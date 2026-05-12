@@ -160,11 +160,15 @@ public sealed record WorkflowHttpExecutorSettings
 
     public string Url { get; init; } = string.Empty;
 
+    public string UrlJsonPath { get; init; } = string.Empty;
+
     public IReadOnlyDictionary<string, string> Headers { get; init; } = new Dictionary<string, string>();
 
     public string Body { get; init; } = string.Empty;
 
     public int MaxResponseBytes { get; init; } = 262144;
+
+    public bool IncludeInputPayload { get; init; }
 }
 
 public sealed record WorkflowSpreadsheetCellWrite(string CellAddress, string Value);
@@ -208,7 +212,11 @@ public sealed record WorkflowProjectStructureExecutorSettings
 
     public Guid? ProjectId { get; init; }
 
+    public string ProjectIdJsonPath { get; init; } = string.Empty;
+
     public string NodeId { get; init; } = string.Empty;
+
+    public string NodeIdJsonPath { get; init; } = string.Empty;
 
     public string AssetKind { get; init; } = "md";
 

@@ -621,6 +621,41 @@
             };
         }
 
+        switch ((link?.tone || "").toLowerCase()) {
+            case "success":
+            case "true":
+                return {
+                    stroke: "rgba(20, 184, 166, 0.9)",
+                    arrowFill: "rgba(15, 118, 110, 0.96)",
+                    lineWidth: 3.2,
+                    lineDash: []
+                };
+            case "danger":
+            case "else":
+                return {
+                    stroke: "rgba(244, 63, 94, 0.9)",
+                    arrowFill: "rgba(225, 29, 72, 0.96)",
+                    lineWidth: 3.2,
+                    lineDash: []
+                };
+            case "default":
+            case "warning":
+                return {
+                    stroke: "rgba(245, 158, 11, 0.94)",
+                    arrowFill: "rgba(217, 119, 6, 0.98)",
+                    lineWidth: 3.2,
+                    lineDash: []
+                };
+            case "fanout":
+            case "info":
+                return {
+                    stroke: "rgba(14, 165, 233, 0.9)",
+                    arrowFill: "rgba(2, 132, 199, 0.98)",
+                    lineWidth: 3.2,
+                    lineDash: []
+                };
+        }
+
         if (link?.isUserAuthored) {
             return {
                 stroke: "rgba(14, 165, 233, 0.82)",
@@ -1375,6 +1410,115 @@
         context.restore();
     }
 
+    function renderCanvasDecisionNode(context, state, node, hostBounds, accent, detailMode, meta) {
+        const isSelected = state.selectedIds.has(node.id);
+        const paletteStyle = resolveCanvasNodePaletteStyle(node, accent, isSelected);
+        const zoom = Math.max(state?.ui?.zoom || 1, 0.01);
+        const centerX = hostBounds.left + (hostBounds.width / 2);
+        const centerY = hostBounds.top + (hostBounds.height / 2);
+        const radius = Math.max(42 * zoom, Math.min(hostBounds.width, hostBounds.height) * 0.46);
+
+        context.save();
+        context.shadowColor = isSelected ? "rgba(15, 118, 110, 0.2)" : "rgba(15, 23, 42, 0.12)";
+        context.shadowBlur = Math.max(10, 16 * zoom);
+        context.shadowOffsetY = Math.max(4, 8 * zoom);
+        traceCanvasDecisionDiamond(context, centerX, centerY, radius);
+        context.fillStyle = "rgba(255, 255, 255, 0.98)";
+        context.fill();
+        context.lineWidth = isSelected ? Math.max(2.2, 3 * zoom) : Math.max(1.6, 2.2 * zoom);
+        context.strokeStyle = accent || "rgba(20, 184, 166, 0.9)";
+        context.stroke();
+        context.restore();
+
+        const innerRadius = radius * 0.42;
+        context.save();
+        context.lineWidth = Math.max(1.6, 2.2 * zoom);
+        context.lineCap = "round";
+        context.lineJoin = "round";
+        context.strokeStyle = "rgba(51, 65, 85, 0.9)";
+        context.fillStyle = "rgba(20, 184, 166, 0.9)";
+        context.beginPath();
+        context.moveTo(centerX - innerRadius * 0.45, centerY);
+        context.lineTo(centerX + innerRadius * 0.08, centerY);
+        context.lineTo(centerX + innerRadius * 0.52, centerY - innerRadius * 0.34);
+        context.moveTo(centerX + innerRadius * 0.08, centerY);
+        context.lineTo(centerX + innerRadius * 0.52, centerY + innerRadius * 0.34);
+        context.stroke();
+        for (const point of [
+            { x: centerX - innerRadius * 0.45, y: centerY },
+            { x: centerX + innerRadius * 0.52, y: centerY - innerRadius * 0.34 },
+            { x: centerX + innerRadius * 0.52, y: centerY + innerRadius * 0.34 }
+        ]) {
+            context.beginPath();
+            context.arc(point.x, point.y, Math.max(2.4, 3.3 * zoom), 0, Math.PI * 2);
+            context.fill();
+        }
+
+        context.restore();
+
+        context.save();
+        setCanvasFont(context, 800, Math.max(10, 13.5 * zoom));
+        context.fillStyle = "rgba(15, 23, 42, 0.92)";
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+        const label = (node.title || node.kind || "Decision").trim().toUpperCase();
+        const primitives = getCanvasRuntimePrimitives();
+        const displayLabel = primitives?.fitText
+            ? primitives.fitText(context, label, radius * 1.1, "...")
+            : label;
+        context.fillText(displayLabel, centerX, centerY + radius * 0.33);
+        context.restore();
+
+        const anchorRadius = Math.max(5, 6.5 * zoom);
+        const anchors = [
+            { x: centerX - radius, y: centerY, direction: "input", side: "left" },
+            { x: centerX + radius, y: centerY, direction: "output", side: "right" }
+        ];
+        for (const anchor of anchors) {
+            context.save();
+            context.beginPath();
+            context.arc(anchor.x, anchor.y, anchorRadius, 0, Math.PI * 2);
+            context.fillStyle = "rgba(255, 255, 255, 0.98)";
+            context.fill();
+            context.lineWidth = Math.max(1.4, 2 * zoom);
+            context.strokeStyle = accent || "rgba(20, 184, 166, 0.92)";
+            context.stroke();
+            context.restore();
+
+            const bounds = buildRect(
+                anchor.x - anchorRadius - Math.max(8, 10 * zoom),
+                anchor.y - anchorRadius - Math.max(8, 10 * zoom),
+                (anchorRadius + Math.max(8, 10 * zoom)) * 2,
+                (anchorRadius + Math.max(8, 10 * zoom)) * 2);
+            registerCanvasPortHotZone(
+                state,
+                node,
+                bounds,
+                anchor.direction === "input"
+                    ? (Array.isArray(node.inputPorts) ? node.inputPorts[0] : null)
+                    : (Array.isArray(node.outputPorts) ? node.outputPorts[0] : null),
+                anchor.side,
+                anchor.direction);
+        }
+
+        if ((node.branchLabel || "").trim() && detailMode !== "compact") {
+            const labelHeight = Math.max(19, 22 * zoom);
+            const labelWidth = Math.min(radius * 1.45, Math.max(74, (node.branchLabel.length * 6.5 * zoom) + 22));
+            drawCanvasBadgePill(
+                context,
+                buildRect(centerX - (labelWidth / 2), centerY - radius - (labelHeight / 2), labelWidth, labelHeight),
+                node.branchLabel,
+                "rgba(240, 253, 250, 0.98)",
+                "rgba(20, 184, 166, 0.38)",
+                "rgba(15, 118, 110, 0.98)",
+                Math.max(8, 9.5 * zoom));
+        }
+
+        meta.portCount = Math.max(
+            Array.isArray(node.inputPorts) ? node.inputPorts.length : 0,
+            Array.isArray(node.outputPorts) ? node.outputPorts.length : 0);
+    }
+
     function drawCanvasBranchLabelPill(context, state, node, startX, top, maxWidth, height, paletteStyle) {
         const branchLabel = (node?.branchLabel || "").trim();
         if (!branchLabel || maxWidth <= 0) {
@@ -2096,5 +2240,5 @@
         drawCanvasCollapseControl(context, state, node, paletteStyle);
     }
 
-    Object.assign(shared, { getCanvasRuntimePrimitives, createFallbackHitRegistry, createCanvasHitRegistry, createCanvasSurfaceHost, destroyCanvasSurfaceHost, hexToRgba, resolveNodeAccentColor, resolveAnchorRect, buildRect, boundsToHitRect, projectSceneBounds, getNodeSceneBounds, clearSceneHotZones, registerSceneHotZone, getSceneHitAtPoint, getSceneHitAtEvent, resolveHitNode, clearScenePopoverHover, syncSceneHoverState, resolveCanvasNodeDetailMode, setCanvasFont, drawCanvasTextLines, drawRoundedPanel, requestSceneImage, buildCanvasSnapshotBounds, reconcileRetainedLayer, drawCanvasFrame, renderGroupFrames, drawCanvasLink, renderLinks, renderCanvasLinkLabels, drawCanvasBadgePill, drawCanvasProgressBadge, drawCanvasAnnotationBadges, drawNodeMediaPreview, renderCanvasMicroNode, renderCanvasInlineTextNode, getCanvasAdvancedNodePortLayout, renderCanvasStandardNode, renderCanvasAdvancedNode });
+    Object.assign(shared, { getCanvasRuntimePrimitives, createFallbackHitRegistry, createCanvasHitRegistry, createCanvasSurfaceHost, destroyCanvasSurfaceHost, hexToRgba, resolveNodeAccentColor, resolveAnchorRect, buildRect, boundsToHitRect, projectSceneBounds, getNodeSceneBounds, clearSceneHotZones, registerSceneHotZone, getSceneHitAtPoint, getSceneHitAtEvent, resolveHitNode, clearScenePopoverHover, syncSceneHoverState, resolveCanvasNodeDetailMode, setCanvasFont, drawCanvasTextLines, drawRoundedPanel, requestSceneImage, buildCanvasSnapshotBounds, reconcileRetainedLayer, drawCanvasFrame, renderGroupFrames, drawCanvasLink, renderLinks, renderCanvasLinkLabels, drawCanvasBadgePill, drawCanvasProgressBadge, drawCanvasAnnotationBadges, drawNodeMediaPreview, renderCanvasMicroNode, renderCanvasInlineTextNode, getCanvasAdvancedNodePortLayout, renderCanvasDecisionNode, renderCanvasStandardNode, renderCanvasAdvancedNode });
 })();

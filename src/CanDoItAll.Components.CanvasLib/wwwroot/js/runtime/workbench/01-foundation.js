@@ -52,6 +52,9 @@
     function normalizeInputField(field) {
         return {
             key: field?.key || "",
+            sectionKey: field?.sectionKey || "",
+            sectionTitle: field?.sectionTitle || "",
+            sectionDescription: field?.sectionDescription || "",
             label: field?.label || field?.key || "Value",
             placeholder: field?.placeholder || "",
             inputMode: field?.inputMode || "text",
@@ -230,6 +233,7 @@
             menuSize: action?.menuSize || "normal",
             submenuLayout: action?.submenuLayout || "",
             requiresInput: !!action?.requiresInput,
+            setupRendererKey: action?.setupRendererKey || "",
             createMode: action?.createMode || "command",
             objectSubtype: action?.objectSubtype || "",
             titleLabel: action?.titleLabel || "Title",
@@ -629,6 +633,11 @@
             return { width: 164, height: 76 };
         }
 
+        if ((node?.family || "").toLowerCase() === "workflow-decision" ||
+            (node?.paletteKey || "").toLowerCase() === "workflow-decision") {
+            return { width: 178, height: 178 };
+        }
+
         const inputPorts = Array.isArray(node?.inputPorts) ? node.inputPorts : [];
         const outputPorts = Array.isArray(node?.outputPorts) ? node.outputPorts : [];
         const portRows = Math.max(inputPorts.length, outputPorts.length);
@@ -662,6 +671,10 @@
         }
 
         const family = (node.family || "item").toLowerCase();
+        if (family === "workflow-decision" || (node.paletteKey || "").toLowerCase() === "workflow-decision") {
+            return baseSize;
+        }
+
         const titleText = node.title || "Untitled";
         const subtitleText = node.subtitle || node.leadText || "";
         const chipText = Array.isArray(node.chips) && node.chips.length > 0

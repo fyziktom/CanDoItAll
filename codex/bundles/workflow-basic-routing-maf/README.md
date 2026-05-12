@@ -9,6 +9,7 @@
 - Add first-class basic routing to CanDoItAll workflow definitions and the workflow canvas using the Microsoft Agent Framework workflow primitives that already exist today.
 - Support deterministic `IF/ELSE`, `SWITCH/default`, and multi-selection fan-out routing now, while keeping a clean replacement seam for the later ARTL DSL.
 - Preserve the existing workflow executor, LLM component, persistence, process-integration, and canvas boundaries.
+- Reopened 2026-05-11 to improve production workflow authoring: clean PostgreSQL datasource setup, richer decision-node canvas UX, setup-dialog renderer coverage, and practical seeded workflow examples that exercise IF/ELSE, SWITCH/default, and fan-out logic.
 
 ## Outcome Contract
 
@@ -45,6 +46,10 @@
 3. `subbundles/03-workflow-canvas-routing-authoring-ux`
 4. `subbundles/04-validation-persistence-api-and-scenario-seeds`
 5. `subbundles/05-routing-test-proof-browser-proof-and-artl-handoff`
+6. `subbundles/06-postgresql-clean-test-datasource`
+7. `subbundles/07-decision-node-canvas-ux-and-setup-renderers`
+8. `subbundles/08-production-example-workflows-and-llm-tuning`
+9. `subbundles/09-execution-observation-repair-and-final-proof`
 
 ## Dependency And Validation Map
 
@@ -53,12 +58,16 @@
 - Subbundle 03 is the browser-visible foundation. Do not close the bundle without Playwright/browser proof that canvas-authored routes can be created, edited, saved, and preview-run.
 - Subbundle 04 may run in parallel with UI styling only after the domain model is stable, but its persistence/API compatibility tests must pass before final proof.
 - Subbundle 05 closes the raw request, reviews proof, and records the ARTL handoff contract.
+- Subbundle 06 adds a clean PostgreSQL datasource/profile for Visual Studio verification and must not drop any database except the explicitly named workflow-routing test database.
+- Subbundle 07 improves the workflow canvas decision-block shape, right-click second-layer menu, toolbox presence, and first-create setup dialogs through renderer-keyed actions.
+- Subbundle 08 seeds practical workflows and tuned component/executor settings for document, email, spreadsheet, internet-fetch, and additional production-like scenarios.
+- Subbundle 09 runs and observes at least 20 real-world workflow scenarios, records failures, repairs implementation or bundle notes, and captures browser screenshots.
 
 ## Validation Summary
 
 - Bundle preparation status: `Prepared`
 - Bundle readiness gate: `Passed by local prepared-stage validator`
-- Execution status: `Completed`
-- Subbundle gate review: `All five subbundles completed with proof`
-- Final closure gate: `Passed by local completed-stage validator`
-- Browser validation analytics: `Passed on /agents/workflows with desktop maximized canvas screenshot proof`
+- Execution status: `Completed follow-up implementation`
+- Subbundle gate review: `Subbundles 01-09 completed`
+- Final closure gate: `Passed follow-up validation`
+- Browser validation analytics: `Decision-node visual proof, nested menu proof, decision setup dialog proof, and executor setup dialog proof captured`

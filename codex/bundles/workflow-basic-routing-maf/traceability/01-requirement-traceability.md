@@ -22,3 +22,15 @@
 | RQ-018 component tests | 03 | 05 | Component test proof |
 | RQ-019 integration tests | 04 | 05 | Integration test proof |
 | RQ-020 browser proof | 03 | 05 | Screenshots and browser analytics |
+| RQ-021 PostgreSQL datasource | 06 | 09 | Reset script, launch profile, database proof |
+| RQ-022 decision toolbox/menu entries | 07 | 09 | Component/browser tests and screenshots |
+| RQ-023 diamond decision visuals | 07 | 09 | Browser screenshots and canvas pixel review |
+| RQ-024 richer setup dialogs | 07 | 09 | Component/browser tests |
+| RQ-025 setup renderer seam | 07 | 08 | Source review and action metadata tests |
+| RQ-026 seeded workflow examples | 08 | 09 | Catalog tests and scenario matrix |
+| RQ-027 LLM/workflow tuning | 08 | 09 | Seed inspection and preview proof |
+| RQ-028 20-scenario observation/repair | 09 | 08 | Scenario logs, model comparison, execution report |
+
+## Follow-up Closure
+
+- RQ-021 through RQ-028 are closed by subbundles 06 through 09. Evidence is recorded in `reviews/01-execution-report.md` and `reviews/evidence/subbundle-06` through `reviews/evidence/subbundle-09`.

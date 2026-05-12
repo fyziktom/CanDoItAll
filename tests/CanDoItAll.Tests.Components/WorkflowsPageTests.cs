@@ -4,10 +4,14 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages;
+using CanDoItAll.Tools.Documents;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Tests.Components;
 
@@ -185,6 +189,68 @@ public sealed class WorkflowsPageTests
             Assert.Contains(notificationService.Messages, message => message.Summary == "Workflow canvas valid");
             Assert.DoesNotContain("workflow-canvas-validation-issue", cut.Markup);
         });
+    }
+
+    [Fact]
+    public async Task Workflow_example_seed_creates_production_examples_when_enabled()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"workflow-example-seed-{Guid.NewGuid():N}");
+        var store = new InMemoryWorkflowCatalogStore();
+        var catalogService = new InMemoryWorkflowCatalogService(store, new WorkflowDefinitionValidator());
+        var seeder = new WorkflowExampleCatalogSeedService(
+            catalogService,
+            catalogService,
+            catalogService,
+            new WorkspaceFileService(workspaceRoot),
+            new WorkspacePathResolutionService(workspaceRoot),
+            new ClosedXmlSpreadsheetDocumentService(),
+            Options.Create(new WorkflowExampleCatalogSeedOptions
+            {
+                Enabled = true,
+                SeedSampleWorkspaceFiles = true
+            }),
+            NullLogger<WorkflowExampleCatalogSeedService>.Instance);
+
+        try
+        {
+            await seeder.EnsureSeededAsync();
+        }
+        finally
+        {
+            if (Directory.Exists(workspaceRoot))
+            {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+        }
+
+        var definitions = await catalogService.ListDefinitionsAsync();
+        var examples = definitions
+            .Where(item => item.Name.StartsWith("Example:", StringComparison.Ordinal))
+            .ToArray();
+        Assert.True(examples.Length >= 15);
+
+        var components = await catalogService.ListComponentsAsync();
+        Assert.True(components.Count(component => component.Name.StartsWith("Example LLM:", StringComparison.Ordinal)) >= 15);
+
+        var invoice = Assert.Single(examples, item => item.Name == "Example: Invoice Workbook Risk Switch");
+        var invoiceDetail = await catalogService.GetDefinitionAsync(invoice.Id);
+        Assert.NotNull(invoiceDetail);
+        Assert.True(invoiceDetail!.Validation.Succeeded);
+        Assert.Contains(invoiceDetail.Definition.Graph.Edges, edge => edge.Routing.Kind == WorkflowRouteKind.SwitchDefault);
+
+        var fanOut = Assert.Single(examples, item => item.Name == "Example: Pipeline Workbook Fan-out");
+        var fanOutDetail = await catalogService.GetDefinitionAsync(fanOut.Id);
+        Assert.NotNull(fanOutDetail);
+        Assert.True(fanOutDetail!.Validation.Succeeded);
+        Assert.Contains(fanOutDetail.Definition.Graph.Edges, edge => edge.Routing.Kind == WorkflowRouteKind.FanOutSelector);
+
+        var internet = Assert.Single(examples, item => item.Name == "Example: Internet Research Capture");
+        var internetDetail = await catalogService.GetDefinitionAsync(internet.Id);
+        Assert.NotNull(internetDetail);
+        Assert.True(internetDetail!.Validation.Succeeded);
+        Assert.Contains(internetDetail.Definition.Graph.Nodes, node =>
+            node.Settings.ExecutorId == WorkflowExecutorIds.HttpFetch &&
+            node.Settings.ExecutorSettingsJson.Contains("urlJsonPath", StringComparison.Ordinal));
     }
 
     [Fact]

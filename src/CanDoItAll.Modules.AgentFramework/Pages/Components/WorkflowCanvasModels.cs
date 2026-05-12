@@ -511,12 +511,28 @@ internal static class WorkflowCanvasDefinitionMapper
         return edge.Routing.Kind switch
         {
             WorkflowRouteKind.Always => "neutral",
+            WorkflowRouteKind.Predicate when IsNegativePredicateLabel(edge.Routing.Label) ||
+                                             edge.Routing.Operator == WorkflowRouteOperator.NotEquals ||
+                                             edge.Routing.Operator == WorkflowRouteOperator.IsFalsy => "danger",
             WorkflowRouteKind.Predicate => "success",
             WorkflowRouteKind.SwitchCase => "info",
             WorkflowRouteKind.SwitchDefault => "default",
             WorkflowRouteKind.FanOutSelector => "fanout",
             _ => "neutral"
         };
+    }
+
+    private static bool IsNegativePredicateLabel(string label)
+    {
+        if (string.IsNullOrWhiteSpace(label))
+        {
+            return false;
+        }
+
+        return label.Contains("else", StringComparison.OrdinalIgnoreCase) ||
+               label.Contains("false", StringComparison.OrdinalIgnoreCase) ||
+               label.Contains("reject", StringComparison.OrdinalIgnoreCase) ||
+               label.Contains("no ", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string FormatExpectedValue(WorkflowEdgeRouting routing)
@@ -617,25 +633,131 @@ internal static class WorkflowCanvasDefinitionMapper
             FocusActionLabel = "Focus start",
             ShowQuickCreateRail = true,
             CollapseOnDoubleClick = false,
-            QuickCreateActions = CreatableNodeKinds
-                .Select(kind => new CanvasWorkbenchAction
-                {
-                    ActionId = BuildCreateActionId(kind),
-                    Label = ResolveDefaultNodeName(kind),
-                    MenuLabel = ResolveDefaultNodeName(kind),
-                    Description = ResolveDefaultInstructions(kind),
-                    Icon = ResolveIcon(kind),
-                    Tone = ResolveTone(kind),
-                    RequiresInput = true,
-                    CreateMode = "dialog",
-                    TitlePlaceholder = ResolveDefaultNodeName(kind),
-                    NotesPlaceholder = ResolveDefaultInstructions(kind),
-                    SubmitLabel = "Add node"
-                })
+            QuickCreateActions = WorkflowCanvasDecisionCatalog.BuildQuickCreateActions()
+                .Concat(CreatableNodeKinds
+                    .Select(kind => new CanvasWorkbenchAction
+                    {
+                        ActionId = BuildCreateActionId(kind),
+                        Label = ResolveDefaultNodeName(kind),
+                        MenuLabel = ResolveDefaultNodeName(kind),
+                        Description = ResolveDefaultInstructions(kind),
+                        Icon = ResolveIcon(kind),
+                        Tone = ResolveTone(kind),
+                        SetupRendererKey = $"workflow-node-{kind.ToString().ToLowerInvariant()}",
+                        RequiresInput = true,
+                        CreateMode = "dialog",
+                        TitlePlaceholder = ResolveDefaultNodeName(kind),
+                        NotesPlaceholder = ResolveDefaultInstructions(kind),
+                        SubmitLabel = "Add node",
+                        InputFields = BuildNodeSetupFields(kind),
+                        DefaultInputValues = BuildNodeDefaultInputValues(kind)
+                    }))
                 .Concat(WorkflowExecutorCanvasCatalog.BuildQuickCreateActions(executors))
                 .ToList()
         };
     }
+
+    private static List<CanvasWorkbenchInputField> BuildNodeSetupFields(WorkflowNodeKind kind)
+    {
+        var fields = new List<CanvasWorkbenchInputField>
+        {
+            CreateShapeField(
+                "inputShape",
+                "Input shape",
+                sectionDescription: "Set the node contract before it lands on the canvas."),
+            CreateShapeField(
+                "resultShape",
+                "Result shape",
+                sectionDescription: "Set the node contract before it lands on the canvas.")
+        };
+
+        if (kind == WorkflowNodeKind.HumanInput)
+        {
+            fields.Add(new CanvasWorkbenchInputField
+            {
+                Key = "externalRequestKind",
+                SectionKey = "request",
+                SectionTitle = "Request",
+                SectionDescription = "Choose how the workflow should pause for outside input.",
+                Label = "Request kind",
+                InputMode = "select",
+                IsRequired = true,
+                Options =
+                [
+                    new CanvasWorkbenchInputOption { Value = WorkflowExternalRequestKind.HumanInput.ToString(), Label = "Human input" },
+                    new CanvasWorkbenchInputOption { Value = WorkflowExternalRequestKind.Approval.ToString(), Label = "Approval" }
+                ]
+            });
+        }
+
+        if (kind == WorkflowNodeKind.AgentStep)
+        {
+            fields.Add(new CanvasWorkbenchInputField
+            {
+                Key = "agentId",
+                SectionKey = "binding",
+                SectionTitle = "Binding",
+                SectionDescription = "Optional for now; bind the node to an agent when the id is known.",
+                Label = "Agent id",
+                Placeholder = "00000000-0000-0000-0000-000000000000"
+            });
+        }
+
+        if (kind == WorkflowNodeKind.Subworkflow)
+        {
+            fields.Add(new CanvasWorkbenchInputField
+            {
+                Key = "subworkflowId",
+                SectionKey = "binding",
+                SectionTitle = "Binding",
+                SectionDescription = "Optional for now; bind the node to another workflow when the id is known.",
+                Label = "Subworkflow id",
+                Placeholder = "00000000-0000-0000-0000-000000000000"
+            });
+        }
+
+        return fields;
+    }
+
+    private static List<CanvasWorkbenchInputValue> BuildNodeDefaultInputValues(WorkflowNodeKind kind)
+        =>
+        [
+            new CanvasWorkbenchInputValue { Key = "inputShape", Value = WorkflowValueShapeKind.Text.ToString() },
+            new CanvasWorkbenchInputValue
+            {
+                Key = "resultShape",
+                Value = kind is WorkflowNodeKind.StrictLogic or WorkflowNodeKind.Triage
+                    ? WorkflowValueShapeKind.Json.ToString()
+                    : WorkflowValueShapeKind.Text.ToString()
+            },
+            new CanvasWorkbenchInputValue
+            {
+                Key = "externalRequestKind",
+                Value = WorkflowExternalRequestKind.HumanInput.ToString()
+            }
+        ];
+
+    private static CanvasWorkbenchInputField CreateShapeField(
+        string key,
+        string label,
+        string sectionDescription)
+        => new()
+        {
+            Key = key,
+            SectionKey = "contract",
+            SectionTitle = "Contract",
+            SectionDescription = sectionDescription,
+            Label = label,
+            InputMode = "select",
+            IsRequired = true,
+            Options = Enum.GetValues<WorkflowValueShapeKind>()
+                .Select(shape => new CanvasWorkbenchInputOption
+                {
+                    Value = shape.ToString(),
+                    Label = shape.ToString()
+                })
+                .ToList()
+        };
 
     private static CanvasWorkbenchNode BuildWorkbenchNode(
         WorkflowCanvasNodeDraft node,
@@ -949,4 +1071,206 @@ internal static class WorkflowCanvasDefinitionMapper
         kind = default;
         return false;
     }
+}
+
+internal enum WorkflowDecisionBlockKind
+{
+    IfElse,
+    Switch,
+    FanOut
+}
+
+internal static class WorkflowCanvasDecisionCatalog
+{
+    private const string CreateDecisionActionPrefix = "workflow-decision:create:";
+
+    public static IReadOnlyList<WorkflowDecisionBlockKind> DecisionBlockKinds { get; } =
+    [
+        WorkflowDecisionBlockKind.IfElse,
+        WorkflowDecisionBlockKind.Switch,
+        WorkflowDecisionBlockKind.FanOut
+    ];
+
+    public static IReadOnlyList<CanvasWorkbenchAction> BuildQuickCreateActions()
+        =>
+        [
+            new CanvasWorkbenchAction
+            {
+                ActionId = "workflow-decision:menu",
+                Label = "Decisions",
+                MenuLabel = "Decisions",
+                Description = "Split execution with IF/ELSE predicates, SWITCH/default branches, or fan-out selectors.",
+                Icon = "call_split",
+                Tone = "accent",
+                SubmenuLayout = "toolbox",
+                Children = DecisionBlockKinds.Select(BuildCreateAction).ToList()
+            }
+        ];
+
+    public static CanvasWorkbenchAction BuildCreateAction(WorkflowDecisionBlockKind kind)
+        => kind switch
+        {
+            WorkflowDecisionBlockKind.IfElse => new CanvasWorkbenchAction
+            {
+                ActionId = BuildCreateActionId(kind),
+                Label = "IF",
+                MenuLabel = "IF / ELSE",
+                Description = "Create a binary decision with true and else branches.",
+                Icon = "call_split",
+                Tone = "success",
+                SetupRendererKey = "workflow-decision-if-else",
+                RequiresInput = true,
+                CreateMode = "dialog",
+                ObjectSubtype = kind.ToString(),
+                TitlePlaceholder = "IF",
+                NotesPlaceholder = "Route based on a deterministic JSON predicate.",
+                SubmitLabel = "Add decision",
+                DefaultInputValues =
+                [
+                    new CanvasWorkbenchInputValue { Key = "jsonPath", Value = "$.status" },
+                    new CanvasWorkbenchInputValue { Key = "expectedValue", Value = "approved" },
+                    new CanvasWorkbenchInputValue { Key = "trueLabel", Value = "IF" },
+                    new CanvasWorkbenchInputValue { Key = "falseLabel", Value = "ELSE" }
+                ],
+                InputFields =
+                [
+                    RouteJsonPathField("Predicate", "$.status"),
+                    new CanvasWorkbenchInputField
+                    {
+                        Key = "expectedValue",
+                        SectionKey = "predicate",
+                        SectionTitle = "Predicate",
+                        SectionDescription = "The IF branch runs when this value matches.",
+                        Label = "Expected value",
+                        Placeholder = "approved",
+                        IsRequired = true
+                    },
+                    BranchLabelField("trueLabel", "IF branch", "IF"),
+                    BranchLabelField("falseLabel", "Else branch", "ELSE")
+                ]
+            },
+            WorkflowDecisionBlockKind.Switch => new CanvasWorkbenchAction
+            {
+                ActionId = BuildCreateActionId(kind),
+                Label = "SWITCH",
+                MenuLabel = "SWITCH / DEFAULT",
+                Description = "Create switch cases plus a default branch.",
+                Icon = "alt_route",
+                Tone = "info",
+                SetupRendererKey = "workflow-decision-switch",
+                RequiresInput = true,
+                CreateMode = "dialog",
+                ObjectSubtype = kind.ToString(),
+                TitlePlaceholder = "SWITCH",
+                NotesPlaceholder = "Route based on a JSON discriminator value.",
+                SubmitLabel = "Add switch",
+                DefaultInputValues =
+                [
+                    new CanvasWorkbenchInputValue { Key = "jsonPath", Value = "$.category" },
+                    new CanvasWorkbenchInputValue { Key = "caseValues", Value = "high, medium, low" },
+                    new CanvasWorkbenchInputValue { Key = "defaultLabel", Value = "DEFAULT" }
+                ],
+                InputFields =
+                [
+                    RouteJsonPathField("Discriminator", "$.category"),
+                    new CanvasWorkbenchInputField
+                    {
+                        Key = "caseValues",
+                        SectionKey = "branches",
+                        SectionTitle = "Branches",
+                        SectionDescription = "Comma, semicolon, or line-separated switch case values.",
+                        Label = "Case values",
+                        Placeholder = "high, medium, low",
+                        InputMode = "textarea",
+                        IsRequired = true
+                    },
+                    BranchLabelField("defaultLabel", "Default branch", "DEFAULT")
+                ]
+            },
+            WorkflowDecisionBlockKind.FanOut => new CanvasWorkbenchAction
+            {
+                ActionId = BuildCreateActionId(kind),
+                Label = "FAN-OUT",
+                MenuLabel = "Fan-out",
+                Description = "Create parallel branch selectors for multi-target routing.",
+                Icon = "hub",
+                Tone = "accent",
+                SetupRendererKey = "workflow-decision-fan-out",
+                RequiresInput = true,
+                CreateMode = "dialog",
+                ObjectSubtype = kind.ToString(),
+                TitlePlaceholder = "FAN-OUT",
+                NotesPlaceholder = "Select one or more downstream branches from an array or text field.",
+                SubmitLabel = "Add fan-out",
+                DefaultInputValues =
+                [
+                    new CanvasWorkbenchInputValue { Key = "jsonPath", Value = "$.targets" },
+                    new CanvasWorkbenchInputValue { Key = "branchLabels", Value = "validate payment, check inventory, reserve shipment, send confirmation" }
+                ],
+                InputFields =
+                [
+                    RouteJsonPathField("Selector path", "$.targets"),
+                    new CanvasWorkbenchInputField
+                    {
+                        Key = "branchLabels",
+                        SectionKey = "branches",
+                        SectionTitle = "Branches",
+                        SectionDescription = "Comma, semicolon, or line-separated branch names.",
+                        Label = "Branch labels",
+                        Placeholder = "validate payment, check inventory, reserve shipment, send confirmation",
+                        InputMode = "textarea",
+                        IsRequired = true
+                    }
+                ]
+            },
+            _ => throw new InvalidOperationException($"Unsupported decision block kind '{kind}'.")
+        };
+
+    public static string BuildCreateActionId(WorkflowDecisionBlockKind kind)
+        => $"{CreateDecisionActionPrefix}{kind}";
+
+    public static bool TryParseCreateActionId(string actionId, out WorkflowDecisionBlockKind kind)
+    {
+        if (actionId.StartsWith(CreateDecisionActionPrefix, StringComparison.Ordinal) &&
+            Enum.TryParse(actionId[CreateDecisionActionPrefix.Length..], ignoreCase: false, out kind))
+        {
+            return true;
+        }
+
+        kind = default;
+        return false;
+    }
+
+    public static string ResolveLabel(WorkflowDecisionBlockKind kind)
+        => kind switch
+        {
+            WorkflowDecisionBlockKind.IfElse => "IF",
+            WorkflowDecisionBlockKind.Switch => "SWITCH",
+            WorkflowDecisionBlockKind.FanOut => "FAN-OUT",
+            _ => kind.ToString()
+        };
+
+    private static CanvasWorkbenchInputField RouteJsonPathField(string sectionTitle, string placeholder)
+        => new()
+        {
+            Key = "jsonPath",
+            SectionKey = "predicate",
+            SectionTitle = sectionTitle,
+            SectionDescription = "Routes evaluate against the current workflow payload JSON.",
+            Label = "JSON path",
+            Placeholder = placeholder,
+            IsRequired = true
+        };
+
+    private static CanvasWorkbenchInputField BranchLabelField(string key, string label, string placeholder)
+        => new()
+        {
+            Key = key,
+            SectionKey = "branches",
+            SectionTitle = "Branches",
+            SectionDescription = "These labels become visible branch chips on the connector.",
+            Label = label,
+            Placeholder = placeholder,
+            IsRequired = true
+        };
 }

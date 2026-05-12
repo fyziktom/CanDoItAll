@@ -655,6 +655,23 @@ public sealed class WorkflowExecutorTests
             Assert.Contains("ok", result.PayloadJson, StringComparison.Ordinal);
         });
 
+        await RecordAsync("http gets url from workflow input and carries payload", async () =>
+        {
+            await using var server = SingleResponseHttpServer.Json(200, "{\"ok\":true}");
+            var result = await ExecuteDirectAsync(
+                new HttpFetchWorkflowExecutor(),
+                new WorkflowHttpExecutorSettings
+                {
+                    Method = WorkflowHttpMethodKind.Get,
+                    UrlJsonPath = "$.source.url",
+                    IncludeInputPayload = true
+                },
+                $$"""{"source":{"url":"{{server.Url}}"},"projectId":"11111111-1111-1111-1111-111111111111"}""");
+
+            Assert.Contains("ok", result.PayloadJson, StringComparison.Ordinal);
+            Assert.Contains("11111111-1111-1111-1111-111111111111", result.PayloadJson, StringComparison.Ordinal);
+        });
+
         await RecordAsync("http posts bounded payload", async () =>
         {
             await using var server = SingleResponseHttpServer.Json(201, "{\"created\":true}");
@@ -879,10 +896,16 @@ public sealed class WorkflowExecutorTests
     private static async Task<WorkflowNodeExecutionResult> ExecuteDirectAsync<TSettings>(
         IWorkflowExecutor executor,
         TSettings settings)
+        => await ExecuteDirectAsync(executor, settings, "{}");
+
+    private static async Task<WorkflowNodeExecutionResult> ExecuteDirectAsync<TSettings>(
+        IWorkflowExecutor executor,
+        TSettings settings,
+        string inputJson)
     {
         return await executor.ExecuteAsync(
             CreateExecutionContext(executor.Descriptor, settings),
-            new WorkflowNodeInput("{}"));
+            new WorkflowNodeInput(inputJson));
     }
 
     private static WorkflowNode CreateExecutorNode(

@@ -65,6 +65,8 @@ public sealed class CanvasWorkbenchAction
 
     public string Tone { get; set; } = "neutral";
 
+    public string SetupRendererKey { get; set; } = string.Empty;
+
     public bool RequiresInput { get; set; }
 
     public string CreateMode { get; set; } = "command";
@@ -105,6 +107,12 @@ public sealed class CanvasWorkbenchAction
 public sealed class CanvasWorkbenchInputField
 {
     public string Key { get; set; } = string.Empty;
+
+    public string SectionKey { get; set; } = string.Empty;
+
+    public string SectionTitle { get; set; } = string.Empty;
+
+    public string SectionDescription { get; set; } = string.Empty;
 
     public string Label { get; set; } = string.Empty;
 

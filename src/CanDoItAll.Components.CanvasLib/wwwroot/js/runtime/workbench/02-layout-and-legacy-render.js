@@ -339,6 +339,11 @@
             return buildNodeSideAnchorPoint(state, node, resolvedSide, 0, 0);
         }
 
+        if ((node?.family || "").toLowerCase() === "workflow-decision" ||
+            (node?.paletteKey || "").toLowerCase() === "workflow-decision") {
+            return buildNodeSideAnchorPoint(state, node, resolvedSide, 0, 0);
+        }
+
         const ports = getNodePortCollection(node, direction);
         if (portId && ports.length > 0) {
             const portIndex = ports.findIndex(port => port?.id === portId);

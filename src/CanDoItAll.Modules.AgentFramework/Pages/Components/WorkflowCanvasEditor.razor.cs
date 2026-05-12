@@ -74,7 +74,7 @@ public partial class WorkflowCanvasEditor
     private string newComponentProviderProfileId = string.Empty;
     private string newComponentModel = string.Empty;
     private string workflowToolboxSearchText = string.Empty;
-    private string? expandedWorkflowToolboxGroupKey = "workflow-nodes";
+    private string? expandedWorkflowToolboxGroupKey = "workflow-decisions";
     private string testInputJson = "{\"prompt\":\"Summarize this workflow input.\"}";
     private string errorMessage = string.Empty;
     private CanvasWorkbenchUiState canvasUiState = CreateWorkflowCanvasUiState("start");
@@ -288,6 +288,7 @@ public partial class WorkflowCanvasEditor
         }
 
         ApplyCreateRequest(node, request);
+        ApplyExecutorCreateRequest(node, request);
         document.Nodes.Add(node);
         InsertNodeBeforeEnd(node);
         SelectNode(node.Id.Value);
@@ -578,16 +579,30 @@ public partial class WorkflowCanvasEditor
 
     private async Task HandleCanvasCreateActionAsync(CanvasWorkbenchCreateActionRequest request)
     {
-        if (WorkflowCanvasDefinitionMapper.TryParseCreateActionId(request.ActionId, out var kind))
+        try
         {
-            await AddNodeAsync(kind, request, ResolveRequestedComponent(request));
-            return;
-        }
+            if (WorkflowCanvasDecisionCatalog.TryParseCreateActionId(request.ActionId, out var decisionKind))
+            {
+                await AddDecisionNodeAsync(decisionKind, request);
+                return;
+            }
 
-        if (WorkflowExecutorCanvasCatalog.TryParseCreateActionId(request.ActionId, out var executorId) &&
-            TryResolveExecutorDescriptor(executorId, out var descriptor))
+            if (WorkflowCanvasDefinitionMapper.TryParseCreateActionId(request.ActionId, out var kind))
+            {
+                await AddNodeAsync(kind, request, ResolveRequestedComponent(request));
+                return;
+            }
+
+            if (WorkflowExecutorCanvasCatalog.TryParseCreateActionId(request.ActionId, out var executorId) &&
+                TryResolveExecutorDescriptor(executorId, out var descriptor))
+            {
+                await AddExecutorNodeAsync(descriptor, request);
+            }
+        }
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or JsonException)
         {
-            await AddExecutorNodeAsync(descriptor, request);
+            errorMessage = exception.Message;
+            NotificationService.Error("Workflow node create failed", exception.Message);
         }
     }
 
@@ -874,6 +889,21 @@ public partial class WorkflowCanvasEditor
 
     private IReadOnlyList<OverlayToolboxSection> BuildWorkflowToolboxSections()
     {
+        var decisionItems = WorkflowCanvasDecisionCatalog.DecisionBlockKinds
+            .Select(kind =>
+            {
+                var action = WorkflowCanvasDecisionCatalog.BuildCreateAction(kind);
+                return new OverlayToolboxItem(
+                    action.ActionId,
+                    action.Label,
+                    action.Description,
+                    Icon: action.Icon,
+                    Tone: action.Tone,
+                    DataTestId: $"workflow-toolbox-decision-{kind}");
+            })
+            .Where(MatchesWorkflowToolboxSearch)
+            .ToList();
+
         var workflowNodeItems = WorkflowCanvasDefinitionMapper.CreatableNodeKinds
             .Select(kind => new OverlayToolboxItem(
                 WorkflowCanvasDefinitionMapper.BuildCreateActionId(kind),
@@ -893,6 +923,28 @@ public partial class WorkflowCanvasEditor
             .ToList();
 
         var sections = new List<OverlayToolboxSection>();
+        if (decisionItems.Count > 0)
+        {
+            sections.Add(new OverlayToolboxSection(
+                "workflow-decisions",
+                "Decisions",
+                "IF/ELSE, SWITCH/default, and fan-out split blocks.",
+                [
+                    new OverlayToolboxGroup(
+                        "workflow-decisions",
+                        "Branching blocks",
+                        "Drop a configured split node with default branches.",
+                        decisionItems,
+                        Icon: "call_split",
+                        Tone: "accent",
+                        IsExpanded: IsWorkflowToolboxGroupExpanded("workflow-decisions"),
+                        DataTestId: "workflow-toolbox-group-workflow-decisions",
+                        BodyDataTestId: "workflow-toolbox-group-body-workflow-decisions")
+                ],
+                Tone: "accent",
+                DataTestId: "workflow-toolbox-section-decisions"));
+        }
+
         if (workflowNodeItems.Count > 0)
         {
             sections.Add(new OverlayToolboxSection(
@@ -1035,6 +1087,254 @@ public partial class WorkflowCanvasEditor
 
         WorkflowCanvasDefinitionMapper.ApplyExecutor(node, descriptor);
     }
+
+    private Task AddDecisionNodeAsync(
+        WorkflowDecisionBlockKind decisionKind,
+        CanvasWorkbenchCreateActionRequest request)
+    {
+        var position = ResolveCreatePosition(request);
+        var node = WorkflowCanvasDefinitionMapper.CreateNode(
+            WorkflowNodeKind.Triage,
+            document.Nodes,
+            componentOptions,
+            position.X,
+            position.Y);
+
+        node.Name = WorkflowCanvasDecisionCatalog.ResolveLabel(decisionKind);
+        node.Instructions = ResolveDecisionInstructions(decisionKind);
+        node.InputShapeKind = WorkflowValueShapeKind.Json;
+        node.ResultShapeKind = WorkflowValueShapeKind.Json;
+        ApplyCreateRequest(node, request);
+        if (string.Equals(node.Name, request.Title, StringComparison.Ordinal) &&
+            string.IsNullOrWhiteSpace(request.Title))
+        {
+            node.Name = WorkflowCanvasDecisionCatalog.ResolveLabel(decisionKind);
+        }
+
+        document.Nodes.Add(node);
+        InsertNodeBeforeEnd(node);
+        AddDefaultDecisionBranches(node, decisionKind, request);
+        SelectNode(node.Id.Value);
+        SyncEdgeDefaults();
+        return Task.CompletedTask;
+    }
+
+    private void AddDefaultDecisionBranches(
+        WorkflowCanvasNodeDraft decisionNode,
+        WorkflowDecisionBlockKind decisionKind,
+        CanvasWorkbenchCreateActionRequest request)
+    {
+        var end = document.Nodes.FirstOrDefault(node => node.Kind == WorkflowNodeKind.End);
+        document.Edges.RemoveAll(edge => edge.SourceNodeId == decisionNode.Id && edge.TargetNodeId == end?.Id);
+
+        var branchSpecs = BuildDecisionBranchSpecs(decisionKind, request);
+        for (var index = 0; index < branchSpecs.Count; index++)
+        {
+            var spec = branchSpecs[index];
+            var branchNode = WorkflowCanvasDefinitionMapper.CreateNode(
+                WorkflowNodeKind.StrictLogic,
+                document.Nodes,
+                componentOptions,
+                decisionNode.CanvasX + 300,
+                decisionNode.CanvasY + ((index - ((branchSpecs.Count - 1) / 2d)) * 135));
+            branchNode.Name = spec.TargetName;
+            branchNode.Instructions = spec.TargetInstructions;
+            branchNode.InputShapeKind = WorkflowValueShapeKind.Json;
+            branchNode.ResultShapeKind = WorkflowValueShapeKind.Json;
+            document.Nodes.Add(branchNode);
+
+            document.Edges.Add(new WorkflowCanvasEdgeDraft(
+                CreateEdgeId(decisionNode.Id, branchNode.Id),
+                decisionNode.Id,
+                branchNode.Id)
+            {
+                Kind = ResolveEdgeKindForRoute(spec.Routing.Kind),
+                Routing = spec.Routing
+            });
+
+            if (end is not null)
+            {
+                document.Edges.Add(new WorkflowCanvasEdgeDraft(
+                    CreateEdgeId(branchNode.Id, end.Id),
+                    branchNode.Id,
+                    end.Id));
+            }
+        }
+    }
+
+    private IReadOnlyList<DecisionBranchSpec> BuildDecisionBranchSpecs(
+        WorkflowDecisionBlockKind decisionKind,
+        CanvasWorkbenchCreateActionRequest request)
+    {
+        var jsonPath = NormalizeJsonPath(GetInputValue(request, "jsonPath", ResolveDefaultDecisionJsonPath(decisionKind)));
+        return decisionKind switch
+        {
+            WorkflowDecisionBlockKind.IfElse => BuildIfElseBranchSpecs(request, jsonPath),
+            WorkflowDecisionBlockKind.Switch => BuildSwitchBranchSpecs(request, jsonPath),
+            WorkflowDecisionBlockKind.FanOut => BuildFanOutBranchSpecs(request, jsonPath),
+            _ => []
+        };
+    }
+
+    private static IReadOnlyList<DecisionBranchSpec> BuildIfElseBranchSpecs(
+        CanvasWorkbenchCreateActionRequest request,
+        string jsonPath)
+    {
+        var expectedValue = GetInputValue(request, "expectedValue", "approved");
+        var expectedJson = JsonSerializer.Serialize(expectedValue);
+        var trueLabel = GetInputValue(request, "trueLabel", "IF").ToUpperInvariant();
+        var falseLabel = GetInputValue(request, "falseLabel", "ELSE").ToUpperInvariant();
+        return
+        [
+            new DecisionBranchSpec(
+                trueLabel,
+                $"Handle {trueLabel}",
+                $"Continue when {jsonPath} equals {expectedValue}.",
+                WorkflowEdgeRouting.Predicate(
+                    jsonPath,
+                    WorkflowRouteOperator.Equals,
+                    expectedJson,
+                    WorkflowRouteValueKind.String,
+                    trueLabel)),
+            new DecisionBranchSpec(
+                falseLabel,
+                $"Handle {falseLabel}",
+                $"Continue when {jsonPath} does not equal {expectedValue}.",
+                WorkflowEdgeRouting.Predicate(
+                    jsonPath,
+                    WorkflowRouteOperator.NotEquals,
+                    expectedJson,
+                    WorkflowRouteValueKind.String,
+                    falseLabel))
+        ];
+    }
+
+    private static IReadOnlyList<DecisionBranchSpec> BuildSwitchBranchSpecs(
+        CanvasWorkbenchCreateActionRequest request,
+        string jsonPath)
+    {
+        var cases = SplitBranchValues(GetInputValue(request, "caseValues", "high, medium, low"));
+        if (cases.Count == 0)
+        {
+            cases = ["case-1", "case-2"];
+        }
+
+        var specs = cases
+            .Take(6)
+            .Select((value, index) => new DecisionBranchSpec(
+                $"Case {index + 1}",
+                ToBranchTargetName(value),
+                $"Handle switch case '{value}' from {jsonPath}.",
+                WorkflowEdgeRouting.SwitchCase(
+                    jsonPath,
+                    JsonSerializer.Serialize(value),
+                    WorkflowRouteValueKind.String,
+                    $"Case {index + 1}")))
+            .ToList();
+        var defaultLabel = GetInputValue(request, "defaultLabel", "DEFAULT").ToUpperInvariant();
+        specs.Add(new DecisionBranchSpec(
+            defaultLabel,
+            "Unhandled",
+            "Handle values that do not match any configured switch case.",
+            WorkflowEdgeRouting.SwitchDefault(defaultLabel)));
+        return specs;
+    }
+
+    private static IReadOnlyList<DecisionBranchSpec> BuildFanOutBranchSpecs(
+        CanvasWorkbenchCreateActionRequest request,
+        string jsonPath)
+    {
+        var branches = SplitBranchValues(GetInputValue(
+            request,
+            "branchLabels",
+            "validate payment, check inventory, reserve shipment, send confirmation"));
+        if (branches.Count == 0)
+        {
+            branches = ["branch-1", "branch-2", "branch-3"];
+        }
+
+        return branches
+            .Take(8)
+            .Select((value, index) => new DecisionBranchSpec(
+                $"Fan-out {index + 1}",
+                ToBranchTargetName(value),
+                $"Run when {jsonPath} contains '{value}'.",
+                WorkflowEdgeRouting.FanOutSelector(
+                    jsonPath,
+                    WorkflowRouteOperator.Contains,
+                    JsonSerializer.Serialize(value),
+                    WorkflowRouteValueKind.String,
+                    index,
+                    ToBranchTargetName(value))))
+            .ToList();
+    }
+
+    private static string ResolveDecisionInstructions(WorkflowDecisionBlockKind kind)
+        => kind switch
+        {
+            WorkflowDecisionBlockKind.IfElse => "Evaluate a deterministic predicate and route to the IF or ELSE branch.",
+            WorkflowDecisionBlockKind.Switch => "Evaluate a deterministic discriminator and route to a matching case or default branch.",
+            WorkflowDecisionBlockKind.FanOut => "Evaluate a deterministic selector and route to every selected downstream branch.",
+            _ => "Route the workflow payload to the correct downstream branch."
+        };
+
+    private static string ResolveDefaultDecisionJsonPath(WorkflowDecisionBlockKind kind)
+        => kind switch
+        {
+            WorkflowDecisionBlockKind.Switch => "$.category",
+            WorkflowDecisionBlockKind.FanOut => "$.targets",
+            _ => "$.status"
+        };
+
+    private static string NormalizeJsonPath(string value)
+        => string.IsNullOrWhiteSpace(value) ? "$.status" : value.Trim();
+
+    private static string GetInputValue(
+        CanvasWorkbenchCreateActionRequest? request,
+        string key,
+        string fallback)
+    {
+        if (request?.InputValues is null)
+        {
+            return fallback;
+        }
+
+        var value = request.InputValues.FirstOrDefault(input =>
+            string.Equals(input.Key, key, StringComparison.OrdinalIgnoreCase))?.Value;
+        return string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
+    }
+
+    private static List<string> SplitBranchValues(string value)
+    {
+        return value
+            .Split([',', ';', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static string ToBranchTargetName(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "Branch";
+        }
+
+        var normalized = value.Trim().Replace('-', ' ').Replace('_', ' ');
+        return string.Join(
+            " ",
+            normalized
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(word => word.Length == 1
+                    ? word.ToUpperInvariant()
+                    : char.ToUpperInvariant(word[0]) + word[1..].ToLowerInvariant()));
+    }
+
+    private sealed record DecisionBranchSpec(
+        string Label,
+        string TargetName,
+        string TargetInstructions,
+        WorkflowEdgeRouting Routing);
 
     private static string ResolveWorkflowToolboxNodeIcon(WorkflowNodeKind kind)
         => kind switch
@@ -1241,7 +1541,245 @@ public partial class WorkflowCanvasEditor
         {
             node.Instructions = request.Notes.Trim();
         }
+
+        if (Enum.TryParse<WorkflowValueShapeKind>(
+                GetInputValue(request, "inputShape", node.InputShapeKind.ToString()),
+                out var inputShape))
+        {
+            node.InputShapeKind = inputShape;
+        }
+
+        if (Enum.TryParse<WorkflowValueShapeKind>(
+                GetInputValue(request, "resultShape", node.ResultShapeKind.ToString()),
+                out var resultShape))
+        {
+            node.ResultShapeKind = resultShape;
+        }
+
+        if (node.Kind == WorkflowNodeKind.HumanInput &&
+            Enum.TryParse<WorkflowExternalRequestKind>(
+                GetInputValue(request, "externalRequestKind", node.ExternalRequestKind?.ToString() ?? WorkflowExternalRequestKind.HumanInput.ToString()),
+                out var requestKind))
+        {
+            node.ExternalRequestKind = requestKind;
+        }
+
+        if (node.Kind == WorkflowNodeKind.AgentStep &&
+            Guid.TryParse(GetInputValue(request, "agentId", string.Empty), out var agentId))
+        {
+            node.AgentId = agentId;
+        }
+
+        if (node.Kind == WorkflowNodeKind.Subworkflow &&
+            Guid.TryParse(GetInputValue(request, "subworkflowId", string.Empty), out var workflowId))
+        {
+            node.SubworkflowId = new WorkflowId(workflowId);
+        }
     }
+
+    private static void ApplyExecutorCreateRequest(
+        WorkflowCanvasNodeDraft node,
+        CanvasWorkbenchCreateActionRequest? request)
+    {
+        if (request is null || node.Kind != WorkflowNodeKind.Executor)
+        {
+            return;
+        }
+
+        var policy = node.ExecutionPolicy ?? WorkflowExecutorExecutionPolicy.Default;
+        if (int.TryParse(GetInputValue(request, "timeoutSeconds", string.Empty), out var timeoutSeconds))
+        {
+            policy = policy with
+            {
+                TimeoutSeconds = Math.Clamp(
+                    timeoutSeconds,
+                    WorkflowExecutorPolicyLimits.MinTimeoutSeconds,
+                    WorkflowExecutorPolicyLimits.MaxTimeoutSeconds)
+            };
+        }
+
+        if (int.TryParse(GetInputValue(request, "retryAttempts", string.Empty), out var retryAttempts))
+        {
+            policy = policy with
+            {
+                MaxRetryAttempts = Math.Clamp(
+                    retryAttempts,
+                    WorkflowExecutorPolicyLimits.MinRetryAttempts,
+                    WorkflowExecutorPolicyLimits.MaxRetryAttempts)
+            };
+        }
+
+        var captureOutput = GetInputValue(request, "captureOutput", string.Empty);
+        if (bool.TryParse(captureOutput, out var captureOutputArtifact))
+        {
+            policy = policy with
+            {
+                CaptureOutputArtifact = captureOutputArtifact
+            };
+        }
+
+        node.ExecutionPolicy = policy;
+        if (node.ExecutorId == WorkflowExecutorIds.StorageFile)
+        {
+            var settings = ReadExecutorCreateSettings<WorkflowStorageFileExecutorSettings>(node);
+            if (Enum.TryParse<WorkflowStorageFileOperation>(GetInputValue(request, "storageOperation", settings.Operation.ToString()), out var operation))
+            {
+                settings = settings with { Operation = operation };
+            }
+
+            settings = settings with
+            {
+                Path = GetInputValue(request, "storagePath", settings.Path),
+                DestinationPath = GetInputValue(request, "storageDestinationPath", settings.DestinationPath),
+                Content = GetInputValue(request, "storageContent", settings.Content),
+                ContentFromInput = ReadCreateBool(request, "storageContentFromInput", settings.ContentFromInput),
+                Query = GetInputValue(request, "storageQuery", settings.Query),
+                SearchPattern = GetInputValue(request, "storageSearchPattern", settings.SearchPattern),
+                MaxResults = ReadCreateInt(request, "storageMaxResults", settings.MaxResults),
+                MaxCharacters = ReadCreateInt(request, "storageMaxCharacters", settings.MaxCharacters),
+                Overwrite = ReadCreateBool(request, "storageOverwrite", settings.Overwrite)
+            };
+            node.ExecutorSettingsJson = JsonSerializer.Serialize(settings, ExecutorJsonOptions);
+            return;
+        }
+
+        if (node.ExecutorId == WorkflowExecutorIds.HttpFetch)
+        {
+            var settings = ReadExecutorCreateSettings<WorkflowHttpExecutorSettings>(node);
+            if (Enum.TryParse<WorkflowHttpMethodKind>(GetInputValue(request, "httpMethod", settings.Method.ToString()), out var method))
+            {
+                settings = settings with { Method = method };
+            }
+
+            var headers = settings.Headers;
+            var headersJson = GetInputValue(request, "httpHeadersJson", string.Empty);
+            if (!string.IsNullOrWhiteSpace(headersJson))
+            {
+                headers = JsonSerializer.Deserialize<IReadOnlyDictionary<string, string>>(headersJson, ExecutorJsonOptions)
+                          ?? new Dictionary<string, string>();
+            }
+
+            settings = settings with
+            {
+                Url = GetInputValue(request, "httpUrl", settings.Url),
+                UrlJsonPath = GetInputValue(request, "httpUrlJsonPath", settings.UrlJsonPath),
+                Headers = headers,
+                Body = GetInputValue(request, "httpBody", settings.Body),
+                MaxResponseBytes = ReadCreateInt(request, "httpMaxResponseBytes", settings.MaxResponseBytes),
+                IncludeInputPayload = ReadCreateBool(request, "httpIncludeInputPayload", settings.IncludeInputPayload)
+            };
+            node.ExecutorSettingsJson = JsonSerializer.Serialize(settings, ExecutorJsonOptions);
+            return;
+        }
+
+        if (node.ExecutorId == WorkflowExecutorIds.Spreadsheet)
+        {
+            var settings = ReadExecutorCreateSettings<WorkflowSpreadsheetExecutorSettings>(node);
+            if (Enum.TryParse<WorkflowSpreadsheetOperation>(GetInputValue(request, "spreadsheetOperation", settings.Operation.ToString()), out var operation))
+            {
+                settings = settings with { Operation = operation };
+            }
+
+            settings = settings with
+            {
+                WorkbookPath = GetInputValue(request, "spreadsheetWorkbookPath", settings.WorkbookPath),
+                OutputWorkbookPath = GetInputValue(request, "spreadsheetOutputWorkbookPath", settings.OutputWorkbookPath),
+                WorksheetName = GetInputValue(request, "spreadsheetWorksheetName", settings.WorksheetName),
+                CellAddress = GetInputValue(request, "spreadsheetCellAddress", settings.CellAddress),
+                RangeAddress = GetInputValue(request, "spreadsheetRangeAddress", settings.RangeAddress),
+                Value = GetInputValue(request, "spreadsheetValue", settings.Value),
+                CreateWorkbookIfMissing = ReadCreateBool(request, "spreadsheetCreateWorkbookIfMissing", settings.CreateWorkbookIfMissing),
+                Overwrite = ReadCreateBool(request, "spreadsheetOverwrite", settings.Overwrite),
+                MaxRows = ReadCreateInt(request, "spreadsheetMaxRows", settings.MaxRows),
+                MaxColumns = ReadCreateInt(request, "spreadsheetMaxColumns", settings.MaxColumns)
+            };
+            node.ExecutorSettingsJson = JsonSerializer.Serialize(settings, ExecutorJsonOptions);
+            return;
+        }
+
+        if (node.ExecutorId == WorkflowExecutorIds.ProjectStructure)
+        {
+            var settings = ReadExecutorCreateSettings<WorkflowProjectStructureExecutorSettings>(node);
+            if (Enum.TryParse<WorkflowProjectStructureOperation>(GetInputValue(request, "projectStructureOperation", settings.Operation.ToString()), out var operation))
+            {
+                settings = settings with { Operation = operation };
+            }
+
+            var projectId = settings.ProjectId;
+            var projectIdValue = GetInputValue(request, "projectStructureProjectId", projectId?.ToString("D") ?? string.Empty);
+            if (Guid.TryParse(projectIdValue, out var parsedProjectId) && parsedProjectId != Guid.Empty)
+            {
+                projectId = parsedProjectId;
+            }
+
+            settings = settings with
+            {
+                ProjectId = projectId,
+                ProjectIdJsonPath = GetInputValue(request, "projectStructureProjectIdJsonPath", settings.ProjectIdJsonPath),
+                NodeId = GetInputValue(request, "projectStructureNodeId", settings.NodeId),
+                NodeIdJsonPath = GetInputValue(request, "projectStructureNodeIdJsonPath", settings.NodeIdJsonPath),
+                AssetKind = GetInputValue(request, "projectStructureAssetKind", settings.AssetKind),
+                Title = GetInputValue(request, "projectStructureTitle", settings.Title),
+                Content = GetInputValue(request, "projectStructureContent", settings.Content),
+                ContentFromInput = ReadCreateBool(request, "projectStructureContentFromInput", settings.ContentFromInput),
+                SourceWorkspacePath = GetInputValue(request, "projectStructureSourceWorkspacePath", settings.SourceWorkspacePath),
+                ContentType = GetInputValue(request, "projectStructureContentType", settings.ContentType)
+            };
+            node.ExecutorSettingsJson = JsonSerializer.Serialize(settings, ExecutorJsonOptions);
+            return;
+        }
+
+        if (node.ExecutorId == WorkflowExecutorIds.ImageGeneration)
+        {
+            var settings = ReadExecutorCreateSettings<WorkflowImageGenerationExecutorSettings>(node);
+            if (Enum.TryParse<WorkflowImageGenerationOperation>(GetInputValue(request, "imageOperation", settings.Operation.ToString()), out var operation))
+            {
+                settings = settings with { Operation = operation };
+            }
+
+            var providerProfileId = settings.ProviderProfileId;
+            var providerIdValue = GetInputValue(request, "imageProviderProfileId", providerProfileId?.ToString("D") ?? string.Empty);
+            if (Guid.TryParse(providerIdValue, out var parsedProviderId) && parsedProviderId != Guid.Empty)
+            {
+                providerProfileId = parsedProviderId;
+            }
+
+            settings = settings with
+            {
+                Prompt = GetInputValue(request, "imagePrompt", settings.Prompt),
+                ProviderProfileId = providerProfileId,
+                Model = GetInputValue(request, "imageModel", settings.Model),
+                Size = GetInputValue(request, "imageSize", settings.Size),
+                Quality = GetInputValue(request, "imageQuality", settings.Quality),
+                OutputFormat = GetInputValue(request, "imageOutputFormat", settings.OutputFormat),
+                OutputWorkspacePath = GetInputValue(request, "imageOutputWorkspacePath", settings.OutputWorkspacePath)
+            };
+            node.ExecutorSettingsJson = JsonSerializer.Serialize(settings, ExecutorJsonOptions);
+        }
+    }
+
+    private static TSettings ReadExecutorCreateSettings<TSettings>(WorkflowCanvasNodeDraft node)
+        where TSettings : new()
+    {
+        if (string.IsNullOrWhiteSpace(node.ExecutorSettingsJson))
+        {
+            return new TSettings();
+        }
+
+        return JsonSerializer.Deserialize<TSettings>(node.ExecutorSettingsJson, ExecutorJsonOptions) ?? new TSettings();
+    }
+
+    private static int ReadCreateInt(
+        CanvasWorkbenchCreateActionRequest request,
+        string key,
+        int fallback)
+        => int.TryParse(GetInputValue(request, key, string.Empty), out var value) ? value : fallback;
+
+    private static bool ReadCreateBool(
+        CanvasWorkbenchCreateActionRequest request,
+        string key,
+        bool fallback)
+        => bool.TryParse(GetInputValue(request, key, string.Empty), out var value) ? value : fallback;
 
     private LlmCallComponent? ResolveRequestedComponent(CanvasWorkbenchCreateActionRequest request)
     {
