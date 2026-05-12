@@ -1,0 +1,1021 @@
+workflows:
+  - key: document-summary-review-router
+    name: Document Summary Review Router
+    description: Summarizes an input document, gates finance/security review with IF/ELSE, and captures either an auto-summary or review request.
+    routingInstructions: Return needsReview true when the document mentions missing approval, compliance risk, security risk, or legal risk. Preserve projectId when present.
+    graph:
+      startNodeId: start
+      nodes:
+        - { id: start, kind: Start, name: Start, x: 80, y: 220 }
+        - { id: summarize, kind: LlmCall, name: Summarize document, x: 340, y: 220 }
+        - { id: review-gate, kind: Triage, name: IF, x: 600, y: 220 }
+        - { id: auto-summary, kind: StrictLogic, name: Store auto summary, x: 900, y: 120 }
+        - { id: request-review, kind: HumanInput, name: Request finance/security review, externalRequestKind: Approval, x: 900, y: 330 }
+        - { id: end, kind: End, name: End, x: 1180, y: 220 }
+      edges:
+        - { source: start, target: summarize }
+        - { source: summarize, target: review-gate }
+        - source: review-gate
+          target: request-review
+          kind: Conditional
+          routing: { kind: Predicate, jsonPath: "$.needsReview", operator: Equals, expectedValue: "true", expectedValueKind: Boolean, label: IF }
+        - source: review-gate
+          target: auto-summary
+          kind: Conditional
+          routing: { kind: Predicate, jsonPath: "$.needsReview", operator: Equals, expectedValue: "false", expectedValueKind: Boolean, label: ELSE }
+        - { source: auto-summary, target: end }
+        - { source: request-review, target: end }
+
+  - key: email-task-creation-router
+    name: Email Task Creation Router
+    description: Classifies email as tasks, ASAP response, informative, or default with SWITCH/default and creates WorkItem/task nodes for actionable email requests.
+    routingInstructions: |-
+      Classify route as `tasks`, `asap_response`, `informative`, or `no_action`.
+      Use `tasks` when the sender asks me or my team to do concrete work.
+      Use `asap_response` when a reply is explicitly urgent, same-day, blocked, escalated, or phrased as ASAP/immediate.
+      Use `informative` when the email only gives FYI/context/status and no work is assigned to me.
+      Use `no_action` when the message is delegated to someone else, spam-like, or not relevant; this goes through the SWITCH default branch.
+      For `tasks` and `asap_response`, return a non-empty tasks array. Each task requires title, summary, owner, dueUtc when present, urgency, requiresResponse, asap, sourceEmailId, and evidence.
+      Create tasks only for actions assigned to me or required from the current project team; do not create tasks for FYI text or work assigned solely to another person.
+      Preserve projectId and nodeId so the project-structure executor creates WorkItem/task nodes under the workflow node.
+    graph:
+      startNodeId: start
+      nodes:
+        - { id: start, kind: Start, name: Start, x: 80, y: 220 }
+        - id: ingest-email-sources
+          kind: Executor
+          name: Load email sources
+          x: 320
+          y: 220
+          executor:
+            id: source.ingest
+            settings:
+              includeAdditionalSources: true
+              includeParentNodePath: true
+              includeSelectedNodePaths: true
+              includeParentSubtreePaths: true
+              recursiveFolders: true
+              allowAbsoluteInputPaths: true
+              maxFiles: 16
+              maxCharactersPerFile: 14000
+              maxTotalCharacters: 90000
+          instructions: Load explicit project-structure file and folder sources into bounded text before the LLM summarizes them.
+        - { id: classify-email, kind: LlmCall, name: Classify email, x: 620, y: 220 }
+        - { id: email-switch, kind: Triage, name: SWITCH, x: 900, y: 220 }
+        - id: create-email-task-nodes
+          kind: Executor
+          name: Create task nodes
+          x: 1210
+          y: 20
+          executor:
+            id: project-structure
+            settings:
+              operation: CreateTaskNodes
+              projectIdJsonPath: "$.projectId"
+              nodeIdJsonPath: "$.nodeId"
+              taskItemsJsonPath: "$.tasks"
+              taskObjectSubtype: task
+              maxTaskNodes: 12
+          instructions: Create WorkItem/task nodes under the workflow node from the LLM tasks array.
+        - id: create-asap-response-task
+          kind: Executor
+          name: Create ASAP response task
+          x: 1210
+          y: 170
+          executor:
+            id: project-structure
+            settings:
+              operation: CreateTaskNodes
+              projectIdJsonPath: "$.projectId"
+              nodeIdJsonPath: "$.nodeId"
+              taskItemsJsonPath: "$.tasks"
+              taskObjectSubtype: task
+              maxTaskNodes: 12
+          instructions: Create WorkItem/task nodes under the workflow node from the LLM tasks array.
+        - id: store-informative-summary
+          kind: Executor
+          name: Store informative summary
+          x: 1210
+          y: 320
+          executor:
+            id: project-structure
+            settings:
+              operation: CreateAsset
+              projectIdJsonPath: "$.projectId"
+              nodeIdJsonPath: "$.nodeId"
+              title: Informative email summary
+              assetKind: md
+              contentFromInput: true
+              contentType: text/markdown
+          instructions: Create a markdown asset in the selected project structure.
+        - id: store-default-summary
+          kind: Executor
+          name: Store no-action summary
+          x: 1210
+          y: 470
+          executor:
+            id: project-structure
+            settings:
+              operation: CreateAsset
+              projectIdJsonPath: "$.projectId"
+              nodeIdJsonPath: "$.nodeId"
+              title: No-action email summary
+              assetKind: md
+              contentFromInput: true
+              contentType: text/markdown
+          instructions: Create a markdown asset in the selected project structure.
+        - { id: end, kind: End, name: End, x: 1530, y: 245 }
+      edges:
+        - { source: start, target: ingest-email-sources }
+        - { source: ingest-email-sources, target: classify-email }
+        - { source: classify-email, target: email-switch }
+        - source: email-switch
+          target: create-email-task-nodes
+          kind: Conditional
+          routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: tasks, expectedValueKind: String, label: Tasks }
+        - source: email-switch
+          target: create-asap-response-task
+          kind: Conditional
+          routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: asap_response, expectedValueKind: String, label: ASAP response }
+        - source: email-switch
+          target: store-informative-summary
+          kind: Conditional
+          routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: informative, expectedValueKind: String, label: Informative }
+        - source: email-switch
+          target: store-default-summary
+          kind: Conditional
+          routing: { kind: SwitchDefault, label: DEFAULT }
+        - { source: create-email-task-nodes, target: end }
+        - { source: create-asap-response-task, target: end }
+        - { source: store-informative-summary, target: end }
+        - { source: store-default-summary, target: end }
+
+  - key: email-reply-draft-gate
+    name: Email Reply Draft Gate
+    description: Drafts a customer response only when the email requires a response; otherwise archives a compact summary.
+    routingInstructions: Set requiresResponse true when sender expects an answer or asks a question. Include responseDraft only when true.
+    graph:
+      startNodeId: start
+      nodes:
+        - { id: start, kind: Start, name: Start, x: 80, y: 220 }
+        - { id: analyze-email, kind: LlmCall, name: Analyze email response need, x: 340, y: 220 }
+        - { id: response-gate, kind: Triage, name: IF, x: 620, y: 220 }
+        - id: store-reply
+          kind: Executor
+          name: Store reply draft
+          x: 900
+          y: 120
+          executor:
+            id: storage.file
+            settings:
+              operation: WriteText
+              path: samples/workflows/reply-draft.md
+              contentFromInput: true
+              overwrite: true
+          instructions: Write the workflow JSON payload to a workspace file.
+        - id: archive-summary
+          kind: Executor
+          name: Archive email summary
+          x: 900
+          y: 330
+          executor:
+            id: storage.file
+            settings:
+              operation: WriteText
+              path: samples/workflows/email-archive.md
+              contentFromInput: true
+              overwrite: true
+          instructions: Write the workflow JSON payload to a workspace file.
+        - { id: end, kind: End, name: End, x: 1180, y: 220 }
+      edges:
+        - { source: start, target: analyze-email }
+        - { source: analyze-email, target: response-gate }
+        - source: response-gate
+          target: store-reply
+          kind: Conditional
+          routing: { kind: Predicate, jsonPath: "$.requiresResponse", operator: Equals, expectedValue: "true", expectedValueKind: Boolean, label: IF }
+        - source: response-gate
+          target: archive-summary
+          kind: Conditional
+          routing: { kind: Predicate, jsonPath: "$.requiresResponse", operator: Equals, expectedValue: "false", expectedValueKind: Boolean, label: ELSE }
+        - { source: store-reply, target: end }
+        - { source: archive-summary, target: end }
+
+  - key: invoice-workbook-risk-switch
+    name: Invoice Workbook Risk Switch
+    description: Reads invoice rows from XLSX, classifies risk, and writes a branch-specific decision back to an output workbook.
+    routingInstructions: Classify risk as high, medium, low, or default from invoice amount, status, and due date. Return risk and summary.
+    graph:
+      startNodeId: start
+      nodes:
+        - { id: start, kind: Start, name: Start, x: 80, y: 220 }
+        - id: read-invoices
+          kind: Executor
+          name: Read invoice rows
+          x: 300
+          y: 220
+          executor:
+            id: spreadsheet
+            settings:
+              operation: RangeToMarkdown
+              workbookPath: samples/workflows/invoices.xlsx
+              worksheetName: Invoices
+              rangeAddress: A1:F6
+              maxRows: 50
+              maxColumns: 12
+          instructions: Read a bounded XLSX range for downstream LLM classification.
+        - { id: classify-invoices, kind: LlmCall, name: Classify invoice risk, x: 560, y: 220 }
+        - { id: risk-switch, kind: Triage, name: SWITCH, x: 820, y: 220 }
+        - id: write-high-risk
+          kind: Executor
+          name: Write high risk decision
+          x: 1120
+          y: 20
+          executor:
+            id: spreadsheet
+            settings:
+              operation: WriteCell
+              workbookPath: samples/workflows/invoices.xlsx
+              outputWorkbookPath: samples/workflows/invoices-reviewed.xlsx
+              worksheetName: Invoices
+              cellAddress: G2
+              value: High risk - finance review
+              createWorkbookIfMissing: false
+              overwrite: true
+          instructions: Write a branch decision to an output XLSX workbook.
+        - id: write-medium-risk
+          kind: Executor
+          name: Write medium risk decision
+          x: 1120
+          y: 160
+          executor:
+            id: spreadsheet
+            settings:
+              operation: WriteCell
+              workbookPath: samples/workflows/invoices.xlsx
+              outputWorkbookPath: samples/workflows/invoices-reviewed.xlsx
+              worksheetName: Invoices
+              cellAddress: G2
+              value: Medium risk - owner review
+              createWorkbookIfMissing: false
+              overwrite: true
+          instructions: Write a branch decision to an output XLSX workbook.
+        - id: write-low-risk
+          kind: Executor
+          name: Write low risk decision
+          x: 1120
+          y: 300
+          executor:
+            id: spreadsheet
+            settings:
+              operation: WriteCell
+              workbookPath: samples/workflows/invoices.xlsx
+              outputWorkbookPath: samples/workflows/invoices-reviewed.xlsx
+              worksheetName: Invoices
+              cellAddress: G2
+              value: Low risk - auto approve
+              createWorkbookIfMissing: false
+              overwrite: true
+          instructions: Write a branch decision to an output XLSX workbook.
+        - id: write-default-risk
+          kind: Executor
+          name: Write default decision
+          x: 1120
+          y: 440
+          executor:
+            id: spreadsheet
+            settings:
+              operation: WriteCell
+              workbookPath: samples/workflows/invoices.xlsx
+              outputWorkbookPath: samples/workflows/invoices-reviewed.xlsx
+              worksheetName: Invoices
+              cellAddress: G2
+              value: Unhandled - manual review
+              createWorkbookIfMissing: false
+              overwrite: true
+          instructions: Write a branch decision to an output XLSX workbook.
+        - { id: end, kind: End, name: End, x: 1440, y: 220 }
+      edges:
+        - { source: start, target: read-invoices }
+        - { source: read-invoices, target: classify-invoices }
+        - { source: classify-invoices, target: risk-switch }
+        - source: risk-switch
+          target: write-high-risk
+          kind: Conditional
+          routing: { kind: SwitchCase, jsonPath: "$.risk", expectedValue: high, expectedValueKind: String, label: High }
+        - source: risk-switch
+          target: write-medium-risk
+          kind: Conditional
+          routing: { kind: SwitchCase, jsonPath: "$.risk", expectedValue: medium, expectedValueKind: String, label: Medium }
+        - source: risk-switch
+          target: write-low-risk
+          kind: Conditional
+          routing: { kind: SwitchCase, jsonPath: "$.risk", expectedValue: low, expectedValueKind: String, label: Low }
+        - source: risk-switch
+          target: write-default-risk
+          kind: Conditional
+          routing: { kind: SwitchDefault, label: DEFAULT }
+        - { source: write-high-risk, target: end }
+        - { source: write-medium-risk, target: end }
+        - { source: write-low-risk, target: end }
+        - { source: write-default-risk, target: end }
+
+  - key: pipeline-workbook-fan-out
+    name: Pipeline Workbook Fan-out
+    description: Reads sales pipeline XLSX and fans out to sales, marketing, and executive update branches based on selected targets.
+    routingInstructions: Return targets containing sales, marketing, and/or executive based on segment, score, and next step.
+    graph:
+      startNodeId: start
+      nodes:
+        - { id: start, kind: Start, name: Start, x: 80, y: 220 }
+        - id: read-pipeline
+          kind: Executor
+          name: Read pipeline workbook
+          x: 300
+          y: 220
+          executor:
+            id: spreadsheet
+            settings:
+              operation: RangeToMarkdown
+              workbookPath: samples/workflows/pipeline.xlsx
+              worksheetName: Pipeline
+              rangeAddress: A1:E6
+              maxRows: 50
+              maxColumns: 12
+          instructions: Read a bounded XLSX range for downstream LLM classification.
+        - { id: plan-updates, kind: LlmCall, name: Plan branch updates, x: 560, y: 220 }
+        - { id: fanout, kind: Triage, name: FAN-OUT, x: 820, y: 220 }
+        - id: sales-update
+          kind: Executor
+          name: Sales update
+          x: 1120
+          y: 40
+          executor:
+            id: spreadsheet
+            settings:
+              operation: WriteCell
+              workbookPath: samples/workflows/invoices.xlsx
+              outputWorkbookPath: samples/workflows/invoices-reviewed.xlsx
+              worksheetName: Invoices
+              cellAddress: G2
+              value: Sales follow-up needed
+              createWorkbookIfMissing: false
+              overwrite: true
+          instructions: Write a branch decision to an output XLSX workbook.
+        - id: marketing-update
+          kind: Executor
+          name: Marketing update
+          x: 1120
+          y: 220
+          executor:
+            id: spreadsheet
+            settings:
+              operation: WriteCell
+              workbookPath: samples/workflows/invoices.xlsx
+              outputWorkbookPath: samples/workflows/invoices-reviewed.xlsx
+              worksheetName: Invoices
+              cellAddress: G2
+              value: Marketing nurture needed
+              createWorkbookIfMissing: false
+              overwrite: true
+          instructions: Write a branch decision to an output XLSX workbook.
+        - id: executive-update
+          kind: Executor
+          name: Executive update
+          x: 1120
+          y: 400
+          executor:
+            id: spreadsheet
+            settings:
+              operation: WriteCell
+              workbookPath: samples/workflows/invoices.xlsx
+              outputWorkbookPath: samples/workflows/invoices-reviewed.xlsx
+              worksheetName: Invoices
+              cellAddress: G2
+              value: Executive visibility needed
+              createWorkbookIfMissing: false
+              overwrite: true
+          instructions: Write a branch decision to an output XLSX workbook.
+        - { id: end, kind: End, name: End, x: 1430, y: 220 }
+      edges:
+        - { source: start, target: read-pipeline }
+        - { source: read-pipeline, target: plan-updates }
+        - { source: plan-updates, target: fanout }
+        - source: fanout
+          target: sales-update
+          kind: FanOut
+          routing: { kind: FanOutSelector, jsonPath: "$.targets", operator: Contains, expectedValue: sales, expectedValueKind: String, fanOutTargetIndex: 0, label: Sales }
+        - source: fanout
+          target: marketing-update
+          kind: FanOut
+          routing: { kind: FanOutSelector, jsonPath: "$.targets", operator: Contains, expectedValue: marketing, expectedValueKind: String, fanOutTargetIndex: 1, label: Marketing }
+        - source: fanout
+          target: executive-update
+          kind: FanOut
+          routing: { kind: FanOutSelector, jsonPath: "$.targets", operator: Contains, expectedValue: executive, expectedValueKind: String, fanOutTargetIndex: 2, label: Executive }
+        - { source: sales-update, target: end }
+        - { source: marketing-update, target: end }
+        - { source: executive-update, target: end }
+
+  - key: mouser-order-reconciliation
+    name: Mouser Order Reconciliation
+    description: Compares the supplied Mouser order workbook and receipt PDF from a project-structure workflow node and stores the reconciliation summary under that workflow node.
+    routingInstructions: |-
+      Compare the loaded `Cart_Mar30_1059AM.xls` workbook rows with `MOUSER_Receipt_89566550.pdf`.
+      Extract ordered quantity, shipped quantity, pending quantity, unit price, extended price, invoice number, order date, tracking numbers, and merchandise/freight/tax totals when present.
+      Set route to `matched` only when the workbook and receipt agree on line items and totals; otherwise set `mismatch`.
+      The markdown must contain a reconciliation table with Mouser part number, customer/manufacturer part number when visible, quantity, unit price, extended price, and source file evidence.
+      Include any unreadable or missing source as a gap; do not mark matched if a required file was not loaded.
+    graph:
+      startNodeId: start
+      nodes:
+        - { id: start, kind: Start, name: Start, x: 80, y: 220 }
+        - id: ingest-sources
+          kind: Executor
+          name: Load project-structure sources
+          x: 330
+          y: 220
+          executor:
+            id: source.ingest
+            settings:
+              includeAdditionalSources: true
+              includeParentNodePath: true
+              includeSelectedNodePaths: true
+              includeParentSubtreePaths: true
+              recursiveFolders: true
+              allowAbsoluteInputPaths: true
+              maxFiles: 16
+              maxCharactersPerFile: 14000
+              maxTotalCharacters: 90000
+          instructions: Load explicit project-structure file and folder sources into bounded text before the LLM summarizes them.
+        - { id: reconcile-mouser-order, kind: LlmCall, name: Reconcile Mouser order, x: 640, y: 220 }
+        - id: store-project-structure-summary
+          kind: Executor
+          name: Store workflow summary
+          x: 950
+          y: 220
+          executor:
+            id: project-structure
+            settings:
+              operation: CreateAsset
+              projectIdJsonPath: "$.projectId"
+              nodeIdJsonPath: "$.nodeId"
+              title: Mouser order reconciliation summary
+              assetKind: md
+              contentFromInput: true
+              contentType: text/markdown
+          instructions: Create a markdown asset in the selected project structure.
+        - { id: end, kind: End, name: End, x: 1260, y: 220 }
+      edges:
+        - { source: start, target: ingest-sources }
+        - { source: ingest-sources, target: reconcile-mouser-order }
+        - { source: reconcile-mouser-order, target: store-project-structure-summary }
+        - { source: store-project-structure-summary, target: end }
+
+  - key: mouser-purchasing-summary
+    name: Mouser Purchasing Summary
+    description: Turns a Mouser order folder into a purchasing brief with line-item highlights, open questions, and a result asset under the workflow node.
+    routingInstructions: |-
+      Build a purchasing brief from all loaded Mouser order sources.
+      Identify invoice/order number, order date, ship date, tracking numbers, destination, line-item highlights, large-cost items, total spend signals, and follow-up questions.
+      Mention both the workbook and receipt source paths when loaded.
+      Set risk to `low` when evidence is complete and internally consistent, `medium` when some values are missing, and `high` when documents conflict or no order document was readable.
+    graph:
+      startNodeId: start
+      nodes:
+        - { id: start, kind: Start, name: Start, x: 80, y: 220 }
+        - id: ingest-sources
+          kind: Executor
+          name: Load project-structure sources
+          x: 330
+          y: 220
+          executor:
+            id: source.ingest
+            settings:
+              includeAdditionalSources: true
+              includeParentNodePath: true
+              includeSelectedNodePaths: true
+              includeParentSubtreePaths: true
+              recursiveFolders: true
+              allowAbsoluteInputPaths: true
+              maxFiles: 16
+              maxCharactersPerFile: 14000
+              maxTotalCharacters: 90000
+          instructions: Load explicit project-structure file and folder sources into bounded text before the LLM summarizes them.
+        - { id: summarize-mouser-purchase, kind: LlmCall, name: Summarize Mouser purchase, x: 640, y: 220 }
+        - id: store-project-structure-summary
+          kind: Executor
+          name: Store workflow summary
+          x: 950
+          y: 220
+          executor:
+            id: project-structure
+            settings:
+              operation: CreateAsset
+              projectIdJsonPath: "$.projectId"
+              nodeIdJsonPath: "$.nodeId"
+              title: Mouser purchasing summary
+              assetKind: md
+              contentFromInput: true
+              contentType: text/markdown
+          instructions: Create a markdown asset in the selected project structure.
+        - { id: end, kind: End, name: End, x: 1260, y: 220 }
+      edges:
+        - { source: start, target: ingest-sources }
+        - { source: ingest-sources, target: summarize-mouser-purchase }
+        - { source: summarize-mouser-purchase, target: store-project-structure-summary }
+        - { source: store-project-structure-summary, target: end }
+
+  - key: seamark-xray-device-folder-summary
+    name: SEAMARK Xray Device Folder Summary
+    description: Summarizes a folder of SEAMARK x-ray device PDFs and stores device/use-case findings under the workflow node.
+    routingInstructions: |-
+      Treat the loaded SEAMARK folder as the primary source. Read every loaded PDF text and produce a real device summary, not a placeholder.
+      Identify device/model families including X-5600, X-6600, X-6600A, product-series context, inspection use cases, tube voltage/current or focal-size evidence, stage size, detector/resolution evidence, operating system, power, weight/dimensions, and source file names.
+      Include quotation evidence when loaded: ZM-x5600 at $35,000, ZM-x6600 at $41,500.00, ZM-x6600A at $66,000, plus the listed marketing price ranges.
+      Critical price mapping: X-5600 is ZM-x5600 and costs $35,000; X-6600 is ZM-x6600 and costs $41,500.00; X-6600A is ZM-x6600A and costs $66,000. Never swap X-6600 and X-6600A prices.
+      If the catalogue PDF has no extractable text, record it as a scanned/unreadable gap while still using the extractable specification and quotation PDFs.
+      Set risk to `medium` when some sources are scanned or pricing needs current validation; set route to `summary`.
+    graph:
+      startNodeId: start
+      nodes:
+        - { id: start, kind: Start, name: Start, x: 80, y: 220 }
+        - id: ingest-sources
+          kind: Executor
+          name: Load project-structure sources
+          x: 330
+          y: 220
+          executor:
+            id: source.ingest
+            settings:
+              includeAdditionalSources: true
+              includeParentNodePath: true
+              includeSelectedNodePaths: true
+              includeParentSubtreePaths: true
+              recursiveFolders: true
+              allowAbsoluteInputPaths: true
+              maxFiles: 16
+              maxCharactersPerFile: 14000
+              maxTotalCharacters: 90000
+          instructions: Load explicit project-structure file and folder sources into bounded text before the LLM summarizes them.
+        - { id: summarize-seamark-folder, kind: LlmCall, name: Summarize SEAMARK folder, x: 640, y: 220 }
+        - id: store-project-structure-summary
+          kind: Executor
+          name: Store workflow summary
+          x: 950
+          y: 220
+          executor:
+            id: project-structure
+            settings:
+              operation: CreateAsset
+              projectIdJsonPath: "$.projectId"
+              nodeIdJsonPath: "$.nodeId"
+              title: SEAMARK xray device summary
+              assetKind: md
+              contentFromInput: true
+              contentType: text/markdown
+          instructions: Create a markdown asset in the selected project structure.
+        - { id: end, kind: End, name: End, x: 1260, y: 220 }
+      edges:
+        - { source: start, target: ingest-sources }
+        - { source: ingest-sources, target: summarize-seamark-folder }
+        - { source: summarize-seamark-folder, target: store-project-structure-summary }
+        - { source: store-project-structure-summary, target: end }
+
+  - key: seamark-price-list-extraction
+    name: SEAMARK Price List Extraction
+    description: Extracts price-list highlights and uncertainty from the SEAMARK quote and device specification PDFs.
+    routingInstructions: |-
+      Focus on `X Ray Machine Agent Quotation List2018.pdf` and related specification PDFs.
+      Extract price evidence into a table with model, EWX Shenzhen USD price, marketing price range, quantity, and specification evidence from the device PDFs.
+      Required price facts when present: ZM-x5600 $35,000 and USD39900-42000, ZM-x6600 $41,500.00 and USD46000-49000, ZM-x6600A $66,000 and USD73000-78000.
+      Critical price mapping: X-5600 is ZM-x5600 and costs $35,000; X-6600 is ZM-x6600 and costs $41,500.00; X-6600A is ZM-x6600A and costs $66,000. Never swap X-6600 and X-6600A prices.
+      Include quotation date, delivery/payment/service terms, warranty/travel-cost caveat, and validity period.
+      Set needsReview true because the quotation is from 2018 and current prices must be confirmed.
+    graph:
+      startNodeId: start
+      nodes:
+        - { id: start, kind: Start, name: Start, x: 80, y: 220 }
+        - id: ingest-sources
+          kind: Executor
+          name: Load project-structure sources
+          x: 330
+          y: 220
+          executor:
+            id: source.ingest
+            settings:
+              includeAdditionalSources: true
+              includeParentNodePath: true
+              includeSelectedNodePaths: true
+              includeParentSubtreePaths: true
+              recursiveFolders: true
+              allowAbsoluteInputPaths: true
+              maxFiles: 16
+              maxCharactersPerFile: 14000
+              maxTotalCharacters: 90000
+          instructions: Load explicit project-structure file and folder sources into bounded text before the LLM summarizes them.
+        - { id: extract-seamark-pricing, kind: LlmCall, name: Extract SEAMARK pricing, x: 640, y: 220 }
+        - id: store-project-structure-summary
+          kind: Executor
+          name: Store workflow summary
+          x: 950
+          y: 220
+          executor:
+            id: project-structure
+            settings:
+              operation: CreateAsset
+              projectIdJsonPath: "$.projectId"
+              nodeIdJsonPath: "$.nodeId"
+              title: SEAMARK price list summary
+              assetKind: md
+              contentFromInput: true
+              contentType: text/markdown
+          instructions: Create a markdown asset in the selected project structure.
+        - { id: end, kind: End, name: End, x: 1260, y: 220 }
+      edges:
+        - { source: start, target: ingest-sources }
+        - { source: ingest-sources, target: extract-seamark-pricing }
+        - { source: extract-seamark-pricing, target: store-project-structure-summary }
+        - { source: store-project-structure-summary, target: end }
+
+  - key: iotfactory-financial-plan-review
+    name: IoTFactory Financial Plan Review
+    description: Reviews the supplied IoTFactory financial workbook and stores budget risks, assumptions, and follow-up actions under the workflow node.
+    routingInstructions: |-
+      Use the loaded `IoTFactory rozpočet-v1.xlsx` workbook as the financial-plan source.
+      Summarize revenue assumptions, module/server unit assumptions, year-by-year budget shape, expense categories, cash/funding risks, and validation questions.
+      Include Czech sheet names or labels such as `Summary Rozpočet`, `Příjmy z modulů`, `Výdaje`, and yearly tabs when loaded.
+      Set risk to high when revenue depends on unvalidated unit-volume growth or missing cost evidence; otherwise medium.
+    graph:
+      startNodeId: start
+      nodes:
+        - { id: start, kind: Start, name: Start, x: 80, y: 220 }
+        - id: ingest-sources
+          kind: Executor
+          name: Load project-structure sources
+          x: 330
+          y: 220
+          executor:
+            id: source.ingest
+            settings:
+              includeAdditionalSources: true
+              includeParentNodePath: true
+              includeSelectedNodePaths: true
+              includeParentSubtreePaths: true
+              recursiveFolders: true
+              allowAbsoluteInputPaths: true
+              maxFiles: 16
+              maxCharactersPerFile: 14000
+              maxTotalCharacters: 90000
+          instructions: Load explicit project-structure file and folder sources into bounded text before the LLM summarizes them.
+        - { id: review-iotfactory-plan, kind: LlmCall, name: Review IoTFactory financial plan, x: 640, y: 220 }
+        - id: store-project-structure-summary
+          kind: Executor
+          name: Store workflow summary
+          x: 950
+          y: 220
+          executor:
+            id: project-structure
+            settings:
+              operation: CreateAsset
+              projectIdJsonPath: "$.projectId"
+              nodeIdJsonPath: "$.nodeId"
+              title: IoTFactory financial plan review
+              assetKind: md
+              contentFromInput: true
+              contentType: text/markdown
+          instructions: Create a markdown asset in the selected project structure.
+        - { id: end, kind: End, name: End, x: 1260, y: 220 }
+      edges:
+        - { source: start, target: ingest-sources }
+        - { source: ingest-sources, target: review-iotfactory-plan }
+        - { source: review-iotfactory-plan, target: store-project-structure-summary }
+        - { source: store-project-structure-summary, target: end }
+
+  - key: internet-research-capture
+    name: Internet Research Capture
+    description: Fetches bounded web content, summarizes it, and stores relevant research in project structure when projectId is supplied.
+    routingInstructions: From fetched content and carried inputPayload, return relevant, summary, projectId, and sourceUrl. Keep projectId empty when absent.
+    graph:
+      startNodeId: start
+      nodes:
+        - { id: start, kind: Start, name: Start, x: 80, y: 220 }
+        - id: fetch-source
+          kind: Executor
+          name: Fetch source
+          x: 300
+          y: 220
+          executor:
+            id: http.fetch
+            settings:
+              method: Get
+              urlJsonPath: "$.url"
+              maxResponseBytes: 262144
+              includeInputPayload: true
+          instructions: Fetch bounded HTTP content from the URL in the workflow input.
+        - { id: summarize-source, kind: LlmCall, name: Summarize source, x: 580, y: 220 }
+        - { id: relevance-gate, kind: Triage, name: IF, x: 860, y: 220 }
+        - id: store-research
+          kind: Executor
+          name: Store research asset
+          x: 1160
+          y: 120
+          executor:
+            id: project-structure
+            settings:
+              operation: CreateAsset
+              projectIdJsonPath: "$.projectId"
+              nodeIdJsonPath: "$.nodeId"
+              title: Internet research brief
+              assetKind: md
+              contentFromInput: true
+              contentType: text/markdown
+          instructions: Create a markdown asset in the selected project structure.
+        - id: store-not-relevant
+          kind: Executor
+          name: Store not relevant note
+          x: 1160
+          y: 330
+          executor:
+            id: storage.file
+            settings:
+              operation: WriteText
+              path: samples/workflows/research-not-relevant.md
+              contentFromInput: true
+              overwrite: true
+          instructions: Write the workflow JSON payload to a workspace file.
+        - { id: end, kind: End, name: End, x: 1460, y: 220 }
+      edges:
+        - { source: start, target: fetch-source }
+        - { source: fetch-source, target: summarize-source }
+        - { source: summarize-source, target: relevance-gate }
+        - source: relevance-gate
+          target: store-research
+          kind: Conditional
+          routing: { kind: Predicate, jsonPath: "$.relevant", operator: Equals, expectedValue: "true", expectedValueKind: Boolean, label: IF }
+        - source: relevance-gate
+          target: store-not-relevant
+          kind: Conditional
+          routing: { kind: Predicate, jsonPath: "$.relevant", operator: Equals, expectedValue: "false", expectedValueKind: Boolean, label: ELSE }
+        - { source: store-research, target: end }
+        - { source: store-not-relevant, target: end }
+
+  - key: support-sla-escalation
+    name: Support SLA Escalation
+    description: Routes support tickets by SLA breach and severity, with IF and SWITCH branches for urgent operational handling.
+    routingInstructions: Set breachedSla true for overdue or sev-1/sev-2 tickets. Classify route as incident, billing, product, or default.
+    graph:
+      startNodeId: start
+      nodes:
+        - { id: start, kind: Start, name: Start, x: 80, y: 220 }
+        - { id: triage-ticket, kind: LlmCall, name: Triage support ticket, x: 330, y: 220 }
+        - { id: sla-gate, kind: Triage, name: IF, x: 600, y: 220 }
+        - { id: escalate-sla, kind: HumanInput, name: Escalate SLA breach, externalRequestKind: Approval, x: 880, y: 100 }
+        - { id: ticket-switch, kind: Triage, name: SWITCH, x: 900, y: 330 }
+        - { id: billing-ticket, kind: StrictLogic, name: Billing path, x: 1200, y: 180 }
+        - { id: product-ticket, kind: StrictLogic, name: Product path, x: 1200, y: 330 }
+        - { id: default-ticket, kind: StrictLogic, name: Default support path, x: 1200, y: 480 }
+        - { id: end, kind: End, name: End, x: 1500, y: 260 }
+      edges:
+        - { source: start, target: triage-ticket }
+        - { source: triage-ticket, target: sla-gate }
+        - source: sla-gate
+          target: escalate-sla
+          kind: Conditional
+          routing: { kind: Predicate, jsonPath: "$.breachedSla", operator: Equals, expectedValue: "true", expectedValueKind: Boolean, label: IF }
+        - source: sla-gate
+          target: ticket-switch
+          kind: Conditional
+          routing: { kind: Predicate, jsonPath: "$.breachedSla", operator: Equals, expectedValue: "false", expectedValueKind: Boolean, label: ELSE }
+        - source: ticket-switch
+          target: billing-ticket
+          kind: Conditional
+          routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: billing, expectedValueKind: String, label: Billing }
+        - source: ticket-switch
+          target: product-ticket
+          kind: Conditional
+          routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: product, expectedValueKind: String, label: Product }
+        - source: ticket-switch
+          target: default-ticket
+          kind: Conditional
+          routing: { kind: SwitchDefault, label: DEFAULT }
+        - { source: escalate-sla, target: end }
+        - { source: billing-ticket, target: end }
+        - { source: product-ticket, target: end }
+        - { source: default-ticket, target: end }
+
+  - key: sales-lead-qualification
+    name: Sales Lead Qualification
+    description: Classifies leads into enterprise handoff, nurture, disqualify, or default routes using SWITCH/default.
+    routingInstructions: Classify route as enterprise, nurture, disqualify, or default. Use score, segment, budget, and timeline evidence.
+    graph:
+      startNodeId: start
+      nodes:
+        - { id: start, kind: Start, name: Start, x: 80, y: 220 }
+        - { id: classify-lead, kind: LlmCall, name: Classify sales lead, x: 340, y: 220 }
+        - { id: switch, kind: Triage, name: SWITCH, x: 620, y: 220 }
+        - { id: enterprise-handoff, kind: StrictLogic, name: Enterprise handoff, x: 900, y: 60 }
+        - { id: nurture-lead, kind: StrictLogic, name: Nurture lead, x: 900, y: 210 }
+        - { id: disqualify-lead, kind: StrictLogic, name: Disqualify lead, x: 900, y: 360 }
+        - { id: default-lead, kind: StrictLogic, name: Default review, x: 900, y: 510 }
+        - { id: end, kind: End, name: End, x: 1180, y: 260 }
+      edges:
+        - { source: start, target: classify-lead }
+        - { source: classify-lead, target: switch }
+        - { source: switch, target: enterprise-handoff, kind: Conditional, routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: enterprise, expectedValueKind: String, label: Enterprise } }
+        - { source: switch, target: nurture-lead, kind: Conditional, routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: nurture, expectedValueKind: String, label: Nurture } }
+        - { source: switch, target: disqualify-lead, kind: Conditional, routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: disqualify, expectedValueKind: String, label: Disqualify } }
+        - { source: switch, target: default-lead, kind: Conditional, routing: { kind: SwitchDefault, label: DEFAULT } }
+        - { source: enterprise-handoff, target: end }
+        - { source: nurture-lead, target: end }
+        - { source: disqualify-lead, target: end }
+        - { source: default-lead, target: end }
+
+  - key: release-readiness-gate
+    name: Release Readiness Gate
+    description: Gates release publication with IF/ELSE based on blockers, unresolved approvals, and missing validation evidence.
+    routingInstructions: Set ready true only when blockers are empty, validation passed, and approvals are present.
+    graph:
+      startNodeId: start
+      nodes:
+        - { id: start, kind: Start, name: Start, x: 80, y: 220 }
+        - { id: check-release, kind: LlmCall, name: Check release readiness, x: 340, y: 220 }
+        - { id: release-gate, kind: Triage, name: IF, x: 620, y: 220 }
+        - { id: publish-release, kind: StrictLogic, name: Publish release, x: 900, y: 120 }
+        - { id: hold-release, kind: HumanInput, name: Hold for approval, externalRequestKind: Approval, x: 900, y: 330 }
+        - { id: end, kind: End, name: End, x: 1180, y: 220 }
+      edges:
+        - { source: start, target: check-release }
+        - { source: check-release, target: release-gate }
+        - { source: release-gate, target: publish-release, kind: Conditional, routing: { kind: Predicate, jsonPath: "$.ready", operator: Equals, expectedValue: "true", expectedValueKind: Boolean, label: IF } }
+        - { source: release-gate, target: hold-release, kind: Conditional, routing: { kind: Predicate, jsonPath: "$.ready", operator: Equals, expectedValue: "false", expectedValueKind: Boolean, label: ELSE } }
+        - { source: publish-release, target: end }
+        - { source: hold-release, target: end }
+
+  - key: incident-response-fan-out
+    name: Incident Response Fan-out
+    description: Fans out incident response to communications, engineering, security, and leadership branches from one incident payload.
+    routingInstructions: Return targets containing comms, engineering, security, and/or leadership based on severity, data exposure, and customer impact.
+    graph:
+      startNodeId: start
+      nodes:
+        - { id: start, kind: Start, name: Start, x: 80, y: 220 }
+        - { id: classify-incident, kind: LlmCall, name: Classify incident response, x: 340, y: 220 }
+        - { id: fanout, kind: Triage, name: FAN-OUT, x: 620, y: 220 }
+        - { id: comms-branch, kind: StrictLogic, name: Comms update, x: 900, y: 50 }
+        - { id: engineering-branch, kind: StrictLogic, name: Engineering repair, x: 900, y: 190 }
+        - { id: security-branch, kind: StrictLogic, name: Security review, x: 900, y: 330 }
+        - { id: leadership-branch, kind: StrictLogic, name: Leadership brief, x: 900, y: 470 }
+        - { id: end, kind: End, name: End, x: 1180, y: 260 }
+      edges:
+        - { source: start, target: classify-incident }
+        - { source: classify-incident, target: fanout }
+        - { source: fanout, target: comms-branch, kind: FanOut, routing: { kind: FanOutSelector, jsonPath: "$.targets", operator: Contains, expectedValue: comms, expectedValueKind: String, fanOutTargetIndex: 0, label: Comms } }
+        - { source: fanout, target: engineering-branch, kind: FanOut, routing: { kind: FanOutSelector, jsonPath: "$.targets", operator: Contains, expectedValue: engineering, expectedValueKind: String, fanOutTargetIndex: 1, label: Engineering } }
+        - { source: fanout, target: security-branch, kind: FanOut, routing: { kind: FanOutSelector, jsonPath: "$.targets", operator: Contains, expectedValue: security, expectedValueKind: String, fanOutTargetIndex: 2, label: Security } }
+        - { source: fanout, target: leadership-branch, kind: FanOut, routing: { kind: FanOutSelector, jsonPath: "$.targets", operator: Contains, expectedValue: leadership, expectedValueKind: String, fanOutTargetIndex: 3, label: Leadership } }
+        - { source: comms-branch, target: end }
+        - { source: engineering-branch, target: end }
+        - { source: security-branch, target: end }
+        - { source: leadership-branch, target: end }
+
+  - key: hr-staffing-intake-switch
+    name: HR Staffing Intake Switch
+    description: Routes staffing requests to engineering, design, operations, or default review based on requested role family.
+    routingInstructions: Classify route as engineering, design, operations, or default. Include missingInputs for budget, location, or start date gaps.
+    graph:
+      startNodeId: start
+      nodes:
+        - { id: start, kind: Start, name: Start, x: 80, y: 220 }
+        - { id: classify-staffing, kind: LlmCall, name: Classify staffing request, x: 340, y: 220 }
+        - { id: switch, kind: Triage, name: SWITCH, x: 620, y: 220 }
+        - { id: engineering-staffing, kind: StrictLogic, name: Engineering staffing, x: 900, y: 60 }
+        - { id: design-staffing, kind: StrictLogic, name: Design staffing, x: 900, y: 210 }
+        - { id: operations-staffing, kind: StrictLogic, name: Operations staffing, x: 900, y: 360 }
+        - { id: default-staffing, kind: StrictLogic, name: Default review, x: 900, y: 510 }
+        - { id: end, kind: End, name: End, x: 1180, y: 260 }
+      edges:
+        - { source: start, target: classify-staffing }
+        - { source: classify-staffing, target: switch }
+        - { source: switch, target: engineering-staffing, kind: Conditional, routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: engineering, expectedValueKind: String, label: Engineering } }
+        - { source: switch, target: design-staffing, kind: Conditional, routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: design, expectedValueKind: String, label: Design } }
+        - { source: switch, target: operations-staffing, kind: Conditional, routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: operations, expectedValueKind: String, label: Operations } }
+        - { source: switch, target: default-staffing, kind: Conditional, routing: { kind: SwitchDefault, label: DEFAULT } }
+        - { source: engineering-staffing, target: end }
+        - { source: design-staffing, target: end }
+        - { source: operations-staffing, target: end }
+        - { source: default-staffing, target: end }
+
+  - key: contract-renewal-watch
+    name: Contract Renewal Watch
+    description: Detects renewal risk from contract notes and routes risky renewals to review while archiving low-risk updates.
+    routingInstructions: Set needsReview true when renewal terms, price, security, legal, or finance risk requires explicit review.
+    graph:
+      startNodeId: start
+      nodes:
+        - { id: start, kind: Start, name: Start, x: 80, y: 220 }
+        - { id: review-renewal, kind: LlmCall, name: Review renewal, x: 340, y: 220 }
+        - { id: renewal-gate, kind: Triage, name: IF, x: 620, y: 220 }
+        - { id: renewal-review, kind: HumanInput, name: Renewal review, externalRequestKind: Approval, x: 900, y: 120 }
+        - id: renewal-archive
+          kind: Executor
+          name: Archive renewal summary
+          x: 900
+          y: 330
+          executor:
+            id: storage.file
+            settings:
+              operation: WriteText
+              path: samples/workflows/renewal-summary.md
+              contentFromInput: true
+              overwrite: true
+          instructions: Write the workflow JSON payload to a workspace file.
+        - { id: end, kind: End, name: End, x: 1180, y: 220 }
+      edges:
+        - { source: start, target: review-renewal }
+        - { source: review-renewal, target: renewal-gate }
+        - { source: renewal-gate, target: renewal-review, kind: Conditional, routing: { kind: Predicate, jsonPath: "$.needsReview", operator: Equals, expectedValue: "true", expectedValueKind: Boolean, label: IF } }
+        - { source: renewal-gate, target: renewal-archive, kind: Conditional, routing: { kind: Predicate, jsonPath: "$.needsReview", operator: Equals, expectedValue: "false", expectedValueKind: Boolean, label: ELSE } }
+        - { source: renewal-review, target: end }
+        - { source: renewal-archive, target: end }
+
+  - key: customer-feedback-action-fan-out
+    name: Customer Feedback Action Fan-out
+    description: Classifies customer feedback into product, support, success, and marketing follow-up lanes using fan-out selectors.
+    routingInstructions: Return targets containing product, support, success, and/or marketing based on feedback themes and urgency.
+    graph:
+      startNodeId: start
+      nodes:
+        - { id: start, kind: Start, name: Start, x: 80, y: 220 }
+        - { id: classify-feedback, kind: LlmCall, name: Classify feedback follow-up, x: 340, y: 220 }
+        - { id: fanout, kind: Triage, name: FAN-OUT, x: 620, y: 220 }
+        - { id: product-branch, kind: StrictLogic, name: Product follow-up, x: 900, y: 50 }
+        - { id: support-branch, kind: StrictLogic, name: Support follow-up, x: 900, y: 190 }
+        - { id: success-branch, kind: StrictLogic, name: Success follow-up, x: 900, y: 330 }
+        - { id: marketing-branch, kind: StrictLogic, name: Marketing follow-up, x: 900, y: 470 }
+        - { id: end, kind: End, name: End, x: 1180, y: 260 }
+      edges:
+        - { source: start, target: classify-feedback }
+        - { source: classify-feedback, target: fanout }
+        - { source: fanout, target: product-branch, kind: FanOut, routing: { kind: FanOutSelector, jsonPath: "$.targets", operator: Contains, expectedValue: product, expectedValueKind: String, fanOutTargetIndex: 0, label: Product } }
+        - { source: fanout, target: support-branch, kind: FanOut, routing: { kind: FanOutSelector, jsonPath: "$.targets", operator: Contains, expectedValue: support, expectedValueKind: String, fanOutTargetIndex: 1, label: Support } }
+        - { source: fanout, target: success-branch, kind: FanOut, routing: { kind: FanOutSelector, jsonPath: "$.targets", operator: Contains, expectedValue: success, expectedValueKind: String, fanOutTargetIndex: 2, label: Success } }
+        - { source: fanout, target: marketing-branch, kind: FanOut, routing: { kind: FanOutSelector, jsonPath: "$.targets", operator: Contains, expectedValue: marketing, expectedValueKind: String, fanOutTargetIndex: 3, label: Marketing } }
+        - { source: product-branch, target: end }
+        - { source: support-branch, target: end }
+        - { source: success-branch, target: end }
+        - { source: marketing-branch, target: end }
+
+  - key: vendor-risk-intake-switch
+    name: Vendor Risk Intake Switch
+    description: Routes vendor risk notes to security, legal, finance, or default handling using SWITCH/default.
+    routingInstructions: Classify route as security, legal, finance, or default. Include summary and evidence for the chosen route.
+    graph:
+      startNodeId: start
+      nodes:
+        - { id: start, kind: Start, name: Start, x: 80, y: 220 }
+        - { id: classify-vendor-risk, kind: LlmCall, name: Classify vendor risk, x: 340, y: 220 }
+        - { id: switch, kind: Triage, name: SWITCH, x: 620, y: 220 }
+        - { id: security-review, kind: StrictLogic, name: Security review, x: 900, y: 60 }
+        - { id: legal-review, kind: StrictLogic, name: Legal review, x: 900, y: 210 }
+        - { id: finance-review, kind: StrictLogic, name: Finance review, x: 900, y: 360 }
+        - { id: default-vendor-risk, kind: StrictLogic, name: Default review, x: 900, y: 510 }
+        - { id: end, kind: End, name: End, x: 1180, y: 260 }
+      edges:
+        - { source: start, target: classify-vendor-risk }
+        - { source: classify-vendor-risk, target: switch }
+        - { source: switch, target: security-review, kind: Conditional, routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: security, expectedValueKind: String, label: Security } }
+        - { source: switch, target: legal-review, kind: Conditional, routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: legal, expectedValueKind: String, label: Legal } }
+        - { source: switch, target: finance-review, kind: Conditional, routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: finance, expectedValueKind: String, label: Finance } }
+        - { source: switch, target: default-vendor-risk, kind: Conditional, routing: { kind: SwitchDefault, label: DEFAULT } }
+        - { source: security-review, target: end }
+        - { source: legal-review, target: end }
+        - { source: finance-review, target: end }
+        - { source: default-vendor-risk, target: end }
+
+  - key: meeting-notes-action-extractor
+    name: Meeting Notes Action Extractor
+    description: Extracts meeting actions and uses SWITCH/default to separate blocked, owner-needed, informational, and default outcomes.
+    routingInstructions: Classify route as blocked, owner, info, or default. Include actionItems and preserve projectId when present.
+    graph:
+      startNodeId: start
+      nodes:
+        - { id: start, kind: Start, name: Start, x: 80, y: 220 }
+        - { id: extract-meeting-actions, kind: LlmCall, name: Extract meeting actions, x: 340, y: 220 }
+        - { id: switch, kind: Triage, name: SWITCH, x: 620, y: 220 }
+        - { id: blocked-action, kind: StrictLogic, name: Blocked action, x: 900, y: 60 }
+        - { id: owner-confirmation, kind: StrictLogic, name: Owner confirmation, x: 900, y: 210 }
+        - { id: information-only, kind: StrictLogic, name: Information only, x: 900, y: 360 }
+        - { id: default-meeting, kind: StrictLogic, name: Default review, x: 900, y: 510 }
+        - { id: end, kind: End, name: End, x: 1180, y: 260 }
+      edges:
+        - { source: start, target: extract-meeting-actions }
+        - { source: extract-meeting-actions, target: switch }
+        - { source: switch, target: blocked-action, kind: Conditional, routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: blocked, expectedValueKind: String, label: Blocked } }
+        - { source: switch, target: owner-confirmation, kind: Conditional, routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: owner, expectedValueKind: String, label: Owner } }
+        - { source: switch, target: information-only, kind: Conditional, routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: info, expectedValueKind: String, label: Info } }
+        - { source: switch, target: default-meeting, kind: Conditional, routing: { kind: SwitchDefault, label: DEFAULT } }
+        - { source: blocked-action, target: end }
+        - { source: owner-confirmation, target: end }
+        - { source: information-only, target: end }
+        - { source: default-meeting, target: end }
