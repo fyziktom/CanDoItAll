@@ -95,7 +95,8 @@ public enum WorkflowProjectStructureOperation
     ListProjects,
     ReadTree,
     ReadNode,
-    CreateAsset
+    CreateAsset,
+    CreateTaskNodes
 }
 
 public enum WorkflowImageGenerationOperation
@@ -266,6 +267,12 @@ public sealed record WorkflowProjectStructureExecutorSettings
     public string SourceWorkspacePath { get; init; } = string.Empty;
 
     public string ContentType { get; init; } = "text/markdown";
+
+    public string TaskItemsJsonPath { get; init; } = "$.tasks";
+
+    public string TaskObjectSubtype { get; init; } = "task";
+
+    public int MaxTaskNodes { get; init; } = 20;
 }
 
 public sealed record WorkflowImageGenerationExecutorSettings

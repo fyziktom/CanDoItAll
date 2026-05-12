@@ -30,7 +30,7 @@ public sealed class WorkflowExampleCatalogSeedService(
     IOptions<WorkflowExampleCatalogSeedOptions> options,
     ILogger<WorkflowExampleCatalogSeedService> logger)
 {
-    private const string SeedVersion = "2026-05-project-structure-workflow-scenarios-v2";
+    private const string SeedVersion = "2026-05-project-structure-email-switch-tasks-v3";
     private const string SeedMarker = "Managed workflow example seed";
     private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
     private static readonly WorkflowValueShape JsonShape = new(
@@ -366,8 +366,17 @@ public sealed class WorkflowExampleCatalogSeedService(
                 BuildDocumentSummaryGraph),
             new(
                 "Email Task Creation Router",
-                "Processes email into task creation, summary, reply, or default paths with SWITCH/default and a project-structure asset node.",
-                "Classify route as task, summary, reply, or default. Preserve projectId and produce concise taskActions for project structure storage.",
+                "Classifies email as tasks, ASAP response, informative, or default with SWITCH/default and creates WorkItem/task nodes for actionable email requests.",
+                """
+                Classify route as `tasks`, `asap_response`, `informative`, or `no_action`.
+                Use `tasks` when the sender asks me or my team to do concrete work.
+                Use `asap_response` when a reply is explicitly urgent, same-day, blocked, escalated, or phrased as ASAP/immediate.
+                Use `informative` when the email only gives FYI/context/status and no work is assigned to me.
+                Use `no_action` when the message is delegated to someone else, spam-like, or not relevant; this goes through the SWITCH default branch.
+                For `tasks` and `asap_response`, return a non-empty tasks array. Each task requires title, summary, owner, dueUtc when present, urgency, requiresResponse, asap, sourceEmailId, and evidence.
+                Create tasks only for actions assigned to me or required from the current project team; do not create tasks for FYI text or work assigned solely to another person.
+                Preserve projectId and nodeId so the project-structure executor creates WorkItem/task nodes under the workflow node.
+                """,
                 BuildEmailTaskGraph),
             new(
                 "Email Reply Draft Gate",
@@ -502,6 +511,9 @@ public sealed class WorkflowExampleCatalogSeedService(
            - Use empty string, false, or [] when a field does not apply.
            - Preserve projectId from top-level projectId or from project.id when either exists. Do not invent ids.
            - Preserve nodeId from top-level nodeId or from runContext.workflowNodeId when either exists. Do not invent ids.
+           - For email task workflows, include emailCategory, isInformational, asapResponseRequired, and tasks. The tasks array must contain only concrete work assigned to me/current project team.
+           - Email task objects must include title, summary, owner, dueUtc, urgency, requiresResponse, asap, sourceEmailId, and evidence. Use an empty dueUtc only when the email has no deadline.
+           - When the email only informs or delegates work to someone else, set tasks to [] and route to informative or no_action.
            - When the input contains project or runContext objects, copy them to the output unchanged so project-structure storage can keep the original execution context.
            - Keep summary under 900 characters and actions as concrete imperative steps.
            - When the input has sourceDocuments or documents, base the result on those loaded document texts, not on file names alone.
@@ -541,26 +553,28 @@ public sealed class WorkflowExampleCatalogSeedService(
         var nodes = new[]
         {
             Start(),
-            Llm("classify-email", "Classify email", componentId, 320, 220),
-            Decision("email-switch", "SWITCH", 590, 220),
-            ProjectAsset("create-task-asset", "Create project tasks", 900, 20, "Email action tasks"),
-            StorageWrite("write-email-summary", "Write email summary", 900, 160, "samples/workflows/email-summary.md"),
-            Logic("draft-reply", "Draft response", 900, 300),
-            Logic("unhandled-email", "Unhandled email", 900, 440),
-            End(1200, 220)
+            SourceIngest("ingest-email-sources", "Load email sources", 320, 220),
+            Llm("classify-email", "Classify email", componentId, 620, 220),
+            Decision("email-switch", "SWITCH", 900, 220),
+            ProjectTaskNodes("create-email-task-nodes", "Create task nodes", 1210, 20),
+            ProjectTaskNodes("create-asap-response-task", "Create ASAP response task", 1210, 170),
+            ProjectAsset("store-informative-summary", "Store informative summary", 1210, 320, "Informative email summary"),
+            ProjectAsset("store-default-summary", "Store no-action summary", 1210, 470, "No-action email summary"),
+            End(1530, 245)
         };
         return Graph(
             nodes,
-            Direct("start", "classify-email"),
+            Direct("start", "ingest-email-sources"),
+            Direct("ingest-email-sources", "classify-email"),
             Direct("classify-email", "email-switch"),
-            Switch("email-switch", "create-task-asset", "$.route", "task", "Task"),
-            Switch("email-switch", "write-email-summary", "$.route", "summary", "Summary"),
-            Switch("email-switch", "draft-reply", "$.route", "reply", "Reply"),
-            SwitchDefault("email-switch", "unhandled-email", "DEFAULT"),
-            Direct("create-task-asset", "end"),
-            Direct("write-email-summary", "end"),
-            Direct("draft-reply", "end"),
-            Direct("unhandled-email", "end"));
+            Switch("email-switch", "create-email-task-nodes", "$.route", "tasks", "Tasks"),
+            Switch("email-switch", "create-asap-response-task", "$.route", "asap_response", "ASAP response"),
+            Switch("email-switch", "store-informative-summary", "$.route", "informative", "Informative"),
+            SwitchDefault("email-switch", "store-default-summary", "DEFAULT"),
+            Direct("create-email-task-nodes", "end"),
+            Direct("create-asap-response-task", "end"),
+            Direct("store-informative-summary", "end"),
+            Direct("store-default-summary", "end"));
     }
 
     private static WorkflowGraph BuildEmailReplyGraph(WorkflowComponentId componentId)
@@ -1101,6 +1115,24 @@ public sealed class WorkflowExampleCatalogSeedService(
             },
             "Create a markdown asset in the selected project structure.");
 
+    private static WorkflowNode ProjectTaskNodes(string id, string name, double x, double y)
+        => Executor(
+            id,
+            name,
+            x,
+            y,
+            WorkflowExecutorIds.ProjectStructure,
+            new WorkflowProjectStructureExecutorSettings
+            {
+                Operation = WorkflowProjectStructureOperation.CreateTaskNodes,
+                ProjectIdJsonPath = "$.projectId",
+                NodeIdJsonPath = "$.nodeId",
+                TaskItemsJsonPath = "$.tasks",
+                TaskObjectSubtype = "task",
+                MaxTaskNodes = 12
+            },
+            "Create WorkItem/task nodes under the workflow node from the LLM tasks array.");
+
     private static WorkflowNode Executor<TSettings>(
         string id,
         string name,
@@ -1273,8 +1305,30 @@ public sealed class WorkflowExampleCatalogSeedService(
             "summary": { "type": "string" },
             "markdown": { "type": "string" },
             "actions": { "type": "array", "items": { "type": "string" } },
+            "tasks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {
+                  "title": { "type": "string" },
+                  "summary": { "type": "string" },
+                  "owner": { "type": "string" },
+                  "dueUtc": { "type": "string" },
+                  "urgency": { "type": "string" },
+                  "requiresResponse": { "type": "boolean" },
+                  "asap": { "type": "boolean" },
+                  "sourceEmailId": { "type": "string" },
+                  "evidence": { "type": "array", "items": { "type": "string" } }
+                },
+                "required": ["title", "summary", "owner", "dueUtc", "urgency", "requiresResponse", "asap", "sourceEmailId", "evidence"]
+              }
+            },
             "evidence": { "type": "array", "items": { "type": "string" } },
             "targets": { "type": "array", "items": { "type": "string" } },
+            "emailCategory": { "type": "string" },
+            "isInformational": { "type": "boolean" },
+            "asapResponseRequired": { "type": "boolean" },
             "risk": { "type": "string" },
             "relevant": { "type": "boolean" },
             "needsReview": { "type": "boolean" },
