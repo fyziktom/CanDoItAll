@@ -26,6 +26,8 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
 
         services.AddOptions<ProcessMockAgentOptions>()
             .Bind(configuration.GetSection(ProcessMockAgentOptions.SectionName));
+        services.AddOptions<WorkflowExampleCatalogSeedOptions>()
+            .Bind(configuration.GetSection(WorkflowExampleCatalogSeedOptions.SectionName));
         services.AddSingleton<IProviderProfileService, ProviderProfileService>();
         services.AddSingleton<ICapabilityProofService, CapabilityProofService>();
         services.AddSingleton<IAgentProviderCredentialResolver, SecretStoreAgentProviderCredentialResolver>();
@@ -59,6 +61,7 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddScoped<IAgentFrameworkWorkspaceService, CurrentProfileAgentFrameworkWorkspaceService>();
         services.AddScoped<IAgentFrameworkOrganizationCatalogRepairService, AgentFrameworkOrganizationCatalogRepairService>();
         services.AddScoped<AgentFrameworkCatalogWarmupService>();
+        services.AddScoped<WorkflowExampleCatalogSeedService>();
         services.AddScoped<ProcessMockAgentCatalogService>();
         services.AddScoped<AgentFrameworkExecutionRecoveryService>();
         services.AddScoped<ScenarioHarnessService>();

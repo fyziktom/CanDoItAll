@@ -4,10 +4,14 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages;
+using CanDoItAll.Tools.Documents;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Tests.Components;
 
@@ -138,6 +142,185 @@ public sealed class WorkflowsPageTests
         Assert.NotNull(detail);
         Assert.Contains(detail!.Definition.Graph.Nodes, node => node.Kind == WorkflowNodeKind.LlmCall);
         Assert.Contains(detail.Definition.Graph.Nodes, node => node.CanvasX != 0 && node.CanvasY != 0);
+    }
+
+    [Fact]
+    public async Task Workflow_canvas_authors_typed_predicate_route_metadata()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync(RegisterDeterministicWorkflowLlmInvoker);
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var notificationService = harness.Context.Services.GetRequiredService<NotificationService>();
+
+        navigation.NavigateTo("/agents/workflows");
+        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+
+        cut.WaitForElement("[data-testid='workflows-tab-editor']");
+        cut.Find("[data-testid='workflows-tab-editor']").Click();
+        cut.WaitForElement("[data-testid='workflow-canvas-editor']");
+        cut.Find("[data-testid='workflow-canvas-toggle-components']").Click();
+        cut.WaitForElement("[data-testid='workflow-canvas-create-component']");
+        cut.Find("[data-testid='workflow-canvas-create-component']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(notificationService.Messages, message => message.Summary == "LLM component created");
+        });
+        cut.Find("[data-testid='workflow-canvas-place-component']").Click();
+        cut.WaitForElement("[data-testid='workflow-canvas-edit-edge']");
+
+        cut.Find("[data-testid='workflow-canvas-edit-edge']").Click();
+        cut.Find("[data-testid='workflow-canvas-edge-route-kind']").Change(WorkflowRouteKind.Predicate.ToString());
+        cut.WaitForElement("[data-testid='workflow-canvas-edge-route-json-path']");
+        cut.Find("[data-testid='workflow-canvas-edge-route-label']").Change("High value");
+        cut.Find("[data-testid='workflow-canvas-edge-route-json-path']").Change("$.invoice.total");
+        cut.Find("[data-testid='workflow-canvas-edge-route-operator']").Change(WorkflowRouteOperator.GreaterThanOrEqual.ToString());
+        cut.Find("[data-testid='workflow-canvas-edge-route-value-kind']").Change(WorkflowRouteValueKind.Number.ToString());
+        cut.Find("[data-testid='workflow-canvas-edge-route-expected-value']").Change("5000");
+        cut.Find("[data-testid='workflow-canvas-add-edge']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("High value", cut.Find("[data-testid='workflow-canvas-edge-route-summary']").TextContent);
+            Assert.Contains("$.invoice.total", cut.Find("[data-testid='workflow-canvas-edge-route-summary']").TextContent);
+        });
+
+        cut.Find("[data-testid='workflow-canvas-validate']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(notificationService.Messages, message => message.Summary == "Workflow canvas valid");
+            Assert.DoesNotContain("workflow-canvas-validation-issue", cut.Markup);
+        });
+    }
+
+    [Fact]
+    public async Task Workflow_canvas_decision_context_action_adds_and_edits_routes_in_node_dialog()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync(RegisterDeterministicWorkflowLlmInvoker);
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+
+        navigation.NavigateTo("/agents/workflows");
+        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+
+        cut.WaitForElement("[data-testid='workflows-tab-editor']");
+        cut.Find("[data-testid='workflows-tab-editor']").Click();
+        cut.WaitForElement("[data-testid='workflow-canvas-editor']");
+
+        var request = new CanvasWorkbenchCreateActionRequest(
+            "workflow-decision:create:Switch",
+            SourceNodeId: "start",
+            X: 420,
+            Y: 220,
+            ParentNodeId: "start",
+            Title: "SWITCH",
+            Subtitle: string.Empty,
+            Notes: "Route by workflow category.",
+            PlacementKind: "child",
+            CreateMode: "dialog",
+            ObjectSubtype: "Switch",
+            UploadedFile: null,
+            InputValues:
+            [
+                new CanvasWorkbenchInputValue { Key = "jsonPath", Value = "$.route" },
+                new CanvasWorkbenchInputValue { Key = "caseValues", Value = "alpha, beta" },
+                new CanvasWorkbenchInputValue { Key = "defaultLabel", Value = "DEFAULT" }
+            ]);
+
+        await cut.InvokeAsync(() => cut.FindComponent<CanvasWorkbench>().Instance.OnCreateAction(SerializationPersistencePack.Serialize(request)));
+
+        cut.WaitForAssertion(() =>
+        {
+            var switchNode = cut.FindComponent<CanvasWorkbench>().Instance.Surface.Nodes.Single(node => node.Title == "SWITCH");
+            Assert.Contains(switchNode.ContextActions, action =>
+                action.Children.Any(child => child.ActionId == "workflow-decision:add-route"));
+        });
+
+        var nodeId = cut.FindComponent<CanvasWorkbench>().Instance.Surface.Nodes.Single(node => node.Title == "SWITCH").Id;
+        await cut.InvokeAsync(() => cut.FindComponent<CanvasWorkbench>().Instance.OnContextAction(nodeId, "workflow-decision:add-route", 0, 0));
+
+        cut.WaitForElement("[data-testid='workflow-canvas-decision-route-editor']");
+        cut.Find("[data-testid='workflow-canvas-decision-route-label']").Change("Case Gamma");
+        cut.Find("[data-testid='workflow-canvas-decision-route-expected-value']").Change("gamma");
+        cut.Find("[data-testid='workflow-canvas-decision-save-route']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var surface = cut.FindComponent<CanvasWorkbench>().Instance.Surface;
+            Assert.Contains(surface.Links, link => link.Label == "Case Gamma");
+            Assert.Contains(surface.Nodes, node => node.Title == "Case Gamma");
+            Assert.Contains("4 route(s)", cut.Markup);
+        });
+
+        cut.FindAll("[data-testid='workflow-canvas-decision-edit-route']").First().Click();
+        cut.WaitForElement("[data-testid='workflow-canvas-decision-route-editor']");
+        cut.Find("[data-testid='workflow-canvas-decision-route-label']").Change("Case Alpha Updated");
+        cut.Find("[data-testid='workflow-canvas-decision-save-route']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(cut.FindComponent<CanvasWorkbench>().Instance.Surface.Links, link => link.Label == "Case Alpha Updated");
+            Assert.Contains("Case Alpha Updated", cut.Markup);
+        });
+    }
+
+    [Fact]
+    public async Task Workflow_example_seed_creates_production_examples_when_enabled()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"workflow-example-seed-{Guid.NewGuid():N}");
+        var store = new InMemoryWorkflowCatalogStore();
+        var catalogService = new InMemoryWorkflowCatalogService(store, new WorkflowDefinitionValidator());
+        var seeder = new WorkflowExampleCatalogSeedService(
+            catalogService,
+            catalogService,
+            catalogService,
+            new WorkspaceFileService(workspaceRoot),
+            new WorkspacePathResolutionService(workspaceRoot),
+            new ClosedXmlSpreadsheetDocumentService(),
+            Options.Create(new WorkflowExampleCatalogSeedOptions
+            {
+                Enabled = true,
+                SeedSampleWorkspaceFiles = true
+            }),
+            NullLogger<WorkflowExampleCatalogSeedService>.Instance);
+
+        try
+        {
+            await seeder.EnsureSeededAsync();
+        }
+        finally
+        {
+            if (Directory.Exists(workspaceRoot))
+            {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+        }
+
+        var definitions = await catalogService.ListDefinitionsAsync();
+        var examples = definitions
+            .Where(item => item.Name.StartsWith("Example:", StringComparison.Ordinal))
+            .ToArray();
+        Assert.True(examples.Length >= 15);
+
+        var components = await catalogService.ListComponentsAsync();
+        Assert.True(components.Count(component => component.Name.StartsWith("Example LLM:", StringComparison.Ordinal)) >= 15);
+
+        var invoice = Assert.Single(examples, item => item.Name == "Example: Invoice Workbook Risk Switch");
+        var invoiceDetail = await catalogService.GetDefinitionAsync(invoice.Id);
+        Assert.NotNull(invoiceDetail);
+        Assert.True(invoiceDetail!.Validation.Succeeded);
+        Assert.Contains(invoiceDetail.Definition.Graph.Edges, edge => edge.Routing.Kind == WorkflowRouteKind.SwitchDefault);
+
+        var fanOut = Assert.Single(examples, item => item.Name == "Example: Pipeline Workbook Fan-out");
+        var fanOutDetail = await catalogService.GetDefinitionAsync(fanOut.Id);
+        Assert.NotNull(fanOutDetail);
+        Assert.True(fanOutDetail!.Validation.Succeeded);
+        Assert.Contains(fanOutDetail.Definition.Graph.Edges, edge => edge.Routing.Kind == WorkflowRouteKind.FanOutSelector);
+
+        var internet = Assert.Single(examples, item => item.Name == "Example: Internet Research Capture");
+        var internetDetail = await catalogService.GetDefinitionAsync(internet.Id);
+        Assert.NotNull(internetDetail);
+        Assert.True(internetDetail!.Validation.Succeeded);
+        Assert.Contains(internetDetail.Definition.Graph.Nodes, node =>
+            node.Settings.ExecutorId == WorkflowExecutorIds.HttpFetch &&
+            node.Settings.ExecutorSettingsJson.Contains("urlJsonPath", StringComparison.Ordinal));
     }
 
     [Fact]

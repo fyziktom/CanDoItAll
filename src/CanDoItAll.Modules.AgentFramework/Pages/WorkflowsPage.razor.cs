@@ -23,6 +23,9 @@ public partial class WorkflowsPage
     public IWorkflowTestRunner TestRunner { get; set; } = default!;
 
     [Inject]
+    public WorkflowExampleCatalogSeedService ExampleCatalogSeedService { get; set; } = default!;
+
+    [Inject]
     public IWorkflowRuntimeManager RuntimeManager { get; set; } = default!;
 
     [Inject]
@@ -84,6 +87,16 @@ public partial class WorkflowsPage
 
     protected override async Task OnInitializedAsync()
     {
+        try
+        {
+            await ExampleCatalogSeedService.EnsureSeededAsync();
+        }
+        catch (Exception exception)
+        {
+            errorMessage = exception.Message;
+            NotificationService.Error("Workflow examples seed failed", exception.Message);
+        }
+
         await RefreshAsync();
     }
 

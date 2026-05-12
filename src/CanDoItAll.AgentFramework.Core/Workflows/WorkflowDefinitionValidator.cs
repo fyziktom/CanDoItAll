@@ -99,6 +99,7 @@ public sealed class WorkflowDefinitionValidator : IWorkflowDefinitionValidator
             }
         }
 
+        AddRoutingIssues(graph, issues);
         var componentIds = components.Select(component => component.Id).ToHashSet();
         var componentsById = components.ToDictionary(component => component.Id);
         foreach (var node in graph.Nodes.Where(node => node.Kind == WorkflowNodeKind.LlmCall))
@@ -215,6 +216,214 @@ public sealed class WorkflowDefinitionValidator : IWorkflowDefinitionValidator
                     node.Id));
             }
         }
+    }
+
+    private static void AddRoutingIssues(
+        WorkflowGraph graph,
+        List<WorkflowValidationIssue> issues)
+    {
+        foreach (var edge in graph.Edges)
+        {
+            AddEdgeRoutingIssues(edge, issues);
+        }
+
+        foreach (var group in graph.Edges.GroupBy(edge => edge.SourceNodeId))
+        {
+            AddGroupedRoutingIssues(group.Key, group.ToArray(), issues);
+        }
+    }
+
+    private static void AddEdgeRoutingIssues(
+        WorkflowEdge edge,
+        List<WorkflowValidationIssue> issues)
+    {
+        var routing = edge.Routing;
+        if (routing is null)
+        {
+            AddRouteIssue(edge, issues, "Routing metadata cannot be null.");
+            return;
+        }
+
+        if (!Enum.IsDefined(routing.Kind))
+        {
+            AddRouteIssue(edge, issues, $"Route kind '{routing.Kind}' is not supported.");
+        }
+
+        if (!Enum.IsDefined(routing.Operator))
+        {
+            AddRouteIssue(edge, issues, $"Route operator '{routing.Operator}' is not supported.");
+        }
+
+        if (!Enum.IsDefined(routing.ExpectedValueKind))
+        {
+            AddRouteIssue(edge, issues, $"Route value kind '{routing.ExpectedValueKind}' is not supported.");
+        }
+
+        if (string.IsNullOrWhiteSpace(routing.RoutingLanguage))
+        {
+            AddRouteIssue(edge, issues, "Routing language is required.");
+        }
+        else if (string.Equals(routing.RoutingLanguage, WorkflowRoutingLanguages.ArtlV1, StringComparison.Ordinal))
+        {
+            AddRouteIssue(edge, issues, "Routing language 'artl-v1' is reserved for a later ARTL compiler and is not supported by this runtime.");
+        }
+        else if (!WorkflowRoutingValidation.IsBuiltInRoute(routing) &&
+                 !(routing.Kind == WorkflowRouteKind.Always &&
+                   string.Equals(routing.RoutingLanguage, WorkflowRoutingLanguages.LegacyConditionExpression, StringComparison.Ordinal)))
+        {
+            AddRouteIssue(edge, issues, $"Routing language '{routing.RoutingLanguage}' is not supported.");
+        }
+
+        switch (routing.Kind)
+        {
+            case WorkflowRouteKind.Always:
+                AddAlwaysRouteIssues(edge, issues);
+                return;
+            case WorkflowRouteKind.SwitchDefault:
+                AddSwitchDefaultIssues(edge, issues);
+                return;
+            case WorkflowRouteKind.Predicate:
+            case WorkflowRouteKind.SwitchCase:
+            case WorkflowRouteKind.FanOutSelector:
+                AddPredicateRouteIssues(edge, issues);
+                return;
+            default:
+                return;
+        }
+    }
+
+    private static void AddAlwaysRouteIssues(
+        WorkflowEdge edge,
+        List<WorkflowValidationIssue> issues)
+    {
+        var routing = edge.Routing;
+        if (!string.IsNullOrWhiteSpace(routing.JsonPath) ||
+            !string.IsNullOrWhiteSpace(routing.ExpectedValueJson) ||
+            routing.FanOutTargetIndex.HasValue)
+        {
+            AddRouteIssue(edge, issues, "Direct routes cannot carry predicate fields or fan-out target indices.");
+        }
+    }
+
+    private static void AddSwitchDefaultIssues(
+        WorkflowEdge edge,
+        List<WorkflowValidationIssue> issues)
+    {
+        var routing = edge.Routing;
+        if (!string.IsNullOrWhiteSpace(routing.JsonPath) ||
+            !string.IsNullOrWhiteSpace(routing.ExpectedValueJson) ||
+            routing.FanOutTargetIndex.HasValue)
+        {
+            AddRouteIssue(edge, issues, "Switch default routes cannot carry predicate fields or fan-out target indices.");
+        }
+    }
+
+    private static void AddPredicateRouteIssues(
+        WorkflowEdge edge,
+        List<WorkflowValidationIssue> issues)
+    {
+        var routing = edge.Routing;
+        if (!WorkflowRoutingValidation.TryParseJsonPath(routing.JsonPath, out _, out var pathError))
+        {
+            AddRouteIssue(edge, issues, $"Route JSON path is invalid: {pathError}.");
+        }
+
+        if (!WorkflowRoutingValidation.TryValidateExpectedValue(routing, out var expectedValueError))
+        {
+            AddRouteIssue(edge, issues, $"Route expected value is invalid: {expectedValueError}.");
+        }
+
+        if ((routing.Operator is
+                WorkflowRouteOperator.GreaterThan or
+                WorkflowRouteOperator.GreaterThanOrEqual or
+                WorkflowRouteOperator.LessThan or
+                WorkflowRouteOperator.LessThanOrEqual) &&
+            routing.ExpectedValueKind != WorkflowRouteValueKind.Number)
+        {
+            AddRouteIssue(edge, issues, "Numeric comparison routes must use a numeric expected value.");
+        }
+
+        if ((routing.Operator is WorkflowRouteOperator.StartsWith or WorkflowRouteOperator.EndsWith) &&
+            routing.ExpectedValueKind != WorkflowRouteValueKind.String)
+        {
+            AddRouteIssue(edge, issues, "String prefix and suffix routes must use a string expected value.");
+        }
+
+        if (routing.Kind == WorkflowRouteKind.FanOutSelector)
+        {
+            if (routing.FanOutTargetIndex is < 0)
+            {
+                AddRouteIssue(edge, issues, "Fan-out target index cannot be negative.");
+            }
+        }
+        else if (routing.FanOutTargetIndex.HasValue)
+        {
+            AddRouteIssue(edge, issues, "Only fan-out selector routes can specify a fan-out target index.");
+        }
+    }
+
+    private static void AddGroupedRoutingIssues(
+        WorkflowNodeId sourceNodeId,
+        IReadOnlyList<WorkflowEdge> outgoingEdges,
+        List<WorkflowValidationIssue> issues)
+    {
+        var switchEdges = outgoingEdges
+            .Where(edge => edge.Routing.Kind is WorkflowRouteKind.SwitchCase or WorkflowRouteKind.SwitchDefault)
+            .ToArray();
+        if (switchEdges.Length > 0)
+        {
+            var nonSwitchEdges = outgoingEdges
+                .Where(edge => edge.Routing.Kind is not (WorkflowRouteKind.SwitchCase or WorkflowRouteKind.SwitchDefault))
+                .ToArray();
+            foreach (var edge in nonSwitchEdges)
+            {
+                AddRouteIssue(
+                    edge,
+                    issues,
+                    $"Source node '{sourceNodeId}' cannot mix switch routes with non-switch outgoing routes.");
+            }
+
+            var defaultEdges = switchEdges
+                .Where(edge => edge.Routing.Kind == WorkflowRouteKind.SwitchDefault)
+                .ToArray();
+            foreach (var edge in defaultEdges.Skip(1))
+            {
+                AddRouteIssue(edge, issues, $"Source node '{sourceNodeId}' has more than one switch default route.");
+            }
+        }
+
+        var fanOutEdges = outgoingEdges
+            .Where(edge => edge.Kind == WorkflowEdgeKind.FanOut || edge.Routing.Kind == WorkflowRouteKind.FanOutSelector)
+            .ToArray();
+        var duplicateFanOutIndices = fanOutEdges
+            .Where(edge => edge.Routing.FanOutTargetIndex.HasValue)
+            .GroupBy(edge => edge.Routing.FanOutTargetIndex!.Value)
+            .Where(group => group.Count() > 1)
+            .SelectMany(group => group.Skip(1))
+            .ToArray();
+        foreach (var edge in duplicateFanOutIndices)
+        {
+            AddRouteIssue(edge, issues, $"Source node '{sourceNodeId}' has a duplicate fan-out target index '{edge.Routing.FanOutTargetIndex}'.");
+        }
+
+        foreach (var edge in fanOutEdges.Where(edge => edge.Routing.FanOutTargetIndex >= fanOutEdges.Length))
+        {
+            AddRouteIssue(
+                edge,
+                issues,
+                $"Fan-out target index '{edge.Routing.FanOutTargetIndex}' is outside the target range 0-{fanOutEdges.Length - 1}.");
+        }
+    }
+
+    private static void AddRouteIssue(
+        WorkflowEdge edge,
+        List<WorkflowValidationIssue> issues,
+        string message)
+    {
+        issues.Add(new WorkflowValidationIssue(
+            WorkflowValidationIssueCode.InvalidRouteDefinition,
+            $"Workflow edge '{edge.Id}' route is invalid: {message}",
+            EdgeId: edge.Id));
     }
 
     private static void AddDisconnectedNodeIssues(

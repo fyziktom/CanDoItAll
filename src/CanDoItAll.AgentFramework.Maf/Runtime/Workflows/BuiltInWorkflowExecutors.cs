@@ -185,7 +185,8 @@ public sealed class HttpFetchWorkflowExecutor : IWorkflowExecutor
         CancellationToken cancellationToken = default)
     {
         var settings = WorkflowExecutorJson.Deserialize<WorkflowHttpExecutorSettings>(context.SettingsJson);
-        if (!Uri.TryCreate(settings.Url, UriKind.Absolute, out var uri) ||
+        var resolvedUrl = ResolveUrl(settings, input);
+        if (!Uri.TryCreate(resolvedUrl, UriKind.Absolute, out var uri) ||
             uri.Scheme is not ("http" or "https"))
         {
             throw new InvalidOperationException("HTTP executor requires an absolute http or https URL.");
@@ -224,6 +225,7 @@ public sealed class HttpFetchWorkflowExecutor : IWorkflowExecutor
             contentType = response.Content.Headers.ContentType?.ToString() ?? string.Empty,
             body.Text,
             body.IsTruncated,
+            inputPayload = settings.IncludeInputPayload ? input.PayloadJson : string.Empty,
             headers = response.Headers
                 .Concat(response.Content.Headers)
                 .ToDictionary(header => header.Key, header => string.Join(",", header.Value), StringComparer.OrdinalIgnoreCase)
@@ -242,6 +244,99 @@ public sealed class HttpFetchWorkflowExecutor : IWorkflowExecutor
             WorkflowHttpMethodKind.Delete => HttpMethod.Delete,
             _ => throw new InvalidOperationException($"HTTP method '{method}' is not supported.")
         };
+
+    private static string ResolveUrl(
+        WorkflowHttpExecutorSettings settings,
+        WorkflowNodeInput input)
+    {
+        if (!string.IsNullOrWhiteSpace(settings.Url))
+        {
+            return settings.Url.Trim();
+        }
+
+        var url = ResolveInputJsonString(input, settings.UrlJsonPath, nameof(settings.UrlJsonPath));
+        return string.IsNullOrWhiteSpace(url)
+            ? throw new InvalidOperationException("HTTP executor setting 'Url' or 'UrlJsonPath' is required.")
+            : url.Trim();
+    }
+
+    private static string? ResolveInputJsonString(
+        WorkflowNodeInput input,
+        string jsonPath,
+        string settingName)
+    {
+        if (string.IsNullOrWhiteSpace(jsonPath))
+        {
+            return null;
+        }
+
+        if (!WorkflowRoutingValidation.TryParseJsonPath(jsonPath.Trim(), out var path, out var pathError))
+        {
+            throw new InvalidOperationException($"HTTP executor setting '{settingName}' has invalid JSON path: {pathError}.");
+        }
+
+        if (string.IsNullOrWhiteSpace(input.PayloadJson))
+        {
+            throw new InvalidOperationException($"HTTP executor setting '{settingName}' requires a workflow JSON payload.");
+        }
+
+        using var document = JsonDocument.Parse(input.PayloadJson);
+        if (!TryResolve(document.RootElement, path, out var value))
+        {
+            throw new InvalidOperationException($"HTTP executor setting '{settingName}' path '{jsonPath}' was not found in the workflow payload.");
+        }
+
+        return value.ValueKind == JsonValueKind.String
+            ? value.GetString()
+            : value.GetRawText();
+    }
+
+    private static bool TryResolve(
+        JsonElement root,
+        IReadOnlyList<BuiltInJsonPathSegment> path,
+        out JsonElement value)
+    {
+        value = root;
+        foreach (var segment in path)
+        {
+            if (segment.PropertyName is not null)
+            {
+                if (value.ValueKind != JsonValueKind.Object ||
+                    !value.TryGetProperty(segment.PropertyName, out value))
+                {
+                    return false;
+                }
+
+                continue;
+            }
+
+            if (segment.Index is not { } targetIndex || value.ValueKind != JsonValueKind.Array)
+            {
+                return false;
+            }
+
+            var currentIndex = 0;
+            var matched = false;
+            foreach (var item in value.EnumerateArray())
+            {
+                if (currentIndex == targetIndex)
+                {
+                    value = item;
+                    matched = true;
+                    break;
+                }
+
+                currentIndex++;
+            }
+
+            if (!matched)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     private static async Task<(string Text, bool IsTruncated)> ReadBoundedBodyAsync(
         HttpResponseMessage response,
@@ -398,7 +493,7 @@ public sealed class ProjectStructureWorkflowExecutor(IServiceScopeFactory scopeF
         {
             WorkflowProjectStructureOperation.ListProjects => await service.ListProjectsAsync(cancellationToken),
             WorkflowProjectStructureOperation.ReadTree => await service.GetStructureAsync(
-                RequireProjectId(settings),
+                RequireProjectId(settings, input),
                 new ProjectStructureReadRequest(
                     IncludeLinks: true,
                     IncludeLayout: true,
@@ -408,9 +503,9 @@ public sealed class ProjectStructureWorkflowExecutor(IServiceScopeFactory scopeF
                     Take: 250),
                 cancellationToken),
             WorkflowProjectStructureOperation.ReadNode => await service.GetStructureAsync(
-                RequireProjectId(settings),
+                RequireProjectId(settings, input),
                 new ProjectStructureReadRequest(
-                    NodeIds: [Require(settings.NodeId, nameof(settings.NodeId))],
+                    NodeIds: [RequireNodeId(settings, input)],
                     IncludeLinks: true,
                     IncludeLayout: true,
                     IncludeMetadata: true,
@@ -418,9 +513,9 @@ public sealed class ProjectStructureWorkflowExecutor(IServiceScopeFactory scopeF
                     IncludeAssets: true),
                 cancellationToken),
             WorkflowProjectStructureOperation.CreateAsset => await service.CreateAssetAsync(
-                RequireProjectId(settings),
+                RequireProjectId(settings, input),
                 BuildAssetRequest(settings, input),
-                BuildAgentContext(),
+                BuildAgentContext(input),
                 cancellationToken),
             _ => throw new InvalidOperationException($"Project-structure operation '{settings.Operation}' is not supported.")
         };
@@ -455,7 +550,7 @@ public sealed class ProjectStructureWorkflowExecutor(IServiceScopeFactory scopeF
             Subtitle: string.Empty,
             Notes: content,
             media,
-            ParentNodeKey: string.IsNullOrWhiteSpace(settings.NodeId) ? null : settings.NodeId.Trim(),
+            ParentNodeKey: ResolveOptionalNodeId(settings, input) ?? ResolveWorkflowParentNodeId(input),
             ObjectSubtype: NormalizeAssetKind(settings.AssetKind),
             MetadataJson: "{}",
             SourceWorkspacePath: sourcePath,
@@ -463,19 +558,194 @@ public sealed class ProjectStructureWorkflowExecutor(IServiceScopeFactory scopeF
             SourceContentType: settings.ContentType);
     }
 
-    private static Guid RequireProjectId(WorkflowProjectStructureExecutorSettings settings)
-        => settings.ProjectId is { } projectId && projectId != Guid.Empty
-            ? projectId
-            : throw new InvalidOperationException("Project-structure executor setting 'ProjectId' is required.");
+    private static Guid RequireProjectId(
+        WorkflowProjectStructureExecutorSettings settings,
+        WorkflowNodeInput input)
+    {
+        if (settings.ProjectId is { } projectId && projectId != Guid.Empty)
+        {
+            return projectId;
+        }
 
-    private static ProjectStructureAgentContext BuildAgentContext()
-        => new(
+        var rawProjectId = ResolveInputJsonString(input, settings.ProjectIdJsonPath, nameof(settings.ProjectIdJsonPath));
+        if (Guid.TryParse(rawProjectId, out var parsed) && parsed != Guid.Empty)
+        {
+            return parsed;
+        }
+
+        if (TryResolveInputJsonString(input, "$.project.id", out rawProjectId) &&
+            Guid.TryParse(rawProjectId, out parsed) &&
+            parsed != Guid.Empty)
+        {
+            return parsed;
+        }
+
+        throw new InvalidOperationException("Project-structure executor setting 'ProjectId' or 'ProjectIdJsonPath' is required unless the workflow input includes '$.project.id'.");
+    }
+
+    private static string RequireNodeId(
+        WorkflowProjectStructureExecutorSettings settings,
+        WorkflowNodeInput input)
+        => Require(ResolveOptionalNodeId(settings, input) ?? string.Empty, nameof(settings.NodeId));
+
+    private static string? ResolveOptionalNodeId(
+        WorkflowProjectStructureExecutorSettings settings,
+        WorkflowNodeInput input)
+    {
+        if (!string.IsNullOrWhiteSpace(settings.NodeId))
+        {
+            return settings.NodeId.Trim();
+        }
+
+        return ResolveInputJsonString(input, settings.NodeIdJsonPath, nameof(settings.NodeIdJsonPath));
+    }
+
+    private static string? ResolveWorkflowParentNodeId(WorkflowNodeInput input)
+        => TryResolveInputJsonString(input, "$.runContext.workflowNodeId", out var workflowNodeId) &&
+           !string.IsNullOrWhiteSpace(workflowNodeId)
+            ? workflowNodeId.Trim()
+            : null;
+
+    private static string? ResolveInputJsonString(
+        WorkflowNodeInput input,
+        string jsonPath,
+        string settingName)
+    {
+        if (string.IsNullOrWhiteSpace(jsonPath))
+        {
+            return null;
+        }
+
+        if (!WorkflowRoutingValidation.TryParseJsonPath(jsonPath.Trim(), out var path, out var pathError))
+        {
+            throw new InvalidOperationException($"Project-structure executor setting '{settingName}' has invalid JSON path: {pathError}.");
+        }
+
+        if (string.IsNullOrWhiteSpace(input.PayloadJson))
+        {
+            throw new InvalidOperationException($"Project-structure executor setting '{settingName}' requires a workflow JSON payload.");
+        }
+
+        using var document = JsonDocument.Parse(input.PayloadJson);
+        if (!TryResolve(document.RootElement, path, out var value))
+        {
+            throw new InvalidOperationException($"Project-structure executor setting '{settingName}' path '{jsonPath}' was not found in the workflow payload.");
+        }
+
+        return value.ValueKind == JsonValueKind.String
+            ? value.GetString()
+            : value.GetRawText();
+    }
+
+    private static bool TryResolveInputJsonString(
+        WorkflowNodeInput input,
+        string jsonPath,
+        out string? resolvedValue)
+    {
+        resolvedValue = null;
+        if (string.IsNullOrWhiteSpace(jsonPath))
+        {
+            return false;
+        }
+
+        if (!WorkflowRoutingValidation.TryParseJsonPath(jsonPath.Trim(), out var path, out var pathError))
+        {
+            throw new InvalidOperationException($"Project-structure executor has invalid JSON path '{jsonPath}': {pathError}.");
+        }
+
+        if (string.IsNullOrWhiteSpace(input.PayloadJson))
+        {
+            return false;
+        }
+
+        using var document = JsonDocument.Parse(input.PayloadJson);
+        if (!TryResolve(document.RootElement, path, out var value))
+        {
+            return false;
+        }
+
+        resolvedValue = value.ValueKind == JsonValueKind.String
+            ? value.GetString()
+            : value.GetRawText();
+        return true;
+    }
+
+    private static bool TryResolve(
+        JsonElement root,
+        IReadOnlyList<BuiltInJsonPathSegment> path,
+        out JsonElement value)
+    {
+        value = root;
+        foreach (var segment in path)
+        {
+            if (segment.PropertyName is not null)
+            {
+                if (value.ValueKind != JsonValueKind.Object ||
+                    !value.TryGetProperty(segment.PropertyName, out value))
+                {
+                    return false;
+                }
+
+                continue;
+            }
+
+            if (segment.Index is not { } targetIndex || value.ValueKind != JsonValueKind.Array)
+            {
+                return false;
+            }
+
+            var currentIndex = 0;
+            var matched = false;
+            foreach (var item in value.EnumerateArray())
+            {
+                if (currentIndex == targetIndex)
+                {
+                    value = item;
+                    matched = true;
+                    break;
+                }
+
+                currentIndex++;
+            }
+
+            if (!matched)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static ProjectStructureAgentContext BuildAgentContext(WorkflowNodeInput input)
+    {
+        var fallback = new ProjectStructureAgentContext(
             "workflow-executor",
             "Workflow executor",
             Environment.MachineName,
             string.Empty,
             string.Empty,
             Guid.NewGuid().ToString("N"));
+
+        return string.IsNullOrWhiteSpace(ReadRunContextString(input, "agentId"))
+            ? fallback
+            : new ProjectStructureAgentContext(
+                ReadRunContextString(input, "agentId"),
+                ReadRunContextString(input, "agentName", fallback.AgentName),
+                ReadRunContextString(input, "machineName", fallback.MachineName),
+                ReadRunContextString(input, "repositoryRoot", fallback.RepositoryRoot),
+                ReadRunContextString(input, "branchName", fallback.BranchName),
+                ReadRunContextString(input, "sessionId", fallback.SessionId));
+    }
+
+    private static string ReadRunContextString(
+        WorkflowNodeInput input,
+        string propertyName,
+        string fallback = "")
+        => TryResolveInputJsonString(input, $"$.runContext.{propertyName}", out var value) &&
+           !string.IsNullOrWhiteSpace(value)
+            ? value.Trim()
+            : fallback;
 
     private static string NormalizeAssetKind(string value)
         => string.IsNullOrWhiteSpace(value) ? "md" : value.Trim().TrimStart('.').ToLowerInvariant();

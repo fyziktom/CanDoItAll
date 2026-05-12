@@ -1,0 +1,55 @@
+{
+  "generatedAtUtc": "2026-05-12T09:54:41.0432500+00:00",
+  "appBaseUrl": "http://127.0.0.1:5087",
+  "databaseProfile": "Configured PostgreSQL override from appsettings.Development.json",
+  "openAiApiKeyPresent": true,
+  "ollamaTagsContainGptoss20b64k": true,
+  "results": [
+    {
+      "provider": "OpenAI chat completions",
+      "providerId": "036b360a-e3f4-8350-97ca-f88de60ba2bb",
+      "model": "gpt-5-mini",
+      "testChatSucceeded": true,
+      "testChatMarkerObserved": true,
+      "testChatResponsePreview": "OPENAI-MOUSER-CHECK: Given the two sources (C:\\programovani\\testdata\\testworkflows\\mouser-order\\Cart_Mar30_1059AM.xls and C:\\programovani\\testdata\\testworkflows\\mouser-order\\MOUSER_Receipt_89566550.pdf), a CanDoItAll workflow for reconciling Mouser order inputs should verify the following items, and flag any mismatches or missing evidence.\n\n1) File-level / metadata checks\n- Confirm both files are present and readable (XLS and PDF paths).\n- Validate receipt/order identity: Mouser receipt number on PDF (89566550) matches any order number referenced in the cart or order confirmation.\n- Verify dates/times: cart timestamp (Mar 30 10:59 AM) vs receipt order/ship dates — flag unexpected date gaps.\n- Confirm currency and locale (e.g., USD, EUR) are consistent between cart and receipt.\n- Validate f",
+      "testChatError": null,
+      "workflow": {
+        "succeeded": true,
+        "phase": "completed-run",
+        "componentId": "70d2f5fe-7b9d-4f53-acc3-1a8f209b8298",
+        "workflowId": "41912fb5-0d96-45c2-9017-2666d65247eb",
+        "versionId": "caf9893f-1306-446a-a799-0b43245cc3a6",
+        "runId": "765a9e5a-2af2-4e54-8c4a-d5a82d7b534d",
+        "runState": 4,
+        "markerObserved": true,
+        "eventCount": 15,
+        "artifactCount": 0,
+        "responsePreview": "WorkflowStartedEvent()\nSuperStepStartedEvent(Step = 0, Data: Microsoft.Agents.AI.Workflows.SuperStepStartInfo = Microsoft.Agents.AI.Workflows.SuperStepStartInfo)\nExecutorInvokedEvent(Executor = start, Data: CanDoItAll.AgentFramework.Models.WorkflowNodeInput = WorkflowNodeInput { PayloadJson = \"Case: reconcile Mouser order inputs. Sources: C:\\\\programovani\\\\testdata\\\\testworkflows\\\\mouser-order\\\\Cart_Mar30_1059AM.xls and C:\\\\programovani\\\\testdata\\\\testworkflows\\\\mouser-order\\\\MOUSER_Receipt_89566550.pdf. Summarize what a workflow should verify, including item match, quantities, totals, and missing evidence.\" })\nExecutorCompletedEvent(Executor = start, Data: CanDoItAll.AgentFramework.Models.WorkflowNodeInput = WorkflowNodeInput { PayloadJson = \"Case: reconcile Mouser order inputs. Sources: C:\\\\programovani\\\\testdata\\\\testworkflows\\\\mouser-order\\\\Cart_Mar30_1059AM.xls and C:\\\\programovani\\\\testdata\\\\testworkflows\\\\mouser-order\\\\MOUSER_Receipt_89566550.pdf. Summarize what a workflow should verify, including item match, quantities, totals, and missing evidence.\" })\nSuperStepCompletedEvent(Step = 0, Data: Microsoft.Agents.AI.Workflows.SuperStepCompletionInfo = Microsoft.Agents.AI.Workflows.SuperStepCompletionInfo)\nSuperStepStartedEvent(Step = 1, Data: Microsoft.Agents.AI.Workflows.SuperStepStartInfo = Microsoft.Agents.AI.Workflows.SuperStepStartInfo)\nExecutorInvokedEvent(Executor = llm, Data: CanDoItAll.AgentFramework.Models.WorkflowNodeInput = WorkflowNodeInput { PayloadJson = \"Case: reconcile Mouser order inputs. Sources: C:\\\\programovani\\\\testdata\\\\testworkflows\\\\mouser-order"
+      },
+      "succeeded": true
+    },
+    {
+      "provider": "Local Ollama gptoss20b64k",
+      "providerId": "48446192-8e6d-46b5-8ccc-0126a676c234",
+      "model": "gptoss20b64k:latest",
+      "testChatSucceeded": true,
+      "testChatMarkerObserved": true,
+      "testChatResponsePreview": "OLLAMA-SEAMARK-CHECK: The SEAMARK folder contains a collection of PDF documents that detail X‑ray inspection devices and their associated price lists, organized by device family and use case.  \n\n**Key extraction goals for the workflow**\n\n| Source | Data to extract | Purpose |\n|--------|-----------------|---------|\n| **Device PDFs** | • Device family (e.g., “High‑Resolution X‑ray”, “Portable X‑ray”, “Industrial X‑ray”)  <br>• Model identifiers and serial numbers  <br>• Technical specifications (energy range, detector type, resolution, scan speed)  <br>• Supported use cases (e.g., “Security screening”, “Industrial non‑destructive testing”, “Medical imaging”)  <br>• Certification and compliance information (e.g., CE, FCC, ISO)  <br>• Warranty and service terms | Build a structured catalog of ",
+      "testChatError": null,
+      "workflow": {
+        "succeeded": true,
+        "phase": "completed-run",
+        "componentId": "00c950d5-7e46-427d-ae07-34e18e05b22d",
+        "workflowId": "127bb924-4640-4913-b7dc-d8ac3ae2118c",
+        "versionId": "d9bf5afd-cbc7-4e17-97a9-858f5d2b3027",
+        "runId": "d6bf0a47-92e9-4b5e-88cf-190a7fd12d0d",
+        "runState": 4,
+        "markerObserved": true,
+        "eventCount": 15,
+        "artifactCount": 0,
+        "responsePreview": "WorkflowStartedEvent()\nSuperStepStartedEvent(Step = 0, Data: Microsoft.Agents.AI.Workflows.SuperStepStartInfo = Microsoft.Agents.AI.Workflows.SuperStepStartInfo)\nExecutorInvokedEvent(Executor = start, Data: CanDoItAll.AgentFramework.Models.WorkflowNodeInput = WorkflowNodeInput { PayloadJson = \"Case: summarize the SEAMARK folder for x-ray inspection devices. Source folder: C:\\\\programovani\\\\testdata\\\\testworkflows\\\\SEAMARK. Summarize what a workflow should extract from device PDFs and price list PDFs, including device families, use cases, and uncertainty.\" })\nExecutorCompletedEvent(Executor = start, Data: CanDoItAll.AgentFramework.Models.WorkflowNodeInput = WorkflowNodeInput { PayloadJson = \"Case: summarize the SEAMARK folder for x-ray inspection devices. Source folder: C:\\\\programovani\\\\testdata\\\\testworkflows\\\\SEAMARK. Summarize what a workflow should extract from device PDFs and price list PDFs, including device families, use cases, and uncertainty.\" })\nSuperStepCompletedEvent(Step = 0, Data: Microsoft.Agents.AI.Workflows.SuperStepCompletionInfo = Microsoft.Agents.AI.Workflows.SuperStepCompletionInfo)\nSuperStepStartedEvent(Step = 1, Data: Microsoft.Agents.AI.Workflows.SuperStepStartInfo = Microsoft.Agents.AI.Workflows.SuperStepStartInfo)\nExecutorInvokedEvent(Executor = llm, Data: CanDoItAll.AgentFramework.Models.WorkflowNodeInput = WorkflowNodeInput { PayloadJson = \"Case: summarize the SEAMARK folder for x-ray inspection devices. Source folder: C:\\\\programovani\\\\testdata\\\\testworkflows\\\\SEAMARK. Summarize what a workflow should extract from device PDFs and price list PDFs"
+      },
+      "succeeded": true
+    }
+  ]
+}

@@ -30,6 +30,7 @@ public sealed record ProjectStructureSelectionDetailState(
     IReadOnlyList<ProjectStructureSelectionBadgePresentation> BadgePresentations,
     StorageSummaryModel? StorageSummary,
     ProjectStructureAttachmentPreviewCardState? AttachmentPreview,
+    ProjectStructureSelectionWorkflowStatusState? WorkflowStatus,
     bool HasMermaidViewer,
     IReadOnlyList<ProjectStructureInspectorActionItem> Actions,
     string? WorkflowFeedback,
@@ -39,6 +40,19 @@ public sealed record ProjectStructureSelectionDetailState(
     string LocationLabel,
     IReadOnlyList<ProjectStructureDetailSection> DetailSections,
     IReadOnlyList<ProjectStructureNodeFact> Facts);
+
+public sealed record ProjectStructureSelectionWorkflowStatusState(
+    string WorkflowName,
+    string State,
+    string Status,
+    string Message,
+    string StepLabel,
+    string ProgressLabel,
+    string RunId,
+    string LastUpdatedLabel,
+    IReadOnlyList<string> CreatedNodeIds,
+    IReadOnlyList<string> CreatedAssetIds,
+    IReadOnlyList<string> CreatedFilePaths);
 
 public sealed record ProjectStructureAttachmentPreviewCardState(
     AttachmentPreviewKind Kind,

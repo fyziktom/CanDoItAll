@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.CanvasLib;
 
@@ -75,12 +76,19 @@ internal sealed class WorkflowCanvasEdgeDraft(
     public WorkflowEdgeKind Kind { get; set; } = WorkflowEdgeKind.Direct;
 
     public string ConditionExpression { get; set; } = string.Empty;
+
+    public WorkflowEdgeRouting Routing { get; set; } = WorkflowEdgeRouting.Always;
 }
 
 internal static class WorkflowCanvasDefinitionMapper
 {
     public const string InputPortId = "workflow:input";
     public const string OutputPortId = "workflow:output";
+    public const string EditNodeActionId = "workflow-node:edit";
+    public const string RemoveNodeActionId = "workflow-node:remove";
+    public const string AddDecisionRouteActionId = "workflow-decision:add-route";
+
+    private const string DecisionRoutesActionId = "workflow-decision:routes";
 
     private static readonly IReadOnlyDictionary<WorkflowNodeKind, string> NodeIcons = new Dictionary<WorkflowNodeKind, string>
     {
@@ -194,7 +202,8 @@ internal static class WorkflowCanvasDefinitionMapper
             document.Edges.Add(new WorkflowCanvasEdgeDraft(edge.Id, edge.SourceNodeId, edge.TargetNodeId)
             {
                 Kind = edge.Kind,
-                ConditionExpression = edge.ConditionExpression
+                ConditionExpression = edge.ConditionExpression,
+                Routing = edge.Routing ?? WorkflowEdgeRouting.Always
             });
         }
 
@@ -237,7 +246,10 @@ internal static class WorkflowCanvasDefinitionMapper
                 edge.TargetNodeId,
                 new WorkflowPortId(InputPortId),
                 edge.Kind,
-                edge.ConditionExpression.Trim()))
+                edge.ConditionExpression.Trim())
+            {
+                Routing = edge.Routing
+            })
             .ToArray();
         var now = DateTimeOffset.UtcNow;
         return new WorkflowDefinition(
@@ -275,6 +287,40 @@ internal static class WorkflowCanvasDefinitionMapper
         var nodes = document.Nodes
             .Select(node => BuildWorkbenchNode(node, componentsById, executorsById, issuesByNode))
             .ToList();
+        var decisionSummariesBySource = document.Edges
+            .GroupBy(edge => edge.SourceNodeId)
+            .Where(group => group.Count() > 1 || group.Any(edge => edge.Routing.Kind != WorkflowRouteKind.Always))
+            .ToDictionary(
+                group => group.Key.Value,
+                group => $"{group.Count()} route(s)");
+        var decisionNodeIds = document.Nodes
+            .Where(node => node.Kind == WorkflowNodeKind.Triage)
+            .Select(node => node.Id.Value)
+            .ToHashSet(StringComparer.Ordinal);
+        foreach (var node in nodes)
+        {
+            if (decisionNodeIds.Contains(node.Id))
+            {
+                AddDecisionContextActions(node);
+            }
+
+            if (!decisionSummariesBySource.TryGetValue(node.Id, out var summary))
+            {
+                continue;
+            }
+
+            node.Family = "workflow-decision";
+            node.Icon = "call_split";
+            node.BranchLabel = summary;
+            node.PaletteKey = "workflow-decision";
+            node.AccentColor = "#0f766e";
+            node.FooterChips.Add(new CanvasWorkbenchChip
+            {
+                Text = summary,
+                Tone = "info"
+            });
+        }
+
         var links = document.Edges
             .Select(edge => new CanvasWorkbenchLink
             {
@@ -282,7 +328,10 @@ internal static class WorkflowCanvasDefinitionMapper
                 SourcePortId = OutputPortId,
                 TargetId = edge.TargetNodeId.Value,
                 TargetPortId = InputPortId,
-                Kind = edge.Kind.ToString(),
+                Kind = edge.Routing.Kind.ToString(),
+                Label = ResolveRouteLabel(edge),
+                Summary = BuildRouteSummary(edge),
+                Tone = ResolveRouteTone(edge),
                 IsUserAuthored = true
             })
             .ToList();
@@ -415,6 +464,109 @@ internal static class WorkflowCanvasDefinitionMapper
         };
     }
 
+    public static string ResolveRouteModeLabel(WorkflowRouteKind kind)
+    {
+        return kind switch
+        {
+            WorkflowRouteKind.Always => "Direct",
+            WorkflowRouteKind.Predicate => "IF predicate",
+            WorkflowRouteKind.SwitchCase => "Switch case",
+            WorkflowRouteKind.SwitchDefault => "Switch default",
+            WorkflowRouteKind.FanOutSelector => "Fan-out selector",
+            _ => kind.ToString()
+        };
+    }
+
+    public static string BuildRouteSummary(WorkflowCanvasEdgeDraft edge)
+    {
+        ArgumentNullException.ThrowIfNull(edge);
+
+        var routing = edge.Routing ?? WorkflowEdgeRouting.Always;
+        var summary = routing.Kind switch
+        {
+            WorkflowRouteKind.Always => "Always",
+            WorkflowRouteKind.Predicate => $"{routing.JsonPath} {WorkflowRoutingValidation.FormatOperator(routing.Operator)} {FormatExpectedValue(routing)}",
+            WorkflowRouteKind.SwitchCase => $"case {FormatExpectedValue(routing)} from {routing.JsonPath}",
+            WorkflowRouteKind.SwitchDefault => "default branch",
+            WorkflowRouteKind.FanOutSelector => $"target {routing.FanOutTargetIndex?.ToString() ?? "auto"} when {routing.JsonPath} {WorkflowRoutingValidation.FormatOperator(routing.Operator)} {FormatExpectedValue(routing)}",
+            _ => routing.Kind.ToString()
+        };
+
+        return string.IsNullOrWhiteSpace(routing.Label)
+            ? summary
+            : $"{routing.Label}: {summary}";
+    }
+
+    public static string ResolveRouteLabel(WorkflowCanvasEdgeDraft edge)
+    {
+        ArgumentNullException.ThrowIfNull(edge);
+
+        var routing = edge.Routing ?? WorkflowEdgeRouting.Always;
+        if (!string.IsNullOrWhiteSpace(routing.Label))
+        {
+            return routing.Label.Trim();
+        }
+
+        return routing.Kind switch
+        {
+            WorkflowRouteKind.Always => "Direct",
+            WorkflowRouteKind.Predicate => "IF",
+            WorkflowRouteKind.SwitchCase => $"Case {FormatExpectedValue(routing)}",
+            WorkflowRouteKind.SwitchDefault => "Default",
+            WorkflowRouteKind.FanOutSelector => $"Fan-out {routing.FanOutTargetIndex?.ToString() ?? string.Empty}".Trim(),
+            _ => routing.Kind.ToString()
+        };
+    }
+
+    public static string ResolveRouteTone(WorkflowCanvasEdgeDraft edge)
+    {
+        ArgumentNullException.ThrowIfNull(edge);
+
+        return edge.Routing.Kind switch
+        {
+            WorkflowRouteKind.Always => "neutral",
+            WorkflowRouteKind.Predicate when IsNegativePredicateLabel(edge.Routing.Label) ||
+                                             edge.Routing.Operator == WorkflowRouteOperator.NotEquals ||
+                                             edge.Routing.Operator == WorkflowRouteOperator.IsFalsy => "danger",
+            WorkflowRouteKind.Predicate => "success",
+            WorkflowRouteKind.SwitchCase => "info",
+            WorkflowRouteKind.SwitchDefault => "default",
+            WorkflowRouteKind.FanOutSelector => "fanout",
+            _ => "neutral"
+        };
+    }
+
+    private static bool IsNegativePredicateLabel(string label)
+    {
+        if (string.IsNullOrWhiteSpace(label))
+        {
+            return false;
+        }
+
+        return label.Contains("else", StringComparison.OrdinalIgnoreCase) ||
+               label.Contains("false", StringComparison.OrdinalIgnoreCase) ||
+               label.Contains("reject", StringComparison.OrdinalIgnoreCase) ||
+               label.Contains("no ", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string FormatExpectedValue(WorkflowEdgeRouting routing)
+    {
+        if (!WorkflowRoutingValidation.RequiresExpectedValue(routing.Operator))
+        {
+            return string.Empty;
+        }
+
+        if (routing.ExpectedValueKind == WorkflowRouteValueKind.String &&
+            routing.ExpectedValueJson.Length >= 2 &&
+            routing.ExpectedValueJson[0] == '"' &&
+            routing.ExpectedValueJson[^1] == '"')
+        {
+            return routing.ExpectedValueJson[1..^1];
+        }
+
+        return routing.ExpectedValueJson;
+    }
+
     public static IReadOnlyList<WorkflowNodeKind> CreatableNodeKinds { get; } =
     [
         WorkflowNodeKind.LlmCall,
@@ -495,25 +647,131 @@ internal static class WorkflowCanvasDefinitionMapper
             FocusActionLabel = "Focus start",
             ShowQuickCreateRail = true,
             CollapseOnDoubleClick = false,
-            QuickCreateActions = CreatableNodeKinds
-                .Select(kind => new CanvasWorkbenchAction
-                {
-                    ActionId = BuildCreateActionId(kind),
-                    Label = ResolveDefaultNodeName(kind),
-                    MenuLabel = ResolveDefaultNodeName(kind),
-                    Description = ResolveDefaultInstructions(kind),
-                    Icon = ResolveIcon(kind),
-                    Tone = ResolveTone(kind),
-                    RequiresInput = true,
-                    CreateMode = "dialog",
-                    TitlePlaceholder = ResolveDefaultNodeName(kind),
-                    NotesPlaceholder = ResolveDefaultInstructions(kind),
-                    SubmitLabel = "Add node"
-                })
+            QuickCreateActions = WorkflowCanvasDecisionCatalog.BuildQuickCreateActions()
+                .Concat(CreatableNodeKinds
+                    .Select(kind => new CanvasWorkbenchAction
+                    {
+                        ActionId = BuildCreateActionId(kind),
+                        Label = ResolveDefaultNodeName(kind),
+                        MenuLabel = ResolveDefaultNodeName(kind),
+                        Description = ResolveDefaultInstructions(kind),
+                        Icon = ResolveIcon(kind),
+                        Tone = ResolveTone(kind),
+                        SetupRendererKey = $"workflow-node-{kind.ToString().ToLowerInvariant()}",
+                        RequiresInput = true,
+                        CreateMode = "dialog",
+                        TitlePlaceholder = ResolveDefaultNodeName(kind),
+                        NotesPlaceholder = ResolveDefaultInstructions(kind),
+                        SubmitLabel = "Add node",
+                        InputFields = BuildNodeSetupFields(kind),
+                        DefaultInputValues = BuildNodeDefaultInputValues(kind)
+                    }))
                 .Concat(WorkflowExecutorCanvasCatalog.BuildQuickCreateActions(executors))
                 .ToList()
         };
     }
+
+    private static List<CanvasWorkbenchInputField> BuildNodeSetupFields(WorkflowNodeKind kind)
+    {
+        var fields = new List<CanvasWorkbenchInputField>
+        {
+            CreateShapeField(
+                "inputShape",
+                "Input shape",
+                sectionDescription: "Set the node contract before it lands on the canvas."),
+            CreateShapeField(
+                "resultShape",
+                "Result shape",
+                sectionDescription: "Set the node contract before it lands on the canvas.")
+        };
+
+        if (kind == WorkflowNodeKind.HumanInput)
+        {
+            fields.Add(new CanvasWorkbenchInputField
+            {
+                Key = "externalRequestKind",
+                SectionKey = "request",
+                SectionTitle = "Request",
+                SectionDescription = "Choose how the workflow should pause for outside input.",
+                Label = "Request kind",
+                InputMode = "select",
+                IsRequired = true,
+                Options =
+                [
+                    new CanvasWorkbenchInputOption { Value = WorkflowExternalRequestKind.HumanInput.ToString(), Label = "Human input" },
+                    new CanvasWorkbenchInputOption { Value = WorkflowExternalRequestKind.Approval.ToString(), Label = "Approval" }
+                ]
+            });
+        }
+
+        if (kind == WorkflowNodeKind.AgentStep)
+        {
+            fields.Add(new CanvasWorkbenchInputField
+            {
+                Key = "agentId",
+                SectionKey = "binding",
+                SectionTitle = "Binding",
+                SectionDescription = "Optional for now; bind the node to an agent when the id is known.",
+                Label = "Agent id",
+                Placeholder = "00000000-0000-0000-0000-000000000000"
+            });
+        }
+
+        if (kind == WorkflowNodeKind.Subworkflow)
+        {
+            fields.Add(new CanvasWorkbenchInputField
+            {
+                Key = "subworkflowId",
+                SectionKey = "binding",
+                SectionTitle = "Binding",
+                SectionDescription = "Optional for now; bind the node to another workflow when the id is known.",
+                Label = "Subworkflow id",
+                Placeholder = "00000000-0000-0000-0000-000000000000"
+            });
+        }
+
+        return fields;
+    }
+
+    private static List<CanvasWorkbenchInputValue> BuildNodeDefaultInputValues(WorkflowNodeKind kind)
+        =>
+        [
+            new CanvasWorkbenchInputValue { Key = "inputShape", Value = WorkflowValueShapeKind.Text.ToString() },
+            new CanvasWorkbenchInputValue
+            {
+                Key = "resultShape",
+                Value = kind is WorkflowNodeKind.StrictLogic or WorkflowNodeKind.Triage
+                    ? WorkflowValueShapeKind.Json.ToString()
+                    : WorkflowValueShapeKind.Text.ToString()
+            },
+            new CanvasWorkbenchInputValue
+            {
+                Key = "externalRequestKind",
+                Value = WorkflowExternalRequestKind.HumanInput.ToString()
+            }
+        ];
+
+    private static CanvasWorkbenchInputField CreateShapeField(
+        string key,
+        string label,
+        string sectionDescription)
+        => new()
+        {
+            Key = key,
+            SectionKey = "contract",
+            SectionTitle = "Contract",
+            SectionDescription = sectionDescription,
+            Label = label,
+            InputMode = "select",
+            IsRequired = true,
+            Options = Enum.GetValues<WorkflowValueShapeKind>()
+                .Select(shape => new CanvasWorkbenchInputOption
+                {
+                    Value = shape.ToString(),
+                    Label = shape.ToString()
+                })
+                .ToList()
+        };
 
     private static CanvasWorkbenchNode BuildWorkbenchNode(
         WorkflowCanvasNodeDraft node,
@@ -563,7 +821,7 @@ internal static class WorkflowCanvasDefinitionMapper
             [
                 new CanvasWorkbenchAction
                 {
-                    ActionId = "workflow-node:edit",
+                    ActionId = EditNodeActionId,
                     Label = "Edit node",
                     MenuLabel = "Edit",
                     Icon = "edit",
@@ -571,7 +829,7 @@ internal static class WorkflowCanvasDefinitionMapper
                 },
                 new CanvasWorkbenchAction
                 {
-                    ActionId = "workflow-node:remove",
+                    ActionId = RemoveNodeActionId,
                     Label = "Remove node",
                     MenuLabel = "Remove",
                     Icon = "delete",
@@ -581,6 +839,37 @@ internal static class WorkflowCanvasDefinitionMapper
             InputPorts = node.Kind == WorkflowNodeKind.Start ? [] : [BuildInputPort(node)],
             OutputPorts = node.Kind == WorkflowNodeKind.End ? [] : [BuildOutputPort(node)]
         };
+    }
+
+    private static void AddDecisionContextActions(CanvasWorkbenchNode node)
+    {
+        if (node.ContextActions.Any(action => string.Equals(action.ActionId, DecisionRoutesActionId, StringComparison.Ordinal)))
+        {
+            return;
+        }
+
+        node.ContextActions.Insert(Math.Min(1, node.ContextActions.Count), new CanvasWorkbenchAction
+        {
+            ActionId = DecisionRoutesActionId,
+            Label = "Routes",
+            MenuLabel = "Routes",
+            Description = "Add or edit decision outputs.",
+            Icon = "alt_route",
+            Tone = "accent",
+            SubmenuLayout = "hive",
+            Children =
+            [
+                new CanvasWorkbenchAction
+                {
+                    ActionId = AddDecisionRouteActionId,
+                    Label = "Add route",
+                    MenuLabel = "Add route",
+                    Description = "Add another decision output route.",
+                    Icon = "add",
+                    Tone = "success"
+                }
+            ]
+        });
     }
 
     private static List<CanvasWorkbenchChip> BuildNodeChips(
@@ -827,4 +1116,206 @@ internal static class WorkflowCanvasDefinitionMapper
         kind = default;
         return false;
     }
+}
+
+internal enum WorkflowDecisionBlockKind
+{
+    IfElse,
+    Switch,
+    FanOut
+}
+
+internal static class WorkflowCanvasDecisionCatalog
+{
+    private const string CreateDecisionActionPrefix = "workflow-decision:create:";
+
+    public static IReadOnlyList<WorkflowDecisionBlockKind> DecisionBlockKinds { get; } =
+    [
+        WorkflowDecisionBlockKind.IfElse,
+        WorkflowDecisionBlockKind.Switch,
+        WorkflowDecisionBlockKind.FanOut
+    ];
+
+    public static IReadOnlyList<CanvasWorkbenchAction> BuildQuickCreateActions()
+        =>
+        [
+            new CanvasWorkbenchAction
+            {
+                ActionId = "workflow-decision:menu",
+                Label = "Decisions",
+                MenuLabel = "Decisions",
+                Description = "Split execution with IF/ELSE predicates, SWITCH/default branches, or fan-out selectors.",
+                Icon = "call_split",
+                Tone = "accent",
+                SubmenuLayout = "toolbox",
+                Children = DecisionBlockKinds.Select(BuildCreateAction).ToList()
+            }
+        ];
+
+    public static CanvasWorkbenchAction BuildCreateAction(WorkflowDecisionBlockKind kind)
+        => kind switch
+        {
+            WorkflowDecisionBlockKind.IfElse => new CanvasWorkbenchAction
+            {
+                ActionId = BuildCreateActionId(kind),
+                Label = "IF",
+                MenuLabel = "IF / ELSE",
+                Description = "Create a binary decision with true and else branches.",
+                Icon = "call_split",
+                Tone = "success",
+                SetupRendererKey = "workflow-decision-if-else",
+                RequiresInput = true,
+                CreateMode = "dialog",
+                ObjectSubtype = kind.ToString(),
+                TitlePlaceholder = "IF",
+                NotesPlaceholder = "Route based on a deterministic JSON predicate.",
+                SubmitLabel = "Add decision",
+                DefaultInputValues =
+                [
+                    new CanvasWorkbenchInputValue { Key = "jsonPath", Value = "$.status" },
+                    new CanvasWorkbenchInputValue { Key = "expectedValue", Value = "approved" },
+                    new CanvasWorkbenchInputValue { Key = "trueLabel", Value = "IF" },
+                    new CanvasWorkbenchInputValue { Key = "falseLabel", Value = "ELSE" }
+                ],
+                InputFields =
+                [
+                    RouteJsonPathField("Predicate", "$.status"),
+                    new CanvasWorkbenchInputField
+                    {
+                        Key = "expectedValue",
+                        SectionKey = "predicate",
+                        SectionTitle = "Predicate",
+                        SectionDescription = "The IF branch runs when this value matches.",
+                        Label = "Expected value",
+                        Placeholder = "approved",
+                        IsRequired = true
+                    },
+                    BranchLabelField("trueLabel", "IF branch", "IF"),
+                    BranchLabelField("falseLabel", "Else branch", "ELSE")
+                ]
+            },
+            WorkflowDecisionBlockKind.Switch => new CanvasWorkbenchAction
+            {
+                ActionId = BuildCreateActionId(kind),
+                Label = "SWITCH",
+                MenuLabel = "SWITCH / DEFAULT",
+                Description = "Create switch cases plus a default branch.",
+                Icon = "alt_route",
+                Tone = "info",
+                SetupRendererKey = "workflow-decision-switch",
+                RequiresInput = true,
+                CreateMode = "dialog",
+                ObjectSubtype = kind.ToString(),
+                TitlePlaceholder = "SWITCH",
+                NotesPlaceholder = "Route based on a JSON discriminator value.",
+                SubmitLabel = "Add switch",
+                DefaultInputValues =
+                [
+                    new CanvasWorkbenchInputValue { Key = "jsonPath", Value = "$.category" },
+                    new CanvasWorkbenchInputValue { Key = "caseValues", Value = "high, medium, low" },
+                    new CanvasWorkbenchInputValue { Key = "defaultLabel", Value = "DEFAULT" }
+                ],
+                InputFields =
+                [
+                    RouteJsonPathField("Discriminator", "$.category"),
+                    new CanvasWorkbenchInputField
+                    {
+                        Key = "caseValues",
+                        SectionKey = "branches",
+                        SectionTitle = "Branches",
+                        SectionDescription = "Comma, semicolon, or line-separated switch case values.",
+                        Label = "Case values",
+                        Placeholder = "high, medium, low",
+                        InputMode = "textarea",
+                        IsRequired = true
+                    },
+                    BranchLabelField("defaultLabel", "Default branch", "DEFAULT")
+                ]
+            },
+            WorkflowDecisionBlockKind.FanOut => new CanvasWorkbenchAction
+            {
+                ActionId = BuildCreateActionId(kind),
+                Label = "FAN-OUT",
+                MenuLabel = "Fan-out",
+                Description = "Create parallel branch selectors for multi-target routing.",
+                Icon = "hub",
+                Tone = "accent",
+                SetupRendererKey = "workflow-decision-fan-out",
+                RequiresInput = true,
+                CreateMode = "dialog",
+                ObjectSubtype = kind.ToString(),
+                TitlePlaceholder = "FAN-OUT",
+                NotesPlaceholder = "Select one or more downstream branches from an array or text field.",
+                SubmitLabel = "Add fan-out",
+                DefaultInputValues =
+                [
+                    new CanvasWorkbenchInputValue { Key = "jsonPath", Value = "$.targets" },
+                    new CanvasWorkbenchInputValue { Key = "branchLabels", Value = "validate payment, check inventory, reserve shipment, send confirmation" }
+                ],
+                InputFields =
+                [
+                    RouteJsonPathField("Selector path", "$.targets"),
+                    new CanvasWorkbenchInputField
+                    {
+                        Key = "branchLabels",
+                        SectionKey = "branches",
+                        SectionTitle = "Branches",
+                        SectionDescription = "Comma, semicolon, or line-separated branch names.",
+                        Label = "Branch labels",
+                        Placeholder = "validate payment, check inventory, reserve shipment, send confirmation",
+                        InputMode = "textarea",
+                        IsRequired = true
+                    }
+                ]
+            },
+            _ => throw new InvalidOperationException($"Unsupported decision block kind '{kind}'.")
+        };
+
+    public static string BuildCreateActionId(WorkflowDecisionBlockKind kind)
+        => $"{CreateDecisionActionPrefix}{kind}";
+
+    public static bool TryParseCreateActionId(string actionId, out WorkflowDecisionBlockKind kind)
+    {
+        if (actionId.StartsWith(CreateDecisionActionPrefix, StringComparison.Ordinal) &&
+            Enum.TryParse(actionId[CreateDecisionActionPrefix.Length..], ignoreCase: false, out kind))
+        {
+            return true;
+        }
+
+        kind = default;
+        return false;
+    }
+
+    public static string ResolveLabel(WorkflowDecisionBlockKind kind)
+        => kind switch
+        {
+            WorkflowDecisionBlockKind.IfElse => "IF",
+            WorkflowDecisionBlockKind.Switch => "SWITCH",
+            WorkflowDecisionBlockKind.FanOut => "FAN-OUT",
+            _ => kind.ToString()
+        };
+
+    private static CanvasWorkbenchInputField RouteJsonPathField(string sectionTitle, string placeholder)
+        => new()
+        {
+            Key = "jsonPath",
+            SectionKey = "predicate",
+            SectionTitle = sectionTitle,
+            SectionDescription = "Routes evaluate against the current workflow payload JSON.",
+            Label = "JSON path",
+            Placeholder = placeholder,
+            IsRequired = true
+        };
+
+    private static CanvasWorkbenchInputField BranchLabelField(string key, string label, string placeholder)
+        => new()
+        {
+            Key = key,
+            SectionKey = "branches",
+            SectionTitle = "Branches",
+            SectionDescription = "These labels become visible branch chips on the connector.",
+            Label = label,
+            Placeholder = placeholder,
+            IsRequired = true
+        };
 }

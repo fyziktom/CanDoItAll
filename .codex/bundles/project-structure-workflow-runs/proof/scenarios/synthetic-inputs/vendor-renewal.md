@@ -1,0 +1,1 @@
+Vendor asks for a two-year renewal, 14 percent price increase, and a support addendum. Finance approval is missing.

@@ -25,6 +25,8 @@ public enum ProjectObjectType
     PromptStep,
     ProcessDefinition,
     ProcessRun,
+    WorkflowDefinition,
+    WorkflowRun,
     ValidationRun,
     TestPlan,
     TestEvidence,

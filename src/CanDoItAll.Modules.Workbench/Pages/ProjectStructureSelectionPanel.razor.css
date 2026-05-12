@@ -1,0 +1,12 @@
+.project-structure-workflow-status-card .project-structure-advanced-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.project-structure-workflow-status-card .cw-summary-tile {
+    min-height: 0;
+    padding: 0.55rem 0.65rem;
+}
+
+.project-structure-workflow-status-card .cw-summary-tile strong {
+    overflow-wrap: anywhere;
+}

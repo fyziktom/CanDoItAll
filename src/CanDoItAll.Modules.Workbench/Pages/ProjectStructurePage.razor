@@ -220,6 +220,20 @@ else
                                                            CloseProcessLink="CloseProcessLinkDialog"
                                                            ProcessLinkSelectionChanged="HandleProcessLinkSelectionChanged"
                                                            ExecuteProcessLink="ExecuteProcessLinkAsync"
+                                                           WorkflowAddDialog="@workflowAddDialog"
+                                                           CloseWorkflowAdd="CloseWorkflowAddDialog"
+                                                           WorkflowAddSelectionChanged="HandleWorkflowAddSelectionChanged"
+                                                           WorkflowAddIncludeParentSubtreeChanged="HandleWorkflowAddIncludeParentSubtreeChanged"
+                                                           WorkflowAddIncludeAssetsChanged="HandleWorkflowAddIncludeAssetsChanged"
+                                                           WorkflowAddManualInputChanged="HandleWorkflowAddManualInputChanged"
+                                                           WorkflowAddSourceKindChanged="HandleWorkflowAddSourceKindChanged"
+                                                           WorkflowAddSourceKeyChanged="HandleWorkflowAddSourceKeyChanged"
+                                                           WorkflowAddSourceLabelChanged="HandleWorkflowAddSourceLabelChanged"
+                                                           WorkflowAddSourceValueChanged="HandleWorkflowAddSourceValueChanged"
+                                                           ExecuteWorkflowAdd="ExecuteWorkflowAddAsync"
+                                                           WorkflowStartDialog="@workflowStartDialog"
+                                                           CloseWorkflowStart="CloseWorkflowStartDialog"
+                                                           ExecuteWorkflowStart="ExecuteWorkflowStartAsync"
                                                            ProcessStartDialog="@processStartDialog"
             CloseProcessStart="CloseProcessStartDialog"
             ExecuteProcessStart="ExecuteProcessStartAsync"
@@ -851,6 +865,7 @@ else
 
         selectedNodeIds = args.SelectedNodeIds.ToList();
         pendingClientSelectionId = null;
+        await RefreshSelectedWorkflowStatusAsync(args.PrimaryNodeId ?? selectedNodeIds.FirstOrDefault());
         await LoadPartyEditorAsync();
         await InvokeAsync(StateHasChanged);
     }
@@ -1106,6 +1121,19 @@ else
                     await OpenStartProcessDialogAsync(processDefinitionNode);
                 }
                 break;
+            case "add-workflow":
+                if (ResolveNode(nodeId) is { } workflowParentNode)
+                {
+                    await OpenAddWorkflowDialogAsync(workflowParentNode);
+                }
+                break;
+            case "start-workflow":
+            case "execute-workflow":
+                if (ResolveNode(nodeId) is { } workflowDefinitionNode)
+                {
+                    await OpenStartWorkflowDialogAsync(workflowDefinitionNode);
+                }
+                break;
             case "project:open-structure":
                 if (ResolveNode(nodeId) is { } projectNodeForOpen)
                 {
@@ -1322,6 +1350,7 @@ else
 
         selectedNodeIds = [nodeId];
         await PersistSelectionAsync();
+        await RefreshSelectedWorkflowStatusAsync(nodeId);
         await LoadPartyEditorAsync();
         await InvokeAsync(StateHasChanged);
     }
@@ -1329,6 +1358,7 @@ else
     private async Task ClearSelectionAsync()
     {
         selectedNodeIds.Clear();
+        selectedWorkflowStatus = null;
         await PersistSelectionAsync();
         await LoadPartyEditorAsync();
         await InvokeAsync(StateHasChanged);

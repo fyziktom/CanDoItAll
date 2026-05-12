@@ -14,7 +14,7 @@ public sealed class WorkflowApiIntegrationTests
         var component = await SaveComponentAsync(host);
         var saveResponse = await host.Client.PostAsJsonAsync(
             "/api/workflows/definitions",
-            CreateDefinitionSaveRequest(component.Id));
+            CreateDefinitionSaveRequest(component.Id, graph: CreatePassthroughGraph()));
         var saveBody = await saveResponse.Content.ReadAsStringAsync();
         Assert.True(saveResponse.IsSuccessStatusCode, saveBody);
         var definition = JsonSerializer.Deserialize<WorkflowDefinition>(saveBody, JsonOptions())!;
@@ -48,6 +48,51 @@ public sealed class WorkflowApiIntegrationTests
         Assert.NotNull(testRun.Run);
         Assert.Equal(WorkflowRunState.Completed, testRun.Run.State);
         Assert.NotEmpty(testRun.Events);
+    }
+
+    [Fact]
+    public async Task Workflow_api_round_trips_typed_route_metadata()
+    {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
+        var saveResponse = await host.Client.PostAsJsonAsync(
+            "/api/workflows/definitions",
+            new WorkflowDefinitionSaveRequest(
+                Id: null,
+                ExpectedVersionId: null,
+                Name: "Routing API workflow",
+                Description: "Workflow route metadata API proof.",
+                Status: WorkflowLifecycleStatus.Draft,
+                Graph: CreateRoutingGraph(),
+                RuntimePolicy: new WorkflowRuntimePolicy(
+                    WorkflowRuntimeBackendKind.InProcess,
+                    AllowInProcessPreviewRuns: true,
+                    RequireDurableProductionRuns: false,
+                    ExposeAzureFunctionsStatusEndpoint: false,
+                    ExposeAzureFunctionsMcpTool: false)));
+        var saveBody = await saveResponse.Content.ReadAsStringAsync();
+        Assert.True(saveResponse.IsSuccessStatusCode, saveBody);
+        var definition = JsonSerializer.Deserialize<WorkflowDefinition>(saveBody, JsonOptions())!;
+
+        var detailResponse = await host.Client.GetAsync($"/api/workflows/definitions/{definition.Id.Value:D}");
+        var detailBody = await detailResponse.Content.ReadAsStringAsync();
+        Assert.True(detailResponse.IsSuccessStatusCode, detailBody);
+        var detail = JsonSerializer.Deserialize<WorkflowDefinitionDetail>(detailBody, JsonOptions())!;
+
+        Assert.True(detail.Validation.Succeeded);
+        Assert.Collection(
+            detail.Definition.Graph.Edges.Where(edge => edge.SourceNodeId.Value == "start").OrderBy(edge => edge.Id.Value),
+            switchCase =>
+            {
+                Assert.Equal(WorkflowRouteKind.SwitchCase, switchCase.Routing.Kind);
+                Assert.Equal("$.customer.tier", switchCase.Routing.JsonPath);
+                Assert.Equal("\"enterprise\"", switchCase.Routing.ExpectedValueJson);
+                Assert.Equal("Enterprise", switchCase.Routing.Label);
+            },
+            switchDefault =>
+            {
+                Assert.Equal(WorkflowRouteKind.SwitchDefault, switchDefault.Routing.Kind);
+                Assert.Equal("Default", switchDefault.Routing.Label);
+            });
     }
 
     [Fact]
@@ -149,6 +194,7 @@ public sealed class WorkflowApiIntegrationTests
 
     private static WorkflowDefinitionSaveRequest CreateDefinitionSaveRequest(
         WorkflowComponentId componentId,
+        WorkflowGraph? graph = null,
         WorkflowRuntimePolicy? runtimePolicy = null)
     {
         return new WorkflowDefinitionSaveRequest(
@@ -157,7 +203,7 @@ public sealed class WorkflowApiIntegrationTests
             Name: "API workflow",
             Description: "Workflow created by API integration tests.",
             Status: WorkflowLifecycleStatus.Draft,
-            Graph: CreateGraph(componentId),
+            Graph: graph ?? CreateGraph(componentId),
             RuntimePolicy: runtimePolicy ?? new WorkflowRuntimePolicy(
                 WorkflowRuntimeBackendKind.InProcess,
                 AllowInProcessPreviewRuns: true,
@@ -200,6 +246,56 @@ public sealed class WorkflowApiIntegrationTests
             ]);
     }
 
+    private static WorkflowGraph CreatePassthroughGraph()
+    {
+        return new WorkflowGraph(
+            new WorkflowNodeId("start"),
+            [
+                CreateNode("start", WorkflowNodeKind.Start, resultShape: WorkflowValueShape.Text),
+                CreateNode("logic", WorkflowNodeKind.StrictLogic, inputShape: WorkflowValueShape.Text, resultShape: WorkflowValueShape.Text),
+                CreateNode("end", WorkflowNodeKind.End, inputShape: WorkflowValueShape.Text)
+            ],
+            [
+                CreateEdge("start-to-logic", "start", "logic"),
+                CreateEdge("logic-to-end", "logic", "end")
+            ]);
+    }
+
+    private static WorkflowGraph CreateRoutingGraph()
+    {
+        return new WorkflowGraph(
+            new WorkflowNodeId("start"),
+            [
+                CreateNode("start", WorkflowNodeKind.Start, resultShape: JsonShape()),
+                CreateNode("enterprise", WorkflowNodeKind.StrictLogic, inputShape: JsonShape(), resultShape: JsonShape()),
+                CreateNode("standard", WorkflowNodeKind.StrictLogic, inputShape: JsonShape(), resultShape: JsonShape()),
+                CreateNode("end", WorkflowNodeKind.End, inputShape: JsonShape())
+            ],
+            [
+                CreateEdge(
+                    "start-to-enterprise",
+                    "start",
+                    "enterprise",
+                    WorkflowEdgeKind.Conditional,
+                    WorkflowEdgeRouting.SwitchCase(
+                        "$.customer.tier",
+                        "\"enterprise\"",
+                        WorkflowRouteValueKind.String,
+                        "Enterprise")),
+                CreateEdge(
+                    "start-to-standard",
+                    "start",
+                    "standard",
+                    WorkflowEdgeKind.Conditional,
+                    WorkflowEdgeRouting.SwitchDefault("Default")),
+                CreateEdge("enterprise-to-end", "enterprise", "end"),
+                CreateEdge("standard-to-end", "standard", "end")
+            ]);
+    }
+
+    private static WorkflowValueShape JsonShape()
+        => new(WorkflowValueShapeKind.Json, "{}", "JSON payload");
+
     private static WorkflowNode CreateNode(
         string id,
         WorkflowNodeKind kind,
@@ -222,7 +318,12 @@ public sealed class WorkflowApiIntegrationTests
                 ResultShape: resultShape ?? WorkflowValueShape.Text));
     }
 
-    private static WorkflowEdge CreateEdge(string id, string source, string target)
+    private static WorkflowEdge CreateEdge(
+        string id,
+        string source,
+        string target,
+        WorkflowEdgeKind kind = WorkflowEdgeKind.Direct,
+        WorkflowEdgeRouting? routing = null)
     {
         return new WorkflowEdge(
             new WorkflowEdgeId(id),
@@ -230,8 +331,11 @@ public sealed class WorkflowApiIntegrationTests
             SourcePortId: null,
             new WorkflowNodeId(target),
             TargetPortId: null,
-            WorkflowEdgeKind.Direct,
-            ConditionExpression: string.Empty);
+            kind,
+            ConditionExpression: string.Empty)
+        {
+            Routing = routing ?? WorkflowEdgeRouting.Always
+        };
     }
 
     private static LlmCallComponentSaveRequest CreateComponentRequest()

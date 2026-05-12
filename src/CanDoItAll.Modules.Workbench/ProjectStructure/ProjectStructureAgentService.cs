@@ -14,7 +14,8 @@ public sealed class ProjectStructureAgentService(
     IProjectStructureRuntimeLauncher runtimeLauncher,
     IProjectStructureLocalFileOpener localFileOpener,
     IWorkspacePathAccessGuard pathAccessGuard,
-    ProjectStructureProcessNodeService processNodeService)
+    ProjectStructureProcessNodeService processNodeService,
+    ProjectStructureWorkflowNodeService workflowNodeService)
 {
     private static readonly ProjectStructureReadRequest FullNodeReadRequest = new(
         IncludeLinks: true,
@@ -771,6 +772,43 @@ public sealed class ProjectStructureAgentService(
         return processNodeService.StartAsync(projectId, nodeId, request, agent, cancellationToken);
     }
 
+    public Task<ProjectStructureWorkflowNodeCreateResult> CreateWorkflowNodeAsync(
+        Guid projectId,
+        string parentNodeId,
+        ProjectStructureWorkflowNodeCreateInput request,
+        ProjectStructureAgentContext agent,
+        CancellationToken cancellationToken = default)
+    {
+        return workflowNodeService.CreateAsync(projectId, parentNodeId, request, agent, cancellationToken);
+    }
+
+    public Task<ProjectStructureWorkflowAddOptionsResult> GetWorkflowAddOptionsAsync(
+        Guid projectId,
+        string parentNodeId,
+        ProjectStructureWorkflowAddOptionsInput request,
+        CancellationToken cancellationToken = default)
+    {
+        return workflowNodeService.GetAddOptionsAsync(projectId, parentNodeId, request, cancellationToken);
+    }
+
+    public Task<ProjectStructureWorkflowNodeStartResult> StartWorkflowNodeAsync(
+        Guid projectId,
+        string nodeId,
+        ProjectStructureWorkflowNodeStartInput request,
+        ProjectStructureAgentContext agent,
+        CancellationToken cancellationToken = default)
+    {
+        return workflowNodeService.StartAsync(projectId, nodeId, request, agent, cancellationToken);
+    }
+
+    public Task<ProjectStructureWorkflowRunStatus> GetWorkflowNodeStatusAsync(
+        Guid projectId,
+        string nodeId,
+        CancellationToken cancellationToken = default)
+    {
+        return workflowNodeService.GetStatusAsync(projectId, nodeId, cancellationToken);
+    }
+
     public Task<int> DeleteNodeAsync(
         Guid projectId,
         string nodeId,
@@ -1283,6 +1321,43 @@ public sealed class ProjectStructureAgentService(
                 queue.Enqueue(childId);
             }
         }
+    }
+
+    internal static ProjectStructureNodeSummary MapNodeSummaryForInternalUse(ProjectStructureNode node)
+    {
+        return new ProjectStructureNodeSummary(
+            node.Id,
+            node.ParentId,
+            node.ObjectType,
+            node.ObjectSubtype,
+            node.Title,
+            node.Subtitle,
+            node.Status,
+            node.Notes,
+            node.Route,
+            node.ArtifactKind,
+            node.ArtifactId,
+            node.MediaRelativePath,
+            node.MediaContentType,
+            node.MediaOriginalFileName,
+            node.Badges,
+            node.ProgressMode,
+            node.ProgressPercent,
+            node.MarkerIcon,
+            node.MarkerTone,
+            node.MarkerLabel,
+            node.Priority,
+            node.Priority,
+            node.StartUtc,
+            node.EndUtc,
+            node.MetadataJson,
+            node.ProjectRole,
+            node.RelatedProjectId,
+            node.ParentProjectCount,
+            node.X,
+            node.Y,
+            node.DurationSeconds,
+            null);
     }
 
     private ProjectStructureNodeSummary MapNodeSummary(

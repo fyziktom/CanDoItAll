@@ -1,0 +1,1 @@
+Incident affected checkout for 22 minutes. Engineering identified a cache invalidation bug. Customer communications and leadership update are required.

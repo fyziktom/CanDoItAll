@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
@@ -116,6 +117,37 @@ public sealed record ProjectStructureProcessLinkDialogState(
     public string Copy => "Choose an existing process definition to link to this node. The link stays explicit in the project structure and does not create a new process.";
 
     public string SubmitLabel => "Add process";
+}
+
+public sealed record ProjectStructureWorkflowAddDialogState(
+    string ParentNodeId,
+    string ParentNodeTitle,
+    IReadOnlyList<ProjectStructureWorkflowDefinitionOption> Options,
+    WorkflowId? SelectedWorkflowId,
+    WorkflowVersionId? SelectedVersionId,
+    ProjectStructureWorkflowInputSettings InputSettings,
+    ProjectStructureWorkflowInputPreview Preview,
+    string Error)
+{
+    public string Title => $"Add workflow for {ParentNodeTitle}";
+
+    public string Copy => "Choose an active workflow and review the project, parent node, and optional sources that will be sent as input.";
+
+    public string SubmitLabel => "Add workflow";
+}
+
+public sealed record ProjectStructureWorkflowStartDialogState(
+    string NodeId,
+    string NodeTitle,
+    ProjectStructureWorkflowRunStatus? Status,
+    bool IsBusy,
+    string Error)
+{
+    public string Title => $"Start {NodeTitle}";
+
+    public string Copy => "Confirm the workflow start. The workflow definition owns its execution settings, so this starts directly without resource matching.";
+
+    public string SubmitLabel => "Start workflow";
 }
 
 public enum ProjectStructureProcessStartStage

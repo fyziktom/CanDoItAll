@@ -78,6 +78,9 @@ internal static class ProjectStructureMenuComposition
             case ProjectObjectType.ProcessDefinition:
                 preferredActions.Add("start-process");
                 break;
+            case ProjectObjectType.WorkflowDefinition:
+                preferredActions.Add("start-workflow");
+                break;
         }
 
         preferredActions.AddRange(
@@ -88,6 +91,7 @@ internal static class ProjectStructureMenuComposition
             "open",
             "summary",
             "add-process",
+            "add-workflow",
             "validate",
             "test",
             "connect"

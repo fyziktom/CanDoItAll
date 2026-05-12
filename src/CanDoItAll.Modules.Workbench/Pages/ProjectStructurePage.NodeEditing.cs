@@ -66,6 +66,15 @@ public partial class ProjectStructurePage
             actions.Add(new ProjectStructureInspectorAction("add-process", "Add process", "account_tree", "mint"));
         }
 
+        if (node.ObjectType == ProjectObjectType.WorkflowDefinition)
+        {
+            actions.Add(new ProjectStructureInspectorAction("start-workflow", "Start workflow", "play_arrow", "mint"));
+        }
+        else if (CanLinkExistingWorkflow(node))
+        {
+            actions.Add(new ProjectStructureInspectorAction("add-workflow", "Add workflow", "flow", "accent"));
+        }
+
         actions.Add(new ProjectStructureInspectorAction("connect", "Connect selected", "link", "ghost"));
         actions.Add(new ProjectStructureInspectorAction("reconnect", "Reconnect", "relink", "primary"));
         actions.Add(new ProjectStructureInspectorAction("disconnect", "Disconnect", "link_off", "ghost"));
@@ -223,6 +232,13 @@ public partial class ProjectStructurePage
             case "execute-process":
                 await OpenStartProcessDialogAsync(node);
                 break;
+            case "add-workflow":
+                await OpenAddWorkflowDialogAsync(node);
+                break;
+            case "start-workflow":
+            case "execute-workflow":
+                await OpenStartWorkflowDialogAsync(node);
+                break;
             case "project:open-structure":
                 await OpenProjectStructureInNewTabAsync(node);
                 break;
@@ -280,6 +296,16 @@ public partial class ProjectStructurePage
     {
         return node.ProjectRole == ProjectStructureProjectRole.None &&
                node.ObjectType is not (ProjectObjectType.ProcessDefinition or ProjectObjectType.ProcessRun);
+    }
+
+    private static bool CanLinkExistingWorkflow(ProjectStructureNode node)
+    {
+        return node.ProjectRole == ProjectStructureProjectRole.None &&
+               node.ObjectType is not (
+                   ProjectObjectType.ProcessDefinition or
+                   ProjectObjectType.ProcessRun or
+                   ProjectObjectType.WorkflowDefinition or
+                   ProjectObjectType.WorkflowRun);
     }
 
     private bool CanEditNode(ProjectStructureNode? node)

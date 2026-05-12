@@ -363,6 +363,22 @@
                 progressTrack: "rgba(220, 38, 38, 0.22)",
                 progressText: "rgba(127, 29, 29, 0.88)"
             },
+            "workflow-decision": {
+                surfaceFill: "rgba(240, 253, 250, 0.98)",
+                surfaceStroke: isSelected ? "rgba(15, 118, 110, 0.96)" : "rgba(20, 184, 166, 0.64)",
+                surfaceShadow: "rgba(15, 118, 110, 0.16)",
+                labelText: "rgba(15, 118, 110, 0.78)",
+                titleText: "rgba(19, 78, 74, 0.96)",
+                secondaryText: "rgba(15, 118, 110, 0.84)",
+                iconFill: "rgba(255, 251, 235, 0.86)",
+                iconStroke: "rgba(245, 158, 11, 0.46)",
+                iconText: "rgba(15, 118, 110, 0.96)",
+                subtleFill: "rgba(255, 255, 255, 0.84)",
+                subtleStroke: "rgba(20, 184, 166, 0.4)",
+                subtleText: "rgba(15, 118, 110, 0.9)",
+                progressTrack: "rgba(20, 184, 166, 0.24)",
+                progressText: "rgba(19, 78, 74, 0.9)"
+            },
             neutral: {
                 surfaceFill: "rgba(241, 245, 249, 0.98)",
                 surfaceStroke: isSelected ? "rgba(71, 85, 105, 0.92)" : "rgba(148, 163, 184, 0.44)",

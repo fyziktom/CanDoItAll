@@ -29,5 +29,11 @@ public sealed class CanvasWorkbenchLink
 
     public string Kind { get; set; } = string.Empty;
 
+    public string Label { get; set; } = string.Empty;
+
+    public string Summary { get; set; } = string.Empty;
+
+    public string Tone { get; set; } = "neutral";
+
     public bool IsUserAuthored { get; set; }
 }
