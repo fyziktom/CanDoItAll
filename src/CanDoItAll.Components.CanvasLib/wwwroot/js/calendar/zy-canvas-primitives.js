@@ -324,12 +324,19 @@
   }
 
   CanvasSurface.prototype.measure = function() {
-    var rect = this.canvas.getBoundingClientRect();
+    var canvasRect = this.canvas.getBoundingClientRect();
+    var rect = canvasRect;
     if (this.resizeTarget) {
       var targetRect = this.resizeTarget.getBoundingClientRect();
       var targetIsVisible = targetRect.width > 1 && targetRect.height > 1;
       if (targetIsVisible) {
-        rect = targetRect;
+        var targetHeight = canvasRect.height > 1
+          ? canvasRect.height
+          : (this.resizeTarget.clientHeight || targetRect.height);
+        rect = {
+          width: this.resizeTarget.clientWidth || targetRect.width,
+          height: targetHeight
+        };
       }
     }
 

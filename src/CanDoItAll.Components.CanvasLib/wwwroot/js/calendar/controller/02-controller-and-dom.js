@@ -169,7 +169,7 @@
       + '<div class="zy-calendar-toolbar-group">'
       + renderCalendarToolbarIconButton('open-help', 'Show help', 'help', false, '')
       + renderCalendarToolbarIconButton('open-settings', 'Open settings', 'settings', false, '')
-      + renderCalendarAddEventButton()
+      + (this.options.allowCreate ? renderCalendarAddEventButton() : '')
       + '</div>'
       + '<span class="zy-calendar-toolbar-divider" aria-hidden="true">|</span>'
       + '<div class="zy-calendar-toolbar-group">'
@@ -658,12 +658,24 @@
 
     this.utilityKicker.textContent = 'Quick help';
     this.utilityTitle.textContent = 'Using the canvas';
+    var editingHelp = this.options.allowCreate || this.options.allowEdit
+      ? '<p>The calendar is optimized for fast editing directly on the canvas.</p>'
+      : '<p>This calendar is in read-only projection mode for scheduled runs.</p>';
+    var createHelp = this.options.allowCreate
+      ? '<li>Double click empty space to create a timed event for that date.</li>'
+      : '';
+    var moveHelp = this.options.allowEdit && this.options.allowDragDrop
+      ? '<li>Drag timed blocks in day or week view to move them.</li>'
+      : '';
+    var resizeHelp = this.options.allowEdit && this.options.allowResize
+      ? '<li>Resize event edges to change duration.</li>'
+      : '';
     this.utilityBody.innerHTML = ''
-      + '<p>The calendar is optimized for fast editing directly on the canvas.</p>'
+      + editingHelp
       + '<ul class="zy-calendar-utility-list">'
-      + '<li>Double click empty space to create a timed event for that date.</li>'
-      + '<li>Drag timed blocks in day or week view to move them.</li>'
-      + '<li>Resize event edges to change duration.</li>'
+      + createHelp
+      + moveHelp
+      + resizeHelp
       + '<li>Switch to list view when you want a compact overview or exports for the visible range.</li>'
       + '</ul>';
     this.utilityFooter.innerHTML = '';
@@ -781,8 +793,9 @@
         + this.renderMeta('Category', selectedEvent.category || 'Event')
         + this.renderMeta('Description', selectedEvent.description || 'No description')
         + this.renderMeta('Notes', selectedEvent.notes || 'No notes');
+      var canEditSelected = this.options.allowEdit && !selectedEvent.readOnly;
       this.panelActions.innerHTML = ''
-        + '<button type="button" class="zy-calendar-button zy-calendar-button-primary" data-action="edit-selected">Edit selected</button>'
+        + (canEditSelected ? '<button type="button" class="zy-calendar-button zy-calendar-button-primary" data-action="edit-selected">Edit selected</button>' : '')
         + '<button type="button" class="zy-calendar-button" data-action="focus-selected">Focus on event</button>'
         + (connectedPlaylistUrl !== '' ? ('<a class="zy-calendar-button" href="' + escapeHtml(connectedPlaylistUrl) + '" target="_blank" rel="noopener">Connected Playlist</a>') : '')
         + (selectedEvent.playlistsBuilderUrl !== '' ? ('<a class="zy-calendar-button" href="' + escapeHtml(selectedEvent.playlistsBuilderUrl) + '">Playlist builder</a>') : '')
@@ -798,15 +811,21 @@
       + this.renderStat('All day', String(this.state.visibleEvents.filter(function(event) { return event.allDay; }).length))
       + this.renderStat('Timed', String(this.state.visibleEvents.filter(function(event) { return !event.allDay; }).length))
       + this.renderStat('Selected', this.state.selectedDateKey);
+    var keyboardText = this.options.allowEdit
+      ? 'Arrows move, Enter edits, Delete removes'
+      : 'Arrows move, Enter selects';
+    var modeText = this.options.allowCreate
+      ? 'Double click empty space or use Add event'
+      : 'Read-only projection';
     this.panelMeta.innerHTML = ''
       + this.renderMeta('Current view', this.state.view === 'list' ? ('List / ' + this.state.listScope) : this.state.view)
       + this.renderMeta('Anchor date', this.state.anchorDateKey)
       + this.renderMeta('Display timezone', this.state.timezone)
       + this.renderMeta('Locale', this.state.locale)
-      + this.renderMeta('Keyboard', 'Arrows move, Enter edits, Delete removes')
-      + this.renderMeta('Create', 'Double click empty space or use Add event');
+      + this.renderMeta('Keyboard', keyboardText)
+      + this.renderMeta(this.options.allowCreate ? 'Create' : 'Mode', modeText);
     this.panelActions.innerHTML = ''
-      + '<button type="button" class="zy-calendar-button zy-calendar-button-primary" data-action="add-event">Add event</button>'
+      + (this.options.allowCreate ? '<button type="button" class="zy-calendar-button zy-calendar-button-primary" data-action="add-event">Add event</button>' : '')
       + '<button type="button" class="zy-calendar-button" data-action="go-list">Open list</button>';
   };
 
@@ -834,6 +853,7 @@
 
     var rows = events.map(function(event) {
       var eventId = asText(event.id || event.eventId);
+      var canEdit = this.options.allowEdit && !event.readOnly;
       return '<tr>'
         + '<td class="zy-calendar-list-col-actions"><div class="zy-calendar-list-actions">'
         + renderCalendarListActionButton({
@@ -842,13 +862,13 @@
           label: 'Select event',
           icon: 'view'
         })
-        + renderCalendarListActionButton({
+        + (canEdit ? renderCalendarListActionButton({
           action: 'edit-row',
           eventId: eventId,
           label: 'Edit event',
           icon: 'edit',
           primary: true
-        })
+        }) : '')
         + '</div></td>'
         + '<td><span class="zy-calendar-list-row-title">' + escapeHtml(event.title) + '</span><span class="zy-calendar-list-row-meta">' + escapeHtml(event.eventType + ' | ' + event.status) + '</span></td>'
         + '<td>' + renderListRangeLabel(event.startUtc, event.endUtc, event.allDay, this.state.timezone, this.state.locale) + '</td>'

@@ -4,7 +4,7 @@
 
 - Execution status: `Completed`
 - Preparation status: `Prepared and repaired for CanvasLib calendar usage`
-- Last update: `2026-05-12`
+- Last update: `2026-05-12 CanvasSurface measurement repair`
 
 ## Implementation Summary
 
@@ -13,6 +13,8 @@
 - Added SQLite and PostgreSQL EF migrations for `SchedulerPlanner_Plans` and `SchedulerPlanner_Runs`.
 - Added shell navigation entry for Scheduler and registered the module in composition/runtime startup.
 - Used CanvasLib `CanvasCalendar` as the scheduled/actual run visualization surface. Browser validation found and fixed the Windows-vs-IANA time-zone mismatch for CanvasLib.
+- Repaired the scheduler UI after browser review: CanvasLib calendar now gets full-width scheduler placement, read-only calendar surfaces no longer expose create/edit affordances, and the schedule target selector is a dialog with card selection, tag filters, and process/workflow type checkboxes.
+- Repaired the CanvasLib canvas measurement feedback loop that kept clearing the scheduler calendar backing store before the grid could remain visible.
 
 ## Subbundle Gate Results
 
@@ -31,11 +33,16 @@
 | Bundle structure | `python C:\Users\lucys\.codex\skills\candoitall-bundle-preparation\scripts\validate_bundle.py .codex\bundles\scheduler-planner-module --profile initiative --stage prepared` | Passed |
 | Full solution build | `dotnet build .\CanDoItAll.slnx` | Passed, 0 warnings, 0 errors |
 | SchedulerPlanner integration | `dotnet test .\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter SchedulerPlanner --no-restore` | Passed, 5 tests |
-| SchedulerPlanner component | `dotnet test .\tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --filter SchedulerPlanner --no-restore` | Passed, 1 test |
+| SchedulerPlanner component | `dotnet test .\tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --filter SchedulerPlanner --no-restore` | Passed, 2 tests |
+| CanvasLib targeted build | `dotnet build .\src\CanDoItAll.Components.CanvasLib\CanDoItAll.Components.CanvasLib.csproj --no-restore` | Passed, 0 warnings, 0 errors |
 | Automation runtime regression | `dotnet test .\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~AutomationRuntimeIntegrationTests" --no-restore` | Passed, 38 tests |
 | Browser route | `http://127.0.0.1:5127/scheduler` through Playwright MCP | Passed |
+| Repair browser route | `http://localhost:5032/scheduler` through Playwright MCP | Passed |
 | Browser screenshot | `C:\repositories\CanDoItAll\.codex\bundles\scheduler-planner-module\evidence\scheduler-page-after-fix.png` | Captured |
 | Browser snapshot | `C:\repositories\CanDoItAll\.codex\bundles\scheduler-planner-module\evidence\scheduler-page-after-timezone-fix.md` | Captured |
+| Repair calendar screenshot | `C:\repositories\CanDoItAll\.codex\bundles\scheduler-planner-module\evidence\scheduler-calendar-repair.png` | Captured |
+| Repair target picker screenshot | `C:\repositories\CanDoItAll\.codex\bundles\scheduler-planner-module\evidence\scheduler-target-picker-repair.png` | Captured |
+| Measurement repair screenshot | `C:\repositories\CanDoItAll\.codex\bundles\scheduler-planner-module\evidence\scheduler-calendar-drawn-after-measure-fix.png` | Captured |
 
 ## Browser Validation Analytics
 
@@ -44,12 +51,17 @@
 | 04-scheduler-planner-ui | `/scheduler` | Desktop viewport | Page title `Scheduler`; tabs present; scheduled-runs tab contains `scheduler-calendar`; new-schedule tab contains `scheduler-form`; console contained only Blazor connection info after the fix. | `C:\repositories\CanDoItAll\.codex\bundles\scheduler-planner-module\evidence\scheduler-page-after-fix.png` | Passed |
 | 04-scheduler-planner-ui | `/scheduler` CanvasLib calendar | Desktop viewport | Calendar text showed `2026-05-11 to 2026-05-17 in America/La_Paz`; `SA Western Standard Time` no longer present. | `C:\repositories\CanDoItAll\.codex\bundles\scheduler-planner-module\evidence\scheduler-page-after-fix.png` | Passed |
 | 05-validation-and-closure | `/scheduler` new schedule | Desktop viewport | Target dropdown listed process and workflow targets, CRON preview/form rendered. | `C:\repositories\CanDoItAll\.codex\bundles\scheduler-planner-module\evidence\scheduler-page-after-timezone-fix.md` | Passed |
+| 04-scheduler-planner-ui repair | `/scheduler` scheduled runs | 2048x1152 desktop viewport | Calendar measured 1459px wide; Canvas body columns resolved to `1085px 320px`; Add Event actions absent; side panel displayed `Arrows move, Enter selects` and `Read-only projection`. | `C:\repositories\CanDoItAll\.codex\bundles\scheduler-planner-module\evidence\scheduler-calendar-repair.png` | Passed |
+| 04-scheduler-planner-ui repair | `/scheduler` target picker | 2048x1152 desktop viewport | New schedule target picker opened as a BaseLib dialog with 42 cards, search, tag filter, and both type checkboxes; unchecking workflows reduced visible cards to process-only results. | `C:\repositories\CanDoItAll\.codex\bundles\scheduler-planner-module\evidence\scheduler-target-picker-repair.png` | Passed |
+| 04-scheduler-planner-ui measurement repair | `/scheduler` scheduled runs | 2048x1051 desktop viewport | Canvas stabilized at `1083x694` CSS pixels instead of expanding to `1844px`; pixel scan found non-transparent, non-white, dark, and colored grid pixels; Add Event actions remained absent. | `C:\repositories\CanDoItAll\.codex\bundles\scheduler-planner-module\evidence\scheduler-calendar-drawn-after-measure-fix.png` | Passed |
 
 ## Analytics Review
 
 - Browser proof initially exposed a CanvasLib rendering defect: the calendar received `SA Western Standard Time`, which browser `Intl.DateTimeFormat` rejected. SchedulerPlanner now converts the default calendar time zone to IANA (`America/La_Paz` on this machine).
 - The fixed browser pass rendered the Scheduler page, tabs, new schedule form, and CanvasLib calendar without console errors beyond normal Blazor connection information.
 - Runtime database had zero saved SchedulerPlanner plans, so browser proof confirmed the empty-state calendar and form. Scheduled event projection is covered by SchedulerPlanner integration tests.
+- Repair proof exposed a second CanvasLib issue: read-only surfaces still advertised create/edit actions and the panel collapsed only by viewport media query. CanvasLib now respects `AllowCreate`/`AllowEdit` in toolbar, panel, list, keyboard, double-click, drag, and resize flows, and uses a container query so narrow host placement collapses correctly.
+- Follow-up browser proof exposed the actual blank-grid cause: `CanvasSurface` measured the parent shell height and then assigned that height back to the child canvas, creating a resize feedback loop that cleared the backing store. CanvasLib now uses the stable canvas CSS height while still taking width from the resize target.
 
 ## Raw Note Closure
 
@@ -66,6 +78,8 @@
 | Search history of old runs | Completed | History tab supports search, status, and target-kind filters backed by `SchedulerHistoryQuery`. |
 | Use imagegen for UI proposals | Completed | `C:\repositories\CanDoItAll\.codex\bundles\scheduler-planner-module\evidence\ui-layout-proposals.png`. |
 | Use CanvasLib calendar | Completed | `CanvasCalendar` renders in `/scheduler`; browser proof and component test cover the host. |
+| Repair calendar rendering | Completed | Scheduled-runs calendar is full-width, CanvasLib read-only projection mode is enforced, and the canvas grid draws after the measurement feedback repair. |
+| Target picker as dialog/cards with filters | Completed | New-schedule target picker uses a BaseLib dialog with card selection, tag filters, and process/workflow checkboxes; component and browser proof cover filtering. |
 | Prepare bundle only before implementation | Completed | Bundle was prepared/repaired first, validated, then executed. |
 
 ## Decisions

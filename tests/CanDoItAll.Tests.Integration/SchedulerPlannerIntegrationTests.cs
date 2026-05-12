@@ -52,6 +52,11 @@ public sealed class SchedulerPlannerIntegrationTests
             item.EventType == nameof(SchedulerPlanTargetKind.Process) &&
             item.Title == "Weekday onboarding check" &&
             item.Status == "Scheduled");
+        Assert.False(workspace.CalendarSurface.AllowCreate);
+        Assert.False(workspace.CalendarSurface.AllowEdit);
+        Assert.False(workspace.CalendarSurface.AllowDelete);
+        Assert.False(workspace.CalendarSurface.AllowDragDrop);
+        Assert.False(workspace.CalendarSurface.AllowResize);
         Assert.Equal(1, await CountRowsAsync(dbContext.Database.GetDbConnection(), "QRTZ_JOB_DETAILS"));
         Assert.Equal(1, await CountRowsAsync(dbContext.Database.GetDbConnection(), "QRTZ_CRON_TRIGGERS"));
     }

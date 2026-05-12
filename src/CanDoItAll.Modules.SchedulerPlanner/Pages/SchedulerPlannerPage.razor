@@ -60,7 +60,7 @@
                   AriaLabel="Scheduler planner tabs"
                   data-testid="scheduler-tabs">
                 <TabsItem Text="Scheduled runs" Icon="calendar_month" BadgeText="@Plans.Count.ToString()" data-testid="scheduler-tab-scheduled">
-                    <Grid Gap="LayoutGap.Large" ColumnTemplateLg="minmax(0,1.2fr) minmax(22rem,0.8fr)">
+                    <Stack GapScale="LayoutGap.Large" AlignItems="AlignItems.Stretch">
                         <SurfaceCard data-testid="scheduler-calendar-card">
                             <Split Gap="LayoutGap.Small">
                                 <div>
@@ -69,7 +69,7 @@
                                 </div>
                                 <StatusBadge Tone="info" Text="@($"{CalendarEventCount} event(s)")" />
                             </Split>
-                            <div class="mt-4" style="min-height: 34rem;" data-testid="scheduler-calendar">
+                            <div class="scheduler-planner-calendar-shell mt-4" data-testid="scheduler-calendar">
                                 <CanvasCalendar Surface="@workspace.CalendarSurface"
                                                 HostClass="scheduler-planner-calendar-host" />
                             </div>
@@ -126,7 +126,7 @@
                                 </Stack>
                             }
                         </SurfaceCard>
-                    </Grid>
+                    </Stack>
                 </TabsItem>
 
                 <TabsItem Text="New schedule" Icon="event_repeat" data-testid="scheduler-tab-new">
@@ -143,19 +143,21 @@
                                                data-testid="scheduler-name" />
                                 </label>
 
-                                <label class="block">
+                                <div>
                                     <span class="cda-eyebrow">Target</span>
-                                    <select class="cda-input mt-1"
-                                            value="@SelectedTargetKey"
-                                            @onchange="HandleTargetChanged"
-                                            data-testid="scheduler-target">
-                                        <option value="">Select target</option>
-                                        @foreach (var target in TargetOptions)
-                                        {
-                                            <option value="@BuildTargetKey(target)">@target.Kind / @target.Name / @target.Status</option>
-                                        }
-                                    </select>
-                                </label>
+                                    <div class="scheduler-target-summary mt-1" data-testid="scheduler-target-selected">
+                                        <div class="min-w-0">
+                                            <p class="text-sm font-semibold text-slate-900">@SelectedTargetName</p>
+                                            <p class="mt-1 text-xs leading-5 text-slate-500">@SelectedTargetDescription</p>
+                                        </div>
+                                        <Button Text="Choose"
+                                                Icon="switch_account"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Size="ButtonSize.Small"
+                                                Click="OpenTargetPicker"
+                                                data-testid="scheduler-target-open" />
+                                    </div>
+                                </div>
 
                                 <label class="block">
                                     <span class="cda-eyebrow">Quartz CRON</span>
@@ -302,6 +304,127 @@
                     </SurfaceCard>
                 </TabsItem>
             </Tabs>
+
+            <Dialog IsOpen="@isTargetPickerOpen"
+                    Eyebrow="Target"
+                    Title="Choose workflow or process"
+                    Subtitle="Select the run target for this Quartz CRON schedule."
+                    Size="ModalSize.Wide"
+                    DenseChrome="true"
+                    TestId="scheduler-target-dialog"
+                    OnClose="CloseTargetPickerAsync">
+                <Stack GapScale="LayoutGap.Medium"
+                       AlignItems="AlignItems.Stretch"
+                       Class="scheduler-target-picker">
+                    <div class="scheduler-target-picker__filters">
+                        <TextBox Value="@targetSearchText"
+                                 ValueChanged="HandleTargetSearchChangedAsync"
+                                 Placeholder="Search workflows and processes"
+                                 Immediate="true"
+                                 Class="scheduler-target-picker__search"
+                                 aria-label="Search workflows and processes"
+                                 data-testid="scheduler-target-search" />
+
+                        <TagEditor Value="@targetTagFilters"
+                                   ValueChanged="HandleTargetTagFiltersChangedAsync"
+                                   Suggestions="@AvailableTargetTags"
+                                   Placeholder="Filter tags"
+                                   MaxTags="6"
+                                   TestId="scheduler-target-tag-filter"
+                                   InputTestId="scheduler-target-tag-filter-input" />
+                    </div>
+
+                    <Split Gap="LayoutGap.Small"
+                           AlignItems="AlignItems.Start"
+                           JustifyContent="JustifyContent.SpaceBetween"
+                           Wrap="FlexWrap.Wrap">
+                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                            <StatusBadge Tone="info" Text="@($"{FilteredTargetOptions.Count} of {TargetOptions.Count} targets")" />
+                            @if (targetTagFilters.Count > 0)
+                            {
+                                <StatusBadge Tone="neutral" Text="@($"{targetTagFilters.Count} tag filter(s)")" />
+                            }
+                        </Cluster>
+
+                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                            <label class="scheduler-target-picker__check">
+                                <CheckBox TValue="bool"
+                                          @bind-Value="showProcessTargets"
+                                          aria-label="Show process targets"
+                                          data-testid="scheduler-target-filter-processes" />
+                                <span>Processes</span>
+                            </label>
+                            <label class="scheduler-target-picker__check">
+                                <CheckBox TValue="bool"
+                                          @bind-Value="showWorkflowTargets"
+                                          aria-label="Show workflow targets"
+                                          data-testid="scheduler-target-filter-workflows" />
+                                <span>Workflows</span>
+                            </label>
+                        </Cluster>
+                    </Split>
+
+                    @if (FilteredTargetOptions.Count == 0)
+                    {
+                        <EmptyState Eyebrow="No matches"
+                                    Title="No targets match the current filters"
+                                    Description="Clear the search, tags, or target type filters to show available workflows and processes." />
+                    }
+                    else
+                    {
+                        <Grid Gap="LayoutGap.Medium"
+                              ColumnTemplate="repeat(auto-fit,minmax(16rem,1fr))"
+                              Class="w-full">
+                            @foreach (var target in FilteredTargetOptions)
+                            {
+                                var isSelected = IsTargetSelected(target);
+
+                                <article class="@ResolveTargetCardClass(target)" data-testid="scheduler-target-card-shell">
+                                    <button type="button"
+                                            class="scheduler-target-card__select"
+                                            aria-label="@($"Select {target.Name}")"
+                                            @onclick="@(() => SelectTarget(target))"
+                                            data-testid="scheduler-target-card">
+                                        <Stack GapScale="LayoutGap.Small"
+                                               AlignItems="AlignItems.Stretch">
+                                            <div class="scheduler-target-card__identity">
+                                                <Avatar Alt="@target.Name"
+                                                        FallbackText="@ResolveTargetInitials(target)"
+                                                        UseDefaultImageWhenMissing="false"
+                                                        Size="AvatarSize.Medium"
+                                                        Shape="AvatarShape.Rounded" />
+
+                                                <div class="scheduler-target-card__identity-copy">
+                                                    <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
+                                                        <StatusBadge Tone="@ResolveTargetKindTone(target.Kind)" Text="@target.Kind.ToString()" />
+                                                        <StatusBadge Tone="@ResolveTargetStatusTone(target.Status)" Text="@target.Status" />
+                                                        @if (isSelected)
+                                                        {
+                                                            <StatusBadge Tone="info" Text="Selected" />
+                                                        }
+                                                    </Cluster>
+
+                                                    <p class="scheduler-target-card__name">@target.Name</p>
+                                                    <p class="scheduler-target-card__role">@ResolveTargetRole(target)</p>
+                                                </div>
+                                            </div>
+
+                                            <p class="scheduler-target-card__summary">@ResolveTargetDescription(target)</p>
+
+                                            <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
+                                                @foreach (var tag in BuildTargetTags(target).Take(3))
+                                                {
+                                                    <StatusBadge Tone="neutral" Text="@tag" />
+                                                }
+                                            </Cluster>
+                                        </Stack>
+                                    </button>
+                                </article>
+                            }
+                        </Grid>
+                    }
+                </Stack>
+            </Dialog>
         }
     </ChildContent>
 </PageScaffold>
@@ -313,6 +436,11 @@
     private bool isBusy;
     private string errorMessage = string.Empty;
     private int activeTabIndex;
+    private bool isTargetPickerOpen;
+    private string targetSearchText = string.Empty;
+    private IReadOnlyList<string> targetTagFilters = [];
+    private bool showProcessTargets = true;
+    private bool showWorkflowTargets = true;
 
     private IReadOnlyList<SchedulerPlanSummary> Plans => workspace?.Plans ?? [];
 
@@ -321,10 +449,6 @@
     private IReadOnlyList<SchedulerTargetOption> TargetOptions => workspace?.TargetOptions ?? [];
 
     private int CalendarEventCount => workspace?.CalendarSurface.Events.Count ?? 0;
-
-    private string SelectedTargetKey => editor.TargetId == Guid.Empty
-        ? string.Empty
-        : $"{editor.TargetKind}|{editor.TargetId:D}|{editor.TargetVersionId?.ToString("D") ?? string.Empty}";
 
     private SchedulerTargetOption? SelectedTarget => TargetOptions.FirstOrDefault(item =>
         item.Kind == editor.TargetKind &&
@@ -351,6 +475,22 @@
     }
 
     private string CronPreviewDescription => "Quartz will trigger the saved plan using this expression and the selected misfire policy. The scheduler stores Quartz state in the database for recovery.";
+
+    private IReadOnlyList<string> AvailableTargetTags
+        => TargetOptions
+            .SelectMany(BuildTargetTags)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    private IReadOnlyList<SchedulerTargetOption> FilteredTargetOptions
+        => TargetOptions
+            .Where(MatchesTargetTypeFilter)
+            .Where(MatchesTargetSearch)
+            .Where(MatchesTargetTagFilters)
+            .OrderBy(item => item.Kind)
+            .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
     protected override async Task OnInitializedAsync()
     {
@@ -380,6 +520,7 @@
     private async Task ResetEditorAsync()
     {
         editor = await SchedulerPlannerService.CreateDefaultEditorAsync();
+        isTargetPickerOpen = false;
     }
 
     private async Task TogglePlanAsync(SchedulerPlanSummary plan)
@@ -396,34 +537,46 @@
         activeTabIndex = 1;
     }
 
-    private void HandleTargetChanged(ChangeEventArgs args)
+    private void OpenTargetPicker()
     {
-        var value = args.Value?.ToString();
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            editor.TargetId = Guid.Empty;
-            editor.TargetVersionId = null;
-            return;
-        }
+        isTargetPickerOpen = true;
+    }
 
-        var parts = value.Split('|', StringSplitOptions.None);
-        if (parts.Length < 2 ||
-            !Enum.TryParse<SchedulerPlanTargetKind>(parts[0], out var kind) ||
-            !Guid.TryParse(parts[1], out var targetId))
-        {
-            return;
-        }
+    private Task CloseTargetPickerAsync()
+    {
+        isTargetPickerOpen = false;
+        return Task.CompletedTask;
+    }
 
-        editor.TargetKind = kind;
-        editor.TargetId = targetId;
-        editor.TargetVersionId = parts.Length >= 3 && Guid.TryParse(parts[2], out var versionId)
-            ? versionId
-            : null;
+    private Task HandleTargetSearchChangedAsync(string? value)
+    {
+        targetSearchText = value ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleTargetTagFiltersChangedAsync(IReadOnlyList<string> value)
+    {
+        targetTagFilters = value
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return Task.CompletedTask;
+    }
+
+    private void SelectTarget(SchedulerTargetOption target)
+    {
+        editor.TargetKind = target.Kind;
+        editor.TargetId = target.Id;
+        editor.TargetVersionId = target.VersionId;
 
         if (string.IsNullOrWhiteSpace(editor.Name))
         {
-            editor.Name = $"{SelectedTarget?.Name ?? kind.ToString()} schedule";
+            editor.Name = $"{target.Name} schedule";
         }
+
+        isTargetPickerOpen = false;
     }
 
     private async Task RunUiOperationAsync(Func<Task> operation)
@@ -444,9 +597,131 @@
         }
     }
 
-    private static string BuildTargetKey(SchedulerTargetOption target)
+    private bool IsTargetSelected(SchedulerTargetOption target)
     {
-        return $"{target.Kind}|{target.Id:D}|{target.VersionId?.ToString("D") ?? string.Empty}";
+        return target.Kind == editor.TargetKind &&
+               target.Id == editor.TargetId &&
+               (target.Kind != SchedulerPlanTargetKind.Workflow || target.VersionId == editor.TargetVersionId);
+    }
+
+    private bool MatchesTargetTypeFilter(SchedulerTargetOption target)
+    {
+        return target.Kind switch
+        {
+            SchedulerPlanTargetKind.Process => showProcessTargets,
+            SchedulerPlanTargetKind.Workflow => showWorkflowTargets,
+            _ => false
+        };
+    }
+
+    private bool MatchesTargetSearch(SchedulerTargetOption target)
+    {
+        if (string.IsNullOrWhiteSpace(targetSearchText))
+        {
+            return true;
+        }
+
+        var query = targetSearchText.Trim();
+        return target.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+               target.Description.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+               target.Status.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+               target.Kind.ToString().Contains(query, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool MatchesTargetTagFilters(SchedulerTargetOption target)
+    {
+        if (targetTagFilters.Count == 0)
+        {
+            return true;
+        }
+
+        var targetTags = BuildTargetTags(target);
+        return targetTagFilters.All(filter =>
+            targetTags.Any(tag => string.Equals(tag, filter, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private string ResolveTargetCardClass(SchedulerTargetOption target)
+    {
+        return string.Join(' ', new[]
+        {
+            "scheduler-target-card",
+            IsTargetSelected(target) ? "scheduler-target-card--selected" : null
+        }.Where(item => !string.IsNullOrWhiteSpace(item)));
+    }
+
+    private static IReadOnlyList<string> BuildTargetTags(SchedulerTargetOption target)
+    {
+        var tags = new List<string>
+        {
+            target.Kind.ToString()
+        };
+
+        if (!string.IsNullOrWhiteSpace(target.Status))
+        {
+            tags.Add(target.Status.Trim());
+        }
+
+        if (target.VersionId.HasValue)
+        {
+            tags.Add("Versioned");
+        }
+
+        return tags
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static string ResolveTargetDescription(SchedulerTargetOption target)
+    {
+        return string.IsNullOrWhiteSpace(target.Description)
+            ? "No description is configured for this target."
+            : target.Description.Trim();
+    }
+
+    private static string ResolveTargetInitials(SchedulerTargetOption target)
+    {
+        return target.Kind == SchedulerPlanTargetKind.Workflow
+            ? "WF"
+            : "PR";
+    }
+
+    private static string ResolveTargetRole(SchedulerTargetOption target)
+    {
+        return target.Kind == SchedulerPlanTargetKind.Workflow
+            ? "Workflow definition"
+            : "Process definition";
+    }
+
+    private static string ResolveTargetKindTone(SchedulerPlanTargetKind kind)
+    {
+        return kind == SchedulerPlanTargetKind.Workflow
+            ? "secondary"
+            : "info";
+    }
+
+    private static string ResolveTargetStatusTone(string status)
+    {
+        if (status.Contains("active", StringComparison.OrdinalIgnoreCase) ||
+            status.Contains("published", StringComparison.OrdinalIgnoreCase) ||
+            status.Contains("ready", StringComparison.OrdinalIgnoreCase))
+        {
+            return "success";
+        }
+
+        if (status.Contains("draft", StringComparison.OrdinalIgnoreCase) ||
+            status.Contains("paused", StringComparison.OrdinalIgnoreCase))
+        {
+            return "warning";
+        }
+
+        if (status.Contains("archived", StringComparison.OrdinalIgnoreCase) ||
+            status.Contains("disabled", StringComparison.OrdinalIgnoreCase))
+        {
+            return "neutral";
+        }
+
+        return "info";
     }
 
     private static string FormatNextFire(DateTimeOffset? nextFireAtUtc)
