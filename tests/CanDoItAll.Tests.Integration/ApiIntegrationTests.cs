@@ -150,6 +150,10 @@ public sealed class ApiIntegrationTests
 
         Assert.True(paths.TryGetProperty("/api/project-structure/projects/{projectId}/nodes/{nodeId}/type", out _));
         Assert.True(paths.TryGetProperty("/api/project-structure/projects/{projectId}/nodes/{nodeId}/process/start", out _));
+        Assert.True(paths.TryGetProperty("/api/project-structure/projects/{projectId}/nodes/{nodeId}/workflow-add-options", out _));
+        Assert.True(paths.TryGetProperty("/api/project-structure/projects/{projectId}/nodes/{nodeId}/workflow-definition", out _));
+        Assert.True(paths.TryGetProperty("/api/project-structure/projects/{projectId}/nodes/{nodeId}/workflow/start", out _));
+        Assert.True(paths.TryGetProperty("/api/project-structure/projects/{projectId}/nodes/{nodeId}/workflow/status", out _));
         Assert.True(paths.TryGetProperty("/api/project-structure/projects/{projectId}/assets/{nodeId}/content", out _));
         Assert.True(paths.TryGetProperty("/api/processes/templates/{processKey}/detail", out _));
         Assert.True(paths.TryGetProperty("/api/processes/templates/baseline-scenarios", out _));

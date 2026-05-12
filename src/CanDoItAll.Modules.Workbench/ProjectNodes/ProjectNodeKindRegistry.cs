@@ -17,7 +17,8 @@ internal enum ProjectNodeKindFamily
     Script,
     Environment,
     Infrastructure,
-    Link
+    Link,
+    Workflow
 }
 
 internal sealed record ProjectNodeKindDescriptor(
@@ -279,7 +280,8 @@ internal static class ProjectNodeKindRegistry
             Script = family == ProjectNodeKindFamily.Script ? metadata.Script : null,
             Environment = family == ProjectNodeKindFamily.Environment ? metadata.Environment : null,
             Infrastructure = family == ProjectNodeKindFamily.Infrastructure ? metadata.Infrastructure : null,
-            Link = family == ProjectNodeKindFamily.Link ? metadata.Link : null
+            Link = family == ProjectNodeKindFamily.Link ? metadata.Link : null,
+            Workflow = family == ProjectNodeKindFamily.Workflow ? metadata.Workflow : null
         };
 
     private static IReadOnlyDictionary<(ProjectObjectType ObjectType, string ObjectSubtype), ProjectNodeKindDescriptor> BuildDescriptors()
@@ -310,6 +312,30 @@ internal static class ProjectNodeKindRegistry
                         Profile("diamond", "#dc2626", "RN", "Run", ProjectObjectPaletteKeys.Danger),
                     _ =>
                         Profile("diamond", "#0284c7", "RN", "Run", ProjectObjectPaletteKeys.Info)
+                }),
+            Workflow(
+                ProjectObjectType.WorkflowDefinition,
+                "Workflow",
+                Profile("hex", "#7c3aed", "WF", "Workflow", ProjectObjectPaletteKeys.Secondary),
+                status => status.Contains("Active", StringComparison.OrdinalIgnoreCase)
+                    ? Profile("hex", "#0f766e", "WF", "Workflow", ProjectObjectPaletteKeys.Success)
+                    : Profile("hex", "#7c3aed", "WF", "Workflow", ProjectObjectPaletteKeys.Secondary)),
+            Workflow(
+                ProjectObjectType.WorkflowRun,
+                "Workflow run",
+                Profile("diamond", "#0284c7", "WR", "Run", ProjectObjectPaletteKeys.Info),
+                status => status switch
+                {
+                    var candidate when candidate.Contains("Completed", StringComparison.OrdinalIgnoreCase) =>
+                        Profile("diamond", "#16a34a", "WR", "Run", ProjectObjectPaletteKeys.Success),
+                    var candidate when candidate.Contains("Failed", StringComparison.OrdinalIgnoreCase) ||
+                                       candidate.Contains("Cancelled", StringComparison.OrdinalIgnoreCase) =>
+                        Profile("diamond", "#dc2626", "WR", "Run", ProjectObjectPaletteKeys.Danger),
+                    var candidate when candidate.Contains("Running", StringComparison.OrdinalIgnoreCase) ||
+                                       candidate.Contains("Waiting", StringComparison.OrdinalIgnoreCase) =>
+                        Profile("diamond", "#0f766e", "WR", "Run", ProjectObjectPaletteKeys.Success),
+                    _ =>
+                        Profile("diamond", "#0284c7", "WR", "Run", ProjectObjectPaletteKeys.Info)
                 }),
             Simple(
                 ProjectObjectType.ValidationRun,
@@ -592,6 +618,23 @@ internal static class ProjectNodeKindRegistry
             allowNotePromotion,
             false,
             buildVisualProfile ?? (_ => visualProfile));
+
+    private static ProjectNodeKindDescriptor Workflow(
+        ProjectObjectType objectType,
+        string label,
+        ProjectObjectVisualProfile visualProfile,
+        Func<string, ProjectObjectVisualProfile>? buildVisualProfile = null)
+        => new(
+            objectType,
+            string.Empty,
+            ProjectNodeKindFamily.Workflow,
+            label,
+            "agent-framework",
+            false,
+            false,
+            false,
+            buildVisualProfile ?? (_ => visualProfile),
+            (metadata, _) => metadata.Workflow ??= new ProjectWorkflowNodeMetadata());
 
     private static ProjectNodeKindDescriptor ProjectBlock(string objectSubtype, string label, ProjectObjectVisualProfile visualProfile)
         => new(

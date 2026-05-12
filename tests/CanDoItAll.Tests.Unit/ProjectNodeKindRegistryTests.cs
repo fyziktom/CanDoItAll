@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
@@ -47,6 +48,36 @@ public sealed class ProjectNodeKindRegistryTests
         Assert.Equal("Keep description", normalizedWorkItem.WorkItem.Description);
 
         Assert.Null(normalizedDecision.WorkItem);
+    }
+
+    [Fact]
+    public void Workflow_metadata_is_scoped_and_requires_workflow_id()
+    {
+        var workflowId = WorkflowId.New();
+        var metadata = new ProjectObjectMetadataEnvelope
+        {
+            Workflow = new ProjectWorkflowNodeMetadata
+            {
+                WorkflowId = workflowId,
+                WorkflowName = "Order reconciliation"
+            },
+            WorkItem = new ProjectWorkItemMetadata()
+        };
+
+        var normalized = ProjectNodeKindRegistry.NormalizeMetadata(ProjectObjectType.WorkflowDefinition, string.Empty, metadata, string.Empty, null);
+
+        Assert.Equal(ProjectNodeKindFamily.Workflow, ProjectNodeKindRegistry.ResolveDescriptor(ProjectObjectType.WorkflowDefinition, string.Empty).Family);
+        Assert.NotNull(normalized.Workflow);
+        Assert.Equal(workflowId, normalized.Workflow!.WorkflowId);
+        Assert.Null(normalized.WorkItem);
+        Assert.Throws<InvalidOperationException>(() =>
+            ProjectObjectMetadataSerializer.Validate(
+                ProjectObjectType.WorkflowDefinition,
+                string.Empty,
+                new ProjectObjectMetadataEnvelope
+                {
+                    Workflow = new ProjectWorkflowNodeMetadata()
+                }));
     }
 
     [Fact]

@@ -38,9 +38,19 @@ internal sealed class ProjectStructureAgentApiTestHost : IAsyncDisposable
     public HttpClient Client { get; }
 
     public static async Task<ProjectStructureAgentApiTestHost> CreateAsync()
+        => await CreateAsync(
+            "candoitall-api-tests",
+            testEnvironment => testEnvironment.CreateManagedSqliteProfile("api-host"));
+
+    public static async Task<ProjectStructureAgentApiTestHost> CreateAsync(
+        string testEnvironmentKey,
+        Func<CanDoItAllTestEnvironment, TestDatabaseProfile> profileFactory)
     {
-        var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-api-tests");
-        var activeProfile = testEnvironment.CreateManagedSqliteProfile("api-host");
+        ArgumentException.ThrowIfNullOrWhiteSpace(testEnvironmentKey);
+        ArgumentNullException.ThrowIfNull(profileFactory);
+
+        var testEnvironment = CanDoItAllTestEnvironment.Create(testEnvironmentKey);
+        var activeProfile = profileFactory(testEnvironment);
 
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {

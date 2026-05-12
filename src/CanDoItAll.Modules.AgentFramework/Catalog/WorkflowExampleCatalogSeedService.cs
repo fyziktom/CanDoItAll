@@ -30,7 +30,7 @@ public sealed class WorkflowExampleCatalogSeedService(
     IOptions<WorkflowExampleCatalogSeedOptions> options,
     ILogger<WorkflowExampleCatalogSeedService> logger)
 {
-    private const string SeedVersion = "2026-05-routing-production-examples-v1";
+    private const string SeedVersion = "2026-05-project-structure-workflow-scenarios-v1";
     private const string SeedMarker = "Managed workflow example seed";
     private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
     private static readonly WorkflowValueShape JsonShape = new(
@@ -385,6 +385,31 @@ public sealed class WorkflowExampleCatalogSeedService(
                 "Return targets containing sales, marketing, and/or executive based on segment, score, and next step.",
                 BuildPipelineFanOutGraph),
             new(
+                "Mouser Order Reconciliation",
+                "Compares the supplied Mouser order workbook and receipt PDF from a project-structure workflow node and stores the reconciliation summary under that workflow node.",
+                "Compare Cart_Mar30_1059AM.xls with MOUSER_Receipt_89566550.pdf when those paths are present in sources. Set route to matched or mismatch. Include item, quantity, total, and source-path evidence in summary and actions.",
+                BuildMouserOrderReconciliationGraph),
+            new(
+                "Mouser Purchasing Summary",
+                "Turns a Mouser order folder into a purchasing brief with line-item highlights, open questions, and a result asset under the workflow node.",
+                "Summarize order purpose, notable items, quantities, totals, and purchasing follow-up. Mention both the XLS and PDF source paths when present. Set risk to low, medium, or high from missing or conflicting evidence.",
+                BuildMouserPurchasingSummaryGraph),
+            new(
+                "SEAMARK Xray Device Folder Summary",
+                "Summarizes a folder of SEAMARK x-ray device PDFs and stores device/use-case findings under the workflow node.",
+                "Treat the folder path as the primary source. Identify x-ray inspection device families, likely use cases, and documents reviewed. Mention at least two SEAMARK PDF names when present.",
+                BuildSeamarkFolderSummaryGraph),
+            new(
+                "SEAMARK Price List Extraction",
+                "Extracts price-list highlights and uncertainty from the SEAMARK quote and device specification PDFs.",
+                "Focus on X Ray Machine Agent Quotation List2018.pdf and related specification PDFs. Summarize price evidence, model names, assumptions, and gaps. Set needsReview true when price evidence is incomplete.",
+                BuildSeamarkPriceListGraph),
+            new(
+                "IoTFactory Financial Plan Review",
+                "Reviews the supplied IoTFactory financial workbook and stores budget risks, assumptions, and follow-up actions under the workflow node.",
+                "Use IoTFactory rozpočet-v1.xlsx as the financial-plan source when present. Summarize budget assumptions, funding or cost risks, validation questions, and concrete next actions.",
+                BuildIotFactoryFinancialPlanGraph),
+            new(
                 "Internet Research Capture",
                 "Fetches bounded web content, summarizes it, and stores relevant research in project structure when projectId is supplied.",
                 "From fetched content and carried inputPayload, return relevant, summary, projectId, and sourceUrl. Keep projectId empty when absent.",
@@ -442,9 +467,10 @@ public sealed class WorkflowExampleCatalogSeedService(
 
            Contract:
            - Return one JSON object only. Do not wrap it in Markdown.
-           - Always include: route, summary, actions, targets, risk, relevant, needsReview, requiresResponse, ready, projectId, sourceUrl.
+           - Always include: route, summary, actions, targets, risk, relevant, needsReview, requiresResponse, ready, projectId, nodeId, sourceUrl.
            - Use empty string, false, or [] when a field does not apply.
-           - Preserve projectId from the input payload if it exists. Do not invent ids.
+           - Preserve projectId from top-level projectId or from project.id when either exists. Do not invent ids.
+           - Preserve nodeId from top-level nodeId or from runContext.workflowNodeId when either exists. Do not invent ids.
            - Keep summary under 900 characters and actions as concrete imperative steps.
            - Normalize route and target values to lowercase tokens used by the workflow branches.
            - Fields consumed by IF/SWITCH branches must be literal predicate data, not answers to the prose scenario name.
@@ -576,6 +602,61 @@ public sealed class WorkflowExampleCatalogSeedService(
             Direct("sales-update", "end"),
             Direct("marketing-update", "end"),
             Direct("executive-update", "end"));
+    }
+
+    private static WorkflowGraph BuildMouserOrderReconciliationGraph(WorkflowComponentId componentId)
+        => BuildProjectStructureSummaryGraph(
+            componentId,
+            "reconcile-mouser-order",
+            "Reconcile Mouser order",
+            "Mouser order reconciliation summary");
+
+    private static WorkflowGraph BuildMouserPurchasingSummaryGraph(WorkflowComponentId componentId)
+        => BuildProjectStructureSummaryGraph(
+            componentId,
+            "summarize-mouser-purchase",
+            "Summarize Mouser purchase",
+            "Mouser purchasing summary");
+
+    private static WorkflowGraph BuildSeamarkFolderSummaryGraph(WorkflowComponentId componentId)
+        => BuildProjectStructureSummaryGraph(
+            componentId,
+            "summarize-seamark-folder",
+            "Summarize SEAMARK folder",
+            "SEAMARK xray device summary");
+
+    private static WorkflowGraph BuildSeamarkPriceListGraph(WorkflowComponentId componentId)
+        => BuildProjectStructureSummaryGraph(
+            componentId,
+            "extract-seamark-pricing",
+            "Extract SEAMARK pricing",
+            "SEAMARK price list summary");
+
+    private static WorkflowGraph BuildIotFactoryFinancialPlanGraph(WorkflowComponentId componentId)
+        => BuildProjectStructureSummaryGraph(
+            componentId,
+            "review-iotfactory-plan",
+            "Review IoTFactory financial plan",
+            "IoTFactory financial plan review");
+
+    private static WorkflowGraph BuildProjectStructureSummaryGraph(
+        WorkflowComponentId componentId,
+        string llmId,
+        string llmName,
+        string assetTitle)
+    {
+        var nodes = new[]
+        {
+            Start(),
+            Llm(llmId, llmName, componentId, 340, 220),
+            ProjectAsset("store-project-structure-summary", "Store workflow summary", 660, 220, assetTitle),
+            End(980, 220)
+        };
+        return Graph(
+            nodes,
+            Direct("start", llmId),
+            Direct(llmId, "store-project-structure-summary"),
+            Direct("store-project-structure-summary", "end"));
     }
 
     private static WorkflowGraph BuildInternetResearchGraph(WorkflowComponentId componentId)
@@ -1143,7 +1224,7 @@ public sealed class WorkflowExampleCatalogSeedService(
             "nodeId": { "type": "string" },
             "sourceUrl": { "type": "string" }
           },
-          "required": ["route", "summary", "actions", "targets", "risk", "relevant", "needsReview", "requiresResponse", "ready", "projectId", "sourceUrl"]
+          "required": ["route", "summary", "actions", "targets", "risk", "relevant", "needsReview", "requiresResponse", "ready", "projectId", "nodeId", "sourceUrl"]
         }
         """;
 

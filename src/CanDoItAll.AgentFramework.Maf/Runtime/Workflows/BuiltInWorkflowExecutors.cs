@@ -515,7 +515,7 @@ public sealed class ProjectStructureWorkflowExecutor(IServiceScopeFactory scopeF
             WorkflowProjectStructureOperation.CreateAsset => await service.CreateAssetAsync(
                 RequireProjectId(settings, input),
                 BuildAssetRequest(settings, input),
-                BuildAgentContext(),
+                BuildAgentContext(input),
                 cancellationToken),
             _ => throw new InvalidOperationException($"Project-structure operation '{settings.Operation}' is not supported.")
         };
@@ -550,7 +550,7 @@ public sealed class ProjectStructureWorkflowExecutor(IServiceScopeFactory scopeF
             Subtitle: string.Empty,
             Notes: content,
             media,
-            ParentNodeKey: ResolveOptionalNodeId(settings, input),
+            ParentNodeKey: ResolveOptionalNodeId(settings, input) ?? ResolveWorkflowParentNodeId(input),
             ObjectSubtype: NormalizeAssetKind(settings.AssetKind),
             MetadataJson: "{}",
             SourceWorkspacePath: sourcePath,
@@ -573,7 +573,14 @@ public sealed class ProjectStructureWorkflowExecutor(IServiceScopeFactory scopeF
             return parsed;
         }
 
-        throw new InvalidOperationException("Project-structure executor setting 'ProjectId' or 'ProjectIdJsonPath' is required.");
+        if (TryResolveInputJsonString(input, "$.project.id", out rawProjectId) &&
+            Guid.TryParse(rawProjectId, out parsed) &&
+            parsed != Guid.Empty)
+        {
+            return parsed;
+        }
+
+        throw new InvalidOperationException("Project-structure executor setting 'ProjectId' or 'ProjectIdJsonPath' is required unless the workflow input includes '$.project.id'.");
     }
 
     private static string RequireNodeId(
@@ -592,6 +599,12 @@ public sealed class ProjectStructureWorkflowExecutor(IServiceScopeFactory scopeF
 
         return ResolveInputJsonString(input, settings.NodeIdJsonPath, nameof(settings.NodeIdJsonPath));
     }
+
+    private static string? ResolveWorkflowParentNodeId(WorkflowNodeInput input)
+        => TryResolveInputJsonString(input, "$.runContext.workflowNodeId", out var workflowNodeId) &&
+           !string.IsNullOrWhiteSpace(workflowNodeId)
+            ? workflowNodeId.Trim()
+            : null;
 
     private static string? ResolveInputJsonString(
         WorkflowNodeInput input,
@@ -622,6 +635,39 @@ public sealed class ProjectStructureWorkflowExecutor(IServiceScopeFactory scopeF
         return value.ValueKind == JsonValueKind.String
             ? value.GetString()
             : value.GetRawText();
+    }
+
+    private static bool TryResolveInputJsonString(
+        WorkflowNodeInput input,
+        string jsonPath,
+        out string? resolvedValue)
+    {
+        resolvedValue = null;
+        if (string.IsNullOrWhiteSpace(jsonPath))
+        {
+            return false;
+        }
+
+        if (!WorkflowRoutingValidation.TryParseJsonPath(jsonPath.Trim(), out var path, out var pathError))
+        {
+            throw new InvalidOperationException($"Project-structure executor has invalid JSON path '{jsonPath}': {pathError}.");
+        }
+
+        if (string.IsNullOrWhiteSpace(input.PayloadJson))
+        {
+            return false;
+        }
+
+        using var document = JsonDocument.Parse(input.PayloadJson);
+        if (!TryResolve(document.RootElement, path, out var value))
+        {
+            return false;
+        }
+
+        resolvedValue = value.ValueKind == JsonValueKind.String
+            ? value.GetString()
+            : value.GetRawText();
+        return true;
     }
 
     private static bool TryResolve(
@@ -671,14 +717,35 @@ public sealed class ProjectStructureWorkflowExecutor(IServiceScopeFactory scopeF
         return true;
     }
 
-    private static ProjectStructureAgentContext BuildAgentContext()
-        => new(
+    private static ProjectStructureAgentContext BuildAgentContext(WorkflowNodeInput input)
+    {
+        var fallback = new ProjectStructureAgentContext(
             "workflow-executor",
             "Workflow executor",
             Environment.MachineName,
             string.Empty,
             string.Empty,
             Guid.NewGuid().ToString("N"));
+
+        return string.IsNullOrWhiteSpace(ReadRunContextString(input, "agentId"))
+            ? fallback
+            : new ProjectStructureAgentContext(
+                ReadRunContextString(input, "agentId"),
+                ReadRunContextString(input, "agentName", fallback.AgentName),
+                ReadRunContextString(input, "machineName", fallback.MachineName),
+                ReadRunContextString(input, "repositoryRoot", fallback.RepositoryRoot),
+                ReadRunContextString(input, "branchName", fallback.BranchName),
+                ReadRunContextString(input, "sessionId", fallback.SessionId));
+    }
+
+    private static string ReadRunContextString(
+        WorkflowNodeInput input,
+        string propertyName,
+        string fallback = "")
+        => TryResolveInputJsonString(input, $"$.runContext.{propertyName}", out var value) &&
+           !string.IsNullOrWhiteSpace(value)
+            ? value.Trim()
+            : fallback;
 
     private static string NormalizeAssetKind(string value)
         => string.IsNullOrWhiteSpace(value) ? "md" : value.Trim().TrimStart('.').ToLowerInvariant();

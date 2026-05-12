@@ -118,6 +118,64 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
+    public async Task MafBackendRecordsConfiguredFileArtifactsForCompletedFileWrites()
+    {
+        var executor = new RecordingWorkflowExecutor();
+        var catalog = new WorkflowExecutorCatalog([executor]);
+        var invoker = new WorkflowExecutorInvoker(catalog, [executor]);
+        var compiler = new MafWorkflowCompiler(new WorkflowDefinitionValidator(catalog), invoker);
+        var backend = new MafInProcessWorkflowExecutionBackend(compiler, []);
+        var filePath = "reports/generated-summary.md";
+        var definition = CreateDefinition(
+        [
+            CreateExecutorNode("write-summary", WorkflowExecutorIds.StorageFile) with
+            {
+                Settings = CreateSettings(WorkflowExecutorIds.StorageFile) with
+                {
+                    ExecutorSettingsJson = System.Text.Json.JsonSerializer.Serialize(
+                        new WorkflowStorageFileExecutorSettings
+                        {
+                            Operation = WorkflowStorageFileOperation.WriteText,
+                            Path = filePath,
+                            Content = "Generated procurement summary."
+                        },
+                        new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web))
+                }
+            },
+            CreateNode("end", WorkflowNodeKind.End)
+        ], [
+            CreateEdge("write-end", "write-summary", "end")
+        ],
+        startNodeId: "write-summary") with
+        {
+            RuntimePolicy = new WorkflowRuntimePolicy(
+                WorkflowRuntimeBackendKind.InProcess,
+                AllowInProcessPreviewRuns: true,
+                RequireDurableProductionRuns: false,
+                ExposeAzureFunctionsStatusEndpoint: false,
+                ExposeAzureFunctionsMcpTool: false)
+        };
+
+        var result = await backend.StartAsync(
+            definition,
+            new WorkflowRunStartRequest(
+                definition.Id,
+                definition.VersionId,
+                "{\"input\":\"hello\"}",
+                WorkflowRuntimeBackendKind.InProcess,
+                SourceProcessRunId: null,
+                SourceProcessAssignmentId: null),
+            WorkflowRunId.New());
+
+        var artifact = Assert.Single(result.Artifacts);
+        Assert.Equal(WorkflowRunState.Completed, result.Run.State);
+        Assert.Equal(WorkflowArtifactKind.File, artifact.Kind);
+        Assert.Equal(new WorkflowNodeId("write-summary"), artifact.NodeId);
+        Assert.Equal(filePath, artifact.StoragePath);
+        Assert.Equal("generated-summary.md", artifact.Name);
+    }
+
+    [Fact]
     public async Task MafCompilerRoutesStartOutputIntoExecutorNode()
     {
         var executor = new RecordingWorkflowExecutor();

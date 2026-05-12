@@ -1,6 +1,7 @@
 @namespace CanDoItAll.Modules.Workbench.Pages
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.Common
+@using CanDoItAll.AgentFramework.Models
 @using CanDoItAll.SharedKernel
 
 @if (ProjectHierarchyDialog is not null)
@@ -257,6 +258,243 @@
                     <PanelCard Class="project-structure-inline-feedback"
                                data-tone="warn">
                         @processDialog.Error
+                    </PanelCard>
+                }
+            </Stack>
+        </Body>
+    </ProjectStructureOverlayDialog>
+}
+
+@if (WorkflowAddDialog is not null)
+{
+    var workflowDialog = WorkflowAddDialog;
+    var selectedOption = workflowDialog.SelectedWorkflowId.HasValue
+        ? workflowDialog.Options.FirstOrDefault(option => option.WorkflowId == workflowDialog.SelectedWorkflowId.Value)
+        : null;
+    var source = ResolveWorkflowInputSource(workflowDialog.InputSettings);
+
+    <ProjectStructureOverlayDialog CanvasScoped="true"
+                                   AriaLabel="@workflowDialog.Title"
+                                   Kicker="Workflow input"
+                                   Title="@workflowDialog.Title"
+                                   Summary="@workflowDialog.Copy"
+                                   DialogClass="project-structure-workflow-add-dialog"
+                                   BodyClass="project-structure-workflow-add-dialog__body"
+                                   DataTestId="project-structure-workflow-add-dialog"
+                                   Close="CloseWorkflowAdd">
+        <Actions>
+            <Button Text="Cancel"
+                    Variant="Variant.Text"
+                    ButtonStyle="ButtonStyle.Base"
+                    Click="CloseWorkflowAdd" />
+            <Button Text="@workflowDialog.SubmitLabel"
+                    ButtonStyle="ButtonStyle.Info"
+                    data-testid="project-structure-workflow-add-submit"
+                    Disabled="@(workflowDialog.Options.Count == 0 || !workflowDialog.SelectedWorkflowId.HasValue)"
+                    Click="ExecuteWorkflowAdd" />
+        </Actions>
+        <Body>
+            <Stack GapScale="LayoutGap.Medium">
+                <PanelCard>
+                    <Stack GapScale="LayoutGap.Small">
+                        <TextBlock TextStyle="TextStyle.Footer" Value="Workflow" Class="cw-panel-copy" />
+                        <select class="cw-context-toolbox__search"
+                                data-testid="project-structure-workflow-add-select"
+                                value="@(workflowDialog.SelectedWorkflowId?.Value.ToString("D") ?? string.Empty)"
+                                @onchange="WorkflowAddSelectionChanged">
+                            <option value="">Select a workflow</option>
+                            @foreach (var option in workflowDialog.Options)
+                            {
+                                <option value="@option.WorkflowId.Value"
+                                        disabled="@(!option.IsSelectable)">
+                                    @($"{option.DisplayName} ({option.Status})")
+                                </option>
+                            }
+                        </select>
+                    </Stack>
+                </PanelCard>
+
+                @if (selectedOption is not null)
+                {
+                    <PanelCard>
+                        <Stack GapScale="LayoutGap.Tiny">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Selected workflow" />
+                            <TextBlock TextStyle="TextStyle.Subtitle2" Value="@selectedOption.DisplayName" />
+                            <TextBlock TextStyle="TextStyle.Note"
+                                       Value="@($"{selectedOption.PreferredBackend} backend")"
+                                       Class="cw-panel-copy" />
+                            @if (!string.IsNullOrWhiteSpace(selectedOption.Description))
+                            {
+                                <TextBlock TextStyle="TextStyle.Note"
+                                           Value="@selectedOption.Description"
+                                           Class="cw-panel-copy" />
+                            }
+                            @if (!selectedOption.IsSelectable)
+                            {
+                                <TextBlock TextStyle="TextStyle.Note"
+                                           Value="@selectedOption.DisabledReason"
+                                           Class="cw-panel-copy" />
+                            }
+                        </Stack>
+                    </PanelCard>
+                }
+
+                <PanelCard>
+                    <Stack GapScale="LayoutGap.Small">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Always included" />
+                        <div class="cw-chip-row">
+                            <Pill Tone="PillTone.Info" Text="Project details" />
+                            <Pill Tone="PillTone.Info" Text="@($"Parent: {workflowDialog.ParentNodeTitle}")" />
+                        </div>
+                    </Stack>
+                </PanelCard>
+
+                <PanelCard>
+                    <Stack GapScale="LayoutGap.Small">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Optional input" />
+                        <label class="project-structure-checkbox-row">
+                            <input type="checkbox"
+                                   checked="@workflowDialog.InputSettings.IncludeParentSubtree"
+                                   data-testid="project-structure-workflow-add-include-subtree"
+                                   @onchange="WorkflowAddIncludeParentSubtreeChanged" />
+                            <span>Include parent subtree</span>
+                        </label>
+                        <label class="project-structure-checkbox-row">
+                            <input type="checkbox"
+                                   checked="@workflowDialog.InputSettings.IncludeAssets"
+                                   data-testid="project-structure-workflow-add-include-assets"
+                                   @onchange="WorkflowAddIncludeAssetsChanged" />
+                            <span>Include asset references</span>
+                        </label>
+                    </Stack>
+                </PanelCard>
+
+                <PanelCard>
+                    <Stack GapScale="LayoutGap.Small">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Additional source" />
+                        <select class="cw-context-toolbox__search"
+                                data-testid="project-structure-workflow-add-source-kind"
+                                value="@source.Kind.ToString()"
+                                @onchange="WorkflowAddSourceKindChanged">
+                            @foreach (var sourceKind in WorkflowInputSourceKinds)
+                            {
+                                <option value="@sourceKind">@ResolveWorkflowInputSourceKindLabel(sourceKind)</option>
+                            }
+                        </select>
+                        <input class="cw-context-toolbox__search"
+                               type="text"
+                               data-testid="project-structure-workflow-add-source-key"
+                               placeholder="Source key"
+                               value="@source.Key"
+                               @oninput="WorkflowAddSourceKeyChanged" />
+                        <input class="cw-context-toolbox__search"
+                               type="text"
+                               data-testid="project-structure-workflow-add-source-label"
+                               placeholder="Source label"
+                               value="@source.Label"
+                               @oninput="WorkflowAddSourceLabelChanged" />
+                        <input class="cw-context-toolbox__search"
+                               type="text"
+                               data-testid="project-structure-workflow-add-source-value"
+                               placeholder="File path, folder path, or external reference"
+                               value="@source.Value"
+                               @oninput="WorkflowAddSourceValueChanged" />
+                    </Stack>
+                </PanelCard>
+
+                <PanelCard>
+                    <Stack GapScale="LayoutGap.Small">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Manual JSON" />
+                        <textarea class="cw-context-toolbox__search"
+                                  rows="5"
+                                  data-testid="project-structure-workflow-add-manual-json"
+                                  value="@workflowDialog.InputSettings.ManualInputJson"
+                                  @oninput="WorkflowAddManualInputChanged"></textarea>
+                    </Stack>
+                </PanelCard>
+
+                <PanelCard>
+                    <Stack GapScale="LayoutGap.Small">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Input preview" />
+                        @foreach (var previewSection in workflowDialog.Preview.Sections)
+                        {
+                            <div class="project-structure-facts-list">
+                                <div class="project-structure-fact-row">
+                                    <span>@previewSection.Title</span>
+                                    <strong>@previewSection.Summary</strong>
+                                </div>
+                                @foreach (var row in previewSection.Rows)
+                                {
+                                    <div class="project-structure-fact-row">
+                                        <span>@row.Label</span>
+                                        <strong>@row.Value</strong>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </Stack>
+                </PanelCard>
+
+                @if (!string.IsNullOrWhiteSpace(workflowDialog.Error))
+                {
+                    <PanelCard Class="project-structure-inline-feedback"
+                               data-tone="warn">
+                        @workflowDialog.Error
+                    </PanelCard>
+                }
+            </Stack>
+        </Body>
+    </ProjectStructureOverlayDialog>
+}
+
+@if (WorkflowStartDialog is not null)
+{
+    var workflowStart = WorkflowStartDialog;
+    var status = workflowStart.Status;
+
+    <ProjectStructureOverlayDialog CanvasScoped="true"
+                                   AriaLabel="@workflowStart.Title"
+                                   Kicker="Workflow start"
+                                   Title="@workflowStart.Title"
+                                   Summary="@workflowStart.Copy"
+                                   DataTestId="project-structure-workflow-start-dialog"
+                                   Close="CloseWorkflowStart">
+        <Actions>
+            <Button Text="Cancel"
+                    Variant="Variant.Text"
+                    ButtonStyle="ButtonStyle.Base"
+                    Disabled="@workflowStart.IsBusy"
+                    Click="CloseWorkflowStart" />
+            <Button Text="@workflowStart.SubmitLabel"
+                    ButtonStyle="ButtonStyle.Success"
+                    data-testid="project-structure-workflow-start-submit"
+                    IsBusy="@workflowStart.IsBusy"
+                    Disabled="@workflowStart.IsBusy"
+                    Click="ExecuteWorkflowStart" />
+        </Actions>
+        <Body>
+            <Stack GapScale="LayoutGap.Medium">
+                <PanelCard>
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Workflow node" />
+                        <TextBlock TextStyle="TextStyle.Subtitle2" Value="@workflowStart.NodeTitle" />
+                        @if (status is not null)
+                        {
+                            <TextBlock TextStyle="TextStyle.Note"
+                                       Value="@($"{status.Status} / step {status.CurrentStepIndex} of {status.StepCount}")"
+                                       Class="cw-panel-copy" />
+                            <TextBlock TextStyle="TextStyle.Note"
+                                       Value="@status.Message"
+                                       Class="cw-panel-copy" />
+                        }
+                    </Stack>
+                </PanelCard>
+
+                @if (!string.IsNullOrWhiteSpace(workflowStart.Error))
+                {
+                    <PanelCard Class="project-structure-inline-feedback"
+                               data-tone="warn">
+                        @workflowStart.Error
                     </PanelCard>
                 }
             </Stack>
@@ -715,6 +953,14 @@
 
 @code {
     private const int ProcessStartVisibleCandidateCount = 5;
+    private static readonly ProjectStructureWorkflowInputSourceKind[] WorkflowInputSourceKinds =
+    [
+        ProjectStructureWorkflowInputSourceKind.FilePath,
+        ProjectStructureWorkflowInputSourceKind.FolderPath,
+        ProjectStructureWorkflowInputSourceKind.SelectedNode,
+        ProjectStructureWorkflowInputSourceKind.ManualJson
+    ];
+
     private Guid? processStartCandidateVisibilityLaunchPlanId;
     private bool showAllProcessStartCandidates;
 
@@ -768,6 +1014,48 @@
 
     [Parameter]
     public EventCallback ExecuteProcessLink { get; set; }
+
+    [Parameter]
+    public ProjectStructureWorkflowAddDialogState? WorkflowAddDialog { get; set; }
+
+    [Parameter]
+    public EventCallback CloseWorkflowAdd { get; set; }
+
+    [Parameter]
+    public EventCallback<ChangeEventArgs> WorkflowAddSelectionChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<ChangeEventArgs> WorkflowAddIncludeParentSubtreeChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<ChangeEventArgs> WorkflowAddIncludeAssetsChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<ChangeEventArgs> WorkflowAddManualInputChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<ChangeEventArgs> WorkflowAddSourceKindChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<ChangeEventArgs> WorkflowAddSourceKeyChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<ChangeEventArgs> WorkflowAddSourceLabelChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<ChangeEventArgs> WorkflowAddSourceValueChanged { get; set; }
+
+    [Parameter]
+    public EventCallback ExecuteWorkflowAdd { get; set; }
+
+    [Parameter]
+    public ProjectStructureWorkflowStartDialogState? WorkflowStartDialog { get; set; }
+
+    [Parameter]
+    public EventCallback CloseWorkflowStart { get; set; }
+
+    [Parameter]
+    public EventCallback ExecuteWorkflowStart { get; set; }
 
     [Parameter]
     public bool RenderProcessStartDialog { get; set; } = true;
@@ -877,6 +1165,24 @@
         => string.IsNullOrWhiteSpace(value)
             ? "primary"
             : value.Trim().ToLowerInvariant().Replace(':', '-');
+
+    private static ProjectStructureWorkflowInputSource ResolveWorkflowInputSource(
+        ProjectStructureWorkflowInputSettings settings)
+        => settings.AdditionalSources.FirstOrDefault()
+           ?? new ProjectStructureWorkflowInputSource(
+               ProjectStructureWorkflowInputSourceKind.FilePath,
+               "source",
+               "Additional source",
+               string.Empty);
+
+    private static string ResolveWorkflowInputSourceKindLabel(ProjectStructureWorkflowInputSourceKind sourceKind)
+        => sourceKind switch
+        {
+            ProjectStructureWorkflowInputSourceKind.FolderPath => "Folder path",
+            ProjectStructureWorkflowInputSourceKind.SelectedNode => "Selected node",
+            ProjectStructureWorkflowInputSourceKind.ManualJson => "Manual JSON reference",
+            _ => "File path"
+        };
 
     private static IReadOnlyList<ProjectStructureProcessStartCandidateState> SelectVisibleProcessStartCandidates(
         IReadOnlyList<ProjectStructureProcessStartCandidateState> orderedCandidates)

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench;
@@ -186,6 +187,8 @@ public sealed class ProjectObjectMetadataEnvelope
     public ProjectInfrastructureMetadata? Infrastructure { get; set; }
 
     public ProjectLinkMetadata? Link { get; set; }
+
+    public ProjectWorkflowNodeMetadata? Workflow { get; set; }
 }
 
 public sealed record ProjectNodeMarker(
@@ -470,6 +473,53 @@ public sealed class ProjectLinkMetadata
     public string DisplayHint { get; set; } = string.Empty;
 }
 
+public sealed class ProjectWorkflowNodeMetadata
+{
+    [ProjectStructurePreviewField("Workflow", 10)]
+    public string WorkflowName { get; set; } = string.Empty;
+
+    [ProjectStructurePreviewField("Workflow id", 20)]
+    public WorkflowId? WorkflowId { get; set; }
+
+    [ProjectStructurePreviewField("Workflow version", 30)]
+    public WorkflowVersionId? WorkflowVersionId { get; set; }
+
+    [ProjectStructurePreviewField("Description", 40)]
+    public string WorkflowDescription { get; set; } = string.Empty;
+
+    public ProjectStructureWorkflowInputSettings InputSettings { get; set; } = ProjectStructureWorkflowInputSettings.Default();
+
+    [ProjectStructurePreviewField("Last run", 50)]
+    public WorkflowRunId? LastRunId { get; set; }
+
+    [ProjectStructurePreviewField("Last state", 60)]
+    public WorkflowRunState? LastRunState { get; set; }
+
+    [ProjectStructurePreviewField("Last summary", 70)]
+    public string LastRunSummary { get; set; } = string.Empty;
+
+    [ProjectStructurePreviewField("Created nodes", 72)]
+    public IReadOnlyList<string> LastCreatedNodeIds { get; set; } = [];
+
+    [ProjectStructurePreviewField("Created assets", 74)]
+    public IReadOnlyList<string> LastCreatedAssetIds { get; set; } = [];
+
+    [ProjectStructurePreviewField("Created files", 76)]
+    public IReadOnlyList<string> LastCreatedFilePaths { get; set; } = [];
+
+    [ProjectStructurePreviewField("Step", 80)]
+    public int LastStepIndex { get; set; }
+
+    [ProjectStructurePreviewField("Step count", 90)]
+    public int LastStepCount { get; set; }
+
+    [ProjectStructurePreviewField("Last started", 100)]
+    public DateTimeOffset? LastStartedAtUtc { get; set; }
+
+    [ProjectStructurePreviewField("Last updated", 110)]
+    public DateTimeOffset? LastUpdatedAtUtc { get; set; }
+}
+
 public static class ProjectObjectMetadataSerializer
 {
     private static readonly JsonSerializerOptions SerializerOptions = BuildSerializerOptions();
@@ -578,6 +628,12 @@ public static class ProjectObjectMetadataSerializer
             string.IsNullOrWhiteSpace(metadata.Meeting?.Address))
         {
             throw new InvalidOperationException("Onsite meetings require an address.");
+        }
+
+        if (objectType is ProjectObjectType.WorkflowDefinition or ProjectObjectType.WorkflowRun &&
+            metadata.Workflow?.WorkflowId is null)
+        {
+            throw new InvalidOperationException("Workflow nodes require workflow metadata with a workflow id.");
         }
     }
 
@@ -791,6 +847,11 @@ public static class ProjectObjectMetadataSerializer
             count++;
         }
 
+        if (metadata.Workflow is not null)
+        {
+            count++;
+        }
+
         return count;
     }
 
@@ -846,8 +907,13 @@ public static class ProjectObjectMetadataSerializer
             return ProjectNodeKindFamily.Infrastructure;
         }
 
-        return metadata.Link is not null
-            ? ProjectNodeKindFamily.Link
+        if (metadata.Link is not null)
+        {
+            return ProjectNodeKindFamily.Link;
+        }
+
+        return metadata.Workflow is not null
+            ? ProjectNodeKindFamily.Workflow
             : ProjectNodeKindFamily.None;
     }
 }

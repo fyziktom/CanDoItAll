@@ -250,6 +250,18 @@ public sealed class ProjectStructureActionCatalogAdapterTests
     }
 
     [Fact]
+    public void Workflow_definition_nodes_expose_start_workflow_without_add_workflow()
+    {
+        var adapter = new ProjectStructureActionCatalogAdapter();
+        var node = CreateNode("workflow-definition:11111111-1111-1111-1111-111111111111", ProjectObjectType.WorkflowDefinition, "Delivery workflow", 0, 0);
+
+        var actions = adapter.BuildNodeContextActions(node);
+
+        Assert.Contains(actions, action => action.ActionId == "start-workflow");
+        Assert.DoesNotContain(actions, action => action.ActionId == "add-workflow");
+    }
+
+    [Fact]
     public void Runtime_capable_nodes_expose_normal_and_admin_run_actions_when_requested()
     {
         var adapter = new ProjectStructureActionCatalogAdapter();
@@ -320,6 +332,17 @@ public sealed class ProjectStructureActionCatalogAdapterTests
         var actions = adapter.BuildNodeContextActions(node);
 
         Assert.Contains(actions, action => action.ActionId == "add-process");
+    }
+
+    [Fact]
+    public void Non_workflow_nodes_expose_add_workflow_action()
+    {
+        var adapter = new ProjectStructureActionCatalogAdapter();
+        var node = CreateNode("work-item", ProjectObjectType.WorkItem, "Task", 0, 0);
+
+        var actions = adapter.BuildNodeContextActions(node);
+
+        Assert.Contains(actions, action => action.ActionId == "add-workflow");
     }
 
     private static ProjectStructureNode CreateNode(
