@@ -267,6 +267,7 @@ public sealed class WorkflowsPageTests
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"workflow-example-seed-{Guid.NewGuid():N}");
         var store = new InMemoryWorkflowCatalogStore();
         var catalogService = new InMemoryWorkflowCatalogService(store, new WorkflowDefinitionValidator());
+        var templatePack = new WorkflowTemplatePackLoader().Load();
         var seeder = new WorkflowExampleCatalogSeedService(
             catalogService,
             catalogService,
@@ -297,10 +298,16 @@ public sealed class WorkflowsPageTests
         var examples = definitions
             .Where(item => item.Name.StartsWith("Example:", StringComparison.Ordinal))
             .ToArray();
-        Assert.True(examples.Length >= 15);
+        Assert.Equal(templatePack.Workflows.Count, examples.Length);
 
         var components = await catalogService.ListComponentsAsync();
-        Assert.True(components.Count(component => component.Name.StartsWith("Example LLM:", StringComparison.Ordinal)) >= 15);
+        Assert.Equal(templatePack.Workflows.Count, components.Count(component => component.Name.StartsWith("Example LLM:", StringComparison.Ordinal)));
+        foreach (var example in examples)
+        {
+            var detail = await catalogService.GetDefinitionAsync(example.Id);
+            Assert.NotNull(detail);
+            Assert.True(detail!.Validation.Succeeded, string.Join("; ", detail.Validation.Issues.Select(issue => issue.Message)));
+        }
 
         var invoice = Assert.Single(examples, item => item.Name == "Example: Invoice Workbook Risk Switch");
         var invoiceDetail = await catalogService.GetDefinitionAsync(invoice.Id);

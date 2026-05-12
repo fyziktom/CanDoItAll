@@ -24,6 +24,8 @@ public static class WorkflowExecutorIds
 {
     public static WorkflowExecutorId StorageFile { get; } = new("storage.file");
 
+    public static WorkflowExecutorId SourceIngestion { get; } = new("source.ingest");
+
     public static WorkflowExecutorId ProjectStructure { get; } = new("project-structure");
 
     public static WorkflowExecutorId HttpFetch { get; } = new("http.fetch");
@@ -93,7 +95,8 @@ public enum WorkflowProjectStructureOperation
     ListProjects,
     ReadTree,
     ReadNode,
-    CreateAsset
+    CreateAsset,
+    CreateTaskNodes
 }
 
 public enum WorkflowImageGenerationOperation
@@ -152,6 +155,41 @@ public sealed record WorkflowStorageFileExecutorSettings
     public int MaxLines { get; init; } = 160;
 
     public bool Overwrite { get; init; } = true;
+}
+
+public sealed record WorkflowSourceIngestionExecutorSettings
+{
+    public IReadOnlyList<string> SourceKeys { get; init; } = [];
+
+    public IReadOnlyList<string> AllowedExtensions { get; init; } =
+    [
+        ".md",
+        ".txt",
+        ".eml",
+        ".csv",
+        ".json",
+        ".pdf",
+        ".xls",
+        ".xlsx"
+    ];
+
+    public bool IncludeAdditionalSources { get; init; } = true;
+
+    public bool IncludeParentNodePath { get; init; } = true;
+
+    public bool IncludeSelectedNodePaths { get; init; } = true;
+
+    public bool IncludeParentSubtreePaths { get; init; } = true;
+
+    public bool RecursiveFolders { get; init; } = true;
+
+    public bool AllowAbsoluteInputPaths { get; init; }
+
+    public int MaxFiles { get; init; } = 12;
+
+    public int MaxCharactersPerFile { get; init; } = 12000;
+
+    public int MaxTotalCharacters { get; init; } = 60000;
 }
 
 public sealed record WorkflowHttpExecutorSettings
@@ -229,6 +267,12 @@ public sealed record WorkflowProjectStructureExecutorSettings
     public string SourceWorkspacePath { get; init; } = string.Empty;
 
     public string ContentType { get; init; } = "text/markdown";
+
+    public string TaskItemsJsonPath { get; init; } = "$.tasks";
+
+    public string TaskObjectSubtype { get; init; } = "task";
+
+    public int MaxTaskNodes { get; init; } = 20;
 }
 
 public sealed record WorkflowImageGenerationExecutorSettings

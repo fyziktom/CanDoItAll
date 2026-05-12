@@ -13,6 +13,7 @@ using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Prompts;
 using CanDoItAll.Modules.Resources;
+using CanDoItAll.Modules.SchedulerPlanner;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.TestLab;
 using CanDoItAll.Modules.Validation;
@@ -32,7 +33,10 @@ public static class RuntimeHostServiceCollectionExtensions
 {
     private const string OpenAiApiKeyConfigurationKey = "OPENAI_API_KEY";
 
-    public static IServiceCollection AddCanDoItAllRuntimeModules(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddCanDoItAllRuntimeModules(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        string? contentRootPath = null)
     {
         ArgumentNullException.ThrowIfNull(configuration);
 
@@ -50,7 +54,8 @@ public static class RuntimeHostServiceCollectionExtensions
         services.AddTestLabModule();
         services.AddActivityModule();
         services.AddAgentFrameworkModule(configuration);
-        services.AddAutomationModule(configuration);
+        services.AddAutomationModule(configuration, contentRootPath);
+        services.AddSchedulerPlannerModule();
         services.AddCollaborationModule();
         services.AddCrmHrModule();
         return services;
@@ -161,6 +166,14 @@ public sealed class AppDatabaseBootstrapper(
             "Ensuring CRM/HR schema for profile {ProfileId}.",
             profile.Profile.Id);
         await CrmHrSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        logger.LogInformation(
+            "Ensuring Quartz automation schema for profile {ProfileId}.",
+            profile.Profile.Id);
+        await AutomationQuartzSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        logger.LogInformation(
+            "Ensuring scheduler planner schema for profile {ProfileId}.",
+            profile.Profile.Id);
+        await SchedulerPlannerSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         logger.LogInformation(
             "Ensuring managed SQLite staffing bootstrap for profile {ProfileId}.",
             profile.Profile.Id);

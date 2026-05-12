@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -6,6 +7,7 @@ using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 
@@ -38,7 +40,8 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
 
         await using var host = await ProjectStructureAgentApiTestHost.CreateAsync(
             "workflow-scenario-harness",
-            testEnvironment => testEnvironment.CreateManagedSqliteProfile("scenario-harness"));
+            testEnvironment => testEnvironment.CreateManagedSqliteProfile("scenario-harness"),
+            ConfigureGroundedWorkflowServices);
         var execution = await RunHarnessAsync(
             host,
             proofRoot,
@@ -79,7 +82,8 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
                 "workflow-scenario-harness-postgres",
                 testEnvironment => testEnvironment.CreatePostgreSqlProfile(
                     "scenario-harness-postgres",
-                    BuildDatabaseConnectionString(availability.ConnectionString!, databaseName)));
+                    BuildDatabaseConnectionString(availability.ConnectionString!, databaseName)),
+                ConfigureGroundedWorkflowServices);
             var execution = await RunHarnessAsync(
                 host,
                 proofRoot,
@@ -158,11 +162,17 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
             Assert.Equal(100, result.ProgressPercent);
             Assert.NotEmpty(result.CreatedNodeIds);
         });
-        Assert.Contains(execution.Scenarios, result => result.Id == "S01" && result.Validations.Any(item => item.Contains("MOUSER_Receipt_89566550.pdf", StringComparison.Ordinal)));
-        Assert.Contains(execution.Scenarios, result => result.Id == "S03" && result.Validations.Any(item => item.Contains("SEAMARK", StringComparison.Ordinal)));
-        Assert.Contains(execution.Scenarios, result => result.Id == "S06" && result.Validations.Any(item => item.Contains("IoTFactory", StringComparison.Ordinal)));
+        Assert.Contains(execution.Scenarios, result => result.Id == "S01" && result.Validations.Any(item => item.Contains("89566550", StringComparison.Ordinal)));
+        Assert.Contains(execution.Scenarios, result => result.Id == "S03" && result.Validations.Any(item => item.Contains("ZM-x5600", StringComparison.Ordinal)));
+        Assert.Contains(execution.Scenarios, result => result.Id == "S06" && result.Validations.Any(item => item.Contains("Summary Rozpočet", StringComparison.Ordinal)));
         Assert.Contains(execution.Scenarios, result => result.Id == "S17" && result.CreatedFilePaths.Contains("samples/workflows/scenario-harness/S17-file-save-result.md"));
         Assert.True(File.Exists(execution.ResultPath), $"Expected scenario harness result artifact at '{execution.ResultPath}'.");
+    }
+
+    private static void ConfigureGroundedWorkflowServices(IServiceCollection services)
+    {
+        services.RemoveAll<IWorkflowLlmComponentInvoker>();
+        services.AddSingleton<IWorkflowLlmComponentInvoker, GroundedScenarioWorkflowLlmInvoker>();
     }
 
     private static async Task<ScenarioRunResult> RunScenarioAsync(
@@ -198,12 +208,14 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
                     LeaseToken: leaseToken)));
         }
 
-        WorkflowDefinition definition;
-        await using (var scope = host.App.Services.CreateAsyncScope())
-        {
-            var catalogService = scope.ServiceProvider.GetRequiredService<IWorkflowCatalogService>();
-            definition = await catalogService.SaveDefinitionAsync(CreateScenarioWorkflowDefinitionSaveRequest(scenario));
-        }
+        var component = await PostAndReadAsync<LlmCallComponent>(
+            host.Client,
+            "/api/workflows/components",
+            CreateScenarioComponentRequest(scenario));
+        var definition = await PostAndReadAsync<WorkflowDefinition>(
+            host.Client,
+            "/api/workflows/definitions",
+            CreateScenarioWorkflowDefinitionSaveRequest(scenario, component.Id));
 
         var inputSettings = ProjectStructureWorkflowInputSettings.Default();
         inputSettings.IncludeParentSubtree = scenario.IncludeParentSubtree;
@@ -249,7 +261,9 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
             $"/api/project-structure/projects/{project.Id}/nodes/{workflowNode.Node.Id}/workflow/start",
             new ProjectStructureWorkflowNodeStartInput(WorkflowRuntimeBackendKind.InProcess, LeaseToken: leaseToken));
 
-        Assert.Equal(WorkflowRunState.Completed, started.Status.State);
+        Assert.True(
+            started.Status.State == WorkflowRunState.Completed,
+            JsonSerializer.Serialize(started.Status, JsonOptions));
         Assert.Equal("complete", started.Status.ProgressMode);
         Assert.Equal(100, started.Status.ProgressPercent);
 
@@ -342,26 +356,98 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
         }
     }
 
-    private static WorkflowDefinitionSaveRequest CreateScenarioWorkflowDefinitionSaveRequest(WorkflowScenario scenario)
+    private static LlmCallComponentSaveRequest CreateScenarioComponentRequest(WorkflowScenario scenario)
     {
+        return new LlmCallComponentSaveRequest(
+            Id: null,
+            Name: $"Scenario Harness LLM: {scenario.Id} {scenario.Title}",
+            ProviderProfileId: null,
+            Model: "scenario-grounded-test",
+            Modality: WorkflowModality.Text,
+            ModelSettings: new WorkflowModelSettings(
+                Temperature: 0.1,
+                MaxOutputTokens: 1600,
+                RequireJsonOutput: true,
+                ResponseFormatJsonSchema:
+                """
+                {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "properties": {
+                    "route": { "type": "string" },
+                    "summary": { "type": "string" },
+                    "markdown": { "type": "string" },
+                    "actions": { "type": "array", "items": { "type": "string" } },
+                    "targets": { "type": "array", "items": { "type": "string" } },
+                    "risk": { "type": "string" },
+                    "relevant": { "type": "boolean" },
+                    "needsReview": { "type": "boolean" },
+                    "requiresResponse": { "type": "boolean" },
+                    "ready": { "type": "boolean" },
+                    "projectId": { "type": "string" },
+                    "nodeId": { "type": "string" },
+                    "sourceUrl": { "type": "string" },
+                    "project": { "type": "object", "additionalProperties": true },
+                    "runContext": { "type": "object", "additionalProperties": true }
+                  },
+                  "required": ["route", "summary", "markdown", "actions", "targets", "risk", "relevant", "needsReview", "requiresResponse", "ready", "projectId", "nodeId", "sourceUrl"]
+                }
+                """),
+            Instructions:
+            $"""
+            Produce a grounded project-structure workflow result for scenario {scenario.Id}: {scenario.Title}.
+            Use only the loaded sourceDocuments/documents supplied by the previous source-ingestion node.
+            The markdown must include source paths, verified facts, gaps, and next actions.
+            Scenario instructions: {scenario.Instructions}
+            Expected grounded phrases: {string.Join(", ", scenario.ExpectedPhrases)}
+            """,
+            InputShape: CreateJsonShape(),
+            ResultShape: CreateJsonShape(),
+            Permissions: AgentPermissionsPolicy.Default);
+    }
+
+    private static WorkflowDefinitionSaveRequest CreateScenarioWorkflowDefinitionSaveRequest(
+        WorkflowScenario scenario,
+        WorkflowComponentId componentId)
+    {
+        var sourceSettingsJson = JsonSerializer.Serialize(
+            new WorkflowSourceIngestionExecutorSettings
+            {
+                IncludeAdditionalSources = true,
+                IncludeParentNodePath = true,
+                IncludeSelectedNodePaths = true,
+                IncludeParentSubtreePaths = true,
+                RecursiveFolders = true,
+                AllowAbsoluteInputPaths = true,
+                MaxFiles = 18,
+                MaxCharactersPerFile = 16000,
+                MaxTotalCharacters = 120000
+            },
+            JsonOptions);
         var assetSettingsJson = JsonSerializer.Serialize(
             new WorkflowProjectStructureExecutorSettings
             {
                 Operation = WorkflowProjectStructureOperation.CreateAsset,
+                ProjectIdJsonPath = "$.projectId",
+                NodeIdJsonPath = "$.nodeId",
                 AssetKind = "md",
                 Title = $"{scenario.Id} result summary",
-                Content = scenario.ExpectedSummaryMarkdown,
+                ContentFromInput = true,
                 ContentType = "text/markdown"
             },
             JsonOptions);
         var nodes = new List<WorkflowNode>
         {
             CreateWorkflowNode("start", WorkflowNodeKind.Start, resultShape: WorkflowValueShape.Text),
-            CreateExecutorWorkflowNode("create-summary-asset", WorkflowExecutorIds.ProjectStructure, assetSettingsJson)
+            CreateExecutorWorkflowNode("ingest-sources", WorkflowExecutorIds.SourceIngestion, sourceSettingsJson),
+            CreateLlmWorkflowNode("summarize-sources", componentId),
+            CreateExecutorWorkflowNode("create-summary-asset", WorkflowExecutorIds.ProjectStructure, assetSettingsJson, CreateJsonShape())
         };
         var edges = new List<WorkflowEdge>
         {
-            CreateWorkflowEdge("start-to-summary", "start", "create-summary-asset")
+            CreateWorkflowEdge("start-to-ingest", "start", "ingest-sources"),
+            CreateWorkflowEdge("ingest-to-llm", "ingest-sources", "summarize-sources"),
+            CreateWorkflowEdge("llm-to-summary", "summarize-sources", "create-summary-asset")
         };
 
         if (!string.IsNullOrWhiteSpace(scenario.FileOutputPath))
@@ -371,12 +457,13 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
                 {
                     Operation = WorkflowStorageFileOperation.WriteText,
                     Path = scenario.FileOutputPath,
-                    Content = scenario.ExpectedSummaryMarkdown,
+                    ContentFromInput = true,
                     Overwrite = true
                 },
                 JsonOptions);
             nodes.Add(CreateExecutorWorkflowNode("write-result-file", WorkflowExecutorIds.StorageFile, fileSettingsJson, CreateJsonShape()));
-            edges.Add(CreateWorkflowEdge("summary-to-file", "create-summary-asset", "write-result-file"));
+            edges.Add(CreateWorkflowEdge("llm-to-file", "summarize-sources", "write-result-file"));
+            edges.Add(CreateWorkflowEdge("summary-to-end", "create-summary-asset", "end"));
             edges.Add(CreateWorkflowEdge("file-to-end", "write-result-file", "end"));
         }
         else
@@ -454,6 +541,25 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
             });
     }
 
+    private static WorkflowNode CreateLlmWorkflowNode(
+        string id,
+        WorkflowComponentId componentId)
+    {
+        return new WorkflowNode(
+            new WorkflowNodeId(id),
+            WorkflowNodeKind.LlmCall,
+            id,
+            [],
+            new WorkflowNodeSettings(
+                ComponentId: componentId,
+                AgentId: null,
+                SubworkflowId: null,
+                ExternalRequestKind: null,
+                Instructions: "Produce a grounded markdown result from loaded workflow sources.",
+                InputShape: CreateJsonShape(),
+                ResultShape: CreateJsonShape()));
+    }
+
     private static WorkflowEdge CreateWorkflowEdge(string id, string source, string target)
     {
         return new WorkflowEdge(
@@ -508,7 +614,7 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
                 [FileChild("Mouser cart workbook", mouserCart), FileChild("Mouser receipt PDF", mouserReceipt)],
                 true,
                 true,
-                ["MOUSER_Receipt_89566550.pdf", "Cart_Mar30_1059AM.xls", "quantity", "total"]),
+                ["89566550", "485-4754", "378.16", "FEDEX"]),
             CreateScenario(
                 "S02",
                 "Mouser order purchasing summary",
@@ -519,7 +625,7 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
                 [FileChild("Mouser cart workbook", mouserCart)],
                 true,
                 false,
-                ["purchasing", "Mouser", "open questions"]),
+                ["89566550", "Adafruit", "MEAN WELL"]),
             CreateScenario(
                 "S03",
                 "SEAMARK folder x-ray device summary",
@@ -530,7 +636,7 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
                 [FileChild("SEAMARK catalogue", seamarkCatalogue), FileChild("SEAMARK quotation list", seamarkQuotation)],
                 true,
                 true,
-                ["SEAMARK", "x-ray inspection", "catalogue"]),
+                ["ZM-x5600", "$35,000", "X-6600A", "90kV"]),
             CreateScenario(
                 "S04",
                 "SEAMARK price list extraction",
@@ -541,7 +647,7 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
                 [FileChild("SEAMARK quotation list", seamarkQuotation)],
                 true,
                 true,
-                ["Quotation List2018", "price", "uncertainty"]),
+                ["Quotation Date: 2018.10.15", "USD73000-78000", "$41,500.00"]),
             CreateScenario(
                 "S05",
                 "SEAMARK model comparison",
@@ -552,7 +658,7 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
                 [FileChild("X-5600 specification", seamarkX5600), FileChild("X-6600 specification", seamarkX6600), FileChild("X-6600A specification", seamarkX6600A)],
                 true,
                 true,
-                ["X-5600", "X-6600", "comparison"]),
+                ["X-5600", "X-6600", "640mm*540mm", "1176*1104"]),
             CreateScenario(
                 "S06",
                 "IoTFactory financial plan review",
@@ -563,7 +669,7 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
                 [FileChild("IoTFactory financial workbook", iotFactoryWorkbook)],
                 true,
                 true,
-                ["IoTFactory", "budget", "risk"]),
+                ["Summary Rozpočet", "Příjmy z modulů", "Výdaje"]),
             CreateScenario(
                 "S07",
                 "Business plan markdown review",
@@ -574,7 +680,7 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
                 [NoteChild("Market assumptions", "Needs pricing validation against three competitors.")],
                 true,
                 false,
-                ["investor", "strengths", "risks"]),
+                ["regional distributors", "gross margin", "competitors"]),
             CreateScenario(
                 "S08",
                 "Customer email task extraction",
@@ -585,7 +691,7 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
                 [FileChild("Customer email", customerEmail)],
                 true,
                 true,
-                ["customer email", "tasks", "owner"]),
+                ["INV-1042", "finance", "account management"]),
             CreateScenario(
                 "S09",
                 "Vendor renewal risk",
@@ -596,7 +702,7 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
                 [],
                 false,
                 false,
-                ["renewal", "review", "price increase"]),
+                ["two-year renewal", "14 percent price increase", "Finance approval"]),
             CreateScenario(
                 "S10",
                 "Support SLA escalation",
@@ -607,7 +713,7 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
                 [NoteChild("SLA note", "The customer has a P1 billing-impact ticket with a missed response window.")],
                 true,
                 true,
-                ["SLA", "escalation", "billing"]),
+                ["P1 support ticket", "Billing outage", "missed by 42 minutes"]),
             CreateScenario(
                 "S11",
                 "Meeting notes action extraction",
@@ -618,7 +724,7 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
                 [NoteChild("Inventory action", "Supplier ETA is blocking shipment reservation.")],
                 true,
                 false,
-                ["meeting notes", "blocked", "owner"]),
+                ["inventory check", "supplier ETA", "owner confirmation"]),
             CreateScenario(
                 "S12",
                 "Release readiness gate",
@@ -629,7 +735,7 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
                 [NoteChild("QA status", "Regression passed, but security sign-off is still pending.")],
                 true,
                 true,
-                ["release", "hold", "security sign-off"]),
+                ["Release candidate 2026.05", "regression", "Security sign-off"]),
             CreateScenario(
                 "S13",
                 "Vendor risk routing",
@@ -640,7 +746,7 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
                 [],
                 false,
                 false,
-                ["vendor", "security", "finance"]),
+                ["analytics vendor", "SSO", "Security questionnaire"]),
             CreateScenario(
                 "S14",
                 "Sales lead qualification",
@@ -651,7 +757,7 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
                 [NoteChild("ACME lead", "Score 91, enterprise segment, security review requested.")],
                 true,
                 true,
-                ["enterprise", "nurture", "qualification"]),
+                ["ACME score 91", "Globex score 74", "Initech score 32"]),
             CreateScenario(
                 "S15",
                 "Incident response fan-out",
@@ -684,7 +790,7 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
                 [],
                 false,
                 false,
-                ["file-save", "saved path", "S17-file-save-result.md"],
+                ["workflow result", "output path", "execution summary"],
                 "samples/workflows/scenario-harness/S17-file-save-result.md"),
             CreateScenario(
                 "S18",
@@ -951,6 +1057,334 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
         builder.Timeout = 5;
         builder.CommandTimeout = 15;
         return builder.ConnectionString;
+    }
+
+    private sealed class GroundedScenarioWorkflowLlmInvoker : IWorkflowLlmComponentInvoker
+    {
+        public ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
+            WorkflowDefinition definition,
+            WorkflowNode node,
+            LlmCallComponent component,
+            WorkflowNodeInput input,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            using var document = JsonDocument.Parse(input.PayloadJson);
+            var root = document.RootElement;
+            var manualInput = root.TryGetProperty("manualInput", out var manualInputElement)
+                ? manualInputElement
+                : default;
+            var scenarioId = ReadString(manualInput, "scenarioId");
+            var title = ReadString(manualInput, "title");
+            var instructions = ReadString(manualInput, "instructions");
+            var expectedPhrases = ReadStringArray(manualInput, "expectedPhrases");
+            var sourceDocuments = ReadSourceDocuments(root);
+            if (sourceDocuments.Count == 0)
+            {
+                throw new InvalidOperationException($"Scenario '{scenarioId}' did not load any source documents before the LLM node.");
+            }
+
+            var projectContext = BuildProjectContext(root);
+            var evidence = new List<GroundedScenarioEvidence>();
+            foreach (var phrase in expectedPhrases)
+            {
+                var item = FindEvidence(phrase, sourceDocuments, projectContext);
+                if (item is null)
+                {
+                    throw new InvalidOperationException(
+                        $"Scenario '{scenarioId}' expected grounded phrase '{phrase}', but it was not found in loaded source documents or project-structure context.");
+                }
+
+                evidence.Add(item);
+            }
+
+            var markdown = BuildMarkdown(
+                scenarioId,
+                title,
+                instructions,
+                root,
+                sourceDocuments,
+                evidence);
+            var payload = new
+            {
+                route = "summary",
+                summary = $"Grounded result for {scenarioId}: {title}. Loaded {sourceDocuments.Count} source document(s).",
+                markdown,
+                actions = new[]
+                {
+                    "Review cited source paths.",
+                    "Confirm stale prices, dates, and operational decisions with the source owner before committing changes."
+                },
+                targets = sourceDocuments.Select(item => item.Path).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
+                risk = evidence.Count == expectedPhrases.Count ? "medium" : "high",
+                relevant = true,
+                needsReview = sourceDocuments.Any(item => string.Equals(item.ExtractionStatus, "pdf-no-extractable-text", StringComparison.OrdinalIgnoreCase)),
+                requiresResponse = false,
+                ready = true,
+                projectId = ReadNestedString(root, "project", "id"),
+                nodeId = ReadNestedString(root, "runContext", "workflowNodeId"),
+                sourceUrl = string.Empty,
+                project = CloneProperty(root, "project"),
+                runContext = CloneProperty(root, "runContext"),
+                loadedSourceCount = sourceDocuments.Count,
+                evidence = evidence.Select(item => new
+                {
+                    item.Phrase,
+                    item.SourceName,
+                    item.SourcePath,
+                    item.Snippet
+                }).ToArray()
+            };
+
+            return ValueTask.FromResult(new WorkflowNodeExecutionResult(
+                node.Id,
+                JsonSerializer.Serialize(payload, JsonOptions),
+                component.ResultShape));
+        }
+
+        private static string BuildMarkdown(
+            string scenarioId,
+            string title,
+            string instructions,
+            JsonElement root,
+            IReadOnlyList<GroundedScenarioDocument> sourceDocuments,
+            IReadOnlyList<GroundedScenarioEvidence> evidence)
+        {
+            var builder = new StringBuilder();
+            builder.AppendLine($"# {scenarioId} {title}");
+            builder.AppendLine();
+            builder.AppendLine("## Result");
+            builder.AppendLine($"Loaded {sourceDocuments.Count} source document(s) through the workflow source-ingestion node.");
+            if (!string.IsNullOrWhiteSpace(instructions))
+            {
+                builder.AppendLine($"Instruction focus: {instructions}");
+            }
+
+            builder.AppendLine();
+            builder.AppendLine("## Sources");
+            builder.AppendLine("| Source | Path | Status | Characters |");
+            builder.AppendLine("| --- | --- | --- | ---: |");
+            foreach (var source in sourceDocuments)
+            {
+                builder.AppendLine($"| {EscapeMarkdown(source.FileName)} | {EscapeMarkdown(source.Path)} | {EscapeMarkdown(source.ExtractionStatus)} | {source.TotalCharacters} |");
+            }
+
+            builder.AppendLine();
+            builder.AppendLine("## Verified Facts");
+            foreach (var item in evidence)
+            {
+                builder.AppendLine($"- **{EscapeMarkdown(item.Phrase)}** - {EscapeMarkdown(item.SourceName)}: {EscapeMarkdown(item.Snippet)}");
+            }
+
+            var noTextSources = sourceDocuments
+                .Where(item => string.Equals(item.ExtractionStatus, "pdf-no-extractable-text", StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            if (noTextSources.Length > 0)
+            {
+                builder.AppendLine();
+                builder.AppendLine("## Gaps");
+                foreach (var source in noTextSources)
+                {
+                    builder.AppendLine($"- {EscapeMarkdown(source.FileName)} had no extractable PDF text and needs OCR/manual review.");
+                }
+            }
+
+            builder.AppendLine();
+            builder.AppendLine("## Project Context");
+            builder.AppendLine($"- Project: {EscapeMarkdown(ReadNestedString(root, "project", "name"))}");
+            builder.AppendLine($"- Workflow node: {EscapeMarkdown(ReadNestedString(root, "runContext", "workflowNodeId"))}");
+            builder.AppendLine($"- Parent node: {EscapeMarkdown(ReadNestedString(root, "parentNode", "title"))}");
+            builder.AppendLine();
+            builder.AppendLine("## Next Actions");
+            builder.AppendLine("- Keep this summary attached under the workflow node for traceability.");
+            builder.AppendLine("- Re-run the workflow if source files or pricing data change.");
+            return builder.ToString().Trim();
+        }
+
+        private static IReadOnlyList<GroundedScenarioDocument> ReadSourceDocuments(JsonElement root)
+        {
+            var documents = new List<GroundedScenarioDocument>();
+            var sourceArray = root.TryGetProperty("sourceDocuments", out var sourceDocuments)
+                ? sourceDocuments
+                : root.TryGetProperty("documents", out var documentsElement)
+                    ? documentsElement
+                    : default;
+            if (sourceArray.ValueKind != JsonValueKind.Array)
+            {
+                return documents;
+            }
+
+            foreach (var item in sourceArray.EnumerateArray())
+            {
+                var text = ReadString(item, "text");
+                var path = ReadString(item, "path");
+                var fileName = ReadString(item, "fileName");
+                if (string.IsNullOrWhiteSpace(text) &&
+                    string.IsNullOrWhiteSpace(path) &&
+                    string.IsNullOrWhiteSpace(fileName))
+                {
+                    continue;
+                }
+
+                documents.Add(new GroundedScenarioDocument(
+                    fileName,
+                    path,
+                    ReadString(item, "label"),
+                    text,
+                    ReadString(item, "extractionStatus"),
+                    ReadInt32(item, "totalCharacters")));
+            }
+
+            return documents;
+        }
+
+        private static string BuildProjectContext(JsonElement root)
+        {
+            var builder = new StringBuilder();
+            AppendRawProperty(builder, root, "project");
+            AppendRawProperty(builder, root, "runContext");
+            AppendRawProperty(builder, root, "parentNode");
+            AppendRawProperty(builder, root, "selectedNodes");
+            AppendRawProperty(builder, root, "parentSubtree");
+            AppendRawProperty(builder, root, "sources");
+            return builder.ToString();
+        }
+
+        private static GroundedScenarioEvidence? FindEvidence(
+            string phrase,
+            IReadOnlyList<GroundedScenarioDocument> sourceDocuments,
+            string projectContext)
+        {
+            foreach (var source in sourceDocuments)
+            {
+                var sourceText = string.Join(
+                    Environment.NewLine,
+                    source.FileName,
+                    source.Path,
+                    source.Label,
+                    source.ExtractionStatus,
+                    source.Text);
+                var snippet = FindSnippet(sourceText, phrase);
+                if (!string.IsNullOrWhiteSpace(snippet))
+                {
+                    return new GroundedScenarioEvidence(
+                        phrase,
+                        string.IsNullOrWhiteSpace(source.FileName) ? source.Label : source.FileName,
+                        source.Path,
+                        snippet);
+                }
+            }
+
+            var contextSnippet = FindSnippet(projectContext, phrase);
+            return string.IsNullOrWhiteSpace(contextSnippet)
+                ? null
+                : new GroundedScenarioEvidence(phrase, "project-structure context", "project structure input", contextSnippet);
+        }
+
+        private static string? FindSnippet(string value, string phrase)
+        {
+            if (string.IsNullOrWhiteSpace(value) || string.IsNullOrWhiteSpace(phrase))
+            {
+                return null;
+            }
+
+            var index = value.IndexOf(phrase, StringComparison.OrdinalIgnoreCase);
+            if (index < 0)
+            {
+                return null;
+            }
+
+            var start = Math.Max(0, index - 80);
+            var length = Math.Min(value.Length - start, phrase.Length + 160);
+            return value.Substring(start, length)
+                .Replace("\r", " ", StringComparison.Ordinal)
+                .Replace("\n", " ", StringComparison.Ordinal)
+                .Trim();
+        }
+
+        private static IReadOnlyList<string> ReadStringArray(JsonElement element, string propertyName)
+        {
+            if (element.ValueKind == JsonValueKind.Undefined ||
+                !element.TryGetProperty(propertyName, out var property) ||
+                property.ValueKind != JsonValueKind.Array)
+            {
+                return [];
+            }
+
+            return property.EnumerateArray()
+                .Where(item => item.ValueKind == JsonValueKind.String)
+                .Select(item => item.GetString() ?? string.Empty)
+                .Where(item => !string.IsNullOrWhiteSpace(item))
+                .ToArray();
+        }
+
+        private static string ReadNestedString(JsonElement root, string objectName, string propertyName)
+        {
+            if (!root.TryGetProperty(objectName, out var item))
+            {
+                return string.Empty;
+            }
+
+            return ReadString(item, propertyName);
+        }
+
+        private static JsonElement? CloneProperty(JsonElement root, string propertyName)
+            => root.TryGetProperty(propertyName, out var property)
+                ? property.Clone()
+                : null;
+
+        private static string ReadString(JsonElement element, string propertyName)
+        {
+            if (element.ValueKind == JsonValueKind.Undefined ||
+                !element.TryGetProperty(propertyName, out var property))
+            {
+                return string.Empty;
+            }
+
+            return property.ValueKind == JsonValueKind.String
+                ? property.GetString() ?? string.Empty
+                : property.GetRawText();
+        }
+
+        private static int ReadInt32(JsonElement element, string propertyName)
+        {
+            if (element.ValueKind == JsonValueKind.Undefined ||
+                !element.TryGetProperty(propertyName, out var property) ||
+                property.ValueKind != JsonValueKind.Number)
+            {
+                return 0;
+            }
+
+            return property.TryGetInt32(out var value) ? value : 0;
+        }
+
+        private static void AppendRawProperty(StringBuilder builder, JsonElement root, string propertyName)
+        {
+            if (root.TryGetProperty(propertyName, out var property))
+            {
+                builder.AppendLine(property.GetRawText());
+            }
+        }
+
+        private static string EscapeMarkdown(string value)
+            => value
+                .Replace("|", "\\|", StringComparison.Ordinal)
+                .Replace("\r", " ", StringComparison.Ordinal)
+                .Replace("\n", " ", StringComparison.Ordinal);
+
+        private sealed record GroundedScenarioDocument(
+            string FileName,
+            string Path,
+            string Label,
+            string Text,
+            string ExtractionStatus,
+            int TotalCharacters);
+
+        private sealed record GroundedScenarioEvidence(
+            string Phrase,
+            string SourceName,
+            string SourcePath,
+            string Snippet);
     }
 
     private sealed record WorkflowScenario(

@@ -213,9 +213,10 @@ public sealed class QuartzAutomationSchedulerBridge(
             .UsingJobData(AutomationTriggerQuartzJob.TriggerIdKey, triggerRecord.Id.ToString("N"))
             .UsingJobData(AutomationTriggerQuartzJob.TriggerKeyKey, triggerRecord.TriggerKey)
             .UsingJobData(AutomationTriggerQuartzJob.OwnerKeyKey, triggerRecord.OwnerKey)
-            .UsingJobData(AutomationTriggerQuartzJob.OwnerKindKey, (int)triggerRecord.OwnerKind)
+            .UsingJobData(AutomationTriggerQuartzJob.OwnerKindKey, triggerRecord.OwnerKind.ToString())
             .UsingJobData(AutomationTriggerQuartzJob.PayloadJsonKey, triggerRecord.PayloadJson)
             .UsingJobData(AutomationTriggerQuartzJob.DedupeKeyKey, triggerRecord.DedupeKey)
+            .RequestRecovery()
             .Build();
 
         await scheduler.ScheduleJob(job, quartzTrigger, cancellationToken);
@@ -318,7 +319,9 @@ public sealed class AutomationTriggerQuartzJob(
         var triggerId = Guid.ParseExact(context.MergedJobDataMap.GetString(TriggerIdKey)!, "N");
         var triggerKey = context.MergedJobDataMap.GetString(TriggerKeyKey) ?? string.Empty;
         var ownerKey = context.MergedJobDataMap.GetString(OwnerKeyKey) ?? string.Empty;
-        var ownerKind = (AutomationTriggerOwnerKind)context.MergedJobDataMap.GetInt(OwnerKindKey);
+        var ownerKind = Enum.Parse<AutomationTriggerOwnerKind>(
+            context.MergedJobDataMap.GetString(OwnerKindKey) ?? string.Empty,
+            ignoreCase: false);
         var payloadJson = context.MergedJobDataMap.GetString(PayloadJsonKey) ?? "{}";
         var dedupeKey = context.MergedJobDataMap.GetString(DedupeKeyKey) ?? string.Empty;
         var firedAtUtc = context.FireTimeUtc;

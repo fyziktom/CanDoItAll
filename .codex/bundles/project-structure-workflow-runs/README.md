@@ -52,5 +52,5 @@
 - Execution status: `Completed`
 - Subbundle gate review: `Subbundles 01-07 passed`
 - Final closure gate: `Passed with explicit global-test residual`
-- Browser validation analytics: `PostgreSQL add/start/status/result screenshots captured; result projection API/component proof passed; SQLite/PostgreSQL 20-scenario harness artifacts captured; gpt-5-mini and local Ollama gptoss20b64k provider workflow proof captured`
+- Browser validation analytics: `PostgreSQL add/start/status/result screenshots captured; result projection API/component proof passed; SQLite/PostgreSQL 20-scenario harness artifacts captured; gpt-5-mini and local Ollama gptoss20b64k provider workflow proof captured and rerun with source-ingestion result validation for Mouser reconciliation facts and SEAMARK device/price mappings`
 - Residual validation state: `Full-solution test timed out after 20 minutes, and the workflow-filtered solution run still fails in the unrelated Playwright process audit waiting for processes-launch-name-input. Targeted project-structure workflow proof passed.`

@@ -1,12 +1,14 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using ExcelDataReader;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tools.Documents;
 using Microsoft.Extensions.DependencyInjection;
+using UglyToad.PdfPig;
 using DocumentCellWrite = CanDoItAll.Tools.Documents.SpreadsheetCellWrite;
 using DocumentRangeWrite = CanDoItAll.Tools.Documents.SpreadsheetRangeWrite;
 using DocumentWriteRequest = CanDoItAll.Tools.Documents.SpreadsheetWriteRequest;
@@ -28,6 +30,16 @@ public static class BuiltInWorkflowExecutorDescriptors
         "folder_open",
         "builtin.storage-file",
         new WorkflowStorageFileExecutorSettings());
+
+    public static WorkflowExecutorDescriptor SourceIngestion { get; } = Create(
+        WorkflowExecutorIds.SourceIngestion,
+        "Source ingestion",
+        "Loads explicit project-structure workflow file and folder sources into bounded text for downstream LLM nodes.",
+        WorkflowExecutorCategoryKind.Data,
+        "drive_folder_upload",
+        "builtin.source-ingest",
+        new WorkflowSourceIngestionExecutorSettings(),
+        defaultPolicy: WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 90, CaptureOutputArtifact = true });
 
     public static WorkflowExecutorDescriptor HttpFetch { get; } = Create(
         WorkflowExecutorIds.HttpFetch,
@@ -52,7 +64,7 @@ public static class BuiltInWorkflowExecutorDescriptors
     public static WorkflowExecutorDescriptor ProjectStructure { get; } = Create(
         WorkflowExecutorIds.ProjectStructure,
         "Project structure",
-        "Reads project structures and creates typed asset nodes through the project-structure service.",
+        "Reads project structures and creates typed asset and task nodes through the project-structure service.",
         WorkflowExecutorCategoryKind.ProjectStructure,
         "account_tree",
         "builtin.project-structure",
@@ -173,6 +185,688 @@ public sealed class WorkspaceFileWorkflowExecutor(IWorkspaceFileService files) :
 
     private static string? EmptyToNull(string value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+}
+
+public sealed class SourceIngestionWorkflowExecutor(IWorkspacePathResolutionService paths) : IWorkflowExecutor
+{
+    private static readonly char[] PathTrimCharacters = [' ', '\t', '\r', '\n', '`', '\'', '"'];
+
+    static SourceIngestionWorkflowExecutor()
+    {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+    }
+
+    public WorkflowExecutorDescriptor Descriptor => BuiltInWorkflowExecutorDescriptors.SourceIngestion;
+
+    public ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
+        WorkflowExecutorExecutionContext context,
+        WorkflowNodeInput input,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var settings = WorkflowExecutorJson.Deserialize<WorkflowSourceIngestionExecutorSettings>(context.SettingsJson);
+        using var document = JsonDocument.Parse(input.PayloadJson);
+        var root = document.RootElement;
+        var allowedExtensions = NormalizeExtensions(settings.AllowedExtensions);
+        var sourceKeys = NormalizeKeys(settings.SourceKeys);
+        var maxFiles = Math.Clamp(settings.MaxFiles, 1, 40);
+        var maxCharactersPerFile = Math.Clamp(settings.MaxCharactersPerFile, 1000, 80000);
+        var remainingCharacters = Math.Clamp(settings.MaxTotalCharacters, 1000, 240000);
+        var candidates = CollectCandidates(root, settings, sourceKeys)
+            .GroupBy(candidate => $"{candidate.Kind}:{candidate.Value}", StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .ToList();
+        var loaded = new List<WorkflowSourceIngestionDocument>();
+        var errors = new List<WorkflowSourceIngestionError>();
+        var visitedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var truncated = false;
+
+        foreach (var candidate in candidates)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (loaded.Count >= maxFiles || remainingCharacters <= 0)
+            {
+                truncated = true;
+                break;
+            }
+
+            try
+            {
+                foreach (var file in ResolveCandidateFiles(candidate, settings, allowedExtensions, maxFiles - loaded.Count))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (!visitedFiles.Add(file.FullPath))
+                    {
+                        continue;
+                    }
+
+                    var loadedDocument = ReadSourceDocument(candidate, file, maxCharactersPerFile, remainingCharacters);
+                    loaded.Add(loadedDocument);
+                    remainingCharacters -= loadedDocument.Text.Length;
+                    truncated = truncated || loadedDocument.IsTruncated;
+                    if (loaded.Count >= maxFiles || remainingCharacters <= 0)
+                    {
+                        truncated = true;
+                        break;
+                    }
+                }
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
+            {
+                errors.Add(new WorkflowSourceIngestionError(
+                    candidate.Key,
+                    candidate.Label,
+                    candidate.Kind,
+                    candidate.Value,
+                    candidate.Origin,
+                    exception.Message));
+            }
+        }
+
+        var result = new
+        {
+            project = TryClone(root, "project"),
+            runContext = TryClone(root, "runContext"),
+            parentNode = TryClone(root, "parentNode"),
+            selectedNodes = TryClone(root, "selectedNodes"),
+            parentSubtree = TryClone(root, "parentSubtree"),
+            manualInput = TryClone(root, "manualInput"),
+            sourceSummary = BuildSourceSummary(loaded, errors, truncated),
+            documents = loaded,
+            sourceDocuments = loaded,
+            sourceErrors = errors,
+            loadedSourceCount = loaded.Count,
+            failedSourceCount = errors.Count,
+            isTruncated = truncated
+        };
+
+        return ValueTask.FromResult(WorkflowExecutorJson.Result(context, result));
+    }
+
+    private IEnumerable<WorkflowSourceIngestionFile> ResolveCandidateFiles(
+        WorkflowSourceCandidate candidate,
+        WorkflowSourceIngestionExecutorSettings settings,
+        IReadOnlySet<string> allowedExtensions,
+        int take)
+    {
+        if (take <= 0)
+        {
+            yield break;
+        }
+
+        var kind = candidate.Kind;
+        var resolvedAsDirectory = string.Equals(kind, "folderPath", StringComparison.OrdinalIgnoreCase) ||
+                                  (!string.Equals(kind, "filePath", StringComparison.OrdinalIgnoreCase) && Directory.Exists(ResolvePathForProbe(candidate.Value, settings)));
+
+        if (resolvedAsDirectory)
+        {
+            var directory = ResolveDirectory(candidate.Value, settings);
+            var count = 0;
+            foreach (var file in Directory.EnumerateFiles(
+                         directory.FullPath,
+                         "*",
+                         new EnumerationOptions
+                         {
+                             RecurseSubdirectories = settings.RecursiveFolders,
+                             IgnoreInaccessible = true,
+                             AttributesToSkip = 0
+                         })
+                     .OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+            {
+                if (!IsAllowedExtension(file, allowedExtensions))
+                {
+                    continue;
+                }
+
+                yield return new WorkflowSourceIngestionFile(
+                    file,
+                    ToDisplayPath(file, directory),
+                    Path.GetFileName(file));
+                count++;
+                if (count >= take)
+                {
+                    yield break;
+                }
+            }
+
+            yield break;
+        }
+
+        var resolvedFile = ResolveFile(candidate.Value, settings);
+        if (!IsAllowedExtension(resolvedFile.FullPath, allowedExtensions))
+        {
+            throw new InvalidOperationException($"Source file '{resolvedFile.RelativePath}' has extension '{Path.GetExtension(resolvedFile.FullPath)}', which is not allowed by this workflow source-ingestion node.");
+        }
+
+        yield return new WorkflowSourceIngestionFile(
+            resolvedFile.FullPath,
+            resolvedFile.RelativePath,
+            Path.GetFileName(resolvedFile.FullPath));
+    }
+
+    private WorkflowSourceIngestionDocument ReadSourceDocument(
+        WorkflowSourceCandidate candidate,
+        WorkflowSourceIngestionFile file,
+        int maxCharactersPerFile,
+        int remainingCharacters)
+    {
+        var maxCharacters = Math.Max(0, Math.Min(maxCharactersPerFile, remainingCharacters));
+        var extension = Path.GetExtension(file.FullPath).ToLowerInvariant();
+        var result = extension switch
+        {
+            ".pdf" => ReadPdf(file.FullPath, maxCharacters),
+            ".xls" or ".xlsx" => ReadWorkbook(file.FullPath, maxCharacters),
+            _ => ReadText(file.FullPath, maxCharacters)
+        };
+
+        return new WorkflowSourceIngestionDocument(
+            candidate.Key,
+            candidate.Label,
+            candidate.Kind,
+            candidate.Origin,
+            file.DisplayPath,
+            file.FileName,
+            extension,
+            result.Text,
+            result.TotalCharacters,
+            result.IsTruncated,
+            result.ExtractionStatus);
+    }
+
+    private static WorkflowSourceReadResult ReadText(string fullPath, int maxCharacters)
+    {
+        using var reader = new StreamReader(fullPath, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+        return ReadBounded(reader, maxCharacters, "text");
+    }
+
+    private static WorkflowSourceReadResult ReadPdf(string fullPath, int maxCharacters)
+    {
+        var builder = new StringBuilder(Math.Min(maxCharacters, 8192));
+        var totalCharacters = 0;
+        var isTruncated = false;
+
+        using var pdf = PdfDocument.Open(fullPath);
+        foreach (var page in pdf.GetPages())
+        {
+            var pageText = page.Text ?? string.Empty;
+            totalCharacters += pageText.Length;
+            AppendBounded(builder, $"# Page {page.Number}{Environment.NewLine}{pageText}{Environment.NewLine}", maxCharacters, ref isTruncated);
+            if (isTruncated)
+            {
+                break;
+            }
+        }
+
+        var text = builder.ToString().Trim();
+        return new WorkflowSourceReadResult(
+            text,
+            totalCharacters,
+            isTruncated,
+            string.IsNullOrWhiteSpace(text) ? "pdf-no-extractable-text" : "pdf-text");
+    }
+
+    private static WorkflowSourceReadResult ReadWorkbook(string fullPath, int maxCharacters)
+    {
+        using var stream = File.Open(fullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        using var reader = ExcelReaderFactory.CreateReader(stream);
+        var builder = new StringBuilder(Math.Min(maxCharacters, 8192));
+        var totalCharacters = 0;
+        var isTruncated = false;
+
+        do
+        {
+            var worksheetName = string.IsNullOrWhiteSpace(reader.Name) ? "Sheet" : reader.Name;
+            AppendBounded(builder, $"## Worksheet: {worksheetName}{Environment.NewLine}", maxCharacters, ref isTruncated);
+            var rowIndex = 0;
+            while (reader.Read())
+            {
+                rowIndex++;
+                if (rowIndex > 80)
+                {
+                    isTruncated = true;
+                    break;
+                }
+
+                var cells = new List<string>();
+                var fieldCount = Math.Min(reader.FieldCount, 20);
+                for (var index = 0; index < fieldCount; index++)
+                {
+                    var value = reader.GetValue(index)?.ToString()?.Trim() ?? string.Empty;
+                    if (!string.IsNullOrWhiteSpace(value) || cells.Count > 0)
+                    {
+                        cells.Add(value);
+                    }
+                }
+
+                if (cells.Count == 0)
+                {
+                    continue;
+                }
+
+                var line = string.Join(" | ", cells);
+                totalCharacters += line.Length;
+                AppendBounded(builder, line + Environment.NewLine, maxCharacters, ref isTruncated);
+                if (isTruncated)
+                {
+                    break;
+                }
+            }
+        }
+        while (!isTruncated && reader.NextResult());
+
+        return new WorkflowSourceReadResult(builder.ToString().Trim(), totalCharacters, isTruncated, "workbook-text");
+    }
+
+    private static WorkflowSourceReadResult ReadBounded(TextReader reader, int maxCharacters, string extractionStatus)
+    {
+        var buffer = new char[Math.Min(Math.Max(maxCharacters, 1), 8192)];
+        var builder = new StringBuilder(Math.Min(maxCharacters, 8192));
+        var totalCharacters = 0;
+        var isTruncated = false;
+
+        while (true)
+        {
+            var read = reader.Read(buffer, 0, buffer.Length);
+            if (read == 0)
+            {
+                break;
+            }
+
+            totalCharacters += read;
+            AppendBounded(builder, new string(buffer, 0, read), maxCharacters, ref isTruncated);
+            if (isTruncated)
+            {
+                break;
+            }
+        }
+
+        return new WorkflowSourceReadResult(builder.ToString(), totalCharacters, isTruncated, extractionStatus);
+    }
+
+    private static void AppendBounded(StringBuilder builder, string value, int maxCharacters, ref bool isTruncated)
+    {
+        if (maxCharacters <= 0 || builder.Length >= maxCharacters)
+        {
+            isTruncated = true;
+            return;
+        }
+
+        var remaining = maxCharacters - builder.Length;
+        if (value.Length <= remaining)
+        {
+            builder.Append(value);
+            return;
+        }
+
+        builder.Append(value.AsSpan(0, remaining));
+        isTruncated = true;
+    }
+
+    private WorkspaceResolvedPath ResolveFile(string value, WorkflowSourceIngestionExecutorSettings settings)
+    {
+        var path = NormalizeInputPath(value);
+        try
+        {
+            return paths.ResolveFilePath(path, allowMissing: false);
+        }
+        catch (InvalidOperationException) when (settings.AllowAbsoluteInputPaths && Path.IsPathRooted(path))
+        {
+            var fullPath = Path.GetFullPath(path);
+            if (!File.Exists(fullPath))
+            {
+                throw new InvalidOperationException($"Source file '{fullPath}' was not found.");
+            }
+
+            return new WorkspaceResolvedPath(fullPath, NormalizeAbsoluteDisplayPath(fullPath), IsWorkspacePath: false);
+        }
+    }
+
+    private WorkspaceResolvedPath ResolveDirectory(string value, WorkflowSourceIngestionExecutorSettings settings)
+    {
+        var path = NormalizeInputPath(value);
+        try
+        {
+            return paths.ResolveDirectoryPath(path, allowMissing: false);
+        }
+        catch (InvalidOperationException) when (settings.AllowAbsoluteInputPaths && Path.IsPathRooted(path))
+        {
+            var fullPath = Path.GetFullPath(path);
+            if (!Directory.Exists(fullPath))
+            {
+                throw new InvalidOperationException($"Source directory '{fullPath}' was not found.");
+            }
+
+            return new WorkspaceResolvedPath(fullPath, NormalizeAbsoluteDisplayPath(fullPath), IsWorkspacePath: false);
+        }
+    }
+
+    private string ResolvePathForProbe(string value, WorkflowSourceIngestionExecutorSettings settings)
+    {
+        var path = NormalizeInputPath(value);
+        if (Path.IsPathRooted(path))
+        {
+            if (!settings.AllowAbsoluteInputPaths)
+            {
+                return path;
+            }
+
+            return Path.GetFullPath(path);
+        }
+
+        try
+        {
+            return paths.ResolveDirectoryPath(path, allowMissing: false).FullPath;
+        }
+        catch (InvalidOperationException)
+        {
+            return path;
+        }
+    }
+
+    private static IReadOnlyList<WorkflowSourceCandidate> CollectCandidates(
+        JsonElement root,
+        WorkflowSourceIngestionExecutorSettings settings,
+        IReadOnlySet<string> sourceKeys)
+    {
+        var candidates = new List<WorkflowSourceCandidate>();
+        if (settings.IncludeAdditionalSources &&
+            root.TryGetProperty("sources", out var sources) &&
+            sources.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var source in sources.EnumerateArray())
+            {
+                if (TryReadBoolean(source, "isEnabled", out var isEnabled) && !isEnabled)
+                {
+                    continue;
+                }
+
+                var kind = ReadString(source, "kind");
+                if (!IsPathSourceKind(kind))
+                {
+                    continue;
+                }
+
+                var key = ReadString(source, "key");
+                if (!ShouldIncludeKey(key, sourceKeys))
+                {
+                    continue;
+                }
+
+                var value = ReadString(source, "value");
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    continue;
+                }
+
+                candidates.Add(new WorkflowSourceCandidate(
+                    key,
+                    ReadString(source, "label"),
+                    kind,
+                    value,
+                    "additional-source"));
+            }
+        }
+
+        if (settings.IncludeParentNodePath && root.TryGetProperty("parentNode", out var parentNode))
+        {
+            AddNodeCandidate(candidates, parentNode, "parent-node", sourceKeys);
+        }
+
+        if (settings.IncludeSelectedNodePaths && root.TryGetProperty("selectedNodes", out var selectedNodes))
+        {
+            AddNodeCandidates(candidates, selectedNodes, "selected-node", sourceKeys);
+        }
+
+        if (settings.IncludeParentSubtreePaths && root.TryGetProperty("parentSubtree", out var parentSubtree))
+        {
+            AddNodeCandidates(candidates, parentSubtree, "parent-subtree", sourceKeys);
+        }
+
+        return candidates;
+    }
+
+    private static void AddNodeCandidates(
+        List<WorkflowSourceCandidate> candidates,
+        JsonElement nodes,
+        string origin,
+        IReadOnlySet<string> sourceKeys)
+    {
+        if (nodes.ValueKind != JsonValueKind.Array)
+        {
+            return;
+        }
+
+        foreach (var node in nodes.EnumerateArray())
+        {
+            AddNodeCandidate(candidates, node, origin, sourceKeys);
+        }
+    }
+
+    private static void AddNodeCandidate(
+        List<WorkflowSourceCandidate> candidates,
+        JsonElement node,
+        string origin,
+        IReadOnlySet<string> sourceKeys)
+    {
+        var nodeId = ReadString(node, "id");
+        if (!ShouldIncludeKey(nodeId, sourceKeys))
+        {
+            return;
+        }
+
+        var mediaPath = ReadString(node, "mediaRelativePath");
+        var notes = ReadString(node, "notes");
+        var candidatePath = !string.IsNullOrWhiteSpace(mediaPath)
+            ? mediaPath
+            : ExtractPathLine(notes);
+        if (string.IsNullOrWhiteSpace(candidatePath))
+        {
+            return;
+        }
+
+        var kind = LooksLikeFolderPath(candidatePath) ? "folderPath" : "filePath";
+        candidates.Add(new WorkflowSourceCandidate(
+            string.IsNullOrWhiteSpace(nodeId) ? origin : nodeId,
+            ReadString(node, "title"),
+            kind,
+            candidatePath,
+            origin));
+    }
+
+    private static JsonElement? TryClone(JsonElement root, string propertyName)
+    {
+        if (!root.TryGetProperty(propertyName, out var value))
+        {
+            return null;
+        }
+
+        return value.Clone();
+    }
+
+    private static string BuildSourceSummary(
+        IReadOnlyList<WorkflowSourceIngestionDocument> loaded,
+        IReadOnlyList<WorkflowSourceIngestionError> errors,
+        bool truncated)
+    {
+        var sourceText = loaded.Count == 1 ? "source" : "sources";
+        var summary = $"Loaded {loaded.Count} {sourceText}";
+        if (errors.Count > 0)
+        {
+            summary += $" with {errors.Count} error(s)";
+        }
+
+        if (truncated)
+        {
+            summary += "; content was truncated to workflow limits";
+        }
+
+        return summary + ".";
+    }
+
+    private static IReadOnlySet<string> NormalizeKeys(IReadOnlyList<string> sourceKeys)
+        => sourceKeys
+            .Where(key => !string.IsNullOrWhiteSpace(key))
+            .Select(key => key.Trim())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    private static IReadOnlySet<string> NormalizeExtensions(IReadOnlyList<string> extensions)
+        => extensions
+            .Where(extension => !string.IsNullOrWhiteSpace(extension))
+            .Select(extension => extension.Trim().StartsWith(".", StringComparison.Ordinal)
+                ? extension.Trim().ToLowerInvariant()
+                : "." + extension.Trim().ToLowerInvariant())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    private static bool ShouldIncludeKey(string key, IReadOnlySet<string> sourceKeys)
+        => sourceKeys.Count == 0 || sourceKeys.Contains(key);
+
+    private static bool IsPathSourceKind(string kind)
+        => string.Equals(kind, "filePath", StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(kind, "folderPath", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsAllowedExtension(string fullPath, IReadOnlySet<string> allowedExtensions)
+        => allowedExtensions.Count == 0 || allowedExtensions.Contains(Path.GetExtension(fullPath));
+
+    private static string NormalizeInputPath(string value)
+        => value.Trim(PathTrimCharacters).Replace('/', Path.DirectorySeparatorChar);
+
+    private static string NormalizeAbsoluteDisplayPath(string value)
+        => Path.GetFullPath(value).Replace('\\', '/');
+
+    private static string ToDisplayPath(string fullPath, WorkspaceResolvedPath directory)
+    {
+        if (directory.IsWorkspacePath)
+        {
+            return NormalizeAbsoluteDisplayPath(fullPath).StartsWith(NormalizeAbsoluteDisplayPath(directory.FullPath), StringComparison.OrdinalIgnoreCase)
+                ? Path.Combine(directory.RelativePath, Path.GetRelativePath(directory.FullPath, fullPath)).Replace('\\', '/')
+                : NormalizeAbsoluteDisplayPath(fullPath);
+        }
+
+        return NormalizeAbsoluteDisplayPath(fullPath);
+    }
+
+    private static string ExtractPathLine(string value)
+    {
+        foreach (var line in value.Split(["\r\n", "\n"], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var candidate = ExtractEmbeddedPath(line.Trim(PathTrimCharacters));
+            if (Path.IsPathRooted(candidate) ||
+                candidate.StartsWith("external-target/", StringComparison.OrdinalIgnoreCase) ||
+                candidate.StartsWith("external-target\\", StringComparison.OrdinalIgnoreCase) ||
+                LooksLikeRelativeFilePath(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static string ExtractEmbeddedPath(string value)
+    {
+        var index = FindWindowsPathStart(value);
+        return index > 0
+            ? value[index..].Trim(PathTrimCharacters)
+            : value;
+    }
+
+    private static int FindWindowsPathStart(string value)
+    {
+        for (var index = 0; index < value.Length - 2; index++)
+        {
+            if (IsAsciiLetter(value[index]) &&
+                value[index + 1] == ':' &&
+                value[index + 2] is '\\' or '/')
+            {
+                return index;
+            }
+        }
+
+        return value.IndexOf(@"\\", StringComparison.Ordinal);
+    }
+
+    private static bool IsAsciiLetter(char value)
+    {
+        return value is >= 'A' and <= 'Z' or >= 'a' and <= 'z';
+    }
+
+    private static bool LooksLikeFolderPath(string value)
+    {
+        var normalized = value.Trim(PathTrimCharacters);
+        if (Directory.Exists(normalized))
+        {
+            return true;
+        }
+
+        return string.IsNullOrWhiteSpace(Path.GetExtension(normalized));
+    }
+
+    private static bool LooksLikeRelativeFilePath(string value)
+        => value.Contains('/') || value.Contains('\\') || !string.IsNullOrWhiteSpace(Path.GetExtension(value));
+
+    private static string ReadString(JsonElement element, string propertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out var property))
+        {
+            return string.Empty;
+        }
+
+        return property.ValueKind == JsonValueKind.String
+            ? property.GetString() ?? string.Empty
+            : property.GetRawText();
+    }
+
+    private static bool TryReadBoolean(JsonElement element, string propertyName, out bool value)
+    {
+        value = false;
+        if (!element.TryGetProperty(propertyName, out var property) ||
+            property.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+        {
+            return false;
+        }
+
+        value = property.GetBoolean();
+        return true;
+    }
+
+    private sealed record WorkflowSourceCandidate(
+        string Key,
+        string Label,
+        string Kind,
+        string Value,
+        string Origin);
+
+    private sealed record WorkflowSourceIngestionFile(
+        string FullPath,
+        string DisplayPath,
+        string FileName);
+
+    private sealed record WorkflowSourceReadResult(
+        string Text,
+        int TotalCharacters,
+        bool IsTruncated,
+        string ExtractionStatus);
+
+    private sealed record WorkflowSourceIngestionDocument(
+        string Key,
+        string Label,
+        string Kind,
+        string Origin,
+        string Path,
+        string FileName,
+        string Extension,
+        string Text,
+        int TotalCharacters,
+        bool IsTruncated,
+        string ExtractionStatus);
+
+    private sealed record WorkflowSourceIngestionError(
+        string Key,
+        string Label,
+        string Kind,
+        string Value,
+        string Origin,
+        string Message);
 }
 
 public sealed class HttpFetchWorkflowExecutor : IWorkflowExecutor
@@ -517,10 +1211,66 @@ public sealed class ProjectStructureWorkflowExecutor(IServiceScopeFactory scopeF
                 BuildAssetRequest(settings, input),
                 BuildAgentContext(input),
                 cancellationToken),
+            WorkflowProjectStructureOperation.CreateTaskNodes => await CreateTaskNodesAsync(
+                service,
+                settings,
+                input,
+                cancellationToken),
             _ => throw new InvalidOperationException($"Project-structure operation '{settings.Operation}' is not supported.")
         };
 
         return WorkflowExecutorJson.Result(context, result);
+    }
+
+    private static async Task<object> CreateTaskNodesAsync(
+        ProjectStructureAgentService service,
+        WorkflowProjectStructureExecutorSettings settings,
+        WorkflowNodeInput input,
+        CancellationToken cancellationToken)
+    {
+        var projectId = RequireProjectId(settings, input);
+        var parentNodeId = ResolveOptionalNodeId(settings, input) ??
+                           ResolveWorkflowParentNodeId(input) ??
+                           throw new InvalidOperationException("Project-structure task creation requires 'NodeId', 'NodeIdJsonPath', or '$.runContext.workflowNodeId'.");
+        var tasks = ReadTaskSources(settings, input);
+        var createdNodes = new List<ProjectStructureNodeSummary>(tasks.Count);
+        var agent = BuildAgentContext(input);
+
+        foreach (var task in tasks)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            createdNodes.Add(await service.CreateNodeAsync(
+                projectId,
+                new ProjectStructureNodeCreateInput(
+                    ProjectObjectType.WorkItem,
+                    task.Title,
+                    BuildTaskSubtitle(task),
+                    BuildTaskNotes(task),
+                    parentNodeId,
+                    EndUtc: task.DueUtc,
+                    ObjectSubtype: NormalizeTaskSubtype(settings.TaskObjectSubtype),
+                    MetadataJson: BuildTaskMetadataJson(task, input)),
+                agent,
+                cancellationToken));
+        }
+
+        return new
+        {
+            projectId,
+            parentNodeId,
+            createdTaskCount = createdNodes.Count,
+            createdNodeIds = createdNodes.Select(node => node.Id).ToArray(),
+            createdNodes = createdNodes.Select(node => new
+            {
+                node.Id,
+                node.ParentId,
+                node.ObjectType,
+                node.ObjectSubtype,
+                node.Title,
+                node.Subtitle,
+                node.EndUtc
+            }).ToArray()
+        };
     }
 
     private static ProjectStructureAssetCreateInput BuildAssetRequest(
@@ -556,6 +1306,245 @@ public sealed class ProjectStructureWorkflowExecutor(IServiceScopeFactory scopeF
             SourceWorkspacePath: sourcePath,
             SourceFileName: $"{SanitizeFileName(title)}.{NormalizeAssetKind(settings.AssetKind)}",
             SourceContentType: settings.ContentType);
+    }
+
+    private static IReadOnlyList<WorkflowTaskNodeSource> ReadTaskSources(
+        WorkflowProjectStructureExecutorSettings settings,
+        WorkflowNodeInput input)
+    {
+        if (settings.MaxTaskNodes <= 0)
+        {
+            throw new InvalidOperationException("Project-structure executor setting 'MaxTaskNodes' must be greater than zero.");
+        }
+
+        var tasksElement = ResolveInputJsonElement(input, settings.TaskItemsJsonPath, nameof(settings.TaskItemsJsonPath));
+        if (tasksElement.ValueKind != JsonValueKind.Array)
+        {
+            throw new InvalidOperationException($"Project-structure executor setting '{nameof(settings.TaskItemsJsonPath)}' must resolve to a JSON array.");
+        }
+
+        var tasks = new List<WorkflowTaskNodeSource>();
+        var index = 0;
+        foreach (var item in tasksElement.EnumerateArray())
+        {
+            index++;
+            if (index > settings.MaxTaskNodes)
+            {
+                throw new InvalidOperationException($"Project-structure task creation received more than the configured MaxTaskNodes value of {settings.MaxTaskNodes}.");
+            }
+
+            if (item.ValueKind != JsonValueKind.Object)
+            {
+                throw new InvalidOperationException($"Task item {index} must be a JSON object.");
+            }
+
+            tasks.Add(new WorkflowTaskNodeSource(
+                ReadRequiredTaskString(item, "title", index),
+                ReadOptionalString(item, "summary", "notes", "description"),
+                ReadOptionalString(item, "owner", "assignee"),
+                ReadOptionalDueUtc(item, index),
+                ReadOptionalString(item, "urgency", "priority"),
+                ReadOptionalBoolean(item, "requiresResponse", "responseRequired"),
+                ReadOptionalBoolean(item, "asap", "needsAsapResponse"),
+                ReadOptionalString(item, "sourceEmailId", "emailId"),
+                ReadOptionalStringArray(item, "evidence")));
+        }
+
+        if (tasks.Count == 0)
+        {
+            throw new InvalidOperationException("Project-structure task creation requires at least one task item.");
+        }
+
+        return tasks;
+    }
+
+    private static string BuildTaskSubtitle(WorkflowTaskNodeSource task)
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(task.Urgency))
+        {
+            parts.Add(task.Urgency.Trim());
+        }
+
+        if (task.Asap)
+        {
+            parts.Add("asap");
+        }
+
+        if (task.RequiresResponse)
+        {
+            parts.Add("response required");
+        }
+
+        if (!string.IsNullOrWhiteSpace(task.Owner))
+        {
+            parts.Add($"owner: {task.Owner.Trim()}");
+        }
+
+        if (task.DueUtc is not null)
+        {
+            parts.Add($"due: {task.DueUtc:yyyy-MM-dd HH:mm 'UTC'}");
+        }
+
+        return string.Join(" | ", parts);
+    }
+
+    private static string BuildTaskNotes(WorkflowTaskNodeSource task)
+    {
+        var builder = new StringBuilder();
+        if (!string.IsNullOrWhiteSpace(task.Summary))
+        {
+            builder.AppendLine(task.Summary.Trim());
+        }
+
+        if (!string.IsNullOrWhiteSpace(task.SourceEmailId))
+        {
+            builder.AppendLine();
+            builder.AppendLine($"Source email: {task.SourceEmailId.Trim()}");
+        }
+
+        if (task.Evidence.Count > 0)
+        {
+            builder.AppendLine();
+            builder.AppendLine("Evidence:");
+            foreach (var evidence in task.Evidence)
+            {
+                builder.AppendLine($"- {evidence}");
+            }
+        }
+
+        return builder.ToString().Trim();
+    }
+
+    private static string BuildTaskMetadataJson(WorkflowTaskNodeSource task, WorkflowNodeInput input)
+        => JsonSerializer.Serialize(
+            new Dictionary<string, object?>
+            {
+                ["source"] = "workflow-email-intake",
+                ["sourceEmailId"] = task.SourceEmailId,
+                ["urgency"] = task.Urgency,
+                ["owner"] = task.Owner,
+                ["requiresResponse"] = task.RequiresResponse,
+                ["asap"] = task.Asap,
+                ["workflowRunId"] = ReadRunContextString(input, "runId"),
+                ["workflowNodeId"] = ReadRunContextString(input, "workflowNodeId")
+            },
+            new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+    private static string NormalizeTaskSubtype(string value)
+        => string.IsNullOrWhiteSpace(value) ? "task" : value.Trim().ToLowerInvariant();
+
+    private static JsonElement ResolveInputJsonElement(
+        WorkflowNodeInput input,
+        string jsonPath,
+        string settingName)
+    {
+        if (string.IsNullOrWhiteSpace(jsonPath))
+        {
+            throw new InvalidOperationException($"Project-structure executor setting '{settingName}' is required.");
+        }
+
+        if (!WorkflowRoutingValidation.TryParseJsonPath(jsonPath.Trim(), out var path, out var pathError))
+        {
+            throw new InvalidOperationException($"Project-structure executor setting '{settingName}' has invalid JSON path: {pathError}.");
+        }
+
+        if (string.IsNullOrWhiteSpace(input.PayloadJson))
+        {
+            throw new InvalidOperationException($"Project-structure executor setting '{settingName}' requires a workflow JSON payload.");
+        }
+
+        using var document = JsonDocument.Parse(input.PayloadJson);
+        if (!TryResolve(document.RootElement, path, out var value))
+        {
+            throw new InvalidOperationException($"Project-structure executor setting '{settingName}' path '{jsonPath}' was not found in the workflow payload.");
+        }
+
+        return value.Clone();
+    }
+
+    private static string ReadRequiredTaskString(JsonElement element, string propertyName, int index)
+    {
+        var value = ReadOptionalString(element, propertyName);
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw new InvalidOperationException($"Task item {index} requires non-empty '{propertyName}'.");
+        }
+
+        return value.Trim();
+    }
+
+    private static string ReadOptionalString(JsonElement element, params string[] propertyNames)
+    {
+        foreach (var propertyName in propertyNames)
+        {
+            if (!element.TryGetProperty(propertyName, out var property) ||
+                property.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+            {
+                continue;
+            }
+
+            return property.ValueKind == JsonValueKind.String
+                ? property.GetString() ?? string.Empty
+                : property.GetRawText();
+        }
+
+        return string.Empty;
+    }
+
+    private static bool ReadOptionalBoolean(JsonElement element, params string[] propertyNames)
+    {
+        foreach (var propertyName in propertyNames)
+        {
+            if (!element.TryGetProperty(propertyName, out var property))
+            {
+                continue;
+            }
+
+            if (property.ValueKind is JsonValueKind.True or JsonValueKind.False)
+            {
+                return property.GetBoolean();
+            }
+
+            if (property.ValueKind == JsonValueKind.String &&
+                bool.TryParse(property.GetString(), out var parsed))
+            {
+                return parsed;
+            }
+        }
+
+        return false;
+    }
+
+    private static DateTimeOffset? ReadOptionalDueUtc(JsonElement element, int index)
+    {
+        var value = ReadOptionalString(element, "dueUtc", "dueDateUtc", "dueDate");
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        if (DateTimeOffset.TryParse(value, out var parsed))
+        {
+            return parsed.ToUniversalTime();
+        }
+
+        throw new InvalidOperationException($"Task item {index} has invalid due date '{value}'.");
+    }
+
+    private static IReadOnlyList<string> ReadOptionalStringArray(JsonElement element, string propertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out var property) ||
+            property.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        return property.EnumerateArray()
+            .Select(item => item.ValueKind == JsonValueKind.String ? item.GetString() ?? string.Empty : item.GetRawText())
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Select(item => item.Trim())
+            .ToArray();
     }
 
     private static Guid RequireProjectId(
@@ -761,6 +1750,17 @@ public sealed class ProjectStructureWorkflowExecutor(IServiceScopeFactory scopeF
         => string.IsNullOrWhiteSpace(value)
             ? throw new InvalidOperationException($"Project-structure executor setting '{name}' is required.")
             : value.Trim();
+
+    private sealed record WorkflowTaskNodeSource(
+        string Title,
+        string Summary,
+        string Owner,
+        DateTimeOffset? DueUtc,
+        string Urgency,
+        bool RequiresResponse,
+        bool Asap,
+        string SourceEmailId,
+        IReadOnlyList<string> Evidence);
 }
 
 public sealed class ImageGenerationWorkflowExecutor : IWorkflowExecutor

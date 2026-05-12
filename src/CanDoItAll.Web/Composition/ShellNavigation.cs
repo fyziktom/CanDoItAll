@@ -21,6 +21,7 @@ public static class ShellNavigation
         new("Test Lab", "/test-lab", "TL", "Plans, evidence, linked tests, and execution records.", PinnedByDefault: false),
         new("Activity", "/activity", "AC", "Timeline and cross-entity search for recent work.", PinnedByDefault: false),
         new("Automation", "/automation", "AU", "Background jobs, exports, sends, and operational diagnostics.", PinnedByDefault: false),
+        new("Scheduler", "/scheduler", "SC", "Calendar-backed workflow and process run planning.", PinnedByDefault: false),
         new("Settings", "/settings", "ST", "Workspace defaults, providers, secrets, and environment settings.", PinnedByDefault: true)
     ];
 

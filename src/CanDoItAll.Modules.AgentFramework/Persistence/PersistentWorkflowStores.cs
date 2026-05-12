@@ -100,6 +100,85 @@ public sealed class PersistentWorkflowCatalogService(
         return definition;
     }
 
+    public async Task<WorkflowDefinition> ChangeDefinitionStatusAsync(
+        WorkflowDefinitionStatusChangeRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var detail = await GetDefinitionAsync(request.WorkflowId, versionId: null, cancellationToken)
+            ?? throw new KeyNotFoundException($"Workflow definition '{request.WorkflowId}' was not found.");
+        if (request.Status == WorkflowLifecycleStatus.Active)
+        {
+            ThrowIfValidationFailed(await ValidateDefinitionAsync(detail.Definition, cancellationToken), "Workflow definition cannot be published");
+        }
+
+        return await SaveDefinitionAsync(
+            new WorkflowDefinitionSaveRequest(
+                detail.Definition.Id,
+                request.ExpectedVersionId,
+                detail.Definition.Name,
+                detail.Definition.Description,
+                request.Status,
+                detail.Definition.Graph,
+                detail.Definition.RuntimePolicy),
+            cancellationToken);
+    }
+
+    public async Task<WorkflowDefinitionExportEnvelope?> ExportDefinitionAsync(
+        WorkflowId workflowId,
+        WorkflowVersionId? versionId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var detail = await GetDefinitionAsync(workflowId, versionId, cancellationToken);
+        return detail is null
+            ? null
+            : new WorkflowDefinitionExportEnvelope(
+                WorkflowDefinitionExchangeFormats.Current,
+                detail.Definition,
+                detail.Validation,
+                DateTimeOffset.UtcNow);
+    }
+
+    public async Task<WorkflowDefinition> ImportDefinitionAsync(
+        WorkflowDefinitionImportRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(request.Envelope);
+        ArgumentNullException.ThrowIfNull(request.Envelope.Definition);
+        if (!string.Equals(
+            request.Envelope.SourceFormat,
+            WorkflowDefinitionExchangeFormats.Current,
+            StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"Workflow definition import format '{request.Envelope.SourceFormat}' is not supported.");
+        }
+
+        var source = request.Envelope.Definition;
+        var workflowId = request.PreserveWorkflowId ? source.Id : (WorkflowId?)null;
+        var importedName = string.IsNullOrWhiteSpace(request.Name) ? source.Name : request.Name.Trim();
+        var importedStatus = request.Status ?? WorkflowLifecycleStatus.Draft;
+        var candidate = source with
+        {
+            Name = importedName,
+            Status = importedStatus
+        };
+        ThrowIfValidationFailed(await ValidateDefinitionAsync(candidate, cancellationToken), "Workflow definition import failed validation");
+
+        return await SaveDefinitionAsync(
+            new WorkflowDefinitionSaveRequest(
+                workflowId,
+                null,
+                importedName,
+                source.Description,
+                importedStatus,
+                source.Graph,
+                source.RuntimePolicy),
+            cancellationToken);
+    }
+
     public async Task DeleteDefinitionAsync(
         WorkflowId workflowId,
         CancellationToken cancellationToken = default)
@@ -479,6 +558,19 @@ public sealed class PersistentWorkflowCatalogService(
                 .Select(node => node with { Ports = node.Ports.ToArray() })
                 .ToArray(),
             graph.Edges.ToArray());
+    }
+
+    private static void ThrowIfValidationFailed(
+        WorkflowValidationResult validation,
+        string messagePrefix)
+    {
+        if (validation.Succeeded)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"{messagePrefix}: {string.Join(" ", validation.Issues.Select(issue => issue.Message))}");
     }
 
     private static WorkflowDefinition CreateComponentValidationDefinition(LlmCallComponent component)

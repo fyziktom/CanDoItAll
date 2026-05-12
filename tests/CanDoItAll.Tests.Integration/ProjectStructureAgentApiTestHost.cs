@@ -3,11 +3,13 @@ using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
 using CanDoItAll.Web;
+using CanDoItAll.Web.Api;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
 namespace CanDoItAll.Tests.Integration;
@@ -44,7 +46,8 @@ internal sealed class ProjectStructureAgentApiTestHost : IAsyncDisposable
 
     public static async Task<ProjectStructureAgentApiTestHost> CreateAsync(
         string testEnvironmentKey,
-        Func<CanDoItAllTestEnvironment, TestDatabaseProfile> profileFactory)
+        Func<CanDoItAllTestEnvironment, TestDatabaseProfile> profileFactory,
+        Action<IServiceCollection>? configureServices = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(testEnvironmentKey);
         ArgumentNullException.ThrowIfNull(profileFactory);
@@ -62,7 +65,10 @@ internal sealed class ProjectStructureAgentApiTestHost : IAsyncDisposable
         builder.Configuration.AddInMemoryCollection(activeProfile.CreateConfigurationValues(new Dictionary<string, string?>
         {
             ["DevelopmentManager:TuningModeEnabled"] = "false",
-            [LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey] = LocalRuntimeHostedWorkerPolicy.McpToolHostLaneKind
+            [LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey] = LocalRuntimeHostedWorkerPolicy.McpToolHostLaneKind,
+            ["Api:Enabled"] = "true",
+            ["Api:OpenApiEnabled"] = "false",
+            ["Api:Authorization:Enabled"] = "false"
         }));
 
         TestApplicationBootstrap.ConfigureDefaultServices(
@@ -70,10 +76,13 @@ internal sealed class ProjectStructureAgentApiTestHost : IAsyncDisposable
             builder.Configuration,
             builder.Environment,
             registerTestHostApplicationLifetime: false);
+        builder.Services.AddCanDoItAllApi(builder.Configuration);
+        configureServices?.Invoke(builder.Services);
 
         var app = builder.Build();
         app.Urls.Add("http://127.0.0.1:0");
         app.MapProjectStructureAgentApi();
+        app.MapCanDoItAllApi();
 
         await TestApplicationBootstrap.InitializeSchemaAsync(app.Services, TestSchemaBootstrapModules.Full);
 
