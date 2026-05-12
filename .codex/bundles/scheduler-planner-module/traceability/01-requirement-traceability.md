@@ -18,3 +18,4 @@
 | SPM-R014 | 04 | Component code review and browser screenshot review. |
 | SPM-R015 | 04 | Navigation route test or browser proof. |
 | SPM-R016 | 01, 02, 05 | Execution report documents package/store choices. |
+| SPM-R017 | 04, 05 | Mapper tests and browser screenshot/pixel proof showing CanvasCalendar scheduled-run preview. |

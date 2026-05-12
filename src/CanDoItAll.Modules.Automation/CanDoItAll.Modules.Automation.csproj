@@ -15,6 +15,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.4" />
     <PackageReference Include="MQTTnet" Version="5.1.0.1559" />
     <PackageReference Include="Quartz.Extensions.Hosting" Version="3.13.1" />
+    <PackageReference Include="Quartz.Serialization.Json" Version="3.13.1" />
   </ItemGroup>
 
   <ItemGroup>

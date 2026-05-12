@@ -55,6 +55,14 @@
   - Uses `PageScaffold`, `PageHeader`, `SummaryTiles`, `SectionCard`, `FilterBar`, `Button`, `Stack`, `StatusBadge`, and `EmptyState`.
 - `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor`
   - Uses tabbed workspace patterns and dense operational controls.
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Components.CanvasLib\Components\Calendar\CanvasCalendar.razor`
+  - Provides a typed CanvasLib calendar wrapper over `CanvasCalendarSurface`.
+  - Supports typed events, week/day initial views, selected date/event, time zone, slot minutes, business hours, mini-month count, read-only toggles, selection/state callbacks, and event save/delete callbacks.
+  - Existing app shell already loads CanvasLib calendar assets through `C:\repositories\CanDoItAll\src\CanDoItAll.Web\Components\App.razor`.
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Components.CanvasLib\Canvas\Calendar\CanvasCalendarContracts.cs`
+  - `CanvasCalendarEvent` has `StartUtc`, `EndUtc`, `Timezone`, `Title`, `Description`, `EventType`, `Status`, `Color`, `ReadOnly`, and checklist/notes fields that can represent scheduled run preview blocks.
+- `C:\repositories\CanDoItAll\src\CanDoItAll.Components.Sandbox\SandboxCanvasSamples.cs`
+  - Contains `CreateCalendarSurface` and sample event mapping for CanvasCalendar.
 - `C:\repositories\CanDoItAll\src\CanDoItAll.Web\Composition\ShellNavigation.cs`
   - Main navigation currently includes `Automation` at `/automation`, but no scheduler/planner item.
 
@@ -74,3 +82,4 @@
 - There is no stored CRON description field/service.
 - There is no schedule fire/run history entity that joins schedule, target, Quartz fire, durable message, and workflow/process run outcome.
 - There is no handler that turns `AutomationTriggerFireRequest` into a workflow/process run.
+- The prepared bundle originally did not explicitly require CanvasLib calendar usage. It has now been repaired so SchedulerPlanner uses CanvasCalendar for scheduled-run calendar preview while still using BaseLib controls for setup and history grids.

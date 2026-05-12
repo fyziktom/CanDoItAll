@@ -18,3 +18,4 @@
 | SPM-R014 | UI must follow existing BaseLib/Radzen-style component patterns and avoid raw ad hoc UI for standard controls. | Must | Component review and browser screenshot review. |
 | SPM-R015 | Navigation must expose the Scheduler/Planner page without hiding the existing `/automation` diagnostics page. | Should | Navigation/component proof. |
 | SPM-R016 | The implementation must document package/version choices for CRON descriptions and Quartz serialization/store dependencies. | Should | Architecture note or implementation report. |
+| SPM-R017 | SchedulerPlanner must use the existing CanvasLib `CanvasCalendar` for scheduled-run calendar preview. | Must | Calendar surface mapper tests and browser proof that CanvasCalendar renders planned/actual schedule events. |

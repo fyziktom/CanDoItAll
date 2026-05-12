@@ -1742,7 +1742,7 @@ public sealed class AutomationRuntimeIntegrationTests
     {
         public const string Key = "test.project-node";
 
-        private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
+        private static readonly System.Text.Json.JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
 
         public string MaterializerKey => Key;
 

@@ -123,15 +123,30 @@ Use the generated proposal image in `evidence/ui-layout-proposals.png` as visual
 - Use Proposal A as the primary layout: table-first operations console.
 - Borrow Proposal B's timeline/detail drawer for next/last fire inspection.
 - Use Proposal C's guided setup only inside the `New schedule` tab, not as a full-page wizard.
+- Use CanvasLib `CanvasCalendar` as the calendar preview surface for scheduled runs. The calendar should visualize projected next fire windows and recent actual scheduled fires as read-only `CanvasCalendarEvent` blocks.
 
 Own page:
 
 - Route recommendation: `/scheduler` if treated as a first-class module; also link from Automation navigation context if the shell supports it.
 - Required tabs: `Scheduled runs`, `New schedule`, `Run history`.
 - Use existing BaseLib wrappers: `PageScaffold`, `PageHeader`, `Tabs`, `SummaryTile`, `FilterBar`, form fields, buttons, status badges, empty states, and data grid/table wrappers where available.
+- Use `CanvasCalendar` in `Scheduled runs` for the calendar/timeline view and in `New schedule` as an optional next-fire preview if the form has a valid CRON. Do not use CanvasCalendar as the editor for schedule creation because it models concrete event windows, not recurring CRON definitions.
+
+## CanvasLib Calendar Fit
+
+`CanvasCalendar` is a good fit for scheduler visualization because `CanvasCalendarSurface` already supports:
+
+- concrete events with `StartUtc` and `EndUtc`
+- title, description, status, type, color, and read-only flags
+- selected date/event state
+- timezone and timezone options
+- week/day views, slot minutes, business hours, and mini-month navigation
+- selection/state callbacks for linking a calendar event back to a schedule/run detail panel
+
+It is not the source of recurrence truth. SchedulerPlanner should compute projected occurrences from Quartz/CRON schedule metadata and map them into read-only `CanvasCalendarEvent` values.
 
 ## Validation Strategy
 
 - Integration tests for domain persistence, Automation trigger projection, Quartz DB restart/recovery, fire handler dedupe, process adapter, workflow adapter, and history queries.
 - Component tests for tab rendering, validation states, history filters, and schedule command outcomes.
-- Playwright proof for page route, tab switching, schedule form validation, active schedule table, history search, wide viewport screenshot, and narrower viewport screenshot.
+- Playwright proof for page route, tab switching, schedule form validation, active schedule table, CanvasCalendar nonblank rendering, history search, wide viewport screenshot, and narrower viewport screenshot.

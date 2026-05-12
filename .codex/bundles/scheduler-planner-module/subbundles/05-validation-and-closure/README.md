@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -15,11 +15,12 @@
 - Integration, component, and Playwright/browser validation cover the critical paths.
 - Quartz DB recovery proof is recorded clearly.
 - CRON description package/version and Quartz compatibility proof are recorded.
+- CanvasLib calendar usage and rendering proof are recorded.
 - Execution report is complete and ready for handoff.
 
 ## Covered Inputs
 
-- SPM-R001 through SPM-R016
+- SPM-R001 through SPM-R017
 
 ## Prerequisites
 
@@ -78,6 +79,7 @@
 - Do not close the bundle if Quartz DB recovery has not been proven.
 - Do not treat screenshots as proof if they are not manually reviewed.
 - Do not declare CRON description complete without Quartz-style CRON compatibility evidence.
+- Do not declare UI complete without CanvasCalendar rendering proof.
 
 ## Acceptance Checklist
 
@@ -86,6 +88,7 @@
 - Integration tests pass or failures are explicitly unrelated and documented.
 - Component tests pass.
 - Browser proof covers all SchedulerPlanner tabs.
+- Browser proof shows CanvasCalendar scheduled-run preview rendered with event blocks.
 - Final report identifies package versions, DB provider behavior, and known limitations.
 
 ## Proof Required
@@ -95,15 +98,16 @@
 - `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj`
 - `dotnet test C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj`
 - Browser screenshots for SchedulerPlanner route and tabs.
+- CanvasCalendar nonblank/event-block proof.
 - Updated execution report.
 
 ## Browser Validation Logging
 
 - Target route: final SchedulerPlanner route.
 - Required viewport passes: wide desktop and narrower layout.
-- Required actions: navigate page, inspect each tab, validate form error state, validate CRON description preview, search history.
+- Required actions: navigate page, inspect each tab, inspect CanvasCalendar preview, validate form error state, validate CRON description preview, search history.
 - Required evidence: screenshot paths in execution report.
-- Screenshot review questions: Does the page match existing product density? Are controls usable and non-overlapping? Is failure/dead-letter state visible? Are scheduled run rows scannable?
+- Screenshot review questions: Does the page match existing product density? Are controls usable and non-overlapping? Is failure/dead-letter state visible? Are scheduled run rows scannable? Is CanvasCalendar nonblank, framed, and populated with schedule events?
 
 ## Progression Gate
 

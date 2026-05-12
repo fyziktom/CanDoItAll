@@ -1,0 +1,481 @@
+@page "/scheduler"
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.CanvasLib
+@using CanDoItAll.Modules.Automation
+@inject ISchedulerPlannerService SchedulerPlannerService
+@inject ICronDescriptionService CronDescriptionService
+
+<PageTitle>Scheduler</PageTitle>
+
+<PageScaffold>
+    <Header>
+        <PageHeader Eyebrow="Scheduler"
+                    Title="Scheduler and planner"
+                    Description="Plan automatic workflow and process runs with Quartz CRON triggers, durable recovery, and calendar-backed visibility."
+                    Compact="true">
+            <Actions>
+                <Button Text="Refresh"
+                        Icon="refresh"
+                        ButtonStyle="ButtonStyle.Light"
+                        Disabled="@isBusy"
+                        IsBusy="@isBusy"
+                        Click="RefreshAsync"
+                        data-testid="scheduler-refresh" />
+            </Actions>
+        </PageHeader>
+    </Header>
+
+    <Lead>
+        <SummaryTiles>
+            <SummaryTile Label="Schedules" Value="@Plans.Count.ToString()" HelperText="Saved run plans." Tone="info" Compact="true" />
+            <SummaryTile Label="Enabled" Value="@Plans.Count(item => item.IsEnabled).ToString()" HelperText="Plans currently projected into Quartz." Tone="success" Compact="true" />
+            <SummaryTile Label="Next 30 days" Value="@CalendarEventCount.ToString()" HelperText="Projected calendar events." Tone="secondary" Compact="true" />
+            <SummaryTile Label="Failures" Value="@History.Count(item => item.Status == SchedulerPlanRunDispatchStatus.Failed).ToString()" HelperText="Failed dispatch attempts in the current history view." Tone="warning" Compact="true" />
+        </SummaryTiles>
+    </Lead>
+
+    <ChildContent>
+        @if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <SurfaceCard Soft="true" data-testid="scheduler-error">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Action required" />
+                <h2 class="text-base font-semibold text-rose-900">Scheduler operation failed</h2>
+                <p class="mt-2 text-sm leading-6 text-rose-700">@errorMessage</p>
+            </SurfaceCard>
+        }
+
+        @if (workspace is null)
+        {
+            <SurfaceCard data-testid="scheduler-loading">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Loading" />
+                <h2 class="text-base font-semibold text-slate-900">Refreshing scheduler state</h2>
+            </SurfaceCard>
+        }
+        else
+        {
+            <Tabs @bind-SelectedIndex="activeTabIndex"
+                  RenderMode="TabRenderMode.Server"
+                  Variant="TabsVariant.WorkspacePrimary"
+                  OverflowMode="TabsOverflowMode.Wrap"
+                  AriaLabel="Scheduler planner tabs"
+                  data-testid="scheduler-tabs">
+                <TabsItem Text="Scheduled runs" Icon="calendar_month" BadgeText="@Plans.Count.ToString()" data-testid="scheduler-tab-scheduled">
+                    <Grid Gap="LayoutGap.Large" ColumnTemplateLg="minmax(0,1.2fr) minmax(22rem,0.8fr)">
+                        <SurfaceCard data-testid="scheduler-calendar-card">
+                            <Split Gap="LayoutGap.Small">
+                                <div>
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Calendar" />
+                                    <h2 class="text-base font-semibold text-slate-900">Planned and dispatched runs</h2>
+                                </div>
+                                <StatusBadge Tone="info" Text="@($"{CalendarEventCount} event(s)")" />
+                            </Split>
+                            <div class="mt-4" style="min-height: 34rem;" data-testid="scheduler-calendar">
+                                <CanvasCalendar Surface="@workspace.CalendarSurface"
+                                                HostClass="scheduler-planner-calendar-host" />
+                            </div>
+                        </SurfaceCard>
+
+                        <SurfaceCard data-testid="scheduler-plan-list">
+                            <Split Gap="LayoutGap.Small">
+                                <div>
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Run plans" />
+                                    <h2 class="text-base font-semibold text-slate-900">Actual scheduled runs</h2>
+                                </div>
+                                <Button Text="New"
+                                        Icon="add"
+                                        Size="ButtonSize.Small"
+                                        Click="OpenNewScheduleTab" />
+                            </Split>
+
+                            @if (Plans.Count == 0)
+                            {
+                                <div class="mt-4">
+                                    <EmptyState Eyebrow="No schedules"
+                                                Title="Create the first scheduled run"
+                                                Description="Saved plans will appear here after a workflow or process is assigned to a CRON schedule." />
+                                </div>
+                            }
+                            else
+                            {
+                                <Stack GapScale="LayoutGap.Small" Class="mt-4">
+                                    @foreach (var plan in Plans)
+                                    {
+                                        <div class="cda-panel-card--soft" data-testid="scheduler-plan-item">
+                                            <Split Gap="LayoutGap.Small"
+                                                   AlignItems="AlignItems.Start"
+                                                   JustifyContent="JustifyContent.SpaceBetween"
+                                                   Wrap="FlexWrap.Wrap">
+                                                <div class="min-w-0">
+                                                    <p class="text-sm font-semibold text-slate-900">@plan.Name</p>
+                                                    <p class="mt-1 text-xs text-slate-500">@plan.TargetKind / @plan.TargetName</p>
+                                                    <p class="mt-2 text-sm leading-6 text-slate-600">@plan.CronDescription</p>
+                                                </div>
+                                                <StatusBadge Tone="@(plan.IsEnabled ? "success" : "neutral")" Text="@(plan.IsEnabled ? "Enabled" : "Paused")" />
+                                            </Split>
+                                            <Cluster Gap="LayoutGap.Small" Class="mt-3">
+                                                <StatusBadge Tone="neutral" Text="@FormatNextFire(plan.NextPlannedFireAtUtc)" />
+                                                <Button Text="@(plan.IsEnabled ? "Pause" : "Resume")"
+                                                        Icon="@(plan.IsEnabled ? "pause" : "play_arrow")"
+                                                        ButtonStyle="ButtonStyle.Light"
+                                                        Size="ButtonSize.Small"
+                                                        Disabled="@isBusy"
+                                                        Click="@(() => TogglePlanAsync(plan))" />
+                                            </Cluster>
+                                        </div>
+                                    }
+                                </Stack>
+                            }
+                        </SurfaceCard>
+                    </Grid>
+                </TabsItem>
+
+                <TabsItem Text="New schedule" Icon="event_repeat" data-testid="scheduler-tab-new">
+                    <Grid Gap="LayoutGap.Large" ColumnTemplateLg="minmax(0,0.9fr) minmax(0,1.1fr)">
+                        <SurfaceCard data-testid="scheduler-form">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Setup" />
+                            <h2 class="text-base font-semibold text-slate-900">Schedule a workflow or process run</h2>
+
+                            <Stack GapScale="LayoutGap.Medium" Class="mt-4">
+                                <label class="block">
+                                    <span class="cda-eyebrow">Name</span>
+                                    <InputText @bind-Value="editor.Name"
+                                               class="cda-input mt-1"
+                                               data-testid="scheduler-name" />
+                                </label>
+
+                                <label class="block">
+                                    <span class="cda-eyebrow">Target</span>
+                                    <select class="cda-input mt-1"
+                                            value="@SelectedTargetKey"
+                                            @onchange="HandleTargetChanged"
+                                            data-testid="scheduler-target">
+                                        <option value="">Select target</option>
+                                        @foreach (var target in TargetOptions)
+                                        {
+                                            <option value="@BuildTargetKey(target)">@target.Kind / @target.Name / @target.Status</option>
+                                        }
+                                    </select>
+                                </label>
+
+                                <label class="block">
+                                    <span class="cda-eyebrow">Quartz CRON</span>
+                                    <InputText @bind-Value="editor.CronExpression"
+                                               class="cda-input mt-1 font-mono"
+                                               data-testid="scheduler-cron" />
+                                </label>
+
+                                <label class="block">
+                                    <span class="cda-eyebrow">Time zone</span>
+                                    <InputText @bind-Value="editor.TimeZoneId"
+                                               class="cda-input mt-1"
+                                               data-testid="scheduler-timezone" />
+                                </label>
+
+                                <label class="block">
+                                    <span class="cda-eyebrow">Misfire policy</span>
+                                    <InputSelect @bind-Value="editor.MisfirePolicy"
+                                                 class="cda-input mt-1"
+                                                 data-testid="scheduler-misfire">
+                                        @foreach (var policy in Enum.GetValues<AutomationTriggerMisfirePolicy>())
+                                        {
+                                            <option value="@policy">@policy</option>
+                                        }
+                                    </InputSelect>
+                                </label>
+
+                                <label class="block">
+                                    <span class="cda-eyebrow">Input JSON</span>
+                                    <InputTextArea @bind-Value="editor.InputJson"
+                                                   class="cda-input cda-input--textarea mt-1 font-mono"
+                                                   data-testid="scheduler-input-json" />
+                                </label>
+
+                                <label class="flex items-center gap-2 text-sm text-slate-700">
+                                    <InputCheckbox @bind-Value="editor.IsEnabled" />
+                                    Enabled after save
+                                </label>
+
+                                <Cluster Gap="LayoutGap.Small">
+                                    <Button Text="Save schedule"
+                                            Icon="save"
+                                            Disabled="@isBusy"
+                                            IsBusy="@isBusy"
+                                            Click="SaveScheduleAsync"
+                                            data-testid="scheduler-save" />
+                                    <Button Text="Reset"
+                                            Icon="restart_alt"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Disabled="@isBusy"
+                                            Click="ResetEditorAsync" />
+                                </Cluster>
+                            </Stack>
+                        </SurfaceCard>
+
+                        <SurfaceCard data-testid="scheduler-cron-preview">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="CRON description" />
+                            <h2 class="text-base font-semibold text-slate-900">@CronPreviewTitle</h2>
+                            <p class="mt-3 text-sm leading-6 text-slate-600">@CronPreviewDescription</p>
+
+                            <div class="mt-5 cda-panel-card--soft">
+                                <p class="cda-eyebrow">Target summary</p>
+                                <p class="mt-1 text-sm font-semibold text-slate-900">@SelectedTargetName</p>
+                                <p class="mt-2 text-sm leading-6 text-slate-600">@SelectedTargetDescription</p>
+                            </div>
+                        </SurfaceCard>
+                    </Grid>
+                </TabsItem>
+
+                <TabsItem Text="History" Icon="history" BadgeText="@History.Count.ToString()" data-testid="scheduler-tab-history">
+                    <SurfaceCard data-testid="scheduler-history">
+                        <FilterBar ResultText="@($"{History.Count} run(s)")">
+                            <InputText @bind-Value="historyQuery.Search"
+                                       class="cda-input"
+                                       placeholder="Search history"
+                                       data-testid="scheduler-history-search" />
+                            <InputSelect @bind-Value="historyQuery.Status"
+                                         class="cda-input"
+                                         data-testid="scheduler-history-status">
+                                <option value="">All statuses</option>
+                                @foreach (var status in Enum.GetValues<SchedulerPlanRunDispatchStatus>())
+                                {
+                                    <option value="@status">@status</option>
+                                }
+                            </InputSelect>
+                            <InputSelect @bind-Value="historyQuery.TargetKind"
+                                         class="cda-input"
+                                         data-testid="scheduler-history-kind">
+                                <option value="">All targets</option>
+                                @foreach (var kind in Enum.GetValues<SchedulerPlanTargetKind>())
+                                {
+                                    <option value="@kind">@kind</option>
+                                }
+                            </InputSelect>
+                            <Button Text="Search"
+                                    Icon="search"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Size="ButtonSize.Small"
+                                    Disabled="@isBusy"
+                                    Click="RefreshAsync" />
+                        </FilterBar>
+
+                        @if (History.Count == 0)
+                        {
+                            <div class="mt-4">
+                                <EmptyState Eyebrow="No history"
+                                            Title="No scheduled run history"
+                                            Description="Triggered runs and dispatch failures appear here after Quartz fires a schedule." />
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="mt-4">
+                                <DataGrid TItem="SchedulerPlanRunSummary"
+                                          Data="@History"
+                                          AllowPaging="true"
+                                          PageSize="12">
+                                    <Columns>
+                                        <DataGridColumn TItem="SchedulerPlanRunSummary" Title="Run">
+                                            <Template Context="run">
+                                                <div>
+                                                    <p class="font-semibold text-slate-900">@run.PlanName</p>
+                                                    <p class="text-xs text-slate-500">@run.TargetKind / @run.TargetName</p>
+                                                </div>
+                                            </Template>
+                                        </DataGridColumn>
+                                        <DataGridColumn TItem="SchedulerPlanRunSummary" Title="Fired">
+                                            <Template Context="run">@run.FiredAtUtc.LocalDateTime.ToString("g")</Template>
+                                        </DataGridColumn>
+                                        <DataGridColumn TItem="SchedulerPlanRunSummary" Title="Status">
+                                            <Template Context="run">
+                                                <StatusBadge Tone="@ResolveRunTone(run.Status)" Text="@run.Status.ToString()" />
+                                            </Template>
+                                        </DataGridColumn>
+                                        <DataGridColumn TItem="SchedulerPlanRunSummary" Title="Result">
+                                            <Template Context="run">
+                                                <span class="text-sm text-slate-600">@ResolveRunResult(run)</span>
+                                            </Template>
+                                        </DataGridColumn>
+                                    </Columns>
+                                </DataGrid>
+                            </div>
+                        }
+                    </SurfaceCard>
+                </TabsItem>
+            </Tabs>
+        }
+    </ChildContent>
+</PageScaffold>
+
+@code {
+    private SchedulerPlannerWorkspace? workspace;
+    private SchedulerPlanEditorModel editor = new();
+    private SchedulerHistoryQuery historyQuery = new();
+    private bool isBusy;
+    private string errorMessage = string.Empty;
+    private int activeTabIndex;
+
+    private IReadOnlyList<SchedulerPlanSummary> Plans => workspace?.Plans ?? [];
+
+    private IReadOnlyList<SchedulerPlanRunSummary> History => workspace?.History ?? [];
+
+    private IReadOnlyList<SchedulerTargetOption> TargetOptions => workspace?.TargetOptions ?? [];
+
+    private int CalendarEventCount => workspace?.CalendarSurface.Events.Count ?? 0;
+
+    private string SelectedTargetKey => editor.TargetId == Guid.Empty
+        ? string.Empty
+        : $"{editor.TargetKind}|{editor.TargetId:D}|{editor.TargetVersionId?.ToString("D") ?? string.Empty}";
+
+    private SchedulerTargetOption? SelectedTarget => TargetOptions.FirstOrDefault(item =>
+        item.Kind == editor.TargetKind &&
+        item.Id == editor.TargetId &&
+        (item.Kind != SchedulerPlanTargetKind.Workflow || item.VersionId == editor.TargetVersionId));
+
+    private string SelectedTargetName => SelectedTarget?.Name ?? "No target selected";
+
+    private string SelectedTargetDescription => SelectedTarget?.Description ?? "Select a workflow or process target before saving the schedule.";
+
+    private string CronPreviewTitle
+    {
+        get
+        {
+            try
+            {
+                return CronDescriptionService.Describe(editor.CronExpression, editor.TimeZoneId);
+            }
+            catch
+            {
+                return "CRON expression needs attention";
+            }
+        }
+    }
+
+    private string CronPreviewDescription => "Quartz will trigger the saved plan using this expression and the selected misfire policy. The scheduler stores Quartz state in the database for recovery.";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshAsync();
+        editor = await SchedulerPlannerService.CreateDefaultEditorAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        await RunUiOperationAsync(async () =>
+        {
+            workspace = await SchedulerPlannerService.GetWorkspaceAsync(historyQuery);
+        });
+    }
+
+    private async Task SaveScheduleAsync()
+    {
+        await RunUiOperationAsync(async () =>
+        {
+            await SchedulerPlannerService.SavePlanAsync(editor);
+            workspace = await SchedulerPlannerService.GetWorkspaceAsync(historyQuery);
+            editor = await SchedulerPlannerService.CreateDefaultEditorAsync();
+            activeTabIndex = 0;
+        });
+    }
+
+    private async Task ResetEditorAsync()
+    {
+        editor = await SchedulerPlannerService.CreateDefaultEditorAsync();
+    }
+
+    private async Task TogglePlanAsync(SchedulerPlanSummary plan)
+    {
+        await RunUiOperationAsync(async () =>
+        {
+            await SchedulerPlannerService.SetPlanEnabledAsync(plan.Id, !plan.IsEnabled);
+            workspace = await SchedulerPlannerService.GetWorkspaceAsync(historyQuery);
+        });
+    }
+
+    private void OpenNewScheduleTab()
+    {
+        activeTabIndex = 1;
+    }
+
+    private void HandleTargetChanged(ChangeEventArgs args)
+    {
+        var value = args.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            editor.TargetId = Guid.Empty;
+            editor.TargetVersionId = null;
+            return;
+        }
+
+        var parts = value.Split('|', StringSplitOptions.None);
+        if (parts.Length < 2 ||
+            !Enum.TryParse<SchedulerPlanTargetKind>(parts[0], out var kind) ||
+            !Guid.TryParse(parts[1], out var targetId))
+        {
+            return;
+        }
+
+        editor.TargetKind = kind;
+        editor.TargetId = targetId;
+        editor.TargetVersionId = parts.Length >= 3 && Guid.TryParse(parts[2], out var versionId)
+            ? versionId
+            : null;
+
+        if (string.IsNullOrWhiteSpace(editor.Name))
+        {
+            editor.Name = $"{SelectedTarget?.Name ?? kind.ToString()} schedule";
+        }
+    }
+
+    private async Task RunUiOperationAsync(Func<Task> operation)
+    {
+        errorMessage = string.Empty;
+        isBusy = true;
+        try
+        {
+            await operation();
+        }
+        catch (Exception exception)
+        {
+            errorMessage = exception.Message;
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private static string BuildTargetKey(SchedulerTargetOption target)
+    {
+        return $"{target.Kind}|{target.Id:D}|{target.VersionId?.ToString("D") ?? string.Empty}";
+    }
+
+    private static string FormatNextFire(DateTimeOffset? nextFireAtUtc)
+    {
+        return nextFireAtUtc.HasValue
+            ? $"Next {nextFireAtUtc.Value.LocalDateTime:g}"
+            : "No next fire";
+    }
+
+    private static string ResolveRunTone(SchedulerPlanRunDispatchStatus status)
+    {
+        return status switch
+        {
+            SchedulerPlanRunDispatchStatus.Dispatched => "success",
+            SchedulerPlanRunDispatchStatus.Failed => "danger",
+            SchedulerPlanRunDispatchStatus.Dispatching => "info",
+            _ => "neutral"
+        };
+    }
+
+    private static string ResolveRunResult(SchedulerPlanRunSummary run)
+    {
+        if (!string.IsNullOrWhiteSpace(run.ErrorMessage))
+        {
+            return run.ErrorMessage;
+        }
+
+        return string.IsNullOrWhiteSpace(run.Summary)
+            ? run.TargetRunId?.ToString("D") ?? "No target run id"
+            : run.Summary;
+    }
+}

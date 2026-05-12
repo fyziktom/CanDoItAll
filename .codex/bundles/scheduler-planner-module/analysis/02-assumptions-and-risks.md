@@ -7,6 +7,7 @@
 - Scheduler/Planner should be an operator-facing module, not only an internal Automation diagnostics page.
 - Existing Automation runtime remains the Quartz integration layer. SchedulerPlanner should depend on Automation, not the other way around.
 - Runtime database profiles must support SQLite and PostgreSQL unless implementation analysis proves one is intentionally unsupported.
+- CanvasLib calendar is suitable for visualizing planned/actual scheduled run windows, but not for replacing the schedule setup form or history search grid.
 
 ## Critical Path Risks
 
@@ -21,6 +22,7 @@
 
 - The page has dense operational information. A generic card-heavy dashboard would make the workflow slower. The preferred layout is a table-first console with a detail drawer and compact setup form.
 - The UI must not bypass the component library. If existing wrappers are missing for a needed control, the implementation should improve BaseLib or use the closest existing wrapper before adding raw ad hoc markup.
+- CanvasCalendar is canvas/JS-backed and needs real browser proof. Component tests alone cannot prove that the calendar is nonblank and correctly framed.
 - Integration tests can pass while Quartz still uses in-memory job storage if tests only verify `Automation_Triggers` rehydration. Restart proof must inspect or exercise Quartz persistent store behavior.
 - Browser screenshots can look acceptable at one viewport while tabs or table controls overlap at narrower widths. UI closure requires both wide and narrower passes.
 
@@ -31,6 +33,7 @@
 - Use typed schedule target records and constants for Automation owner keys/trigger keys.
 - Add integration tests for schedule create/update/delete, restart recovery, fire dispatch, dedupe, and history.
 - Add component and Playwright validation for all three tabs at wide and narrow widths.
+- Build a SchedulerPlanner-to-`CanvasCalendarSurface` mapper and validate it separately so calendar rendering does not duplicate scheduling rules inside Razor markup.
 
 ## Reopen Triggers
 
@@ -38,4 +41,5 @@
 - Any schedule target stored only as string/JSON payload without typed target kind and id fields.
 - Any CRON description implementation that cannot handle the Quartz-style expressions accepted by schedule validation.
 - Any UI implementation that omits one of the three required tabs.
+- Any UI implementation that skips CanvasLib calendar for scheduled-run preview without a documented blocker.
 - Any target launch path that can start duplicate process/workflow runs for the same scheduled fire dedupe key.

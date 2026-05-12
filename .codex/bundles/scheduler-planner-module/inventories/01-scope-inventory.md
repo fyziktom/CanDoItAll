@@ -15,12 +15,14 @@
 | Workflow execution | `C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Core\Contracts\Contracts.cs`, `C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs` |
 | Existing Automation UI | `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Automation\Pages\AutomationPage.razor` |
 | Existing workflow UI | `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor` |
+| Canvas calendar | `C:\repositories\CanDoItAll\src\CanDoItAll.Components.CanvasLib\Components\Calendar\CanvasCalendar.razor`, `C:\repositories\CanDoItAll\src\CanDoItAll.Components.CanvasLib\Canvas\Calendar\CanvasCalendarContracts.cs`, `C:\repositories\CanDoItAll\src\CanDoItAll.Components.Sandbox\SandboxCanvasSamples.cs` |
 | Existing tests | `C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\AutomationRuntimeIntegrationTests.cs`, `C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components`, `C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Playwright` |
 
 ## Expected New Files Or Areas
 
 - `C:\repositories\CanDoItAll\src\CanDoItAll.Modules.SchedulerPlanner\CanDoItAll.Modules.SchedulerPlanner.csproj`
 - SchedulerPlanner domain models, EF configurations, migrations, service registration, application service, Automation message handler, adapters, and page/components.
+- SchedulerPlanner-to-CanvasCalendar surface mapper for planned/actual schedule events.
 - Integration tests under `C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration`.
 - Component tests under `C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components`.
 - Playwright proof under `C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Playwright` or existing browser validation harness.
