@@ -16,6 +16,19 @@ public interface IWorkflowCatalogService
         WorkflowDefinitionSaveRequest request,
         CancellationToken cancellationToken = default);
 
+    Task<WorkflowDefinition> ChangeDefinitionStatusAsync(
+        WorkflowDefinitionStatusChangeRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<WorkflowDefinitionExportEnvelope?> ExportDefinitionAsync(
+        WorkflowId workflowId,
+        WorkflowVersionId? versionId = null,
+        CancellationToken cancellationToken = default);
+
+    Task<WorkflowDefinition> ImportDefinitionAsync(
+        WorkflowDefinitionImportRequest request,
+        CancellationToken cancellationToken = default);
+
     Task DeleteDefinitionAsync(
         WorkflowId workflowId,
         CancellationToken cancellationToken = default);

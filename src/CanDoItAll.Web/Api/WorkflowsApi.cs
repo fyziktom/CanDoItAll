@@ -57,12 +57,74 @@ internal static class WorkflowsApi
             await GetDefinitionResultAsync(workflowId, versionId, catalogService, cancellationToken))
             .WithName("GetWorkflowDefinitionVersion");
 
+        workflows.MapGet("/definitions/{workflowId:guid}/export", async (
+                Guid workflowId,
+                Guid? versionId,
+                IWorkflowCatalogService catalogService,
+                CancellationToken cancellationToken) =>
+        {
+            var envelope = await catalogService.ExportDefinitionAsync(
+                new WorkflowId(workflowId),
+                versionId.HasValue ? new WorkflowVersionId(versionId.Value) : null,
+                cancellationToken);
+            return envelope is null
+                ? ApiEndpointResults.NotFound("Workflow definition was not found.", "workflows.definition-not-found")
+                : Results.Ok(envelope);
+        })
+        .WithName("ExportWorkflowDefinition");
+
         workflows.MapPost("/definitions", async (
                 WorkflowDefinitionSaveRequest request,
                 IWorkflowCatalogService catalogService,
                 CancellationToken cancellationToken) =>
             await ToApiResultAsync(() => catalogService.SaveDefinitionAsync(request, cancellationToken)))
             .WithName("SaveWorkflowDefinition");
+
+        workflows.MapPost("/definitions/import", async (
+                WorkflowDefinitionImportRequest request,
+                IWorkflowCatalogService catalogService,
+                CancellationToken cancellationToken) =>
+            await ToApiResultAsync(() => catalogService.ImportDefinitionAsync(request, cancellationToken)))
+            .WithName("ImportWorkflowDefinition");
+
+        workflows.MapPost("/definitions/{workflowId:guid}/publish", async (
+                Guid workflowId,
+                Guid? expectedVersionId,
+                IWorkflowCatalogService catalogService,
+                CancellationToken cancellationToken) =>
+            await ChangeDefinitionStatusAsync(
+                workflowId,
+                expectedVersionId,
+                WorkflowLifecycleStatus.Active,
+                catalogService,
+                cancellationToken))
+            .WithName("PublishWorkflowDefinition");
+
+        workflows.MapPost("/definitions/{workflowId:guid}/suspend", async (
+                Guid workflowId,
+                Guid? expectedVersionId,
+                IWorkflowCatalogService catalogService,
+                CancellationToken cancellationToken) =>
+            await ChangeDefinitionStatusAsync(
+                workflowId,
+                expectedVersionId,
+                WorkflowLifecycleStatus.Suspended,
+                catalogService,
+                cancellationToken))
+            .WithName("SuspendWorkflowDefinition");
+
+        workflows.MapPost("/definitions/{workflowId:guid}/archive", async (
+                Guid workflowId,
+                Guid? expectedVersionId,
+                IWorkflowCatalogService catalogService,
+                CancellationToken cancellationToken) =>
+            await ChangeDefinitionStatusAsync(
+                workflowId,
+                expectedVersionId,
+                WorkflowLifecycleStatus.Archived,
+                catalogService,
+                cancellationToken))
+            .WithName("ArchiveWorkflowDefinition");
 
         workflows.MapDelete("/definitions/{workflowId:guid}", async (
                 Guid workflowId,
@@ -288,6 +350,21 @@ internal static class WorkflowsApi
             .WithName("GetWorkflowAnalytics");
 
         return group;
+    }
+
+    private static async Task<IResult> ChangeDefinitionStatusAsync(
+        Guid workflowId,
+        Guid? expectedVersionId,
+        WorkflowLifecycleStatus status,
+        IWorkflowCatalogService catalogService,
+        CancellationToken cancellationToken)
+    {
+        return await ToApiResultAsync(() => catalogService.ChangeDefinitionStatusAsync(
+            new WorkflowDefinitionStatusChangeRequest(
+                new WorkflowId(workflowId),
+                expectedVersionId.HasValue ? new WorkflowVersionId(expectedVersionId.Value) : null,
+                status),
+            cancellationToken));
     }
 
     private static async Task<IResult> StartWorkflowRunAsync(

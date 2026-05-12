@@ -18,6 +18,28 @@ public sealed record WorkflowDefinitionSaveRequest(
     WorkflowGraph Graph,
     WorkflowRuntimePolicy RuntimePolicy);
 
+public static class WorkflowDefinitionExchangeFormats
+{
+    public const string Current = "CanDoItAll.WorkflowDefinition/v1";
+}
+
+public sealed record WorkflowDefinitionStatusChangeRequest(
+    WorkflowId WorkflowId,
+    WorkflowVersionId? ExpectedVersionId,
+    WorkflowLifecycleStatus Status);
+
+public sealed record WorkflowDefinitionExportEnvelope(
+    string SourceFormat,
+    WorkflowDefinition Definition,
+    WorkflowValidationResult Validation,
+    DateTimeOffset ExportedAtUtc);
+
+public sealed record WorkflowDefinitionImportRequest(
+    WorkflowDefinitionExportEnvelope Envelope,
+    string? Name,
+    WorkflowLifecycleStatus? Status,
+    bool PreserveWorkflowId);
+
 public sealed record WorkflowDefinitionDetail(
     WorkflowDefinition Definition,
     WorkflowValidationResult Validation);

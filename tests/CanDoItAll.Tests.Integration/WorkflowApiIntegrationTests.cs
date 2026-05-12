@@ -51,6 +51,77 @@ public sealed class WorkflowApiIntegrationTests
     }
 
     [Fact]
+    public async Task Workflow_api_exports_imports_and_changes_definition_lifecycle()
+    {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
+        var saveResponse = await host.Client.PostAsJsonAsync(
+            "/api/workflows/definitions",
+            CreateDefinitionSaveRequest(componentId: WorkflowComponentId.New(), graph: CreatePassthroughGraph()));
+        var saveBody = await saveResponse.Content.ReadAsStringAsync();
+        Assert.True(saveResponse.IsSuccessStatusCode, saveBody);
+        var definition = JsonSerializer.Deserialize<WorkflowDefinition>(saveBody, JsonOptions())!;
+
+        var publishResponse = await host.Client.PostAsync(
+            $"/api/workflows/definitions/{definition.Id.Value:D}/publish?expectedVersionId={definition.VersionId.Value:D}",
+            content: null);
+        var publishBody = await publishResponse.Content.ReadAsStringAsync();
+        Assert.True(publishResponse.IsSuccessStatusCode, publishBody);
+        var published = JsonSerializer.Deserialize<WorkflowDefinition>(publishBody, JsonOptions())!;
+
+        var suspendResponse = await host.Client.PostAsync(
+            $"/api/workflows/definitions/{published.Id.Value:D}/suspend?expectedVersionId={published.VersionId.Value:D}",
+            content: null);
+        var suspendBody = await suspendResponse.Content.ReadAsStringAsync();
+        Assert.True(suspendResponse.IsSuccessStatusCode, suspendBody);
+        var suspended = JsonSerializer.Deserialize<WorkflowDefinition>(suspendBody, JsonOptions())!;
+
+        var exportResponse = await host.Client.GetAsync($"/api/workflows/definitions/{suspended.Id.Value:D}/export");
+        var exportBody = await exportResponse.Content.ReadAsStringAsync();
+        Assert.True(exportResponse.IsSuccessStatusCode, exportBody);
+        var envelope = JsonSerializer.Deserialize<WorkflowDefinitionExportEnvelope>(exportBody, JsonOptions())!;
+
+        var importResponse = await host.Client.PostAsJsonAsync(
+            "/api/workflows/definitions/import",
+            new WorkflowDefinitionImportRequest(
+                envelope,
+                Name: "Imported API workflow",
+                WorkflowLifecycleStatus.Draft,
+                PreserveWorkflowId: false));
+        var importBody = await importResponse.Content.ReadAsStringAsync();
+        Assert.True(importResponse.IsSuccessStatusCode, importBody);
+        var imported = JsonSerializer.Deserialize<WorkflowDefinition>(importBody, JsonOptions())!;
+
+        Assert.Equal(WorkflowLifecycleStatus.Active, published.Status);
+        Assert.Equal(definition.Id, published.Id);
+        Assert.NotEqual(definition.VersionId, published.VersionId);
+        Assert.Equal(WorkflowLifecycleStatus.Suspended, suspended.Status);
+        Assert.Equal(WorkflowDefinitionExchangeFormats.Current, envelope.SourceFormat);
+        Assert.True(envelope.Validation.Succeeded);
+        Assert.NotEqual(suspended.Id, imported.Id);
+        Assert.Equal("Imported API workflow", imported.Name);
+        Assert.Equal(WorkflowLifecycleStatus.Draft, imported.Status);
+        Assert.Equal(suspended.Graph.Nodes.Count, imported.Graph.Nodes.Count);
+    }
+
+    [Fact]
+    public async Task Workflow_api_rejects_publish_when_definition_is_invalid()
+    {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
+        var saveResponse = await host.Client.PostAsJsonAsync(
+            "/api/workflows/definitions",
+            CreateDefinitionSaveRequest(WorkflowComponentId.New()));
+        var saveBody = await saveResponse.Content.ReadAsStringAsync();
+        Assert.True(saveResponse.IsSuccessStatusCode, saveBody);
+        var definition = JsonSerializer.Deserialize<WorkflowDefinition>(saveBody, JsonOptions())!;
+
+        var response = await host.Client.PostAsync($"/api/workflows/definitions/{definition.Id.Value:D}/publish", content: null);
+        var body = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("cannot be published", body, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task Workflow_api_round_trips_typed_route_metadata()
     {
         await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
@@ -166,6 +237,9 @@ public sealed class WorkflowApiIntegrationTests
         Assert.True(paths.TryGetProperty("/api/workflows/provider-options", out _));
         Assert.True(paths.TryGetProperty("/api/workflows/components", out _));
         Assert.True(paths.TryGetProperty("/api/workflows/test-runs", out _));
+        Assert.True(paths.TryGetProperty("/api/workflows/definitions/{workflowId}/publish", out _));
+        Assert.True(paths.TryGetProperty("/api/workflows/definitions/{workflowId}/export", out _));
+        Assert.True(paths.TryGetProperty("/api/workflows/definitions/import", out _));
         Assert.True(paths.TryGetProperty("/api/workflows/runs/{runId}/events", out _));
     }
 
