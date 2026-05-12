@@ -774,7 +774,7 @@ public sealed class SourceIngestionWorkflowExecutor(IWorkspacePathResolutionServ
     {
         for (var index = 0; index < value.Length - 2; index++)
         {
-            if (char.IsAsciiLetter(value[index]) &&
+            if (IsAsciiLetter(value[index]) &&
                 value[index + 1] == ':' &&
                 value[index + 2] is '\\' or '/')
             {
@@ -783,6 +783,11 @@ public sealed class SourceIngestionWorkflowExecutor(IWorkspacePathResolutionServ
         }
 
         return value.IndexOf(@"\\", StringComparison.Ordinal);
+    }
+
+    private static bool IsAsciiLetter(char value)
+    {
+        return value is >= 'A' and <= 'Z' or >= 'a' and <= 'z';
     }
 
     private static bool LooksLikeFolderPath(string value)
