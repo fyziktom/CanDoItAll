@@ -589,7 +589,8 @@ public sealed record ProjectStructureAssetCreateInput(
     string? LeaseToken = null,
     string? SourceWorkspacePath = null,
     string? SourceFileName = null,
-    string? SourceContentType = null);
+    string? SourceContentType = null,
+    string? SourceUrl = null);
 
 public sealed record ProjectStructureApprovalRequestCreateInput(
     string Title,
