@@ -99,7 +99,7 @@ Design the plugin architecture for CanDoItAll so bundled plugins can later expos
 
 - Bundle preparation status: `Prepared`
 - Bundle readiness gate: `Passed`
-- Execution status: `Not started`
-- Subbundle gate review: `Pending`
+- Execution status: `In progress`
+- Subbundle gate review: `SB01-SB10 passed; SB11 pending`
 - Final closure gate: `Pending`
-- Browser validation analytics: `Pending`
+- Browser validation analytics: `SB04 workflow settings fallback proof captured; SB10 plugin catalog route proof captured`

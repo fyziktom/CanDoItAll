@@ -1,0 +1,56 @@
+@using CanDoItAll.Modules.Security
+@using CanDoItAll.SharedKernel.Configuration
+@inject ISettingsRendererRegistry RendererRegistry
+
+@if (ResolvedRenderer is { } renderer)
+{
+    <DynamicComponent Type="@renderer.ComponentType"
+                      Parameters="@BuildRendererParameters()" />
+}
+else
+{
+    <ConfigurationSchemaFallbackRenderer Schema="@Schema"
+                                         State="@State"
+                                         Secrets="@Secrets"
+                                         Validation="@Validation"
+                                         StateChanged="@StateChanged"
+                                         TestIdPrefix="@TestIdPrefix" />
+}
+
+@code {
+    [Parameter]
+    public string? RendererKey { get; set; }
+
+    [Parameter]
+    public required ConfigurationSchema Schema { get; set; }
+
+    [Parameter]
+    public required ConfigurationState State { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<SecretListItem> Secrets { get; set; } = [];
+
+    [Parameter]
+    public ConfigurationValidationResult? Validation { get; set; }
+
+    [Parameter]
+    public EventCallback<ConfigurationState> StateChanged { get; set; }
+
+    [Parameter]
+    public string TestIdPrefix { get; set; } = "settings-renderer";
+
+    private SettingsRendererDescriptor? ResolvedRenderer => RendererRegistry.FindRenderer(RendererKey);
+
+    private IDictionary<string, object> BuildRendererParameters()
+    {
+        return new Dictionary<string, object>
+        {
+            [nameof(Schema)] = Schema,
+            [nameof(State)] = State,
+            [nameof(Secrets)] = Secrets,
+            [nameof(Validation)] = Validation ?? ConfigurationValidationResult.Success,
+            [nameof(StateChanged)] = StateChanged,
+            [nameof(TestIdPrefix)] = TestIdPrefix
+        };
+    }
+}

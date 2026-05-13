@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -85,10 +85,18 @@
 
 ## Acceptance Checklist
 
-- [ ] A dedicated Plugins module exists and is wired into composition deterministically.
-- [ ] Bundled plugin catalog source exists.
-- [ ] Installation/enabled state persists separately from plugin connection settings.
-- [ ] Plugin catalog API returns bundled/installed/enabled/unavailable states.
+- [x] A dedicated Plugins module exists and is wired into composition deterministically.
+- [x] Bundled plugin catalog source exists.
+- [x] Installation/enabled state persists separately from plugin connection settings.
+- [x] Plugin catalog API returns bundled/installed/enabled/unavailable states.
+
+## Proof Captured
+
+- `dotnet build src\CanDoItAll.Modules.Plugins\CanDoItAll.Modules.Plugins.csproj` - passed, 0 warnings, 0 errors.
+- `dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "PluginCatalog|PluginInstallation"` - passed, 3 tests.
+- `dotnet build CanDoItAll.slnx` - passed, 0 warnings, 0 errors.
+- Browser route proof: `/plugins` rendered the plugin catalog shell after database confirmation; screenshot captured at `artifacts\sb10-plugins-catalog\sb10-plugins-catalog-route.png`.
+- Startup/browser diagnostics: browser console had 0 warnings/errors and server log scan found no `fail:`, `crit:`, `Exception`, or `error:` entries after the AgentFramework warmup query repair.
 
 ## Proof Required
 
@@ -102,7 +110,7 @@
 
 ## Progression Gate
 
-- Passed only when plugin catalog/install state is separate and deterministic.
+- Passed. Plugin catalog/install state is separate, deterministic, and persisted outside plugin connection settings.
 
 ## Suggested Agent Prompt
 

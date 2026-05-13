@@ -16,7 +16,7 @@ internal static class WorkflowExecutorCanvasCatalog
         IReadOnlyList<SecretListItem> secrets)
     {
         var implemented = executors
-            .Where(executor => executor.IsImplemented)
+            .Where(executor => executor.CanExecute)
             .OrderBy(executor => executor.Category)
             .ThenBy(executor => executor.Name, StringComparer.OrdinalIgnoreCase)
             .Select(executor => BuildCreateAction(executor, secrets))

@@ -24,6 +24,7 @@ public static class AgentFrameworkServiceCollectionExtensions
         services.TryAddSingleton<ISandboxWorkspaceStore>(_ => new FileSandboxWorkspaceStore(normalizedWorkspaceRoot, resolvedScope));
         services.TryAddSingleton<IAgentPackageService>(_ => new ZipAgentPackageService(normalizedWorkspaceRoot, resolvedScope));
         services.TryAddSingleton<IWorkspaceFileService>(_ => new WorkspaceFileService(normalizedWorkspaceRoot, resolvedScope));
+        services.TryAddSingleton<IPluginWorkspaceFiles, PluginWorkspaceFiles>();
         services.TryAddSingleton<IWorkspacePathResolutionService>(_ => new WorkspacePathResolutionService(normalizedWorkspaceRoot, resolvedScope));
         services.TryAddSingleton<IWorkspaceProcessHost, LocalWorkspaceProcessHost>();
         services.TryAddSingleton<IWorkspaceCommandExecutionService>(serviceProvider => new WorkspaceCommandExecutionService(
@@ -54,8 +55,10 @@ public static class AgentFrameworkServiceCollectionExtensions
         services.TryAddSingleton<IProviderDiagnosticsService>(serviceProvider => new ProviderDiagnosticsService(
             serviceProvider.GetRequiredService<IAgentRuntime>()));
         services.TryAddSingleton<ISpreadsheetDocumentService, ClosedXmlSpreadsheetDocumentService>();
+        services.TryAddSingleton<IProjectStructureRuntimeGateway, UnavailableProjectStructureRuntimeGateway>();
         services.AddBuiltInWorkflowExecutors();
         services.TryAddSingleton<IWorkflowExecutorCatalog, WorkflowExecutorCatalog>();
+        services.TryAddSingleton<IWorkflowExecutorExecutionObserver, NullWorkflowExecutorExecutionObserver>();
         services.TryAddSingleton<IWorkflowExecutorInvoker, WorkflowExecutorInvoker>();
         services.TryAddSingleton<IWorkflowLlmComponentInvoker, MafWorkflowLlmComponentInvoker>();
         services.TryAddSingleton<IWorkflowDefinitionValidator, WorkflowDefinitionValidator>();

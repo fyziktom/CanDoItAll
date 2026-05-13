@@ -2,13 +2,11 @@ using System.Text;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
-using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
-public sealed class ProjectStructureWorkflowExecutor(IServiceScopeFactory scopeFactory) : IWorkflowExecutor
+public sealed class ProjectStructureWorkflowExecutor(IProjectStructureRuntimeGateway projectStructureGateway) : IWorkflowExecutor
 {
     public WorkflowExecutorDescriptor Descriptor => BuiltInWorkflowExecutorDescriptors.ProjectStructure;
 
@@ -18,16 +16,13 @@ public sealed class ProjectStructureWorkflowExecutor(IServiceScopeFactory scopeF
         CancellationToken cancellationToken = default)
     {
         var settings = WorkflowExecutorJson.Deserialize<WorkflowProjectStructureExecutorSettings>(context.SettingsJson);
-        using var scope = scopeFactory.CreateScope();
-        var service = scope.ServiceProvider.GetService<ProjectStructureAgentService>()
-            ?? throw new InvalidOperationException("Project-structure executor requires ProjectStructureAgentService, but it is not registered in this host.");
 
         object result = settings.Operation switch
         {
-            WorkflowProjectStructureOperation.ListProjects => await service.ListProjectsAsync(cancellationToken),
-            WorkflowProjectStructureOperation.ReadTree => await service.GetStructureAsync(
+            WorkflowProjectStructureOperation.ListProjects => await projectStructureGateway.ListProjectsAsync(cancellationToken),
+            WorkflowProjectStructureOperation.ReadTree => await projectStructureGateway.ReadStructureAsync(
                 RequireProjectId(settings, input),
-                new ProjectStructureReadRequest(
+                new ProjectStructureRuntimeReadRequest(
                     IncludeLinks: true,
                     IncludeLayout: true,
                     IncludeMetadata: true,
@@ -35,9 +30,9 @@ public sealed class ProjectStructureWorkflowExecutor(IServiceScopeFactory scopeF
                     IncludeAssets: true,
                     Take: 250),
                 cancellationToken),
-            WorkflowProjectStructureOperation.ReadNode => await service.GetStructureAsync(
+            WorkflowProjectStructureOperation.ReadNode => await projectStructureGateway.ReadStructureAsync(
                 RequireProjectId(settings, input),
-                new ProjectStructureReadRequest(
+                new ProjectStructureRuntimeReadRequest(
                     NodeIds: [RequireNodeId(settings, input)],
                     IncludeLinks: true,
                     IncludeLayout: true,
@@ -45,13 +40,13 @@ public sealed class ProjectStructureWorkflowExecutor(IServiceScopeFactory scopeF
                     IncludeNotes: true,
                     IncludeAssets: true),
                 cancellationToken),
-            WorkflowProjectStructureOperation.CreateAsset => await service.CreateAssetAsync(
+            WorkflowProjectStructureOperation.CreateAsset => await projectStructureGateway.CreateAssetAsync(
                 RequireProjectId(settings, input),
                 BuildAssetRequest(settings, input),
                 BuildAgentContext(input),
                 cancellationToken),
             WorkflowProjectStructureOperation.CreateTaskNodes => await CreateTaskNodesAsync(
-                service,
+                projectStructureGateway,
                 settings,
                 input,
                 cancellationToken),
@@ -62,7 +57,7 @@ public sealed class ProjectStructureWorkflowExecutor(IServiceScopeFactory scopeF
     }
 
     private static async Task<object> CreateTaskNodesAsync(
-        ProjectStructureAgentService service,
+        IProjectStructureRuntimeGateway gateway,
         WorkflowProjectStructureExecutorSettings settings,
         WorkflowNodeInput input,
         CancellationToken cancellationToken)
@@ -72,15 +67,15 @@ public sealed class ProjectStructureWorkflowExecutor(IServiceScopeFactory scopeF
                            ResolveWorkflowParentNodeId(input) ??
                            throw new InvalidOperationException("Project-structure task creation requires 'NodeId', 'NodeIdJsonPath', or '$.runContext.workflowNodeId'.");
         var tasks = ReadTaskSources(settings, input);
-        var createdNodes = new List<ProjectStructureNodeSummary>(tasks.Count);
+        var createdNodes = new List<ProjectStructureRuntimeNodeSummary>(tasks.Count);
         var agent = BuildAgentContext(input);
 
         foreach (var task in tasks)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            createdNodes.Add(await service.CreateNodeAsync(
+            createdNodes.Add(await gateway.CreateNodeAsync(
                 projectId,
-                new ProjectStructureNodeCreateInput(
+                new ProjectStructureRuntimeNodeCreateRequest(
                     ProjectObjectType.WorkItem,
                     task.Title,
                     BuildTaskSubtitle(task),
@@ -112,7 +107,7 @@ public sealed class ProjectStructureWorkflowExecutor(IServiceScopeFactory scopeF
         };
     }
 
-    private static ProjectStructureAssetCreateInput BuildAssetRequest(
+    private static ProjectStructureRuntimeAssetCreateRequest BuildAssetRequest(
         WorkflowProjectStructureExecutorSettings settings,
         WorkflowNodeInput input)
     {
@@ -121,19 +116,19 @@ public sealed class ProjectStructureWorkflowExecutor(IServiceScopeFactory scopeF
             : ProjectObjectType.File;
         var title = Require(settings.Title, nameof(settings.Title));
         var sourcePath = string.IsNullOrWhiteSpace(settings.SourceWorkspacePath) ? null : settings.SourceWorkspacePath.Trim();
-        ProjectObjectMediaPayload? media = null;
+        ProjectStructureRuntimeMediaPayload? media = null;
         var content = WorkflowInputPayloadText.Resolve(settings.Content, settings.ContentFromInput, input);
 
         if (sourcePath is null)
         {
             var bytes = Encoding.UTF8.GetBytes(content);
-            media = new ProjectObjectMediaPayload(
+            media = new ProjectStructureRuntimeMediaPayload(
                 $"{SanitizeFileName(title)}.{NormalizeAssetKind(settings.AssetKind)}",
                 settings.ContentType,
                 Convert.ToBase64String(bytes));
         }
 
-        return new ProjectStructureAssetCreateInput(
+        return new ProjectStructureRuntimeAssetCreateRequest(
             objectType,
             title,
             Subtitle: string.Empty,
@@ -545,9 +540,9 @@ public sealed class ProjectStructureWorkflowExecutor(IServiceScopeFactory scopeF
         return true;
     }
 
-    private static ProjectStructureAgentContext BuildAgentContext(WorkflowNodeInput input)
+    private static ProjectStructureRuntimeAgentContext BuildAgentContext(WorkflowNodeInput input)
     {
-        var fallback = new ProjectStructureAgentContext(
+        var fallback = new ProjectStructureRuntimeAgentContext(
             "workflow-executor",
             "Workflow executor",
             Environment.MachineName,
@@ -557,7 +552,7 @@ public sealed class ProjectStructureWorkflowExecutor(IServiceScopeFactory scopeF
 
         return string.IsNullOrWhiteSpace(ReadRunContextString(input, "agentId"))
             ? fallback
-            : new ProjectStructureAgentContext(
+            : new ProjectStructureRuntimeAgentContext(
                 ReadRunContextString(input, "agentId"),
                 ReadRunContextString(input, "agentName", fallback.AgentName),
                 ReadRunContextString(input, "machineName", fallback.MachineName),

@@ -1,10 +1,13 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.SharedKernel.Configuration;
 
 namespace CanDoItAll.AgentFramework.Core;
 
 public sealed class WorkflowDefinitionValidator : IWorkflowDefinitionValidator
 {
+    private static readonly IConfigurationSchemaValidator SettingsSchemaValidator = new ConfigurationSchemaValidator();
+
     private readonly IWorkflowExecutorCatalog? executorCatalog;
 
     public WorkflowDefinitionValidator()
@@ -182,12 +185,23 @@ public sealed class WorkflowDefinitionValidator : IWorkflowDefinitionValidator
                 continue;
             }
 
-            if (executorCatalog is not null && !executorCatalog.TryGetExecutor(executorId, out _))
+            WorkflowExecutorDescriptor? descriptor = null;
+            if (executorCatalog is not null)
             {
-                issues.Add(new WorkflowValidationIssue(
-                    WorkflowValidationIssueCode.InvalidExecutorReference,
-                    $"Workflow executor '{executorId}' is not registered.",
-                    node.Id));
+                if (!executorCatalog.TryGetExecutor(executorId, out descriptor))
+                {
+                    issues.Add(new WorkflowValidationIssue(
+                        WorkflowValidationIssueCode.InvalidExecutorReference,
+                        $"Workflow executor '{executorId}' is not registered.",
+                        node.Id));
+                }
+                else if (!descriptor.CanExecute)
+                {
+                    issues.Add(new WorkflowValidationIssue(
+                        WorkflowValidationIssueCode.InvalidExecutorReference,
+                        $"Workflow executor '{executorId}' is not runnable: {descriptor.Availability.Message}",
+                        node.Id));
+                }
             }
 
             var policy = node.Settings.ExecutionPolicy ?? WorkflowExecutorExecutionPolicy.Default;
@@ -199,14 +213,18 @@ public sealed class WorkflowDefinitionValidator : IWorkflowDefinitionValidator
                     node.Id));
             }
 
-            if (string.IsNullOrWhiteSpace(node.Settings.ExecutorSettingsJson))
+            var settingsJson = string.IsNullOrWhiteSpace(node.Settings.ExecutorSettingsJson)
+                ? descriptor?.DefaultSettingsJson ?? string.Empty
+                : node.Settings.ExecutorSettingsJson;
+            if (string.IsNullOrWhiteSpace(settingsJson))
             {
                 continue;
             }
 
+            JsonDocument settingsDocument;
             try
             {
-                using var _ = JsonDocument.Parse(node.Settings.ExecutorSettingsJson);
+                settingsDocument = JsonDocument.Parse(settingsJson);
             }
             catch (JsonException exception)
             {
@@ -214,8 +232,58 @@ public sealed class WorkflowDefinitionValidator : IWorkflowDefinitionValidator
                     WorkflowValidationIssueCode.InvalidExecutorSettings,
                     $"Workflow executor node '{node.Id}' has invalid settings JSON: {exception.Message}",
                     node.Id));
+                continue;
+            }
+
+            using (settingsDocument)
+            {
+                AddExecutorSettingsSchemaIssues(node, descriptor, settingsDocument.RootElement, issues);
             }
         }
+    }
+
+    private static void AddExecutorSettingsSchemaIssues(
+        WorkflowNode node,
+        WorkflowExecutorDescriptor? descriptor,
+        JsonElement settingsRoot,
+        List<WorkflowValidationIssue> issues)
+    {
+        if (descriptor?.ConfigurationSchema.Fields.Count is not > 0)
+        {
+            return;
+        }
+
+        if (settingsRoot.ValueKind != JsonValueKind.Object)
+        {
+            issues.Add(new WorkflowValidationIssue(
+                WorkflowValidationIssueCode.InvalidExecutorSettings,
+                $"Workflow executor node '{node.Id}' settings must be a JSON object.",
+                node.Id));
+            return;
+        }
+
+        var state = new ConfigurationState(ReadConfigurationValues(settingsRoot));
+        var validation = SettingsSchemaValidator.Validate(descriptor.ConfigurationSchema, state);
+        foreach (var issue in validation.Issues)
+        {
+            issues.Add(new WorkflowValidationIssue(
+                WorkflowValidationIssueCode.InvalidExecutorSettings,
+                $"Workflow executor node '{node.Id}' has invalid setting '{issue.FieldKey}': {issue.Message}",
+                node.Id));
+        }
+    }
+
+    private static IReadOnlyDictionary<string, string> ReadConfigurationValues(JsonElement settingsRoot)
+    {
+        var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var property in settingsRoot.EnumerateObject())
+        {
+            values[property.Name] = property.Value.ValueKind == JsonValueKind.String
+                ? property.Value.GetString() ?? string.Empty
+                : property.Value.GetRawText();
+        }
+
+        return values;
     }
 
     private static void AddRoutingIssues(

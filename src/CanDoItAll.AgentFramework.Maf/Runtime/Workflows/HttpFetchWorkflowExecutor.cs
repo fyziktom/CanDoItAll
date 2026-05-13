@@ -102,8 +102,8 @@ public sealed class HttpFetchWorkflowExecutor(ISecretRuntimeResolver? secretReso
                     ? WorkflowSecretPurposes.HttpHeader
                     : binding.Purpose.Trim(),
                 [secretId],
-                ConsumerType: "workflow-http",
-                ConsumerId: $"{context.Definition.Id.Value:D}/{context.Node.Id.Value}"),
+                ConsumerType: SecretRuntimeConsumerTypes.WorkflowHttpExecutor,
+                ConsumerId: SecretRuntimeConsumerIds.WorkflowNode(context.Definition.Id.Value, context.Node.Id.Value)),
             cancellationToken);
         if (string.IsNullOrWhiteSpace(secretValue))
         {

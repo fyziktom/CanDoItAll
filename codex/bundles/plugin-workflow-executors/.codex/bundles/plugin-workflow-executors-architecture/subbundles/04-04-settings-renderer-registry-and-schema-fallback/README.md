@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -82,10 +82,10 @@
 
 ## Acceptance Checklist
 
-- [ ] A renderer registry exists for trusted/bundled settings components.
-- [ ] A schema fallback settings renderer exists and supports the canonical field types.
-- [ ] Renderer keys are collision-safe and duplicate registrations fail predictably.
-- [ ] Workflow executor settings UI has a path away from hard-coded per-executor branches.
+- [x] A renderer registry exists for trusted/bundled settings components.
+- [x] A schema fallback settings renderer exists and supports the canonical field types.
+- [x] Renderer keys are collision-safe and duplicate registrations fail predictably.
+- [x] Workflow executor settings UI has a path away from hard-coded per-executor branches.
 
 ## Proof Required
 
@@ -95,11 +95,15 @@
 
 ## Browser Validation Logging
 
-- If UI changed: open the workflow editor/settings page, verify fallback fields render, capture maximized desktop screenshot and a narrower layout screenshot.
+- Completed on `2026-05-13 12:58:50 -04:00`.
+- Route: `http://localhost:5032/agents/workflows`.
+- Verified the workflow editor renders a schema-backed fallback settings form for a `Workspace files` executor node.
+- Desktop screenshot: `C:\repositories\CanDoItAll\codex\bundles\plugin-workflow-executors\.codex\bundles\plugin-workflow-executors-architecture\artifacts\sb04-settings-renderer\sb04-workflow-settings-desktop.png`.
+- Narrow screenshot: `C:\repositories\CanDoItAll\codex\bundles\plugin-workflow-executors\.codex\bundles\plugin-workflow-executors-architecture\artifacts\sb04-settings-renderer\sb04-workflow-settings-narrow.png`.
 
 ## Progression Gate
 
-- Passed only when plugin settings can be rendered without copying hard-coded executor settings branches.
+- Passed. Workflow executor settings now route through `SettingsRendererHost` and `ConfigurationSchemaFallbackRenderer`, so plugin settings can render from canonical schema metadata without adding per-plugin hard-coded branches.
 
 ## Suggested Agent Prompt
 

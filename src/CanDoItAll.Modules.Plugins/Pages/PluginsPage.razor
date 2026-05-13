@@ -1,0 +1,95 @@
+@page "/plugins"
+@using CanDoItAll.Components.BaseLib
+@using Microsoft.AspNetCore.Components.Web
+@inject PluginCatalogService PluginCatalog
+
+<PageTitle>Plugins</PageTitle>
+
+<PageScaffold>
+    <Header>
+        <PageHeader Eyebrow="Plugins"
+                    Title="Plugin catalog"
+                    Description="Review bundled plugin manifests and persisted installation state.">
+            <Actions>
+                <Button Text="Refresh" ButtonStyle="ButtonStyle.Light" Click="LoadAsync" />
+            </Actions>
+        </PageHeader>
+    </Header>
+
+    <ChildContent>
+        <SummaryTiles>
+            <SummaryTile Label="Catalog" Value="@catalog.Count.ToString()" HelperText="Plugins visible to the catalog." />
+            <SummaryTile Label="Installed" Value="@catalog.Count(item => item.IsInstalled).ToString()" HelperText="Persisted installations." Tone="info" />
+            <SummaryTile Label="Enabled" Value="@catalog.Count(item => item.IsEnabled).ToString()" HelperText="Installations enabled for runtime use." Tone="success" />
+            <SummaryTile Label="Unavailable" Value="@catalog.Count(item => item.Availability == PluginCatalogAvailabilityKind.Unavailable).ToString()" HelperText="Installed plugins missing from the bundled catalog." Tone="warning" />
+        </SummaryTiles>
+
+        @if (catalog.Count == 0)
+        {
+            <EmptyState Eyebrow="No plugins"
+                        Title="No bundled plugins are registered"
+                        Description="Catalog entries appear here after bundled plugin sources register manifests." />
+        }
+        else
+        {
+            <Stack GapScale="LayoutGap.Medium">
+                @foreach (var plugin in catalog)
+                {
+                    <SurfaceCard>
+                        <Split Gap="LayoutGap.Medium">
+                            <Stack GapScale="LayoutGap.Small">
+                                <Cluster Gap="LayoutGap.Small">
+                                    <StatusBadge Tone="@ResolveAvailabilityTone(plugin)" Text="@plugin.Availability.ToString()" />
+                                    <StatusBadge Tone="@ResolveInstallationTone(plugin)" Text="@plugin.InstallationState.ToString()" />
+                                    <StatusBadge Tone="neutral" Text="@plugin.SourceKind.ToString()" />
+                                </Cluster>
+                                <Stack GapScale="LayoutGap.Tiny">
+                                    <h2 class="cda-title-lg">@plugin.DisplayName</h2>
+                                    <p class="cda-body-muted">@plugin.Description</p>
+                                </Stack>
+                            </Stack>
+                            <Stack GapScale="LayoutGap.Tiny" Class="min-w-[14rem] text-sm text-[var(--cda-text-muted)]">
+                                <span>@plugin.PluginId</span>
+                                <span>Version @plugin.Version</span>
+                                <span>@plugin.Vendor</span>
+                            </Stack>
+                        </Split>
+                        @if (!string.IsNullOrWhiteSpace(plugin.UnavailableReason))
+                        {
+                            <Alert AlertStyle="AlertStyle.Warning" Class="mt-4">
+                                @plugin.UnavailableReason
+                            </Alert>
+                        }
+                    </SurfaceCard>
+                }
+            </Stack>
+        }
+    </ChildContent>
+</PageScaffold>
+
+@code {
+    private IReadOnlyList<PluginCatalogItem> catalog = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        catalog = await PluginCatalog.ListCatalogAsync();
+    }
+
+    private static string ResolveAvailabilityTone(PluginCatalogItem plugin)
+        => plugin.Availability == PluginCatalogAvailabilityKind.Available
+            ? "success"
+            : "warning";
+
+    private static string ResolveInstallationTone(PluginCatalogItem plugin)
+        => plugin.InstallationState switch
+        {
+            PluginInstallationStateKind.InstalledEnabled => "success",
+            PluginInstallationStateKind.InstalledDisabled => "warning",
+            _ => "neutral"
+        };
+}

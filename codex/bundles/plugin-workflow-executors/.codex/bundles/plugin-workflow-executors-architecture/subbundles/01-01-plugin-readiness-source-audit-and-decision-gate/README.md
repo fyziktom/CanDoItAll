@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -119,10 +119,10 @@
 
 ## Acceptance Checklist
 
-- [ ] Source references in inventories/01-source-map.md still resolve or are corrected.
-- [ ] Readiness conclusion is re-confirmed or updated with explicit changes.
-- [ ] Execution report records the audited source snapshot and any source drift.
-- [ ] No implementation work starts until the audit is complete.
+- [x] Source references in inventories/01-source-map.md still resolve or are corrected.
+- [x] Readiness conclusion is re-confirmed or updated with explicit changes.
+- [x] Execution report records the audited source snapshot and any source drift.
+- [x] No implementation work starts until the audit is complete.
 
 ## Proof Required
 

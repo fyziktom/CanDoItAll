@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
@@ -5,6 +7,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Components.OverlayLib;
+using CanDoItAll.SharedKernel.Configuration;
 using CanDoItAll.Modules.Security;
 using Microsoft.AspNetCore.Components;
 
@@ -150,7 +153,7 @@ public partial class WorkflowCanvasEditor
         new()
         {
             Label = "Executors",
-            Value = executorDescriptors.Count(executor => executor.IsImplemented).ToString(),
+            Value = executorDescriptors.Count(executor => executor.CanExecute).ToString(),
             Tone = "info"
         },
         new()
@@ -961,7 +964,7 @@ public partial class WorkflowCanvasEditor
         =>
         [
             new("Workflow", "info"),
-            new($"{executorDescriptors.Count(executor => executor.IsImplemented)} executors", "label")
+            new($"{executorDescriptors.Count(executor => executor.CanExecute)} executors", "label")
         ];
 
     private IReadOnlyList<OverlayToolboxSection> WorkflowToolboxSections
@@ -1071,7 +1074,7 @@ public partial class WorkflowCanvasEditor
         IEnumerable<WorkflowExecutorDescriptor> descriptors)
     {
         var items = descriptors
-            .OrderBy(executor => executor.IsImplemented ? 0 : 1)
+            .OrderBy(executor => executor.CanExecute ? 0 : 1)
             .ThenBy(executor => executor.Name, StringComparer.OrdinalIgnoreCase)
             .Select(executor => new OverlayToolboxItem(
                 WorkflowExecutorCanvasCatalog.BuildCreateActionId(executor.Id),
@@ -1079,7 +1082,7 @@ public partial class WorkflowCanvasEditor
                 executor.Description,
                 Icon: executor.IconName,
                 Tone: WorkflowExecutorCanvasCatalog.ResolveTone(executor.Category),
-                IsDisabled: !executor.IsImplemented,
+                IsDisabled: !executor.CanExecute,
                 DataTestId: $"workflow-toolbox-executor-{executor.Id.Value.Replace('.', '-')}"))
             .Where(MatchesWorkflowToolboxSearch)
             .ToList();
@@ -1122,7 +1125,7 @@ public partial class WorkflowCanvasEditor
     }
 
     private WorkflowExecutorDescriptor? ResolveDefaultExecutorDescriptor()
-        => executorDescriptors.FirstOrDefault(executor => executor.IsImplemented)
+        => executorDescriptors.FirstOrDefault(executor => executor.CanExecute)
            ?? executorDescriptors.FirstOrDefault();
 
     private bool TryResolveExecutorDescriptor(
@@ -1482,6 +1485,173 @@ public partial class WorkflowCanvasEditor
         var updated = update(ReadExecutorSettings<TSettings>(node));
         node.ExecutorSettingsJson = JsonSerializer.Serialize(updated, ExecutorJsonOptions);
         errorMessage = string.Empty;
+    }
+
+    private ConfigurationState CreateExecutorConfigurationState(
+        WorkflowCanvasNodeDraft node,
+        WorkflowExecutorDescriptor descriptor)
+    {
+        var settingsJson = string.IsNullOrWhiteSpace(node.ExecutorSettingsJson)
+            ? descriptor.DefaultSettingsJson
+            : node.ExecutorSettingsJson;
+
+        return ReadConfigurationState(settingsJson, descriptor.ConfigurationSchema);
+    }
+
+    private void HandleSelectedExecutorConfigurationStateChanged(
+        WorkflowCanvasNodeDraft node,
+        ConfigurationSchema schema,
+        ConfigurationState state)
+    {
+        node.ExecutorSettingsJson = SerializeConfigurationState(schema, state);
+        errorMessage = string.Empty;
+    }
+
+    private static ConfigurationState ReadConfigurationState(
+        string? settingsJson,
+        ConfigurationSchema schema)
+    {
+        if (string.IsNullOrWhiteSpace(settingsJson))
+        {
+            return new ConfigurationState();
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(settingsJson);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return new ConfigurationState();
+            }
+
+            var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var property in document.RootElement.EnumerateObject())
+            {
+                values[property.Name] = NormalizeConfigurationValue(
+                    property.Name,
+                    property.Value.ValueKind == JsonValueKind.String
+                        ? property.Value.GetString() ?? string.Empty
+                        : property.Value.GetRawText(),
+                    schema);
+            }
+
+            return new ConfigurationState(values);
+        }
+        catch (JsonException)
+        {
+            return new ConfigurationState();
+        }
+    }
+
+    private static string NormalizeConfigurationValue(
+        string key,
+        string value,
+        ConfigurationSchema schema)
+    {
+        var field = schema.Fields.FirstOrDefault(candidate => string.Equals(candidate.Key, key, StringComparison.OrdinalIgnoreCase));
+        if (field?.FieldType != ConfigurationFieldType.Select)
+        {
+            return value;
+        }
+
+        var option = field.Options.FirstOrDefault(candidate =>
+            string.Equals(candidate.Value, value, StringComparison.OrdinalIgnoreCase) ||
+            candidate.AcceptedValues.Any(acceptedValue => string.Equals(acceptedValue, value, StringComparison.OrdinalIgnoreCase)));
+        return option?.Value ?? value;
+    }
+
+    private static string SerializeConfigurationState(
+        ConfigurationSchema schema,
+        ConfigurationState state)
+    {
+        using var stream = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(stream))
+        {
+            writer.WriteStartObject();
+            var writtenKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var field in schema.Fields)
+            {
+                if (!state.Values.TryGetValue(field.Key, out var value) ||
+                    string.IsNullOrWhiteSpace(value))
+                {
+                    continue;
+                }
+
+                WriteConfigurationValue(writer, field.Key, value, field);
+                writtenKeys.Add(field.Key);
+            }
+
+            foreach (var item in state.Values)
+            {
+                if (writtenKeys.Contains(item.Key) ||
+                    string.IsNullOrWhiteSpace(item.Value))
+                {
+                    continue;
+                }
+
+                writer.WriteString(item.Key, item.Value);
+            }
+
+            writer.WriteEndObject();
+        }
+
+        return Encoding.UTF8.GetString(stream.ToArray());
+    }
+
+    private static void WriteConfigurationValue(
+        Utf8JsonWriter writer,
+        string key,
+        string value,
+        ConfigurationFieldDescriptor field)
+    {
+        switch (field.FieldType)
+        {
+            case ConfigurationFieldType.Number:
+                if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var number))
+                {
+                    writer.WriteNumber(key, number);
+                    return;
+                }
+
+                break;
+            case ConfigurationFieldType.Boolean:
+                if (bool.TryParse(value, out var boolean))
+                {
+                    writer.WriteBoolean(key, boolean);
+                    return;
+                }
+
+                break;
+            case ConfigurationFieldType.Json:
+                if (TryWriteRawJsonValue(writer, key, value))
+                {
+                    return;
+                }
+
+                break;
+            default:
+                break;
+        }
+
+        writer.WriteString(key, value);
+    }
+
+    private static bool TryWriteRawJsonValue(
+        Utf8JsonWriter writer,
+        string key,
+        string value)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(value);
+            writer.WritePropertyName(key);
+            document.RootElement.WriteTo(writer);
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     private void UpdateEnumExecutorSettings<TSettings, TEnum>(

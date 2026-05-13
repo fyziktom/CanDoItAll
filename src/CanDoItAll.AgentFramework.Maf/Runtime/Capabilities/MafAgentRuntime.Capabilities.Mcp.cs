@@ -596,8 +596,8 @@ public sealed partial class MafAgentRuntime
                     secretId,
                     purpose,
                     allowedSecretIds,
-                    ConsumerType: "agent-mcp",
-                    ConsumerId: $"{agent.Id:D}/{capabilityName}/{bindingName}"),
+                    ConsumerType: SecretRuntimeConsumerTypes.AgentMcp,
+                    ConsumerId: SecretRuntimeConsumerIds.AgentMcp(agent.Id, capabilityName, bindingName)),
                 cancellationToken);
         }
 

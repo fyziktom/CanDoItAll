@@ -12,7 +12,12 @@ public sealed class StorageSecretResolver(ISecretRuntimeResolver secretResolver)
         }
 
         return await secretResolver.ResolveValueAsync(
-            new SecretRuntimeRequest(secretId.Value, SecretRuntimePurposes.StorageCredential),
+            new SecretRuntimeRequest(
+                secretId.Value,
+                SecretRuntimePurposes.StorageCredential,
+                [secretId.Value],
+                ConsumerType: SecretRuntimeConsumerTypes.StorageCredential,
+                ConsumerId: SecretRuntimeConsumerIds.StorageRuntime()),
             cancellationToken);
     }
 }

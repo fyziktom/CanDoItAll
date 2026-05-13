@@ -15,7 +15,7 @@ public interface IProviderRuntimeGateway
 public sealed class LegacyProviderRuntimeGateway(
     IDbContextFactory<AppDbContext> dbContextFactory,
     ProviderRegistry providerRegistry,
-    SecretService secretService,
+    ISecretRuntimeResolver secretRuntimeResolver,
     IActivityStream activityStream,
     IClock clock) : IProviderRuntimeGateway
 {
@@ -35,9 +35,7 @@ public sealed class LegacyProviderRuntimeGateway(
             return new ProviderHealthResult(false, $"No adapter is registered for provider profile '{provider.Name}'.");
         }
 
-        var secretValue = provider.ApiKeySecretId.HasValue
-            ? (await secretService.GetAsync(provider.ApiKeySecretId.Value, cancellationToken))?.SecretValue
-            : null;
+        var secretValue = await ResolveProviderSecretValueAsync(provider, cancellationToken);
 
         try
         {
@@ -85,11 +83,7 @@ public sealed class LegacyProviderRuntimeGateway(
                 $"No adapter is registered for provider profile '{profile.Name}'."));
         }
 
-        string? secretValue = null;
-        if (profile.ApiKeySecretId.HasValue)
-        {
-            secretValue = (await secretService.GetAsync(profile.ApiKeySecretId.Value, cancellationToken))?.SecretValue;
-        }
+        var secretValue = await ResolveProviderSecretValueAsync(profile, cancellationToken);
 
         var result = await adapter.SendAsync(profile, request, secretValue, cancellationToken);
         if (result.IsSuccess)
@@ -105,5 +99,24 @@ public sealed class LegacyProviderRuntimeGateway(
         }
 
         return result;
+    }
+
+    private async Task<string?> ResolveProviderSecretValueAsync(
+        ProviderProfile profile,
+        CancellationToken cancellationToken)
+    {
+        if (profile.ApiKeySecretId is not { } secretId)
+        {
+            return null;
+        }
+
+        return await secretRuntimeResolver.ResolveValueAsync(
+            new SecretRuntimeRequest(
+                secretId,
+                SecretRuntimePurposes.AgentProviderApiKey,
+                [secretId],
+                ConsumerType: SecretRuntimeConsumerTypes.ProviderProfile,
+                ConsumerId: SecretRuntimeConsumerIds.ProviderProfile(profile.Id)),
+            cancellationToken);
     }
 }

@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -80,10 +80,10 @@
 
 ## Acceptance Checklist
 
-- [ ] Plugin-safe facades exist for workspace files, storage access, and project structure operations.
-- [ ] ProjectStructureWorkflowExecutor no longer depends on concrete Workbench service lookup through IServiceScopeFactory.
-- [ ] Storage driver access is not exposed as a default plugin capability.
-- [ ] Facade tests prove path/policy boundaries.
+- [x] Plugin-safe facades exist for workspace files, storage access, and project structure operations.
+- [x] ProjectStructureWorkflowExecutor no longer depends on concrete Workbench service lookup through IServiceScopeFactory.
+- [x] Storage driver access is not exposed as a default plugin capability.
+- [x] Facade tests prove path/policy boundaries.
 
 ## Proof Required
 
@@ -93,11 +93,11 @@
 
 ## Browser Validation Logging
 
-- N/A unless project structure UI changes.
+- N/A. SB06 changed runtime facades and DI boundaries, not project-structure UI.
 
 ## Progression Gate
 
-- Passed only when project structure access can be offered to plugins without concrete Workbench service leakage.
+- Passed. Project-structure workflow execution now targets `IProjectStructureRuntimeGateway`; Workbench is behind an adapter, workspace files are exposed through a constrained plugin facade, and normal plugin storage access uses `IPluginStorageGateway` rather than raw drivers.
 
 ## Suggested Agent Prompt
 

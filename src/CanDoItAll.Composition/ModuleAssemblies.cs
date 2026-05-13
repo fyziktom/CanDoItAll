@@ -5,6 +5,7 @@ using CanDoItAll.Modules.Automation;
 using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Factory;
+using CanDoItAll.Modules.Plugins;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Prompts;
@@ -28,6 +29,7 @@ public static class ModuleAssemblies
         typeof(CollaborationModuleAssemblyMarker).Assembly,
         typeof(CrmHrModuleAssemblyMarker).Assembly,
         typeof(FactoryModuleAssemblyMarker).Assembly,
+        typeof(PluginsModuleAssemblyMarker).Assembly,
         typeof(ProjectsModuleAssemblyMarker).Assembly,
         typeof(ProcessesModuleAssemblyMarker).Assembly,
         typeof(PromptsModuleAssemblyMarker).Assembly,

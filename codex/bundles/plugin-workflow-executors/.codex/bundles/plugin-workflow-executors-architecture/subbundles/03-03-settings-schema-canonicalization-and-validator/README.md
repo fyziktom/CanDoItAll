@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -81,10 +81,10 @@
 
 ## Acceptance Checklist
 
-- [ ] There is one canonical configuration/settings schema and state model usable by connectors, workflow executors, and future plugins.
-- [ ] Connector settings keep working through adapters or migrated types.
-- [ ] Workflow executor settings can be validated for required fields and types.
-- [ ] Invalid settings fail during validation with redacted, actionable messages.
+- [x] There is one canonical configuration/settings schema and state model usable by connectors, workflow executors, and future plugins.
+- [x] Connector settings keep working through adapters or migrated types.
+- [x] Workflow executor settings can be validated for required fields and types.
+- [x] Invalid settings fail during validation with redacted, actionable messages.
 
 ## Proof Required
 

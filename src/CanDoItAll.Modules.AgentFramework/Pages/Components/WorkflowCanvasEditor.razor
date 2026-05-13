@@ -2,6 +2,7 @@
 @using CanDoItAll.AgentFramework.Core
 @using CanDoItAll.Components.CanvasLib
 @using CanDoItAll.Components.OverlayLib
+@using CanDoItAll.Modules.Workspace.Pages.Components
 
 <SurfaceCard Class="workflow-canvas-editor"
              data-testid="workflow-canvas-editor">
@@ -71,7 +72,7 @@
                                               AriaLabel="Workflow toolbox floating window"
                                               Kicker="Workflow"
                                               Title="Nodes and executors"
-                                              Summary="@($"{document.Nodes.Count} nodes · {executorDescriptors.Count(executor => executor.IsImplemented)} executors")"
+                                                      Summary="@($"{document.Nodes.Count} nodes · {executorDescriptors.Count(executor => executor.CanExecute)} executors")"
                                               BodyClass="workflow-canvas-floating-window__body"
                                               DefaultPlacement="top-left"
                                               SafeTopSelector=".workflow-canvas-overlay-safe-top"
@@ -384,8 +385,8 @@
                                     <option value="">Select executor</option>
                                     @foreach (var executor in executorDescriptors)
                                     {
-                                        <option value="@executor.Id.Value"
-                                                disabled="@(!executor.IsImplemented)">@executor.Name@(executor.IsImplemented ? string.Empty : " (planned)")</option>
+                                    <option value="@executor.Id.Value"
+                                            disabled="@(!executor.CanExecute)">@executor.Name@(executor.CanExecute ? string.Empty : $" ({executor.Availability.Kind.ToString().ToLowerInvariant()})")</option>
                                     }
                                 </select>
                             </label>
@@ -439,7 +440,16 @@
                                 <span>Capture output as workflow artifact</span>
                             </label>
 
-                            @if (selected.ExecutorId == WorkflowExecutorIds.StorageFile)
+                            @if (descriptor?.ConfigurationSchema.Fields.Count > 0)
+                            {
+                                <SettingsRendererHost RendererKey="@descriptor.SetupRendererKey"
+                                                      Schema="@descriptor.ConfigurationSchema"
+                                                      State="@CreateExecutorConfigurationState(selected, descriptor)"
+                                                      Secrets="secretPickerItems"
+                                                      StateChanged="state => HandleSelectedExecutorConfigurationStateChanged(selected, descriptor.ConfigurationSchema, state)"
+                                                      TestIdPrefix="workflow-canvas-executor-settings" />
+                            }
+                            else if (selected.ExecutorId == WorkflowExecutorIds.StorageFile)
                             {
                                 var settings = ReadExecutorSettings<WorkflowStorageFileExecutorSettings>(selected);
                                 <Grid Gap="LayoutGap.Small" ColumnsLg="2">
@@ -1230,8 +1240,8 @@
                                     <option value="">Select executor</option>
                                     @foreach (var executor in executorDescriptors)
                                     {
-                                        <option value="@executor.Id.Value"
-                                                disabled="@(!executor.IsImplemented)">@executor.Name@(executor.IsImplemented ? string.Empty : " (planned)")</option>
+                              <option value="@executor.Id.Value"
+                                      disabled="@(!executor.CanExecute)">@executor.Name@(executor.CanExecute ? string.Empty : $" ({executor.Availability.Kind.ToString().ToLowerInvariant()})")</option>
                                     }
                                 </select>
                             </label>
@@ -1288,6 +1298,19 @@
                                 <span>Capture output as workflow artifact</span>
                             </label>
                         </section>
+
+                        @if (descriptor?.ConfigurationSchema.Fields.Count > 0)
+                        {
+                            <section class="workflow-canvas-dialog-section workflow-canvas-dialog-section--fill">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Executor settings" />
+                                <SettingsRendererHost RendererKey="@descriptor.SetupRendererKey"
+                                                      Schema="@descriptor.ConfigurationSchema"
+                                                      State="@CreateExecutorConfigurationState(modalNode, descriptor)"
+                                                      Secrets="secretPickerItems"
+                                                      StateChanged="state => HandleSelectedExecutorConfigurationStateChanged(modalNode, descriptor.ConfigurationSchema, state)"
+                                                      TestIdPrefix="workflow-canvas-node-modal-settings" />
+                            </section>
+                        }
 
                         <section class="workflow-canvas-dialog-section workflow-canvas-dialog-section--fill">
                             <TextBlock TextStyle="TextStyle.Eyebrow" Value="Executor settings JSON" />

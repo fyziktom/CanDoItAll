@@ -39,7 +39,17 @@ Subbundles:
 
 Goal: define future shop/OAuth seams and prove the MVP does not regress core workflows/settings/secrets.
 
-## Dependency Map
+## Execution Order
+
+1. `SB01` source audit and decision gate.
+2. `SB02`-`SB07` foundation hardening.
+3. `SB08` mandatory foundation architecture review.
+4. `SB09`-`SB13` bundled plugin MVP.
+5. `SB14` mandatory MVP architecture review.
+6. `SB15`-`SB17` shop/OAuth/proof closure.
+7. `SB18` final architecture review and closure.
+
+## Subbundle Dependency Map
 
 ```mermaid
 flowchart TD
@@ -73,20 +83,32 @@ flowchart TD
     SB17 --> SB18[SB18 Final Review]
 ```
 
+## Critical Subbundles
+
+- `SB02`, `SB03`, `SB04`, `SB05`, `SB06`, and `SB07` are critical foundation subbundles. Plugin module work must not start until their closure proof passes `SB08`.
+- `SB09`, `SB10`, `SB11`, `SB12`, and `SB13` are critical MVP subbundles. Shop/OAuth expansion must not start until their closure proof passes `SB14`.
+- `SB17` is the critical proof closure subbundle for tests, API checks, and browser proof before `SB18`.
+
+## Phase Gates
+
+- `SB08` must confirm foundation hardening, compatibility, source map updates, and validation evidence before any plugin module is added.
+- `SB14` must confirm the bundled plugin MVP architecture before shop/package/OAuth work begins.
+- `SB18` must confirm final implementation proof, raw-note closure, analytics rows, and remaining risks before the bundle is marked complete.
+
 ## Execution Table
 
 | Id | Folder | Phase | Status | Dependencies | Objective |
 | --- | --- | --- | --- | --- | --- |
-| SB01 | 01-01-plugin-readiness-source-audit-and-decision-gate | Prerequisite | Ready | None | Audit current code, confirm assumptions, update source map/risk register before edits. |
-| SB02 | 02-02-workflow-executor-contract-hardening | Prerequisite | Ready | SB01 | Harden executor descriptor/provenance/availability/policy/schema metadata for plugin ownership. |
-| SB03 | 03-03-settings-schema-canonicalization-and-validator | Prerequisite | Ready | SB02 | Extract/adapt canonical settings schema/state/validator from connector infrastructure. |
-| SB04 | 04-04-settings-renderer-registry-and-schema-fallback | Prerequisite | Ready | SB03 | Create renderer registry and schema fallback UI; begin de-hardcoding workflow settings UI. |
-| SB05 | 05-05-secret-runtime-authorization-and-plugin-secret-broker | Prerequisite | Ready | SB01,SB03 | Make secrets consumer-bound and introduce plugin-facing secret broker contract. |
-| SB06 | 06-06-workspace-file-storage-project-facades | Prerequisite | Ready | SB01 | Create plugin-safe workspace/storage/project-structure facades and fix concrete Workbench leakage. |
-| SB07 | 07-07-policy-observability-and-sanitization | Prerequisite | Ready | SB02,SB05,SB06 | Add execution policy/audit/sanitization foundations for plugin executor calls. |
-| SB08 | 08-08-architecture-review-gate-foundations | Review Gate | Ready | SB01-SB07 | Mandatory foundation review before plugin module starts. |
-| SB09 | 09-09-plugins-abstractions-project-and-manifest | MVP | Ready | SB08 | Create plugin abstractions project and manifest/capability contracts. |
-| SB10 | 10-10-plugins-module-catalog-and-persistence | MVP | Ready | SB09 | Create Plugins module, catalog, installed state, API wiring, composition, migrations. |
+| SB01 | 01-01-plugin-readiness-source-audit-and-decision-gate | Prerequisite | Completed | None | Audit current code, confirm assumptions, update source map/risk register before edits. |
+| SB02 | 02-02-workflow-executor-contract-hardening | Prerequisite | Completed | SB01 | Harden executor descriptor/provenance/availability/policy/schema metadata for plugin ownership. |
+| SB03 | 03-03-settings-schema-canonicalization-and-validator | Prerequisite | Completed | SB02 | Extract/adapt canonical settings schema/state/validator from connector infrastructure. |
+| SB04 | 04-04-settings-renderer-registry-and-schema-fallback | Prerequisite | Completed | SB03 | Create renderer registry and schema fallback UI; begin de-hardcoding workflow settings UI. |
+| SB05 | 05-05-secret-runtime-authorization-and-plugin-secret-broker | Prerequisite | Completed | SB01,SB03 | Make secrets consumer-bound and introduce plugin-facing secret broker contract. |
+| SB06 | 06-06-workspace-file-storage-project-facades | Prerequisite | Completed | SB01 | Create plugin-safe workspace/storage/project-structure facades and fix concrete Workbench leakage. |
+| SB07 | 07-07-policy-observability-and-sanitization | Prerequisite | Completed | SB02,SB05,SB06 | Add execution policy/audit/sanitization foundations for plugin executor calls. |
+| SB08 | 08-08-architecture-review-gate-foundations | Review Gate | Completed | SB01-SB07 | Mandatory foundation review before plugin module starts. |
+| SB09 | 09-09-plugins-abstractions-project-and-manifest | MVP | Completed | SB08 | Create plugin abstractions project and manifest/capability contracts. |
+| SB10 | 10-10-plugins-module-catalog-and-persistence | MVP | Completed | SB09 | Create Plugins module, catalog, installed state, API wiring, composition, migrations. |
 | SB11 | 11-11-plugin-settings-page-and-connection-model | MVP | Ready | SB10,SB04,SB05 | Add plugin catalog/settings UI, connection settings, health check surface. |
 | SB12 | 12-12-workflow-plugin-executor-bridge | MVP | Ready | SB10,SB11,SB02 | Bridge plugin executors into workflow catalog/canvas/invoker with connection selection. |
 | SB13 | 13-13-sample-bundled-plugin | MVP | Ready | SB12,SB07 | Add a small bundled external-service plugin proving settings, secrets, executor, and workflow usage. |

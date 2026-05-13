@@ -55,6 +55,126 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
+    public void BuiltInDescriptorsExposeSourceAvailabilityAndSchemaMetadata()
+    {
+        var descriptor = BuiltInWorkflowExecutorDescriptors.StorageFile;
+        var planned = BuiltInWorkflowExecutorDescriptors.Planned[0];
+
+        Assert.Equal(WorkflowExecutorSourceKind.BuiltIn, descriptor.Source.Kind);
+        Assert.Equal(WorkflowExecutorSourceIds.BuiltIn, descriptor.Source.SourceId);
+        Assert.Equal(WorkflowExecutorTrustLevel.Application, descriptor.Source.TrustLevel);
+        Assert.Equal(WorkflowExecutorAvailabilityKind.Available, descriptor.Availability.Kind);
+        Assert.True(descriptor.CanExecute);
+        Assert.Equal(WorkflowExecutorSettingsSchemaKind.JsonSchema, descriptor.SettingsSchema.Kind);
+        Assert.Equal(descriptor.SettingsSchemaJson, descriptor.SettingsSchema.SchemaJson);
+
+        Assert.False(planned.CanExecute);
+        Assert.False(planned.IsImplemented);
+        Assert.Equal(WorkflowExecutorAvailabilityKind.Planned, planned.Availability.Kind);
+        Assert.False(planned.Availability.IsRunnable);
+    }
+
+    [Fact]
+    public void WorkflowExecutorDescriptorDeserializesLegacyJsonWithDefaultMetadata()
+    {
+        const string legacyJson = """
+            {
+              "id": "storage.file",
+              "name": "Workspace files",
+              "description": "Legacy descriptor",
+              "category": "Storage",
+              "iconName": "folder_open",
+              "setupRendererKey": "builtin.storage-file",
+              "inputShape": {
+                "kind": "Text",
+                "schemaJson": "",
+                "description": "Plain text"
+              },
+              "resultShape": {
+                "kind": "Json",
+                "schemaJson": "{}",
+                "description": "JSON payload"
+              },
+              "settingsSchemaJson": "{\"type\":\"object\"}",
+              "defaultSettingsJson": "{}",
+              "defaultPolicy": {
+                "timeoutSeconds": 30,
+                "maxRetryAttempts": 0,
+                "retryDelayMilliseconds": 250,
+                "captureOutputArtifact": false
+              },
+              "isImplemented": true
+            }
+            """;
+
+        var descriptor = System.Text.Json.JsonSerializer.Deserialize<WorkflowExecutorDescriptor>(
+            legacyJson,
+            new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web)
+            {
+                Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
+            });
+
+        Assert.NotNull(descriptor);
+        Assert.True(descriptor.CanExecute);
+        Assert.Equal(WorkflowExecutorSourceKind.BuiltIn, descriptor.Source.Kind);
+        Assert.Equal(WorkflowExecutorAvailabilityKind.Available, descriptor.Availability.Kind);
+        Assert.Equal(WorkflowExecutorSettingsSchemaKind.JsonSchema, descriptor.SettingsSchema.Kind);
+        Assert.Equal("{\"type\":\"object\"}", descriptor.SettingsSchema.SchemaJson);
+    }
+
+    [Fact]
+    public void ValidatorRejectsPlannedExecutorNode()
+    {
+        var plannedExecutor = new PlannedWorkflowExecutor(BuiltInWorkflowExecutorDescriptors.Planned[0]);
+        var catalog = new WorkflowExecutorCatalog([plannedExecutor]);
+        var validator = new WorkflowDefinitionValidator(catalog);
+        var definition = CreateDefinition(
+        [
+            CreateNode("start", WorkflowNodeKind.Start),
+            CreateExecutorNode("tool", plannedExecutor.Descriptor.Id),
+            CreateNode("end", WorkflowNodeKind.End)
+        ], [
+            CreateEdge("start-tool", "start", "tool"),
+            CreateEdge("tool-end", "tool", "end")
+        ]);
+
+        var result = validator.Validate(definition, []);
+
+        Assert.Contains(result.Issues, issue =>
+            issue.Code == WorkflowValidationIssueCode.InvalidExecutorReference &&
+            issue.Message.Contains("not runnable", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task InvokerRejectsPlannedExecutorBeforeCallingImplementation()
+    {
+        var plannedExecutor = new PlannedWorkflowExecutor(BuiltInWorkflowExecutorDescriptors.Planned[0]);
+        var catalog = new WorkflowExecutorCatalog([plannedExecutor]);
+        var invoker = new WorkflowExecutorInvoker(catalog, [plannedExecutor]);
+        var node = CreateExecutorNode("tool", plannedExecutor.Descriptor.Id);
+
+        var exception = await Assert.ThrowsAsync<WorkflowExecutorUnavailableException>(() => invoker.ExecuteAsync(
+            CreateDefinition([node], [], "tool"),
+            node,
+            new WorkflowNodeInput("{}")).AsTask());
+
+        Assert.Equal(plannedExecutor.Descriptor.Id, exception.ExecutorId);
+        Assert.Equal(WorkflowExecutorAvailabilityKind.Planned, exception.Availability.Kind);
+    }
+
+    [Fact]
+    public void InvokerRejectsDuplicateExecutorImplementations()
+    {
+        var first = new RecordingWorkflowExecutor();
+        var second = new RecordingWorkflowExecutor();
+        var catalog = new WorkflowExecutorCatalog([first]);
+
+        var exception = Assert.Throws<InvalidOperationException>(() => new WorkflowExecutorInvoker(catalog, [first, second]));
+
+        Assert.Contains(WorkflowExecutorIds.StorageFile.Value, exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void ValidatorRejectsUnknownExecutorId()
     {
         var catalog = new WorkflowExecutorCatalog([new RecordingWorkflowExecutor()]);
@@ -937,9 +1057,7 @@ public sealed class WorkflowExecutorTests
 
         await RecordAsync("project structure reports missing host service", async () =>
         {
-            var provider = new ServiceCollection().BuildServiceProvider();
-            var scopeFactory = provider.GetRequiredService<IServiceScopeFactory>();
-            await Assert.ThrowsAsync<InvalidOperationException>(() => ExecuteDirectAsync(new ProjectStructureWorkflowExecutor(scopeFactory), new WorkflowProjectStructureExecutorSettings
+            await Assert.ThrowsAsync<InvalidOperationException>(() => ExecuteDirectAsync(new ProjectStructureWorkflowExecutor(new UnavailableProjectStructureRuntimeGateway()), new WorkflowProjectStructureExecutorSettings
             {
                 Operation = WorkflowProjectStructureOperation.ListProjects,
                 ProjectId = Guid.NewGuid()

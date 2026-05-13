@@ -79,6 +79,7 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
             return new WorkflowBackendStartResult(failed, [failedEvent], [], []);
         }
 
+        using var auditScope = WorkflowExecutorExecutionAuditScope.Push(runId);
         await using var run = await InProcessExecution.RunAsync(
             build.Workflow,
             new WorkflowNodeInput(request.InputJson),

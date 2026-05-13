@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -79,10 +79,10 @@
 
 ## Acceptance Checklist
 
-- [ ] Plugin executor calls have an observability/audit plan tied to workflow run/node/plugin/connection ids.
-- [ ] Settings and errors have redacted summaries.
-- [ ] Payload and artifact capture policies are explicit.
-- [ ] Tests verify secret values do not appear in plugin execution logs/errors.
+- [x] Plugin executor calls have an observability/audit plan tied to workflow run/node/plugin/connection ids.
+- [x] Settings and errors have redacted summaries.
+- [x] Payload and artifact capture policies are explicit.
+- [x] Tests verify secret values do not appear in plugin execution logs/errors.
 
 ## Proof Required
 
@@ -95,7 +95,7 @@
 
 ## Progression Gate
 
-- Passed only when plugin execution can be observed without leaking secrets or unbounded payloads.
+- Passed. `WorkflowExecutorInvoker` now emits redacted execution audit records through `IWorkflowExecutorExecutionObserver`, plugin executor output payloads are capped, and plugin failure/settings summaries are sanitized before reaching audit records or invocation exceptions.
 
 ## Suggested Agent Prompt
 

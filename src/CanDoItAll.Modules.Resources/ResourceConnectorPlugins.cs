@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.SharedKernel.Configuration;
 
 namespace CanDoItAll.Modules.Resources;
 
@@ -410,7 +411,7 @@ public sealed class ResourceConnectorPluginRegistry(IEnumerable<IResourceConnect
     private static ConnectorConfigFieldDescriptor Field(
         string key,
         string label,
-        ConnectorConfigFieldType fieldType,
+        ConfigurationFieldType fieldType,
         bool isRequired,
         string helpText)
     {

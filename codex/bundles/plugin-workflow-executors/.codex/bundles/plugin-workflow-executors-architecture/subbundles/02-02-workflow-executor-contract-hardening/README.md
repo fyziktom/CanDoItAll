@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -87,10 +87,10 @@
 
 ## Acceptance Checklist
 
-- [ ] Workflow executor descriptors expose or can be associated with source/provenance, availability, plugin ownership, version, and settings schema metadata.
-- [ ] Current built-in executors remain backward compatible.
-- [ ] Unimplemented/planned/unavailable executors cannot be treated as runnable without explicit validation/runtime handling.
-- [ ] Duplicate executor id behavior remains deterministic and tested.
+- [x] Workflow executor descriptors expose or can be associated with source/provenance, availability, plugin ownership, version, and settings schema metadata.
+- [x] Current built-in executors remain backward compatible.
+- [x] Unimplemented/planned/unavailable executors cannot be treated as runnable without explicit validation/runtime handling.
+- [x] Duplicate executor id behavior remains deterministic and tested.
 
 ## Proof Required
 

@@ -22,6 +22,7 @@ public static class SecurityModuleServiceCollectionExtensions
             SecretVaultFactory.CreateDefault(serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<SecretVaultOptions>>().Value));
         services.AddSingleton<ISecretRuntimeResolver, SecretRuntimeResolver>();
         services.AddSingleton<IStorageSecretResolver, StorageSecretResolver>();
+        services.AddScoped<IPluginSecretBroker, PluginSecretBroker>();
         services.AddScoped<SecretService>();
         return services;
     }

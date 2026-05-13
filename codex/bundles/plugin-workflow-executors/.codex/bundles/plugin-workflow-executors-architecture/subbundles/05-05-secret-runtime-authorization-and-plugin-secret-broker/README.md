@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -81,10 +81,10 @@
 
 ## Acceptance Checklist
 
-- [ ] Secret runtime resolution enforces consumer type and consumer id for plugin/executor/connection scenarios.
-- [ ] A plugin-facing secret broker contract exists or is ready to be used by the plugin module.
-- [ ] Secret references in settings are persisted as ids/bindings only.
-- [ ] Tests prove forbidden secrets are rejected and logs/messages are redacted.
+- [x] Secret runtime resolution enforces consumer type and consumer id for plugin/executor/connection scenarios.
+- [x] A plugin-facing secret broker contract exists or is ready to be used by the plugin module.
+- [x] Secret references in settings are persisted as ids/bindings only.
+- [x] Tests prove forbidden secrets are rejected and logs/messages are redacted.
 
 ## Proof Required
 
@@ -94,11 +94,11 @@
 
 ## Browser Validation Logging
 
-- N/A unless secret picker UI changes; if changed, capture settings secret picker proof.
+- N/A. SB05 changed runtime authorization and broker contracts, not picker UI.
 
 ## Progression Gate
 
-- Passed only when a plugin/executor/connection cannot resolve an unbound secret even if it knows the secret id.
+- Passed. Plugin connection resolution requires a persisted `SecretReference` binding for the plugin connection consumer and purpose; knowing a secret id is not sufficient.
 
 ## Suggested Agent Prompt
 

@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.Modules.Security;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workspace;
@@ -206,9 +207,7 @@ public sealed partial class WorkspaceService
                 clock.GetUtcNow());
         }
 
-        var secretValue = record.CredentialSecretId.HasValue
-            ? (await secretService.GetAsync(record.CredentialSecretId.Value, cancellationToken))?.SecretValue
-            : null;
+        var secretValue = await ResolveStorageCredentialAsync(record, cancellationToken);
         var result = await driver.TestConnectionAsync(record, secretValue, cancellationToken);
         model.CapabilityMask = result.CapabilityMask;
         model.HealthStatus = result.HealthStatus;
@@ -252,6 +251,25 @@ public sealed partial class WorkspaceService
             result.HealthStatus,
             result.CapabilityMask,
             result.TestedAtUtc);
+    }
+
+    private async Task<string?> ResolveStorageCredentialAsync(
+        StorageCatalogRecord record,
+        CancellationToken cancellationToken)
+    {
+        if (record.CredentialSecretId is not { } secretId)
+        {
+            return null;
+        }
+
+        return await secretRuntimeResolver.ResolveValueAsync(
+            new SecretRuntimeRequest(
+                secretId,
+                SecretRuntimePurposes.StorageCredential,
+                [secretId],
+                ConsumerType: SecretRuntimeConsumerTypes.StorageCredential,
+                ConsumerId: SecretRuntimeConsumerIds.StorageCatalog(record.Id)),
+            cancellationToken);
     }
 
     public async Task<IReadOnlyList<StorageRoutingPreferenceSummary>> ListStorageRoutingDefaultsAsync(CancellationToken cancellationToken = default)

@@ -908,8 +908,8 @@ internal static class WorkflowCanvasDefinitionMapper
         {
             chips.Add(new CanvasWorkbenchChip
             {
-                Text = executor.IsImplemented ? executor.Name : $"{executor.Name} planned",
-                Tone = executor.IsImplemented ? "accent" : "warning"
+                Text = executor.CanExecute ? executor.Name : $"{executor.Name} {executor.Availability.Kind.ToString().ToLowerInvariant()}",
+                Tone = executor.CanExecute ? "accent" : "warning"
             });
         }
 

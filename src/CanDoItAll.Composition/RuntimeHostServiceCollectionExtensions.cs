@@ -9,6 +9,7 @@ using CanDoItAll.Modules.Automation;
 using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Factory;
+using CanDoItAll.Modules.Plugins;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Prompts;
@@ -49,6 +50,7 @@ public static class RuntimeHostServiceCollectionExtensions
         services.AddResourcesModule();
         services.AddPromptsModule();
         services.AddFactoryModule();
+        services.AddPluginsModule();
         services.AddProcessesModule(configuration);
         services.AddValidationModule();
         services.AddTestLabModule();

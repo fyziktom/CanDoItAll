@@ -141,6 +141,7 @@ public sealed partial class WorkspaceService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     IClock clock,
     SecretService secretService,
+    ISecretRuntimeResolver secretRuntimeResolver,
     ProviderRegistry providerRegistry,
     IProviderRuntimeGateway providerRuntimeGateway,
     IStorageCatalogService storageCatalogService,

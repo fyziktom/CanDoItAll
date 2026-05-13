@@ -41,6 +41,7 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             var (workspaceRoot, scope) = ResolveCurrentWorkspaceScope(serviceProvider);
             return new WorkspaceFileService(workspaceRoot, scope);
         });
+        services.TryAddScoped<IPluginWorkspaceFiles, PluginWorkspaceFiles>();
         services.TryAddScoped<IWorkspacePathResolutionService>(serviceProvider =>
         {
             var (workspaceRoot, scope) = ResolveCurrentWorkspaceScope(serviceProvider);
@@ -69,6 +70,8 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddScoped<IDatabaseTransferHandler, AiAgentsDatabaseTransferHandler>();
         services.AddScoped<IProviderRuntimeGateway, AgentFrameworkProviderRuntimeGateway>();
         services.AddScoped<IAiTechnicalAgentBridge, AgentFrameworkAiTechnicalAgentBridge>();
+        services.TryAddScoped<IPluginStorageGateway, PluginStorageGateway>();
+        services.TryAddScoped<IProjectStructureRuntimeGateway, UnavailableProjectStructureRuntimeGateway>();
         services.TryAddScoped<ISpreadsheetDocumentService, ClosedXmlSpreadsheetDocumentService>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, WorkspaceFileWorkflowExecutor>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, SourceIngestionWorkflowExecutor>());
@@ -82,6 +85,7 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         }
 
         services.TryAddScoped<IWorkflowExecutorCatalog, WorkflowExecutorCatalog>();
+        services.TryAddScoped<IWorkflowExecutorExecutionObserver, NullWorkflowExecutorExecutionObserver>();
         services.TryAddScoped<IWorkflowExecutorInvoker, WorkflowExecutorInvoker>();
         services.TryAddScoped<IWorkflowLlmComponentInvoker, MafWorkflowLlmComponentInvoker>();
         services.TryAddScoped<IWorkflowDefinitionValidator, WorkflowDefinitionValidator>();

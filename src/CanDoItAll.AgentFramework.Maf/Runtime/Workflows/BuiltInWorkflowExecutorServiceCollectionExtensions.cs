@@ -10,6 +10,7 @@ public static class BuiltInWorkflowExecutorServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
+        services.TryAddSingleton<IProjectStructureRuntimeGateway, UnavailableProjectStructureRuntimeGateway>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowExecutor, WorkspaceFileWorkflowExecutor>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowExecutor, SourceIngestionWorkflowExecutor>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowExecutor, HttpFetchWorkflowExecutor>());

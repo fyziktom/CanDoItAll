@@ -1,5 +1,6 @@
 @using CanDoItAll.Modules.Security
 @using CanDoItAll.Modules.Workspace
+@using CanDoItAll.SharedKernel.Configuration
 
 <div>
     <label class="cda-field-label">@Field.Label</label>
@@ -23,11 +24,25 @@
             </label>
             break;
         case ConnectorConfigFieldType.Json:
+        case ConnectorConfigFieldType.MultilineText:
             <InputTextArea Value="@TextValue"
                            ValueChanged="HandleTextChanged"
                            ValueExpression="@(() => TextValue)"
                            class="@($"{InputClass} cda-input--textarea min-h-24")"
                            data-testid="@TestId" />
+            break;
+        case ConnectorConfigFieldType.Select:
+            <InputSelect TValue="string"
+                         Value="@TextValue"
+                         ValueChanged="EventCallback.Factory.Create<string>(this, HandleTextChanged)"
+                         ValueExpression="@(() => TextValue)"
+                         class="@InputClass"
+                         data-testid="@TestId">
+                @foreach (var option in Field.Options)
+                {
+                    <option value="@option.Value">@option.Label</option>
+                }
+            </InputSelect>
             break;
         case ConnectorConfigFieldType.SecretReference:
             <InputSelect TValue="string"
@@ -61,10 +76,10 @@
 
 @code {
     [Parameter]
-    public required ConnectorConfigFieldDescriptor Field { get; set; }
+    public required ConfigurationFieldDescriptor Field { get; set; }
 
     [Parameter]
-    public required ConnectorConfigState State { get; set; }
+    public required ConfigurationState State { get; set; }
 
     [Parameter]
     public IReadOnlyList<SecretListItem> Secrets { get; set; } = [];
@@ -74,6 +89,9 @@
 
     [Parameter]
     public string? TestId { get; set; }
+
+    [Parameter]
+    public EventCallback<ConfigurationState> StateChanged { get; set; }
 
     private string TextValue
     {
@@ -93,18 +111,21 @@
         set => State.SetBoolean(Field.Key, value);
     }
 
-    private void HandleTextChanged(string value)
+    private async Task HandleTextChanged(string value)
     {
         TextValue = value;
+        await StateChanged.InvokeAsync(State);
     }
 
-    private void HandleNumberChanged(int? value)
+    private async Task HandleNumberChanged(int? value)
     {
         NumberValue = value;
+        await StateChanged.InvokeAsync(State);
     }
 
-    private void HandleBooleanChanged(bool value)
+    private async Task HandleBooleanChanged(bool value)
     {
         BooleanValue = value;
+        await StateChanged.InvokeAsync(State);
     }
 }

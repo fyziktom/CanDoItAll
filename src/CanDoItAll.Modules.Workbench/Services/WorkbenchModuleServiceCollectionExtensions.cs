@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
@@ -36,6 +37,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<ProjectStructureProcessNodeService>();
         services.AddScoped<ProjectStructureWorkflowNodeService>();
         services.AddScoped<ProjectStructureAgentService>();
+        services.AddScoped<IProjectStructureRuntimeGateway, WorkbenchProjectStructureRuntimeGateway>();
         services.AddScoped<IProjectGanttPreviewService, ProjectGanttPreviewService>();
         services.AddScoped<IProjectStructureLocalFileOpener, ProjectStructureLocalFileOpener>();
         services.AddScoped<IProjectStructureRuntimeLauncher, ProjectStructureRuntimeLauncher>();

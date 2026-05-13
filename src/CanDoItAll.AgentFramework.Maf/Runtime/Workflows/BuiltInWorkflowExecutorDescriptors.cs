@@ -1,13 +1,21 @@
+using System.Globalization;
+using System.Reflection;
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.SharedKernel.Configuration;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
 public static class BuiltInWorkflowExecutorDescriptors
 {
+    private const string SettingsSchemaVersion = "1.0";
+
     private static readonly WorkflowValueShape JsonShape = new(
         WorkflowValueShapeKind.Json,
         "{}",
         "JSON payload");
+    private static readonly WorkflowExecutorSourceDescriptor BuiltInSource = WorkflowExecutorSourceDescriptor.BuiltIn(
+        typeof(BuiltInWorkflowExecutorDescriptors).Assembly.GetName().Version?.ToString() ?? string.Empty);
 
     public static WorkflowExecutorDescriptor StorageFile { get; } = Create(
         WorkflowExecutorIds.StorageFile,
@@ -87,6 +95,8 @@ public static class BuiltInWorkflowExecutorDescriptors
         TSettings defaultSettings,
         WorkflowExecutorExecutionPolicy? defaultPolicy = null)
     {
+        const string schemaJson = "{\"type\":\"object\"}";
+        var configurationSchema = CreateSettingsConfigurationSchema<TSettings>();
         return new WorkflowExecutorDescriptor(
             id,
             name,
@@ -96,10 +106,16 @@ public static class BuiltInWorkflowExecutorDescriptors
             setupRendererKey,
             WorkflowValueShape.Text,
             JsonShape,
-            "{\"type\":\"object\"}",
+            schemaJson,
             WorkflowExecutorJson.Serialize(defaultSettings),
             defaultPolicy ?? WorkflowExecutorExecutionPolicy.Default,
-            IsImplemented: true);
+            IsImplemented: true)
+        {
+            Source = BuiltInSource,
+            Availability = WorkflowExecutorAvailabilityDescriptor.Available(),
+            SettingsSchema = WorkflowExecutorSettingsSchemaDescriptor.JsonSchema(SettingsSchemaVersion, schemaJson),
+            ConfigurationSchema = configurationSchema
+        };
     }
 
     private static WorkflowExecutorDescriptor CreatePlanned(
@@ -110,6 +126,7 @@ public static class BuiltInWorkflowExecutorDescriptors
         string iconName,
         string setupRendererKey)
     {
+        const string schemaJson = "{\"type\":\"object\"}";
         return new WorkflowExecutorDescriptor(
             id,
             name,
@@ -119,10 +136,86 @@ public static class BuiltInWorkflowExecutorDescriptors
             setupRendererKey,
             WorkflowValueShape.Text,
             JsonShape,
-            "{\"type\":\"object\"}",
+            schemaJson,
             "{}",
             WorkflowExecutorExecutionPolicy.Default,
-            IsImplemented: false);
+            IsImplemented: false)
+        {
+            Source = BuiltInSource,
+            Availability = WorkflowExecutorAvailabilityDescriptor.Planned("Executor is listed for roadmap visibility but is not implemented in this host."),
+            SettingsSchema = WorkflowExecutorSettingsSchemaDescriptor.JsonSchema(SettingsSchemaVersion, schemaJson),
+            ConfigurationSchema = ConfigurationSchema.Empty(SettingsSchemaVersion)
+        };
+    }
+
+    private static ConfigurationSchema CreateSettingsConfigurationSchema<TSettings>()
+    {
+        var fields = typeof(TSettings)
+            .GetProperties(BindingFlags.Instance | BindingFlags.Public)
+            .Where(property => property.GetMethod is not null)
+            .Select(property => new ConfigurationFieldDescriptor(
+                JsonNamingPolicy.CamelCase.ConvertName(property.Name),
+                property.Name,
+                ResolveFieldType(property.PropertyType),
+                IsRequired: false,
+                HelpText: string.Empty)
+            {
+                Options = ResolveOptions(property.PropertyType)
+            })
+            .ToArray();
+
+        return new ConfigurationSchema(SettingsSchemaVersion, fields);
+    }
+
+    private static ConfigurationFieldType ResolveFieldType(Type propertyType)
+    {
+        var type = Nullable.GetUnderlyingType(propertyType) ?? propertyType;
+        if (type == typeof(bool))
+        {
+            return ConfigurationFieldType.Boolean;
+        }
+
+        if (type == typeof(int) ||
+            type == typeof(long) ||
+            type == typeof(decimal) ||
+            type == typeof(double) ||
+            type == typeof(float))
+        {
+            return ConfigurationFieldType.Number;
+        }
+
+        if (type.IsEnum)
+        {
+            return ConfigurationFieldType.Select;
+        }
+
+        if (type == typeof(string) || type == typeof(Guid))
+        {
+            return ConfigurationFieldType.Text;
+        }
+
+        return ConfigurationFieldType.Json;
+    }
+
+    private static IReadOnlyList<ConfigurationFieldOption> ResolveOptions(Type propertyType)
+    {
+        var type = Nullable.GetUnderlyingType(propertyType) ?? propertyType;
+        if (!type.IsEnum)
+        {
+            return [];
+        }
+
+        return Enum.GetValues(type)
+            .Cast<object>()
+            .Select(value =>
+            {
+                var name = Enum.GetName(type, value) ?? value.ToString() ?? string.Empty;
+                return new ConfigurationFieldOption(name, name)
+                {
+                    AcceptedValues = [Convert.ToInt64(value, CultureInfo.InvariantCulture).ToString(CultureInfo.InvariantCulture)]
+                };
+            })
+            .ToArray();
     }
 }
 

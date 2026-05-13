@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using CanDoItAll.SharedKernel.Configuration;
 
 namespace CanDoItAll.AgentFramework.Models;
 
@@ -57,6 +58,186 @@ public enum WorkflowExecutorCategoryKind
     Human,
     Utility,
     Command
+}
+
+public enum WorkflowExecutorSourceKind
+{
+    BuiltIn,
+    BundledPlugin,
+    LocalPackage,
+    RemotePackage
+}
+
+public enum WorkflowExecutorTrustLevel
+{
+    Application,
+    BundledPlugin,
+    LocalPackage,
+    RemotePackage,
+    Untrusted
+}
+
+public enum WorkflowExecutorAvailabilityKind
+{
+    Available,
+    Planned,
+    Disabled,
+    Unavailable,
+    Incompatible
+}
+
+public enum WorkflowExecutorSettingsSchemaKind
+{
+    None,
+    JsonSchema
+}
+
+public static class WorkflowExecutorSourceIds
+{
+    public const string BuiltIn = "candoitall.builtins";
+}
+
+public sealed record WorkflowExecutorSourceDescriptor
+{
+    public WorkflowExecutorSourceDescriptor(
+        WorkflowExecutorSourceKind kind,
+        string sourceId,
+        string sourceVersion,
+        string pluginId,
+        string packageId,
+        WorkflowExecutorTrustLevel trustLevel)
+    {
+        if (string.IsNullOrWhiteSpace(sourceId))
+        {
+            throw new ArgumentException("Workflow executor source id cannot be empty.", nameof(sourceId));
+        }
+
+        Kind = kind;
+        SourceId = sourceId.Trim();
+        SourceVersion = string.IsNullOrWhiteSpace(sourceVersion) ? string.Empty : sourceVersion.Trim();
+        PluginId = string.IsNullOrWhiteSpace(pluginId) ? string.Empty : pluginId.Trim();
+        PackageId = string.IsNullOrWhiteSpace(packageId) ? string.Empty : packageId.Trim();
+        TrustLevel = trustLevel;
+    }
+
+    public WorkflowExecutorSourceKind Kind { get; init; }
+
+    public string SourceId { get; init; }
+
+    public string SourceVersion { get; init; }
+
+    public string PluginId { get; init; }
+
+    public string PackageId { get; init; }
+
+    public WorkflowExecutorTrustLevel TrustLevel { get; init; }
+
+    public static WorkflowExecutorSourceDescriptor BuiltIn(string sourceVersion = "")
+        => new(
+            WorkflowExecutorSourceKind.BuiltIn,
+            WorkflowExecutorSourceIds.BuiltIn,
+            sourceVersion,
+            pluginId: string.Empty,
+            packageId: string.Empty,
+            WorkflowExecutorTrustLevel.Application);
+
+    public static WorkflowExecutorSourceDescriptor BundledPlugin(
+        string pluginId,
+        string sourceVersion)
+        => new(
+            WorkflowExecutorSourceKind.BundledPlugin,
+            pluginId,
+            sourceVersion,
+            pluginId,
+            packageId: string.Empty,
+            WorkflowExecutorTrustLevel.BundledPlugin);
+}
+
+public sealed record WorkflowExecutorAvailabilityDescriptor
+{
+    public WorkflowExecutorAvailabilityDescriptor(
+        WorkflowExecutorAvailabilityKind kind,
+        bool isRunnable,
+        string reasonCode,
+        string message)
+    {
+        Kind = kind;
+        IsRunnable = isRunnable;
+        ReasonCode = string.IsNullOrWhiteSpace(reasonCode) ? string.Empty : reasonCode.Trim();
+        Message = string.IsNullOrWhiteSpace(message) ? string.Empty : message.Trim();
+    }
+
+    public WorkflowExecutorAvailabilityKind Kind { get; init; }
+
+    public bool IsRunnable { get; init; }
+
+    public string ReasonCode { get; init; }
+
+    public string Message { get; init; }
+
+    public static WorkflowExecutorAvailabilityDescriptor Available()
+        => new(
+            WorkflowExecutorAvailabilityKind.Available,
+            isRunnable: true,
+            reasonCode: string.Empty,
+            message: "Executor is available.");
+
+    public static WorkflowExecutorAvailabilityDescriptor Planned(string message)
+        => new(
+            WorkflowExecutorAvailabilityKind.Planned,
+            isRunnable: false,
+            reasonCode: "planned",
+            message: message);
+
+    public static WorkflowExecutorAvailabilityDescriptor Disabled(string message)
+        => new(
+            WorkflowExecutorAvailabilityKind.Disabled,
+            isRunnable: false,
+            reasonCode: "disabled",
+            message: message);
+
+    public static WorkflowExecutorAvailabilityDescriptor Unavailable(string reasonCode, string message)
+        => new(
+            WorkflowExecutorAvailabilityKind.Unavailable,
+            isRunnable: false,
+            reasonCode,
+            message);
+
+    public static WorkflowExecutorAvailabilityDescriptor Incompatible(string message)
+        => new(
+            WorkflowExecutorAvailabilityKind.Incompatible,
+            isRunnable: false,
+            reasonCode: "incompatible",
+            message: message);
+}
+
+public sealed record WorkflowExecutorSettingsSchemaDescriptor
+{
+    public WorkflowExecutorSettingsSchemaDescriptor(
+        WorkflowExecutorSettingsSchemaKind kind,
+        string version,
+        string schemaJson)
+    {
+        Kind = kind;
+        Version = string.IsNullOrWhiteSpace(version) ? string.Empty : version.Trim();
+        SchemaJson = string.IsNullOrWhiteSpace(schemaJson) ? string.Empty : schemaJson.Trim();
+    }
+
+    public WorkflowExecutorSettingsSchemaKind Kind { get; init; }
+
+    public string Version { get; init; }
+
+    public string SchemaJson { get; init; }
+
+    public bool HasSchema => Kind != WorkflowExecutorSettingsSchemaKind.None && !string.IsNullOrWhiteSpace(SchemaJson);
+
+    public static WorkflowExecutorSettingsSchemaDescriptor None()
+        => new(WorkflowExecutorSettingsSchemaKind.None, version: string.Empty, schemaJson: string.Empty);
+
+    public static WorkflowExecutorSettingsSchemaDescriptor JsonSchema(
+        string version,
+        string schemaJson)
+        => new(WorkflowExecutorSettingsSchemaKind.JsonSchema, version, schemaJson);
 }
 
 public enum WorkflowStorageFileOperation
@@ -158,7 +339,21 @@ public sealed record WorkflowExecutorDescriptor(
     string SettingsSchemaJson,
     string DefaultSettingsJson,
     WorkflowExecutorExecutionPolicy DefaultPolicy,
-    bool IsImplemented);
+    bool IsImplemented)
+{
+    public WorkflowExecutorSourceDescriptor Source { get; init; } = WorkflowExecutorSourceDescriptor.BuiltIn();
+
+    public WorkflowExecutorAvailabilityDescriptor Availability { get; init; } = IsImplemented
+        ? WorkflowExecutorAvailabilityDescriptor.Available()
+        : WorkflowExecutorAvailabilityDescriptor.Planned("Executor is planned but not implemented.");
+
+    public WorkflowExecutorSettingsSchemaDescriptor SettingsSchema { get; init; } =
+        WorkflowExecutorSettingsSchemaDescriptor.JsonSchema("1.0", SettingsSchemaJson);
+
+    public ConfigurationSchema ConfigurationSchema { get; init; } = ConfigurationSchema.Empty();
+
+    public bool CanExecute => IsImplemented && Availability.IsRunnable;
+}
 
 public sealed record WorkflowStorageFileExecutorSettings
 {
