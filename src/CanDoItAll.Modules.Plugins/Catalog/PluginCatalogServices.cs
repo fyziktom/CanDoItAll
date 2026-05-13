@@ -50,6 +50,14 @@ public sealed class PluginInstallationStore(
             .SingleOrDefaultAsync(item => item.PluginId == pluginId.Value, cancellationToken);
     }
 
+    public PluginInstallationRecord? Find(PluginId pluginId)
+    {
+        using var dbContext = dbContextFactory.CreateDbContext();
+        return dbContext.Set<PluginInstallationRecord>()
+            .AsNoTracking()
+            .SingleOrDefault(item => item.PluginId == pluginId.Value);
+    }
+
     public async Task<Result<PluginInstallationRecord>> InstallAsync(
         PluginDescriptor descriptor,
         bool enable,

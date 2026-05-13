@@ -256,7 +256,9 @@ internal sealed class ApiTestHost : IAsyncDisposable
 
     public HttpClient Client { get; }
 
-    public static async Task<ApiTestHost> CreateAsync(bool jwtEnabled)
+    public static async Task<ApiTestHost> CreateAsync(
+        bool jwtEnabled,
+        Action<IServiceCollection>? configureServices = null)
     {
         var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-api-tests");
         var activeProfile = testEnvironment.CreateManagedSqliteProfile("api-host");
@@ -288,6 +290,7 @@ internal sealed class ApiTestHost : IAsyncDisposable
             builder.Environment,
             registerTestHostApplicationLifetime: false);
         builder.Services.AddCanDoItAllApi(builder.Configuration);
+        configureServices?.Invoke(builder.Services);
 
         var app = builder.Build();
         app.Urls.Add("http://127.0.0.1:0");

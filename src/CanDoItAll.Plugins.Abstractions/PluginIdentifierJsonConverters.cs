@@ -68,6 +68,19 @@ public sealed class PluginRendererKeyJsonConverter : JsonConverter<PluginRendere
     }
 }
 
+public sealed class PluginHostToolRecipeIdJsonConverter : JsonConverter<PluginHostToolRecipeId>
+{
+    public override PluginHostToolRecipeId Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        return new PluginHostToolRecipeId(PluginIdentifierJsonConverterHelpers.ReadString(ref reader, nameof(PluginHostToolRecipeId)));
+    }
+
+    public override void Write(Utf8JsonWriter writer, PluginHostToolRecipeId value, JsonSerializerOptions options)
+    {
+        writer.WriteStringValue(value.Value);
+    }
+}
+
 internal static class PluginIdentifierJsonConverterHelpers
 {
     public static string ReadString(ref Utf8JsonReader reader, string typeName)

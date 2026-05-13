@@ -1,7 +1,9 @@
 @page "/plugins"
 @using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Plugins.Abstractions
 @using Microsoft.AspNetCore.Components.Web
 @inject PluginCatalogService PluginCatalog
+@inject PluginSettingsService PluginSettings
 
 <PageTitle>Plugins</PageTitle>
 
@@ -17,6 +19,13 @@
     </Header>
 
     <ChildContent>
+        @if (!string.IsNullOrWhiteSpace(statusMessage))
+        {
+            <Alert AlertStyle="@statusAlertStyle" Class="mb-4">
+                @statusMessage
+            </Alert>
+        }
+
         <SummaryTiles>
             <SummaryTile Label="Catalog" Value="@catalog.Count.ToString()" HelperText="Plugins visible to the catalog." />
             <SummaryTile Label="Installed" Value="@catalog.Count(item => item.IsInstalled).ToString()" HelperText="Persisted installations." Tone="info" />
@@ -35,7 +44,7 @@
             <Stack GapScale="LayoutGap.Medium">
                 @foreach (var plugin in catalog)
                 {
-                    <SurfaceCard>
+                    <SurfaceCard @key="plugin.PluginId.Value">
                         <Split Gap="LayoutGap.Medium">
                             <Stack GapScale="LayoutGap.Small">
                                 <Cluster Gap="LayoutGap.Small">
@@ -54,6 +63,89 @@
                                 <span>@plugin.Vendor</span>
                             </Stack>
                         </Split>
+
+                        <Cluster Gap="LayoutGap.Small" Class="mt-4">
+                            @if (!plugin.IsInstalled)
+                            {
+                                <Button Text="Install and enable"
+                                        Icon="download"
+                                        ButtonStyle="ButtonStyle.Primary"
+                                        Size="ButtonSize.Small"
+                                        IsBusy="@IsBusy(plugin.PluginId, "install")"
+                                        Click="@(() => InstallAsync(plugin))" />
+                            }
+                            else if (plugin.IsEnabled)
+                            {
+                                <Button Text="Disable"
+                                        Icon="block"
+                                        ButtonStyle="ButtonStyle.Warning"
+                                        Variant="Variant.Outlined"
+                                        Size="ButtonSize.Small"
+                                        IsBusy="@IsBusy(plugin.PluginId, "disable")"
+                                        Click="@(() => DisableAsync(plugin))" />
+                            }
+                            else
+                            {
+                                <Button Text="Enable"
+                                        Icon="play_arrow"
+                                        ButtonStyle="ButtonStyle.Success"
+                                        Size="ButtonSize.Small"
+                                        IsBusy="@IsBusy(plugin.PluginId, "enable")"
+                                        Click="@(() => EnableAsync(plugin))" />
+                            }
+                        </Cluster>
+
+                        @if (settingsByPluginId.TryGetValue(plugin.PluginId.Value, out var settings) && settings.Grants.Count > 0)
+                        {
+                            <Stack GapScale="LayoutGap.Small" Class="mt-5">
+                                <h3 class="cda-title-sm">Capability grants</h3>
+                                <Stack GapScale="LayoutGap.Tiny">
+                                    @foreach (var grant in settings.Grants)
+                                    {
+                                        <div class="grid gap-3 rounded-lg border border-[var(--cda-border-subtle)] bg-[var(--cda-surface-muted)] p-3 md:grid-cols-[minmax(0,1fr)_auto]">
+                                            <Stack GapScale="LayoutGap.Tiny">
+                                                <Cluster Gap="LayoutGap.Small">
+                                                    <StatusBadge Tone="@ResolveGrantTone(grant.State)" Text="@grant.State.ToString()" />
+                                                    <StatusBadge Tone="@ResolveRiskTone(grant.RiskKind)" Text="@grant.RiskKind.ToString()" />
+                                                    <StatusBadge Tone="neutral" Text="@grant.Capability.ToString()" />
+                                                </Cluster>
+                                                <span class="text-sm font-medium text-[var(--cda-text)]">@ResolveGrantName(grant)</span>
+                                                @if (!string.IsNullOrWhiteSpace(grant.Reason))
+                                                {
+                                                    <span class="text-sm text-[var(--cda-text-muted)]">@grant.Reason</span>
+                                                }
+                                            </Stack>
+                                            <Cluster Gap="LayoutGap.Tiny" Class="self-start">
+                                                <Button Text="Grant"
+                                                        Icon="check"
+                                                        ButtonStyle="ButtonStyle.Success"
+                                                        Size="ButtonSize.Small"
+                                                        Disabled="@(grant.State == PluginGrantState.Granted)"
+                                                        IsBusy="@IsBusy(plugin.PluginId, GrantBusyKey(grant, "grant"))"
+                                                        Click="@(() => UpdateGrantAsync(plugin, grant, PluginGrantState.Granted))" />
+                                                <Button Text="Deny"
+                                                        Icon="close"
+                                                        ButtonStyle="ButtonStyle.Danger"
+                                                        Variant="Variant.Outlined"
+                                                        Size="ButtonSize.Small"
+                                                        Disabled="@(grant.State == PluginGrantState.Denied)"
+                                                        IsBusy="@IsBusy(plugin.PluginId, GrantBusyKey(grant, "deny"))"
+                                                        Click="@(() => UpdateGrantAsync(plugin, grant, PluginGrantState.Denied))" />
+                                                <Button Text="Revoke"
+                                                        Icon="undo"
+                                                        ButtonStyle="ButtonStyle.Warning"
+                                                        Variant="Variant.Outlined"
+                                                        Size="ButtonSize.Small"
+                                                        Disabled="@(grant.State == PluginGrantState.Revoked)"
+                                                        IsBusy="@IsBusy(plugin.PluginId, GrantBusyKey(grant, "revoke"))"
+                                                        Click="@(() => UpdateGrantAsync(plugin, grant, PluginGrantState.Revoked))" />
+                                            </Cluster>
+                                        </div>
+                                    }
+                                </Stack>
+                            </Stack>
+                        }
+
                         @if (!string.IsNullOrWhiteSpace(plugin.UnavailableReason))
                         {
                             <Alert AlertStyle="AlertStyle.Warning" Class="mt-4">
@@ -69,6 +161,10 @@
 
 @code {
     private IReadOnlyList<PluginCatalogItem> catalog = [];
+    private IReadOnlyDictionary<string, PluginSettingsDetail> settingsByPluginId = new Dictionary<string, PluginSettingsDetail>(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> busyActions = new(StringComparer.OrdinalIgnoreCase);
+    private string statusMessage = string.Empty;
+    private AlertStyle statusAlertStyle = AlertStyle.Info;
 
     protected override async Task OnInitializedAsync()
     {
@@ -78,7 +174,112 @@
     private async Task LoadAsync()
     {
         catalog = await PluginCatalog.ListCatalogAsync();
+        var settings = new Dictionary<string, PluginSettingsDetail>(StringComparer.OrdinalIgnoreCase);
+        foreach (var plugin in catalog)
+        {
+            var detail = await PluginSettings.GetSettingsAsync(plugin.PluginId);
+            if (detail is not null)
+            {
+                settings[plugin.PluginId.Value] = detail;
+            }
+        }
+
+        settingsByPluginId = settings;
     }
+
+    private Task InstallAsync(PluginCatalogItem plugin)
+        => RunPluginActionAsync(plugin.PluginId, "install", async () =>
+        {
+            var result = await PluginCatalog.InstallAsync(plugin.PluginId, new PluginInstallRequest(Enable: true, Actor: "ui"));
+            ApplyStatus(result, $"Installed {plugin.DisplayName}.");
+        });
+
+    private Task EnableAsync(PluginCatalogItem plugin)
+        => RunPluginActionAsync(plugin.PluginId, "enable", async () =>
+        {
+            var result = await PluginCatalog.SetEnabledAsync(plugin.PluginId, isEnabled: true, new PluginInstallationUpdateRequest("ui"));
+            ApplyStatus(result, $"Enabled {plugin.DisplayName}.");
+        });
+
+    private Task DisableAsync(PluginCatalogItem plugin)
+        => RunPluginActionAsync(plugin.PluginId, "disable", async () =>
+        {
+            var result = await PluginCatalog.SetEnabledAsync(plugin.PluginId, isEnabled: false, new PluginInstallationUpdateRequest("ui"));
+            ApplyStatus(result, $"Disabled {plugin.DisplayName}.");
+        });
+
+    private Task UpdateGrantAsync(
+        PluginCatalogItem plugin,
+        PluginCapabilityGrantItem grant,
+        PluginGrantState state)
+        => RunPluginActionAsync(plugin.PluginId, GrantBusyKey(grant, state.ToString()), async () =>
+        {
+            var request = new PluginGrantUpdateRequest(
+                grant.Capability,
+                state,
+                grant.RecipeId?.Value,
+                grant.ScopeKind,
+                grant.ScopeKey,
+                grant.RiskKind,
+                $"{state} from plugin settings UI.");
+            var result = await PluginSettings.UpdateGrantAsync(plugin.PluginId, request, "ui");
+            ApplyStatus(result, $"{state} {ResolveGrantName(grant)} for {plugin.DisplayName}.");
+        });
+
+    private async Task RunPluginActionAsync(
+        PluginId pluginId,
+        string action,
+        Func<Task> operation)
+    {
+        var key = BusyKey(pluginId, action);
+        if (!busyActions.Add(key))
+        {
+            return;
+        }
+
+        statusMessage = string.Empty;
+        try
+        {
+            await operation();
+            await LoadAsync();
+        }
+        catch (Exception exception)
+        {
+            statusAlertStyle = AlertStyle.Danger;
+            statusMessage = exception.Message;
+        }
+        finally
+        {
+            busyActions.Remove(key);
+        }
+    }
+
+    private void ApplyStatus<T>(CanDoItAll.SharedKernel.Result<T> result, string successMessage)
+    {
+        if (result.IsSuccess)
+        {
+            statusAlertStyle = AlertStyle.Success;
+            statusMessage = successMessage;
+            return;
+        }
+
+        statusAlertStyle = AlertStyle.Danger;
+        statusMessage = string.Join(" ", result.Errors.Select(error => error.Message));
+    }
+
+    private bool IsBusy(PluginId pluginId, string action)
+        => busyActions.Contains(BusyKey(pluginId, action));
+
+    private static string BusyKey(PluginId pluginId, string action)
+        => $"{pluginId.Value}:{action}";
+
+    private static string GrantBusyKey(PluginCapabilityGrantItem grant, string action)
+        => $"{action}:{grant.Capability}:{grant.RecipeId?.Value ?? "capability"}";
+
+    private static string ResolveGrantName(PluginCapabilityGrantItem grant)
+        => grant.RecipeId is { } recipeId
+            ? $"{grant.Capability}: {recipeId.Value}"
+            : grant.Capability.ToString();
 
     private static string ResolveAvailabilityTone(PluginCatalogItem plugin)
         => plugin.Availability == PluginCatalogAvailabilityKind.Available
@@ -91,5 +292,22 @@
             PluginInstallationStateKind.InstalledEnabled => "success",
             PluginInstallationStateKind.InstalledDisabled => "warning",
             _ => "neutral"
+        };
+
+    private static string ResolveGrantTone(PluginGrantState state)
+        => state switch
+        {
+            PluginGrantState.Granted => "success",
+            PluginGrantState.Denied or PluginGrantState.Revoked => "danger",
+            PluginGrantState.Requested => "warning",
+            _ => "neutral"
+        };
+
+    private static string ResolveRiskTone(PluginGrantRiskKind riskKind)
+        => riskKind switch
+        {
+            PluginGrantRiskKind.High => "danger",
+            PluginGrantRiskKind.Medium => "warning",
+            _ => "info"
         };
 }

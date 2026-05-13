@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -41,6 +41,7 @@
 
 - Plugin settings application service for catalog state, connection settings, grant state, and health state.
 - API endpoints or command handlers for grant changes, connection CRUD, health checks, install, enable, and disable actions.
+- Development/validation API coverage sufficient to control plugin state like workflows/project structure APIs do, without direct database mutation.
 - UI that shows requested vs granted capabilities, risk labels, grant status, connection status, actor/timestamp, and reason when unavailable.
 - UI controls for granting/revoking file access, host-tool recipes, PowerShell recipes, Docker recipes, HTTP/network, storage, and secrets when declared.
 - Browser validation for plugin settings and permission management.
@@ -82,6 +83,7 @@
 
 - Installed/enabled plugin displays denied grants by default.
 - Grant changes persist and audit with trusted actor and timestamp.
+- API tests prove install, enable/disable, grant list/update, and connection list/update flows needed by later Qdrant workflow validation.
 - Connection settings validate schema and do not expose secret values.
 - UI shows risk labels for host commands, PowerShell, Docker, files, HTTP, storage, and secrets.
 - Browser screenshots and DOM assertions prove the controls work.

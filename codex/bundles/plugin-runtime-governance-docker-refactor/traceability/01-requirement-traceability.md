@@ -26,3 +26,5 @@
 | `R022` workflow grant check performance | `SB07` | `SB05` | Run-scoped grant snapshot tests or measurement. |
 | `R023` observability and redaction | `SB07` | `SB03`, `SB05`, `SB06` | Audit/receipt tests with redaction assertions. |
 | `R024` final validation | `SB08` | all | Completed validator, tests, browser proof, and architecture review. |
+| `R025` plugin API development control | `SB04` | `SB06`, `SB08` | API tests and Qdrant validation use plugin APIs instead of direct DB mutation. |
+| `R026` Qdrant workflow proof | `SB06` | `SB03`, `SB04`, `SB05`, `SB08` | End-to-end workflow proof starts or verifies Qdrant via Docker plugin and reads logs. |

@@ -39,4 +39,4 @@ Status: `Passed for prepared stage`
 
 ## Final Decision
 
-`Prepared`
+`Completed`

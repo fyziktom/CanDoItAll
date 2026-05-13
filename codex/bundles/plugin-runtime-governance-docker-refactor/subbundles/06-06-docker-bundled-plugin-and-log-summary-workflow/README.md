@@ -2,23 +2,25 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
-- Add a simple bundled Docker plugin and sample workflow that prove the generic plugin runtime can safely list containers, pull/start a container, read bounded logs, and hand logs to an LLM summary step.
+- Add a simple bundled Docker plugin and sample workflow that prove the generic plugin runtime can safely list containers, pull/start a container, read bounded logs, hand logs to an LLM summary step, and start or verify a Qdrant vector database container through the workflow path.
 
 ## Success Criteria
 
 - Docker plugin uses generic host-tool recipes from SB03.
 - Docker plugin requires explicit grants from SB02/SB04 and workflow enforcement from SB05.
 - Log summary workflow uses a separate LLM node, not privileged Docker plugin access to LLM credentials.
+- End-to-end proof starts or verifies Qdrant through the plugin workflow path while Docker is running.
 
 ## Covered Inputs
 
 - `N006`: Docker plugin can inspect running containers, pull/start Docker, and get logs.
 - `N007`: workflow includes LLM summary of logs.
 - `N008`: plugins remain generic.
+- `N011`: Qdrant vector database container must be started through workflow proof.
 - Requirements `R007`, `R009`, `R010`, `R014`, and `R015`.
 
 ## Prerequisites
@@ -44,6 +46,7 @@
 - Bundled Docker plugin descriptor with workflow executors for list containers, pull image, start container, and read logs.
 - Executor settings schemas with typed, validated fields for image reference, registry policy, container name, tail count, since timestamp, timeout, and max characters.
 - Sample workflow template or fixture: Docker read logs -> LLM summary -> artifact/result.
+- Sample Qdrant workflow template or validation fixture: Docker pull/start Qdrant -> Docker logs -> summary-compatible workflow step.
 - Tests using fake recipe runner output for list, pull, start, logs, missing Docker CLI, invalid image reference, missing grant, and oversized logs.
 - Optional local Docker CLI smoke test instructions that are skipped unless explicitly enabled.
 
@@ -65,7 +68,8 @@
 5. Add sample workflow fixture or template that pipes logs into an LLM summary node.
 6. Add deterministic tests with fake recipe runner responses.
 7. Optionally document a local Docker CLI smoke path without making CI depend on Docker.
-8. Update execution report with sample workflow proof.
+8. Validate the Qdrant workflow through plugin APIs and workflow APIs, not direct database mutation.
+9. Update execution report with sample workflow proof.
 
 ## Scope Exceptions
 
@@ -94,6 +98,7 @@
 
 - Unit/integration test command and result for Docker plugin behavior with fake recipes.
 - Workflow validation or run proof showing Docker logs feed LLM summary.
+- Host proof that the workflow path starts or verifies a Qdrant container.
 - Evidence that oversized logs produce truncation/artifact metadata instead of oversized payloads.
 - Optional Docker CLI smoke result if a local environment explicitly enables it.
 

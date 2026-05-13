@@ -64,7 +64,35 @@ public interface IPluginCapabilityContext
     IPluginOAuth2Capability? OAuth2 { get; }
 
     IPluginExecutionEvents Events { get; }
+
+    IPluginHostToolCapability HostTools { get; }
 }
+
+public interface IPluginHostToolCapability
+{
+    ValueTask<PluginHostToolExecutionResult> ExecuteAsync(
+        PluginHostToolExecutionRequest request,
+        CancellationToken cancellationToken = default);
+}
+
+public sealed record PluginHostToolExecutionRequest(
+    PluginHostToolRecipeId RecipeId,
+    IReadOnlyDictionary<string, string> Arguments,
+    int TimeoutSeconds = 30,
+    int MaxOutputCharacters = 12000);
+
+public sealed record PluginHostToolExecutionResult(
+    PluginHostToolRecipeId RecipeId,
+    bool Succeeded,
+    int ExitCode,
+    string Message,
+    string Stdout,
+    string Stderr,
+    bool StdoutTruncated,
+    bool StderrTruncated,
+    string BoundaryMode,
+    bool BoundaryEnforced,
+    IReadOnlyList<string> EnvironmentVariableNames);
 
 public interface IPluginSecretCapability
 {

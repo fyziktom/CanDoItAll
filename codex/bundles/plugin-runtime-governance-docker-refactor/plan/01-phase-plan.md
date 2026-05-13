@@ -7,7 +7,7 @@
 3. Add the controlled host-tool and command capability.
 4. Add plugin settings, connection management, and permission UI/API.
 5. Add workflow plugin bridge enforcement.
-6. Add the bundled Docker sample plugin and log-summary workflow.
+6. Add the bundled Docker sample plugin and log-summary workflow, including Qdrant start-container proof.
 7. Harden persistence, performance, EF query shape, and observability.
 8. Run final validation, architecture review, browser proof review, and closure.
 
@@ -55,5 +55,5 @@ flowchart TD
 - Exit gate after `SB03`: no Docker work may proceed unless raw shell/PowerShell exposure is impossible through plugin-facing APIs.
 - Exit gate after `SB04`: no workflow bridge work may rely on permissions until UI/API grant persistence is proven.
 - Exit gate after `SB05`: Docker sample work must not proceed until workflow validation and runtime both reject missing grants.
-- Exit gate after `SB06`: Docker proof must include bounded logs and a separate LLM summary node.
+- Exit gate after `SB06`: Docker proof must include bounded logs, a separate LLM summary-compatible node, and a workflow path that starts or verifies a Qdrant vector database container.
 - Closure gate after `SB08`: rerun bundle validator at completed stage, targeted tests, browser validation, architecture review, and raw-note closure table.

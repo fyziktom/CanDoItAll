@@ -38,6 +38,7 @@
 | `R017` | Plugin connections must persist settings separately from grants and secrets. | Connections have typed ids, schema validation, health state, secret bindings, concurrency token, and audit fields. |
 | `R018` | Plugin API must expose minimal command-style operations for grants and connections. | Endpoints validate ids, derive actor identity, enforce antiforgery/auth policy per app conventions, and return typed errors. |
 | `R019` | UI validation must include plugin settings and workflow-editor missing-grant paths. | Execution report contains route, viewport, assertions, screenshots, and visual review notes. |
+| `R025` | Plugin API must be complete enough for development and validation automation, comparable in practical control to workflow and project-structure APIs. | API clients can list plugin catalog, install, enable/disable, inspect settings, list/update grants, list/update connections, and trigger sample setup without direct database edits. |
 
 ## Persistence, Performance, EF, And Observability
 
@@ -48,3 +49,4 @@
 | `R022` | Hot-path grant checks must be designed for workflow execution. | Grant state is loaded with bounded queries or cached per workflow run; compiled queries are considered only if measurements justify them. |
 | `R023` | Observability must capture grants and host-tool execution without leaking secrets. | Audit records include plugin id, connection id, workflow/node ids, recipe id, grant ids, policy, boundary, truncation, and redacted messages. |
 | `R024` | Final validation must include architecture review, targeted tests, browser proof, and performance/EF review. | Closure report lists commands, screenshots, assertions, and residual risks. |
+| `R026` | End-to-end proof must start a Qdrant vector database container through a plugin workflow. | Validation creates or reuses a workflow that invokes the Docker plugin start-container executor for Qdrant, then reads logs and routes them to an LLM-summary-compatible workflow step; failures are repaired before closure. |

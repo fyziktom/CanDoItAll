@@ -43,6 +43,8 @@
 - `N007`: include workflow use where Docker logs are summarized by an LLM.
 - `N008`: keep plugins generic.
 - `N009`: require explicit user control over host tools such as files and PowerShell.
+- `N010`: provide proper plugin APIs comparable to workflow and project-structure APIs so plugin state can be controlled during development and validation.
+- `N011`: prove the implemented plugin workflow by starting a Qdrant vector database container through the workflow path while Docker is running.
 
 ## Dependency And Sequencing Signals
 
@@ -58,6 +60,7 @@
 - During later implementation, run targeted unit, integration, component, browser, and workflow tests per subbundle.
 - Browser validation is mandatory for plugin settings, permission toggles, and workflow-editor warnings.
 - Host-command tests must prove denied-by-default behavior, bounded output, cancellation, timeout, tree-kill, receipt/audit creation, and secret environment exclusion.
+- End-to-end validation must exercise the plugin workflow API path to install/enable/grant the Docker plugin, run a workflow that starts Qdrant, read logs, and summarize logs with an LLM-compatible workflow step or deterministic substitute when live LLM credentials are unavailable.
 
 ## Evidence Contract
 
@@ -84,6 +87,7 @@
 - The project keeps Radzen/component-library conventions where already present.
 - Plugins remain in-process for this refactor; OS-level sandboxing is outside scope unless a later bundle introduces it.
 - Docker CLI availability is optional and must be detected with actionable errors.
+- Plugin management APIs must exist before end-to-end workflow validation so tests and local validation can control plugin install, enablement, grants, and sample workflow setup without hand-editing state.
 
 ## Primary Risks
 

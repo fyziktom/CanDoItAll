@@ -15,7 +15,8 @@ public enum PluginCapabilityKind
     ProjectStructure = 1 << 5,
     HttpClient = 1 << 6,
     OAuth2 = 1 << 7,
-    ExecutionEvents = 1 << 8
+    ExecutionEvents = 1 << 8,
+    HostCommand = 1 << 9
 }
 
 public enum PluginSourceKind
