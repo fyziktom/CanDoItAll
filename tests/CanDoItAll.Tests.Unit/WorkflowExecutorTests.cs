@@ -33,6 +33,28 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
+    public void BuiltInRegistrationAddsImplementedAndPlannedExecutors()
+    {
+        var services = new ServiceCollection();
+
+        services.AddBuiltInWorkflowExecutors();
+
+        var executorDescriptors = services
+            .Where(descriptor => descriptor.ServiceType == typeof(IWorkflowExecutor))
+            .ToArray();
+        Assert.Equal(6 + BuiltInWorkflowExecutorDescriptors.Planned.Count, executorDescriptors.Length);
+        Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(WorkspaceFileWorkflowExecutor));
+        Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(SourceIngestionWorkflowExecutor));
+        Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(HttpFetchWorkflowExecutor));
+        Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(SpreadsheetWorkflowExecutor));
+        Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(ProjectStructureWorkflowExecutor));
+        Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(ImageGenerationWorkflowExecutor));
+        Assert.Equal(
+            BuiltInWorkflowExecutorDescriptors.Planned.Count,
+            executorDescriptors.Count(descriptor => descriptor.ImplementationInstance is PlannedWorkflowExecutor));
+    }
+
+    [Fact]
     public void ValidatorRejectsUnknownExecutorId()
     {
         var catalog = new WorkflowExecutorCatalog([new RecordingWorkflowExecutor()]);

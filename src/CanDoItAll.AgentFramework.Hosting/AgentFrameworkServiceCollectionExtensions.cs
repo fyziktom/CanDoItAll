@@ -54,17 +54,7 @@ public static class AgentFrameworkServiceCollectionExtensions
         services.TryAddSingleton<IProviderDiagnosticsService>(serviceProvider => new ProviderDiagnosticsService(
             serviceProvider.GetRequiredService<IAgentRuntime>()));
         services.TryAddSingleton<ISpreadsheetDocumentService, ClosedXmlSpreadsheetDocumentService>();
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowExecutor, WorkspaceFileWorkflowExecutor>());
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowExecutor, SourceIngestionWorkflowExecutor>());
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowExecutor, HttpFetchWorkflowExecutor>());
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowExecutor, SpreadsheetWorkflowExecutor>());
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowExecutor, ProjectStructureWorkflowExecutor>());
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowExecutor, ImageGenerationWorkflowExecutor>());
-        foreach (var descriptor in BuiltInWorkflowExecutorDescriptors.Planned)
-        {
-            services.AddSingleton<IWorkflowExecutor>(new PlannedWorkflowExecutor(descriptor));
-        }
-
+        services.AddBuiltInWorkflowExecutors();
         services.TryAddSingleton<IWorkflowExecutorCatalog, WorkflowExecutorCatalog>();
         services.TryAddSingleton<IWorkflowExecutorInvoker, WorkflowExecutorInvoker>();
         services.TryAddSingleton<IWorkflowLlmComponentInvoker, MafWorkflowLlmComponentInvoker>();
