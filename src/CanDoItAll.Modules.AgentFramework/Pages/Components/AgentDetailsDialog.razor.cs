@@ -4,6 +4,7 @@ using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Security;
 using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
@@ -31,6 +32,9 @@ public partial class AgentDetailsDialog
     public ProcessesService ProcessesService { get; set; } = default!;
 
     [Inject]
+    public SecretService SecretService { get; set; } = default!;
+
+    [Inject]
     public NotificationService NotificationService { get; set; } = default!;
 
     [CascadingParameter]
@@ -42,6 +46,7 @@ public partial class AgentDetailsDialog
     private IReadOnlyList<CapabilityCatalogItem> capabilities = [];
     private IReadOnlyList<ProjectAccessListItem> projectStructureProjects = [];
     private IReadOnlyList<ProcessDefinitionListItem> processDefinitions = [];
+    private IReadOnlyList<SecretListItem> secrets = [];
     private IReadOnlyList<string> tagValues = [];
     private string externalWorkspaceRootsText = string.Empty;
     private string allowedStorageCatalogIdsText = string.Empty;
@@ -59,9 +64,12 @@ public partial class AgentDetailsDialog
     private bool areProcessDefinitionsLoaded;
     private bool isLoadingProcessDefinitions;
     private bool processDefinitionsRequested;
+    private bool areSecretsLoaded;
+    private bool isLoadingSecrets;
     private string? providerLoadErrorMessage;
     private string? projectStructureProjectsErrorMessage;
     private string? processDefinitionsErrorMessage;
+    private string? secretsErrorMessage;
     private Task? projectStructureProjectsLoadTask;
     private Task? processDefinitionsLoadTask;
     private int selectedTabIndex;
@@ -101,9 +109,11 @@ public partial class AgentDetailsDialog
                 ? WorkspaceService.ListProvidersAsync()
                 : Task.FromResult<IReadOnlyList<ProviderProfile>>(InitialProviders);
             var capabilitiesTask = WorkspaceService.ListCapabilitiesAsync();
+            var secretsTask = SecretService.ListForPickerAsync();
 
             agents = (await agentsTask).ToList();
             capabilities = (await capabilitiesTask).ToList();
+            await LoadSecretsAsync(secretsTask);
             await LoadProvidersAsync(providersTask);
 
             if (AgentId.HasValue)
@@ -146,6 +156,26 @@ public partial class AgentDetailsDialog
         {
             providerLoadErrorMessage = $"Failed to load providers. {exception.Message}";
             NotificationService.Error("Providers failed to load", exception.Message);
+        }
+    }
+
+    private async Task LoadSecretsAsync(Task<IReadOnlyList<SecretListItem>> secretsTask)
+    {
+        isLoadingSecrets = true;
+        secretsErrorMessage = null;
+        try
+        {
+            secrets = (await secretsTask).ToList();
+            areSecretsLoaded = true;
+        }
+        catch (Exception exception)
+        {
+            secretsErrorMessage = $"Failed to load secrets. {exception.Message}";
+            NotificationService.Error("Secrets failed to load", exception.Message);
+        }
+        finally
+        {
+            isLoadingSecrets = false;
         }
     }
 
@@ -518,6 +548,36 @@ public partial class AgentDetailsDialog
         return editor.WorkspaceToolAccess.AllowAllStorageCatalogs
             ? $"{accessMode}; all storage catalogs"
             : $"{accessMode}; {editor.WorkspaceToolAccess.AllowedStorageCatalogIds.Count} storage catalog(s)";
+    }
+
+    private static string DescribeSecretScope(AgentEditorModel editor)
+    {
+        var count = editor.AllowedSecretReferences
+            .Where(item => item.SecretId != Guid.Empty)
+            .Select(item => item.SecretId)
+            .Distinct()
+            .Count();
+        return count == 0
+            ? "No stored secrets"
+            : $"{count} stored secret(s)";
+    }
+
+    private bool HasAllowedSecret(Guid secretId)
+        => editorModel.AllowedSecretReferences.Any(item => item.SecretId == secretId);
+
+    private void ToggleAllowedSecret(SecretListItem secret, object? rawValue)
+    {
+        var isEnabled = rawValue is bool value && value;
+        editorModel.AllowedSecretReferences.RemoveAll(item => item.SecretId == secret.Id);
+        if (!isEnabled)
+        {
+            return;
+        }
+
+        editorModel.AllowedSecretReferences.Add(new AgentAllowedSecretReference(
+            secret.Id,
+            secret.Name,
+            AgentSecretPurposes.GeneralAgentRequest));
     }
 
     private string DescribeRuntimeParameterPolicy(ProviderProfile provider)

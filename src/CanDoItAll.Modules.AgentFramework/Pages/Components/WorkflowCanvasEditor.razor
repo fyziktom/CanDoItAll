@@ -547,6 +547,59 @@
                                               value="@BuildHeadersJson(selected)"
                                               @onchange="args => UpdateHttpHeadersJson(selected, args)"></textarea>
                                 </label>
+                                <div class="workflow-canvas-panel workflow-canvas-panel--soft"
+                                     data-testid="workflow-http-secret-header">
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Secret header" />
+                                    @if (!string.IsNullOrWhiteSpace(secretPickerErrorMessage))
+                                    {
+                                        <p class="workflow-canvas-error">@secretPickerErrorMessage</p>
+                                    }
+                                    <Grid Gap="LayoutGap.Small" ColumnsLg="2">
+                                        <label class="workflow-canvas-field">
+                                            <span>Secret</span>
+                                            <select class="cda-input"
+                                                    value="@(settings.SecretHeader.SecretId?.ToString("D") ?? string.Empty)"
+                                                    disabled="@isLoadingSecrets"
+                                                    @onchange="args => UpdateHttpSecretId(selected, args)"
+                                                    data-testid="workflow-http-secret-select">
+                                                <option value="">None</option>
+                                                @foreach (var secret in secretPickerItems)
+                                                {
+                                                    <option value="@secret.Id.ToString("D")">@secret.Name (@secret.Kind)</option>
+                                                }
+                                            </select>
+                                        </label>
+                                        <label class="workflow-canvas-field">
+                                            <span>Header</span>
+                                            <input class="cda-input"
+                                                   value="@settings.SecretHeader.HeaderName"
+                                                   @onchange="args => UpdateHttpSecretHeaderName(selected, args)"
+                                                   data-testid="workflow-http-secret-header-name" />
+                                        </label>
+                                        <label class="workflow-canvas-field">
+                                            <span>Format</span>
+                                            <select class="cda-input"
+                                                    value="@settings.SecretHeader.ValueFormat"
+                                                    @onchange="args => UpdateHttpSecretValueFormat(selected, args)"
+                                                    data-testid="workflow-http-secret-format">
+                                                @foreach (var valueFormat in Enum.GetValues<WorkflowHttpSecretValueFormat>())
+                                                {
+                                                    <option value="@valueFormat">@valueFormat</option>
+                                                }
+                                            </select>
+                                        </label>
+                                        @if (settings.SecretHeader.ValueFormat == WorkflowHttpSecretValueFormat.CustomPrefix)
+                                        {
+                                            <label class="workflow-canvas-field">
+                                                <span>Prefix</span>
+                                                <input class="cda-input"
+                                                       value="@settings.SecretHeader.CustomPrefix"
+                                                       @onchange="args => UpdateHttpSecretCustomPrefix(selected, args)"
+                                                       data-testid="workflow-http-secret-prefix" />
+                                            </label>
+                                        }
+                                    </Grid>
+                                </div>
                                 <label class="workflow-canvas-field">
                                     <span>Body</span>
                                     <textarea class="cda-input cda-input--textarea workflow-canvas-textarea"

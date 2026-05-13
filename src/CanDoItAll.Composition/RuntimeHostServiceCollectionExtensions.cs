@@ -42,7 +42,7 @@ public static class RuntimeHostServiceCollectionExtensions
 
         PromoteConfiguredOpenAiCredential(configuration);
 
-        services.AddSecurityModule();
+        services.AddSecurityModule(configuration);
         services.AddWorkspaceModule();
         services.AddProjectsModule();
         services.AddWorkbenchModule();

@@ -186,6 +186,8 @@ public sealed class ProjectObjectMetadataEnvelope
 
     public ProjectInfrastructureMetadata? Infrastructure { get; set; }
 
+    public ProjectSecretReferenceMetadata? SecretReference { get; set; }
+
     public ProjectLinkMetadata? Link { get; set; }
 
     public ProjectWorkflowNodeMetadata? Workflow { get; set; }
@@ -459,6 +461,21 @@ public sealed class ProjectInfrastructureMetadata
 
     [ProjectStructurePreviewField("AI reference URL", 250)]
     public string AiReferenceUrl { get; set; } = string.Empty;
+}
+
+public sealed class ProjectSecretReferenceMetadata
+{
+    [ProjectStructurePreviewField("Secret id", 10)]
+    public Guid? SecretId { get; set; }
+
+    [ProjectStructurePreviewField("Secret", 20)]
+    public string SecretNameSnapshot { get; set; } = string.Empty;
+
+    [ProjectStructurePreviewField("Purpose", 30)]
+    public string Purpose { get; set; } = string.Empty;
+
+    [ProjectStructurePreviewField("Reference", 40)]
+    public string ExternalReference { get; set; } = string.Empty;
 }
 
 public sealed class ProjectLinkMetadata
@@ -842,6 +859,11 @@ public static class ProjectObjectMetadataSerializer
             count++;
         }
 
+        if (metadata.SecretReference is not null)
+        {
+            count++;
+        }
+
         if (metadata.Link is not null)
         {
             count++;
@@ -905,6 +927,11 @@ public static class ProjectObjectMetadataSerializer
         if (metadata.Infrastructure is not null)
         {
             return ProjectNodeKindFamily.Infrastructure;
+        }
+
+        if (metadata.SecretReference is not null)
+        {
+            return ProjectNodeKindFamily.SecretReference;
         }
 
         if (metadata.Link is not null)

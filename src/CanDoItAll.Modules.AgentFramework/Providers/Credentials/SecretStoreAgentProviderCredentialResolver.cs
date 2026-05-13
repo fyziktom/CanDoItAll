@@ -1,8 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Security;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 
 namespace CanDoItAll.Modules.AgentFramework;
@@ -10,8 +8,7 @@ namespace CanDoItAll.Modules.AgentFramework;
 using AgentFrameworkProviderProfile = CanDoItAll.AgentFramework.Models.ProviderProfile;
 
 internal sealed class SecretStoreAgentProviderCredentialResolver(
-    IDbContextFactory<AppDbContext> dbContextFactory,
-    ISecretProtector secretProtector,
+    ISecretRuntimeResolver secretResolver,
     IConfiguration configuration) : IAgentProviderCredentialResolver
 {
     public ProviderCredentialResolution Resolve(
@@ -22,32 +19,33 @@ internal sealed class SecretStoreAgentProviderCredentialResolver(
         var secretRecordId = AgentFrameworkProviderMetadata.ResolveSecretRecordId(provider);
         if (secretRecordId.HasValue)
         {
-            using var dbContext = dbContextFactory.CreateDbContext();
-            var secret = dbContext.Set<SecretRecord>()
-                .SingleOrDefault(item => item.Id == secretRecordId.Value);
-            if (secret is null)
-            {
-                return new ProviderCredentialResolution(
-                    string.Empty,
-                    $"secret record '{secretRecordId.Value:D}'",
-                    $"Secret record '{secretRecordId.Value:D}' was not found.");
-            }
-
             try
             {
-                var secretValue = secretProtector.Unprotect(secret.EncryptedPayload);
-                AgentProviderEnvironmentCredential.PromoteProcessValue(provider.ApiKeyEnvironmentVariable, secretValue);
+                var secretValue = secretResolver.ResolveValueAsync(
+                        new SecretRuntimeRequest(secretRecordId.Value, SecretRuntimePurposes.AgentProviderApiKey))
+                    .ConfigureAwait(false)
+                    .GetAwaiter()
+                    .GetResult();
+                if (string.IsNullOrWhiteSpace(secretValue))
+                {
+                    return new ProviderCredentialResolution(
+                        string.Empty,
+                        $"secret record '{secretRecordId.Value:D}'",
+                        $"Secret record '{secretRecordId.Value:D}' was not found or did not contain a usable value.");
+                }
+
                 return new ProviderCredentialResolution(
                     secretValue,
-                    $"secret record '{secret.Name}'",
-                    string.Empty);
+                    $"secret record '{secretRecordId.Value:D}'",
+                    string.Empty,
+                    ShouldPromoteToProcessEnvironment: false);
             }
             catch (Exception exception)
             {
                 return new ProviderCredentialResolution(
                     string.Empty,
-                    $"secret record '{secret.Name}'",
-                    $"Secret record '{secret.Name}' could not be decrypted: {exception.Message}");
+                    $"secret record '{secretRecordId.Value:D}'",
+                    $"Secret record '{secretRecordId.Value:D}' could not be resolved: {exception.Message}");
             }
         }
 

@@ -825,7 +825,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
     private void PrimeProviderCredentialEnvironment(ProviderProfile provider)
     {
         var resolution = providerCredentialResolver.Resolve(provider);
-        if (!resolution.IsResolved)
+        if (!resolution.IsResolved ||
+            !resolution.ShouldPromoteToProcessEnvironment)
         {
             return;
         }

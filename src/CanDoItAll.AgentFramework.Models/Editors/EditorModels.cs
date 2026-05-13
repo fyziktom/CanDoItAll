@@ -20,6 +20,7 @@ public sealed class AgentEditorModel
     public bool IsTemplate { get; set; }
     public string TemplateKey { get; set; } = string.Empty;
     public AgentPermissionsPolicy Permissions { get; set; } = AgentPermissionsPolicy.Default;
+    public List<AgentAllowedSecretReference> AllowedSecretReferences { get; set; } = [];
     public AgentProjectStructureAccessSettings ProjectStructureAccess { get; set; } = new();
     public AgentProcessAccessSettings ProcessAccess { get; set; } = new();
     public AgentWorkspaceToolAccessSettings WorkspaceToolAccess { get; set; } = new();
@@ -49,6 +50,7 @@ public sealed class AgentEditorModel
             IsTemplate = definition.IsTemplate,
             TemplateKey = definition.TemplateKey,
             Permissions = definition.Permissions,
+            AllowedSecretReferences = definition.Permissions.NormalizedAllowedSecrets.ToList(),
             ProjectStructureAccess = AgentProjectStructureAccessMetadata.Read(definition.ConfigurationJson),
             ProcessAccess = AgentProcessAccessMetadata.Read(definition.ConfigurationJson),
             WorkspaceToolAccess = AgentWorkspaceToolAccessMetadata.Read(definition.ConfigurationJson),

@@ -185,6 +185,10 @@ internal static class WorkflowExecutorCanvasCatalog
                 Value("httpUrl", settings.Url),
                 Value("httpUrlJsonPath", settings.UrlJsonPath),
                 Value("httpHeadersJson", JsonSerializer.Serialize(settings.Headers, JsonOptions)),
+                Value("httpSecretId", settings.SecretHeader.SecretId?.ToString("D") ?? string.Empty),
+                Value("httpSecretHeaderName", settings.SecretHeader.HeaderName),
+                Value("httpSecretValueFormat", settings.SecretHeader.ValueFormat.ToString()),
+                Value("httpSecretCustomPrefix", settings.SecretHeader.CustomPrefix),
                 Value("httpBody", settings.Body),
                 Value("httpMaxResponseBytes", settings.MaxResponseBytes.ToString()),
                 Value("httpIncludeInputPayload", settings.IncludeInputPayload.ToString().ToLowerInvariant())
@@ -272,6 +276,10 @@ internal static class WorkflowExecutorCanvasCatalog
                 TextField("httpUrl", "Request", "URL", "https://example.com/feed.json", inputMode: "url"),
                 TextField("httpUrlJsonPath", "Request", "URL JSON path", "$.url"),
                 TextAreaField("httpHeadersJson", "Request", "Headers JSON", "{\"Accept\":\"application/json\"}"),
+                TextField("httpSecretId", "Secret header", "Secret id", "00000000-0000-0000-0000-000000000000"),
+                TextField("httpSecretHeaderName", "Secret header", "Header", "Authorization"),
+                SelectField<WorkflowHttpSecretValueFormat>("httpSecretValueFormat", "Secret header", "Choose how the secret value is written into the request header.", "Format"),
+                TextField("httpSecretCustomPrefix", "Secret header", "Custom prefix", "Token"),
                 TextAreaField("httpBody", "Request", "Body"),
                 NumberField("httpMaxResponseBytes", "Request", "Max response bytes", "262144"),
                 BoolField("httpIncludeInputPayload", "Request", "Carry input payload")

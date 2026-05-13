@@ -113,6 +113,10 @@
                                                    OnSelect="@(() => EditSecretAsync(secret.Id))">
                                     <Status>
                                         <StatusBadge Tone="info" Text="@secret.Kind.ToString()" />
+                                        <CopyButton Value="@secret.Name"
+                                                    AriaLabel="Copy secret name"
+                                                    DisplayMode="CopyButtonDisplayMode.IconOnly"
+                                                    Size="CopyButtonSize.ExtraSmall" />
                                     </Status>
                                 </SelectionListItem>
                             }
@@ -162,7 +166,13 @@
                             <FormSection Title="Encrypted payload" Description="The raw value is only edited here, while other areas consume references to the saved record.">
                                 <div>
                                     <label class="cda-field-label">Secret value</label>
-                                    <InputText @bind-Value="secretModel.SecretValue" class="cda-input" type="password" />
+                                    <SecretField @bind-Value="secretModel.SecretValue"
+                                                 SecretName="@secretModel.Name"
+                                                 ShowNameCopy="true"
+                                                 ShowValueCopy="true"
+                                                 RevealDurationSeconds="30"
+                                                 Placeholder="Enter or update secret value"
+                                                 data-testid="settings-secret-value" />
                                 </div>
                                 <div>
                                     <label class="cda-field-label">Metadata JSON</label>

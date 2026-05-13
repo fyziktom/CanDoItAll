@@ -5,6 +5,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Components.OverlayLib;
+using CanDoItAll.Modules.Security;
 using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
@@ -29,6 +30,9 @@ public partial class WorkflowCanvasEditor
 
     [Inject]
     public IWorkflowTestRunner TestRunner { get; set; } = default!;
+
+    [Inject]
+    public SecretService SecretService { get; set; } = default!;
 
     [Inject]
     public NotificationService NotificationService { get; set; } = default!;
@@ -89,6 +93,8 @@ public partial class WorkflowCanvasEditor
     private string? expandedWorkflowToolboxGroupKey = "workflow-decisions";
     private string testInputJson = "{\"prompt\":\"Summarize this workflow input.\"}";
     private string errorMessage = string.Empty;
+    private IReadOnlyList<SecretListItem> secretPickerItems = [];
+    private string secretPickerErrorMessage = string.Empty;
     private CanvasWorkbenchUiState canvasUiState = CreateWorkflowCanvasUiState("start");
     private CanvasWorkbench? workbenchRef;
     private CanvasWorkbenchWindowState toolboxWindowState = CreateWindowState(width: 300, height: 380);
@@ -97,6 +103,7 @@ public partial class WorkflowCanvasEditor
     private bool isNodeDetailsDialogOpen;
     private bool isBusy;
     private bool isTesting;
+    private bool isLoadingSecrets;
 
     private WorkflowCanvasNodeDraft? SelectedNode
         => string.IsNullOrWhiteSpace(selectedNodeId)
@@ -175,6 +182,11 @@ public partial class WorkflowCanvasEditor
         validationIssues = [];
         testResult = null;
         SyncEdgeDefaults();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSecretPickerItemsAsync();
     }
 
     private Task ToggleToolboxWindowAsync()
@@ -1488,6 +1500,80 @@ public partial class WorkflowCanvasEditor
         });
     }
 
+    private void UpdateHttpSecretId(WorkflowCanvasNodeDraft node, ChangeEventArgs args)
+    {
+        var selected = Guid.TryParse(args.Value?.ToString(), out var secretId) && secretId != Guid.Empty
+            ? secretPickerItems.FirstOrDefault(item => item.Id == secretId)
+            : null;
+
+        UpdateExecutorSettings<WorkflowHttpExecutorSettings>(node, settings => settings with
+        {
+            SecretHeader = settings.SecretHeader with
+            {
+                SecretId = selected?.Id,
+                SecretNameSnapshot = selected?.Name ?? string.Empty,
+                Purpose = WorkflowSecretPurposes.HttpHeader
+            }
+        });
+    }
+
+    private void UpdateHttpSecretHeaderName(WorkflowCanvasNodeDraft node, ChangeEventArgs args)
+    {
+        UpdateExecutorSettings<WorkflowHttpExecutorSettings>(node, settings => settings with
+        {
+            SecretHeader = settings.SecretHeader with
+            {
+                HeaderName = ReadString(args)
+            }
+        });
+    }
+
+    private void UpdateHttpSecretValueFormat(WorkflowCanvasNodeDraft node, ChangeEventArgs args)
+    {
+        if (!Enum.TryParse<WorkflowHttpSecretValueFormat>(ReadString(args), out var valueFormat))
+        {
+            return;
+        }
+
+        UpdateExecutorSettings<WorkflowHttpExecutorSettings>(node, settings => settings with
+        {
+            SecretHeader = settings.SecretHeader with
+            {
+                ValueFormat = valueFormat
+            }
+        });
+    }
+
+    private void UpdateHttpSecretCustomPrefix(WorkflowCanvasNodeDraft node, ChangeEventArgs args)
+    {
+        UpdateExecutorSettings<WorkflowHttpExecutorSettings>(node, settings => settings with
+        {
+            SecretHeader = settings.SecretHeader with
+            {
+                CustomPrefix = ReadString(args)
+            }
+        });
+    }
+
+    private async Task LoadSecretPickerItemsAsync()
+    {
+        isLoadingSecrets = true;
+        secretPickerErrorMessage = string.Empty;
+        try
+        {
+            secretPickerItems = await SecretService.ListForPickerAsync();
+        }
+        catch (Exception exception)
+        {
+            secretPickerItems = [];
+            secretPickerErrorMessage = $"Secret list failed to load. {exception.Message}";
+        }
+        finally
+        {
+            isLoadingSecrets = false;
+        }
+    }
+
     private string BuildCellWritesJson(WorkflowCanvasNodeDraft node)
         => JsonSerializer.Serialize(ReadExecutorSettings<WorkflowSpreadsheetExecutorSettings>(node).CellWrites, IndentedExecutorJsonOptions);
 
@@ -1714,11 +1800,46 @@ public partial class WorkflowCanvasEditor
                           ?? new Dictionary<string, string>();
             }
 
+            var secretHeader = settings.SecretHeader;
+            var httpSecretId = GetInputValue(request, "httpSecretId", secretHeader.SecretId?.ToString("D") ?? string.Empty);
+            if (Guid.TryParse(httpSecretId, out var parsedSecretId) && parsedSecretId != Guid.Empty)
+            {
+                secretHeader = secretHeader with
+                {
+                    SecretId = parsedSecretId,
+                    SecretNameSnapshot = ResolveSecretNameSnapshot(parsedSecretId),
+                    Purpose = WorkflowSecretPurposes.HttpHeader
+                };
+            }
+            else
+            {
+                secretHeader = secretHeader with
+                {
+                    SecretId = null,
+                    SecretNameSnapshot = string.Empty
+                };
+            }
+
+            if (Enum.TryParse<WorkflowHttpSecretValueFormat>(GetInputValue(request, "httpSecretValueFormat", secretHeader.ValueFormat.ToString()), out var secretValueFormat))
+            {
+                secretHeader = secretHeader with
+                {
+                    ValueFormat = secretValueFormat
+                };
+            }
+
+            secretHeader = secretHeader with
+            {
+                HeaderName = GetInputValue(request, "httpSecretHeaderName", secretHeader.HeaderName),
+                CustomPrefix = GetInputValue(request, "httpSecretCustomPrefix", secretHeader.CustomPrefix)
+            };
+
             settings = settings with
             {
                 Url = GetInputValue(request, "httpUrl", settings.Url),
                 UrlJsonPath = GetInputValue(request, "httpUrlJsonPath", settings.UrlJsonPath),
                 Headers = headers,
+                SecretHeader = secretHeader,
                 Body = GetInputValue(request, "httpBody", settings.Body),
                 MaxResponseBytes = ReadCreateInt(request, "httpMaxResponseBytes", settings.MaxResponseBytes),
                 IncludeInputPayload = ReadCreateBool(request, "httpIncludeInputPayload", settings.IncludeInputPayload)
@@ -1823,6 +1944,9 @@ public partial class WorkflowCanvasEditor
 
         return JsonSerializer.Deserialize<TSettings>(node.ExecutorSettingsJson, ExecutorJsonOptions) ?? new TSettings();
     }
+
+    private static string ResolveSecretNameSnapshot(Guid secretId)
+        => secretId == Guid.Empty ? string.Empty : secretId.ToString("D");
 
     private static int ReadCreateInt(
         CanvasWorkbenchCreateActionRequest request,

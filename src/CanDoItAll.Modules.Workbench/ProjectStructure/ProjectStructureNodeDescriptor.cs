@@ -150,6 +150,11 @@ internal static class ProjectStructureNodeDescriptor
                 AddIfValue(facts, "Path", metadata.Infrastructure?.StoragePathPrefix);
                 AddIfValue(facts, "AI", HumanizeEnum(metadata.Infrastructure?.AiReferenceKind));
                 break;
+            case ProjectObjectType.SecretReference:
+                AddIfValue(facts, "Secret", metadata.SecretReference?.SecretNameSnapshot);
+                AddIfValue(facts, "Purpose", metadata.SecretReference?.Purpose);
+                AddIfValue(facts, "Reference", metadata.SecretReference?.ExternalReference);
+                break;
             case ProjectObjectType.Link:
                 AddIfValue(facts, "URL", metadata.Link?.Url);
                 AddIfValue(facts, "Channel", HumanizeEnum(metadata.Link?.Channel));

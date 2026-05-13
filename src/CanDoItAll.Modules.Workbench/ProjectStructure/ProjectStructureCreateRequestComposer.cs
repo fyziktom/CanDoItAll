@@ -168,6 +168,17 @@ internal static class ProjectStructureCreateRequestComposer
                 nodeReferences.InfrastructureSecretReferenceId = ParseNodeGuid(inputValues, "secretRef");
                 AddLinkIfPresent(pendingLinks, inputValues, "secretRef", ProjectObjectLinkKind.Uses);
                 break;
+            case ProjectObjectType.SecretReference:
+                metadata.SecretReference = new ProjectSecretReferenceMetadata
+                {
+                    SecretId = ParseGuid(inputValues, "secretId"),
+                    SecretNameSnapshot = string.IsNullOrWhiteSpace(GetValue(inputValues, "secretName"))
+                        ? request.Title?.Trim() ?? string.Empty
+                        : GetValue(inputValues, "secretName"),
+                    Purpose = string.IsNullOrWhiteSpace(notes) ? "project-structure-reference" : notes,
+                    ExternalReference = request.Subtitle?.Trim() ?? string.Empty
+                };
+                break;
             case ProjectObjectType.Link:
                 metadata.Link = new ProjectLinkMetadata
                 {

@@ -80,6 +80,18 @@
                                   Disabled="@IsDisabled" />
                     </FormField>
 
+                    <FormField Text="Timed secret">
+                        <SecretField Value="@FormState.Secret"
+                                     ValueChanged="HandleSecretChanged"
+                                     SecretName="sandbox-api-key"
+                                     ShowNameCopy="true"
+                                     ShowValueCopy="true"
+                                     RevealDurationSeconds="30"
+                                     Placeholder="Managed secret"
+                                     Disabled="@IsDisabled"
+                                     data-testid="sandbox-secret-field" />
+                    </FormField>
+
                     <FormField Text="Reminders">
                         <Split Breakpoint="LayoutBreakpoint.None"
                                Gap="LayoutGap.Medium"

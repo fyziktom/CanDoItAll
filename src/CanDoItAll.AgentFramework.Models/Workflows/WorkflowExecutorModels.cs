@@ -79,6 +79,34 @@ public enum WorkflowHttpMethodKind
     Delete
 }
 
+public enum WorkflowHttpSecretValueFormat
+{
+    Raw,
+    Bearer,
+    Basic,
+    CustomPrefix
+}
+
+public static class WorkflowSecretPurposes
+{
+    public const string HttpHeader = "workflow-http-header";
+}
+
+public sealed record WorkflowHttpSecretHeaderBinding
+{
+    public Guid? SecretId { get; init; }
+
+    public string SecretNameSnapshot { get; init; } = string.Empty;
+
+    public string Purpose { get; init; } = WorkflowSecretPurposes.HttpHeader;
+
+    public string HeaderName { get; init; } = "Authorization";
+
+    public WorkflowHttpSecretValueFormat ValueFormat { get; init; } = WorkflowHttpSecretValueFormat.Bearer;
+
+    public string CustomPrefix { get; init; } = string.Empty;
+}
+
 public enum WorkflowSpreadsheetOperation
 {
     WorkbookSummary,
@@ -201,6 +229,8 @@ public sealed record WorkflowHttpExecutorSettings
     public string UrlJsonPath { get; init; } = string.Empty;
 
     public IReadOnlyDictionary<string, string> Headers { get; init; } = new Dictionary<string, string>();
+
+    public WorkflowHttpSecretHeaderBinding SecretHeader { get; init; } = new();
 
     public string Body { get; init; } = string.Empty;
 

@@ -333,13 +333,13 @@ public sealed partial class CapabilityProofService
             var environmentVariableBindings = ReadConfigurationStringDictionary(capability.ConfigurationJson, "environmentVariableBindings");
             if (environmentVariableBindings.Count > 0)
             {
-                notes.Add($"Local MCP environment bindings resolve {environmentVariableBindings.Count} value(s) from runtime environment variables.");
+                notes.Add($"Local MCP environment bindings resolve {environmentVariableBindings.Count} value(s) from runtime environment variables or stored secret references.");
             }
 
             var headerBindings = ReadConfigurationStringDictionary(capability.ConfigurationJson, "headerBindings");
             if (headerBindings.Count > 0)
             {
-                notes.Add($"MCP header bindings resolve {headerBindings.Count} value(s) from runtime environment variables.");
+                notes.Add($"MCP header bindings resolve {headerBindings.Count} value(s) from runtime environment variables or stored secret references.");
             }
 
             notes.Add($"Local MCP command '{command}' uses explicit allowedTools and approvalMode '{approvalMode}'.");

@@ -1164,6 +1164,11 @@ public sealed partial class MafAgentRuntime
             return;
         }
 
+        if (!credential.ShouldPromoteToProcessEnvironment)
+        {
+            return;
+        }
+
         AgentProviderEnvironmentCredential.PromoteProcessValue(provider.ApiKeyEnvironmentVariable, credential.ApiKey);
         if (provider.Kind == ProviderKind.OpenAi)
         {

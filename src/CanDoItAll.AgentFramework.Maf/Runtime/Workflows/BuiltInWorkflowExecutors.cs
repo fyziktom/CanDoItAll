@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using ExcelDataReader;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tools.Documents;
@@ -869,7 +870,7 @@ public sealed class SourceIngestionWorkflowExecutor(IWorkspacePathResolutionServ
         string Message);
 }
 
-public sealed class HttpFetchWorkflowExecutor : IWorkflowExecutor
+public sealed class HttpFetchWorkflowExecutor(ISecretRuntimeResolver? secretResolver = null) : IWorkflowExecutor
 {
     public WorkflowExecutorDescriptor Descriptor => BuiltInWorkflowExecutorDescriptors.HttpFetch;
 
@@ -897,6 +898,8 @@ public sealed class HttpFetchWorkflowExecutor : IWorkflowExecutor
 
             request.Headers.TryAddWithoutValidation(header.Key.Trim(), header.Value);
         }
+
+        await ApplySecretHeaderAsync(request, settings.SecretHeader, context, cancellationToken);
 
         if (!string.IsNullOrEmpty(settings.Body) && settings.Method is not WorkflowHttpMethodKind.Get)
         {
@@ -938,6 +941,100 @@ public sealed class HttpFetchWorkflowExecutor : IWorkflowExecutor
             WorkflowHttpMethodKind.Delete => HttpMethod.Delete,
             _ => throw new InvalidOperationException($"HTTP method '{method}' is not supported.")
         };
+
+    private async Task ApplySecretHeaderAsync(
+        HttpRequestMessage request,
+        WorkflowHttpSecretHeaderBinding binding,
+        WorkflowExecutorExecutionContext context,
+        CancellationToken cancellationToken)
+    {
+        if (binding.SecretId is not { } secretId)
+        {
+            return;
+        }
+
+        if (secretResolver is null)
+        {
+            throw new InvalidOperationException("HTTP executor secret header binding requires a registered secret runtime resolver.");
+        }
+
+        var headerName = NormalizeHeaderName(binding.HeaderName);
+        var secretValue = await secretResolver.ResolveValueAsync(
+            new SecretRuntimeRequest(
+                secretId,
+                string.IsNullOrWhiteSpace(binding.Purpose)
+                    ? WorkflowSecretPurposes.HttpHeader
+                    : binding.Purpose.Trim(),
+                [secretId],
+                ConsumerType: "workflow-http",
+                ConsumerId: $"{context.Definition.Id.Value:D}/{context.Node.Id.Value}"),
+            cancellationToken);
+        if (string.IsNullOrWhiteSpace(secretValue))
+        {
+            throw new InvalidOperationException($"HTTP executor secret '{secretId:D}' was not found or did not contain a usable value.");
+        }
+
+        var headerValue = FormatSecretHeaderValue(binding, secretValue);
+        request.Headers.Remove(headerName);
+        if (!request.Headers.TryAddWithoutValidation(headerName, headerValue))
+        {
+            throw new InvalidOperationException($"HTTP executor could not apply secret header '{headerName}'.");
+        }
+    }
+
+    private static string NormalizeHeaderName(string headerName)
+    {
+        if (string.IsNullOrWhiteSpace(headerName))
+        {
+            throw new InvalidOperationException("HTTP executor secret header name is required.");
+        }
+
+        var normalized = headerName.Trim();
+        if (normalized.Contains('\r', StringComparison.Ordinal) ||
+            normalized.Contains('\n', StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("HTTP executor secret header name cannot contain line breaks.");
+        }
+
+        return normalized;
+    }
+
+    private static string FormatSecretHeaderValue(
+        WorkflowHttpSecretHeaderBinding binding,
+        string secretValue)
+    {
+        if (secretValue.Contains('\r', StringComparison.Ordinal) ||
+            secretValue.Contains('\n', StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("HTTP executor secret header value cannot contain line breaks.");
+        }
+
+        return binding.ValueFormat switch
+        {
+            WorkflowHttpSecretValueFormat.Raw => secretValue,
+            WorkflowHttpSecretValueFormat.Bearer => $"Bearer {secretValue}",
+            WorkflowHttpSecretValueFormat.Basic => $"Basic {secretValue}",
+            WorkflowHttpSecretValueFormat.CustomPrefix => $"{NormalizeHeaderPrefix(binding.CustomPrefix)} {secretValue}",
+            _ => throw new InvalidOperationException($"HTTP secret header value format '{binding.ValueFormat}' is not supported.")
+        };
+    }
+
+    private static string NormalizeHeaderPrefix(string prefix)
+    {
+        if (string.IsNullOrWhiteSpace(prefix))
+        {
+            throw new InvalidOperationException("HTTP executor custom secret header prefix is required.");
+        }
+
+        var normalized = prefix.Trim();
+        if (normalized.Contains('\r', StringComparison.Ordinal) ||
+            normalized.Contains('\n', StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("HTTP executor custom secret header prefix cannot contain line breaks.");
+        }
+
+        return normalized;
+    }
 
     private static string ResolveUrl(
         WorkflowHttpExecutorSettings settings,

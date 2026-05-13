@@ -113,6 +113,7 @@ public sealed class DataProtectionSecretProtector(IDataProtectionProvider dataPr
 
 public sealed class SecretService(
     IDbContextFactory<AppDbContext> dbContextFactory,
+    ISecretVault vault,
     ISecretProtector protector,
     IClock clock,
     IActivityStream activityStream)
@@ -140,7 +141,7 @@ public sealed class SecretService(
             Id = secret.Id,
             Name = secret.Name,
             Kind = secret.Kind,
-            SecretValue = protector.Unprotect(secret.EncryptedPayload),
+            SecretValue = await ResolveSecretValueAsync(secret, cancellationToken),
             Scope = secret.Scope,
             RotationNote = secret.RotationNote,
             MetadataJson = secret.MetadataJson
@@ -168,21 +169,45 @@ public sealed class SecretService(
         {
             entity = new SecretRecord
             {
+                Id = model.Id is { } requestedId && requestedId != Guid.Empty
+                    ? requestedId
+                    : Guid.NewGuid(),
                 CreatedAtUtc = clock.GetUtcNow()
             };
 
             await dbContext.Set<SecretRecord>().AddAsync(entity, cancellationToken);
         }
 
+        var oldVaultKey = SecretVaultRecordReference.TryParse(entity.EncryptedPayload, out var existingVaultKey)
+            ? existingVaultKey
+            : null;
+        var newVaultKey = SecretVaultRecordReference.BuildKey(entity.Id, Guid.NewGuid());
+        await vault.SetAsync(newVaultKey, model.SecretValue, cancellationToken);
+
         entity.Name = model.Name.Trim();
         entity.Kind = model.Kind;
         entity.Scope = string.IsNullOrWhiteSpace(model.Scope) ? "workspace" : model.Scope.Trim();
         entity.RotationNote = model.RotationNote?.Trim();
         entity.MetadataJson = string.IsNullOrWhiteSpace(model.MetadataJson) ? "{}" : model.MetadataJson;
-        entity.EncryptedPayload = protector.Protect(model.SecretValue);
+        entity.EncryptedPayload = SecretVaultRecordReference.Create(newVaultKey);
         entity.UpdatedAtUtc = clock.GetUtcNow();
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception saveException) when (saveException is not OperationCanceledException)
+        {
+            await DeleteStagedVaultPayloadAsync(newVaultKey, saveException, cancellationToken);
+            throw;
+        }
+
+        if (!string.IsNullOrWhiteSpace(oldVaultKey) &&
+            !string.Equals(oldVaultKey, newVaultKey, StringComparison.Ordinal))
+        {
+            await vault.DeleteAsync(oldVaultKey, cancellationToken);
+        }
+
         await activityStream.RecordAsync(new ActivityWriteRequest(
             "security",
             model.Id.HasValue ? "update-secret" : "create-secret",
@@ -203,8 +228,17 @@ public sealed class SecretService(
             return;
         }
 
+        var vaultKey = SecretVaultRecordReference.TryParse(entity.EncryptedPayload, out var parsedVaultKey)
+            ? parsedVaultKey
+            : null;
+
         dbContext.Remove(entity);
         await dbContext.SaveChangesAsync(cancellationToken);
+        if (!string.IsNullOrWhiteSpace(vaultKey))
+        {
+            await vault.DeleteAsync(vaultKey, cancellationToken);
+        }
+
         await activityStream.RecordAsync(new ActivityWriteRequest(
             "security",
             "delete-secret",
@@ -217,4 +251,43 @@ public sealed class SecretService(
 
     public async Task<IReadOnlyList<SecretListItem>> ListForPickerAsync(CancellationToken cancellationToken = default)
         => await ListAsync(cancellationToken);
+
+    private async Task<string> ResolveSecretValueAsync(
+        SecretRecord secret,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (SecretVaultRecordReference.TryParse(secret.EncryptedPayload, out var vaultKey))
+            {
+                return await vault.GetAsync(vaultKey, cancellationToken)
+                    ?? throw new InvalidOperationException("The referenced vault payload was not found.");
+            }
+
+            return protector.Unprotect(secret.EncryptedPayload);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            throw new InvalidOperationException(
+                $"Secret '{secret.Name}' ({secret.Id:D}) could not be opened for editing.",
+                exception);
+        }
+    }
+
+    private async Task DeleteStagedVaultPayloadAsync(
+        string vaultKey,
+        Exception saveException,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await vault.DeleteAsync(vaultKey, cancellationToken);
+        }
+        catch (Exception cleanupException) when (cleanupException is not OperationCanceledException)
+        {
+            throw new InvalidOperationException(
+                "Secret metadata save failed and staged vault payload cleanup also failed.",
+                new AggregateException(saveException, cleanupException));
+        }
+    }
 }

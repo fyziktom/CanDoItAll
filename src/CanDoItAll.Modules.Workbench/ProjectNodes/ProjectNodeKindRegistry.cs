@@ -17,6 +17,7 @@ internal enum ProjectNodeKindFamily
     Script,
     Environment,
     Infrastructure,
+    SecretReference,
     Link,
     Workflow
 }
@@ -280,6 +281,7 @@ internal static class ProjectNodeKindRegistry
             Script = family == ProjectNodeKindFamily.Script ? metadata.Script : null,
             Environment = family == ProjectNodeKindFamily.Environment ? metadata.Environment : null,
             Infrastructure = family == ProjectNodeKindFamily.Infrastructure ? metadata.Infrastructure : null,
+            SecretReference = family == ProjectNodeKindFamily.SecretReference ? metadata.SecretReference : null,
             Link = family == ProjectNodeKindFamily.Link ? metadata.Link : null,
             Workflow = family == ProjectNodeKindFamily.Workflow ? metadata.Workflow : null
         };
@@ -346,7 +348,7 @@ internal static class ProjectNodeKindRegistry
                     : Profile("diamond", "#dc2626", "VL", "Validate", ProjectObjectPaletteKeys.Danger)),
             Simple(ProjectObjectType.TestPlan, "Test plan", Profile("diamond", "#7c3aed", "TS", "Test", ProjectObjectPaletteKeys.Secondary)),
             Simple(ProjectObjectType.TestEvidence, "Test evidence", Profile("diamond", "#7c3aed", "TS", "Test", ProjectObjectPaletteKeys.Secondary)),
-            Simple(ProjectObjectType.SecretReference, "Secret", Profile("shield", "#be123c", "SC", "Secret", ProjectObjectPaletteKeys.Danger)),
+            SecretReference(ProjectObjectType.SecretReference, "Secret", Profile("shield", "#be123c", "SC", "Secret", ProjectObjectPaletteKeys.Danger)),
 
             ProjectBlock("feature", "Feature block", Profile("hex", "#2563eb", "FB", "Feature", ProjectObjectPaletteKeys.Info)),
             ProjectBlock("architecture", "Architecture block", Profile("hex", "#4f46e5", "AR", "Architecture", ProjectObjectPaletteKeys.Secondary)),
@@ -635,6 +637,22 @@ internal static class ProjectNodeKindRegistry
             false,
             buildVisualProfile ?? (_ => visualProfile),
             (metadata, _) => metadata.Workflow ??= new ProjectWorkflowNodeMetadata());
+
+    private static ProjectNodeKindDescriptor SecretReference(
+        ProjectObjectType objectType,
+        string label,
+        ProjectObjectVisualProfile visualProfile)
+        => new(
+            objectType,
+            string.Empty,
+            ProjectNodeKindFamily.SecretReference,
+            label,
+            "security",
+            false,
+            false,
+            false,
+            _ => visualProfile,
+            (metadata, _) => metadata.SecretReference ??= new ProjectSecretReferenceMetadata());
 
     private static ProjectNodeKindDescriptor ProjectBlock(string objectSubtype, string label, ProjectObjectVisualProfile visualProfile)
         => new(

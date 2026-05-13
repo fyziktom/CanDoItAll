@@ -4,6 +4,7 @@ using System.Text;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.Security;
 using CanDoItAll.Tools.Documents;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -743,6 +744,42 @@ public sealed class WorkflowExecutorTests
             Assert.Contains("201", result.PayloadJson, StringComparison.Ordinal);
         });
 
+        await RecordAsync("http applies secret header only to request", async () =>
+        {
+            var secretId = Guid.NewGuid();
+            await using var server = SingleResponseHttpServer.Json(200, "{\"ok\":true}");
+            var result = await ExecuteDirectAsync(
+                new HttpFetchWorkflowExecutor(new StaticSecretRuntimeResolver(secretId, "secret-token")),
+                new WorkflowHttpExecutorSettings
+                {
+                    Method = WorkflowHttpMethodKind.Get,
+                    Url = server.Url,
+                    SecretHeader = new WorkflowHttpSecretHeaderBinding
+                    {
+                        SecretId = secretId,
+                        SecretNameSnapshot = "API",
+                        HeaderName = "Authorization",
+                        ValueFormat = WorkflowHttpSecretValueFormat.Bearer
+                    }
+                });
+
+            Assert.Contains("Authorization: Bearer secret-token", server.RequestHeaders, StringComparison.Ordinal);
+            Assert.DoesNotContain("secret-token", result.PayloadJson, StringComparison.Ordinal);
+        });
+
+        await RecordAsync("http secret header requires runtime resolver", async () =>
+        {
+            await Assert.ThrowsAsync<InvalidOperationException>(() => ExecuteDirectAsync(new HttpFetchWorkflowExecutor(), new WorkflowHttpExecutorSettings
+            {
+                Method = WorkflowHttpMethodKind.Get,
+                Url = "https://example.test",
+                SecretHeader = new WorkflowHttpSecretHeaderBinding
+                {
+                    SecretId = Guid.NewGuid()
+                }
+            }));
+        });
+
         await RecordAsync("http fails on server error", async () =>
         {
             await using var server = SingleResponseHttpServer.Json(500, "{\"error\":\"boom\"}");
@@ -1217,6 +1254,8 @@ public sealed class WorkflowExecutorTests
 
         public string Url { get; }
 
+        public string RequestHeaders { get; private set; } = string.Empty;
+
         public static SingleResponseHttpServer Json(int statusCode, string body)
             => new(statusCode, body, "application/json");
 
@@ -1236,7 +1275,7 @@ public sealed class WorkflowExecutorTests
         {
             using var client = await listener.AcceptTcpClientAsync();
             await using var stream = client.GetStream();
-            await ReadRequestHeadersAsync(stream);
+            RequestHeaders = await ReadRequestHeadersAsync(stream);
             var bodyBytes = Encoding.UTF8.GetBytes(body);
             var reason = statusCode switch
             {
@@ -1254,7 +1293,7 @@ public sealed class WorkflowExecutorTests
             await stream.WriteAsync(bodyBytes);
         }
 
-        private static async Task ReadRequestHeadersAsync(NetworkStream stream)
+        private static async Task<string> ReadRequestHeadersAsync(NetworkStream stream)
         {
             var buffer = new byte[1024];
             var received = new List<byte>();
@@ -1263,16 +1302,30 @@ public sealed class WorkflowExecutorTests
                 var read = await stream.ReadAsync(buffer);
                 if (read == 0)
                 {
-                    return;
+                    return Encoding.ASCII.GetString(received.ToArray());
                 }
 
                 received.AddRange(buffer.Take(read));
                 if (received.Count >= 4 &&
                     Encoding.ASCII.GetString(received.ToArray()).Contains("\r\n\r\n", StringComparison.Ordinal))
                 {
-                    return;
+                    return Encoding.ASCII.GetString(received.ToArray());
                 }
             }
+
+            return Encoding.ASCII.GetString(received.ToArray());
+        }
+    }
+
+    private sealed class StaticSecretRuntimeResolver(Guid expectedSecretId, string value) : ISecretRuntimeResolver
+    {
+        public Task<string?> ResolveValueAsync(
+            SecretRuntimeRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            Assert.Equal(expectedSecretId, request.SecretId);
+            Assert.Contains(expectedSecretId, request.AllowedSecretIds ?? []);
+            return Task.FromResult<string?>(value);
         }
     }
 
