@@ -144,10 +144,9 @@ public sealed class ActivityService(
     public async Task<IReadOnlyList<ActivityTimelineItem>> ListRecentAsync(int take = 40, CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var entries = await dbContext.Set<ActivityEntry>().ToListAsync(cancellationToken);
-        return entries
-            .OrderByDescending(entry => entry.CreatedAtUtc)
-            .Take(Math.Clamp(take, 1, 100))
+        var boundedTake = Math.Clamp(take, 1, 100);
+        var query = dbContext.Set<ActivityEntry>()
+            .AsNoTracking()
             .Select(entry => new ActivityTimelineItem(
                 entry.Id,
                 entry.Category,
@@ -156,8 +155,20 @@ public sealed class ActivityService(
                 entry.Description,
                 entry.Route,
                 entry.CreatedAtUtc,
-                entry.Actor))
-            .ToList();
+                entry.Actor));
+
+        if (dbContext.Database.IsSqlite())
+        {
+            return (await query.ToListAsync(cancellationToken))
+                .OrderByDescending(entry => entry.CreatedAtUtc)
+                .Take(boundedTake)
+                .ToList();
+        }
+
+        return await query
+            .OrderByDescending(entry => entry.CreatedAtUtc)
+            .Take(boundedTake)
+            .ToListAsync(cancellationToken);
     }
 
     public Task<IReadOnlyList<SearchResult>> SearchAsync(string query, int take = 12, CancellationToken cancellationToken = default)

@@ -324,15 +324,26 @@ public sealed class ProjectStructureLeaseService(
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
-        var leases = await dbContext.Set<ProjectStructureLeaseRecord>()
+        if (dbContext.Database.IsSqlite())
+        {
+            var leases = await dbContext.Set<ProjectStructureLeaseRecord>()
+                .Where(item => item.ScopeKind == scopeKind &&
+                               item.ScopeKey == scopeKey &&
+                               item.ReleasedAtUtc == null)
+                .ToListAsync(cancellationToken);
+
+            return leases
+                .Where(item => item.ExpiresAtUtc > now)
+                .OrderByDescending(item => item.RenewedAtUtc)
+                .FirstOrDefault();
+        }
+
+        return await dbContext.Set<ProjectStructureLeaseRecord>()
             .Where(item => item.ScopeKind == scopeKind &&
                            item.ScopeKey == scopeKey &&
-                           item.ReleasedAtUtc == null)
-            .ToListAsync(cancellationToken);
-
-        return leases
-            .Where(item => item.ExpiresAtUtc > now)
+                           item.ReleasedAtUtc == null &&
+                           item.ExpiresAtUtc > now)
             .OrderByDescending(item => item.RenewedAtUtc)
-            .FirstOrDefault();
+            .FirstOrDefaultAsync(cancellationToken);
     }
 }

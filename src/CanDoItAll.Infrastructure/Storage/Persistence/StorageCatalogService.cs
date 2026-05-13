@@ -19,6 +19,7 @@ public sealed class StorageCatalogService(
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         return await dbContext.Set<StorageCatalogRecord>()
+            .AsNoTracking()
             .OrderBy(item => item.DisplayOrder)
             .ThenBy(item => item.Name)
             .ToListAsync(cancellationToken);
@@ -30,6 +31,7 @@ public sealed class StorageCatalogService(
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         return await dbContext.Set<StorageCatalogRecord>()
+            .AsNoTracking()
             .FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
     }
 
@@ -162,6 +164,7 @@ public sealed class StorageCatalogService(
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         return await dbContext.Set<StorageRoutingRule>()
+            .AsNoTracking()
             .OrderBy(item => item.Priority)
             .ThenBy(item => item.Name)
             .ToListAsync(cancellationToken);

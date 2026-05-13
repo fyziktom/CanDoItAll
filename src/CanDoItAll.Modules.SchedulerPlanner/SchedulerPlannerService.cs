@@ -291,7 +291,54 @@ public sealed class SchedulerPlannerService(
                 item.Run.ErrorMessage.Contains(search));
         }
 
-        var rows = await runsQuery
+        if (dbContext.Database.IsSqlite())
+        {
+            var rows = await runsQuery
+                .Select(item => new SchedulerPlanRunSummary(
+                    item.Run.Id,
+                    item.Plan.Id,
+                    item.Plan.Name,
+                    item.Plan.TargetKind,
+                    item.Plan.TargetNameSnapshot,
+                    item.Run.FiredAtUtc,
+                    item.Run.Status,
+                    item.Run.AttemptCount,
+                    item.Run.TargetRunId,
+                    item.Run.Summary,
+                    item.Run.ErrorMessage,
+                    item.Run.UpdatedAtUtc))
+                .ToListAsync(cancellationToken);
+
+            var filteredRows = rows.AsEnumerable();
+            if (query.FromUtc.HasValue)
+            {
+                filteredRows = filteredRows.Where(item => item.FiredAtUtc >= query.FromUtc.Value);
+            }
+
+            if (query.ToUtc.HasValue)
+            {
+                filteredRows = filteredRows.Where(item => item.FiredAtUtc <= query.ToUtc.Value);
+            }
+
+            return filteredRows
+                .OrderByDescending(item => item.FiredAtUtc)
+                .Take(take)
+                .ToList();
+        }
+
+        if (query.FromUtc.HasValue)
+        {
+            runsQuery = runsQuery.Where(item => item.Run.FiredAtUtc >= query.FromUtc.Value);
+        }
+
+        if (query.ToUtc.HasValue)
+        {
+            runsQuery = runsQuery.Where(item => item.Run.FiredAtUtc <= query.ToUtc.Value);
+        }
+
+        return await runsQuery
+            .OrderByDescending(item => item.Run.FiredAtUtc)
+            .Take(take)
             .Select(item => new SchedulerPlanRunSummary(
                 item.Run.Id,
                 item.Plan.Id,
@@ -306,22 +353,6 @@ public sealed class SchedulerPlannerService(
                 item.Run.ErrorMessage,
                 item.Run.UpdatedAtUtc))
             .ToListAsync(cancellationToken);
-
-        var filteredRows = rows.AsEnumerable();
-        if (query.FromUtc.HasValue)
-        {
-            filteredRows = filteredRows.Where(item => item.FiredAtUtc >= query.FromUtc.Value);
-        }
-
-        if (query.ToUtc.HasValue)
-        {
-            filteredRows = filteredRows.Where(item => item.FiredAtUtc <= query.ToUtc.Value);
-        }
-
-        return filteredRows
-            .OrderByDescending(item => item.FiredAtUtc)
-            .Take(take)
-            .ToList();
     }
 
     private CanvasCalendarSurface BuildCalendarSurface(

@@ -555,28 +555,32 @@ public sealed partial class ProcessRuntimeReadQueryService(
         IQueryable<ProcessRun> runsQuery,
         CancellationToken cancellationToken)
     {
-        var runs = (await runsQuery
-                .Select(
-                    run => new ProcessRunListProjection(
-                        run.Id,
-                        run.ProcessDefinitionId,
-                        run.ProcessDefinitionVersionId,
-                        run.ParentRunId,
-                        run.ParentStepRunId,
-                        run.RootRunId ?? run.Id,
-                        run.HierarchyDepth,
-                        run.ProjectId,
-                        run.Name,
-                        run.Status,
-                        run.OperatingMode,
-                        run.ManagerAgentId,
-                        run.ManagerAgentName,
-                        run.EstimatedCost,
-                        run.ActualCost,
-                        run.UpdatedAtUtc))
-                .ToListAsync(cancellationToken))
-            .OrderByDescending(run => run.UpdatedAtUtc)
-            .ToList();
+        var projectedRunsQuery = runsQuery
+            .Select(
+                run => new ProcessRunListProjection(
+                    run.Id,
+                    run.ProcessDefinitionId,
+                    run.ProcessDefinitionVersionId,
+                    run.ParentRunId,
+                    run.ParentStepRunId,
+                    run.RootRunId ?? run.Id,
+                    run.HierarchyDepth,
+                    run.ProjectId,
+                    run.Name,
+                    run.Status,
+                    run.OperatingMode,
+                    run.ManagerAgentId,
+                    run.ManagerAgentName,
+                    run.EstimatedCost,
+                    run.ActualCost,
+                    run.UpdatedAtUtc));
+        var runs = dbContext.Database.IsSqlite()
+            ? (await projectedRunsQuery.ToListAsync(cancellationToken))
+                .OrderByDescending(run => run.UpdatedAtUtc)
+                .ToList()
+            : await projectedRunsQuery
+                .OrderByDescending(run => run.UpdatedAtUtc)
+                .ToListAsync(cancellationToken);
         if (runs.Count == 0)
         {
             return [];

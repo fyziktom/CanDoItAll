@@ -150,9 +150,15 @@ public sealed partial class WorkspaceService(
     public async Task<WorkspaceSettingsModel> GetSettingsAsync(CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var settings = (await dbContext.Set<WorkspaceSettings>().ToListAsync(cancellationToken))
-            .OrderByDescending(item => item.UpdatedAtUtc)
-            .FirstOrDefault();
+        var settingsQuery = dbContext.Set<WorkspaceSettings>()
+            .AsNoTracking();
+        var settings = dbContext.Database.IsSqlite()
+            ? (await settingsQuery.ToListAsync(cancellationToken))
+                .OrderByDescending(item => item.UpdatedAtUtc)
+                .FirstOrDefault()
+            : await settingsQuery
+                .OrderByDescending(item => item.UpdatedAtUtc)
+                .FirstOrDefaultAsync(cancellationToken);
         if (settings is null)
         {
             return new WorkspaceSettingsModel();
@@ -170,9 +176,15 @@ public sealed partial class WorkspaceService(
     public async Task SaveSettingsAsync(WorkspaceSettingsModel model, CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var settings = (await dbContext.Set<WorkspaceSettings>().ToListAsync(cancellationToken))
-            .OrderByDescending(item => item.UpdatedAtUtc)
-            .FirstOrDefault();
+        var settingsQuery = dbContext.Set<WorkspaceSettings>()
+            .AsQueryable();
+        var settings = dbContext.Database.IsSqlite()
+            ? (await settingsQuery.ToListAsync(cancellationToken))
+                .OrderByDescending(item => item.UpdatedAtUtc)
+                .FirstOrDefault()
+            : await settingsQuery
+                .OrderByDescending(item => item.UpdatedAtUtc)
+                .FirstOrDefaultAsync(cancellationToken);
         if (settings is null)
         {
             settings = new WorkspaceSettings();
@@ -203,6 +215,7 @@ public sealed partial class WorkspaceService(
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var profiles = await dbContext.Set<ProviderProfile>()
+            .AsNoTracking()
             .OrderBy(profile => profile.Name)
             .ToListAsync(cancellationToken);
         return profiles
@@ -232,7 +245,9 @@ public sealed partial class WorkspaceService(
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var provider = await dbContext.Set<ProviderProfile>().FirstOrDefaultAsync(item => item.Id == id.Value, cancellationToken);
+        var provider = await dbContext.Set<ProviderProfile>()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(item => item.Id == id.Value, cancellationToken);
         if (provider is null)
         {
             return NewProvider();

@@ -181,11 +181,31 @@ public sealed class BackgroundJobTracker(
     public async Task<IReadOnlyList<BackgroundJobSummary>> ListAsync(CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var records = await dbContext.Set<BackgroundJobRecord>().ToListAsync(cancellationToken);
+        var query = dbContext.Set<BackgroundJobRecord>()
+            .AsNoTracking()
+            .Select(job => new
+            {
+                job.Id,
+                job.JobType,
+                job.Description,
+                job.State,
+                job.CorrelationId,
+                job.ErrorSummary,
+                job.CreatedAtUtc,
+                job.UpdatedAtUtc
+            });
+
+        var records = dbContext.Database.IsSqlite()
+            ? (await query.ToListAsync(cancellationToken))
+                .OrderByDescending(job => job.UpdatedAtUtc)
+                .Take(50)
+                .ToList()
+            : await query
+                .OrderByDescending(job => job.UpdatedAtUtc)
+                .Take(50)
+                .ToListAsync(cancellationToken);
 
         return records
-            .OrderByDescending(job => job.UpdatedAtUtc)
-            .Take(50)
             .Select(job => new BackgroundJobSummary(
                 job.Id,
                 job.JobType,

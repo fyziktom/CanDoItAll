@@ -255,6 +255,9 @@ public sealed partial class AppSmokeTests
         Assert.InRange(Math.Abs(maximized.HostTop), 0, 1);
         Assert.InRange(Math.Abs(maximized.HostWidth - maximized.ViewportWidth), 0, 1);
         Assert.InRange(Math.Abs(maximized.HostHeight - maximized.ViewportHeight), 0, 1);
+        Assert.Equal(3, maximized.CanvasLayerCount);
+        Assert.InRange(Math.Abs(maximized.MinCanvasLayerHeight - maximized.HostHeight), 0, 1);
+        Assert.InRange(Math.Abs(maximized.MaxCanvasLayerHeight - maximized.HostHeight), 0, 1);
         Assert.InRange(Math.Abs(maximized.DocumentClientHeight - maximized.ViewportHeight), 0, 1);
         Assert.InRange(Math.Abs(maximized.DocumentScrollHeight - maximized.ViewportHeight), 0, 1);
 
@@ -2515,6 +2518,8 @@ public sealed partial class AppSmokeTests
             @"() => {
                 const shell = document.querySelector('.cw-workbench-shell');
                 const host = document.querySelector('.cw-canvas-host');
+                const canvasLayers = Array.from(document.querySelectorAll('.cw-workbench__canvas'));
+                const canvasLayerHeights = canvasLayers.map(layer => layer.getBoundingClientRect().height);
                 return {
                     isMaximized: shell?.classList.contains('is-maximized') === true,
                     bodyLock: document.body.classList.contains('cw-body-lock'),
@@ -2522,6 +2527,9 @@ public sealed partial class AppSmokeTests
                     hostTop: host?.getBoundingClientRect().top ?? 0,
                     hostWidth: host?.getBoundingClientRect().width ?? 0,
                     hostHeight: host?.getBoundingClientRect().height ?? 0,
+                    canvasLayerCount: canvasLayers.length,
+                    minCanvasLayerHeight: canvasLayerHeights.length > 0 ? Math.min(...canvasLayerHeights) : 0,
+                    maxCanvasLayerHeight: canvasLayerHeights.length > 0 ? Math.max(...canvasLayerHeights) : 0,
                     documentClientHeight: document.documentElement.clientHeight,
                     documentScrollHeight: document.documentElement.scrollHeight,
                     viewportWidth: window.innerWidth,
@@ -4683,6 +4691,12 @@ public sealed partial class AppSmokeTests
         public double HostWidth { get; set; }
 
         public double HostHeight { get; set; }
+
+        public int CanvasLayerCount { get; set; }
+
+        public double MinCanvasLayerHeight { get; set; }
+
+        public double MaxCanvasLayerHeight { get; set; }
 
         public double DocumentClientHeight { get; set; }
 
