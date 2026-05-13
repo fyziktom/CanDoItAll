@@ -18,6 +18,10 @@ public partial class WorkflowCanvasEditor
     private const string ToolboxWindowId = "workflow-canvas-toolbox";
     private const string SelectionWindowId = "workflow-canvas-selection";
     private const string ComponentsWindowId = "workflow-canvas-components";
+    private const string CanvasCreateConnectionActionId = "connection:create";
+    private const string CanvasDeleteNodeActionId = "delete";
+    private const string CanvasDeleteLinkActionId = "delete-link";
+    private const string CanvasLinkTargetKind = "link";
 
     private static readonly JsonSerializerOptions ExecutorJsonOptions = CreateExecutorJsonOptions(writeIndented: false);
     private static readonly JsonSerializerOptions IndentedExecutorJsonOptions = CreateExecutorJsonOptions(writeIndented: true);
@@ -119,6 +123,13 @@ public partial class WorkflowCanvasEditor
         => SelectedNode is null
             ? $"{document.Nodes.Count} nodes"
             : $"{SelectedNode.Kind} · {SelectedNode.Id.Value}";
+
+    private sealed record RemovalBridge(
+        WorkflowNodeId SourceNodeId,
+        WorkflowNodeId TargetNodeId,
+        WorkflowEdgeKind Kind,
+        string ConditionExpression,
+        WorkflowEdgeRouting Routing);
 
     private CanvasWorkbenchSurface CanvasSurface
         => WorkflowCanvasDefinitionMapper.BuildSurface(
@@ -460,22 +471,132 @@ public partial class WorkflowCanvasEditor
 
     private Task RemoveNodeAsync(WorkflowCanvasNodeDraft node)
     {
+        errorMessage = string.Empty;
         if (node.Kind is WorkflowNodeKind.Start or WorkflowNodeKind.End)
         {
             return Task.CompletedTask;
         }
 
+        var incomingEdges = document.Edges
+            .Where(edge => edge.TargetNodeId == node.Id)
+            .ToArray();
+        var outgoingEdges = document.Edges
+            .Where(edge => edge.SourceNodeId == node.Id)
+            .ToArray();
+        var bridge = ResolveRemovalBridge(node, incomingEdges, outgoingEdges);
+
         document.Nodes.Remove(node);
         document.Edges.RemoveAll(edge => edge.SourceNodeId == node.Id || edge.TargetNodeId == node.Id);
+        if (bridge is { } bridgeEdge &&
+            !document.Edges.Any(edge => edge.SourceNodeId == bridgeEdge.SourceNodeId && edge.TargetNodeId == bridgeEdge.TargetNodeId))
+        {
+            document.Edges.Add(new WorkflowCanvasEdgeDraft(
+                CreateEdgeId(bridgeEdge.SourceNodeId, bridgeEdge.TargetNodeId),
+                bridgeEdge.SourceNodeId,
+                bridgeEdge.TargetNodeId)
+            {
+                Kind = bridgeEdge.Kind,
+                ConditionExpression = bridgeEdge.ConditionExpression,
+                Routing = bridgeEdge.Routing
+            });
+            NotificationService.Info(
+                "Workflow route reconnected",
+                $"{ResolveNodeName(bridgeEdge.SourceNodeId)} -> {ResolveNodeName(bridgeEdge.TargetNodeId)}");
+        }
+        else if (bridge is { } existingBridge)
+        {
+            NotificationService.Info(
+                "Workflow route already connected",
+                $"{ResolveNodeName(existingBridge.SourceNodeId)} -> {ResolveNodeName(existingBridge.TargetNodeId)}");
+        }
+        else if (incomingEdges.Length > 0 || outgoingEdges.Length > 0)
+        {
+            errorMessage = "Removed node had branching or incomplete routes. Connect the remaining nodes manually before running the workflow.";
+            NotificationService.Warning("Workflow route needs attention", errorMessage);
+        }
+
         if (decisionRouteEditorNodeId == node.Id.Value)
         {
             ResetDecisionRouteEditor();
         }
 
         isNodeDetailsDialogOpen = isNodeDetailsDialogOpen && SelectedNode is not null && SelectedNode != node;
-        SelectNode(document.StartNodeId.Value);
+        SelectNode(bridge?.TargetNodeId.Value ?? document.StartNodeId.Value);
         SyncEdgeDefaults();
         return Task.CompletedTask;
+    }
+
+    private RemovalBridge? ResolveRemovalBridge(
+        WorkflowCanvasNodeDraft node,
+        IReadOnlyList<WorkflowCanvasEdgeDraft> incomingEdges,
+        IReadOnlyList<WorkflowCanvasEdgeDraft> outgoingEdges)
+    {
+        if (incomingEdges.Count != 1 || outgoingEdges.Count != 1)
+        {
+            return null;
+        }
+
+        var incoming = incomingEdges[0];
+        var outgoing = outgoingEdges[0];
+        if (incoming.SourceNodeId == outgoing.TargetNodeId)
+        {
+            return null;
+        }
+
+        if (WouldCreateCycle(incoming.SourceNodeId, outgoing.TargetNodeId, node.Id))
+        {
+            return null;
+        }
+
+        var routeSource = incoming.Routing.Kind != WorkflowRouteKind.Always
+            ? incoming
+            : outgoing.Routing.Kind != WorkflowRouteKind.Always
+                ? outgoing
+                : incoming;
+        return new RemovalBridge(
+            incoming.SourceNodeId,
+            outgoing.TargetNodeId,
+            ResolveEdgeKindForRoute(routeSource.Routing.Kind),
+            routeSource.ConditionExpression,
+            routeSource.Routing);
+    }
+
+    private bool WouldCreateCycle(
+        WorkflowNodeId sourceNodeId,
+        WorkflowNodeId targetNodeId,
+        WorkflowNodeId removedNodeId)
+    {
+        var pending = new Queue<WorkflowNodeId>();
+        var visited = new HashSet<WorkflowNodeId>();
+        pending.Enqueue(targetNodeId);
+        while (pending.Count > 0)
+        {
+            var current = pending.Dequeue();
+            if (!visited.Add(current))
+            {
+                continue;
+            }
+
+            if (current == sourceNodeId)
+            {
+                return true;
+            }
+
+            foreach (var edge in document.Edges)
+            {
+                if (edge.SourceNodeId == removedNodeId || edge.TargetNodeId == removedNodeId)
+                {
+                    continue;
+                }
+
+                if (edge.SourceNodeId == current)
+                {
+                    pending.Enqueue(edge.TargetNodeId);
+                }
+            }
+        }
+
+        return false;
     }
 
     private async Task ValidateAsync()
@@ -666,6 +787,12 @@ public partial class WorkflowCanvasEditor
 
     private async Task HandleCanvasContextActionAsync(CanvasWorkbenchContextActionRequest request)
     {
+        if (string.Equals(request.TargetKind, CanvasLinkTargetKind, StringComparison.Ordinal))
+        {
+            await HandleCanvasLinkContextActionAsync(request);
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(request.NodeId))
         {
             return;
@@ -689,9 +816,125 @@ public partial class WorkflowCanvasEditor
                 BeginDecisionRouteEdit(node, routeEdge: null);
                 break;
             case WorkflowCanvasDefinitionMapper.RemoveNodeActionId:
+            case CanvasDeleteNodeActionId:
                 await RemoveNodeAsync(node);
                 break;
         }
+    }
+
+    private Task HandleCanvasLinkContextActionAsync(CanvasWorkbenchContextActionRequest request)
+    {
+        return request.ActionId switch
+        {
+            CanvasCreateConnectionActionId => CreateEdgeFromCanvasConnectionAsync(request),
+            CanvasDeleteLinkActionId => RemoveEdgeFromCanvasConnectionAsync(request),
+            _ => Task.CompletedTask
+        };
+    }
+
+    private Task CreateEdgeFromCanvasConnectionAsync(CanvasWorkbenchContextActionRequest request)
+    {
+        errorMessage = string.Empty;
+        var hasSource = TryResolveCanvasConnectionEndpoint(request.LinkSourceId, isSource: true, out var sourceNode, out var sourceError);
+        var hasTarget = TryResolveCanvasConnectionEndpoint(request.LinkTargetId, isSource: false, out var targetNode, out var targetError);
+        if (!hasSource || !hasTarget)
+        {
+            errorMessage = hasSource ? targetError : sourceError;
+            NotificationService.Warning("Workflow connection failed", errorMessage);
+            return Task.CompletedTask;
+        }
+
+        if (sourceNode.Id == targetNode.Id)
+        {
+            errorMessage = "Choose different source and target nodes for the workflow edge.";
+            NotificationService.Warning("Workflow connection failed", errorMessage);
+            return Task.CompletedTask;
+        }
+
+        if (document.Edges.Any(edge => edge.SourceNodeId == sourceNode.Id && edge.TargetNodeId == targetNode.Id))
+        {
+            errorMessage = "That workflow edge already exists.";
+            NotificationService.Warning("Workflow connection failed", errorMessage);
+            return Task.CompletedTask;
+        }
+
+        document.Edges.Add(new WorkflowCanvasEdgeDraft(
+            CreateEdgeId(sourceNode.Id, targetNode.Id),
+            sourceNode.Id,
+            targetNode.Id));
+        SelectNode(targetNode.Id.Value);
+        ResetEdgeEditor();
+        NotificationService.Success("Workflow edge connected", $"{sourceNode.Name} -> {targetNode.Name}");
+        return Task.CompletedTask;
+    }
+
+    private Task RemoveEdgeFromCanvasConnectionAsync(CanvasWorkbenchContextActionRequest request)
+    {
+        errorMessage = string.Empty;
+        if (string.IsNullOrWhiteSpace(request.LinkSourceId) ||
+            string.IsNullOrWhiteSpace(request.LinkTargetId))
+        {
+            errorMessage = "Choose a workflow edge before removing it.";
+            NotificationService.Warning("Workflow edge removal failed", errorMessage);
+            return Task.CompletedTask;
+        }
+
+        var edge = document.Edges.FirstOrDefault(item =>
+            string.Equals(item.SourceNodeId.Value, request.LinkSourceId, StringComparison.Ordinal) &&
+            string.Equals(item.TargetNodeId.Value, request.LinkTargetId, StringComparison.Ordinal));
+        if (edge is null)
+        {
+            errorMessage = "The selected workflow edge no longer exists.";
+            NotificationService.Warning("Workflow edge removal failed", errorMessage);
+            return Task.CompletedTask;
+        }
+
+        document.Edges.Remove(edge);
+        if (editingEdgeId == edge.Id)
+        {
+            ResetEdgeEditor();
+        }
+
+        NotificationService.Info("Workflow edge removed", $"{ResolveNodeName(edge.SourceNodeId)} -> {ResolveNodeName(edge.TargetNodeId)}");
+        return Task.CompletedTask;
+    }
+
+    private bool TryResolveCanvasConnectionEndpoint(
+        string? nodeId,
+        bool isSource,
+        out WorkflowCanvasNodeDraft node,
+        out string error)
+    {
+        node = null!;
+        error = string.Empty;
+        if (string.IsNullOrWhiteSpace(nodeId))
+        {
+            error = isSource
+                ? "Choose a source workflow node for the edge."
+                : "Choose a target workflow node for the edge.";
+            return false;
+        }
+
+        node = document.Nodes.FirstOrDefault(item => string.Equals(item.Id.Value, nodeId, StringComparison.Ordinal))!;
+        if (node is null)
+        {
+            error = $"Workflow node '{nodeId}' does not exist.";
+            return false;
+        }
+
+        if (isSource && node.Kind == WorkflowNodeKind.End)
+        {
+            error = "End nodes cannot start workflow edges.";
+            return false;
+        }
+
+        if (!isSource && node.Kind == WorkflowNodeKind.Start)
+        {
+            error = "Start nodes cannot receive workflow edges.";
+            return false;
+        }
+
+        return true;
     }
 
     private void HandleNameChanged(ChangeEventArgs args)

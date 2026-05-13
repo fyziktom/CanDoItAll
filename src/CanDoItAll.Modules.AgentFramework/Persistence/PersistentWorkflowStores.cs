@@ -25,10 +25,16 @@ public sealed class PersistentWorkflowCatalogService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var query = dbContext.Set<WorkflowDefinitionRecord>()
             .AsNoTracking();
-        var records = (await query
+        var orderedRecords = dbContext.Database.IsSqlite()
+            ? (await query.ToListAsync(cancellationToken))
                 .OrderByDescending(item => item.UpdatedAtUtc)
                 .ThenByDescending(item => item.CreatedAtUtc)
-                .ToListAsync(cancellationToken))
+                .ToList()
+            : await query
+                .OrderByDescending(item => item.UpdatedAtUtc)
+                .ThenByDescending(item => item.CreatedAtUtc)
+                .ToListAsync(cancellationToken);
+        var records = orderedRecords
             .GroupBy(item => item.WorkflowId)
             .Select(group => group.First())
             .OrderByDescending(item => item.UpdatedAtUtc)

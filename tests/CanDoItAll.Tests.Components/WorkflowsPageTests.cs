@@ -145,6 +145,96 @@ public sealed class WorkflowsPageTests
     }
 
     [Fact]
+    public async Task Workflow_canvas_reconnects_linear_route_after_delete_and_accepts_canvas_connections()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync(RegisterDeterministicWorkflowLlmInvoker);
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var notificationService = harness.Context.Services.GetRequiredService<NotificationService>();
+
+        navigation.NavigateTo("/agents/workflows");
+        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+
+        cut.WaitForElement("[data-testid='workflows-tab-editor']");
+        cut.Find("[data-testid='workflows-tab-editor']").Click();
+        cut.WaitForElement("[data-testid='workflow-canvas-editor']");
+        cut.Find("[data-testid='workflow-canvas-toggle-components']").Click();
+        cut.WaitForElement("[data-testid='workflow-canvas-create-component']");
+        cut.Find("[data-testid='workflow-canvas-create-component']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(notificationService.Messages, message => message.Summary == "LLM component created");
+        });
+
+        cut.Find("[data-testid='workflow-canvas-place-component']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Single(
+                cut.FindComponent<CanvasWorkbench>().Instance.Surface.Nodes,
+                node => node.Kind == WorkflowNodeKind.LlmCall.ToString());
+        });
+        cut.Find("[data-testid='workflow-canvas-place-component']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            var surface = cut.FindComponent<CanvasWorkbench>().Instance.Surface;
+            Assert.Equal(CanvasWorkbenchModes.Authoring, surface.Mode);
+            Assert.Equal(2, surface.Nodes.Count(node => node.Kind == WorkflowNodeKind.LlmCall.ToString()));
+            Assert.Contains(surface.Links, link => link.SourceId == "start" && link.TargetId == "llm");
+            Assert.Contains(surface.Links, link => link.SourceId == "llm" && link.TargetId == "llm-1");
+            Assert.Contains(surface.Links, link => link.SourceId == "llm-1" && link.TargetId == "end");
+        });
+
+        await cut.InvokeAsync(() => cut.FindComponent<CanvasWorkbench>().Instance.OnContextAction("llm", "workflow-node:remove", 0, 0));
+
+        cut.WaitForAssertion(() =>
+        {
+            var surface = cut.FindComponent<CanvasWorkbench>().Instance.Surface;
+            Assert.DoesNotContain(surface.Nodes, node => node.Id == "llm");
+            Assert.Contains(surface.Links, link => link.SourceId == "start" && link.TargetId == "llm-1");
+            Assert.DoesNotContain(surface.Links, link => link.SourceId == "llm" || link.TargetId == "llm");
+        });
+
+        var deleteRequest = new CanvasWorkbenchContextActionRequest(
+            NodeId: "llm-1",
+            ActionId: "delete-link",
+            X: 0,
+            Y: 0,
+            TargetKind: "link",
+            LinkSourceId: "start",
+            LinkTargetId: "llm-1",
+            LinkKind: "Always",
+            LinkSourcePortId: "workflow:output",
+            LinkTargetPortId: "workflow:input");
+        await cut.InvokeAsync(() => cut.FindComponent<CanvasWorkbench>().Instance.OnContextActionRequest(SerializationPersistencePack.Serialize(deleteRequest)));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.DoesNotContain(
+                cut.FindComponent<CanvasWorkbench>().Instance.Surface.Links,
+                link => link.SourceId == "start" && link.TargetId == "llm-1");
+        });
+
+        var createRequest = deleteRequest with
+        {
+            ActionId = "connection:create"
+        };
+        await cut.InvokeAsync(() => cut.FindComponent<CanvasWorkbench>().Instance.OnContextActionRequest(SerializationPersistencePack.Serialize(createRequest)));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(
+                cut.FindComponent<CanvasWorkbench>().Instance.Surface.Links,
+                link => link.SourceId == "start" && link.TargetId == "llm-1");
+        });
+
+        cut.Find("[data-testid='workflow-canvas-validate']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(notificationService.Messages, message => message.Summary == "Workflow canvas valid");
+            Assert.DoesNotContain("workflow-canvas-validation-issue", cut.Markup);
+        });
+    }
+
+    [Fact]
     public async Task Workflow_canvas_authors_typed_predicate_route_metadata()
     {
         await using var harness = await ComponentTestHarness.CreateAsync(RegisterDeterministicWorkflowLlmInvoker);

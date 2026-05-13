@@ -351,7 +351,7 @@ internal static class WorkflowCanvasDefinitionMapper
         return new CanvasWorkbenchSurface
         {
             SurfaceId = document.DefinitionId?.ToString() ?? "workflow-canvas-draft",
-            Mode = "workflow-authoring",
+            Mode = CanvasWorkbenchModes.Authoring,
             DependencySourceId = document.VersionId?.ToString() ?? "draft",
             Nodes = nodes,
             Links = links,

@@ -1,10 +1,17 @@
 namespace CanDoItAll.Components.CanvasLib;
 
+public static class CanvasWorkbenchModes
+{
+    public const string Authoring = "authoring";
+    public const string Delete = "delete";
+    public const string Dependency = "dependency";
+}
+
 public sealed class CanvasWorkbenchSurface
 {
     public string SurfaceId { get; set; } = string.Empty;
 
-    public string Mode { get; set; } = "authoring";
+    public string Mode { get; set; } = CanvasWorkbenchModes.Authoring;
 
     public string DependencySourceId { get; set; } = string.Empty;
 
