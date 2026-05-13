@@ -549,10 +549,28 @@
                                 </label>
                                 <div class="workflow-canvas-panel workflow-canvas-panel--soft"
                                      data-testid="workflow-http-secret-header">
-                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Secret header" />
+                                    <Split Breakpoint="LayoutBreakpoint.Md"
+                                           Gap="LayoutGap.Small"
+                                           AlignItems="AlignItems.Center"
+                                           JustifyContent="JustifyContent.SpaceBetween"
+                                           Wrap="FlexWrap.Wrap">
+                                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Secret header" />
+                                        <Button Text="Refresh secrets"
+                                                Variant="Variant.Text"
+                                                ButtonStyle="ButtonStyle.Base"
+                                                Size="ButtonSize.Small"
+                                                Disabled="@isLoadingSecrets"
+                                                IsBusy="@isLoadingSecrets"
+                                                Click="LoadSecretPickerItemsAsync"
+                                                data-testid="workflow-http-secret-refresh" />
+                                    </Split>
                                     @if (!string.IsNullOrWhiteSpace(secretPickerErrorMessage))
                                     {
                                         <p class="workflow-canvas-error">@secretPickerErrorMessage</p>
+                                    }
+                                    else if (!isLoadingSecrets && secretPickerItems.Count == 0)
+                                    {
+                                        <p class="workflow-canvas-help">No stored secrets found in the active database.</p>
                                     }
                                     <Grid Gap="LayoutGap.Small" ColumnsLg="2">
                                         <label class="workflow-canvas-field">

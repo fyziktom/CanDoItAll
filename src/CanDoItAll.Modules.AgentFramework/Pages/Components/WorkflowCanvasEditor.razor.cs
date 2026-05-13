@@ -122,6 +122,7 @@ public partial class WorkflowCanvasEditor
             document,
             componentOptions,
             executorDescriptors,
+            secretPickerItems,
             validationIssues,
             canvasUiState,
             selectedNodeId);
@@ -580,13 +581,17 @@ public partial class WorkflowCanvasEditor
         return definition;
     }
 
-    private Task HandleCanvasSelectionChangedAsync(CanvasWorkbenchSelectionChangedEventArgs args)
+    private async Task HandleCanvasSelectionChangedAsync(CanvasWorkbenchSelectionChangedEventArgs args)
     {
         selectedNodeId = args.PrimaryNodeId ?? args.SelectedNodeIds.FirstOrDefault();
         canvasUiState.SelectedNodeIds = string.IsNullOrWhiteSpace(selectedNodeId)
             ? []
             : [selectedNodeId];
-        return Task.CompletedTask;
+
+        if (IsHttpExecutorNode(SelectedNode))
+        {
+            await LoadSecretPickerItemsAsync();
+        }
     }
 
     private Task HandleCanvasStateChangedAsync(string stateJson)
@@ -820,17 +825,25 @@ public partial class WorkflowCanvasEditor
         canvasUiState.SelectedNodeIds = [nodeId];
     }
 
-    private Task HandleCanvasNodeOpenedAsync(string nodeId)
+    private async Task HandleCanvasNodeOpenedAsync(string nodeId)
     {
         SelectNode(nodeId);
+        if (IsHttpExecutorNode(SelectedNode))
+        {
+            await LoadSecretPickerItemsAsync();
+        }
+
         isNodeDetailsDialogOpen = SelectedNode is not null;
-        return Task.CompletedTask;
     }
 
-    private Task OpenSelectedNodeDetailsAsync()
+    private async Task OpenSelectedNodeDetailsAsync()
     {
+        if (IsHttpExecutorNode(SelectedNode))
+        {
+            await LoadSecretPickerItemsAsync();
+        }
+
         isNodeDetailsDialogOpen = SelectedNode is not null;
-        return Task.CompletedTask;
     }
 
     private Task CloseNodeDetailsDialogAsync()
@@ -1573,6 +1586,13 @@ public partial class WorkflowCanvasEditor
             isLoadingSecrets = false;
         }
     }
+
+    private static bool IsHttpExecutorNode(WorkflowCanvasNodeDraft? node)
+        => node is
+        {
+            Kind: WorkflowNodeKind.Executor,
+            ExecutorId: { } executorId
+        } && executorId == WorkflowExecutorIds.HttpFetch;
 
     private string BuildCellWritesJson(WorkflowCanvasNodeDraft node)
         => JsonSerializer.Serialize(ReadExecutorSettings<WorkflowSpreadsheetExecutorSettings>(node).CellWrites, IndentedExecutorJsonOptions);

@@ -271,6 +271,12 @@
     font-size: 0.88rem;
 }
 
+.workflow-canvas-help {
+    margin: 0;
+    color: var(--cda-color-text-muted, #64748b);
+    font-size: 0.88rem;
+}
+
 @media (max-width: 760px) {
     .workflow-canvas-node-dialog {
         height: auto;

@@ -43,4 +43,6 @@ Do not add a generic model-visible "read secret" tool. If an action needs a secr
 
 The shared `SecretField` BaseLib component is the standard secret-value editor. It masks by default, supports copy buttons for the value and secret name, and only reveals the value through a timed "Show for 30s" action.
 
-The project-structure secret-reference dialog searches existing stored secrets and can create a new stored secret before adding the reference node. The node must never persist the secret value itself.
+The project-structure secret-reference dialog searches existing stored secrets, offers a dropdown stored-secret selector when adding or editing a secret node, and can create a new stored secret before adding or updating the reference node. The node must never persist the secret value itself.
+
+Workflow HTTP executor creation and the selected HTTP executor inspector use the same stored-secret selector for request-header credentials. The workflow stores only the secret id and resolves the secret value server-side at execution time.

@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Modules.Security;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
@@ -11,13 +12,14 @@ internal static class WorkflowExecutorCanvasCatalog
     private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
 
     public static IReadOnlyList<CanvasWorkbenchAction> BuildQuickCreateActions(
-        IReadOnlyList<WorkflowExecutorDescriptor> executors)
+        IReadOnlyList<WorkflowExecutorDescriptor> executors,
+        IReadOnlyList<SecretListItem> secrets)
     {
         var implemented = executors
             .Where(executor => executor.IsImplemented)
             .OrderBy(executor => executor.Category)
             .ThenBy(executor => executor.Name, StringComparer.OrdinalIgnoreCase)
-            .Select(BuildCreateAction)
+            .Select(executor => BuildCreateAction(executor, secrets))
             .ToList();
         if (implemented.Count == 0)
         {
@@ -39,10 +41,12 @@ internal static class WorkflowExecutorCanvasCatalog
         ];
     }
 
-    public static CanvasWorkbenchAction BuildCreateAction(WorkflowExecutorDescriptor descriptor)
+    public static CanvasWorkbenchAction BuildCreateAction(
+        WorkflowExecutorDescriptor descriptor,
+        IReadOnlyList<SecretListItem>? secrets = null)
     {
         var defaultInputValues = BuildDefaultInputValues(descriptor);
-        var inputFields = BuildInputFields(descriptor);
+        var inputFields = BuildInputFields(descriptor, secrets ?? []);
         return new CanvasWorkbenchAction
         {
             ActionId = BuildCreateActionId(descriptor.Id),
@@ -249,7 +253,9 @@ internal static class WorkflowExecutorCanvasCatalog
         return values;
     }
 
-    private static List<CanvasWorkbenchInputField> BuildInputFields(WorkflowExecutorDescriptor descriptor)
+    private static List<CanvasWorkbenchInputField> BuildInputFields(
+        WorkflowExecutorDescriptor descriptor,
+        IReadOnlyList<SecretListItem> secrets)
     {
         var fields = new List<CanvasWorkbenchInputField>();
         if (descriptor.Id == WorkflowExecutorIds.StorageFile)
@@ -276,7 +282,7 @@ internal static class WorkflowExecutorCanvasCatalog
                 TextField("httpUrl", "Request", "URL", "https://example.com/feed.json", inputMode: "url"),
                 TextField("httpUrlJsonPath", "Request", "URL JSON path", "$.url"),
                 TextAreaField("httpHeadersJson", "Request", "Headers JSON", "{\"Accept\":\"application/json\"}"),
-                TextField("httpSecretId", "Secret header", "Secret id", "00000000-0000-0000-0000-000000000000"),
+                SecretSelectField("httpSecretId", "Secret header", "Stored secret", secrets),
                 TextField("httpSecretHeaderName", "Secret header", "Header", "Authorization"),
                 SelectField<WorkflowHttpSecretValueFormat>("httpSecretValueFormat", "Secret header", "Choose how the secret value is written into the request header.", "Format"),
                 TextField("httpSecretCustomPrefix", "Secret header", "Custom prefix", "Token"),
@@ -399,6 +405,35 @@ internal static class WorkflowExecutorCanvasCatalog
                 new CanvasWorkbenchInputOption { Value = "false", Label = "No" }
             ]
         };
+
+    private static CanvasWorkbenchInputField SecretSelectField(
+        string key,
+        string section,
+        string label,
+        IReadOnlyList<SecretListItem> secrets)
+    {
+        var options = secrets
+            .OrderBy(secret => secret.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(secret => new CanvasWorkbenchInputOption
+            {
+                Value = secret.Id.ToString("D"),
+                Label = $"{secret.Name} ({secret.Kind})"
+            })
+            .ToList();
+
+        return new CanvasWorkbenchInputField
+        {
+            Key = key,
+            SectionKey = Slug(section),
+            SectionTitle = section,
+            SectionDescription = "Select a stored secret. The workflow stores only the secret id and resolves it at request time.",
+            Label = label,
+            Placeholder = "No secret header",
+            InputMode = "select",
+            IsRequired = false,
+            Options = options
+        };
+    }
 
     private static CanvasWorkbenchInputField SelectField<TEnum>(
         string key,

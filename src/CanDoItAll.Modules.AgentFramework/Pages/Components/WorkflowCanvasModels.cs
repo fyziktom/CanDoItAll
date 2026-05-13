@@ -1,6 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Modules.Security;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
@@ -268,6 +269,7 @@ internal static class WorkflowCanvasDefinitionMapper
         WorkflowCanvasDocument document,
         IReadOnlyList<LlmCallComponent> components,
         IReadOnlyList<WorkflowExecutorDescriptor> executors,
+        IReadOnlyList<SecretListItem> secrets,
         IReadOnlyList<WorkflowValidationIssue> validationIssues,
         CanvasWorkbenchUiState uiState,
         string? selectedNodeId)
@@ -275,6 +277,7 @@ internal static class WorkflowCanvasDefinitionMapper
         ArgumentNullException.ThrowIfNull(document);
         ArgumentNullException.ThrowIfNull(components);
         ArgumentNullException.ThrowIfNull(executors);
+        ArgumentNullException.ThrowIfNull(secrets);
         ArgumentNullException.ThrowIfNull(validationIssues);
         ArgumentNullException.ThrowIfNull(uiState);
 
@@ -353,7 +356,7 @@ internal static class WorkflowCanvasDefinitionMapper
             Nodes = nodes,
             Links = links,
             UiState = resolvedUiState,
-            Chrome = BuildChrome(executors)
+            Chrome = BuildChrome(executors, secrets)
         };
     }
 
@@ -636,7 +639,9 @@ internal static class WorkflowCanvasDefinitionMapper
         }
     }
 
-    private static CanvasWorkbenchChrome BuildChrome(IReadOnlyList<WorkflowExecutorDescriptor> executors)
+    private static CanvasWorkbenchChrome BuildChrome(
+        IReadOnlyList<WorkflowExecutorDescriptor> executors,
+        IReadOnlyList<SecretListItem> secrets)
     {
         return new CanvasWorkbenchChrome
         {
@@ -666,7 +671,7 @@ internal static class WorkflowCanvasDefinitionMapper
                         InputFields = BuildNodeSetupFields(kind),
                         DefaultInputValues = BuildNodeDefaultInputValues(kind)
                     }))
-                .Concat(WorkflowExecutorCanvasCatalog.BuildQuickCreateActions(executors))
+                .Concat(WorkflowExecutorCanvasCatalog.BuildQuickCreateActions(executors, secrets))
                 .ToList()
         };
     }

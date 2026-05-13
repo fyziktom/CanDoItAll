@@ -320,6 +320,12 @@ public partial class ProjectStructurePage
 
     private async Task OpenEditDialogAsync(ProjectStructureNode node)
     {
+        if (node.ObjectType == ProjectObjectType.SecretReference)
+        {
+            await OpenSecretReferenceEditDialogAsync(node);
+            return;
+        }
+
         if (!TryBuildNodeEditModel(node, out var model) || workbenchRef is null)
         {
             return;
