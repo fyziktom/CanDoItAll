@@ -48,12 +48,11 @@ public sealed partial class ProcessRuntimeReadQueryService
             .ToList();
     }
 
-    private static int Average(IEnumerable<int> values)
+    private static int Average(int total, int count)
     {
-        var materialized = values.ToList();
-        return materialized.Count == 0
+        return count == 0
             ? 0
-            : (int)Math.Round(materialized.Average(), MidpointRounding.AwayFromZero);
+            : (int)Math.Round((double)total / count, MidpointRounding.AwayFromZero);
     }
 
     private static async Task<IReadOnlyList<ProcessDecisionViewModel>> ListDecisionRecordsAsync(
@@ -62,6 +61,7 @@ public sealed partial class ProcessRuntimeReadQueryService
         CancellationToken cancellationToken)
     {
         var items = await dbContext.Set<ProcessDecisionRecord>()
+            .AsNoTracking()
             .Where(item => item.ProcessRunId == runId)
             .Select(item => new ProcessDecisionViewModel(
                 item.Id,
@@ -84,6 +84,7 @@ public sealed partial class ProcessRuntimeReadQueryService
         CancellationToken cancellationToken)
     {
         var items = await dbContext.Set<ProcessArtifactRecord>()
+            .AsNoTracking()
             .Where(item => item.ProcessRunId == runId)
             .Select(item => new ProcessArtifactViewModel(
                 item.Id,
@@ -520,6 +521,7 @@ public sealed partial class ProcessRuntimeReadQueryService
         CancellationToken cancellationToken)
     {
         var assignments = await dbContext.Set<ProcessRunAssignment>()
+            .AsNoTracking()
             .Where(item => item.ProcessRunId == runId)
             .ToListAsync(cancellationToken);
         if (assignments.Count == 0)
@@ -532,6 +534,7 @@ public sealed partial class ProcessRuntimeReadQueryService
             .Distinct()
             .ToList();
         var roleDisplayNames = await dbContext.Set<ProcessRoleRequirement>()
+            .AsNoTracking()
             .Where(item => roleIds.Contains(item.Id))
             .ToDictionaryAsync(item => item.Id, item => item.DisplayName, cancellationToken);
 
@@ -566,6 +569,7 @@ public sealed partial class ProcessRuntimeReadQueryService
         CancellationToken cancellationToken)
     {
         var items = await dbContext.Set<ProcessWorkBrief>()
+            .AsNoTracking()
             .Where(item => item.ProcessRunId == runId)
             .Select(item => new ProcessWorkBriefViewModel(
                 item.Id,
@@ -644,6 +648,7 @@ public sealed partial class ProcessRuntimeReadQueryService
         CancellationToken cancellationToken)
     {
         var items = await dbContext.Set<ProcessConformanceObservation>()
+            .AsNoTracking()
             .Where(item => item.ProcessRunId == runId)
             .Select(item => new ProcessConformanceObservationViewModel(
                 item.Id,
@@ -667,6 +672,7 @@ public sealed partial class ProcessRuntimeReadQueryService
         CancellationToken cancellationToken)
     {
         var threads = await dbContext.Set<CollaborationThreadRecord>()
+            .AsNoTracking()
             .Where(item => item.ContextKind == CollaborationContextKind.ProcessRun && item.ContextId == runId)
             .Select(item => new ProcessDirectMessageThreadProjection(
                 item.Id,
@@ -682,6 +688,7 @@ public sealed partial class ProcessRuntimeReadQueryService
             .Select(item => item.ThreadId)
             .ToArray();
         var inboxItems = await dbContext.Set<CollaborationInboxItemRecord>()
+            .AsNoTracking()
             .Where(item => threadIds.Contains(item.ThreadId))
             .Select(item => new ProcessDirectMessageInboxProjection(
                 item.ThreadId,
@@ -689,12 +696,14 @@ public sealed partial class ProcessRuntimeReadQueryService
                 item.UnreadCount))
             .ToListAsync(cancellationToken);
         var participants = await dbContext.Set<CollaborationParticipantRecord>()
+            .AsNoTracking()
             .Where(item => threadIds.Contains(item.ThreadId) && item.ParticipantKind == CollaborationParticipantKind.Role)
             .Select(item => new ProcessDirectMessageParticipantProjection(
                 item.ThreadId,
                 item.DisplayName))
             .ToListAsync(cancellationToken);
         var messages = await dbContext.Set<CollaborationMessageRecord>()
+            .AsNoTracking()
             .Where(item => threadIds.Contains(item.ThreadId))
             .Select(item => new ProcessDirectMessageMessageProjection(
                 item.ThreadId,
@@ -802,17 +811,24 @@ public sealed partial class ProcessRuntimeReadQueryService
         ProcessRunStatus Status,
         DateTimeOffset UpdatedAtUtc);
 
-    private sealed record ProcessAnalyticsRunProjection(
-        Guid Id,
-        ProcessRunStatus Status,
+    private sealed record ProcessAnalyticsRunStatsProjection(
+        int TotalCount,
+        int ActiveCount,
+        int CompletedCount,
+        int BlockedCount,
         decimal EstimatedCost,
         decimal ActualCost);
 
-    private sealed record ProcessStepAnalyticsProjection(
-        int WaitMinutes,
-        int TouchMinutes,
-        int BlockedMinutes,
-        ProcessCapabilityGapSeverity CapabilityGapSeverity);
+    private sealed record ProcessStepAnalyticsStatsProjection(
+        int StepCount,
+        int CapabilityGapCount,
+        int TotalCycleMinutes,
+        int TotalWaitMinutes,
+        int TotalBlockedMinutes);
+
+    private sealed record ProcessConformanceStatsProjection(
+        int TotalCount,
+        int SafeNonActionCount);
 
     private sealed record ProcessActiveRunStepHealthProjection(
         Guid RunId,

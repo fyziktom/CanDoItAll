@@ -635,34 +635,44 @@ public sealed partial class ProcessRuntimeReadQueryService(
         Func<IQueryable<ProcessImprovementCandidate>, IQueryable<ProcessImprovementCandidate>> improvementQueryBuilder,
         CancellationToken cancellationToken)
     {
-        var runs = await runsQuery
+        var runStats = await runsQuery
+            .GroupBy(_ => 1)
             .Select(
-                run => new ProcessAnalyticsRunProjection(
-                    run.Id,
-                    run.Status,
-                    run.EstimatedCost,
-                    run.ActualCost))
-            .ToListAsync(cancellationToken);
-        var runIds = runs.Select(run => run.Id).ToList();
-        var stepMetrics = runIds.Count == 0
-            ? []
-            : await dbContext.Set<ProcessStepRun>()
+                group => new ProcessAnalyticsRunStatsProjection(
+                    group.Count(),
+                    group.Count(run => run.Status == ProcessRunStatus.Active),
+                    group.Count(run => run.Status == ProcessRunStatus.Completed),
+                    group.Count(run => run.Status == ProcessRunStatus.Blocked),
+                    group.Sum(run => run.EstimatedCost),
+                    group.Sum(run => run.ActualCost)))
+            .SingleOrDefaultAsync(cancellationToken);
+        var scopedRunIds = runsQuery.Select(run => run.Id);
+        var hasRuns = runStats?.TotalCount > 0;
+        var stepStats = hasRuns
+            ? await dbContext.Set<ProcessStepRun>()
                 .AsNoTracking()
-                .Where(stepRun => runIds.Contains(stepRun.ProcessRunId))
+                .Where(stepRun => scopedRunIds.Contains(stepRun.ProcessRunId))
+                .GroupBy(_ => 1)
                 .Select(
-                    stepRun => new ProcessStepAnalyticsProjection(
-                        stepRun.WaitMinutes,
-                        stepRun.TouchMinutes,
-                        stepRun.BlockedMinutes,
-                        stepRun.CapabilityGapSeverity))
-                .ToListAsync(cancellationToken);
-        var conformanceFlags = runIds.Count == 0
-            ? []
-            : await dbContext.Set<ProcessConformanceObservation>()
-            .AsNoTracking()
-            .Where(item => runIds.Contains(item.ProcessRunId))
-            .Select(item => item.IsSafeNonAction)
-            .ToListAsync(cancellationToken);
+                    group => new ProcessStepAnalyticsStatsProjection(
+                        group.Count(),
+                        group.Count(stepRun => stepRun.CapabilityGapSeverity != ProcessCapabilityGapSeverity.None),
+                        group.Sum(stepRun => stepRun.WaitMinutes + stepRun.TouchMinutes + stepRun.BlockedMinutes),
+                        group.Sum(stepRun => stepRun.WaitMinutes),
+                        group.Sum(stepRun => stepRun.BlockedMinutes)))
+                .SingleOrDefaultAsync(cancellationToken)
+            : null;
+        var conformanceStats = hasRuns
+            ? await dbContext.Set<ProcessConformanceObservation>()
+                .AsNoTracking()
+                .Where(item => scopedRunIds.Contains(item.ProcessRunId))
+                .GroupBy(_ => 1)
+                .Select(
+                    group => new ProcessConformanceStatsProjection(
+                        group.Count(),
+                        group.Count(item => item.IsSafeNonAction)))
+                .SingleOrDefaultAsync(cancellationToken)
+            : null;
         var improvementCount = await improvementQueryBuilder(
                 dbContext.Set<ProcessImprovementCandidate>()
                     .AsNoTracking()
@@ -670,18 +680,18 @@ public sealed partial class ProcessRuntimeReadQueryService(
             .CountAsync(cancellationToken);
 
         return new ProcessAnalyticsSummary(
-            runs.Count,
-            runs.Count(run => run.Status == ProcessRunStatus.Active),
-            runs.Count(run => run.Status == ProcessRunStatus.Completed),
-            runs.Count(run => run.Status == ProcessRunStatus.Blocked),
-            stepMetrics.Count(item => item.CapabilityGapSeverity != ProcessCapabilityGapSeverity.None),
+            runStats?.TotalCount ?? 0,
+            runStats?.ActiveCount ?? 0,
+            runStats?.CompletedCount ?? 0,
+            runStats?.BlockedCount ?? 0,
+            stepStats?.CapabilityGapCount ?? 0,
             improvementCount,
-            conformanceFlags.Count,
-            conformanceFlags.Count(item => item),
-            Average(stepMetrics.Select(item => item.WaitMinutes + item.TouchMinutes + item.BlockedMinutes)),
-            Average(stepMetrics.Select(item => item.WaitMinutes)),
-            Average(stepMetrics.Select(item => item.BlockedMinutes)),
-            runs.Sum(run => run.EstimatedCost),
-            runs.Sum(run => run.ActualCost));
+            conformanceStats?.TotalCount ?? 0,
+            conformanceStats?.SafeNonActionCount ?? 0,
+            Average(stepStats?.TotalCycleMinutes ?? 0, stepStats?.StepCount ?? 0),
+            Average(stepStats?.TotalWaitMinutes ?? 0, stepStats?.StepCount ?? 0),
+            Average(stepStats?.TotalBlockedMinutes ?? 0, stepStats?.StepCount ?? 0),
+            runStats?.EstimatedCost ?? 0,
+            runStats?.ActualCost ?? 0);
     }
 }
