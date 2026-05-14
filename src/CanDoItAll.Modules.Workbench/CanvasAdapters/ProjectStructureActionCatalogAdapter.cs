@@ -119,6 +119,31 @@ public sealed class ProjectStructureActionCatalogAdapter
             });
         }
 
+        if (node.ObjectType == ProjectObjectType.WorkflowDefinition)
+        {
+            actions.Insert(1, new CanvasWorkbenchAction
+            {
+                ActionId = "start-workflow",
+                Label = "Start workflow",
+                MenuLabel = "Start workflow",
+                Description = "Confirm and start this workflow with the stored project-structure input.",
+                Icon = "play_arrow",
+                Tone = "mint"
+            });
+        }
+        else if (CanLinkExistingWorkflow(node))
+        {
+            actions.Insert(6, new CanvasWorkbenchAction
+            {
+                ActionId = "add-workflow",
+                Label = "Add workflow",
+                MenuLabel = "Add workflow",
+                Description = "Add a workflow node under this item and configure the input sent to the workflow.",
+                Icon = "flow",
+                Tone = "accent"
+            });
+        }
+
         if (node.ObjectType == ProjectObjectType.PromptFlow)
         {
             actions.Insert(1, new CanvasWorkbenchAction
@@ -213,6 +238,16 @@ public sealed class ProjectStructureActionCatalogAdapter
     {
         return node.ProjectRole == ProjectStructureProjectRole.None &&
                node.ObjectType is not (ProjectObjectType.ProcessDefinition or ProjectObjectType.ProcessRun);
+    }
+
+    private static bool CanLinkExistingWorkflow(ProjectStructureNode node)
+    {
+        return node.ProjectRole == ProjectStructureProjectRole.None &&
+               node.ObjectType is not (
+                   ProjectObjectType.ProcessDefinition or
+                   ProjectObjectType.ProcessRun or
+                   ProjectObjectType.WorkflowDefinition or
+                   ProjectObjectType.WorkflowRun);
     }
 
     public IReadOnlyList<CanvasWorkbenchAction> BuildGroupContextActions()

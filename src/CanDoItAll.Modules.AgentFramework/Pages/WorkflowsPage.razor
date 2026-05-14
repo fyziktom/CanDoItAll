@@ -1,0 +1,887 @@
+@page "/agents/workflows"
+
+<PageTitle>Workflows</PageTitle>
+
+<PageScaffold>
+    <Header>
+        <PageHeader Eyebrow="AgentFramework"
+                    Title="Workflows"
+                    Description="Build, validate, test, and observe workflow executions as a peer option beside technical agents."
+                    Compact="true">
+            <Actions>
+                <Button Text="Refresh"
+                        Icon="refresh"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="RefreshAsync"
+                        Disabled="@isBusy"
+                        IsBusy="@isBusy"
+                        data-testid="workflows-refresh" />
+                <Button Text="Create starter"
+                        Icon="add"
+                        Click="CreateStarterWorkflowAsync"
+                        Disabled="@isBusy"
+                        data-testid="workflows-create-starter" />
+                <Button Text="Open agents"
+                        Icon="support_agent"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="OpenAgents"
+                        data-testid="workflows-open-agents" />
+            </Actions>
+        </PageHeader>
+    </Header>
+
+    <Lead>
+        <Cluster Gap="LayoutGap.Small"
+                 Wrap="FlexWrap.Wrap"
+                 Class="workflows-summary"
+                 data-testid="workflows-summary">
+            <SummaryTile Label="Definitions"
+                         Value="@definitions.Count.ToString()"
+                         HelperText="Saved workflow definitions in the workflow catalog."
+                         Tone="info"
+                         Badge="true"
+                         Compact="true"
+                         ShowHelperTextAsTooltip="true" />
+            <SummaryTile Label="LLM components"
+                         Value="@components.Count.ToString()"
+                         HelperText="Prepared LLM Call Components available to workflow nodes."
+                         Tone="success"
+                         Badge="true"
+                         Compact="true"
+                         ShowHelperTextAsTooltip="true" />
+            <SummaryTile Label="Runs"
+                         Value="@historyRunTotalCount.ToString()"
+                         HelperText="Paged workflow runs for the selected workflow history."
+                         Tone="secondary"
+                         Badge="true"
+                         Compact="true"
+                         ShowHelperTextAsTooltip="true" />
+            <SummaryTile Label="Pending input"
+                         Value="@pendingRequests.Count.ToString()"
+                         HelperText="Human-in-loop or approval requests waiting for a response."
+                         Tone="warning"
+                         Badge="true"
+                         Compact="true"
+                         ShowHelperTextAsTooltip="true" />
+            <SummaryTile Label="Default backend"
+                         Value="@settings.DefaultRuntimePolicy.PreferredBackend.ToString()"
+                         HelperText="Workflow setting used when a run does not request a backend explicitly."
+                         Tone="info"
+                         Badge="true"
+                         Compact="true"
+                         ShowHelperTextAsTooltip="true" />
+        </Cluster>
+    </Lead>
+
+    <ChildContent>
+        @if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <SurfaceCard Soft="true"
+                         data-testid="workflows-error">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Action required" />
+                <h2 class="workflows-card-title">Workflow operation failed</h2>
+                <p class="workflows-muted">@errorMessage</p>
+            </SurfaceCard>
+        }
+
+        @if (isLoading)
+        {
+            <SurfaceCard data-testid="workflows-loading">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Loading" />
+                <h2 class="workflows-card-title">Refreshing workflow runtime state</h2>
+                <p class="workflows-muted">Loading definitions, settings, components, runs, artifacts, and pending requests.</p>
+            </SurfaceCard>
+        }
+        else
+        {
+            <Tabs @bind-SelectedIndex="activeWorkflowTabIndex"
+                  RenderMode="TabRenderMode.Server"
+                  Variant="TabsVariant.WorkspacePrimary"
+                  OverflowMode="TabsOverflowMode.Wrap"
+                  AriaLabel="Workflow workspace tabs"
+                  data-testid="workflows-tabs">
+                <TabsItem Text="Dashboard"
+                          Icon="dashboard"
+                          data-testid="workflows-tab-dashboard">
+                    <Grid Gap="LayoutGap.Large"
+                          Class="workflows-layout"
+                          ColumnTemplateLg="minmax(0,1.2fr) minmax(20rem,0.8fr)">
+                        <SurfaceCard data-testid="workflows-dashboard-live">
+                            <Split Gap="LayoutGap.Small">
+                                <div>
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Live dashboard" />
+                                    <h2 class="workflows-card-title">@SelectedDefinitionTitle</h2>
+                                </div>
+                                <StatusBadge Tone="@RunTone" Text="@RunText" />
+                            </Split>
+
+                            @if (selectedDefinition is null)
+                            {
+                                <EmptyState Eyebrow="No workflow selected"
+                                            Title="Choose a workflow"
+                                            Description="Select a workflow definition or create the starter workflow to populate the dashboard." />
+                            }
+                            else
+                            {
+                                <p class="workflows-muted mt-3">@selectedDefinition.Description</p>
+                                <Grid Gap="LayoutGap.Small" ColumnsLg="4" Class="mt-4">
+                                    <div class="workflows-fact">
+                                        <span>Status</span>
+                                        <strong>@selectedDefinition.Status</strong>
+                                    </div>
+                                    <div class="workflows-fact">
+                                        <span>Backend</span>
+                                        <strong>@selectedDefinition.RuntimePolicy.PreferredBackend</strong>
+                                    </div>
+                                    <div class="workflows-fact">
+                                        <span>Nodes</span>
+                                        <strong>@selectedDefinition.Graph.Nodes.Count</strong>
+                                    </div>
+                                    <div class="workflows-fact">
+                                        <span>Edges</span>
+                                        <strong>@selectedDefinition.Graph.Edges.Count</strong>
+                                    </div>
+                                </Grid>
+                            }
+                        </SurfaceCard>
+
+                        <SurfaceCard data-testid="workflows-dashboard-activity">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Activity" />
+                            <h2 class="workflows-card-title">Current signals</h2>
+                            <Stack GapScale="LayoutGap.Small" Class="mt-4">
+                                <div class="workflows-fact">
+                                    <span>Validation</span>
+                                    <strong>@ValidationText</strong>
+                                </div>
+                                <div class="workflows-fact">
+                                    <span>Pending input</span>
+                                    <strong>@pendingRequests.Count</strong>
+                                </div>
+                                <div class="workflows-fact">
+                                    <span>Artifacts</span>
+                                    <strong>@artifacts.Count</strong>
+                                </div>
+                                <div class="workflows-fact">
+                                    <span>Settings</span>
+                                    <strong>@settings.DefaultRuntimePolicy.PreferredBackend</strong>
+                                </div>
+                            </Stack>
+                        </SurfaceCard>
+                    </Grid>
+                </TabsItem>
+
+                <TabsItem Text="Processes"
+                          Icon="list_alt"
+                          BadgeText="@definitions.Count.ToString()"
+                          data-testid="workflows-tab-processes">
+                    <Grid Gap="LayoutGap.Large"
+                          Class="workflows-layout"
+                          ColumnTemplateXl="minmax(18rem,0.85fr) minmax(0,1.45fr)">
+                        <SurfaceCard data-testid="workflows-catalog">
+                            <Split Gap="LayoutGap.Small">
+                                <div>
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Catalog" />
+                                    <h2 class="workflows-card-title">Workflow definitions</h2>
+                                </div>
+                                <StatusBadge Tone="info" Text="@definitions.Count.ToString()" />
+                            </Split>
+
+                            @if (definitions.Count == 0)
+                            {
+                                <EmptyState Eyebrow="No workflows"
+                                            Title="Create a starter workflow"
+                                            Description="The workflow catalog is empty. Create the starter definition to validate the page and runtime wiring." />
+                            }
+                            else
+                            {
+                                <Stack GapScale="LayoutGap.Small" Class="mt-4">
+                                    @foreach (var definition in definitions)
+                                    {
+                                        <button type="button"
+                                                class="workflows-catalog-item @(IsSelectedDefinition(definition) ? "workflows-catalog-item--selected" : string.Empty)"
+                                                @onclick="@(() => SelectDefinitionAsync(definition.Id))"
+                                                data-testid="workflows-catalog-item">
+                                            <span class="workflows-catalog-item__title">@definition.Name</span>
+                                            <span class="workflows-catalog-item__meta">@definition.Status · @definition.PreferredBackend · @FormatDate(definition.UpdatedAtUtc)</span>
+                                        </button>
+                                    }
+                                </Stack>
+                            }
+                        </SurfaceCard>
+
+                        <SurfaceCard data-testid="workflows-detail">
+                            <Split Gap="LayoutGap.Small">
+                                <div>
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Definition" />
+                                    <h2 class="workflows-card-title">@SelectedDefinitionTitle</h2>
+                                </div>
+                                <StatusBadge Tone="@ValidationTone" Text="@ValidationText" />
+                            </Split>
+
+                            @if (selectedDefinition is null)
+                            {
+                                <EmptyState Eyebrow="Select workflow"
+                                            Title="No workflow selected"
+                                            Description="Choose a workflow definition to inspect validation, settings, and runtime state." />
+                            }
+                            else
+                            {
+                                <p class="workflows-muted mt-3">@selectedDefinition.Description</p>
+                                <Grid Gap="LayoutGap.Small" ColumnsLg="2" Class="mt-4">
+                                    <div class="workflows-fact">
+                                        <span>Status</span>
+                                        <strong>@selectedDefinition.Status</strong>
+                                    </div>
+                                    <div class="workflows-fact">
+                                        <span>Preferred backend</span>
+                                        <strong>@selectedDefinition.RuntimePolicy.PreferredBackend</strong>
+                                    </div>
+                                    <div class="workflows-fact">
+                                        <span>Nodes</span>
+                                        <strong>@selectedDefinition.Graph.Nodes.Count</strong>
+                                    </div>
+                                    <div class="workflows-fact">
+                                        <span>Edges</span>
+                                        <strong>@selectedDefinition.Graph.Edges.Count</strong>
+                                    </div>
+                                </Grid>
+
+                                <div class="workflows-section">
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Validation" />
+                                    @if (validationIssues.Count == 0)
+                                    {
+                                        <p class="workflows-muted">Definition is valid for the current component library and settings.</p>
+                                    }
+                                    else
+                                    {
+                                        <Stack GapScale="LayoutGap.Small">
+                                            @foreach (var issue in validationIssues)
+                                            {
+                                                <div class="workflows-issue" data-testid="workflows-validation-issue">
+                                                    <strong>@issue.Code</strong>
+                                                    <span>@issue.Message</span>
+                                                </div>
+                                            }
+                                        </Stack>
+                                    }
+                                </div>
+
+                                <div class="workflows-section">
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Settings" />
+                                    <p class="workflows-muted">@BuildSettingsSummary()</p>
+                                </div>
+                            }
+                        </SurfaceCard>
+                    </Grid>
+                </TabsItem>
+
+                <TabsItem Text="Editor"
+                          Icon="edit_square"
+                          data-testid="workflows-tab-editor">
+                    <WorkflowCanvasEditor Definition="selectedDefinition"
+                                          Components="components"
+                                          ProviderOptions="providerOptions"
+                                          DefinitionSaved="HandleCanvasDefinitionSavedAsync"
+                                          PreviewRunCompleted="HandleCanvasPreviewRunCompletedAsync"
+                                          ComponentLibraryChanged="RefreshComponentLibraryAsync" />
+                </TabsItem>
+
+                <TabsItem Text="Templates"
+                          Icon="content_copy"
+                          BadgeText="@components.Count.ToString()"
+                          data-testid="workflows-tab-templates">
+                    <Grid Gap="LayoutGap.Large"
+                          Class="workflows-layout"
+                          ColumnTemplateLg="minmax(0,0.9fr) minmax(0,1.1fr)">
+                        <SurfaceCard data-testid="workflows-templates">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Templates" />
+                            <h2 class="workflows-card-title">Starter workflow</h2>
+                            <p class="workflows-muted mt-3">Creates a draft workflow with one prepared LLM call and in-process preview policy.</p>
+                            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="mt-4">
+                                <Button Text="Create starter"
+                                        Icon="add"
+                                        Click="CreateStarterWorkflowAsync"
+                                        Disabled="@isBusy"
+                                        data-testid="workflows-template-create-starter" />
+                            </Cluster>
+                        </SurfaceCard>
+
+                        <SurfaceCard data-testid="workflows-components">
+                            <Split Gap="LayoutGap.Small">
+                                <div>
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="LLM components" />
+                                    <h2 class="workflows-card-title">Prepared call library</h2>
+                                </div>
+                                <StatusBadge Tone="success" Text="@components.Count.ToString()" />
+                            </Split>
+                            <p class="workflows-muted mt-3">@BuildProviderOptionsSummary()</p>
+
+                            @if (components.Count == 0)
+                            {
+                                <EmptyState Eyebrow="No components"
+                                            Title="No prepared calls"
+                                            Description="Create a starter workflow or use the editor component window to add LLM call components." />
+                            }
+                            else
+                            {
+                                <Stack GapScale="LayoutGap.Small" Class="mt-4">
+                                    @foreach (var component in components)
+                                    {
+                                        <div class="workflows-artifact" data-testid="workflows-component-item">
+                                            <strong>@component.Name</strong>
+                                            <span>@ResolveComponentProviderLabel(component) · @component.Model · @component.Modality</span>
+                                            <small>@component.ResultShape.Kind</small>
+                                        </div>
+                                    }
+                                </Stack>
+                            }
+                        </SurfaceCard>
+                    </Grid>
+                </TabsItem>
+
+                <TabsItem Text="History"
+                          Icon="history"
+                          BadgeText="@historyRunTotalCount.ToString()"
+                          data-testid="workflows-tab-history">
+                    <Grid Gap="LayoutGap.Large"
+                          Class="workflows-layout workflows-history-layout"
+                          ColumnTemplateXl="minmax(18rem,0.72fr) minmax(0,1.35fr) minmax(18rem,0.78fr)">
+                        <SurfaceCard Class="workflows-history-card"
+                                     data-testid="workflows-test-run">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Test run" />
+                            <h2 class="workflows-card-title">Preview execution</h2>
+                            <p class="workflows-muted">Runs use the requested in-process preview backend unless the selected workflow requires a different backend.</p>
+
+                            <label class="workflows-field mt-4">
+                                <span>Input JSON</span>
+                                <textarea class="cda-input cda-input--textarea workflows-input"
+                                          @bind="testInputJson"
+                                          data-testid="workflows-test-input"></textarea>
+                            </label>
+
+                            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="mt-4">
+                                <Button Text="Run test"
+                                        Icon="play_arrow"
+                                        Click="RunSelectedWorkflowAsync"
+                                        Disabled="@(selectedDefinition is null || isRunningTest)"
+                                        IsBusy="@isRunningTest"
+                                        data-testid="workflows-run-test" />
+                                <Button Text="Cancel selected run"
+                                        Icon="stop"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Click="CancelSelectedRunAsync"
+                                        Disabled="@(selectedRun is null || IsTerminalRun(selectedRun))"
+                                        data-testid="workflows-cancel-run" />
+                            </Cluster>
+
+                            @if (testResult is not null)
+                            {
+                                <div class="workflows-section" data-testid="workflows-test-result">
+                                    <StatusBadge Tone="@(testResult.Succeeded ? "success" : "danger")"
+                                                 Text="@(testResult.Succeeded ? "Succeeded" : "Failed")" />
+                                    @if (!string.IsNullOrWhiteSpace(testResult.ErrorMessage))
+                                    {
+                                        <p class="workflows-muted mt-2">@FormatWorkflowMessage(testResult.ErrorMessage)</p>
+                                    }
+                                </div>
+                            }
+                        </SurfaceCard>
+
+                        <SurfaceCard Class="workflows-history-card workflows-history-card--timeline"
+                                     data-testid="workflows-runs">
+                            <Split Gap="LayoutGap.Small">
+                                <div>
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Run history" />
+                                    <h2 class="workflows-card-title">Runtime timeline</h2>
+                                </div>
+                                <StatusBadge Tone="@RunTone" Text="@RunText" />
+                            </Split>
+
+                            @if (runs.Count == 0)
+                            {
+                                <EmptyState Eyebrow="No runs"
+                                            Title="No workflow runs yet"
+                                            Description="Run a workflow test to populate the runtime timeline." />
+                            }
+                            else
+                            {
+                                <Stack GapScale="LayoutGap.Small" Class="mt-4 workflows-run-list workflows-history-scroll">
+                                    @foreach (var run in runs)
+                                    {
+                                        <div class="workflows-run-item @(selectedRun?.RunId == run.RunId ? "workflows-run-item--selected" : string.Empty)"
+                                             data-testid="workflows-run-item">
+                                            <button type="button"
+                                                    class="workflows-run-item__select"
+                                                    @onclick="@(() => SelectRunAsync(run.RunId))">
+                                                <span class="workflows-run-item__title">
+                                                    <StatusBadge Tone="@ResolveRunTone(run.State)" Text="@run.State.ToString()" />
+                                                    <small>@run.Backend · @FormatDate(run.UpdatedAtUtc)</small>
+                                                </span>
+                                                <span class="workflows-clamped-text">@Truncate(run.Summary, 120)</span>
+                                            </button>
+                                            <Button Text="Details"
+                                                    Icon="open_in_full"
+                                                    Size="ButtonSize.Small"
+                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Click="@(() => OpenRunDetailDialogAsync(run))"
+                                                    data-testid="workflows-run-detail" />
+                                        </div>
+                                    }
+                                </Stack>
+
+                                <div class="workflows-pager"
+                                     data-testid="workflows-run-pager">
+                                    <span>@FormatPageLabel(historyRunPageIndex, HistoryRunTotalPages, historyRunTotalCount, "runs")</span>
+                                    <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.NoWrap">
+                                        <Button Text="Previous"
+                                                Icon="chevron_left"
+                                                Size="ButtonSize.Small"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Disabled="@(!CanGoToPreviousRunPage)"
+                                                Click="@(() => ChangeRunPageAsync(-1))"
+                                                data-testid="workflows-run-page-previous" />
+                                        <Button Text="Next"
+                                                Icon="chevron_right"
+                                                Size="ButtonSize.Small"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Disabled="@(!CanGoToNextRunPage)"
+                                                Click="@(() => ChangeRunPageAsync(1))"
+                                                data-testid="workflows-run-page-next" />
+                                    </Cluster>
+                                </div>
+                            }
+
+                            <div class="workflows-section workflows-events-section">
+                                <Split Gap="LayoutGap.Small" AlignItems="AlignItems.Center">
+                                    <div>
+                                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Events" />
+                                        <p class="workflows-muted">@FormatPageLabel(historyEventPageIndex, HistoryEventTotalPages, historyEventTotalCount, "events")</p>
+                                    </div>
+                                    @if (selectedRun is not null)
+                                    {
+                                        <StatusBadge Tone="@RunTone" Text="@FormatShortId(selectedRun.RunId.Value)" />
+                                    }
+                                </Split>
+
+                                @if (runEvents.Count == 0)
+                                {
+                                    <EmptyState Eyebrow="No events"
+                                                Title="No events on this run"
+                                                Description="Runtime events appear here after a run starts producing timeline records." />
+                                }
+                                else
+                                {
+                                    <Stack GapScale="LayoutGap.Small" Class="mt-3 workflows-history-scroll workflows-event-list">
+                                        @foreach (var workflowEvent in runEvents)
+                                        {
+                                            <div class="workflows-event" data-testid="workflows-run-event">
+                                                <div class="workflows-event__summary">
+                                                    <StatusBadge Tone="@ResolveEventTone(workflowEvent.Kind)" Text="@workflowEvent.Kind.ToString()" />
+                                                    <small>@FormatDate(workflowEvent.CreatedAtUtc)</small>
+                                                    <span class="workflows-clamped-text">@Truncate(workflowEvent.Message, 140)</span>
+                                                </div>
+                                                <Button Text="Details"
+                                                        Icon="open_in_full"
+                                                        Size="ButtonSize.Small"
+                                                        ButtonStyle="ButtonStyle.Light"
+                                                        Click="@(() => OpenEventDetailDialog(workflowEvent))"
+                                                        data-testid="workflows-event-detail" />
+                                            </div>
+                                        }
+                                    </Stack>
+
+                                    <div class="workflows-pager"
+                                         data-testid="workflows-event-pager">
+                                        <span>@FormatPageLabel(historyEventPageIndex, HistoryEventTotalPages, historyEventTotalCount, "events")</span>
+                                        <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.NoWrap">
+                                            <Button Text="Previous"
+                                                    Icon="chevron_left"
+                                                    Size="ButtonSize.Small"
+                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Disabled="@(!CanGoToPreviousEventPage)"
+                                                    Click="@(() => ChangeEventPageAsync(-1))"
+                                                    data-testid="workflows-event-page-previous" />
+                                            <Button Text="Next"
+                                                    Icon="chevron_right"
+                                                    Size="ButtonSize.Small"
+                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Disabled="@(!CanGoToNextEventPage)"
+                                                    Click="@(() => ChangeEventPageAsync(1))"
+                                                    data-testid="workflows-event-page-next" />
+                                        </Cluster>
+                                    </div>
+                                }
+                            </div>
+                        </SurfaceCard>
+
+                        <Stack GapScale="LayoutGap.Large" Class="workflows-history-side">
+                            <SurfaceCard Class="workflows-history-card workflows-history-card--side"
+                                         data-testid="workflows-artifacts">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Artifacts" />
+                                <h2 class="workflows-card-title">Captured outputs</h2>
+                                @if (artifacts.Count == 0)
+                                {
+                                    <EmptyState Eyebrow="No artifacts"
+                                                Title="No workflow artifacts"
+                                                Description="Artifacts produced by workflow steps will appear here after runs capture them." />
+                                }
+                                else
+                                {
+                                    <Stack GapScale="LayoutGap.Small" Class="mt-4">
+                                        @foreach (var artifact in artifacts)
+                                        {
+                                            <div class="workflows-artifact" data-testid="workflows-artifact">
+                                                <strong>@artifact.Name</strong>
+                                                <span>@artifact.Kind · @artifact.ContentType</span>
+                                                <small>@artifact.Summary</small>
+                                            </div>
+                                        }
+                                    </Stack>
+                                }
+                            </SurfaceCard>
+
+                            <SurfaceCard Class="workflows-history-card workflows-history-card--side"
+                                         data-testid="workflows-pending-requests">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Human-in-loop" />
+                                <h2 class="workflows-card-title">Pending requests</h2>
+                                @if (pendingRequests.Count == 0)
+                                {
+                                    <EmptyState Eyebrow="No pending input"
+                                                Title="No workflow is waiting"
+                                                Description="RequestPort and human approval waits will appear here when a workflow pauses for input." />
+                                }
+                                else
+                                {
+                                    <Stack GapScale="LayoutGap.Medium" Class="mt-4">
+                                        @foreach (var request in pendingRequests)
+                                        {
+                                            <div class="workflows-request" data-testid="workflows-pending-request">
+                                                <StatusBadge Tone="warning" Text="@request.Kind.ToString()" />
+                                                <strong>@request.EventName</strong>
+                                                <small>@request.RequestJson</small>
+                                                <label class="workflows-field">
+                                                    <span>Response JSON</span>
+                                                    <textarea class="cda-input cda-input--textarea workflows-request-response"
+                                                              @bind="pendingResponseJson"
+                                                              data-testid="workflows-pending-response"></textarea>
+                                                </label>
+                                                <Button Text="Respond"
+                                                        Icon="send"
+                                                        Size="ButtonSize.Small"
+                                                        Click="@(() => RespondToRequestAsync(request))"
+                                                        Disabled="@isBusy"
+                                                        data-testid="workflows-respond-request" />
+                                            </div>
+                                        }
+                                    </Stack>
+                                }
+                            </SurfaceCard>
+                        </Stack>
+                    </Grid>
+                </TabsItem>
+
+                <TabsItem Text="Analytics"
+                          Icon="query_stats"
+                          data-testid="workflows-tab-analytics">
+                    <Grid Gap="LayoutGap.Large"
+                          Class="workflows-layout"
+                          ColumnTemplateLg="minmax(0,1fr) minmax(0,1fr)">
+                        <SurfaceCard data-testid="workflows-analytics-status">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Analytics" />
+                            <h2 class="workflows-card-title">Current history page</h2>
+                            <Grid Gap="LayoutGap.Small" ColumnsLg="2" Class="mt-4">
+                                <div class="workflows-fact">
+                                    <span>Shown done</span>
+                                    <strong>@runs.Count(run => run.State == WorkflowRunState.Completed)</strong>
+                                </div>
+                                <div class="workflows-fact">
+                                    <span>Shown running</span>
+                                    <strong>@runs.Count(run => run.State == WorkflowRunState.Running)</strong>
+                                </div>
+                                <div class="workflows-fact">
+                                    <span>Shown waiting</span>
+                                    <strong>@runs.Count(run => run.State == WorkflowRunState.WaitingForInput)</strong>
+                                </div>
+                                <div class="workflows-fact">
+                                    <span>Shown failed</span>
+                                    <strong>@runs.Count(run => run.State == WorkflowRunState.Failed)</strong>
+                                </div>
+                            </Grid>
+                        </SurfaceCard>
+
+                        <SurfaceCard data-testid="workflows-analytics-catalog">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Catalog health" />
+                            <h2 class="workflows-card-title">Workflow inventory</h2>
+                            <Grid Gap="LayoutGap.Small" ColumnsLg="2" Class="mt-4">
+                                <div class="workflows-fact">
+                                    <span>Drafts</span>
+                                    <strong>@definitions.Count(definition => definition.Status == WorkflowLifecycleStatus.Draft)</strong>
+                                </div>
+                                <div class="workflows-fact">
+                                    <span>Published</span>
+                                    <strong>@definitions.Count(definition => definition.Status == WorkflowLifecycleStatus.Active)</strong>
+                                </div>
+                                <div class="workflows-fact">
+                                    <span>Components</span>
+                                    <strong>@components.Count</strong>
+                                </div>
+                                <div class="workflows-fact">
+                                    <span>Validation issues</span>
+                                    <strong>@validationIssues.Count</strong>
+                                </div>
+                            </Grid>
+                            <div class="workflows-section">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Runtime policy" />
+                                <p class="workflows-muted">@BuildSettingsSummary()</p>
+                            </div>
+                        </SurfaceCard>
+                    </Grid>
+                </TabsItem>
+            </Tabs>
+
+            @if (isPreviewInputDialogOpen)
+            {
+                <Dialog IsOpen="true"
+                        Title="Preview inputs"
+                        Eyebrow="Workflow preview"
+                        Subtitle="@WorkflowPreviewInputSupport.BuildRequirementSummary(previewInputState.Requirements)"
+                        Size="ModalSize.Wide"
+                        DenseChrome="true"
+                        OnClose="ClosePreviewInputDialog"
+                        TestId="workflows-preview-input-dialog">
+                    <ChildContent>
+                        <div class="workflows-detail-dialog">
+                            <SurfaceCard Soft="true">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Required context" />
+                                <p class="workflows-muted">@WorkflowPreviewInputSupport.BuildRequirementSummary(previewInputState.Requirements)</p>
+                                @if (!string.IsNullOrWhiteSpace(previewInputState.ProjectLoadError))
+                                {
+                                    <p class="workflows-error-note">@previewInputState.ProjectLoadError</p>
+                                }
+                            </SurfaceCard>
+
+                            <Grid Gap="LayoutGap.Small" ColumnsLg="2">
+                                @if (previewProjectOptions.Count > 0)
+                                {
+                                    <label class="workflows-field">
+                                        <span>Project</span>
+                                        <select class="cda-input"
+                                                value="@previewInputState.ProjectId"
+                                                @onchange="HandlePreviewProjectChanged"
+                                                data-testid="workflows-preview-project-select">
+                                            <option value="">Choose project</option>
+                                            @foreach (var project in previewProjectOptions)
+                                            {
+                                                <option value="@project.Id.ToString("D")">@project.Name</option>
+                                            }
+                                        </select>
+                                    </label>
+                                }
+
+                                <label class="workflows-field">
+                                    <span>Project id</span>
+                                    <input class="cda-input"
+                                           @bind="previewInputState.ProjectId"
+                                           data-testid="workflows-preview-project-id" />
+                                </label>
+
+                                <label class="workflows-field">
+                                    <span>Parent node id</span>
+                                    <input class="cda-input"
+                                           @bind="previewInputState.ParentNodeId"
+                                           data-testid="workflows-preview-node-id" />
+                                </label>
+                            </Grid>
+
+                            @if (previewInputState.Requirements.HasProjectStructureWrites)
+                            {
+                                <label class="workflows-check-field">
+                                    <input type="checkbox"
+                                           @bind="previewInputState.SkipProjectStructureWrites"
+                                           data-testid="workflows-preview-skip-project-writes" />
+                                    <span>Skip project-structure write steps for this preview</span>
+                                </label>
+                            }
+
+                            <label class="workflows-field">
+                                <span>Input JSON</span>
+                                <textarea class="cda-input cda-input--textarea workflows-input"
+                                          @bind="previewInputState.InputJson"
+                                          data-testid="workflows-preview-input-json"></textarea>
+                            </label>
+
+                            @if (!string.IsNullOrWhiteSpace(previewInputErrorMessage))
+                            {
+                                <p class="workflows-error-note" data-testid="workflows-preview-input-error">@previewInputErrorMessage</p>
+                            }
+                        </div>
+                    </ChildContent>
+                    <Footer>
+                        <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+                            <Button Text="Cancel"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Click="ClosePreviewInputDialog"
+                                    data-testid="workflows-preview-input-cancel" />
+                            <Button Text="Run preview"
+                                    Icon="play_arrow"
+                                    Click="StartSelectedWorkflowPreviewFromDialogAsync"
+                                    Disabled="@isRunningTest"
+                                    IsBusy="@isRunningTest"
+                                    data-testid="workflows-preview-input-run" />
+                        </Cluster>
+                    </Footer>
+                </Dialog>
+            }
+
+            @if (runDetail is { } currentRunDetail)
+            {
+                var resultPayloadJson = ResolveRunResultPayload(runDetailEvents);
+                var resultPreview = ResolveRunResultPreview(resultPayloadJson);
+                var summaryMessage = FormatWorkflowMessage(currentRunDetail.Summary);
+
+                <Dialog IsOpen="true"
+                        Title="Workflow run"
+                        Eyebrow="History detail"
+                        Subtitle="@summaryMessage"
+                        Size="ModalSize.Wide"
+                        DenseChrome="true"
+                        OnClose="CloseRunDetailDialog"
+                        TestId="workflows-run-detail-dialog">
+                    <div class="workflows-detail-dialog">
+                        <Grid Gap="LayoutGap.Small" ColumnsLg="4">
+                            <div class="workflows-fact">
+                                <span>Run</span>
+                                <strong>@FormatShortId(currentRunDetail.RunId.Value)</strong>
+                            </div>
+                            <div class="workflows-fact">
+                                <span>State</span>
+                                <strong>@currentRunDetail.State</strong>
+                            </div>
+                            <div class="workflows-fact">
+                                <span>Backend</span>
+                                <strong>@currentRunDetail.Backend</strong>
+                            </div>
+                            <div class="workflows-fact">
+                                <span>Updated</span>
+                                <strong>@FormatFullDate(currentRunDetail.UpdatedAtUtc)</strong>
+                            </div>
+                        </Grid>
+
+                        <div class="workflows-section">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Summary" />
+                            <pre class="workflows-detail-pre" data-testid="workflows-run-detail-summary">@summaryMessage</pre>
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(resultPreview))
+                        {
+                            <div class="workflows-section">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Result" />
+                                <pre class="workflows-detail-pre" data-testid="workflows-run-detail-result">@resultPreview</pre>
+                            </div>
+                        }
+
+                        @if (runDetailArtifacts.Count > 0)
+                        {
+                            <div class="workflows-section">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Captured outputs" />
+                                <Stack GapScale="LayoutGap.Small" Class="mt-3">
+                                    @foreach (var artifact in runDetailArtifacts)
+                                    {
+                                        <div class="workflows-artifact" data-testid="workflows-run-detail-artifact">
+                                            <strong>@artifact.Name</strong>
+                                            <span>@artifact.Kind · @artifact.ContentType · @(artifact.NodeId?.Value ?? "workflow")</span>
+                                            <small>@artifact.Summary</small>
+                                            <small>@artifact.StoragePath</small>
+                                        </div>
+                                    }
+                                </Stack>
+                            </div>
+                        }
+
+                        @if (runDetailEvents.Count > 0)
+                        {
+                            <div class="workflows-section">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Events" />
+                                <Stack GapScale="LayoutGap.Small" Class="mt-3">
+                                    @foreach (var workflowEvent in runDetailEvents)
+                                    {
+                                        <div class="workflows-event" data-testid="workflows-run-detail-event">
+                                            <div class="workflows-event__summary">
+                                                <StatusBadge Tone="@ResolveEventTone(workflowEvent.Kind)" Text="@workflowEvent.Kind.ToString()" />
+                                                <small>@FormatFullDate(workflowEvent.CreatedAtUtc)</small>
+                                                <span>@ResolveEventDisplayMessage(workflowEvent)</span>
+                                                @if (!string.IsNullOrWhiteSpace(workflowEvent.PayloadJson))
+                                                {
+                                                    <pre class="workflows-detail-pre">@workflowEvent.PayloadJson</pre>
+                                                }
+                                                @if (HasTechnicalEventMessage(workflowEvent))
+                                                {
+                                                    <details>
+                                                        <summary>Technical details</summary>
+                                                        <pre class="workflows-detail-pre">@workflowEvent.Message</pre>
+                                                    </details>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                </Stack>
+                            </div>
+                        }
+
+                        <div class="workflows-section">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Identifiers" />
+                            <pre class="workflows-detail-pre">RunId: @currentRunDetail.RunId
+WorkflowId: @currentRunDetail.WorkflowId
+VersionId: @currentRunDetail.VersionId
+BackendRunId: @currentRunDetail.BackendRunId
+CreatedAt: @FormatFullDate(currentRunDetail.CreatedAtUtc)
+UpdatedAt: @FormatFullDate(currentRunDetail.UpdatedAtUtc)</pre>
+                        </div>
+                    </div>
+                </Dialog>
+            }
+
+            @if (eventDetail is { } currentEventDetail)
+            {
+                <Dialog IsOpen="true"
+                        Title="@currentEventDetail.Kind.ToString()"
+                        Eyebrow="Event detail"
+                        Subtitle="@FormatFullDate(currentEventDetail.CreatedAtUtc)"
+                        Size="ModalSize.Wide"
+                        DenseChrome="true"
+                        OnClose="CloseEventDetailDialog"
+                        TestId="workflows-event-detail-dialog">
+                    <div class="workflows-detail-dialog">
+                        <Grid Gap="LayoutGap.Small" ColumnsLg="3">
+                            <div class="workflows-fact">
+                                <span>Event</span>
+                                <strong>@currentEventDetail.Kind</strong>
+                            </div>
+                            <div class="workflows-fact">
+                                <span>Run</span>
+                                <strong>@FormatShortId(currentEventDetail.RunId.Value)</strong>
+                            </div>
+                            <div class="workflows-fact">
+                                <span>Node</span>
+                                <strong>@(currentEventDetail.NodeId?.Value ?? "None")</strong>
+                            </div>
+                        </Grid>
+
+                        <div class="workflows-section">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Message" />
+                            <pre class="workflows-detail-pre">@currentEventDetail.Message</pre>
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(currentEventDetail.PayloadJson))
+                        {
+                            <div class="workflows-section">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Payload JSON" />
+                                <pre class="workflows-detail-pre">@currentEventDetail.PayloadJson</pre>
+                            </div>
+                        }
+                    </div>
+                </Dialog>
+            }
+        }
+    </ChildContent>
+</PageScaffold>

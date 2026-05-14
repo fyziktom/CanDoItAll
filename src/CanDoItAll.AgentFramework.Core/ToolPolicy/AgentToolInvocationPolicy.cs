@@ -77,7 +77,8 @@ public sealed record ToolInvocationPolicyContext(
     IReadOnlyList<string>? AllowedExternalTargetAliases = null,
     IReadOnlyList<string>? ReadOnlyExternalTargetAliases = null,
     bool ApprovalWrapperEffectiveForProvider = false,
-    bool ApplicationApprovalAvailable = false)
+    bool ApplicationApprovalAvailable = false,
+    bool ProcessScaffoldToolOnly = false)
 {
     public bool HasEffectiveApprovalPath =>
         (ApprovalWrapperAvailable && ApprovalWrapperEffectiveForProvider) ||
@@ -154,7 +155,8 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         "workspace_dotnet_test",
         "workspace_dotnet_run",
         "workspace_pwsh_run_script",
-        "workspace_python_run_file"
+        "workspace_python_run_file",
+        "workspace_inspect_image"
     };
     private static readonly HashSet<string> BroadManagedWorkspaceDiscoveryTools = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -170,6 +172,14 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         "workspace_move_path",
         "workspace_delete_path",
         "workspace_dotnet_new"
+    };
+    private static readonly HashSet<string> DirectProductFileMutationTools = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "workspace_write_file",
+        "workspace_append_file",
+        "workspace_copy_path",
+        "workspace_move_path",
+        "workspace_delete_path"
     };
     private static readonly string[] ManagedWorkspacePathArgumentFragments =
     [
@@ -260,6 +270,12 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         if (readOnlyExternalTargetDecision is not null)
         {
             return ValueTask.FromResult(readOnlyExternalTargetDecision);
+        }
+
+        var scaffoldToolOnlyDecision = EvaluateScaffoldToolOnlyDirectProductMutation(context, signature);
+        if (scaffoldToolOnlyDecision is not null)
+        {
+            return ValueTask.FromResult(scaffoldToolOnlyDecision);
         }
 
         var dotnetNewTemplateConsistencyDecision = EvaluateDotnetNewTemplateConsistency(context, signature);
@@ -426,22 +442,28 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         }
 
         var allowedAliases = NormalizeAllowedExternalTargetAliases(context.AllowedExternalTargetAliases);
+        var readOnlyAliases = NormalizeAllowedExternalTargetAliases(context.ReadOnlyExternalTargetAliases);
+        var readableAliases = allowedAliases
+            .Concat(readOnlyAliases)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(alias => alias.Length)
+            .ToArray();
         foreach (var referencedAlias in referencedAliases)
         {
-            if (IsAllowedExternalTargetAlias(referencedAlias, allowedAliases) ||
+            if (IsAllowedExternalTargetAlias(referencedAlias, readableAliases) ||
                 IsAllowedScaffoldParentAlias(context, referencedAlias, allowedAliases))
             {
                 continue;
             }
 
-            var allowedSummary = allowedAliases.Count == 0
+            var allowedSummary = readableAliases.Length == 0
                 ? "no external-target roots are grounded for this run"
-                : $"allowed roots: {string.Join(", ", allowedAliases)}";
-            var currentRunGuidance = BuildCurrentRunExternalTargetGuidance(allowedAliases);
+                : $"current-run roots: {string.Join(", ", readableAliases)}";
+            var currentRunGuidance = BuildCurrentRunExternalTargetGuidance(readableAliases);
             var scaffoldGuidance = BuildScaffoldParentGuidance(context, allowedAliases);
             return ToolInvocationPolicyDecision.Deny(
                 signature,
-                $"Governed process runs may only access external-target paths grounded by the current run. Denied '{referencedAlias}' because {allowedSummary}.{currentRunGuidance}{scaffoldGuidance}");
+                $"Governed process runs may only access external-target paths grounded by the current run. The requested external-target path is outside the current run boundary; {allowedSummary}.{currentRunGuidance}{scaffoldGuidance}");
         }
 
         return null;
@@ -534,6 +556,14 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
                     $"This governed run has a grounded external product target. Broad managed evidence discovery at '{normalizedPath}' is denied because it can pull stale artifacts from unrelated runs; list or search the grounded external-target alias or current-run artifact root '{BuildCurrentRunManagedArtifactRoot(context)}' instead.");
             }
 
+            if (IsManagedOutputPath(normalizedPath) &&
+                context.Classification is ToolInvocationClassification.Mutation or ToolInvocationClassification.Validation)
+            {
+                return ToolInvocationPolicyDecision.Deny(
+                    signature,
+                    $"This governed run has a grounded external product target. Managed output path '{normalizedPath}' is not a fallback product root; use the grounded external-target alias or return Blocked with the exact access problem.");
+            }
+
             if (IsAllowedExternalRunManagedPath(normalizedPath))
             {
                 continue;
@@ -587,6 +617,37 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         return ToolInvocationPolicyDecision.Deny(
             signature,
             $"This governed step has read-only access to product target '{matchedAlias}'. Use read, build, test, run, browser, and durable evidence-artifact tools for validation; route defects to a repair implementation step instead of mutating product files from a review or QA step.");
+    }
+
+    private static ToolInvocationPolicyDecision? EvaluateScaffoldToolOnlyDirectProductMutation(
+        ToolInvocationPolicyContext context,
+        string signature)
+    {
+        if (!context.ProcessScaffoldToolOnly ||
+            !DirectProductFileMutationTools.Contains(context.ToolName))
+        {
+            return null;
+        }
+
+        var referencedAliases = ResolveReferencedExternalTargetAliases(context.RedactedArguments);
+        if (referencedAliases.Count == 0)
+        {
+            return null;
+        }
+
+        var allowedAliases = NormalizeAllowedExternalTargetAliases(context.AllowedExternalTargetAliases);
+        var matchedAlias = referencedAliases.FirstOrDefault(referencedAlias =>
+            allowedAliases.Any(allowedAlias =>
+                string.Equals(referencedAlias, allowedAlias, StringComparison.OrdinalIgnoreCase) ||
+                referencedAlias.StartsWith(allowedAlias + "/", StringComparison.OrdinalIgnoreCase)));
+        if (string.IsNullOrWhiteSpace(matchedAlias))
+        {
+            return null;
+        }
+
+        return ToolInvocationPolicyDecision.Deny(
+            signature,
+            "This governed .NET scaffold step is tool-only for product files. Create or modify product solution, project, and source files with scaffold/build tools such as workspace_dotnet_new or a reviewed script, and use workspace_write_file only for current-run artifacts.");
     }
 
     private static bool IsGovernedProcessRun(ToolInvocationPolicyContext context)
@@ -765,6 +826,12 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             normalizedPath.StartsWith(root + "/", StringComparison.OrdinalIgnoreCase));
     }
 
+    private static bool IsManagedOutputPath(string normalizedPath)
+    {
+        return string.Equals(normalizedPath, "output", StringComparison.OrdinalIgnoreCase) ||
+               normalizedPath.StartsWith("output/", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static bool IsDeniedExternalRunManagedPath(string normalizedPath)
     {
         return DeniedExternalRunManagedRoots.Any(root =>
@@ -874,6 +941,8 @@ public static class AgentToolInvocationPolicyMetadata
     public const string ProcessesTemplateMermaidGet = "processes_template_mermaid_get";
     public const string ProcessesTemplateImport = "processes_template_import";
     public const string ProcessesTemplateBaselineScenariosList = "processes_template_baseline_scenarios_list";
+    public const string ImageGenerationCreate = "image_generation_create";
+    public const string WorkspaceInspectImage = "workspace_inspect_image";
 
     private static readonly string[] SensitiveArgumentNameFragments =
     [
@@ -903,6 +972,7 @@ public static class AgentToolInvocationPolicyMetadata
             Validation("workspace_dotnet_build"),
             Validation("workspace_dotnet_test"),
             Validation("workspace_dotnet_run"),
+            Read(WorkspaceInspectImage),
             Read(LoadSkill),
             Read(ReadSkillResource),
             Mutation(RunSkillScript),
@@ -916,6 +986,7 @@ public static class AgentToolInvocationPolicyMetadata
             Mutation(ProcessesAssignmentResolve),
             Mutation(ProcessesArtifactRecord),
             Mutation(ProcessesTemplateImport),
+            Mutation(ImageGenerationCreate),
             Read(ProcessesDefinitionsList),
             Read(ProcessesDefinitionEditorGet),
             Read(ProcessesDefinitionExport),

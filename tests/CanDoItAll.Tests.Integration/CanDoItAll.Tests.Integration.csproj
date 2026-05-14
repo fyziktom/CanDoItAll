@@ -26,10 +26,12 @@
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.Modules.Plugins\CanDoItAll.Modules.Plugins.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.Prompts\CanDoItAll.Modules.Prompts.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj" />
     <ProjectReference Include="..\..\tools\CanDoItAll.Manager\CanDoItAll.Manager.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.Modules.SchedulerPlanner\CanDoItAll.Modules.SchedulerPlanner.csproj" />
   </ItemGroup>
 
 </Project>

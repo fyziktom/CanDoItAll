@@ -1,5 +1,6 @@
 using Bunit;
 using AngleSharp.Dom;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
@@ -14,6 +15,20 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
 using CanDoItAll.Infrastructure.Persistence;
+using WorkflowDefinition = CanDoItAll.AgentFramework.Models.WorkflowDefinition;
+using WorkflowDefinitionSaveRequest = CanDoItAll.AgentFramework.Models.WorkflowDefinitionSaveRequest;
+using WorkflowEdge = CanDoItAll.AgentFramework.Models.WorkflowEdge;
+using WorkflowEdgeId = CanDoItAll.AgentFramework.Models.WorkflowEdgeId;
+using WorkflowEdgeKind = CanDoItAll.AgentFramework.Models.WorkflowEdgeKind;
+using WorkflowGraph = CanDoItAll.AgentFramework.Models.WorkflowGraph;
+using WorkflowLifecycleStatus = CanDoItAll.AgentFramework.Models.WorkflowLifecycleStatus;
+using WorkflowNode = CanDoItAll.AgentFramework.Models.WorkflowNode;
+using WorkflowNodeId = CanDoItAll.AgentFramework.Models.WorkflowNodeId;
+using WorkflowNodeKind = CanDoItAll.AgentFramework.Models.WorkflowNodeKind;
+using WorkflowNodeSettings = CanDoItAll.AgentFramework.Models.WorkflowNodeSettings;
+using WorkflowRuntimeBackendKind = CanDoItAll.AgentFramework.Models.WorkflowRuntimeBackendKind;
+using WorkflowRuntimePolicy = CanDoItAll.AgentFramework.Models.WorkflowRuntimePolicy;
+using WorkflowValueShape = CanDoItAll.AgentFramework.Models.WorkflowValueShape;
 
 namespace CanDoItAll.Tests.Components;
 
@@ -514,6 +529,92 @@ public sealed class ProjectStructurePageTests
 
         Assert.Contains($"/projects/{projectId}/processes?processId={definitionResult.Value}", route, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(uriBeforeOpen, navigation.Uri);
+    }
+
+    [Fact]
+    public async Task Workflow_nodes_can_be_added_started_and_inspected_from_project_structure()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var workflowCatalog = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
+
+        var definition = await CreateComponentWorkflowDefinitionAsync(workflowCatalog, "Canvas workflow proof");
+        var projectId = await CreateProjectAsync(projectsService, "Workflow structure project");
+        var parentNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "SEAMARK folder",
+                "Vendor documents",
+                "Folder with xray device PDFs and price lists.",
+                $"project:{projectId}",
+                420,
+                260,
+                ObjectSubtype: "vendor-folder"));
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, parentNode.Id);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("SEAMARK folder", cut.Markup);
+            Assert.Contains("Add workflow", cut.Markup);
+        });
+
+        FindButtonByLabel(cut, "Add workflow").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("project-structure-workflow-add-dialog", cut.Markup);
+            Assert.Contains("Project", cut.Markup);
+            Assert.Contains("Parent node", cut.Markup);
+        });
+
+        cut.Find("[data-testid='project-structure-workflow-add-select']")
+            .Change(definition.Id.Value.ToString("D"));
+        cut.Find("[data-testid='project-structure-workflow-add-include-subtree']")
+            .Change(true);
+        cut.Find("[data-testid='project-structure-workflow-add-source-value']")
+            .Input("C:\\programovani\\testdata\\testworkflows\\SEAMARK");
+        cut.Find("[data-testid='project-structure-workflow-add-manual-json']")
+            .Input("{\"task\":\"summarize-xray-devices\"}");
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("SEAMARK", cut.Markup);
+            Assert.Contains("summarize-xray-devices", cut.Markup);
+        });
+
+        cut.Find("[data-testid='project-structure-workflow-add-submit']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Canvas workflow proof", cut.Markup);
+            Assert.Contains("project-structure-workflow-status-card", cut.Markup);
+            Assert.Contains("Ready", cut.Markup);
+            Assert.Contains("Start workflow", cut.Markup);
+        });
+
+        FindButtonByLabel(cut, "Start workflow").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("project-structure-workflow-start-dialog", cut.Markup);
+            Assert.DoesNotContain("project-structure-process-start-dialog", cut.Markup, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("Use HR manager suggestions", cut.Markup, StringComparison.OrdinalIgnoreCase);
+        });
+
+        cut.Find("[data-testid='project-structure-workflow-start-submit']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("project-structure-workflow-status-card", cut.Markup);
+            Assert.Contains("Completed", cut.Markup);
+            Assert.Contains("2 / 2", cut.Markup);
+            Assert.Contains("100%", cut.Markup);
+        });
     }
 
     [Fact]
@@ -1296,6 +1397,54 @@ public sealed class ProjectStructurePageTests
     }
 
     [Fact]
+    public async Task Text_file_asset_nodes_open_readable_preview_on_canvas_double_click()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var project = await projectsService.GetAsync(null);
+        project.Name = "Text Asset Preview Project";
+        project.Description = "Verify source-like file preview from canvas double-click.";
+        project.Objective = "Open text assets before editing node details.";
+        project.CurrentPhase = "Review";
+
+        var saveResult = await projectsService.SaveAsync(project);
+        Assert.True(saveResult.IsSuccess);
+        var projectId = saveResult.Value;
+
+        var markdownNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.File,
+                "Operator README",
+                "Markdown asset",
+                "# Operator checklist\n\n- Review workflow output\n- Attach evidence",
+                $"project:{projectId}",
+                540,
+                260,
+                null,
+                null,
+                "markdown"));
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+
+        cut.WaitForAssertion(() => Assert.Contains("Operator README", cut.Markup));
+
+        await OpenNodeFromCanvasAsync(cut, markdownNode.Id);
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Canvas preview", cut.Markup);
+            Assert.Contains("Operator checklist", cut.Markup);
+            Assert.Contains("project-structure-text-asset-preview", cut.Markup);
+            Assert.Contains("Edit details", cut.Markup);
+            Assert.DoesNotContain("project-structure-node-quick-actions", cut.Markup);
+        });
+    }
+
+    [Fact]
     public async Task Audio_attachment_nodes_render_audio_preview_and_local_open_action_when_host_supports_it()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -2071,6 +2220,61 @@ public sealed class ProjectStructurePageTests
         Assert.True(result.IsSuccess);
         return result.Value;
     }
+
+    private static Task<WorkflowDefinition> CreateComponentWorkflowDefinitionAsync(
+        IWorkflowCatalogService catalogService,
+        string name)
+    {
+        var start = new WorkflowNodeId("start");
+        var end = new WorkflowNodeId("end");
+        return catalogService.SaveDefinitionAsync(new WorkflowDefinitionSaveRequest(
+            Id: null,
+            ExpectedVersionId: null,
+            Name: name,
+            Description: "Component proof workflow for project-structure execution.",
+            WorkflowLifecycleStatus.Active,
+            new WorkflowGraph(
+                start,
+                [
+                    CreateComponentWorkflowNode(start, WorkflowNodeKind.Start, resultShape: WorkflowValueShape.Text),
+                    CreateComponentWorkflowNode(end, WorkflowNodeKind.End, inputShape: WorkflowValueShape.Text)
+                ],
+                [
+                    new WorkflowEdge(
+                        new WorkflowEdgeId("start-to-end"),
+                        start,
+                        SourcePortId: null,
+                        end,
+                        TargetPortId: null,
+                        WorkflowEdgeKind.Direct,
+                        ConditionExpression: string.Empty)
+                ]),
+            new WorkflowRuntimePolicy(
+                WorkflowRuntimeBackendKind.InProcess,
+                AllowInProcessPreviewRuns: true,
+                RequireDurableProductionRuns: false,
+                ExposeAzureFunctionsStatusEndpoint: false,
+                ExposeAzureFunctionsMcpTool: false)));
+    }
+
+    private static WorkflowNode CreateComponentWorkflowNode(
+        WorkflowNodeId id,
+        WorkflowNodeKind kind,
+        WorkflowValueShape? inputShape = null,
+        WorkflowValueShape? resultShape = null)
+        => new(
+            id,
+            kind,
+            id.Value,
+            [],
+            new WorkflowNodeSettings(
+                ComponentId: null,
+                AgentId: null,
+                SubworkflowId: null,
+                ExternalRequestKind: null,
+                Instructions: string.Empty,
+                InputShape: inputShape ?? WorkflowValueShape.Text,
+                ResultShape: resultShape ?? WorkflowValueShape.Text));
 
     private static ProcessDefinitionEditorModel BuildProcessDefinitionEditor(Guid projectId, Guid managerRoleId)
     {

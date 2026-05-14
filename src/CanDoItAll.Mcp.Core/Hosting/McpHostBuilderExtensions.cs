@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -63,6 +64,32 @@ public static class McpHostBuilderExtensions
 
         optionsBuilder.ValidateOnStart();
         services.AddSingleton<IValidateOptions<TOptions>, TValidator>();
+        return services;
+    }
+
+    public static IServiceCollection AddCanDoItAllMcpIdleShutdown<TOptions>(
+        this IServiceCollection services,
+        Func<TOptions, McpIdleShutdownOptions> selectOptions)
+        where TOptions : class
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(selectOptions);
+
+        services.TryAddSingleton(TimeProvider.System);
+        services.TryAddSingleton<IMcpIdleActivityTracker, McpIdleActivityTracker>();
+
+        services
+            .AddOptions<McpIdleShutdownOptions>()
+            .Configure<IOptions<TOptions>>((idleOptions, typedOptions) =>
+            {
+                var selectedOptions = selectOptions(typedOptions.Value);
+                idleOptions.CopyFrom(selectedOptions);
+            })
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.AddSingleton<McpIdleShutdownCoordinator>();
+        services.AddHostedService<McpIdleShutdownHostedService>();
         return services;
     }
 }

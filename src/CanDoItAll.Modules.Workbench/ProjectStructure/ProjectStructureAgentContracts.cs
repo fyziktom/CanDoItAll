@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.SharedKernel;
@@ -218,6 +219,56 @@ public sealed record ProjectStructureReadResponse(
     IReadOnlyList<ProjectStructureLinkSummary> Links,
     IReadOnlyList<string> Warnings);
 
+public sealed record ProjectStructureNodeCatalogResponse(
+    IReadOnlyList<ProjectStructureNodeCatalogItem> Items,
+    IReadOnlyList<ProjectStructureNodeCatalogObjectType> ObjectTypes,
+    IReadOnlyList<ProjectStructureLinkKindCatalogItem> LinkKinds,
+    IReadOnlyList<string> Guidance);
+
+public sealed record ProjectStructureNodeCatalogItem(
+    string ActionId,
+    ProjectObjectType ObjectType,
+    string ObjectSubtype,
+    string GroupKey,
+    string Label,
+    string Description,
+    string DefaultTitle,
+    string TitleLabel,
+    string SubtitleLabel,
+    string NotesLabel,
+    bool RequiresFile,
+    string AcceptedFileTypes,
+    IReadOnlyList<ProjectStructureNodeCatalogField> InputFields,
+    IReadOnlyList<ProjectStructureNodeCatalogDefaultValue> DefaultInputValues,
+    IReadOnlyList<string> Aliases);
+
+public sealed record ProjectStructureNodeCatalogField(
+    string Key,
+    string Label,
+    string InputMode,
+    string Placeholder,
+    bool IsRequired,
+    IReadOnlyList<ProjectStructureNodeCatalogOption> Options);
+
+public sealed record ProjectStructureNodeCatalogOption(
+    string Value,
+    string Label);
+
+public sealed record ProjectStructureNodeCatalogDefaultValue(
+    string Key,
+    string Value);
+
+public sealed record ProjectStructureNodeCatalogObjectType(
+    ProjectObjectType ObjectType,
+    string Label,
+    bool IsUserCreatable,
+    IReadOnlyList<string> CreatableSubtypes);
+
+public sealed record ProjectStructureLinkKindCatalogItem(
+    ProjectObjectLinkKind Kind,
+    string Label,
+    string Guidance);
+
 [JsonConverter(typeof(ProjectStructureNodeCreateInputJsonConverter))]
 public sealed record ProjectStructureNodeCreateInput(
     ProjectObjectType ObjectType,
@@ -347,6 +398,157 @@ public sealed record ProjectStructureProcessDefinitionLinkInput(
     Guid ProcessDefinitionId,
     string? LeaseToken = null);
 
+public enum ProjectStructureWorkflowInputSourceKind
+{
+    ParentNode,
+    ParentSubtree,
+    SelectedNode,
+    FilePath,
+    FolderPath,
+    ManualJson
+}
+
+public sealed record ProjectStructureWorkflowInputSource(
+    ProjectStructureWorkflowInputSourceKind Kind,
+    string Key,
+    string Label,
+    string Value,
+    bool IsEnabled = true);
+
+public sealed class ProjectStructureWorkflowInputSettings
+{
+    public bool IncludeProject { get; set; } = true;
+
+    public bool IncludeParentNode { get; set; } = true;
+
+    public bool IncludeParentNodeDetails { get; set; } = true;
+
+    public bool IncludeParentSubtree { get; set; }
+
+    public bool IncludeAssets { get; set; } = true;
+
+    public IReadOnlyList<string> SelectedNodeIds { get; set; } = [];
+
+    public IReadOnlyList<ProjectStructureWorkflowInputSource> AdditionalSources { get; set; } = [];
+
+    public string ManualInputJson { get; set; } = "{}";
+
+    public static ProjectStructureWorkflowInputSettings Default() => new();
+}
+
+public sealed record ProjectStructureWorkflowNodeCreateInput(
+    WorkflowId WorkflowId,
+    WorkflowVersionId? VersionId = null,
+    string? Title = null,
+    string? Subtitle = null,
+    string? Notes = null,
+    ProjectStructureWorkflowInputSettings? InputSettings = null,
+    double? X = null,
+    double? Y = null,
+    string? LeaseToken = null);
+
+public sealed record ProjectStructureWorkflowNodeCreateResult(
+    Guid ProjectId,
+    ProjectStructureNodeSummary Node,
+    WorkflowId WorkflowId,
+    WorkflowVersionId WorkflowVersionId,
+    IReadOnlyList<string> Warnings);
+
+public sealed record ProjectStructureWorkflowAddOptionsInput(
+    WorkflowId? WorkflowId = null,
+    WorkflowVersionId? VersionId = null,
+    ProjectStructureWorkflowInputSettings? InputSettings = null,
+    IReadOnlyList<string>? SelectedNodeIds = null);
+
+public sealed record ProjectStructureWorkflowDefinitionOption(
+    WorkflowId WorkflowId,
+    WorkflowVersionId VersionId,
+    string DisplayName,
+    string Description,
+    WorkflowLifecycleStatus Status,
+    WorkflowRuntimeBackendKind PreferredBackend,
+    bool IsSelectable,
+    string DisabledReason);
+
+public sealed record ProjectStructureWorkflowInputPreviewRow(
+    string Label,
+    string Value);
+
+public sealed record ProjectStructureWorkflowInputPreviewSection(
+    string Title,
+    string Summary,
+    IReadOnlyList<ProjectStructureWorkflowInputPreviewRow> Rows);
+
+public sealed record ProjectStructureWorkflowInputPreview(
+    string Summary,
+    string InputJson,
+    IReadOnlyList<ProjectStructureWorkflowInputPreviewSection> Sections);
+
+public sealed record ProjectStructureWorkflowAddOptionsResult(
+    Guid ProjectId,
+    ProjectStructureNodeSummary ParentNode,
+    IReadOnlyList<ProjectStructureWorkflowDefinitionOption> Workflows,
+    WorkflowId? SelectedWorkflowId,
+    WorkflowVersionId? SelectedVersionId,
+    ProjectStructureWorkflowInputSettings InputSettings,
+    ProjectStructureWorkflowInputPreview Preview,
+    IReadOnlyList<string> Warnings);
+
+public sealed record ProjectStructureWorkflowNodeStartInput(
+    WorkflowRuntimeBackendKind? RequestedBackend = null,
+    string RequestedBy = "project-structure",
+    string? LeaseToken = null);
+
+public sealed record ProjectStructureWorkflowRunEventSummary(
+    WorkflowEventKind Kind,
+    string Message,
+    string NodeId,
+    DateTimeOffset CreatedAtUtc);
+
+public sealed record ProjectStructureWorkflowRunArtifactSummary(
+    WorkflowArtifactKind Kind,
+    string Name,
+    string ContentType,
+    string StoragePath,
+    string Summary);
+
+public sealed record ProjectStructureWorkflowExecutionSummary(
+    WorkflowRunId? RunId,
+    WorkflowRunState State,
+    string WorkflowName,
+    string RunSummary,
+    int CurrentStepIndex,
+    int StepCount,
+    IReadOnlyList<ProjectStructureWorkflowRunArtifactSummary> Artifacts,
+    IReadOnlyList<string> CreatedNodeIds,
+    IReadOnlyList<string> CreatedAssetIds,
+    IReadOnlyList<string> CreatedFilePaths);
+
+public sealed record ProjectStructureWorkflowRunStatus(
+    WorkflowRunId? RunId,
+    WorkflowRunState State,
+    string Status,
+    string ProgressMode,
+    int ProgressPercent,
+    string MarkerIcon,
+    string MarkerTone,
+    string MarkerLabel,
+    int CurrentStepIndex,
+    int StepCount,
+    string Message,
+    ProjectStructureWorkflowExecutionSummary Summary,
+    IReadOnlyList<ProjectStructureWorkflowRunEventSummary> RecentEvents);
+
+public sealed record ProjectStructureWorkflowNodeStartResult(
+    Guid ProjectId,
+    string NodeId,
+    WorkflowId WorkflowId,
+    WorkflowVersionId WorkflowVersionId,
+    WorkflowRunId RunId,
+    string Route,
+    ProjectStructureWorkflowRunStatus Status,
+    IReadOnlyList<string> Warnings);
+
 public sealed record ProjectStructureNodeCommandInput(
     ProjectStructureCommandKind CommandKind,
     string? LeaseToken = null);
@@ -355,16 +557,39 @@ public sealed record ProjectStructureSubtreeTransferInput(
     Guid TargetProjectId,
     string? LeaseToken = null);
 
+public sealed record ProjectStructureNodesToSubprojectInput(
+    string Name,
+    IReadOnlyList<string> NodeIds,
+    string? Description = null,
+    string? Objective = null,
+    string? CurrentPhase = null,
+    ProjectStatus Status = ProjectStatus.Active,
+    bool IncludeDescendants = true,
+    string? LeaseToken = null);
+
+public sealed record ProjectStructureNodesToSubprojectResult(
+    Guid SourceProjectId,
+    Guid TargetProjectId,
+    string TargetProjectName,
+    IReadOnlyList<string> RequestedNodeIds,
+    IReadOnlyList<string> MovedNodeIds,
+    int MovedNodeCount,
+    int MovedRootCount,
+    IReadOnlyList<string> Warnings);
+
 public sealed record ProjectStructureAssetCreateInput(
     ProjectObjectType ObjectType,
     string Title,
     string Subtitle,
     string Notes,
-    ProjectObjectMediaPayload Media,
+    ProjectObjectMediaPayload? Media,
     string? ParentNodeKey = null,
     string? ObjectSubtype = null,
     string? MetadataJson = null,
-    string? LeaseToken = null);
+    string? LeaseToken = null,
+    string? SourceWorkspacePath = null,
+    string? SourceFileName = null,
+    string? SourceContentType = null);
 
 public sealed record ProjectStructureApprovalRequestCreateInput(
     string Title,

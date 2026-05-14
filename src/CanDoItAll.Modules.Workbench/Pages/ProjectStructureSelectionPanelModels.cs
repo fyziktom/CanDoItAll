@@ -30,6 +30,7 @@ public sealed record ProjectStructureSelectionDetailState(
     IReadOnlyList<ProjectStructureSelectionBadgePresentation> BadgePresentations,
     StorageSummaryModel? StorageSummary,
     ProjectStructureAttachmentPreviewCardState? AttachmentPreview,
+    ProjectStructureSelectionWorkflowStatusState? WorkflowStatus,
     bool HasMermaidViewer,
     IReadOnlyList<ProjectStructureInspectorActionItem> Actions,
     string? WorkflowFeedback,
@@ -40,12 +41,26 @@ public sealed record ProjectStructureSelectionDetailState(
     IReadOnlyList<ProjectStructureDetailSection> DetailSections,
     IReadOnlyList<ProjectStructureNodeFact> Facts);
 
+public sealed record ProjectStructureSelectionWorkflowStatusState(
+    string WorkflowName,
+    string State,
+    string Status,
+    string Message,
+    string StepLabel,
+    string ProgressLabel,
+    string RunId,
+    string LastUpdatedLabel,
+    IReadOnlyList<string> CreatedNodeIds,
+    IReadOnlyList<string> CreatedAssetIds,
+    IReadOnlyList<string> CreatedFilePaths);
+
 public sealed record ProjectStructureAttachmentPreviewCardState(
     AttachmentPreviewKind Kind,
     string DisplayName,
     string LeadCopy,
     string Route,
     string PreviewSource,
+    string TextContent,
     string OriginalFileName,
     string ContentType,
     bool CanShowLocalOpen,
@@ -73,5 +88,6 @@ public enum AttachmentPreviewKind
     Image,
     Video,
     Audio,
-    Document
+    Document,
+    TextDocument
 }

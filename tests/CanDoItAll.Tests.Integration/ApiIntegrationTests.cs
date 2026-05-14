@@ -150,6 +150,10 @@ public sealed class ApiIntegrationTests
 
         Assert.True(paths.TryGetProperty("/api/project-structure/projects/{projectId}/nodes/{nodeId}/type", out _));
         Assert.True(paths.TryGetProperty("/api/project-structure/projects/{projectId}/nodes/{nodeId}/process/start", out _));
+        Assert.True(paths.TryGetProperty("/api/project-structure/projects/{projectId}/nodes/{nodeId}/workflow-add-options", out _));
+        Assert.True(paths.TryGetProperty("/api/project-structure/projects/{projectId}/nodes/{nodeId}/workflow-definition", out _));
+        Assert.True(paths.TryGetProperty("/api/project-structure/projects/{projectId}/nodes/{nodeId}/workflow/start", out _));
+        Assert.True(paths.TryGetProperty("/api/project-structure/projects/{projectId}/nodes/{nodeId}/workflow/status", out _));
         Assert.True(paths.TryGetProperty("/api/project-structure/projects/{projectId}/assets/{nodeId}/content", out _));
         Assert.True(paths.TryGetProperty("/api/processes/templates/{processKey}/detail", out _));
         Assert.True(paths.TryGetProperty("/api/processes/templates/baseline-scenarios", out _));
@@ -252,7 +256,9 @@ internal sealed class ApiTestHost : IAsyncDisposable
 
     public HttpClient Client { get; }
 
-    public static async Task<ApiTestHost> CreateAsync(bool jwtEnabled)
+    public static async Task<ApiTestHost> CreateAsync(
+        bool jwtEnabled,
+        Action<IServiceCollection>? configureServices = null)
     {
         var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-api-tests");
         var activeProfile = testEnvironment.CreateManagedSqliteProfile("api-host");
@@ -284,6 +290,7 @@ internal sealed class ApiTestHost : IAsyncDisposable
             builder.Environment,
             registerTestHostApplicationLifetime: false);
         builder.Services.AddCanDoItAllApi(builder.Configuration);
+        configureServices?.Invoke(builder.Services);
 
         var app = builder.Build();
         app.Urls.Add("http://127.0.0.1:0");

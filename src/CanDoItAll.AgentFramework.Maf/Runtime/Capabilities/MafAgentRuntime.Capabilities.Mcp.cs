@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.Security;
 using Microsoft.Extensions.AI;
 using ModelContextProtocol.Client;
 using System.Text;
@@ -46,14 +47,20 @@ public sealed partial class MafAgentRuntime
             if (configuration.Hosted == true)
             {
                 EnsureHostedMcpSupported(capability, provider);
-                var hostedTool = CreateHostedMcpTool(capability, configuration, approvalRequired, suppressApprovalRequirements);
+                var hostedTool = await CreateHostedMcpToolAsync(
+                    capability,
+                    configuration,
+                    agent,
+                    approvalRequired,
+                    suppressApprovalRequirements,
+                    cancellationToken);
                 state.Tools.Add(hostedTool);
                 state.HasApprovalTools |= hostedApprovalRequired;
                 await progressCallback(ExecutionState.Preparing, "MCP", $"Attached hosted MCP server '{capability.Name}' through Microsoft Agent Framework.");
                 return;
             }
 
-            var mcpClient = await CreateMcpClientAsync(capability, configuration, provider, cancellationToken);
+            var mcpClient = await CreateMcpClientAsync(capability, configuration, agent, provider, cancellationToken);
             state.AsyncDisposables.Add(mcpClient);
 
             var tools = await mcpClient.ListToolsAsync(cancellationToken: cancellationToken);
@@ -67,10 +74,10 @@ public sealed partial class MafAgentRuntime
             await progressCallback(ExecutionState.Preparing, "MCP", $"Attached {tools.Count} MCP tool(s) from '{capability.Name}'.");
         }
 
-        private static AIFunction CreateModelContextBoundedMcpTool(AIFunction tool)
+        private AIFunction CreateModelContextBoundedMcpTool(AIFunction tool)
         {
             return IsBrowserMcpToolName(tool.Name)
-                ? new BrowserMcpModelContextBoundedAIFunction(tool)
+                ? new BrowserMcpModelContextBoundedAIFunction(tool, owner.workspaceRoot, owner.workspaceScope)
                 : tool;
         }
 
@@ -312,11 +319,13 @@ public sealed partial class MafAgentRuntime
             builder.Append("... [truncated]");
         }
 
-        private static HostedMcpServerTool CreateHostedMcpTool(
+        private async Task<HostedMcpServerTool> CreateHostedMcpToolAsync(
             CapabilityCatalogItem capability,
             McpCapabilityConfiguration configuration,
+            AgentDefinition agent,
             bool approvalRequired,
-            bool suppressApprovalRequirements)
+            bool suppressApprovalRequirements,
+            CancellationToken cancellationToken)
         {
             ThrowIfPersistedSecretsConfigured(capability, configuration);
             var endpoint = ResolveConfiguredEndpoint(capability, configuration);
@@ -337,7 +346,13 @@ public sealed partial class MafAgentRuntime
             }
 
             var hostedHeaders = hostedTool.Headers;
-            foreach (var header in ResolveSecretBindings(configuration.HeaderBindings, capability.Name, "header"))
+            foreach (var header in await ResolveSecretBindingsAsync(
+                         configuration.HeaderBindings,
+                         agent,
+                         capability.Name,
+                         "header",
+                         SecretRuntimePurposes.AgentMcpHeader,
+                         cancellationToken))
             {
                 if (hostedHeaders is not null)
                 {
@@ -386,6 +401,7 @@ public sealed partial class MafAgentRuntime
         private async Task<McpClient> CreateMcpClientAsync(
             CapabilityCatalogItem capability,
             McpCapabilityConfiguration configuration,
+            AgentDefinition agent,
             ProviderProfile provider,
             CancellationToken cancellationToken)
         {
@@ -401,7 +417,13 @@ public sealed partial class MafAgentRuntime
                         allowedExternalRoots: configuration.AllowedWorkingDirectories);
                 var commandExecutionService = owner.services.GetService(typeof(IWorkspaceCommandExecutionService)) as IWorkspaceCommandExecutionService
                     ?? new WorkspaceCommandExecutionService(owner.workspaceRoot, new LocalWorkspaceProcessHost(), owner.workspaceScope);
-                var environmentVariables = ResolveSecretBindings(configuration.EnvironmentVariableBindings, capability.Name, "environment variable")
+                var environmentVariables = (await ResolveSecretBindingsAsync(
+                        configuration.EnvironmentVariableBindings,
+                        agent,
+                        capability.Name,
+                        "environment variable",
+                        SecretRuntimePurposes.AgentMcpEnvironmentVariable,
+                        cancellationToken))
                     .ToDictionary(
                         pair => pair.Key,
                         pair => (string?)pair.Value,
@@ -438,7 +460,13 @@ public sealed partial class MafAgentRuntime
 
             var additionalHeaders = httpTransportOptions.AdditionalHeaders;
             ThrowIfPersistedSecretsConfigured(capability, configuration);
-            foreach (var header in ResolveSecretBindings(configuration.HeaderBindings, capability.Name, "header"))
+            foreach (var header in await ResolveSecretBindingsAsync(
+                         configuration.HeaderBindings,
+                         agent,
+                         capability.Name,
+                         "header",
+                         SecretRuntimePurposes.AgentMcpHeader,
+                         cancellationToken))
             {
                 if (additionalHeaders is not null)
                 {
@@ -486,10 +514,13 @@ public sealed partial class MafAgentRuntime
             }
         }
 
-        private static IReadOnlyDictionary<string, string> ResolveSecretBindings(
+        private async Task<IReadOnlyDictionary<string, string>> ResolveSecretBindingsAsync(
             IDictionary<string, string>? bindings,
+            AgentDefinition agent,
             string capabilityName,
-            string bindingKind)
+            string bindingKind,
+            string purpose,
+            CancellationToken cancellationToken)
         {
             var resolved = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             if (bindings is null)
@@ -510,6 +541,25 @@ public sealed partial class MafAgentRuntime
                         $"MCP capability '{capabilityName}' contains a {bindingKind} binding for '{binding.Key}' without an environment variable name.");
                 }
 
+                if (TryParseSecretBinding(binding.Value, out var secretId))
+                {
+                    var secretValue = await ResolveAllowedAgentSecretAsync(
+                        agent,
+                        secretId,
+                        purpose,
+                        capabilityName,
+                        binding.Key,
+                        cancellationToken);
+                    if (string.IsNullOrWhiteSpace(secretValue))
+                    {
+                        throw new InvalidOperationException(
+                            $"MCP capability '{capabilityName}' requires stored secret '{secretId:D}' to resolve {bindingKind} '{binding.Key}', but the secret is missing or empty.");
+                    }
+
+                    resolved[binding.Key] = secretValue;
+                    continue;
+                }
+
                 var resolvedValue = AgentProviderEnvironmentCredential.ResolveAndPromote(binding.Value);
                 if (string.IsNullOrWhiteSpace(resolvedValue))
                 {
@@ -521,6 +571,49 @@ public sealed partial class MafAgentRuntime
             }
 
             return resolved;
+        }
+
+        private async Task<string?> ResolveAllowedAgentSecretAsync(
+            AgentDefinition agent,
+            Guid secretId,
+            string purpose,
+            string capabilityName,
+            string bindingName,
+            CancellationToken cancellationToken)
+        {
+            var resolver = owner.services.GetService(typeof(ISecretRuntimeResolver)) as ISecretRuntimeResolver;
+            if (resolver is null)
+            {
+                throw new InvalidOperationException(
+                    $"MCP capability '{capabilityName}' requires stored secret '{secretId:D}' for binding '{bindingName}', but the secret runtime resolver is not registered.");
+            }
+
+            var allowedSecretIds = agent.Permissions.NormalizedAllowedSecrets
+                .Select(item => item.SecretId)
+                .ToHashSet();
+            return await resolver.ResolveValueAsync(
+                new SecretRuntimeRequest(
+                    secretId,
+                    purpose,
+                    allowedSecretIds,
+                    ConsumerType: SecretRuntimeConsumerTypes.AgentMcp,
+                    ConsumerId: SecretRuntimeConsumerIds.AgentMcp(agent.Id, capabilityName, bindingName)),
+                cancellationToken);
+        }
+
+        private static bool TryParseSecretBinding(string value, out Guid secretId)
+        {
+            secretId = Guid.Empty;
+            const string prefix = "secret:";
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return false;
+            }
+
+            var normalized = value.Trim();
+            return Guid.TryParse(normalized, out secretId) ||
+                   (normalized.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) &&
+                    Guid.TryParse(normalized[prefix.Length..], out secretId));
         }
 
         private void AttachProviderCredentialForLocalMcp(
@@ -596,14 +689,81 @@ public sealed partial class MafAgentRuntime
                 .Any(item => string.Equals(item, capability, StringComparison.OrdinalIgnoreCase));
         }
 
-        private sealed class BrowserMcpModelContextBoundedAIFunction(AIFunction innerFunction) : DelegatingAIFunction(innerFunction)
+        private sealed class BrowserMcpModelContextBoundedAIFunction(
+            AIFunction innerFunction,
+            string workspaceRoot,
+            WorkspaceScopeDescriptor workspaceScope) : DelegatingAIFunction(innerFunction)
         {
             protected override async ValueTask<object?> InvokeCoreAsync(
                 AIFunctionArguments arguments,
                 CancellationToken cancellationToken)
             {
                 var result = await base.InvokeCoreAsync(arguments, cancellationToken).ConfigureAwait(false);
+                if (string.Equals(Name, "browser_take_screenshot", StringComparison.OrdinalIgnoreCase))
+                {
+                    MirrorScreenshotToScopedArtifactPath(workspaceRoot, workspaceScope, TryGetStringArgument(arguments, "filename"));
+                }
+
                 return CompactBrowserMcpToolResultForModelContext(Name, arguments, result);
+            }
+
+            private static void MirrorScreenshotToScopedArtifactPath(
+                string workspaceRoot,
+                WorkspaceScopeDescriptor workspaceScope,
+                string? fileName)
+            {
+                if (workspaceScope.IsDefaultSandbox ||
+                    string.IsNullOrWhiteSpace(fileName))
+                {
+                    return;
+                }
+
+                var normalizedFileName = WorkspaceScopeDescriptor.NormalizeRelativePath(fileName);
+                if (string.IsNullOrWhiteSpace(normalizedFileName) ||
+                    Path.IsPathRooted(normalizedFileName) ||
+                    !MatchesRoot(normalizedFileName, "artifacts") ||
+                    MatchesRoot(normalizedFileName, workspaceScope.ArtifactRootRelativePath) ||
+                    normalizedFileName.StartsWith("artifacts/scopes/", StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+
+                var unscopedFullPath = Path.GetFullPath(Path.Combine(
+                    workspaceRoot,
+                    normalizedFileName.Replace('/', Path.DirectorySeparatorChar)));
+                if (!File.Exists(unscopedFullPath))
+                {
+                    return;
+                }
+
+                var suffix = RemoveRoot(normalizedFileName, "artifacts");
+                var scopedRelativePath = string.IsNullOrWhiteSpace(suffix)
+                    ? workspaceScope.ArtifactRootRelativePath
+                    : WorkspaceScopeDescriptor.NormalizeRelativePath(Path.Combine(workspaceScope.ArtifactRootRelativePath, suffix));
+                var scopedFullPath = Path.GetFullPath(Path.Combine(
+                    workspaceRoot,
+                    scopedRelativePath.Replace('/', Path.DirectorySeparatorChar)));
+                var scopedDirectory = Path.GetDirectoryName(scopedFullPath);
+                if (string.IsNullOrWhiteSpace(scopedDirectory))
+                {
+                    return;
+                }
+
+                Directory.CreateDirectory(scopedDirectory);
+                File.Copy(unscopedFullPath, scopedFullPath, overwrite: true);
+            }
+
+            private static bool MatchesRoot(string relativePath, string rootRelativePath)
+            {
+                return string.Equals(relativePath, rootRelativePath, StringComparison.OrdinalIgnoreCase) ||
+                       relativePath.StartsWith(rootRelativePath + "/", StringComparison.OrdinalIgnoreCase);
+            }
+
+            private static string RemoveRoot(string relativePath, string rootRelativePath)
+            {
+                return string.Equals(relativePath, rootRelativePath, StringComparison.OrdinalIgnoreCase)
+                    ? string.Empty
+                    : relativePath[(rootRelativePath.Length + 1)..];
             }
         }
 

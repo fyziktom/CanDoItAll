@@ -503,6 +503,9 @@
   .min-w-0 {
     min-width: calc(var(--spacing) * 0);
   }
+  .min-w-fit {
+    min-width: fit-content;
+  }
   .min-w-full {
     min-width: 100%;
   }
@@ -1431,6 +1434,16 @@
   .sm\:\[grid-template-rows\:var\(--cda-grid-rows-sm\)\] {
     @media (width >= 40rem) {
       grid-template-rows: var(--cda-grid-rows-sm);
+    }
+  }
+  .sm\:flex-row {
+    @media (width >= 40rem) {
+      flex-direction: row;
+    }
+  }
+  .sm\:items-center {
+    @media (width >= 40rem) {
+      align-items: center;
     }
   }
   .sm\:gap-x-4 {

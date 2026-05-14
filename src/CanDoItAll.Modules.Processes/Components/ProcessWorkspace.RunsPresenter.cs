@@ -1,5 +1,6 @@
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Projects;
+using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -98,6 +99,8 @@ public partial class ProcessWorkspace
 
         public IReadOnlyList<ProcessExecutionRunViewModel> ExecutionRuns => workspace.executionRuns;
 
+        public IReadOnlyList<ProcessWorkflowRunViewModel> WorkflowRuns => workspace.workflowRuns;
+
         public IReadOnlyList<ProcessEscalationViewModel> ProcessEscalations => workspace.processEscalations;
 
         public IReadOnlyList<ProcessOperatorApprovalViewModel> OperatorApprovals => workspace.operatorApprovals;
@@ -107,6 +110,8 @@ public partial class ProcessWorkspace
         public IReadOnlyList<ProcessActiveRunSummaryViewModel> ActiveRunSummaries => workspace.activeRunSummaries;
 
         public IReadOnlyList<ProjectPartyOption> PartyOptions => workspace.partyOptions;
+
+        public IReadOnlyList<ProcessWorkflowDefinitionOption> WorkflowOptions => workspace.workflowOptions;
 
         public string RunNameDraft
         {
@@ -156,6 +161,17 @@ public partial class ProcessWorkspace
             set => workspace.assignmentPartyId = value;
         }
 
+        public string AssignmentWorkflowOptionKey
+            => workspace.AssignmentWorkflowOptionKey;
+
+        public bool IsWorkflowAssignmentSelected
+            => ProcessExecutorKindNames.IsWorkflow(AssignmentExecutorKind);
+
+        public void SetAssignmentWorkflowOption(ChangeEventArgs args)
+        {
+            workspace.SetAssignmentWorkflowOption(args.Value?.ToString());
+        }
+
         public string AssignmentDisplayName
         {
             get => workspace.assignmentDisplayName;
@@ -165,7 +181,7 @@ public partial class ProcessWorkspace
         public string AssignmentExecutorKind
         {
             get => workspace.assignmentExecutorKind;
-            set => workspace.assignmentExecutorKind = value ?? string.Empty;
+            set => workspace.SetAssignmentExecutorKind(value);
         }
 
         public string AssignmentBindingReason

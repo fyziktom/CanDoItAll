@@ -36,8 +36,16 @@ public sealed partial class ProcessesService
             role.DisplayName = roleModel.DisplayName.Trim();
             role.Purpose = roleModel.Purpose.Trim();
             role.StaffingIntent = roleModel.StaffingIntent.Trim();
-            role.PreferredExecutorKind = roleModel.PreferredExecutorKind.Trim();
+            role.PreferredExecutorKind = ProcessExecutorKindNames.Normalize(roleModel.PreferredExecutorKind);
+            role.PreferredWorkflowDefinitionId = roleModel.PreferredWorkflowDefinitionId;
+            role.PreferredWorkflowVersionId = roleModel.PreferredWorkflowVersionId;
             role.PreferredProjectAssignmentRole = roleModel.PreferredProjectAssignmentRole;
+            if (!ProcessExecutorKindNames.IsWorkflow(role.PreferredExecutorKind))
+            {
+                role.PreferredWorkflowDefinitionId = null;
+                role.PreferredWorkflowVersionId = null;
+            }
+
             role.IsRequired = roleModel.IsRequired;
             role.AllowsFallback = roleModel.AllowsFallback;
             role.RequiresExplicitApproval = roleModel.RequiresExplicitApproval;

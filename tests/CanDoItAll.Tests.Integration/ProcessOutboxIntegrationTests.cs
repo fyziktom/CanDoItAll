@@ -200,6 +200,48 @@ public sealed class ProcessOutboxIntegrationTests
     }
 
     [Fact]
+    public async Task ProcessPendingAsync_can_skip_persisted_automation_dispatches_created_before_runtime_start()
+    {
+        await using var harness = await ProcessOutboxHarness.CreateAsync(trackAutomationDispatch: true);
+        await using var scope = harness.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var outboxService = scope.ServiceProvider.GetRequiredService<ProcessOutboxService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Process outbox persisted automation skip");
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Persisted automation dispatch should not resume",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Validate runtime startup dispatch boundary"
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var cutoff = DateTimeOffset.UtcNow;
+        await MoveAutomationDispatchCreatedAtAsync(dbContextFactory, runResult.Value, cutoff.AddMinutes(-5));
+
+        Assert.Equal(0, await outboxService.ProcessPendingAsync(
+            minimumAutomationDispatchCreatedAtUtc: cutoff));
+        Assert.Equal(0, harness.AutomationDispatch.CallCount);
+
+        var automationDispatchRecord = Assert.Single(await ListAutomationDispatchRecordsAsync(dbContextFactory, runResult.Value));
+        Assert.Equal(ProcessOutboxRecordStatus.Pending, automationDispatchRecord.Status);
+        Assert.Equal(0, automationDispatchRecord.AttemptCount);
+
+        Assert.Equal(1, await outboxService.ProcessPendingAsync());
+        Assert.Equal(1, harness.AutomationDispatch.CallCount);
+    }
+
+    [Fact]
     public async Task TransitionStepAsync_leaves_automation_dispatch_for_durable_worker()
     {
         await using var harness = await ProcessOutboxHarness.CreateAsync(trackAutomationDispatch: true);
@@ -690,6 +732,21 @@ public sealed class ProcessOutboxIntegrationTests
         var record = await dbContext.Set<ProcessOutboxRecord>()
             .SingleAsync(item => item.Id == outboxId);
         record.NextAttemptAtUtc = DateTimeOffset.UtcNow.AddMinutes(-1);
+        await dbContext.SaveChangesAsync();
+    }
+
+    private static async Task MoveAutomationDispatchCreatedAtAsync(
+        IDbContextFactory<AppDbContext> dbContextFactory,
+        Guid runId,
+        DateTimeOffset createdAtUtc)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var record = await dbContext.Set<ProcessOutboxRecord>()
+            .SingleAsync(item =>
+                item.CommandKey == ProcessOutboxService.AutomationDispatchCommandKey &&
+                item.ProcessRunId == runId);
+        record.CreatedAtUtc = createdAtUtc;
+        record.UpdatedAtUtc = createdAtUtc;
         await dbContext.SaveChangesAsync();
     }
 

@@ -15,20 +15,33 @@ public static class ProcessesModuleServiceCollectionExtensions
         var backgroundWorkersEnabled = LocalRuntimeHostedWorkerPolicy.AreBackgroundHostedWorkersEnabled(
             configuration[LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey],
             configuration["LaneKind"]);
+        var runtimeOptions = configuration
+            .GetSection(ProcessRuntimeOptions.SectionName)
+            .Get<ProcessRuntimeOptions>() ?? new ProcessRuntimeOptions();
 
         services.AddOptions<ProcessTemplatePackOptions>()
             .BindConfiguration(ProcessTemplatePackOptions.SectionName);
         services.AddOptions<ProcessRuntimeOptions>()
             .BindConfiguration(ProcessRuntimeOptions.SectionName);
+        services.AddOptions<ProcessObservationCacheOptions>()
+            .BindConfiguration(ProcessObservationCacheOptions.SectionName);
         services.AddScoped<ProcessesService>();
         services.AddScoped<ProcessOutboxService>();
+        services.AddScoped<ProcessWorkflowRunCoordinator>();
         services.AddScoped<IProcessRunAutomationDispatchService, ProcessRunAutomationDispatchService>();
         services.AddScoped<IProcessDefinitionListQueryService, ProcessDefinitionListQueryService>();
         services.AddScoped<IProcessRuntimeReadQueryService, ProcessRuntimeReadQueryService>();
+        services.AddSingleton<ProcessObservationCache>();
+        services.AddSingleton<IProcessObservationInvalidator>(provider => provider.GetRequiredService<ProcessObservationCache>());
+        services.AddScoped<IProcessObservationService, ProcessObservationService>();
+        services.AddScoped<IProcessManagerChatService, ProcessManagerChatService>();
+        services.AddScoped<IProcessObservationIntentResolver, ProcessObservationIntentResolver>();
+        services.AddScoped<ProcessObservationDashboardState>();
         services.AddScoped<ProcessRuntimeStateOverviewService>();
         services.AddScoped<ProcessWorkspaceRunDetailsLoader>();
         services.AddScoped<ProcessRunRecoveryService>();
         services.AddSingleton<ProcessRunRecoveryStartupGate>();
+        services.AddSingleton<ProcessRuntimeSession>();
         services.AddScoped<IProcessEscalationService, ProcessEscalationService>();
         services.AddScoped<ProcessCanvasSurfaceFactory>();
         services.AddScoped<ProcessCanvasRecompositionService>();
@@ -52,7 +65,11 @@ public static class ProcessesModuleServiceCollectionExtensions
         if (backgroundWorkersEnabled)
         {
             services.AddHostedService<ProcessCatalogWarmupWorker>();
-            services.AddHostedService<ProcessRunRecoveryWorker>();
+            if (runtimeOptions.RecoverActiveRunsOnStartup)
+            {
+                services.AddHostedService<ProcessRunRecoveryWorker>();
+            }
+
             services.AddHostedService<ProcessOutboxDrainWorker>();
         }
 

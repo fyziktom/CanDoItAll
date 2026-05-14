@@ -1,3 +1,7 @@
+using CanDoItAll.AgentFramework.Components;
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
@@ -15,8 +19,16 @@ public partial class ProjectStructurePage
     [Inject]
     private ProcessesService ProcessesService { get; set; } = default!;
 
+    [Inject]
+    private IAgentFrameworkWorkspaceService AgentWorkspaceService { get; set; } = default!;
+
+    [Inject]
+    private DialogService DialogService { get; set; } = default!;
+
     private ProjectStructureProcessLinkDialogState? processLinkDialog;
     private ProjectStructureProcessStartDialogState? processStartDialog;
+    private IReadOnlyDictionary<Guid, ProjectStructureProcessStartAgentMetadata> processStartAgentMetadataById =
+        new Dictionary<Guid, ProjectStructureProcessStartAgentMetadata>();
 
     private async Task OpenAddProcessDialogAsync(ProjectStructureNode node)
     {
@@ -145,6 +157,22 @@ public partial class ProjectStructurePage
         processStartDialog = null;
     }
 
+    private async Task ReviewAndStartProcessAsync()
+    {
+        if (processStartDialog is null)
+        {
+            return;
+        }
+
+        processStartDialog = processStartDialog with
+        {
+            AssignmentsReviewed = true,
+            Error = string.Empty
+        };
+
+        await ExecuteProcessStartAsync();
+    }
+
     private async Task ExecuteProcessStartAsync()
     {
         if (processStartDialog is null)
@@ -245,6 +273,7 @@ public partial class ProjectStructurePage
                     return;
                 }
 
+                await RefreshProcessStartAgentMetadataAsync();
                 processStartDialog = MapProcessStartDialogState(
                     dialog,
                     launchPlan,
@@ -289,6 +318,7 @@ public partial class ProjectStructurePage
 
                 if (HasRequiredRoleGaps(currentLaunchPlan))
                 {
+                    await RefreshProcessStartAgentMetadataAsync();
                     processStartDialog = MapProcessStartDialogState(
                         dialog,
                         currentLaunchPlan,
@@ -387,6 +417,7 @@ public partial class ProjectStructurePage
                     return;
                 }
 
+                await RefreshProcessStartAgentMetadataAsync();
                 processStartDialog = MapProcessStartDialogState(
                     originalDialog,
                     launchPlan,
@@ -477,6 +508,162 @@ public partial class ProjectStructurePage
         {
             await SetProcessActionExceptionAsync(exception, "selecting a staffing candidate");
         }
+    }
+
+    private async Task OpenManualProcessStartAgentPickerAsync(Guid launchPlanRoleId)
+    {
+        if (processStartDialog is null || !processStartDialog.LaunchPlanId.HasValue)
+        {
+            return;
+        }
+
+        var launchPlanId = processStartDialog.LaunchPlanId.Value;
+        var role = processStartDialog.Roles.FirstOrDefault(item => item.LaunchPlanRoleId == launchPlanRoleId);
+        if (role is null)
+        {
+            processStartDialog = processStartDialog with { Error = "The selected launch role was not found. Reload the launch plan and try again." };
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        try
+        {
+            var agents = await AgentWorkspaceService.ListAgentsAsync(includeTemplates: false);
+            await RefreshProcessStartAgentMetadataAsync(agents);
+            var selectedAgentId = role.Candidates
+                .FirstOrDefault(candidate => candidate.IsSelected && candidate.TechnicalAgentId.HasValue)
+                ?.TechnicalAgentId;
+            var result = await DialogService.OpenAsync<AgentSwitchDialog>(
+                $"Assign {role.DisplayName}",
+                new Dictionary<string, object?>
+                {
+                    [nameof(AgentSwitchDialog.Agents)] = agents,
+                    [nameof(AgentSwitchDialog.SelectedAgentId)] = selectedAgentId,
+                    [nameof(AgentSwitchDialog.FavoriteToggled)] =
+                        (Func<AgentDefinition, Task<AgentDefinition>>)ToggleProcessStartAgentFavoriteAsync
+                },
+                new DialogOptions
+                {
+                    Eyebrow = "Process assignment",
+                    Subtitle = "Choose the technical AI agent for this process role.",
+                    Size = ModalSize.Wide,
+                    DenseChrome = true,
+                    TestId = "project-structure-process-assignment-agent-switch-dialog",
+                    AriaLabel = "Assign process role agent"
+                });
+
+            if (result is not Guid agentId)
+            {
+                return;
+            }
+
+            if (processStartDialog?.LaunchPlanId != launchPlanId)
+            {
+                return;
+            }
+
+            await ApplyManualProcessStartAgentSelectionAsync(launchPlanId, launchPlanRoleId, agentId);
+        }
+        catch (Exception exception)
+        {
+            await SetProcessActionExceptionAsync(exception, "opening the AI agent directory");
+        }
+    }
+
+    private async Task ApplyManualProcessStartAgentSelectionAsync(
+        Guid launchPlanId,
+        Guid launchPlanRoleId,
+        Guid technicalAgentId)
+    {
+        if (processStartDialog is null || processStartDialog.LaunchPlanId != launchPlanId)
+        {
+            return;
+        }
+
+        var role = processStartDialog.Roles.FirstOrDefault(item => item.LaunchPlanRoleId == launchPlanRoleId);
+        if (role is null)
+        {
+            processStartDialog = processStartDialog with { Error = "The selected launch role was not found. Reload the launch plan and try again." };
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        var existingCandidate = role.Candidates.FirstOrDefault(candidate =>
+            candidate.IsResolvable &&
+            candidate.TechnicalAgentId == technicalAgentId);
+        if (existingCandidate is not null)
+        {
+            if (existingCandidate.IsSelected)
+            {
+                return;
+            }
+
+            await SelectProcessStartCandidateAsync(
+                new ProjectStructureProcessStartCandidateSelection(launchPlanRoleId, existingCandidate.CandidateId));
+            return;
+        }
+
+        try
+        {
+            processStartDialog = processStartDialog with
+            {
+                IsBusy = true,
+                Error = string.Empty,
+                ConfirmHrManagerMatch = false
+            };
+            await InvokeAsync(StateHasChanged);
+
+            var result = await ProcessesService.SelectLaunchTechnicalAgentAsync(
+                new ProcessLaunchTechnicalAgentSelectionRequest
+                {
+                    LaunchPlanId = launchPlanId,
+                    LaunchPlanRoleId = launchPlanRoleId,
+                    TechnicalAgentId = technicalAgentId
+                });
+            if (result.IsFailure)
+            {
+                await SetProcessActionErrorAsync(result.Errors);
+                return;
+            }
+
+            await ReloadProcessStartLaunchPlanAsync(
+                launchPlanId,
+                "Role selection updated from the AI agent directory.");
+        }
+        catch (Exception exception)
+        {
+            await SetProcessActionExceptionAsync(exception, "assigning the selected AI agent");
+        }
+    }
+
+    private async Task<AgentDefinition> ToggleProcessStartAgentFavoriteAsync(AgentDefinition agent)
+    {
+        var editor = await AgentWorkspaceService.GetAgentEditorAsync(agent.Id);
+        if (editor.Id is null)
+        {
+            throw new InvalidOperationException("Agent was not found.");
+        }
+
+        if (editor.Tags.Any(AgentSpecialTags.IsFavorite))
+        {
+            editor.Tags = editor.Tags
+                .Where(item => !AgentSpecialTags.IsFavorite(item))
+                .ToList();
+        }
+        else
+        {
+            editor.Tags = editor.Tags
+                .Append(AgentSpecialTags.Favorite)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        await AgentWorkspaceService.SaveAgentAsync(editor);
+        var agents = await AgentWorkspaceService.ListAgentsAsync(includeTemplates: false);
+        await RefreshProcessStartAgentMetadataAsync(agents);
+        return agents.FirstOrDefault(item => item.Id == agent.Id)
+            ?? throw new InvalidOperationException("Agent was not found after saving favorite state.");
     }
 
     private Task HandleProcessStartAssignmentsReviewedChanged(ChangeEventArgs args)
@@ -666,6 +853,7 @@ public partial class ProjectStructurePage
             return;
         }
 
+        await RefreshProcessStartAgentMetadataAsync();
         processStartDialog = MapProcessStartDialogState(processStartDialog, launchPlan, statusMessage);
         await InvokeAsync(StateHasChanged);
     }
@@ -753,7 +941,40 @@ public partial class ProjectStructurePage
         return launchPlan.Roles.Any(role => role.IsRequired && !role.IsResolved);
     }
 
-    private static ProjectStructureProcessStartDialogState MapProcessStartDialogState(
+    private async Task<IReadOnlyList<AgentDefinition>> RefreshProcessStartAgentMetadataAsync(
+        IReadOnlyList<AgentDefinition>? knownAgents = null)
+    {
+        var agents = knownAgents?.ToList()
+            ?? (await AgentWorkspaceService.ListAgentsAsync(includeTemplates: false)).ToList();
+
+        IReadOnlyList<ProviderProfile> providers = [];
+        try
+        {
+            providers = await AgentWorkspaceService.ListProvidersAsync();
+        }
+        catch (Exception exception)
+        {
+            Logger.LogDebug(exception, "Agent provider metadata could not be loaded for process assignment badges.");
+        }
+
+        var providerById = providers.ToDictionary(item => item.Id);
+        processStartAgentMetadataById = agents.ToDictionary(
+            item => item.Id,
+            item =>
+            {
+                ProviderProfile? provider = null;
+                if (item.ProviderProfileId.HasValue)
+                {
+                    providerById.TryGetValue(item.ProviderProfileId.Value, out provider);
+                }
+
+                return ProjectStructureProcessStartAgentMetadata.FromAgent(item, provider);
+            });
+
+        return agents;
+    }
+
+    private ProjectStructureProcessStartDialogState MapProcessStartDialogState(
         ProjectStructureProcessStartDialogState dialog,
         ProcessLaunchPlanDetails launchPlan,
         string statusMessage = "",
@@ -781,23 +1002,110 @@ public partial class ProjectStructurePage
                     role.SelectionSummary,
                     role.ReadinessSummary,
                     role.Candidates
-                        .Select(candidate => new ProjectStructureProcessStartCandidateState(
-                            candidate.Id,
-                            candidate.DisplayName,
-                            candidate.CandidateKind.ToString(),
-                            candidate.ExecutorKind,
-                            $"{candidate.Score:0.0} score",
-                            role.SelectedCandidateId == candidate.Id,
-                            candidate.IsRecommended,
-                            candidate.RequiresProvisioning,
-                            candidate.CandidateKind != ProcessLaunchCandidateKind.Gap,
-                            candidate.RecommendationSummary,
-                            candidate.AvailabilitySummary,
-                            candidate.SourceRegistryKey))
+                        .Select(candidate => MapProcessStartCandidateState(role, candidate))
                         .ToList()))
                 .ToList(),
             Error = error
         };
+    }
+
+    private ProjectStructureProcessStartCandidateState MapProcessStartCandidateState(
+        ProcessLaunchRoleViewModel role,
+        ProcessLaunchCandidateViewModel candidate)
+    {
+        var metadata = candidate.TechnicalAgentId.HasValue &&
+                       processStartAgentMetadataById.TryGetValue(candidate.TechnicalAgentId.Value, out var match)
+            ? match
+            : ProjectStructureProcessStartAgentMetadata.Empty;
+
+        return new ProjectStructureProcessStartCandidateState(
+            candidate.Id,
+            candidate.TechnicalAgentId,
+            candidate.DisplayName,
+            candidate.CandidateKind.ToString(),
+            candidate.ExecutorKind,
+            $"{candidate.Score:0.0} score",
+            role.SelectedCandidateId == candidate.Id,
+            candidate.IsRecommended,
+            candidate.RequiresProvisioning,
+            candidate.CandidateKind != ProcessLaunchCandidateKind.Gap,
+            candidate.RecommendationSummary,
+            candidate.AvailabilitySummary,
+            candidate.SourceRegistryKey,
+            metadata.ProviderName,
+            metadata.Model,
+            metadata.RoleTitle,
+            metadata.Summary,
+            metadata.StatusLabel,
+            metadata.WorkloadLabel,
+            metadata.AvatarImageUrl,
+            metadata.ToolNames,
+            metadata.SkillNames);
+    }
+
+    private sealed record ProjectStructureProcessStartAgentMetadata(
+        string ProviderName,
+        string Model,
+        string RoleTitle,
+        string Summary,
+        string StatusLabel,
+        string WorkloadLabel,
+        string AvatarImageUrl,
+        IReadOnlyList<string> ToolNames,
+        IReadOnlyList<string> SkillNames)
+    {
+        public static ProjectStructureProcessStartAgentMetadata Empty { get; } = new(
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            [],
+            []);
+
+        public static ProjectStructureProcessStartAgentMetadata FromAgent(
+            AgentDefinition agent,
+            ProviderProfile? provider)
+        {
+            var toolNames = agent.Capabilities
+                .Where(item => item.Kind is not CapabilityKind.Skill)
+                .Select(item => ResolveCapabilityDisplayName(item))
+                .Where(item => !string.IsNullOrWhiteSpace(item))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var skillNames = agent.Capabilities
+                .Where(item => item.Kind == CapabilityKind.Skill)
+                .Select(item => ResolveCapabilityDisplayName(item))
+                .Where(item => !string.IsNullOrWhiteSpace(item))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            return new ProjectStructureProcessStartAgentMetadata(
+                provider?.Name ?? string.Empty,
+                agent.Model,
+                agent.RoleTitle,
+                agent.Summary,
+                agent.Status.ToString(),
+                agent.Workload.ToString(),
+                agent.AvatarImageUrl ?? string.Empty,
+                toolNames,
+                skillNames);
+        }
+
+        private static string ResolveCapabilityDisplayName(AgentCapabilityAssignment capability)
+        {
+            if (!string.IsNullOrWhiteSpace(capability.CapabilityKey))
+            {
+                return capability.CapabilityKey;
+            }
+
+            return capability.Kind.ToString();
+        }
     }
 
     private ProcessProjectStructureContext CreateProcessStartContext(ProjectStructureNode node)

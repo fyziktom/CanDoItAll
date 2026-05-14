@@ -68,6 +68,9 @@
     public bool CanvasScoped { get; set; }
 
     [Parameter]
+    public bool FullScreen { get; set; }
+
+    [Parameter]
     public string DialogClass { get; set; } = string.Empty;
 
     [Parameter]
@@ -90,9 +93,10 @@
 
     private string ResolveBackdropCssClass()
     {
-        return CanvasScoped
-            ? "project-structure-preview-backdrop project-structure-preview-backdrop--canvas"
-            : "project-structure-preview-backdrop";
+        return CssClassBuilder.Join(
+            "project-structure-preview-backdrop",
+            CanvasScoped ? "project-structure-preview-backdrop--canvas" : null,
+            FullScreen ? "project-structure-preview-backdrop--fullscreen" : null);
     }
 
     private string ResolveBackdropStyle()
@@ -100,21 +104,27 @@
         var position = CanvasScoped ? "absolute" : "fixed";
         var zIndex = CanvasScoped ? "720" : "900";
         var borderRadius = CanvasScoped ? "border-radius:inherit;" : string.Empty;
-        return $"position:{position};inset:0;z-index:{zIndex};display:flex;align-items:center;justify-content:center;padding:1.5rem;box-sizing:border-box;background:rgba(15, 23, 42, 0.58);backdrop-filter:blur(10px);{borderRadius}";
+        var alignment = FullScreen
+            ? "align-items:stretch;justify-content:stretch;padding:0.8rem;"
+            : "align-items:center;justify-content:center;padding:1.5rem;";
+        return $"position:{position};inset:0;z-index:{zIndex};display:flex;{alignment}box-sizing:border-box;background:rgba(15, 23, 42, 0.58);backdrop-filter:blur(10px);{borderRadius}";
     }
 
     private string ResolveDialogCssClass()
     {
-        return string.IsNullOrWhiteSpace(DialogClass)
-            ? "project-structure-preview-dialog"
-            : $"project-structure-preview-dialog {DialogClass}";
+        return CssClassBuilder.Join(
+            "project-structure-preview-dialog",
+            FullScreen ? "project-structure-preview-dialog--fullscreen" : null,
+            DialogClass);
     }
 
     private string ResolveDialogStyle()
     {
-        var width = CanvasScoped
-            ? "width:min(72rem,calc(100% - 3rem));max-height:calc(100% - 3rem);"
-            : "width:min(72rem,calc(100vw - 3rem));max-height:calc(100dvh - 3rem);";
+        var width = FullScreen
+            ? "width:100%;height:100%;max-height:none;"
+            : CanvasScoped
+                ? "width:min(72rem,calc(100% - 3rem));max-height:calc(100% - 3rem);"
+                : "width:min(72rem,calc(100vw - 3rem));max-height:calc(100dvh - 3rem);";
         return $"{width}display:grid;grid-template-rows:auto minmax(0, 1fr);gap:1rem;padding:1.1rem;box-sizing:border-box;border:1px solid rgba(148, 163, 184, 0.26);border-radius:1.5rem;background:linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));box-shadow:0 24px 64px rgba(15, 23, 42, 0.28);overflow:hidden;min-height:0;";
     }
 

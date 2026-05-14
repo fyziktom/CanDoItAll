@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Collaboration;
+using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.Processes;
@@ -47,12 +48,11 @@ public sealed partial class ProcessRuntimeReadQueryService
             .ToList();
     }
 
-    private static int Average(IEnumerable<int> values)
+    private static int Average(int total, int count)
     {
-        var materialized = values.ToList();
-        return materialized.Count == 0
+        return count == 0
             ? 0
-            : (int)Math.Round(materialized.Average(), MidpointRounding.AwayFromZero);
+            : (int)Math.Round((double)total / count, MidpointRounding.AwayFromZero);
     }
 
     private static async Task<IReadOnlyList<ProcessDecisionViewModel>> ListDecisionRecordsAsync(
@@ -61,6 +61,7 @@ public sealed partial class ProcessRuntimeReadQueryService
         CancellationToken cancellationToken)
     {
         var items = await dbContext.Set<ProcessDecisionRecord>()
+            .AsNoTracking()
             .Where(item => item.ProcessRunId == runId)
             .Select(item => new ProcessDecisionViewModel(
                 item.Id,
@@ -83,6 +84,7 @@ public sealed partial class ProcessRuntimeReadQueryService
         CancellationToken cancellationToken)
     {
         var items = await dbContext.Set<ProcessArtifactRecord>()
+            .AsNoTracking()
             .Where(item => item.ProcessRunId == runId)
             .Select(item => new ProcessArtifactViewModel(
                 item.Id,
@@ -142,12 +144,21 @@ public sealed partial class ProcessRuntimeReadQueryService
 
     private static ProcessOutboxHealthStatus ResolveOutboxHealth(ProcessOutboxRecord record, DateTimeOffset now)
     {
-        return record.Status switch
+        return ResolveOutboxHealth(record.Status, record.LeaseExpiresAtUtc, record.NextAttemptAtUtc, now);
+    }
+
+    private static ProcessOutboxHealthStatus ResolveOutboxHealth(
+        ProcessOutboxRecordStatus status,
+        DateTimeOffset? leaseExpiresAtUtc,
+        DateTimeOffset? nextAttemptAtUtc,
+        DateTimeOffset now)
+    {
+        return status switch
         {
             ProcessOutboxRecordStatus.Completed => ProcessOutboxHealthStatus.Completed,
             ProcessOutboxRecordStatus.DeadLettered => ProcessOutboxHealthStatus.DeadLettered,
-            _ when record.LeaseExpiresAtUtc.HasValue && record.LeaseExpiresAtUtc.Value > now => ProcessOutboxHealthStatus.Leased,
-            _ when record.NextAttemptAtUtc.HasValue && record.NextAttemptAtUtc.Value > now => ProcessOutboxHealthStatus.WaitingToRetry,
+            _ when leaseExpiresAtUtc.HasValue && leaseExpiresAtUtc.Value > now => ProcessOutboxHealthStatus.Leased,
+            _ when nextAttemptAtUtc.HasValue && nextAttemptAtUtc.Value > now => ProcessOutboxHealthStatus.WaitingToRetry,
             _ => ProcessOutboxHealthStatus.Pending
         };
     }
@@ -192,7 +203,7 @@ public sealed partial class ProcessRuntimeReadQueryService
         ProcessArtifactExpectation expectation,
         IReadOnlyList<ProcessArtifactRecord> stepArtifacts)
     {
-        var artifact = stepArtifacts.FirstOrDefault(item => SatisfiesArtifactExpectation(item, expectation));
+        var artifact = ResolveBestArtifactForExpectation(expectation, stepArtifacts);
         if (artifact is not null)
         {
             var sourceKind = ResolveArtifactSourceKind(artifact.ExternalReferenceKey);
@@ -225,6 +236,61 @@ public sealed partial class ProcessRuntimeReadQueryService
             string.Empty,
             string.Empty,
             BuildUnsatisfiedArtifactDiagnostic(stepRun, expectation, status));
+    }
+
+    internal static ProcessArtifactRecord? ResolveBestArtifactForExpectation(
+        ProcessArtifactExpectation expectation,
+        IReadOnlyList<ProcessArtifactRecord> stepArtifacts)
+    {
+        return stepArtifacts
+            .Where(item => SatisfiesArtifactExpectation(item, expectation))
+            .OrderBy(item => ResolveArtifactExpectationSpecificityPriority(expectation, item))
+            .ThenBy(ResolveArtifactSourcePriority)
+            .ThenByDescending(item => item.CreatedAtUtc)
+            .FirstOrDefault();
+    }
+
+    private static int ResolveArtifactExpectationSpecificityPriority(
+        ProcessArtifactExpectation expectation,
+        ProcessArtifactRecord artifact)
+    {
+        if (string.Equals(artifact.Title, expectation.Title, StringComparison.OrdinalIgnoreCase))
+        {
+            return 0;
+        }
+
+        var expectedSlug = FileSafeSlugBuilder.Build(expectation.Title);
+        if (string.IsNullOrWhiteSpace(expectedSlug))
+        {
+            return artifact.ArtifactExpectationId == expectation.Id ? 2 : 3;
+        }
+
+        if (string.Equals(FileSafeSlugBuilder.Build(artifact.Title), expectedSlug, StringComparison.OrdinalIgnoreCase))
+        {
+            return 1;
+        }
+
+        var pathSlug = FileSafeSlugBuilder.Build(Path.GetFileNameWithoutExtension(artifact.ManagedStoragePath));
+        if (string.Equals(pathSlug, expectedSlug, StringComparison.OrdinalIgnoreCase))
+        {
+            return 1;
+        }
+
+        return artifact.ArtifactExpectationId == expectation.Id ? 2 : 3;
+    }
+
+    private static int ResolveArtifactSourcePriority(ProcessArtifactRecord artifact)
+    {
+        return ResolveArtifactSourceKind(artifact.ExternalReferenceKey) switch
+        {
+            ProcessArtifactExpectationSourceKind.ProcessArtifactRecord => 0,
+            ProcessArtifactExpectationSourceKind.AgentExecutionArtifact => 0,
+            ProcessArtifactExpectationSourceKind.ProcessMockArtifact => 1,
+            ProcessArtifactExpectationSourceKind.AssistantResponse => 2,
+            ProcessArtifactExpectationSourceKind.CompletedDecision => 3,
+            ProcessArtifactExpectationSourceKind.ProviderNativeBrowserArtifact => 4,
+            _ => 5
+        };
     }
 
     private static ProcessArtifactExpectationSatisfactionStatus ResolveUnsatisfiedArtifactStatus(
@@ -455,6 +521,7 @@ public sealed partial class ProcessRuntimeReadQueryService
         CancellationToken cancellationToken)
     {
         var assignments = await dbContext.Set<ProcessRunAssignment>()
+            .AsNoTracking()
             .Where(item => item.ProcessRunId == runId)
             .ToListAsync(cancellationToken);
         if (assignments.Count == 0)
@@ -467,6 +534,7 @@ public sealed partial class ProcessRuntimeReadQueryService
             .Distinct()
             .ToList();
         var roleDisplayNames = await dbContext.Set<ProcessRoleRequirement>()
+            .AsNoTracking()
             .Where(item => roleIds.Contains(item.Id))
             .ToDictionaryAsync(item => item.Id, item => item.DisplayName, cancellationToken);
 
@@ -479,6 +547,8 @@ public sealed partial class ProcessRuntimeReadQueryService
                     item.RoleRequirementId,
                     item.StepDefinitionId,
                     item.PartyId,
+                    item.WorkflowDefinitionId,
+                    item.WorkflowVersionId,
                     item.DisplayName,
                     item.ExecutorKind,
                     item.BindingReason,
@@ -499,6 +569,7 @@ public sealed partial class ProcessRuntimeReadQueryService
         CancellationToken cancellationToken)
     {
         var items = await dbContext.Set<ProcessWorkBrief>()
+            .AsNoTracking()
             .Where(item => item.ProcessRunId == runId)
             .Select(item => new ProcessWorkBriefViewModel(
                 item.Id,
@@ -516,12 +587,68 @@ public sealed partial class ProcessRuntimeReadQueryService
             .ToList();
     }
 
+    private static async Task<IReadOnlyList<ProcessWorkflowRunViewModel>> ListWorkflowRunsAsync(
+        AppDbContext dbContext,
+        Guid runId,
+        CancellationToken cancellationToken)
+    {
+        var links = await dbContext.Set<ProcessWorkflowRunLink>()
+            .AsNoTracking()
+            .Where(item => item.ProcessRunId == runId)
+            .ToListAsync(cancellationToken);
+        if (links.Count == 0)
+        {
+            return [];
+        }
+
+        var stepRunIds = links
+            .Select(item => item.StepRunId)
+            .Distinct()
+            .ToList();
+        var assignmentIds = links
+            .Select(item => item.AssignmentId)
+            .Distinct()
+            .ToList();
+        var stepTitlesById = await dbContext.Set<ProcessStepRun>()
+            .AsNoTracking()
+            .Where(item => stepRunIds.Contains(item.Id))
+            .ToDictionaryAsync(item => item.Id, item => item.Title, cancellationToken);
+        var assignmentNamesById = await dbContext.Set<ProcessRunAssignment>()
+            .AsNoTracking()
+            .Where(item => assignmentIds.Contains(item.Id))
+            .ToDictionaryAsync(item => item.Id, item => item.DisplayName, cancellationToken);
+
+        return links
+            .OrderByDescending(item => item.UpdatedAtUtc)
+            .Select(item => new ProcessWorkflowRunViewModel(
+                item.Id,
+                item.ProcessRunId,
+                item.StepRunId,
+                item.AssignmentId,
+                item.WorkflowDefinitionId,
+                item.WorkflowVersionId,
+                item.WorkflowRunId,
+                assignmentNamesById.GetValueOrDefault(item.AssignmentId, "Workflow"),
+                stepTitlesById.GetValueOrDefault(item.StepRunId, string.Empty),
+                assignmentNamesById.GetValueOrDefault(item.AssignmentId, string.Empty),
+                item.WorkflowBackend,
+                item.WorkflowBackendRunId,
+                item.State,
+                item.Summary,
+                ArtifactCount: 0,
+                PendingRequestCount: 0,
+                item.CreatedAtUtc,
+                item.UpdatedAtUtc))
+            .ToList();
+    }
+
     private static async Task<IReadOnlyList<ProcessConformanceObservationViewModel>> ListConformanceObservationsAsync(
         AppDbContext dbContext,
         Guid runId,
         CancellationToken cancellationToken)
     {
         var items = await dbContext.Set<ProcessConformanceObservation>()
+            .AsNoTracking()
             .Where(item => item.ProcessRunId == runId)
             .Select(item => new ProcessConformanceObservationViewModel(
                 item.Id,
@@ -545,6 +672,7 @@ public sealed partial class ProcessRuntimeReadQueryService
         CancellationToken cancellationToken)
     {
         var threads = await dbContext.Set<CollaborationThreadRecord>()
+            .AsNoTracking()
             .Where(item => item.ContextKind == CollaborationContextKind.ProcessRun && item.ContextId == runId)
             .Select(item => new ProcessDirectMessageThreadProjection(
                 item.Id,
@@ -560,6 +688,7 @@ public sealed partial class ProcessRuntimeReadQueryService
             .Select(item => item.ThreadId)
             .ToArray();
         var inboxItems = await dbContext.Set<CollaborationInboxItemRecord>()
+            .AsNoTracking()
             .Where(item => threadIds.Contains(item.ThreadId))
             .Select(item => new ProcessDirectMessageInboxProjection(
                 item.ThreadId,
@@ -567,12 +696,14 @@ public sealed partial class ProcessRuntimeReadQueryService
                 item.UnreadCount))
             .ToListAsync(cancellationToken);
         var participants = await dbContext.Set<CollaborationParticipantRecord>()
+            .AsNoTracking()
             .Where(item => threadIds.Contains(item.ThreadId) && item.ParticipantKind == CollaborationParticipantKind.Role)
             .Select(item => new ProcessDirectMessageParticipantProjection(
                 item.ThreadId,
                 item.DisplayName))
             .ToListAsync(cancellationToken);
         var messages = await dbContext.Set<CollaborationMessageRecord>()
+            .AsNoTracking()
             .Where(item => threadIds.Contains(item.ThreadId))
             .Select(item => new ProcessDirectMessageMessageProjection(
                 item.ThreadId,
@@ -680,17 +811,40 @@ public sealed partial class ProcessRuntimeReadQueryService
         ProcessRunStatus Status,
         DateTimeOffset UpdatedAtUtc);
 
-    private sealed record ProcessAnalyticsRunProjection(
-        Guid Id,
-        ProcessRunStatus Status,
+    private sealed record ProcessAnalyticsRunStatsProjection(
+        int TotalCount,
+        int ActiveCount,
+        int CompletedCount,
+        int BlockedCount,
         decimal EstimatedCost,
         decimal ActualCost);
 
-    private sealed record ProcessStepAnalyticsProjection(
-        int WaitMinutes,
-        int TouchMinutes,
-        int BlockedMinutes,
-        ProcessCapabilityGapSeverity CapabilityGapSeverity);
+    private sealed record ProcessStepAnalyticsStatsProjection(
+        int StepCount,
+        int CapabilityGapCount,
+        int TotalCycleMinutes,
+        int TotalWaitMinutes,
+        int TotalBlockedMinutes);
+
+    private sealed record ProcessConformanceStatsProjection(
+        int TotalCount,
+        int SafeNonActionCount);
+
+    private sealed record ProcessActiveRunStepHealthProjection(
+        Guid RunId,
+        Guid StepRunId,
+        string Title,
+        ProcessStepRunStatus Status);
+
+    private sealed record ProcessActiveRunOutboxHealthProjection(
+        Guid RunId,
+        ProcessOutboxRecordStatus Status,
+        DateTimeOffset? LeaseExpiresAtUtc,
+        DateTimeOffset? NextAttemptAtUtc);
+
+    private sealed record ProcessActiveRunOutboxSummaryProjection(
+        int PendingCount,
+        int DeadLetteredCount);
 
     private sealed record ProcessDirectMessageThreadProjection(
         Guid ThreadId,

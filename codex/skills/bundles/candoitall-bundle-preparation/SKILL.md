@@ -9,6 +9,14 @@ Prepare the bundle first. Do not implement feature code while preparing the bund
 
 Turn messy inputs into a bundle that an implementation agent can execute without rediscovering the problem. Save the raw inputs, structure them, split the work into explicit subbundles, model the dependency chain, and validate that the bundle is complete before handing it off.
 
+## GPT-5.5 Preparation Posture
+
+- Build the smallest bundle that removes ambiguity for execution. Do not add sections, prose, or subbundles that do not improve coverage, sequencing, proof, or handoff quality.
+- Write outcome-first prompts and acceptance criteria: desired end state, hard constraints, owned inputs, allowed boundaries, proof required, and stop conditions.
+- Preserve detailed reasoning in bundle artifacts where it will be reused; keep user-facing progress concise.
+- Use tools persistently enough to ground the current-state analysis in the repo. If a lookup is empty or suspiciously thin, try a different path before assuming the gap is real.
+- For long-running or resumed work, make the bundle itself the durable state: current subbundle, gate status, proof paths, raw-note closure, blockers, and reopen triggers must be recoverable from files.
+
 ## Choose The Bundle Profile
 
 - Use the `feedback` profile for testing notes, QA findings, screenshots, docx review docs, or a short list of concrete issues.
@@ -168,7 +176,7 @@ When the likely implementation loop includes repeated test churn:
 
 ## Output Rule
 
-The bundle is only ready when a different implementation agent could execute it phase by phase without guessing what to change, what must land first, how to prove it, which raw notes are still open, or how to record completion.
+The bundle is only ready when a different implementation agent could execute it phase by phase without guessing the desired outcome, what to change, what must land first, how to prove it, which raw notes are still open, or how to record completion.
 
 ## Validator Expectations
 

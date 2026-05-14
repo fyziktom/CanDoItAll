@@ -91,10 +91,39 @@ public sealed class ProjectStructureAnalyticsService(
             query = query.Where(item => item.Succeeded == request.Succeeded.Value);
         }
 
-        var records = await query
-            .ToListAsync(cancellationToken);
+        if (dbContext.Database.IsSqlite())
+        {
+            var records = await query.ToListAsync(cancellationToken);
+            var sqliteEntries = records
+                .OrderByDescending(item => item.OccurredAtUtc)
+                .Take(take)
+                .Select(item => new ProjectStructureAnalyticsEntry(
+                    item.Id,
+                    item.OperationName,
+                    item.ProjectId,
+                    item.NodeKey,
+                    item.ScopeKind,
+                    item.ScopeKey,
+                    item.AgentId,
+                    item.AgentName,
+                    item.MachineName,
+                    item.RepositoryRoot,
+                    item.BranchName,
+                    item.Succeeded,
+                    item.DurationMs,
+                    item.WarningCount,
+                    item.ErrorCode,
+                    item.ErrorMessage,
+                    item.RequestSummaryJson,
+                    item.ResponseSummaryJson,
+                    item.WarningsJson,
+                    item.OccurredAtUtc))
+                .ToList();
 
-        var entries = records
+            return new ProjectStructureAnalyticsResponse(sqliteEntries);
+        }
+
+        var entries = await query
             .OrderByDescending(item => item.OccurredAtUtc)
             .Take(take)
             .Select(item => new ProjectStructureAnalyticsEntry(
@@ -118,7 +147,7 @@ public sealed class ProjectStructureAnalyticsService(
                 item.ResponseSummaryJson,
                 item.WarningsJson,
                 item.OccurredAtUtc))
-            .ToList();
+            .ToListAsync(cancellationToken);
 
         return new ProjectStructureAnalyticsResponse(entries);
     }

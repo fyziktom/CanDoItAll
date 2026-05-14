@@ -89,6 +89,7 @@ public sealed partial class ProcessesService
         }
 
         await processOutboxService.ProcessAsync(outboxId, cancellationToken);
+        NotifyDefinitionObservationChanged(definition.ProjectId, definition.Id);
         return Result.Success();
     }
 
@@ -225,6 +226,7 @@ public sealed partial class ProcessesService
         await dbContext.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         await processOutboxService.ProcessAsync(outboxId, cancellationToken);
+        NotifyDefinitionObservationChanged(definition.ProjectId, definitionId);
     }
 
     private async Task<Result<ProcessPublicationContext>> LoadPublicationContextAsync(

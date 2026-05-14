@@ -4,7 +4,20 @@
     if (!shared) { throw new Error('CanvasLib workbench foundation must load before 06-canvas-renderers.js.'); }
     const { contextSubmenuHoverDelayMs, MIN_ZOOM, MAX_ZOOM, selectionModel, getRequiredRootService, getTextMeasureService, getViewportControllerService, getAnimationTimelineService, clear, createElement, createSvgElement, normalizeInputField, normalizeInputValue, clamp, debounce, now, createWorkbenchMetrics, formatMetricDuration, cloneWorkbenchMetrics, incrementMetric, resetLastDragPatchMetrics, recordDragPatchMetrics, round, normalizeAction, normalizeAnnotation, normalizeCompactPath, normalizeDiagnosticsOptions, normalizeMinimapOptions, normalizeClipboardOptions, normalizeTooltipPopoverOptions, normalizeMarqueeOptions, normalizeSnapGuideOptions, normalizeConnectorAnchorOptions, normalizeTransformHandleOptions, normalizeGroupFrame, normalizeProgressPercent, normalizeMenuActionScale, normalizeSurface, toSelectionSet, toCollapsedSet, getDefaultNodeSize, resolveBaseNodeSize, estimateNodeSizeFromText, getNodeSize, buildNodeLookup, isNodeVisible, getVisibleNodes, getProjectionOverscanPx, collectProjectedContextNodeIds, isNodeProjectedInViewport, getProjectedNodes, getBaseNodePosition, getNodeDepth, getNodeMobility, buildResolvedLayoutKey, buildLayoutItems, getCollisionPaddingX, getCollisionPaddingY, getOverlapDelta, chooseCollisionAxis, resolveCollisionDirection, applyCollisionSeparation, enforceParentClearance, enforceSiblingSpacing, relaxTowardBase, computeResolvedNodePositions, ensureLayoutPositions, getNodePosition, getSceneBounds, clampPanToScene, setPan, syncMenuScaleCss, serializeState, legacyApplySceneTransform, cancelViewportAnimation, updateViewportTransform, animateViewportTransition, getLinkAnchorPoint, resolveCollapseAnchorInfo, getLinkRetainedKey, getLinkPathData, updateLinkElement, shouldRenderArrow, getExpandedFrameNodeIds, getFrameRetainedKey, createFrameElement, updateFrameElement, getFrameBounds, legacyRenderGroupFrames, resolveChipToneClass, createProgressMarker, resolveProgressDisplay, createProgressBadge, resolveProgressPresetBadgeOptions, resolveMarkerGlyph, createMarkerBadge, createPriorityBadge, appendNodeIndicators, renderInlineTextNode, createNodeMedia, createCompactPathButton, renderStandardNode, createRetainedNodeElement, getNodeRetainedContentKey, updateNodeElementChrome, renderNodeElementContent, buildActiveDragContext, positionFloatingOverlayWithinHost, hidePopover, legacyShowPopover, invokeAnnotationAction, renderNodeAnnotations, updateConnectorAnchorHover, getConnectorAnchorPoints, hideStatusNotice, showStatusNotice, renderEmptyStateOverlay, clearSnapGuides, legacyRenderSnapGuides, legacyRenderConnectorAnchorOverlay, getSelectionBounds, legacyRenderTransformHandlesOverlay, resolveSnapAdjustment, legacyRenderDebugDecorations, legacyBuildDiagnosticsSnapshot, renderDiagnosticsOverlay, navigateViaMinimap, resolveClipboardAnchor, buildClipboardPayload, copySelectionToClipboard, requestClipboardDuplicate, toggleMinimap, toggleDiagnostics, invalidateMeasuredLayout, legacyMeasureRenderedNodeSizes, legacyScheduleNodeMeasurement, getHostPoint, worldToHostPoint, getWorldPoint, hitTestNode, hitTestFrameHandle, hitTestProgressBadge, isOverlayTarget, applyFullTextTooltip, reconcileSelection, applySelection, selectSingleNode, publishSelection, clearViewportStateCommit, createSerializedStateSnapshot, invokeStateChanged, publishState, publishStateNow, scheduleViewportStateCommit, publishNodesMoved, setSelection, toggleSelection, toggleCollapse, clearContextMenu, closeComposer, ensureHostFocus, deferHostFocus, resolveComposerAnchor, layoutComposer, render, getContextActions, isCreateAction, buildCreateRequest, resolveMenuLabel, getMenuScale, isCompactHiveLayout, resolveMenuActionVariant, getActionMetrics, applyProgressPresetTone, fitContextMenuLabel, resolveActionGlyph, createMenuActionIcon, resolveMenuActionAriaLabel, getRadialOffsets, buildCompactHiveCoordinates, getCompactHiveOffsets, resolveContextMenuOffsets, resolveContextMenuSafeTop, getContextMenuLayerBounds, clampLayerBoundsToHost, positionContextMenu, getContextMenuOrbitRadius, getContextMenuLocalPoint, isPointInContextMenuLayer, closeContextMenuLayersFrom, syncContextMenuLayers, resolveSubmenuOrigin, ensureSubmenuLoadingIndicator, clearSubmenuLoadingIndicator, cancelPendingContextSubmenu, scheduleContextSubmenuOpen, clampLayerOriginToHost, getToolboxPanelSize, getToolboxPanelBounds, clampToolboxPanelOriginToHost, resolveToolboxPanelOrigin, createContextMenuLayer, shiftContextMenuLayerOrigin, nudgeContextMenuLayerIntoVisibleHost, resolveQuickCreateSourceNode, submitCreateRequest, submitNodeEdit, readFileAsUpload, commitComposer, decorateComposerShell, createComposerWizard, createComposerSection, updateComposerFileState, openCreateComposer, openInlineNoteComposer, buildChildNotePlacement, buildSiblingNotePlacement, openKeyboardNoteComposer, openExistingNoteEditor, executeContextAction, openContextSubmenu, openContextSubmenuByActionId, renderContextMenuLayer, renderToolboxPreview, renderToolboxPanelLayer, showContextMenu, legacyOpenNodeMetadataMenu, startPan, isMarqueeModifierPressed, startMarquee, ensureSelectedForDrag, startDragForNodeIds, startDrag, startFrameDrag, updateMarquee, legacyApplyMarqueeSelection, updateDrag, updatePan, isNodeVisibleInViewport, centerNodeElementInViewport, ensureNodeVisible, legacyResize, findContainingBlockOverride, suspendContainingBlock, restoreContainingBlock, setMaximized, fitView, focusNode, normalizeWheelDelta, applyWheelZoom, setZoomPercent, setMenuScalePercent, toggleHelp, isManualDoubleActivation, handleNodeDoubleActivation, legacyAttachEvents, hydrateState, refresh } = shared;
     const { getCanvasRuntimePrimitives, createFallbackHitRegistry, createCanvasHitRegistry, createCanvasSurfaceHost, destroyCanvasSurfaceHost, hexToRgba, resolveNodeAccentColor, resolveCanvasNodePaletteStyle, resolveAnchorRect, buildRect, boundsToHitRect, projectSceneBounds, getNodeSceneBounds, clearSceneHotZones, registerSceneHotZone, getSceneHitAtPoint, getSceneHitAtEvent, resolveHitNode, clearScenePopoverHover, syncSceneHoverState } = shared;
+    function isActiveCanvasDrag(state) {
+        const kind = state?.interaction?.kind || "";
+        return kind === "drag" ||
+            kind === "frame-drag" ||
+            kind === "dependency-drag";
+    }
+
     function resolveCanvasNodeDetailMode(state, projectedNodeCount) {
+        if (isActiveCanvasDrag(state)) {
+            return (state.ui.zoom || 1) <= 0.9 || projectedNodeCount >= 24
+                ? "micro"
+                : "compact";
+        }
+
         if ((state.ui.zoom || 1) <= 0.3 || projectedNodeCount >= 120) {
             return "micro";
         }
@@ -177,6 +190,7 @@
             subtitle: node?.subtitle || "",
             inlineText: node?.inlineText || "",
             selected: !!extra?.selected,
+            highlighted: !!extra?.highlighted,
             collapsed: !!extra?.collapsed,
             isInlineTextNode: !!node?.isInlineTextNode,
             markerText: extra?.markerText || "",
@@ -373,19 +387,55 @@
         };
     }
 
-    function buildCanvasLinkGeometry(startPoint, endPoint, sourceSide, targetSide) {
-        const controlOffset = Math.max(56, Math.abs(endPoint.x - startPoint.x) * 0.38);
-        const resolvedSourceSide = sourceSide === "left" ? -1 : 1;
-        const resolvedTargetSide = targetSide === "right" ? 1 : -1;
+    function resolveCanvasLinkControlVector(side) {
+        switch ((side || "").toLowerCase()) {
+            case "left":
+                return { x: -1, y: 0 };
+            case "top":
+                return { x: 0, y: -1 };
+            case "bottom":
+                return { x: 0, y: 1 };
+            default:
+                return { x: 1, y: 0 };
+        }
+    }
+
+    function resolveCanvasAnchorSideFromHostBounds(bounds, point, detailMode) {
+        const centerX = bounds.left + (bounds.width / 2);
+        const centerY = bounds.top + (bounds.height / 2);
+        const pointX = Number.isFinite(point?.x) ? point.x : centerX;
+        const pointY = Number.isFinite(point?.y) ? point.y : centerY;
+        const deltaX = pointX - centerX;
+        const deltaY = pointY - centerY;
+        if ((detailMode || "").toLowerCase() === "micro" && Math.abs(deltaY) > Math.abs(deltaX)) {
+            return deltaY >= 0 ? "bottom" : "top";
+        }
+
+        return deltaX >= 0 ? "right" : "left";
+    }
+
+    function buildCanvasLinkGeometry(startPoint, endPoint, sourceSide, targetSide, routeOffset) {
+        const controlOffset = Math.max(
+            56,
+            Math.max(Math.abs(endPoint.x - startPoint.x), Math.abs(endPoint.y - startPoint.y)) * 0.38);
+        const sourceVector = resolveCanvasLinkControlVector(sourceSide);
+        const targetVector = resolveCanvasLinkControlVector(targetSide);
+        const routeOffsetY = Number.isFinite(routeOffset) ? routeOffset : 0;
         const controlPoint1 = {
-            x: startPoint.x + (controlOffset * resolvedSourceSide),
-            y: startPoint.y
+            x: startPoint.x + (controlOffset * sourceVector.x),
+            y: startPoint.y + (controlOffset * sourceVector.y) + routeOffsetY
         };
         const controlPoint2 = {
-            x: endPoint.x + (controlOffset * resolvedTargetSide),
-            y: endPoint.y
+            x: endPoint.x + (controlOffset * targetVector.x),
+            y: endPoint.y + (controlOffset * targetVector.y) + routeOffsetY
         };
         const midPoint = sampleCubicBezierPoint(startPoint, controlPoint1, controlPoint2, endPoint, 0.5);
+        const labelPoint = sampleCubicBezierPoint(
+            startPoint,
+            controlPoint1,
+            controlPoint2,
+            endPoint,
+            Math.abs(routeOffsetY) > 0.1 ? 0.32 : 0.5);
         const padding = 12;
         const minX = Math.min(startPoint.x, controlPoint1.x, controlPoint2.x, endPoint.x) - padding;
         const minY = Math.min(startPoint.y, controlPoint1.y, controlPoint2.y, endPoint.y) - padding;
@@ -411,6 +461,10 @@
             midPoint: {
                 x: round(midPoint.x),
                 y: round(midPoint.y)
+            },
+            labelPoint: {
+                x: round(labelPoint.x),
+                y: round(labelPoint.y)
             },
             bounds: {
                 left: round(minX),
@@ -567,6 +621,41 @@
             };
         }
 
+        switch ((link?.tone || "").toLowerCase()) {
+            case "success":
+            case "true":
+                return {
+                    stroke: "rgba(20, 184, 166, 0.9)",
+                    arrowFill: "rgba(15, 118, 110, 0.96)",
+                    lineWidth: 3.2,
+                    lineDash: []
+                };
+            case "danger":
+            case "else":
+                return {
+                    stroke: "rgba(244, 63, 94, 0.9)",
+                    arrowFill: "rgba(225, 29, 72, 0.96)",
+                    lineWidth: 3.2,
+                    lineDash: []
+                };
+            case "default":
+            case "warning":
+                return {
+                    stroke: "rgba(245, 158, 11, 0.94)",
+                    arrowFill: "rgba(217, 119, 6, 0.98)",
+                    lineWidth: 3.2,
+                    lineDash: []
+                };
+            case "fanout":
+            case "info":
+                return {
+                    stroke: "rgba(14, 165, 233, 0.9)",
+                    arrowFill: "rgba(2, 132, 199, 0.98)",
+                    lineWidth: 3.2,
+                    lineDash: []
+                };
+        }
+
         if (link?.isUserAuthored) {
             return {
                 stroke: "rgba(14, 165, 233, 0.82)",
@@ -637,12 +726,90 @@
         context.restore();
     }
 
+    function resolveCanvasLinkLabelStyle(link, fallbackStyle) {
+        switch ((link?.tone || "").toLowerCase()) {
+            case "success":
+            case "true":
+                return {
+                    fill: "rgba(236, 253, 245, 0.97)",
+                    stroke: "rgba(20, 184, 166, 0.42)",
+                    text: "rgba(15, 118, 110, 0.98)"
+                };
+            case "warning":
+            case "default":
+                return {
+                    fill: "rgba(255, 251, 235, 0.98)",
+                    stroke: "rgba(245, 158, 11, 0.46)",
+                    text: "rgba(146, 64, 14, 0.98)"
+                };
+            case "danger":
+                return {
+                    fill: "rgba(254, 242, 242, 0.98)",
+                    stroke: "rgba(244, 63, 94, 0.44)",
+                    text: "rgba(159, 18, 57, 0.98)"
+                };
+            case "fanout":
+            case "info":
+                return {
+                    fill: "rgba(240, 249, 255, 0.98)",
+                    stroke: "rgba(14, 165, 233, 0.42)",
+                    text: "rgba(3, 105, 161, 0.98)"
+                };
+            default:
+                return {
+                    fill: "rgba(255, 255, 255, 0.96)",
+                    stroke: fallbackStyle?.stroke || "rgba(100, 116, 139, 0.32)",
+                    text: "rgba(30, 41, 59, 0.9)"
+                };
+        }
+    }
+
+    function drawCanvasLinkLabel(context, link, geometry, fallbackStyle) {
+        const rawLabel = (link?.label || "").trim();
+        const labelPoint = geometry?.labelPoint || geometry?.midPoint;
+        if (!rawLabel || !labelPoint) {
+            return;
+        }
+
+        const label = rawLabel.length > 32
+            ? `${rawLabel.slice(0, 29)}...`
+            : rawLabel;
+        const style = resolveCanvasLinkLabelStyle(link, fallbackStyle);
+        context.save();
+        setCanvasFont(context, 800, 11);
+        const textWidth = Math.min(180, Math.ceil(context.measureText(label).width));
+        const width = textWidth + 20;
+        const height = 24;
+        const bounds = buildRect(
+            labelPoint.x - (width / 2),
+            labelPoint.y - (height / 2),
+            width,
+            height);
+        drawRoundedPanel(context, bounds, 12, style.fill, style.stroke, 1, "rgba(15, 23, 42, 0.1)");
+        context.fillStyle = style.text;
+        context.textBaseline = "middle";
+        context.textAlign = "center";
+        context.fillText(label, labelPoint.x, labelPoint.y + 0.5);
+        context.restore();
+    }
+
+    function renderCanvasLinkLabels(context, renderedLinks) {
+        if (!context || !Array.isArray(renderedLinks)) {
+            return;
+        }
+
+        for (const link of renderedLinks) {
+            drawCanvasLinkLabel(context, link, link, resolveCanvasLinkStyle(link, null));
+        }
+    }
+
     function drawCanvasLink(context, link, startPoint, endPoint, options) {
         const geometry = buildCanvasLinkGeometry(
             startPoint,
             endPoint,
             options?.sourceSide || (endPoint.x >= startPoint.x ? "right" : "left"),
-            options?.targetSide || (endPoint.x >= startPoint.x ? "left" : "right"));
+            options?.targetSide || (endPoint.x >= startPoint.x ? "left" : "right"),
+            options?.routeOffset || 0);
         const style = resolveCanvasLinkStyle(link, options);
         context.save();
         context.beginPath();
@@ -664,6 +831,7 @@
         context.restore();
 
         if (!shouldRenderArrow(link) && !options?.isPreview && !options?.forceArrow) {
+            drawCanvasLinkLabel(context, link, geometry, style);
             return geometry;
         }
 
@@ -693,10 +861,11 @@
             drawCanvasArrowHead(context, midPoint, midAngle, style.arrowFill, 10, 4);
         }
 
+        drawCanvasLinkLabel(context, link, geometry, style);
         return geometry;
     }
 
-    function renderLinks(state, visibleNodes) {
+    function renderLinks(state, visibleNodes, options) {
         const surface = state.linkSurface;
         if (!surface) {
             return;
@@ -705,14 +874,49 @@
         surface.clear();
         state.renderedLinks = [];
         state.previewLink = null;
+        const linkFilter = typeof options?.linkFilter === "function"
+            ? options.linkFilter
+            : null;
+        const includePreviewLinks = options?.includePreviewLinks !== false;
         // Keep links visible when one endpoint moves outside the viewport.
         // Only collapsed or otherwise hidden nodes should suppress a connection.
         const graphVisibleNodeIds = new Set(getVisibleNodes(state).map(node => node.id));
+        const detailMode = resolveCanvasNodeDetailMode(state, (visibleNodes || []).length);
         const nextEntries = new Map();
         let renderedLinkCount = 0;
+        const outgoingLinksBySource = new Map();
+        for (const [index, link] of state.surface.links.entries()) {
+            if (!link?.sourceId || !link?.targetId) {
+                continue;
+            }
+
+            const sourceLinks = outgoingLinksBySource.get(link.sourceId) || [];
+            sourceLinks.push({ index, link });
+            outgoingLinksBySource.set(link.sourceId, sourceLinks);
+        }
+
+        const routeOffsetsByLinkIndex = new Map();
+        for (const sourceLinks of outgoingLinksBySource.values()) {
+            if (sourceLinks.length <= 1) {
+                continue;
+            }
+
+            const zoom = Math.max(state.ui.zoom || 1, 0.01);
+            const offsetStep = Math.max(28, Math.min(52, 42 * zoom));
+            const centerIndex = (sourceLinks.length - 1) / 2;
+            for (let sourceLinkIndex = 0; sourceLinkIndex < sourceLinks.length; sourceLinkIndex += 1) {
+                routeOffsetsByLinkIndex.set(
+                    sourceLinks[sourceLinkIndex].index,
+                    (sourceLinkIndex - centerIndex) * offsetStep);
+            }
+        }
 
         for (const [index, link] of state.surface.links.entries()) {
             if (!graphVisibleNodeIds.has(link.sourceId) || !graphVisibleNodeIds.has(link.targetId)) {
+                continue;
+            }
+
+            if (linkFilter && !linkFilter(link, index)) {
                 continue;
             }
 
@@ -722,20 +926,22 @@
                 continue;
             }
 
-            const sourcePosition = getNodePosition(state, source);
-            const targetPosition = getNodePosition(state, target);
-            const sourceSide = targetPosition.x >= sourcePosition.x ? "right" : "left";
-            const targetSide = sourceSide === "right" ? "left" : "right";
-            const sourceAnchor = worldToHostPoint(state, getLinkAnchorPoint(state, source, sourceSide, link.sourcePortId, "output"));
-            const targetAnchor = worldToHostPoint(state, getLinkAnchorPoint(state, target, targetSide, link.targetPortId, "input"));
+            const anchorSides = shared.resolveLinkAnchorSides?.(state, source, target, detailMode) || {
+                sourceSide: "right",
+                targetSide: "left"
+            };
+            const sourceAnchor = worldToHostPoint(state, getLinkAnchorPoint(state, source, anchorSides.sourceSide, link.sourcePortId, "output", detailMode));
+            const targetAnchor = worldToHostPoint(state, getLinkAnchorPoint(state, target, anchorSides.targetSide, link.targetPortId, "input", detailMode));
             const connectionStyle = resolveCanvasLinkConnectionStyle(
                 findNodePort(source, link.sourcePortId, "output"),
                 findNodePort(target, link.targetPortId, "input"));
             const retainedKey = getLinkRetainedKey(link, index);
+            const routeOffset = routeOffsetsByLinkIndex.get(index) || 0;
             const geometry = drawCanvasLink(surface.context, link, sourceAnchor, targetAnchor, {
                 key: retainedKey,
-                sourceSide: sourceAnchor.side || sourceSide,
-                targetSide: targetAnchor.side || targetSide,
+                sourceSide: sourceAnchor.side || anchorSides.sourceSide,
+                targetSide: targetAnchor.side || anchorSides.targetSide,
+                routeOffset,
                 isHovered: state.surface?.mode === "delete" && state.hoveredDeleteLinkKey === retainedKey,
                 connectionStyle
             });
@@ -746,6 +952,9 @@
                     targetId: link.targetId,
                     targetPortId: link.targetPortId || "",
                     kind: link.kind || "",
+                    label: link.label || "",
+                    tone: link.tone || "",
+                    routeOffset,
                     flow: !!link.isUserAuthored,
                     hovered: state.hoveredDeleteLinkKey === retainedKey
                 })
@@ -757,19 +966,23 @@
                 targetId: link.targetId,
                 targetPortId: link.targetPortId || "",
                 kind: link.kind || "",
+                label: link.label || "",
+                tone: link.tone || "",
                 isUserAuthored: !!link.isUserAuthored,
                 startPoint: geometry.startPoint,
                 endPoint: geometry.endPoint,
                 controlPoint1: geometry.controlPoint1,
                 controlPoint2: geometry.controlPoint2,
                 midPoint: geometry.midPoint,
+                labelPoint: geometry.labelPoint,
                 bounds: geometry.bounds
             });
             renderedLinkCount += 1;
         }
 
         const dependencySourceId = state.surface?.dependencySourceId || "";
-        if (state.surface?.mode === "dependency" &&
+        if (includePreviewLinks &&
+            state.surface?.mode === "dependency" &&
             dependencySourceId &&
             graphVisibleNodeIds.has(dependencySourceId) &&
             state.lookups.byId.has(dependencySourceId)) {
@@ -788,19 +1001,19 @@
 
             if (hoveredTargetId && state.lookups.byId.has(hoveredTargetId)) {
                 const previewTarget = state.lookups.byId.get(hoveredTargetId);
-                const sourcePosition = getNodePosition(state, previewSource);
-                const targetPosition = getNodePosition(state, previewTarget);
-                const sourceSide = targetPosition.x >= sourcePosition.x ? "right" : "left";
-                const targetSide = sourceSide === "right" ? "left" : "right";
-                const sourceAnchor = worldToHostPoint(state, getLinkAnchorPoint(state, previewSource, sourceSide, previewLink.sourcePortId, "output"));
-                const targetAnchor = worldToHostPoint(state, getLinkAnchorPoint(state, previewTarget, targetSide, previewLink.targetPortId, "input"));
+                const anchorSides = shared.resolveLinkAnchorSides?.(state, previewSource, previewTarget, detailMode) || {
+                    sourceSide: "right",
+                    targetSide: "left"
+                };
+                const sourceAnchor = worldToHostPoint(state, getLinkAnchorPoint(state, previewSource, anchorSides.sourceSide, previewLink.sourcePortId, "output", detailMode));
+                const targetAnchor = worldToHostPoint(state, getLinkAnchorPoint(state, previewTarget, anchorSides.targetSide, previewLink.targetPortId, "input", detailMode));
                 const previewConnectionStyle = resolveCanvasLinkConnectionStyle(
                     findNodePort(previewSource, previewLink.sourcePortId, "output"),
                     findNodePort(previewTarget, previewLink.targetPortId, "input"));
                 const previewGeometry = drawCanvasLink(surface.context, previewLink, sourceAnchor, targetAnchor, {
                     isPreview: true,
-                    sourceSide: sourceAnchor.side || sourceSide,
-                    targetSide: targetAnchor.side || targetSide,
+                    sourceSide: sourceAnchor.side || anchorSides.sourceSide,
+                    targetSide: targetAnchor.side || anchorSides.targetSide,
                     forceArrow: true,
                     connectionStyle: previewConnectionStyle
                 });
@@ -817,10 +1030,8 @@
             }
             else if (state.pointerHostPoint) {
                 const previewSourceBounds = projectSceneBounds(state, getNodeSceneBounds(state, previewSource));
-                const sourceSide = state.pointerHostPoint.x >= (previewSourceBounds.left + (previewSourceBounds.width / 2))
-                    ? "right"
-                    : "left";
-                const sourceAnchor = worldToHostPoint(state, getLinkAnchorPoint(state, previewSource, sourceSide, previewLink.sourcePortId, "output"));
+                const sourceSide = resolveCanvasAnchorSideFromHostBounds(previewSourceBounds, state.pointerHostPoint, detailMode);
+                const sourceAnchor = worldToHostPoint(state, getLinkAnchorPoint(state, previewSource, sourceSide, previewLink.sourcePortId, "output", detailMode));
                 const previewConnectionStyle = resolveCanvasLinkConnectionStyle(
                     findNodePort(previewSource, previewLink.sourcePortId, "output"),
                     null);
@@ -844,27 +1055,37 @@
             }
         }
 
-        if (state.connectionDraft) {
-            const previewSource = resolveConnectionAnchorHostPoint(state, state.connectionDraft, "output");
-            const previewTarget = state.connectionTarget
-                ? resolveConnectionAnchorHostPoint(state, state.connectionTarget, "input")
+        if (includePreviewLinks && state.connectionDraft) {
+            const outputDescriptor = state.connectionDraft.direction === "input"
+                ? state.connectionTarget
+                : state.connectionDraft;
+            const inputDescriptor = state.connectionDraft.direction === "input"
+                ? state.connectionDraft
+                : state.connectionTarget;
+            const previewSource = outputDescriptor
+                ? resolveConnectionAnchorHostPoint(state, outputDescriptor, "output")
+                : state.pointerHostPoint;
+            const previewTarget = inputDescriptor
+                ? resolveConnectionAnchorHostPoint(state, inputDescriptor, "input")
                 : null;
             const previewEndpoint = previewTarget || state.pointerHostPoint;
             if (previewSource && previewEndpoint) {
-                const previewSourceNode = state.lookups.byId.get(state.connectionDraft.nodeId) || null;
-                const previewTargetNode = state.connectionTarget?.nodeId
-                    ? state.lookups.byId.get(state.connectionTarget.nodeId) || null
+                const previewSourceNode = outputDescriptor?.nodeId
+                    ? state.lookups.byId.get(outputDescriptor.nodeId) || null
+                    : null;
+                const previewTargetNode = inputDescriptor?.nodeId
+                    ? state.lookups.byId.get(inputDescriptor.nodeId) || null
                     : null;
                 const previewConnectionStyle = resolveCanvasLinkConnectionStyle(
-                    findNodePort(previewSourceNode, state.connectionDraft.portId || "", "output"),
-                    findNodePort(previewTargetNode, state.connectionTarget?.portId || "", "input"));
+                    findNodePort(previewSourceNode, outputDescriptor?.portId || "", "output"),
+                    findNodePort(previewTargetNode, inputDescriptor?.portId || "", "input"));
                 const previewGeometry = drawCanvasLink(
                     surface.context,
                     {
-                        sourceId: state.connectionDraft.nodeId,
-                        sourcePortId: state.connectionDraft.portId || "",
-                        targetId: state.connectionTarget?.nodeId || "",
-                        targetPortId: state.connectionTarget?.portId || "",
+                        sourceId: outputDescriptor?.nodeId || "",
+                        sourcePortId: outputDescriptor?.portId || "",
+                        targetId: inputDescriptor?.nodeId || "",
+                        targetPortId: inputDescriptor?.portId || "",
                         kind: "flow",
                         isUserAuthored: true
                     },
@@ -872,16 +1093,16 @@
                     previewEndpoint,
                     {
                         isPreview: true,
-                        sourceSide: previewSource.side || state.connectionDraft.side || "right",
-                        targetSide: previewTarget?.side || state.connectionTarget?.side || "left",
+                        sourceSide: previewSource.side || outputDescriptor?.side || "right",
+                        targetSide: previewTarget?.side || inputDescriptor?.side || "left",
                         forceArrow: true,
                         connectionStyle: previewConnectionStyle
                     });
                 state.previewLink = {
-                    sourceId: state.connectionDraft.nodeId,
-                    sourcePortId: state.connectionDraft.portId || "",
-                    targetId: state.connectionTarget?.nodeId || null,
-                    targetPortId: state.connectionTarget?.portId || "",
+                    sourceId: outputDescriptor?.nodeId || null,
+                    sourcePortId: outputDescriptor?.portId || "",
+                    targetId: inputDescriptor?.nodeId || null,
+                    targetPortId: inputDescriptor?.portId || "",
                     startPoint: previewGeometry.startPoint,
                     endPoint: previewGeometry.endPoint,
                     controlPoint1: previewGeometry.controlPoint1,
@@ -1121,6 +1342,218 @@
         return true;
     }
 
+    function isWorkflowDecisionNode(node) {
+        const family = (node?.family || "").toLowerCase();
+        const paletteKey = (node?.paletteKey || "").toLowerCase();
+        return family === "workflow-decision" ||
+            paletteKey === "workflow-decision";
+    }
+
+    function traceCanvasDecisionDiamond(context, centerX, centerY, radius) {
+        context.beginPath();
+        context.moveTo(centerX, centerY - radius);
+        context.lineTo(centerX + radius, centerY);
+        context.lineTo(centerX, centerY + radius);
+        context.lineTo(centerX - radius, centerY);
+        context.closePath();
+    }
+
+    function drawCanvasDecisionCues(context, state, node, hostBounds, paletteStyle) {
+        if (!isWorkflowDecisionNode(node)) {
+            return;
+        }
+
+        const zoom = Math.max(state?.ui?.zoom || 1, 0.01);
+        const markerRadius = Math.max(5, 7 * zoom);
+        const centerY = hostBounds.top + (hostBounds.height / 2);
+        const leftX = hostBounds.left - Math.max(2, 3 * zoom);
+        const rightX = hostBounds.right + Math.max(2, 3 * zoom);
+
+        context.save();
+        context.lineWidth = Math.max(1.1, 1.5 * zoom);
+        context.fillStyle = paletteStyle.iconFill || "rgba(255, 251, 235, 0.9)";
+        context.strokeStyle = paletteStyle.iconStroke || "rgba(245, 158, 11, 0.56)";
+        context.shadowColor = "rgba(15, 118, 110, 0.16)";
+        context.shadowBlur = Math.max(4, 8 * zoom);
+        traceCanvasDecisionDiamond(context, leftX, centerY, markerRadius);
+        context.fill();
+        context.stroke();
+        traceCanvasDecisionDiamond(context, rightX, centerY, markerRadius);
+        context.fill();
+        context.stroke();
+        context.restore();
+
+        const forkX = hostBounds.right - Math.max(28, 34 * zoom);
+        const branchX = hostBounds.right - Math.max(10, 14 * zoom);
+        const forkGap = Math.max(8, 12 * zoom);
+        const dotRadius = Math.max(2.2, 3.2 * zoom);
+        context.save();
+        context.globalAlpha = 0.82;
+        context.strokeStyle = "rgba(245, 158, 11, 0.58)";
+        context.fillStyle = "rgba(15, 118, 110, 0.78)";
+        context.lineWidth = Math.max(1.2, 1.8 * zoom);
+        context.lineCap = "round";
+        context.beginPath();
+        context.moveTo(forkX, centerY);
+        context.lineTo(branchX, centerY - forkGap);
+        context.moveTo(forkX, centerY);
+        context.lineTo(branchX, centerY + forkGap);
+        context.stroke();
+        context.beginPath();
+        context.moveTo(forkX + dotRadius, centerY);
+        context.arc(forkX, centerY, dotRadius, 0, Math.PI * 2);
+        context.moveTo(branchX + dotRadius, centerY - forkGap);
+        context.arc(branchX, centerY - forkGap, dotRadius, 0, Math.PI * 2);
+        context.moveTo(branchX + dotRadius, centerY + forkGap);
+        context.arc(branchX, centerY + forkGap, dotRadius, 0, Math.PI * 2);
+        context.fill();
+        context.restore();
+    }
+
+    function renderCanvasDecisionNode(context, state, node, hostBounds, accent, detailMode, meta) {
+        const isSelected = state.selectedIds.has(node.id);
+        const paletteStyle = resolveCanvasNodePaletteStyle(node, accent, isSelected);
+        const zoom = Math.max(state?.ui?.zoom || 1, 0.01);
+        const centerX = hostBounds.left + (hostBounds.width / 2);
+        const centerY = hostBounds.top + (hostBounds.height / 2);
+        const radius = Math.max(42 * zoom, Math.min(hostBounds.width, hostBounds.height) * 0.46);
+
+        context.save();
+        context.shadowColor = isSelected ? "rgba(15, 118, 110, 0.2)" : "rgba(15, 23, 42, 0.12)";
+        context.shadowBlur = Math.max(10, 16 * zoom);
+        context.shadowOffsetY = Math.max(4, 8 * zoom);
+        traceCanvasDecisionDiamond(context, centerX, centerY, radius);
+        context.fillStyle = "rgba(255, 255, 255, 0.98)";
+        context.fill();
+        context.lineWidth = isSelected ? Math.max(2.2, 3 * zoom) : Math.max(1.6, 2.2 * zoom);
+        context.strokeStyle = accent || "rgba(20, 184, 166, 0.9)";
+        context.stroke();
+        context.restore();
+
+        const innerRadius = radius * 0.42;
+        context.save();
+        context.lineWidth = Math.max(1.6, 2.2 * zoom);
+        context.lineCap = "round";
+        context.lineJoin = "round";
+        context.strokeStyle = "rgba(51, 65, 85, 0.9)";
+        context.fillStyle = "rgba(20, 184, 166, 0.9)";
+        context.beginPath();
+        context.moveTo(centerX - innerRadius * 0.45, centerY);
+        context.lineTo(centerX + innerRadius * 0.08, centerY);
+        context.lineTo(centerX + innerRadius * 0.52, centerY - innerRadius * 0.34);
+        context.moveTo(centerX + innerRadius * 0.08, centerY);
+        context.lineTo(centerX + innerRadius * 0.52, centerY + innerRadius * 0.34);
+        context.stroke();
+        for (const point of [
+            { x: centerX - innerRadius * 0.45, y: centerY },
+            { x: centerX + innerRadius * 0.52, y: centerY - innerRadius * 0.34 },
+            { x: centerX + innerRadius * 0.52, y: centerY + innerRadius * 0.34 }
+        ]) {
+            context.beginPath();
+            context.arc(point.x, point.y, Math.max(2.4, 3.3 * zoom), 0, Math.PI * 2);
+            context.fill();
+        }
+
+        context.restore();
+
+        context.save();
+        setCanvasFont(context, 800, Math.max(10, 13.5 * zoom));
+        context.fillStyle = "rgba(15, 23, 42, 0.92)";
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+        const label = (node.title || node.kind || "Decision").trim().toUpperCase();
+        const primitives = getCanvasRuntimePrimitives();
+        const displayLabel = primitives?.fitText
+            ? primitives.fitText(context, label, radius * 1.1, "...")
+            : label;
+        context.fillText(displayLabel, centerX, centerY + radius * 0.33);
+        context.restore();
+
+        const anchorRadius = Math.max(5, 6.5 * zoom);
+        const anchors = [
+            { x: centerX - radius, y: centerY, direction: "input", side: "left" },
+            { x: centerX + radius, y: centerY, direction: "output", side: "right" }
+        ];
+        for (const anchor of anchors) {
+            context.save();
+            context.beginPath();
+            context.arc(anchor.x, anchor.y, anchorRadius, 0, Math.PI * 2);
+            context.fillStyle = "rgba(255, 255, 255, 0.98)";
+            context.fill();
+            context.lineWidth = Math.max(1.4, 2 * zoom);
+            context.strokeStyle = accent || "rgba(20, 184, 166, 0.92)";
+            context.stroke();
+            context.restore();
+
+            const bounds = buildRect(
+                anchor.x - anchorRadius - Math.max(8, 10 * zoom),
+                anchor.y - anchorRadius - Math.max(8, 10 * zoom),
+                (anchorRadius + Math.max(8, 10 * zoom)) * 2,
+                (anchorRadius + Math.max(8, 10 * zoom)) * 2);
+            registerCanvasPortHotZone(
+                state,
+                node,
+                bounds,
+                anchor.direction === "input"
+                    ? (Array.isArray(node.inputPorts) ? node.inputPorts[0] : null)
+                    : (Array.isArray(node.outputPorts) ? node.outputPorts[0] : null),
+                anchor.side,
+                anchor.direction);
+        }
+
+        if ((node.branchLabel || "").trim() && detailMode !== "compact") {
+            const labelHeight = Math.max(19, 22 * zoom);
+            const labelWidth = Math.min(radius * 1.45, Math.max(74, (node.branchLabel.length * 6.5 * zoom) + 22));
+            drawCanvasBadgePill(
+                context,
+                buildRect(centerX - (labelWidth / 2), centerY - radius - (labelHeight / 2), labelWidth, labelHeight),
+                node.branchLabel,
+                "rgba(240, 253, 250, 0.98)",
+                "rgba(20, 184, 166, 0.38)",
+                "rgba(15, 118, 110, 0.98)",
+                Math.max(8, 9.5 * zoom));
+        }
+
+        meta.portCount = Math.max(
+            Array.isArray(node.inputPorts) ? node.inputPorts.length : 0,
+            Array.isArray(node.outputPorts) ? node.outputPorts.length : 0);
+    }
+
+    function drawCanvasBranchLabelPill(context, state, node, startX, top, maxWidth, height, paletteStyle) {
+        const branchLabel = (node?.branchLabel || "").trim();
+        if (!branchLabel || maxWidth <= 0) {
+            return;
+        }
+
+        const zoom = Math.max(state?.ui?.zoom || 1, 0.01);
+        const fontSize = Math.max(8, 9.5 * zoom);
+        const horizontalPadding = Math.max(16, 20 * zoom);
+        context.save();
+        setCanvasFont(context, 700, fontSize);
+        const measuredWidth = Math.ceil(context.measureText(branchLabel).width + horizontalPadding);
+        const width = Math.min(maxWidth, Math.max(58, measuredWidth));
+        if (width <= 28) {
+            context.restore();
+            return;
+        }
+
+        const textWidth = Math.max(8, width - horizontalPadding);
+        const primitives = getCanvasRuntimePrimitives();
+        const displayLabel = primitives?.fitText
+            ? primitives.fitText(context, branchLabel, textWidth, "...")
+            : branchLabel;
+        context.restore();
+
+        drawCanvasBadgePill(
+            context,
+            buildRect(startX, top, width, height),
+            displayLabel,
+            paletteStyle.iconFill,
+            paletteStyle.iconStroke,
+            paletteStyle.iconText,
+            fontSize);
+    }
+
     function renderCanvasMicroNode(context, state, node, hostBounds, accent, meta) {
         const isSelected = state.selectedIds.has(node.id);
         const paletteStyle = resolveCanvasNodePaletteStyle(node, accent, isSelected);
@@ -1132,6 +1565,7 @@
             paletteStyle.surfaceStroke,
             isSelected ? Math.max(1.4, 2 * state.ui.zoom) : 1,
             paletteStyle.surfaceShadow);
+        drawCanvasDecisionCues(context, state, node, hostBounds, paletteStyle);
         context.save();
         setCanvasFont(context, 700, Math.max(7, 10 * state.ui.zoom));
         context.fillStyle = paletteStyle.titleText;
@@ -1153,6 +1587,7 @@
             paletteStyle.surfaceStroke,
             isSelected ? Math.max(1.5, 2.2 * state.ui.zoom) : 1,
             paletteStyle.surfaceShadow);
+        drawCanvasDecisionCues(context, state, node, hostBounds, paletteStyle);
         context.save();
         const padding = Math.max(12, 18 * state.ui.zoom);
         const contentWidth = Math.max(24, hostBounds.width - (padding * 2));
@@ -1486,6 +1921,7 @@
             paletteStyle.surfaceStroke,
             isSelected ? Math.max(1.6, 2.4 * state.ui.zoom) : 1,
             paletteStyle.surfaceShadow);
+        drawCanvasDecisionCues(context, state, node, hostBounds, paletteStyle);
 
         context.save();
         context.fillStyle = "rgba(59, 130, 246, 0.18)";
@@ -1578,6 +2014,15 @@
             paletteStyle.subtleStroke,
             paletteStyle.subtleText,
             Math.max(8, 9.5 * state.ui.zoom));
+        drawCanvasBranchLabelPill(
+            context,
+            state,
+            node,
+            footerPillBounds.right + Math.max(6, 8 * state.ui.zoom),
+            layout.footerTop,
+            hostBounds.right - layout.padding - footerPillBounds.right - Math.max(6, 8 * state.ui.zoom),
+            layout.footerHeight,
+            paletteStyle);
 
         drawCanvasCollapseControl(context, state, node, paletteStyle);
     }
@@ -1594,6 +2039,7 @@
             paletteStyle.surfaceStroke,
             isSelected ? Math.max(1.6, 2.4 * state.ui.zoom) : 1,
             paletteStyle.surfaceShadow);
+        drawCanvasDecisionCues(context, state, node, hostBounds, paletteStyle);
         if (node.isPreviewOnly) {
             context.save();
             context.strokeStyle = "rgba(14, 165, 233, 0.38)";
@@ -1781,9 +2227,18 @@
             paletteStyle.subtleStroke,
             paletteStyle.subtleText,
             Math.max(8, 9.5 * state.ui.zoom));
+        drawCanvasBranchLabelPill(
+            context,
+            state,
+            node,
+            footerPillBounds.right + Math.max(6, 8 * state.ui.zoom),
+            footerTop,
+            hostBounds.right - padding - footerPillBounds.right - Math.max(6, 8 * state.ui.zoom),
+            footerHeight,
+            paletteStyle);
 
         drawCanvasCollapseControl(context, state, node, paletteStyle);
     }
 
-    Object.assign(shared, { getCanvasRuntimePrimitives, createFallbackHitRegistry, createCanvasHitRegistry, createCanvasSurfaceHost, destroyCanvasSurfaceHost, hexToRgba, resolveNodeAccentColor, resolveAnchorRect, buildRect, boundsToHitRect, projectSceneBounds, getNodeSceneBounds, clearSceneHotZones, registerSceneHotZone, getSceneHitAtPoint, getSceneHitAtEvent, resolveHitNode, clearScenePopoverHover, syncSceneHoverState, resolveCanvasNodeDetailMode, setCanvasFont, drawCanvasTextLines, drawRoundedPanel, requestSceneImage, buildCanvasSnapshotBounds, reconcileRetainedLayer, drawCanvasFrame, renderGroupFrames, drawCanvasLink, renderLinks, drawCanvasBadgePill, drawCanvasProgressBadge, drawCanvasAnnotationBadges, drawNodeMediaPreview, renderCanvasMicroNode, renderCanvasInlineTextNode, getCanvasAdvancedNodePortLayout, renderCanvasStandardNode, renderCanvasAdvancedNode });
+    Object.assign(shared, { getCanvasRuntimePrimitives, createFallbackHitRegistry, createCanvasHitRegistry, createCanvasSurfaceHost, destroyCanvasSurfaceHost, hexToRgba, resolveNodeAccentColor, resolveAnchorRect, buildRect, boundsToHitRect, projectSceneBounds, getNodeSceneBounds, clearSceneHotZones, registerSceneHotZone, getSceneHitAtPoint, getSceneHitAtEvent, resolveHitNode, clearScenePopoverHover, syncSceneHoverState, resolveCanvasNodeDetailMode, setCanvasFont, drawCanvasTextLines, drawRoundedPanel, requestSceneImage, buildCanvasSnapshotBounds, reconcileRetainedLayer, drawCanvasFrame, renderGroupFrames, drawCanvasLink, renderLinks, renderCanvasLinkLabels, drawCanvasBadgePill, drawCanvasProgressBadge, drawCanvasAnnotationBadges, drawNodeMediaPreview, renderCanvasMicroNode, renderCanvasInlineTextNode, getCanvasAdvancedNodePortLayout, renderCanvasDecisionNode, renderCanvasStandardNode, renderCanvasAdvancedNode });
 })();

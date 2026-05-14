@@ -1,16 +1,18 @@
 # CanDoItAll
 
-CanDoItAll is a local-first .NET 10 Blazor Web App for project delivery work. It combines project structure, process templates and runs, workbench views, prompts, resources, validation, test evidence, activity, automation, CRM/HR staffing, and AgentFramework-backed AI agents in one workspace.
+CanDoItAll is a local-first .NET 10 Blazor Web App for project delivery work. It combines project structure, process templates and runs, workbench views, prompts, resources, validation, test evidence, activity, automation, CRM/HR staffing, AgentFramework-backed AI agents, and an HTTP API control plane in one workspace.
 
-The current architecture is modular: `CanDoItAll.Web` hosts the app, `CanDoItAll.Composition` wires the runtime, `CanDoItAll.Infrastructure` owns data/storage/control-plane concerns, `CanDoItAll.Modules.*` own product behavior, `CanDoItAll.AgentFramework.*` owns technical agent execution, and `CanDoItAll.Mcp.*` exposes selected capabilities to local agents.
+The current architecture is modular: `CanDoItAll.Web` hosts the app and HTTP API, `CanDoItAll.Composition` wires the runtime, `CanDoItAll.Infrastructure` owns data/storage/control-plane concerns, `CanDoItAll.Modules.*` own product behavior, `CanDoItAll.AgentFramework.*` owns technical agent execution, and `CanDoItAll.Mcp.*` exposes selected local-development sidecars. Process, project-structure, and agent operations should use the HTTP APIs and repo-managed Codex skills; the old Processes and ProjectStructure MCP servers are suppressed for now.
 
 ## Overview
 
 ```mermaid
 flowchart LR
     User[Local user] --> Web[CanDoItAll.Web Blazor host]
-    Agent[AI coding agent] --> Mcp[MCP sidecars]
+    Agent[AI coding agent] --> Api[HTTP API control plane]
+    Agent --> Mcp[Local MCP sidecars]
 
+    Api --> Web
     Web --> Composition[CanDoItAll.Composition]
     Composition --> Infrastructure[Infrastructure and control plane]
     Composition --> Modules[Runtime modules]
@@ -22,22 +24,23 @@ flowchart LR
     Processes --> AgentModule
     AgentModule --> AgentFramework[AgentFramework Core and MAF runtime]
     AgentFramework --> Providers[AI providers]
-    AgentFramework --> Tools[Workspace, process, project-structure, skill, and MCP tools]
+    AgentFramework --> Tools[Workspace, process, project-structure, skill, API, and MCP tools]
 
     Infrastructure --> AppDb[(Active AppDbContext profile)]
     Infrastructure --> ControlPlane[(Control-plane files)]
     AgentFramework --> WorkspaceFiles[(File sandbox workspace)]
     Processes --> ManagedFiles[(Managed artifacts)]
 
-    Mcp --> Processes
-    Mcp --> Workbench
-    Mcp --> Infrastructure
+    Mcp --> DevLoop[Code analytics, components, dotnet watch, Mermaid, SSH]
+    DevLoop --> Infrastructure
 ```
 
 ## Architecture Docs
 
-- [Architecture beta](docs/architecture-beta.md): detailed current architecture with Mermaid `architecture-beta`, C4, and sequence diagrams, including process execution with AI agents.
+- [Architecture beta](docs/architecture-beta.md): detailed current architecture with GitHub-safe Mermaid flowcharts, C4, class, and sequence diagrams, including process execution with AI agents.
 - [Docs index](docs/README.md): repository documentation map.
+- [Enterprise operating system](docs/enterprise-operating-system.md): customer-facing explanation of CanDoItAll as an operating system for projects.
+- [API control plane](docs/api-control-plane.md): current process, project-structure, project, and agent HTTP APIs.
 - [Architecture index](architecture/README.md): current architecture docs, ADRs, and historical architecture reviews.
 - [Shared components](docs/ui-shared-components/README.md): current shared component-library split and usage guidance.
 
@@ -105,7 +108,7 @@ powershell -ExecutionPolicy Bypass -File tests\CanDoItAll.Tests.Playwright\bin\D
 | `CanDoItAll.Modules.*` | Product modules for projects, processes, workbench, workspace, prompts, resources, validation, automation, CRM/HR, AgentFramework, activity, collaboration, security, and test lab. |
 | `CanDoItAll.AgentFramework.*` | Technical agent catalog, provider profiles, file-backed workspaces, Microsoft Agent Framework runtime adapter, workspace tools, MCP capabilities, execution runs, artifacts, and UI components. |
 | `CanDoItAll.Components.*` | Shared Razor UI primitives, canvas controls, overlay windows, WebGL workbench runtime, facade, and sandbox projects. |
-| `CanDoItAll.Mcp.*` | Agent-facing adapters for code analytics, components, dotnet watch, process runtime, project structure, SSH operations, and local runtime helpers. |
+| `CanDoItAll.Mcp.*` | Agent-facing sidecars for code analytics, components, dotnet watch, Mermaid, SSH operations, and local runtime helpers. Processes and ProjectStructure MCPs are not active; use HTTP APIs for those surfaces. |
 | `CanDoItAll.Migrations.*` | Provider-specific EF Core migrations for SQLite and PostgreSQL. |
 | `tests/*` | Unit, integration, component, Playwright, support, and MCP-focused tests. |
 | `tools/*` | Local manager, dotnet-watch tray, MCP harness, RPI validation artifacts, and scenario seeding tools. |
@@ -116,7 +119,7 @@ Each tracked `.csproj` directory under `src`, `tests`, and `tools` has a local `
 
 Processes are durable runtime workflows. A process run materializes assignments, step runs, work briefs, artifact expectations, dependencies, decisions, journals, and outbox work. Ready steps are dispatched by `ProcessRunAutomationDispatchService`, which resolves the assigned CRM/HR AI party to a technical AgentFramework agent, builds a governed process-step prompt, executes the agent, audits required tool and evidence use, projects execution artifacts into managed storage, records process artifacts, and transitions the step.
 
-Agent execution is handled by `CanDoItAll.AgentFramework.*`. The Microsoft Agent Framework adapter attaches permitted workspace, process, project-structure, skill, MCP, and provider-native tools. Execution state, chat sessions, tool receipts, artifacts, approvals, and metrics are persisted in the active profile's file sandbox workspace.
+Agent execution is handled by `CanDoItAll.AgentFramework.*`. The Microsoft Agent Framework adapter attaches permitted workspace, process, project-structure, skill, API, MCP, and provider-native tools. Execution state, chat sessions, tool receipts, artifacts, approvals, and metrics are persisted in the active profile's file sandbox workspace.
 
 Real process-agent automation should run against a PostgreSQL AppDbContext profile when `Processes:Runtime:RequirePostgreSqlForAgentAutomation` is enabled. SQLite remains useful for local module smoke work, but governed multi-agent process runs are expected to use PostgreSQL so step journals, tool receipts, artifacts, and recovery attempts do not bottleneck the run.
 
@@ -130,7 +133,7 @@ The managed OpenAI agent/provider seed defaults to `gpt-5-mini`. The runtime omi
 - AgentFramework catalog, chat, execution, receipt, and artifact files live in a profile-scoped file sandbox workspace.
 - Workbench browser tab state is stored in local storage under `candoitall.workbench.session`.
 
-## Codex Skills And MCP Setup
+## Codex Skills, API, And MCP Setup
 
 The portable Codex skill pack is documented in [codex/README.md](codex/README.md).
 
@@ -140,10 +143,11 @@ Install or refresh the CanDoItAll custom skills and required public sibling skil
 powershell -ExecutionPolicy Bypass -File .\codex\scripts\install-candoitall-skills.ps1
 ```
 
-MCP setup notes:
+Current API and MCP notes:
 
-- [Processes MCP setup](docs/processes-mcp-setup.md)
-- [Project Structure MCP setup](docs/project-structure-mcp-setup.md)
+- [API control plane](docs/api-control-plane.md)
+- [Processes MCP transition note](docs/processes-mcp-setup.md)
+- [Project Structure MCP transition note](docs/project-structure-mcp-setup.md)
 - [DotNetWatch persistent backend notes](docs/mcp-dotnetwatch-persistent-backend-benefits.md)
 
 ## Styling

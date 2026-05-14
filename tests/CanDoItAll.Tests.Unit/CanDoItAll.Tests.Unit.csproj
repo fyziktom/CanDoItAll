@@ -23,6 +23,8 @@
     <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Hosting\CanDoItAll.AgentFramework.Hosting.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.Plugins.Abstractions\CanDoItAll.Plugins.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.Tools.Documents\CanDoItAll.Tools.Documents.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Components.WebGlLib\CanDoItAll.Components.WebGlLib.csproj" />
     <ProjectReference Include="..\..\src\Space3D\CanDoItAll.Space3D.Mouse.Driver\CanDoItAll.Space3D.Mouse.Driver.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />

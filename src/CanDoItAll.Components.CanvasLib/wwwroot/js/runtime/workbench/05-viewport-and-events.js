@@ -10,6 +10,18 @@
     const { contextSubmenuHoverDelayMs, MIN_ZOOM, MAX_ZOOM, selectionModel, getRequiredRootService, getTextMeasureService, getViewportControllerService, getAnimationTimelineService, clear, createElement, createSvgElement, normalizeInputField, normalizeInputValue, clamp, debounce, now, createWorkbenchMetrics, formatMetricDuration, cloneWorkbenchMetrics, incrementMetric, resetLastDragPatchMetrics, recordDragPatchMetrics, round, normalizeAction, normalizeAnnotation, normalizeCompactPath, normalizeDiagnosticsOptions, normalizeMinimapOptions, normalizeClipboardOptions, normalizeTooltipPopoverOptions, normalizeMarqueeOptions, normalizeSnapGuideOptions, normalizeConnectorAnchorOptions, normalizeTransformHandleOptions, normalizeGroupFrame, normalizeProgressPercent, normalizeMenuActionScale, normalizeSurface, toSelectionSet, toCollapsedSet, getDefaultNodeSize, resolveBaseNodeSize, estimateNodeSizeFromText, getNodeSize, buildNodeLookup, isNodeVisible, getVisibleNodes, getProjectionOverscanPx, collectProjectedContextNodeIds, isNodeProjectedInViewport, getProjectedNodes, getBaseNodePosition, getNodeDepth, getNodeMobility, buildResolvedLayoutKey, buildLayoutItems, getCollisionPaddingX, getCollisionPaddingY, getOverlapDelta, chooseCollisionAxis, resolveCollisionDirection, applyCollisionSeparation, enforceParentClearance, enforceSiblingSpacing, relaxTowardBase, computeResolvedNodePositions, ensureLayoutPositions, getNodePosition, getSceneBounds, clampPanToScene, setPan, syncMenuScaleCss, serializeState, legacyApplySceneTransform, cancelViewportAnimation, updateViewportTransform, animateViewportTransition, getLinkAnchorPoint, getLinkRetainedKey, getLinkPathData, updateLinkElement, shouldRenderArrow, getExpandedFrameNodeIds, getFrameRetainedKey, createFrameElement, updateFrameElement, getFrameBounds, legacyRenderGroupFrames, resolveChipToneClass, createProgressMarker, resolveProgressDisplay, createProgressBadge, resolveProgressPresetBadgeOptions, resolveMarkerGlyph, createMarkerBadge, createPriorityBadge, appendNodeIndicators, renderInlineTextNode, createNodeMedia, createCompactPathButton, renderStandardNode, createRetainedNodeElement, getNodeRetainedContentKey, updateNodeElementChrome, renderNodeElementContent, buildActiveDragContext, positionFloatingOverlayWithinHost, hidePopover, legacyShowPopover, invokeAnnotationAction, renderNodeAnnotations, updateConnectorAnchorHover, getConnectorAnchorPoints, hideStatusNotice, showStatusNotice, renderEmptyStateOverlay, clearSnapGuides, legacyRenderSnapGuides, legacyRenderConnectorAnchorOverlay, getSelectionBounds, legacyRenderTransformHandlesOverlay, resolveSnapAdjustment, legacyRenderDebugDecorations, legacyBuildDiagnosticsSnapshot, renderDiagnosticsOverlay, navigateViaMinimap, resolveClipboardAnchor, buildClipboardPayload, copySelectionToClipboard, requestClipboardDuplicate, toggleMinimap, toggleDiagnostics, invalidateMeasuredLayout, legacyMeasureRenderedNodeSizes, legacyScheduleNodeMeasurement, getHostPoint, worldToHostPoint, getWorldPoint, hitTestNode, hitTestFrameHandle, hitTestProgressBadge, isOverlayTarget, applyFullTextTooltip, reconcileSelection, applySelection, selectSingleNode, publishSelection, clearViewportStateCommit, createSerializedStateSnapshot, invokeStateChanged, publishState, publishStateNow, scheduleViewportStateCommit, publishNodesMoved, setSelection, toggleSelection, toggleCollapse, clearContextMenu, closeComposer, ensureHostFocus, deferHostFocus, resolveComposerAnchor, layoutComposer, render, getContextActions, isCreateAction, buildCreateRequest, resolveMenuLabel, getMenuScale, isCompactHiveLayout, resolveMenuActionVariant, getActionMetrics, applyProgressPresetTone, fitContextMenuLabel, resolveActionGlyph, createMenuActionIcon, resolveMenuActionAriaLabel, getRadialOffsets, buildCompactHiveCoordinates, getCompactHiveOffsets, resolveContextMenuOffsets, resolveContextMenuSafeTop, getContextMenuLayerBounds, clampLayerBoundsToHost, positionContextMenu, getContextMenuOrbitRadius, getContextMenuLocalPoint, isPointInContextMenuLayer, closeContextMenuLayersFrom, syncContextMenuLayers, resolveSubmenuOrigin, ensureSubmenuLoadingIndicator, clearSubmenuLoadingIndicator, cancelPendingContextSubmenu, scheduleContextSubmenuOpen, clampLayerOriginToHost, getToolboxPanelSize, getToolboxPanelBounds, clampToolboxPanelOriginToHost, resolveToolboxPanelOrigin, createContextMenuLayer, shiftContextMenuLayerOrigin, nudgeContextMenuLayerIntoVisibleHost, resolveQuickCreateSourceNode, submitCreateRequest, submitNodeEdit, readFileAsUpload, commitComposer, decorateComposerShell, createComposerWizard, createComposerSection, updateComposerFileState, openCreateComposer, openInlineNoteComposer, buildChildNotePlacement, buildSiblingNotePlacement, openKeyboardNoteComposer, openExistingNoteEditor, executeContextAction, openContextSubmenu, openContextSubmenuByActionId, renderContextMenuLayer, renderToolboxPreview, renderToolboxPanelLayer, showContextMenu, legacyOpenNodeMetadataMenu } = shared;
     function startPan(state, event) {
         clearSnapGuides(state);
+        if (state.anchorLayer) {
+            state.anchorLayer.innerHTML = "";
+        }
+
+        if (state.transformLayer) {
+            state.transformLayer.innerHTML = "";
+        }
+
+        if (state.debugLayer) {
+            state.debugLayer.innerHTML = "";
+        }
+
         state.interaction = {
             kind: "pan",
             startClientX: event.clientX,
@@ -70,6 +82,7 @@
     }
 
     function startDragForNodeIds(state, event, nodeIds, options) {
+        cancelActiveDragRender(state);
         const draggedNodes = [...new Set((nodeIds || []).filter(id => state.lookups.byId.has(id)))];
         if (!draggedNodes.length) {
             return;
@@ -96,6 +109,7 @@
         clearSnapGuides(state);
         render(state);
         state.interaction.dragContext = buildActiveDragContext(state);
+        captureActiveDragBaseLayout(state, state.interaction);
     }
 
     function startDrag(state, event, nodeId) {
@@ -111,6 +125,100 @@
 
         setSelection(state, renderedFrame.nodeIds, true);
         startDragForNodeIds(state, event, renderedFrame.nodeIds, { kind: "frame-drag", frameId });
+    }
+
+    function isNodeDragInteraction(interaction) {
+        return interaction?.kind === "drag" ||
+            interaction?.kind === "frame-drag" ||
+            interaction?.kind === "dependency-drag";
+    }
+
+    function cloneLayoutPositionMap(layoutPositions) {
+        const clone = new Map();
+        for (const [nodeId, position] of layoutPositions || []) {
+            if (!position) {
+                continue;
+            }
+
+            clone.set(nodeId, {
+                x: position.x,
+                y: position.y
+            });
+        }
+
+        return clone;
+    }
+
+    function captureActiveDragBaseLayout(state, interaction) {
+        if (!isNodeDragInteraction(interaction)) {
+            return;
+        }
+
+        const visibleNodes = getVisibleNodes(state);
+        const layoutPositions = ensureLayoutPositions(state, visibleNodes);
+        interaction.baseLayoutPositions = cloneLayoutPositionMap(layoutPositions);
+    }
+
+    function prepareActiveDragLayoutPositions(state, interaction) {
+        if (!isNodeDragInteraction(interaction)) {
+            return;
+        }
+
+        if (!interaction.baseLayoutPositions) {
+            captureActiveDragBaseLayout(state, interaction);
+        }
+
+        const visibleNodes = getVisibleNodes(state);
+        const layoutPositions = cloneLayoutPositionMap(interaction.baseLayoutPositions);
+        for (const nodeId of interaction.nodeIds || []) {
+            const position = state.ui.manualPositions?.[nodeId];
+            if (!position) {
+                continue;
+            }
+
+            layoutPositions.set(nodeId, {
+                x: position.x,
+                y: position.y
+            });
+        }
+
+        state.layoutPositions = layoutPositions;
+        state.layoutKey = buildResolvedLayoutKey(state, visibleNodes);
+        state.sceneBounds = null;
+        state.sceneBoundsKey = "";
+    }
+
+    function cancelActiveDragRender(state) {
+        if (!state?.activeDragRenderFrame) {
+            return false;
+        }
+
+        if (typeof window.cancelAnimationFrame === "function") {
+            window.cancelAnimationFrame(state.activeDragRenderFrame);
+        }
+
+        state.activeDragRenderFrame = 0;
+        return true;
+    }
+
+    function scheduleActiveDragRender(state) {
+        if (!state || state.activeDragRenderFrame) {
+            return;
+        }
+
+        if (typeof window.requestAnimationFrame !== "function") {
+            workbenchInternals.scenePatching.renderActiveDrag(state);
+            return;
+        }
+
+        state.activeDragRenderFrame = window.requestAnimationFrame(() => {
+            state.activeDragRenderFrame = 0;
+            if (!isNodeDragInteraction(state.interaction)) {
+                return;
+            }
+
+            workbenchInternals.scenePatching.renderActiveDrag(state);
+        });
     }
 
     function captureResolvedDragPositions(state, interaction) {
@@ -220,16 +328,17 @@
             };
         }
 
-        state.interaction.resolvedPositions = captureResolvedDragPositions(state, state.interaction);
-        workbenchInternals.scenePatching.renderActiveDrag(state);
+        state.interaction.resolvedPositions = null;
+        prepareActiveDragLayoutPositions(state, state.interaction);
+        scheduleActiveDragRender(state);
     }
 
     function updatePan(state, event) {
         const deltaX = event.clientX - state.interaction.startClientX;
         const deltaY = event.clientY - state.interaction.startClientY;
         state.interaction.moved = state.interaction.moved || Math.abs(deltaX) > 1 || Math.abs(deltaY) > 1;
-        workbenchInternals.sceneLayout.setPan(state, state.interaction.panX + deltaX, state.interaction.panY + deltaY);
-        render(state);
+        workbenchInternals.sceneLayout.setPan(state, state.interaction.panX + deltaX, state.interaction.panY + deltaY, state.ui.zoom, { skipClamp: true });
+        shared.applyViewportPreviewTransform?.(state);
     }
 
     async function finishInteraction(state) {
@@ -238,6 +347,8 @@
         }
 
         const interaction = state.interaction;
+        shared.cancelDeferredViewportRender?.(state);
+        cancelActiveDragRender(state);
         workbenchInternals.overlayRenderer.clearSnapGuides(state);
         if (state.metrics) {
             state.metrics.lastReleasedInteractionKind = interaction.kind || "";
@@ -280,6 +391,7 @@
             case "pan":
                 state.interaction = null;
                 if (interaction.moved) {
+                    setPan(state, state.ui.panX, state.ui.panY);
                     publishState(state);
                 }
                 break;
@@ -787,7 +899,8 @@
             hostPoint,
             {
                 commitMode: "idle",
-                delayMs: 280
+                delayMs: 280,
+                renderMode: "animation-frame"
             });
     }
 
@@ -825,7 +938,13 @@
             target.panX,
             target.panY,
             target.zoom);
-        render(state);
+        if (options?.renderMode === "animation-frame") {
+            shared.applyViewportPreviewTransform?.(state);
+            shared.scheduleDeferredViewportRender?.(state, options?.delayMs ?? 180);
+        }
+        else {
+            render(state);
+        }
 
         if (options?.commitMode === "idle") {
             scheduleViewportStateCommit(state, options?.delayMs);
@@ -913,6 +1032,8 @@
                 if (isOverlayTarget(event.target)) {
                     return;
                 }
+
+                shared.flushDeferredViewportRender?.(state);
 
                 if (state.composer) {
                     closeComposer(state, { focusHost: false });
@@ -1142,6 +1263,7 @@
                             const hadComposer = !!state.composer;
                             clearContextMenu(state);
                             closeComposer(state);
+                            shared.clearNodeHighlights?.(state, { render: true, publish: true });
                             if (!hadContextMenu && !hadComposer) {
                                 setSelection(state, [], true);
                             }
@@ -1181,6 +1303,7 @@
             lookups,
             ui: normalizedSurface.uiState,
             selectedIds: toSelectionSet(normalizedSurface.uiState.selectedNodeIds),
+            highlightedIds: new Set((normalizedSurface.uiState.highlightedNodeIds || []).filter(Boolean)),
             collapsedIds: toCollapsedSet(normalizedSurface.uiState.collapsedNodeIds),
             helpOpen: false,
             interaction: null,
@@ -1272,6 +1395,7 @@
         state.lookups = workbenchInternals.stateStore.buildNodeLookup(state.surface.nodes);
         state.ui = state.surface.uiState;
         workbenchInternals.stateStore.reconcileSelection(state);
+        state.highlightedIds = new Set((state.ui.highlightedNodeIds || []).filter(Boolean));
         state.collapsedIds = toCollapsedSet(state.ui.collapsedNodeIds);
         state.pointerHostPoint = null;
         state.hoveredDeleteNodeId = null;

@@ -125,6 +125,26 @@ internal sealed partial class ProcessRunAutomationDispatchService
         string targetNodeId,
         string selectedProcessNodeId)
     {
+        return ResolveProjectStructureGroundingFocusNodes(
+                nodesById,
+                nodesByParentId,
+                targetNodeId,
+                selectedProcessNodeId)
+            .SelectMany(ResolveExternalTargetHintsFromProjectStructureNode)
+            .GroupBy(hint => hint.MappedAlias, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .OrderByDescending(hint => hint.MappedAlias.Length)
+            .ThenBy(hint => hint.SourceNodeTitle, StringComparer.OrdinalIgnoreCase)
+            .Take(4)
+            .ToList();
+    }
+
+    private static IReadOnlyList<ProjectStructureGroundingNodeData> ResolveProjectStructureGroundingFocusNodes(
+        IReadOnlyDictionary<string, ProjectStructureGroundingNodeData> nodesById,
+        IReadOnlyDictionary<string, IReadOnlyList<ProjectStructureGroundingNodeData>> nodesByParentId,
+        string targetNodeId,
+        string selectedProcessNodeId)
+    {
         var focusNodeIds = new HashSet<string>(StringComparer.Ordinal);
         foreach (var node in ResolveProjectStructureAncestorPath(targetNodeId, nodesById))
         {
@@ -162,12 +182,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return focusNodeIds
             .Where(nodesById.ContainsKey)
             .Select(id => nodesById[id])
-            .SelectMany(ResolveExternalTargetHintsFromProjectStructureNode)
-            .GroupBy(hint => hint.MappedAlias, StringComparer.OrdinalIgnoreCase)
+            .GroupBy(node => node.Id, StringComparer.Ordinal)
             .Select(group => group.First())
-            .OrderByDescending(hint => hint.MappedAlias.Length)
-            .ThenBy(hint => hint.SourceNodeTitle, StringComparer.OrdinalIgnoreCase)
-            .Take(4)
             .ToList();
     }
 
@@ -343,7 +359,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         trimmed = StripInlinePathAnnotations(trimmed);
         trimmed = Regex.Replace(
             trimmed,
-            @"(?i)(?:\.\s+|\s+)(?:Acceptance|Accepted|Archetype|Deliverable|Exact|Requirement|Requirements|Required|Evidence|Validation|Validate|Tests?|Startup|Browser|Agents?|Use|The|This|Then|Next|No-go|Include|Includes)\b.*$",
+            @"(?i)(?:\.\s+|\s+)(?:Acceptance|Accepted|Architecture|Archetype|Deliverable|Escalation|Exact|Feature|Features|Requirement|Requirements|Required|Evidence|Validation|Validate|Tests?|Startup|Browser|Agents?|Use|The|This|Then|Next|No-go|Include|Includes)\b.*$",
             string.Empty,
             RegexOptions.CultureInvariant);
         trimmed = Regex.Replace(
@@ -376,7 +392,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         return Regex.Replace(
                 value,
-                @"(?i)(?:\\|/)n(?:Acceptance|Accepted|Alias|Aliases|All|App|Application|Archetype|Code|Deliverable|Directory|Exact|Files?|Generated|Include|Includes|Mapped|Mapping|Node|No-go|Notes?|Output|Path|Product|Project|Requirement|Requirements|Required|Root|Source|Status|Workspace|Worksp|Evidence|Validation|Validate|Tests?|Startup|Browser|Agents?|Use|The|This|Then|Next)\b.*$",
+                @"(?i)[\\/](?:r[\\/]?)?n\s*(?:[-*]\s*)?(?:Acceptance|Accepted|Alias|Aliases|All|App|Application|Architecture|Archetype|Code|Deliverable|Directory|Escalation|Exact|Feature|Features|Files?|Generated|Include|Includes|Mapped|Mapping|Node|No-go|Notes?|Output|Path|Product|Project|Requirement|Requirements|Required|Root|Source|Status|Workspace|Worksp|Evidence|Validation|Validate|Tests?|Startup|Browser|Agents?|Use|The|This|Then|Next)\b.*$",
                 string.Empty,
                 RegexOptions.CultureInvariant)
             .Trim();
@@ -391,7 +407,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         var stripped = Regex.Replace(
             value,
-            @"(?i)(?:;\s*(?:notes?|type|status|subtitle|metadata|source|project|node|mapped)\b.*$|\s+\((?:maps?|mapped)\s+to\b.*$|\s+mapped\s+to\b.*$|\s+from\s+[^\\/]*$)",
+            @"(?i)(?:;\s*(?:notes?|type|status|subtitle|metadata|source|project|node|mapped)\b.*$|\s+(?:Acceptance|Accepted|Architecture|Archetype|Deliverable|Escalation|Exact|Feature|Features|Requirement|Requirements|Required|Evidence|Validation|Validate|Tests?|Startup|Browser|Agents?|Use|The|This|Then|Next|No-go|Include|Includes)\b.*$|\s+\([a-z][a-z0-9_-]*:[^)]+\)?$|\s+\((?:maps?|mapped)\s+to\b.*$|\s+mapped\s+to\b.*$|\s+from\s+[^\\/]*$)",
             string.Empty,
             RegexOptions.CultureInvariant);
         stripped = Regex.Replace(
@@ -406,7 +422,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             RegexOptions.CultureInvariant);
         stripped = Regex.Replace(
             stripped,
-            @"(?i)\s+(?:Workspace\s+alias|Mapped\s+alias|Business-analysis|Business\s+analysis|All\s+generated|All\s+app(?:lication)?|Generated\s+app(?:lication)?|App(?:lication)?\s+source|Source\s+belongs|Code\s+belongs|Files?\s+belong|Output\s+directory|Acceptance|Archetype|Deliverable|Exact|Include|Includes|No-go|Preservation\s+rule|Agents?\s+must|Use\s+only|Do\s+not|The\s+app|This\s+app)\b.*$",
+            @"(?i)\s+(?:[-*]\s*)?(?:Workspace\s+alias|Mapped\s+alias|Business-analysis|Business\s+analysis|All\s+generated|All\s+app(?:lication)?|Generated\s+app(?:lication)?|App(?:lication)?\s+source|App\s+project\s+path|Expected\s+project\s+source\s+path|Expected\s+base\s+URL|Run\s+command|Source\s+root|Source\s+belongs|Code\s+belongs|Files?\s+belong|Output\s+directory|Acceptance|Archetype|Deliverable|Exact|Include|Includes|No-go|Preservation\s+rule|Agents?\s+must|Use\s+only|Do\s+not|The\s+app|This\s+app)\b.*$",
             string.Empty,
             RegexOptions.CultureInvariant);
         stripped = Regex.Replace(
@@ -500,6 +516,144 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         return string.Join("; ", segments);
+    }
+
+    private static IReadOnlyList<ProjectStructureRequiredArtifactPath> ResolveProjectStructureRequiredArtifactPathsForFocus(
+        IReadOnlyDictionary<string, ProjectStructureGroundingNodeData> nodesById,
+        IReadOnlyDictionary<string, IReadOnlyList<ProjectStructureGroundingNodeData>> nodesByParentId,
+        string targetNodeId,
+        string selectedProcessNodeId)
+    {
+        return ResolveProjectStructureGroundingFocusNodes(
+                nodesById,
+                nodesByParentId,
+                targetNodeId,
+                selectedProcessNodeId)
+            .SelectMany(ResolveProjectStructureRequiredArtifactPathsFromNode)
+            .GroupBy(item => item.AliasPath, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .OrderBy(item => item.FileName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static IReadOnlyList<ProjectStructureRequiredArtifactPath> ResolveProjectStructureRequiredArtifactPathsFromNode(
+        ProjectStructureGroundingNodeData node)
+    {
+        ArgumentNullException.ThrowIfNull(node);
+
+        var text = string.Join(
+            Environment.NewLine,
+            node.Title,
+            node.Subtitle,
+            node.Notes,
+            node.MetadataJson);
+        if (string.IsNullOrWhiteSpace(text) ||
+            !TryResolveProjectStructureArtifactOutputRoot(text, out _, out var outputRootAlias))
+        {
+            return [];
+        }
+
+        var fileNames = ResolveProjectStructureRequiredArtifactFileNames(text);
+        if (fileNames.Count == 0)
+        {
+            return [];
+        }
+
+        return fileNames
+            .Select(fileName => new ProjectStructureRequiredArtifactPath(
+                fileName,
+                $"{outputRootAlias.TrimEnd('/')}/{fileName}"))
+            .ToList();
+    }
+
+    private static bool TryResolveProjectStructureArtifactOutputRoot(
+        string text,
+        out string absolutePath,
+        out string mappedAlias)
+    {
+        absolutePath = string.Empty;
+        mappedAlias = string.Empty;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        foreach (Match match in Regex.Matches(
+                     text,
+                     @"(?im)(?:business[-\s]*analysis\s+output\s+root|artifact\s+(?:destination|output)\s+(?:root|folder|directory)|document\s+output\s+root|report\s+output\s+root|required\s+output\s+root|output\s+(?:root|folder|directory))\s*[:=-]\s*`?(?<path>[A-Za-z]:\\[^\r\n`""']+)",
+                     RegexOptions.CultureInvariant))
+        {
+            var path = match.Groups["path"].Value;
+            if (!TryNormalizeAbsoluteExternalPathCandidate(path, out var normalizedPath) ||
+                !TryMapAbsoluteExternalPathToAlias(normalizedPath, out var alias))
+            {
+                continue;
+            }
+
+            absolutePath = normalizedPath;
+            mappedAlias = alias;
+            return true;
+        }
+
+        return false;
+    }
+
+    internal static IReadOnlyList<string> ResolveProjectStructureRequiredArtifactFileNames(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return [];
+        }
+
+        var body = text;
+        var markerMatch = Regex.Match(
+            text,
+            @"(?is)(?:required\s+durable\s+files?|required\s+markdown\s+files?|required\s+files?)\s*:\s*(?<body>.*)",
+            RegexOptions.CultureInvariant);
+        if (markerMatch.Success)
+        {
+            body = markerMatch.Groups["body"].Value;
+            var stopMatch = Regex.Match(
+                body,
+                @"(?im)^\s*(?:planning\s+constraints?|constraints?|product\s+evidence|source\s+paths?|business[-\s]*analysis\s+output\s+root|output\s+root)\s*:",
+                RegexOptions.CultureInvariant);
+            if (stopMatch.Success)
+            {
+                body = body[..stopMatch.Index];
+            }
+        }
+
+        return Regex.Matches(
+                body,
+                @"(?<![\w.-])(?<file>[A-Za-z0-9][A-Za-z0-9_.-]*\.md)(?![\w.-])",
+                RegexOptions.CultureInvariant)
+            .Select(match => match.Groups["file"].Value.Trim())
+            .Where(fileName => !string.IsNullOrWhiteSpace(fileName))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(fileName => fileName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static void AppendProjectStructureRequiredArtifactContract(
+        StringBuilder builder,
+        IReadOnlyList<ProjectStructureRequiredArtifactPath> requiredArtifactPaths)
+    {
+        if (requiredArtifactPaths.Count == 0)
+        {
+            return;
+        }
+
+        builder.AppendLine("Project-structure required artifact contract:");
+        foreach (var artifactPath in requiredArtifactPaths)
+        {
+            builder.Append("- Required file `");
+            builder.Append(artifactPath.FileName);
+            builder.Append("` must be written at `");
+            builder.Append(artifactPath.AliasPath);
+            builder.AppendLine("`.");
+        }
+
+        builder.AppendLine("- Internal process artifacts, response-only drafts, and wrong-root or sibling-root files do not satisfy these required external files.");
     }
 
     private static bool HasProjectStructureGroundingSignal(ProjectStructureGroundingNodeData node)

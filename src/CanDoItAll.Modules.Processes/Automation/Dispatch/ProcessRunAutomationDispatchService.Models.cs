@@ -30,7 +30,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessWorkBrief? WorkBrief,
         Guid TechnicalAgentId,
         IReadOnlyList<DispatchArtifactExpectation> ExpectedArtifacts,
-        IReadOnlySet<Guid> RecordedArtifactExpectationIds,
+        HashSet<Guid> RecordedArtifactExpectationIds,
         IReadOnlyList<DispatchArtifactInput> ArtifactInputs,
         HashSet<string> ExternalReferenceKeys,
         Guid? ChatSessionId,
@@ -59,6 +59,17 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessSensitivityLevel SensitivityLevel,
         string ValidationRequirementSummary,
         string AllowedFutureUsageSummary);
+
+internal sealed record ProjectStructureRequiredArtifactPath(
+    string FileName,
+    string AliasPath);
+
+internal sealed record SubprocessCapabilityGapStep(
+    string Title,
+    ProcessStepRunStatus Status,
+    ProcessCapabilityGapSeverity CapabilityGapSeverity,
+    Guid? CurrentExecutorPartyId,
+    string CurrentExecutorName);
 
     private sealed record DispatchArtifactInput(
         string SourceStepTitle,

@@ -25,7 +25,9 @@ public partial class ProjectStructurePage
         };
 
     private CanvasWorkbenchAction HydrateCreateAction(CanvasWorkbenchAction action)
-        => new()
+    {
+        var useSecretReferenceDialog = IsSecretReferenceCreateAction(action.ActionId);
+        return new CanvasWorkbenchAction
         {
             ActionId = action.ActionId,
             Label = action.Label,
@@ -35,8 +37,8 @@ public partial class ProjectStructurePage
             MenuSize = action.MenuSize,
             SubmenuLayout = action.SubmenuLayout,
             Tone = action.Tone,
-            RequiresInput = action.RequiresInput,
-            CreateMode = action.CreateMode,
+            RequiresInput = useSecretReferenceDialog ? false : action.RequiresInput,
+            CreateMode = useSecretReferenceDialog ? "secret-reference-picker" : action.CreateMode,
             ObjectSubtype = action.ObjectSubtype,
             TitleLabel = action.TitleLabel,
             TitlePlaceholder = action.TitlePlaceholder,
@@ -44,13 +46,13 @@ public partial class ProjectStructurePage
             SubtitlePlaceholder = action.SubtitlePlaceholder,
             NotesLabel = action.NotesLabel,
             NotesPlaceholder = action.NotesPlaceholder,
-            ShowDefaultTextFields = action.ShowDefaultTextFields,
+            ShowDefaultTextFields = useSecretReferenceDialog ? false : action.ShowDefaultTextFields,
             SubmitLabel = action.SubmitLabel,
-            RequiresFile = action.RequiresFile,
-            AcceptedFileTypes = action.AcceptedFileTypes,
-            FilePrompt = action.FilePrompt,
-            SupportsDragDrop = action.SupportsDragDrop,
-            InputFields = action.InputFields.Select(HydrateInputField).ToList(),
+            RequiresFile = useSecretReferenceDialog ? false : action.RequiresFile,
+            AcceptedFileTypes = useSecretReferenceDialog ? string.Empty : action.AcceptedFileTypes,
+            FilePrompt = useSecretReferenceDialog ? string.Empty : action.FilePrompt,
+            SupportsDragDrop = useSecretReferenceDialog ? false : action.SupportsDragDrop,
+            InputFields = useSecretReferenceDialog ? [] : action.InputFields.Select(HydrateInputField).ToList(),
             DefaultInputValues = action.DefaultInputValues
                 .Select(value => new CanvasWorkbenchInputValue
                 {
@@ -60,6 +62,7 @@ public partial class ProjectStructurePage
                 .ToList(),
             Children = action.Children.Select(HydrateCreateAction).ToList()
         };
+    }
 
     private CanvasWorkbenchInputField HydrateInputField(CanvasWorkbenchInputField field)
     {
@@ -92,6 +95,9 @@ public partial class ProjectStructurePage
             "storageCatalogId" => BuildStorageCatalogOptions(),
             _ => null
         };
+
+    private static bool IsSecretReferenceCreateAction(string? actionId)
+        => string.Equals(actionId, "add-secret-reference", StringComparison.Ordinal);
 
     private IReadOnlyList<CanvasWorkbenchInputOption> BuildNodeOptions(params ProjectObjectType[] objectTypes)
     {

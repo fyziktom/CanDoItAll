@@ -38,6 +38,7 @@ internal sealed partial class ProcessRunAutomationDispatchService(
     IStoragePlacementService storagePlacementService,
     IWorkspacePathResolver workspacePathResolver,
     IDatabaseProfileRuntimeAccessor databaseProfileRuntimeAccessor,
+    ProcessWorkflowRunCoordinator workflowRunCoordinator,
     IOptions<ProcessRuntimeOptions> processRuntimeOptions,
     IClock clock,
     ILogger<ProcessRunAutomationDispatchService> logger) : IProcessRunAutomationDispatchService
@@ -66,7 +67,7 @@ internal sealed partial class ProcessRunAutomationDispatchService(
     private static readonly TimeSpan StaleAutomationExecutionRunTimeout = TimeSpan.FromMinutes(10);
     private static readonly ConcurrentDictionary<Guid, SemaphoreSlim> StepDispatchGuards = [];
     private static readonly Regex RequiredToolNameRegex = new(
-        @"\b(?:workspace|browser|project_structure)_[a-z0-9_]+\b",
+        @"\b(?:workspace|browser|project_structure|image_generation)_[a-z0-9_]+\b",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly Regex WorkspacePathInToolRequestRegex = new(
         @"(?<path>[A-Za-z]:\\[^`""'\r\n\s]+|external-target[\\/][^\s`""']+)",

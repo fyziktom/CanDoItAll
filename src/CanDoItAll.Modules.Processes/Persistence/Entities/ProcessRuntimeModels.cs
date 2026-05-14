@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -103,6 +104,7 @@ public enum ProcessLaunchCandidateKind {
     Workforce,
     AiResource,
     NewAiAgentProposal,
+    Workflow,
     Gap
 }
 
@@ -244,6 +246,10 @@ public sealed class ProcessRunAssignment {
     public string DisplayName { get; set; } = string.Empty;
 
     public string ExecutorKind { get; set; } = string.Empty;
+
+    public Guid? WorkflowDefinitionId { get; set; }
+
+    public Guid? WorkflowVersionId { get; set; }
 
     public string BindingReason { get; set; } = string.Empty;
 
@@ -505,6 +511,10 @@ public sealed class ProcessLaunchCandidate {
 
     public string ExecutorKind { get; set; } = string.Empty;
 
+    public Guid? WorkflowDefinitionId { get; set; }
+
+    public Guid? WorkflowVersionId { get; set; }
+
     public decimal Score { get; set; }
 
     public bool IsRecommended { get; set; }
@@ -522,6 +532,34 @@ public sealed class ProcessLaunchCandidate {
     public string MetadataJson { get; set; } = "{}";
 
     public DateTimeOffset CreatedAtUtc { get; set; }
+}
+
+public sealed class ProcessWorkflowRunLink {
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid ProcessRunId { get; set; }
+
+    public Guid StepRunId { get; set; }
+
+    public Guid AssignmentId { get; set; }
+
+    public Guid WorkflowDefinitionId { get; set; }
+
+    public Guid WorkflowVersionId { get; set; }
+
+    public Guid WorkflowRunId { get; set; }
+
+    public WorkflowRuntimeBackendKind WorkflowBackend { get; set; } = WorkflowRuntimeBackendKind.InProcess;
+
+    public string WorkflowBackendRunId { get; set; } = string.Empty;
+
+    public WorkflowRunState State { get; set; } = WorkflowRunState.NotStarted;
+
+    public string Summary { get; set; } = string.Empty;
+
+    public DateTimeOffset CreatedAtUtc { get; set; }
+
+    public DateTimeOffset UpdatedAtUtc { get; set; }
 }
 
 public sealed class ProcessLaunchApprovalRecord {

@@ -1501,15 +1501,20 @@ public sealed class MafAgentRuntimeTests
             "project_structure_project_update",
             "project_structure_hierarchy_get",
             "project_structure_subproject_link",
+            "project_structure_nodes_to_new_subproject",
             "project_structure_read",
+            "project_structure_node_catalog",
             "project_structure_checklist",
             "project_structure_dependencies_query",
+            "project_structure_dependency_link",
+            "project_structure_dependency_unlink",
             "project_structure_node_create",
             "project_structure_node_update",
             "project_structure_node_move",
             "project_structure_node_recompose",
             "project_structure_node_reparent",
             "project_structure_approval_request",
+            "project_structure_asset_create",
             "project_structure_asset_get",
             "project_structure_asset_create_revision",
             "project_structure_import",
@@ -1529,6 +1534,57 @@ public sealed class MafAgentRuntimeTests
         Assert.Contains(
             progressMessages,
             item => item.Contains("Attached internal project-structure tools", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task CreateCapabilityState_attaches_image_generation_tool_when_agent_is_allowed()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var seededAgent = seed.Agents[0];
+        var chatProvider = Assert.Single(seed.Providers, item => item.Id == seededAgent.ProviderProfileId);
+        var imageProvider = Assert.Single(seed.Providers, item => item.Purpose == ProviderProfilePurpose.ImageGeneration);
+        var agent = seededAgent with
+        {
+            Permissions = AgentPermissionsPolicy.Default,
+            ConfigurationJson = AgentImageGenerationAccessMetadata.Write(
+                AgentProjectStructureAccessMetadata.Write(
+                    seededAgent.ConfigurationJson,
+                    new AgentProjectStructureAccessSettings
+                    {
+                        CanRead = true,
+                        AllowAllProjects = true
+                    }),
+                new AgentImageGenerationAccessSettings
+                {
+                    CanGenerateImages = true,
+                    PreferredProviderProfileId = imageProvider.Id,
+                    DefaultModel = "gpt-image-1-mini",
+                    CanStoreImagesAsProjectAssets = true
+                })
+        };
+        var progressMessages = new List<string>();
+        var runtime = new MafAgentRuntime(application.RootPath, scope.ServiceProvider);
+
+        var state = await InvokeCreateCapabilityStateAsync(
+            runtime,
+            agent,
+            chatProvider,
+            Array.Empty<CapabilityCatalogItem>(),
+            progressMessages,
+            suppressApprovalRequirements: true);
+        var tools = Assert.IsAssignableFrom<IEnumerable<AITool>>(
+            state.GetType().GetProperty("Tools", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state));
+        var toolNames = tools
+            .Select(item => item.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        Assert.Contains("image_generation_create", toolNames);
+        Assert.Contains(
+            progressMessages,
+            item => item.Contains("Attached internal image-generation tools", StringComparison.Ordinal));
     }
 
     [Fact]

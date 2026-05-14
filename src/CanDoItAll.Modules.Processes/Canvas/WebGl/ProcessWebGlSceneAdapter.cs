@@ -613,6 +613,7 @@ public sealed class ProcessWebGlSceneAdapter
     {
         return link.Kind.ToLowerInvariant() switch
         {
+            "artifact" => ProcessCanvasCatalog.ConnectionCategories.Artifact,
             "messaging" => ProcessCanvasCatalog.ConnectionCategories.Messaging,
             _ when link.SourcePortId.StartsWith(ProcessCanvasCatalog.DefinitionPorts.BranchOutcomeOutputPrefix, StringComparison.Ordinal)
                 => ProcessCanvasCatalog.ConnectionCategories.BranchRoute,
@@ -655,7 +656,9 @@ public sealed class ProcessWebGlSceneAdapter
             return "Route";
         }
 
-        if (link.SourcePortId.StartsWith(ProcessCanvasCatalog.DefinitionPorts.StepArtifactOutputPrefix, StringComparison.Ordinal))
+        if (string.Equals(link.Kind, "artifact", StringComparison.OrdinalIgnoreCase) ||
+            link.SourcePortId.StartsWith(ProcessCanvasCatalog.DefinitionPorts.StepArtifactOutputPrefix, StringComparison.Ordinal) ||
+            string.Equals(link.SourcePortId, ProcessCanvasCatalog.DefinitionPorts.ArtifactUsageOutput, StringComparison.Ordinal))
         {
             return "Artifact";
         }
@@ -747,6 +750,25 @@ public sealed class ProcessWebGlSceneAdapter
             : anchorId;
     }
 
+    private static ProcessRoleEditorModel? ResolveDefinitionRoleByNodeId(
+        ProcessDefinitionEditorModel editor,
+        string nodeId)
+    {
+        if (!ProcessCanvasBranching.TryResolveDefinitionRoleToken(nodeId, out var roleToken))
+        {
+            return null;
+        }
+
+        if (Guid.TryParse(roleToken, out var roleId))
+        {
+            return editor.Roles.FirstOrDefault(role => role.Id == roleId);
+        }
+
+        return editor.Roles.FirstOrDefault(role =>
+            string.Equals(role.Key, roleToken, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(role.DisplayName.Replace(' ', '-'), roleToken, StringComparison.OrdinalIgnoreCase));
+    }
+
     private static bool TryResolveDecisionAuthorityChange(
         ProcessDefinitionEditorModel editor,
         string sourceNodeId,
@@ -763,8 +785,7 @@ public sealed class ProcessWebGlSceneAdapter
             return false;
         }
 
-        var sourceRole = editor.Roles.FirstOrDefault(role =>
-            string.Equals(ProcessCanvasBranching.BuildDefinitionRoleNodeId(role), sourceNodeId, StringComparison.Ordinal));
+        var sourceRole = ResolveDefinitionRoleByNodeId(editor, sourceNodeId);
         var targetStep = editor.Steps.FirstOrDefault(step =>
             string.Equals(ProcessCanvasBranching.BuildDefinitionBranchNodeId(step), targetNodeId, StringComparison.Ordinal) ||
             string.Equals(ProcessCanvasBranching.BuildDefinitionStepNodeId(step), targetNodeId, StringComparison.Ordinal));
@@ -806,8 +827,7 @@ public sealed class ProcessWebGlSceneAdapter
             return false;
         }
 
-        var sourceRole = editor.Roles.FirstOrDefault(role =>
-            string.Equals(ProcessCanvasBranching.BuildDefinitionRoleNodeId(role), sourceNodeId, StringComparison.Ordinal));
+        var sourceRole = ResolveDefinitionRoleByNodeId(editor, sourceNodeId);
         var targetStep = editor.Steps.FirstOrDefault(step =>
             string.Equals(ProcessCanvasBranching.BuildDefinitionStepNodeId(step), targetNodeId, StringComparison.Ordinal));
         if (sourceRole?.Id is null || targetStep is null)
@@ -864,10 +884,8 @@ public sealed class ProcessWebGlSceneAdapter
             return false;
         }
 
-        var sourceRole = editor.Roles.FirstOrDefault(role =>
-            string.Equals(ProcessCanvasBranching.BuildDefinitionRoleNodeId(role), sourceNodeId, StringComparison.Ordinal));
-        var targetRole = editor.Roles.FirstOrDefault(role =>
-            string.Equals(ProcessCanvasBranching.BuildDefinitionRoleNodeId(role), targetNodeId, StringComparison.Ordinal));
+        var sourceRole = ResolveDefinitionRoleByNodeId(editor, sourceNodeId);
+        var targetRole = ResolveDefinitionRoleByNodeId(editor, targetNodeId);
         if (sourceRole?.Id is null || targetRole?.Id is null)
         {
             return true;
@@ -914,24 +932,17 @@ public sealed class ProcessWebGlSceneAdapter
         out bool changed)
     {
         changed = false;
-        if (!sourcePortId.StartsWith(ProcessCanvasCatalog.DefinitionPorts.StepArtifactOutputPrefix, StringComparison.Ordinal) ||
-            !string.Equals(targetPortId, ProcessCanvasCatalog.DefinitionPorts.StepArtifactInputs, StringComparison.Ordinal))
+        if (!string.Equals(targetPortId, ProcessCanvasCatalog.DefinitionPorts.StepArtifactInputs, StringComparison.Ordinal))
         {
             return false;
         }
 
-        var sourceStep = editor.Steps.FirstOrDefault(step =>
-            string.Equals(ProcessCanvasBranching.BuildDefinitionStepNodeId(step), sourceNodeId, StringComparison.Ordinal));
         var targetStep = editor.Steps.FirstOrDefault(step =>
             string.Equals(ProcessCanvasBranching.BuildDefinitionStepNodeId(step), targetNodeId, StringComparison.Ordinal));
-        if (sourceStep?.Id is null || targetStep is null)
-        {
-            return true;
-        }
-
-        var sourceArtifact = sourceStep.ArtifactExpectations.FirstOrDefault(artifact =>
-            string.Equals(ProcessCanvasCatalog.DefinitionPorts.BuildStepArtifactOutputPortId(artifact), sourcePortId, StringComparison.Ordinal));
-        if (sourceArtifact?.Id is null)
+        if (targetStep is null ||
+            !TryResolveArtifactConnectionSource(editor, sourceNodeId, sourcePortId, out var sourceStep, out var sourceArtifact) ||
+            sourceStep.Id is null ||
+            sourceArtifact.Id is null)
         {
             return true;
         }
@@ -962,6 +973,56 @@ public sealed class ProcessWebGlSceneAdapter
 
         changed = UpsertDependency(targetStep, sourceStep.Id.Value, null) || changed;
         return true;
+    }
+
+    private static bool TryResolveArtifactConnectionSource(
+        ProcessDefinitionEditorModel editor,
+        string sourceNodeId,
+        string sourcePortId,
+        out ProcessStepEditorModel sourceStep,
+        out ProcessArtifactExpectationEditorModel sourceArtifact)
+    {
+        sourceStep = default!;
+        sourceArtifact = default!;
+        if (sourcePortId.StartsWith(ProcessCanvasCatalog.DefinitionPorts.StepArtifactOutputPrefix, StringComparison.Ordinal))
+        {
+            var step = editor.Steps.FirstOrDefault(candidate =>
+                string.Equals(ProcessCanvasBranching.BuildDefinitionStepNodeId(candidate), sourceNodeId, StringComparison.Ordinal));
+            var artifact = step?.ArtifactExpectations.FirstOrDefault(candidate =>
+                string.Equals(ProcessCanvasCatalog.DefinitionPorts.BuildStepArtifactOutputPortId(candidate), sourcePortId, StringComparison.Ordinal));
+            if (step is null || artifact is null)
+            {
+                return false;
+            }
+
+            sourceStep = step;
+            sourceArtifact = artifact;
+            return true;
+        }
+
+        if (!string.Equals(sourcePortId, ProcessCanvasCatalog.DefinitionPorts.ArtifactUsageOutput, StringComparison.Ordinal) ||
+            !ProcessCanvasBranching.TryResolveDefinitionArtifactToken(sourceNodeId, out var artifactToken))
+        {
+            return false;
+        }
+
+        foreach (var step in editor.Steps)
+        {
+            var artifact = Guid.TryParse(artifactToken, out var artifactId)
+                ? step.ArtifactExpectations.FirstOrDefault(candidate => candidate.Id == artifactId)
+                : step.ArtifactExpectations.FirstOrDefault(candidate =>
+                    string.Equals(candidate.Title.Replace(' ', '-'), artifactToken, StringComparison.OrdinalIgnoreCase));
+            if (artifact is null)
+            {
+                continue;
+            }
+
+            sourceStep = step;
+            sourceArtifact = artifact;
+            return true;
+        }
+
+        return false;
     }
 
     private static bool TryResolveDependencyChange(

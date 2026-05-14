@@ -4,6 +4,12 @@
 
 - Execution state: `Not started`
 
+## Outcome Check
+
+- Requested outcome:
+- Current closure decision: `Not started`
+- Evidence still missing:
+
 ## Commands
 
 - List the targeted commands and their outcomes.

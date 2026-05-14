@@ -1,7 +1,7 @@
 .processes-workspace-root {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    height: calc(100dvh - 6.5rem);
     min-height: 0;
     overflow: hidden;
 }
@@ -20,11 +20,25 @@
 }
 
 .processes-workspace-root ::deep .processes-workspace-identity {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
     padding: 0.75rem 1rem;
 }
 
+.processes-workspace-root ::deep .processes-workspace-identity > * {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+}
+
 .processes-workspace-root ::deep .processes-workspace-identity__copy {
-    flex: 1 1 26rem;
+    flex: 1 1 min(26rem, 100%);
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
 }
 
 .processes-workspace-root ::deep .processes-workspace-identity__copy .cda-eyebrow {
@@ -32,7 +46,9 @@
 }
 
 .processes-workspace-root ::deep .processes-workspace-identity__title {
+    flex: 1 1 auto;
     min-width: 0;
+    max-width: 100%;
     overflow: hidden;
     color: rgb(15 23 42);
     font-size: 1rem;
@@ -42,9 +58,152 @@
     white-space: nowrap;
 }
 
-.processes-workspace-root ::deep .processes-workspace-identity__badges {
+.processes-workspace-root ::deep .processes-workspace-identity__copy .pf-help-popover {
     flex: 0 0 auto;
+}
+
+.processes-workspace-root ::deep .processes-workspace-identity__badges {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 100%;
     justify-content: flex-end;
+}
+
+.processes-workspace-root ::deep .processes-role-card-grid {
+    width: 100%;
+    align-self: stretch;
+    align-items: stretch;
+}
+
+.processes-workspace-root ::deep .processes-role-card {
+    display: flex;
+    width: 100%;
+    min-height: 12.5rem;
+    overflow: hidden;
+    border: 1px solid rgb(226 232 240);
+    border-radius: 1rem;
+    background: rgb(248 250 252);
+    color: rgb(15 23 42);
+    padding: 1rem;
+    position: relative;
+    transition: border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+}
+
+.processes-workspace-root ::deep .processes-role-card:hover,
+.processes-workspace-root ::deep .processes-role-card:focus-within {
+    border-color: rgb(14 165 233);
+    box-shadow: 0 12px 28px rgb(15 23 42 / 0.08);
+    transform: translateY(-1px);
+}
+
+.processes-workspace-root ::deep .processes-role-card > * {
+    width: 100%;
+    min-width: 0;
+}
+
+.processes-workspace-root ::deep .processes-role-card__identity {
+    display: flex;
+    min-width: 0;
+    align-items: flex-start;
+    gap: 0.85rem;
+}
+
+.processes-workspace-root ::deep .processes-role-card__avatar {
+    display: inline-flex;
+    width: 2.75rem;
+    height: 2.75rem;
+    flex: 0 0 2.75rem;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgb(226 232 240);
+    border-radius: 0.95rem;
+    background: rgb(255 255 255 / 0.94);
+    color: rgb(51 65 85);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    box-shadow: 0 6px 16px rgb(15 23 42 / 0.06);
+}
+
+.processes-workspace-root ::deep .processes-role-card__copy {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.processes-workspace-root ::deep .processes-role-card__name {
+    margin: 0.7rem 0 0;
+    color: rgb(15 23 42);
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+.processes-workspace-root ::deep .processes-role-card__kind {
+    margin: 0.25rem 0 0;
+    color: rgb(100 116 139);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+    text-transform: uppercase;
+}
+
+.processes-workspace-root ::deep .processes-role-card__summary {
+    display: -webkit-box;
+    margin: 0;
+    overflow: hidden;
+    color: rgb(71 85 105);
+    font-size: 0.85rem;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+}
+
+.processes-workspace-root ::deep .processes-role-card__tags {
+    max-height: 4.5rem;
+    overflow: hidden;
+}
+
+.processes-workspace-root ::deep .processes-role-card__footer {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    color: rgb(100 116 139);
+    font-size: 0.75rem;
+    line-height: 1.35;
+}
+
+.processes-workspace-root ::deep .processes-role-card__footer > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+    .processes-workspace-root ::deep .processes-workspace-identity__copy {
+        flex-basis: 100%;
+    }
+
+    .processes-workspace-root ::deep .processes-workspace-identity__title {
+        display: -webkit-box;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+    }
+
+    .processes-workspace-root ::deep .processes-workspace-identity__badges {
+        width: 100%;
+        flex: 1 1 100%;
+        justify-content: flex-start;
+    }
 }
 
 .processes-workspace-root ::deep .process-canvas-toolbar-actions {
@@ -93,7 +252,67 @@
 }
 
 .processes-workspace-root ::deep .process-canvas-toolbar-recompose {
-    flex: 0 0 auto;
+    position: relative;
+    z-index: 670;
+    width: 2.55rem;
+    min-width: 2.55rem;
+    height: 2.55rem;
+    flex: 0 0 2.55rem;
+}
+
+.processes-workspace-root ::deep .process-canvas-toolbar-recompose--open {
+    z-index: 720;
+}
+
+.processes-workspace-root ::deep .cw-toolbar:has(.process-canvas-toolbar-recompose--open),
+.processes-workspace-root ::deep .cw-toolbar-group--left:has(.process-canvas-toolbar-recompose--open) {
+    overflow: visible;
+}
+
+.processes-workspace-root ::deep .process-canvas-toolbar-recompose__panel {
+    position: absolute;
+    top: calc(100% + 1.5rem);
+    left: 0;
+    z-index: 730;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    width: min(22rem, calc(100vw - 2rem));
+    max-height: min(32rem, calc(100dvh - 7rem));
+    overflow-y: auto;
+    padding: 0.5rem;
+    border: 1px solid rgba(226, 232, 240, 0.92);
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 20px 42px rgba(15, 23, 42, 0.18);
+    backdrop-filter: blur(18px);
+}
+
+.processes-workspace-root ::deep .process-canvas-toolbar-recompose__panel > button {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+    padding: 0.62rem 0.75rem;
+    border: 1px solid transparent;
+    border-radius: 0.85rem;
+    background: transparent;
+    color: rgb(15, 23, 42);
+    text-align: left;
+    transition: border-color 140ms ease, background 140ms ease, transform 140ms ease;
+}
+
+.processes-workspace-root ::deep .process-canvas-toolbar-recompose__panel > button:hover:not(:disabled),
+.processes-workspace-root ::deep .process-canvas-toolbar-recompose__panel > button:focus-visible {
+    border-color: rgba(203, 213, 225, 0.88);
+    background: rgba(248, 250, 252, 0.96);
+    transform: translateY(-1px);
+    outline: none;
+}
+
+.processes-workspace-root ::deep .process-canvas-toolbar-recompose__panel > button:disabled {
+    cursor: not-allowed;
+    opacity: 0.58;
 }
 
 .processes-workspace-root ::deep .process-canvas-stage-agent-toggle {
@@ -224,6 +443,17 @@
 }
 
 @media (max-width: 767.98px) {
+    .processes-workspace-root {
+        height: auto;
+        min-height: 100dvh;
+        overflow: visible;
+    }
+
+    .processes-workspace-root ::deep .processes-page-scaffold {
+        height: auto !important;
+        overflow: visible !important;
+    }
+
     .processes-workspace-root ::deep .cad-tabs--fill-height {
         display: block;
         height: auto !important;

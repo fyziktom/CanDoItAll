@@ -1,0 +1,48 @@
+@namespace CanDoItAll.Components.BaseLib
+
+<span @attributes='AdditionalAttributes.WithClass("cda-copyable-mono-value")'>
+    <MonoText Text="@DisplayValue" />
+    <CopyButton Value="@CopyValue"
+                Size="CopyButtonSize.ExtraSmall"
+                DisplayMode="CopyButtonDisplayMode.IconOnly"
+                AriaLabel="@AriaLabel" />
+</span>
+
+@code {
+    [Parameter]
+    public string? Value { get; set; }
+
+    [Parameter]
+    public int StartChars { get; set; } = 12;
+
+    [Parameter]
+    public int EndChars { get; set; } = 8;
+
+    [Parameter]
+    public bool Truncate { get; set; } = true;
+
+    [Parameter]
+    public string EmptyText { get; set; } = "none";
+
+    [Parameter]
+    public string AriaLabel { get; set; } = "Copy value";
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string CopyValue => Value ?? string.Empty;
+
+    private string DisplayValue
+    {
+        get
+        {
+            string value = string.IsNullOrWhiteSpace(Value) ? EmptyText : Value!;
+            if (!Truncate || value.Length <= StartChars + EndChars + 3)
+            {
+                return value;
+            }
+
+            return $"{value[..Math.Max(1, StartChars)]}...{value[^Math.Max(1, EndChars)..]}";
+        }
+    }
+}

@@ -1,0 +1,1 @@
+New analytics vendor requests SSO, exports customer data, and requires prepaid annual billing. Security questionnaire is incomplete.

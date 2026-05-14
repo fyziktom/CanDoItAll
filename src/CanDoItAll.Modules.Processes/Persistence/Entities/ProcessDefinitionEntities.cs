@@ -97,6 +97,10 @@ public sealed class ProcessRoleRequirement
 
     public string PreferredExecutorKind { get; set; } = string.Empty;
 
+    public Guid? PreferredWorkflowDefinitionId { get; set; }
+
+    public Guid? PreferredWorkflowVersionId { get; set; }
+
     public ProjectPartyAssignmentRole? PreferredProjectAssignmentRole { get; set; }
 
     public bool IsRequired { get; set; } = true;

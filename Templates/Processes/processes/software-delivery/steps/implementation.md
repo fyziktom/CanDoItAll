@@ -2,7 +2,8 @@
 
 **Process:** `software-delivery` / Multi-team software delivery and release governance  
 **Step key:** `implementation`  
-**Step kind:** Work
+**Step kind:** Subprocess
+**Subprocess:** `.NET implementation slice with atomic validation` (`dotnet-development-slice`)
 **Target lead hours:** 36
 
 ## Summary

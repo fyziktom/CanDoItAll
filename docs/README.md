@@ -4,14 +4,23 @@ This folder contains current operational and architecture documentation for the 
 
 ## Architecture
 
-- [Architecture beta](architecture-beta.md): current source-grounded architecture with `architecture-beta`, C4, and sequence diagrams.
+- [Architecture beta](architecture-beta.md): current source-grounded architecture with GitHub-safe Mermaid flowcharts, C4, class, and sequence diagrams.
 - [Architecture index](../architecture/README.md): ADRs, historical reviews, and current architecture entry points.
 
-## Runtime And MCP
+## Enterprise And Product Orientation
 
-- [Processes MCP setup](processes-mcp-setup.md): local stdio MCP over the canonical Processes module.
-- [Project Structure MCP setup](project-structure-mcp-setup.md): thin MCP client against the web-hosted project-structure API.
+These docs are for readers who need to understand what CanDoItAll does before they need source-level details.
+
+- [Enterprise operating system](enterprise-operating-system.md): customer-facing explanation of CanDoItAll as an operating system for projects, with audience-specific infographics.
+
+## Runtime, API, And MCP
+
+- [API control plane](api-control-plane.md): current HTTP API surface for projects, project structure, processes, agents, and API access.
+- [Processes MCP transition note](processes-mcp-setup.md): retired/suppressed MCP guidance and current replacement path.
+- [Project Structure MCP transition note](project-structure-mcp-setup.md): retired/suppressed MCP guidance and current replacement path.
 - [DotNetWatch persistent backend benefits](mcp-dotnetwatch-persistent-backend-benefits.md): development-sidecar runtime notes.
+- [Process agent operator runbook](process-agent-operator-runbook.md): operational triage for escalations, approvals, rework, and recovery.
+- [Agent output contracts](agent-output-contracts.md): typed structured-output and finalizer-tool contracts for machine-critical agent decisions.
 
 ## Components And UI
 

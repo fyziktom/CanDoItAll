@@ -64,15 +64,119 @@ public sealed class ProcessCanvasRecompositionServiceTests
         var repairBox = boxesById[ProcessCanvasBranching.BuildDefinitionStepNodeId(repairStep)];
         var mergeBox = boxesById[ProcessCanvasBranching.BuildDefinitionStepNodeId(mergeStep)];
         var branchBox = boxesById[ProcessCanvasBranching.BuildDefinitionBranchNodeId(decisionStep)];
-        var roleBox = boxesById[ProcessCanvasBranching.BuildDefinitionRoleNodeId(role)];
+        var decisionRoleBox = boxesById[ProcessCanvasBranching.BuildDefinitionRoleInstanceNodeId(role, decisionStep)];
+        var implementationRoleBox = boxesById[ProcessCanvasBranching.BuildDefinitionRoleInstanceNodeId(role, implementationStep)];
 
-        Assert.True(roleBox.X < intakeBox.X);
         Assert.True(intakeBox.X < decisionBox.X);
         Assert.True(decisionBox.X < implementationBox.X);
         Assert.True(decisionBox.X < repairBox.X);
+        Assert.True(decisionRoleBox.X < decisionBox.X);
+        Assert.True(implementationRoleBox.X < implementationBox.X);
+        Assert.True(Math.Abs(decisionRoleBox.Y - decisionBox.Y) < 1d);
+        Assert.True(Math.Abs(implementationRoleBox.Y - implementationBox.Y) < 1d);
+        Assert.True(Math.Abs(implementationBox.Y - decisionBox.Y) < 1d);
+        Assert.True(Math.Abs(mergeBox.Y - decisionBox.Y) < 1d);
+        Assert.True(Math.Abs(repairBox.Y - decisionBox.Y) > 150d);
         Assert.True(branchBox.X > decisionBox.X);
         Assert.True(branchBox.X < Math.Min(implementationBox.X, repairBox.X));
-        Assert.True(implementationBox.Y < mergeBox.Y || repairBox.Y < mergeBox.Y || mergeBox.X > implementationBox.X);
+        Assert.True(Math.Abs(branchBox.Y - decisionBox.Y) > 80d);
+    }
+
+    [Fact]
+    public void Recompose_keeps_multi_dependency_primary_continuations_on_main_lane()
+    {
+        var surfaceFactory = CreateSurfaceFactory();
+        var service = new ProcessCanvasRecompositionService(surfaceFactory);
+        var editor = BuildPrimaryContinuationEditor();
+
+        service.Apply(editor, ProcessCanvasRecompositionMode.Recompose);
+
+        var boxesById = ResolveBoxes(surfaceFactory, editor)
+            .ToDictionary(box => box.NodeId, StringComparer.Ordinal);
+        var reviewStep = editor.Steps.Single(step => string.Equals(step.Key, "review", StringComparison.Ordinal));
+        var implementationStep = editor.Steps.Single(step => string.Equals(step.Key, "implement", StringComparison.Ordinal));
+
+        var reviewBox = boxesById[ProcessCanvasBranching.BuildDefinitionStepNodeId(reviewStep)];
+        var implementationBox = boxesById[ProcessCanvasBranching.BuildDefinitionStepNodeId(implementationStep)];
+
+        Assert.True(reviewBox.X < implementationBox.X);
+        Assert.True(Math.Abs(reviewBox.Y - implementationBox.Y) < 1d);
+    }
+
+    [Fact]
+    public void Main_path_spine_pushes_branches_farther_from_the_default_path()
+    {
+        var surfaceFactory = CreateSurfaceFactory();
+        var balancedEditor = BuildBranchingEditor();
+        var spineEditor = BuildBranchingEditor();
+        var service = new ProcessCanvasRecompositionService(surfaceFactory);
+
+        service.Apply(balancedEditor, ProcessCanvasRecompositionMode.Recompose);
+        service.Apply(spineEditor, ProcessCanvasRecompositionMode.MainPathSpine);
+
+        var balancedBoxesById = ResolveBoxes(surfaceFactory, balancedEditor)
+            .ToDictionary(box => box.NodeId, StringComparer.Ordinal);
+        var spineBoxesById = ResolveBoxes(surfaceFactory, spineEditor)
+            .ToDictionary(box => box.NodeId, StringComparer.Ordinal);
+        var balancedDecisionBox = ResolveStepBox(balancedEditor, balancedBoxesById, "review-path");
+        var balancedRepairBox = ResolveStepBox(balancedEditor, balancedBoxesById, "repair");
+        var spineDecisionBox = ResolveStepBox(spineEditor, spineBoxesById, "review-path");
+        var spineImplementationBox = ResolveStepBox(spineEditor, spineBoxesById, "implement");
+        var spineRepairBox = ResolveStepBox(spineEditor, spineBoxesById, "repair");
+
+        AssertNoOverlaps(spineBoxesById.Values);
+        Assert.True(Math.Abs(spineImplementationBox.Y - spineDecisionBox.Y) < 1d);
+        Assert.True(
+            Math.Abs(spineRepairBox.Y - spineDecisionBox.Y) >
+            Math.Abs(balancedRepairBox.Y - balancedDecisionBox.Y) + 250d);
+    }
+
+    [Fact]
+    public void Branch_fan_out_increases_step_columns_and_branch_lane_spacing()
+    {
+        var surfaceFactory = CreateSurfaceFactory();
+        var balancedEditor = BuildBranchingEditor();
+        var fanOutEditor = BuildBranchingEditor();
+        var service = new ProcessCanvasRecompositionService(surfaceFactory);
+
+        service.Apply(balancedEditor, ProcessCanvasRecompositionMode.Recompose);
+        service.Apply(fanOutEditor, ProcessCanvasRecompositionMode.BranchFanOut);
+
+        var balancedBoxesById = ResolveBoxes(surfaceFactory, balancedEditor)
+            .ToDictionary(box => box.NodeId, StringComparer.Ordinal);
+        var fanOutBoxesById = ResolveBoxes(surfaceFactory, fanOutEditor)
+            .ToDictionary(box => box.NodeId, StringComparer.Ordinal);
+        var balancedDecisionBox = ResolveStepBox(balancedEditor, balancedBoxesById, "review-path");
+        var balancedImplementationBox = ResolveStepBox(balancedEditor, balancedBoxesById, "implement");
+        var fanOutDecisionBox = ResolveStepBox(fanOutEditor, fanOutBoxesById, "review-path");
+        var fanOutImplementationBox = ResolveStepBox(fanOutEditor, fanOutBoxesById, "implement");
+        var fanOutRepairBox = ResolveStepBox(fanOutEditor, fanOutBoxesById, "repair");
+
+        AssertNoOverlaps(fanOutBoxesById.Values);
+        Assert.True(fanOutImplementationBox.X - fanOutDecisionBox.X > balancedImplementationBox.X - balancedDecisionBox.X + 120d);
+        Assert.True(Math.Abs(fanOutRepairBox.Y - fanOutDecisionBox.Y) > 850d);
+    }
+
+    [Fact]
+    public void Feedback_lanes_place_feedback_steps_below_main_path_and_alternatives_above()
+    {
+        var surfaceFactory = CreateSurfaceFactory();
+        var service = new ProcessCanvasRecompositionService(surfaceFactory);
+        var editor = BuildFeedbackLaneEditor();
+
+        service.Apply(editor, ProcessCanvasRecompositionMode.FeedbackLanes);
+
+        var boxesById = ResolveBoxes(surfaceFactory, editor)
+            .ToDictionary(box => box.NodeId, StringComparer.Ordinal);
+        var decisionBox = ResolveStepBox(editor, boxesById, "review-path");
+        var implementationBox = ResolveStepBox(editor, boxesById, "implement");
+        var consultBox = ResolveStepBox(editor, boxesById, "consult-legal");
+        var repairBox = ResolveStepBox(editor, boxesById, "repair-change");
+
+        AssertNoOverlaps(boxesById.Values);
+        Assert.True(Math.Abs(implementationBox.Y - decisionBox.Y) < 1d);
+        Assert.True(consultBox.Y < decisionBox.Y - 700d);
+        Assert.True(repairBox.Y > decisionBox.Y + 700d);
     }
 
     [Fact]
@@ -102,6 +206,15 @@ public sealed class ProcessCanvasRecompositionServiceTests
         return surfaceFactory.BuildDefinitionSurface(editor).Nodes
             .Select(node => CanvasLayoutNodeBox.FromNode(node))
             .ToList();
+    }
+
+    private static CanvasLayoutNodeBox ResolveStepBox(
+        ProcessDefinitionEditorModel editor,
+        IReadOnlyDictionary<string, CanvasLayoutNodeBox> boxesById,
+        string stepKey)
+    {
+        var step = editor.Steps.Single(item => string.Equals(item.Key, stepKey, StringComparison.Ordinal));
+        return boxesById[ProcessCanvasBranching.BuildDefinitionStepNodeId(step)];
     }
 
     private static void AssertNoOverlaps(IEnumerable<CanvasLayoutNodeBox> boxes)
@@ -377,6 +490,199 @@ public sealed class ProcessCanvasRecompositionServiceTests
                     Dependencies = CreateDependencies((implementationStepId, null)),
                     CanvasX = 1040,
                     CanvasY = 380
+                }
+            ]
+        };
+    }
+
+    private static ProcessDefinitionEditorModel BuildFeedbackLaneEditor()
+    {
+        var roleId = Guid.NewGuid();
+        var intakeStepId = Guid.NewGuid();
+        var decisionStepId = Guid.NewGuid();
+        var acceptedOutcomeId = Guid.NewGuid();
+        var consultOutcomeId = Guid.NewGuid();
+        var repairOutcomeId = Guid.NewGuid();
+        var implementationStepId = Guid.NewGuid();
+        var consultStepId = Guid.NewGuid();
+        var repairStepId = Guid.NewGuid();
+
+        return new ProcessDefinitionEditorModel
+        {
+            Name = "Feedback lane recomposition test",
+            Summary = "Separate feedback lanes from ordinary alternatives.",
+            ValueStatement = "Repair paths should not visually cut through the main delivery spine.",
+            CustomerName = "Acme",
+            OwnerName = "Owner",
+            GovernancePolicySummary = "Feedback lane proof.",
+            ChangeSummary = "Feedback lane proof.",
+            ConstitutionRuleSummary = "Feedback lane proof.",
+            OperatingModeSummary = "Feedback lane proof.",
+            SimulationReadinessSummary = "Feedback lane proof.",
+            Roles =
+            [
+                new ProcessRoleEditorModel
+                {
+                    Id = roleId,
+                    Key = "reviewer",
+                    DisplayName = "Reviewer",
+                    CanvasX = 980,
+                    CanvasY = 440
+                }
+            ],
+            Steps =
+            [
+                new ProcessStepEditorModel
+                {
+                    Id = intakeStepId,
+                    Key = "intake",
+                    Title = "Capture request",
+                    StepKind = ProcessStepKind.Start,
+                    CanvasX = 920,
+                    CanvasY = 380
+                },
+                new ProcessStepEditorModel
+                {
+                    Id = decisionStepId,
+                    Key = "review-path",
+                    Title = "Review outcome",
+                    StepKind = ProcessStepKind.Decision,
+                    Dependencies = CreateDependencies((intakeStepId, null)),
+                    DecisionRoleRequirementId = roleId,
+                    CanvasX = 1080,
+                    CanvasY = 380,
+                    BranchOutcomes =
+                    [
+                        new ProcessStepBranchOutcomeEditorModel
+                        {
+                            Id = consultOutcomeId,
+                            Key = "consult-needed",
+                            Title = "Consult needed"
+                        },
+                        new ProcessStepBranchOutcomeEditorModel
+                        {
+                            Id = repairOutcomeId,
+                            Key = "repair-needed",
+                            Title = "Repair needed"
+                        },
+                        new ProcessStepBranchOutcomeEditorModel
+                        {
+                            Id = acceptedOutcomeId,
+                            Key = "accepted",
+                            Title = "Accepted"
+                        }
+                    ]
+                },
+                new ProcessStepEditorModel
+                {
+                    Id = implementationStepId,
+                    Key = "implement",
+                    Title = "Implement change",
+                    StepKind = ProcessStepKind.Work,
+                    Dependencies = CreateDependencies((decisionStepId, acceptedOutcomeId)),
+                    CanvasX = 1040,
+                    CanvasY = 380,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = roleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                        }
+                    ]
+                },
+                new ProcessStepEditorModel
+                {
+                    Id = consultStepId,
+                    Key = "consult-legal",
+                    Title = "Consult legal",
+                    StepKind = ProcessStepKind.Review,
+                    Dependencies = CreateDependencies((decisionStepId, consultOutcomeId)),
+                    CanvasX = 1040,
+                    CanvasY = 380
+                },
+                new ProcessStepEditorModel
+                {
+                    Id = repairStepId,
+                    Key = "repair-change",
+                    Title = "Repair change",
+                    StepKind = ProcessStepKind.Work,
+                    Dependencies = CreateDependencies((decisionStepId, repairOutcomeId)),
+                    CanvasX = 1040,
+                    CanvasY = 380
+                }
+            ]
+        };
+    }
+
+    private static ProcessDefinitionEditorModel BuildPrimaryContinuationEditor()
+    {
+        var roleId = Guid.NewGuid();
+        var intakeStepId = Guid.NewGuid();
+        var reviewStepId = Guid.NewGuid();
+        var implementationStepId = Guid.NewGuid();
+
+        return new ProcessDefinitionEditorModel
+        {
+            Name = "Primary continuation recomposition test",
+            Summary = "Keep multi-input continuation on the main path.",
+            ValueStatement = "A step that depends on an earlier root and its direct continuation should not become a branch lane.",
+            CustomerName = "Acme",
+            OwnerName = "Owner",
+            GovernancePolicySummary = "Primary continuation proof.",
+            ChangeSummary = "Primary continuation proof.",
+            ConstitutionRuleSummary = "Primary continuation proof.",
+            OperatingModeSummary = "Primary continuation proof.",
+            SimulationReadinessSummary = "Primary continuation proof.",
+            Roles =
+            [
+                new ProcessRoleEditorModel
+                {
+                    Id = roleId,
+                    Key = "engineer",
+                    DisplayName = "Engineer",
+                    CanvasX = 120,
+                    CanvasY = 40
+                }
+            ],
+            Steps =
+            [
+                new ProcessStepEditorModel
+                {
+                    Id = intakeStepId,
+                    Key = "intake",
+                    Title = "Capture request",
+                    StepKind = ProcessStepKind.Start,
+                    CanvasX = 120,
+                    CanvasY = 120
+                },
+                new ProcessStepEditorModel
+                {
+                    Id = reviewStepId,
+                    Key = "review",
+                    Title = "Review request",
+                    StepKind = ProcessStepKind.Review,
+                    Dependencies = CreateDependencies((intakeStepId, null)),
+                    CanvasX = 430,
+                    CanvasY = 120
+                },
+                new ProcessStepEditorModel
+                {
+                    Id = implementationStepId,
+                    Key = "implement",
+                    Title = "Implement request",
+                    StepKind = ProcessStepKind.Work,
+                    Dependencies = CreateDependencies((intakeStepId, null), (reviewStepId, null)),
+                    CanvasX = 740,
+                    CanvasY = 120,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = roleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                        }
+                    ]
                 }
             ]
         };

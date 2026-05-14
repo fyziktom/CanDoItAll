@@ -39,6 +39,7 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
         var configurationJson = AgentProjectStructureAccessMetadata.Write(model.ConfigurationJson, model.ProjectStructureAccess);
         configurationJson = AgentProcessAccessMetadata.Write(configurationJson, model.ProcessAccess);
         configurationJson = AgentWorkspaceToolAccessMetadata.Write(configurationJson, model.WorkspaceToolAccess);
+        configurationJson = AgentImageGenerationAccessMetadata.Write(configurationJson, model.ImageGenerationAccess);
         await UpdateCatalogAsync(catalog =>
         {
             var existingAgent = catalog.Agents.FirstOrDefault(item => item.Id == id);
@@ -77,7 +78,10 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
                 ConfigurationJson: configurationJson.Trim(),
                 IsTemplate: model.IsTemplate,
                 TemplateKey: normalizedTemplateKey,
-                Permissions: model.Permissions,
+                Permissions: model.Permissions with
+                {
+                    AllowedSecrets = NormalizeAllowedSecretReferences(model.AllowedSecretReferences)
+                },
                 Capabilities: capabilities,
                 Tags: model.Tags
                     .Where(item => !string.IsNullOrWhiteSpace(item))
@@ -433,6 +437,27 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList()
         };
+    }
+
+    private static IReadOnlyList<AgentAllowedSecretReference> NormalizeAllowedSecretReferences(
+        IEnumerable<AgentAllowedSecretReference> references)
+    {
+        return references
+            .Where(item => item.SecretId != Guid.Empty)
+            .GroupBy(item => item.SecretId)
+            .Select(group =>
+            {
+                var item = group.Last();
+                return new AgentAllowedSecretReference(
+                    item.SecretId,
+                    item.NameSnapshot.Trim(),
+                    string.IsNullOrWhiteSpace(item.Purpose)
+                        ? AgentSecretPurposes.GeneralAgentRequest
+                        : item.Purpose.Trim());
+            })
+            .OrderBy(item => item.NameSnapshot, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(item => item.SecretId)
+            .ToList();
     }
 
     private static CapabilityCatalogItem NormalizeCapability(CapabilityCatalogItem capability)

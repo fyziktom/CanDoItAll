@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using CanDoItAll.Mcp.Core.Hosting;
 using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Mcp.Components.Configuration;
@@ -19,6 +20,11 @@ public sealed class ServerOptions
 
     [Required]
     public string WorkspaceRoot { get; set; } = ".";
+
+    [Required]
+    public McpIdleShutdownOptions IdleShutdown { get; set; } = McpIdleShutdownOptions.Create(
+        inactivityTimeoutSeconds: 300,
+        checkIntervalSeconds: 15);
 }
 
 public sealed class CatalogOptions

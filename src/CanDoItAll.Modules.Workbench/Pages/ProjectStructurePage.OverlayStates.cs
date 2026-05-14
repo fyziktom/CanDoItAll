@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
@@ -118,6 +119,37 @@ public sealed record ProjectStructureProcessLinkDialogState(
     public string SubmitLabel => "Add process";
 }
 
+public sealed record ProjectStructureWorkflowAddDialogState(
+    string ParentNodeId,
+    string ParentNodeTitle,
+    IReadOnlyList<ProjectStructureWorkflowDefinitionOption> Options,
+    WorkflowId? SelectedWorkflowId,
+    WorkflowVersionId? SelectedVersionId,
+    ProjectStructureWorkflowInputSettings InputSettings,
+    ProjectStructureWorkflowInputPreview Preview,
+    string Error)
+{
+    public string Title => $"Add workflow for {ParentNodeTitle}";
+
+    public string Copy => "Choose an active workflow and review the project, parent node, and optional sources that will be sent as input.";
+
+    public string SubmitLabel => "Add workflow";
+}
+
+public sealed record ProjectStructureWorkflowStartDialogState(
+    string NodeId,
+    string NodeTitle,
+    ProjectStructureWorkflowRunStatus? Status,
+    bool IsBusy,
+    string Error)
+{
+    public string Title => $"Start {NodeTitle}";
+
+    public string Copy => "Confirm the workflow start. The workflow definition owns its execution settings, so this starts directly without resource matching.";
+
+    public string SubmitLabel => "Start workflow";
+}
+
 public enum ProjectStructureProcessStartStage
 {
     Confirm,
@@ -130,6 +162,7 @@ public sealed record ProjectStructureProcessStartCandidateSelection(
 
 public sealed record ProjectStructureProcessStartCandidateState(
     Guid CandidateId,
+    Guid? TechnicalAgentId,
     string DisplayName,
     string CandidateKindLabel,
     string ExecutorKind,
@@ -140,7 +173,16 @@ public sealed record ProjectStructureProcessStartCandidateState(
     bool IsResolvable,
     string RecommendationSummary,
     string AvailabilitySummary,
-    string SourceRegistryKey);
+    string SourceRegistryKey,
+    string AgentProviderName = "",
+    string AgentModel = "",
+    string AgentRoleTitle = "",
+    string AgentSummary = "",
+    string AgentStatusLabel = "",
+    string AgentWorkloadLabel = "",
+    string AgentAvatarImageUrl = "",
+    IReadOnlyList<string>? ToolNames = null,
+    IReadOnlyList<string>? SkillNames = null);
 
 public sealed record ProjectStructureProcessStartRoleState(
     Guid LaunchPlanRoleId,

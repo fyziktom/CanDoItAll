@@ -238,6 +238,38 @@ public sealed partial class ProcessCanvasSurfaceFactory
         return ports;
     }
 
+    private static List<CanvasWorkbenchPort> BuildDefinitionRoleInstanceOutputPorts(DefinitionRoleNodePlan plan)
+    {
+        var ports = new List<CanvasWorkbenchPort>();
+        foreach (var responsibilityKind in plan.Responsibilities)
+        {
+            ports.Add(new CanvasWorkbenchPort
+            {
+                Id = ProcessCanvasCatalog.DefinitionPorts.GetRoleResponsibilityOutputPortId(responsibilityKind),
+                Label = ProcessCanvasCatalog.DefinitionPorts.GetResponsibilityLabel(responsibilityKind),
+                Side = "right",
+                Tone = "info",
+                Kind = responsibilityKind.ToString().ToLowerInvariant(),
+                IsRequired = true
+            });
+        }
+
+        if (plan.IsDecisionAuthority)
+        {
+            ports.Add(new CanvasWorkbenchPort
+            {
+                Id = ProcessCanvasCatalog.DefinitionPorts.RoleDecisionAuthorityOutput,
+                Label = "Decision authority",
+                Side = "right",
+                Tone = "info",
+                Kind = "decision",
+                IsRequired = true
+            });
+        }
+
+        return ports;
+    }
+
     private static List<CanvasWorkbenchPort> BuildDefinitionRoleInputPorts(
         ProcessRoleEditorModel role,
         ProcessDefinitionEditorModel editor)
@@ -252,6 +284,38 @@ public sealed partial class ProcessCanvasSurfaceFactory
                 Side = "left",
                 Tone = inboundMessagingCount == 0 ? "neutral" : "accent",
                 Kind = "messaging"
+            }
+        ];
+    }
+
+    private static List<CanvasWorkbenchPort> BuildDefinitionArtifactInputPorts()
+    {
+        return
+        [
+            new CanvasWorkbenchPort
+            {
+                Id = ProcessCanvasCatalog.DefinitionPorts.ArtifactSourceInput,
+                Label = "Produced by",
+                Side = "left",
+                Tone = "accent",
+                Kind = "artifact-source",
+                IsRequired = true
+            }
+        ];
+    }
+
+    private static List<CanvasWorkbenchPort> BuildDefinitionArtifactOutputPorts()
+    {
+        return
+        [
+            new CanvasWorkbenchPort
+            {
+                Id = ProcessCanvasCatalog.DefinitionPorts.ArtifactUsageOutput,
+                Label = "Use artifact",
+                Side = "right",
+                Tone = "accent",
+                Kind = "artifact-output",
+                IsRequired = true
             }
         ];
     }

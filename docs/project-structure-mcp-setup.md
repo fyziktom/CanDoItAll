@@ -1,45 +1,37 @@
-# Project Structure MCP Setup
+# Project Structure MCP Transition Note
 
-## Purpose
+## Current Status
 
-Use `CanDoItAll.Mcp.ProjectStructure` on each Codex workstation as a thin stdio MCP client against the main CanDoItAll web instance. The MCP never talks to the local database or managed files directly.
+`CanDoItAll.Mcp.ProjectStructure` is not an active MCP server in the current repository shape. Project, hierarchy, asset, dependency, lease, process-node, and analytics work now goes through the web-hosted HTTP API.
 
-## Central machine preparation
+Do not reinstall or call `candoitall_projectstructure` in current sessions. It may return later, but current documentation should route agents and developers through the HTTP API.
 
-1. Open `/settings` in CanDoItAll web.
-2. Go to the `Project Structure MCP` section.
-3. Set the central base URL to the address reachable from the other workstations.
-4. Create or update an agent profile with the capabilities and approval thresholds you want.
-5. Save the profile and copy the generated install command or local settings JSON from the setup guide.
+## Current Replacement
 
-## Workstation install
+Use the web API and the repo-managed project-structure API skill:
 
-Run the generated command from the repo root on the workstation:
+- API overview: [API control plane](api-control-plane.md)
+- Skill guidance: [codex/skills/candoitall-api-project-structure/SKILL.md](../codex/skills/candoitall-api-project-structure/SKILL.md)
+- Source routes: [ProjectStructureAgentApi.cs](../src/CanDoItAll.Web/ProjectStructureAgentApi.cs)
 
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Install-CanDoItAllProjectStructureMcp.ps1 -RepoRoot . -ServerBaseUrl 'http://main-machine:7271' -AgentToken 'replace-with-generated-token'
-```
+Key route families:
 
-The script does all of the following:
+- project records and hierarchy: `/api/project-structure/projects`
+- structure read and node mutation: `/api/project-structure/projects/{projectId}/structure/read`, `/nodes`, `/nodes/{nodeId}`
+- status, progress, markers, priority, movement, recomposition, reparenting, and delete commands: `/api/project-structure/projects/{projectId}/nodes/...`
+- process nodes: `/api/project-structure/projects/{projectId}/nodes/{nodeId}/process-definition` and `/process/start`
+- dependencies and links: `/dependencies/query`, `/dependencies/link`, `/dependencies/unlink`, `/links`, `/links/unlink`
+- assets and revisions: `/assets`, `/assets/{nodeId}`, `/assets/{nodeId}/content`, `/assets/{nodeId}/revisions`
+- coordination and review: `/leases/acquire`, `/leases/renew`, `/leases/release`, `/leases/current`, `/knowledge/query`, `/analytics/query`
 
-- publishes `CanDoItAll.Mcp.ProjectStructure` into a versioned folder under `.artifacts\mcp-installs\CanDoItAll.Mcp.ProjectStructure\`
-- writes `CanDoItAll.Mcp.ProjectStructure.settings.local.json`
-- repoints `.vscode\mcp.json` to the newly published entrypoint
-- repoints `%USERPROFILE%\.codex\config.toml` to the newly published entrypoint
+## Migration Guidance
 
-## Manual settings file
+1. Start `src/CanDoItAll.Web`.
+2. Check API status with `GET /api/access/status`.
+3. If API authorization is enabled, use a Settings-generated bearer token or an already-authorized token.
+4. Acquire a project lease before mutating shared structure.
+5. Prefer focused endpoints and read back only the changed node, link, dependency, or asset.
 
-If you need to write the settings file manually, start from [CanDoItAll.Mcp.ProjectStructure.settings.example.json](/C:/repositories/CanDoItAll/CanDoItAll.Mcp.ProjectStructure.settings.example.json) and save the workstation copy as `CanDoItAll.Mcp.ProjectStructure.settings.local.json`.
+## Removed Setup Commands
 
-## Reinstall and refresh
-
-- Run `.\tools\Install-CanDoItAllProjectStructureMcp.ps1` again after a token rotation or base-URL change.
-- Run `.\tools\Reinstall-CanDoItAllMcps.ps1` when you want the full repo MCP suite refreshed in one pass.
-- Reinstall no longer needs to overwrite the currently running MCP binary, so a fresh publish can be prepared even while an older session is still connected.
-- The settings UI remains the source of truth for the current token and setup command.
-
-## Safety rules
-
-- Keep the generated token only on trusted workstations.
-- Rotate the token in CanDoItAll web when a machine is retired or the token leaks.
-- Assets are readonly through the MCP. New versions must be created as revision nodes under the original asset node.
+Old setup commands such as `Install-CanDoItAllProjectStructureMcp.ps1` and `candoitall_projectstructure` should not be used for current work. The full MCP reinstall script now removes stale `candoitall_projectstructure` config sections from local Codex config.

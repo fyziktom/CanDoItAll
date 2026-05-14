@@ -342,11 +342,127 @@ public sealed class ProcessCanvasSurfaceFactoryTests
             link.TargetId == reviewNode.Id &&
             link.SourcePortId == ProcessCanvasCatalog.DefinitionPorts.StepStructuralOutput &&
             link.TargetPortId == ProcessCanvasCatalog.DefinitionPorts.StepStructuralInput);
+
+        var artifactNodeId = ProcessCanvasBranching.BuildDefinitionArtifactNodeId(editor.Steps[0].ArtifactExpectations[0]);
+        var artifactCloneNodeId = ProcessCanvasBranching.BuildDefinitionArtifactCloneNodeId(
+            editor.Steps[0].ArtifactExpectations[0],
+            editor.Steps[1].ArtifactInputs[0],
+            editor.Steps[1]);
+        var artifactNode = Assert.Single(surface.Nodes, node => node.Id == artifactNodeId);
+        var artifactCloneNode = Assert.Single(surface.Nodes, node => node.Id == artifactCloneNodeId);
+        Assert.Equal(ProcessCanvasCatalog.NodeKinds.DefinitionArtifact, artifactNode.Kind);
+        Assert.Equal(ProcessCanvasCatalog.NodeKinds.DefinitionArtifact, artifactCloneNode.Kind);
+        Assert.Equal("artifact", artifactNode.PaletteKey);
+        Assert.Equal("artifact", artifactCloneNode.PaletteKey);
+        Assert.Equal(artifactNode.AccentColor, artifactCloneNode.AccentColor);
+        Assert.NotEqual(implementationNode.AccentColor, artifactNode.AccentColor);
+        Assert.Contains(artifactNode.ContextActions, action => action.ActionId == "process-definition.create-artifact-clone");
+        Assert.Contains(artifactCloneNode.ContextActions, action => action.ActionId == "process-definition.highlight-artifact-clones");
         Assert.Contains(surface.Links, link =>
+            link.SourceId == implementationNode.Id &&
+            link.TargetId == artifactNode.Id &&
+            link.SourcePortId == ProcessCanvasCatalog.DefinitionPorts.BuildStepArtifactOutputPortId(editor.Steps[0].ArtifactExpectations[0]) &&
+            link.TargetPortId == ProcessCanvasCatalog.DefinitionPorts.ArtifactSourceInput);
+        Assert.Contains(surface.Links, link =>
+            link.SourceId == artifactCloneNode.Id &&
+            link.TargetId == reviewNode.Id &&
+            link.SourcePortId == ProcessCanvasCatalog.DefinitionPorts.ArtifactUsageOutput &&
+            link.TargetPortId == ProcessCanvasCatalog.DefinitionPorts.StepArtifactInputs);
+        Assert.DoesNotContain(surface.Links, link =>
             link.SourceId == implementationNode.Id &&
             link.TargetId == reviewNode.Id &&
             link.SourcePortId == ProcessCanvasCatalog.DefinitionPorts.BuildStepArtifactOutputPortId(editor.Steps[0].ArtifactExpectations[0]) &&
             link.TargetPortId == ProcessCanvasCatalog.DefinitionPorts.StepArtifactInputs);
+    }
+
+    [Fact]
+    public void Definition_surface_renders_repeated_role_as_step_role_instances()
+    {
+        var roleId = Guid.NewGuid();
+        var firstStepId = Guid.NewGuid();
+        var secondStepId = Guid.NewGuid();
+        var editor = new ProcessDefinitionEditorModel
+        {
+            Roles =
+            [
+                new ProcessRoleEditorModel
+                {
+                    Id = roleId,
+                    Key = "delivery-lead",
+                    DisplayName = "Delivery lead"
+                }
+            ],
+            Steps =
+            [
+                new ProcessStepEditorModel
+                {
+                    Id = firstStepId,
+                    Key = "scope",
+                    Title = "Clarify scope",
+                    StepKind = ProcessStepKind.Start,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            Id = Guid.NewGuid(),
+                            RoleRequirementId = roleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible,
+                            IsRequired = true
+                        }
+                    ]
+                },
+                new ProcessStepEditorModel
+                {
+                    Id = secondStepId,
+                    Key = "release",
+                    Title = "Approve release",
+                    StepKind = ProcessStepKind.Approval,
+                    Dependencies = CreateDependencies((firstStepId, null)),
+                    DecisionRoleRequirementId = roleId,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            Id = Guid.NewGuid(),
+                            RoleRequirementId = roleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Approver,
+                            IsRequired = true
+                        }
+                    ]
+                }
+            ]
+        };
+
+        var factory = CreateFactory();
+        var surface = factory.BuildDefinitionSurface(editor);
+
+        var canonicalRoleNodeId = ProcessCanvasBranching.BuildDefinitionRoleNodeId(editor.Roles[0]);
+        var scopeRoleNodeId = ProcessCanvasBranching.BuildDefinitionRoleInstanceNodeId(editor.Roles[0], editor.Steps[0]);
+        var releaseRoleNodeId = ProcessCanvasBranching.BuildDefinitionRoleInstanceNodeId(editor.Roles[0], editor.Steps[1]);
+        var roleNodes = surface.Nodes
+            .Where(node => node.Kind == ProcessCanvasCatalog.NodeKinds.DefinitionRole)
+            .ToList();
+
+        Assert.DoesNotContain(roleNodes, node => node.Id == canonicalRoleNodeId);
+        Assert.Contains(roleNodes, node => node.Id == scopeRoleNodeId);
+        Assert.Contains(roleNodes, node => node.Id == releaseRoleNodeId);
+        Assert.All(roleNodes, roleNode =>
+            Assert.Contains(roleNode.ContextActions, action => action.ActionId == "process-definition.highlight-role-clones"));
+        Assert.True(ProcessCanvasBranching.TryResolveDefinitionRoleToken(scopeRoleNodeId, out var roleToken));
+        Assert.Equal(roleId.ToString("D"), roleToken);
+
+        Assert.Contains(surface.Links, link =>
+            link.SourceId == scopeRoleNodeId &&
+            link.TargetId == ProcessCanvasBranching.BuildDefinitionStepNodeId(editor.Steps[0]) &&
+            link.SourcePortId == ProcessCanvasCatalog.DefinitionPorts.GetRoleResponsibilityOutputPortId(ProcessResponsibilityKind.Responsible));
+        Assert.Contains(surface.Links, link =>
+            link.SourceId == releaseRoleNodeId &&
+            link.TargetId == ProcessCanvasBranching.BuildDefinitionStepNodeId(editor.Steps[1]) &&
+            link.SourcePortId == ProcessCanvasCatalog.DefinitionPorts.GetRoleResponsibilityOutputPortId(ProcessResponsibilityKind.Approver));
+        Assert.Contains(surface.Links, link =>
+            link.SourceId == releaseRoleNodeId &&
+            link.TargetId == ProcessCanvasBranching.BuildDefinitionBranchNodeId(editor.Steps[1]) &&
+            link.SourcePortId == ProcessCanvasCatalog.DefinitionPorts.RoleDecisionAuthorityOutput);
     }
 
     [Fact]

@@ -24,12 +24,21 @@ public partial class MainLayout
             return;
         }
 
-        var dismissed = await JS.InvokeAsync<bool>("CanDoItAll.browserState.isDatabaseStartupPromptDismissed");
-        if (!dismissed)
+        if (ShouldPromptForStartupDatabaseConfirmation(databaseSelection) &&
+            !await JS.InvokeAsync<bool>("CanDoItAll.browserState.isDatabaseStartupPromptDismissed"))
         {
             databaseDialogStartupMode = true;
             databaseDialogOpen = true;
         }
+    }
+
+    private static bool ShouldPromptForStartupDatabaseConfirmation(DatabaseSelectionStateModel? selection)
+    {
+        return selection?.ResolutionSource is
+            DatabaseProfileResolutionSource.ExplicitOverride or
+            DatabaseProfileResolutionSource.PersistedCatalogFallback or
+            DatabaseProfileResolutionSource.LegacyDiscovery or
+            DatabaseProfileResolutionSource.AutoProvisionedManagedSqlite;
     }
 
     private async Task OpenDatabaseDialogAsync()

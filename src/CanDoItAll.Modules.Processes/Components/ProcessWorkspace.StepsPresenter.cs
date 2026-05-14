@@ -62,6 +62,8 @@ public partial class ProcessWorkspace
 
         public ProcessRoleEditorModel? SelectedCanvasDefinitionRole => workspace.SelectedCanvasDefinitionRole;
 
+        public ProcessArtifactExpectationEditorModel? SelectedCanvasDefinitionArtifact => workspace.SelectedCanvasDefinitionArtifact;
+
         public bool IsCanvasEditorOpen => workspace.IsCanvasEditorOpen;
 
         public bool IsCanvasEditorCreateMode => workspace.IsCanvasEditorCreateMode;
@@ -83,6 +85,8 @@ public partial class ProcessWorkspace
         public IReadOnlyList<ProcessStepEditorModel> CanvasEditorDependencyOptions => workspace.CanvasEditorDependencyOptions;
 
         public IReadOnlyList<ProcessSubprocessDefinitionOption> SubprocessDefinitionOptions => workspace.SubprocessDefinitionOptions;
+
+        public IReadOnlyList<ProcessWorkflowDefinitionOption> WorkflowOptions => workspace.workflowOptions;
 
         public void CaptureWorkbench(CanvasWorkbench? workbench)
         {
@@ -162,6 +166,21 @@ public partial class ProcessWorkspace
         public Task RecomposeDefinitionCanvasAsync()
         {
             return workspace.RecomposeDefinitionCanvasAsync();
+        }
+
+        public Task RecomposeDefinitionCanvasMainPathSpineAsync()
+        {
+            return workspace.RecomposeDefinitionCanvasMainPathSpineAsync();
+        }
+
+        public Task RecomposeDefinitionCanvasBranchFanOutAsync()
+        {
+            return workspace.RecomposeDefinitionCanvasBranchFanOutAsync();
+        }
+
+        public Task RecomposeDefinitionCanvasFeedbackLanesAsync()
+        {
+            return workspace.RecomposeDefinitionCanvasFeedbackLanesAsync();
         }
 
         public Task HandleCanvasToolboxWindowStateChangedAsync(CanvasWorkbenchWindowState state)

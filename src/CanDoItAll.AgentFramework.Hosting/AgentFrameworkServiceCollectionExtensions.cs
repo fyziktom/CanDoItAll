@@ -2,6 +2,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
+using CanDoItAll.Tools.Documents;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -23,6 +24,8 @@ public static class AgentFrameworkServiceCollectionExtensions
         services.TryAddSingleton<ISandboxWorkspaceStore>(_ => new FileSandboxWorkspaceStore(normalizedWorkspaceRoot, resolvedScope));
         services.TryAddSingleton<IAgentPackageService>(_ => new ZipAgentPackageService(normalizedWorkspaceRoot, resolvedScope));
         services.TryAddSingleton<IWorkspaceFileService>(_ => new WorkspaceFileService(normalizedWorkspaceRoot, resolvedScope));
+        services.TryAddSingleton<IPluginWorkspaceFiles, PluginWorkspaceFiles>();
+        services.TryAddSingleton<IWorkspacePathResolutionService>(_ => new WorkspacePathResolutionService(normalizedWorkspaceRoot, resolvedScope));
         services.TryAddSingleton<IWorkspaceProcessHost, LocalWorkspaceProcessHost>();
         services.TryAddSingleton<IWorkspaceCommandExecutionService>(serviceProvider => new WorkspaceCommandExecutionService(
             normalizedWorkspaceRoot,
@@ -51,6 +54,34 @@ public static class AgentFrameworkServiceCollectionExtensions
         services.TryAddSingleton<ICapabilityProofService, CapabilityProofService>();
         services.TryAddSingleton<IProviderDiagnosticsService>(serviceProvider => new ProviderDiagnosticsService(
             serviceProvider.GetRequiredService<IAgentRuntime>()));
+        services.TryAddSingleton<ISpreadsheetDocumentService, ClosedXmlSpreadsheetDocumentService>();
+        services.TryAddSingleton<IProjectStructureRuntimeGateway, UnavailableProjectStructureRuntimeGateway>();
+        services.AddBuiltInWorkflowExecutors();
+        services.TryAddSingleton<IWorkflowExecutorCatalog, WorkflowExecutorCatalog>();
+        services.TryAddSingleton<IWorkflowExecutorExecutionObserver, NullWorkflowExecutorExecutionObserver>();
+        services.TryAddSingleton<IWorkflowExecutorInvoker, WorkflowExecutorInvoker>();
+        services.TryAddSingleton<IWorkflowLlmComponentInvoker, MafWorkflowLlmComponentInvoker>();
+        services.TryAddSingleton<IWorkflowDefinitionValidator, WorkflowDefinitionValidator>();
+        services.TryAddSingleton<IWorkflowRuntimeBackendCatalog, WorkflowRuntimeBackendCatalog>();
+        services.TryAddSingleton<InMemoryWorkflowCatalogStore>();
+        services.TryAddScoped(serviceProvider => new InMemoryWorkflowCatalogService(
+            serviceProvider.GetRequiredService<InMemoryWorkflowCatalogStore>(),
+            serviceProvider.GetRequiredService<IWorkflowDefinitionValidator>(),
+            serviceProvider.GetRequiredService<IProviderProfileRegistry>(),
+            serviceProvider.GetRequiredService<IProviderProfileService>()));
+        services.TryAddScoped<IWorkflowCatalogService>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowCatalogService>());
+        services.TryAddScoped<IWorkflowComponentLibraryService>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowCatalogService>());
+        services.TryAddScoped<IWorkflowSettingsService>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowCatalogService>());
+        services.TryAddSingleton<InMemoryWorkflowRunStore>();
+        services.TryAddSingleton<IWorkflowRunStore>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowRunStore>());
+        services.TryAddSingleton<IWorkflowArtifactStore>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowRunStore>());
+        services.TryAddSingleton<IWorkflowExternalRequestStore>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowRunStore>());
+        services.TryAddSingleton<IWorkflowEventSink, NullWorkflowEventSink>();
+        services.TryAddSingleton<MafWorkflowCompiler>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutionBackend, MafInProcessWorkflowExecutionBackend>());
+        services.TryAddScoped<IWorkflowRuntimeManager, WorkflowRuntimeManager>();
+        services.TryAddScoped<IWorkflowProcessExecutorBridge, WorkflowProcessExecutorBridge>();
+        services.TryAddScoped<IWorkflowTestRunner, WorkflowTestRunner>();
         services.TryAddScoped<IAgentFrameworkWorkspaceService, AgentFrameworkWorkspaceService>();
 
         return services;

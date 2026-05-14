@@ -1,0 +1,24 @@
+@namespace CanDoItAll.Components.BaseLib
+
+<StatusCheckList Title="@Title"
+                 Description="@Description"
+                 Items="@Items"
+                 EmptyText="@EmptyText"
+                 data-testid="@TestId" />
+
+@code {
+    [Parameter]
+    public string? Title { get; set; } = "Verification";
+
+    [Parameter]
+    public string? Description { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<StatusCheckItem> Items { get; set; } = [];
+
+    [Parameter]
+    public string EmptyText { get; set; } = "No verification checks are available.";
+
+    [Parameter]
+    public string? TestId { get; set; }
+}

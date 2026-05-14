@@ -47,7 +47,10 @@
                                                  ToggleAgentWindow="Presenter.ToggleCanvasAgentWindowAsync"
                                                  ResolveCollisionsClicked="Presenter.ResolveDefinitionCanvasCollisionsAsync"
                                                  AddSpaceAroundClicked="Presenter.AddDefinitionCanvasSpaceAroundAsync"
-                                                 RecomposeCanvasClicked="Presenter.RecomposeDefinitionCanvasAsync" />
+                                                 RecomposeCanvasClicked="Presenter.RecomposeDefinitionCanvasAsync"
+                                                 MainPathSpineClicked="Presenter.RecomposeDefinitionCanvasMainPathSpineAsync"
+                                                 BranchFanOutClicked="Presenter.RecomposeDefinitionCanvasBranchFanOutAsync"
+                                                 FeedbackLanesClicked="Presenter.RecomposeDefinitionCanvasFeedbackLanesAsync" />
                 </ToolbarLeftContent>
                 <OverlayContent>
                     <ContextualAgentWorkspaceWindows WindowId="@Presenter.CanvasAgentWindowId"
@@ -95,6 +98,7 @@
                                               StateChanged="Presenter.HandleCanvasSelectionWindowStateChangedAsync">
                             <ProcessCanvasSelectionPanel DefinitionStep="@Presenter.SelectedCanvasDefinitionStep"
                                                          DefinitionRole="@Presenter.SelectedCanvasDefinitionRole"
+                                                         DefinitionArtifact="@Presenter.SelectedCanvasDefinitionArtifact"
                                                          OpenToolbox="Presenter.OpenCanvasToolboxAsync"
                                                          ClearSelection="Presenter.ClearCanvasSelectionAsync"
                                                          EditDefinitionStep="Presenter.EditDefinitionStepAsync"
@@ -153,6 +157,7 @@
                                 {
                                     <ProcessRoleEditorForm Model="@Presenter.CanvasRoleDraft"
                                                            ShowRemove="false"
+                                                           WorkflowOptions="@Presenter.WorkflowOptions"
                                                            TestId="processes-canvas-role-editor" />
                                 }
                                 else if (Presenter.CanvasStepDraft is not null)

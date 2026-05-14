@@ -4,6 +4,7 @@
     <ProjectReference Include="..\CanDoItAll.Components\CanDoItAll.Components.csproj" />
     <ProjectReference Include="..\CanDoItAll.Components.BaseLib\CanDoItAll.Components.BaseLib.csproj" />
     <ProjectReference Include="..\CanDoItAll.Components.CanvasLib\CanDoItAll.Components.CanvasLib.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Components.Charts\CanDoItAll.Components.Charts.csproj" />
     <ProjectReference Include="..\CanDoItAll.Components.Mermaid\CanDoItAll.Components.Mermaid.csproj" />
     <ProjectReference Include="..\CanDoItAll.Composition\CanDoItAll.Composition.csproj" />
     <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
@@ -15,10 +16,12 @@
     <ProjectReference Include="..\CanDoItAll.Modules.Automation\CanDoItAll.Modules.Automation.csproj" />
     <ProjectReference Include="..\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj" />
     <ProjectReference Include="..\CanDoItAll.Modules.Factory\CanDoItAll.Modules.Factory.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.Plugins\CanDoItAll.Modules.Plugins.csproj" />
     <ProjectReference Include="..\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
     <ProjectReference Include="..\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj" />
     <ProjectReference Include="..\CanDoItAll.Modules.Prompts\CanDoItAll.Modules.Prompts.csproj" />
     <ProjectReference Include="..\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.SchedulerPlanner\CanDoItAll.Modules.SchedulerPlanner.csproj" />
     <ProjectReference Include="..\CanDoItAll.Modules.Security\CanDoItAll.Modules.Security.csproj" />
     <ProjectReference Include="..\CanDoItAll.Modules.TestLab\CanDoItAll.Modules.TestLab.csproj" />
     <ProjectReference Include="..\CanDoItAll.Modules.Validation\CanDoItAll.Modules.Validation.csproj" />

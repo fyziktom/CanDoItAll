@@ -665,7 +665,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             successfulToolNames.Add(toolName);
         }
 
-        foreach (var toolName in ResolveSuccessfulExecutionLogToolNames(detail.ExecutionLog))
+        foreach (var toolName in ResolveSuccessfulExecutionLogToolNames(detail))
         {
             successfulToolNames.Add(toolName);
         }
@@ -673,20 +673,26 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return successfulToolNames;
     }
 
-    private static IReadOnlyList<string> ResolveSuccessfulExecutionLogToolNames(IReadOnlyList<ExecutionLogEntry> executionLog)
+    private static IReadOnlyList<string> ResolveSuccessfulExecutionLogToolNames(ExecutionRunDetail detail)
     {
+        var executionLog = detail.ExecutionLog;
         if (executionLog.Count == 0)
         {
             return [];
         }
 
+        var canTrustCompletedInternalToolLogs =
+            detail.Run.State == ExecutionState.Completed &&
+            detail.Run.Outcome == RunOutcome.Succeeded &&
+            HasCompletedDeclaredStepOutcome(detail);
         var toolNames = new HashSet<string>(StringComparer.Ordinal);
         foreach (var entry in executionLog)
         {
             if (!string.Equals(entry.Phase, "Tool", StringComparison.OrdinalIgnoreCase) ||
                 entry.State == ExecutionState.Failed ||
                 !TryResolveExecutionLogInvokedToolName(entry.Message, out var toolName) ||
-                !IsProviderNativeExecutionLogToolName(toolName))
+                (!IsProviderNativeExecutionLogToolName(toolName) &&
+                 !(canTrustCompletedInternalToolLogs && IsInternalMafExecutionLogToolName(toolName))))
             {
                 continue;
             }
@@ -836,6 +842,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
     private static bool IsProviderNativeExecutionLogToolName(string toolName)
     {
         return toolName.StartsWith("browser_", StringComparison.Ordinal);
+    }
+
+    private static bool IsInternalMafExecutionLogToolName(string toolName)
+    {
+        return toolName.StartsWith("project_structure_", StringComparison.Ordinal) ||
+               toolName.StartsWith("process_", StringComparison.Ordinal) ||
+               toolName.StartsWith("image_generation_", StringComparison.Ordinal);
     }
 
     private static IReadOnlyList<string> ResolveSuccessfulSessionToolNames(string? serializedSessionStateJson)

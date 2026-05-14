@@ -29,7 +29,9 @@ public static class WorkspaceExecutionAuditContext
             ExecutionInvocationMetadata.ResolveAllowedExternalTargetAliases(run),
             ExecutionInvocationMetadata.ResolveReadOnlyExternalTargetAliases(run),
             ExecutionInvocationMetadata.ResolveProcessCooperationMode(run),
-            ExecutionInvocationMetadata.ResolveProcessWorkspaceToolProfile(run));
+            ExecutionInvocationMetadata.ResolveProcessWorkspaceToolProfile(run),
+            ExecutionInvocationMetadata.ResolveProcessBrowserToolsAllowed(run),
+            ExecutionInvocationMetadata.ResolveProcessScaffoldToolOnly(run));
         return new Scope(previous);
     }
 
@@ -49,7 +51,9 @@ public static class WorkspaceExecutionAuditContext
         IReadOnlyList<string> AllowedExternalTargetAliases,
         IReadOnlyList<string> ReadOnlyExternalTargetAliases,
         AgentProcessCooperationMode? ProcessCooperationMode,
-        AgentWorkspaceToolProfileKind? WorkspaceToolProfileOverride);
+        AgentWorkspaceToolProfileKind? WorkspaceToolProfileOverride,
+        bool ProcessBrowserToolsAllowed,
+        bool ProcessScaffoldToolOnly);
 
     private sealed class Scope(WorkspaceExecutionAuditScopeState? previous) : IDisposable
     {

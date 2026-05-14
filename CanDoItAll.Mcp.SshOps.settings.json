@@ -1,6 +1,11 @@
 {
   "Server": {
     "Name": "CanDoItAll.Mcp.SshOps",
+    "IdleShutdown": {
+      "Enabled": true,
+      "InactivityTimeoutSeconds": 1800,
+      "CheckIntervalSeconds": 30
+    },
     "StateDirectory": ".mcp-state/sshops",
     "LogDirectory": ".mcp-state/sshops/logs",
     "MaxBundleBytes": 67108864,

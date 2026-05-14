@@ -176,6 +176,7 @@ public sealed partial class ProcessesService {
                 ProcessRuntimeEventTypes.ManualAgentStepRerun,
                 cancellationToken);
             await dbContext.SaveChangesAsync(cancellationToken);
+            NotifyRunObservationChanged(run.ProjectId, run.ProcessDefinitionId, run.Id);
         }
 
         return Result.Success();

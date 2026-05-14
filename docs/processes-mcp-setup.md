@@ -1,62 +1,36 @@
-# Processes MCP Setup
+# Processes MCP Transition Note
 
-## Purpose
+## Current Status
 
-Use `CanDoItAll.Mcp.Processes` as a local stdio MCP for process-definition and process-run work inside this repository. It talks to the same CanDoItAll process module and database profiles that the web host uses; it is not a second remote API surface.
+`CanDoItAll.Mcp.Processes` is not an active MCP server in the current repository shape. The process MCP was suppressed after process definition, runtime, launch-plan, escalation, assignment, artifact, and analytics work moved behind the web-hosted HTTP API.
 
-## What It Exposes
+Do not reinstall or call `candoitall_processes` in current sessions. It may return later if there is a real capability gap, but current docs and skills should treat the HTTP API as the supported path.
 
-- process-definition listing, editor loading, save, publish, delete, import, and export
-- process-run listing, detail lookup, start, step transition, and artifact recording
-- supporting option lookups for parties and executor candidates
-- process analytics and assignment-resolution helpers
+## Current Replacement
 
-## Standard Install
+Use the web API and the repo-managed process API skill:
 
-Run the full MCP reinstall from the repo root when you want the whole local MCP suite refreshed in one pass:
+- API overview: [API control plane](api-control-plane.md)
+- Skill guidance: [codex/skills/candoitall-api-processes/SKILL.md](../codex/skills/candoitall-api-processes/SKILL.md)
+- Source routes: [ProcessesApi.cs](../src/CanDoItAll.Web/Api/ProcessesApi.cs)
 
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Reinstall-CanDoItAllMcps.ps1
-```
+Key route families:
 
-That flow publishes the process MCP, syncs repo-managed skills, updates `.vscode\mcp.json`, updates `%USERPROFILE%\.codex\config.toml`, and records the entrypoint in `.artifacts\mcp-installs\install-manifest.json`.
+- definitions: `/api/processes/definitions`
+- templates: `/api/processes/templates`
+- runs: `/api/processes/runs`
+- run steps, artifacts, assignments, escalations, approvals, rework, and direct messages: `/api/processes/runs/{runId}/...`
+- launch planning and HR matching: `/api/processes/launch-plans`
+- analytics and option lookups: `/api/processes/analytics`, `/api/processes/executor-options`, `/api/processes/manager-agent-options`, `/api/processes/party-options/{projectId}`
 
-## Focused Install
+## Migration Guidance
 
-If you only need to republish the process MCP, run:
+1. Start `src/CanDoItAll.Web`.
+2. Check API status with `GET /api/access/status`.
+3. If API authorization is enabled, use a Settings-generated bearer token or an already-authorized token.
+4. Use the focused route for the smallest operation instead of fetching full process run detail by default.
+5. Read back the run, step, artifact, assignment, or escalation you changed.
 
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Install-CanDoItAllProcessesMcp.ps1
-```
+## Removed Setup Commands
 
-## Settings
-
-The local settings file is [CanDoItAll.Mcp.Processes.settings.json](/C:/repositories/CanDoItAll/CanDoItAll.Mcp.Processes.settings.json). It is intentionally small because this MCP is local-only:
-
-```json
-{
-  "CanDoItAllMcpLaneKind": "PublishedActive",
-  "Server": {
-    "Name": "CanDoItAll.Mcp.Processes",
-    "RepositoryRoot": ".",
-    "EnsureCurrentProfileReadyOnStartup": true
-  },
-  "Processes": {
-    "Runtime": {
-      "RequirePostgreSqlForAgentAutomation": true
-    }
-  }
-}
-```
-
-For governed runs that dispatch real AgentFramework agents, keep the active AppDbContext profile on PostgreSQL. The runtime guard intentionally blocks process-agent automation on SQLite when `RequirePostgreSqlForAgentAutomation` is enabled because SQLite becomes too slow for multi-step runs with tool receipts, artifacts, and recovery attempts.
-
-## Restart Requirement
-
-Codex and other MCP clients do not hot-discover new server registrations in the current session. After install or reinstall, restart the client so `candoitall_processes` is loaded and the new tool list becomes available.
-
-## Safety Rules
-
-- Keep process behavior canonical in `CanDoItAll.Modules.Processes`; do not fork definitions or runtime semantics inside the MCP.
-- Treat this MCP as an orchestration surface, not a replacement for application services.
-- Reinstall after significant process-tool changes so the published entrypoint and synced skill stay aligned with source.
+Old setup commands such as `Install-CanDoItAllProcessesMcp.ps1` and `candoitall_processes` should not be used for current work. The full MCP reinstall script now removes stale `candoitall_processes` config sections from local Codex config.

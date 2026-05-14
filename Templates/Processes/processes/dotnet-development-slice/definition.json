@@ -56,7 +56,8 @@
     "Validation evidence is missing or too broad to explain failures."
   ],
   "TailoringRules": [
-    "Skip or replace the Blazor SSR setup subprocess only through an explicit process edit when the repository already has a correct solution skeleton.",
+    "Skip the generic .NET solution setup subprocess only when the repository already has a correct solution skeleton and the skip records explicit proof.",
+    "Use the app archetype, test framework, validation type, and product root from the current project structure or upstream architecture notes; escalate when those inputs conflict or are missing.",
     "Split large features into multiple instances of this subprocess instead of widening one child run indefinitely.",
     "Keep parent approval and release gates in the parent process; this subprocess owns implementation proof only."
   ],
@@ -88,8 +89,8 @@
       "AllowsFallback": true,
       "RequiresExplicitApproval": false,
       "DefaultAllocationPercent": 60,
-      "CanvasX": 280,
-      "CanvasY": 40
+      "CanvasX": 899,
+      "CanvasY": -370
     },
     {
       "Key": "software-engineer",
@@ -103,8 +104,8 @@
       "AllowsFallback": true,
       "RequiresExplicitApproval": false,
       "DefaultAllocationPercent": 100,
-      "CanvasX": 520,
-      "CanvasY": 40
+      "CanvasX": -170,
+      "CanvasY": -1123.2
     },
     {
       "Key": "qa-lead",
@@ -118,8 +119,8 @@
       "AllowsFallback": true,
       "RequiresExplicitApproval": false,
       "DefaultAllocationPercent": 70,
-      "CanvasX": 760,
-      "CanvasY": 40
+      "CanvasX": 4139,
+      "CanvasY": 370
     }
   ],
   "Steps": [
@@ -128,23 +129,23 @@
       "Key": "slice-intake",
       "Title": "Capture implementation slice boundary",
       "Subtitle": "Small enough to finish",
-      "Notes": "Restate the parent scope as one bounded implementation slice with assumptions, exclusions, and validation hooks.",
+      "Notes": "Restate the parent scope as one bounded implementation slice with assumptions, exclusions, and validation hooks. This is an intake step: do not run restore, build, test, app startup, or browser validation here.",
       "StepKind": "Start",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": false,
       "InputContractSummary": "Parent scope packet, repository context, and requested behavior.",
-      "OutputContractSummary": "Slice boundary with acceptance criteria and excluded follow-up work.",
-      "EvidenceContractSummary": "Scope summary, assumptions, and validation plan outline.",
+      "OutputContractSummary": "Slice boundary with acceptance criteria, product-root intent, setup needs, and excluded follow-up work.",
+      "EvidenceContractSummary": "Scope summary, assumptions, product-root classification, setup/implementation handoff, and validation plan outline.",
       "DecisionRightsSummary": "Slice manager can narrow execution scope but cannot silently discard parent acceptance criteria.",
-      "ExceptionPolicySummary": "Block when the slice cannot be made small enough for atomic validation.",
+      "ExceptionPolicySummary": "Block when the slice cannot be made small enough for atomic validation or when the required product root, architecture, app archetype, or validation boundary is contradictory.",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 80,
-      "CanvasY": 200,
+      "CanvasX": 260,
+      "CanvasY": 0,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,
       "Dependencies": [],
@@ -168,7 +169,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by parent peer review and future slices.",
-          "ValidationRequirementSummary": "Must define acceptance criteria, exclusions, and validation hooks."
+          "ValidationRequirementSummary": "Must define acceptance criteria, exclusions, intended product root, setup needs, and validation hooks without using build/runtime/browser proof as intake evidence."
         }
       ],
       "ArtifactInputs": [],
@@ -185,7 +186,7 @@
       "Key": "slice-architecture-check",
       "Title": "Check architecture and source-of-truth impact",
       "Subtitle": "No hidden ownership drift",
-      "Notes": "Confirm canonical models, integration boundaries, persistence ownership, and UI/application/domain responsibilities before code starts.",
+      "Notes": "Confirm canonical models, integration boundaries, persistence ownership, and UI/application/domain responsibilities before code starts. This architecture step must not run restore, build, test, app startup, browser proof, or product-root file inspection for a missing greenfield root; record the intended root and setup handoff instead.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -195,15 +196,15 @@
       "OutputContractSummary": "Architecture decision record or explicit no-ADR rationale for this slice.",
       "EvidenceContractSummary": "Touched boundaries, source-of-truth decision, and risk notes.",
       "DecisionRightsSummary": "Slice architect can require split or escalation when ownership boundaries are unclear.",
-      "ExceptionPolicySummary": "Block on canonical model ambiguity, persistence ownership conflict, or unsafe cross-layer leakage.",
+      "ExceptionPolicySummary": "Block on canonical model ambiguity, persistence ownership conflict, unsafe cross-layer leakage, or contradictory project-structure requirements. Do not block only because a greenfield product root does not exist yet.",
       "TargetLeadHours": 3,
       "DependsOnStepKey": "slice-intake",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "solution-architect",
-      "CanvasX": 360,
-      "CanvasY": 200,
-      "BranchCanvasX": 0,
-      "BranchCanvasY": 0,
+      "CanvasX": 1340,
+      "CanvasY": 0,
+      "BranchCanvasX": 1600,
+      "BranchCanvasY": 357,
       "Dependencies": [
         {
           "DependsOnStepKey": "slice-intake",
@@ -224,9 +225,9 @@
           "Key": "slice-architecture-decision",
           "TemplateKey": "architecture-decision-record",
           "Title": "Slice architecture decision record",
-          "ArtifactKind": "DecisionRecord",
+          "ArtifactKind": "Decision",
           "IsRequired": true,
-          "TrustRequirement": "ApprovalRequired",
+          "TrustRequirement": "ReviewRequired",
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by implementation, peer review, and parent release approval.",
@@ -252,10 +253,10 @@
       "Key": "prepare-solution-skeleton",
       "Title": "Prepare solution skeleton subprocess",
       "Subtitle": "Nested scaffold run",
-      "Notes": "Launch the Blazor SSR solution setup subprocess when the slice starts from an empty or incomplete .NET solution.",
+      "Notes": "Launch the generic .NET solution setup subprocess when the slice starts from an empty or incomplete .NET solution. The child process must choose the app archetype and test framework from project structure or architecture notes, not from process-specific assumptions.",
       "StepKind": "Subprocess",
-      "SubprocessProcessKey": "dotnet-blazor-ssr-solution-setup",
-      "SubprocessDefinitionSnapshotName": ".NET Blazor SSR solution setup subprocess",
+      "SubprocessProcessKey": "dotnet-solution-setup",
+      "SubprocessDefinitionSnapshotName": ".NET solution setup subprocess",
       "AllowsManualSkip": true,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
@@ -269,8 +270,8 @@
       "DependsOnStepKey": "slice-architecture-check",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 640,
-      "CanvasY": 200,
+      "CanvasX": 2420,
+      "CanvasY": 0,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,
       "Dependencies": [
@@ -282,7 +283,7 @@
       "RoleAssignments": [
         {
           "RoleKey": "delivery-manager",
-          "ResponsibilityKind": "Accountable",
+          "ResponsibilityKind": "Responsible",
           "IsRequired": true,
           "FallbackOrder": 0,
           "RebindPolicySummary": "Rebind only to a manager-capable operator that can coordinate parent and child run evidence."
@@ -338,8 +339,8 @@
       "DependsOnStepKey": "prepare-solution-skeleton",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 920,
-      "CanvasY": 200,
+      "CanvasX": 3500,
+      "CanvasY": 0,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,
       "Dependencies": [
@@ -355,7 +356,7 @@
       "RoleAssignments": [
         {
           "RoleKey": "delivery-manager",
-          "ResponsibilityKind": "Accountable",
+          "ResponsibilityKind": "Responsible",
           "IsRequired": true,
           "FallbackOrder": 0,
           "RebindPolicySummary": "Rebind only to a manager-capable operator that can observe child implementation runs and request targeted rework."
@@ -413,10 +414,10 @@
       "DependsOnStepKey": "implement-code-change",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "qa-lead",
-      "CanvasX": 1200,
-      "CanvasY": 200,
-      "BranchCanvasX": 0,
-      "BranchCanvasY": 0,
+      "CanvasX": 4580,
+      "CanvasY": 0,
+      "BranchCanvasX": 4840,
+      "BranchCanvasY": 357,
       "Dependencies": [
         {
           "DependsOnStepKey": "implement-code-change",
@@ -480,8 +481,8 @@
       "DependsOnStepKey": "add-tests-and-proof",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 1480,
-      "CanvasY": 200,
+      "CanvasX": 5660,
+      "CanvasY": 0,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,
       "Dependencies": [

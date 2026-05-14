@@ -89,8 +89,8 @@
       "AllowsFallback": true,
       "RequiresExplicitApproval": false,
       "DefaultAllocationPercent": 60,
-      "CanvasX": 280,
-      "CanvasY": 40
+      "CanvasX": 899,
+      "CanvasY": 370
     },
     {
       "Key": "software-engineer",
@@ -104,8 +104,8 @@
       "AllowsFallback": true,
       "RequiresExplicitApproval": false,
       "DefaultAllocationPercent": 100,
-      "CanvasX": 520,
-      "CanvasY": 40
+      "CanvasX": 3059,
+      "CanvasY": 370
     },
     {
       "Key": "qa-lead",
@@ -144,8 +144,8 @@
       "DependsOnStepKey": "",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 80,
-      "CanvasY": 200,
+      "CanvasX": 260,
+      "CanvasY": 0,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,
       "Dependencies": [],
@@ -213,10 +213,10 @@
       "DependsOnStepKey": "feature-slice-intake",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "solution-architect",
-      "CanvasX": 360,
-      "CanvasY": 200,
-      "BranchCanvasX": 0,
-      "BranchCanvasY": 0,
+      "CanvasX": 1340,
+      "CanvasY": 0,
+      "BranchCanvasX": 1600,
+      "BranchCanvasY": 357,
       "Dependencies": [
         {
           "DependsOnStepKey": "feature-slice-intake",
@@ -296,10 +296,10 @@
       "DependsOnStepKey": "implementation-approach",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "qa-lead",
-      "CanvasX": 640,
-      "CanvasY": 200,
-      "BranchCanvasX": 0,
-      "BranchCanvasY": 0,
+      "CanvasX": 2420,
+      "CanvasY": 0,
+      "BranchCanvasX": 2618,
+      "BranchCanvasY": 357,
       "Dependencies": [
         {
           "DependsOnStepKey": "feature-slice-intake",
@@ -371,8 +371,8 @@
       "DependsOnStepKey": "test-contract",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 920,
-      "CanvasY": 200,
+      "CanvasX": 3500,
+      "CanvasY": 0,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,
       "Dependencies": [
@@ -454,10 +454,10 @@
       "DependsOnStepKey": "code-change",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "qa-lead",
-      "CanvasX": 1200,
-      "CanvasY": 200,
-      "BranchCanvasX": 0,
-      "BranchCanvasY": 0,
+      "CanvasX": 4580,
+      "CanvasY": 0,
+      "BranchCanvasX": 4840,
+      "BranchCanvasY": 357,
       "Dependencies": [
         {
           "DependsOnStepKey": "test-contract",
@@ -536,8 +536,8 @@
       "DependsOnStepKey": "targeted-validation",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 1480,
-      "CanvasY": 200,
+      "CanvasX": 5660,
+      "CanvasY": 0,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,
       "Dependencies": [

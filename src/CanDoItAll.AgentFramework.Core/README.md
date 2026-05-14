@@ -26,11 +26,11 @@ Framework references:
 
 Direct package references:
 
-- `Microsoft.Agents.AI.Workflows (1.0.0)`
+- `OpenTelemetry.Api (1.15.3)`
 
 ## Architecture Notes
 
-Keep AgentFramework model contracts, persistence, provider-neutral orchestration, and provider/runtime adapters separated. Process automation should consume this layer through the AgentFramework module bridge instead of reaching into provider-specific code directly.
+Keep AgentFramework model contracts, persistence, provider-neutral orchestration, and provider/runtime adapters separated. MAF-specific workflow adapters and checkpoint helpers belong in `CanDoItAll.AgentFramework.Maf`. Process automation should consume this layer through the AgentFramework module bridge instead of reaching into provider-specific code directly.
 
 ## Related Docs
 

@@ -125,28 +125,29 @@ public sealed partial class AppSmokeTests
 
         await templateDialog.GetByRole(AriaRole.Button, new() { Name = "Roles", Exact = true }).ClickAsync();
         await page.GetByTestId("processes-template-library-add-button").ClickAsync();
+        var roleDialog = page.GetByTestId("processes-role-details-dialog");
+        await roleDialog.WaitForAsync();
+        await templateDialog.WaitForAsync(new() { State = WaitForSelectorState.Detached });
+        await WaitForBodyTextAsync(page, "Role template loaded", 15_000);
+        var roleTemplateNotificationText = await page.Locator(".rz-notification").InnerTextAsync();
+        Assert.Contains("Role template loaded", roleTemplateNotificationText, StringComparison.OrdinalIgnoreCase);
+
+        await roleDialog.ScreenshotAsync(new()
+        {
+            Path = Path.Combine(artifactsDir, "05-role-template-details-dialog.png")
+        });
+
+        await page.GetByTestId("processes-role-dialog-save").ClickAsync();
         await WaitForBodyTextAsync(page, "Role added", 15_000);
         var roleNotificationText = await page.Locator(".rz-notification").InnerTextAsync();
         Assert.Contains("Role added", roleNotificationText, StringComparison.OrdinalIgnoreCase);
+        await roleDialog.WaitForAsync(new() { State = WaitForSelectorState.Detached });
+
+        await page.GetByTestId("processes-templates-button").ClickAsync();
+        templateDialog = page.GetByTestId("processes-template-library-dialog");
         await templateDialog.WaitForAsync();
-
-        var overlayProof = await page.EvaluateAsync<TemplateOverlayProof>(
-            @"() => {
-                const notification = document.querySelector('.rz-notification');
-                const dialog = document.querySelector('[data-testid=""processes-template-library-dialog""]');
-                return {
-                    notificationZIndex: notification ? parseInt(getComputedStyle(notification).zIndex || '0', 10) : 0,
-                    dialogZIndex: dialog ? parseInt(getComputedStyle(dialog).zIndex || '0', 10) : 0
-                };
-            }");
-        Assert.NotNull(overlayProof);
-        Assert.True(overlayProof!.NotificationZIndex > overlayProof.DialogZIndex, "Expected notifications to render above the templates modal.");
-
-        await page.Locator(".rz-notification").First.ScreenshotAsync(new()
-        {
-            Path = Path.Combine(artifactsDir, "05-template-library-notification-over-modal.png")
-        });
-
+        await page.GetByTestId("processes-template-library-list-scroll").WaitForAsync();
+        await page.GetByTestId("processes-template-library-detail-scroll").WaitForAsync();
         await templateDialog.GetByRole(AriaRole.Button, new() { Name = "Processes", Exact = true }).ClickAsync();
         await page.GetByTestId("processes-template-library-item-ai-assisted-change-delivery").WaitForAsync();
         await page.GetByTestId("processes-template-library-item-ai-assisted-change-delivery").ClickAsync();
@@ -188,13 +189,6 @@ public sealed partial class AppSmokeTests
         await WaitForBodyTextAsync(page, "AI evaluation lead", 15_000);
 
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
-    }
-
-    private sealed class TemplateOverlayProof
-    {
-        public int NotificationZIndex { get; set; }
-
-        public int DialogZIndex { get; set; }
     }
 
     private sealed class MermaidContainmentProof

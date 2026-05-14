@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
@@ -133,14 +134,18 @@ public sealed partial class ProcessesService
                 return Result<Guid>.Failure(CreateRunStartGraphError());
             }
 
+            var stepRoleRequirementsByStepId = BuildStepRoleRequirementsByStepId(context.StepRoleRequirements);
+            var artifactExpectationTitlesByStepId = BuildArtifactExpectationTitlesByStepId(context.ArtifactExpectations);
             for (var index = 0; index < context.Steps.Count; index++)
             {
                 var step = context.Steps[index];
-                var stepRoleRequirements = context.StepRoleRequirements
-                    .Where(item => item.StepDefinitionId == step.Id)
-                    .ToList();
-                var currentAssignment = ResolveCurrentExecutorAssignment(step, stepRoleRequirements, resolvedAssignments);
-                var capabilityGapSeverity = ResolveStepCapabilityGapSeverity(step, stepRoleRequirements, resolvedAssignments);
+                var stepRoleRequirements = stepRoleRequirementsByStepId.GetValueOrDefault(step.Id) ?? [];
+                var effectiveAssignmentsByRoleRequirementId = BuildEffectiveAssignmentsByRoleRequirementId(step.Id, resolvedAssignments);
+                var currentAssignment = ResolveCurrentExecutorAssignment(step, stepRoleRequirements, effectiveAssignmentsByRoleRequirementId);
+                var capabilityGapSeverity = ResolveStepCapabilityGapSeverity(stepRoleRequirements, effectiveAssignmentsByRoleRequirementId);
+                var evidenceExpectationSummary = artifactExpectationTitlesByStepId.TryGetValue(step.Id, out var artifactExpectationTitles)
+                    ? string.Join("; ", artifactExpectationTitles)
+                    : string.Empty;
                 var status = rootStepIds.Contains(step.Id)
                     ? (step.RequiresApproval ? ProcessStepRunStatus.WaitingApproval : ProcessStepRunStatus.Ready)
                     : ProcessStepRunStatus.Pending;
@@ -177,9 +182,7 @@ public sealed partial class ProcessesService
                         HandoffSummary = step.InputContractSummary,
                         AssignmentReason = currentAssignment?.BindingReason ?? "No executor is currently bound to the required role.",
                         ExpectedOutcome = step.OutputContractSummary,
-                        EvidenceExpectationSummary = string.Join(
-                            "; ",
-                            context.ArtifactExpectations.Where(item => item.StepDefinitionId == step.Id).Select(item => item.Title)),
+                        EvidenceExpectationSummary = evidenceExpectationSummary,
                         CreatedAtUtc = now
                     },
                     cancellationToken);
@@ -252,6 +255,7 @@ public sealed partial class ProcessesService
         }
 
         await processOutboxService.ProcessAsync(outboxId, cancellationToken);
+        NotifyRunObservationChanged(run.ProjectId, run.ProcessDefinitionId, run.Id);
 
         return Result<Guid>.Success(run.Id);
     }
@@ -265,6 +269,7 @@ public sealed partial class ProcessesService
         Dictionary<Guid, ProcessLaunchCandidate>? selectedCandidatesByRoleRequirementId = null;
         Dictionary<ProjectPartyAssignmentRole, List<ProjectPartyAssignmentDetail>>? projectAssignmentLookup = null;
         IReadOnlyDictionary<Guid, ProcessLaunchCandidate> directAiCandidatesByRoleRequirementId = new Dictionary<Guid, ProcessLaunchCandidate>();
+        IReadOnlyDictionary<Guid, ProcessLaunchCandidate> directWorkflowCandidatesByRoleRequirementId = new Dictionary<Guid, ProcessLaunchCandidate>();
         IReadOnlyDictionary<Guid, InheritedRunAssignmentCandidate> inheritedAssignmentsByRoleRequirementId = new Dictionary<Guid, InheritedRunAssignmentCandidate>();
         ProcessDefinition? definition;
         ProcessDefinitionVersion? publishedVersion;
@@ -481,6 +486,13 @@ public sealed partial class ProcessesService
                 cancellationToken);
         }
 
+        if (launchPlan is null)
+        {
+            directWorkflowCandidatesByRoleRequirementId = await BuildDirectRunWorkflowCandidateAssignmentsAsync(
+                roles,
+                cancellationToken);
+        }
+
         var defaultRunName = launchPlan is not null
             ? launchPlan.Name
             : $"{definition.Name} / {clock.GetUtcNow():yyyy-MM-dd HH:mm}";
@@ -501,6 +513,7 @@ public sealed partial class ProcessesService
                 defaultRunName,
                 selectedCandidatesByRoleRequirementId ?? [],
                 directAiCandidatesByRoleRequirementId,
+                directWorkflowCandidatesByRoleRequirementId,
                 inheritedAssignmentsByRoleRequirementId,
                 projectAssignmentLookup ?? [],
                 parentContext.ParentRun,
@@ -717,7 +730,10 @@ public sealed partial class ProcessesService
             .SingleOrDefaultAsync(cancellationToken);
         if (existingRun is not null)
         {
-            return Result<ProcessSubprocessRunStartResult>.Success(existingRun);
+            return Result<ProcessSubprocessRunStartResult>.Success(await ReconcileExistingSubprocessRunStatusAsync(
+                dbContext,
+                existingRun,
+                cancellationToken));
         }
 
         var startResult = await StartRunAsync(
@@ -754,6 +770,48 @@ public sealed partial class ProcessesService
         return Result<ProcessSubprocessRunStartResult>.Success(startedRun);
     }
 
+    private async Task<ProcessSubprocessRunStartResult> ReconcileExistingSubprocessRunStatusAsync(
+        AppDbContext dbContext,
+        ProcessSubprocessRunStartResult existingRun,
+        CancellationToken cancellationToken)
+    {
+        if (existingRun.Status != ProcessRunStatus.Active)
+        {
+            return existingRun;
+        }
+
+        var stepRuns = await dbContext.Set<ProcessStepRun>()
+            .AsNoTracking()
+            .Where(item => item.ProcessRunId == existingRun.RunId)
+            .ToListAsync(cancellationToken);
+        var resolvedStatus = ProcessRunStatusResolver.Resolve(stepRuns);
+        if (resolvedStatus == existingRun.Status)
+        {
+            return existingRun;
+        }
+
+        var run = await dbContext.Set<ProcessRun>()
+            .SingleAsync(item => item.Id == existingRun.RunId, cancellationToken);
+        var now = clock.GetUtcNow();
+        run.Status = resolvedStatus;
+        run.UpdatedAtUtc = now;
+        run.CompletedAtUtc = resolvedStatus is ProcessRunStatus.Completed or ProcessRunStatus.Failed or ProcessRunStatus.Cancelled
+            ? now
+            : null;
+        run.ConcurrencyToken = Guid.NewGuid();
+
+        logger.LogWarning(
+            "Reconciled stale active subprocess run {RunId} to {Status} from its step ledger.",
+            existingRun.RunId,
+            resolvedStatus);
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return existingRun with
+        {
+            Status = resolvedStatus
+        };
+    }
+
     private static ProcessRunAssignment ResolveRunAssignment(
         ProcessRoleRequirement role,
         Guid processRunId,
@@ -767,16 +825,59 @@ public sealed partial class ProcessesService
                 ProcessRunId = processRunId,
                 RoleRequirementId = role.Id,
                 PartyId = launchCandidate.PartyId,
+                WorkflowDefinitionId = launchCandidate.WorkflowDefinitionId,
+                WorkflowVersionId = launchCandidate.WorkflowVersionId,
                 DisplayName = launchCandidate.DisplayName,
-                ExecutorKind = launchCandidate.ExecutorKind,
+                ExecutorKind = ProcessExecutorKindNames.Normalize(launchCandidate.ExecutorKind),
                 BindingReason = string.IsNullOrWhiteSpace(launchCandidate.RecommendationSummary)
                     ? "Bound from the approved launch plan."
                     : launchCandidate.RecommendationSummary,
                 SourceRegistryKey = launchCandidate.SourceRegistryKey,
                 SnapshotSummary = role.SnapshotSummary,
                 IsFallback = false,
-                IsCapabilityGap = launchCandidate.CandidateKind == ProcessLaunchCandidateKind.Gap,
+                IsCapabilityGap = launchCandidate.CandidateKind == ProcessLaunchCandidateKind.Gap || !HasExecutableTarget(launchCandidate),
                 AllowsDirectMessaging = launchCandidate.AllowsDirectMessaging && launchCandidate.CandidateKind != ProcessLaunchCandidateKind.Gap
+            };
+        }
+
+        if (context.DirectWorkflowCandidatesByRoleRequirementId.TryGetValue(role.Id, out var directWorkflowCandidate))
+        {
+            return new ProcessRunAssignment
+            {
+                ProcessRunId = processRunId,
+                RoleRequirementId = role.Id,
+                WorkflowDefinitionId = directWorkflowCandidate.WorkflowDefinitionId,
+                WorkflowVersionId = directWorkflowCandidate.WorkflowVersionId,
+                DisplayName = directWorkflowCandidate.DisplayName,
+                ExecutorKind = ProcessExecutorKindNames.Workflow,
+                BindingReason = string.IsNullOrWhiteSpace(directWorkflowCandidate.RecommendationSummary)
+                    ? "Matched preferred workflow definition for direct process execution."
+                    : directWorkflowCandidate.RecommendationSummary,
+                SourceRegistryKey = directWorkflowCandidate.SourceRegistryKey,
+                SnapshotSummary = role.SnapshotSummary,
+                IsFallback = false,
+                IsCapabilityGap = false,
+                AllowsDirectMessaging = false
+            };
+        }
+
+        if (IsWorkflowRole(role))
+        {
+            return new ProcessRunAssignment
+            {
+                ProcessRunId = processRunId,
+                RoleRequirementId = role.Id,
+                WorkflowDefinitionId = role.PreferredWorkflowDefinitionId,
+                WorkflowVersionId = role.PreferredWorkflowVersionId,
+                DisplayName = string.IsNullOrWhiteSpace(role.DisplayName)
+                    ? "Unassigned workflow"
+                    : role.DisplayName,
+                ExecutorKind = ProcessExecutorKindNames.Workflow,
+                BindingReason = "No active workflow definition was selected for direct process execution.",
+                SnapshotSummary = role.SnapshotSummary,
+                IsFallback = false,
+                IsCapabilityGap = true,
+                AllowsDirectMessaging = false
             };
         }
 
@@ -793,7 +894,7 @@ public sealed partial class ProcessesService
                 RoleRequirementId = role.Id,
                 PartyId = directAiCandidate.PartyId,
                 DisplayName = directAiCandidate.DisplayName,
-                ExecutorKind = directAiCandidate.ExecutorKind,
+                ExecutorKind = ProcessExecutorKindNames.Normalize(directAiCandidate.ExecutorKind),
                 BindingReason = string.IsNullOrWhiteSpace(directAiCandidate.RecommendationSummary)
                     ? "Matched bound AI resource from the shared agent directory for direct assisted execution."
                     : directAiCandidate.RecommendationSummary,
@@ -813,8 +914,10 @@ public sealed partial class ProcessesService
                 ProcessRunId = processRunId,
                 RoleRequirementId = role.Id,
                 PartyId = parentAssignment.PartyId,
+                WorkflowDefinitionId = parentAssignment.WorkflowDefinitionId,
+                WorkflowVersionId = parentAssignment.WorkflowVersionId,
                 DisplayName = parentAssignment.DisplayName,
-                ExecutorKind = parentAssignment.ExecutorKind,
+                ExecutorKind = ProcessExecutorKindNames.Normalize(parentAssignment.ExecutorKind),
                 BindingReason = BuildInheritedAssignmentReason(inheritedCandidate),
                 SourceRegistryKey = string.IsNullOrWhiteSpace(parentAssignment.SourceRegistryKey)
                     ? $"parent-run-assignment:{parentAssignment.Id:D}"
@@ -832,7 +935,9 @@ public sealed partial class ProcessesService
             RoleRequirementId = role.Id,
             PartyId = candidate?.PartyId,
             DisplayName = candidate?.PartyDisplayName ?? "Unassigned role",
-            ExecutorKind = candidate is not null ? candidate.PartyTypeLabel : role.PreferredExecutorKind,
+            ExecutorKind = candidate is not null
+                ? ProcessExecutorKindNames.Normalize(candidate.PartyTypeLabel)
+                : ProcessExecutorKindNames.Normalize(role.PreferredExecutorKind),
             BindingReason = candidate is not null
                 ? $"Matched project portfolio role {candidate.Role}."
                 : "No eligible project assignment was pre-bound to this role.",
@@ -841,6 +946,12 @@ public sealed partial class ProcessesService
             IsCapabilityGap = candidate is null,
             AllowsDirectMessaging = candidate is not null
         };
+    }
+
+    private static bool HasExecutableTarget(ProcessLaunchCandidate candidate)
+    {
+        return candidate.PartyId.HasValue ||
+            candidate.WorkflowDefinitionId.HasValue && candidate.WorkflowVersionId.HasValue;
     }
 
     private sealed record RunStartContext(
@@ -859,6 +970,7 @@ public sealed partial class ProcessesService
         string DefaultRunName,
         IReadOnlyDictionary<Guid, ProcessLaunchCandidate> SelectedLaunchCandidatesByRoleRequirementId,
         IReadOnlyDictionary<Guid, ProcessLaunchCandidate> DirectAiCandidatesByRoleRequirementId,
+        IReadOnlyDictionary<Guid, ProcessLaunchCandidate> DirectWorkflowCandidatesByRoleRequirementId,
         IReadOnlyDictionary<Guid, InheritedRunAssignmentCandidate> InheritedAssignmentsByRoleRequirementId,
         IReadOnlyDictionary<ProjectPartyAssignmentRole, List<ProjectPartyAssignmentDetail>> ProjectAssignmentLookup,
         ProcessRun? ParentRun,
@@ -885,6 +997,46 @@ public sealed partial class ProcessesService
     private sealed record InheritedRoleAssignmentSource(
         ProcessRunAssignment Assignment,
         ProcessRoleRequirement ParentRole);
+
+    private static Dictionary<Guid, List<ProcessStepRoleAssignmentRequirement>> BuildStepRoleRequirementsByStepId(
+        IReadOnlyList<ProcessStepRoleAssignmentRequirement> stepRoleRequirements)
+    {
+        var requirementsByStepId = new Dictionary<Guid, List<ProcessStepRoleAssignmentRequirement>>();
+        requirementsByStepId.EnsureCapacity(stepRoleRequirements.Count);
+
+        foreach (var requirement in stepRoleRequirements)
+        {
+            if (!requirementsByStepId.TryGetValue(requirement.StepDefinitionId, out var stepRequirements))
+            {
+                stepRequirements = [];
+                requirementsByStepId[requirement.StepDefinitionId] = stepRequirements;
+            }
+
+            stepRequirements.Add(requirement);
+        }
+
+        return requirementsByStepId;
+    }
+
+    private static Dictionary<Guid, List<string>> BuildArtifactExpectationTitlesByStepId(
+        IReadOnlyList<ProcessArtifactExpectation> artifactExpectations)
+    {
+        var titlesByStepId = new Dictionary<Guid, List<string>>();
+        titlesByStepId.EnsureCapacity(artifactExpectations.Count);
+
+        foreach (var artifactExpectation in artifactExpectations)
+        {
+            if (!titlesByStepId.TryGetValue(artifactExpectation.StepDefinitionId, out var titles))
+            {
+                titles = [];
+                titlesByStepId[artifactExpectation.StepDefinitionId] = titles;
+            }
+
+            titles.Add(artifactExpectation.Title);
+        }
+
+        return titlesByStepId;
+    }
 
     private async Task<IReadOnlyDictionary<Guid, InheritedRunAssignmentCandidate>> BuildInheritedSubprocessAssignmentsAsync(
         AppDbContext dbContext,
@@ -1064,6 +1216,59 @@ public sealed partial class ProcessesService
             : parentAssignment.BindingReason.Trim();
 
         return $"Inherited subprocess role binding from parent role '{inheritedCandidate.ParentRole.DisplayName}' by {inheritedCandidate.MatchReason}. Parent binding: {parentBinding}";
+    }
+
+    private async Task<IReadOnlyDictionary<Guid, ProcessLaunchCandidate>> BuildDirectRunWorkflowCandidateAssignmentsAsync(
+        IReadOnlyList<ProcessRoleRequirement> roles,
+        CancellationToken cancellationToken)
+    {
+        var workflowRoles = roles
+            .Where(role => IsWorkflowRole(role) && role.PreferredWorkflowDefinitionId.HasValue)
+            .ToList();
+        if (workflowRoles.Count == 0)
+        {
+            return new Dictionary<Guid, ProcessLaunchCandidate>();
+        }
+
+        var activeWorkflows = (await workflowCatalogService.ListDefinitionsAsync(cancellationToken))
+            .Where(item => item.Status == WorkflowLifecycleStatus.Active)
+            .ToList();
+        if (activeWorkflows.Count == 0)
+        {
+            return new Dictionary<Guid, ProcessLaunchCandidate>();
+        }
+
+        var selectedCandidatesByRoleId = new Dictionary<Guid, ProcessLaunchCandidate>();
+        foreach (var role in workflowRoles)
+        {
+            var workflow = activeWorkflows.FirstOrDefault(item =>
+                item.Id.Value == role.PreferredWorkflowDefinitionId!.Value &&
+                (!role.PreferredWorkflowVersionId.HasValue || item.VersionId.Value == role.PreferredWorkflowVersionId.Value));
+            if (workflow is null)
+            {
+                continue;
+            }
+
+            selectedCandidatesByRoleId[role.Id] = new ProcessLaunchCandidate
+            {
+                CandidateKind = ProcessLaunchCandidateKind.Workflow,
+                WorkflowDefinitionId = workflow.Id.Value,
+                WorkflowVersionId = workflow.VersionId.Value,
+                DisplayName = workflow.Name,
+                ExecutorKind = ProcessExecutorKindNames.Workflow,
+                Score = 104m,
+                IsRecommended = true,
+                AllowsDirectMessaging = false,
+                RequiresProvisioning = false,
+                RecommendationSummary = $"Matched preferred active workflow '{workflow.Name}' for direct process execution.",
+                AvailabilitySummary = $"{workflow.Status} / {workflow.PreferredBackend}",
+                SourceRegistryKey = $"workflow:{workflow.Id.Value:D}:{workflow.VersionId.Value:D}",
+                MetadataJson = "{}",
+                CreatedAtUtc = clock.GetUtcNow()
+            };
+        }
+
+        return selectedCandidatesByRoleId;
     }
 
     private async Task<IReadOnlyDictionary<Guid, ProcessLaunchCandidate>> BuildDirectRunAiCandidateAssignmentsAsync(
@@ -1268,45 +1473,91 @@ public sealed partial class ProcessesService
     private static ProcessRunAssignment? ResolveCurrentExecutorAssignment(
         ProcessStepDefinition stepDefinition,
         IReadOnlyList<ProcessStepRoleAssignmentRequirement> stepRoleRequirements,
-        IReadOnlyList<ProcessRunAssignment> runAssignments)
+        IReadOnlyDictionary<Guid, ProcessRunAssignment> assignmentsByRoleRequirementId)
     {
-        if (stepRoleRequirements.Count == 0 || runAssignments.Count == 0)
+        if (stepRoleRequirements.Count == 0 || assignmentsByRoleRequirementId.Count == 0)
         {
             return null;
         }
 
-        var assignmentsByRoleRequirementId = BuildEffectiveAssignmentsByRoleRequirementId(stepDefinition.Id, runAssignments);
         foreach (var responsibilityKind in GetExecutorPriority(stepDefinition.StepKind))
         {
-            var candidate = stepRoleRequirements
-                .Where(item => item.ResponsibilityKind == responsibilityKind)
-                .OrderBy(item => item.FallbackOrder)
-                .Select(item => assignmentsByRoleRequirementId.GetValueOrDefault(item.RoleRequirementId))
-                .FirstOrDefault(item => item is not null);
+            var candidate = ResolveAssignmentByResponsibility(
+                stepRoleRequirements,
+                assignmentsByRoleRequirementId,
+                responsibilityKind);
             if (candidate is not null)
             {
                 return candidate;
             }
         }
 
-        return stepRoleRequirements
-            .OrderBy(item => item.IsRequired ? 0 : 1)
-            .ThenBy(item => item.FallbackOrder)
-            .Select(item => assignmentsByRoleRequirementId.GetValueOrDefault(item.RoleRequirementId))
-            .FirstOrDefault(item => item is not null);
+        return ResolveFallbackAssignment(stepRoleRequirements, assignmentsByRoleRequirementId);
+    }
+
+    private static ProcessRunAssignment? ResolveAssignmentByResponsibility(
+        IReadOnlyList<ProcessStepRoleAssignmentRequirement> stepRoleRequirements,
+        IReadOnlyDictionary<Guid, ProcessRunAssignment> assignmentsByRoleRequirementId,
+        ProcessResponsibilityKind responsibilityKind)
+    {
+        ProcessRunAssignment? selectedAssignment = null;
+        var selectedFallbackOrder = 0;
+
+        foreach (var requirement in stepRoleRequirements)
+        {
+            if (requirement.ResponsibilityKind != responsibilityKind ||
+                !assignmentsByRoleRequirementId.TryGetValue(requirement.RoleRequirementId, out var assignment))
+            {
+                continue;
+            }
+
+            if (selectedAssignment is null || requirement.FallbackOrder < selectedFallbackOrder)
+            {
+                selectedAssignment = assignment;
+                selectedFallbackOrder = requirement.FallbackOrder;
+            }
+        }
+
+        return selectedAssignment;
+    }
+
+    private static ProcessRunAssignment? ResolveFallbackAssignment(
+        IReadOnlyList<ProcessStepRoleAssignmentRequirement> stepRoleRequirements,
+        IReadOnlyDictionary<Guid, ProcessRunAssignment> assignmentsByRoleRequirementId)
+    {
+        ProcessRunAssignment? selectedAssignment = null;
+        var selectedIsRequired = false;
+        var selectedFallbackOrder = 0;
+
+        foreach (var requirement in stepRoleRequirements)
+        {
+            if (!assignmentsByRoleRequirementId.TryGetValue(requirement.RoleRequirementId, out var assignment))
+            {
+                continue;
+            }
+
+            if (selectedAssignment is null ||
+                requirement.IsRequired && !selectedIsRequired ||
+                requirement.IsRequired == selectedIsRequired && requirement.FallbackOrder < selectedFallbackOrder)
+            {
+                selectedAssignment = assignment;
+                selectedIsRequired = requirement.IsRequired;
+                selectedFallbackOrder = requirement.FallbackOrder;
+            }
+        }
+
+        return selectedAssignment;
     }
 
     private static ProcessCapabilityGapSeverity ResolveStepCapabilityGapSeverity(
-        ProcessStepDefinition stepDefinition,
         IReadOnlyList<ProcessStepRoleAssignmentRequirement> stepRoleRequirements,
-        IReadOnlyList<ProcessRunAssignment> runAssignments)
+        IReadOnlyDictionary<Guid, ProcessRunAssignment> assignmentsByRoleRequirementId)
     {
         if (stepRoleRequirements.Count == 0)
         {
             return ProcessCapabilityGapSeverity.None;
         }
 
-        var assignmentsByRoleRequirementId = BuildEffectiveAssignmentsByRoleRequirementId(stepDefinition.Id, runAssignments);
         foreach (var requirement in stepRoleRequirements)
         {
             if (!assignmentsByRoleRequirementId.TryGetValue(requirement.RoleRequirementId, out var assignment))
@@ -1332,15 +1583,52 @@ public sealed partial class ProcessesService
         Guid stepDefinitionId,
         IReadOnlyList<ProcessRunAssignment> runAssignments)
     {
-        return runAssignments
-            .Where(item => !item.StepDefinitionId.HasValue || item.StepDefinitionId == stepDefinitionId)
-            .GroupBy(item => item.RoleRequirementId)
-            .ToDictionary(
-                group => group.Key,
-                group => group
-                    .OrderByDescending(item => item.StepDefinitionId == stepDefinitionId)
-                    .ThenByDescending(item => item.PartyId.HasValue)
-                    .First());
+        var assignmentsByRoleRequirementId = new Dictionary<Guid, ProcessRunAssignment>();
+        assignmentsByRoleRequirementId.EnsureCapacity(runAssignments.Count);
+
+        foreach (var assignment in runAssignments)
+        {
+            if (assignment.StepDefinitionId.HasValue && assignment.StepDefinitionId.Value != stepDefinitionId)
+            {
+                continue;
+            }
+
+            if (!assignmentsByRoleRequirementId.TryGetValue(assignment.RoleRequirementId, out var currentAssignment) ||
+                IsPreferredRunAssignment(stepDefinitionId, assignment, currentAssignment))
+            {
+                assignmentsByRoleRequirementId[assignment.RoleRequirementId] = assignment;
+            }
+        }
+
+        return assignmentsByRoleRequirementId;
+    }
+
+    private static bool IsPreferredRunAssignment(
+        Guid stepDefinitionId,
+        ProcessRunAssignment candidate,
+        ProcessRunAssignment current)
+    {
+        var candidateIsStepScoped = candidate.StepDefinitionId == stepDefinitionId;
+        var currentIsStepScoped = current.StepDefinitionId == stepDefinitionId;
+        if (candidateIsStepScoped != currentIsStepScoped)
+        {
+            return candidateIsStepScoped;
+        }
+
+        var candidateHasExecutableTarget = HasExecutableTarget(candidate);
+        var currentHasExecutableTarget = HasExecutableTarget(current);
+        if (candidateHasExecutableTarget != currentHasExecutableTarget)
+        {
+            return candidateHasExecutableTarget;
+        }
+
+        return false;
+    }
+
+    private static bool HasExecutableTarget(ProcessRunAssignment assignment)
+    {
+        return assignment.PartyId.HasValue ||
+            assignment.WorkflowDefinitionId.HasValue && assignment.WorkflowVersionId.HasValue;
     }
 
     private static IReadOnlyList<ProcessResponsibilityKind> GetExecutorPriority(ProcessStepKind stepKind)

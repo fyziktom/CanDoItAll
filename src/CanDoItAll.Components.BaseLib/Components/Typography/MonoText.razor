@@ -1,8 +1,15 @@
 @namespace CanDoItAll.Components.BaseLib
 
-<TextBlock Class="@Class" TextStyle="TextStyle.Mono" Value="@Text">
-    @ChildContent
-</TextBlock>
+@if (ChildContent is null)
+{
+    <TextBlock Class="@Class" TextStyle="TextStyle.Mono" Value="@Text" />
+}
+else
+{
+    <TextBlock Class="@Class" TextStyle="TextStyle.Mono">
+        @ChildContent
+    </TextBlock>
+}
 
 @code {
     [Parameter]

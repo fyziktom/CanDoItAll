@@ -7,6 +7,13 @@ description: Validate a CanDoItAll bundle after preparation, when reopening a st
 
 Use this skill when the bundle needs a gate, not more implementation. It exists to stop weak bundles from being treated as executable and to stop weak execution proof from being treated as completion.
 
+## GPT-5.5 Gate Posture
+
+- Decide the gate result from evidence, not from how much process text exists.
+- Prefer a short `Pass`, `Fail`, or `Blocked` decision with concrete repairs over a long restatement of the bundle.
+- If evidence is missing, name the missing artifact, command, row, source input, or prerequisite. Do not infer completion from intention.
+- After compaction or resume, reread the bundle files and validator output before passing a gate from memory.
+
 ## Stages
 
 - `Readiness gate` after preparation or bundle repair

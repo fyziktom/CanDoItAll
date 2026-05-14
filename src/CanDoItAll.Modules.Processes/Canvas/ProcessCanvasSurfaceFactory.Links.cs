@@ -7,19 +7,33 @@ public sealed partial class ProcessCanvasSurfaceFactory
     private static List<CanvasWorkbenchLink> BuildDefinitionLinks(
         IReadOnlyList<ProcessStepEditorModel> steps,
         IReadOnlyDictionary<Guid, ProcessRoleEditorModel> rolesById,
-        IReadOnlyList<ProcessRoleMessagingPolicyEditorModel> messagingPolicies)
+        IReadOnlyList<ProcessRoleMessagingPolicyEditorModel> messagingPolicies,
+        IReadOnlyDictionary<DefinitionRoleNodeKey, string> roleNodeIds)
     {
         var stepsById = steps
             .Where(step => step.Id.HasValue)
             .ToDictionary(step => step.Id!.Value);
         var artifactOwnersById = steps
             .SelectMany(step => step.ArtifactExpectations
-                .Where(artifact => artifact.Id.HasValue)
+                .Where(artifact => artifact.Id is { } artifactId && artifactId != Guid.Empty)
                 .Select(artifact => new KeyValuePair<Guid, (ProcessStepEditorModel Step, ProcessArtifactExpectationEditorModel Artifact)>(
                     artifact.Id!.Value,
                     (step, artifact))))
             .ToDictionary(item => item.Key, item => item.Value);
         var links = new List<CanvasWorkbenchLink>();
+
+        foreach (var artifactOwner in artifactOwnersById.Values)
+        {
+            links.Add(new CanvasWorkbenchLink
+            {
+                SourceId = BuildDefinitionNodeId(artifactOwner.Step),
+                SourcePortId = ProcessCanvasCatalog.DefinitionPorts.BuildStepArtifactOutputPortId(artifactOwner.Artifact),
+                TargetId = ProcessCanvasBranching.BuildDefinitionArtifactNodeId(artifactOwner.Artifact),
+                TargetPortId = ProcessCanvasCatalog.DefinitionPorts.ArtifactSourceInput,
+                Kind = "artifact",
+                IsUserAuthored = true
+            });
+        }
 
         foreach (var step in steps.Where(ProcessCanvasBranching.ShouldRenderBranchRouter))
         {
@@ -38,7 +52,10 @@ public sealed partial class ProcessCanvasSurfaceFactory
             {
                 links.Add(new CanvasWorkbenchLink
                 {
-                    SourceId = BuildDefinitionRoleNodeId(rolesById[step.DecisionRoleRequirementId.Value]),
+                    SourceId = ResolveDefinitionRoleNodeId(
+                        rolesById[step.DecisionRoleRequirementId.Value],
+                        step,
+                        roleNodeIds),
                     SourcePortId = ProcessCanvasCatalog.DefinitionPorts.RoleDecisionAuthorityOutput,
                     TargetId = BuildDefinitionBranchNodeId(step),
                     TargetPortId = ProcessCanvasCatalog.DefinitionPorts.BranchDecisionRoleInput,
@@ -57,7 +74,7 @@ public sealed partial class ProcessCanvasSurfaceFactory
 
             links.Add(new CanvasWorkbenchLink
             {
-                SourceId = BuildDefinitionRoleNodeId(decisionRole),
+                SourceId = ResolveDefinitionRoleNodeId(decisionRole, step, roleNodeIds),
                 SourcePortId = ProcessCanvasCatalog.DefinitionPorts.RoleDecisionAuthorityOutput,
                 TargetId = BuildDefinitionNodeId(step),
                 TargetPortId = ProcessCanvasCatalog.DefinitionPorts.StepDecisionAuthorityInput,
@@ -75,7 +92,7 @@ public sealed partial class ProcessCanvasSurfaceFactory
                 var role = rolesById[assignment.RoleRequirementId!.Value];
                 links.Add(new CanvasWorkbenchLink
                 {
-                    SourceId = BuildDefinitionRoleNodeId(role),
+                    SourceId = ResolveDefinitionRoleNodeId(role, step, roleNodeIds),
                     SourcePortId = ProcessCanvasCatalog.DefinitionPorts.GetRoleResponsibilityOutputPortId(assignment.ResponsibilityKind),
                     TargetId = BuildDefinitionNodeId(step),
                     TargetPortId = ProcessCanvasCatalog.DefinitionPorts.GetStepResponsibilityInputPortId(assignment.ResponsibilityKind),
@@ -126,8 +143,8 @@ public sealed partial class ProcessCanvasSurfaceFactory
 
                 links.Add(new CanvasWorkbenchLink
                 {
-                    SourceId = BuildDefinitionNodeId(artifactOwner.Step),
-                    SourcePortId = ProcessCanvasCatalog.DefinitionPorts.BuildStepArtifactOutputPortId(artifactOwner.Artifact),
+                    SourceId = ProcessCanvasBranching.BuildDefinitionArtifactCloneNodeId(artifactOwner.Artifact, artifactInput, step),
+                    SourcePortId = ProcessCanvasCatalog.DefinitionPorts.ArtifactUsageOutput,
                     TargetId = BuildDefinitionNodeId(step),
                     TargetPortId = ProcessCanvasCatalog.DefinitionPorts.StepArtifactInputs,
                     Kind = "artifact",
@@ -156,6 +173,32 @@ public sealed partial class ProcessCanvasSurfaceFactory
         }
 
         return links;
+    }
+
+    private static string ResolveDefinitionRoleNodeId(
+        ProcessRoleEditorModel role,
+        ProcessStepEditorModel? relatedStep,
+        IReadOnlyDictionary<DefinitionRoleNodeKey, string> roleNodeIds)
+    {
+        if (role.Id.HasValue && relatedStep?.Id.HasValue == true)
+        {
+            var instanceKey = new DefinitionRoleNodeKey(role.Id.Value, relatedStep.Id.Value);
+            if (roleNodeIds.TryGetValue(instanceKey, out var instanceNodeId))
+            {
+                return instanceNodeId;
+            }
+        }
+
+        if (role.Id.HasValue)
+        {
+            var contractKey = new DefinitionRoleNodeKey(role.Id.Value, null);
+            if (roleNodeIds.TryGetValue(contractKey, out var contractNodeId))
+            {
+                return contractNodeId;
+            }
+        }
+
+        return BuildDefinitionRoleNodeId(role);
     }
 
     private static List<CanvasWorkbenchLink> BuildRunLinks(IReadOnlyList<ProcessStepRunViewModel> stepRuns)

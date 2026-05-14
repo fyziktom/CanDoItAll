@@ -62,13 +62,11 @@
             data-testid="@AgentsTestId"
             Click="ToggleAgentWindow" />
 
-    <div class="process-canvas-toolbar-recompose flex flex-col items-start gap-2"
-         data-testid="processes-canvas-recompose-menu"
-         @onmouseenter="OpenRecompositionMenu"
-         @onmouseleave="CloseRecompositionMenu">
+    <div class="@ResolveRecompositionMenuClass()"
+         data-testid="processes-canvas-recompose-menu">
         <Button Icon="account_tree"
                 aria-label="Recompose canvas"
-                title="@(IsRecompositionInProgress ? "Canvas recomposition is in progress" : "Recompose canvas: resolve collisions, add spacing, or rebuild the flow layout")"
+                title="@(IsRecompositionInProgress ? "Canvas recomposition is in progress" : "Recompose canvas: resolve collisions, add spacing, or choose a graph layout")"
                 Variant="Variant.Text"
                 ButtonStyle="ButtonStyle.Base"
                 Disabled="@(!CanRecomposeCanvas)"
@@ -79,9 +77,9 @@
 
         @if (recompositionMenuOpen && CanRecomposeCanvas)
         {
-            <div class="flex flex-col gap-1 overflow-y-auto rounded-[1.35rem] border border-white/70 bg-white/95 p-2 backdrop-blur"
-                 style="min-width:15.5rem;max-height:min(18rem,calc(100dvh - 12rem));box-shadow:0 18px 34px rgba(15,23,42,0.14);"
-                 data-testid="processes-canvas-recompose-menu-panel">
+            <div class="process-canvas-toolbar-recompose__panel flex flex-col gap-1 overflow-y-auto rounded-[1.1rem] border border-white/80 bg-white/95 p-2 backdrop-blur"
+                 data-testid="processes-canvas-recompose-menu-panel"
+                 @onclick:stopPropagation="true">
                 <button type="button"
                         class="flex w-full flex-col items-start rounded-[1rem] border border-transparent px-3 py-2 text-left transition hover:-translate-y-px hover:border-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-55"
                         data-testid="processes-canvas-recompose-collisions"
@@ -105,8 +103,35 @@
                         data-testid="processes-canvas-recompose-smart"
                         disabled="@IsRecompositionInProgress"
                         @onclick="TriggerRecomposeCanvasAsync">
-                    <span class="text-sm font-semibold text-slate-950">Recomposition</span>
-                    <span class="mt-1 text-xs leading-5 text-slate-500">Rebuild the process map into a clearer fishbone-style delivery flow with branch lanes.</span>
+                    <span class="text-sm font-semibold text-slate-950">Balanced flow</span>
+                    <span class="mt-1 text-xs leading-5 text-slate-500">Rebuild the process map into the default left-to-right flow with branch lanes.</span>
+                </button>
+
+                <button type="button"
+                        class="flex w-full flex-col items-start rounded-[1rem] border border-transparent px-3 py-2 text-left transition hover:-translate-y-px hover:border-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-55"
+                        data-testid="processes-canvas-recompose-main-spine"
+                        disabled="@IsRecompositionInProgress"
+                        @onclick="TriggerMainPathSpineAsync">
+                    <span class="text-sm font-semibold text-slate-950">Main spine</span>
+                    <span class="mt-1 text-xs leading-5 text-slate-500">Keep the default delivery path flatter and push non-primary paths farther out.</span>
+                </button>
+
+                <button type="button"
+                        class="flex w-full flex-col items-start rounded-[1rem] border border-transparent px-3 py-2 text-left transition hover:-translate-y-px hover:border-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-55"
+                        data-testid="processes-canvas-recompose-branch-fanout"
+                        disabled="@IsRecompositionInProgress"
+                        @onclick="TriggerBranchFanOutAsync">
+                    <span class="text-sm font-semibold text-slate-950">Branch fan-out</span>
+                    <span class="mt-1 text-xs leading-5 text-slate-500">Use larger columns and lanes so decision branches are separated before they rejoin.</span>
+                </button>
+
+                <button type="button"
+                        class="flex w-full flex-col items-start rounded-[1rem] border border-transparent px-3 py-2 text-left transition hover:-translate-y-px hover:border-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-55"
+                        data-testid="processes-canvas-recompose-feedback-lanes"
+                        disabled="@IsRecompositionInProgress"
+                        @onclick="TriggerFeedbackLanesAsync">
+                    <span class="text-sm font-semibold text-slate-950">Feedback lanes</span>
+                    <span class="mt-1 text-xs leading-5 text-slate-500">Place repair, recheck, exception, and feedback paths below the main route.</span>
                 </button>
             </div>
         }
@@ -187,6 +212,22 @@
     [Parameter]
     public EventCallback RecomposeCanvasClicked { get; set; }
 
+    [Parameter]
+    public EventCallback MainPathSpineClicked { get; set; }
+
+    [Parameter]
+    public EventCallback BranchFanOutClicked { get; set; }
+
+    [Parameter]
+    public EventCallback FeedbackLanesClicked { get; set; }
+
+    private string ResolveRecompositionMenuClass()
+    {
+        return recompositionMenuOpen
+            ? "process-canvas-toolbar-recompose process-canvas-toolbar-recompose--open"
+            : "process-canvas-toolbar-recompose";
+    }
+
     private string ResolveButtonCssClass(bool isActive)
     {
         return isActive
@@ -229,21 +270,6 @@
             : ToolbarButtonSizeStyle;
     }
 
-    private void OpenRecompositionMenu()
-    {
-        if (!CanRecomposeCanvas)
-        {
-            return;
-        }
-
-        recompositionMenuOpen = true;
-    }
-
-    private void CloseRecompositionMenu()
-    {
-        recompositionMenuOpen = false;
-    }
-
     private Task ToggleRecompositionMenuAsync()
     {
         if (!CanRecomposeCanvas)
@@ -257,19 +283,37 @@
 
     private async Task TriggerResolveCollisionsAsync()
     {
-        recompositionMenuOpen = false;
-        await ResolveCollisionsClicked.InvokeAsync();
+        await TriggerRecompositionAsync(ResolveCollisionsClicked);
     }
 
     private async Task TriggerAddSpaceAroundAsync()
     {
-        recompositionMenuOpen = false;
-        await AddSpaceAroundClicked.InvokeAsync();
+        await TriggerRecompositionAsync(AddSpaceAroundClicked);
     }
 
     private async Task TriggerRecomposeCanvasAsync()
     {
+        await TriggerRecompositionAsync(RecomposeCanvasClicked);
+    }
+
+    private async Task TriggerMainPathSpineAsync()
+    {
+        await TriggerRecompositionAsync(MainPathSpineClicked);
+    }
+
+    private async Task TriggerBranchFanOutAsync()
+    {
+        await TriggerRecompositionAsync(BranchFanOutClicked);
+    }
+
+    private async Task TriggerFeedbackLanesAsync()
+    {
+        await TriggerRecompositionAsync(FeedbackLanesClicked);
+    }
+
+    private async Task TriggerRecompositionAsync(EventCallback callback)
+    {
         recompositionMenuOpen = false;
-        await RecomposeCanvasClicked.InvokeAsync();
+        await callback.InvokeAsync();
     }
 }

@@ -1,0 +1,113 @@
+packKey: candoitall-workflow-template-pack
+name: CanDoItAll default workflow template pack
+version: 2026-05-file-backed-workflows-v1
+seedMarker: Managed workflow example seed
+seedVersion: 2026-05-file-backed-workflows-v1
+definitionNamePrefix: "Example: "
+componentNamePrefix: "Example LLM: "
+component:
+  modelSettings:
+    temperature: 0.1
+    maxOutputTokens: 1400
+    requireJsonOutput: true
+    responseFormatJsonSchema: |-
+      {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "route": { "type": "string" },
+          "summary": { "type": "string" },
+          "markdown": { "type": "string" },
+          "actions": { "type": "array", "items": { "type": "string" } },
+          "tasks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "title": { "type": "string" },
+                "summary": { "type": "string" },
+                "owner": { "type": "string" },
+                "dueUtc": { "type": "string" },
+                "urgency": { "type": "string" },
+                "requiresResponse": { "type": "boolean" },
+                "asap": { "type": "boolean" },
+                "sourceEmailId": { "type": "string" },
+                "evidence": { "type": "array", "items": { "type": "string" } }
+              },
+              "required": ["title", "summary", "owner", "dueUtc", "urgency", "requiresResponse", "asap", "sourceEmailId", "evidence"]
+            }
+          },
+          "evidence": { "type": "array", "items": { "type": "string" } },
+          "targets": { "type": "array", "items": { "type": "string" } },
+          "emailCategory": { "type": "string" },
+          "isInformational": { "type": "boolean" },
+          "asapResponseRequired": { "type": "boolean" },
+          "risk": { "type": "string" },
+          "relevant": { "type": "boolean" },
+          "needsReview": { "type": "boolean" },
+          "requiresResponse": { "type": "boolean" },
+          "ready": { "type": "boolean" },
+          "projectId": { "type": "string" },
+          "nodeId": { "type": "string" },
+          "sourceUrl": { "type": "string" },
+          "project": { "type": "object", "additionalProperties": true },
+          "runContext": { "type": "object", "additionalProperties": true }
+        },
+        "required": ["route", "summary", "markdown", "actions", "targets", "risk", "relevant", "needsReview", "requiresResponse", "ready", "projectId", "nodeId", "sourceUrl"]
+      }
+  instructionsTemplate: |-
+    You are a production workflow LLM component for "{name}".
+
+    Contract:
+    - Return one JSON object only. Do not wrap it in Markdown.
+    - Always include: route, summary, actions, targets, risk, relevant, needsReview, requiresResponse, ready, projectId, nodeId, sourceUrl.
+    - Always include markdown. The markdown field is the user-facing project-structure result asset.
+    - Use empty string, false, or [] when a field does not apply.
+    - Preserve projectId from top-level projectId or from project.id when either exists. Do not invent ids.
+    - Preserve nodeId from top-level nodeId or from runContext.workflowNodeId when either exists. Do not invent ids.
+    - For email task workflows, include emailCategory, isInformational, asapResponseRequired, and tasks. The tasks array must contain only concrete work assigned to me/current project team.
+    - Email task objects must include title, summary, owner, dueUtc, urgency, requiresResponse, asap, sourceEmailId, and evidence. Use an empty dueUtc only when the email has no deadline.
+    - When the email only informs or delegates work to someone else, set tasks to [] and route to informative or no_action.
+    - When the input contains project or runContext objects, copy them to the output unchanged so project-structure storage can keep the original execution context.
+    - Keep summary under 900 characters and actions as concrete imperative steps.
+    - When the input has sourceDocuments or documents, base the result on those loaded document texts, not on file names alone.
+    - In markdown, include: result summary, evidence table with source file names/paths, concrete findings, open gaps, and recommended next actions.
+    - If a source has extractionStatus pdf-no-extractable-text, say that explicitly and do not pretend the document content was read.
+    - Normalize route and target values to lowercase tokens used by the workflow branches.
+    - Fields consumed by IF/SWITCH branches must be literal predicate data, not answers to the prose scenario name.
+    - Do not invert booleans or route tokens because a label uses negative wording such as "not selected" or "does not need".
+
+    Scenario-specific routing:
+    {routingInstructions}
+jsonShape:
+  kind: Json
+  schemaJson: |-
+    {"type":"object","additionalProperties":true}
+  description: Workflow JSON payload
+runtimePolicy:
+  preferredBackend: DurableTask
+  allowInProcessPreviewRuns: true
+  requireDurableProductionRuns: true
+  exposeAzureFunctionsStatusEndpoint: false
+  exposeAzureFunctionsMcpTool: false
+executorPolicies:
+  fast:
+    timeoutSeconds: 45
+    maxRetryAttempts: 0
+    retryDelayMilliseconds: 250
+    captureOutputArtifact: true
+  slow:
+    timeoutSeconds: 90
+    maxRetryAttempts: 1
+    retryDelayMilliseconds: 250
+    captureOutputArtifact: true
+nodeInstructionDefaults:
+  Start: Accept the workflow input payload.
+  LlmCall: Run the prepared LLM component and return the strict JSON contract.
+  Triage: Route deterministic JSON branch values.
+  StrictLogic: Apply deterministic branch handling for this workflow outcome.
+  HumanInput: Request explicit review before this workflow continues.
+  End: Return the final workflow payload.
+workflowFiles:
+  - relativePath: workflows/default-workflows.yaml

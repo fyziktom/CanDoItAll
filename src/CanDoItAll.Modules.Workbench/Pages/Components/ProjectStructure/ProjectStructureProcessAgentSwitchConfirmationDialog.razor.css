@@ -1,0 +1,117 @@
+.project-structure-agent-switch-confirmation {
+    display: grid;
+    gap: 1rem;
+}
+
+.project-structure-agent-switch-confirmation__role {
+    background: #f7fbff;
+    border: 1px solid rgba(132, 175, 221, 0.26);
+    border-radius: 0.95rem;
+    display: grid;
+    gap: 0.2rem;
+    padding: 0.85rem 1rem;
+}
+
+.project-structure-agent-switch-confirmation__role span,
+.project-structure-agent-switch-confirmation__agent span {
+    color: #536988;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+.project-structure-agent-switch-confirmation__role strong {
+    color: #17233d;
+    font-size: 0.96rem;
+    font-weight: 800;
+}
+
+.project-structure-agent-switch-confirmation__flow {
+    align-items: center;
+    display: grid;
+    gap: 0.8rem;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+}
+
+.project-structure-agent-switch-confirmation__agent {
+    align-items: center;
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    border-radius: 1rem;
+    display: grid;
+    gap: 0.35rem;
+    justify-items: center;
+    min-height: 11rem;
+    padding: 1rem;
+    text-align: center;
+}
+
+.project-structure-agent-switch-confirmation__agent.is-current {
+    background: #f8fbff;
+}
+
+.project-structure-agent-switch-confirmation__agent.is-next {
+    background: #f0fbf5;
+    border-color: rgba(39, 191, 115, 0.34);
+}
+
+.project-structure-agent-switch-confirmation__agent strong {
+    color: #17233d;
+    font-size: 0.98rem;
+    font-weight: 800;
+    line-height: 1.25;
+}
+
+.project-structure-agent-switch-confirmation__agent small {
+    color: #617493;
+    font-size: 0.8rem;
+}
+
+.project-structure-agent-switch-confirmation__arrow {
+    align-items: center;
+    background: #dff8ea;
+    border: 1px solid rgba(39, 191, 115, 0.34);
+    border-radius: 999px;
+    color: #139257;
+    display: inline-flex;
+    font-size: 1.65rem;
+    height: 3.1rem;
+    justify-content: center;
+    width: 3.1rem;
+}
+
+.project-structure-agent-switch-confirmation__summary {
+    align-items: center;
+    background: #fff7eb;
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    border-radius: 0.9rem;
+    color: #526985;
+    display: grid;
+    font-size: 0.86rem;
+    gap: 0.55rem;
+    grid-template-columns: auto minmax(0, 1fr);
+    line-height: 1.45;
+    padding: 0.8rem 0.9rem;
+}
+
+.project-structure-agent-switch-confirmation__summary .rz-icon {
+    color: #f28a2d;
+}
+
+.project-structure-agent-switch-confirmation__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    justify-content: flex-end;
+}
+
+@media (max-width: 640px) {
+    .project-structure-agent-switch-confirmation__flow {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .project-structure-agent-switch-confirmation__arrow {
+        justify-self: center;
+        transform: rotate(90deg);
+    }
+}

@@ -70,6 +70,7 @@ public sealed partial class MafAgentRuntime
                 "workspace-pwsh-run-script" or "workspace_pwsh_run_script" => [AIFunctionFactory.Create(workspacePlugin.RunWorkspacePowerShellScript, "workspace_pwsh_run_script", capability.Description)],
                 "workspace-convert-document" or "workspace_convert_document" => [AIFunctionFactory.Create(workspacePlugin.ConvertDocumentToMarkdown, "workspace_convert_document", capability.Description)],
                 "workspace-inspect-spreadsheet" or "workspace_inspect_spreadsheet" => [AIFunctionFactory.Create(workspacePlugin.InspectSpreadsheetFile, "workspace_inspect_spreadsheet", capability.Description)],
+                "workspace-inspect-image" or "workspace_inspect_image" => [AIFunctionFactory.Create(workspacePlugin.InspectImageFile, "workspace_inspect_image", capability.Description)],
                 "provider-health" or "provider_health" => [AIFunctionFactory.Create(() => DescribeProviderHealth(provider), "provider_health", capability.Description)],
                 "agent-package-export" or "agent_package_export" => [AIFunctionFactory.Create(ListExportPackages, "agent_package_export", capability.Description)],
                 _ => []
@@ -163,7 +164,7 @@ public sealed partial class MafAgentRuntime
                 tools.Add(AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceRestore, "workspace_dotnet_restore", "Runs a bounded dotnet restore recipe in the managed workspace or configured external workspace root."));
                 tools.Add(AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceBuild, "workspace_dotnet_build", "Runs a bounded dotnet build recipe in the managed workspace or configured external workspace root."));
                 tools.Add(AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceTest, "workspace_dotnet_test", "Runs a bounded dotnet test recipe in the managed workspace or configured external workspace root."));
-                tools.Add(AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceRun, "workspace_dotnet_run", "Runs a bounded dotnet run recipe or loopback HTTP startup smoke in the managed workspace or configured external workspace root. HTTP smoke stops the launched process tree by default; set keepAlive true only when a later browser tool in the same step needs the app to remain running, then stop it with the recorded stopCommand before finalizing."));
+                tools.Add(AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceRun, "workspace_dotnet_run", "Runs a bounded dotnet run recipe or loopback HTTP startup smoke in the managed workspace or configured external workspace root. HTTP smoke stops the launched process tree by default. Use keepAlive true with lifetimeScope ExecutionRun for same-step browser proof, or lifetimeScope ProcessRun only when a later process step owns capture and cleanup."));
             }
 
             if (attachFileTools && access.CanScaffoldProjects)
@@ -181,6 +182,7 @@ public sealed partial class MafAgentRuntime
             {
                 tools.Add(WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.ConvertDocumentToMarkdown, "workspace_convert_document", "Converts a workspace document such as a PDF to markdown using markitdown."), suppressApprovalRequirements));
                 tools.Add(AIFunctionFactory.Create(workspacePlugin.InspectSpreadsheetFile, "workspace_inspect_spreadsheet", "Inspects a workspace .xls, .xlsx, .csv, or .tsv file and returns a compact preview."));
+                tools.Add(AIFunctionFactory.Create(workspacePlugin.InspectImageFile, "workspace_inspect_image", "Inspects a workspace PNG, JPEG, or GIF image and returns format, dimensions, and byte size before asset storage."));
             }
 
             if (storagePlugin is not null && (access.CanReadStorage || access.CanWriteStorage))
@@ -309,7 +311,7 @@ public sealed partial class MafAgentRuntime
             AddWorkspacePluginTool(tools, "workspace_git_diff", () => AIFunctionFactory.Create(workspacePlugin.GitWorkspaceDiff, "workspace_git_diff", "Runs a bounded git diff recipe in the current workspace."));
             AddWorkspacePluginTool(tools, "workspace_dotnet_build", () => AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceBuild, "workspace_dotnet_build", "Runs a bounded dotnet build recipe in the managed workspace or a grounded external-target alias. On failure, read the returned stdout/stderr diagnostics or artifact paths before editing or retrying."));
             AddWorkspacePluginTool(tools, "workspace_dotnet_test", () => AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceTest, "workspace_dotnet_test", "Runs a bounded dotnet test recipe in the managed workspace or a grounded external-target alias. On failure, read the returned stdout/stderr diagnostics or artifact paths before editing or retrying."));
-            AddWorkspacePluginTool(tools, "workspace_dotnet_run", () => AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceRun, "workspace_dotnet_run", "Runs a bounded dotnet run recipe or loopback HTTP startup smoke in the managed workspace or a grounded external-target alias. On failure, read the returned stdout/stderr diagnostics or artifact paths before editing or retrying."));
+            AddWorkspacePluginTool(tools, "workspace_dotnet_run", () => AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceRun, "workspace_dotnet_run", "Runs a bounded dotnet run recipe or loopback HTTP startup smoke in the managed workspace or a grounded external-target alias. Use lifetimeScope ProcessRun only when the process graph has a later cleanup step. On failure, read the returned stdout/stderr diagnostics or artifact paths before editing or retrying."));
             AddWorkspacePluginTool(tools, "workspace_create_directory", () => WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.CreateWorkspaceDirectory, "workspace_create_directory", "Creates a directory in the managed workspace or a grounded external-target alias. In external-target process runs, product source, tests, scripts, and assets must stay under the grounded product alias or current-run artifact folders."), suppressApprovalRequirements));
             AddWorkspacePluginTool(tools, "workspace_write_file", () => WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.WriteWorkspaceTextFile, "workspace_write_file", "Creates or overwrites a text file in the managed workspace or a grounded external-target alias. In external-target process runs, product source and tests must be written under the grounded product alias, not managed src/tests/tools roots."), suppressApprovalRequirements));
             AddWorkspacePluginTool(tools, "workspace_append_file", () => WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.AppendWorkspaceTextFile, "workspace_append_file", "Appends text to a workspace file. In external-target process runs, product source and tests must be written under the grounded product alias, not managed src/tests/tools roots."), suppressApprovalRequirements));
@@ -322,6 +324,7 @@ public sealed partial class MafAgentRuntime
             AddWorkspacePluginTool(tools, "workspace_pwsh_run_script", () => WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.RunWorkspacePowerShellScript, "workspace_pwsh_run_script", "Runs a workspace PowerShell script in non-interactive mode through the controlled execution plane."), suppressApprovalRequirements));
             AddWorkspacePluginTool(tools, "workspace_convert_document", () => WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.ConvertDocumentToMarkdown, "workspace_convert_document", "Converts a workspace document such as a PDF to markdown using markitdown."), suppressApprovalRequirements));
             AddWorkspacePluginTool(tools, "workspace_inspect_spreadsheet", () => WrapWithApproval(AIFunctionFactory.Create(workspacePlugin.InspectSpreadsheetFile, "workspace_inspect_spreadsheet", "Inspects a workspace .xls, .xlsx, .csv, or .tsv file and returns a compact preview."), suppressApprovalRequirements));
+            AddWorkspacePluginTool(tools, "workspace_inspect_image", () => AIFunctionFactory.Create(workspacePlugin.InspectImageFile, "workspace_inspect_image", "Inspects a workspace PNG, JPEG, or GIF image and returns format, dimensions, and byte size before asset storage."));
             return tools;
         }
 

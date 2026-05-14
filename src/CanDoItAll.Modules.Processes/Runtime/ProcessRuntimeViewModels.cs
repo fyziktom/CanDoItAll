@@ -280,6 +280,8 @@ public sealed record ProcessRunAssignmentViewModel(
     Guid RoleRequirementId,
     Guid? StepDefinitionId,
     Guid? PartyId,
+    Guid? WorkflowDefinitionId,
+    Guid? WorkflowVersionId,
     string DisplayName,
     string ExecutorKind,
     string BindingReason,
@@ -411,6 +413,26 @@ public sealed record ProcessExecutionRunViewModel(
     public IReadOnlyList<ProcessExecutionToolReceiptViewModel> ToolReceipts { get; init; } = [];
 }
 
+public sealed record ProcessWorkflowRunViewModel(
+    Guid Id,
+    Guid ProcessRunId,
+    Guid StepRunId,
+    Guid AssignmentId,
+    Guid WorkflowDefinitionId,
+    Guid WorkflowVersionId,
+    Guid WorkflowRunId,
+    string WorkflowName,
+    string StepTitle,
+    string AssignmentDisplayName,
+    WorkflowRuntimeBackendKind Backend,
+    string BackendRunId,
+    WorkflowRunState State,
+    string Summary,
+    int ArtifactCount,
+    int PendingRequestCount,
+    DateTimeOffset CreatedAtUtc,
+    DateTimeOffset UpdatedAtUtc);
+
 public sealed record ProcessActiveAgentViewModel(
     Guid ExecutionRunId,
     Guid AgentId,
@@ -419,11 +441,30 @@ public sealed record ProcessActiveAgentViewModel(
     string StepTitle,
     ExecutionState State,
     RunOutcome? Outcome,
+    DateTimeOffset? StartedAtUtc,
     DateTimeOffset UpdatedAtUtc)
 {
     public string StatusBadgeText { get; init; } = string.Empty;
 
     public string StatusTone { get; init; } = "neutral";
+}
+
+public sealed record ProcessActiveRunHealthMetrics(
+    Guid RunId,
+    int PendingOutboxCount,
+    int DeadLetteredOutboxCount,
+    int BlockedOrFailedStepCount,
+    IReadOnlyDictionary<Guid, string> StepTitlesByStepRunId)
+{
+    public static ProcessActiveRunHealthMetrics Empty(Guid runId)
+    {
+        return new ProcessActiveRunHealthMetrics(
+            runId,
+            0,
+            0,
+            0,
+            new Dictionary<Guid, string>());
+    }
 }
 
 public sealed record ProcessActiveRunSummaryViewModel(
@@ -459,6 +500,8 @@ public sealed record ProcessLaunchCandidateViewModel(
     ProcessLaunchCandidateKind CandidateKind,
     Guid? PartyId,
     Guid? TechnicalAgentId,
+    Guid? WorkflowDefinitionId,
+    Guid? WorkflowVersionId,
     string DisplayName,
     string ExecutorKind,
     decimal Score,
@@ -627,6 +670,15 @@ public sealed class ProcessLaunchCandidateSelectionRequest
     public Guid CandidateId { get; set; }
 }
 
+public sealed class ProcessLaunchTechnicalAgentSelectionRequest
+{
+    public Guid LaunchPlanId { get; set; }
+
+    public Guid LaunchPlanRoleId { get; set; }
+
+    public Guid TechnicalAgentId { get; set; }
+}
+
 public sealed class ProcessLaunchApprovalDecisionRequest
 {
     public Guid LaunchPlanId { get; set; }
@@ -686,6 +738,10 @@ public sealed class ProcessAssignmentResolutionRequest
     public string DisplayName { get; set; } = string.Empty;
 
     public string ExecutorKind { get; set; } = string.Empty;
+
+    public Guid? WorkflowDefinitionId { get; set; }
+
+    public Guid? WorkflowVersionId { get; set; }
 
     public string BindingReason { get; set; } = string.Empty;
 

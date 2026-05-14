@@ -1,0 +1,6 @@
+{
+  "SourceFormat": "CanDoItAll.ProcessTemplatePack/current-module-projection",
+  "Warnings": [
+    "Use the runtime projection service for authoritative import."
+  ]
+}

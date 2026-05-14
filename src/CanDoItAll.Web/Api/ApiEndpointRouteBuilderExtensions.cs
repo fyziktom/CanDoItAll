@@ -44,6 +44,8 @@ public static class ApiEndpointRouteBuilderExtensions
         group.MapProjectsApi();
         group.MapProcessesApi();
         group.MapAgentsApi();
+        group.MapWorkflowsApi();
+        group.MapPluginsApi();
 
         return endpoints;
     }

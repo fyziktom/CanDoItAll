@@ -1,5 +1,6 @@
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.Security;
+using CanDoItAll.SharedKernel.Configuration;
 using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.Workspace.Pages.Components;
@@ -25,7 +26,7 @@ public partial class ProviderManagementPanel
             string.Equals(manifest.PluginKey, providerModel.ConnectorPluginKey, StringComparison.OrdinalIgnoreCase))
         ?? providerManifests.FirstOrDefault();
 
-    private IReadOnlyList<ConnectorConfigFieldDescriptor> SelectedProviderFields => SelectedProviderManifest?.ConfigurationSchema.Fields ?? [];
+    private IReadOnlyList<ConfigurationFieldDescriptor> SelectedProviderFields => SelectedProviderManifest?.ConfigurationSchema.Fields ?? [];
 
     private IReadOnlyList<ProviderProfileSummary> FilteredProviders => providers
         .Where(provider =>
@@ -225,7 +226,7 @@ public partial class ProviderManagementPanel
     }
 
     private static string? ResolveProviderFieldTestId(
-        ConnectorConfigFieldDescriptor field)
+        ConfigurationFieldDescriptor field)
     {
         return field.Key switch
         {

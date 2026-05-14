@@ -67,7 +67,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
             if (TryReadDotnetRunStartupReceipt(fullPath, out var startupReceipt) &&
                 startupReceipt.KeepAlive &&
                 !startupReceipt.CleanupAttempted &&
-                startupReceipt.AppProcessTreeIds.Count > 0)
+                startupReceipt.AppProcessTreeIds.Count > 0 &&
+                startupReceipt.LifetimeScope == WorkspaceProcessLifetimeScope.ExecutionRun)
             {
                 receipts.Add(startupReceipt);
             }
@@ -119,6 +120,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
             receipt = new DotnetRunStartupReceipt(
                 KeepAlive: keepAlive,
+                LifetimeScope: TryReadLifetimeScope(root, "lifetimeScope"),
                 CleanupAttempted: TryReadBoolean(root, "cleanupAttempted"),
                 AppProcessTreeIds: TryReadIntArray(root, "appProcessTreeIds"));
             return true;
@@ -196,11 +198,27 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return items;
     }
 
+    private static WorkspaceProcessLifetimeScope TryReadLifetimeScope(JsonElement root, string propertyName)
+    {
+        if (!root.TryGetProperty(propertyName, out var value))
+        {
+            return WorkspaceProcessLifetimeScope.ExecutionRun;
+        }
+
+        return value.ValueKind switch
+        {
+            JsonValueKind.String when Enum.TryParse<WorkspaceProcessLifetimeScope>(value.GetString(), ignoreCase: true, out var parsed) => parsed,
+            JsonValueKind.Number when value.TryGetInt32(out var numeric) && Enum.IsDefined(typeof(WorkspaceProcessLifetimeScope), numeric) => (WorkspaceProcessLifetimeScope)numeric,
+            _ => WorkspaceProcessLifetimeScope.ExecutionRun
+        };
+    }
+
     private sealed record DotnetRunStartupReceipt(
         bool KeepAlive,
+        WorkspaceProcessLifetimeScope LifetimeScope,
         bool CleanupAttempted,
         IReadOnlyList<int> AppProcessTreeIds)
     {
-        public static DotnetRunStartupReceipt Empty { get; } = new(false, false, []);
+        public static DotnetRunStartupReceipt Empty { get; } = new(false, WorkspaceProcessLifetimeScope.ExecutionRun, false, []);
     }
 }

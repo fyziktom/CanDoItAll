@@ -7,6 +7,13 @@ description: Validate a CanDoItAll subbundle before implementation starts and af
 
 Use this skill before and after each subbundle. It exists to stop dependency mistakes early, when they are still cheap to fix.
 
+## GPT-5.5 Gate Posture
+
+- Validate the current subbundle against the actual bundle files and repo state, not memory from earlier conversation turns.
+- Keep the decision compact: `Pass`, `Fail`, or `Blocked`, followed by the exact prerequisite, proof, or downstream gate issue that drives the result.
+- Treat the progression gate as the durable state handoff for the next agent or resumed session.
+- If proof is weak but the work may still continue, record the explicit risk and the dependent subbundle that must re-check it. Do not silently lend trust to downstream work.
+
 ## Required Flow
 
 1. Read the root `README.md`, `plan/01-phase-plan.md`, the selected subbundle README, and the relevant traceability rows.

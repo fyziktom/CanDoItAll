@@ -1,4 +1,5 @@
 using System.Text;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
@@ -123,6 +124,7 @@ public partial class ProjectStructurePage
     {
         var attachmentPreview = BuildAttachmentPreviewCardState(node);
         var storageSummary = BuildSelectionStorageSummary(node);
+        var workflowStatus = BuildWorkflowSelectionStatus(node);
         var actions = ResolveInspectorActions(node)
             .Select(action => new ProjectStructureInspectorActionItem(
                 action.ActionId,
@@ -143,6 +145,7 @@ public partial class ProjectStructurePage
             SelectedNodeBadgePresentations,
             storageSummary,
             attachmentPreview,
+            workflowStatus,
             HasMermaidViewer(node),
             actions,
             workflowFeedback,
@@ -152,6 +155,47 @@ public partial class ProjectStructurePage
             $"{Math.Round(node.X)}, {Math.Round(node.Y)}",
             ProjectStructureNodeDetailFactory.BuildSections(node),
             SelectedNodeFacts);
+    }
+
+    private ProjectStructureSelectionWorkflowStatusState? BuildWorkflowSelectionStatus(ProjectStructureNode node)
+    {
+        if (node.ObjectType != ProjectObjectType.WorkflowDefinition)
+        {
+            return null;
+        }
+
+        var metadata = ProjectObjectMetadataSerializer.Parse(node.MetadataJson).Workflow;
+        if (metadata is null)
+        {
+            return null;
+        }
+
+        var cachedStatus = selectedWorkflowStatus is not null &&
+                           string.Equals(selectedNode?.Id, node.Id, StringComparison.Ordinal)
+            ? selectedWorkflowStatus
+            : null;
+        var workflowName = cachedStatus?.Summary.WorkflowName ?? metadata.WorkflowName;
+        var state = cachedStatus?.State ?? metadata.LastRunState ?? WorkflowRunState.NotStarted;
+        var message = cachedStatus?.Message ?? metadata.LastRunSummary;
+        var currentStep = cachedStatus?.CurrentStepIndex ?? metadata.LastStepIndex;
+        var stepCount = cachedStatus?.StepCount ?? metadata.LastStepCount;
+        var createdNodeIds = cachedStatus?.Summary.CreatedNodeIds ?? metadata.LastCreatedNodeIds;
+        var createdAssetIds = cachedStatus?.Summary.CreatedAssetIds ?? metadata.LastCreatedAssetIds;
+        var createdFilePaths = cachedStatus?.Summary.CreatedFilePaths ?? metadata.LastCreatedFilePaths;
+        var lastUpdatedAtUtc = metadata.LastUpdatedAtUtc ?? metadata.LastStartedAtUtc;
+
+        return new ProjectStructureSelectionWorkflowStatusState(
+            string.IsNullOrWhiteSpace(workflowName) ? node.Title : workflowName,
+            state.ToString(),
+            node.Status,
+            string.IsNullOrWhiteSpace(message) ? "Workflow is ready to start from project structure." : message,
+            stepCount > 0 ? $"{Math.Clamp(currentStep, 0, stepCount)} / {stepCount}" : "Not started",
+            cachedStatus is null ? ResolveProgressLabel(node) : $"{cachedStatus.ProgressPercent}%",
+            (cachedStatus?.RunId ?? metadata.LastRunId)?.ToString() ?? string.Empty,
+            lastUpdatedAtUtc.HasValue ? lastUpdatedAtUtc.Value.ToLocalTime().ToString("g") : "Not run yet",
+            createdNodeIds,
+            createdAssetIds,
+            createdFilePaths);
     }
 
     private ProjectStructureAttachmentPreviewCardState? BuildAttachmentPreviewCardState(ProjectStructureNode node)
@@ -167,6 +211,7 @@ public partial class ProjectStructurePage
             ResolveAttachmentLeadCopy(node),
             node.Route ?? string.Empty,
             ResolveAttachmentPreviewSource(node),
+            ResolveAttachmentTextContent(node),
             node.MediaOriginalFileName ?? string.Empty,
             ResolveAttachmentContentType(node),
             CanShowLocalOpen(node),
@@ -234,7 +279,36 @@ public partial class ProjectStructurePage
             .Append('|')
             .Append(selectedDetail.AttachmentPreview?.Kind ?? AttachmentPreviewKind.None)
             .Append('|')
-            .Append(selectedDetail.AttachmentPreview?.LocalOpenFeedback ?? string.Empty);
+            .Append(selectedDetail.AttachmentPreview?.LocalOpenFeedback ?? string.Empty)
+            .Append('|')
+            .Append(selectedDetail.WorkflowStatus?.State ?? string.Empty)
+            .Append('|')
+            .Append(selectedDetail.WorkflowStatus?.StepLabel ?? string.Empty)
+            .Append('|')
+            .Append(selectedDetail.WorkflowStatus?.ProgressLabel ?? string.Empty)
+            .Append('|')
+            .Append(selectedDetail.WorkflowStatus?.Message ?? string.Empty);
+
+        if (selectedDetail.WorkflowStatus is not null)
+        {
+            foreach (var nodeId in selectedDetail.WorkflowStatus.CreatedNodeIds)
+            {
+                builder.Append('|')
+                    .Append(nodeId);
+            }
+
+            foreach (var assetId in selectedDetail.WorkflowStatus.CreatedAssetIds)
+            {
+                builder.Append('|')
+                    .Append(assetId);
+            }
+
+            foreach (var filePath in selectedDetail.WorkflowStatus.CreatedFilePaths)
+            {
+                builder.Append('|')
+                    .Append(filePath);
+            }
+        }
 
         foreach (var badge in selectedDetail.BadgePresentations)
         {
@@ -310,6 +384,68 @@ public partial class ProjectStructurePage
         else
         {
             builder.Append("|process-link:");
+        }
+
+        if (workflowAddDialog is not null)
+        {
+            builder.Append("|workflow-add:")
+                .Append(workflowAddDialog.ParentNodeId)
+                .Append(':')
+                .Append(workflowAddDialog.SelectedWorkflowId?.ToString() ?? string.Empty)
+                .Append(':')
+                .Append(workflowAddDialog.SelectedVersionId?.ToString() ?? string.Empty)
+                .Append(':')
+                .Append(workflowAddDialog.InputSettings.IncludeParentSubtree)
+                .Append(':')
+                .Append(workflowAddDialog.InputSettings.IncludeAssets)
+                .Append(':')
+                .Append(workflowAddDialog.InputSettings.ManualInputJson)
+                .Append(':')
+                .Append(workflowAddDialog.Error);
+
+            foreach (var source in workflowAddDialog.InputSettings.AdditionalSources)
+            {
+                builder.Append("|workflow-source:")
+                    .Append(source.Kind)
+                    .Append(':')
+                    .Append(source.Key)
+                    .Append(':')
+                    .Append(source.Label)
+                    .Append(':')
+                    .Append(source.Value);
+            }
+
+            foreach (var section in workflowAddDialog.Preview.Sections)
+            {
+                builder.Append("|workflow-preview:")
+                    .Append(section.Title)
+                    .Append(':')
+                    .Append(section.Summary);
+            }
+        }
+        else
+        {
+            builder.Append("|workflow-add:");
+        }
+
+        if (workflowStartDialog is not null)
+        {
+            builder.Append("|workflow-start:")
+                .Append(workflowStartDialog.NodeId)
+                .Append(':')
+                .Append(workflowStartDialog.IsBusy)
+                .Append(':')
+                .Append(workflowStartDialog.Status?.State.ToString() ?? string.Empty)
+                .Append(':')
+                .Append(workflowStartDialog.Status?.CurrentStepIndex ?? 0)
+                .Append(':')
+                .Append(workflowStartDialog.Status?.StepCount ?? 0)
+                .Append(':')
+                .Append(workflowStartDialog.Error);
+        }
+        else
+        {
+            builder.Append("|workflow-start:");
         }
 
         if (processStartDialog is not null)

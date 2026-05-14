@@ -49,6 +49,9 @@
     "prompt-security-review",
     "prompt-ai-evaluation"
   ],
+  "SharedArtifactRefs": [
+    "implementation-change-set"
+  ],
   "LocalRoleRefs": [
     "ai-evaluation-lead",
     "ai-safety-reviewer",
@@ -90,7 +93,7 @@
       "Key": "task-intake",
       "Title": "Capture change demand and human acceptance boundary",
       "Subtitle": "AI work starts from a human-owned contract",
-      "Notes": "Normalize the requested change into a bounded problem statement, value target, exclusions, and human acceptance criteria before any agent is engaged.",
+      "Notes": "Normalize the requested change into a bounded problem statement, value target, exclusions, and human acceptance criteria before any agent is engaged. When the current project structure or mindmap already supplies a concrete deliverable, product root, feature boundary, exclusions, and acceptance criteria, treat those explicit facts as the current human acceptance boundary for this intake step. Do not require a separate approval artifact just to repeat the same facts; record missing or contradictory owner input only when the mindmap leaves a core deliverable, authority, cost/license constraint, or safe execution boundary unresolved.",
       "StepKind": "Start",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -105,8 +108,8 @@
       "DependsOnStepKey": "",
 "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 120,
-      "CanvasY": 180,
+      "CanvasX": 260,
+      "CanvasY": 0,
       "BranchOutcomes": [],
       "RoleAssignments": [
         {
@@ -134,7 +137,7 @@
           "SensitivityLevel": "",
           "RetentionDays": 0,
           "AllowedFutureUsageSummary": "",
-          "ValidationRequirementSummary": "",
+          "ValidationRequirementSummary": "Must identify request source, decision owner, scope boundary, and missing inputs explicitly.",
           "Key": "task-intake-intake-brief"
         },
         {
@@ -146,7 +149,7 @@
           "SensitivityLevel": "",
           "RetentionDays": 0,
           "AllowedFutureUsageSummary": "",
-          "ValidationRequirementSummary": "",
+          "ValidationRequirementSummary": "Must copy acceptance criteria from the current project structure or approval source; explicit project-structure criteria count as acknowledged for this intake step unless they are missing or contradictory.",
           "Key": "intake-acceptance-criteria-pack"
         }
       ],
@@ -172,7 +175,7 @@
       "Key": "delegation-design",
       "Title": "Define delegation boundary, allowed tools, and refusal conditions",
       "Subtitle": "The agent gets a sandbox, not a blank check",
-      "Notes": "Translate the human change brief into a precise delegation contract that states what the agent may touch, what it must refuse, and which evidence it must produce.",
+      "Notes": "Translate the human change brief into a precise delegation contract that states what the agent may touch, what it must refuse, and which evidence it must produce. Keep the contract proportional to the work. For low-risk local deliverables with a complete project-structure mindmap, the delegation boundary may be concise: allowed product root, requested files or modules, forbidden extras, validation hooks, and escalation conditions. Do not add unrequested frameworks, package managers, release gates, or broad governance work just because they could be useful.",
       "StepKind": "Decision",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -187,8 +190,8 @@
       "DependsOnStepKey": "task-intake",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "solution-architect",
-      "CanvasX": 430,
-      "CanvasY": 180,
+      "CanvasX": 1340,
+      "CanvasY": 0,
       "BranchOutcomes": [
         {
           "Key": "delegate",
@@ -240,7 +243,7 @@
         {
           "TemplateKey": "execution-trace-pack",
           "Title": "Delegation configuration snapshot",
-          "ArtifactKind": "Evidence",
+          "ArtifactKind": "Brief",
           "IsRequired": true,
           "TrustRequirement": "",
           "SensitivityLevel": "",
@@ -275,8 +278,8 @@
       "DocRefs": [
         "processes/ai-assisted-change-delivery/steps/delegation-design.md"
       ],
-      "BranchCanvasX": 630,
-      "BranchCanvasY": 180,
+      "BranchCanvasX": 1549,
+      "BranchCanvasY": -2430,
       "Dependencies": [
         {
           "DependsOnStepKey": "task-intake",
@@ -290,7 +293,7 @@
       "Key": "agent-execution",
       "Title": "Run delegated execution and capture full trace",
       "Subtitle": "Every automated move must stay reproducible",
-      "Notes": "Execute the delegated work, capture tool calls and outputs, and preserve the trace so later reviewers can understand what the agent actually did.",
+      "Notes": "Execute the delegated work, capture tool calls and outputs, and preserve the trace so later reviewers can understand what the agent actually did. The current project structure is the source of truth for implementation scope. Implement only the requested deliverable in the grounded product root, honor explicit no-framework/no-package/no-build constraints, and escalate instead of adding tooling, features, or architecture not requested by the delegation contract. A trace-only result is not a completed execution step: produce a concrete product-file change set or return a governed Blocked outcome with the exact architecture, permission, cost, or tooling blocker.",
       "StepKind": "Work",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -298,15 +301,15 @@
       "RequiresDecisionRecord": false,
       "InputContractSummary": "Delegation contract, prompt package, repository workspace, and allowed tools.",
       "OutputContractSummary": "Draft change output plus full execution trace.",
-      "EvidenceContractSummary": "Execution trace pack, generated diff, and intermediate reasoning artifacts permitted by policy.",
+      "EvidenceContractSummary": "Product-file change set, execution trace pack, generated diff when applicable, and intermediate reasoning artifacts permitted by policy.",
       "DecisionRightsSummary": "Software engineer supervises the lane; AI safety reviewer may halt execution when boundary breaches appear.",
       "ExceptionPolicySummary": "Stop immediately if the agent attempts disallowed files, tools, or data domains.",
       "TargetLeadHours": 8,
       "DependsOnStepKey": "delegation-design",
 "DependsOnBranchOutcomeKey": "delegate",
       "DecisionRoleKey": "",
-      "CanvasX": 740,
-      "CanvasY": 180,
+      "CanvasX": 2420,
+      "CanvasY": 1040,
       "BranchOutcomes": [],
       "RoleAssignments": [
         {
@@ -343,6 +346,18 @@
           "AllowedFutureUsageSummary": "",
           "ValidationRequirementSummary": "",
           "Key": "agent-execution-execution-trace-pack"
+        },
+        {
+          "TemplateKey": "implementation-change-set",
+          "Title": "Delegated change set",
+          "ArtifactKind": "Deliverable",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 0,
+          "AllowedFutureUsageSummary": "",
+          "ValidationRequirementSummary": "Must identify concrete product files created or changed under the grounded product root and validation evidence after the latest mutation. If no product files can be changed, the governed step outcome must be Blocked; trace-only artifacts are not sufficient.",
+          "Key": "agent-execution-delegated-change-set"
         },
         {
           "TemplateKey": "provenance-report",
@@ -387,13 +402,13 @@
       "Key": "evaluation-and-benchmarking",
       "Title": "Evaluate outputs against benchmark and acceptance evidence",
       "Subtitle": "A polished answer is not enough",
-      "Notes": "Run deterministic checks, benchmark tasks, and human review prompts to determine whether the agent output actually satisfies the bounded acceptance criteria.",
+      "Notes": "Run deterministic checks, benchmark tasks, and human review prompts to determine whether the agent output actually satisfies the bounded acceptance criteria. Use the project-structure mindmap to decide the validation shape. When the mindmap explicitly says a deliverable is plain static JavaScript, no npm, no package install, and no build step, evaluate the actual product files directly with file inspection plus static browser or local HTTP smoke proof. Do not block only because there is no generated harness, package.json, benchmark dataset, or npm script unless the acceptance criteria asked for one.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": true,
-      "InputContractSummary": "Generated diff, execution trace, acceptance criteria, test harness, and benchmark cases.",
+      "InputContractSummary": "Generated diff or product-file change set, execution trace, acceptance criteria, validation hooks, and test harness or benchmark cases only when requested or needed for the deliverable type.",
       "OutputContractSummary": "Evaluation report with pass/fail evidence and required rework.",
       "EvidenceContractSummary": "Benchmark report, test evidence, and evaluator notes.",
       "DecisionRightsSummary": "AI evaluation lead owns measurement quality; QA lead reviews reproducibility and adequacy of tests.",
@@ -402,8 +417,8 @@
       "DependsOnStepKey": "agent-execution",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 1050,
-      "CanvasY": 180,
+      "CanvasX": 3500,
+      "CanvasY": 1040,
       "BranchOutcomes": [],
       "RoleAssignments": [
         {
@@ -496,6 +511,18 @@
         {
           "ArtifactExpectationKey": "project-structure-context-brief",
           "SourceStepKey": "delegation-design"
+        },
+        {
+          "ArtifactExpectationKey": "agent-execution-delegated-change-set",
+          "SourceStepKey": "agent-execution"
+        },
+        {
+          "ArtifactExpectationKey": "agent-execution-execution-trace-pack",
+          "SourceStepKey": "agent-execution"
+        },
+        {
+          "ArtifactExpectationKey": "agent-execution-provenance-report",
+          "SourceStepKey": "agent-execution"
         }
       ]
     },
@@ -519,8 +546,8 @@
       "DependsOnStepKey": "evaluation-and-benchmarking",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "release-approver",
-      "CanvasX": 1360,
-      "CanvasY": 180,
+      "CanvasX": 4580,
+      "CanvasY": 1040,
       "BranchOutcomes": [
         {
           "Key": "approved",
@@ -597,11 +624,15 @@
       "DocRefs": [
         "processes/ai-assisted-change-delivery/steps/safety-and-security-review.md"
       ],
-      "BranchCanvasX": 1560,
-      "BranchCanvasY": 180,
+      "BranchCanvasX": 4789,
+      "BranchCanvasY": 2430,
       "Dependencies": [
         {
           "DependsOnStepKey": "evaluation-and-benchmarking",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "agent-execution",
           "DependsOnBranchOutcomeKey": ""
         },
         {
@@ -613,6 +644,22 @@
         {
           "ArtifactExpectationKey": "project-structure-context-brief",
           "SourceStepKey": "delegation-design"
+        },
+        {
+          "ArtifactExpectationKey": "agent-execution-delegated-change-set",
+          "SourceStepKey": "agent-execution"
+        },
+        {
+          "ArtifactExpectationKey": "agent-execution-execution-trace-pack",
+          "SourceStepKey": "agent-execution"
+        },
+        {
+          "ArtifactExpectationKey": "evaluation-and-benchmarking-test-evidence-pack",
+          "SourceStepKey": "evaluation-and-benchmarking"
+        },
+        {
+          "ArtifactExpectationKey": "evaluation-and-benchmarking-evaluation-benchmark-report",
+          "SourceStepKey": "evaluation-and-benchmarking"
         }
       ]
     },
@@ -636,8 +683,8 @@
       "DependsOnStepKey": "safety-and-security-review",
       "DependsOnBranchOutcomeKey": "approved",
       "DecisionRoleKey": "",
-      "CanvasX": 1670,
-      "CanvasY": 180,
+      "CanvasX": 5660,
+      "CanvasY": 1040,
       "BranchOutcomes": [],
       "RoleAssignments": [
         {
@@ -704,9 +751,34 @@
         {
           "DependsOnStepKey": "safety-and-security-review",
           "DependsOnBranchOutcomeKey": "approved"
+        },
+        {
+          "DependsOnStepKey": "evaluation-and-benchmarking",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "agent-execution",
+          "DependsOnBranchOutcomeKey": ""
         }
       ],
-      "ArtifactInputs": []
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "agent-execution-delegated-change-set",
+          "SourceStepKey": "agent-execution"
+        },
+        {
+          "ArtifactExpectationKey": "agent-execution-execution-trace-pack",
+          "SourceStepKey": "agent-execution"
+        },
+        {
+          "ArtifactExpectationKey": "evaluation-and-benchmarking-test-evidence-pack",
+          "SourceStepKey": "evaluation-and-benchmarking"
+        },
+        {
+          "ArtifactExpectationKey": "safety-and-security-review-release-readiness-report",
+          "SourceStepKey": "safety-and-security-review"
+        }
+      ]
     },
     {
       "Order": 6,
@@ -728,8 +800,8 @@
       "DependsOnStepKey": "delegation-design",
       "DependsOnBranchOutcomeKey": "human-only",
       "DecisionRoleKey": "",
-      "CanvasX": 740,
-      "CanvasY": 340,
+      "CanvasX": 2420,
+      "CanvasY": -2080,
       "BranchOutcomes": [],
       "RoleAssignments": [
         {
@@ -782,8 +854,8 @@
       "DependsOnStepKey": "safety-and-security-review",
       "DependsOnBranchOutcomeKey": "rework",
       "DecisionRoleKey": "",
-      "CanvasX": 1670,
-      "CanvasY": 340,
+      "CanvasX": 5660,
+      "CanvasY": 2080,
       "BranchOutcomes": [],
       "RoleAssignments": [
         {
@@ -812,9 +884,30 @@
         {
           "DependsOnStepKey": "safety-and-security-review",
           "DependsOnBranchOutcomeKey": "rework"
+        },
+        {
+          "DependsOnStepKey": "evaluation-and-benchmarking",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "agent-execution",
+          "DependsOnBranchOutcomeKey": ""
         }
       ],
-      "ArtifactInputs": []
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "agent-execution-delegated-change-set",
+          "SourceStepKey": "agent-execution"
+        },
+        {
+          "ArtifactExpectationKey": "evaluation-and-benchmarking-test-evidence-pack",
+          "SourceStepKey": "evaluation-and-benchmarking"
+        },
+        {
+          "ArtifactExpectationKey": "safety-and-security-review-security-review-note",
+          "SourceStepKey": "safety-and-security-review"
+        }
+      ]
     }
   ],
   "DocPath": "processes/ai-assisted-change-delivery/definition.md",
@@ -836,10 +929,10 @@
       "Summary": "Owner for AI change evaluation design, benchmark selection, and evidence integrity.",
       "Purpose": "Ensure AI-assisted work is judged using explicit evaluation criteria rather than optimism about model capability.",
       "StaffingIntent": "A technically rigorous evaluator for AI-assisted delivery or AI-enabled product changes.",
-      "PreferredExecutorKind": "person",
+      "PreferredExecutorKind": "person-or-agent",
       "PreferredProjectAssignmentRole": "Reviewer",
       "IsRequired": true,
-      "AllowsFallback": false,
+      "AllowsFallback": true,
       "RequiresExplicitApproval": true,
       "DefaultAllocationPercent": 40,
       "RoleTemplateSourceKey": "process-role-template/ai-assisted-change-delivery/ai-evaluation-lead",
@@ -908,10 +1001,10 @@
       "Summary": "Specialist reviewer for prompt, model-behavior, and misuse-resistant delivery controls.",
       "Purpose": "Assess whether the AI-assisted workflow or AI-enabled output path has enough safety constraints and refusal logic for intended use.",
       "StaffingIntent": "A specialist in practical AI safety controls and failure containment.",
-      "PreferredExecutorKind": "person",
+      "PreferredExecutorKind": "person-or-agent",
       "PreferredProjectAssignmentRole": "Reviewer",
       "IsRequired": true,
-      "AllowsFallback": false,
+      "AllowsFallback": true,
       "RequiresExplicitApproval": true,
       "DefaultAllocationPercent": 25,
       "RoleTemplateSourceKey": "process-role-template/ai-assisted-change-delivery/ai-safety-reviewer",
@@ -980,10 +1073,10 @@
       "Summary": "Decision authority for whether model-originated uncertainty is acceptable for the intended use.",
       "Purpose": "Accept, conditionally accept, or reject AI-related change exposure based on model behavior risk and control coverage.",
       "StaffingIntent": "A senior risk owner combining product, security, compliance, and ML judgment.",
-      "PreferredExecutorKind": "person",
+      "PreferredExecutorKind": "person-or-agent",
       "PreferredProjectAssignmentRole": "Manager",
       "IsRequired": true,
-      "AllowsFallback": false,
+      "AllowsFallback": true,
       "RequiresExplicitApproval": true,
       "DefaultAllocationPercent": 20,
       "RoleTemplateSourceKey": "process-role-template/ai-assisted-change-delivery/model-risk-approver",
@@ -1158,10 +1251,10 @@
       "DisplayName": "Product owner",
       "Purpose": "Convert business intent into an explicit delivery contract with clear acceptance boundaries and prioritized value trade-offs.",
       "StaffingIntent": "One accountable human decision-maker who can clarify scope, decide priority, accept delivered outcomes, and absorb stakeholder escalation without routing every decision through engineering.",
-      "PreferredExecutorKind": "person",
+      "PreferredExecutorKind": "person-or-agent",
       "PreferredProjectAssignmentRole": "CustomerContact",
       "IsRequired": true,
-      "AllowsFallback": false,
+      "AllowsFallback": true,
       "RequiresExplicitApproval": true,
       "DefaultAllocationPercent": 35,
       "CanvasX": 60,
@@ -1174,7 +1267,7 @@
       "DisplayName": "Solution architect",
       "Purpose": "Protect maintainability and operability by reviewing design options, target architecture fit, and downstream integration impact before costly implementation commitment.",
       "StaffingIntent": "A senior technical authority who can reason across components, environments, data boundaries, and operational consequences.",
-      "PreferredExecutorKind": "person",
+      "PreferredExecutorKind": "person-or-agent",
       "PreferredProjectAssignmentRole": "Reviewer",
       "IsRequired": true,
       "AllowsFallback": true,
@@ -1190,10 +1283,10 @@
       "DisplayName": "AI safety reviewer",
       "Purpose": "Assess whether the AI-assisted workflow or AI-enabled output path has enough safety constraints and refusal logic for intended use.",
       "StaffingIntent": "A specialist in practical AI safety controls and failure containment.",
-      "PreferredExecutorKind": "person",
+      "PreferredExecutorKind": "person-or-agent",
       "PreferredProjectAssignmentRole": "Reviewer",
       "IsRequired": true,
-      "AllowsFallback": false,
+      "AllowsFallback": true,
       "RequiresExplicitApproval": true,
       "DefaultAllocationPercent": 25,
       "CanvasX": 360,
@@ -1206,10 +1299,10 @@
       "DisplayName": "Model risk approver",
       "Purpose": "Accept, conditionally accept, or reject AI-related change exposure based on model behavior risk and control coverage.",
       "StaffingIntent": "A senior risk owner combining product, security, compliance, and ML judgment.",
-      "PreferredExecutorKind": "person",
+      "PreferredExecutorKind": "person-or-agent",
       "PreferredProjectAssignmentRole": "Manager",
       "IsRequired": true,
-      "AllowsFallback": false,
+      "AllowsFallback": true,
       "RequiresExplicitApproval": true,
       "DefaultAllocationPercent": 20,
       "CanvasX": 510,
@@ -1238,10 +1331,10 @@
       "DisplayName": "AI evaluation lead",
       "Purpose": "Ensure AI-assisted work is judged using explicit evaluation criteria rather than optimism about model capability.",
       "StaffingIntent": "A technically rigorous evaluator for AI-assisted delivery or AI-enabled product changes.",
-      "PreferredExecutorKind": "person",
+      "PreferredExecutorKind": "person-or-agent",
       "PreferredProjectAssignmentRole": "Reviewer",
       "IsRequired": true,
-      "AllowsFallback": false,
+      "AllowsFallback": true,
       "RequiresExplicitApproval": true,
       "DefaultAllocationPercent": 40,
       "CanvasX": 810,
@@ -1254,14 +1347,14 @@
       "DisplayName": "QA lead",
       "Purpose": "Challenge whether the delivered change is proven enough for its risk profile and make test evidence decision-ready for release governance.",
       "StaffingIntent": "A senior test leader able to shape strategy, select evidence depth, and identify where automation is not enough.",
-      "PreferredExecutorKind": "person",
+      "PreferredExecutorKind": "person-or-agent",
       "PreferredProjectAssignmentRole": "Reviewer",
       "IsRequired": true,
       "AllowsFallback": true,
       "RequiresExplicitApproval": true,
       "DefaultAllocationPercent": 40,
-      "CanvasX": 960,
-      "CanvasY": 40,
+      "CanvasX": 3059,
+      "CanvasY": 1239.5,
       "Notes": "Quality owner for coverage depth, evidence quality, and release confidence."
     },
     {
@@ -1270,7 +1363,7 @@
       "DisplayName": "Security reviewer",
       "Purpose": "Ensure changes touching trust boundaries, sensitive data, dependencies, or operational attack surface are reviewed proportionally and documented defensibly.",
       "StaffingIntent": "A senior security practitioner who can translate security risk into concrete engineering and governance decisions.",
-      "PreferredExecutorKind": "person",
+      "PreferredExecutorKind": "person-or-agent",
       "PreferredProjectAssignmentRole": "Reviewer",
       "IsRequired": true,
       "AllowsFallback": true,
@@ -1286,7 +1379,7 @@
       "DisplayName": "Release approver",
       "Purpose": "Decide whether the accumulated evidence is sufficient to expose the change to real users, data, and operational load.",
       "StaffingIntent": "A senior operational or governance authority who can accept release risk on behalf of the organization.",
-      "PreferredExecutorKind": "person",
+      "PreferredExecutorKind": "person-or-agent",
       "PreferredProjectAssignmentRole": "Manager",
       "IsRequired": true,
       "AllowsFallback": true,

@@ -18,11 +18,18 @@ public partial class ProcessWorkspace
         loadedProcessQueryId = ProcessIdQuery;
         loadedRunQueryId = RunIdQuery;
         loadedLaunchPlanQueryId = LaunchPlanIdQuery;
-        await LoadWorkspaceAsync();
+        try
+        {
+            await LoadWorkspaceAsync(componentLifetimeCts.Token);
+        }
+        catch (OperationCanceledException) when (componentLifetimeCts.IsCancellationRequested)
+        {
+        }
     }
 
     public void Dispose()
     {
+        componentLifetimeCts.Cancel();
         AgentWorkspaceService.ExecutionUpdated -= HandleManagerChatExecutionUpdated;
         StopRuntimeRefreshLoop();
         CancelPendingDefinitionCanvasPersistence();
@@ -30,13 +37,16 @@ public partial class ProcessWorkspace
 
     public async ValueTask DisposeAsync()
     {
+        componentLifetimeCts.Cancel();
         AgentWorkspaceService.ExecutionUpdated -= HandleManagerChatExecutionUpdated;
-        StopRuntimeRefreshLoop();
+        await StopRuntimeRefreshLoopAsync();
         await QuiesceDefinitionCanvasPersistenceAsync(DefinitionCanvasPersistenceQuiescenceMode.CancelPendingChanges);
+        componentLifetimeCts.Dispose();
     }
 
-    private async Task LoadWorkspaceAsync()
+    private async Task LoadWorkspaceAsync(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (RunIdQuery.HasValue || LaunchPlanIdQuery.HasValue)
         {
             detailTab = DetailTabRuns;
@@ -44,7 +54,7 @@ public partial class ProcessWorkspace
 
         if (ProjectId.HasValue)
         {
-            var project = await ProjectsService.GetAsync(ProjectId.Value);
+            var project = await ProjectsService.GetAsync(ProjectId.Value, cancellationToken);
             projectName = project.Name;
         }
         else
@@ -52,29 +62,29 @@ public partial class ProcessWorkspace
             projectName = string.Empty;
         }
 
-        definitions = await ProcessesService.ListDefinitionsAsync(ProjectId);
-        runtimeStateOverview = await RuntimeStateOverviewService.GetOverviewAsync(
-            definitions.Select(definition => definition.Id).ToList(),
-            ProjectId);
+        definitions = await ProcessesService.ListDefinitionsAsync(ProjectId, cancellationToken);
+        await LoadRuntimeOverviewAsync(cancellationToken);
         var nextSelectedProcessId = ResolveSelectedProcessId();
         if (nextSelectedProcessId != selectedProcessId)
         {
             await QuiesceDefinitionCanvasPersistenceAsync(DefinitionCanvasPersistenceQuiescenceMode.FlushPendingChanges);
+            cancellationToken.ThrowIfCancellationRequested();
             selectedCanvasNodeId = null;
             ResetDefinitionCanvasState();
             ResetRuntimeCanvasState();
         }
 
         selectedProcessId = nextSelectedProcessId;
-        editor = await ProcessesService.GetEditorAsync(selectedProcessId, ProjectId);
-        executorOptions = await ProcessesService.ListExecutorOptionsAsync();
-        managerAgentOptions = await ProcessesService.ListManagerAgentOptionsAsync();
-        analytics = await ProcessesService.GetAnalyticsAsync(selectedProcessId, ProjectId);
-        improvements = await ProcessesService.ListImprovementsAsync(selectedProcessId);
+        editor = await ProcessesService.GetEditorAsync(selectedProcessId, ProjectId, cancellationToken);
+        executorOptions = await ProcessesService.ListExecutorOptionsAsync(cancellationToken);
+        workflowOptions = await ProcessesService.ListWorkflowDefinitionOptionsAsync(cancellationToken);
+        managerAgentOptions = await ProcessesService.ListManagerAgentOptionsAsync(cancellationToken);
+        analytics = await ProcessesService.GetAnalyticsAsync(selectedProcessId, ProjectId, cancellationToken);
+        improvements = await ProcessesService.ListImprovementsAsync(selectedProcessId, cancellationToken);
 
         if (ProjectId.HasValue)
         {
-            partyOptions = await ProcessesService.ListPartyOptionsAsync(ProjectId.Value);
+            partyOptions = await ProcessesService.ListPartyOptionsAsync(ProjectId.Value, cancellationToken);
         }
         else
         {
@@ -85,7 +95,7 @@ public partial class ProcessWorkspace
         {
             if (ShouldLoadRuntimePaneData())
             {
-                await LoadRuntimePaneDataAsync();
+                await LoadRuntimePaneDataAsync(cancellationToken);
             }
             else
             {
@@ -100,14 +110,20 @@ public partial class ProcessWorkspace
         RefreshCanvasSurface();
         if (string.Equals(detailTab, DetailTabManagerChat, StringComparison.Ordinal))
         {
-            await LoadManagerChatAsync();
+            await LoadManagerChatAsync(cancellationToken);
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         UpdateRuntimeRefreshLoop();
         StateHasChanged();
     }
 
     private async Task LoadRuntimePaneDataAsync(CancellationToken cancellationToken = default)
+    {
+        await LoadRuntimePaneDataAsync(forceRefresh: false, cancellationToken);
+    }
+
+    private async Task LoadRuntimePaneDataAsync(bool forceRefresh, CancellationToken cancellationToken = default)
     {
         if (!selectedProcessId.HasValue)
         {
@@ -119,7 +135,7 @@ public partial class ProcessWorkspace
         {
             launchPlans = await ProcessesService.ListLaunchPlansAsync(selectedProcessId, ProjectId, cancellationToken);
             selectedLaunchPlanId = ResolveSelectedLaunchPlanId();
-            await LoadLaunchPlanDetailsAsync();
+            await LoadLaunchPlanDetailsAsync(cancellationToken);
         }
         else
         {
@@ -128,10 +144,24 @@ public partial class ProcessWorkspace
             selectedLaunchPlan = null;
         }
 
-        runs = await ProcessesService.ListRunsAsync(selectedProcessId, ProjectId, cancellationToken);
-        activeRunSummaries = string.Equals(detailTab, DetailTabRuns, StringComparison.Ordinal)
-            ? await RunDetailsLoader.LoadActiveRunSummariesAsync(runs, cancellationToken)
-            : [];
+        var observation = await ProcessObservationService.GetDashboardSnapshotAsync(
+            new ProcessObservationDashboardQuery(
+                ProjectId,
+                definitions.Select(definition => definition.Id).ToList(),
+                selectedProcessId,
+                IncludeRuns: true,
+                IncludeActiveRunSummaries: string.Equals(detailTab, DetailTabRuns, StringComparison.Ordinal),
+                IncludeAnalytics: string.Equals(detailTab, DetailTabAnalytics, StringComparison.Ordinal),
+                ForceRefresh: forceRefresh),
+            cancellationToken);
+        runtimeStateOverview = observation.RuntimeStateOverview;
+        runs = observation.Runs;
+        activeRunSummaries = observation.ActiveRunSummaries;
+        ObservationDashboardState.SetDashboardSnapshot(observation);
+        if (observation.Analytics is not null)
+        {
+            analytics = observation.Analytics;
+        }
 
         var nextSelectedRunId = ResolveSelectedRunId();
         if (nextSelectedRunId != selectedRunId)
@@ -148,6 +178,21 @@ public partial class ProcessWorkspace
         }
 
         ClearRunDetails();
+    }
+
+    private async Task LoadRuntimeOverviewAsync(
+        CancellationToken cancellationToken = default,
+        bool forceRefresh = false)
+    {
+        var observation = await ProcessObservationService.GetDashboardSnapshotAsync(
+            new ProcessObservationDashboardQuery(
+                ProjectId,
+                definitions.Select(definition => definition.Id).ToList(),
+                selectedProcessId,
+                ForceRefresh: forceRefresh),
+            cancellationToken);
+        runtimeStateOverview = observation.RuntimeStateOverview;
+        ObservationDashboardState.SetDashboardSnapshot(observation);
     }
 
     private void ClearRuntimePaneData()
@@ -193,7 +238,14 @@ public partial class ProcessWorkspace
             return;
         }
 
-        var runDetails = await RunDetailsLoader.LoadAsync(selectedRunId.Value, cancellationToken);
+        var runSnapshot = await ProcessObservationService.GetRunSnapshotAsync(
+            new ProcessRunObservationQuery(selectedRunId.Value, ProjectId),
+            cancellationToken);
+        ApplyRunDetails(runSnapshot.Details);
+    }
+
+    private void ApplyRunDetails(ProcessWorkspaceRunDetails runDetails)
+    {
         stepRuns = runDetails.StepRuns;
         decisions = runDetails.Decisions;
         artifacts = runDetails.Artifacts;
@@ -202,6 +254,7 @@ public partial class ProcessWorkspace
         workBriefs = runDetails.WorkBriefs;
         conformanceObservations = runDetails.ConformanceObservations;
         executionRuns = runDetails.ExecutionRuns;
+        workflowRuns = runDetails.WorkflowRuns;
         processEscalations = runDetails.Escalations;
         operatorApprovals = runDetails.OperatorApprovals;
         attemptTimeline = runDetails.AttemptTimeline;
@@ -251,6 +304,7 @@ public partial class ProcessWorkspace
         workBriefs = [];
         conformanceObservations = [];
         executionRuns = [];
+        workflowRuns = [];
         processEscalations = [];
         operatorApprovals = [];
         attemptTimeline = [];

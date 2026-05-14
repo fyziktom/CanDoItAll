@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using CanDoItAll.Mcp.Core.Hosting;
 
 namespace CanDoItAll.Mcp.SshOps.Configuration;
 
@@ -32,6 +33,11 @@ public sealed class ServerOptions
 {
     [Required]
     public string Name { get; set; } = "CanDoItAll.Mcp.SshOps";
+
+    [Required]
+    public McpIdleShutdownOptions IdleShutdown { get; set; } = McpIdleShutdownOptions.Create(
+        inactivityTimeoutSeconds: 1_800,
+        checkIntervalSeconds: 30);
 
     public string StateDirectory { get; set; } = ".mcp-state/sshops";
 

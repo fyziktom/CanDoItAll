@@ -13,17 +13,32 @@ internal sealed partial class ProcessRunAutomationDispatchService
         string? projectStructureGroundingSummary,
         string? artifactInspectionGroundingSummary)
     {
-        var allowedExternalTargetAliases = ResolveAllowedExternalTargetAliases(
+        var resolvedExternalTargetAliases = ResolveAllowedExternalTargetAliases(
             candidate,
             projectStructureGroundingSummary,
             artifactInspectionGroundingSummary);
-        var metadata = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+        var allowExternalTargetMutation = AllowsExternalTargetMutation(candidate, projectStructureGroundingSummary);
+        var allowedExternalTargetAliases = allowExternalTargetMutation
+            ? resolvedExternalTargetAliases
+            : [];
+        var metadata = new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            [ExecutionInvocationMetadata.ProcessBrowserToolsAllowedMetadataKey] = RequiresConcreteBrowserProof(candidate)
+        };
+        if (IsDotNetSolutionSetupScaffoldMutationStep(candidate))
+        {
+            metadata[ExecutionInvocationMetadata.ProcessScaffoldToolOnlyMetadataKey] = true;
+        }
+
         if (allowedExternalTargetAliases.Count > 0)
         {
             metadata[ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey] = allowedExternalTargetAliases;
         }
 
-        var readOnlyExternalTargetAliases = ResolveReadOnlyExternalTargetAliases(candidate, allowedExternalTargetAliases);
+        var readOnlyExternalTargetAliases = ResolveReadOnlyExternalTargetAliases(
+            candidate,
+            resolvedExternalTargetAliases,
+            allowExternalTargetMutation);
         if (readOnlyExternalTargetAliases.Count > 0)
         {
             metadata[ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey] = readOnlyExternalTargetAliases;
@@ -40,16 +55,26 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static IReadOnlyList<string> ResolveReadOnlyExternalTargetAliases(
         DispatchCandidate candidate,
-        IReadOnlyList<string> allowedExternalTargetAliases)
+        IReadOnlyList<string> resolvedExternalTargetAliases,
+        bool allowExternalTargetMutation)
     {
-        if (allowedExternalTargetAliases.Count == 0 ||
+        if (allowExternalTargetMutation ||
+            resolvedExternalTargetAliases.Count == 0 ||
             !IsProductReadOnlyValidationStep(candidate))
         {
             return [];
         }
 
-        return allowedExternalTargetAliases;
+        return resolvedExternalTargetAliases;
     }
+
+    private static bool AllowsExternalTargetMutation(
+        DispatchCandidate candidate,
+        string? projectStructureGroundingSummary)
+        => RequiresConcreteImplementationProof(candidate) ||
+           ContainsProductRepairIntent(candidate) ||
+           IsDotNetSolutionSetupScaffoldMutationStep(candidate) ||
+           LooksLikeExternalArtifactDestination(candidate, projectStructureGroundingSummary);
 
     private static bool IsProductReadOnlyValidationStep(DispatchCandidate candidate)
     {
@@ -77,6 +102,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
                stepText.Contains("quality", StringComparison.Ordinal) ||
                stepText.Contains("proof", StringComparison.Ordinal) ||
                stepText.Contains("review", StringComparison.Ordinal) ||
+               stepText.Contains("scope", StringComparison.Ordinal) ||
+               stepText.Contains("intake", StringComparison.Ordinal) ||
+               stepText.Contains("boundary", StringComparison.Ordinal) ||
+               stepText.Contains("planning", StringComparison.Ordinal) ||
+               stepText.Contains("architecture", StringComparison.Ordinal) ||
+               stepText.Contains("architect", StringComparison.Ordinal) ||
+               stepText.Contains("source-of-truth", StringComparison.Ordinal) ||
+               stepText.Contains("canonical", StringComparison.Ordinal) ||
                stepText.Contains("security", StringComparison.Ordinal) ||
                stepText.Contains("readiness", StringComparison.Ordinal) ||
                stepText.Contains("approval", StringComparison.Ordinal);

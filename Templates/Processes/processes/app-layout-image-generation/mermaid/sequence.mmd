@@ -1,0 +1,10 @@
+sequenceDiagram
+    participant Manager as Layout generation manager
+    participant Generator as Layout image generation agent
+    participant Provider as Image provider
+    participant Project as Project structure
+
+    Manager->>Project: Read screenshot asset inputs
+    Generator->>Provider: Generate layout image from screenshot asset sources
+    Generator->>Project: Store generated image asset
+    Generator->>Project: Read back generated asset metadata

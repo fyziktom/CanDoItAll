@@ -22,6 +22,7 @@ public static class WorkspaceModuleServiceCollectionExtensions
         services.TryAddScoped<IProviderRuntimeGateway>(serviceProvider => serviceProvider.GetRequiredService<LegacyProviderRuntimeGateway>());
         services.AddScoped<IConnectorManifestSource>(serviceProvider => serviceProvider.GetRequiredService<ProviderRegistry>());
         services.TryAddScoped<ConnectorPluginRegistry>();
+        services.TryAddScoped<ISettingsRendererRegistry, SettingsRendererRegistry>();
         services.AddScoped<ConnectorCommandProcessor>();
         services.AddScoped<ConnectorOutboxService>();
         services.AddScoped<ProviderExecutionService>();

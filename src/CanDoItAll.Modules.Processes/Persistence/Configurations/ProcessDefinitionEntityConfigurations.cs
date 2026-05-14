@@ -88,6 +88,8 @@ internal sealed class ProcessRoleRequirementConfiguration : IEntityTypeConfigura
         builder.Property(role => role.RoleTemplateSnapshotName).HasMaxLength(200);
         builder.Property(role => role.SnapshotSummary).HasColumnType("TEXT");
         builder.HasIndex(role => new { role.ProcessDefinitionVersionId, role.Key }).IsUnique();
+        builder.HasIndex(role => role.PreferredWorkflowDefinitionId);
+        builder.HasIndex(role => role.PreferredWorkflowVersionId);
         builder.HasOne<ProcessDefinitionVersion>()
             .WithMany()
             .HasForeignKey(role => role.ProcessDefinitionVersionId)

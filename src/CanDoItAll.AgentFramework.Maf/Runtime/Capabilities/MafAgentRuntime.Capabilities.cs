@@ -33,6 +33,7 @@ public sealed partial class MafAgentRuntime
         await AttachConfiguredWorkspaceToolsAsync(composition, agent, progressCallback, suppressApprovalRequirements);
         await AttachInternalProjectStructureToolsAsync(composition, agent, progressCallback);
         await AttachInternalProcessToolsAsync(composition, agent, progressCallback, suppressApprovalRequirements);
+        await AttachInternalImageGenerationToolsAsync(composition, agent, progressCallback, suppressApprovalRequirements);
         await AttachA2ARemoteAgentToolsAsync(composition, agent, progressCallback, cancellationToken, suppressApprovalRequirements);
         await AttachCatalogCapabilitiesAsync(
             composition,
@@ -279,6 +280,34 @@ public sealed partial class MafAgentRuntime
             "Attached internal process-module tools backed by the workspace services and current agent policy.");
     }
 
+    private async Task AttachInternalImageGenerationToolsAsync(
+        RuntimeCapabilityComposition composition,
+        AgentDefinition agent,
+        Func<ExecutionState, string, string, Task> progressCallback,
+        bool suppressApprovalRequirements)
+    {
+        if (!agent.Permissions.CanUseTools)
+        {
+            return;
+        }
+
+        var tools = CreateImageGenerationToolBuilder()
+            .CreateTools(agent)
+            .Select(tool => WrapInternalProcessMutationTool(tool, suppressApprovalRequirements))
+            .ToList();
+        if (tools.Count == 0)
+        {
+            return;
+        }
+
+        composition.State.Tools.AddRange(tools);
+        composition.State.HasApprovalTools |= tools.Any(tool => tool is ApprovalRequiredAIFunction);
+        await progressCallback(
+            ExecutionState.Preparing,
+            "Image generation",
+            "Attached internal image-generation tools backed by the agent image-generation access policy.");
+    }
+
     private async Task AttachA2ARemoteAgentToolsAsync(
         RuntimeCapabilityComposition composition,
         AgentDefinition agent,
@@ -352,6 +381,15 @@ public sealed partial class MafAgentRuntime
     {
         if (await TrySkipUnsupportedProviderNativeCapabilityAsync(capability, provider, progressCallback))
         {
+            return;
+        }
+
+        if (ShouldSkipProcessBrowserMcpCapability(capability))
+        {
+            await progressCallback(
+                ExecutionState.Preparing,
+                "Capability boundary",
+                $"Skipping browser MCP capability '{capability.Name}' because this governed process step does not require browser proof.");
             return;
         }
 
@@ -436,6 +474,22 @@ public sealed partial class MafAgentRuntime
         }
 
         return false;
+    }
+
+    private static bool ShouldSkipProcessBrowserMcpCapability(CapabilityCatalogItem capability)
+    {
+        if (WorkspaceExecutionAuditContext.Current?.ProcessBrowserToolsAllowed != false ||
+            capability.Kind != CapabilityKind.McpServer)
+        {
+            return false;
+        }
+
+        var configuration = DeserializeConfiguration<McpCapabilityConfiguration>(capability.ConfigurationJson);
+        return capability.Key.Contains("playwright", StringComparison.OrdinalIgnoreCase) ||
+               capability.Name.Contains("playwright", StringComparison.OrdinalIgnoreCase) ||
+               capability.EndpointOrPath.Contains("@playwright/mcp", StringComparison.OrdinalIgnoreCase) ||
+               (configuration?.Arguments?.Any(argument =>
+                   argument.Contains("@playwright/mcp", StringComparison.OrdinalIgnoreCase)) ?? false);
     }
 
     private async Task AttachCompactionAsync(

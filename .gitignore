@@ -11,8 +11,11 @@ output
 .codex/live-targets
 .codex/live-runner
 .codex/runlogs
+.codex/tmp
+.codex/temp
 .codex-artifacts
 .codex-tmp
+.codex-temp
 .playwright-mcp
 evidence
 

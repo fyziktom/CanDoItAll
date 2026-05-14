@@ -128,8 +128,8 @@
       "AllowsFallback": true,
       "RequiresExplicitApproval": true,
       "DefaultAllocationPercent": 40,
-      "CanvasX": 1020,
-      "CanvasY": 40,
+      "CanvasX": 3059,
+      "CanvasY": 370,
       "Notes": "Quality owner for coverage depth, evidence quality, and release confidence."
     },
     {
@@ -144,8 +144,8 @@
       "AllowsFallback": true,
       "RequiresExplicitApproval": true,
       "DefaultAllocationPercent": 20,
-      "CanvasX": 1320,
-      "CanvasY": 40,
+      "CanvasX": 4139,
+      "CanvasY": 370,
       "Notes": "Final go-live decision owner for production promotion and rollback preparedness."
     },
     {
@@ -186,10 +186,10 @@
       "DependsOnStepKey": "",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 120,
-      "CanvasY": 360,
-      "BranchCanvasX": 0.0,
-      "BranchCanvasY": 0.0,
+      "CanvasX": 260,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
       "Dependencies": [],
       "RoleAssignments": [
         {
@@ -250,10 +250,10 @@
       "DependsOnStepKey": "activate-emergency-bridge",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 430,
-      "CanvasY": 360,
-      "BranchCanvasX": 0.0,
-      "BranchCanvasY": 0.0,
+      "CanvasX": 1340,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
       "Dependencies": [
         {
           "DependsOnStepKey": "activate-emergency-bridge",
@@ -326,10 +326,10 @@
       "DependsOnStepKey": "assess-blast-radius",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 740,
-      "CanvasY": 360,
-      "BranchCanvasX": 0.0,
-      "BranchCanvasY": 0.0,
+      "CanvasX": 2420,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
       "Dependencies": [
         {
           "DependsOnStepKey": "assess-blast-radius",
@@ -395,10 +395,10 @@
       "DependsOnStepKey": "package-hotfix",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 1050,
-      "CanvasY": 360,
-      "BranchCanvasX": 0.0,
-      "BranchCanvasY": 0.0,
+      "CanvasX": 3500,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
       "Dependencies": [
         {
           "DependsOnStepKey": "package-hotfix",
@@ -466,10 +466,10 @@
       "DependsOnStepKey": "",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 1360,
-      "CanvasY": 360,
-      "BranchCanvasX": 0.0,
-      "BranchCanvasY": 0.0,
+      "CanvasX": 4580,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
       "Dependencies": [
         {
           "DependsOnStepKey": "assess-blast-radius",
@@ -548,10 +548,10 @@
       "DependsOnStepKey": "approve-emergency-release",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 1670,
-      "CanvasY": 360,
-      "BranchCanvasX": 0.0,
-      "BranchCanvasY": 0.0,
+      "CanvasX": 5660,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
       "Dependencies": [
         {
           "DependsOnStepKey": "approve-emergency-release",
@@ -629,10 +629,10 @@
       "DependsOnStepKey": "execute-emergency-rollout",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 1980,
-      "CanvasY": 360,
-      "BranchCanvasX": 0.0,
-      "BranchCanvasY": 0.0,
+      "CanvasX": 6740,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
       "Dependencies": [
         {
           "DependsOnStepKey": "execute-emergency-rollout",

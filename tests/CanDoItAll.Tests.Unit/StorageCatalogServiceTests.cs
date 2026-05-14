@@ -2,6 +2,7 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Tests.Unit;
@@ -49,6 +50,52 @@ public sealed class StorageCatalogServiceTests
 
             var storages = await sut.ListAsync();
             Assert.Single(storages, item => item.Id == bootstrapStorage.Id);
+        }
+        finally
+        {
+            TestFileSystem.DeleteDirectoryWithRetry(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task EnsureBootstrapFileSystemStorageAsync_recovers_from_concurrent_first_use()
+    {
+        AppDbContextModelRegistry.ConfigureAssemblies(TestApplicationBootstrap.ModuleAssemblies);
+        var workspaceRoot = TestFileSystem.CreateTemporaryRoot("storage-catalog");
+        var databaseName = $"storage-catalog-{Guid.NewGuid():N}";
+        var connectionString = $"Data Source={databaseName};Mode=Memory;Cache=Shared";
+
+        try
+        {
+            await using var keeperConnection = new SqliteConnection(connectionString);
+            await keeperConnection.OpenAsync();
+            var options = new DbContextOptionsBuilder<AppDbContext>()
+                .UseSqlite(connectionString)
+                .Options;
+            await using (var dbContext = new AppDbContext(options))
+            {
+                await dbContext.Database.EnsureCreatedAsync();
+            }
+
+            var factory = new TestDbContextFactory(options);
+            var resolver = new TestWorkspacePathResolver(workspaceRoot);
+            var clock = new TestClock(new DateTimeOffset(2026, 4, 1, 12, 0, 0, TimeSpan.Zero));
+            var tasks = Enumerable.Range(0, 12)
+                .Select(_ => Task.Run(async () =>
+                {
+                    var service = new StorageCatalogService(factory, resolver, clock);
+                    return await service.EnsureBootstrapFileSystemStorageAsync();
+                }))
+                .ToArray();
+
+            var results = await Task.WhenAll(tasks);
+
+            await using var assertContext = new AppDbContext(options);
+            var storages = await assertContext.Set<StorageCatalogRecord>().ToListAsync();
+            var rules = await assertContext.Set<StorageRoutingRule>().ToListAsync();
+            var bootstrapStorage = Assert.Single(storages, item => item.IsSystemDefault);
+            Assert.All(results, result => Assert.Equal(bootstrapStorage.Id, result.Id));
+            Assert.Single(rules, item => item.PreferredStorageId == bootstrapStorage.Id);
         }
         finally
         {

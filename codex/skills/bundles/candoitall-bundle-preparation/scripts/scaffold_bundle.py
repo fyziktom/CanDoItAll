@@ -155,17 +155,23 @@ def main() -> int:
         load_template(template_directory, "structured-input-template.md", replacements),
     )
 
-    ensure_file(bundle_root / "analysis" / "01-current-state.md", "# Current State\n\nDocument the relevant repo state and affected files.\n")
+    ensure_file(bundle_root / "analysis" / "01-current-state.md", "# Current State\n\nDocument the relevant repo state, affected files, and evidence gathered from real inspection.\n")
     ensure_file(bundle_root / "analysis" / "02-assumptions-and-risks.md", ASSUMPTIONS_AND_RISKS_TEMPLATE)
-    ensure_file(bundle_root / "requirements" / "01-normalized-requirements.md", "# Normalized Requirements\n\nConvert the raw inputs into concrete, testable requirements.\n")
-    ensure_file(bundle_root / "architecture" / "01-target-solution.md", "# Target Solution\n\nDescribe the intended end state and important boundaries.\n")
+    ensure_file(bundle_root / "requirements" / "01-normalized-requirements.md", "# Normalized Requirements\n\nConvert the raw inputs into concrete, testable requirements with observable success criteria.\n")
+    ensure_file(bundle_root / "architecture" / "01-target-solution.md", "# Target Solution\n\nDescribe the intended end state, important boundaries, and allowed side effects.\n")
     ensure_file(bundle_root / "plan" / "01-phase-plan.md", PHASE_PLAN_TEMPLATE)
     ensure_file(
         bundle_root / "traceability" / "01-requirement-traceability.md",
         load_template(template_directory, "traceability-template.md", replacements),
     )
-    ensure_file(bundle_root / "shared-prompts" / "implementation-prompt.md", "# Implementation Prompt\n\nWrite the reusable implementation prompt for this bundle.\n")
-    ensure_file(bundle_root / "shared-prompts" / "qa-prompt.md", "# QA Prompt\n\nWrite the reusable QA prompt for this bundle.\n")
+    ensure_file(
+        bundle_root / "shared-prompts" / "implementation-prompt.md",
+        "# Implementation Prompt\n\nWrite an outcome-first reusable implementation prompt. Include owned inputs, hard constraints, prerequisite checks, smallest-change guidance, required proof, status-update rules, and stop conditions.\n",
+    )
+    ensure_file(
+        bundle_root / "shared-prompts" / "qa-prompt.md",
+        "# QA Prompt\n\nWrite an outcome-first reusable QA prompt. Include coverage checks, dependency gates, proof review, browser or host validation when applicable, raw-note closure, and blocker handling.\n",
+    )
     ensure_file(
         bundle_root / "reviews" / "00-bundle-self-review.md",
         load_template(template_directory, "self-review-template.md", replacements),

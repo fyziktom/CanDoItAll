@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Modules.Processes;
 using Microsoft.AspNetCore.Mvc;
 
@@ -317,12 +318,181 @@ internal static class ProcessesApi
                     PartyId = request.PartyId,
                     DisplayName = request.DisplayName,
                     ExecutorKind = request.ExecutorKind,
+                    WorkflowDefinitionId = request.WorkflowDefinitionId,
+                    WorkflowVersionId = request.WorkflowVersionId,
                     BindingReason = request.BindingReason,
                     IsFallback = request.IsFallback,
                     AllowsDirectMessaging = request.AllowsDirectMessaging
                 },
                 cancellationToken)))
             .WithName("ResolveProcessRunAssignment");
+
+        processes.MapGet("/runs/{runId:guid}/escalations", async (
+                Guid runId,
+                IProcessEscalationService escalationService,
+                CancellationToken cancellationToken) =>
+            Results.Ok(await escalationService.ListAsync(runId, cancellationToken)))
+            .WithName("ListProcessRunEscalations");
+
+        processes.MapPost("/runs/{runId:guid}/escalations", async (
+                Guid runId,
+                ProcessEscalationCreateApiRequest request,
+                IProcessEscalationService escalationService,
+                CancellationToken cancellationToken) =>
+            ApiEndpointResults.FromResult(await escalationService.CreateAsync(
+                new ProcessEscalationCreateRequest
+                {
+                    ProcessRunId = runId,
+                    StepRunId = request.StepRunId,
+                    Kind = request.Kind,
+                    Severity = request.Severity,
+                    Title = request.Title,
+                    Reason = request.Reason,
+                    Owner = request.Owner,
+                    DueAtUtc = request.DueAtUtc,
+                    SourceExecutionRunId = request.SourceExecutionRunId,
+                    SourceApprovalId = request.SourceApprovalId,
+                    SourceToolName = request.SourceToolName,
+                    CreatedBy = NormalizeActor(request.CreatedBy)
+                },
+                cancellationToken)))
+            .WithName("CreateProcessRunEscalation");
+
+        processes.MapPost("/runs/{runId:guid}/escalations/{escalationId:guid}/assign", async (
+                Guid runId,
+                Guid escalationId,
+                ProcessEscalationAssignmentApiRequest request,
+                IProcessEscalationService escalationService,
+                CancellationToken cancellationToken) =>
+        {
+            var routeValidation = await ValidateEscalationRouteAsync(runId, escalationId, escalationService, cancellationToken);
+            if (routeValidation is not null)
+            {
+                return routeValidation;
+            }
+
+            return ApiEndpointResults.FromResult(await escalationService.AssignAsync(
+                new ProcessEscalationAssignmentRequest
+                {
+                    EscalationId = escalationId,
+                    Owner = request.Owner,
+                    AssignedBy = NormalizeActor(request.AssignedBy)
+                },
+                cancellationToken));
+        })
+        .WithName("AssignProcessRunEscalation");
+
+        processes.MapPost("/runs/{runId:guid}/escalations/{escalationId:guid}/resolve", async (
+                Guid runId,
+                Guid escalationId,
+                ProcessEscalationResolutionApiRequest request,
+                IProcessEscalationService escalationService,
+                CancellationToken cancellationToken) =>
+        {
+            var routeValidation = await ValidateEscalationRouteAsync(runId, escalationId, escalationService, cancellationToken);
+            if (routeValidation is not null)
+            {
+                return routeValidation;
+            }
+
+            return ApiEndpointResults.FromResult(await escalationService.ResolveAsync(
+                new ProcessEscalationResolutionRequest
+                {
+                    EscalationId = escalationId,
+                    Resolution = request.Resolution,
+                    ResolvedBy = NormalizeActor(request.ResolvedBy)
+                },
+                cancellationToken));
+        })
+        .WithName("ResolveProcessRunEscalation");
+
+        processes.MapPost("/runs/{runId:guid}/escalations/{escalationId:guid}/reopen", async (
+                Guid runId,
+                Guid escalationId,
+                ProcessEscalationReopenApiRequest request,
+                IProcessEscalationService escalationService,
+                CancellationToken cancellationToken) =>
+        {
+            var routeValidation = await ValidateEscalationRouteAsync(runId, escalationId, escalationService, cancellationToken);
+            if (routeValidation is not null)
+            {
+                return routeValidation;
+            }
+
+            return ApiEndpointResults.FromResult(await escalationService.ReopenAsync(
+                new ProcessEscalationReopenRequest
+                {
+                    EscalationId = escalationId,
+                    Reason = request.Reason,
+                    ReopenedBy = NormalizeActor(request.ReopenedBy)
+                },
+                cancellationToken));
+        })
+        .WithName("ReopenProcessRunEscalation");
+
+        processes.MapPost("/runs/{runId:guid}/escalations/{escalationId:guid}/rework", async (
+                Guid runId,
+                Guid escalationId,
+                ProcessEscalationReworkApiRequest request,
+                IProcessEscalationService escalationService,
+                CancellationToken cancellationToken) =>
+        {
+            var routeValidation = await ValidateEscalationRouteAsync(runId, escalationId, escalationService, cancellationToken);
+            if (routeValidation is not null)
+            {
+                return routeValidation;
+            }
+
+            return ApiEndpointResults.FromResult(await escalationService.RequestReworkAsync(
+                new ProcessEscalationReworkRequest
+                {
+                    EscalationId = escalationId,
+                    StepRunConcurrencyToken = request.StepRunConcurrencyToken,
+                    Directive = request.Directive,
+                    RequestedBy = NormalizeActor(request.RequestedBy)
+                },
+                cancellationToken));
+        })
+        .WithName("RequestProcessRunEscalationRework");
+
+        processes.MapPost("/runs/{runId:guid}/operator-approvals/decisions", async (
+                Guid runId,
+                ProcessOperatorApprovalDecisionApiRequest request,
+                IProcessEscalationService escalationService,
+                IAgentFrameworkWorkspaceService workspaceService,
+                CancellationToken cancellationToken) =>
+        {
+            if (request.ExecutionRunId.HasValue)
+            {
+                try
+                {
+                    await workspaceService.ContinueExecutionRunAsync(
+                        request.ExecutionRunId.Value,
+                        request.Status == ProcessOperatorApprovalStatus.Approved,
+                        request.AutoApprovePendingToolCalls,
+                        cancellationToken);
+                }
+                catch (InvalidOperationException exception)
+                {
+                    return ApiEndpointResults.FromException(exception);
+                }
+            }
+
+            return ApiEndpointResults.FromResult(await escalationService.RecordApprovalDecisionAsync(
+                new ProcessOperatorApprovalDecisionRequest
+                {
+                    ProcessRunId = runId,
+                    StepRunId = request.StepRunId,
+                    ExecutionRunId = request.ExecutionRunId,
+                    LaunchPlanId = request.LaunchPlanId,
+                    ExternalApprovalId = request.ExternalApprovalId,
+                    Status = request.Status,
+                    Summary = request.Summary,
+                    DecidedBy = NormalizeActor(request.DecidedBy)
+                },
+                cancellationToken));
+        })
+        .WithName("DecideProcessRunOperatorApproval");
 
         processes.MapPost("/artifacts", async (
                 ProcessArtifactRecordRequest request,
@@ -683,6 +853,7 @@ internal static class ProcessesApi
             ShouldInclude(query.IncludeConformanceObservations) ? FilterConformanceObservations(details.ConformanceObservations, query) : [],
             ShouldInclude(query.IncludeDirectMessages) ? FilterDirectMessageThreads(details.DirectMessageThreads, query) : [],
             ShouldInclude(query.IncludeExecutionRuns) ? FilterExecutionRuns(details.ExecutionRuns, query) : [],
+            ShouldInclude(query.IncludeWorkflowRuns) ? FilterWorkflowRuns(details.WorkflowRuns, query) : [],
             ShouldInclude(query.IncludeEscalations) ? details.Escalations : [],
             ShouldInclude(query.IncludeOperatorApprovals) ? details.OperatorApprovals : [],
             ShouldInclude(query.IncludeAttemptTimeline) ? details.AttemptTimeline : [],
@@ -698,6 +869,20 @@ internal static class ProcessesApi
         var query = new ProcessRunDetailApiQuery { StepRunId = stepRunId };
         return FilterStepRuns(await processesService.ListStepRunsAsync(runId, cancellationToken), query)
             .SingleOrDefault();
+    }
+
+    private static async Task<IResult?> ValidateEscalationRouteAsync(
+        Guid runId,
+        Guid escalationId,
+        IProcessEscalationService escalationService,
+        CancellationToken cancellationToken)
+    {
+        var escalation = (await escalationService.ListAsync(runId, cancellationToken))
+            .SingleOrDefault(item => item.Id == escalationId);
+
+        return escalation is null
+            ? ApiEndpointResults.NotFound("Process escalation was not found for this run.", "processes.escalation-not-found")
+            : null;
     }
 
     private static IReadOnlyList<ProcessStepRunViewModel> FilterStepRuns(
@@ -927,6 +1112,50 @@ internal static class ProcessesApi
             .ToList();
     }
 
+    private static IReadOnlyList<ProcessWorkflowRunViewModel> FilterWorkflowRuns(
+        IReadOnlyList<ProcessWorkflowRunViewModel> workflowRuns,
+        ProcessRunDetailApiQuery query)
+    {
+        var filtered = workflowRuns.AsEnumerable();
+        if (query.StepRunId.HasValue)
+        {
+            filtered = filtered.Where(item => item.StepRunId == query.StepRunId.Value);
+        }
+
+        if (query.WorkflowRunId.HasValue)
+        {
+            filtered = filtered.Where(item => item.WorkflowRunId == query.WorkflowRunId.Value);
+        }
+
+        if (query.WorkflowDefinitionId.HasValue)
+        {
+            filtered = filtered.Where(item => item.WorkflowDefinitionId == query.WorkflowDefinitionId.Value);
+        }
+
+        if (query.WorkflowVersionId.HasValue)
+        {
+            filtered = filtered.Where(item => item.WorkflowVersionId == query.WorkflowVersionId.Value);
+        }
+
+        if (query.WorkflowState.HasValue)
+        {
+            filtered = filtered.Where(item => item.State == query.WorkflowState.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.Search))
+        {
+            filtered = filtered.Where(item => Contains(item.WorkflowName, query.Search) ||
+                                             Contains(item.StepTitle, query.Search) ||
+                                             Contains(item.AssignmentDisplayName, query.Search) ||
+                                             Contains(item.Summary, query.Search));
+        }
+
+        return filtered
+            .OrderByDescending(item => item.UpdatedAtUtc)
+            .Take(NormalizeTake(query.Take))
+            .ToList();
+    }
+
     private static bool Contains(string value, string? search)
     {
         return !string.IsNullOrWhiteSpace(search) &&
@@ -982,11 +1211,19 @@ internal sealed class ProcessRunDetailApiQuery
 
     public Guid? AgentId { get; set; }
 
+    public Guid? WorkflowRunId { get; set; }
+
+    public Guid? WorkflowDefinitionId { get; set; }
+
+    public Guid? WorkflowVersionId { get; set; }
+
     public ProcessStepRunStatus? StepStatus { get; set; }
 
     public ProcessArtifactKind? ArtifactKind { get; set; }
 
     public ExecutionState? ExecutionState { get; set; }
+
+    public WorkflowRunState? WorkflowState { get; set; }
 
     public string? Search { get; set; }
 
@@ -1008,6 +1245,8 @@ internal sealed class ProcessRunDetailApiQuery
 
     public bool? IncludeExecutionRuns { get; set; } = true;
 
+    public bool? IncludeWorkflowRuns { get; set; } = true;
+
     public bool? IncludeEscalations { get; set; } = true;
 
     public bool? IncludeOperatorApprovals { get; set; } = true;
@@ -1026,6 +1265,7 @@ internal sealed record ProcessRunDetail(
     IReadOnlyList<ProcessConformanceObservationViewModel> ConformanceObservations,
     IReadOnlyList<ProcessDirectMessageThreadViewModel> DirectMessageThreads,
     IReadOnlyList<ProcessExecutionRunViewModel> ExecutionRuns,
+    IReadOnlyList<ProcessWorkflowRunViewModel> WorkflowRuns,
     IReadOnlyList<ProcessEscalationViewModel> Escalations,
     IReadOnlyList<ProcessOperatorApprovalViewModel> OperatorApprovals,
     IReadOnlyList<ProcessAttemptTimelineEntryViewModel> AttemptTimeline,
@@ -1084,11 +1324,89 @@ internal sealed class ProcessAssignmentResolutionApiRequest
 
     public string ExecutorKind { get; set; } = string.Empty;
 
+    public Guid? WorkflowDefinitionId { get; set; }
+
+    public Guid? WorkflowVersionId { get; set; }
+
     public string BindingReason { get; set; } = string.Empty;
 
     public bool IsFallback { get; set; }
 
     public bool AllowsDirectMessaging { get; set; } = true;
+}
+
+internal sealed class ProcessEscalationCreateApiRequest
+{
+    public Guid? StepRunId { get; set; }
+
+    public ProcessEscalationKind Kind { get; set; } = ProcessEscalationKind.BlockedStep;
+
+    public ProcessEscalationSeverity Severity { get; set; } = ProcessEscalationSeverity.Moderate;
+
+    public string Title { get; set; } = string.Empty;
+
+    public string Reason { get; set; } = string.Empty;
+
+    public string Owner { get; set; } = string.Empty;
+
+    public DateTimeOffset? DueAtUtc { get; set; }
+
+    public string SourceExecutionRunId { get; set; } = string.Empty;
+
+    public string SourceApprovalId { get; set; } = string.Empty;
+
+    public string SourceToolName { get; set; } = string.Empty;
+
+    public string? CreatedBy { get; set; }
+}
+
+internal sealed class ProcessEscalationAssignmentApiRequest
+{
+    public string Owner { get; set; } = string.Empty;
+
+    public string? AssignedBy { get; set; }
+}
+
+internal sealed class ProcessEscalationResolutionApiRequest
+{
+    public string Resolution { get; set; } = string.Empty;
+
+    public string? ResolvedBy { get; set; }
+}
+
+internal sealed class ProcessEscalationReopenApiRequest
+{
+    public string Reason { get; set; } = string.Empty;
+
+    public string? ReopenedBy { get; set; }
+}
+
+internal sealed class ProcessEscalationReworkApiRequest
+{
+    public Guid? StepRunConcurrencyToken { get; set; }
+
+    public string Directive { get; set; } = string.Empty;
+
+    public string? RequestedBy { get; set; }
+}
+
+internal sealed class ProcessOperatorApprovalDecisionApiRequest
+{
+    public Guid? StepRunId { get; set; }
+
+    public Guid? ExecutionRunId { get; set; }
+
+    public Guid? LaunchPlanId { get; set; }
+
+    public string ExternalApprovalId { get; set; } = string.Empty;
+
+    public ProcessOperatorApprovalStatus Status { get; set; } = ProcessOperatorApprovalStatus.Approved;
+
+    public string Summary { get; set; } = string.Empty;
+
+    public string? DecidedBy { get; set; }
+
+    public bool AutoApprovePendingToolCalls { get; set; }
 }
 
 internal sealed class ProcessArtifactRecordApiRequest

@@ -1,0 +1,90 @@
+@namespace CanDoItAll.Components.BaseLib
+
+<DialogScaffold Eyebrow="@Eyebrow"
+                Title="@Title"
+                Description="@Description"
+                ContextRail="@ContextRail"
+                ReviewPanel="@ReviewPanel"
+                ValidationContent="@RenderValidation"
+                Footer="@RenderFooter"
+                data-testid="@TestId">
+    @ChildContent
+</DialogScaffold>
+
+@code {
+    private string confirmationText = string.Empty;
+
+    [Parameter]
+    public string Eyebrow { get; set; } = "Danger action";
+
+    [Parameter]
+    public string Title { get; set; } = "Confirm action";
+
+    [Parameter]
+    public string? Description { get; set; }
+
+    [Parameter]
+    public string RequiredConfirmation { get; set; } = "confirm";
+
+    [Parameter]
+    public string ConfirmButtonText { get; set; } = "Confirm";
+
+    [Parameter]
+    public string CancelButtonText { get; set; } = "Cancel";
+
+    [Parameter]
+    public string? TestId { get; set; }
+
+    [Parameter]
+    public EventCallback Confirmed { get; set; }
+
+    [Parameter]
+    public EventCallback Cancelled { get; set; }
+
+    [Parameter]
+    public RenderFragment? ContextRail { get; set; }
+
+    [Parameter]
+    public RenderFragment? ReviewPanel { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private bool CanConfirm => string.Equals(confirmationText, RequiredConfirmation, StringComparison.Ordinal);
+
+    private RenderFragment RenderValidation => builder =>
+    {
+        builder.OpenElement(0, "label");
+        builder.AddAttribute(1, "class", "cda-danger-action__confirm");
+        builder.OpenElement(2, "span");
+        builder.AddContent(3, $"Type '{RequiredConfirmation}' to confirm.");
+        builder.CloseElement();
+        builder.OpenElement(4, "input");
+        builder.AddAttribute(5, "value", confirmationText);
+        builder.AddAttribute(6, "aria-label", "Confirmation text");
+        builder.AddAttribute(7, "oninput", EventCallback.Factory.Create<ChangeEventArgs>(this, args =>
+        {
+            confirmationText = args.Value?.ToString() ?? string.Empty;
+        }));
+        builder.CloseElement();
+        builder.CloseElement();
+    };
+
+    private RenderFragment RenderFooter => builder =>
+    {
+        builder.OpenComponent<Button>(0);
+        builder.AddAttribute(1, nameof(Button.Text), CancelButtonText);
+        builder.AddAttribute(2, nameof(Button.Icon), "close");
+        builder.AddAttribute(3, nameof(Button.Variant), Variant.Outlined);
+        builder.AddAttribute(4, nameof(Button.Click), Cancelled);
+        builder.CloseComponent();
+
+        builder.OpenComponent<Button>(5);
+        builder.AddAttribute(6, nameof(Button.Text), ConfirmButtonText);
+        builder.AddAttribute(7, nameof(Button.Icon), "warning");
+        builder.AddAttribute(8, nameof(Button.ButtonStyle), ButtonStyle.Danger);
+        builder.AddAttribute(9, nameof(Button.Disabled), !CanConfirm);
+        builder.AddAttribute(10, nameof(Button.Click), Confirmed);
+        builder.CloseComponent();
+    };
+}

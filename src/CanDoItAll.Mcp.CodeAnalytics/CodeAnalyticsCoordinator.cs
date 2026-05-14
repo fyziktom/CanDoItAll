@@ -303,7 +303,8 @@ public sealed class CodeAnalyticsCoordinator(
             NormalizeOptionalValue(request.QueryText),
             NormalizeList(request.FocusTags),
             request.Intent,
-            request.Precision);
+            request.Precision,
+            NormalizeList(request.RelationHints));
 
         var response = await applicationService.GetFocusedContextAsync(query, cancellationToken);
         return response ?? throw new ToolInvocationException("FocusedContextNotFound", $"Focused context could not be resolved from snapshot '{query.SnapshotId}'.");

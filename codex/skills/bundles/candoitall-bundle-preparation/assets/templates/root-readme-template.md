@@ -10,6 +10,13 @@ This bundle is a coordination and execution package for `{{BUNDLE_NAME}}`.
 
 - Describe the desired end state in one short paragraph.
 
+## Outcome Contract
+
+- Requested outcome:
+- Hard constraints:
+- Evidence required before closure:
+- Known blockers or explicit scope exceptions:
+
 ## Bundle Layout
 
 - `inputs/` raw request, artifacts, and structured input
@@ -31,6 +38,7 @@ This bundle is a coordination and execution package for `{{BUNDLE_NAME}}`.
 ## Dependency And Validation Map
 
 - Keep the mermaid dependency map, critical-subbundle notes, and phase gates current in `plan/01-phase-plan.md`.
+- If the bundle is resumed after compaction or by a different agent, use this README, the current subbundle README, and `reviews/01-execution-report.md` as the durable state.
 
 ## Validation Summary
 

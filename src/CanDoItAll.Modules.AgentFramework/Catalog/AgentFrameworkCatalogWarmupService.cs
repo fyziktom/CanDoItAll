@@ -10,6 +10,7 @@ namespace CanDoItAll.Modules.AgentFramework;
 internal sealed class AgentFrameworkCatalogWarmupService(
     IAgentFrameworkOrganizationCatalogRepairService organizationCatalogRepairService,
     ProcessMockAgentCatalogService processMockAgentCatalogService,
+    WorkflowExampleCatalogSeedService workflowExampleCatalogSeedService,
     IAiTechnicalAgentBridge technicalAgentBridge,
     ILogger<AgentFrameworkCatalogWarmupService> logger)
 {
@@ -19,6 +20,7 @@ internal sealed class AgentFrameworkCatalogWarmupService(
         await organizationCatalogRepairService.EnsureCurrentOrganizationCatalogAsync(cancellationToken);
         await processMockAgentCatalogService.EnsureCatalogAsync(cancellationToken);
         await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
+        await workflowExampleCatalogSeedService.EnsureSeededAsync(cancellationToken);
         stopwatch.Stop();
 
         logger.LogInformation(

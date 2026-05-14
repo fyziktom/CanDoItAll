@@ -3,6 +3,8 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Maf;
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
@@ -132,6 +134,432 @@ public sealed class ProjectStructureAgentApiIntegrationTests
         Assert.Contains(analytics.Entries, entry => entry.OperationName == "projects.create" && entry.Succeeded);
         Assert.Contains(analytics.Entries, entry => entry.OperationName == "structure.node-create" && entry.Succeeded);
         Assert.Contains(analytics.Entries, entry => entry.OperationName == "structure.read" && entry.Succeeded);
+    }
+
+    [Fact]
+    public async Task ProjectStructureAgentApi_creates_workflow_node_with_typed_metadata()
+    {
+        await using var host = await ProjectStructureAgentApiTestHost.CreateAsync();
+
+        var project = await PostAndReadAsync<ProjectSummary>(
+            host.Client,
+            "/api/project-structure/projects",
+            new ProjectStructureProjectSaveRequest(
+                "Workflow API project",
+                "HTTP workflow node validation",
+                "Create workflow nodes from project structure.",
+                "Execution",
+                ProjectStatus.Active));
+
+        var lease = await PostAndReadAsync<ProjectStructureLeaseSnapshot>(
+            host.Client,
+            "/api/project-structure/leases/acquire",
+            new ProjectStructureLeaseAcquireRequest(
+                ProjectStructureLeaseScopeKind.Project,
+                project.Id.ToString(),
+                "Create workflow node",
+                15));
+
+        var parent = await PostAndReadAsync<ProjectStructureNodeSummary>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id}/nodes",
+            new ProjectStructureNodeCreateInput(
+                ProjectObjectType.ProjectBlock,
+                "Mouser order",
+                "Procurement",
+                "Parent node that supplies the workflow context.",
+                $"project:{project.Id}",
+                ObjectSubtype: "financial",
+                LeaseToken: lease.LeaseToken));
+
+        WorkflowDefinition definition;
+        await using (var scope = host.App.Services.CreateAsyncScope())
+        {
+            var catalogService = scope.ServiceProvider.GetRequiredService<IWorkflowCatalogService>();
+            definition = await catalogService.SaveDefinitionAsync(CreateWorkflowDefinitionSaveRequest());
+        }
+
+        var inputSettings = ProjectStructureWorkflowInputSettings.Default();
+        inputSettings.IncludeParentSubtree = true;
+        inputSettings.ManualInputJson = "{\"check\":\"pdf-xlsx-match\"}";
+        inputSettings.AdditionalSources =
+        [
+            new ProjectStructureWorkflowInputSource(
+                ProjectStructureWorkflowInputSourceKind.FolderPath,
+                "mouser-data",
+                "Mouser order files",
+                "C:\\programovani\\testdata\\testworkflows\\mouser-order")
+        ];
+
+        var created = await PostAndReadAsync<ProjectStructureWorkflowNodeCreateResult>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id}/nodes/{parent.Id}/workflow-definition",
+            new ProjectStructureWorkflowNodeCreateInput(
+                definition.Id,
+                definition.VersionId,
+                "Mouser order reconciliation",
+                InputSettings: inputSettings,
+                X: 820,
+                Y: 420,
+                LeaseToken: lease.LeaseToken));
+
+        Assert.Equal(project.Id, created.ProjectId);
+        Assert.Equal(definition.Id, created.WorkflowId);
+        Assert.Equal(definition.VersionId, created.WorkflowVersionId);
+        Assert.Equal(ProjectObjectType.WorkflowDefinition, created.Node.ObjectType);
+        Assert.Equal(parent.Id, created.Node.ParentId);
+        Assert.Equal("workflow-definition", created.Node.ArtifactKind);
+        Assert.Equal(definition.Id.Value, created.Node.ArtifactId);
+
+        var readback = await PostAndReadAsync<ProjectStructureReadResponse>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id}/structure/read",
+            new ProjectStructureReadRequest(IncludeLinks: true, IncludeMetadata: true, IncludeNotes: true));
+        var workflowNode = Assert.Single(readback.Nodes, node => node.Id == created.Node.Id);
+        var metadata = ProjectObjectMetadataSerializer.Parse(workflowNode.MetadataJson);
+
+        Assert.Equal("Mouser order reconciliation", workflowNode.Title);
+        Assert.Equal(definition.Id, metadata.Workflow?.WorkflowId);
+        Assert.Equal(definition.VersionId, metadata.Workflow?.WorkflowVersionId);
+        Assert.True(metadata.Workflow!.InputSettings.IncludeProject);
+        Assert.True(metadata.Workflow.InputSettings.IncludeParentNode);
+        Assert.True(metadata.Workflow.InputSettings.IncludeParentNodeDetails);
+        Assert.True(metadata.Workflow.InputSettings.IncludeParentSubtree);
+        Assert.Equal("{\"check\":\"pdf-xlsx-match\"}", metadata.Workflow.InputSettings.ManualInputJson);
+        Assert.Contains(
+            metadata.Workflow.InputSettings.AdditionalSources,
+            source => source.Kind == ProjectStructureWorkflowInputSourceKind.FolderPath &&
+                      source.Key == "mouser-data");
+
+        var missingWorkflowResponse = await host.Client.PostAsJsonAsync(
+            $"/api/project-structure/projects/{project.Id}/nodes/{parent.Id}/workflow-definition",
+            new ProjectStructureWorkflowNodeCreateInput(WorkflowId.New(), LeaseToken: lease.LeaseToken));
+
+        Assert.Equal(HttpStatusCode.NotFound, missingWorkflowResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task ProjectStructureAgentApi_builds_workflow_input_preview_from_project_parent_and_sources()
+    {
+        await using var host = await ProjectStructureAgentApiTestHost.CreateAsync();
+
+        var project = await PostAndReadAsync<ProjectSummary>(
+            host.Client,
+            "/api/project-structure/projects",
+            new ProjectStructureProjectSaveRequest(
+                "SEAMARK xray review",
+                "Workflow input preview validation",
+                "Preview workflow input before creating a node.",
+                "Discovery",
+                ProjectStatus.Active));
+
+        var parent = await PostAndReadAsync<ProjectStructureNodeSummary>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id}/nodes",
+            new ProjectStructureNodeCreateInput(
+                ProjectObjectType.Repository,
+                "SEAMARK folder",
+                "Local folder",
+                "Folder with xray device PDFs and price lists.",
+                $"project:{project.Id}",
+                ObjectSubtype: "folder"));
+
+        var child = await PostAndReadAsync<ProjectStructureNodeSummary>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id}/nodes",
+            new ProjectStructureNodeCreateInput(
+                ProjectObjectType.File,
+                "SEAMARK price list",
+                "PDF",
+                "Price list extracted from the vendor folder.",
+                parent.Id,
+                ObjectSubtype: "pdf"));
+
+        WorkflowDefinition activeDefinition;
+        WorkflowDefinition draftDefinition;
+        await using (var scope = host.App.Services.CreateAsyncScope())
+        {
+            var catalogService = scope.ServiceProvider.GetRequiredService<IWorkflowCatalogService>();
+            activeDefinition = await catalogService.SaveDefinitionAsync(CreateWorkflowDefinitionSaveRequest("SEAMARK folder summary"));
+            draftDefinition = await catalogService.SaveDefinitionAsync(CreateWorkflowDefinitionSaveRequest("Draft SEAMARK workflow", WorkflowLifecycleStatus.Draft));
+        }
+
+        var inputSettings = ProjectStructureWorkflowInputSettings.Default();
+        inputSettings.IncludeParentSubtree = true;
+        inputSettings.ManualInputJson = "{\"task\":\"compare-devices\"}";
+        inputSettings.AdditionalSources =
+        [
+            new ProjectStructureWorkflowInputSource(
+                ProjectStructureWorkflowInputSourceKind.FolderPath,
+                "seamark-folder",
+                "SEAMARK source folder",
+                "C:\\programovani\\testdata\\testworkflows\\SEAMARK")
+        ];
+
+        var options = await PostAndReadAsync<ProjectStructureWorkflowAddOptionsResult>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id}/nodes/{parent.Id}/workflow-add-options",
+            new ProjectStructureWorkflowAddOptionsInput(
+                activeDefinition.Id,
+                InputSettings: inputSettings,
+                SelectedNodeIds: [child.Id]));
+
+        Assert.Equal(activeDefinition.Id, options.SelectedWorkflowId);
+        Assert.Equal(activeDefinition.VersionId, options.SelectedVersionId);
+        Assert.Contains(options.Workflows, item => item.WorkflowId == activeDefinition.Id && item.IsSelectable);
+        Assert.Contains(options.Workflows, item => item.WorkflowId == draftDefinition.Id && !item.IsSelectable);
+        Assert.Contains("Project", options.Preview.Summary);
+        Assert.Contains("Parent node", options.Preview.Summary);
+        Assert.Contains("SEAMARK source folder", options.Preview.Summary);
+
+        using var inputPayload = JsonDocument.Parse(options.Preview.InputJson);
+        var root = inputPayload.RootElement;
+        Assert.Equal(project.Id, root.GetProperty("project").GetProperty("id").GetGuid());
+        Assert.Equal("SEAMARK xray review", root.GetProperty("project").GetProperty("name").GetString());
+        Assert.Equal(parent.Id, root.GetProperty("parentNode").GetProperty("id").GetString());
+        Assert.Equal("SEAMARK folder", root.GetProperty("parentNode").GetProperty("title").GetString());
+        Assert.Equal("Folder with xray device PDFs and price lists.", root.GetProperty("parentNode").GetProperty("notes").GetString());
+        Assert.Equal("SEAMARK price list", root.GetProperty("selectedNodes")[0].GetProperty("title").GetString());
+        Assert.Equal("SEAMARK price list", root.GetProperty("parentSubtree")[0].GetProperty("title").GetString());
+        Assert.Equal("C:\\programovani\\testdata\\testworkflows\\SEAMARK", root.GetProperty("sources")[0].GetProperty("value").GetString());
+        Assert.Equal("compare-devices", root.GetProperty("manualInput").GetProperty("task").GetString());
+
+        var invalidManualJson = await host.Client.PostAsJsonAsync(
+            $"/api/project-structure/projects/{project.Id}/nodes/{parent.Id}/workflow-add-options",
+            new ProjectStructureWorkflowAddOptionsInput(
+                activeDefinition.Id,
+                InputSettings: new ProjectStructureWorkflowInputSettings
+                {
+                    ManualInputJson = "{"
+                }));
+
+        Assert.Equal(HttpStatusCode.BadRequest, invalidManualJson.StatusCode);
+    }
+
+    [Fact]
+    public async Task ProjectStructureAgentApi_starts_workflow_node_and_updates_summary()
+    {
+        await using var host = await ProjectStructureAgentApiTestHost.CreateAsync();
+        var project = await CreateWorkflowProjectAsync(host.Client, "Workflow run project");
+        var lease = await AcquireProjectLeaseAsync(host.Client, project.Id, "Start workflow node");
+        var parent = await CreateProjectBlockAsync(host.Client, project.Id, lease.LeaseToken, "Mouser order", "Order files and reconciliation notes.");
+
+        WorkflowDefinition definition;
+        await using (var scope = host.App.Services.CreateAsyncScope())
+        {
+            var catalogService = scope.ServiceProvider.GetRequiredService<IWorkflowCatalogService>();
+            definition = await catalogService.SaveDefinitionAsync(CreateWorkflowDefinitionSaveRequest("Mouser reconciliation workflow"));
+        }
+
+        var inputSettings = ProjectStructureWorkflowInputSettings.Default();
+        inputSettings.ManualInputJson = "{\"task\":\"reconcile-order\"}";
+        inputSettings.AdditionalSources =
+        [
+            new ProjectStructureWorkflowInputSource(
+                ProjectStructureWorkflowInputSourceKind.FolderPath,
+                "mouser-source",
+                "Mouser source folder",
+                "C:\\programovani\\testdata\\testworkflows\\mouser-order")
+        ];
+        var workflowNode = await PostAndReadAsync<ProjectStructureWorkflowNodeCreateResult>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id}/nodes/{parent.Id}/workflow-definition",
+            new ProjectStructureWorkflowNodeCreateInput(
+                definition.Id,
+                definition.VersionId,
+                InputSettings: inputSettings,
+                LeaseToken: lease.LeaseToken));
+
+        var started = await PostAndReadAsync<ProjectStructureWorkflowNodeStartResult>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id}/nodes/{workflowNode.Node.Id}/workflow/start",
+            new ProjectStructureWorkflowNodeStartInput(WorkflowRuntimeBackendKind.InProcess, LeaseToken: lease.LeaseToken));
+
+        Assert.Equal(WorkflowRunState.Completed, started.Status.State);
+        Assert.Equal("complete", started.Status.ProgressMode);
+        Assert.Equal(100, started.Status.ProgressPercent);
+        Assert.Equal(3, started.Status.StepCount);
+        Assert.Equal(3, started.Status.CurrentStepIndex);
+        Assert.Contains(started.RunId.Value.ToString("D"), started.Route);
+
+        var createdFilePath = "C:\\programovani\\testdata\\testworkflows\\mouser-order\\generated-summary.md";
+        await using (var scope = host.App.Services.CreateAsyncScope())
+        {
+            var runStore = scope.ServiceProvider.GetRequiredService<IWorkflowRunStore>();
+            await runStore.SaveArtifactAsync(new WorkflowArtifactRecord(
+                WorkflowArtifactId.New(),
+                started.RunId,
+                WorkflowArtifactKind.File,
+                NodeId: null,
+                "generated-summary.md",
+                "text/markdown",
+                createdFilePath,
+                "Generated procurement summary.",
+                DateTimeOffset.UtcNow));
+        }
+
+        var status = await GetAndReadAsync<ProjectStructureWorkflowRunStatus>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id}/nodes/{workflowNode.Node.Id}/workflow/status");
+
+        Assert.Equal(WorkflowRunState.Completed, status.State);
+        Assert.Contains(createdFilePath, status.Summary.CreatedFilePaths);
+        Assert.Contains(status.Summary.Artifacts, artifact => artifact.Name == "generated-summary.md");
+
+        var readback = await PostAndReadAsync<ProjectStructureReadResponse>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id}/structure/read",
+            new ProjectStructureReadRequest(IncludeMetadata: true));
+        var updatedWorkflowNode = Assert.Single(readback.Nodes, node => node.Id == workflowNode.Node.Id);
+        var metadata = ProjectObjectMetadataSerializer.Parse(updatedWorkflowNode.MetadataJson).Workflow;
+
+        Assert.Equal("Completed", updatedWorkflowNode.Status);
+        Assert.Equal("complete", updatedWorkflowNode.ProgressMode);
+        Assert.Equal(100, updatedWorkflowNode.ProgressPercent);
+        Assert.Equal(started.RunId, metadata?.LastRunId);
+        Assert.Equal(WorkflowRunState.Completed, metadata?.LastRunState);
+        Assert.Contains(createdFilePath, metadata?.LastCreatedFilePaths ?? []);
+    }
+
+    [Fact]
+    public async Task ProjectStructureAgentApi_projects_workflow_created_assets_under_workflow_node()
+    {
+        await using var host = await ProjectStructureAgentApiTestHost.CreateAsync();
+        var project = await CreateWorkflowProjectAsync(host.Client, "Workflow asset projection project");
+        var lease = await AcquireProjectLeaseAsync(host.Client, project.Id, "Start workflow asset projection");
+        var parent = await CreateProjectBlockAsync(host.Client, project.Id, lease.LeaseToken, "SEAMARK folder", "Folder with xray device PDFs and price lists.");
+
+        WorkflowDefinition definition;
+        await using (var scope = host.App.Services.CreateAsyncScope())
+        {
+            var catalogService = scope.ServiceProvider.GetRequiredService<IWorkflowCatalogService>();
+            definition = await catalogService.SaveDefinitionAsync(CreateProjectStructureAssetWorkflowDefinitionSaveRequest());
+        }
+
+        var workflowNode = await PostAndReadAsync<ProjectStructureWorkflowNodeCreateResult>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id}/nodes/{parent.Id}/workflow-definition",
+            new ProjectStructureWorkflowNodeCreateInput(
+                definition.Id,
+                definition.VersionId,
+                InputSettings: ProjectStructureWorkflowInputSettings.Default(),
+                LeaseToken: lease.LeaseToken));
+
+        var started = await PostAndReadAsync<ProjectStructureWorkflowNodeStartResult>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id}/nodes/{workflowNode.Node.Id}/workflow/start",
+            new ProjectStructureWorkflowNodeStartInput(WorkflowRuntimeBackendKind.InProcess, LeaseToken: lease.LeaseToken));
+
+        var readback = await PostAndReadAsync<ProjectStructureReadResponse>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id}/structure/read",
+            new ProjectStructureReadRequest(
+                IncludeLinks: true,
+                IncludeMetadata: true,
+                IncludeAssets: true,
+                IncludeNotes: true));
+        var generatedAsset = Assert.Single(readback.Nodes, node => node.Title == "Workflow generated summary");
+        var assetId = generatedAsset.ArtifactId?.ToString("D") ?? generatedAsset.Id;
+        var updatedWorkflowNode = Assert.Single(readback.Nodes, node => node.Id == workflowNode.Node.Id);
+        var metadata = ProjectObjectMetadataSerializer.Parse(updatedWorkflowNode.MetadataJson).Workflow;
+
+        Assert.Equal(WorkflowRunState.Completed, started.Status.State);
+        Assert.Equal(workflowNode.Node.Id, generatedAsset.ParentId);
+        Assert.Contains(readback.Links, link => link.SourceId == workflowNode.Node.Id && link.TargetId == generatedAsset.Id);
+        Assert.Contains(generatedAsset.Id, started.Status.Summary.CreatedNodeIds);
+        Assert.Contains(assetId, started.Status.Summary.CreatedAssetIds);
+        Assert.Contains(generatedAsset.Id, metadata?.LastCreatedNodeIds ?? []);
+        Assert.Contains(assetId, metadata?.LastCreatedAssetIds ?? []);
+    }
+
+    [Fact]
+    public async Task ProjectStructureAgentApi_marks_workflow_node_waiting_cancelled_and_failed_states()
+    {
+        await using var host = await ProjectStructureAgentApiTestHost.CreateAsync();
+        var project = await CreateWorkflowProjectAsync(host.Client, "Workflow state project");
+        var lease = await AcquireProjectLeaseAsync(host.Client, project.Id, "Start state workflows");
+        var parent = await CreateProjectBlockAsync(host.Client, project.Id, lease.LeaseToken, "SEAMARK folder", "Folder with xray device PDFs and price lists.");
+
+        WorkflowDefinition waitingDefinition;
+        WorkflowDefinition completedDefinition;
+        await using (var scope = host.App.Services.CreateAsyncScope())
+        {
+            var catalogService = scope.ServiceProvider.GetRequiredService<IWorkflowCatalogService>();
+            waitingDefinition = await catalogService.SaveDefinitionAsync(CreateHumanInputWorkflowDefinitionSaveRequest());
+            completedDefinition = await catalogService.SaveDefinitionAsync(CreateWorkflowDefinitionSaveRequest("Backend failure probe workflow"));
+        }
+
+        var waitingWorkflowNode = await PostAndReadAsync<ProjectStructureWorkflowNodeCreateResult>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id}/nodes/{parent.Id}/workflow-definition",
+            new ProjectStructureWorkflowNodeCreateInput(
+                waitingDefinition.Id,
+                waitingDefinition.VersionId,
+                "SEAMARK folder approval",
+                InputSettings: ProjectStructureWorkflowInputSettings.Default(),
+                LeaseToken: lease.LeaseToken));
+        var waitingStart = await PostAndReadAsync<ProjectStructureWorkflowNodeStartResult>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id}/nodes/{waitingWorkflowNode.Node.Id}/workflow/start",
+            new ProjectStructureWorkflowNodeStartInput(WorkflowRuntimeBackendKind.InProcess, LeaseToken: lease.LeaseToken));
+
+        Assert.Equal(WorkflowRunState.WaitingForInput, waitingStart.Status.State);
+        Assert.Equal("pause", waitingStart.Status.MarkerIcon);
+        Assert.Equal(2, waitingStart.Status.CurrentStepIndex);
+
+        await using (var scope = host.App.Services.CreateAsyncScope())
+        {
+            var runtimeManager = scope.ServiceProvider.GetRequiredService<IWorkflowRuntimeManager>();
+            await runtimeManager.CancelAsync(waitingStart.RunId);
+        }
+
+        var cancelledStatus = await GetAndReadAsync<ProjectStructureWorkflowRunStatus>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id}/nodes/{waitingWorkflowNode.Node.Id}/workflow/status");
+
+        Assert.Equal(WorkflowRunState.Cancelled, cancelledStatus.State);
+        Assert.Equal("stop", cancelledStatus.MarkerIcon);
+        Assert.Equal("Cancelled", cancelledStatus.MarkerLabel);
+
+        var failedWorkflowNode = await PostAndReadAsync<ProjectStructureWorkflowNodeCreateResult>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id}/nodes/{parent.Id}/workflow-definition",
+            new ProjectStructureWorkflowNodeCreateInput(
+                completedDefinition.Id,
+                completedDefinition.VersionId,
+                "Durable backend failure probe",
+                InputSettings: ProjectStructureWorkflowInputSettings.Default(),
+                LeaseToken: lease.LeaseToken));
+        var failedStartResponse = await host.Client.PostAsJsonAsync(
+            $"/api/project-structure/projects/{project.Id}/nodes/{failedWorkflowNode.Node.Id}/workflow/start",
+            new ProjectStructureWorkflowNodeStartInput(WorkflowRuntimeBackendKind.DurableTask, LeaseToken: lease.LeaseToken));
+
+        Assert.Equal(HttpStatusCode.BadRequest, failedStartResponse.StatusCode);
+
+        var failedStatus = await GetAndReadAsync<ProjectStructureWorkflowRunStatus>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id}/nodes/{failedWorkflowNode.Node.Id}/workflow/status");
+
+        Assert.Equal(WorkflowRunState.Failed, failedStatus.State);
+        Assert.Equal("alert", failedStatus.MarkerIcon);
+        Assert.Contains("not registered", failedStatus.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ProjectStructureAgentApi_rejects_workflow_start_from_non_workflow_node()
+    {
+        await using var host = await ProjectStructureAgentApiTestHost.CreateAsync();
+        var project = await CreateWorkflowProjectAsync(host.Client, "Invalid workflow start project");
+        var lease = await AcquireProjectLeaseAsync(host.Client, project.Id, "Reject invalid workflow start");
+        var parent = await CreateProjectBlockAsync(host.Client, project.Id, lease.LeaseToken, "Regular node", "This is not a workflow node.");
+
+        var response = await host.Client.PostAsJsonAsync(
+            $"/api/project-structure/projects/{project.Id}/nodes/{parent.Id}/workflow/start",
+            new ProjectStructureWorkflowNodeStartInput(WorkflowRuntimeBackendKind.InProcess, LeaseToken: lease.LeaseToken));
+        var body = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("WorkflowNodeRequired", body);
     }
 
     [Fact]
@@ -480,6 +908,209 @@ public sealed class ProjectStructureAgentApiIntegrationTests
 
         var payload = await response.Content.ReadFromJsonAsync<T>();
         return payload ?? throw new InvalidOperationException($"No payload was returned for '{path}'.");
+    }
+
+    private static Task<ProjectSummary> CreateWorkflowProjectAsync(HttpClient client, string name)
+    {
+        return PostAndReadAsync<ProjectSummary>(
+            client,
+            "/api/project-structure/projects",
+            new ProjectStructureProjectSaveRequest(
+                name,
+                "Workflow project-structure validation",
+                "Validate workflow nodes from project structure.",
+                "Execution",
+                ProjectStatus.Active));
+    }
+
+    private static Task<ProjectStructureLeaseSnapshot> AcquireProjectLeaseAsync(
+        HttpClient client,
+        Guid projectId,
+        string reason)
+    {
+        return PostAndReadAsync<ProjectStructureLeaseSnapshot>(
+            client,
+            "/api/project-structure/leases/acquire",
+            new ProjectStructureLeaseAcquireRequest(
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString(),
+                reason,
+                15));
+    }
+
+    private static Task<ProjectStructureNodeSummary> CreateProjectBlockAsync(
+        HttpClient client,
+        Guid projectId,
+        string leaseToken,
+        string title,
+        string notes)
+    {
+        return PostAndReadAsync<ProjectStructureNodeSummary>(
+            client,
+            $"/api/project-structure/projects/{projectId}/nodes",
+            new ProjectStructureNodeCreateInput(
+                ProjectObjectType.ProjectBlock,
+                title,
+                "Workflow input",
+                notes,
+                $"project:{projectId}",
+                ObjectSubtype: "workflow-input",
+                LeaseToken: leaseToken));
+    }
+
+    private static WorkflowDefinitionSaveRequest CreateWorkflowDefinitionSaveRequest(
+        string name = "Order reconciliation workflow",
+        WorkflowLifecycleStatus status = WorkflowLifecycleStatus.Active)
+    {
+        return new WorkflowDefinitionSaveRequest(
+            Id: null,
+            ExpectedVersionId: null,
+            Name: name,
+            Description: "Checks order documents and produces a concise procurement summary.",
+            Status: status,
+            Graph: new WorkflowGraph(
+                new WorkflowNodeId("start"),
+                [
+                    CreateWorkflowNode("start", WorkflowNodeKind.Start, resultShape: WorkflowValueShape.Text),
+                    CreateWorkflowNode("logic", WorkflowNodeKind.StrictLogic, inputShape: WorkflowValueShape.Text, resultShape: WorkflowValueShape.Text),
+                    CreateWorkflowNode("end", WorkflowNodeKind.End, inputShape: WorkflowValueShape.Text)
+                ],
+                [
+                    CreateWorkflowEdge("start-to-logic", "start", "logic"),
+                    CreateWorkflowEdge("logic-to-end", "logic", "end")
+                ]),
+            RuntimePolicy: new WorkflowRuntimePolicy(
+                WorkflowRuntimeBackendKind.InProcess,
+                AllowInProcessPreviewRuns: true,
+                RequireDurableProductionRuns: false,
+                ExposeAzureFunctionsStatusEndpoint: false,
+                ExposeAzureFunctionsMcpTool: false));
+    }
+
+    private static WorkflowDefinitionSaveRequest CreateHumanInputWorkflowDefinitionSaveRequest()
+    {
+        return new WorkflowDefinitionSaveRequest(
+            Id: null,
+            ExpectedVersionId: null,
+            Name: "Human approval workflow",
+            Description: "Waits for human input before producing a workflow result.",
+            Status: WorkflowLifecycleStatus.Active,
+            Graph: new WorkflowGraph(
+                new WorkflowNodeId("start"),
+                [
+                    CreateWorkflowNode("start", WorkflowNodeKind.Start, resultShape: WorkflowValueShape.Text),
+                    CreateWorkflowNode("approval", WorkflowNodeKind.HumanInput, inputShape: WorkflowValueShape.Text, resultShape: WorkflowValueShape.Text),
+                    CreateWorkflowNode("end", WorkflowNodeKind.End, inputShape: WorkflowValueShape.Text)
+                ],
+                [
+                    CreateWorkflowEdge("start-to-approval", "start", "approval"),
+                    CreateWorkflowEdge("approval-to-end", "approval", "end")
+                ]),
+            RuntimePolicy: new WorkflowRuntimePolicy(
+                WorkflowRuntimeBackendKind.InProcess,
+                AllowInProcessPreviewRuns: true,
+                RequireDurableProductionRuns: false,
+                ExposeAzureFunctionsStatusEndpoint: false,
+                ExposeAzureFunctionsMcpTool: false));
+    }
+
+    private static WorkflowDefinitionSaveRequest CreateProjectStructureAssetWorkflowDefinitionSaveRequest()
+    {
+        var executorSettingsJson = JsonSerializer.Serialize(
+            new WorkflowProjectStructureExecutorSettings
+            {
+                Operation = WorkflowProjectStructureOperation.CreateAsset,
+                AssetKind = "md",
+                Title = "Workflow generated summary",
+                Content = "Project-structure result created by a workflow run.",
+                ContentType = "text/markdown"
+            },
+            new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+        return new WorkflowDefinitionSaveRequest(
+            Id: null,
+            ExpectedVersionId: null,
+            Name: "Project-structure asset workflow",
+            Description: "Creates a workflow result asset under the workflow node.",
+            Status: WorkflowLifecycleStatus.Active,
+            Graph: new WorkflowGraph(
+                new WorkflowNodeId("start"),
+                [
+                    CreateWorkflowNode("start", WorkflowNodeKind.Start, resultShape: WorkflowValueShape.Text),
+                    CreateExecutorWorkflowNode("create-asset", WorkflowExecutorIds.ProjectStructure, executorSettingsJson),
+                    CreateWorkflowNode("end", WorkflowNodeKind.End, inputShape: CreateJsonShape())
+                ],
+                [
+                    CreateWorkflowEdge("start-to-asset", "start", "create-asset"),
+                    CreateWorkflowEdge("asset-to-end", "create-asset", "end")
+                ]),
+            RuntimePolicy: new WorkflowRuntimePolicy(
+                WorkflowRuntimeBackendKind.InProcess,
+                AllowInProcessPreviewRuns: true,
+                RequireDurableProductionRuns: false,
+                ExposeAzureFunctionsStatusEndpoint: false,
+                ExposeAzureFunctionsMcpTool: false));
+    }
+
+    private static WorkflowNode CreateWorkflowNode(
+        string id,
+        WorkflowNodeKind kind,
+        WorkflowValueShape? inputShape = null,
+        WorkflowValueShape? resultShape = null)
+    {
+        return new WorkflowNode(
+            new WorkflowNodeId(id),
+            kind,
+            id,
+            [],
+            new WorkflowNodeSettings(
+                ComponentId: null,
+                AgentId: null,
+                SubworkflowId: null,
+                ExternalRequestKind: null,
+                Instructions: string.Empty,
+                InputShape: inputShape ?? WorkflowValueShape.Text,
+                ResultShape: resultShape ?? WorkflowValueShape.Text));
+    }
+
+    private static WorkflowNode CreateExecutorWorkflowNode(
+        string id,
+        WorkflowExecutorId executorId,
+        string executorSettingsJson)
+    {
+        return new WorkflowNode(
+            new WorkflowNodeId(id),
+            WorkflowNodeKind.Executor,
+            id,
+            [],
+            new WorkflowNodeSettings(
+                ComponentId: null,
+                AgentId: null,
+                SubworkflowId: null,
+                ExternalRequestKind: null,
+                Instructions: string.Empty,
+                InputShape: WorkflowValueShape.Text,
+                ResultShape: CreateJsonShape()) with
+            {
+                ExecutorId = executorId,
+                ExecutorSettingsJson = executorSettingsJson,
+                ExecutionPolicy = WorkflowExecutorExecutionPolicy.Default
+            });
+    }
+
+    private static WorkflowValueShape CreateJsonShape()
+        => new(WorkflowValueShapeKind.Json, "{}", "JSON payload");
+
+    private static WorkflowEdge CreateWorkflowEdge(string id, string source, string target)
+    {
+        return new WorkflowEdge(
+            new WorkflowEdgeId(id),
+            new WorkflowNodeId(source),
+            SourcePortId: null,
+            new WorkflowNodeId(target),
+            TargetPortId: null,
+            WorkflowEdgeKind.Direct,
+            ConditionExpression: string.Empty);
     }
 
     private static async Task<T> GetAndReadAsync<T>(HttpClient client, string path)

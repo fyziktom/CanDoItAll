@@ -193,6 +193,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return AgentFailureCategory.ArtifactMissing;
         }
 
+        if (!string.IsNullOrWhiteSpace(ResolveOutOfScopeExternalTargetReferenceSummary(detail, ResolveOutputInspectionText(responseText))))
+        {
+            return AgentFailureCategory.OutOfScopeReference;
+        }
+
         if (MentionsRepeatedToolInvocation(responseText) || MentionsRepeatedToolInvocation(detail.Run.ResultSummary))
         {
             return AgentFailureCategory.RepeatedToolLoop;
@@ -263,6 +268,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
         if (!string.IsNullOrWhiteSpace(missingArtifact))
         {
             return missingArtifact;
+        }
+
+        var outOfScopeReference = ResolveOutOfScopeExternalTargetReferenceSummary(detail, inspectionText);
+        if (!string.IsNullOrWhiteSpace(outOfScopeReference))
+        {
+            return outOfScopeReference;
         }
 
         return category == AgentFailureCategory.QaRejected
@@ -350,6 +361,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             AgentFailureCategory.TestFailure => $"Repair test failures for step '{candidate.StepRun.Title}' and rerun test proof.",
             AgentFailureCategory.BrowserProofFailure => $"Repair browser-proof failure for step '{candidate.StepRun.Title}' and capture fresh evidence.",
             AgentFailureCategory.ArtifactMissing => $"Produce or repair missing artifacts for step '{candidate.StepRun.Title}'.",
+            AgentFailureCategory.OutOfScopeReference => $"Remove stale or ungrounded path references from step '{candidate.StepRun.Title}' evidence and use only current-run grounded paths.",
             AgentFailureCategory.HumanRequestedRerun => $"Apply human-directed repair for step '{candidate.StepRun.Title}'.",
             _ => $"Recover step '{candidate.StepRun.Title}' from {decision.FailureCategory}."
         };

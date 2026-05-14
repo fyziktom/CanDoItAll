@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace CanDoItAll.AgentFramework.Models;
 
 public sealed record AgentCapabilityAssignment(
@@ -8,6 +10,16 @@ public sealed record AgentCapabilityAssignment(
     DateTimeOffset? LastVerifiedAtUtc,
     string ProofNotes);
 
+public static class AgentSecretPurposes
+{
+    public const string GeneralAgentRequest = "agent-request";
+}
+
+public sealed record AgentAllowedSecretReference(
+    Guid SecretId,
+    string NameSnapshot,
+    string Purpose);
+
 public sealed record AgentPermissionsPolicy(
     bool CanUseTools,
     bool CanAskOtherAgents,
@@ -15,7 +27,8 @@ public sealed record AgentPermissionsPolicy(
     bool CanObserveOtherAgents,
     bool CanScheduleWork,
     bool RequiresApprovalForExternalCalls,
-    bool AutoApproveExternalCallsByDefault = false)
+    bool AutoApproveExternalCallsByDefault = false,
+    IReadOnlyList<AgentAllowedSecretReference>? AllowedSecrets = null)
 {
     public static AgentPermissionsPolicy Default { get; } = new(
         CanUseTools: true,
@@ -24,7 +37,12 @@ public sealed record AgentPermissionsPolicy(
         CanObserveOtherAgents: false,
         CanScheduleWork: false,
         RequiresApprovalForExternalCalls: true,
-        AutoApproveExternalCallsByDefault: false);
+        AutoApproveExternalCallsByDefault: false,
+        AllowedSecrets: []);
+
+    [JsonIgnore]
+    public IReadOnlyList<AgentAllowedSecretReference> NormalizedAllowedSecrets
+        => AllowedSecrets ?? [];
 }
 
 public sealed record AgentDefinition(

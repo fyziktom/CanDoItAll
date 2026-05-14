@@ -189,6 +189,12 @@
         closeComposer(state, { focusHost: false });
 
         const shell = decorateComposerShell(state, `Create ${action.label || "item"}`, action.label || "Create", "dialog");
+        const setupRendererKey = (action.setupRendererKey || "").trim().toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+        if (setupRendererKey) {
+            shell.composer.dataset.setupRenderer = setupRendererKey;
+            shell.composer.classList.add(`renderer-${setupRendererKey}`);
+        }
+
         const dialogBody = createElement(state.document, "div", "cw-canvas-composer__dialog-body");
         const overview = createElement(state.document, "div", "cw-canvas-composer__overview");
         const scroll = createElement(state.document, "div", "cw-canvas-composer__scroll");
@@ -264,14 +270,25 @@
         }
 
         const inputFieldEntries = [];
-        let inputFields = null;
-        if ((action.inputFields || []).length > 0) {
-            const inputsSection = appendSection("Inputs", "Complete the typed fields required before the item can be created.");
-            inputFields = createElement(state.document, "div", "cw-canvas-composer__fields");
-            inputsSection.appendChild(inputFields);
-        }
+        const inputFieldSections = new Map();
+        const resolveInputFieldContainer = field => {
+            const sectionKey = field.sectionKey || "inputs";
+            const existing = inputFieldSections.get(sectionKey);
+            if (existing) {
+                return existing;
+            }
+
+            const section = appendSection(
+                field.sectionTitle || "Inputs",
+                field.sectionDescription || "Complete the typed fields required before the item can be created.");
+            const fields = createElement(state.document, "div", "cw-canvas-composer__fields");
+            section.appendChild(fields);
+            inputFieldSections.set(sectionKey, fields);
+            return fields;
+        };
 
         for (const field of action.inputFields || []) {
+            const inputFields = resolveInputFieldContainer(field);
             const fieldWrapper = createElement(state.document, "label", "cw-canvas-composer__field");
             fieldWrapper.appendChild(createElement(
                 state.document,
@@ -533,19 +550,21 @@
         });
     }
 
-    function buildChildNotePlacement(position, childCount) {
+    function buildChildNotePlacement(position, childCount, sourceSize) {
         const column = childCount % 3;
         const row = Math.floor(childCount / 3);
+        const horizontalGap = ((sourceSize?.width || 148) / 2) + 98;
         return {
-            x: round(position.x + 240 + (column * 46)),
-            y: round(position.y - 70 + (row * 118))
+            x: round(position.x + horizontalGap + (column * 36)),
+            y: round(position.y + (row * 104))
         };
     }
 
-    function buildSiblingNotePlacement(position, siblingCount) {
+    function buildSiblingNotePlacement(position, siblingCount, sourceSize) {
+        const verticalGap = ((sourceSize?.height || 76) / 2) + 58;
         return {
             x: round(position.x + ((siblingCount % 2) * 24)),
-            y: round(position.y + 132)
+            y: round(position.y + verticalGap)
         };
     }
 
@@ -567,9 +586,10 @@
         }
 
         const position = getNodePosition(state, node);
+        const sourceSize = getNodeSize(state, node);
         const anchorWorld = isSibling
-            ? buildSiblingNotePlacement(position, state.surface.nodes.filter(candidate => candidate.parentId === node.parentId && candidate.id !== node.id).length)
-            : buildChildNotePlacement(position, state.surface.nodes.filter(candidate => candidate.parentId === node.id).length);
+            ? buildSiblingNotePlacement(position, state.surface.nodes.filter(candidate => candidate.parentId === node.parentId && candidate.id !== node.id).length, sourceSize)
+            : buildChildNotePlacement(position, state.surface.nodes.filter(candidate => candidate.parentId === node.id).length, sourceSize);
 
         openInlineNoteComposer(state, {
             kind: "note-create",

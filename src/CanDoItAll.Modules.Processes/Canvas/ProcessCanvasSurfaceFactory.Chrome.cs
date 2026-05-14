@@ -165,6 +165,52 @@ public sealed partial class ProcessCanvasSurfaceFactory
         return actions;
     }
 
+    private static List<CanvasWorkbenchAction> BuildDefinitionArtifactContextActions()
+    {
+        return
+        [
+            new CanvasWorkbenchAction
+            {
+                ActionId = ProcessCanvasActionIds.CreateArtifactClone,
+                Label = "Create clone",
+                MenuLabel = "Create clone",
+                Icon = "content_copy",
+                Tone = "info"
+            },
+            new CanvasWorkbenchAction
+            {
+                ActionId = ProcessCanvasActionIds.HighlightArtifactClones,
+                Label = "Highlight clones",
+                MenuLabel = "Highlight all clones",
+                Icon = "hub",
+                Tone = "accent"
+            }
+        ];
+    }
+
+    private static List<CanvasWorkbenchAction> BuildDefinitionRoleContextActions()
+    {
+        return
+        [
+            new CanvasWorkbenchAction
+            {
+                ActionId = ProcessCanvasActionIds.EditDefinitionRole,
+                Label = "Edit role",
+                MenuLabel = "Edit role",
+                Icon = "draw",
+                Tone = "accent"
+            },
+            new CanvasWorkbenchAction
+            {
+                ActionId = ProcessCanvasActionIds.HighlightRoleClones,
+                Label = "Highlight clones",
+                MenuLabel = "Highlight all clones",
+                Icon = "hub",
+                Tone = "accent"
+            }
+        ];
+    }
+
     private static List<CanvasWorkbenchChip> BuildDefinitionFooterChips(string status, IReadOnlyList<string> dependencyOutcomeTitles)
     {
         var chips = new List<CanvasWorkbenchChip>
@@ -435,6 +481,8 @@ public sealed partial class ProcessCanvasSurfaceFactory
         if (string.Equals(port.Id, ProcessCanvasCatalog.DefinitionPorts.StepArtifactInputs, StringComparison.Ordinal) ||
             port.Id.StartsWith(ProcessCanvasCatalog.DefinitionPorts.StepArtifactInputPrefix, StringComparison.Ordinal) ||
             port.Id.StartsWith(ProcessCanvasCatalog.DefinitionPorts.StepArtifactOutputPrefix, StringComparison.Ordinal) ||
+            string.Equals(port.Id, ProcessCanvasCatalog.DefinitionPorts.ArtifactSourceInput, StringComparison.Ordinal) ||
+            string.Equals(port.Id, ProcessCanvasCatalog.DefinitionPorts.ArtifactUsageOutput, StringComparison.Ordinal) ||
             string.Equals(port.Id, ProcessCanvasCatalog.RuntimePorts.StepArtifactInputs, StringComparison.Ordinal) ||
             port.Id.StartsWith(ProcessCanvasCatalog.RuntimePorts.StepArtifactOutputPrefix, StringComparison.Ordinal))
         {

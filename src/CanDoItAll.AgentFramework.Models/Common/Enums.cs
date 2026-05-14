@@ -12,13 +12,20 @@ public enum ProviderKind
 {
     OpenAi,
     AzureOpenAi,
-    Ollama
+    Ollama,
+    ComfyUi
 }
 
 public enum ProviderTransportKind
 {
     Responses,
     ChatCompletions
+}
+
+public enum ProviderProfilePurpose
+{
+    Chat,
+    ImageGeneration
 }
 
 public enum CapabilityKind

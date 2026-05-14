@@ -1,0 +1,1 @@
+Release candidate 2026.05 passed regression and smoke tests. Security sign-off remains pending and rollback owner is assigned.

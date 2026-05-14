@@ -52,6 +52,9 @@
     function normalizeInputField(field) {
         return {
             key: field?.key || "",
+            sectionKey: field?.sectionKey || "",
+            sectionTitle: field?.sectionTitle || "",
+            sectionDescription: field?.sectionDescription || "",
             label: field?.label || field?.key || "Value",
             placeholder: field?.placeholder || "",
             inputMode: field?.inputMode || "text",
@@ -230,6 +233,7 @@
             menuSize: action?.menuSize || "normal",
             submenuLayout: action?.submenuLayout || "",
             requiresInput: !!action?.requiresInput,
+            setupRendererKey: action?.setupRendererKey || "",
             createMode: action?.createMode || "command",
             objectSubtype: action?.objectSubtype || "",
             titleLabel: action?.titleLabel || "Title",
@@ -442,11 +446,17 @@
                 sourcePortId: link?.sourcePortId || "",
                 targetPortId: link?.targetPortId || "",
                 kind: link?.kind || "",
+                label: link?.label || "",
+                summary: link?.summary || "",
+                tone: link?.tone || "neutral",
                 isUserAuthored: !!link?.isUserAuthored
             })) : [],
             uiState: {
                 version: surface?.uiState?.version || "canvas-workbench.v1",
                 selectedNodeIds: normalizedSelection.selectedNodeIds,
+                highlightedNodeIds: Array.isArray(surface?.uiState?.highlightedNodeIds)
+                    ? [...new Set(surface.uiState.highlightedNodeIds.filter(Boolean))]
+                    : [],
                 collapsedNodeIds: Array.isArray(surface?.uiState?.collapsedNodeIds) ? [...surface.uiState.collapsedNodeIds] : [],
                 groupFrames: Array.isArray(surface?.uiState?.groupFrames) ? surface.uiState.groupFrames.map(normalizeGroupFrame) : [],
                 manualPositions: surface?.uiState?.manualPositions || {},
@@ -623,6 +633,11 @@
             return { width: 164, height: 76 };
         }
 
+        if ((node?.family || "").toLowerCase() === "workflow-decision" ||
+            (node?.paletteKey || "").toLowerCase() === "workflow-decision") {
+            return { width: 178, height: 178 };
+        }
+
         const inputPorts = Array.isArray(node?.inputPorts) ? node.inputPorts : [];
         const outputPorts = Array.isArray(node?.outputPorts) ? node.outputPorts : [];
         const portRows = Math.max(inputPorts.length, outputPorts.length);
@@ -656,6 +671,10 @@
         }
 
         const family = (node.family || "item").toLowerCase();
+        if (family === "workflow-decision" || (node.paletteKey || "").toLowerCase() === "workflow-decision") {
+            return baseSize;
+        }
+
         const titleText = node.title || "Untitled";
         const subtitleText = node.subtitle || node.leadText || "";
         const chipText = Array.isArray(node.chips) && node.chips.length > 0
@@ -785,8 +804,8 @@
         return state.surface.nodes.filter(node => isNodeVisible(state, node.id));
     }
 
-    function getProjectionOverscanPx(state) {
-        const rect = state.host?.getBoundingClientRect?.() || { width: 0, height: 0 };
+    function getProjectionOverscanPx(state, hostRect) {
+        const rect = hostRect || state.host?.getBoundingClientRect?.() || { width: 0, height: 0 };
         const baseOverscan = Math.max(180, Math.min(rect.width || 0, rect.height || 0) * 0.24);
         return state?.interaction
             ? Math.max(baseOverscan, 320)
@@ -816,8 +835,8 @@
         return contextNodeIds;
     }
 
-    function isNodeProjectedInViewport(state, node, visibleNodes, overscanPx) {
-        const rect = state.host?.getBoundingClientRect?.();
+    function isNodeProjectedInViewport(state, node, visibleNodes, overscanPx, projectionContext) {
+        const rect = projectionContext?.hostRect || state.host?.getBoundingClientRect?.();
         if (!rect) {
             return true;
         }
@@ -827,7 +846,11 @@
             return true;
         }
 
-        const position = projectPoint(state, getNodePosition(state, node, visibleNodes));
+        const resolved = projectionContext?.layoutPositions?.get?.(node.id);
+        const nodePosition = resolved
+            ? { x: resolved.x, y: resolved.y }
+            : getNodePosition(state, node, visibleNodes);
+        const position = projectPoint(state, nodePosition);
         const size = getNodeSize(state, node);
         const halfWidth = (size.width * state.ui.zoom) / 2;
         const halfHeight = (size.height * state.ui.zoom) / 2;
@@ -842,12 +865,14 @@
             return [];
         }
 
-        ensureLayoutPositions(state, visibleNodes);
-        const overscanPx = getProjectionOverscanPx(state);
+        const layoutPositions = ensureLayoutPositions(state, visibleNodes);
+        const hostRect = state.host?.getBoundingClientRect?.();
+        const overscanPx = getProjectionOverscanPx(state, hostRect);
         const contextNodeIds = collectProjectedContextNodeIds(state);
+        const projectionContext = { hostRect, layoutPositions };
         const projectedNodes = visibleNodes.filter(node =>
             contextNodeIds.has(node.id) ||
-            isNodeProjectedInViewport(state, node, visibleNodes, overscanPx));
+            isNodeProjectedInViewport(state, node, visibleNodes, overscanPx, projectionContext));
         if (projectedNodes.length > 0) {
             return projectedNodes;
         }
@@ -1246,6 +1271,8 @@
 
         state.layoutPositions = computeResolvedNodePositions(state, nodes);
         state.layoutKey = key;
+        state.sceneBounds = null;
+        state.sceneBoundsKey = "";
         return state.layoutPositions;
     }
 
@@ -1262,7 +1289,10 @@
             return null;
         }
 
-        ensureLayoutPositions(state, nodes);
+        const positions = ensureLayoutPositions(state, nodes);
+        if (state.sceneBounds && state.sceneBoundsKey === state.layoutKey) {
+            return state.sceneBounds;
+        }
 
         let minX = Number.POSITIVE_INFINITY;
         let maxX = Number.NEGATIVE_INFINITY;
@@ -1270,7 +1300,10 @@
         let maxY = Number.NEGATIVE_INFINITY;
 
         for (const node of nodes) {
-            const position = getNodePosition(state, node, nodes);
+            const resolved = positions.get(node.id);
+            const position = resolved
+                ? { x: resolved.x, y: resolved.y }
+                : getBaseNodePosition(state, node);
             const size = getNodeSize(state, node);
             minX = Math.min(minX, position.x - (size.width / 2));
             maxX = Math.max(maxX, position.x + (size.width / 2));
@@ -1278,7 +1311,9 @@
             maxY = Math.max(maxY, position.y + (size.height / 2));
         }
 
-        return { minX, maxX, minY, maxY };
+        state.sceneBounds = { minX, maxX, minY, maxY };
+        state.sceneBoundsKey = state.layoutKey;
+        return state.sceneBounds;
     }
 
     function clampPanToScene(state, panX, panY, zoom) {
@@ -1349,6 +1384,7 @@
         return JSON.stringify({
             version: state.ui.version || "canvas-workbench.v1",
             selectedNodeIds: [...state.selectedIds],
+            highlightedNodeIds: [...(state.highlightedIds || new Set())],
             collapsedNodeIds: [...state.collapsedIds],
             groupFrames: Array.isArray(state.ui.groupFrames) ? state.ui.groupFrames.map(normalizeGroupFrame) : [],
             manualPositions: state.ui.manualPositions || {},

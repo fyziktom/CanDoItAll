@@ -227,13 +227,74 @@
                                 }
                                 else
                                 {
-                                    <Stack GapScale="LayoutGap.Medium">
+                                    <Grid Gap="LayoutGap.Medium"
+                                          ColumnsMd="2"
+                                          ColumnsXl="3"
+                                          Class="processes-role-card-grid"
+                                          data-testid="processes-role-card-grid">
                                         @foreach (var role in editor.Roles)
                                         {
-                                            <ProcessRoleEditorForm Model="@role"
-                                                                   Remove="@(() => RemoveRole(role))" />
+                                            <article class="processes-role-card"
+                                                     data-testid="processes-role-card">
+                                                <Stack GapScale="LayoutGap.Small"
+                                                       AlignItems="AlignItems.Stretch">
+                                                    <div class="processes-role-card__identity">
+                                                        <div class="processes-role-card__avatar"
+                                                             aria-hidden="true">
+                                                            @BuildRoleInitials(role)
+                                                        </div>
+                                                        <div class="processes-role-card__copy">
+                                                            <Cluster Gap="LayoutGap.XSmall"
+                                                                     Wrap="FlexWrap.Wrap"
+                                                                     Class="processes-role-card__badges">
+                                                                <StatusBadge Tone="@(role.IsRequired ? "neutral" : "info")"
+                                                                             Text="@(role.IsRequired ? "Required" : "Optional")" />
+                                                                @if (role.RequiresExplicitApproval)
+                                                                {
+                                                                    <StatusBadge Tone="warning"
+                                                                                 Text="Approval" />
+                                                                }
+                                                                @if (role.AllowsFallback)
+                                                                {
+                                                                    <StatusBadge Tone="success"
+                                                                                 Text="Fallback" />
+                                                                }
+                                                            </Cluster>
+
+                                                            <p class="processes-role-card__name">@ResolveRoleDisplayName(role)</p>
+                                                            <p class="processes-role-card__kind">@ResolveRoleExecutorKind(role)</p>
+                                                        </div>
+                                                    </div>
+
+                                                    <p class="processes-role-card__summary">@ResolveRoleSummary(role)</p>
+
+                                                    <Cluster Gap="LayoutGap.XSmall"
+                                                             Wrap="FlexWrap.Wrap"
+                                                             Class="processes-role-card__tags">
+                                                        <StatusBadge Tone="neutral"
+                                                                     Text="@ResolveRoleKey(role)" />
+                                                        <StatusBadge Tone="info"
+                                                                     Text="@($"{role.DefaultAllocationPercent}% allocation")" />
+                                                        @if (role.PreferredProjectAssignmentRole.HasValue)
+                                                        {
+                                                            <StatusBadge Tone="neutral"
+                                                                         Text="@role.PreferredProjectAssignmentRole.Value.ToString()" />
+                                                        }
+                                                    </Cluster>
+
+                                                    <div class="processes-role-card__footer">
+                                                        <span>@ResolveRoleTemplateLabel(role)</span>
+                                                        <Button Text="Details"
+                                                                Icon="edit"
+                                                                Size="ButtonSize.Small"
+                                                                ButtonStyle="ButtonStyle.Light"
+                                                                Click="@(() => OpenRoleDetails(role))"
+                                                                data-testid="processes-role-details-button" />
+                                                    </div>
+                                                </Stack>
+                                            </article>
                                         }
-                                    </Stack>
+                                    </Grid>
                                 }
 
                                 <Cluster Gap="LayoutGap.Small">
@@ -429,6 +490,92 @@
                               AddProcessTemplate="AddProcessTemplateAsync"
                               AddRoleTemplate="AddRoleTemplateAsync"
                               AddArtifactTemplate="AddArtifactTemplateAsync" />
+
+@if (roleDialogModel is not null)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="Role requirement"
+            Title="@RoleDialogTitle"
+            Subtitle="@RoleDialogSubtitle"
+            Size="ModalSize.Wide"
+            ShowCloseButton="false"
+            TestId="processes-role-details-dialog"
+            OnClose="CloseRoleDialogAsync">
+        <HeaderActions>
+            <Button ButtonStyle="ButtonStyle.Light"
+                    Text="Close"
+                    Click="CloseRoleDialogAsync" />
+        </HeaderActions>
+        <ChildContent>
+            <Stack GapScale="LayoutGap.Medium">
+                <SurfaceCard Soft="true"
+                             data-testid="processes-role-template-picker">
+                    <Grid Gap="LayoutGap.Medium"
+                          ColumnTemplateLg="minmax(0,1fr) auto"
+                          AlignItems="AlignItems.End">
+                        <FormField Text="Start from template">
+                            <InputSelect @bind-Value="selectedRoleTemplateItemId"
+                                         class="cda-input"
+                                         data-testid="processes-role-template-select">
+                                <option value="">Choose a role template</option>
+                                @foreach (var template in RoleTemplateOptions)
+                                {
+                                    <option value="@template.ItemId">@($"{template.Title} / {template.ScopeLabel}")</option>
+                                }
+                            </InputSelect>
+                        </FormField>
+                        <Button Text="Apply template"
+                                ButtonStyle="ButtonStyle.Light"
+                                Disabled="@string.IsNullOrWhiteSpace(selectedRoleTemplateItemId)"
+                                Click="ApplySelectedRoleTemplate"
+                                data-testid="processes-role-template-apply" />
+                    </Grid>
+                </SurfaceCard>
+
+                @if (!string.IsNullOrWhiteSpace(roleDialogError))
+                {
+                    <SurfaceCard Soft="true"
+                                 Class="border-red-200 bg-red-50 text-red-700"
+                                 data-testid="processes-role-dialog-error">
+                        <p class="text-sm font-semibold">@roleDialogError</p>
+                    </SurfaceCard>
+                }
+
+                <ProcessRoleEditorForm Model="@roleDialogModel"
+                                       ShowHeader="false"
+                                       ShowRemove="false"
+                                       WorkflowOptions="@workflowOptions"
+                                       TestId="processes-role-details-form" />
+            </Stack>
+        </ChildContent>
+        <Footer>
+            <Split Breakpoint="LayoutBreakpoint.None"
+                   Gap="LayoutGap.Medium"
+                   AlignItems="AlignItems.Center"
+                   JustifyContent="JustifyContent.SpaceBetween"
+                   Wrap="FlexWrap.Wrap">
+                <Cluster Gap="LayoutGap.Small">
+                    @if (!roleDialogIsNew)
+                    {
+                        <Button Text="Remove role"
+                                ButtonStyle="ButtonStyle.Light"
+                                Click="RemoveRoleFromDialog"
+                                data-testid="processes-role-dialog-remove" />
+                    }
+                </Cluster>
+                <Cluster Gap="LayoutGap.Small"
+                         JustifyContent="JustifyContent.End">
+                    <Button Text="Cancel"
+                            ButtonStyle="ButtonStyle.Light"
+                            Click="CloseRoleDialogAsync" />
+                    <Button Text="Save role"
+                            Click="SaveRoleDialog"
+                            data-testid="processes-role-dialog-save" />
+                </Cluster>
+            </Split>
+        </Footer>
+    </Dialog>
+}
 
 @if (canvasActionDialog is not null)
 {

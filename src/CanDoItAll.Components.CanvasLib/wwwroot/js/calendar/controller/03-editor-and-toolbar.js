@@ -547,6 +547,10 @@
       return;
     }
     if (action === 'add-event') {
+      if (!this.options.allowCreate) {
+        return;
+      }
+
       this.closeUtilityModal();
       this.openEditor(buildDefaultEvent(this.state.timezone, this.state.locale, this.state.selectedDateKey, 9 * 60, false), 'create');
       return;
@@ -606,7 +610,7 @@
     }
     if (action === 'edit-selected' || action === 'edit-row') {
       var selectedEvent = eventId !== '' ? this.state.events.find(function(item) { return item.id === eventId || item.eventId === eventId; }) : this.getSelectedEvent();
-      if (selectedEvent) {
+      if (selectedEvent && this.options.allowEdit && !selectedEvent.readOnly) {
         this.openEditor(selectedEvent, 'edit');
       }
       return;

@@ -8,9 +8,14 @@ public partial class ProcessWorkspace
     private void RefreshCanvasSurface()
     {
         NormalizeEditorForAuthoring();
+        PruneDefinitionArtifactCloneDrafts();
         canvasSurface = detailTab == DetailTabRuns && SelectedRun is not null
             ? CanvasSurfaceFactory.BuildRunSurface(SelectedRun, stepRuns, selectedCanvasNodeId)
-            : CanvasSurfaceFactory.BuildDefinitionSurface(editor, selectedCanvasNodeId, definitionCanvasTool);
+            : CanvasSurfaceFactory.BuildDefinitionSurface(
+                editor,
+                selectedCanvasNodeId,
+                definitionCanvasTool,
+                artifactCloneDrafts.Values.ToList());
 
         var uiState = BuildCanvasUiState(canvasSurface, ResolveStoredCanvasUiState());
         canvasSurface.UiState = uiState;
@@ -100,6 +105,10 @@ public partial class ProcessWorkspace
         var availableNodeIds = surface.Nodes
             .Select(node => node.Id)
             .ToHashSet(StringComparer.Ordinal);
+        uiState.HighlightedNodeIds = uiState.HighlightedNodeIds
+            .Where(availableNodeIds.Contains)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
 
         if (string.Equals(selectedCanvasNodeId, NoCanvasSelection, StringComparison.Ordinal))
         {
@@ -137,6 +146,7 @@ public partial class ProcessWorkspace
     {
         definitionCanvasTool = DefinitionCanvasSelectTool;
         definitionCanvasUiState = CreateDefaultDefinitionCanvasUiState();
+        artifactCloneDrafts.Clear();
     }
 
     private void ResetRuntimeCanvasState()
@@ -182,5 +192,29 @@ public partial class ProcessWorkspace
     private static CanvasWorkbenchUiState CloneCanvasUiState(CanvasWorkbenchUiState uiState)
     {
         return CanvasWorkbenchUiState.Parse(uiState.ToJson());
+    }
+
+    private void PruneDefinitionArtifactCloneDrafts()
+    {
+        if (artifactCloneDrafts.Count == 0)
+        {
+            return;
+        }
+
+        var artifactIds = editor.Steps
+            .SelectMany(step => step.ArtifactExpectations)
+            .Where(artifact => artifact.Id is { } artifactId && artifactId != Guid.Empty)
+            .Select(artifact => artifact.Id!.Value)
+            .ToHashSet();
+        foreach (var draft in artifactCloneDrafts.Values.ToList())
+        {
+            if (artifactIds.Contains(draft.ArtifactExpectationId))
+            {
+                continue;
+            }
+
+            artifactCloneDrafts.Remove(draft.NodeId);
+            definitionCanvasUiState.ManualPositions.Remove(draft.NodeId);
+        }
     }
 }

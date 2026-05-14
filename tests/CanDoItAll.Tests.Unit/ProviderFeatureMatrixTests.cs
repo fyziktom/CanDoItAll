@@ -95,6 +95,29 @@ public sealed class ProviderFeatureMatrixTests
     }
 
     [Fact]
+    public void ResolveFeatureMatrix_marks_image_generation_provider_by_explicit_purpose()
+    {
+        var service = new ProviderProfileService();
+        var provider = CreateProvider(
+            ProviderKind.OpenAi,
+            ProviderTransportKind.Responses,
+            supportsTools: false,
+            preferFrameworkManagedHistory: false) with
+        {
+            DefaultModel = "gpt-image-1-mini",
+            Purpose = ProviderProfilePurpose.ImageGeneration
+        };
+
+        var matrix = service.ResolveFeatureMatrix(provider);
+
+        Assert.Equal(ProviderProfilePurpose.ImageGeneration, matrix.Purpose);
+        Assert.True(matrix.SupportsImageGeneration);
+        Assert.False(matrix.SupportsTools);
+        Assert.False(matrix.SupportsNativeWebSearch);
+        Assert.False(matrix.SupportsLocalMcpBridge);
+    }
+
+    [Fact]
     public void Workspace_backed_provider_registry_uses_feature_matrix_and_transport_metadata()
     {
         var source = ReadRepositoryFile(

@@ -8,7 +8,7 @@ namespace CanDoItAll.Tests.Components;
 public sealed class ProjectStructurePlacementPolicyTests
 {
     [Fact]
-    public void Sibling_placement_stacks_below_the_source()
+    public void Sibling_placement_stacks_close_below_the_source()
     {
         var sourceNode = CreateNode("source", "parent", 300, 200);
         var siblingNode = sourceNode with { Id = "sibling" };
@@ -29,7 +29,7 @@ public sealed class ProjectStructurePlacementPolicyTests
         var placement = new ProjectStructurePlacementPolicy().ResolveCreatePlacement([sourceNode, siblingNode], sourceNode, null, request);
 
         Assert.Equal(300, placement.X);
-        Assert.Equal(480, placement.Y);
+        Assert.Equal(312, placement.Y);
     }
 
     [Fact]
@@ -81,7 +81,101 @@ public sealed class ProjectStructurePlacementPolicyTests
         Assert.True(placement.X < leftBranch.X);
     }
 
-    private static ProjectStructureNode CreateNode(string id, string? parentId, double x, double y)
+    [Fact]
+    public void Standard_child_placement_uses_nearby_space_before_falling_back_to_wide_offsets()
+    {
+        var sourceNode = CreateNode("source", "parent", 300, 200);
+        var request = new CanvasWorkbenchCreateActionRequest(
+            "add-block-feature",
+            "source",
+            sourceNode.X,
+            sourceNode.Y,
+            sourceNode.Id,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            "child",
+            "dialog",
+            "feature",
+            null);
+
+        var placement = new ProjectStructurePlacementPolicy().ResolveCreatePlacement(
+            [sourceNode],
+            sourceNode,
+            sourceNode,
+            request,
+            ProjectObjectType.ProjectBlock);
+
+        Assert.NotNull(placement.X);
+        Assert.True(placement.X > sourceNode.X);
+        Assert.InRange(placement.X.Value - sourceNode.X, 260d, 320d);
+        Assert.Equal(sourceNode.Y, placement.Y);
+    }
+
+    [Fact]
+    public void Simple_note_child_placement_sits_right_next_to_the_source()
+    {
+        var sourceNode = CreateNode("source", "parent", 300, 200);
+        var request = new CanvasWorkbenchCreateActionRequest(
+            "add-note",
+            "source",
+            sourceNode.X,
+            sourceNode.Y,
+            sourceNode.Id,
+            "Child note",
+            string.Empty,
+            "Child note",
+            "child",
+            "quick-note",
+            string.Empty,
+            null);
+
+        var plan = new ProjectStructurePlacementPolicy().ResolveCreatePlacementPlan(
+            [sourceNode],
+            sourceNode,
+            sourceNode,
+            request,
+            ProjectObjectType.Note);
+
+        Assert.Equal(488, plan.Placement.X);
+        Assert.Equal(sourceNode.Y, plan.Placement.Y);
+        Assert.Empty(plan.FollowUpMoves);
+    }
+
+    [Fact]
+    public void Simple_note_sibling_placement_moves_lower_stack_nodes_down()
+    {
+        var sourceNode = CreateNode("source", "parent", 300, 200, notes: "Source note");
+        var lowerNode = CreateNode("lower", "parent", 300, 304, notes: "Lower note");
+        var request = new CanvasWorkbenchCreateActionRequest(
+            "add-note",
+            "source",
+            sourceNode.X,
+            sourceNode.Y,
+            sourceNode.ParentId,
+            "Inserted note\r\nwith more content\r\nthat needs room",
+            string.Empty,
+            "Inserted note\r\nwith more content\r\nthat needs room",
+            "sibling",
+            "quick-note",
+            string.Empty,
+            null);
+
+        var plan = new ProjectStructurePlacementPolicy().ResolveCreatePlacementPlan(
+            [sourceNode, lowerNode],
+            sourceNode,
+            null,
+            request,
+            ProjectObjectType.Note);
+
+        var move = Assert.Single(plan.FollowUpMoves);
+        Assert.Equal(300, plan.Placement.X);
+        Assert.True(plan.Placement.Y > sourceNode.Y);
+        Assert.Equal(lowerNode.Id, move.NodeId);
+        Assert.True(move.Y > lowerNode.Y);
+    }
+
+    private static ProjectStructureNode CreateNode(string id, string? parentId, double x, double y, string notes = "")
         => new(
             id,
             parentId,
@@ -90,7 +184,7 @@ public sealed class ProjectStructurePlacementPolicyTests
             "Node",
             string.Empty,
             "Draft",
-            string.Empty,
+            notes,
             "/projects/1/structure",
             "Note",
             null,

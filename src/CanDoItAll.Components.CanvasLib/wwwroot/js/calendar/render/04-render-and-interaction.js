@@ -353,7 +353,7 @@
           dateKey: dateKey,
           bounds: item.bounds
         });
-        if (this.options.allowResize && !item.event.readOnly) {
+        if (this.options.allowEdit && this.options.allowResize && !item.event.readOnly) {
           this.registry.add({
             x: item.bounds.x,
             y: item.bounds.y,
@@ -745,7 +745,7 @@
     if (safeRegion.type === 'resize-start' || safeRegion.type === 'resize-end') {
       cursor = 'ns-resize';
     } else if (safeRegion.type === 'timed-event' || safeRegion.type === 'month-event' || safeRegion.type === 'all-day-event') {
-      cursor = this.options.allowDragDrop ? 'grab' : 'pointer';
+      cursor = this.options.allowEdit && this.options.allowDragDrop ? 'grab' : 'pointer';
     } else if (
       safeRegion.type === 'time-column' ||
       safeRegion.type === 'all-day-slot' ||
@@ -869,7 +869,7 @@
       this.selectEventById(selectedEvent.id, false);
     }
 
-    if ((region.type === 'resize-start' || region.type === 'resize-end') && selectedEvent && this.options.allowResize && !selectedEvent.readOnly) {
+    if ((region.type === 'resize-start' || region.type === 'resize-end') && selectedEvent && this.options.allowEdit && this.options.allowResize && !selectedEvent.readOnly) {
       this.state.interaction = {
         type: region.type,
         event: selectedEvent,
@@ -880,7 +880,7 @@
       return;
     }
 
-    if (region.type === 'timed-event' && selectedEvent && this.options.allowDragDrop && !selectedEvent.readOnly) {
+    if (region.type === 'timed-event' && selectedEvent && this.options.allowEdit && this.options.allowDragDrop && !selectedEvent.readOnly) {
       var startMinutes = getMinutesFromIso(selectedEvent.startUtc, this.state.timezone, this.state.locale);
       var pointerInfo = this.resolveTimedPoint(point);
       this.state.interaction = {
@@ -894,7 +894,7 @@
       return;
     }
 
-    if (region.type === 'all-day-event' && selectedEvent && this.options.allowDragDrop && !selectedEvent.readOnly) {
+    if (region.type === 'all-day-event' && selectedEvent && this.options.allowEdit && this.options.allowDragDrop && !selectedEvent.readOnly) {
       this.state.interaction = {
         type: 'move-day-span',
         event: selectedEvent,
@@ -905,7 +905,7 @@
       return;
     }
 
-    if (region.type === 'month-event' && selectedEvent && this.options.allowDragDrop && !selectedEvent.readOnly) {
+    if (region.type === 'month-event' && selectedEvent && this.options.allowEdit && this.options.allowDragDrop && !selectedEvent.readOnly) {
       this.state.interaction = {
         type: 'move-month',
         event: selectedEvent,
@@ -1051,6 +1051,10 @@
       return;
     }
     if (interaction.type === 'create-timed' || interaction.type === 'create-day-span') {
+      if (!this.options.allowCreate) {
+        return;
+      }
+
       if (interaction.previewEvent) {
         this.openEditor(interaction.previewEvent, 'create');
       } else {
@@ -1082,11 +1086,15 @@
       var selectedEvent = this.state.events.find(function(item) {
         return item.id === region.eventId || item.eventId === region.eventId;
       });
-      if (selectedEvent) {
+      if (selectedEvent && this.options.allowEdit && !selectedEvent.readOnly) {
         this.openEditor(selectedEvent, 'edit');
       }
       return;
     }
+    if (!this.options.allowCreate) {
+      return;
+    }
+
     if (region.type === 'month-day' || region.type === 'mini-day' || region.type === 'year-day' || region.type === 'all-day-slot') {
       this.openEditor(buildDefaultEvent(this.state.timezone, this.state.locale, region.dateKey, 0, true), 'create');
       return;
@@ -1120,9 +1128,9 @@
     }
     if (event.key === 'Enter') {
       var selectedEvent = this.getSelectedEvent();
-      if (selectedEvent) {
+      if (selectedEvent && this.options.allowEdit && !selectedEvent.readOnly) {
         this.openEditor(selectedEvent, 'edit');
-      } else {
+      } else if (!selectedEvent && this.options.allowCreate) {
         this.openEditor(buildDefaultEvent(this.state.timezone, this.state.locale, this.state.selectedDateKey, 9 * 60, false), 'create');
       }
       event.preventDefault();

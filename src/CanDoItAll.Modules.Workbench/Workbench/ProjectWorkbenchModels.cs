@@ -230,7 +230,13 @@ public sealed record ProjectObjectCreateRequest(
     ProjectObjectMediaPayload? Media = null,
     string? MetadataJson = null,
     int? DurationSeconds = null,
-    ProjectNodeReferenceCollection? NodeReferences = null);
+    ProjectNodeReferenceCollection? NodeReferences = null,
+    ProjectObjectExternalBindingRequest? ExternalBinding = null);
+
+public sealed record ProjectObjectExternalBindingRequest(
+    string Route,
+    string ArtifactKind,
+    Guid? ArtifactId);
 
 public sealed record ProjectObjectEditRequest(
     string Title,
@@ -417,8 +423,7 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
             ? (request.X.Value, request.Y.Value)
             : ProjectWorkbenchGraphConventions.GetDefaultPosition(request.ObjectType, existingCount + 1);
         var media = await SaveMediaAsync(projectId, request.ObjectType, request.Media, cancellationToken);
-        var route = media?.Route ?? $"/projects/{projectId}/structure";
-        var artifactKind = media?.ArtifactKind ?? request.ObjectType.ToString();
+        var binding = ResolveCreateBinding(projectId, request.ObjectType, media, request.ExternalBinding);
         var metadataJson = ProjectWorkbenchObjectModeling.ResolveMetadataJson(request.ObjectType, request.ObjectSubtype, request.MetadataJson, null, request.Notes, media);
         var resolvedEndUtc = ProjectWorkbenchObjectModeling.ResolveEndUtc(request.StartUtc, request.EndUtc, request.DurationSeconds);
         var normalizedDurationSeconds = ProjectWorkbenchObjectModeling.NormalizeDurationSeconds(request.DurationSeconds, request.StartUtc, resolvedEndUtc);
@@ -445,13 +450,13 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
             CreatedAtUtc = clock.GetUtcNow(),
             UpdatedAtUtc = clock.GetUtcNow(),
             Binding = new ProjectNodeBindingState(
-                route,
-                artifactKind,
-                null,
-                media?.RelativePath ?? string.Empty,
-                media?.ContentType ?? string.Empty,
-                media?.OriginalFileName ?? string.Empty,
-                media?.StorageObjectReferenceJson ?? string.Empty),
+                binding.Route,
+                binding.ExternalArtifactKind,
+                binding.ExternalArtifactId,
+                binding.MediaRelativePath,
+                binding.MediaContentType,
+                binding.MediaOriginalFileName,
+                binding.StorageObjectReferenceJson),
             NodeReferences = request.NodeReferences ?? ProjectNodeReferenceCollection.Empty,
             MarkersJson = "[]"
         };
@@ -661,6 +666,21 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
             sourceProjectId,
             sourceNodeKey,
             targetProjectId,
+            cancellationToken);
+    }
+
+    public async Task<ProjectStructureSubprojectTransferResult?> MoveNodesToProjectAsync(
+        Guid sourceProjectId,
+        IReadOnlyCollection<string> sourceNodeKeys,
+        Guid targetProjectId,
+        bool includeDescendants = true,
+        CancellationToken cancellationToken = default)
+    {
+        return await crossModuleMutationService.MoveNodesToProjectAsync(
+            sourceProjectId,
+            sourceNodeKeys,
+            targetProjectId,
+            includeDescendants,
             cancellationToken);
     }
 
@@ -1095,6 +1115,61 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
             media.FileName,
             objectType.ToString(),
             storageReference);
+    }
+
+    private static ProjectNodeBindingState ResolveCreateBinding(
+        Guid projectId,
+        ProjectObjectType objectType,
+        SavedMediaDescriptor? media,
+        ProjectObjectExternalBindingRequest? externalBinding)
+    {
+        if (media is not null && externalBinding is not null)
+        {
+            throw new InvalidOperationException("A project object cannot use both uploaded media and an explicit external binding.");
+        }
+
+        if (media is not null)
+        {
+            return new ProjectNodeBindingState(
+                media.Route,
+                media.ArtifactKind,
+                null,
+                media.RelativePath,
+                media.ContentType,
+                media.OriginalFileName,
+                media.StorageObjectReferenceJson);
+        }
+
+        if (externalBinding is not null)
+        {
+            if (string.IsNullOrWhiteSpace(externalBinding.Route))
+            {
+                throw new InvalidOperationException("External binding route is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(externalBinding.ArtifactKind))
+            {
+                throw new InvalidOperationException("External binding artifact kind is required.");
+            }
+
+            return new ProjectNodeBindingState(
+                externalBinding.Route.Trim(),
+                externalBinding.ArtifactKind.Trim(),
+                externalBinding.ArtifactId,
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                string.Empty);
+        }
+
+        return new ProjectNodeBindingState(
+            $"/projects/{projectId}/structure",
+            objectType.ToString(),
+            null,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            string.Empty);
     }
 
     private static async Task<string?> LoadViewStateAsync(AppDbContext dbContext, Guid projectId, string surfaceKind, CancellationToken cancellationToken)

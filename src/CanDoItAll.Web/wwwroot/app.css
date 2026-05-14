@@ -47,3 +47,9 @@ a {
 #blazor-error-ui.show {
     display: block;
 }
+
+[data-testid="project-structure-process-assignment-agent-switch-dialog"],
+[data-testid="project-structure-process-assignment-agent-details-dialog"],
+[data-testid="project-structure-process-assignment-agent-switch-confirmation-dialog"] {
+    z-index: 1900 !important;
+}

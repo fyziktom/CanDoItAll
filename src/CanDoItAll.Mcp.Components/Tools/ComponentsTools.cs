@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using CanDoItAll.Mcp.Components.Catalog;
 using CanDoItAll.Mcp.Core.Contracts;
+using CanDoItAll.Mcp.Core.Hosting;
 using CanDoItAll.Mcp.Core.Identity;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
@@ -8,7 +9,10 @@ using ModelContextProtocol.Server;
 namespace CanDoItAll.Mcp.Components.Tools;
 
 [McpServerToolType]
-public sealed class ComponentsTools(ComponentCatalogService catalogService, ILogger<ComponentsTools> logger)
+public sealed class ComponentsTools(
+    ComponentCatalogService catalogService,
+    IMcpIdleActivityTracker idleActivityTracker,
+    ILogger<ComponentsTools> logger)
 {
     [McpServerTool(Name = "components_search", ReadOnly = true, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
     [Description("Searches shared components, sandbox examples, and sandbox groups by component name, keyword, prop, or scenario.")]
@@ -79,6 +83,7 @@ public sealed class ComponentsTools(ComponentCatalogService catalogService, ILog
     private Task<McpToolEnvelope<T>> ExecuteAsync<T>(string toolName, Func<T> callback)
     {
         var correlationId = CorrelationIdFactory.Create();
+        using var activity = idleActivityTracker.BeginOperation();
 
         try
         {

@@ -20,8 +20,10 @@ It includes these custom skills:
 
 It also depends on these public sibling skills:
 
-- From `openai/skills`: `frontend-skill`, `playwright`, `screenshot`, `imagegen`
+- From `openai/skills`: `openai-docs`, `playwright`, `screenshot`, `imagegen`
 - From `dotnet/skills`: `mtp-hot-reload`
+
+The bundle skills also use `frontend-skill` when it is already available in the local Codex home, but the current upstream `openai/skills` cache no longer exposes that skill under this installer path.
 
 ## Install Or Refresh Skills
 
@@ -54,8 +56,10 @@ powershell -ExecutionPolicy Bypass -File .\codex\scripts\install-candoitall-skil
 
 ## Notes
 
+- The bundle workflow skills are tuned for ChatGPT-5.5 style operation: outcome-first, concise phase decisions, durable bundle state after compaction or resume, and evidence-driven gates.
 - The bundle skills now assume real browser validation through Playwright MCP plus the `playwright` skill for UI-heavy work.
 - The bundle skill pack now includes explicit readiness, subbundle-gate, and final-closure validators.
+- `openai-docs` is installed with the repo skill pack so model and prompt guidance can be refreshed from official OpenAI docs on other machines.
 - `candoitall-components-mcp` is the repo skill to use before inventing page-local structure in BaseLib or CanvasLib consumers. It expects the `candoitall_components` MCP server to be available and points Codex toward shared component parameters, sandbox routes, and real product usages first.
 - `candoitall-codeanalytics-mcp` is the default repo skill for read-only C# investigation. It expects the `candoitall_codeanalytics` MCP server to be available and steers Codex toward solution inventory, document inspection, exact symbol tools, and focused context. SharpTools is backup-only and should stay disabled unless CodeAnalytics has a real unresolved capability gap.
 - Large-screen validation comes first: maximize the browser window or fill the available desktop work area, capture a screenshot, review it, then continue to narrower widths.

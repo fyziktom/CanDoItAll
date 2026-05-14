@@ -1,0 +1,98 @@
+@namespace CanDoItAll.Components.BaseLib
+
+<section @attributes='AdditionalAttributes.WithClass("cda-entity-picker")'>
+    @if (!string.IsNullOrWhiteSpace(Title) || !string.IsNullOrWhiteSpace(Description))
+    {
+        <header class="cda-entity-picker__header">
+            @if (!string.IsNullOrWhiteSpace(Title))
+            {
+                <h4>@Title</h4>
+            }
+            @if (!string.IsNullOrWhiteSpace(Description))
+            {
+                <p>@Description</p>
+            }
+        </header>
+    }
+
+    @if (Items.Count == 0)
+    {
+        <div class="cda-entity-picker__empty">@EmptyText</div>
+    }
+    else
+    {
+        <div class="cda-entity-picker__list" role="listbox" aria-label="@Title">
+            @foreach (var item in Items)
+            {
+                <button type="button"
+                        class="@ResolveItemClass(item)"
+                        role="option"
+                        aria-selected="@IsSelected(item)"
+                        disabled="@item.Disabled"
+                        @onclick="() => SelectAsync(item)">
+                    @if (!string.IsNullOrWhiteSpace(item.Icon))
+                    {
+                        <span class="material-icons" aria-hidden="true">@item.Icon</span>
+                    }
+                    <span>
+                        <strong>@item.Label</strong>
+                        @if (!string.IsNullOrWhiteSpace(item.Description))
+                        {
+                            <small>@item.Description</small>
+                        }
+                    </span>
+                    @if (!string.IsNullOrWhiteSpace(item.Meta))
+                    {
+                        <em>@item.Meta</em>
+                    }
+                </button>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter]
+    public string Title { get; set; } = "Select item";
+
+    [Parameter]
+    public string? Description { get; set; }
+
+    [Parameter]
+    public string EmptyText { get; set; } = "No items are available.";
+
+    [Parameter]
+    public IReadOnlyList<EntityPickerItem> Items { get; set; } = [];
+
+    [Parameter]
+    public string? SelectedId { get; set; }
+
+    [Parameter]
+    public EventCallback<string> SelectedIdChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<EntityPickerItem> Selected { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private bool IsSelected(EntityPickerItem item)
+        => string.Equals(SelectedId, item.Id, StringComparison.Ordinal);
+
+    private string ResolveItemClass(EntityPickerItem item)
+        => IsSelected(item)
+            ? "cda-entity-picker__item cda-entity-picker__item--selected"
+            : "cda-entity-picker__item";
+
+    private async Task SelectAsync(EntityPickerItem item)
+    {
+        if (item.Disabled)
+        {
+            return;
+        }
+
+        SelectedId = item.Id;
+        await SelectedIdChanged.InvokeAsync(item.Id);
+        await Selected.InvokeAsync(item);
+    }
+}

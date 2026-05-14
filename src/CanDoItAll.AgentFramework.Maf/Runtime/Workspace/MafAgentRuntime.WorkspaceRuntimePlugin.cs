@@ -141,11 +141,11 @@ public sealed partial class MafAgentRuntime
             return commandExecutionService.DotnetTest(allowedTargetPath, configuration, filter, noBuild, noRestore, allowedWorkingDirectory, timeoutSeconds);
         }
 
-        public Task<WorkspaceCommandExecutionResult> DotnetWorkspaceRun(string targetPath, string? url = null, string configuration = "Debug", bool noBuild = true, bool waitForHttp = true, string? workingDirectory = null, int startupTimeoutSeconds = 45, int timeoutSeconds = 120, bool keepAlive = false)
+        public Task<WorkspaceCommandExecutionResult> DotnetWorkspaceRun(string targetPath, string? url = null, string configuration = "Debug", bool noBuild = true, bool waitForHttp = true, string? workingDirectory = null, int startupTimeoutSeconds = 45, int timeoutSeconds = 120, bool keepAlive = false, WorkspaceProcessLifetimeScope lifetimeScope = WorkspaceProcessLifetimeScope.ExecutionRun)
         {
             var allowedTargetPath = PrepareValidationCommandPath(targetPath) ?? targetPath;
             var allowedWorkingDirectory = PrepareValidationCommandPath(workingDirectory);
-            return commandExecutionService.DotnetRun(allowedTargetPath, url, configuration, noBuild, waitForHttp, allowedWorkingDirectory, startupTimeoutSeconds, timeoutSeconds, keepAlive);
+            return commandExecutionService.DotnetRun(allowedTargetPath, url, configuration, noBuild, waitForHttp, allowedWorkingDirectory, startupTimeoutSeconds, timeoutSeconds, keepAlive, lifetimeScope);
         }
 
         public Task<WorkspaceCommandExecutionResult> DotnetWorkspaceNew(string template, string name, string? parentDirectory = null, bool force = false, int timeoutSeconds = 300)
@@ -183,6 +183,12 @@ public sealed partial class MafAgentRuntime
         {
             var allowedPath = PrepareFileReadPath(path) ?? path;
             return artifactToolService.InspectSpreadsheetFile(allowedPath, maxRows, maxColumns, previewCharacters);
+        }
+
+        public Task<WorkspaceImageInspectionResult> InspectImageFile(string path)
+        {
+            var allowedPath = PrepareFileReadPath(path) ?? path;
+            return artifactToolService.InspectImageFile(allowedPath);
         }
 
         private string? PrepareFileReadPath(string? path)
@@ -388,8 +394,17 @@ public sealed partial class MafAgentRuntime
 
         private IReadOnlyList<string> ResolveAllowedExternalTargetAliases()
         {
+            var auditScope = WorkspaceExecutionAuditContext.Current;
+            if (auditScope is not null &&
+                (auditScope.AllowedExternalTargetAliases.Count > 0 ||
+                 auditScope.ReadOnlyExternalTargetAliases.Count > 0))
+            {
+                return auditScope.AllowedExternalTargetAliases
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+            }
+
             return accessSettings.AllowedExternalTargetAliases
-                .Concat(WorkspaceExecutionAuditContext.Current?.AllowedExternalTargetAliases ?? [])
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
         }

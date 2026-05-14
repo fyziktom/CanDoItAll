@@ -22,8 +22,8 @@
   },
   "Processes": [
     {
-      "Key": "dotnet-blazor-ssr-solution-setup",
-      "RelativePath": "processes/dotnet-blazor-ssr-solution-setup"
+      "Key": "dotnet-solution-setup",
+      "RelativePath": "processes/dotnet-solution-setup"
     },
     {
       "Key": "dotnet-feature-function-implementation",
@@ -32,6 +32,18 @@
     {
       "Key": "dotnet-development-slice",
       "RelativePath": "processes/dotnet-development-slice"
+    },
+    {
+      "Key": "app-page-screenshot",
+      "RelativePath": "processes/app-page-screenshot"
+    },
+    {
+      "Key": "app-pages-screenshot-set",
+      "RelativePath": "processes/app-pages-screenshot-set"
+    },
+    {
+      "Key": "app-layout-image-generation",
+      "RelativePath": "processes/app-layout-image-generation"
     },
     {
       "Key": "software-delivery",

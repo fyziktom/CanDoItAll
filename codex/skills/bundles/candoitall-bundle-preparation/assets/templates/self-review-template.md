@@ -9,6 +9,7 @@ Status: `Pending`
 - Confirm that each raw input is mapped to a subbundle or an explicit exception.
 - Confirm that each subbundle has acceptance, proof, and progression-gate rules.
 - Confirm that UI-relevant subbundles include browser-validation logging instructions.
+- Confirm that the bundle states a concise outcome contract and evidence contract instead of relying on process prose.
 
 ## Senior C# Blazor Architect Review
 
@@ -29,6 +30,7 @@ Status: `Pending`
 - Confirm that the handoff is implementation-ready.
 - Confirm that the mermaid dependency map and phase gates are ready for execution.
 - Confirm that the execution report already has browser analytics and subbundle gate sections to fill in during implementation.
+- Confirm that a resumed or different agent can recover current state from bundle files without conversational memory.
 
 ## Remaining Assumptions
 

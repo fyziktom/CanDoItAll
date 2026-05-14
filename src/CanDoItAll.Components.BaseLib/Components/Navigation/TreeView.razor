@@ -18,6 +18,14 @@
         </ul>
     </div>
 }
+else
+{
+    <div @attributes='AdditionalAttributes.WithClass(ResolveCssClass())'>
+        <div class="cda-treeview__empty" role="status">
+            @EmptyText
+        </div>
+    </div>
+}
 
 @code {
     [Parameter, EditorRequired]
@@ -25,6 +33,9 @@
 
     [Parameter]
     public string? AriaLabel { get; set; }
+
+    [Parameter]
+    public string EmptyText { get; set; } = "No items to display.";
 
     [Parameter]
     public TreeViewStyle Style { get; set; } = TreeViewStyle.Default;

@@ -1,5 +1,6 @@
 using CanDoItAll.Components;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Components.Charts;
 using CanDoItAll.Components.Mermaid.Infrastructure;
 using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.ControlPlane;
@@ -47,9 +48,10 @@ builder.Services.AddRazorComponents()
     .AddHubOptions(options => options.MaximumReceiveMessageSize = promptAttachmentMessageLimitBytes);
 
 builder.Services.AddCanDoItAllBaseLib();
+builder.Services.AddCanDoItAllCharts();
 builder.Services.AddCanDoItAllInfrastructure(builder.Configuration, builder.Environment, CanDoItAll.Web.Composition.ModuleAssemblies.All);
 builder.Services.AddCanDoItAllRuntimeDatabaseSwitching();
-builder.Services.AddCanDoItAllRuntimeModules(builder.Configuration);
+builder.Services.AddCanDoItAllRuntimeModules(builder.Configuration, builder.Environment.ContentRootPath);
 builder.Services.AddCanDoItAllApi(builder.Configuration);
 builder.Services.AddCanDoItAllMermaid();
 builder.Services.AddHttpClient<DevelopmentManagerClient>();
@@ -166,6 +168,82 @@ if (app.Environment.IsDevelopment())
             profile.Profile.Runtime.Fingerprint,
             profile.Profile.Storage.WorkspaceRoot,
             profile.ConnectionString
+        });
+    });
+
+    app.MapPost("/_dev/database/profiles/postgresql", async (
+        PostgreSqlDevDatabaseProfileRequest request,
+        IDatabaseProfileService profileService,
+        IDatabaseProfileRuntimeAccessor profileAccessor,
+        IDatabaseDriverRegistry driverRegistry,
+        IAppDatabaseBootstrapper bootstrapper,
+        IDatabaseSwitchCoordinator switchCoordinator) =>
+    {
+        var databaseName = request.DatabaseName?.Trim();
+        var username = request.Username?.Trim();
+        if (string.IsNullOrWhiteSpace(databaseName))
+        {
+            return Results.BadRequest(new[] { "PostgreSQL database name is required." });
+        }
+
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            return Results.BadRequest(new[] { "PostgreSQL username is required." });
+        }
+
+        var saveResult = await profileService.SaveAsync(new CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileEditorModel
+        {
+            DisplayName = string.IsNullOrWhiteSpace(request.DisplayName)
+                ? $"PostgreSQL {databaseName}"
+                : request.DisplayName.Trim(),
+            ProviderKind = DatabaseProviderKind.PostgreSql,
+            SourceKind = DatabaseProfileSourceKind.PostgresConnection,
+            WorkspaceRoot = request.WorkspaceRoot,
+            PostgresHost = string.IsNullOrWhiteSpace(request.Host) ? "127.0.0.1" : request.Host.Trim(),
+            PostgresPort = request.Port is > 0 ? request.Port.Value : 5432,
+            PostgresDatabaseName = databaseName,
+            PostgresUsername = username,
+            PostgresPassword = request.Password ?? string.Empty,
+            PostgresAdminDatabaseName = string.IsNullOrWhiteSpace(request.AdminDatabaseName)
+                ? "postgres"
+                : request.AdminDatabaseName.Trim(),
+            PostgresTrustServerCertificate = request.TrustServerCertificate ?? false
+        });
+        if (saveResult.IsFailure)
+        {
+            return Results.BadRequest(saveResult.Errors.Select(error => error.Message).ToArray());
+        }
+
+        var profile = profileAccessor.ResolveProfile(saveResult.Value);
+        await driverRegistry.Resolve(profile.Profile.ProviderKind).CreateEmptyAsync(profile);
+        await bootstrapper.EnsureProfileReadyAsync(profile);
+
+        object? switchResult = null;
+        if (request.Activate != false)
+        {
+            var activation = await switchCoordinator.SwitchAsync(profile.Profile.Id);
+            if (activation.IsFailure)
+            {
+                return Results.BadRequest(activation.Errors.Select(error => error.Message).ToArray());
+            }
+
+            switchResult = new
+            {
+                activation.Value!.Generation,
+                activation.Value.CurrentProfileId
+            };
+        }
+
+        return Results.Ok(new
+        {
+            profile.Profile.Id,
+            profile.Profile.DisplayName,
+            profile.Profile.ProviderKind,
+            profile.Profile.SourceKind,
+            profile.Profile.Runtime.Fingerprint,
+            profile.Profile.Storage.WorkspaceRoot,
+            Descriptor = $"{profile.Profile.PostgreSql?.Host}:{profile.Profile.PostgreSql?.Port}/{profile.Profile.PostgreSql?.DatabaseName}",
+            Switch = switchResult
         });
     });
 
@@ -827,6 +905,18 @@ await using (var scope = app.Services.CreateAsyncScope())
 }
 
 app.Run();
+
+internal sealed record PostgreSqlDevDatabaseProfileRequest(
+    string? DisplayName,
+    string? Host,
+    int? Port,
+    string? DatabaseName,
+    string? Username,
+    string? Password,
+    string? AdminDatabaseName,
+    bool? TrustServerCertificate,
+    string? WorkspaceRoot,
+    bool? Activate);
 
 public partial class Program;
 

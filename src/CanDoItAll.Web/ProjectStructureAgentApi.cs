@@ -17,6 +17,23 @@ public static class ProjectStructureAgentApi
             .DisableAntiforgery();
         group.ApplyApiAuthorization(endpoints);
 
+        group.MapGet("/node-catalog", async (
+            HttpContext httpContext,
+            ProjectStructureAgentService agentService,
+            ProjectStructureAnalyticsService analyticsService,
+            CancellationToken cancellationToken) =>
+            await ExecuteAsync(
+                httpContext,
+                analyticsService,
+                "structure.node-catalog",
+                null,
+                null,
+                null,
+                null,
+                null,
+                (_, cancellationToken) => agentService.GetNodeCatalogAsync(cancellationToken),
+                cancellationToken));
+
         group.MapGet("/projects", async (
             HttpContext httpContext,
             ProjectStructureAgentService agentService,
@@ -464,6 +481,26 @@ public static class ProjectStructureAgentApi
                 (agent, cancellationToken) => agentService.ReparentNodeAsync(projectId, request, agent, cancellationToken),
                 cancellationToken));
 
+        group.MapPost("/projects/{projectId:guid}/nodes/move-to-new-subproject", async (
+            Guid projectId,
+            HttpContext httpContext,
+            ProjectStructureNodesToSubprojectInput request,
+            ProjectStructureAgentService agentService,
+            ProjectStructureAnalyticsService analyticsService,
+            CancellationToken cancellationToken) =>
+            await ExecuteAsync(
+                httpContext,
+                analyticsService,
+                "structure.nodes-move-to-new-subproject",
+                projectId,
+                null,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString(),
+                request,
+                (agent, cancellationToken) => agentService.MoveNodesToNewSubprojectAsync(projectId, request, agent, cancellationToken),
+                cancellationToken,
+                response => response.TargetProjectId));
+
         group.MapPost("/projects/{projectId:guid}/nodes/{nodeId}/move-descendants-to-project", async (
             Guid projectId,
             string nodeId,
@@ -542,6 +579,85 @@ public static class ProjectStructureAgentApi
                 projectId.ToString(),
                 request,
                 (agent, cancellationToken) => agentService.StartProcessNodeAsync(projectId, nodeId, request, agent, cancellationToken),
+                cancellationToken));
+
+        group.MapPost("/projects/{projectId:guid}/nodes/{nodeId}/workflow-add-options", async (
+            Guid projectId,
+            string nodeId,
+            HttpContext httpContext,
+            ProjectStructureWorkflowAddOptionsInput request,
+            ProjectStructureAgentService agentService,
+            ProjectStructureAnalyticsService analyticsService,
+            CancellationToken cancellationToken) =>
+            await ExecuteAsync(
+                httpContext,
+                analyticsService,
+                "structure.node-workflow-add-options",
+                projectId,
+                nodeId,
+                null,
+                null,
+                request,
+                (_, cancellationToken) => agentService.GetWorkflowAddOptionsAsync(projectId, nodeId, request, cancellationToken),
+                cancellationToken));
+
+        group.MapPost("/projects/{projectId:guid}/nodes/{nodeId}/workflow-definition", async (
+            Guid projectId,
+            string nodeId,
+            HttpContext httpContext,
+            ProjectStructureWorkflowNodeCreateInput request,
+            ProjectStructureAgentService agentService,
+            ProjectStructureAnalyticsService analyticsService,
+            CancellationToken cancellationToken) =>
+            await ExecuteAsync(
+                httpContext,
+                analyticsService,
+                "structure.node-create-workflow-definition",
+                projectId,
+                nodeId,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString(),
+                request,
+                (agent, cancellationToken) => agentService.CreateWorkflowNodeAsync(projectId, nodeId, request, agent, cancellationToken),
+                cancellationToken));
+
+        group.MapPost("/projects/{projectId:guid}/nodes/{nodeId}/workflow/start", async (
+            Guid projectId,
+            string nodeId,
+            HttpContext httpContext,
+            ProjectStructureWorkflowNodeStartInput request,
+            ProjectStructureAgentService agentService,
+            ProjectStructureAnalyticsService analyticsService,
+            CancellationToken cancellationToken) =>
+            await ExecuteAsync(
+                httpContext,
+                analyticsService,
+                "structure.node-start-workflow",
+                projectId,
+                nodeId,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString(),
+                request,
+                (agent, cancellationToken) => agentService.StartWorkflowNodeAsync(projectId, nodeId, request, agent, cancellationToken),
+                cancellationToken));
+
+        group.MapGet("/projects/{projectId:guid}/nodes/{nodeId}/workflow/status", async (
+            Guid projectId,
+            string nodeId,
+            HttpContext httpContext,
+            ProjectStructureAgentService agentService,
+            ProjectStructureAnalyticsService analyticsService,
+            CancellationToken cancellationToken) =>
+            await ExecuteAsync(
+                httpContext,
+                analyticsService,
+                "structure.node-workflow-status",
+                projectId,
+                nodeId,
+                null,
+                null,
+                null,
+                (_, cancellationToken) => agentService.GetWorkflowNodeStatusAsync(projectId, nodeId, cancellationToken),
                 cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/nodes/{nodeId}/delete", async (
@@ -1058,8 +1174,10 @@ public static class ProjectStructureAgentApi
         {
             ProjectStructureReadResponse readResponse => readResponse.Warnings,
             ProjectStructureChecklistResponse checklistResponse => checklistResponse.Warnings,
+            ProjectStructureNodesToSubprojectResult nodesToSubprojectResult => nodesToSubprojectResult.Warnings,
             ProjectStructureImportResult importResult => importResult.Warnings,
             ProjectStructureProcessNodeStartResult processNodeStartResult => processNodeStartResult.Warnings,
+            ProjectStructureWorkflowNodeStartResult workflowNodeStartResult => workflowNodeStartResult.Warnings,
             _ => []
         };
     }

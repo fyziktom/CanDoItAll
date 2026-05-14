@@ -479,7 +479,8 @@ public sealed partial class MafAgentRuntime
                 AllowedExternalTargetAliases: auditScope?.AllowedExternalTargetAliases ?? [],
                 ReadOnlyExternalTargetAliases: auditScope?.ReadOnlyExternalTargetAliases ?? [],
                 ApprovalWrapperEffectiveForProvider: featureMatrix.SupportsApprovalRequiredAIFunction,
-                ApplicationApprovalAvailable: false);
+                ApplicationApprovalAvailable: false,
+                ProcessScaffoldToolOnly: auditScope?.ProcessScaffoldToolOnly == true);
             var policyDecision = await toolPolicy.EvaluateAsync(policyContext, cancellationToken);
             using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("maf.function.invoke", ActivityKind.Internal);
             AgentFrameworkTelemetry.ApplyCurrentAuditScope(activity);
@@ -1159,6 +1160,11 @@ public sealed partial class MafAgentRuntime
         ProviderCredentialResolution credential)
     {
         if (!credential.IsResolved)
+        {
+            return;
+        }
+
+        if (!credential.ShouldPromoteToProcessEnvironment)
         {
             return;
         }

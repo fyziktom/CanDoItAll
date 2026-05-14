@@ -1,9 +1,35 @@
+using System.Globalization;
 using CanDoItAll.Components.CanvasLib;
 
 namespace CanDoItAll.Modules.Processes;
 
 public sealed partial class ProcessCanvasSurfaceFactory
 {
+    private const double DefinitionRoleInstanceOffsetX = 430d;
+    private const double DefinitionRoleInstanceRowGap = 260d;
+    private const double DefinitionArtifactNodeOffsetX = 360d;
+    private const double DefinitionArtifactCloneOffsetX = 260d;
+    private const double DefinitionArtifactNodeRowGap = 230d;
+    private static readonly string[] DefinitionArtifactAccentPalette =
+    [
+        "#be185d",
+        "#0e7490",
+        "#a16207",
+        "#7c2d12",
+        "#6d28d9",
+        "#047857",
+        "#b45309",
+        "#86198f",
+        "#1d4ed8",
+        "#15803d",
+        "#a21caf",
+        "#831843",
+        "#b91c1c",
+        "#4338ca",
+        "#4d7c0f",
+        "#c2410c"
+    ];
+
     private readonly ProcessCanvasChromeCatalogService chromeCatalogService;
 
     public ProcessCanvasSurfaceFactory(ProcessCanvasChromeCatalogService chromeCatalogService)
@@ -14,7 +40,8 @@ public sealed partial class ProcessCanvasSurfaceFactory
     public CanvasWorkbenchSurface BuildDefinitionSurface(
         ProcessDefinitionEditorModel editor,
         string? selectedNodeId = null,
-        string mode = "authoring")
+        string mode = "authoring",
+        IReadOnlyList<ProcessCanvasArtifactCloneDraft>? artifactCloneDrafts = null)
     {
         ArgumentNullException.ThrowIfNull(editor);
 
@@ -50,14 +77,21 @@ public sealed partial class ProcessCanvasSurfaceFactory
             .Where(ProcessCanvasBranching.ShouldRenderBranchRouter)
             .Select(step => BuildDefinitionBranchNode(step, editor.Steps, rolesById))
             .ToList();
-        var roleNodes = editor.Roles
-            .Select((role, index) => BuildDefinitionRoleNode(role, index, editor))
+        var roleNodePlans = BuildDefinitionRoleNodePlans(editor, rolesById);
+        var roleNodeIds = BuildDefinitionRoleNodeIdMap(roleNodePlans);
+        var roleNodes = roleNodePlans
+            .Select(plan => BuildDefinitionRoleNode(plan, editor))
             .ToList();
-        var nodes = new List<CanvasWorkbenchNode>(stepNodes.Count + branchNodes.Count + roleNodes.Count);
+        var artifactNodePlans = BuildDefinitionArtifactNodePlans(editor, roleNodePlans, artifactCloneDrafts ?? []);
+        var artifactNodes = artifactNodePlans
+            .Select(BuildDefinitionArtifactNode)
+            .ToList();
+        var nodes = new List<CanvasWorkbenchNode>(stepNodes.Count + branchNodes.Count + roleNodes.Count + artifactNodes.Count);
         nodes.AddRange(stepNodes);
         nodes.AddRange(branchNodes);
         nodes.AddRange(roleNodes);
-        var links = BuildDefinitionLinks(editor.Steps, rolesById, editor.MessagingPolicies);
+        nodes.AddRange(artifactNodes);
+        var links = BuildDefinitionLinks(editor.Steps, rolesById, editor.MessagingPolicies, roleNodeIds);
 
         return new CanvasWorkbenchSurface
         {
@@ -70,7 +104,7 @@ public sealed partial class ProcessCanvasSurfaceFactory
             Links = links,
             UiState = new CanvasWorkbenchUiState
             {
-                SelectedNodeIds = ResolveSelectedNodeIds(nodes, selectedNodeId),
+                SelectedNodeIds = ResolveSelectedNodeIds(nodes, selectedNodeId, ResolveSelectedRoleInstanceNodeId(nodes, selectedNodeId)),
                 ActiveInspectorTab = "definition"
             },
             Chrome = BuildDefinitionChrome()
@@ -257,36 +291,353 @@ public sealed partial class ProcessCanvasSurfaceFactory
     }
 
     private static CanvasWorkbenchNode BuildDefinitionRoleNode(
-        ProcessRoleEditorModel role,
-        int index,
+        DefinitionRoleNodePlan plan,
         ProcessDefinitionEditorModel editor)
     {
-        var assignmentCount = editor.Steps.Sum(step => step.RoleAssignments.Count(assignment => assignment.RoleRequirementId == role.Id));
-        var decisionCount = editor.Steps.Count(step => step.DecisionRoleRequirementId == role.Id);
+        var role = plan.Role;
+        var assignmentCount = plan.RelatedStep is null
+            ? editor.Steps.Sum(step => step.RoleAssignments.Count(assignment => assignment.RoleRequirementId == role.Id))
+            : plan.Responsibilities.Count;
+        var decisionCount = plan.RelatedStep is null
+            ? editor.Steps.Count(step => step.DecisionRoleRequirementId == role.Id)
+            : plan.IsDecisionAuthority ? 1 : 0;
         var outboundMessagingCount = editor.MessagingPolicies.Count(item => item.SourceRoleRequirementId == role.Id);
         var inboundMessagingCount = editor.MessagingPolicies.Count(item => item.TargetRoleRequirementId == role.Id);
 
         return new CanvasWorkbenchNode
         {
-            Id = BuildDefinitionRoleNodeId(role),
+            Id = plan.NodeId,
             Kind = ProcessCanvasCatalog.NodeKinds.DefinitionRole,
             Family = "group",
             Icon = "people",
-            Title = string.IsNullOrWhiteSpace(role.DisplayName) ? $"Role {index + 1}" : role.DisplayName,
-            Subtitle = string.IsNullOrWhiteSpace(role.PreferredExecutorKind)
-                ? "Role contract"
-                : role.PreferredExecutorKind,
+            Title = string.IsNullOrWhiteSpace(role.DisplayName) ? $"Role {plan.RoleIndex + 1}" : role.DisplayName,
+            Subtitle = ResolveDefinitionRoleSubtitle(plan),
             LeadText = string.IsNullOrWhiteSpace(role.Purpose)
                 ? role.StaffingIntent
                 : role.Purpose,
             Status = role.IsRequired ? "required" : "optional",
-            StatusPill = role.IsRequired ? "Required" : "Optional",
+            StatusPill = plan.RelatedStep is null
+                ? role.IsRequired ? "Required" : "Optional"
+                : "Role instance",
             PaletteKey = "neutral",
             AccentColor = "#0f766e",
             DurationLabel = $"{role.DefaultAllocationPercent}%",
-            X = ResolveDefinitionRoleNodeX(role, editor),
-            Y = ResolveDefinitionRoleNodeY(role, index),
-            Chips =
+            X = ResolveDefinitionRoleNodeX(plan, editor),
+            Y = ResolveDefinitionRoleNodeY(plan),
+            Chips = BuildDefinitionRoleNodeChips(plan, assignmentCount, decisionCount, outboundMessagingCount, inboundMessagingCount),
+            FooterChips = BuildDefinitionRoleNodeFooterChips(plan),
+            ContextActions = BuildDefinitionRoleContextActions(),
+            InputPorts = DecorateProcessPorts(plan.RelatedStep is null
+                ? BuildDefinitionRoleInputPorts(role, editor)
+                : []),
+            OutputPorts = DecorateProcessPorts(plan.RelatedStep is null
+                ? BuildDefinitionRoleOutputPorts(role, editor)
+                : BuildDefinitionRoleInstanceOutputPorts(plan))
+        };
+    }
+
+    private static CanvasWorkbenchNode BuildDefinitionArtifactNode(DefinitionArtifactNodePlan plan)
+    {
+        var artifactTitle = ResolveArtifactTitle(plan.Artifact);
+        return new CanvasWorkbenchNode
+        {
+            Id = plan.NodeId,
+            Kind = ProcessCanvasCatalog.NodeKinds.DefinitionArtifact,
+            Family = "special",
+            Icon = "description",
+            Title = artifactTitle,
+            Subtitle = ResolveDefinitionArtifactSubtitle(plan),
+            LeadText = ResolveDefinitionArtifactLeadText(plan),
+            Status = plan.IsDraft
+                ? "draft"
+                : plan.Artifact.IsRequired ? "required" : "optional",
+            StatusPill = plan.IsClone ? "Clone" : "Artifact",
+            PaletteKey = "artifact",
+            AccentColor = plan.AccentColor,
+            DurationLabel = plan.Artifact.ArtifactKind.ToString(),
+            X = ResolveDefinitionArtifactNodeX(plan),
+            Y = ResolveDefinitionArtifactNodeY(plan),
+            Chips = BuildDefinitionArtifactNodeChips(plan),
+            FooterChips = BuildDefinitionArtifactFooterChips(plan),
+            ContextActions = BuildDefinitionArtifactContextActions(),
+            InputPorts = DecorateProcessPorts(plan.IsClone ? [] : BuildDefinitionArtifactInputPorts()),
+            OutputPorts = DecorateProcessPorts(BuildDefinitionArtifactOutputPorts())
+        };
+    }
+
+    private static List<DefinitionArtifactNodePlan> BuildDefinitionArtifactNodePlans(
+        ProcessDefinitionEditorModel editor,
+        IReadOnlyList<DefinitionRoleNodePlan> roleNodePlans,
+        IReadOnlyList<ProcessCanvasArtifactCloneDraft> artifactCloneDrafts)
+    {
+        var roleInstanceCountByStepId = roleNodePlans
+            .Where(plan => plan.RelatedStep?.Id.HasValue == true)
+            .GroupBy(plan => plan.RelatedStep!.Id!.Value)
+            .ToDictionary(group => group.Key, group => group.Count());
+        var ownerCandidates = editor.Steps
+            .SelectMany((step, stepIndex) => step.ArtifactExpectations
+                .Select((artifact, artifactIndex) => new DefinitionArtifactOwner(step, artifact, artifactIndex))
+                .Select(owner => owner with { StepIndex = stepIndex })
+                .Where(owner => owner.Artifact.Id is { } artifactId && artifactId != Guid.Empty))
+            .ToList();
+        var artifactOwnersById = ownerCandidates
+            .GroupBy(owner => owner.Artifact.Id!.Value)
+            .ToDictionary(group => group.Key, group => group.First());
+        var artifactAccentColorsById = ownerCandidates
+            .Select(owner => owner.Artifact.Id!.Value)
+            .Distinct()
+            .Select((artifactId, artifactIndex) => new
+            {
+                ArtifactId = artifactId,
+                AccentColor = ResolveDefinitionArtifactAccentColor(artifactIndex)
+            })
+            .ToDictionary(item => item.ArtifactId, item => item.AccentColor);
+        var plans = new List<DefinitionArtifactNodePlan>();
+
+        foreach (var owner in ownerCandidates)
+        {
+            plans.Add(DefinitionArtifactNodePlan.CreateSource(
+                owner,
+                ResolveDefinitionArtifactAccentColor(owner, artifactAccentColorsById)));
+        }
+
+        for (var targetStepIndex = 0; targetStepIndex < editor.Steps.Count; targetStepIndex++)
+        {
+            var targetStep = editor.Steps[targetStepIndex];
+            var artifactInputs = targetStep.ArtifactInputs
+                .Where(input => input.ArtifactExpectationId.HasValue &&
+                    artifactOwnersById.ContainsKey(input.ArtifactExpectationId.Value))
+                .ToList();
+            var relatedRoleInstanceCount = targetStep.Id.HasValue
+                ? roleInstanceCountByStepId.GetValueOrDefault(targetStep.Id.Value)
+                : 0;
+
+            for (var artifactInputIndex = 0; artifactInputIndex < artifactInputs.Count; artifactInputIndex++)
+            {
+                var artifactInput = artifactInputs[artifactInputIndex];
+                var owner = artifactOwnersById[artifactInput.ArtifactExpectationId!.Value];
+                plans.Add(DefinitionArtifactNodePlan.CreateInputClone(
+                    owner,
+                    targetStep,
+                    artifactInput,
+                    targetStepIndex,
+                    artifactInputIndex,
+                    relatedRoleInstanceCount,
+                    ResolveDefinitionArtifactAccentColor(owner, artifactAccentColorsById)));
+            }
+        }
+
+        foreach (var draft in artifactCloneDrafts)
+        {
+            if (!artifactOwnersById.TryGetValue(draft.ArtifactExpectationId, out var owner))
+            {
+                continue;
+            }
+
+            plans.Add(DefinitionArtifactNodePlan.CreateDraftClone(
+                owner,
+                draft,
+                ResolveDefinitionArtifactAccentColor(owner, artifactAccentColorsById)));
+        }
+
+        return plans;
+    }
+
+
+    private static List<DefinitionRoleNodePlan> BuildDefinitionRoleNodePlans(
+        ProcessDefinitionEditorModel editor,
+        IReadOnlyDictionary<Guid, ProcessRoleEditorModel> rolesById)
+    {
+        var participations = BuildDefinitionRoleParticipations(editor, rolesById);
+        var participationsByRoleId = participations
+            .GroupBy(participation => participation.Role.Id!.Value)
+            .ToDictionary(group => group.Key, group => group.ToList());
+        var messagingRoleIds = editor.MessagingPolicies
+            .SelectMany(policy => new[] { policy.SourceRoleRequirementId, policy.TargetRoleRequirementId })
+            .Where(roleId => roleId.HasValue)
+            .Select(roleId => roleId!.Value)
+            .ToHashSet();
+        var plans = new List<DefinitionRoleNodePlan>();
+
+        for (var roleIndex = 0; roleIndex < editor.Roles.Count; roleIndex++)
+        {
+            var role = editor.Roles[roleIndex];
+            if (!role.Id.HasValue ||
+                !participationsByRoleId.TryGetValue(role.Id.Value, out var roleParticipations) ||
+                roleParticipations.Count <= 1)
+            {
+                plans.Add(DefinitionRoleNodePlan.CreateContract(role, roleIndex));
+                continue;
+            }
+
+            foreach (var participation in roleParticipations)
+            {
+                plans.Add(DefinitionRoleNodePlan.CreateInstance(role, roleIndex, participation));
+            }
+
+            if (messagingRoleIds.Contains(role.Id.Value))
+            {
+                plans.Add(DefinitionRoleNodePlan.CreateContract(role, roleIndex));
+            }
+        }
+
+        return plans;
+    }
+
+    private static Dictionary<DefinitionRoleNodeKey, string> BuildDefinitionRoleNodeIdMap(
+        IReadOnlyList<DefinitionRoleNodePlan> plans)
+    {
+        var map = new Dictionary<DefinitionRoleNodeKey, string>();
+        foreach (var plan in plans)
+        {
+            if (!plan.Role.Id.HasValue)
+            {
+                continue;
+            }
+
+            map[new DefinitionRoleNodeKey(plan.Role.Id.Value, plan.RelatedStep?.Id)] = plan.NodeId;
+        }
+
+        return map;
+    }
+
+    private static List<DefinitionRoleParticipation> BuildDefinitionRoleParticipations(
+        ProcessDefinitionEditorModel editor,
+        IReadOnlyDictionary<Guid, ProcessRoleEditorModel> rolesById)
+    {
+        var roleIndexById = editor.Roles
+            .Select((role, index) => new { role, index })
+            .Where(item => item.role.Id.HasValue)
+            .ToDictionary(item => item.role.Id!.Value, item => item.index);
+        var builders = new Dictionary<DefinitionRoleParticipationKey, DefinitionRoleParticipationBuilder>();
+
+        for (var stepIndex = 0; stepIndex < editor.Steps.Count; stepIndex++)
+        {
+            var step = editor.Steps[stepIndex];
+            if (!step.Id.HasValue)
+            {
+                continue;
+            }
+
+            foreach (var assignment in step.RoleAssignments.Where(assignment => assignment.RoleRequirementId.HasValue))
+            {
+                var roleId = assignment.RoleRequirementId!.Value;
+                if (!rolesById.TryGetValue(roleId, out var role))
+                {
+                    continue;
+                }
+
+                var builder = ResolveRoleParticipationBuilder(
+                    builders,
+                    role,
+                    step,
+                    stepIndex,
+                    roleIndexById.GetValueOrDefault(roleId, int.MaxValue));
+                if (!builder.Responsibilities.Contains(assignment.ResponsibilityKind))
+                {
+                    builder.Responsibilities.Add(assignment.ResponsibilityKind);
+                }
+            }
+
+            if (!step.DecisionRoleRequirementId.HasValue ||
+                !rolesById.TryGetValue(step.DecisionRoleRequirementId.Value, out var decisionRole))
+            {
+                continue;
+            }
+
+            ResolveRoleParticipationBuilder(
+                    builders,
+                    decisionRole,
+                    step,
+                    stepIndex,
+                    roleIndexById.GetValueOrDefault(step.DecisionRoleRequirementId.Value, int.MaxValue))
+                .IsDecisionAuthority = true;
+        }
+
+        var ordered = builders.Values
+            .OrderBy(builder => builder.StepIndex)
+            .ThenBy(builder => builder.RoleIndex)
+            .ToList();
+        var stepInstanceCounts = ordered
+            .GroupBy(builder => builder.Step.Id!.Value)
+            .ToDictionary(group => group.Key, group => group.Count());
+        var stepInstanceCursors = new Dictionary<Guid, int>();
+        var result = new List<DefinitionRoleParticipation>(ordered.Count);
+
+        foreach (var builder in ordered)
+        {
+            var stepId = builder.Step.Id!.Value;
+            var stepRoleIndex = stepInstanceCursors.GetValueOrDefault(stepId);
+            stepInstanceCursors[stepId] = stepRoleIndex + 1;
+            result.Add(new DefinitionRoleParticipation(
+                builder.Role,
+                builder.Step,
+                [.. builder.Responsibilities],
+                builder.IsDecisionAuthority,
+                builder.StepIndex,
+                stepRoleIndex,
+                stepInstanceCounts[stepId]));
+        }
+
+        return result;
+    }
+
+    private static DefinitionRoleParticipationBuilder ResolveRoleParticipationBuilder(
+        IDictionary<DefinitionRoleParticipationKey, DefinitionRoleParticipationBuilder> builders,
+        ProcessRoleEditorModel role,
+        ProcessStepEditorModel step,
+        int stepIndex,
+        int roleIndex)
+    {
+        var key = new DefinitionRoleParticipationKey(role.Id!.Value, step.Id!.Value);
+        if (builders.TryGetValue(key, out var builder))
+        {
+            return builder;
+        }
+
+        builder = new DefinitionRoleParticipationBuilder(role, step, stepIndex, roleIndex);
+        builders[key] = builder;
+        return builder;
+    }
+
+    private static string? ResolveSelectedRoleInstanceNodeId(
+        IReadOnlyList<CanvasWorkbenchNode> nodes,
+        string? selectedNodeId)
+    {
+        if (!ProcessCanvasBranching.TryResolveDefinitionRoleToken(selectedNodeId, out var selectedRoleToken))
+        {
+            return null;
+        }
+
+        return nodes.FirstOrDefault(node =>
+            ProcessCanvasBranching.TryResolveDefinitionRoleInstanceTokens(node.Id, out var roleToken, out _) &&
+            string.Equals(roleToken, selectedRoleToken, StringComparison.Ordinal))?.Id;
+    }
+
+    private static string ResolveDefinitionRoleSubtitle(DefinitionRoleNodePlan plan)
+    {
+        if (plan.RelatedStep is null)
+        {
+            return string.IsNullOrWhiteSpace(plan.Role.PreferredExecutorKind)
+                ? "Role contract"
+                : plan.Role.PreferredExecutorKind;
+        }
+
+        return string.IsNullOrWhiteSpace(plan.RelatedStep.Title)
+            ? "Step role"
+            : plan.RelatedStep.Title;
+    }
+
+    private static List<CanvasWorkbenchChip> BuildDefinitionRoleNodeChips(
+        DefinitionRoleNodePlan plan,
+        int assignmentCount,
+        int decisionCount,
+        int outboundMessagingCount,
+        int inboundMessagingCount)
+    {
+        if (plan.RelatedStep is null)
+        {
+            return
             [
                 new CanvasWorkbenchChip
                 {
@@ -303,30 +654,300 @@ public sealed partial class ProcessCanvasSurfaceFactory
                     Text = $"{outboundMessagingCount} out / {inboundMessagingCount} in",
                     Tone = outboundMessagingCount == 0 && inboundMessagingCount == 0 ? "neutral" : "accent"
                 }
-            ],
-            FooterChips =
+            ];
+        }
+
+        var chips = plan.Responsibilities
+            .Select(responsibility => new CanvasWorkbenchChip
+            {
+                Text = ProcessCanvasCatalog.DefinitionPorts.GetResponsibilityLabel(responsibility),
+                Tone = "info"
+            })
+            .ToList();
+        if (plan.IsDecisionAuthority)
+        {
+            chips.Add(new CanvasWorkbenchChip
+            {
+                Text = "Decision",
+                Tone = "accent"
+            });
+        }
+
+        return chips.Count == 0
+            ? [new CanvasWorkbenchChip { Text = "Role binding", Tone = "info" }]
+            : chips;
+    }
+
+    private static List<CanvasWorkbenchChip> BuildDefinitionRoleNodeFooterChips(DefinitionRoleNodePlan plan)
+    {
+        var executorKind = string.IsNullOrWhiteSpace(plan.Role.PreferredExecutorKind)
+            ? "person"
+            : plan.Role.PreferredExecutorKind;
+        if (plan.RelatedStep is null)
+        {
+            return
             [
                 new CanvasWorkbenchChip
                 {
-                    Text = string.IsNullOrWhiteSpace(role.PreferredExecutorKind) ? "person" : role.PreferredExecutorKind,
+                    Text = executorKind,
                     Tone = "neutral"
                 }
-            ],
-            ContextActions =
-            [
-                new CanvasWorkbenchAction
-                {
-                    ActionId = ProcessCanvasActionIds.EditDefinitionRole,
-                    Label = "Edit role",
-                    MenuLabel = "Edit role",
-                    Icon = "draw",
-                    Tone = "accent"
-                }
-            ],
-            InputPorts = DecorateProcessPorts(BuildDefinitionRoleInputPorts(role, editor)),
-            OutputPorts = DecorateProcessPorts(BuildDefinitionRoleOutputPorts(role, editor))
-        };
+            ];
+        }
+
+        return
+        [
+            new CanvasWorkbenchChip
+            {
+                Text = "Same role contract",
+                Tone = "neutral"
+            },
+            new CanvasWorkbenchChip
+            {
+                Text = executorKind,
+                Tone = "neutral"
+            }
+        ];
     }
+
+    private static double ResolveDefinitionRoleNodeX(
+        DefinitionRoleNodePlan plan,
+        ProcessDefinitionEditorModel editor)
+    {
+        if (plan.RelatedStep is null)
+        {
+            return ResolveDefinitionRoleNodeX(plan.Role, editor);
+        }
+
+        return ResolveDefinitionStepX(plan.RelatedStep, editor.Steps) - DefinitionRoleInstanceOffsetX;
+    }
+
+    private static double ResolveDefinitionRoleNodeY(DefinitionRoleNodePlan plan)
+    {
+        if (plan.RelatedStep is null)
+        {
+            return ResolveDefinitionRoleNodeY(plan.Role, plan.RoleIndex);
+        }
+
+        return ResolveDefinitionStepY(plan.RelatedStep) + ResolveRoleInstanceOffsetY(
+            plan.StepRoleIndex,
+            plan.StepRoleCount);
+    }
+
+    private static double ResolveRoleInstanceOffsetY(int stepRoleIndex, int stepRoleCount)
+    {
+        if (stepRoleCount <= 1)
+        {
+            return 0d;
+        }
+
+        var row = (stepRoleIndex / 2) + 1;
+        var direction = stepRoleIndex % 2 == 0
+            ? -1d
+            : 1d;
+        return direction * row * DefinitionRoleInstanceRowGap;
+    }
+
+    private static double ResolveDefinitionArtifactNodeX(DefinitionArtifactNodePlan plan)
+    {
+        if (plan.Draft is not null)
+        {
+            return plan.Draft.X;
+        }
+
+        var anchorStep = plan.TargetStep ?? plan.OwnerStep;
+        var anchorStepIndex = plan.TargetStep is null
+            ? plan.OwnerStepIndex
+            : plan.TargetStepIndex;
+        var anchorX = ResolveDefinitionArtifactStepX(anchorStep, anchorStepIndex);
+        return plan.IsClone
+            ? anchorX - DefinitionArtifactCloneOffsetX
+            : anchorX + DefinitionArtifactNodeOffsetX;
+    }
+
+    private static double ResolveDefinitionArtifactNodeY(DefinitionArtifactNodePlan plan)
+    {
+        if (plan.Draft is not null)
+        {
+            return plan.Draft.Y;
+        }
+
+        if (!plan.IsClone)
+        {
+            return ResolveDefinitionStepY(plan.OwnerStep) + ResolveArtifactStackOffsetY(plan.ArtifactIndex, plan.SourceArtifactCount);
+        }
+
+        var targetStep = plan.TargetStep ?? plan.OwnerStep;
+        var roleRowsReserved = (plan.TargetRoleInstanceCount + 1) / 2;
+        var baseOffset = Math.Max(1, roleRowsReserved + 1) * DefinitionArtifactNodeRowGap;
+        return ResolveDefinitionStepY(targetStep) + baseOffset + (plan.InputIndex * DefinitionArtifactNodeRowGap);
+    }
+
+    private static double ResolveArtifactStackOffsetY(int index, int count)
+    {
+        if (count <= 1)
+        {
+            return DefinitionArtifactNodeRowGap;
+        }
+
+        return DefinitionArtifactNodeRowGap + (index * DefinitionArtifactNodeRowGap);
+    }
+
+    private static string ResolveDefinitionArtifactSubtitle(DefinitionArtifactNodePlan plan)
+    {
+        if (plan.IsDraft)
+        {
+            return "Manual artifact clone";
+        }
+
+        if (plan.TargetStep is not null)
+        {
+            return $"Input for {ResolveStepTitle(plan.TargetStep)}";
+        }
+
+        return $"Produced by {ResolveStepTitle(plan.OwnerStep)}";
+    }
+
+    private static string ResolveDefinitionArtifactLeadText(DefinitionArtifactNodePlan plan)
+    {
+        if (plan.IsClone)
+        {
+            return $"Represents the same artifact produced by {ResolveStepTitle(plan.OwnerStep)} without drawing a long cross-canvas artifact line.";
+        }
+
+        if (!string.IsNullOrWhiteSpace(plan.Artifact.ValidationRequirementSummary))
+        {
+            return plan.Artifact.ValidationRequirementSummary;
+        }
+
+        return plan.Artifact.AllowedFutureUsageSummary;
+    }
+
+    private static string ResolveDefinitionArtifactAccentColor(
+        DefinitionArtifactOwner owner,
+        IReadOnlyDictionary<Guid, string> artifactAccentColorsById)
+    {
+        if (owner.Artifact.Id is { } artifactId &&
+            artifactAccentColorsById.TryGetValue(artifactId, out var accentColor))
+        {
+            return accentColor;
+        }
+
+        return ResolveDefinitionArtifactAccentColor(owner.ArtifactIndex);
+    }
+
+    private static string ResolveDefinitionArtifactAccentColor(int artifactIndex)
+    {
+        if (artifactIndex >= 0 && artifactIndex < DefinitionArtifactAccentPalette.Length)
+        {
+            return DefinitionArtifactAccentPalette[artifactIndex];
+        }
+
+        var hue = ((artifactIndex * 47) + 330) % 360;
+        return ConvertHslToHex(hue, 68d, 37d);
+    }
+
+    private static string ConvertHslToHex(int hue, double saturationPercent, double lightnessPercent)
+    {
+        var saturation = Math.Clamp(saturationPercent / 100d, 0d, 1d);
+        var lightness = Math.Clamp(lightnessPercent / 100d, 0d, 1d);
+        var chroma = (1d - Math.Abs((2d * lightness) - 1d)) * saturation;
+        var hueSector = ((hue % 360) + 360) % 360 / 60d;
+        var secondary = chroma * (1d - Math.Abs((hueSector % 2d) - 1d));
+        var match = lightness - (chroma / 2d);
+
+        var (red, green, blue) = hueSector switch
+        {
+            >= 0d and < 1d => (chroma, secondary, 0d),
+            >= 1d and < 2d => (secondary, chroma, 0d),
+            >= 2d and < 3d => (0d, chroma, secondary),
+            >= 3d and < 4d => (0d, secondary, chroma),
+            >= 4d and < 5d => (secondary, 0d, chroma),
+            _ => (chroma, 0d, secondary)
+        };
+
+        return $"#{ToHexByte(red + match)}{ToHexByte(green + match)}{ToHexByte(blue + match)}";
+    }
+
+    private static string ToHexByte(double value)
+    {
+        var channel = (int)Math.Round(Math.Clamp(value, 0d, 1d) * 255d, MidpointRounding.AwayFromZero);
+        return channel.ToString("X2", CultureInfo.InvariantCulture);
+    }
+
+    private static List<CanvasWorkbenchChip> BuildDefinitionArtifactNodeChips(DefinitionArtifactNodePlan plan)
+    {
+        var chips = new List<CanvasWorkbenchChip>
+        {
+            new()
+            {
+                Text = plan.Artifact.ArtifactKind.ToString(),
+                Tone = "accent"
+            },
+            new()
+            {
+                Text = plan.Artifact.IsRequired ? "Required" : "Optional",
+                Tone = plan.Artifact.IsRequired ? "info" : "neutral"
+            }
+        };
+
+        if (plan.IsClone)
+        {
+            chips.Add(new CanvasWorkbenchChip
+            {
+                Text = plan.IsDraft ? "Draft clone" : "Input clone",
+                Tone = "neutral"
+            });
+        }
+
+        return chips;
+    }
+
+    private static List<CanvasWorkbenchChip> BuildDefinitionArtifactFooterChips(DefinitionArtifactNodePlan plan)
+    {
+        if (!plan.IsClone)
+        {
+            return
+            [
+                new CanvasWorkbenchChip
+                {
+                    Text = ResolveStepTitle(plan.OwnerStep),
+                    Tone = "neutral"
+                }
+            ];
+        }
+
+        return
+        [
+            new CanvasWorkbenchChip
+            {
+                Text = "Same artifact",
+                Tone = "accent"
+            },
+            new CanvasWorkbenchChip
+            {
+                Text = ResolveStepTitle(plan.OwnerStep),
+                Tone = "neutral"
+            }
+        ];
+    }
+
+    private static string ResolveArtifactTitle(ProcessArtifactExpectationEditorModel artifact)
+        => string.IsNullOrWhiteSpace(artifact.Title)
+            ? "Untitled artifact"
+            : artifact.Title;
+
+    private static double ResolveDefinitionArtifactStepX(ProcessStepEditorModel step, int stepIndex)
+    {
+        return step.CanvasX != 0
+            ? step.CanvasX
+            : 140 + (Math.Max(0, stepIndex) * 280);
+    }
+
+    private static string ResolveStepTitle(ProcessStepEditorModel step)
+        => string.IsNullOrWhiteSpace(step.Title)
+            ? "Untitled step"
+            : step.Title;
 
     private static CanvasWorkbenchNode BuildRunNode(ProcessStepRunViewModel stepRun)
     {
@@ -364,5 +985,176 @@ public sealed partial class ProcessCanvasSurfaceFactory
             OutputPorts = DecorateProcessPorts(BuildRunStepOutputPorts(stepRun, profile))
         };
     }
+
+    private readonly record struct DefinitionRoleNodeKey(Guid RoleId, Guid? StepId);
+
+    private readonly record struct DefinitionRoleParticipationKey(Guid RoleId, Guid StepId);
+
+    private sealed record DefinitionArtifactOwner(
+        ProcessStepEditorModel Step,
+        ProcessArtifactExpectationEditorModel Artifact,
+        int ArtifactIndex)
+    {
+        public int StepIndex { get; init; }
+    }
+
+    private sealed record DefinitionRoleParticipation(
+        ProcessRoleEditorModel Role,
+        ProcessStepEditorModel Step,
+        IReadOnlyList<ProcessResponsibilityKind> Responsibilities,
+        bool IsDecisionAuthority,
+        int StepIndex,
+        int StepRoleIndex,
+        int StepRoleCount);
+
+    private sealed class DefinitionRoleParticipationBuilder(
+        ProcessRoleEditorModel role,
+        ProcessStepEditorModel step,
+        int stepIndex,
+        int roleIndex)
+    {
+        public ProcessRoleEditorModel Role { get; } = role;
+
+        public ProcessStepEditorModel Step { get; } = step;
+
+        public int StepIndex { get; } = stepIndex;
+
+        public int RoleIndex { get; } = roleIndex;
+
+        public List<ProcessResponsibilityKind> Responsibilities { get; } = [];
+
+        public bool IsDecisionAuthority { get; set; }
+    }
+
+    private sealed record DefinitionRoleNodePlan(
+        string NodeId,
+        ProcessRoleEditorModel Role,
+        ProcessStepEditorModel? RelatedStep,
+        int RoleIndex,
+        IReadOnlyList<ProcessResponsibilityKind> Responsibilities,
+        bool IsDecisionAuthority,
+        int StepRoleIndex,
+        int StepRoleCount)
+    {
+        public static DefinitionRoleNodePlan CreateContract(
+            ProcessRoleEditorModel role,
+            int roleIndex)
+        {
+            return new DefinitionRoleNodePlan(
+                ProcessCanvasBranching.BuildDefinitionRoleNodeId(role),
+                role,
+                null,
+                roleIndex,
+                [],
+                false,
+                0,
+                1);
+        }
+
+        public static DefinitionRoleNodePlan CreateInstance(
+            ProcessRoleEditorModel role,
+            int roleIndex,
+            DefinitionRoleParticipation participation)
+        {
+            return new DefinitionRoleNodePlan(
+                ProcessCanvasBranching.BuildDefinitionRoleInstanceNodeId(role, participation.Step),
+                role,
+                participation.Step,
+                roleIndex,
+                participation.Responsibilities,
+                participation.IsDecisionAuthority,
+                participation.StepRoleIndex,
+                participation.StepRoleCount);
+        }
+    }
+
+    private sealed record DefinitionArtifactNodePlan(
+        string NodeId,
+        ProcessStepEditorModel OwnerStep,
+        ProcessArtifactExpectationEditorModel Artifact,
+        string AccentColor,
+        ProcessStepEditorModel? TargetStep,
+        ProcessStepArtifactInputEditorModel? ArtifactInput,
+        ProcessCanvasArtifactCloneDraft? Draft,
+        int ArtifactIndex,
+        int OwnerStepIndex,
+        int TargetStepIndex,
+        int SourceArtifactCount,
+        int InputIndex,
+        int TargetRoleInstanceCount)
+    {
+        public bool IsClone => TargetStep is not null || Draft is not null;
+
+        public bool IsDraft => Draft is not null;
+
+        public static DefinitionArtifactNodePlan CreateSource(
+            DefinitionArtifactOwner owner,
+            string accentColor)
+        {
+            return new DefinitionArtifactNodePlan(
+                ProcessCanvasBranching.BuildDefinitionArtifactNodeId(owner.Artifact),
+                owner.Step,
+                owner.Artifact,
+                accentColor,
+                null,
+                null,
+                null,
+                owner.ArtifactIndex,
+                owner.StepIndex,
+                0,
+                owner.Step.ArtifactExpectations.Count(HasStableArtifactIdentity),
+                0,
+                0);
+        }
+
+        public static DefinitionArtifactNodePlan CreateInputClone(
+            DefinitionArtifactOwner owner,
+            ProcessStepEditorModel targetStep,
+            ProcessStepArtifactInputEditorModel artifactInput,
+            int targetStepIndex,
+            int inputIndex,
+            int targetRoleInstanceCount,
+            string accentColor)
+        {
+            return new DefinitionArtifactNodePlan(
+                ProcessCanvasBranching.BuildDefinitionArtifactCloneNodeId(owner.Artifact, artifactInput, targetStep),
+                owner.Step,
+                owner.Artifact,
+                accentColor,
+                targetStep,
+                artifactInput,
+                null,
+                owner.ArtifactIndex,
+                owner.StepIndex,
+                targetStepIndex,
+                owner.Step.ArtifactExpectations.Count(HasStableArtifactIdentity),
+                inputIndex,
+                targetRoleInstanceCount);
+        }
+
+        public static DefinitionArtifactNodePlan CreateDraftClone(
+            DefinitionArtifactOwner owner,
+            ProcessCanvasArtifactCloneDraft draft,
+            string accentColor)
+        {
+            return new DefinitionArtifactNodePlan(
+                draft.NodeId,
+                owner.Step,
+                owner.Artifact,
+                accentColor,
+                null,
+                null,
+                draft,
+                owner.ArtifactIndex,
+                owner.StepIndex,
+                0,
+                owner.Step.ArtifactExpectations.Count(HasStableArtifactIdentity),
+                0,
+                0);
+        }
+    }
+
+    private static bool HasStableArtifactIdentity(ProcessArtifactExpectationEditorModel artifact)
+        => artifact.Id is { } artifactId && artifactId != Guid.Empty;
 
 }

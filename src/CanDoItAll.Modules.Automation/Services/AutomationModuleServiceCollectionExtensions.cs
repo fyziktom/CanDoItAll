@@ -8,7 +8,10 @@ namespace CanDoItAll.Modules.Automation;
 
 public static class AutomationModuleServiceCollectionExtensions
 {
-    public static IServiceCollection AddAutomationModule(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddAutomationModule(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        string? contentRootPath = null)
     {
         ArgumentNullException.ThrowIfNull(configuration);
         var backgroundWorkersEnabled = LocalRuntimeHostedWorkerPolicy.AreBackgroundHostedWorkersEnabled(
@@ -21,6 +24,7 @@ public static class AutomationModuleServiceCollectionExtensions
         {
             options.SchedulerId = "CanDoItAll.Automation";
             options.SchedulerName = "CanDoItAll Automation";
+            AutomationQuartzPersistentStoreConfigurator.Configure(options, configuration, contentRootPath);
         });
         services.AddScoped<AutomationWorkspaceService>();
         services.TryAddScoped<IAutomationSignalProvider, CompositeAutomationSignalProvider>();

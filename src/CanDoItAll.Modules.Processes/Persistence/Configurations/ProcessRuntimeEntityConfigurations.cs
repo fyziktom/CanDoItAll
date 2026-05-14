@@ -102,6 +102,8 @@ internal sealed class ProcessRunAssignmentConfiguration : IEntityTypeConfigurati
         builder.Property(assignment => assignment.SourceRegistryKey).HasMaxLength(160);
         builder.Property(assignment => assignment.SnapshotSummary).HasColumnType("TEXT");
         builder.Property(assignment => assignment.AllowsDirectMessaging).HasDefaultValue(false);
+        builder.HasIndex(assignment => assignment.WorkflowDefinitionId);
+        builder.HasIndex(assignment => assignment.WorkflowVersionId);
         builder.HasIndex(assignment => new { assignment.ProcessRunId, assignment.RoleRequirementId })
             .IsUnique()
             .HasDatabaseName(ProcessPersistenceConstraintNames.RunAssignmentRunScopedUniqueIndex)
@@ -371,10 +373,42 @@ internal sealed class ProcessLaunchCandidateConfiguration : IEntityTypeConfigura
         builder.HasIndex(candidate => new { candidate.LaunchPlanRoleId, candidate.Score });
         builder.HasIndex(candidate => candidate.PartyId);
         builder.HasIndex(candidate => candidate.TechnicalAgentId);
+        builder.HasIndex(candidate => candidate.WorkflowDefinitionId);
+        builder.HasIndex(candidate => candidate.WorkflowVersionId);
         builder.HasOne<ProcessLaunchPlanRole>()
             .WithMany()
             .HasForeignKey(candidate => candidate.LaunchPlanRoleId)
             .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+internal sealed class ProcessWorkflowRunLinkConfiguration : IEntityTypeConfiguration<ProcessWorkflowRunLink>
+{
+    public void Configure(EntityTypeBuilder<ProcessWorkflowRunLink> builder)
+    {
+        builder.ToTable("Processes_WorkflowRunLinks");
+        builder.HasKey(link => link.Id);
+        builder.Property(link => link.WorkflowBackend).HasConversion<string>().HasMaxLength(48);
+        builder.Property(link => link.WorkflowBackendRunId).HasMaxLength(200);
+        builder.Property(link => link.State).HasConversion<string>().HasMaxLength(48);
+        builder.Property(link => link.Summary).HasColumnType("TEXT");
+        builder.HasIndex(link => link.ProcessRunId);
+        builder.HasIndex(link => link.WorkflowRunId);
+        builder.HasIndex(link => link.WorkflowDefinitionId);
+        builder.HasIndex(link => new { link.StepRunId, link.AssignmentId })
+            .IsUnique();
+        builder.HasOne<ProcessRun>()
+            .WithMany()
+            .HasForeignKey(link => link.ProcessRunId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<ProcessStepRun>()
+            .WithMany()
+            .HasForeignKey(link => link.StepRunId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<ProcessRunAssignment>()
+            .WithMany()
+            .HasForeignKey(link => link.AssignmentId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 

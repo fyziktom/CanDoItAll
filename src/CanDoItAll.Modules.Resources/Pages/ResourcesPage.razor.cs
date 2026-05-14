@@ -4,6 +4,7 @@ using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.Modules.Workspace.Pages.Components;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.SharedKernel.Configuration;
 using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.Resources.Pages;
@@ -34,7 +35,7 @@ public partial class ResourcesPage
             string.Equals(manifest.PluginKey, editor.ConnectorPluginKey, StringComparison.OrdinalIgnoreCase))
         ?? resourceManifests.FirstOrDefault();
 
-    private IReadOnlyList<ConnectorConfigFieldDescriptor> SelectedResourceFields => SelectedResourceManifest?.ConfigurationSchema.Fields ?? [];
+    private IReadOnlyList<ConfigurationFieldDescriptor> SelectedResourceFields => SelectedResourceManifest?.ConfigurationSchema.Fields ?? [];
 
     private IReadOnlyList<ResourceSummary> FilteredResources => resources
         .Where(resource =>
@@ -227,8 +228,8 @@ public partial class ResourcesPage
     }
 
     private static string? ResolveResourceFieldTestId(
-        ConnectorConfigFieldDescriptor field,
-        IReadOnlyList<ConnectorConfigFieldDescriptor> fields)
+        ConfigurationFieldDescriptor field,
+        IReadOnlyList<ConfigurationFieldDescriptor> fields)
     {
         var primaryFieldKey = fields.FirstOrDefault()?.Key;
         if (!string.Equals(field.Key, primaryFieldKey, StringComparison.OrdinalIgnoreCase))

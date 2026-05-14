@@ -215,7 +215,8 @@ internal sealed class WorkspaceCommandPlanBuilder
         string? workingDirectory = null,
         int startupTimeoutSeconds = 45,
         int timeoutSeconds = 120,
-        bool keepAlive = false)
+        bool keepAlive = false,
+        WorkspaceProcessLifetimeScope lifetimeScope = WorkspaceProcessLifetimeScope.ExecutionRun)
     {
         var target = BuildDotnetRunnableTarget(targetPath, workingDirectory);
         var urls = ResolveDotnetRunUrls(url);
@@ -274,7 +275,8 @@ internal sealed class WorkspaceCommandPlanBuilder
             artifactPaths.StderrLogFullPath,
             artifactPaths.StartupReceiptFullPath,
             boundedStartupTimeoutSeconds,
-            keepAlive);
+            keepAlive,
+            lifetimeScope);
         var encodedCommand = Convert.ToBase64String(Encoding.Unicode.GetBytes(script));
         var planTimeoutSeconds = Math.Max(timeoutSeconds, boundedStartupTimeoutSeconds + 10);
 
@@ -792,7 +794,8 @@ internal sealed class WorkspaceCommandPlanBuilder
         string stderrLogPath,
         string startupReceiptPath,
         int startupTimeoutSeconds,
-        bool keepAlive)
+        bool keepAlive,
+        WorkspaceProcessLifetimeScope lifetimeScope)
     {
         var builder = new StringBuilder();
         builder.AppendLine("$ErrorActionPreference = 'Stop'");
@@ -808,6 +811,7 @@ internal sealed class WorkspaceCommandPlanBuilder
         builder.AppendLine("$startupTimeoutSeconds = " + startupTimeoutSeconds.ToString());
         builder.AppendLine("$noBuild = " + (noBuild ? "$true" : "$false"));
         builder.AppendLine("$keepAlive = " + (keepAlive ? "$true" : "$false"));
+        builder.AppendLine("$lifetimeScope = " + ToPowerShellSingleQuotedString(lifetimeScope.ToString()));
         builder.AppendLine("$appProcess = $null");
         builder.AppendLine("function Read-LogTail {");
         builder.AppendLine("    param([string]$Path)");
@@ -867,6 +871,9 @@ internal sealed class WorkspaceCommandPlanBuilder
         builder.AppendLine("        appProcessId = if ($appProcess -ne $null) { $appProcess.Id } else { $null }");
         builder.AppendLine("        appProcessTreeIds = @($processTreeIds)");
         builder.AppendLine("        keepAlive = $keepAlive");
+        builder.AppendLine("        lifetimeScope = $lifetimeScope");
+        builder.AppendLine("        aspNetCoreEnvironment = $env:ASPNETCORE_ENVIRONMENT");
+        builder.AppendLine("        dotnetEnvironment = $env:DOTNET_ENVIRONMENT");
         builder.AppendLine("        cleanupAttempted = $CleanupAttempted");
         builder.AppendLine("        cleanupProcessIds = @($CleanupProcessIds)");
         builder.AppendLine("        stdoutLog = $stdoutLog");
@@ -896,6 +903,8 @@ internal sealed class WorkspaceCommandPlanBuilder
         builder.AppendLine("    }");
         builder.AppendLine("    if ([string]::IsNullOrWhiteSpace($probeUrl)) { $probeUrl = $listenUrl }");
         builder.AppendLine("    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $stdoutLog) | Out-Null");
+        builder.AppendLine("    if ([string]::IsNullOrWhiteSpace($env:ASPNETCORE_ENVIRONMENT)) { $env:ASPNETCORE_ENVIRONMENT = 'Development' }");
+        builder.AppendLine("    if ([string]::IsNullOrWhiteSpace($env:DOTNET_ENVIRONMENT)) { $env:DOTNET_ENVIRONMENT = 'Development' }");
         builder.AppendLine("    $dotnetPath = (Get-Command dotnet -ErrorAction Stop).Source");
         builder.AppendLine("    $argumentList = @('run', '--project', $projectPath, '--configuration', $configuration, '--no-launch-profile')");
         builder.AppendLine("    if ($noBuild) { $argumentList += '--no-build' }");

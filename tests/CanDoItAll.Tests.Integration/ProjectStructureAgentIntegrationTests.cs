@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
@@ -221,6 +222,173 @@ public sealed class ProjectStructureAgentIntegrationTests
     }
 
     [Fact]
+    public async Task AgentService_MoveNodesToNewSubprojectAsync_creates_subproject_and_preserves_dependency_links()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+
+        var sourceProjectId = await CreateProjectAsync(projects, "Selected nodes source");
+        var parentBlock = await workbench.CreateObjectAsync(
+            sourceProjectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Implementation lane",
+                string.Empty,
+                "Parent block remains in the source project.",
+                $"project:{sourceProjectId}",
+                320,
+                220,
+                null,
+                null,
+                "implementation"));
+        var prerequisiteTask = await workbench.CreateObjectAsync(
+            sourceProjectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Prepare API contract",
+                string.Empty,
+                "Move this selected task.",
+                parentBlock.Id,
+                520,
+                280,
+                null,
+                null,
+                "task"));
+        var dependentTask = await workbench.CreateObjectAsync(
+            sourceProjectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Implement endpoint",
+                string.Empty,
+                "Move this selected task and preserve its dependency.",
+                parentBlock.Id,
+                720,
+                340,
+                null,
+                null,
+                "task"));
+        var childNote = await workbench.CreateObjectAsync(
+            sourceProjectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Endpoint notes",
+                string.Empty,
+                "Descendant should move with the selected task.",
+                dependentTask.Id,
+                900,
+                420));
+        await workbench.LinkObjectsAsync(sourceProjectId, dependentTask.Id, prerequisiteTask.Id, ProjectObjectLinkKind.DependsOn);
+
+        var result = await agentService.MoveNodesToNewSubprojectAsync(
+            sourceProjectId,
+            new ProjectStructureNodesToSubprojectInput(
+                "Extracted endpoint work",
+                [prerequisiteTask.Id, dependentTask.Id],
+                IncludeDescendants: true),
+            DefaultAgent);
+
+        Assert.Equal("Extracted endpoint work", result.TargetProjectName);
+        Assert.Equal(3, result.MovedNodeCount);
+        Assert.Equal(2, result.MovedRootCount);
+        Assert.Contains(prerequisiteTask.Id, result.MovedNodeIds);
+        Assert.Contains(dependentTask.Id, result.MovedNodeIds);
+        Assert.Contains(childNote.Id, result.MovedNodeIds);
+
+        var hierarchy = await projects.GetHierarchyAsync(sourceProjectId);
+        Assert.Contains(hierarchy.ChildProjects, project => project.Id == result.TargetProjectId);
+
+        var sourceSurface = await workbench.GetStructureAsync(sourceProjectId);
+        Assert.Contains(sourceSurface.Nodes, node => node.Id == parentBlock.Id);
+        Assert.DoesNotContain(sourceSurface.Nodes, node => node.Id == prerequisiteTask.Id);
+        Assert.DoesNotContain(sourceSurface.Nodes, node => node.Id == dependentTask.Id);
+
+        var targetSurface = await workbench.GetStructureAsync(result.TargetProjectId);
+        var movedPrerequisite = Assert.Single(targetSurface.Nodes, node => node.Id == prerequisiteTask.Id);
+        var movedDependent = Assert.Single(targetSurface.Nodes, node => node.Id == dependentTask.Id);
+        var movedChildNote = Assert.Single(targetSurface.Nodes, node => node.Id == childNote.Id);
+
+        Assert.Equal($"project:{result.TargetProjectId}", movedPrerequisite.ParentId);
+        Assert.Equal($"project:{result.TargetProjectId}", movedDependent.ParentId);
+        Assert.Equal(dependentTask.Id, movedChildNote.ParentId);
+        Assert.Contains(targetSurface.Links, link =>
+            link.SourceId == dependentTask.Id &&
+            link.TargetId == prerequisiteTask.Id &&
+            link.Kind == ProjectObjectLinkKind.DependsOn);
+    }
+
+    [Fact]
+    public async Task AgentService_MoveNodesToNewSubprojectAsync_without_descendants_reparents_left_behind_children()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+
+        var sourceProjectId = await CreateProjectAsync(projects, "Selected node without descendants");
+        var parentBlock = await workbench.CreateObjectAsync(
+            sourceProjectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Source parent",
+                string.Empty,
+                "Parent should keep child when selected node moves alone.",
+                $"project:{sourceProjectId}",
+                320,
+                220,
+                null,
+                null,
+                "implementation"));
+        var selectedTask = await workbench.CreateObjectAsync(
+            sourceProjectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Move task only",
+                string.Empty,
+                "Move without descendants.",
+                parentBlock.Id,
+                520,
+                280,
+                null,
+                null,
+                "task"));
+        var childNote = await workbench.CreateObjectAsync(
+            sourceProjectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Left behind child",
+                string.Empty,
+                "This child should not keep a cross-project parent.",
+                selectedTask.Id,
+                720,
+                340));
+
+        var result = await agentService.MoveNodesToNewSubprojectAsync(
+            sourceProjectId,
+            new ProjectStructureNodesToSubprojectInput(
+                "Task only subproject",
+                [selectedTask.Id],
+                IncludeDescendants: false),
+            DefaultAgent);
+
+        Assert.Equal(1, result.MovedNodeCount);
+        Assert.Contains(selectedTask.Id, result.MovedNodeIds);
+        Assert.DoesNotContain(childNote.Id, result.MovedNodeIds);
+
+        var sourceSurface = await workbench.GetStructureAsync(sourceProjectId);
+        var leftBehindChild = Assert.Single(sourceSurface.Nodes, node => node.Id == childNote.Id);
+        Assert.Equal(parentBlock.Id, leftBehindChild.ParentId);
+        Assert.DoesNotContain(sourceSurface.Nodes, node => node.Id == selectedTask.Id);
+
+        var targetSurface = await workbench.GetStructureAsync(result.TargetProjectId);
+        var movedTask = Assert.Single(targetSurface.Nodes, node => node.Id == selectedTask.Id);
+        Assert.Equal($"project:{result.TargetProjectId}", movedTask.ParentId);
+    }
+
+    [Fact]
     public async Task AgentService_UpdateNodeAsync_reclassifies_placeholder_nodes_into_typed_blocks()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -365,6 +533,49 @@ public sealed class ProjectStructureAgentIntegrationTests
             string.Equals(link.SourceId, revision.NodeId, StringComparison.Ordinal) &&
             string.Equals(link.TargetId, original.Id, StringComparison.Ordinal) &&
             link.Kind == ProjectObjectLinkKind.DerivedFrom);
+    }
+
+    [Fact]
+    public async Task AgentService_CreateAssetAsync_accepts_workspace_source_path()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var workspacePathResolver = scope.ServiceProvider.GetRequiredService<IWorkspacePathResolver>();
+
+        var projectId = await CreateProjectAsync(projects, "Source path image asset");
+        var sourceRelativePath = Path.Combine("artifacts", "process-runs", Guid.NewGuid().ToString("N"), "inventory.png");
+        var sourceFullPath = Path.Combine(workspacePathResolver.ResolveWorkspaceRoot(), sourceRelativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(sourceFullPath)!);
+        await File.WriteAllBytesAsync(sourceFullPath, [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A]);
+
+        var created = await agentService.CreateAssetAsync(
+            projectId,
+            new ProjectStructureAssetCreateInput(
+                ProjectObjectType.ImageAsset,
+                "Inventory screenshot",
+                "Captured /inventory route",
+                "Accepted screenshot from the process-run artifact path.",
+                null,
+                $"project:{projectId}",
+                "screenshot",
+                null,
+                null,
+                sourceRelativePath.Replace('\\', '/'),
+                "inventory.png",
+                "image/png"),
+            DefaultAgent);
+
+        var surface = await workbench.GetStructureAsync(projectId);
+        var node = Assert.Single(surface.Nodes, item => item.Id == created.Id);
+
+        Assert.Equal(ProjectObjectType.ImageAsset, node.ObjectType);
+        Assert.Equal("screenshot", node.ObjectSubtype);
+        Assert.Equal("inventory.png", node.MediaOriginalFileName);
+        Assert.Equal("image/png", node.MediaContentType);
+        Assert.False(string.IsNullOrWhiteSpace(node.MediaRelativePath));
     }
 
     [Fact]

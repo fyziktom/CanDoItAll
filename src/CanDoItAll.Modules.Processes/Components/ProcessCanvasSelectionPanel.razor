@@ -1,6 +1,6 @@
 @namespace CanDoItAll.Modules.Processes
 
-@if (!IsRuntime && DefinitionStep is null && DefinitionRole is null)
+@if (!IsRuntime && DefinitionStep is null && DefinitionRole is null && DefinitionArtifact is null)
 {
     <EmptyState Eyebrow="Canvas selection"
                 Title="Select a process step"
@@ -50,6 +50,37 @@ else if (!IsRuntime && DefinitionRole is not null)
                 <Button Text="Edit role"
                         Click="EditDefinitionRole"
                         data-testid="processes-canvas-selection-edit-role" />
+                <Button Text="Open toolbox"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="OpenToolbox" />
+                <Button Text="Clear selection"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="ClearSelection" />
+            </Stack>
+        </SurfaceCard>
+    </Stack>
+}
+else if (!IsRuntime && DefinitionArtifact is not null)
+{
+    <Stack GapScale="LayoutGap.Medium">
+        <SurfaceCard Soft="true">
+            <Stack GapScale="LayoutGap.Small">
+                <div>
+                    <p class="cda-eyebrow">Artifact node</p>
+                    <h3 class="mt-1 text-lg font-semibold text-slate-950">@DefinitionArtifactTitle</h3>
+                    <p class="mt-2 text-sm leading-6 text-slate-600">@DefinitionArtifactLeadText</p>
+                </div>
+                <Cluster Gap="LayoutGap.Small">
+                    <StatusBadge Tone="accent" Text="@DefinitionArtifact.ArtifactKind.ToString()" />
+                    <StatusBadge Tone="info" Text="@(DefinitionArtifact.IsRequired ? "Required" : "Optional")" />
+                    <StatusBadge Tone="neutral" Text="@DefinitionArtifact.TrustRequirement.ToString()" />
+                    <StatusBadge Tone="neutral" Text="@DefinitionArtifact.SensitivityLevel.ToString()" />
+                </Cluster>
+            </Stack>
+        </SurfaceCard>
+
+        <SurfaceCard>
+            <Stack GapScale="LayoutGap.Medium">
                 <Button Text="Open toolbox"
                         ButtonStyle="ButtonStyle.Light"
                         Click="OpenToolbox" />
@@ -261,6 +292,9 @@ else if (RuntimeStep is not null)
     public ProcessRoleEditorModel? DefinitionRole { get; set; }
 
     [Parameter]
+    public ProcessArtifactExpectationEditorModel? DefinitionArtifact { get; set; }
+
+    [Parameter]
     public ProcessStepRunViewModel? RuntimeStep { get; set; }
 
     [Parameter]
@@ -336,6 +370,18 @@ else if (RuntimeStep is not null)
             : string.IsNullOrWhiteSpace(DefinitionRole.Purpose)
                 ? DefinitionRole.StaffingIntent
                 : DefinitionRole.Purpose;
+
+    private string DefinitionArtifactLeadText
+        => DefinitionArtifact is null
+            ? string.Empty
+            : !string.IsNullOrWhiteSpace(DefinitionArtifact.ValidationRequirementSummary)
+                ? DefinitionArtifact.ValidationRequirementSummary
+                : DefinitionArtifact.AllowedFutureUsageSummary;
+
+    private string DefinitionArtifactTitle
+        => DefinitionArtifact is null || string.IsNullOrWhiteSpace(DefinitionArtifact.Title)
+            ? "Untitled artifact"
+            : DefinitionArtifact.Title;
 
     private string RuntimeLeadText
         => RuntimeStep is null

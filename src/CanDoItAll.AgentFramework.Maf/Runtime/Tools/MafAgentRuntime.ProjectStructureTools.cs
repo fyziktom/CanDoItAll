@@ -79,9 +79,17 @@ public sealed partial class MafAgentRuntime
                     "project_structure_subproject_link",
                     "Adds or reconnects a subproject under a parent project."),
                 AIFunctionFactory.Create(
+                    (Guid projectId, ProjectStructureNodesToSubprojectInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodesToNewSubprojectAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
+                    "project_structure_nodes_to_new_subproject",
+                    "Creates a new subproject under the opened project and moves the supplied node ids, optionally with descendants, into that subproject in one operation. Use this for prompts like 'take selected nodes and move them to their own new subproject named XYZ'. If the contextual prompt lists selected node ids, pass those exact ids as nodeIds."),
+                AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureReadRequest? request = null, CancellationToken cancellationToken = default) => ProjectStructureReadAsync(agent, accessState, projectId, request, cancellationToken),
                     "project_structure_read",
                     "Reads a filtered project structure with compact node payloads by default. Inspect node.actionCapabilities for runtime run actions (runtime:open/runtime:admin), local File Explorer actions (open-local), and IPFS new-tab actions (open-new-tab)."),
+                AIFunctionFactory.Create(
+                    (CancellationToken cancellationToken = default) => ProjectStructureNodeCatalogAsync(agent, accessState, cancellationToken),
+                    "project_structure_node_catalog",
+                    "Returns the canonical project-structure node catalog shared with the UI, including all creatable node actions, objectType/objectSubtype pairs, aliases, required fields, and dependency-link guidance. Call this before creating or reclassifying unfamiliar nodes."),
                 AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureChecklistRequest? request = null, CancellationToken cancellationToken = default) => ProjectStructureChecklistAsync(agent, accessState, projectId, request, cancellationToken),
                     "project_structure_checklist",
@@ -91,9 +99,17 @@ public sealed partial class MafAgentRuntime
                     "project_structure_dependencies_query",
                     "Returns dependency readiness, prerequisite chains, dependents, and effective durations."),
                 AIFunctionFactory.Create(
+                    (Guid projectId, ProjectStructureLinkInput request, CancellationToken cancellationToken = default) => ProjectStructureDependencyLinkAsync(agent, accessState, projectId, request, cancellationToken),
+                    "project_structure_dependency_link",
+                    "Creates a DependsOn dependency link in the project structure. The source node depends on the target node, so use this when task ordering or Gantt scheduling requires a prerequisite."),
+                AIFunctionFactory.Create(
+                    (Guid projectId, ProjectStructureLinkInput request, CancellationToken cancellationToken = default) => ProjectStructureDependencyUnlinkAsync(agent, accessState, projectId, request, cancellationToken),
+                    "project_structure_dependency_unlink",
+                    "Removes a DependsOn dependency link from the project structure. The source node previously depended on the target node."),
+                AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureNodeCreateInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeCreateAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_create",
-                    "Creates a new project-structure node through the internal workspace service. For typed block variants, keep objectType as ProjectBlock and set objectSubtype to a lowercase key such as feature, architecture, implementation, testing, delivery, research, risk, deployment, operations, repos, or dockers. When adding Mermaid diagrams, always create a File asset node with objectType File, objectSubtype mermaid, and Mermaid source in notes. Other generated files should also use objectType File with an appropriate file subtype, not a ProjectBlock."),
+                    "Creates a new project-structure node through the internal workspace service. For work task nodes, use objectType WorkItem and objectSubtype task. For typed block variants, keep objectType as ProjectBlock and set objectSubtype to a lowercase key such as feature, architecture, implementation, testing, delivery, research, risk, deployment, operations, repos, or dockers. When adding Mermaid diagrams, always create a File asset node with objectType File, objectSubtype mermaid, and Mermaid source in notes. Other generated files should also use objectType File with an appropriate file subtype, not a ProjectBlock. Every created node needs parentNodeKey: use project:{projectId} for top-level nodes or an existing parent node id."),
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, ProjectStructureNodeEditInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeUpdateAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_update",
@@ -114,6 +130,10 @@ public sealed partial class MafAgentRuntime
                     (Guid projectId, ProjectStructureApprovalRequestCreateInput request, CancellationToken cancellationToken = default) => ProjectStructureApprovalRequestAsync(agent, accessState, projectId, request, cancellationToken),
                     "project_structure_approval_request",
                     "Records an approval-request node in the project structure so blocked work is written back into the graph."),
+                AIFunctionFactory.Create(
+                    (Guid projectId, ProjectStructureAssetCreateInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureAssetCreateAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
+                    "project_structure_asset_create",
+                    "Creates a managed File, ImageAsset, or VideoAsset node through the internal project-structure asset pipeline. Use this for generated screenshots and binary media instead of writing loose files into project notes. Provide either media base64 data or sourceWorkspacePath pointing at a file inside the managed workspace."),
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, CancellationToken cancellationToken = default) => ProjectStructureAssetGetAsync(agent, accessState, projectId, nodeId, cancellationToken),
                     "project_structure_asset_get",
@@ -284,6 +304,30 @@ public sealed partial class MafAgentRuntime
                 cancellationToken);
         }
 
+        private Task<ProjectStructureNodesToSubprojectResult> ProjectStructureNodesToNewSubprojectAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            ProjectStructureNodesToSubprojectInput request,
+            int? estimatedMinutes,
+            CancellationToken cancellationToken)
+        {
+            return ExecuteAsync(
+                agent,
+                "structure.nodes-move-to-new-subproject",
+                projectId,
+                null,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString("D"),
+                request,
+                async cancellationToken =>
+                {
+                    EnsureProjectWriteAllowed(accessState, projectId);
+                    return await agentService.MoveNodesToNewSubprojectAsync(projectId, request, BuildAgentContext(agent), cancellationToken);
+                },
+                cancellationToken);
+        }
+
         private Task<ProjectStructureReadToolData> ProjectStructureReadAsync(
             AgentDefinition agent,
             ProjectStructureAccessState accessState,
@@ -309,6 +353,27 @@ public sealed partial class MafAgentRuntime
                         response.Nodes.Select(MapCompactNode).ToList(),
                         response.Links,
                         response.Warnings);
+                },
+                cancellationToken);
+        }
+
+        private Task<ProjectStructureNodeCatalogResponse> ProjectStructureNodeCatalogAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            CancellationToken cancellationToken)
+        {
+            return ExecuteAsync(
+                agent,
+                "structure.node-catalog",
+                null,
+                null,
+                null,
+                null,
+                null,
+                async cancellationToken =>
+                {
+                    EnsureReadAllowed(accessState);
+                    return await agentService.GetNodeCatalogAsync(cancellationToken);
                 },
                 cancellationToken);
         }
@@ -355,6 +420,60 @@ public sealed partial class MafAgentRuntime
                 {
                     EnsureProjectReadAllowed(accessState, projectId);
                     return await agentService.GetDependenciesAsync(projectId, request ?? new ProjectStructureDependencyQueryRequest(), cancellationToken);
+                },
+                cancellationToken);
+        }
+
+        private Task<ProjectStructureLinkChangeResult> ProjectStructureDependencyLinkAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            ProjectStructureLinkInput request,
+            CancellationToken cancellationToken)
+        {
+            return ExecuteAsync(
+                agent,
+                "dependencies.link",
+                projectId,
+                request.SourceNodeId,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString("D"),
+                request,
+                async cancellationToken =>
+                {
+                    EnsureProjectWriteAllowed(accessState, projectId);
+                    return await agentService.LinkNodesAsync(
+                        projectId,
+                        request with { Kind = ProjectObjectLinkKind.DependsOn },
+                        BuildAgentContext(agent),
+                        cancellationToken);
+                },
+                cancellationToken);
+        }
+
+        private Task<ProjectStructureLinkChangeResult> ProjectStructureDependencyUnlinkAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            ProjectStructureLinkInput request,
+            CancellationToken cancellationToken)
+        {
+            return ExecuteAsync(
+                agent,
+                "dependencies.unlink",
+                projectId,
+                request.SourceNodeId,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString("D"),
+                request,
+                async cancellationToken =>
+                {
+                    EnsureProjectWriteAllowed(accessState, projectId);
+                    return await agentService.UnlinkNodesAsync(
+                        projectId,
+                        request with { Kind = ProjectObjectLinkKind.DependsOn },
+                        BuildAgentContext(agent),
+                        cancellationToken);
                 },
                 cancellationToken);
         }
@@ -523,6 +642,30 @@ public sealed partial class MafAgentRuntime
                 {
                     EnsureProjectReadAllowed(accessState, projectId);
                     return await agentService.GetAssetAsync(projectId, nodeId, cancellationToken);
+                },
+                cancellationToken);
+        }
+
+        private Task<ProjectStructureNodeSummary> ProjectStructureAssetCreateAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            ProjectStructureAssetCreateInput request,
+            int? estimatedMinutes,
+            CancellationToken cancellationToken)
+        {
+            return ExecuteAsync(
+                agent,
+                "assets.create",
+                projectId,
+                null,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString("D"),
+                request,
+                async cancellationToken =>
+                {
+                    EnsureProjectWriteAllowed(accessState, projectId);
+                    return await agentService.CreateAssetAsync(projectId, request, BuildAgentContext(agent), cancellationToken);
                 },
                 cancellationToken);
         }
@@ -1124,6 +1267,7 @@ public sealed partial class MafAgentRuntime
                 ProjectStructureReadToolData readResponse => readResponse.Warnings,
                 ProjectStructureChecklistResponse checklistResponse => checklistResponse.Warnings,
                 ProjectStructureDependencyResponse dependencyResponse => dependencyResponse.Warnings,
+                ProjectStructureNodesToSubprojectResult nodesToSubprojectResult => nodesToSubprojectResult.Warnings,
                 ProjectStructureImportResult importResult => importResult.Warnings,
                 _ => []
             };

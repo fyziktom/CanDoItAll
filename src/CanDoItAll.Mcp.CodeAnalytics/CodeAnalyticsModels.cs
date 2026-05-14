@@ -8,10 +8,10 @@ public sealed class CodeAnalyticsBuildSnapshotInput
     [Description("Absolute or repository-relative path to the solution or project to analyze. When omitted, the server default is used.")]
     public string? SolutionPath { get; init; }
 
-    [Description("Optional project names to include in the snapshot scope. Leave empty to analyze the full solution.")]
+    [Description("Optional project names to include in the snapshot scope. Prefer this for large solutions when the task is localized; leave empty only for architecture-wide analysis.")]
     public IReadOnlyList<string>? ScopeProjectNames { get; init; }
 
-    [Description("Optional namespace prefixes to include in the snapshot scope.")]
+    [Description("Optional namespace prefixes to include in the snapshot scope. Prefer this for large solutions when the target area is already known.")]
     public IReadOnlyList<string>? ScopeNamespacePrefixes { get; init; }
 
     [Description("Whether to collect dependency-injection registrations.")]
@@ -101,7 +101,7 @@ public sealed class CodeAnalyticsSymbolSearchInput
     [Description("Snapshot identifier returned by a previous snapshot build.")]
     public string SnapshotId { get; init; } = string.Empty;
 
-    [Description("Search text used to match types and members.")]
+    [Description("Search text used to match types and members. Use fully qualified or exact names with SearchMode=Exact when the prompt names a concrete symbol.")]
     public string SearchText { get; init; } = string.Empty;
 
     [Description("Optional project-name filter.")]
@@ -161,19 +161,22 @@ public sealed class CodeAnalyticsFocusedContextInput
     [Description("Optional service-registration identifier from a services query.")]
     public string? ServiceRegistrationId { get; init; }
 
-    [Description("Traversal depth from 0 to 5.")]
+    [Description("Traversal depth from 0 to 5. Prefer 0 for definition-only, 1 for direct relationships, and 2 for bounded trouble paths; use 3+ only after a narrower result proves it is needed.")]
     public int Depth { get; init; } = 2;
 
-    [Description("Optional free-text hint that helps the service pick the most relevant context.")]
+    [Description("Optional free-text hint that helps the service pick the most relevant context. Prefer TypeId or MemberId when an exact symbol is already known.")]
     public string? QueryText { get; init; }
 
-    [Description("Optional focus tags that bias the selected context.")]
+    [Description("Optional focus tags that bias selected context. Supported examples include Db, EntityFramework, Ui, Razor, Service, Domain, Model, Infra, Client, Crypto, Linq, Parser, Protocol, Query, Test, and Write.")]
     public IReadOnlyList<string>? FocusTags { get; init; }
 
-    [Description("What kind of focused context to assemble.")]
+    [Description("Optional concrete related classes, methods, components, projects, namespaces, or paths that narrow representative usages. Use names like AppDbContext, StorageCatalogService, CanvasSceneHost, or a source path segment.")]
+    public IReadOnlyList<string>? RelationHints { get; init; }
+
+    [Description("What kind of focused context to assemble: Definition, Implementations, UsageSummary, RepresentativeConsumers, TroublePath, or Auto.")]
     public FocusedContextIntent Intent { get; init; } = FocusedContextIntent.Auto;
 
-    [Description("How aggressively to compress the selected context.")]
+    [Description("How aggressively to compress selected context. Use Outline for first-pass orientation, Surgical for exact repairs, and Balanced when both shape and snippets are needed.")]
     public FocusedContextPrecision Precision { get; init; } = FocusedContextPrecision.Auto;
 }
 

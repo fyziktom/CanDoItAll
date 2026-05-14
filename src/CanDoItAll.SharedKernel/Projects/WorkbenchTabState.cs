@@ -8,6 +8,7 @@ public static class WorkbenchTabKinds
     public const string ProjectCalendar = "project-calendar";
     public const string PromptWizardSession = "prompt-wizard-session";
     public const string Processes = "processes";
+    public const string Workflows = "workflows";
     public const string ValidationRun = "validation-run";
     public const string TestPlan = "test-plan";
     public const string PromptDetail = "prompt-detail";

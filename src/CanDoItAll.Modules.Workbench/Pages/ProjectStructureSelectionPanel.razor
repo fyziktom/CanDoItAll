@@ -159,6 +159,87 @@ else if (State.SelectedNode is not null)
             </div>
         </div>
 
+        @if (selectedNode.WorkflowStatus is not null)
+        {
+            var workflowStatus = selectedNode.WorkflowStatus;
+
+            <div class="cw-panel-card project-structure-workflow-status-card"
+                  data-testid="project-structure-workflow-status-card">
+                <p class="cw-panel-kicker">Workflow status</p>
+                <h3 class="cw-panel-title">@workflowStatus.WorkflowName</h3>
+                <p class="cw-panel-copy">@workflowStatus.Message</p>
+
+                <div class="cw-summary-grid project-structure-advanced-summary-grid">
+                    <div class="cw-summary-tile">
+                        <span>State</span>
+                        <strong>@workflowStatus.State</strong>
+                    </div>
+                    <div class="cw-summary-tile">
+                        <span>Step</span>
+                        <strong>@workflowStatus.StepLabel</strong>
+                    </div>
+                    <div class="cw-summary-tile">
+                        <span>Progress</span>
+                        <strong>@workflowStatus.ProgressLabel</strong>
+                    </div>
+                    <div class="cw-summary-tile">
+                        <span>Updated</span>
+                        <strong>@workflowStatus.LastUpdatedLabel</strong>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(workflowStatus.RunId))
+                {
+                    <div class="project-structure-fact-row">
+                        <span>Run id</span>
+                        <strong>@workflowStatus.RunId</strong>
+                    </div>
+                }
+
+                @if (workflowStatus.CreatedNodeIds.Count > 0)
+                {
+                    <div class="project-structure-facts-list"
+                         data-testid="project-structure-workflow-created-nodes">
+                        @foreach (var nodeId in workflowStatus.CreatedNodeIds)
+                        {
+                            <div class="project-structure-fact-row">
+                                <span>Node</span>
+                                <strong>@nodeId</strong>
+                            </div>
+                        }
+                    </div>
+                }
+
+                @if (workflowStatus.CreatedAssetIds.Count > 0)
+                {
+                    <div class="project-structure-facts-list"
+                         data-testid="project-structure-workflow-created-assets">
+                        @foreach (var assetId in workflowStatus.CreatedAssetIds)
+                        {
+                            <div class="project-structure-fact-row">
+                                <span>Asset</span>
+                                <strong>@assetId</strong>
+                            </div>
+                        }
+                    </div>
+                }
+
+                @if (workflowStatus.CreatedFilePaths.Count > 0)
+                {
+                    <div class="project-structure-facts-list"
+                         data-testid="project-structure-workflow-created-files">
+                        @foreach (var filePath in workflowStatus.CreatedFilePaths)
+                        {
+                            <div class="project-structure-fact-row">
+                                <span>File</span>
+                                <strong>@filePath</strong>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+
         @if (selectedNode.StorageSummary is not null)
         {
             <StorageSummaryCard Model="@selectedNode.StorageSummary"
@@ -184,6 +265,18 @@ else if (State.SelectedNode is not null)
                         break;
                     case AttachmentPreviewKind.Audio:
                         <audio class="project-structure-audio-preview" controls preload="metadata" src="@preview.Route"></audio>
+                        break;
+                    case AttachmentPreviewKind.TextDocument:
+                        @if (!string.IsNullOrWhiteSpace(preview.TextContent))
+                        {
+                            <pre class="project-structure-text-asset-preview">@preview.TextContent</pre>
+                        }
+                        else
+                        {
+                            <iframe class="project-structure-document-preview project-structure-document-preview--text"
+                                    src="@preview.PreviewSource"
+                                    title="@($"{preview.DisplayName} text preview")"></iframe>
+                        }
                         break;
                     case AttachmentPreviewKind.Document:
                         <iframe class="project-structure-document-preview"

@@ -825,7 +825,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
     private void PrimeProviderCredentialEnvironment(ProviderProfile provider)
     {
         var resolution = providerCredentialResolver.Resolve(provider);
-        if (!resolution.IsResolved)
+        if (!resolution.IsResolved ||
+            !resolution.ShouldPromoteToProcessEnvironment)
         {
             return;
         }
@@ -1384,9 +1385,35 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
     private static string CreateExecutionSummary(string value)
     {
         var cleaned = value.Trim().ReplaceLineEndings(" ");
+        if (IsMachineReadableExecutionSummary(cleaned))
+        {
+            return cleaned;
+        }
+
         return cleaned.Length <= 160
             ? cleaned
             : $"{cleaned[..157]}...";
+    }
+
+    private static bool IsMachineReadableExecutionSummary(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value) ||
+            value[0] != '{')
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(value);
+            return document.RootElement.ValueKind == JsonValueKind.Object &&
+                   document.RootElement.TryGetProperty("status", out var status) &&
+                   status.ValueKind == JsonValueKind.String;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     private static void EnsureExecutionRunExists(

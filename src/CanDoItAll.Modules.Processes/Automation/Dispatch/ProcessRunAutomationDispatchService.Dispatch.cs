@@ -79,7 +79,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     return;
                 }
 
-                var databaseRequirementFailure = ResolveAutomationDatabaseRequirementFailure();
+                var isWorkflowCandidate = candidate.TechnicalAgentId == Guid.Empty &&
+                    candidate.StepRun.StepKind != ProcessStepKind.Subprocess;
+                var databaseRequirementFailure = isWorkflowCandidate
+                    ? null
+                    : ResolveAutomationDatabaseRequirementFailure();
                 if (databaseRequirementFailure is not null)
                 {
                     await BlockDispatchForDatabaseRequirementAsync(candidate, databaseRequirementFailure, cancellationToken);
@@ -124,6 +128,17 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
                 try
                 {
+                    var workflowOutcome = await workflowRunCoordinator.TryRunOrObserveAsync(
+                        candidate.Run.Id,
+                        candidate.StepRun.Id,
+                        NormalizeTrigger(trigger, triggerStepRunId),
+                        cancellationToken);
+                    if (workflowOutcome.Handled)
+                    {
+                        await HandleWorkflowExecutionOutcomeAsync(candidate, workflowOutcome, cancellationToken);
+                        return;
+                    }
+
                     var executionOutcome = await ExecuteUntilSettledAsync(candidate, trigger, renewLeaseAsync, cancellationToken);
                     var competingExecution = executionOutcome.CompletionStatus is not ProcessStepRunStatus.Completed
                         ? await ResolveCompetingActiveAutomationExecutionAsync(candidate, executionOutcome, cancellationToken)
@@ -247,6 +262,52 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
     }
 
+    private async Task HandleWorkflowExecutionOutcomeAsync(
+        DispatchCandidate candidate,
+        ProcessWorkflowExecutionOutcome workflowOutcome,
+        CancellationToken cancellationToken)
+    {
+        var stepRunSnapshot = await LoadStepRunTransitionSnapshotAsync(candidate.StepRun.Id, cancellationToken)
+            ?? throw new InvalidOperationException($"Process step run {candidate.StepRun.Id} could not be reloaded after workflow execution.");
+        if (workflowOutcome.CompletionStatus == ProcessStepRunStatus.InProgress ||
+            stepRunSnapshot.Status == workflowOutcome.CompletionStatus)
+        {
+            logger.LogInformation(
+                "Workflow execution for process run {RunId}, step {StepRunId} is {Status}.",
+                candidate.Run.Id,
+                candidate.StepRun.Id,
+                workflowOutcome.CompletionStatus);
+            return;
+        }
+
+        if (ShouldSkipAutomationCompletionTransition(stepRunSnapshot.Status, workflowOutcome.CompletionStatus))
+        {
+            logger.LogInformation(
+                "Skipping stale workflow completion transition for run {RunId}, step {StepRunId}. Current status is {CurrentStatus}, requested status is {RequestedStatus}.",
+                candidate.Run.Id,
+                candidate.StepRun.Id,
+                stepRunSnapshot.Status,
+                workflowOutcome.CompletionStatus);
+            return;
+        }
+
+        var transitionResult = await TransitionStepAsync(
+            new ProcessStepTransitionRequest
+            {
+                StepRunId = candidate.StepRun.Id,
+                StepRunConcurrencyToken = stepRunSnapshot.ConcurrencyToken,
+                TargetStatus = workflowOutcome.CompletionStatus,
+                Reason = workflowOutcome.CompletionReason,
+                DecidedBy = AutomationActor,
+                SuppressAutomationDispatch = workflowOutcome.CompletionStatus != ProcessStepRunStatus.Completed
+            },
+            cancellationToken);
+        if (transitionResult.IsFailure)
+        {
+            throw new InvalidOperationException(string.Join(" | ", transitionResult.Errors.Select(error => error.Message)));
+        }
+    }
+
     private async Task<bool> IsRunClosedToAutomationAsync(
         Guid processRunId,
         Guid stepRunId,
@@ -362,6 +423,34 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var terminalStatus = ResolveSubprocessParentStepStatus(subprocessRun.Status);
         if (!terminalStatus.HasValue)
         {
+            var capabilityGapBlockReason = await TryBuildSubprocessCapabilityGapBlockReasonAsync(
+                subprocessRun,
+                cancellationToken);
+            if (capabilityGapBlockReason is not null)
+            {
+                var blockResult = await TransitionStepAsync(
+                    new ProcessStepTransitionRequest
+                    {
+                        StepRunId = stepRunSnapshot.Id,
+                        TargetStatus = ProcessStepRunStatus.Blocked,
+                        Reason = capabilityGapBlockReason,
+                        DecidedBy = AutomationActor,
+                        SuppressAutomationDispatch = true
+                    },
+                    cancellationToken);
+                if (blockResult.IsFailure)
+                {
+                    logger.LogWarning(
+                        "Subprocess step {StepRunId} on run {RunId} could not be blocked after child run {SubprocessRunId} exposed capability gaps. Errors: {Errors}",
+                        stepRunSnapshot.Id,
+                        candidate.Run.Id,
+                        subprocessRun.RunId,
+                        string.Join(" | ", blockResult.Errors.Select(error => error.Message)));
+                }
+
+                return;
+            }
+
             logger.LogInformation(
                 "Subprocess step {StepRunId} on run {RunId} is observing child run {SubprocessRunId} with status {SubprocessStatus}.",
                 stepRunSnapshot.Id,
@@ -394,6 +483,68 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 subprocessRun.RunId,
                 string.Join(" | ", transitionResult.Errors.Select(error => error.Message)));
         }
+    }
+
+    private async Task<string?> TryBuildSubprocessCapabilityGapBlockReasonAsync(
+        ProcessSubprocessRunStartResult subprocessRun,
+        CancellationToken cancellationToken)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var activeChildSteps = await dbContext.Set<ProcessStepRun>()
+            .AsNoTracking()
+            .Where(item =>
+                item.ProcessRunId == subprocessRun.RunId &&
+                (item.Status == ProcessStepRunStatus.Ready ||
+                 item.Status == ProcessStepRunStatus.WaitingApproval ||
+                 item.Status == ProcessStepRunStatus.InProgress))
+            .OrderBy(item => item.Sequence)
+            .Select(item => new SubprocessCapabilityGapStep(
+                item.Title,
+                item.Status,
+                item.CapabilityGapSeverity,
+                item.CurrentExecutorPartyId,
+                item.CurrentExecutorName))
+            .ToListAsync(cancellationToken);
+        if (activeChildSteps.Count == 0)
+        {
+            return null;
+        }
+
+        var executableChildStepExists = activeChildSteps.Any(item =>
+            item.CapabilityGapSeverity == ProcessCapabilityGapSeverity.None &&
+            item.CurrentExecutorPartyId.HasValue);
+        if (executableChildStepExists)
+        {
+            return null;
+        }
+
+        var blockingSteps = activeChildSteps
+            .Where(item =>
+                item.CapabilityGapSeverity != ProcessCapabilityGapSeverity.None ||
+                !item.CurrentExecutorPartyId.HasValue)
+            .Take(3)
+            .Select(BuildSubprocessCapabilityGapStepSummary)
+            .ToList();
+        if (blockingSteps.Count == 0)
+        {
+            return null;
+        }
+
+        var additionalCount = activeChildSteps.Count - blockingSteps.Count;
+        var additionalSummary = additionalCount <= 0
+            ? string.Empty
+            : $" and {additionalCount} more active child step(s)";
+
+        return $"Subprocess run '{subprocessRun.RunName}' cannot proceed because active child step(s) have unresolved required role assignments or capability gaps: {string.Join("; ", blockingSteps)}{additionalSummary}. Resolve the subprocess role assignments or rerun with a launch plan that binds the required roles.";
+    }
+
+    private static string BuildSubprocessCapabilityGapStepSummary(SubprocessCapabilityGapStep step)
+    {
+        var executorName = string.IsNullOrWhiteSpace(step.CurrentExecutorName)
+            ? "unassigned"
+            : step.CurrentExecutorName.Trim();
+
+        return $"'{step.Title}' is {step.Status} for executor '{executorName}' ({step.CapabilityGapSeverity})";
     }
 
     private async Task ProjectCompletedSubprocessArtifactsAsync(
@@ -851,6 +1002,35 @@ internal sealed partial class ProcessRunAutomationDispatchService
                         "Subprocess step is orchestrated by the process runtime."));
             }
 
+            stepRoleRequirementsByStepDefinitionId.TryGetValue(stepRun.StepDefinitionId, out var workflowStepRoleRequirements);
+            var workflowAssignment = ResolveDispatchCurrentAssignment(stepRun, workflowStepRoleRequirements ?? [], runAssignments);
+            var workflowRole = workflowAssignment is null
+                ? null
+                : roleRequirementsById.GetValueOrDefault(workflowAssignment.RoleRequirementId);
+            if (IsWorkflowDispatchAssignment(workflowAssignment, workflowRole))
+            {
+                return new DispatchCandidate(
+                    run,
+                    definition,
+                    stepRun,
+                    currentStepDefinition,
+                    workBriefsByStepRunId.GetValueOrDefault(stepRun.Id),
+                    Guid.Empty,
+                    [],
+                    new HashSet<Guid>(),
+                    [],
+                    externalReferenceKeys,
+                    null,
+                    null,
+                    string.Empty,
+                    [],
+                    false,
+                    new AgentProcessCooperationMetadata(
+                        AgentProcessCooperationMode.ProcessArtifactHandoff,
+                        AgentWorkspaceToolProfileKind.ReadOnly,
+                        "Workflow step is orchestrated through the Microsoft Agent Framework workflow runtime."));
+            }
+
             if (!stepRun.CurrentExecutorPartyId.HasValue)
             {
                 continue;
@@ -952,6 +1132,17 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         return null;
+    }
+
+    private static bool IsWorkflowDispatchAssignment(
+        ProcessRunAssignment? assignment,
+        ProcessRoleRequirement? role)
+    {
+        return assignment is not null &&
+            (ProcessExecutorKindNames.IsWorkflow(assignment.ExecutorKind) ||
+             assignment.WorkflowDefinitionId.HasValue ||
+             ProcessExecutorKindNames.IsWorkflow(role?.PreferredExecutorKind) ||
+             role?.PreferredWorkflowDefinitionId.HasValue == true);
     }
 
     private static async Task<string> LoadLatestManualRecoveryDirectiveAsync(

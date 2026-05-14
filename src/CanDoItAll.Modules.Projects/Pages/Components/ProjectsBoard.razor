@@ -3,9 +3,8 @@
 @using CanDoItAll.Modules.Projects
 @using CanDoItAll.SharedKernel
 
-<section class="flex min-h-[26rem] w-full flex-col overflow-hidden rounded-[1.85rem] border border-slate-200 bg-white/92 shadow-sm shadow-slate-200/60"
-         data-testid="projects-board"
-         style="height: calc(100vh - 13.75rem);">
+<section class="projects-board flex min-h-[26rem] w-full flex-col overflow-hidden rounded-[1.85rem] border border-slate-200 bg-white/92 shadow-sm shadow-slate-200/60"
+         data-testid="projects-board">
     <Stack GapScale="LayoutGap.Medium"
            Class="border-b border-slate-200 px-4 py-4 sm:px-5"
            data-testid="projects-command-bar">
@@ -213,7 +212,7 @@
         </Toolbar>
     </Stack>
 
-    <div class="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5" data-testid="projects-cards-scroll">
+    <div class="projects-board__cards-scroll min-h-0 flex-1 overflow-y-auto p-4 sm:p-5" data-testid="projects-cards-scroll">
         @if (FilteredProjectSummaries.Count == 0)
         {
             <EmptyState Eyebrow="No matching projects"

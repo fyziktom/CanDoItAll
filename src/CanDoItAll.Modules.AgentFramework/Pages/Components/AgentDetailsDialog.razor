@@ -340,6 +340,57 @@ else
                         </FormSection>
                     </TabsItem>
 
+                    <TabsItem Text="Secrets">
+                        <FormSection Title="Secrets" Description="Grant only the stored secrets this agent may request during explicit runtime actions. Values are not stored in the agent definition.">
+                            <Grid Gap="LayoutGap.Large" ColumnsMd="3" data-testid="agents-catalog-secrets">
+                                <div class="cda-admin-subpanel">
+                                    <p class="cda-field-label mb-2">Allowed secrets</p>
+                                    <p class="text-sm leading-6 text-slate-600">
+                                        @DescribeSecretScope(editorModel)
+                                    </p>
+                                </div>
+                                <div class="cda-admin-subpanel md:col-span-2">
+                                    @if (isLoadingSecrets && !areSecretsLoaded)
+                                    {
+                                        <div class="cda-admin-empty">
+                                            Loading stored secrets...
+                                        </div>
+                                    }
+                                    else if (!string.IsNullOrWhiteSpace(secretsErrorMessage))
+                                    {
+                                        <div class="cda-admin-empty text-rose-700">
+                                            @secretsErrorMessage
+                                        </div>
+                                    }
+                                    else if (secrets.Count == 0)
+                                    {
+                                        <div class="cda-admin-empty">
+                                            No stored secrets exist yet.
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="max-h-64 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4"
+                                             data-testid="agents-catalog-secret-list">
+                                            <Stack GapScale="LayoutGap.Small">
+                                                @foreach (var secret in secrets)
+                                                {
+                                                    <label class="cda-inline-option cda-inline-option--muted">
+                                                        <input type="checkbox"
+                                                               checked="@HasAllowedSecret(secret.Id)"
+                                                               @onchange="args => ToggleAllowedSecret(secret, args.Value)" />
+                                                        @secret.Name
+                                                        <span class="text-slate-500">(@secret.Kind)</span>
+                                                    </label>
+                                                }
+                                            </Stack>
+                                        </div>
+                                    }
+                                </div>
+                            </Grid>
+                        </FormSection>
+                    </TabsItem>
+
                     <TabsItem Text="Process Access">
                         <FormSection Title="Process Access" Description="Internal agents always carry the process-module tool family. These settings decide whether the current agent can read or mutate process data and which process definitions it may touch.">
                             <Grid Gap="LayoutGap.Large" ColumnsMd="3" data-testid="agents-catalog-process-access">

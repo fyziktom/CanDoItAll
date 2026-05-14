@@ -36,6 +36,7 @@ public partial class ProcessWorkspace
     private CancellationTokenSource? pendingDefinitionCanvasPersistCts;
     private Task pendingDefinitionCanvasPersistTask = Task.CompletedTask;
     private Task definitionCanvasPersistDrainTask = Task.CompletedTask;
+    private readonly Dictionary<string, ProcessCanvasArtifactCloneDraft> artifactCloneDrafts = new(StringComparer.Ordinal);
 
     private bool IsDefinitionCanvasActive => string.Equals(detailTab, DetailTabSteps, StringComparison.Ordinal);
 
@@ -48,6 +49,8 @@ public partial class ProcessWorkspace
     private ProcessStepEditorModel? SelectedCanvasDefinitionStep => ResolveDefinitionStep(selectedCanvasNodeId);
 
     private ProcessRoleEditorModel? SelectedCanvasDefinitionRole => ResolveDefinitionRole(selectedCanvasNodeId);
+
+    private ProcessArtifactExpectationEditorModel? SelectedCanvasDefinitionArtifact => ResolveDefinitionArtifact(selectedCanvasNodeId);
 
     private ProcessStepRunViewModel? SelectedCanvasRuntimeStep => ResolveRuntimeStep(selectedCanvasNodeId);
 
@@ -79,6 +82,7 @@ public partial class ProcessWorkspace
         => IsRuntimeCanvasActive
             ? SelectedCanvasRuntimeStep?.Title ?? "Runtime selection"
             : SelectedCanvasDefinitionRole?.DisplayName ??
+              (SelectedCanvasDefinitionArtifact is { } artifact ? ResolveArtifactLabel(artifact) : null) ??
               SelectedCanvasDefinitionStep?.Title ??
               "Definition selection";
 
@@ -87,7 +91,9 @@ public partial class ProcessWorkspace
             ? "Track runtime status, executor context, and proof-oriented next actions."
             : SelectedCanvasDefinitionRole is not null
                 ? "Inspect the selected role contract and the routing authority it contributes to the canvas."
-                : "Inspect the selected step and keep role bindings plus artifact expectations close to the canvas.";
+                : SelectedCanvasDefinitionArtifact is not null
+                    ? "Inspect artifact clones that represent the same produced artifact without long artifact lines."
+                    : "Inspect the selected step and keep role bindings plus artifact expectations close to the canvas.";
 
     private string CanvasEditorWindowTitle
         => canvasRoleDraft is not null
@@ -114,6 +120,11 @@ public partial class ProcessWorkspace
         uiState.SelectedNodeIds = args.SelectedNodeIds.Count > 0
             ? [.. args.SelectedNodeIds]
             : [];
+        if (ShouldClearCanvasHighlightsForSelection(uiState.HighlightedNodeIds, uiState.SelectedNodeIds))
+        {
+            uiState.HighlightedNodeIds = [];
+        }
+
         StoreCanvasUiState(uiState);
         if (canvasSurface is not null)
         {
@@ -216,8 +227,29 @@ public partial class ProcessWorkspace
     private Task ClearCanvasSelectionAsync()
     {
         selectedCanvasNodeId = NoCanvasSelection;
+        var uiState = CloneCanvasUiState(ResolveStoredCanvasUiState());
+        uiState.HighlightedNodeIds = [];
+        StoreCanvasUiState(uiState);
         RefreshCanvasSurface();
         return Task.CompletedTask;
+    }
+
+    private static bool ShouldClearCanvasHighlightsForSelection(
+        IReadOnlyCollection<string> highlightedNodeIds,
+        IReadOnlyCollection<string> selectedNodeIds)
+    {
+        if (highlightedNodeIds.Count == 0)
+        {
+            return false;
+        }
+
+        if (selectedNodeIds.Count == 0)
+        {
+            return true;
+        }
+
+        var highlighted = highlightedNodeIds.ToHashSet(StringComparer.Ordinal);
+        return selectedNodeIds.Any(nodeId => !highlighted.Contains(nodeId));
     }
 
     private async Task HandleCanvasContextActionAsync(CanvasWorkbenchContextActionRequest request)
@@ -260,6 +292,15 @@ public partial class ProcessWorkspace
                 return true;
             case CanvasConnectionCreateActionId:
                 await CreateDefinitionCanvasConnectionAsync(request);
+                return true;
+            case ProcessCanvasActionIds.CreateArtifactClone:
+                CreateDefinitionArtifactClone(request);
+                return true;
+            case ProcessCanvasActionIds.HighlightArtifactClones:
+                HighlightDefinitionArtifactClones(request.NodeId);
+                return true;
+            case ProcessCanvasActionIds.HighlightRoleClones:
+                HighlightDefinitionRoleClones(request.NodeId);
                 return true;
             default:
                 return false;
@@ -396,6 +437,16 @@ public partial class ProcessWorkspace
 
             if (position.NodeId.StartsWith(ProcessCanvasCatalog.NodePrefixes.DefinitionRole, StringComparison.Ordinal))
             {
+                if (ProcessCanvasBranching.IsDefinitionRoleInstanceNodeId(position.NodeId))
+                {
+                    uiState.ManualPositions[position.NodeId] = new CanvasWorkbenchPoint
+                    {
+                        X = position.X,
+                        Y = position.Y
+                    };
+                    continue;
+                }
+
                 var role = ResolveDefinitionRole(position.NodeId);
                 if (role is null)
                 {
@@ -405,6 +456,26 @@ public partial class ProcessWorkspace
                 role.CanvasX = position.X;
                 role.CanvasY = position.Y;
                 uiState.ManualPositions.Remove(position.NodeId);
+                continue;
+            }
+
+            if (ProcessCanvasBranching.IsDefinitionArtifactCloneNodeId(position.NodeId) ||
+                ProcessCanvasBranching.IsDefinitionArtifactNodeId(position.NodeId))
+            {
+                if (artifactCloneDrafts.TryGetValue(position.NodeId, out var draft))
+                {
+                    artifactCloneDrafts[position.NodeId] = draft with
+                    {
+                        X = position.X,
+                        Y = position.Y
+                    };
+                }
+
+                uiState.ManualPositions[position.NodeId] = new CanvasWorkbenchPoint
+                {
+                    X = position.X,
+                    Y = position.Y
+                };
             }
         }
 

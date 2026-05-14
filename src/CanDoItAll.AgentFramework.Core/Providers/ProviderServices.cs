@@ -30,6 +30,7 @@ public sealed class ProviderProfileService : IProviderProfileService
             ApiKeyEnvironmentVariable: NormalizeEnvironmentVariable(model.ApiKeyEnvironmentVariable),
             DefaultModel: NormalizeText(model.DefaultModel),
             Transport: model.Transport,
+            Purpose: model.Purpose,
             IsEnabled: model.IsEnabled,
             SupportsStreaming: model.SupportsStreaming,
             SupportsTools: model.SupportsTools,
@@ -50,6 +51,9 @@ public sealed class ProviderProfileService : IProviderProfileService
 
         var normalizedKind = provider.Kind;
         var normalizedTransport = provider.Transport;
+        var normalizedPurpose = Enum.IsDefined(provider.Purpose)
+            ? provider.Purpose
+            : ProviderProfilePurpose.Chat;
         var normalizedPreferFrameworkManagedHistory = provider.PreferFrameworkManagedChatHistory;
         var normalizedBackgroundResponses = provider.SupportsBackgroundResponses;
 
@@ -83,6 +87,7 @@ public sealed class ProviderProfileService : IProviderProfileService
             ApiKeyEnvironmentVariable = NormalizeEnvironmentVariable(provider.ApiKeyEnvironmentVariable),
             DefaultModel = NormalizeText(provider.DefaultModel),
             Transport = normalizedTransport,
+            Purpose = normalizedPurpose,
             PreferFrameworkManagedChatHistory = normalizedPreferFrameworkManagedHistory,
             SupportsBackgroundResponses = normalizedBackgroundResponses,
             ConfigurationJson = NormalizeConfigurationJson(provider.ConfigurationJson),
@@ -156,6 +161,7 @@ public sealed class ProviderProfileService : IProviderProfileService
         return new ProviderFeatureMatrix(
             Kind: normalizedProvider.Kind,
             Transport: normalizedProvider.Transport,
+            Purpose: normalizedProvider.Purpose,
             SupportsStreaming: normalizedProvider.SupportsStreaming,
             SupportsTools: normalizedProvider.SupportsTools,
             SupportsStructuredOutput: supportsStructuredOutput,
@@ -178,7 +184,8 @@ public sealed class ProviderProfileService : IProviderProfileService
             SupportsApprovalRequiredAIFunction: supportsToolApprovalRequests,
             SupportsHostedTools: supportsResponsesNativeTools,
             SupportsHostedMcp: supportsResponsesNativeTools,
-            SupportsLocalMcp: normalizedProvider.SupportsTools);
+            SupportsLocalMcp: normalizedProvider.SupportsTools,
+            SupportsImageGeneration: normalizedProvider.Purpose == ProviderProfilePurpose.ImageGeneration);
     }
 
     public ProviderFeatureSupportResult GetNativeToolSupport(ProviderProfile provider, ProviderNativeToolFamily family)

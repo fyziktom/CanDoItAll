@@ -1,0 +1,222 @@
+{
+  "Kind": "process-template-definition",
+  "Key": "app-layout-image-generation",
+  "DisplayName": "App layout image generation",
+  "Summary": "Generate improved layout recommendation images from stored app screenshots and store them as project-structure image assets.",
+  "ValueStatement": "Turns reviewed screenshot assets into durable AI-generated layout recommendation assets without image-generation-specific process runtime logic.",
+  "CustomerName": "CanDoItAll scenario validation",
+  "OwnerName": "Delivery manager",
+  "InterfaceContractSummary": "Input supplies project id, delivery node id, and stored screenshot asset node ids. Output is a generated layout recommendation image asset with provider/model/source traceability.",
+  "GovernanceNotes": "Image generation is controlled by role instructions, artifact expectations, typed agent image-provider access, and project-structure storage rules; the process core remains generic.",
+  "ChangeSummary": "Adds a reusable layout-recommendation image-generation template.",
+  "GovernancePolicySummary": "Do not close until screenshot source assets are identified, the image-generation provider is resolved, generation succeeds or an explicit provider blocker is recorded, and generated image assets read back.",
+  "ConstitutionRuleSummary": "The process records provider/model/source asset traceability and project asset storage receipts instead of relying on hidden agent memory or loose files.",
+  "OperatingModeSummary": "Governed live execution with a layout image-generation agent.",
+  "SimulationReadinessSummary": "Small enough to run against an existing screenshot asset while proving provider-backed image generation and asset storage.",
+  "Criticality": "High",
+  "AutonomyLevel": "Guarded",
+  "OperatingMode": "GovernedLive",
+  "SourceFrameworkKeys": [
+    "nist-ssdf-ai"
+  ],
+  "SharedRoleRefs": [
+    "delivery-manager",
+    "qa-lead"
+  ],
+  "SharedArtifactRefs": [],
+  "SharedChecklistRefs": [],
+  "SharedValidationRefs": [],
+  "SharedPromptRefs": [],
+  "LocalRoleRefs": [],
+  "LocalArtifactRefs": [],
+  "LocalChecklistRefs": [],
+  "LocalValidationRefs": [],
+  "LocalPromptRefs": [],
+  "Metrics": [
+    "Layout recommendation image assets generated from reviewed screenshot sources.",
+    "Provider credential or model blockers recorded without fabricating image output."
+  ],
+  "Risks": [
+    "Agent selects unrelated project images instead of the accepted screenshot asset.",
+    "Provider credentials or model access are unavailable.",
+    "Generated image is left as a loose artifact but not stored as a project-structure image asset."
+  ],
+  "TailoringRules": [
+    "Use only screenshot assets referenced by the project structure, upstream process artifacts, or launch prompt.",
+    "Use the agent preferred image provider unless the process prompt explicitly provides a different image-generation provider id.",
+    "Do not use browser tools or capture new screenshots in this process; source screenshots already exist.",
+    "Store generated recommendations as image asset nodes under the project delivery area."
+  ],
+  "RoleUsages": [
+    {
+      "Key": "layout-generation-manager",
+      "RoleResourceKey": "delivery-manager",
+      "DisplayName": "Layout generation manager",
+      "Purpose": "Confirm screenshot source assets, delivery node, provider expectations, and closure evidence.",
+      "StaffingIntent": "A manager-capable agent or person that can keep the layout-generation run bounded.",
+      "PreferredExecutorKind": "agent",
+      "PreferredProjectAssignmentRole": "Manager",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 50,
+      "CanvasX": 40,
+      "CanvasY": 40
+    },
+    {
+      "Key": "layout-image-generation-agent",
+      "RoleResourceKey": "qa-lead",
+      "DisplayName": "Layout image generation agent",
+      "Purpose": "Read stored screenshot assets, call the allowed image-generation tool, and store generated layout recommendations as project-structure image assets.",
+      "StaffingIntent": "Agent template with image-generation access, project-structure read/write, and managed workspace artifact access.",
+      "PreferredExecutorKind": "agent",
+      "PreferredProjectAssignmentRole": "AiAgent",
+      "IsRequired": true,
+      "AllowsFallback": false,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 100,
+      "CanvasX": 900,
+      "CanvasY": 40
+    }
+  ],
+  "Steps": [
+    {
+      "Order": 0,
+      "Key": "resolve-layout-sources",
+      "Title": "Resolve layout sources",
+      "Subtitle": "Screenshot asset inputs",
+      "Notes": "Read the project structure and process prompt to identify project id, delivery node id, accepted screenshot image asset node ids, route labels, and expected output target. Do not call image_generation_create in this step.",
+      "StepKind": "Start",
+      "InputContractSummary": "Project delivery block, screenshot asset nodes, and process prompt.",
+      "OutputContractSummary": "Layout generation source packet.",
+      "EvidenceContractSummary": "Project id, delivery node id, screenshot asset node ids, routes, content types, and output naming plan.",
+      "DecisionRightsSummary": "Manager may block if no accepted screenshot image asset can be identified.",
+      "ExceptionPolicySummary": "Block on missing project, delivery node, or screenshot image asset.",
+      "TargetLeadHours": 1,
+      "CanvasX": 240,
+      "CanvasY": 0,
+      "RoleAssignments": [
+        {
+          "RoleKey": "layout-generation-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a manager-capable operator."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "layout-generation-source-packet",
+          "Title": "Layout generation source packet",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by image generation and storage steps.",
+          "ValidationRequirementSummary": "Must name project id, delivery node id, screenshot asset node ids, route labels, content types, and output target."
+        }
+      ]
+    },
+    {
+      "Order": 1,
+      "Key": "generate-and-store-layout-recommendation",
+      "Title": "Generate and store layout recommendation",
+      "Subtitle": "Provider image asset",
+      "Notes": "Use the source packet as the authoritative input. Do not use Playwright or browser tools, and do not capture new screenshots. Call image_generation_create with sourceProjectAssets for the screenshot node ids, the preferred OpenAI image provider, model gpt-image-1-mini unless overridden, size 1024x1024, quality low, and output format png. The prompt must ask for an improved layout recommendation for the same app screen while preserving app domain semantics. After generation succeeds, call project_structure_asset_create with sourceWorkspacePath from the image_generation_create result, objectType ImageAsset, subtype layout-recommendation, parentNodeKey set to the delivery node, and notes that include source screenshot asset ids, provider name, model, and storage locator.",
+      "StepKind": "Work",
+      "DependsOnStepKey": "resolve-layout-sources",
+      "InputContractSummary": "Layout generation source packet.",
+      "OutputContractSummary": "Generated layout image and project-structure image asset receipt.",
+      "EvidenceContractSummary": "image_generation_create result, provider/model, generated output path, project asset node id, content type, original file name, and storage locator.",
+      "DecisionRightsSummary": "Layout agent may tune the visual prompt but must not change source asset ids or provider without recording the reason.",
+      "ExceptionPolicySummary": "Block when credentials are missing, model access fails, source asset is unreadable, generated image data is absent, or asset storage fails.",
+      "TargetLeadHours": 1,
+      "CanvasX": 1080,
+      "CanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "resolve-layout-sources"
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "layout-image-generation-agent",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to an agent with image generation and project-structure asset write access."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "generated-layout-image-asset-receipt",
+          "Title": "Generated layout image asset storage receipt",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by layout review and future app-improvement planning.",
+          "ValidationRequirementSummary": "Must include image_generation_create success, source screenshot asset ids, provider id/name, model, generated workspace path, project image asset node id, content type, original file name, and storage locator."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "SourceStepKey": "resolve-layout-sources",
+          "ArtifactExpectationKey": "layout-generation-source-packet"
+        }
+      ]
+    },
+    {
+      "Order": 2,
+      "Key": "layout-generation-handoff",
+      "Title": "Layout generation handoff",
+      "Subtitle": "Asset readback",
+      "Notes": "Read back the generated project image asset with project_structure_asset_get and summarize the asset id, route, storage locator, provider, model, source screenshot ids, and any blocker. Do not use browser tools in this handoff step.",
+      "StepKind": "End",
+      "DependsOnStepKey": "generate-and-store-layout-recommendation",
+      "InputContractSummary": "Generated layout image asset storage receipt.",
+      "OutputContractSummary": "Layout-generation closure handoff.",
+      "EvidenceContractSummary": "Generated asset readback and blocker status.",
+      "DecisionRightsSummary": "Layout agent must mark the run blocked if generated asset readback fails.",
+      "ExceptionPolicySummary": "Block on missing asset id, unreadable project asset metadata, or provider/model blocker.",
+      "TargetLeadHours": 1,
+      "CanvasX": 1920,
+      "CanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "generate-and-store-layout-recommendation"
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "layout-image-generation-agent",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to an agent with project-structure read access."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "layout-generation-handoff",
+          "Title": "Layout generation handoff",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by product improvement planning.",
+          "ValidationRequirementSummary": "Must include generated asset node id, storage locator, provider/model, source screenshot asset ids, and blocker status."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "SourceStepKey": "generate-and-store-layout-recommendation",
+          "ArtifactExpectationKey": "generated-layout-image-asset-receipt"
+        }
+      ]
+    }
+  ]
+}

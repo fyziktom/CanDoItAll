@@ -20,9 +20,11 @@ internal static class ProcessWebGlLayoutEngine
         var laneLayouts = BuildLaneLayouts(laneEntries, layoutMode, nodeSpacingFactor, metrics);
         var laneProgressByNodeId = laneEntries.ToDictionary(entry => entry.Node.Id, entry => entry.Progress, StringComparer.Ordinal);
         var roleLayouts = BuildRoleLayouts(editor, canvasSurface, nodesById, laneProgressByNodeId, laneLayouts, layoutMode, nodeSpacingFactor, metrics);
+        var artifactLayouts = BuildArtifactLayouts(canvasSurface, laneProgressByNodeId, laneLayouts, layoutMode, nodeSpacingFactor, metrics);
 
         return laneLayouts
             .Concat(roleLayouts)
+            .Concat(artifactLayouts)
             .ToDictionary(item => item.Key, item => item.Value, StringComparer.Ordinal);
     }
 
@@ -132,6 +134,59 @@ internal static class ProcessWebGlLayoutEngine
         return layouts;
     }
 
+    private static Dictionary<string, ProcessWebGlLayoutPosition> BuildArtifactLayouts(
+        CanvasWorkbenchSurface canvasSurface,
+        IReadOnlyDictionary<string, double> laneProgressByNodeId,
+        IReadOnlyDictionary<string, ProcessWebGlLayoutPosition> laneLayouts,
+        string layoutMode,
+        double nodeSpacingFactor,
+        IReadOnlyDictionary<string, ProcessWebGlNodeMetrics> metrics)
+    {
+        var layouts = new Dictionary<string, ProcessWebGlLayoutPosition>(StringComparer.Ordinal);
+        var artifactNodes = canvasSurface.Nodes
+            .Where(IsArtifactNode)
+            .OrderBy(node => node.X)
+            .ThenBy(node => node.Y)
+            .ThenBy(node => node.Id, StringComparer.Ordinal)
+            .ToList();
+        if (artifactNodes.Count == 0)
+        {
+            return layouts;
+        }
+
+        var maxProgress = laneProgressByNodeId.Count == 0
+            ? 1d
+            : laneProgressByNodeId.Values.Max();
+        var spacing = NormalizeNodeSpacingFactor(nodeSpacingFactor);
+        for (var artifactIndex = 0; artifactIndex < artifactNodes.Count; artifactIndex++)
+        {
+            var artifactNode = artifactNodes[artifactIndex];
+            var linkedProgress = ResolveLinkedLaneProgress(canvasSurface, artifactNode.Id, laneProgressByNodeId);
+            var linkedDepth = ResolveLinkedLaneDepth(canvasSurface, artifactNode.Id, laneLayouts);
+            var normalized = maxProgress <= 0
+                ? 0.5d
+                : linkedProgress / maxProgress;
+            var side = ProcessCanvasBranching.IsDefinitionArtifactCloneNodeId(artifactNode.Id)
+                ? -1d
+                : 1d;
+            var nodeMetrics = metrics.GetValueOrDefault(artifactNode.Id) ?? ProcessWebGlNodeMetrics.Empty;
+            var lateralOffset = Math.Clamp((artifactNode.X - 140d) / 360d, -2d, 2d) * 54d;
+            var verticalOffset = Math.Clamp((artifactNode.Y - 180d) / 260d, -3d, 3d) * 42d;
+            layouts[artifactNode.Id] = ResolveArtifactLayout(
+                artifactIndex,
+                normalized,
+                linkedDepth,
+                lateralOffset,
+                verticalOffset,
+                layoutMode,
+                spacing,
+                side,
+                nodeMetrics);
+        }
+
+        return layouts;
+    }
+
     private static Dictionary<string, ProcessWebGlLayoutPosition> BuildRoleLayouts(
         ProcessDefinitionEditorModel editor,
         CanvasWorkbenchSurface canvasSurface,
@@ -143,7 +198,13 @@ internal static class ProcessWebGlLayoutEngine
         IReadOnlyDictionary<string, ProcessWebGlNodeMetrics> metrics)
     {
         var layouts = new Dictionary<string, ProcessWebGlLayoutPosition>(StringComparer.Ordinal);
-        if (editor.Roles.Count == 0)
+        var roleNodes = canvasSurface.Nodes
+            .Where(IsRoleNode)
+            .OrderBy(node => node.X)
+            .ThenBy(node => node.Y)
+            .ThenBy(node => node.Id, StringComparer.Ordinal)
+            .ToList();
+        if (roleNodes.Count == 0)
         {
             return layouts;
         }
@@ -151,22 +212,20 @@ internal static class ProcessWebGlLayoutEngine
         var maxProgress = laneProgressByNodeId.Count == 0
             ? 1d
             : laneProgressByNodeId.Values.Max();
-        for (var roleIndex = 0; roleIndex < editor.Roles.Count; roleIndex++)
+        for (var roleIndex = 0; roleIndex < roleNodes.Count; roleIndex++)
         {
-            var role = editor.Roles[roleIndex];
-            var roleNodeId = ProcessCanvasBranching.BuildDefinitionRoleNodeId(role);
-            if (!nodesById.TryGetValue(roleNodeId, out var roleNode))
-            {
-                continue;
-            }
-
-            var linkedProgress = ResolveLinkedLaneProgress(canvasSurface, roleNodeId, laneProgressByNodeId);
-            var linkedDepth = ResolveLinkedLaneDepth(canvasSurface, roleNodeId, laneLayouts);
+            var roleNode = roleNodes[roleIndex];
+            var linkedProgress = ResolveLinkedLaneProgress(canvasSurface, roleNode.Id, laneProgressByNodeId);
+            var linkedDepth = ResolveLinkedLaneDepth(canvasSurface, roleNode.Id, laneLayouts);
             var normalized = maxProgress <= 0
                 ? 0.5d
                 : linkedProgress / maxProgress;
-            var defaultX = ResolveDefaultRoleCanvasX(editor);
-            var defaultY = ResolveDefaultRoleCanvasY(roleIndex);
+            var defaultX = ProcessCanvasBranching.IsDefinitionRoleInstanceNodeId(roleNode.Id)
+                ? roleNode.X
+                : ResolveDefaultRoleCanvasX(editor);
+            var defaultY = ProcessCanvasBranching.IsDefinitionRoleInstanceNodeId(roleNode.Id)
+                ? roleNode.Y
+                : ResolveDefaultRoleCanvasY(roleIndex);
             var lateralOffset = Math.Clamp((roleNode.X - defaultX) / 260d, -2d, 2d) * 118d;
             var verticalOffset = Math.Clamp((roleNode.Y - defaultY) / 240d, -2d, 2d) * 96d;
             layouts[roleNode.Id] = ResolveRoleLayout(
@@ -316,6 +375,36 @@ internal static class ProcessWebGlLayoutEngine
                 Round((side * (468d + (Math.Abs(normalizedProgress - 0.5d) * 120d))) * spacing + (lateralOffset * 0.38d)),
                 Round((verticalBand * spacing) + (verticalOffset * 0.72d)),
                 Round(linkedDepth + (((roleIndex % 3) - 1) * (94d * spacing)) - (lateralOffset * 0.28d)))
+        };
+    }
+
+    private static ProcessWebGlLayoutPosition ResolveArtifactLayout(
+        int artifactIndex,
+        double normalizedProgress,
+        double linkedDepth,
+        double lateralOffset,
+        double verticalOffset,
+        string layoutMode,
+        double spacing,
+        double side,
+        ProcessWebGlNodeMetrics metrics)
+    {
+        var bandOffset = ((artifactIndex % 5) - 2d) * (34d * spacing);
+        var distance = (244d + ((artifactIndex % 3) * 48d) + (metrics.Clearance * 0.22d)) * spacing;
+        return WebGlWorkbenchLayoutModes.Normalize(layoutMode) switch
+        {
+            WebGlWorkbenchLayoutModes.RadialBurst => new ProcessWebGlLayoutPosition(
+                Round((side * (distance + 90d)) + (Math.Sin(normalizedProgress * Math.PI) * 58d * spacing) + (lateralOffset * 0.32d)),
+                Round(verticalOffset + bandOffset),
+                Round(linkedDepth + (Math.Cos(normalizedProgress * Math.PI * 2d) * 78d * spacing) + (side * 54d * spacing))),
+            WebGlWorkbenchLayoutModes.CriticalPathSpine or WebGlWorkbenchLayoutModes.FanoutCorridor => new ProcessWebGlLayoutPosition(
+                Round((side * distance) + (lateralOffset * 0.28d)),
+                Round(verticalOffset + bandOffset),
+                Round(linkedDepth + (((artifactIndex % 3) - 1d) * 64d * spacing))),
+            _ => new ProcessWebGlLayoutPosition(
+                Round((side * distance) + (Math.Sin(normalizedProgress * Math.PI * 2d) * 36d * spacing) + (lateralOffset * 0.34d)),
+                Round(verticalOffset + bandOffset),
+                Round(linkedDepth + (((artifactIndex % 4) - 1.5d) * 52d * spacing)))
         };
     }
 
@@ -553,6 +642,7 @@ internal static class ProcessWebGlLayoutEngine
     {
         return link.Kind.ToLowerInvariant() switch
         {
+            "artifact" => ProcessCanvasCatalog.ConnectionCategories.Artifact,
             "messaging" => ProcessCanvasCatalog.ConnectionCategories.Messaging,
             _ when IsBranchRoute(link) => ProcessCanvasCatalog.ConnectionCategories.BranchRoute,
             _ when link.SourcePortId.StartsWith(ProcessCanvasCatalog.DefinitionPorts.StepArtifactOutputPrefix, StringComparison.Ordinal)
@@ -570,6 +660,9 @@ internal static class ProcessWebGlLayoutEngine
 
     private static bool IsBranchNode(CanvasWorkbenchNode node)
         => node.Kind.Contains("branch", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsArtifactNode(CanvasWorkbenchNode node)
+        => node.Kind.Contains("artifact", StringComparison.OrdinalIgnoreCase);
 
     private static double NormalizeNodeSpacingFactor(double value)
         => Math.Round(Math.Clamp(double.IsFinite(value) ? value : 1d, 0.75d, 1.85d), 2, MidpointRounding.AwayFromZero);

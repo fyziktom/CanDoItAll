@@ -34,7 +34,8 @@ public enum AgentFailureCategory
     PermissionDenied,
     RepeatedToolLoop,
     Timeout,
-    HumanRequestedRerun
+    HumanRequestedRerun,
+    OutOfScopeReference
 }
 
 public enum AgentRecoverySessionStrategy
@@ -234,6 +235,7 @@ public static class AgentRecoveryDecisionFactory
             AgentFailureCategory.BrowserProofFailure or
             AgentFailureCategory.QaRejected or
             AgentFailureCategory.ArtifactMissing or
+            AgentFailureCategory.OutOfScopeReference or
             AgentFailureCategory.HumanRequestedRerun => AgentRecoveryMode.ReworkContinuation,
             AgentFailureCategory.PermissionDenied => AgentRecoveryMode.HumanEscalation,
             AgentFailureCategory.FinalizerMissing or

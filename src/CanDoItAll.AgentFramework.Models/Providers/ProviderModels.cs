@@ -11,6 +11,7 @@ public enum ProviderNativeToolFamily
 public sealed record ProviderFeatureMatrix(
     ProviderKind Kind,
     ProviderTransportKind Transport,
+    ProviderProfilePurpose Purpose,
     bool SupportsStreaming,
     bool SupportsTools,
     bool SupportsStructuredOutput,
@@ -33,7 +34,8 @@ public sealed record ProviderFeatureMatrix(
     bool SupportsApprovalRequiredAIFunction = false,
     bool SupportsHostedTools = false,
     bool SupportsHostedMcp = false,
-    bool SupportsLocalMcp = false);
+    bool SupportsLocalMcp = false,
+    bool SupportsImageGeneration = false);
 
 public sealed record ProviderFeatureSupportResult(
     ProviderNativeToolFamily Family,
@@ -100,7 +102,8 @@ public sealed record ProviderProfile(
     string Notes,
     string HealthStatus,
     DateTimeOffset? LastCheckedAtUtc,
-    IReadOnlyList<string> SuggestedModels);
+    IReadOnlyList<string> SuggestedModels,
+    ProviderProfilePurpose Purpose = ProviderProfilePurpose.Chat);
 
 public sealed record ProviderHealthResult(
     bool Success,

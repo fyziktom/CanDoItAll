@@ -1,4 +1,4 @@
 interface:
   display_name: "CanDoItAll Bundle Preparation"
   short_description: "Turn raw requests into validated implementation bundles"
-  default_prompt: "Prepare a complete CanDoItAll implementation bundle from my raw request or artifacts."
+  default_prompt: "Create the smallest implementation-ready CanDoItAll bundle that preserves every input, models dependencies, defines proof, and gives the execution agent clear stop conditions."

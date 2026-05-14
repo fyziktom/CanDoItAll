@@ -98,8 +98,8 @@
       "DependsOnStepKey": "",
 "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 120,
-      "CanvasY": 200,
+      "CanvasX": 260,
+      "CanvasY": 0,
       "BranchOutcomes": [],
       "RoleAssignments": [
         {
@@ -185,8 +185,8 @@
       "DependsOnStepKey": "scope-freeze",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 430,
-      "CanvasY": 200,
+      "CanvasX": 1340,
+      "CanvasY": 0,
       "BranchOutcomes": [],
       "RoleAssignments": [
         {
@@ -288,8 +288,8 @@
       "DependsOnStepKey": "readiness-synthesis",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 740,
-      "CanvasY": 200,
+      "CanvasX": 2420,
+      "CanvasY": 0,
       "BranchOutcomes": [],
       "RoleAssignments": [
         {
@@ -391,8 +391,8 @@
       "DependsOnStepKey": "cutover-rehearsal",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "release-approver",
-      "CanvasX": 1050,
-      "CanvasY": 200,
+      "CanvasX": 3500,
+      "CanvasY": 0,
       "BranchOutcomes": [
         {
           "Key": "go",
@@ -470,8 +470,8 @@
       "DocRefs": [
         "processes/release-readiness-and-deployment/steps/security-and-go-no-go.md"
       ],
-      "BranchCanvasX": 1250,
-      "BranchCanvasY": 200,
+      "BranchCanvasX": 3709,
+      "BranchCanvasY": -1390,
       "Dependencies": [
         {
           "DependsOnStepKey": "cutover-rehearsal",
@@ -500,8 +500,8 @@
       "DependsOnStepKey": "security-and-go-no-go",
       "DependsOnBranchOutcomeKey": "go",
       "DecisionRoleKey": "",
-      "CanvasX": 1360,
-      "CanvasY": 200,
+      "CanvasX": 4580,
+      "CanvasY": 0,
       "BranchOutcomes": [],
       "RoleAssignments": [
         {
@@ -592,8 +592,8 @@
       "DependsOnStepKey": "execute-cutover",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 1670,
-      "CanvasY": 200,
+      "CanvasX": 5660,
+      "CanvasY": 0,
       "BranchOutcomes": [],
       "RoleAssignments": [
         {
@@ -684,8 +684,8 @@
       "DependsOnStepKey": "security-and-go-no-go",
       "DependsOnBranchOutcomeKey": "hold",
       "DecisionRoleKey": "",
-      "CanvasX": 1360,
-      "CanvasY": 340,
+      "CanvasX": 4580,
+      "CanvasY": -1040,
       "BranchOutcomes": [],
       "RoleAssignments": [
         {
@@ -951,8 +951,8 @@
       "AllowsFallback": true,
       "RequiresExplicitApproval": true,
       "DefaultAllocationPercent": 40,
-      "CanvasX": 510,
-      "CanvasY": 110,
+      "CanvasX": 899,
+      "CanvasY": 540.5,
       "Notes": "Quality owner for coverage depth, evidence quality, and release confidence."
     },
     {

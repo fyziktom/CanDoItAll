@@ -179,6 +179,42 @@ public sealed class DatabaseProfileOverrideTests
         Assert.Equal(persistedProfileId, selection.ActiveProfileId);
         Assert.Equal(DatabaseProfileResolutionSource.ExplicitOverride, selection.ResolutionSource);
     }
+
+    [Fact]
+    public async Task ResolveCurrentProfile_uses_fingerprint_scoped_workspace_for_postgres_override_without_storage_override()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("control-plane-postgres-override-workspace");
+
+        await using var firstProvider = DatabaseProfileControlPlaneTestHost.BuildServiceProvider(
+            testEnvironment,
+            includeDatabaseOverride: false,
+            additionalValues: new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Database:Provider"] = "PostgreSql",
+                ["Database:ConnectionString"] = "Host=localhost;Port=5432;Database=candoitall-processes-1;Username=candoitall;Password=first-secret"
+            });
+        await using var secondProvider = DatabaseProfileControlPlaneTestHost.BuildServiceProvider(
+            testEnvironment,
+            includeDatabaseOverride: false,
+            additionalValues: new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Database:Provider"] = "PostgreSql",
+                ["Database:ConnectionString"] = "Host=localhost;Port=5432;Database=candoitall-processes-2;Username=candoitall;Password=second-secret"
+            });
+
+        var firstProfile = firstProvider.GetRequiredService<IActiveDatabaseProfileResolver>().ResolveCurrentProfile();
+        var secondProfile = secondProvider.GetRequiredService<IActiveDatabaseProfileResolver>().ResolveCurrentProfile();
+        var expectedRootPrefix = Path.Combine(testEnvironment.RootPath, ".artifacts", "workspace", "runtime-overrides") +
+                                 Path.DirectorySeparatorChar;
+
+        Assert.Equal(DatabaseProfileResolutionSource.ExplicitOverride, firstProfile.ResolutionSource);
+        Assert.Equal(DatabaseProviderKind.PostgreSql, firstProfile.Profile.ProviderKind);
+        Assert.StartsWith(expectedRootPrefix, firstProfile.Profile.Storage.WorkspaceRoot, StringComparison.OrdinalIgnoreCase);
+        Assert.StartsWith(expectedRootPrefix, secondProfile.Profile.Storage.WorkspaceRoot, StringComparison.OrdinalIgnoreCase);
+        Assert.NotEqual(firstProfile.Profile.Storage.WorkspaceRoot, secondProfile.Profile.Storage.WorkspaceRoot);
+        Assert.DoesNotContain("first-secret", firstProfile.Profile.Storage.WorkspaceRoot, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("second-secret", secondProfile.Profile.Storage.WorkspaceRoot, StringComparison.OrdinalIgnoreCase);
+    }
 }
 
 public sealed class SnapshotBackedProfileCatalogTests

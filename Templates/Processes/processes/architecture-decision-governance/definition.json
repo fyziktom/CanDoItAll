@@ -93,8 +93,8 @@
       "DependsOnStepKey": "",
 "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 120,
-      "CanvasY": 220,
+      "CanvasX": 260,
+      "CanvasY": 0,
       "BranchOutcomes": [],
       "RoleAssignments": [
         {
@@ -175,8 +175,8 @@
       "DependsOnStepKey": "decision-intake",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 430,
-      "CanvasY": 220,
+      "CanvasX": 1340,
+      "CanvasY": 0,
       "BranchOutcomes": [],
       "RoleAssignments": [
         {
@@ -271,8 +271,8 @@
       "DependsOnStepKey": "context-and-options",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 740,
-      "CanvasY": 220,
+      "CanvasX": 2420,
+      "CanvasY": 0,
       "BranchOutcomes": [],
       "RoleAssignments": [
         {
@@ -365,8 +365,8 @@
       "DependsOnStepKey": "security-compliance-review",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "service-owner",
-      "CanvasX": 1050,
-      "CanvasY": 220,
+      "CanvasX": 3500,
+      "CanvasY": 0,
       "BranchOutcomes": [
         {
           "Key": "approved",
@@ -427,8 +427,8 @@
       "DocRefs": [
         "processes/architecture-decision-governance/steps/board-decision.md"
       ],
-      "BranchCanvasX": 1250,
-      "BranchCanvasY": 220,
+      "BranchCanvasX": 3709,
+      "BranchCanvasY": -1390,
       "Dependencies": [
         {
           "DependsOnStepKey": "security-compliance-review",
@@ -457,8 +457,8 @@
       "DependsOnStepKey": "board-decision",
       "DependsOnBranchOutcomeKey": "approved",
       "DecisionRoleKey": "",
-      "CanvasX": 1360,
-      "CanvasY": 220,
+      "CanvasX": 4580,
+      "CanvasY": 0,
       "BranchOutcomes": [],
       "RoleAssignments": [
         {
@@ -549,8 +549,8 @@
       "DependsOnStepKey": "board-decision",
       "DependsOnBranchOutcomeKey": "deferred",
       "DecisionRoleKey": "",
-      "CanvasX": 1360,
-      "CanvasY": 340,
+      "CanvasX": 4580,
+      "CanvasY": -1040,
       "BranchOutcomes": [],
       "RoleAssignments": [
         {
@@ -905,8 +905,8 @@
       "AllowsFallback": true,
       "RequiresExplicitApproval": true,
       "DefaultAllocationPercent": 25,
-      "CanvasX": 660,
-      "CanvasY": 40,
+      "CanvasX": 1979,
+      "CanvasY": -370,
       "Notes": "Security gate owner for threat assessment, exception handling, and trust-boundary decisions."
     },
     {
@@ -921,8 +921,8 @@
       "AllowsFallback": true,
       "RequiresExplicitApproval": true,
       "DefaultAllocationPercent": 20,
-      "CanvasX": 810,
-      "CanvasY": 110,
+      "CanvasX": 1979,
+      "CanvasY": 370,
       "Notes": "Policy and evidence steward for contractual, regulatory, license, and audit-sensitive change decisions."
     },
     {

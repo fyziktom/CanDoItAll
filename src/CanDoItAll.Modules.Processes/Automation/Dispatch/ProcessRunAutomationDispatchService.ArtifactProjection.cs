@@ -80,6 +80,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
             var matchedExpectation = ResolveArtifactExpectation(
                 candidate,
+                detail.Run.InputSummary,
                 artifact,
                 TryDecodeTextArtifactContent(artifact, fullPath, content));
             var placement = await storagePlacementService.PlaceAsync(
@@ -119,6 +120,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
             if (recordResult.IsSuccess)
             {
                 candidate.ExternalReferenceKeys.Add(externalReferenceKey);
+                if (matchedExpectation is not null)
+                {
+                    candidate.RecordedArtifactExpectationIds.Add(matchedExpectation.Id);
+                }
             }
             else
             {
@@ -279,6 +284,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
 
             candidate.ExternalReferenceKeys.Add(externalReferenceKey);
+            candidate.RecordedArtifactExpectationIds.Add(expectedArtifact.Id);
             projectedExpectationIds.Add(expectedArtifact.Id);
         }
     }
@@ -307,18 +313,25 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         foreach (var expectedArtifact in candidate.ExpectedArtifacts)
         {
-            if (detail.Artifacts.Any(artifact => ResolveArtifactExpectationId(candidate, artifact) == expectedArtifact.Id))
+            if (candidate.RecordedArtifactExpectationIds.Contains(expectedArtifact.Id) ||
+                detail.Artifacts.Any(artifact => ResolveArtifactExpectationId(candidate, detail, artifact) == expectedArtifact.Id))
             {
                 continue;
             }
 
-            var matchingWrite = fileWrites
-                .LastOrDefault(file => WorkspaceWrittenFileMatchesExpectedArtifact(
+            var matchingWrite = TryResolveProjectStructureExpectedArtifactPath(
+                    candidate,
+                    expectedArtifact,
+                    detail.Run.InputSummary,
+                    out var governedPath)
+                ? fileWrites.LastOrDefault(file => ArtifactPathMatchesGovernedProjectStructurePath(file.Path, governedPath)) ??
+                  receiptFileWrites.LastOrDefault(file => ArtifactPathMatchesGovernedProjectStructurePath(file.Path, governedPath))
+                : fileWrites.LastOrDefault(file => WorkspaceWrittenFileMatchesExpectedArtifact(
                     candidate.ExpectedArtifacts,
                     expectedArtifact,
                     file.Path,
                     file.Content)) ??
-                receiptFileWrites.LastOrDefault(file => WorkspaceWrittenFileMatchesExpectedArtifact(
+                  receiptFileWrites.LastOrDefault(file => WorkspaceWrittenFileMatchesExpectedArtifact(
                     candidate.ExpectedArtifacts,
                     expectedArtifact,
                     file.Path,
@@ -423,6 +436,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             if (recordResult.IsSuccess)
             {
                 candidate.ExternalReferenceKeys.Add(externalReferenceKey);
+                candidate.RecordedArtifactExpectationIds.Add(expectedArtifact.Id);
             }
             else
             {
@@ -460,7 +474,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         foreach (var expectedArtifact in candidate.ExpectedArtifacts)
         {
-            if (detail.Artifacts.Any(artifact => ResolveArtifactExpectationId(candidate, artifact) == expectedArtifact.Id))
+            if (candidate.RecordedArtifactExpectationIds.Contains(expectedArtifact.Id) ||
+                detail.Artifacts.Any(artifact => ResolveArtifactExpectationId(candidate, detail, artifact) == expectedArtifact.Id))
             {
                 continue;
             }
@@ -561,6 +576,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             if (recordResult.IsSuccess)
             {
                 candidate.ExternalReferenceKeys.Add(externalReferenceKey);
+                candidate.RecordedArtifactExpectationIds.Add(expectedArtifact.Id);
             }
             else
             {
@@ -720,6 +736,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             if (recordResult.IsSuccess)
             {
                 candidate.ExternalReferenceKeys.Add(externalReferenceKey);
+                candidate.RecordedArtifactExpectationIds.Add(expectedArtifact.Id);
             }
             else
             {
@@ -790,7 +807,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 continue;
             }
 
-            if (detail.Artifacts.Any(artifact => ResolveArtifactExpectationId(candidate, artifact) == expectedArtifact.Id))
+            if (candidate.RecordedArtifactExpectationIds.Contains(expectedArtifact.Id) ||
+                detail.Artifacts.Any(artifact => ResolveArtifactExpectationId(candidate, detail, artifact) == expectedArtifact.Id))
             {
                 continue;
             }
@@ -887,6 +905,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 if (recordResult.IsSuccess)
                 {
                     candidate.ExternalReferenceKeys.Add(externalReferenceKey);
+                    candidate.RecordedArtifactExpectationIds.Add(expectedArtifact.Id);
                 }
                 else
                 {
@@ -991,6 +1010,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         candidate.ExternalReferenceKeys.Add(externalReferenceKey);
+        candidate.RecordedArtifactExpectationIds.Add(expectedArtifact.Id);
         return true;
     }
 
@@ -1028,7 +1048,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 continue;
             }
 
-            if (detail.Artifacts.Any(artifact => ResolveArtifactExpectationId(candidate, artifact) == expectedArtifact.Id))
+            if (candidate.RecordedArtifactExpectationIds.Contains(expectedArtifact.Id) ||
+                detail.Artifacts.Any(artifact => ResolveArtifactExpectationId(candidate, detail, artifact) == expectedArtifact.Id))
             {
                 continue;
             }
@@ -1139,6 +1160,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 if (recordResult.IsSuccess)
                 {
                     candidate.ExternalReferenceKeys.Add(externalReferenceKey);
+                    candidate.RecordedArtifactExpectationIds.Add(expectedArtifact.Id);
                 }
                 else
                 {
@@ -1168,6 +1190,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             workspaceScope,
             browserOutputsByToolName,
             browserWorkingDirectory,
+            completionStatus,
             cancellationToken);
     }
 
@@ -1178,6 +1201,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         WorkspaceScopeDescriptor workspaceScope,
         IReadOnlyDictionary<string, IReadOnlyList<string>> browserOutputsByToolName,
         string browserWorkingDirectory,
+        ProcessStepRunStatus completionStatus,
         CancellationToken cancellationToken)
     {
         foreach (var pair in browserOutputsByToolName)
@@ -1250,6 +1274,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
                         pair.Key,
                         $"Projected provider-native browser output '{normalizedOutputPath}' into the scoped managed artifact path.",
                         DateTimeOffset.UtcNow);
+                    var matchedExpectation = ResolveArtifactExpectation(
+                        candidate,
+                        detail.Run.InputSummary,
+                        syntheticArtifact);
+                    if (matchedExpectation is not null &&
+                        candidate.RecordedArtifactExpectationIds.Contains(matchedExpectation.Id))
+                    {
+                        continue;
+                    }
+
                     var placement = await storagePlacementService.PlaceAsync(
                         new StoragePlacementRequest(
                             Path.GetFileName(targetFullPath),
@@ -1266,12 +1300,18 @@ internal sealed partial class ProcessRunAutomationDispatchService
                         {
                             ProcessRunId = candidate.Run.Id,
                             StepRunId = candidate.StepRun.Id,
-                            ArtifactKind = ProcessArtifactKind.Evidence,
-                            Title = BuildArtifactTitle(syntheticArtifact),
-                            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
-                            SensitivityLevel = ProcessSensitivityLevel.Internal,
+                            ArtifactExpectationId = matchedExpectation?.Id,
+                            ArtifactKind = matchedExpectation?.ArtifactKind ?? ProcessArtifactKind.Evidence,
+                            Title = matchedExpectation?.Title ?? BuildArtifactTitle(syntheticArtifact),
+                            TrustStatus = matchedExpectation is null
+                                ? ProcessArtifactTrustStatus.ReviewRequired
+                                : ResolveProjectedArtifactTrustStatus(matchedExpectation, completionStatus),
+                            SensitivityLevel = matchedExpectation?.SensitivityLevel ?? ProcessSensitivityLevel.Internal,
                             ProvenanceSummary = $"Projected from provider-native browser output '{normalizedOutputPath}' for AgentFramework execution run {detail.Run.Id:D}.",
-                            AllowedFutureUsageSummary = "Process evidence and audit review.",
+                            AllowedFutureUsageSummary = matchedExpectation is not null &&
+                                                        !string.IsNullOrWhiteSpace(matchedExpectation.AllowedFutureUsageSummary)
+                                ? matchedExpectation.AllowedFutureUsageSummary
+                                : "Process evidence and audit review.",
                             ReviewSummary = syntheticArtifact.Summary,
                             ManagedStoragePath = placement.RelativePath,
                             ExternalReferenceKey = externalReferenceKey
@@ -1280,6 +1320,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     if (recordResult.IsSuccess)
                     {
                         candidate.ExternalReferenceKeys.Add(externalReferenceKey);
+                        if (matchedExpectation is not null)
+                        {
+                            candidate.RecordedArtifactExpectationIds.Add(matchedExpectation.Id);
+                        }
                     }
                     else
                     {
@@ -1312,12 +1356,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         var normalizedPath = WorkspaceScopeDescriptor.NormalizeRelativePath(relativePath);
-        if (!normalizedPath.StartsWith("artifacts/process-runs/", StringComparison.OrdinalIgnoreCase))
+        var comparablePath = NormalizeManagedRelativePathForComparison(normalizedPath);
+        if (!comparablePath.StartsWith("artifacts/process-runs/", StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }
 
-        return ResolveProviderNativeBrowserToolName(normalizedPath).Length > 0;
+        return ResolveProviderNativeBrowserToolName(comparablePath).Length > 0;
     }
 
     private void EnsureProviderNativeBrowserOutputDirectories(DispatchCandidate candidate)

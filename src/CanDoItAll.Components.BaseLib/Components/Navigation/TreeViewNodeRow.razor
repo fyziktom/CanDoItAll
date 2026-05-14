@@ -28,6 +28,7 @@
                 data-testid="@ResolveDataTestId()"
                 disabled="@Node.IsDisabled"
                 @onclick="HandleRowClickAsync"
+                @onkeydown="HandleRowKeyDownAsync"
                 @oncontextmenu="HandleContextMenuAsync"
                 @oncontextmenu:preventDefault="true">
             @if (!string.IsNullOrWhiteSpace(Node.Icon))
@@ -106,6 +107,21 @@
         }
 
         return OnSelect.InvokeAsync(Node.Id);
+    }
+
+    private Task HandleRowKeyDownAsync(KeyboardEventArgs args)
+    {
+        if (Node.IsDisabled || !Node.HasChildren)
+        {
+            return Task.CompletedTask;
+        }
+
+        return args.Key switch
+        {
+            "ArrowRight" when !Node.IsExpanded => OnToggle.InvokeAsync(Node.Id),
+            "ArrowLeft" when Node.IsExpanded => OnToggle.InvokeAsync(Node.Id),
+            _ => Task.CompletedTask
+        };
     }
 
     private Task HandleContextMenuAsync(MouseEventArgs args)

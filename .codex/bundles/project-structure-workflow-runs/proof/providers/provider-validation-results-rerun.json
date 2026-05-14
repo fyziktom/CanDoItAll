@@ -1,0 +1,79 @@
+{
+  "ollamaTagsContainGptoss20b64k": true,
+  "appBaseUrl": "http://127.0.0.1:5087",
+  "generatedAtUtc": "2026-05-12T14:10:57.4479943+00:00",
+  "databaseProfile": "Development PostgreSQL override via running web app",
+  "providers": [
+    {
+      "providerId": "036b360a-e3f4-8350-97ca-f88de60ba2bb",
+      "model": "gpt-5-mini",
+      "provider": "OpenAI chat completions"
+    },
+    {
+      "providerId": "48446192-8e6d-46b5-8ccc-0126a676c234",
+      "model": "gptoss20b64k:latest",
+      "provider": "Local Ollama gptoss20b64k"
+    }
+  ],
+  "results": [
+    {
+      "title": "OpenAI gpt-5-mini Mouser grounded reconciliation",
+      "parentNodeId": "custom:c24eb93e1a1947679cbca06305764af1",
+      "validationPhrases": [
+        "89566550",
+        "485-4754",
+        "378.16",
+        "565.16"
+      ],
+      "definitionId": "ded7f44c-ca42-4dac-9fe7-2116cbe556ba",
+      "versionId": "271796b9-836f-411e-9345-f32f1eb02290",
+      "createdFilePaths": [],
+      "stepCount": 5,
+      "createdNodeIds": [
+        "custom:56c7a4648d1d47abb50d01664818e15d"
+      ],
+      "state": 4,
+      "loadedPreviewContainsSources": true,
+      "progressPercent": 100,
+      "createdAssetIds": [
+        "custom:56c7a4648d1d47abb50d01664818e15d"
+      ],
+      "contentPreview": "## Result summary\n\nBoth source files were compared: Cart_Mar30_1059AM.xls (workbook-text, extraction truncated) and MOUSER_Receipt_89566550.pdf (pdf-text). All 11 line items and the merchandise total agree on part numbers, order quantities, unit prices and extended prices. Invoice number, order date, invoice date, totals, and tracking numbers were extracted. One line (Mouser 485-4754) is ordered but shows shipped=0 / pending=4 on the receipt and is flagged for review.\n\n---\n\n## Evidence table\n\n| Source file | path | extractionStatus | notes |\n|---|---|---:|---|\n| Cart_Mar30_1059AM.xls | C:/programovani/testdata/testworkflows/mouser-order/Cart_Mar30_1059AM.xls | workbook-text | text extraction present, isTruncated: true (possible truncation of workbook content) |\n| MOUSER_Receipt_89566550.pdf | C:/programovani/testdata/testworkflows/mouser-order/MOUSER_Receipt_89566550.pdf | pdf-text | text extraction present; invoice, order date, shipped/pending columns readable |\n\n---\n\n## Reconciliation table (Mouser part number | Customer/MFG part no. | Ordered | Shipped | Pending | Unit Price (USD) | Extended Price (USD) | Evidence)\n\n| Mouser part # | Customer/MFG part # | Ordered | Shipped | Pending | Unit Price | Extended | Source evidence |\n|---|---|---:|---:|---:|---:|---:|---|\n| 485-4754 | 4754 | 4 | 0 | 4 | $24.96 | $99.84 | Cart_Mar30_1059AM.xls (order qty 4, $24.96, $99.84); MOUSER_Receipt_89566550.pdf (shows \"4 0 24.96 99.84\") |\n| 709-PV-SMI-2000A | PV-SMI-2000A | 1 | 1 | 0 | $378.16 | $378.16 | Cart_Mar30_1059AM.xls; MOUSER_Receipt_89566550.pdf (\"1 1 378.16 378.16\") |\n| 170-U032-V11 | U032-V11 | 1 | 1 | 0 | $9.96 | $9.96 | Cart_Mar30_1059AM.xls; MOUSER_Receipt_89566550.pdf (\"1 1 9.96 9.96\") |\n| 170-U178 | U178 | 1 | 1 | 0 | $12.96 | $12.96 | Cart_Mar30_1059AM.xls; MOUSER_Receipt_89566550.pdf (\"1 1 12.96 12.96\") |\n| 170-U094 | U094 | 2 | 2 | 0 | $9.96 | $19.92 | Cart_Mar30_1059AM.xls; MOUSER_Receipt_89566550.pdf (\"2 2 9.96 19.92\") |\n| 485-4960 | 4960 | 10 | 10 | 0 | $2.95 | $29.50 | Cart_Mar30_1059AM.xls; MOUSER_Receipt_89566550.pdf (\"10 10 2.95 29.50\") |\n| 253-AE2746EN1 | AE-2746E-N1 | 3 | 3 | 0 | $1.01 | $3.03 | Cart_Mar30_1059AM.xls; MOUSER_Receipt_89566550.pdf (\"3 3 1.01 3.03\") |\n| 625-BZX55C3V3 | BZX55C3V3-TR | 30 | 30 | 0 | $0.085 | $2.55 | Cart_Mar30_1059AM.xls; MOUSER_Receipt_89566550.pdf (\"30 30 0.085 2.55\") |\n| 78-BAT42-TAP | BAT42-TAP | 10 | 10 | 0 | $0.097 | $0.97 | Cart_Mar30_1059AM.xls; MOUSER_Receipt_89566550.pdf (\"10 10 0.097 0.97\") |\n| 667-EEU-F",
+      "workflowNodeId": "custom:caeed3def1874d43ae0273f6f19865ee",
+      "contentLength": 4779,
+      "currentStepIndex": 5,
+      "runId": "d7bec547-0ba9-4ce6-9d65-b2039dcd9ed8"
+    },
+    {
+      "title": "Ollama gptoss20b64k SEAMARK grounded summary",
+      "parentNodeId": "custom:a9046358bcc143eebe0ee909032c9d3a",
+      "validationPhrases": [
+        "X-5600",
+        "$35,000",
+        "X-6600",
+        "$41,500",
+        "X-6600A",
+        "$66,000"
+      ],
+      "definitionId": "9932345b-cebb-4ce6-b2a8-9ac30d9f437b",
+      "versionId": "f1a2d440-7924-4508-ad40-a7c1a2c2be3b",
+      "createdFilePaths": [],
+      "stepCount": 5,
+      "createdNodeIds": [
+        "custom:be7ad1d332514fe09f2087f161aab6be"
+      ],
+      "state": 4,
+      "loadedPreviewContainsSources": true,
+      "progressPercent": 100,
+      "createdAssetIds": [
+        "custom:be7ad1d332514fe09f2087f161aab6be"
+      ],
+      "contentPreview": "# SEAMARK X‑ray Inspection Device & Quotation Summary\n\n## Source Extraction Table\n| File Name | Extraction Status |\n|-----------|-------------------|\n| 2018-7 Seamark ZM catalogue.pdf | pdf-text (truncated) |\n| X Ray Machine Agent Quotation List2018.pdf | pdf-text |\n| X-5600 Xray Inspection system Specification.pdf | pdf-text |\n| X-6600 X ray Inspection system Specification201809.pdf | pdf-text |\n| X-6600A Xray Inspection system Specification.pdf | pdf-text |\n| X-ray inspection system Presentation.pdf | pdf-text |\n\n## Device Technical & Pricing Table\n| Device | Voltage | Current | Focal Size | Geometric Magnification | System Magnification | Stage Size | Net Weight | Input Voltage | OS | Power | Detector Speed | Detector Resolution | Price (ZM) | Price (USD) |\n|--------|---------|---------|------------|------------------------|---------------------|------------|------------|---------------|----|-------|----------------|---------------------|-----------|-------------|\n| X‑5600 | 90 kV | 200 µA | 15 µm | 15 × | 80 × | 250 mm × 250 mm | 300 kg | AC 110‑220 V (+10 %) | Windows 7 | 1.5 kW | 20 fps | 1176 × 1104 | $35,000 | $39,900‑$42,000 |\n| X‑6600 | 90 kV | 0.2 mA | 5 µm | 150 × | 1 000 × | 640 mm × 540 mm | 900 kg | AC 110‑220 V (+10 %) | Windows 7 | 1.5 kW | 30 fps | 1176 × 1104 | $41,500 | $46,000‑$49,000 |\n| X‑6600A | 130 kV | 0.15 mA | 1 µm | 200 × | 1 000 × | 520 mm × 450 mm | 1 800 kg | AC 110‑220 V (+10 %) | Windows 7 | 2.5 kW | 35 fps | 1500 × 1500 | $66,000 | $73,000‑$78,000 |\n\n### Technical Evidence Sources\n- **Voltage, Current, Focal Size, Magnifications, Stage Size, Net Weight, Input Voltage, OS, Power** – extracted from the respective *Specification.pdf* documents (X‑5600, X‑6600, X‑6600A). \n- **Detector Speed & Resolution** – also from the *Specification.pdf* documents. \n- **Pricing** – taken from *X Ray Machine Agent Quotation List2018.pdf*.\n\n### Gaps\n- **2018-7 Seamark ZM catalogue.pdf** – content truncated; no technical specifications or pricing could be extracted.\n- No additional technical parameters (e.g., radiation leakage, tilt angle) were required for the summary but are available in the specification PDFs.\n\n## Next Validation Actions\n1. **Verify Current Pricing** – The quotation dates are from 2018‑10‑15; confirm whether the listed prices are still valid or have been updated.\n2. **Cross‑Check Device Configurations** – Ensure that the technical parameters match the latest firmware/OS versions (e.g., Windows 7 may be outdated).\n3. **Upda",
+      "workflowNodeId": "custom:97c99f81e8384055a68ba6fdfca6535b",
+      "contentLength": 2727,
+      "currentStepIndex": 5,
+      "runId": "334c826f-deb6-43ba-a9e8-ec82daaa7388"
+    }
+  ],
+  "openAiApiKeyPresent": true
+}

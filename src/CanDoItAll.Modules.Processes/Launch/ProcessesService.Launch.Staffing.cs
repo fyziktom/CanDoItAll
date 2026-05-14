@@ -651,6 +651,135 @@ public sealed partial class ProcessesService
             score += 35m;
         }
 
+        var isScreenshotCaptureRole = RoleMentions(primaryRoleText, "screenshot") &&
+                                      (RoleMentions(primaryRoleText, "capture") ||
+                                       RoleMentions(workText, "playwright") ||
+                                       RoleMentions(roleKey, "app-screenshot-capture-agent"));
+        var isScreenshotStorageReviewRole = RoleMentions(primaryRoleText, "screenshot") &&
+                                            (RoleMentions(primaryRoleText, "review") ||
+                                             RoleMentions(primaryRoleText, "storage") ||
+                                             RoleMentions(primaryRoleText, "asset") ||
+                                             RoleMentions(roleKey, "screenshot-review-storage-agent"));
+        var isLayoutImageGenerationRole = (RoleMentions(primaryRoleText, "layout") ||
+                                           RoleMentions(roleSpecificText, "layout")) &&
+                                          (RoleMentions(primaryRoleText, "image-generation") ||
+                                           RoleMentions(primaryRoleText, "image") ||
+                                           RoleMentions(roleSpecificText, "image-generation") ||
+                                           RoleMentions(roleKey, "layout-image-generation-agent"));
+        if (isScreenshotCaptureRole)
+        {
+            if (HasCapability(capabilityNames, PlaywrightLocalMcpCapability))
+            {
+                score += 260m;
+            }
+            else
+            {
+                score -= 180m;
+            }
+
+            if (HasCapability(capabilityNames, WorkspaceDotnetRunCapability))
+            {
+                score += 80m;
+            }
+
+            if (RoleMentions(agentText, "screenshot") ||
+                RoleMentions(aiFact.TemplateKey, "app-screenshot-capture-agent"))
+            {
+                score += 220m;
+            }
+
+            if (RoleMentions(agentText, "review") ||
+                RoleMentions(agentText, "asset-storage"))
+            {
+                score -= 90m;
+            }
+        }
+
+        if (isScreenshotStorageReviewRole)
+        {
+            var hasScreenshotStorageIdentity =
+                RoleMentions(aiFact.DisplayName, "screenshot") &&
+                (RoleMentions(aiFact.DisplayName, "review") ||
+                 RoleMentions(aiFact.DisplayName, "asset") ||
+                 RoleMentions(aiFact.DisplayName, "storage")) ||
+                RoleMentions(aiFact.RoleTitle, "screenshot") &&
+                (RoleMentions(aiFact.RoleTitle, "review") ||
+                 RoleMentions(aiFact.RoleTitle, "asset") ||
+                 RoleMentions(aiFact.RoleTitle, "storage")) ||
+                RoleMentions(aiFact.TemplateKey, "screenshot-review-storage-agent") ||
+                RoleMentions(aiFact.TemplateKey, "runtime-screenshot-review-storage-agent");
+
+            if (hasScreenshotStorageIdentity)
+            {
+                score += 850m;
+            }
+            else if (RoleMentions(agentText, "screenshot") &&
+                     (RoleMentions(agentText, "review") ||
+                      RoleMentions(agentText, "asset") ||
+                      RoleMentions(agentText, "storage")))
+            {
+                score += 260m;
+            }
+            else
+            {
+                score -= 320m;
+            }
+
+            if (RoleMentions(agentText, "capture") &&
+                HasCapability(capabilityNames, PlaywrightLocalMcpCapability))
+            {
+                score -= 100m;
+            }
+
+            if (!hasScreenshotStorageIdentity &&
+                (RoleMentions(agentText, "programming") ||
+                 RoleMentions(agentText, "implements") ||
+                 RoleMentions(agentText, "developer")))
+            {
+                score -= 160m;
+            }
+        }
+
+        if (isLayoutImageGenerationRole)
+        {
+            var hasLayoutImageIdentity =
+                RoleMentions(aiFact.DisplayName, "layout") &&
+                (RoleMentions(aiFact.DisplayName, "image") ||
+                 RoleMentions(aiFact.DisplayName, "generation")) ||
+                RoleMentions(aiFact.RoleTitle, "layout") &&
+                (RoleMentions(aiFact.RoleTitle, "image") ||
+                 RoleMentions(aiFact.RoleTitle, "generation")) ||
+                RoleMentions(aiFact.TemplateKey, "layout-image-generation-agent") ||
+                RoleMentions(aiFact.TemplateKey, "runtime-layout-image-generation-agent");
+
+            if (hasLayoutImageIdentity)
+            {
+                score += 900m;
+            }
+            else if (RoleMentions(agentText, "image-generation") ||
+                     RoleMentions(agentText, "layout-recommendation"))
+            {
+                score += 280m;
+            }
+            else
+            {
+                score -= 280m;
+            }
+
+            if (RoleMentions(agentText, "screenshot") &&
+                RoleMentions(agentText, "capture") &&
+                HasCapability(capabilityNames, PlaywrightLocalMcpCapability))
+            {
+                score -= 120m;
+            }
+
+            if (RoleMentions(agentText, "project-structure") ||
+                RoleMentions(agentText, "asset-storage"))
+            {
+                score += 120m;
+            }
+        }
+
         if (isImplementationRole)
         {
             if (!selectedWorkIsJavaScript &&

@@ -2,6 +2,7 @@ using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.Modules.Workspace.Pages.Components;
+using CanDoItAll.SharedKernel.Configuration;
 using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.Workspace.Pages;
@@ -35,7 +36,7 @@ public partial class SettingsPage
             string.Equals(manifest.PluginKey, providerModel.ConnectorPluginKey, StringComparison.OrdinalIgnoreCase))
         ?? providerManifests.FirstOrDefault();
 
-    private IReadOnlyList<ConnectorConfigFieldDescriptor> SelectedProviderFields => SelectedProviderManifest?.ConfigurationSchema.Fields ?? [];
+    private IReadOnlyList<ConfigurationFieldDescriptor> SelectedProviderFields => SelectedProviderManifest?.ConfigurationSchema.Fields ?? [];
 
     private IReadOnlyList<SecondaryTabItem> SettingsTabs =>
     [
@@ -434,7 +435,7 @@ public partial class SettingsPage
         };
     }
 
-    private static string? ResolveProviderFieldTestId(ConnectorConfigFieldDescriptor field)
+    private static string? ResolveProviderFieldTestId(ConfigurationFieldDescriptor field)
     {
         return field.Key switch
         {

@@ -61,6 +61,15 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private ProcessRuntimeStateOverviewService RuntimeStateOverviewService { get; set; } = default!;
 
     [Inject]
+    private IProcessObservationService ProcessObservationService { get; set; } = default!;
+
+    [Inject]
+    private IProcessObservationInvalidator ProcessObservationInvalidator { get; set; } = default!;
+
+    [Inject]
+    private ProcessObservationDashboardState ObservationDashboardState { get; set; } = default!;
+
+    [Inject]
     private DialogService DialogService { get; set; } = default!;
 
     [Inject]
@@ -97,12 +106,14 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private IReadOnlyList<ProcessWorkBriefViewModel> workBriefs = [];
     private IReadOnlyList<ProcessConformanceObservationViewModel> conformanceObservations = [];
     private IReadOnlyList<ProcessExecutionRunViewModel> executionRuns = [];
+    private IReadOnlyList<ProcessWorkflowRunViewModel> workflowRuns = [];
     private IReadOnlyList<ProcessEscalationViewModel> processEscalations = [];
     private IReadOnlyList<ProcessOperatorApprovalViewModel> operatorApprovals = [];
     private IReadOnlyList<ProcessAttemptTimelineEntryViewModel> attemptTimeline = [];
     private IReadOnlyList<ProcessActiveRunSummaryViewModel> activeRunSummaries = [];
     private IReadOnlyList<ProcessImprovementViewModel> improvements = [];
     private IReadOnlyList<ProcessExecutorRegistryOption> executorOptions = [];
+    private IReadOnlyList<ProcessWorkflowDefinitionOption> workflowOptions = [];
     private IReadOnlyList<ProjectPartyOption> partyOptions = [];
     private IReadOnlyList<ProcessManagerAgentOption> managerAgentOptions = [];
 
@@ -134,6 +145,8 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private string artifactAllowedUsage = string.Empty;
     private string artifactReview = string.Empty;
     private Guid? assignmentPartyId;
+    private Guid? assignmentWorkflowDefinitionId;
+    private Guid? assignmentWorkflowVersionId;
     private string assignmentDisplayName = string.Empty;
     private string assignmentExecutorKind = "person";
     private string assignmentBindingReason = string.Empty;
@@ -154,6 +167,7 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private string importJson = string.Empty;
     private string projectName = string.Empty;
     private bool isFeedingDefaults;
+    private readonly CancellationTokenSource componentLifetimeCts = new();
     private Guid? stoppingRunId;
     private bool hasLoadedParameters;
     private Guid? loadedProjectId;
@@ -197,7 +211,9 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
 
     private IReadOnlyList<ProcessRunAssignmentViewModel> DirectMessageAssignments
         => assignments
-            .Where(item => !item.StepDefinitionId.HasValue)
+            .Where(item =>
+                !item.StepDefinitionId.HasValue &&
+                !ProcessExecutorKindNames.IsWorkflow(item.ExecutorKind))
             .OrderBy(
                 item => string.IsNullOrWhiteSpace(item.RoleDisplayName)
                     ? ResolveRoleName(item.RoleRequirementId)
@@ -304,7 +320,7 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
         try
         {
             await CatalogWarmupService.WarmupAsync(synchronizeExistingDefinitions: true);
-            RuntimeStateOverviewService.Invalidate();
+            InvalidateObservationState();
             await LoadWorkspaceAsync();
             SetMessage("Default processes were synchronized from the current template pack.");
         }
@@ -317,5 +333,27 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
             isFeedingDefaults = false;
             await InvokeAsync(StateHasChanged);
         }
+    }
+
+    private void InvalidateObservationState(Guid? definitionId = null, Guid? runId = null)
+    {
+        RuntimeStateOverviewService.Invalidate();
+        if (runId.HasValue)
+        {
+            var definitionForRun = runs.FirstOrDefault(item => item.Id == runId.Value)?.ProcessDefinitionId ??
+                definitionId ??
+                selectedProcessId ??
+                Guid.Empty;
+            ProcessObservationInvalidator.NotifyRunChanged(new ProcessRunObservationKey(ProjectId, definitionForRun, runId.Value));
+            return;
+        }
+
+        if (definitionId.HasValue)
+        {
+            ProcessObservationInvalidator.NotifyDefinitionChanged(new ProcessDefinitionObservationKey(ProjectId, definitionId.Value));
+            return;
+        }
+
+        ProcessObservationInvalidator.NotifyProjectChanged(ProjectId);
     }
 }

@@ -1,0 +1,1651 @@
+@namespace CanDoItAll.Modules.AgentFramework.Pages.Components
+@using CanDoItAll.AgentFramework.Core
+@using CanDoItAll.Components.CanvasLib
+@using CanDoItAll.Components.OverlayLib
+@using CanDoItAll.Modules.AgentFramework.Pages
+@using CanDoItAll.Modules.Workspace.Pages.Components
+
+<SurfaceCard Class="workflow-canvas-editor"
+             data-testid="workflow-canvas-editor">
+    <CanvasWorkbenchStage Eyebrow="Workflow canvas"
+                          Title="@document.Name"
+                          Description="@document.Description"
+                          Stats="CanvasStats">
+        <HeaderActions>
+            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                <Button Text="New draft"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="ResetDraftAsync"
+                        Disabled="@isBusy"
+                        data-testid="workflow-canvas-new-draft" />
+                <Button Text="Validate"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="ValidateAsync"
+                        Disabled="@isBusy"
+                        data-testid="workflow-canvas-validate" />
+                <Button Text="Run preview"
+                        Click="RunPreviewAsync"
+                        Disabled="@isBusy"
+                        IsBusy="@isTesting"
+                        data-testid="workflow-canvas-run-preview" />
+                <Button Text="Save"
+                        Click="SaveAsync"
+                        Disabled="@isBusy"
+                        data-testid="workflow-canvas-save" />
+            </Cluster>
+        </HeaderActions>
+        <Canvas>
+            <CanvasWorkbench @ref="workbenchRef"
+                             Surface="CanvasSurface"
+                             SelectionChanged="HandleCanvasSelectionChangedAsync"
+                             NodesMoved="HandleCanvasNodesMovedAsync"
+                             ContextActionRequested="HandleCanvasContextActionAsync"
+                             CreateActionInvoked="HandleCanvasCreateActionAsync"
+                             NodeEdited="HandleCanvasNodeEditedAsync"
+                             NodeOpened="HandleCanvasNodeOpenedAsync"
+                             StateChanged="HandleCanvasStateChangedAsync">
+                <ToolbarLeftContent>
+                    <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.Wrap">
+                        <Button Icon="widgets"
+                                ButtonStyle="ButtonStyle.Light"
+                                Size="ButtonSize.Small"
+                                Click="ToggleToolboxWindowAsync"
+                                data-testid="workflow-canvas-toggle-toolbox" />
+                        <Button Icon="select_all"
+                                ButtonStyle="ButtonStyle.Light"
+                                Size="ButtonSize.Small"
+                                Click="ToggleSelectionWindowAsync"
+                                data-testid="workflow-canvas-toggle-selection" />
+                        <Button Icon="smart_toy"
+                                ButtonStyle="ButtonStyle.Light"
+                                Size="ButtonSize.Small"
+                                Click="ToggleComponentsWindowAsync"
+                                data-testid="workflow-canvas-toggle-components" />
+                    </Cluster>
+                </ToolbarLeftContent>
+                <OverlayContent>
+                    <span class="workflow-canvas-overlay-safe-top" aria-hidden="true"></span>
+
+                    @if (toolboxWindowState.IsVisible)
+                    {
+                        <CanvasFloatingWindow WindowId="@ToolboxWindowId"
+                                              TestId="workflow-canvas-toolbox-window"
+                                              AriaLabel="Workflow toolbox floating window"
+                                              Kicker="Workflow"
+                                              Title="Nodes and executors"
+                                                      Summary="@($"{document.Nodes.Count} nodes · {executorDescriptors.Count(executor => executor.CanExecute)} executors")"
+                                              BodyClass="workflow-canvas-floating-window__body"
+                                              DefaultPlacement="top-left"
+                                              SafeTopSelector=".workflow-canvas-overlay-safe-top"
+                                              DefaultWidth="300"
+                                              DefaultHeight="380"
+                                              MinWidth="260"
+                                              MinHeight="220"
+                                              MaxWidth="300"
+                                              MaxHeight="520"
+                                              State="@toolboxWindowState"
+                                              StateChanged="HandleToolboxWindowStateChangedAsync">
+                            <OverlayComponentToolbox TestId="workflow-canvas-executor-toolbox"
+                                                     AriaLabel="Workflow nodes and executors toolbox"
+                                                     Class="workflow-canvas-toolbox-catalog"
+                                                     ShowHeader="false"
+                                                     SearchText="@workflowToolboxSearchText"
+                                                     SearchTextChanged="@((string? value) => workflowToolboxSearchText = value ?? string.Empty)"
+                                                     SearchPlaceholder="Search nodes, executors, files, HTTP, spreadsheets"
+                                                     EmptyTitle="No workflow tools match the current search."
+                                                     EmptyDescription="Clear the filter to restore nodes and executors."
+                                                     Badges="@WorkflowToolboxBadges"
+                                                     Sections="@WorkflowToolboxSections"
+                                                     GroupToggled="ExpandWorkflowToolboxGroup"
+                                                     ItemSelected="HandleWorkflowToolboxItemSelectedAsync" />
+                        </CanvasFloatingWindow>
+                    }
+
+                    @if (selectionWindowState.IsVisible)
+                    {
+                        <CanvasFloatingWindow WindowId="@SelectionWindowId"
+                                              TestId="workflow-canvas-selection-window"
+                                              AriaLabel="Workflow selection floating window"
+                                              Kicker="Selection"
+                                              Title="Workflow nodes"
+                                              Summary="@SelectionWindowSummary"
+                                              BodyClass="workflow-canvas-floating-window__body"
+                                              DefaultPlacement="top-right"
+                                              SafeTopSelector=".workflow-canvas-overlay-safe-top"
+                                              DefaultWidth="260"
+                                              DefaultHeight="320"
+                                              MinWidth="240"
+                                              MinHeight="180"
+                                              MaxWidth="260"
+                                              MaxHeight="480"
+                                              State="@selectionWindowState"
+                                              StateChanged="HandleSelectionWindowStateChangedAsync">
+                            <Stack GapScale="LayoutGap.Small">
+                                @foreach (var node in document.Nodes)
+                                {
+                                    <button type="button"
+                                            class="workflow-canvas-node-picker @(selectedNodeId == node.Id.Value ? "workflow-canvas-node-picker--selected" : string.Empty)"
+                                            @onclick="@(() => SelectNode(node.Id.Value))"
+                                            data-testid="workflow-canvas-select-node">
+                                        <span>@node.Name</span>
+                                        <small>@node.Kind</small>
+                                    </button>
+                                }
+
+                                @if (SelectedNode is not null)
+                                {
+                                    <Button Text="Open details"
+                                            Icon="open_in_new"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Size="ButtonSize.Small"
+                                            Click="OpenSelectedNodeDetailsAsync"
+                                            data-testid="workflow-canvas-open-selected-node-details" />
+                                }
+                            </Stack>
+                        </CanvasFloatingWindow>
+                    }
+
+                    @if (componentsWindowState.IsVisible)
+                    {
+                        <CanvasFloatingWindow WindowId="@ComponentsWindowId"
+                                              TestId="workflow-canvas-components-window"
+                                              AriaLabel="Workflow component library floating window"
+                                              Kicker="LLM"
+                                              Title="Prepared calls"
+                                              Summary="@BuildProviderOptionsSummary()"
+                                              BodyClass="workflow-canvas-floating-window__body"
+                                              DefaultPlacement="top-left"
+                                              SafeTopSelector=".workflow-canvas-overlay-safe-top"
+                                              DefaultWidth="320"
+                                              DefaultHeight="380"
+                                              MinWidth="260"
+                                              MinHeight="220"
+                                              MaxWidth="320"
+                                              MaxHeight="520"
+                                              State="@componentsWindowState"
+                                              StateChanged="HandleComponentsWindowStateChangedAsync">
+                            <Split Gap="LayoutGap.Small">
+                                <div>
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="LLM components" />
+                                    <h3 class="workflow-canvas-panel-title">Prepared calls</h3>
+                                </div>
+                                <Button Text="Create"
+                                        Size="ButtonSize.Small"
+                                        Click="CreateDefaultComponentAsync"
+                                        Disabled="@isBusy"
+                                        data-testid="workflow-canvas-create-component" />
+                            </Split>
+                            <p class="workflows-muted mt-3"
+                               data-testid="workflow-canvas-provider-options">@BuildProviderOptionsSummary()</p>
+                            @{
+                                var newComponentModelOptions = ResolveNewComponentModelOptions();
+                            }
+                            <Grid Gap="LayoutGap.Small" ColumnsLg="2" Class="mt-3">
+                                @if (ProviderOptions.Count > 0)
+                                {
+                                    <label class="workflow-canvas-field">
+                                        <span>Provider</span>
+                                        <select class="cda-input"
+                                                value="@newComponentProviderProfileId"
+                                                @onchange="HandleNewComponentProviderChanged"
+                                                data-testid="workflow-canvas-component-provider">
+                                            @if (!ProviderOptions.Any(option => option.IsEnabled))
+                                            {
+                                                <option value="">No enabled chat provider</option>
+                                            }
+                                            @foreach (var providerOption in ProviderOptions)
+                                            {
+                                                <option value="@providerOption.ProviderProfileId.ToString("D")"
+                                                        disabled="@(!providerOption.IsEnabled)">@BuildProviderOptionLabel(providerOption)</option>
+                                            }
+                                        </select>
+                                    </label>
+                                }
+                                <label class="workflow-canvas-field">
+                                    <span>Model</span>
+                                    @if (newComponentModelOptions.Count > 0)
+                                    {
+                                        <select class="cda-input"
+                                                value="@newComponentModel"
+                                                @onchange="HandleNewComponentModelChanged"
+                                                data-testid="workflow-canvas-component-model">
+                                            @foreach (var model in newComponentModelOptions)
+                                            {
+                                                <option value="@model">@model</option>
+                                            }
+                                        </select>
+                                    }
+                                    else
+                                    {
+                                        <input class="cda-input"
+                                               value="@newComponentModel"
+                                               @onchange="HandleNewComponentModelChanged"
+                                               data-testid="workflow-canvas-component-model" />
+                                    }
+                                </label>
+                            </Grid>
+                            @if (componentOptions.Count == 0)
+                            {
+                                <EmptyState Eyebrow="No components"
+                                            Title="Create an LLM component"
+                                            Description="Prepared calls carry provider, model, modality, model settings, instructions, and result shape." />
+                            }
+                            else
+                            {
+                                <Stack GapScale="LayoutGap.Small" Class="mt-3">
+                                    @foreach (var component in componentOptions)
+                                    {
+                                        <div class="workflow-canvas-component" data-testid="workflow-canvas-component">
+                                            <div>
+                                                <strong>@component.Name</strong>
+                                                <span>@ResolveComponentProviderLabel(component) · @component.Model · @component.Modality · @component.ResultShape.Kind</span>
+                                            </div>
+                                            <Button Text="Place"
+                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Size="ButtonSize.Small"
+                                                    Click="@(() => OpenLlmComponentCreateAsync(component))"
+                                                    data-testid="workflow-canvas-place-component" />
+                                        </div>
+                                    }
+                                </Stack>
+                            }
+                        </CanvasFloatingWindow>
+                    }
+                </OverlayContent>
+            </CanvasWorkbench>
+        </Canvas>
+        <Inspector>
+            <Stack GapScale="LayoutGap.Medium" data-testid="workflow-canvas-inspector">
+                <div class="workflow-canvas-panel">
+                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Definition" />
+                    <label class="workflow-canvas-field">
+                        <span>Name</span>
+                        <input class="cda-input"
+                               value="@document.Name"
+                               @onchange="HandleNameChanged"
+                               data-testid="workflow-canvas-name" />
+                    </label>
+                    <label class="workflow-canvas-field">
+                        <span>Description</span>
+                        <textarea class="cda-input cda-input--textarea workflow-canvas-textarea"
+                                  value="@document.Description"
+                                  @onchange="HandleDescriptionChanged"
+                                  data-testid="workflow-canvas-description"></textarea>
+                    </label>
+                    <label class="workflow-canvas-field">
+                        <span>Runtime backend</span>
+                        <select class="cda-input"
+                                value="@document.RuntimePolicy.PreferredBackend"
+                                @onchange="HandleRuntimeBackendChanged"
+                                data-testid="workflow-canvas-runtime">
+                            @foreach (var backend in Enum.GetValues<WorkflowRuntimeBackendKind>())
+                            {
+                                <option value="@backend">@backend</option>
+                            }
+                        </select>
+                    </label>
+                </div>
+
+                @if (SelectedNode is null)
+                {
+                    <EmptyState Eyebrow="No node selected"
+                                Title="Select a workflow node"
+                                Description="Use the canvas or node list to choose the node whose typed settings should be edited." />
+                }
+                else
+                {
+                    var selected = SelectedNode;
+                    <div class="workflow-canvas-panel" data-testid="workflow-canvas-node-editor">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Selected node" />
+                        <label class="workflow-canvas-field">
+                            <span>Node name</span>
+                            <input class="cda-input"
+                                   value="@selected.Name"
+                                   @onchange="args => HandleSelectedNodeNameChanged(selected, args)"
+                                   data-testid="workflow-canvas-node-name" />
+                        </label>
+                        <label class="workflow-canvas-field">
+                            <span>Kind</span>
+                            <select class="cda-input"
+                                    value="@selected.Kind"
+                                    @onchange="args => HandleSelectedNodeKindChanged(selected, args)"
+                                    disabled="@(selected.Kind is WorkflowNodeKind.Start or WorkflowNodeKind.End)"
+                                    data-testid="workflow-canvas-node-kind">
+                                @foreach (var kind in Enum.GetValues<WorkflowNodeKind>())
+                                {
+                                    <option value="@kind">@kind</option>
+                                }
+                            </select>
+                        </label>
+
+                        @if (selected.Kind == WorkflowNodeKind.LlmCall)
+                        {
+                            <label class="workflow-canvas-field">
+                                <span>LLM Call Component</span>
+                                <select class="cda-input"
+                                        value="@FormatComponentId(selected.ComponentId)"
+                                        @onchange="args => HandleSelectedComponentChanged(selected, args)"
+                                        data-testid="workflow-canvas-node-component">
+                                    <option value="">Select component</option>
+                                    @foreach (var component in componentOptions)
+                                    {
+                                        <option value="@component.Id.Value.ToString("D")">@component.Name - @ResolveComponentProviderLabel(component) - @component.Model</option>
+                                    }
+                                </select>
+                            </label>
+                        }
+
+                        @if (selected.Kind == WorkflowNodeKind.HumanInput)
+                        {
+                            <label class="workflow-canvas-field">
+                                <span>Request kind</span>
+                                <select class="cda-input"
+                                        value="@selected.ExternalRequestKind"
+                                        @onchange="args => HandleSelectedRequestKindChanged(selected, args)"
+                                        data-testid="workflow-canvas-node-request-kind">
+                                    @foreach (var requestKind in Enum.GetValues<WorkflowExternalRequestKind>())
+                                    {
+                                        <option value="@requestKind">@requestKind</option>
+                                    }
+                                </select>
+                            </label>
+                        }
+
+                        @if (selected.Kind == WorkflowNodeKind.AgentStep)
+                        {
+                            <label class="workflow-canvas-field">
+                                <span>Agent id</span>
+                                <input class="cda-input"
+                                       value="@selected.AgentId?.ToString("D")"
+                                       @onchange="args => HandleSelectedAgentIdChanged(selected, args)"
+                                       data-testid="workflow-canvas-node-agent-id" />
+                            </label>
+                        }
+
+                        @if (selected.Kind == WorkflowNodeKind.Subworkflow)
+                        {
+                            <label class="workflow-canvas-field">
+                                <span>Subworkflow id</span>
+                                <input class="cda-input"
+                                       value="@selected.SubworkflowId?.Value.ToString("D")"
+                                       @onchange="args => HandleSelectedSubworkflowIdChanged(selected, args)"
+                                       data-testid="workflow-canvas-node-subworkflow-id" />
+                            </label>
+                        }
+
+                        @if (selected.Kind == WorkflowNodeKind.Executor)
+                        {
+                            var descriptor = ResolveSelectedExecutorDescriptor(selected);
+                            var policy = ResolveSelectedExecutionPolicy(selected);
+                            <label class="workflow-canvas-field">
+                                <span>Executor</span>
+                                <select class="cda-input"
+                                        value="@selected.ExecutorId?.Value"
+                                        @onchange="args => HandleSelectedExecutorChanged(selected, args)"
+                                        data-testid="workflow-canvas-node-executor">
+                                    <option value="">Select executor</option>
+                                    @foreach (var executor in executorDescriptors)
+                                    {
+                                    <option value="@executor.Id.Value"
+                                            disabled="@(!executor.CanExecute)">@executor.Name@(executor.CanExecute ? string.Empty : $" ({executor.Availability.Kind.ToString().ToLowerInvariant()})")</option>
+                                    }
+                                </select>
+                            </label>
+
+                            @if (descriptor is not null)
+                            {
+                                <div class="workflow-canvas-executor-summary" data-testid="workflow-canvas-executor-summary">
+                                    <StatusBadge Tone="@WorkflowExecutorCanvasCatalog.ResolveTone(descriptor.Category)"
+                                                 Text="@WorkflowExecutorCanvasCatalog.ResolveCategoryLabel(descriptor.Category)" />
+                                    <span>@descriptor.Description</span>
+                                </div>
+                            }
+
+                            <Grid Gap="LayoutGap.Small" ColumnsLg="3">
+                                <label class="workflow-canvas-field">
+                                    <span>Timeout seconds</span>
+                                    <input class="cda-input"
+                                           type="number"
+                                           min="@WorkflowExecutorPolicyLimits.MinTimeoutSeconds"
+                                           max="@WorkflowExecutorPolicyLimits.MaxTimeoutSeconds"
+                                           value="@policy.TimeoutSeconds"
+                                           @onchange="args => UpdateSelectedExecutionPolicy(selected, item => item with { TimeoutSeconds = ReadInt(args, item.TimeoutSeconds) })"
+                                           data-testid="workflow-canvas-executor-timeout" />
+                                </label>
+                                <label class="workflow-canvas-field">
+                                    <span>Retries</span>
+                                    <input class="cda-input"
+                                           type="number"
+                                           min="@WorkflowExecutorPolicyLimits.MinRetryAttempts"
+                                           max="@WorkflowExecutorPolicyLimits.MaxRetryAttempts"
+                                           value="@policy.MaxRetryAttempts"
+                                           @onchange="args => UpdateSelectedExecutionPolicy(selected, item => item with { MaxRetryAttempts = ReadInt(args, item.MaxRetryAttempts) })"
+                                           data-testid="workflow-canvas-executor-retries" />
+                                </label>
+                                <label class="workflow-canvas-field">
+                                    <span>Retry delay ms</span>
+                                    <input class="cda-input"
+                                           type="number"
+                                           min="@WorkflowExecutorPolicyLimits.MinRetryDelayMilliseconds"
+                                           max="@WorkflowExecutorPolicyLimits.MaxRetryDelayMilliseconds"
+                                           value="@policy.RetryDelayMilliseconds"
+                                           @onchange="args => UpdateSelectedExecutionPolicy(selected, item => item with { RetryDelayMilliseconds = ReadInt(args, item.RetryDelayMilliseconds) })"
+                                           data-testid="workflow-canvas-executor-retry-delay" />
+                                </label>
+                            </Grid>
+                            <label class="workflow-canvas-check-field">
+                                <input type="checkbox"
+                                       checked="@policy.CaptureOutputArtifact"
+                                       @onchange="args => UpdateSelectedExecutionPolicy(selected, item => item with { CaptureOutputArtifact = ReadBool(args) })"
+                                       data-testid="workflow-canvas-executor-capture-output" />
+                                <span>Capture output as workflow artifact</span>
+                            </label>
+
+                            @if (descriptor?.ConfigurationSchema.Fields.Count > 0)
+                            {
+                                <SettingsRendererHost RendererKey="@descriptor.SetupRendererKey"
+                                                      Schema="@descriptor.ConfigurationSchema"
+                                                      State="@CreateExecutorConfigurationState(selected, descriptor)"
+                                                      Secrets="secretPickerItems"
+                                                      StateChanged="state => HandleSelectedExecutorConfigurationStateChanged(selected, descriptor.ConfigurationSchema, state)"
+                                                      TestIdPrefix="workflow-canvas-executor-settings" />
+                            }
+                            else if (selected.ExecutorId == WorkflowExecutorIds.StorageFile)
+                            {
+                                var settings = ReadExecutorSettings<WorkflowStorageFileExecutorSettings>(selected);
+                                <Grid Gap="LayoutGap.Small" ColumnsLg="2">
+                                    <label class="workflow-canvas-field">
+                                        <span>Operation</span>
+                                        <select class="cda-input"
+                                                value="@settings.Operation"
+                                                @onchange="args => UpdateEnumExecutorSettings<WorkflowStorageFileExecutorSettings, WorkflowStorageFileOperation>(selected, args, (item, operation) => item with { Operation = operation })">
+                                            @foreach (var operation in Enum.GetValues<WorkflowStorageFileOperation>())
+                                            {
+                                                <option value="@operation">@operation</option>
+                                            }
+                                        </select>
+                                    </label>
+                                    <label class="workflow-canvas-field">
+                                        <span>Path</span>
+                                        <input class="cda-input"
+                                               value="@settings.Path"
+                                               @onchange="args => UpdateExecutorSettings<WorkflowStorageFileExecutorSettings>(selected, item => item with { Path = ReadString(args) })" />
+                                    </label>
+                                    <label class="workflow-canvas-field">
+                                        <span>Destination path</span>
+                                        <input class="cda-input"
+                                               value="@settings.DestinationPath"
+                                               @onchange="args => UpdateExecutorSettings<WorkflowStorageFileExecutorSettings>(selected, item => item with { DestinationPath = ReadString(args) })" />
+                                    </label>
+                                    <label class="workflow-canvas-field">
+                                        <span>Search pattern</span>
+                                        <input class="cda-input"
+                                               value="@settings.SearchPattern"
+                                               @onchange="args => UpdateExecutorSettings<WorkflowStorageFileExecutorSettings>(selected, item => item with { SearchPattern = ReadString(args) })" />
+                                    </label>
+                                    <label class="workflow-canvas-field">
+                                        <span>Max results</span>
+                                        <input class="cda-input"
+                                               type="number"
+                                               value="@settings.MaxResults"
+                                               @onchange="args => UpdateExecutorSettings<WorkflowStorageFileExecutorSettings>(selected, item => item with { MaxResults = ReadInt(args, item.MaxResults) })" />
+                                    </label>
+                                    <label class="workflow-canvas-field">
+                                        <span>Max characters</span>
+                                        <input class="cda-input"
+                                               type="number"
+                                               value="@settings.MaxCharacters"
+                                               @onchange="args => UpdateExecutorSettings<WorkflowStorageFileExecutorSettings>(selected, item => item with { MaxCharacters = ReadInt(args, item.MaxCharacters) })" />
+                                    </label>
+                                </Grid>
+                                <label class="workflow-canvas-field">
+                                    <span>Query</span>
+                                    <input class="cda-input"
+                                           value="@settings.Query"
+                                           @onchange="args => UpdateExecutorSettings<WorkflowStorageFileExecutorSettings>(selected, item => item with { Query = ReadString(args) })" />
+                                </label>
+                                <label class="workflow-canvas-field">
+                                    <span>Content</span>
+                                    <textarea class="cda-input cda-input--textarea workflow-canvas-textarea"
+                                              value="@settings.Content"
+                                              @onchange="args => UpdateExecutorSettings<WorkflowStorageFileExecutorSettings>(selected, item => item with { Content = ReadString(args) })"></textarea>
+                                </label>
+                                <label class="workflow-canvas-check-field">
+                                    <input type="checkbox"
+                                           checked="@settings.ContentFromInput"
+                                           @onchange="args => UpdateExecutorSettings<WorkflowStorageFileExecutorSettings>(selected, item => item with { ContentFromInput = ReadBool(args) })" />
+                                    <span>Use workflow input as content</span>
+                                </label>
+                                <label class="workflow-canvas-check-field">
+                                    <input type="checkbox"
+                                           checked="@settings.Overwrite"
+                                           @onchange="args => UpdateExecutorSettings<WorkflowStorageFileExecutorSettings>(selected, item => item with { Overwrite = ReadBool(args) })" />
+                                    <span>Overwrite existing file</span>
+                                </label>
+                            }
+                            else if (selected.ExecutorId == WorkflowExecutorIds.HttpFetch)
+                            {
+                                var settings = ReadExecutorSettings<WorkflowHttpExecutorSettings>(selected);
+                                <Grid Gap="LayoutGap.Small" ColumnsLg="2">
+                                    <label class="workflow-canvas-field">
+                                        <span>Method</span>
+                                        <select class="cda-input"
+                                                value="@settings.Method"
+                                                @onchange="args => UpdateEnumExecutorSettings<WorkflowHttpExecutorSettings, WorkflowHttpMethodKind>(selected, args, (item, method) => item with { Method = method })">
+                                            @foreach (var method in Enum.GetValues<WorkflowHttpMethodKind>())
+                                            {
+                                                <option value="@method">@method</option>
+                                            }
+                                        </select>
+                                    </label>
+                                    <label class="workflow-canvas-field">
+                                        <span>Max response bytes</span>
+                                        <input class="cda-input"
+                                               type="number"
+                                               value="@settings.MaxResponseBytes"
+                                               @onchange="args => UpdateExecutorSettings<WorkflowHttpExecutorSettings>(selected, item => item with { MaxResponseBytes = ReadInt(args, item.MaxResponseBytes) })" />
+                                    </label>
+                                </Grid>
+                                <label class="workflow-canvas-field">
+                                    <span>URL</span>
+                                    <input class="cda-input"
+                                           value="@settings.Url"
+                                           @onchange="args => UpdateExecutorSettings<WorkflowHttpExecutorSettings>(selected, item => item with { Url = ReadString(args) })" />
+                                </label>
+                                <label class="workflow-canvas-field">
+                                    <span>Headers JSON</span>
+                                    <textarea class="cda-input cda-input--textarea workflow-canvas-textarea"
+                                              value="@BuildHeadersJson(selected)"
+                                              @onchange="args => UpdateHttpHeadersJson(selected, args)"></textarea>
+                                </label>
+                                <div class="workflow-canvas-panel workflow-canvas-panel--soft"
+                                     data-testid="workflow-http-secret-header">
+                                    <Split Breakpoint="LayoutBreakpoint.Md"
+                                           Gap="LayoutGap.Small"
+                                           AlignItems="AlignItems.Center"
+                                           JustifyContent="JustifyContent.SpaceBetween"
+                                           Wrap="FlexWrap.Wrap">
+                                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Secret header" />
+                                        <Button Text="Refresh secrets"
+                                                Variant="Variant.Text"
+                                                ButtonStyle="ButtonStyle.Base"
+                                                Size="ButtonSize.Small"
+                                                Disabled="@isLoadingSecrets"
+                                                IsBusy="@isLoadingSecrets"
+                                                Click="LoadSecretPickerItemsAsync"
+                                                data-testid="workflow-http-secret-refresh" />
+                                    </Split>
+                                    @if (!string.IsNullOrWhiteSpace(secretPickerErrorMessage))
+                                    {
+                                        <p class="workflow-canvas-error">@secretPickerErrorMessage</p>
+                                    }
+                                    else if (!isLoadingSecrets && secretPickerItems.Count == 0)
+                                    {
+                                        <p class="workflow-canvas-help">No stored secrets found in the active database.</p>
+                                    }
+                                    <Grid Gap="LayoutGap.Small" ColumnsLg="2">
+                                        <label class="workflow-canvas-field">
+                                            <span>Secret</span>
+                                            <select class="cda-input"
+                                                    value="@(settings.SecretHeader.SecretId?.ToString("D") ?? string.Empty)"
+                                                    disabled="@isLoadingSecrets"
+                                                    @onchange="args => UpdateHttpSecretId(selected, args)"
+                                                    data-testid="workflow-http-secret-select">
+                                                <option value="">None</option>
+                                                @foreach (var secret in secretPickerItems)
+                                                {
+                                                    <option value="@secret.Id.ToString("D")">@secret.Name (@secret.Kind)</option>
+                                                }
+                                            </select>
+                                        </label>
+                                        <label class="workflow-canvas-field">
+                                            <span>Header</span>
+                                            <input class="cda-input"
+                                                   value="@settings.SecretHeader.HeaderName"
+                                                   @onchange="args => UpdateHttpSecretHeaderName(selected, args)"
+                                                   data-testid="workflow-http-secret-header-name" />
+                                        </label>
+                                        <label class="workflow-canvas-field">
+                                            <span>Format</span>
+                                            <select class="cda-input"
+                                                    value="@settings.SecretHeader.ValueFormat"
+                                                    @onchange="args => UpdateHttpSecretValueFormat(selected, args)"
+                                                    data-testid="workflow-http-secret-format">
+                                                @foreach (var valueFormat in Enum.GetValues<WorkflowHttpSecretValueFormat>())
+                                                {
+                                                    <option value="@valueFormat">@valueFormat</option>
+                                                }
+                                            </select>
+                                        </label>
+                                        @if (settings.SecretHeader.ValueFormat == WorkflowHttpSecretValueFormat.CustomPrefix)
+                                        {
+                                            <label class="workflow-canvas-field">
+                                                <span>Prefix</span>
+                                                <input class="cda-input"
+                                                       value="@settings.SecretHeader.CustomPrefix"
+                                                       @onchange="args => UpdateHttpSecretCustomPrefix(selected, args)"
+                                                       data-testid="workflow-http-secret-prefix" />
+                                            </label>
+                                        }
+                                    </Grid>
+                                </div>
+                                <label class="workflow-canvas-field">
+                                    <span>Body</span>
+                                    <textarea class="cda-input cda-input--textarea workflow-canvas-textarea"
+                                              value="@settings.Body"
+                                              @onchange="args => UpdateExecutorSettings<WorkflowHttpExecutorSettings>(selected, item => item with { Body = ReadString(args) })"></textarea>
+                                </label>
+                            }
+                            else if (selected.ExecutorId == WorkflowExecutorIds.Spreadsheet)
+                            {
+                                var settings = ReadExecutorSettings<WorkflowSpreadsheetExecutorSettings>(selected);
+                                <Grid Gap="LayoutGap.Small" ColumnsLg="2">
+                                    <label class="workflow-canvas-field">
+                                        <span>Operation</span>
+                                        <select class="cda-input"
+                                                value="@settings.Operation"
+                                                @onchange="args => UpdateEnumExecutorSettings<WorkflowSpreadsheetExecutorSettings, WorkflowSpreadsheetOperation>(selected, args, (item, operation) => item with { Operation = operation })">
+                                            @foreach (var operation in Enum.GetValues<WorkflowSpreadsheetOperation>())
+                                            {
+                                                <option value="@operation">@operation</option>
+                                            }
+                                        </select>
+                                    </label>
+                                    <label class="workflow-canvas-field">
+                                        <span>Workbook path</span>
+                                        <input class="cda-input"
+                                               value="@settings.WorkbookPath"
+                                               @onchange="args => UpdateExecutorSettings<WorkflowSpreadsheetExecutorSettings>(selected, item => item with { WorkbookPath = ReadString(args) })" />
+                                    </label>
+                                    <label class="workflow-canvas-field">
+                                        <span>Output workbook</span>
+                                        <input class="cda-input"
+                                               value="@settings.OutputWorkbookPath"
+                                               @onchange="args => UpdateExecutorSettings<WorkflowSpreadsheetExecutorSettings>(selected, item => item with { OutputWorkbookPath = ReadString(args) })" />
+                                    </label>
+                                    <label class="workflow-canvas-field">
+                                        <span>Worksheet</span>
+                                        <input class="cda-input"
+                                               value="@settings.WorksheetName"
+                                               @onchange="args => UpdateExecutorSettings<WorkflowSpreadsheetExecutorSettings>(selected, item => item with { WorksheetName = ReadString(args) })" />
+                                    </label>
+                                    <label class="workflow-canvas-field">
+                                        <span>Cell</span>
+                                        <input class="cda-input"
+                                               value="@settings.CellAddress"
+                                               @onchange="args => UpdateExecutorSettings<WorkflowSpreadsheetExecutorSettings>(selected, item => item with { CellAddress = ReadString(args) })" />
+                                    </label>
+                                    <label class="workflow-canvas-field">
+                                        <span>Range</span>
+                                        <input class="cda-input"
+                                               value="@settings.RangeAddress"
+                                               @onchange="args => UpdateExecutorSettings<WorkflowSpreadsheetExecutorSettings>(selected, item => item with { RangeAddress = ReadString(args) })" />
+                                    </label>
+                                    <label class="workflow-canvas-field">
+                                        <span>Max rows</span>
+                                        <input class="cda-input"
+                                               type="number"
+                                               value="@settings.MaxRows"
+                                               @onchange="args => UpdateExecutorSettings<WorkflowSpreadsheetExecutorSettings>(selected, item => item with { MaxRows = ReadInt(args, item.MaxRows) })" />
+                                    </label>
+                                    <label class="workflow-canvas-field">
+                                        <span>Max columns</span>
+                                        <input class="cda-input"
+                                               type="number"
+                                               value="@settings.MaxColumns"
+                                               @onchange="args => UpdateExecutorSettings<WorkflowSpreadsheetExecutorSettings>(selected, item => item with { MaxColumns = ReadInt(args, item.MaxColumns) })" />
+                                    </label>
+                                </Grid>
+                                <label class="workflow-canvas-field">
+                                    <span>Value</span>
+                                    <input class="cda-input"
+                                           value="@settings.Value"
+                                           @onchange="args => UpdateExecutorSettings<WorkflowSpreadsheetExecutorSettings>(selected, item => item with { Value = ReadString(args) })" />
+                                </label>
+                                <Grid Gap="LayoutGap.Small" ColumnsLg="2">
+                                    <label class="workflow-canvas-field">
+                                        <span>Cell writes JSON</span>
+                                        <textarea class="cda-input cda-input--textarea workflow-canvas-textarea"
+                                                  value="@BuildCellWritesJson(selected)"
+                                                  @onchange="args => UpdateSpreadsheetCellWritesJson(selected, args)"></textarea>
+                                    </label>
+                                    <label class="workflow-canvas-field">
+                                        <span>Range writes JSON</span>
+                                        <textarea class="cda-input cda-input--textarea workflow-canvas-textarea"
+                                                  value="@BuildRangeWritesJson(selected)"
+                                                  @onchange="args => UpdateSpreadsheetRangeWritesJson(selected, args)"></textarea>
+                                    </label>
+                                </Grid>
+                                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="mt-3">
+                                    <label class="workflow-canvas-check-field">
+                                        <input type="checkbox"
+                                               checked="@settings.CreateWorkbookIfMissing"
+                                               @onchange="args => UpdateExecutorSettings<WorkflowSpreadsheetExecutorSettings>(selected, item => item with { CreateWorkbookIfMissing = ReadBool(args) })" />
+                                        <span>Create workbook if missing</span>
+                                    </label>
+                                    <label class="workflow-canvas-check-field">
+                                        <input type="checkbox"
+                                               checked="@settings.Overwrite"
+                                               @onchange="args => UpdateExecutorSettings<WorkflowSpreadsheetExecutorSettings>(selected, item => item with { Overwrite = ReadBool(args) })" />
+                                        <span>Overwrite output workbook</span>
+                                    </label>
+                                </Cluster>
+                            }
+                            else if (selected.ExecutorId == WorkflowExecutorIds.ProjectStructure)
+                            {
+                                var settings = ReadExecutorSettings<WorkflowProjectStructureExecutorSettings>(selected);
+                                <Grid Gap="LayoutGap.Small" ColumnsLg="2">
+                                    <label class="workflow-canvas-field">
+                                        <span>Operation</span>
+                                        <select class="cda-input"
+                                                value="@settings.Operation"
+                                                @onchange="args => UpdateEnumExecutorSettings<WorkflowProjectStructureExecutorSettings, WorkflowProjectStructureOperation>(selected, args, (item, operation) => item with { Operation = operation })">
+                                            @foreach (var operation in Enum.GetValues<WorkflowProjectStructureOperation>())
+                                            {
+                                                <option value="@operation">@operation</option>
+                                            }
+                                        </select>
+                                    </label>
+                                    <label class="workflow-canvas-field">
+                                        <span>Project id</span>
+                                        <input class="cda-input"
+                                               value="@settings.ProjectId?.ToString("D")"
+                                               @onchange="args => UpdateExecutorSettings<WorkflowProjectStructureExecutorSettings>(selected, item => item with { ProjectId = Guid.TryParse(ReadString(args), out var projectId) ? projectId : null })" />
+                                    </label>
+                                    <label class="workflow-canvas-field">
+                                        <span>Node id</span>
+                                        <input class="cda-input"
+                                               value="@settings.NodeId"
+                                               @onchange="args => UpdateExecutorSettings<WorkflowProjectStructureExecutorSettings>(selected, item => item with { NodeId = ReadString(args) })" />
+                                    </label>
+                                    <label class="workflow-canvas-field">
+                                        <span>Asset kind</span>
+                                        <select class="cda-input"
+                                                value="@settings.AssetKind"
+                                                @onchange="args => UpdateExecutorSettings<WorkflowProjectStructureExecutorSettings>(selected, item => item with { AssetKind = ReadString(args) })">
+                                            <option value="md">Markdown</option>
+                                            <option value="json">JSON</option>
+                                            <option value="mermaid">Mermaid</option>
+                                            <option value="image">Image</option>
+                                            <option value="xlsx">Excel</option>
+                                        </select>
+                                    </label>
+                                    <label class="workflow-canvas-field">
+                                        <span>Content type</span>
+                                        <input class="cda-input"
+                                               value="@settings.ContentType"
+                                               @onchange="args => UpdateExecutorSettings<WorkflowProjectStructureExecutorSettings>(selected, item => item with { ContentType = ReadString(args) })" />
+                                    </label>
+                                    <label class="workflow-canvas-field">
+                                        <span>Source workspace path</span>
+                                        <input class="cda-input"
+                                               value="@settings.SourceWorkspacePath"
+                                               @onchange="args => UpdateExecutorSettings<WorkflowProjectStructureExecutorSettings>(selected, item => item with { SourceWorkspacePath = ReadString(args) })" />
+                                    </label>
+                                </Grid>
+                                <label class="workflow-canvas-field">
+                                    <span>Title</span>
+                                    <input class="cda-input"
+                                           value="@settings.Title"
+                                           @onchange="args => UpdateExecutorSettings<WorkflowProjectStructureExecutorSettings>(selected, item => item with { Title = ReadString(args) })" />
+                                </label>
+                                <label class="workflow-canvas-field">
+                                    <span>Content</span>
+                                    <textarea class="cda-input cda-input--textarea workflow-canvas-textarea"
+                                              value="@settings.Content"
+                                              @onchange="args => UpdateExecutorSettings<WorkflowProjectStructureExecutorSettings>(selected, item => item with { Content = ReadString(args) })"></textarea>
+                                </label>
+                                <label class="workflow-canvas-check-field">
+                                    <input type="checkbox"
+                                           checked="@settings.ContentFromInput"
+                                           @onchange="args => UpdateExecutorSettings<WorkflowProjectStructureExecutorSettings>(selected, item => item with { ContentFromInput = ReadBool(args) })" />
+                                    <span>Use workflow input as content</span>
+                                </label>
+                            }
+                            else if (selected.ExecutorId == WorkflowExecutorIds.ImageGeneration)
+                            {
+                                var settings = ReadExecutorSettings<WorkflowImageGenerationExecutorSettings>(selected);
+                                <Grid Gap="LayoutGap.Small" ColumnsLg="2">
+                                    <label class="workflow-canvas-field">
+                                        <span>Operation</span>
+                                        <select class="cda-input"
+                                                value="@settings.Operation"
+                                                @onchange="args => UpdateEnumExecutorSettings<WorkflowImageGenerationExecutorSettings, WorkflowImageGenerationOperation>(selected, args, (item, operation) => item with { Operation = operation })">
+                                            @foreach (var operation in Enum.GetValues<WorkflowImageGenerationOperation>())
+                                            {
+                                                <option value="@operation">@operation</option>
+                                            }
+                                        </select>
+                                    </label>
+                                    <label class="workflow-canvas-field">
+                                        <span>Provider profile id</span>
+                                        <input class="cda-input"
+                                               value="@settings.ProviderProfileId?.ToString("D")"
+                                               @onchange="args => UpdateExecutorSettings<WorkflowImageGenerationExecutorSettings>(selected, item => item with { ProviderProfileId = Guid.TryParse(ReadString(args), out var providerId) ? providerId : null })" />
+                                    </label>
+                                    <label class="workflow-canvas-field">
+                                        <span>Model</span>
+                                        <input class="cda-input"
+                                               value="@settings.Model"
+                                               @onchange="args => UpdateExecutorSettings<WorkflowImageGenerationExecutorSettings>(selected, item => item with { Model = ReadString(args) })" />
+                                    </label>
+                                    <label class="workflow-canvas-field">
+                                        <span>Size</span>
+                                        <input class="cda-input"
+                                               value="@settings.Size"
+                                               @onchange="args => UpdateExecutorSettings<WorkflowImageGenerationExecutorSettings>(selected, item => item with { Size = ReadString(args) })" />
+                                    </label>
+                                    <label class="workflow-canvas-field">
+                                        <span>Quality</span>
+                                        <input class="cda-input"
+                                               value="@settings.Quality"
+                                               @onchange="args => UpdateExecutorSettings<WorkflowImageGenerationExecutorSettings>(selected, item => item with { Quality = ReadString(args) })" />
+                                    </label>
+                                    <label class="workflow-canvas-field">
+                                        <span>Output format</span>
+                                        <input class="cda-input"
+                                               value="@settings.OutputFormat"
+                                               @onchange="args => UpdateExecutorSettings<WorkflowImageGenerationExecutorSettings>(selected, item => item with { OutputFormat = ReadString(args) })" />
+                                    </label>
+                                </Grid>
+                                <label class="workflow-canvas-field">
+                                    <span>Output workspace path</span>
+                                    <input class="cda-input"
+                                           value="@settings.OutputWorkspacePath"
+                                           @onchange="args => UpdateExecutorSettings<WorkflowImageGenerationExecutorSettings>(selected, item => item with { OutputWorkspacePath = ReadString(args) })" />
+                                </label>
+                                <label class="workflow-canvas-field">
+                                    <span>Prompt</span>
+                                    <textarea class="cda-input cda-input--textarea workflow-canvas-textarea"
+                                              value="@settings.Prompt"
+                                              @onchange="args => UpdateExecutorSettings<WorkflowImageGenerationExecutorSettings>(selected, item => item with { Prompt = ReadString(args) })"></textarea>
+                                </label>
+                            }
+                        }
+
+                        <Grid Gap="LayoutGap.Small" ColumnsLg="2">
+                            <label class="workflow-canvas-field">
+                                <span>Input shape</span>
+                                <select class="cda-input"
+                                        value="@selected.InputShapeKind"
+                                        @onchange="args => HandleSelectedInputShapeChanged(selected, args)"
+                                        data-testid="workflow-canvas-node-input-shape">
+                                    @foreach (var shape in Enum.GetValues<WorkflowValueShapeKind>())
+                                    {
+                                        <option value="@shape">@shape</option>
+                                    }
+                                </select>
+                            </label>
+                            <label class="workflow-canvas-field">
+                                <span>Result shape</span>
+                                <select class="cda-input"
+                                        value="@selected.ResultShapeKind"
+                                        @onchange="args => HandleSelectedResultShapeChanged(selected, args)"
+                                        data-testid="workflow-canvas-node-result-shape">
+                                    @foreach (var shape in Enum.GetValues<WorkflowValueShapeKind>())
+                                    {
+                                        <option value="@shape">@shape</option>
+                                    }
+                                </select>
+                            </label>
+                        </Grid>
+
+                        <label class="workflow-canvas-field">
+                            <span>Instructions</span>
+                            <textarea class="cda-input cda-input--textarea workflow-canvas-textarea"
+                                      value="@selected.Instructions"
+                                      @onchange="args => HandleSelectedInstructionsChanged(selected, args)"
+                                      data-testid="workflow-canvas-node-instructions"></textarea>
+                        </label>
+
+                        <Button Text="Remove node"
+                                ButtonStyle="ButtonStyle.Danger"
+                                Size="ButtonSize.Small"
+                                Disabled="@(selected.Kind is WorkflowNodeKind.Start or WorkflowNodeKind.End)"
+                                Click="RemoveSelectedNodeAsync"
+                                data-testid="workflow-canvas-remove-node" />
+                    </div>
+                }
+
+                <div class="workflow-canvas-panel" data-testid="workflow-canvas-edge-editor">
+                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Edges" />
+                    @if (editingEdgeId is not null)
+                    {
+                        <p class="workflow-canvas-route-editing">Editing @editingEdgeId.Value</p>
+                    }
+                    <Grid Gap="LayoutGap.Small" ColumnsLg="2">
+                        <label class="workflow-canvas-field">
+                            <span>Source</span>
+                            <select class="cda-input" @bind="edgeSourceNodeId" data-testid="workflow-canvas-edge-source">
+                                @foreach (var node in document.Nodes.Where(node => node.Kind != WorkflowNodeKind.End))
+                                {
+                                    <option value="@node.Id.Value">@node.Name</option>
+                                }
+                            </select>
+                        </label>
+                        <label class="workflow-canvas-field">
+                            <span>Target</span>
+                            <select class="cda-input" @bind="edgeTargetNodeId" data-testid="workflow-canvas-edge-target">
+                                @foreach (var node in document.Nodes.Where(node => node.Kind != WorkflowNodeKind.Start))
+                                {
+                                    <option value="@node.Id.Value">@node.Name</option>
+                                }
+                            </select>
+                        </label>
+                    </Grid>
+                    <div class="workflow-canvas-route-builder">
+                        <Grid Gap="LayoutGap.Small" ColumnsLg="2">
+                            <label class="workflow-canvas-field">
+                                <span>Route mode</span>
+                                <select class="cda-input"
+                                        value="@edgeRouteKind"
+                                        @onchange="HandleEdgeRouteKindChanged"
+                                        data-testid="workflow-canvas-edge-route-kind">
+                                    @foreach (var kind in Enum.GetValues<WorkflowRouteKind>())
+                                    {
+                                        <option value="@kind">@WorkflowCanvasDefinitionMapper.ResolveRouteModeLabel(kind)</option>
+                                    }
+                                </select>
+                            </label>
+                            <label class="workflow-canvas-field">
+                                <span>Edge label</span>
+                                <input class="cda-input"
+                                       @bind="edgeRouteLabel"
+                                       data-testid="workflow-canvas-edge-route-label" />
+                            </label>
+                        </Grid>
+
+                        @if (IsPredicateRoute(edgeRouteKind))
+                        {
+                            <Grid Gap="LayoutGap.Small" ColumnsLg="2">
+                                <label class="workflow-canvas-field">
+                                    <span>JSON path</span>
+                                    <input class="cda-input"
+                                           @bind="edgeRouteJsonPath"
+                                           placeholder="$.status"
+                                           data-testid="workflow-canvas-edge-route-json-path" />
+                                </label>
+                                @if (ShowsOperator(edgeRouteKind))
+                                {
+                                    <label class="workflow-canvas-field">
+                                        <span>Operator</span>
+                                        <select class="cda-input"
+                                                @bind="edgeRouteOperator"
+                                                data-testid="workflow-canvas-edge-route-operator">
+                                            @foreach (var routeOperator in Enum.GetValues<WorkflowRouteOperator>())
+                                            {
+                                                <option value="@routeOperator">@WorkflowRoutingValidation.FormatOperator(routeOperator)</option>
+                                            }
+                                        </select>
+                                    </label>
+                                }
+                            </Grid>
+                        }
+
+                        @if (ShowsExpectedValue(edgeRouteKind, edgeRouteOperator))
+                        {
+                            <Grid Gap="LayoutGap.Small" ColumnsLg="2">
+                                <label class="workflow-canvas-field">
+                                    <span>Value kind</span>
+                                    <select class="cda-input"
+                                            @bind="edgeRouteValueKind"
+                                            data-testid="workflow-canvas-edge-route-value-kind">
+                                        @foreach (var valueKind in Enum.GetValues<WorkflowRouteValueKind>())
+                                        {
+                                            <option value="@valueKind">@valueKind</option>
+                                        }
+                                    </select>
+                                </label>
+                                <label class="workflow-canvas-field">
+                                    <span>Expected value</span>
+                                    <input class="cda-input"
+                                           @bind="edgeRouteExpectedValue"
+                                           data-testid="workflow-canvas-edge-route-expected-value" />
+                                </label>
+                            </Grid>
+                        }
+
+                        @if (edgeRouteKind == WorkflowRouteKind.FanOutSelector)
+                        {
+                            <label class="workflow-canvas-field">
+                                <span>Fan-out target index</span>
+                                <input class="cda-input"
+                                       type="number"
+                                       min="0"
+                                       value="@(edgeRouteFanOutTargetIndex?.ToString() ?? string.Empty)"
+                                       @onchange="HandleEdgeFanOutTargetIndexChanged"
+                                       data-testid="workflow-canvas-edge-route-fanout-index" />
+                            </label>
+                        }
+
+                        @if (ShowsCaseSensitivity(edgeRouteKind, edgeRouteOperator))
+                        {
+                            <label class="workflow-canvas-check-field">
+                                <input type="checkbox"
+                                       @bind="edgeRouteCaseSensitive"
+                                       data-testid="workflow-canvas-edge-route-case-sensitive" />
+                                Case-sensitive comparison
+                            </label>
+                        }
+                    </div>
+                    <Grid Gap="LayoutGap.Small" ColumnsLg="2" Class="workflow-canvas-legacy-edge-fields">
+                        <label class="workflow-canvas-field">
+                            <span>Kind</span>
+                            <select class="cda-input" value="@edgeKind" disabled data-testid="workflow-canvas-edge-kind">
+                                @foreach (var kind in Enum.GetValues<WorkflowEdgeKind>())
+                                {
+                                    <option value="@kind">@kind</option>
+                                }
+                            </select>
+                        </label>
+                        <label class="workflow-canvas-field">
+                            <span>Legacy condition</span>
+                            <input class="cda-input" @bind="edgeCondition" data-testid="workflow-canvas-edge-condition" />
+                        </label>
+                    </Grid>
+                    <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.Wrap" Class="mt-3">
+                        <Button Text="@EdgeEditorSubmitLabel"
+                                Size="ButtonSize.Small"
+                                Click="AddEdgeAsync"
+                                Disabled="@isBusy"
+                                data-testid="workflow-canvas-add-edge" />
+                        @if (editingEdgeId is not null)
+                        {
+                            <Button Text="Cancel"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Size="ButtonSize.Small"
+                                    Click="CancelEdgeEditAsync"
+                                    Disabled="@isBusy"
+                                    data-testid="workflow-canvas-cancel-edge-edit" />
+                        }
+                    </Cluster>
+
+                    <Stack GapScale="LayoutGap.Small" Class="mt-3">
+                        @foreach (var edge in document.Edges)
+                        {
+                            <div class="workflow-canvas-edge-row" data-testid="workflow-canvas-edge-row">
+                                <div class="workflow-canvas-edge-row__main">
+                                    <span>@ResolveNodeName(edge.SourceNodeId) -> @ResolveNodeName(edge.TargetNodeId)</span>
+                                    <small data-testid="workflow-canvas-edge-route-summary">@WorkflowCanvasDefinitionMapper.BuildRouteSummary(edge)</small>
+                                </div>
+                                <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.Wrap">
+                                    <StatusBadge Tone="@WorkflowCanvasDefinitionMapper.ResolveRouteTone(edge)"
+                                                 Text="@WorkflowCanvasDefinitionMapper.ResolveRouteLabel(edge)" />
+                                    <StatusBadge Tone="info" Text="@edge.Kind.ToString()" />
+                                    <Button Text="Edit"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Size="ButtonSize.Small"
+                                            Click="@(() => EditEdgeAsync(edge))"
+                                            data-testid="workflow-canvas-edit-edge" />
+                                    <Button Text="Remove"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Size="ButtonSize.Small"
+                                            Click="@(() => RemoveEdgeAsync(edge))"
+                                            data-testid="workflow-canvas-remove-edge" />
+                                </Cluster>
+                            </div>
+                        }
+                    </Stack>
+                </div>
+
+                <div class="workflow-canvas-panel" data-testid="workflow-canvas-validation-panel">
+                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Validation and preview" />
+                    @if (!string.IsNullOrWhiteSpace(errorMessage))
+                    {
+                        <p class="workflow-canvas-error">@errorMessage</p>
+                    }
+                    @if (validationIssues.Count == 0)
+                    {
+                        <p class="workflows-muted">No validation issues for the current canvas draft.</p>
+                    }
+                    else
+                    {
+                        <Stack GapScale="LayoutGap.Small">
+                            @foreach (var issue in validationIssues)
+                            {
+                                <div class="workflows-issue" data-testid="workflow-canvas-validation-issue">
+                                    <strong>@issue.Code</strong>
+                                    <span>@issue.Message</span>
+                                </div>
+                            }
+                        </Stack>
+                    }
+
+                    <label class="workflow-canvas-field mt-3">
+                        <span>Preview input JSON</span>
+                        <textarea class="cda-input cda-input--textarea workflow-canvas-textarea"
+                                  @bind="testInputJson"
+                                  data-testid="workflow-canvas-test-input"></textarea>
+                    </label>
+
+                    @if (testResult is not null)
+                    {
+                        <div class="workflow-canvas-test-result" data-testid="workflow-canvas-test-result">
+                            <StatusBadge Tone="@(testResult.Succeeded ? "success" : "danger")"
+                                         Text="@(testResult.Succeeded ? "Succeeded" : "Failed")" />
+                            @if (testResult.Run is not null)
+                            {
+                                <span>@testResult.Run.Summary</span>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(testResult.ErrorMessage))
+                            {
+                                <span>@WorkflowFailureDisplayFormatter.ToUserMessage(testResult.ErrorMessage)</span>
+                            }
+                        </div>
+                    }
+                </div>
+            </Stack>
+        </Inspector>
+    </CanvasWorkbenchStage>
+</SurfaceCard>
+
+@if (isPreviewInputDialogOpen)
+{
+    <Dialog IsOpen="true"
+            Title="Preview inputs"
+            Eyebrow="Workflow preview"
+            Subtitle="@WorkflowPreviewInputSupport.BuildRequirementSummary(previewInputState.Requirements)"
+            Size="ModalSize.Wide"
+            DenseChrome="true"
+            OnClose="ClosePreviewInputDialog"
+            TestId="workflow-canvas-preview-input-dialog">
+        <ChildContent>
+            <div class="workflow-canvas-node-dialog workflow-canvas-node-dialog--single">
+                <main class="workflow-canvas-node-dialog__main">
+                    <section class="workflow-canvas-dialog-section">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Required context" />
+                        <p class="workflow-canvas-help">@WorkflowPreviewInputSupport.BuildRequirementSummary(previewInputState.Requirements)</p>
+                        @if (!string.IsNullOrWhiteSpace(previewInputState.ProjectLoadError))
+                        {
+                            <p class="workflow-canvas-error">@previewInputState.ProjectLoadError</p>
+                        }
+                    </section>
+
+                    <section class="workflow-canvas-dialog-section">
+                        <Grid Gap="LayoutGap.Small" ColumnsLg="2">
+                            @if (previewProjectOptions.Count > 0)
+                            {
+                                <label class="workflow-canvas-field">
+                                    <span>Project</span>
+                                    <select class="cda-input"
+                                            value="@previewInputState.ProjectId"
+                                            @onchange="HandlePreviewProjectChanged"
+                                            data-testid="workflow-canvas-preview-project-select">
+                                        <option value="">Choose project</option>
+                                        @foreach (var project in previewProjectOptions)
+                                        {
+                                            <option value="@project.Id.ToString("D")">@project.Name</option>
+                                        }
+                                    </select>
+                                </label>
+                            }
+
+                            <label class="workflow-canvas-field">
+                                <span>Project id</span>
+                                <input class="cda-input"
+                                       @bind="previewInputState.ProjectId"
+                                       data-testid="workflow-canvas-preview-project-id" />
+                            </label>
+
+                            <label class="workflow-canvas-field">
+                                <span>Parent node id</span>
+                                <input class="cda-input"
+                                       @bind="previewInputState.ParentNodeId"
+                                       data-testid="workflow-canvas-preview-node-id" />
+                            </label>
+                        </Grid>
+                    </section>
+
+                    @if (previewInputState.Requirements.HasProjectStructureWrites)
+                    {
+                        <section class="workflow-canvas-dialog-section">
+                            <label class="workflow-canvas-check-field">
+                                <input type="checkbox"
+                                       @bind="previewInputState.SkipProjectStructureWrites"
+                                       data-testid="workflow-canvas-preview-skip-project-writes" />
+                                <span>Skip project-structure write steps for this preview</span>
+                            </label>
+                        </section>
+                    }
+
+                    <section class="workflow-canvas-dialog-section">
+                        <label class="workflow-canvas-field">
+                            <span>Input JSON</span>
+                            <textarea class="cda-input cda-input--textarea workflow-canvas-textarea workflow-canvas-json-textarea"
+                                      @bind="previewInputState.InputJson"
+                                      data-testid="workflow-canvas-preview-input-json"></textarea>
+                        </label>
+                    </section>
+
+                    @if (!string.IsNullOrWhiteSpace(previewInputErrorMessage))
+                    {
+                        <p class="workflow-canvas-error" data-testid="workflow-canvas-preview-input-error">@previewInputErrorMessage</p>
+                    }
+                </main>
+            </div>
+        </ChildContent>
+        <Footer>
+            <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+                <Button Text="Cancel"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="ClosePreviewInputDialog"
+                        data-testid="workflow-canvas-preview-input-cancel" />
+                <Button Text="Run preview"
+                        Icon="play_arrow"
+                        Click="StartPreviewFromInputDialogAsync"
+                        Disabled="@isTesting"
+                        IsBusy="@isTesting"
+                        data-testid="workflow-canvas-preview-input-run" />
+            </Cluster>
+        </Footer>
+    </Dialog>
+}
+
+@if (isNodeDetailsDialogOpen && SelectedNode is { } modalNode)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="Workflow node"
+            Title="@modalNode.Name"
+            Subtitle="@BuildNodeDetailsDialogSubtitle(modalNode)"
+            Size="ModalSize.Full"
+            DenseChrome="true"
+            TestId="workflow-canvas-node-details-modal"
+            OnClose="CloseNodeDetailsDialogAsync">
+        <ChildContent>
+            <div class="workflow-canvas-node-dialog">
+                <aside class="workflow-canvas-node-dialog__rail">
+                    <section class="workflow-canvas-dialog-section">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Identity" />
+                        <label class="workflow-canvas-field">
+                            <span>Node name</span>
+                            <input class="cda-input"
+                                   value="@modalNode.Name"
+                                   @onchange="args => HandleSelectedNodeNameChanged(modalNode, args)"
+                                   data-testid="workflow-canvas-node-modal-name" />
+                        </label>
+                        <label class="workflow-canvas-field">
+                            <span>Kind</span>
+                            <select class="cda-input"
+                                    value="@modalNode.Kind"
+                                    @onchange="args => HandleSelectedNodeKindChanged(modalNode, args)"
+                                    disabled="@(modalNode.Kind is WorkflowNodeKind.Start or WorkflowNodeKind.End)"
+                                    data-testid="workflow-canvas-node-modal-kind">
+                                @foreach (var kind in Enum.GetValues<WorkflowNodeKind>())
+                                {
+                                    <option value="@kind">@kind</option>
+                                }
+                            </select>
+                        </label>
+                    </section>
+
+                    <section class="workflow-canvas-dialog-section">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Payload" />
+                        <label class="workflow-canvas-field">
+                            <span>Input shape</span>
+                            <select class="cda-input"
+                                    value="@modalNode.InputShapeKind"
+                                    @onchange="args => HandleSelectedInputShapeChanged(modalNode, args)"
+                                    data-testid="workflow-canvas-node-modal-input-shape">
+                                @foreach (var shape in Enum.GetValues<WorkflowValueShapeKind>())
+                                {
+                                    <option value="@shape">@shape</option>
+                                }
+                            </select>
+                        </label>
+                        <label class="workflow-canvas-field">
+                            <span>Result shape</span>
+                            <select class="cda-input"
+                                    value="@modalNode.ResultShapeKind"
+                                    @onchange="args => HandleSelectedResultShapeChanged(modalNode, args)"
+                                    data-testid="workflow-canvas-node-modal-result-shape">
+                                @foreach (var shape in Enum.GetValues<WorkflowValueShapeKind>())
+                                {
+                                    <option value="@shape">@shape</option>
+                                }
+                            </select>
+                        </label>
+                    </section>
+                </aside>
+
+                <main class="workflow-canvas-node-dialog__main">
+                    @if (modalNode.Kind == WorkflowNodeKind.LlmCall)
+                    {
+                        <section class="workflow-canvas-dialog-section">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="LLM call" />
+                            <label class="workflow-canvas-field">
+                                <span>Component</span>
+                                <select class="cda-input"
+                                        value="@FormatComponentId(modalNode.ComponentId)"
+                                        @onchange="args => HandleSelectedComponentChanged(modalNode, args)"
+                                        data-testid="workflow-canvas-node-modal-component">
+                                    <option value="">Select component</option>
+                                    @foreach (var component in componentOptions)
+                                    {
+                                        <option value="@component.Id.Value.ToString("D")">@component.Name - @ResolveComponentProviderLabel(component) - @component.Model</option>
+                                    }
+                                </select>
+                            </label>
+                        </section>
+                    }
+
+                    @if (modalNode.Kind == WorkflowNodeKind.Executor)
+                    {
+                        var descriptor = ResolveSelectedExecutorDescriptor(modalNode);
+                        var policy = ResolveSelectedExecutionPolicy(modalNode);
+                        <section class="workflow-canvas-dialog-section">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Executor" />
+                            <label class="workflow-canvas-field">
+                                <span>Tool</span>
+                                <select class="cda-input"
+                                        value="@modalNode.ExecutorId?.Value"
+                                        @onchange="args => HandleSelectedExecutorChanged(modalNode, args)"
+                                        data-testid="workflow-canvas-node-modal-executor">
+                                    <option value="">Select executor</option>
+                                    @foreach (var executor in executorDescriptors)
+                                    {
+                              <option value="@executor.Id.Value"
+                                      disabled="@(!executor.CanExecute)">@executor.Name@(executor.CanExecute ? string.Empty : $" ({executor.Availability.Kind.ToString().ToLowerInvariant()})")</option>
+                                    }
+                                </select>
+                            </label>
+
+                            @if (descriptor is not null)
+                            {
+                                <div class="workflow-canvas-executor-summary" data-testid="workflow-canvas-node-modal-executor-summary">
+                                    <StatusBadge Tone="@WorkflowExecutorCanvasCatalog.ResolveTone(descriptor.Category)"
+                                                 Text="@WorkflowExecutorCanvasCatalog.ResolveCategoryLabel(descriptor.Category)" />
+                                    <span>@descriptor.Description</span>
+                                </div>
+                            }
+                        </section>
+
+                        <section class="workflow-canvas-dialog-section">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Execution policy" />
+                            <Grid Gap="LayoutGap.Small" ColumnsLg="3">
+                                <label class="workflow-canvas-field">
+                                    <span>Timeout seconds</span>
+                                    <input class="cda-input"
+                                           type="number"
+                                           min="@WorkflowExecutorPolicyLimits.MinTimeoutSeconds"
+                                           max="@WorkflowExecutorPolicyLimits.MaxTimeoutSeconds"
+                                           value="@policy.TimeoutSeconds"
+                                           @onchange="args => UpdateSelectedExecutionPolicy(modalNode, item => item with { TimeoutSeconds = ReadInt(args, item.TimeoutSeconds) })"
+                                           data-testid="workflow-canvas-node-modal-timeout" />
+                                </label>
+                                <label class="workflow-canvas-field">
+                                    <span>Retries</span>
+                                    <input class="cda-input"
+                                           type="number"
+                                           min="@WorkflowExecutorPolicyLimits.MinRetryAttempts"
+                                           max="@WorkflowExecutorPolicyLimits.MaxRetryAttempts"
+                                           value="@policy.MaxRetryAttempts"
+                                           @onchange="args => UpdateSelectedExecutionPolicy(modalNode, item => item with { MaxRetryAttempts = ReadInt(args, item.MaxRetryAttempts) })"
+                                           data-testid="workflow-canvas-node-modal-retries" />
+                                </label>
+                                <label class="workflow-canvas-field">
+                                    <span>Retry delay ms</span>
+                                    <input class="cda-input"
+                                           type="number"
+                                           min="@WorkflowExecutorPolicyLimits.MinRetryDelayMilliseconds"
+                                           max="@WorkflowExecutorPolicyLimits.MaxRetryDelayMilliseconds"
+                                           value="@policy.RetryDelayMilliseconds"
+                                           @onchange="args => UpdateSelectedExecutionPolicy(modalNode, item => item with { RetryDelayMilliseconds = ReadInt(args, item.RetryDelayMilliseconds) })"
+                                           data-testid="workflow-canvas-node-modal-retry-delay" />
+                                </label>
+                            </Grid>
+                            <label class="workflow-canvas-check-field">
+                                <input type="checkbox"
+                                       checked="@policy.CaptureOutputArtifact"
+                                       @onchange="args => UpdateSelectedExecutionPolicy(modalNode, item => item with { CaptureOutputArtifact = ReadBool(args) })"
+                                       data-testid="workflow-canvas-node-modal-capture-output" />
+                                <span>Capture output as workflow artifact</span>
+                            </label>
+                        </section>
+
+                        @if (descriptor?.ConfigurationSchema.Fields.Count > 0)
+                        {
+                            <section class="workflow-canvas-dialog-section workflow-canvas-dialog-section--fill">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Executor settings" />
+                                <SettingsRendererHost RendererKey="@descriptor.SetupRendererKey"
+                                                      Schema="@descriptor.ConfigurationSchema"
+                                                      State="@CreateExecutorConfigurationState(modalNode, descriptor)"
+                                                      Secrets="secretPickerItems"
+                                                      StateChanged="state => HandleSelectedExecutorConfigurationStateChanged(modalNode, descriptor.ConfigurationSchema, state)"
+                                                      TestIdPrefix="workflow-canvas-node-modal-settings" />
+                            </section>
+                        }
+
+                        <section class="workflow-canvas-dialog-section workflow-canvas-dialog-section--fill">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Executor settings JSON" />
+                            <textarea class="cda-input cda-input--textarea workflow-canvas-textarea workflow-canvas-json-textarea workflow-canvas-json-textarea--dialog"
+                                      value="@FormatExecutorSettingsJson(modalNode)"
+                                      @onchange="args => HandleSelectedExecutorSettingsJsonChanged(modalNode, args)"
+                                      data-testid="workflow-canvas-node-modal-settings-json"></textarea>
+                        </section>
+                    }
+
+                    @if (IsDecisionNode(modalNode))
+                    {
+                        var outgoingRoutes = GetDecisionRouteEdges(modalNode).ToArray();
+                        <section class="workflow-canvas-dialog-section workflow-canvas-decision-routes"
+                                 data-testid="workflow-canvas-decision-routes">
+                            <Split Gap="LayoutGap.Small"
+                                   AlignItems="AlignItems.Center"
+                                   JustifyContent="JustifyContent.SpaceBetween">
+                                <div>
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Decision routes" />
+                                    <h3 class="workflow-canvas-panel-title">@outgoingRoutes.Length route(s)</h3>
+                                </div>
+                                <Button Text="Add route"
+                                        Icon="add"
+                                        Size="ButtonSize.Small"
+                                        Click="@(() => StartAddDecisionRouteAsync(modalNode))"
+                                        data-testid="workflow-canvas-decision-add-route" />
+                            </Split>
+
+                            @if (outgoingRoutes.Length == 0)
+                            {
+                                <p class="workflows-muted mt-3">No routes leave this decision yet.</p>
+                            }
+                            else
+                            {
+                                <Stack GapScale="LayoutGap.Small" Class="mt-3">
+                                    @foreach (var routeEdge in outgoingRoutes)
+                                    {
+                                        <div class="workflow-canvas-decision-route-row"
+                                             data-testid="workflow-canvas-decision-route-row">
+                                            <div class="workflow-canvas-edge-row__main">
+                                                <span>@WorkflowCanvasDefinitionMapper.ResolveRouteLabel(routeEdge) -> @ResolveNodeName(routeEdge.TargetNodeId)</span>
+                                                <small>@WorkflowCanvasDefinitionMapper.BuildRouteSummary(routeEdge)</small>
+                                            </div>
+                                            <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.Wrap">
+                                                <StatusBadge Tone="@WorkflowCanvasDefinitionMapper.ResolveRouteTone(routeEdge)"
+                                                             Text="@WorkflowCanvasDefinitionMapper.ResolveRouteLabel(routeEdge)" />
+                                                <Button Text="Edit"
+                                                        ButtonStyle="ButtonStyle.Light"
+                                                        Size="ButtonSize.Small"
+                                                        Click="@(() => StartEditDecisionRouteAsync(modalNode, routeEdge))"
+                                                        data-testid="workflow-canvas-decision-edit-route" />
+                                                <Button Text="Remove"
+                                                        ButtonStyle="ButtonStyle.Light"
+                                                        Size="ButtonSize.Small"
+                                                        Click="@(() => RemoveDecisionRouteAsync(modalNode, routeEdge))"
+                                                        data-testid="workflow-canvas-decision-remove-route" />
+                                            </Cluster>
+                                        </div>
+                                    }
+                                </Stack>
+                            }
+
+                            @if (decisionRouteEditorNodeId == modalNode.Id.Value)
+                            {
+                                <div class="workflow-canvas-route-builder workflow-canvas-route-builder--dialog"
+                                     data-testid="workflow-canvas-decision-route-editor">
+                                    @if (decisionRouteEditingEdgeId is not null)
+                                    {
+                                        <p class="workflow-canvas-route-editing">Editing @decisionRouteEditingEdgeId.Value</p>
+                                    }
+                                    else
+                                    {
+                                        <p class="workflow-canvas-route-editing">Adding a new route from @modalNode.Name</p>
+                                    }
+
+                                    <Grid Gap="LayoutGap.Small" ColumnsLg="2">
+                                        <label class="workflow-canvas-field">
+                                            <span>Target output</span>
+                                            <select class="cda-input"
+                                                    @bind="decisionRouteTargetNodeId"
+                                                    data-testid="workflow-canvas-decision-route-target">
+                                                <option value="">Create new branch output</option>
+                                                @foreach (var targetNode in document.Nodes.Where(node => node.Id != modalNode.Id && node.Kind != WorkflowNodeKind.Start))
+                                                {
+                                                    <option value="@targetNode.Id.Value">@targetNode.Name</option>
+                                                }
+                                            </select>
+                                        </label>
+                                        <label class="workflow-canvas-field">
+                                            <span>Route mode</span>
+                                            <select class="cda-input"
+                                                    value="@decisionRouteKind"
+                                                    @onchange="HandleDecisionRouteKindChanged"
+                                                    data-testid="workflow-canvas-decision-route-kind">
+                                                @foreach (var kind in Enum.GetValues<WorkflowRouteKind>().Where(kind => kind != WorkflowRouteKind.Always))
+                                                {
+                                                    <option value="@kind">@WorkflowCanvasDefinitionMapper.ResolveRouteModeLabel(kind)</option>
+                                                }
+                                            </select>
+                                        </label>
+                                    </Grid>
+
+                                    <Grid Gap="LayoutGap.Small" ColumnsLg="2">
+                                        <label class="workflow-canvas-field">
+                                            <span>Route label</span>
+                                            <input class="cda-input"
+                                                   @bind="decisionRouteLabel"
+                                                   data-testid="workflow-canvas-decision-route-label" />
+                                        </label>
+                                        @if (IsPredicateRoute(decisionRouteKind))
+                                        {
+                                            <label class="workflow-canvas-field">
+                                                <span>JSON path</span>
+                                                <input class="cda-input"
+                                                       @bind="decisionRouteJsonPath"
+                                                       placeholder="$.route"
+                                                       data-testid="workflow-canvas-decision-route-json-path" />
+                                            </label>
+                                        }
+                                    </Grid>
+
+                                    @if (IsPredicateRoute(decisionRouteKind))
+                                    {
+                                        <Grid Gap="LayoutGap.Small" ColumnsLg="2">
+                                            @if (ShowsOperator(decisionRouteKind))
+                                            {
+                                                <label class="workflow-canvas-field">
+                                                    <span>Operator</span>
+                                                    <select class="cda-input"
+                                                            @bind="decisionRouteOperator"
+                                                            data-testid="workflow-canvas-decision-route-operator">
+                                                        @foreach (var routeOperator in Enum.GetValues<WorkflowRouteOperator>())
+                                                        {
+                                                            <option value="@routeOperator">@WorkflowRoutingValidation.FormatOperator(routeOperator)</option>
+                                                        }
+                                                    </select>
+                                                </label>
+                                            }
+                                            @if (ShowsExpectedValue(decisionRouteKind, decisionRouteOperator))
+                                            {
+                                                <label class="workflow-canvas-field">
+                                                    <span>Value kind</span>
+                                                    <select class="cda-input"
+                                                            @bind="decisionRouteValueKind"
+                                                            data-testid="workflow-canvas-decision-route-value-kind">
+                                                        @foreach (var valueKind in Enum.GetValues<WorkflowRouteValueKind>())
+                                                        {
+                                                            <option value="@valueKind">@valueKind</option>
+                                                        }
+                                                    </select>
+                                                </label>
+                                            }
+                                        </Grid>
+                                    }
+
+                                    @if (ShowsExpectedValue(decisionRouteKind, decisionRouteOperator))
+                                    {
+                                        <label class="workflow-canvas-field">
+                                            <span>Expected value</span>
+                                            <input class="cda-input"
+                                                   @bind="decisionRouteExpectedValue"
+                                                   data-testid="workflow-canvas-decision-route-expected-value" />
+                                        </label>
+                                    }
+
+                                    @if (decisionRouteKind == WorkflowRouteKind.FanOutSelector)
+                                    {
+                                        <label class="workflow-canvas-field">
+                                            <span>Fan-out target index</span>
+                                            <input class="cda-input"
+                                                   type="number"
+                                                   min="0"
+                                                   value="@(decisionRouteFanOutTargetIndex?.ToString() ?? string.Empty)"
+                                                   @onchange="HandleDecisionRouteFanOutTargetIndexChanged"
+                                                   data-testid="workflow-canvas-decision-route-fanout-index" />
+                                        </label>
+                                    }
+
+                                    @if (ShowsCaseSensitivity(decisionRouteKind, decisionRouteOperator))
+                                    {
+                                        <label class="workflow-canvas-check-field">
+                                            <input type="checkbox"
+                                                   @bind="decisionRouteCaseSensitive"
+                                                   data-testid="workflow-canvas-decision-route-case-sensitive" />
+                                            <span>Case-sensitive comparison</span>
+                                        </label>
+                                    }
+
+                                    @if (!string.IsNullOrWhiteSpace(decisionRouteError))
+                                    {
+                                        <p class="workflow-canvas-error">@decisionRouteError</p>
+                                    }
+
+                                    <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.Wrap" Class="mt-3">
+                                        <Button Text="Save route"
+                                                Size="ButtonSize.Small"
+                                                Click="@(() => SaveDecisionRouteAsync(modalNode))"
+                                                data-testid="workflow-canvas-decision-save-route" />
+                                        <Button Text="Cancel"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Size="ButtonSize.Small"
+                                                Click="CancelDecisionRouteEditAsync"
+                                                data-testid="workflow-canvas-decision-cancel-route" />
+                                    </Cluster>
+                                </div>
+                            }
+                        </section>
+                    }
+
+                    <section class="workflow-canvas-dialog-section workflow-canvas-dialog-section--instructions">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Instructions" />
+                        <textarea class="cda-input cda-input--textarea workflow-canvas-textarea workflow-canvas-textarea--comfortable"
+                                  value="@modalNode.Instructions"
+                                  @onchange="args => HandleSelectedInstructionsChanged(modalNode, args)"
+                                  data-testid="workflow-canvas-node-modal-instructions"></textarea>
+                    </section>
+
+                    @if (!string.IsNullOrWhiteSpace(errorMessage))
+                    {
+                        <p class="workflow-canvas-error">@errorMessage</p>
+                    }
+                </main>
+            </div>
+        </ChildContent>
+        <Footer>
+            <Cluster JustifyContent="JustifyContent.End">
+                <Button Text="Close"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="CloseNodeDetailsDialogAsync"
+                        data-testid="workflow-canvas-node-modal-close" />
+            </Cluster>
+        </Footer>
+    </Dialog>
+}

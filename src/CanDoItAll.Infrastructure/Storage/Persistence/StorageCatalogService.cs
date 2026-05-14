@@ -11,6 +11,7 @@ public sealed class StorageCatalogService(
 {
     private const string BootstrapStorageName = "Workspace file system";
     private const string BootstrapRoutingRuleName = "Workspace editable fallback";
+    private static readonly Guid BootstrapRoutingRuleId = Guid.Parse("fbb91e1a-f1fc-4261-8baf-76c2de2730b9");
 
     public async Task<IReadOnlyList<StorageCatalogRecord>> ListAsync(CancellationToken cancellationToken = default)
     {
@@ -18,6 +19,7 @@ public sealed class StorageCatalogService(
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         return await dbContext.Set<StorageCatalogRecord>()
+            .AsNoTracking()
             .OrderBy(item => item.DisplayOrder)
             .ThenBy(item => item.Name)
             .ToListAsync(cancellationToken);
@@ -29,6 +31,7 @@ public sealed class StorageCatalogService(
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         return await dbContext.Set<StorageCatalogRecord>()
+            .AsNoTracking()
             .FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
     }
 
@@ -73,7 +76,20 @@ public sealed class StorageCatalogService(
         };
 
         await dbContext.Set<StorageCatalogRecord>().AddAsync(storage, cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            var recoveredStorage = await TryRecoverBootstrapStorageAfterConcurrentInsertAsync(workspaceRoot, cancellationToken);
+            if (recoveredStorage is not null)
+            {
+                return recoveredStorage;
+            }
+
+            throw;
+        }
 
         await EnsureBootstrapRuleAsync(dbContext, storage, cancellationToken);
         return storage;
@@ -148,6 +164,7 @@ public sealed class StorageCatalogService(
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         return await dbContext.Set<StorageRoutingRule>()
+            .AsNoTracking()
             .OrderBy(item => item.Priority)
             .ThenBy(item => item.Name)
             .ToListAsync(cancellationToken);
@@ -204,9 +221,10 @@ public sealed class StorageCatalogService(
     {
         var rule = await dbContext.Set<StorageRoutingRule>()
             .FirstOrDefaultAsync(item =>
-                item.ScopeKind == StorageRoutingScopeKind.Workspace &&
-                item.PreferredStorageId == storage.Id &&
-                item.Name == BootstrapRoutingRuleName,
+                item.Id == BootstrapRoutingRuleId ||
+                (item.ScopeKind == StorageRoutingScopeKind.Workspace &&
+                 item.PreferredStorageId == storage.Id &&
+                 item.Name == BootstrapRoutingRuleName),
                 cancellationToken);
         if (rule is not null)
         {
@@ -215,6 +233,7 @@ public sealed class StorageCatalogService(
 
         rule = new StorageRoutingRule
         {
+            Id = BootstrapRoutingRuleId,
             Name = BootstrapRoutingRuleName,
             ScopeKind = StorageRoutingScopeKind.Workspace,
             UsagePurpose = StorageUsagePurpose.Unknown,
@@ -227,7 +246,41 @@ public sealed class StorageCatalogService(
         };
 
         await dbContext.Set<StorageRoutingRule>().AddAsync(rule, cancellationToken);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            dbContext.Entry(rule).State = EntityState.Detached;
+            if (await dbContext.Set<StorageRoutingRule>().AnyAsync(item => item.Id == BootstrapRoutingRuleId, cancellationToken))
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    private async Task<StorageCatalogRecord?> TryRecoverBootstrapStorageAfterConcurrentInsertAsync(
+        string workspaceRoot,
+        CancellationToken cancellationToken)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var storage = await dbContext.Set<StorageCatalogRecord>()
+            .OrderBy(item => item.DisplayOrder)
+            .FirstOrDefaultAsync(
+                item => item.IsSystemDefault || item.Name == BootstrapStorageName,
+                cancellationToken);
+        if (storage is null)
+        {
+            return null;
+        }
+
+        RefreshBootstrapStorage(storage, workspaceRoot);
         await dbContext.SaveChangesAsync(cancellationToken);
+        await EnsureBootstrapRuleAsync(dbContext, storage, cancellationToken);
+        return storage;
     }
 
     private void RefreshBootstrapStorage(StorageCatalogRecord storage, string workspaceRoot)

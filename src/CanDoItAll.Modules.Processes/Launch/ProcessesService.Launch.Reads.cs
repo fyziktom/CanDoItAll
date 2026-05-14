@@ -145,6 +145,8 @@ public sealed partial class ProcessesService
                         item.CandidateKind,
                         item.PartyId,
                         item.TechnicalAgentId,
+                        item.WorkflowDefinitionId,
+                        item.WorkflowVersionId,
                         item.DisplayName,
                         item.ExecutorKind,
                         item.Score,

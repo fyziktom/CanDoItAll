@@ -85,8 +85,8 @@
       "AllowsFallback": true,
       "RequiresExplicitApproval": false,
       "DefaultAllocationPercent": 100,
-      "CanvasX": 420,
-      "CanvasY": 40,
+      "CanvasX": 899,
+      "CanvasY": 370,
       "Notes": "Primary technical owner for diagnosis, mitigation, and restoration work."
     },
     {
@@ -101,8 +101,8 @@
       "AllowsFallback": true,
       "RequiresExplicitApproval": true,
       "DefaultAllocationPercent": 20,
-      "CanvasX": 720,
-      "CanvasY": 40,
+      "CanvasX": 1979,
+      "CanvasY": 370,
       "Notes": "Explicit governance decision owner for risky mitigations and escalated incident actions."
     }
   ],
@@ -127,10 +127,10 @@
       "DependsOnStepKey": "",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 120,
-      "CanvasY": 320,
-      "BranchCanvasX": 0.0,
-      "BranchCanvasY": 0.0,
+      "CanvasX": 260,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
       "Dependencies": [],
       "RoleAssignments": [
         {
@@ -190,10 +190,10 @@
       "DependsOnStepKey": "respond",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 420,
-      "CanvasY": 320,
-      "BranchCanvasX": 0.0,
-      "BranchCanvasY": 0.0,
+      "CanvasX": 1340,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
       "Dependencies": [
         {
           "DependsOnStepKey": "respond",
@@ -268,10 +268,10 @@
       "DependsOnStepKey": "diagnose",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 720,
-      "CanvasY": 320,
-      "BranchCanvasX": 0.0,
-      "BranchCanvasY": 0.0,
+      "CanvasX": 2420,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
       "Dependencies": [
         {
           "DependsOnStepKey": "diagnose",

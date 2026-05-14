@@ -175,7 +175,8 @@ public interface ICapabilityProofService
 public sealed record ProviderCredentialResolution(
     string ApiKey,
     string ResolutionSource,
-    string FailureMessage)
+    string FailureMessage,
+    bool ShouldPromoteToProcessEnvironment = true)
 {
     public bool IsResolved => !string.IsNullOrWhiteSpace(ApiKey);
 }

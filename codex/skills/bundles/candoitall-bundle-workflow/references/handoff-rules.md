@@ -25,6 +25,17 @@ Execution must preserve and update:
 - residual risks
 - reopened-phase decisions
 
+## Resume Handoff
+
+After compaction, interruption, or transfer to another agent, the workflow must be recoverable from bundle files. The minimum durable state is:
+
+- bundle root and current subbundle
+- raw inputs owned by the active subbundle
+- latest entry or closure gate decision
+- proof already captured and proof still missing
+- browser or host validation analytics state
+- blockers, reopened phases, and downstream dependencies that must be rechecked
+
 ## Compatibility Rule
 
 Do not invent a second bundle shape during execution. If the bundle needs improvement, improve the existing structure instead of migrating into a different format mid-task.

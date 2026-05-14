@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
 
 namespace CanDoItAll.Modules.Processes;
@@ -32,7 +33,7 @@ public partial class ProcessWorkspace
         ResetRuntimeCanvasState();
         detailTab = DetailTabRuns;
         runNameDraft = string.Empty;
-        RuntimeStateOverviewService.Invalidate();
+        InvalidateObservationState(selectedProcessId, selectedRunId);
         await LoadWorkspaceAsync();
         SetMessage("Process run started.");
     }
@@ -50,7 +51,28 @@ public partial class ProcessWorkspace
 
     private async Task OpenRunStepsDialogAsync(Guid runId)
     {
-        await SelectRunAsync(runId);
+        selectedRunId = runId;
+        detailTab = DetailTabRuns;
+        selectedCanvasNodeId = null;
+        ResetRuntimeCanvasState();
+
+        var descriptor = new ProcessObservationDialogDescriptor(
+            ProcessObservationDialogKind.RunSteps,
+            ProcessObservationFocusKind.Run,
+            runId,
+            StepRunId: null,
+            "Run steps",
+            "Read-only process run details");
+        var payload = await ProcessObservationService.GetDialogPayloadAsync(
+            new ProcessObservationDialogQuery(ProjectId, descriptor),
+            CancellationToken.None);
+        if (payload.RunSnapshot is not null)
+        {
+            ApplyRunDetails(payload.RunSnapshot.Details);
+        }
+
+        RefreshCanvasSurface();
+        UpdateRuntimeRefreshLoop();
 
         var selectedRun = SelectedRun;
         if (selectedRun is null)
@@ -110,7 +132,7 @@ public partial class ProcessWorkspace
 
             selectedRunId = runId;
             detailTab = DetailTabRuns;
-            RuntimeStateOverviewService.Invalidate();
+            InvalidateObservationState(selectedProcessId, runId);
             await LoadWorkspaceAsync();
             SetMessage("Blocked process run stopped.");
         }
@@ -149,7 +171,7 @@ public partial class ProcessWorkspace
         }
 
         detailTab = DetailTabRuns;
-        RuntimeStateOverviewService.Invalidate();
+        InvalidateObservationState(selectedProcessId, selectedRunId);
         await LoadWorkspaceAsync();
         SetMessage($"Step updated to {targetStatus}.");
     }
@@ -182,7 +204,7 @@ public partial class ProcessWorkspace
         operatorReworkStepRunId = null;
         operatorReworkDirective = string.Empty;
         detailTab = DetailTabRuns;
-        RuntimeStateOverviewService.Invalidate();
+        InvalidateObservationState(selectedProcessId, selectedRunId);
         await LoadWorkspaceAsync();
         SetMessage("Agent step rerun requested with a recovery directive.");
     }
@@ -205,6 +227,7 @@ public partial class ProcessWorkspace
         }
 
         detailTab = DetailTabRuns;
+        InvalidateObservationState(selectedProcessId, selectedRunId);
         await LoadWorkspaceAsync();
         SetMessage("Escalation assigned.");
     }
@@ -228,6 +251,7 @@ public partial class ProcessWorkspace
 
         operatorEscalationResolution = string.Empty;
         detailTab = DetailTabRuns;
+        InvalidateObservationState(selectedProcessId, selectedRunId);
         await LoadWorkspaceAsync();
         SetMessage("Escalation resolved.");
     }
@@ -251,6 +275,7 @@ public partial class ProcessWorkspace
 
         operatorEscalationResolution = string.Empty;
         detailTab = DetailTabRuns;
+        InvalidateObservationState(selectedProcessId, selectedRunId);
         await LoadWorkspaceAsync();
         SetMessage("Escalation reopened.");
     }
@@ -290,7 +315,7 @@ public partial class ProcessWorkspace
         operatorReworkStepRunId = null;
         operatorReworkDirective = string.Empty;
         detailTab = DetailTabRuns;
-        RuntimeStateOverviewService.Invalidate();
+        InvalidateObservationState(selectedProcessId, selectedRunId);
         await LoadWorkspaceAsync();
         SetMessage("Escalation rework requested.");
     }
@@ -329,6 +354,7 @@ public partial class ProcessWorkspace
 
         operatorManagerDirective = string.Empty;
         detailTab = DetailTabRuns;
+        InvalidateObservationState(selectedProcessId, selectedRunId);
         await LoadWorkspaceAsync();
         SetMessage("Manager directive recorded.");
     }
@@ -383,6 +409,7 @@ public partial class ProcessWorkspace
 
         operatorApprovalDecisionSummary = string.Empty;
         detailTab = DetailTabRuns;
+        InvalidateObservationState(selectedProcessId, selectedRunId);
         await LoadWorkspaceAsync();
         SetMessage($"Approval {status}.");
     }
@@ -399,8 +426,10 @@ public partial class ProcessWorkspace
         if (assignment is null)
         {
             assignmentPartyId = null;
+            assignmentWorkflowDefinitionId = null;
+            assignmentWorkflowVersionId = null;
             assignmentDisplayName = string.Empty;
-            assignmentExecutorKind = "person";
+            assignmentExecutorKind = ProcessExecutorKindNames.Human;
             assignmentBindingReason = string.Empty;
             assignmentIsFallback = false;
             assignmentAllowsDirectMessaging = true;
@@ -409,12 +438,58 @@ public partial class ProcessWorkspace
         }
 
         assignmentPartyId = assignment.PartyId;
+        assignmentWorkflowDefinitionId = assignment.WorkflowDefinitionId;
+        assignmentWorkflowVersionId = assignment.WorkflowVersionId;
         assignmentDisplayName = assignment.DisplayName;
-        assignmentExecutorKind = string.IsNullOrWhiteSpace(assignment.ExecutorKind) ? "person" : assignment.ExecutorKind;
+        assignmentExecutorKind = ProcessExecutorKindNames.Normalize(assignment.ExecutorKind);
         assignmentBindingReason = assignment.BindingReason;
         assignmentIsFallback = assignment.IsFallback;
         assignmentAllowsDirectMessaging = assignment.AllowsDirectMessaging;
         SynchronizeDirectMessagingComposer();
+    }
+
+    private void SetAssignmentExecutorKind(string? executorKind)
+    {
+        assignmentExecutorKind = ProcessExecutorKindNames.Normalize(executorKind);
+        if (ProcessExecutorKindNames.IsWorkflow(assignmentExecutorKind))
+        {
+            assignmentPartyId = null;
+            assignmentAllowsDirectMessaging = false;
+            if (!assignmentWorkflowDefinitionId.HasValue)
+            {
+                var firstWorkflow = workflowOptions.FirstOrDefault(item => item.Status == WorkflowLifecycleStatus.Active)
+                    ?? workflowOptions.FirstOrDefault();
+                if (firstWorkflow is not null)
+                {
+                    assignmentWorkflowDefinitionId = firstWorkflow.DefinitionId;
+                    assignmentWorkflowVersionId = firstWorkflow.VersionId;
+                }
+            }
+        }
+        else
+        {
+            assignmentWorkflowDefinitionId = null;
+            assignmentWorkflowVersionId = null;
+        }
+    }
+
+    private string AssignmentWorkflowOptionKey
+        => BuildWorkflowOptionKey(assignmentWorkflowDefinitionId, assignmentWorkflowVersionId);
+
+    private void SetAssignmentWorkflowOption(string? optionKey)
+    {
+        if (TryParseWorkflowOptionKey(optionKey, out var definitionId, out var versionId))
+        {
+            assignmentWorkflowDefinitionId = definitionId;
+            assignmentWorkflowVersionId = versionId;
+            assignmentExecutorKind = ProcessExecutorKindNames.Workflow;
+            assignmentPartyId = null;
+            assignmentAllowsDirectMessaging = false;
+            return;
+        }
+
+        assignmentWorkflowDefinitionId = null;
+        assignmentWorkflowVersionId = null;
     }
 
     private async Task ResolveSelectedAssignmentAsync()
@@ -433,6 +508,8 @@ public partial class ProcessWorkspace
                 RoleRequirementId = assignment.RoleRequirementId,
                 StepDefinitionId = assignment.StepDefinitionId,
                 PartyId = assignmentPartyId,
+                WorkflowDefinitionId = assignmentWorkflowDefinitionId,
+                WorkflowVersionId = assignmentWorkflowVersionId,
                 DisplayName = assignmentDisplayName,
                 ExecutorKind = assignmentExecutorKind,
                 BindingReason = string.IsNullOrWhiteSpace(assignmentBindingReason)
@@ -532,6 +609,7 @@ public partial class ProcessWorkspace
             });
         if (result.IsFailure)
         {
+            InvalidateObservationState(selectedProcessId, selectedRunId);
             await LoadRunDetailsAsync();
             detailTab = DetailTabRuns;
             SetError(result.Errors);
@@ -539,6 +617,7 @@ public partial class ProcessWorkspace
         }
 
         directMessageBody = string.Empty;
+        InvalidateObservationState(selectedProcessId, selectedRunId);
         await LoadRunDetailsAsync();
         detailTab = DetailTabRuns;
         SetMessage("Direct message recorded.");
@@ -576,6 +655,7 @@ public partial class ProcessWorkspace
         artifactAllowedUsage = string.Empty;
         artifactReview = string.Empty;
         detailTab = DetailTabRuns;
+        InvalidateObservationState(selectedProcessId, selectedRunId);
         await LoadWorkspaceAsync();
         SetMessage("Artifact recorded.");
     }
@@ -674,6 +754,33 @@ public partial class ProcessWorkspace
         return string.IsNullOrWhiteSpace(bindingName)
             ? $"{roleName} ({status})"
             : $"{roleName} / {bindingName} ({status})";
+    }
+
+    private static string BuildWorkflowOptionKey(Guid? definitionId, Guid? versionId)
+    {
+        return definitionId.HasValue && versionId.HasValue
+            ? $"{definitionId.Value:D}|{versionId.Value:D}"
+            : string.Empty;
+    }
+
+    private static bool TryParseWorkflowOptionKey(
+        string? optionKey,
+        out Guid definitionId,
+        out Guid versionId)
+    {
+        definitionId = Guid.Empty;
+        versionId = Guid.Empty;
+        if (string.IsNullOrWhiteSpace(optionKey))
+        {
+            return false;
+        }
+
+        var parts = optionKey.Split('|', StringSplitOptions.TrimEntries);
+        return parts.Length == 2 &&
+            Guid.TryParse(parts[0], out definitionId) &&
+            Guid.TryParse(parts[1], out versionId) &&
+            definitionId != Guid.Empty &&
+            versionId != Guid.Empty;
     }
 
     private string ResolveDefinitionStatusTone(ProcessDefinitionStatus status)
