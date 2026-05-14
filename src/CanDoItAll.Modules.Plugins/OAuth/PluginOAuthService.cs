@@ -27,6 +27,8 @@ public sealed class PluginOAuthService(
 {
     private const int StateBytes = 32;
     private const int PkceVerifierBytes = 64;
+    private const string OfflineAccessScope = "offline_access";
+    private const string OpenIdScope = "openid";
     private static readonly TimeSpan SessionLifetime = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan AccessTokenClockSkew = TimeSpan.FromMinutes(1);
     private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
@@ -550,7 +552,7 @@ public sealed class PluginOAuthService(
         }
 
         var timestamp = clock.GetUtcNow();
-        var scopes = NormalizeScopes(SplitScopes(token.Scope).Count > 0 ? SplitScopes(token.Scope) : fallbackScopes);
+        var scopes = ResolveGrantedScopes(token, fallbackScopes, previousRefreshToken);
         var expiresIn = token.ExpiresIn > 0 ? token.ExpiresIn : 3600;
         return Result<PluginOAuthTokenEnvelope>.Success(new PluginOAuthTokenEnvelope
         {
@@ -824,6 +826,55 @@ public sealed class PluginOAuthService(
             ? []
             : scopes.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
+    private static IReadOnlyList<string> ResolveGrantedScopes(
+        OAuthTokenResponse token,
+        IReadOnlyList<string> fallbackScopes,
+        string previousRefreshToken)
+    {
+        var tokenScopes = SplitScopes(token.Scope);
+        var reportedScopes = tokenScopes.Count > 0 ? tokenScopes : fallbackScopes;
+        var scopes = new HashSet<string>(
+            reportedScopes.Where(scope => !IsEvidenceBackedAuthorizationScope(scope)),
+            StringComparer.OrdinalIgnoreCase);
+
+        if (!string.IsNullOrWhiteSpace(token.RefreshToken) || !string.IsNullOrWhiteSpace(previousRefreshToken))
+        {
+            AddRequestedScope(scopes, fallbackScopes, OfflineAccessScope);
+        }
+
+        if (!string.IsNullOrWhiteSpace(token.IdToken) ||
+            (!string.IsNullOrWhiteSpace(previousRefreshToken) && ContainsScope(fallbackScopes, OpenIdScope)))
+        {
+            AddRequestedScope(scopes, fallbackScopes, OpenIdScope);
+        }
+
+        return NormalizeScopes(scopes.ToArray());
+    }
+
+    private static bool IsEvidenceBackedAuthorizationScope(string scope)
+        => IsScope(scope, OfflineAccessScope) || IsScope(scope, OpenIdScope);
+
+    private static void AddRequestedScope(
+        ISet<string> scopes,
+        IReadOnlyList<string> requestedScopes,
+        string scope)
+    {
+        if (ContainsScope(requestedScopes, scope))
+        {
+            scopes.Add(scope);
+        }
+    }
+
+    private static bool ContainsScope(
+        IReadOnlyList<string> scopes,
+        string scope)
+        => scopes.Any(candidate => IsScope(candidate, scope));
+
+    private static bool IsScope(
+        string candidate,
+        string scope)
+        => string.Equals(candidate, scope, StringComparison.OrdinalIgnoreCase);
+
     private static IReadOnlyList<string> DeserializeScopes(string json)
     {
         try
@@ -999,6 +1050,9 @@ public sealed class PluginOAuthService(
 
         [JsonPropertyName("token_type")]
         public string TokenType { get; init; } = string.Empty;
+
+        [JsonPropertyName("id_token")]
+        public string IdToken { get; init; } = string.Empty;
     }
 }
 

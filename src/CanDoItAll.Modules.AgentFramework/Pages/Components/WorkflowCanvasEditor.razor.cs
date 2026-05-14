@@ -776,16 +776,18 @@ public partial class WorkflowCanvasEditor
         errorMessage = string.Empty;
         try
         {
-            testResult = await TestRunner.RunAsync(new WorkflowTestRunRequest(
-                WorkflowId: null,
-                VersionId: null,
-                DraftDefinition: definition,
-                InputJson: inputJson,
-                RequestedBackend: WorkflowRuntimeBackendKind.InProcess,
-                ValidateOnly: false)
-            {
-                PreviewSimulationPlan = simulationPlan
-            });
+            using var progressScope = WorkflowNodeExecutionProgressScope.Push(new CanvasPreviewNodeSelectionObserver(this));
+            testResult = await TestRunner.RunAsync(
+                new WorkflowTestRunRequest(
+                    WorkflowId: null,
+                    VersionId: null,
+                    DraftDefinition: definition,
+                    InputJson: inputJson,
+                    RequestedBackend: WorkflowRuntimeBackendKind.InProcess,
+                    ValidateOnly: false)
+                {
+                    PreviewSimulationPlan = simulationPlan
+                });
             validationIssues = testResult.Validation.Issues;
             if (testResult.Run is not null)
             {
@@ -811,6 +813,18 @@ public partial class WorkflowCanvasEditor
             isTesting = false;
             isBusy = false;
         }
+    }
+
+    private Task SelectPreviewNodeAsync(WorkflowNodeId nodeId)
+    {
+        if (!document.Nodes.Any(node => node.Id == nodeId))
+        {
+            return Task.CompletedTask;
+        }
+
+        SelectNode(nodeId.Value);
+        StateHasChanged();
+        return Task.CompletedTask;
     }
 
     private async Task<WorkflowDefinition> ValidateCurrentDefinitionAsync()
@@ -1786,6 +1800,21 @@ public partial class WorkflowCanvasEditor
         string TargetName,
         string TargetInstructions,
         WorkflowEdgeRouting Routing);
+
+    private sealed class CanvasPreviewNodeSelectionObserver(WorkflowCanvasEditor editor) : IWorkflowNodeExecutionProgressObserver
+    {
+        public ValueTask RecordAsync(
+            WorkflowNodeExecutionProgress progress,
+            CancellationToken cancellationToken = default)
+        {
+            if (progress.State != WorkflowNodeExecutionProgressState.Started)
+            {
+                return ValueTask.CompletedTask;
+            }
+
+            return new ValueTask(editor.InvokeAsync(() => editor.SelectPreviewNodeAsync(progress.NodeId)));
+        }
+    }
 
     private static string ResolveWorkflowToolboxNodeIcon(WorkflowNodeKind kind)
         => kind switch

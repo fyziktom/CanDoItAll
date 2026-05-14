@@ -53,9 +53,9 @@ Steps:
 
 1. Register an app in Microsoft Entra admin center.
 2. Configure a public client redirect URI for the local callback, for example `http://localhost:{port}/api/plugins/oauth/callback`.
-3. Add delegated Microsoft Graph permission `Mail.Read`. The plugin also requests `offline_access` so it can receive refresh tokens.
+3. Add delegated Microsoft Graph permission `Mail.Read`. The plugin also requests `openid` and `offline_access` so the Microsoft identity platform can complete sign-in and issue refresh tokens.
 4. In the Office365 plugin connection settings, set `clientId` to the app registration client id. Set `redirectUri` only when you need to force an exact callback URL.
-5. In Plugins, install and enable `Office365 Mail`, grant `WorkflowExecutor` and `OAuth2`, then click Login.
+5. In Plugins, install and enable `Office365 Mail`, grant `WorkflowExecutor` and `OAuth2`, then click Login. OAuth login opens in a separate browser tab and asks Microsoft for consent again when reconnecting.
 6. For the workflow test, create or choose an Outlook category named `CanDoItAllSummaryTest` and assign it to a small set of messages.
 7. Get the connection id from `GET /api/plugins/office365.mail/oauth/status`, then set that value in the `connectionId` setting of the `office365-category-email-summary-to-project` workflow.
 

@@ -202,61 +202,116 @@ public sealed class MafWorkflowCompiler(
             IWorkflowContext context,
             CancellationToken cancellationToken)
         {
-            if (simulationSteps.TryGetValue(node.Id, out var simulationStep))
-            {
-                if (node.Settings.ExecutorId != simulationStep.SourceExecutorId)
-                {
-                    var actualExecutorId = node.Settings.ExecutorId?.Value ?? "<none>";
-                    var requestedExecutorId = simulationStep.SourceExecutorId?.Value ?? "<none>";
-                    throw new InvalidOperationException(
-                        $"Preview simulation for workflow node '{node.Id}' targets executor '{requestedExecutorId}', but the node uses executor '{actualExecutorId}'.");
-                }
+            var progressObserver = WorkflowNodeExecutionProgressScope.Current;
+            await RecordProgressAsync(
+                progressObserver,
+                definition,
+                node.Id,
+                WorkflowNodeExecutionProgressState.Started,
+                cancellationToken);
 
-                return new WorkflowNodeInput(WorkflowPreviewSimulationRenderer.Render(
-                    simulationStep,
+            try
+            {
+                var output = await ExecuteNodeCoreAsync(input, cancellationToken);
+                await RecordProgressAsync(
+                    progressObserver,
                     definition,
-                    node,
-                    input));
+                    node.Id,
+                    WorkflowNodeExecutionProgressState.Completed,
+                    cancellationToken);
+                return output;
             }
-
-            if (node.Kind == WorkflowNodeKind.LlmCall)
+            catch
             {
-                if (llmComponentInvoker is null)
-                {
-                    throw new InvalidOperationException($"LLM workflow node '{node.Id}' requires a registered LLM component invoker.");
-                }
-
-                if (node.Settings.ComponentId is not { } componentId ||
-                    !componentsById.TryGetValue(componentId, out var component))
-                {
-                    throw new InvalidOperationException($"LLM workflow node '{node.Id}' references component '{node.Settings.ComponentId}', but it was not supplied to the compiler.");
-                }
-
-                var result = await llmComponentInvoker.ExecuteAsync(definition, node, component, input, cancellationToken);
-                if (result.NodeId != node.Id)
-                {
-                    throw new InvalidOperationException($"LLM workflow node '{node.Id}' returned result for node '{result.NodeId}'.");
-                }
-
-                return new WorkflowNodeInput(result.PayloadJson);
+                await RecordProgressAsync(
+                    progressObserver,
+                    definition,
+                    node.Id,
+                    WorkflowNodeExecutionProgressState.Failed,
+                    CancellationToken.None);
+                throw;
             }
 
-            if (node.Kind == WorkflowNodeKind.Executor || node.Settings.ExecutorId is not null)
+            async ValueTask<WorkflowNodeInput> ExecuteNodeCoreAsync(
+                WorkflowNodeInput nodeInput,
+                CancellationToken nodeCancellationToken)
             {
-                if (executorInvoker is null)
+                if (simulationSteps.TryGetValue(node.Id, out var simulationStep))
                 {
-                    throw new InvalidOperationException($"Workflow executor node '{node.Id}' requires a registered executor invoker.");
+                    if (node.Settings.ExecutorId != simulationStep.SourceExecutorId)
+                    {
+                        var actualExecutorId = node.Settings.ExecutorId?.Value ?? "<none>";
+                        var requestedExecutorId = simulationStep.SourceExecutorId?.Value ?? "<none>";
+                        throw new InvalidOperationException(
+                            $"Preview simulation for workflow node '{node.Id}' targets executor '{requestedExecutorId}', but the node uses executor '{actualExecutorId}'.");
+                    }
+
+                    return new WorkflowNodeInput(WorkflowPreviewSimulationRenderer.Render(
+                        simulationStep,
+                        definition,
+                        node,
+                        nodeInput));
                 }
 
-                var result = await executorInvoker.ExecuteAsync(definition, node, input, cancellationToken);
-                return new WorkflowNodeInput(result.PayloadJson);
-            }
+                if (node.Kind == WorkflowNodeKind.LlmCall)
+                {
+                    if (llmComponentInvoker is null)
+                    {
+                        throw new InvalidOperationException($"LLM workflow node '{node.Id}' requires a registered LLM component invoker.");
+                    }
 
-            return input;
+                    if (node.Settings.ComponentId is not { } componentId ||
+                        !componentsById.TryGetValue(componentId, out var component))
+                    {
+                        throw new InvalidOperationException($"LLM workflow node '{node.Id}' references component '{node.Settings.ComponentId}', but it was not supplied to the compiler.");
+                    }
+
+                    var result = await llmComponentInvoker.ExecuteAsync(definition, node, component, nodeInput, nodeCancellationToken);
+                    if (result.NodeId != node.Id)
+                    {
+                        throw new InvalidOperationException($"LLM workflow node '{node.Id}' returned result for node '{result.NodeId}'.");
+                    }
+
+                    return new WorkflowNodeInput(result.PayloadJson);
+                }
+
+                if (node.Kind == WorkflowNodeKind.Executor || node.Settings.ExecutorId is not null)
+                {
+                    if (executorInvoker is null)
+                    {
+                        throw new InvalidOperationException($"Workflow executor node '{node.Id}' requires a registered executor invoker.");
+                    }
+
+                    var result = await executorInvoker.ExecuteAsync(definition, node, nodeInput, nodeCancellationToken);
+                    return new WorkflowNodeInput(result.PayloadJson);
+                }
+
+                return nodeInput;
+            }
         }
 
         return ((Func<WorkflowNodeInput, IWorkflowContext, CancellationToken, ValueTask<WorkflowNodeInput>>)ExecuteAsync)
             .BindAsExecutor(node.Id.Value, threadsafe: true);
+    }
+
+    private static ValueTask RecordProgressAsync(
+        IWorkflowNodeExecutionProgressObserver? observer,
+        WorkflowDefinition definition,
+        WorkflowNodeId nodeId,
+        WorkflowNodeExecutionProgressState state,
+        CancellationToken cancellationToken)
+    {
+        return observer is null
+            ? ValueTask.CompletedTask
+            : observer.RecordAsync(
+                new WorkflowNodeExecutionProgress(
+                    definition.Id,
+                    definition.VersionId,
+                    WorkflowExecutorExecutionAuditScope.CurrentRunId,
+                    nodeId,
+                    state,
+                    DateTimeOffset.UtcNow),
+                cancellationToken);
     }
 }
 

@@ -72,10 +72,19 @@ public sealed class WorkflowPreviewSimulationTests
             ])
         };
 
+        var progressObserver = new RecordingWorkflowNodeExecutionProgressObserver();
+        using var progressScope = WorkflowNodeExecutionProgressScope.Push(progressObserver);
+
         var result = await backend.StartAsync(definition, request, WorkflowRunId.New());
 
         Assert.Equal(WorkflowRunState.Completed, result.Run.State);
         Assert.Equal(0, executor.InvocationCount);
+        Assert.Contains(progressObserver.Records, record =>
+            record.NodeId == toolNode.Id &&
+            record.State == WorkflowNodeExecutionProgressState.Started);
+        Assert.Contains(progressObserver.Records, record =>
+            record.NodeId == toolNode.Id &&
+            record.State == WorkflowNodeExecutionProgressState.Completed);
     }
 
     private static WorkflowDefinition CreateDefinition(IReadOnlyList<WorkflowNode> nodes)
@@ -168,6 +177,21 @@ public sealed class WorkflowPreviewSimulationTests
         {
             InvocationCount++;
             throw new InvalidOperationException("Executor should not run when preview simulation is selected.");
+        }
+    }
+
+    private sealed class RecordingWorkflowNodeExecutionProgressObserver : IWorkflowNodeExecutionProgressObserver
+    {
+        private readonly List<WorkflowNodeExecutionProgress> records = [];
+
+        public IReadOnlyList<WorkflowNodeExecutionProgress> Records => records;
+
+        public ValueTask RecordAsync(
+            WorkflowNodeExecutionProgress progress,
+            CancellationToken cancellationToken = default)
+        {
+            records.Add(progress);
+            return ValueTask.CompletedTask;
         }
     }
 }

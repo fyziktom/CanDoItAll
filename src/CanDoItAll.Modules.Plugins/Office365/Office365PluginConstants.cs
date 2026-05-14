@@ -17,5 +17,7 @@ public static class Office365PluginConstants
 
     public const string MailReadScope = "https://graph.microsoft.com/Mail.Read";
 
+    public const string OpenIdScope = "openid";
+
     public const string OfflineAccessScope = "offline_access";
 }

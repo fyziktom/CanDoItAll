@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
@@ -190,11 +191,98 @@ public sealed class PluginCatalogIntegrationTests
         Assert.Contains("login.microsoftonline.com/common/oauth2/v2.0/authorize", start.AuthorizationUrl, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(clientId, decodedAuthorizationUrl, StringComparison.Ordinal);
         Assert.Contains(redirectUri, decodedAuthorizationUrl, StringComparison.Ordinal);
+        Assert.Contains(Office365PluginConstants.OpenIdScope, decodedAuthorizationUrl, StringComparison.Ordinal);
         Assert.Contains(Office365PluginConstants.MailReadScope, decodedAuthorizationUrl, StringComparison.Ordinal);
         Assert.Contains(Office365PluginConstants.OfflineAccessScope, decodedAuthorizationUrl, StringComparison.Ordinal);
+        Assert.Contains("prompt=consent", decodedAuthorizationUrl, StringComparison.Ordinal);
         Assert.DoesNotContain("access_token", connection.SettingsJson, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("refresh_token", connection.SettingsJson, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("client_secret", connection.SettingsJson, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Office365_oauth_callback_preserves_openid_and_offline_access_from_token_artifacts()
+    {
+        const string clientId = "2f2a235f-7970-477b-93ba-656be29a8d03";
+        const string redirectUri = "http://localhost:5107/api/plugins/oauth/callback";
+
+        await using var host = await ApiTestHost.CreateAsync(
+            jwtEnabled: false,
+            configureServices: services =>
+            {
+                services.RemoveAll<IHttpClientFactory>();
+                services.AddSingleton<IHttpClientFactory>(new FakeHttpClientFactory(request =>
+                {
+                    Assert.Equal(HttpMethod.Post, request.Method);
+                    Assert.Contains("/oauth2/v2.0/token", request.RequestUri?.AbsoluteUri ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+
+                    return new HttpResponseMessage(HttpStatusCode.OK)
+                    {
+                        Content = JsonContent.Create(new Dictionary<string, object?>(StringComparer.Ordinal)
+                        {
+                            ["access_token"] = "graph-access-token",
+                            ["refresh_token"] = "graph-refresh-token",
+                            ["expires_in"] = 3600,
+                            ["scope"] = Office365PluginConstants.MailReadScope,
+                            ["token_type"] = "Bearer",
+                            ["id_token"] = "openid-token"
+                        })
+                    };
+                }));
+            });
+        var installResponse = await host.Client.PostAsJsonAsync(
+            $"/api/plugins/{Office365PluginConstants.PluginId.Value}/install",
+            new PluginInstallRequest(Enable: true, Actor: "integration-test"));
+        var installBody = await installResponse.Content.ReadAsStringAsync();
+        Assert.True(installResponse.IsSuccessStatusCode, installBody);
+        await GrantAsync(host, Office365PluginConstants.PluginId, PluginCapabilityKind.OAuth2);
+
+        var connectionSettings = new ConfigurationState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            [PluginOAuthConnectionSettingKeys.ClientId] = clientId,
+            [PluginOAuthConnectionSettingKeys.RedirectUri] = redirectUri
+        });
+        var connectionResponse = await host.Client.PostAsJsonAsync(
+            $"/api/plugins/{Office365PluginConstants.PluginId.Value}/connections",
+            new PluginConnectionSaveRequest(
+                Id: null,
+                Office365PluginConstants.ConnectionKey,
+                "CanDoItAll Local Connector",
+                connectionSettings.ToJson(),
+                IsEnabled: true));
+        var connectionBody = await connectionResponse.Content.ReadAsStringAsync();
+        Assert.True(connectionResponse.IsSuccessStatusCode, connectionBody);
+        var connection = JsonSerializer.Deserialize<PluginConnectionItem>(connectionBody, JsonOptions)!;
+
+        var startResponse = await host.Client.PostAsJsonAsync(
+            $"/api/plugins/{Office365PluginConstants.PluginId.Value}/oauth/start",
+            new PluginOAuthStartRequest(
+                Office365PluginConstants.ConnectionKey,
+                connection.Id,
+                ReturnPath: "/plugins"));
+        var startBody = await startResponse.Content.ReadAsStringAsync();
+        Assert.True(startResponse.IsSuccessStatusCode, startBody);
+        var start = JsonSerializer.Deserialize<PluginOAuthStartResponse>(startBody, JsonOptions)!;
+        var state = ReadQueryParameter(start.AuthorizationUrl, "state");
+
+        await using (var callbackScope = host.App.Services.CreateAsyncScope())
+        {
+            var oauthService = callbackScope.ServiceProvider.GetRequiredService<PluginOAuthService>();
+            var returnUri = await oauthService.CompleteCallbackAsync(state, "provider-code", null, null);
+            Assert.Contains("oauth=connected", returnUri.ToString(), StringComparison.Ordinal);
+        }
+
+        var statusResponse = await host.Client.GetAsync($"/api/plugins/{Office365PluginConstants.PluginId.Value}/oauth/status");
+        var statusBody = await statusResponse.Content.ReadAsStringAsync();
+        Assert.True(statusResponse.IsSuccessStatusCode, statusBody);
+        var statuses = JsonSerializer.Deserialize<IReadOnlyList<PluginOAuthConnectionStatusItem>>(statusBody, JsonOptions)!;
+        var status = Assert.Single(statuses);
+
+        Assert.Equal(PluginOAuthConnectionStatusKind.Connected, status.Status);
+        Assert.Contains(Office365PluginConstants.MailReadScope, status.GrantedScopes, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains(Office365PluginConstants.OpenIdScope, status.GrantedScopes, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains(Office365PluginConstants.OfflineAccessScope, status.GrantedScopes, StringComparer.OrdinalIgnoreCase);
+        Assert.Empty(status.LastErrorCode);
     }
 
     [Fact]
@@ -410,6 +498,24 @@ public sealed class PluginCatalogIntegrationTests
     private static string FormatErrors(IReadOnlyList<CanDoItAll.SharedKernel.Error> errors)
         => string.Join(" | ", errors.Select(error => error.Message));
 
+    private static string ReadQueryParameter(
+        string uri,
+        string parameterName)
+    {
+        var query = new Uri(uri).Query.TrimStart('?');
+        foreach (var pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var parts = pair.Split('=', 2);
+            var key = WebUtility.UrlDecode(parts[0]);
+            if (string.Equals(key, parameterName, StringComparison.Ordinal))
+            {
+                return parts.Length == 2 ? WebUtility.UrlDecode(parts[1]) : string.Empty;
+            }
+        }
+
+        throw new InvalidOperationException($"Query parameter '{parameterName}' was not found.");
+    }
+
     private static async Task GrantAsync(
         ApiTestHost host,
         PluginId pluginId,
@@ -425,6 +531,20 @@ public sealed class PluginCatalogIntegrationTests
                 RiskKind: recipeId is null ? PluginGrantRiskKind.Low : PluginGrantRiskKind.High));
         var body = await response.Content.ReadAsStringAsync();
         Assert.True(response.IsSuccessStatusCode, body);
+    }
+
+    private sealed class FakeHttpClientFactory(Func<HttpRequestMessage, HttpResponseMessage> handler) : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name)
+            => new(new FakeHttpMessageHandler(handler));
+    }
+
+    private sealed class FakeHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> handler) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+            => Task.FromResult(handler(request));
     }
 
     private static async Task ConfigureDockerPluginForProofAsync(ApiTestHost host)

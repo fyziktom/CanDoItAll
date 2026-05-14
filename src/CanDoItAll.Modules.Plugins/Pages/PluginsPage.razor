@@ -4,10 +4,12 @@
 @using CanDoItAll.Plugins.Abstractions
 @using CanDoItAll.SharedKernel.Configuration
 @using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
 @inject PluginCatalogService PluginCatalog
 @inject PluginSettingsService PluginSettings
 @inject PluginOAuthService PluginOAuth
 @inject NavigationManager Navigation
+@inject Microsoft.JSInterop.IJSRuntime JsRuntime
 
 <PageTitle>Plugins</PageTitle>
 
@@ -332,10 +334,11 @@
                                                         }
                                                     </Stack>
                                                     <Cluster Gap="LayoutGap.Tiny" Class="self-start">
-                                                        <Button Text="Login"
+                                                        <Button Text="@ResolveOAuthActionText(oauthStatus?.Status)"
                                                                 Icon="login"
                                                                 ButtonStyle="ButtonStyle.Primary"
                                                                 Size="ButtonSize.Small"
+                                                                data-testid="@BuildOAuthLoginTestId(selectedPlugin.PluginId, connectionDescriptor)"
                                                                 Disabled="@(!canStartOAuth)"
                                                                 IsBusy="@IsBusy(selectedPlugin.PluginId, OAuthBusyKey(connectionDescriptor, "login"))"
                                                                 Click="@(() => StartOAuthAsync(selectedPlugin, selectedSettings, connectionDescriptor))" />
@@ -570,7 +573,9 @@
                 return;
             }
 
-            Navigation.NavigateTo(result.Value!.AuthorizationUrl, forceLoad: true);
+            await JsRuntime.InvokeVoidAsync("open", result.Value!.AuthorizationUrl, "_blank", "noopener,noreferrer");
+            statusAlertStyle = AlertStyle.Info;
+            statusMessage = "OAuth login opened in a new browser tab.";
         });
 
     private Task DisconnectOAuthAsync(
@@ -875,6 +880,9 @@
             _ => "neutral"
         };
 
+    private static string ResolveOAuthActionText(PluginOAuthConnectionStatusKind? status)
+        => status == PluginOAuthConnectionStatusKind.ReconnectRequired ? "Reconnect" : "Login";
+
     private static string ResolveSettingsBadge(PluginSettingsDetail settings)
         => settings.ConnectionDescriptors
             .Count(descriptor => descriptor.SettingsSchema.Fields.Count > 0)
@@ -897,6 +905,9 @@
 
     private static string BuildConnectionSaveTestId(PluginId pluginId, PluginConnectionDescriptor descriptor)
         => $"plugin-connection-save-{NormalizeTestId(pluginId.Value)}-{NormalizeTestId(descriptor.Key.Value)}";
+
+    private static string BuildOAuthLoginTestId(PluginId pluginId, PluginConnectionDescriptor descriptor)
+        => $"plugin-oauth-login-{NormalizeTestId(pluginId.Value)}-{NormalizeTestId(descriptor.Key.Value)}";
 
     private static string NormalizeTestId(string value)
     {

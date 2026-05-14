@@ -6,6 +6,9 @@ namespace CanDoItAll.Modules.Plugins;
 
 internal sealed class Office365BundledPlugin : IBundledPlugin
 {
+    private const string PromptParameter = "prompt";
+    private const string ConsentPrompt = "consent";
+
     private static readonly WorkflowValueShape EmailBatchShape = new(
         WorkflowValueShapeKind.Json,
         "{}",
@@ -53,7 +56,13 @@ internal sealed class Office365BundledPlugin : IBundledPlugin
             Office365PluginConstants.ConnectionKey,
             new Uri("https://login.microsoftonline.com/common/oauth2/v2.0/authorize"),
             new Uri("https://login.microsoftonline.com/common/oauth2/v2.0/token"),
-            [Office365PluginConstants.OfflineAccessScope, Office365PluginConstants.MailReadScope]));
+            [Office365PluginConstants.OpenIdScope, Office365PluginConstants.OfflineAccessScope, Office365PluginConstants.MailReadScope])
+        {
+            AuthorizationParameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [PromptParameter] = ConsentPrompt
+            }
+        });
 
     public void ConfigurePluginServices(IPluginServiceRegistry services)
     {
