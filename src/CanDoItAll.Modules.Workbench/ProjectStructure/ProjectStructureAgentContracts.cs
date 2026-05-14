@@ -491,6 +491,19 @@ public sealed record ProjectStructureWorkflowPreviewSimulationOption(
     WorkflowProjectStructureOperation Operation,
     string Description);
 
+public sealed record ProjectStructureWorkflowStartBackendOption(
+    WorkflowRuntimeBackendKind Backend,
+    string Label,
+    string Notes,
+    bool IsSelected);
+
+public sealed record ProjectStructureWorkflowStartOptionsResult(
+    IReadOnlyList<ProjectStructureWorkflowPreviewSimulationOption> SimulationOptions,
+    WorkflowRuntimeBackendKind PreferredBackend,
+    WorkflowRuntimeBackendKind RequestedBackend,
+    IReadOnlyList<ProjectStructureWorkflowStartBackendOption> BackendOptions,
+    string BackendWarning);
+
 public sealed record ProjectStructureWorkflowAddOptionsResult(
     Guid ProjectId,
     ProjectStructureNodeSummary ParentNode,

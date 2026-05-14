@@ -490,6 +490,36 @@
                     </Stack>
                 </PanelCard>
 
+                <PanelCard>
+                    <Stack GapScale="LayoutGap.Small">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Run backend" />
+                        <TextBlock TextStyle="TextStyle.Subtitle2"
+                                   Value="@workflowStart.RequestedBackend.ToString()" />
+                        <div class="cw-chip-row">
+                            <Pill Tone="PillTone.Neutral"
+                                  Text="@($"Definition: {workflowStart.PreferredBackend}")" />
+                            <Pill Tone="PillTone.Info"
+                                  Text="@($"Requested: {workflowStart.RequestedBackend}")" />
+                        </div>
+                        @if (workflowStart.BackendOptions.Count > 0)
+                        {
+                            <div class="cw-chip-row">
+                                @foreach (var backendOption in workflowStart.BackendOptions)
+                                {
+                                    <Pill Tone="@(backendOption.IsSelected ? PillTone.Ok : PillTone.Neutral)"
+                                          Text="@backendOption.Label" />
+                                }
+                            </div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(workflowStart.BackendWarning))
+                        {
+                            <TextBlock TextStyle="TextStyle.Note"
+                                       Value="@workflowStart.BackendWarning"
+                                       Class="cw-panel-copy" />
+                        }
+                    </Stack>
+                </PanelCard>
+
                 @if (workflowStart.SimulationOptions.Count > 0)
                 {
                     <PanelCard>

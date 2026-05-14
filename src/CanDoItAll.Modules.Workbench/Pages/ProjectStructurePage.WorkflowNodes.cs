@@ -179,11 +179,11 @@ public partial class ProjectStructurePage
         }
 
         var status = await TryRefreshWorkflowStatusAsync(node.Id, reloadSurface: false);
-        IReadOnlyList<ProjectStructureWorkflowPreviewSimulationOption> simulationOptions = [];
+        ProjectStructureWorkflowStartOptionsResult? startOptions = null;
         var error = string.Empty;
         try
         {
-            simulationOptions = await WorkflowNodeService.ListStartSimulationOptionsAsync(ProjectId, node.Id);
+            startOptions = await WorkflowNodeService.GetStartOptionsAsync(ProjectId, node.Id);
         }
         catch (Exception exception) when (IsWorkflowUiException(exception))
         {
@@ -194,7 +194,11 @@ public partial class ProjectStructurePage
             node.Id,
             node.Title,
             status,
-            simulationOptions,
+            startOptions?.SimulationOptions ?? [],
+            startOptions?.PreferredBackend ?? WorkflowRuntimeBackendKind.InProcess,
+            startOptions?.RequestedBackend ?? WorkflowRuntimeBackendKind.InProcess,
+            startOptions?.BackendOptions ?? [],
+            startOptions?.BackendWarning ?? string.Empty,
             [],
             false,
             error);
@@ -228,6 +232,7 @@ public partial class ProjectStructurePage
                 ProjectId,
                 dialog.NodeId,
                 new ProjectStructureWorkflowNodeStartInput(
+                    dialog.RequestedBackend,
                     RequestedBy: "project-structure-ui",
                     SimulatedNodeIds: dialog.SimulatedNodeIds),
                 CreateProjectStructureUiAgentContext());

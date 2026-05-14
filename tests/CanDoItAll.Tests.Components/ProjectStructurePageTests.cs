@@ -55,6 +55,16 @@ public sealed class ProjectStructurePageTests
                             WorkflowProjectStructureOperation.CreateAsset,
                             "Skip project-structure asset creation and keep the step input as preview output.")
                     ],
+                    WorkflowRuntimeBackendKind.DurableTask,
+                    WorkflowRuntimeBackendKind.InProcess,
+                    [
+                        new ProjectStructureWorkflowStartBackendOption(
+                            WorkflowRuntimeBackendKind.InProcess,
+                            "InProcess",
+                            "Use for local development.",
+                            IsSelected: true)
+                    ],
+                    "Workflow definition prefers DurableTask, but this host has not registered that runtime. Project Structure explicitly requested InProcess for this local start.",
                     [],
                     IsBusy: false,
                     Error: string.Empty))
@@ -66,6 +76,9 @@ public sealed class ProjectStructurePageTests
             Assert.Contains("Run Preview", cut.Markup);
             Assert.Contains("Store Office365 summary", cut.Markup);
             Assert.Contains("skip project-structure", cut.Markup, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Run backend", cut.Markup);
+            Assert.Contains("Requested: InProcess", cut.Markup);
+            Assert.Contains("Definition: DurableTask", cut.Markup);
         });
 
         cut.Find("[data-testid='project-structure-workflow-start-simulate-store-office365-summary']").Change(true);

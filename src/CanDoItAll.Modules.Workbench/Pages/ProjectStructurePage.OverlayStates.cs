@@ -141,6 +141,10 @@ public sealed record ProjectStructureWorkflowStartDialogState(
     string NodeTitle,
     ProjectStructureWorkflowRunStatus? Status,
     IReadOnlyList<ProjectStructureWorkflowPreviewSimulationOption> SimulationOptions,
+    WorkflowRuntimeBackendKind PreferredBackend,
+    WorkflowRuntimeBackendKind RequestedBackend,
+    IReadOnlyList<ProjectStructureWorkflowStartBackendOption> BackendOptions,
+    string BackendWarning,
     IReadOnlyList<string> SimulatedNodeIds,
     bool IsBusy,
     string Error)
