@@ -34,7 +34,8 @@ public sealed class GmailDownloadByLabelWorkflowExecutor(
         IsImplemented: true)
     {
         Source = PluginSource,
-        Availability = ResolveAvailability()
+        Availability = ResolveAvailability(),
+        Simulation = GmailWorkflowSimulationTemplates.DownloadByLabel
     };
 
     public async ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
@@ -203,7 +204,8 @@ public sealed class GmailMarkProcessedWorkflowExecutor(
         IsImplemented: true)
     {
         Source = PluginSource,
-        Availability = ResolveAvailability()
+        Availability = ResolveAvailability(),
+        Simulation = GmailWorkflowSimulationTemplates.MarkProcessed
     };
 
     public async ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
@@ -364,4 +366,85 @@ public sealed class GmailMarkProcessedWorkflowExecutor(
         options.Converters.Add(new JsonStringEnumConverter());
         return options;
     }
+}
+
+internal static class GmailWorkflowSimulationTemplates
+{
+    public static WorkflowExecutorSimulationDescriptor DownloadByLabel { get; } = WorkflowExecutorSimulationDescriptor.JsonTemplate(
+        """
+        {
+          "provider": "gmail",
+          "filterKind": "label",
+          "filterValue": "simulated-preview-label",
+          "processedLabel": "simulated-preview-processed",
+          "count": 1,
+          "messages": [
+            {
+              "id": "simulated-gmail-message-1",
+              "threadId": "simulated-gmail-thread-1",
+              "subject": "Simulated workflow preview email",
+              "from": "preview@example.test",
+              "receivedAt": "{{utcNow}}",
+              "snippet": "Preview-only Gmail message generated for workflow simulation.",
+              "bodyText": "This is simulated Gmail content for a Run Preview flow. It is not fetched from Gmail.",
+              "labels": [
+                "simulated-preview-label"
+              ],
+              "webLink": "https://mail.google.com/mail/u/0/#inbox/simulated-gmail-message-1"
+            }
+          ],
+          "gmailProcessing": {
+            "connectionId": "preview",
+            "sourceLabel": "simulated-preview-label",
+            "processedLabel": "simulated-preview-processed",
+            "messageIds": [
+              "simulated-gmail-message-1"
+            ]
+          },
+          "projectId": "{{inputPath:$.projectId}}",
+          "nodeId": "{{inputPath:$.nodeId}}",
+          "project": "{{inputPath:$.project}}",
+          "runContext": {
+            "workflowNodeId": "{{inputPath:$.runContext.workflowNodeId}}",
+            "gmailProcessing": {
+              "connectionId": "preview",
+              "sourceLabel": "simulated-preview-label",
+              "processedLabel": "simulated-preview-processed",
+              "messageIds": [
+                "simulated-gmail-message-1"
+              ]
+            }
+          },
+          "workflowInput": "{{inputPayload}}",
+          "simulation": {
+            "nodeId": "{{node.id}}",
+            "nodeName": "{{node.name}}",
+            "sourceExecutorId": "{{source.executor.id}}",
+            "reason": "{{simulation.reason}}",
+            "generatedAtUtc": "{{utcNow}}"
+          }
+        }
+        """,
+        "Simulate a one-message Gmail label download without calling Gmail.");
+
+    public static WorkflowExecutorSimulationDescriptor MarkProcessed { get; } = WorkflowExecutorSimulationDescriptor.JsonTemplate(
+        """
+        {
+          "provider": "gmail",
+          "messageId": "simulated-gmail-message-1",
+          "sourceLabel": "simulated-preview-label",
+          "processedLabel": "simulated-preview-processed",
+          "sourceLabelRemoved": true,
+          "processedLabelAdded": true,
+          "inputPayload": "{{inputPayload}}",
+          "simulation": {
+            "nodeId": "{{node.id}}",
+            "nodeName": "{{node.name}}",
+            "sourceExecutorId": "{{source.executor.id}}",
+            "reason": "{{simulation.reason}}",
+            "generatedAtUtc": "{{utcNow}}"
+          }
+        }
+        """,
+        "Simulate the Gmail label mutation without modifying Gmail.");
 }

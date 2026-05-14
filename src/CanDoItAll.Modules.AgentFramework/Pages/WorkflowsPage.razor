@@ -693,14 +693,24 @@
                                 </label>
                             </Grid>
 
-                            @if (previewInputState.Requirements.HasProjectStructureWrites)
+                            @if (previewInputState.Requirements.SimulationRequirements.Count > 0)
                             {
-                                <label class="workflows-check-field">
-                                    <input type="checkbox"
-                                           @bind="previewInputState.SkipProjectStructureWrites"
-                                           data-testid="workflows-preview-skip-project-writes" />
-                                    <span>Skip project-structure write steps for this preview</span>
-                                </label>
+                                <SurfaceCard Soft="true">
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Simulation" />
+                                    <p class="workflows-muted">Select steps to replace with simulated output during this preview.</p>
+                                    <Stack Gap="LayoutGap.XSmall">
+                                        @foreach (var requirement in previewInputState.Requirements.SimulationRequirements)
+                                        {
+                                            <label class="workflows-check-field">
+                                                <input type="checkbox"
+                                                       checked="@IsPreviewSimulationEnabled(requirement)"
+                                                       @onchange="args => HandlePreviewSimulationChanged(requirement, args)"
+                                                       data-testid="@BuildPreviewSimulationTestId(requirement)" />
+                                                <span>@requirement.NodeName: @requirement.Description</span>
+                                            </label>
+                                        }
+                                    </Stack>
+                                </SurfaceCard>
                             }
 
                             <label class="workflows-field">

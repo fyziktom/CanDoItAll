@@ -1,0 +1,63 @@
+{
+  "executors": {
+    "project-structure": {
+      "operations": {
+        "CreateAsset": {
+          "description": "Simulate the project-structure asset creation envelope and preserve the skipped step input under inputPayload.",
+          "outputTemplate": {
+            "result": {
+              "id": "preview-asset-{{node.id}}",
+              "parentId": "{{inputPath:$.nodeId}}",
+              "objectType": "File",
+              "objectSubtype": "md",
+              "title": "Simulated project-structure asset",
+              "summary": "Project-structure asset creation was skipped for this Run Preview.",
+              "simulated": true
+            },
+            "inputPayload": "{{inputPayload}}",
+            "simulation": {
+              "nodeId": "{{node.id}}",
+              "nodeName": "{{node.name}}",
+              "sourceExecutorId": "{{source.executor.id}}",
+              "reason": "{{simulation.reason}}",
+              "generatedAtUtc": "{{utcNow}}"
+            }
+          }
+        },
+        "CreateTaskNodes": {
+          "description": "Simulate project-structure task-node creation and preserve the skipped step input under inputPayload.",
+          "outputTemplate": {
+            "result": {
+              "projectId": "{{inputPath:$.projectId}}",
+              "parentNodeId": "{{inputPath:$.nodeId}}",
+              "createdTaskCount": 1,
+              "createdNodeIds": [
+                "preview-task-{{node.id}}"
+              ],
+              "createdNodes": [
+                {
+                  "id": "preview-task-{{node.id}}",
+                  "parentId": "{{inputPath:$.nodeId}}",
+                  "objectType": "WorkItem",
+                  "objectSubtype": "task",
+                  "title": "Simulated project-structure task",
+                  "subtitle": "Run Preview simulation",
+                  "endUtc": null
+                }
+              ],
+              "simulated": true
+            },
+            "inputPayload": "{{inputPayload}}",
+            "simulation": {
+              "nodeId": "{{node.id}}",
+              "nodeName": "{{node.name}}",
+              "sourceExecutorId": "{{source.executor.id}}",
+              "reason": "{{simulation.reason}}",
+              "generatedAtUtc": "{{utcNow}}"
+            }
+          }
+        }
+      }
+    }
+  }
+}

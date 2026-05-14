@@ -180,7 +180,7 @@ public sealed class WorkflowsPageTests
         });
 
         cut.Find("[data-testid='workflow-canvas-preview-node-id']").Change("custom:test-parent-node");
-        cut.Find("[data-testid='workflow-canvas-preview-skip-project-writes']").Change(true);
+        cut.Find("[data-testid='workflow-canvas-preview-simulate-store']").Change(true);
         cut.Find("[data-testid='workflow-canvas-preview-input-run']").Click();
 
         cut.WaitForAssertion(() =>
@@ -196,8 +196,12 @@ public sealed class WorkflowsPageTests
         Assert.Equal("custom:test-parent-node", inputDocument.RootElement.GetProperty("nodeId").GetString());
         Assert.Equal("custom:test-parent-node", inputDocument.RootElement.GetProperty("runContext").GetProperty("workflowNodeId").GetString());
         var storeNode = Assert.Single(runner.LastRequest.DraftDefinition!.Graph.Nodes, node => node.Id.Value == "store");
-        Assert.Equal(WorkflowNodeKind.StrictLogic, storeNode.Kind);
-        Assert.Null(storeNode.Settings.ExecutorId);
+        Assert.Equal(WorkflowNodeKind.Executor, storeNode.Kind);
+        Assert.Equal(WorkflowExecutorIds.ProjectStructure, storeNode.Settings.ExecutorId);
+        var simulatedStep = Assert.Single(runner.LastRequest.PreviewSimulationPlan.Steps);
+        Assert.Equal(storeNode.Id, simulatedStep.NodeId);
+        Assert.Equal(WorkflowExecutorIds.ProjectStructure, simulatedStep.SourceExecutorId);
+        Assert.Contains("inputPayload", simulatedStep.OutputTemplateJson, StringComparison.Ordinal);
     }
 
     [Fact]

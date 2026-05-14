@@ -48,7 +48,8 @@ public abstract class DockerWorkflowExecutorBase(
         Source = PluginSource,
         Availability = ResolveAvailability(),
         SettingsSchema = WorkflowExecutorSettingsSchemaDescriptor.JsonSchema("1.0", SettingsSchemaJson),
-        ConfigurationSchema = CreateConfigurationSchema()
+        ConfigurationSchema = CreateConfigurationSchema(),
+        Simulation = DockerWorkflowSimulationTemplates.CommandResult
     };
 
     public async ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
@@ -193,6 +194,38 @@ public abstract class DockerWorkflowExecutorBase(
         options.Converters.Add(new JsonStringEnumConverter());
         return options;
     }
+}
+
+internal static class DockerWorkflowSimulationTemplates
+{
+    public static WorkflowExecutorSimulationDescriptor CommandResult { get; } = WorkflowExecutorSimulationDescriptor.JsonTemplate(
+        """
+        {
+          "pluginId": "candoitall.docker",
+          "executorId": "{{source.executor.id}}",
+          "recipeId": "simulated-preview-recipe",
+          "succeeded": true,
+          "exitCode": 0,
+          "message": "Docker workflow executor was simulated for Run Preview.",
+          "stdout": "simulated docker output",
+          "stderr": "",
+          "stdoutTruncated": false,
+          "stderrTruncated": false,
+          "boundaryMode": "preview-simulation",
+          "boundaryEnforced": true,
+          "environmentVariableNames": [],
+          "arguments": {},
+          "inputPayload": "{{inputPayload}}",
+          "simulation": {
+            "nodeId": "{{node.id}}",
+            "nodeName": "{{node.name}}",
+            "sourceExecutorId": "{{source.executor.id}}",
+            "reason": "{{simulation.reason}}",
+            "generatedAtUtc": "{{utcNow}}"
+          }
+        }
+        """,
+        "Simulate Docker host-tool output without running Docker.");
 }
 
 public sealed class DockerListContainersWorkflowExecutor(

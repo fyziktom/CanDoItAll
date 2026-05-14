@@ -17,6 +17,12 @@ public sealed class MafWorkflowCompiler(
     public MafWorkflowBuildResult Compile(
         WorkflowDefinition definition,
         IReadOnlyList<LlmCallComponent> components)
+        => Compile(definition, components, WorkflowPreviewSimulationPlan.Empty);
+
+    public MafWorkflowBuildResult Compile(
+        WorkflowDefinition definition,
+        IReadOnlyList<LlmCallComponent> components,
+        WorkflowPreviewSimulationPlan? previewSimulationPlan)
     {
         ArgumentNullException.ThrowIfNull(definition);
         ArgumentNullException.ThrowIfNull(components);
@@ -32,9 +38,11 @@ public sealed class MafWorkflowCompiler(
         try
         {
             var componentsById = components.ToDictionary(component => component.Id);
+            var simulationSteps = (previewSimulationPlan ?? WorkflowPreviewSimulationPlan.Empty).Steps
+                .ToDictionary(step => step.NodeId);
             var bindings = definition.Graph.Nodes.ToDictionary(
                 node => node.Id,
-                node => CreateExecutorBinding(definition, node, componentsById));
+                node => CreateExecutorBinding(definition, node, componentsById, simulationSteps));
             var start = bindings[definition.Graph.StartNodeId];
             var builder = new WorkflowBuilder(start)
                 .WithName(definition.Name)
@@ -186,13 +194,31 @@ public sealed class MafWorkflowCompiler(
     private ExecutorBinding CreateExecutorBinding(
         WorkflowDefinition definition,
         WorkflowNode node,
-        IReadOnlyDictionary<WorkflowComponentId, LlmCallComponent> componentsById)
+        IReadOnlyDictionary<WorkflowComponentId, LlmCallComponent> componentsById,
+        IReadOnlyDictionary<WorkflowNodeId, WorkflowPreviewSimulationStep> simulationSteps)
     {
         async ValueTask<WorkflowNodeInput> ExecuteAsync(
             WorkflowNodeInput input,
             IWorkflowContext context,
             CancellationToken cancellationToken)
         {
+            if (simulationSteps.TryGetValue(node.Id, out var simulationStep))
+            {
+                if (node.Settings.ExecutorId != simulationStep.SourceExecutorId)
+                {
+                    var actualExecutorId = node.Settings.ExecutorId?.Value ?? "<none>";
+                    var requestedExecutorId = simulationStep.SourceExecutorId?.Value ?? "<none>";
+                    throw new InvalidOperationException(
+                        $"Preview simulation for workflow node '{node.Id}' targets executor '{requestedExecutorId}', but the node uses executor '{actualExecutorId}'.");
+                }
+
+                return new WorkflowNodeInput(WorkflowPreviewSimulationRenderer.Render(
+                    simulationStep,
+                    definition,
+                    node,
+                    input));
+            }
+
             if (node.Kind == WorkflowNodeKind.LlmCall)
             {
                 if (llmComponentInvoker is null)

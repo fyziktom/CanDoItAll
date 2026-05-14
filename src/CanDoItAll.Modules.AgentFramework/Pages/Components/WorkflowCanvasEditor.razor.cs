@@ -661,14 +661,14 @@ public partial class WorkflowCanvasEditor
         }
 
         var definition = WorkflowCanvasDefinitionMapper.ToDefinition(document);
-        var requirements = WorkflowPreviewInputSupport.Analyze(definition);
-        if (requirements.NeedsProjectContext)
+        var requirements = WorkflowPreviewInputSupport.Analyze(definition, executorDescriptors);
+        if (requirements.NeedsPreviewDialog)
         {
             await OpenPreviewInputDialogAsync(definition, requirements);
             return;
         }
 
-        await RunPreviewCoreAsync(definition, testInputJson);
+        await RunPreviewCoreAsync(definition, testInputJson, WorkflowPreviewSimulationPlan.Empty);
     }
 
     private async Task OpenPreviewInputDialogAsync(
@@ -725,10 +725,11 @@ public partial class WorkflowCanvasEditor
         }
 
         testInputJson = inputJson;
-        var definition = WorkflowPreviewInputSupport.ApplyPreviewOptions(previewInputDefinition, previewInputState);
+        var simulationPlan = WorkflowPreviewInputSupport.BuildSimulationPlan(previewInputState);
+        var definition = previewInputDefinition;
         isPreviewInputDialogOpen = false;
         previewInputDefinition = null;
-        await RunPreviewCoreAsync(definition, inputJson);
+        await RunPreviewCoreAsync(definition, inputJson, simulationPlan);
     }
 
     private void ClosePreviewInputDialog()
@@ -743,9 +744,32 @@ public partial class WorkflowCanvasEditor
         previewInputState.ProjectId = args.Value?.ToString() ?? string.Empty;
     }
 
+    private bool IsPreviewSimulationEnabled(WorkflowPreviewSimulationRequirement requirement)
+        => previewInputState.SimulatedNodeIds.Contains(requirement.NodeId.Value);
+
+    private void HandlePreviewSimulationChanged(
+        WorkflowPreviewSimulationRequirement requirement,
+        ChangeEventArgs args)
+    {
+        var enabled = args.Value is bool value
+            ? value
+            : bool.TryParse(args.Value?.ToString(), out var parsed) && parsed;
+        if (enabled)
+        {
+            previewInputState.SimulatedNodeIds.Add(requirement.NodeId.Value);
+            return;
+        }
+
+        previewInputState.SimulatedNodeIds.Remove(requirement.NodeId.Value);
+    }
+
+    private static string BuildPreviewSimulationTestId(WorkflowPreviewSimulationRequirement requirement)
+        => $"workflow-canvas-preview-simulate-{requirement.NodeId.Value}";
+
     private async Task RunPreviewCoreAsync(
         WorkflowDefinition definition,
-        string inputJson)
+        string inputJson,
+        WorkflowPreviewSimulationPlan simulationPlan)
     {
         isBusy = true;
         isTesting = true;
@@ -758,7 +782,10 @@ public partial class WorkflowCanvasEditor
                 DraftDefinition: definition,
                 InputJson: inputJson,
                 RequestedBackend: WorkflowRuntimeBackendKind.InProcess,
-                ValidateOnly: false));
+                ValidateOnly: false)
+            {
+                PreviewSimulationPlan = simulationPlan
+            });
             validationIssues = testResult.Validation.Issues;
             if (testResult.Run is not null)
             {

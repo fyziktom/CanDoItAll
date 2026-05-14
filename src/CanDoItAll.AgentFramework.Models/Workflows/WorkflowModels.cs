@@ -531,6 +531,19 @@ public sealed record WorkflowRuntimePolicy(
     bool ExposeAzureFunctionsStatusEndpoint,
     bool ExposeAzureFunctionsMcpTool);
 
+public sealed record WorkflowPreviewSimulationPlan(IReadOnlyList<WorkflowPreviewSimulationStep> Steps)
+{
+    public static WorkflowPreviewSimulationPlan Empty { get; } = new([]);
+
+    public bool HasSteps => Steps.Count > 0;
+}
+
+public sealed record WorkflowPreviewSimulationStep(
+    WorkflowNodeId NodeId,
+    WorkflowExecutorId? SourceExecutorId,
+    string Reason,
+    string OutputTemplateJson);
+
 public sealed record WorkflowDefinition(
     WorkflowId Id,
     WorkflowVersionId VersionId,
@@ -570,7 +583,10 @@ public sealed record WorkflowRunStartRequest(
     string InputJson,
     WorkflowRuntimeBackendKind? RequestedBackend,
     Guid? SourceProcessRunId,
-    Guid? SourceProcessAssignmentId);
+    Guid? SourceProcessAssignmentId)
+{
+    public WorkflowPreviewSimulationPlan PreviewSimulationPlan { get; init; } = WorkflowPreviewSimulationPlan.Empty;
+}
 
 public sealed record WorkflowRunSnapshot(
     WorkflowRunId RunId,

@@ -114,7 +114,10 @@ public sealed record WorkflowTestRunRequest(
     WorkflowDefinition? DraftDefinition,
     string InputJson,
     WorkflowRuntimeBackendKind? RequestedBackend,
-    bool ValidateOnly);
+    bool ValidateOnly)
+{
+    public WorkflowPreviewSimulationPlan PreviewSimulationPlan { get; init; } = WorkflowPreviewSimulationPlan.Empty;
+}
 
 public sealed record WorkflowTestRunResult(
     bool Succeeded,

@@ -1196,15 +1196,23 @@
                         </Grid>
                     </section>
 
-                    @if (previewInputState.Requirements.HasProjectStructureWrites)
+                    @if (previewInputState.Requirements.SimulationRequirements.Count > 0)
                     {
                         <section class="workflow-canvas-dialog-section">
-                            <label class="workflow-canvas-check-field">
-                                <input type="checkbox"
-                                       @bind="previewInputState.SkipProjectStructureWrites"
-                                       data-testid="workflow-canvas-preview-skip-project-writes" />
-                                <span>Skip project-structure write steps for this preview</span>
-                            </label>
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Simulation" />
+                            <p class="workflow-canvas-help">Select steps to replace with simulated output during this preview.</p>
+                            <Stack Gap="LayoutGap.XSmall">
+                                @foreach (var requirement in previewInputState.Requirements.SimulationRequirements)
+                                {
+                                    <label class="workflow-canvas-check-field">
+                                        <input type="checkbox"
+                                               checked="@IsPreviewSimulationEnabled(requirement)"
+                                               @onchange="args => HandlePreviewSimulationChanged(requirement, args)"
+                                               data-testid="@BuildPreviewSimulationTestId(requirement)" />
+                                        <span>@requirement.NodeName: @requirement.Description</span>
+                                    </label>
+                                }
+                            </Stack>
                         </section>
                     }
 

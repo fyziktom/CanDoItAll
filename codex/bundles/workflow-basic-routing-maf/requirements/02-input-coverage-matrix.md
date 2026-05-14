@@ -8,3 +8,4 @@
 | Add routing to workflow canvas | RQ-007, RQ-008, RQ-020 | 03, 05 | UI plus browser proof. |
 | Existing workflows in uploaded code | RQ-002, RQ-009 | 01, 04 | Compatibility and persistence. |
 | Execution-grade bundle | RQ-016 through RQ-020 | all | Every subbundle has proof requirements and progression gates. |
+| Run Preview skipped-step simulation repair | RQ-027, RQ-028 | 09 | Observation/repair scope covers preview execution failures from production-like Gmail and project-structure workflows. |

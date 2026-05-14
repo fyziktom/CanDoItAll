@@ -33,7 +33,8 @@ public sealed class Office365DownloadByCategoryWorkflowExecutor(
         IsImplemented: true)
     {
         Source = PluginSource,
-        Availability = ResolveAvailability()
+        Availability = ResolveAvailability(),
+        Simulation = Office365WorkflowSimulationTemplates.DownloadByCategory
     };
 
     public async ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
@@ -137,4 +138,45 @@ public sealed class Office365DownloadByCategoryWorkflowExecutor(
         options.Converters.Add(new JsonStringEnumConverter());
         return options;
     }
+}
+
+internal static class Office365WorkflowSimulationTemplates
+{
+    public static WorkflowExecutorSimulationDescriptor DownloadByCategory { get; } = WorkflowExecutorSimulationDescriptor.JsonTemplate(
+        """
+        {
+          "provider": "office365",
+          "filterKind": "category",
+          "filterValue": "simulated-preview-category",
+          "count": 1,
+          "messages": [
+            {
+              "id": "simulated-office365-message-1",
+              "threadId": "simulated-office365-thread-1",
+              "subject": "Simulated workflow preview message",
+              "from": "preview@example.test",
+              "receivedAt": "{{utcNow}}",
+              "snippet": "Preview-only Office365 message generated for workflow simulation.",
+              "bodyText": "This is simulated Microsoft 365 message content for a Run Preview flow. It is not fetched from Microsoft Graph.",
+              "labels": [
+                "simulated-preview-category"
+              ],
+              "webLink": "https://outlook.office.com/mail/inbox/id/simulated-office365-message-1"
+            }
+          ],
+          "projectId": "{{inputPath:$.projectId}}",
+          "nodeId": "{{inputPath:$.nodeId}}",
+          "project": "{{inputPath:$.project}}",
+          "runContext": "{{inputPath:$.runContext}}",
+          "workflowInput": "{{inputPayload}}",
+          "simulation": {
+            "nodeId": "{{node.id}}",
+            "nodeName": "{{node.name}}",
+            "sourceExecutorId": "{{source.executor.id}}",
+            "reason": "{{simulation.reason}}",
+            "generatedAtUtc": "{{utcNow}}"
+          }
+        }
+        """,
+        "Simulate a one-message Microsoft 365 category download without calling Graph.");
 }

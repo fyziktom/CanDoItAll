@@ -327,6 +327,29 @@ public sealed record WorkflowExecutorExecutionPolicy(
         CaptureOutputArtifact: false);
 }
 
+public sealed record WorkflowExecutorSimulationDescriptor(
+    bool SupportsPreviewSimulation,
+    string OutputTemplateJson,
+    string Description)
+{
+    public static WorkflowExecutorSimulationDescriptor None { get; } = new(
+        SupportsPreviewSimulation: false,
+        OutputTemplateJson: string.Empty,
+        Description: string.Empty);
+
+    public static WorkflowExecutorSimulationDescriptor JsonTemplate(
+        string outputTemplateJson,
+        string description)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(outputTemplateJson);
+
+        return new WorkflowExecutorSimulationDescriptor(
+            SupportsPreviewSimulation: true,
+            OutputTemplateJson: outputTemplateJson.Trim(),
+            Description: string.IsNullOrWhiteSpace(description) ? "Simulate this workflow executor output." : description.Trim());
+    }
+}
+
 public sealed record WorkflowExecutorDescriptor(
     WorkflowExecutorId Id,
     string Name,
@@ -351,6 +374,8 @@ public sealed record WorkflowExecutorDescriptor(
         WorkflowExecutorSettingsSchemaDescriptor.JsonSchema("1.0", SettingsSchemaJson);
 
     public ConfigurationSchema ConfigurationSchema { get; init; } = ConfigurationSchema.Empty();
+
+    public WorkflowExecutorSimulationDescriptor Simulation { get; init; } = WorkflowExecutorSimulationDescriptor.None;
 
     public bool CanExecute => IsImplemented && Availability.IsRunnable;
 }
