@@ -10,6 +10,7 @@ public sealed class Office365GraphClient(IHttpClientFactory httpClientFactory)
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private const string GraphBaseUrl = "https://graph.microsoft.com/v1.0";
+    private const string DefaultProcessedCategoryColor = "preset0";
 
     public async Task<PluginEmailMessageBatch> DownloadMessagesByCategoryAsync(
         string accessToken,
@@ -35,6 +36,69 @@ public sealed class Office365GraphClient(IHttpClientFactory httpClientFactory)
             messages);
     }
 
+    public async Task<Office365MessageCategoryMutationResult> MarkMessageProcessedAsync(
+        string accessToken,
+        string messageId,
+        string sourceCategory,
+        string processedCategory,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(messageId))
+        {
+            throw new InvalidOperationException("Office365 message id is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(sourceCategory))
+        {
+            throw new InvalidOperationException("Office365 source category is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(processedCategory))
+        {
+            throw new InvalidOperationException("Office365 processed category is required.");
+        }
+
+        var normalizedMessageId = messageId.Trim();
+        var normalizedSourceCategory = sourceCategory.Trim();
+        var normalizedProcessedCategory = processedCategory.Trim();
+        using var client = httpClientFactory.CreateClient(nameof(Office365GraphClient));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        var categoryCreated = await EnsureMasterCategoryAsync(client, normalizedProcessedCategory, cancellationToken);
+        var currentCategories = await GetMessageCategoriesAsync(client, normalizedMessageId, cancellationToken);
+        var sourceCategoryRemoved = currentCategories.Any(category => CategoryEquals(category, normalizedSourceCategory));
+        var updatedCategories = currentCategories
+            .Where(category => !CategoryEquals(category, normalizedSourceCategory))
+            .ToList();
+        var processedCategoryAdded = !updatedCategories.Any(category => CategoryEquals(category, normalizedProcessedCategory));
+        if (processedCategoryAdded)
+        {
+            updatedCategories.Add(normalizedProcessedCategory);
+        }
+
+        if (sourceCategoryRemoved || processedCategoryAdded)
+        {
+            var request = new GraphMessageCategoryUpdateRequest(updatedCategories);
+            var url = $"{GraphBaseUrl}/me/messages/{Uri.EscapeDataString(normalizedMessageId)}";
+            using var httpRequest = new HttpRequestMessage(HttpMethod.Patch, url)
+            {
+                Content = JsonContent.Create(request, options: JsonOptions)
+            };
+            using var response = await client.SendAsync(httpRequest, cancellationToken);
+            await EnsureSuccessAsync(response, "update Microsoft Graph message categories", cancellationToken);
+        }
+
+        return new Office365MessageCategoryMutationResult(
+            "office365",
+            normalizedMessageId,
+            normalizedSourceCategory,
+            normalizedProcessedCategory,
+            sourceCategoryRemoved,
+            processedCategoryAdded,
+            categoryCreated,
+            updatedCategories);
+    }
+
     private static async Task<IReadOnlyList<PluginEmailMessage>> ListMessagesAsync(
         HttpClient client,
         string category,
@@ -48,6 +112,61 @@ public sealed class Office365GraphClient(IHttpClientFactory httpClientFactory)
         await EnsureSuccessAsync(response, "list Microsoft Graph messages", cancellationToken);
         var payload = await response.Content.ReadFromJsonAsync<GraphMessagesResponse>(JsonOptions, cancellationToken);
         return payload?.Value.Select(ToEmailMessage).ToArray() ?? [];
+    }
+
+    private static async Task<bool> EnsureMasterCategoryAsync(
+        HttpClient client,
+        string processedCategory,
+        CancellationToken cancellationToken)
+    {
+        var existingCategories = await ListMasterCategoriesAsync(client, cancellationToken);
+        if (existingCategories.Any(category => CategoryEquals(category.DisplayName, processedCategory)))
+        {
+            return false;
+        }
+
+        var request = new GraphMasterCategoryCreateRequest(processedCategory, DefaultProcessedCategoryColor);
+        using var createResponse = await client.PostAsJsonAsync(
+            $"{GraphBaseUrl}/me/outlook/masterCategories",
+            request,
+            JsonOptions,
+            cancellationToken);
+        if (createResponse.StatusCode == HttpStatusCode.Conflict)
+        {
+            var categoriesAfterConflict = await ListMasterCategoriesAsync(client, cancellationToken);
+            if (categoriesAfterConflict.Any(category => CategoryEquals(category.DisplayName, processedCategory)))
+            {
+                return false;
+            }
+        }
+
+        await EnsureSuccessAsync(createResponse, "create Microsoft Graph Outlook category", cancellationToken);
+        return true;
+    }
+
+    private static async Task<IReadOnlyList<GraphMasterCategory>> ListMasterCategoriesAsync(
+        HttpClient client,
+        CancellationToken cancellationToken)
+    {
+        using var response = await client.GetAsync(
+            $"{GraphBaseUrl}/me/outlook/masterCategories?$select=displayName,color",
+            cancellationToken);
+        await EnsureSuccessAsync(response, "list Microsoft Graph Outlook categories", cancellationToken);
+        var payload = await response.Content.ReadFromJsonAsync<GraphMasterCategoriesResponse>(JsonOptions, cancellationToken);
+        return payload?.Value ?? [];
+    }
+
+    private static async Task<IReadOnlyList<string>> GetMessageCategoriesAsync(
+        HttpClient client,
+        string messageId,
+        CancellationToken cancellationToken)
+    {
+        var url = $"{GraphBaseUrl}/me/messages/{Uri.EscapeDataString(messageId)}?$select=id,categories";
+        using var response = await client.GetAsync(url, cancellationToken);
+        await EnsureSuccessAsync(response, "get Microsoft Graph message categories", cancellationToken);
+        var payload = await response.Content.ReadFromJsonAsync<GraphMessageCategorySnapshot>(JsonOptions, cancellationToken)
+                      ?? throw new InvalidOperationException($"Microsoft Graph message '{messageId}' category response was empty.");
+        return payload.Categories ?? [];
     }
 
     private static PluginEmailMessage ToEmailMessage(GraphMessage message)
@@ -64,6 +183,9 @@ public sealed class Office365GraphClient(IHttpClientFactory httpClientFactory)
 
     private static string EscapeODataString(string value)
         => value.Replace("'", "''", StringComparison.Ordinal);
+
+    private static bool CategoryEquals(string left, string right)
+        => string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
 
     private static async Task EnsureSuccessAsync(
         HttpResponseMessage response,
@@ -87,6 +209,18 @@ public sealed class Office365GraphClient(IHttpClientFactory httpClientFactory)
                 : value[..maxLength];
 
     private sealed record GraphMessagesResponse(IReadOnlyList<GraphMessage> Value);
+
+    private sealed record GraphMasterCategoriesResponse(IReadOnlyList<GraphMasterCategory>? Value);
+
+    private sealed record GraphMasterCategory(string DisplayName, string Color);
+
+    private sealed record GraphMasterCategoryCreateRequest(string DisplayName, string Color);
+
+    private sealed record GraphMessageCategorySnapshot(
+        string Id,
+        IReadOnlyList<string>? Categories);
+
+    private sealed record GraphMessageCategoryUpdateRequest(IReadOnlyList<string> Categories);
 
     private sealed record GraphMessage(
         string Id,

@@ -18,3 +18,4 @@
 ## Open Review Items
 
 - None before implementation.
+- Follow-up scope was repaired into the bundle on 2026-05-14: Office365 processed-category mutation and workflow-template scalar settings now map to `N005`/`N006`, `R007`-`R009`, and subbundle `03`.

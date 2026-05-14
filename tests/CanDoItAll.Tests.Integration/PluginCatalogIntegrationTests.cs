@@ -193,6 +193,8 @@ public sealed class PluginCatalogIntegrationTests
         Assert.Contains(redirectUri, decodedAuthorizationUrl, StringComparison.Ordinal);
         Assert.Contains(Office365PluginConstants.OpenIdScope, decodedAuthorizationUrl, StringComparison.Ordinal);
         Assert.Contains(Office365PluginConstants.MailReadScope, decodedAuthorizationUrl, StringComparison.Ordinal);
+        Assert.Contains(Office365PluginConstants.MailReadWriteScope, decodedAuthorizationUrl, StringComparison.Ordinal);
+        Assert.Contains(Office365PluginConstants.MailboxSettingsReadWriteScope, decodedAuthorizationUrl, StringComparison.Ordinal);
         Assert.Contains(Office365PluginConstants.OfflineAccessScope, decodedAuthorizationUrl, StringComparison.Ordinal);
         Assert.Contains("prompt=consent", decodedAuthorizationUrl, StringComparison.Ordinal);
         Assert.DoesNotContain("access_token", connection.SettingsJson, StringComparison.OrdinalIgnoreCase);
@@ -223,7 +225,11 @@ public sealed class PluginCatalogIntegrationTests
                             ["access_token"] = "graph-access-token",
                             ["refresh_token"] = "graph-refresh-token",
                             ["expires_in"] = 3600,
-                            ["scope"] = Office365PluginConstants.MailReadScope,
+                            ["scope"] = string.Join(
+                                ' ',
+                                Office365PluginConstants.MailReadScope,
+                                Office365PluginConstants.MailReadWriteScope,
+                                Office365PluginConstants.MailboxSettingsReadWriteScope),
                             ["token_type"] = "Bearer",
                             ["id_token"] = "openid-token"
                         })
@@ -280,6 +286,8 @@ public sealed class PluginCatalogIntegrationTests
 
         Assert.Equal(PluginOAuthConnectionStatusKind.Connected, status.Status);
         Assert.Contains(Office365PluginConstants.MailReadScope, status.GrantedScopes, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains(Office365PluginConstants.MailReadWriteScope, status.GrantedScopes, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains(Office365PluginConstants.MailboxSettingsReadWriteScope, status.GrantedScopes, StringComparer.OrdinalIgnoreCase);
         Assert.Contains(Office365PluginConstants.OpenIdScope, status.GrantedScopes, StringComparer.OrdinalIgnoreCase);
         Assert.Contains(Office365PluginConstants.OfflineAccessScope, status.GrantedScopes, StringComparer.OrdinalIgnoreCase);
         Assert.Empty(status.LastErrorCode);

@@ -14,6 +14,13 @@
 - Project Structure workflow node start uses `ProjectStructureWorkflowNodeService.StartAsync` and currently sends `WorkflowPreviewSimulationPlan.Empty`.
 - Project Structure start dialog only confirms the start and shows status; it has no simulation options.
 - Project Structure workflow input has `project.id` and `runContext.workflowNodeId`. Some default templates still configure `$.projectId` and `$.nodeId`, so project-structure executors need to fall back to the standard project-structure payload when those top-level aliases are absent.
+- Workflow-template settings are loaded as `Dictionary<string, object?>`; YAML scalar values can arrive as strings, so `contentFromInput: true` can serialize as `"true"` and break typed project-structure settings deserialization. This explains why the actual Office365 seeded workflow did not expose the generic skip option even though the generic analyzer existed.
+
+## Office365 Processed Category
+
+- Gmail has a `gmail.mark-message-processed` executor and default workflow step that creates the processed label when needed, adds it to the message, and removes the source label.
+- Office365 previously only had `office365.messages-by-category`; it downloaded by category and stored the summary but did not mutate the processed message.
+- Microsoft Graph requires `Mail.ReadWrite` to patch message `categories` and `MailboxSettings.ReadWrite` to create/read Outlook master categories.
 
 ## Similar Skip Cases
 

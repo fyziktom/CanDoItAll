@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Workbench;
 
 namespace CanDoItAll.Tests.Unit;
@@ -26,6 +27,31 @@ public sealed class ProjectStructureWorkflowPreviewSimulationSupportTests
         Assert.Equal(2, options.Count);
         Assert.Contains(options, option => option.NodeId == "create-summary" && option.Operation == WorkflowProjectStructureOperation.CreateAsset);
         Assert.Contains(options, option => option.NodeId == "create-tasks" && option.Operation == WorkflowProjectStructureOperation.CreateTaskNodes);
+    }
+
+    [Fact]
+    public void Analyze_returns_office365_default_workflow_store_skip_option()
+    {
+        var pack = new WorkflowTemplatePackLoader().Load();
+        var template = Assert.Single(pack.Workflows, item => item.Key == "office365-category-email-summary-to-project");
+        var now = DateTimeOffset.UtcNow;
+        var definition = new WorkflowDefinition(
+            WorkflowId.New(),
+            WorkflowVersionId.New(),
+            template.Name,
+            template.Description,
+            WorkflowLifecycleStatus.Active,
+            pack.CreateGraph(template, WorkflowComponentId.New()),
+            pack.RuntimePolicy,
+            now,
+            now);
+
+        var options = ProjectStructureWorkflowPreviewSimulationSupport.Analyze(definition);
+
+        Assert.Contains(options, option =>
+            option.NodeId == "store-office365-summary" &&
+            option.NodeName == "Store Office365 summary" &&
+            option.Operation == WorkflowProjectStructureOperation.CreateAsset);
     }
 
     [Fact]

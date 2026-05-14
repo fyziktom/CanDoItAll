@@ -69,13 +69,14 @@ public sealed class GmailDownloadByLabelWorkflowExecutor(
 
         return new WorkflowNodeExecutionResult(
             context.Node.Id,
-            CreatePayload(input, settings, batch),
+            CreatePayload(input, settings, connectionId, batch),
             ResultShape);
     }
 
     private static string CreatePayload(
         WorkflowNodeInput input,
         GmailWorkflowExecutorSettings settings,
+        PluginConnectionId connectionId,
         PluginEmailMessageBatch batch)
     {
         var payload = new JsonObject
@@ -87,7 +88,7 @@ public sealed class GmailDownloadByLabelWorkflowExecutor(
             ["count"] = batch.Count,
             ["messages"] = JsonSerializer.SerializeToNode(batch.Messages, JsonOptions)
         };
-        var processing = CreateProcessingPayload(settings, batch);
+        var processing = CreateProcessingPayload(settings, connectionId, batch);
         payload["gmailProcessing"] = processing.DeepClone();
 
         if (TryParseObject(input.PayloadJson, out var workflowInput))
@@ -111,10 +112,11 @@ public sealed class GmailDownloadByLabelWorkflowExecutor(
 
     private static JsonObject CreateProcessingPayload(
         GmailWorkflowExecutorSettings settings,
+        PluginConnectionId connectionId,
         PluginEmailMessageBatch batch)
         => new()
         {
-            ["connectionId"] = settings.ConnectionId,
+            ["connectionId"] = connectionId.ToString(),
             ["sourceLabel"] = settings.Label,
             ["processedLabel"] = settings.ProcessedLabel,
             ["messageIds"] = JsonSerializer.SerializeToNode(batch.Messages.Select(message => message.Id).ToArray(), JsonOptions)
@@ -218,7 +220,11 @@ public sealed class GmailMarkProcessedWorkflowExecutor(
         var settings = JsonSerializer.Deserialize<GmailMarkProcessedWorkflowExecutorSettings>(context.SettingsJson, JsonOptions)
                        ?? throw new InvalidOperationException("Gmail mark-processed executor settings are invalid.");
 
-        var messageId = ResolveInputJsonString(input, settings.MessageIdJsonPath, nameof(settings.MessageIdJsonPath));
+        var messageId = EmailWorkflowPayloadResolver.ResolveInputJsonString(
+            input,
+            settings.MessageIdJsonPath,
+            nameof(settings.MessageIdJsonPath),
+            "Gmail mark-processed executor");
         if (string.IsNullOrWhiteSpace(messageId))
         {
             throw new InvalidOperationException("Gmail mark-processed executor resolved an empty message id.");
@@ -268,70 +274,6 @@ public sealed class GmailMarkProcessedWorkflowExecutor(
         }
 
         return payload.ToJsonString(JsonOptions);
-    }
-
-    private static string ResolveInputJsonString(
-        WorkflowNodeInput input,
-        string jsonPath,
-        string settingName)
-    {
-        if (string.IsNullOrWhiteSpace(jsonPath))
-        {
-            throw new InvalidOperationException($"Gmail mark-processed executor setting '{settingName}' is required.");
-        }
-
-        if (!WorkflowRoutingValidation.TryParseJsonPath(jsonPath.Trim(), out var path, out var pathError))
-        {
-            throw new InvalidOperationException($"Gmail mark-processed executor setting '{settingName}' has invalid JSON path: {pathError}.");
-        }
-
-        if (string.IsNullOrWhiteSpace(input.PayloadJson))
-        {
-            throw new InvalidOperationException($"Gmail mark-processed executor setting '{settingName}' requires a workflow JSON payload.");
-        }
-
-        using var document = JsonDocument.Parse(input.PayloadJson);
-        if (!TryResolve(document.RootElement, path, out var value))
-        {
-            throw new InvalidOperationException($"Gmail mark-processed executor setting '{settingName}' path '{jsonPath}' was not found in the workflow payload.");
-        }
-
-        return value.ValueKind == JsonValueKind.String
-            ? value.GetString() ?? string.Empty
-            : value.GetRawText();
-    }
-
-    private static bool TryResolve(
-        JsonElement current,
-        IReadOnlyList<BuiltInJsonPathSegment> path,
-        out JsonElement value)
-    {
-        value = current;
-        foreach (var segment in path)
-        {
-            if (segment.PropertyName is not null)
-            {
-                if (value.ValueKind != JsonValueKind.Object ||
-                    !value.TryGetProperty(segment.PropertyName, out value))
-                {
-                    return false;
-                }
-
-                continue;
-            }
-
-            if (segment.Index is not { } index ||
-                value.ValueKind != JsonValueKind.Array ||
-                index < 0 ||
-                index >= value.GetArrayLength())
-            {
-                return false;
-            }
-
-            value = value[index];
-        }
-
-        return true;
     }
 
     private static bool TryParseObject(

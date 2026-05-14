@@ -1,8 +1,8 @@
 packKey: candoitall-workflow-template-pack
 name: CanDoItAll default workflow template pack
-version: 2026-05-file-backed-workflows-v1
+version: 2026-05-email-workflow-processing-v2
 seedMarker: Managed workflow example seed
-seedVersion: 2026-05-file-backed-workflows-v1
+seedVersion: 2026-05-email-workflow-processing-v2
 definitionNamePrefix: "Example: "
 componentNamePrefix: "Example LLM: "
 component:

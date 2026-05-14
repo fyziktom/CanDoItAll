@@ -31,6 +31,7 @@ public static class PluginsModuleServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, GmailDownloadByLabelWorkflowExecutor>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, GmailMarkProcessedWorkflowExecutor>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, Office365DownloadByCategoryWorkflowExecutor>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, Office365MarkProcessedWorkflowExecutor>());
         return services;
     }
 }

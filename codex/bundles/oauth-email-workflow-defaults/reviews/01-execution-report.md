@@ -6,7 +6,7 @@
 
 ## Outcome Check
 
-- Requested outcome: OAuth email workflow connection ids are auto-filled from Plugin OAuth settings, and Project Structure workflow starts can skip project-structure storage writes generically.
+- Requested outcome: OAuth email workflow connection ids are auto-filled from Plugin OAuth settings, Project Structure workflow starts can skip project-structure storage writes generically, and the Office365 summary workflow marks processed messages by category.
 - Current closure decision: `Closed`
 - Evidence still missing: none.
 
@@ -20,6 +20,16 @@
   - Passed: 1 test.
 - `dotnet build src\CanDoItAll.Web\CanDoItAll.Web.csproj`
   - Passed with 0 warnings and 0 errors.
+- `dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~EmailPluginClientTests|FullyQualifiedName~PluginCatalogIntegrationTests"`
+  - Passed: 18 tests after resolved connection-id payload regression coverage. Covers Office365 processed category creation/mutation, new Graph OAuth scopes, and Gmail/Office365 resolved connection ids in workflow payloads.
+- `dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~ProjectStructureWorkflowPreviewSimulationSupportTests|FullyQualifiedName~PluginCapabilityFacadeTests|FullyQualifiedName~WorkflowPreviewSimulationTests"`
+  - Passed: 13 tests. Covers actual Office365 template skip detection and template settings scalar repair.
+- `dotnet test tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --filter "FullyQualifiedName~WorkflowsPageTests|FullyQualifiedName~PluginsPageTests|FullyQualifiedName~ProjectStructurePageTests.Workflow_start_dialog_renders_project_structure_skip_options"`
+  - Passed: 14 tests. Covers preview dialogs and Office365 OAuth new-tab scope flow.
+- `dotnet build src\CanDoItAll.Web\CanDoItAll.Web.csproj`
+  - Passed with 0 warnings and 0 errors after the Office365 processed-category/template-settings follow-up.
+- `python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py codex\bundles\oauth-email-workflow-defaults --stage completed`
+  - Passed after bundle repair for the Office365 processed-category follow-up.
 - `python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py codex\bundles\oauth-email-workflow-defaults --stage completed`
   - Passed.
 
@@ -36,6 +46,7 @@
 | --- | --- | --- | --- | --- | --- |
 | `01-oauth-connection-defaults` | `Passed` | `Passed` | `Passed` | `Proceed` | Blank Gmail/Office365 executor connection ids resolve through Plugin OAuth records; explicit invalid ids fail. |
 | `02-generic-project-storage-skip-preview` | `Passed` | `Passed` | `Passed` | `Proceed` | Generic Project Structure write-node detection, plan building, dialog rendering, and executor context fallback covered. |
+| `03-office365-processed-category-and-template-settings` | `Passed` | `Passed` | `Passed` | `Proceed` | Office365 processed-category executor, Graph scopes, default workflow update, seed bump, and YAML scalar repair covered. |
 
 ## Browser Validation Analytics
 
@@ -52,10 +63,12 @@
 
 | Raw note | Status | Proof |
 | --- | --- | --- |
-| `N001` | `Solved` | Shared OAuth resolver plus Gmail/Office365 executor changes; integration tests passed. |
+| `N001` | `Solved` | Shared OAuth resolver plus Gmail/Office365 executor changes; payloads now include the resolved OAuth connection id; integration tests passed. |
 | `N002` | `Solved` | Project Structure start dialog renders Run Preview skip options and passes selected node ids into runtime start requests; component test passed. |
 | `N003` | `Solved` | Generic Project Structure `CreateAsset`/`CreateTaskNodes` analysis and plan tests passed. |
 | `N004` | `Solved` | Similar default workflow cases inventoried in `analysis/01-current-state.md`; generic implementation covers them by executor operation instead of workflow key. |
+| `N005` | `Solved` | Office365 mark-processed executor added; Graph client creates missing processed category and patches message categories; integration tests passed. |
+| `N006` | `Solved` | Workflow template scalar settings are normalized; actual Office365 template now yields the `store-office365-summary` skip option in unit proof. |
 
 ## Residual Risks
 

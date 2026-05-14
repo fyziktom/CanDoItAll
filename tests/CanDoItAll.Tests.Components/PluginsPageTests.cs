@@ -102,6 +102,8 @@ public sealed class PluginsPageTests
         Assert.Contains("login.microsoftonline.com/common/oauth2/v2.0/authorize", authorizationUrl, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(clientId, decodedAuthorizationUrl, StringComparison.Ordinal);
         Assert.Contains(Office365PluginConstants.OpenIdScope, decodedAuthorizationUrl, StringComparison.Ordinal);
+        Assert.Contains(Office365PluginConstants.MailReadWriteScope, decodedAuthorizationUrl, StringComparison.Ordinal);
+        Assert.Contains(Office365PluginConstants.MailboxSettingsReadWriteScope, decodedAuthorizationUrl, StringComparison.Ordinal);
         Assert.Contains("prompt=consent", decodedAuthorizationUrl, StringComparison.Ordinal);
     }
 }

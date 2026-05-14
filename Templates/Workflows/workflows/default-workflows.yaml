@@ -269,11 +269,12 @@ workflows:
 
   - key: office365-category-email-summary-to-project
     name: Office365 Category Email Summary To Project
-    description: Downloads Microsoft 365 mailbox messages in a configured Outlook category, summarizes the batch, and stores the markdown result under the selected project-structure node.
+    description: Downloads a Microsoft 365 mailbox message in a configured Outlook category, summarizes it, stores the markdown result under the selected project-structure node, and moves the processed category.
     routingInstructions: |-
       Summarize the downloaded Office365 message batch.
       Return route as `summarized`.
       Preserve projectId and nodeId from the input payload.
+      Preserve runContext, including runContext.office365Processing, unchanged so the final Office365 step can move the processed category.
       The markdown field must include the Outlook category, message count, sender/subject evidence, key decisions or requests, open gaps, and recommended next actions.
       Do not include full message bodies unless a short excerpt is needed as evidence.
     graph:
@@ -290,7 +291,8 @@ workflows:
             settings:
               connectionId: ""
               category: CanDoItAllSummaryTest
-              maxMessages: 10
+              processedCategory: CanDoItAllSummaryTestProcessed
+              maxMessages: 1
           instructions: Download a bounded Microsoft Graph message batch from the configured OAuth connection and Outlook category.
         - { id: summarize-office365, kind: LlmCall, name: Summarize Office365 batch, x: 620, y: 220 }
         - id: store-office365-summary
@@ -307,14 +309,29 @@ workflows:
               title: Office365 category email summary
               assetKind: md
               contentFromInput: true
+              includeInputPayload: true
               contentType: text/markdown
           instructions: Create a markdown asset in the selected project structure from the LLM summary payload.
-        - { id: end, kind: End, name: End, x: 1210, y: 220 }
+        - id: mark-office365-processed
+          kind: Executor
+          name: Mark Office365 processed
+          x: 1210
+          y: 220
+          executor:
+            id: office365.mark-message-processed
+            settings:
+              connectionId: ""
+              sourceCategory: CanDoItAllSummaryTest
+              processedCategory: CanDoItAllSummaryTestProcessed
+              messageIdJsonPath: "$.inputPayload.runContext.office365Processing.messageIds[0]"
+          instructions: Ensure the processed Outlook category exists, add it to the message, and remove the source category after the summary asset is stored.
+        - { id: end, kind: End, name: End, x: 1500, y: 220 }
       edges:
         - { source: start, target: download-office365 }
         - { source: download-office365, target: summarize-office365 }
         - { source: summarize-office365, target: store-office365-summary }
-        - { source: store-office365-summary, target: end }
+        - { source: store-office365-summary, target: mark-office365-processed }
+        - { source: mark-office365-processed, target: end }
 
   - key: invoice-workbook-risk-switch
     name: Invoice Workbook Risk Switch

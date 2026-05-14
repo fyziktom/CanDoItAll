@@ -14,10 +14,15 @@ internal sealed class Office365BundledPlugin : IBundledPlugin
         "{}",
         "Office365 email message batch JSON.");
 
+    private static readonly WorkflowValueShape CategoryMutationShape = new(
+        WorkflowValueShapeKind.Json,
+        "{}",
+        "Office365 category mutation result JSON.");
+
     public PluginDescriptor Descriptor { get; } = new(
         Office365PluginConstants.PluginId,
         "Office365 Mail",
-        "Downloads Microsoft 365 messages by Outlook category for workflow summarization.",
+        "Downloads Microsoft 365 messages by Outlook category for workflow summarization and marks processed messages.",
         "1.0.0",
         "CanDoItAll",
         PluginSourceKind.Bundled,
@@ -34,6 +39,16 @@ internal sealed class Office365BundledPlugin : IBundledPlugin
                 CreateExecutorSettingsSchema(),
                 WorkflowValueShape.Text,
                 EmailBatchShape,
+                WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 60 }),
+            new PluginWorkflowExecutorDescriptor(
+                Office365PluginConstants.MarkProcessedExecutorId,
+                "Office365 mark processed",
+                "Adds the processed Outlook category to a Microsoft 365 message and removes the source category.",
+                WorkflowExecutorCategoryKind.Data,
+                Office365PluginConstants.SettingsRendererKey,
+                CreateMarkProcessedSettingsSchema(),
+                WorkflowValueShape.Text,
+                CategoryMutationShape,
                 WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 60 })
         ],
         PluginSettingsDescriptor.Empty,
@@ -41,7 +56,7 @@ internal sealed class Office365BundledPlugin : IBundledPlugin
             new PluginConnectionDescriptor(
                 Office365PluginConstants.ConnectionKey,
                 "Office365 account",
-                "OAuth connection used to read Microsoft 365 mail through Graph.",
+                "OAuth connection used to read Microsoft 365 mail and move processed Outlook categories through Graph.",
                 PluginConnectionAuthKind.OAuth2,
                 CreateConnectionSettingsSchema(),
                 IsRequired: true)
@@ -56,7 +71,13 @@ internal sealed class Office365BundledPlugin : IBundledPlugin
             Office365PluginConstants.ConnectionKey,
             new Uri("https://login.microsoftonline.com/common/oauth2/v2.0/authorize"),
             new Uri("https://login.microsoftonline.com/common/oauth2/v2.0/token"),
-            [Office365PluginConstants.OpenIdScope, Office365PluginConstants.OfflineAccessScope, Office365PluginConstants.MailReadScope])
+            [
+                Office365PluginConstants.OpenIdScope,
+                Office365PluginConstants.OfflineAccessScope,
+                Office365PluginConstants.MailReadScope,
+                Office365PluginConstants.MailReadWriteScope,
+                Office365PluginConstants.MailboxSettingsReadWriteScope
+            ])
         {
             AuthorizationParameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
@@ -82,6 +103,17 @@ internal sealed class Office365BundledPlugin : IBundledPlugin
             [
                 new ConfigurationFieldDescriptor("connectionId", "Connection", ConfigurationFieldType.Text, IsRequired: false, "Optional plugin connection id. Leave empty to use the latest connected Office365 OAuth connection."),
                 new ConfigurationFieldDescriptor("category", "Category", ConfigurationFieldType.Text, IsRequired: true, "Outlook category name."),
+                new ConfigurationFieldDescriptor("processedCategory", "Processed category", ConfigurationFieldType.Text, IsRequired: true, "Outlook category added after successful processing."),
                 new ConfigurationFieldDescriptor("maxMessages", "Max messages", ConfigurationFieldType.Number, IsRequired: false, "Maximum messages to download.")
+            ]);
+
+    private static ConfigurationSchema CreateMarkProcessedSettingsSchema()
+        => new(
+            "1.0",
+            [
+                new ConfigurationFieldDescriptor("connectionId", "Connection", ConfigurationFieldType.Text, IsRequired: false, "Optional plugin connection id. Leave empty to use the latest connected Office365 OAuth connection."),
+                new ConfigurationFieldDescriptor("sourceCategory", "Source category", ConfigurationFieldType.Text, IsRequired: true, "Outlook category removed after successful processing."),
+                new ConfigurationFieldDescriptor("processedCategory", "Processed category", ConfigurationFieldType.Text, IsRequired: true, "Outlook category added after successful processing."),
+                new ConfigurationFieldDescriptor("messageIdJsonPath", "Message id JSON path", ConfigurationFieldType.Text, IsRequired: true, "Workflow JSON path resolving to the Microsoft Graph message id.")
             ]);
 }

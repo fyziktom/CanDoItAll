@@ -519,6 +519,8 @@ public sealed class ProjectStructureWorkflowNodeService(
             ? ResolveDescendants(surface.Nodes, parentNode.Id)
             : [];
         var payload = new ProjectStructureWorkflowInputPayload(
+            project.Id.ToString("D"),
+            workflowNode?.Id ?? parentNode.Id,
             new ProjectStructureWorkflowProjectPayload(
                 project.Id,
                 project.Name,
@@ -1118,6 +1120,8 @@ public sealed class ProjectStructureWorkflowNodeService(
     }
 
     private sealed record ProjectStructureWorkflowInputPayload(
+        string ProjectId,
+        string NodeId,
         ProjectStructureWorkflowProjectPayload Project,
         ProjectStructureWorkflowRunContextPayload? RunContext,
         ProjectStructureWorkflowNodePayload ParentNode,
