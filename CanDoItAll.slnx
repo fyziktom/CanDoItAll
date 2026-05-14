@@ -45,6 +45,10 @@
     <Project Path="src/CanDoItAll.Modules.Workbench/CanDoItAll.Modules.Workbench.csproj" />
     <Project Path="src/CanDoItAll.Modules.Workspace/CanDoItAll.Modules.Workspace.csproj" />
     <Project Path="src/CanDoItAll.Plugins.Abstractions/CanDoItAll.Plugins.Abstractions.csproj" />
+    <Project Path="src/plugins/CanDoItAll.Plugin.Docker/CanDoItAll.Plugin.Docker.csproj" />
+    <Project Path="src/plugins/CanDoItAll.Plugin.Email/CanDoItAll.Plugin.Email.csproj" />
+    <Project Path="src/plugins/CanDoItAll.Plugin.Gmail/CanDoItAll.Plugin.Gmail.csproj" />
+    <Project Path="src/plugins/CanDoItAll.Plugin.Office365/CanDoItAll.Plugin.Office365.csproj" />
     <Project Path="src/CanDoItAll.Tools.Documents/CanDoItAll.Tools.Documents.csproj" />
     <Project Path="src/Space3D/CanDoItAll.Space3D.Mouse.Driver/CanDoItAll.Space3D.Mouse.Driver.csproj" />
     <Project Path="src/Space3D/CanDoItAll.Space3D.Mouse.Components/CanDoItAll.Space3D.Mouse.Components.csproj" />

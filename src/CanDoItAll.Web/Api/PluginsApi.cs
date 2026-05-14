@@ -20,6 +20,59 @@ internal static class PluginsApi
             Results.Ok(await catalogService.ListCatalogAsync(cancellationToken)))
             .WithName("ListPluginCatalog");
 
+        plugins.MapGet("/packages/catalog", async (
+                PluginPackageService packageService,
+                CancellationToken cancellationToken) =>
+            Results.Ok(await packageService.ListPackagesAsync(cancellationToken)))
+            .WithName("ListPluginPackageCatalog");
+
+        plugins.MapPost("/packages/catalog/{packageId}/install", async (
+                string packageId,
+                PluginPackageInstallRequest request,
+                PluginPackageService packageService,
+                CancellationToken cancellationToken) =>
+            await ToPackageApiResultAsync(packageId, id => packageService.InstallFromCatalogAsync(
+                id,
+                request with { Actor = ApiActor },
+                cancellationToken)))
+            .WithName("InstallPluginPackageFromCatalog");
+
+        plugins.MapPost("/packages/upload", async (
+                IFormFile file,
+                bool? enable,
+                PluginPackageService packageService,
+                CancellationToken cancellationToken) =>
+            {
+                if (file.Length == 0)
+                {
+                    return ApiEndpointResults.BadRequest("Plugin package upload is empty.", "plugins.package-upload-empty");
+                }
+
+                await using var stream = file.OpenReadStream();
+                return ApiEndpointResults.FromResult(await packageService.InstallUploadedPackageAsync(
+                    stream,
+                    file.FileName,
+                    new PluginPackageInstallRequest(enable ?? true, ApiActor),
+                    cancellationToken));
+            })
+            .Accepts<IFormFile>("multipart/form-data")
+            .WithName("UploadPluginPackage");
+
+        plugins.MapGet("/runtime/restart-status", async (
+                PluginRuntimeRestartService restartService,
+                CancellationToken cancellationToken) =>
+            Results.Ok(await restartService.GetStatusAsync(cancellationToken)))
+            .WithName("GetPluginRuntimeRestartStatus");
+
+        plugins.MapPost("/runtime/restart", async (
+                PluginRuntimeRestartRequest request,
+                PluginRuntimeRestartService restartService,
+                CancellationToken cancellationToken) =>
+            ApiEndpointResults.FromResult(await restartService.RequestRestartAsync(
+                request with { Actor = ApiActor },
+                cancellationToken)))
+            .WithName("RestartPluginRuntime");
+
         plugins.MapPost("/{pluginId}/install", async (
                 string pluginId,
                 PluginInstallRequest request,
@@ -155,6 +208,23 @@ internal static class PluginsApi
         string pluginId,
         Func<PluginId, Task<Result<PluginCatalogItem>>> action)
         => await ToApiResultAsync<PluginCatalogItem>(pluginId, action);
+
+    private static async Task<IResult> ToPackageApiResultAsync(
+        string packageId,
+        Func<PluginPackageId, Task<Result<PluginPackageInstallResult>>> action)
+    {
+        PluginPackageId id;
+        try
+        {
+            id = new PluginPackageId(packageId);
+        }
+        catch (ArgumentException exception)
+        {
+            return ApiEndpointResults.BadRequest(exception.Message, "plugins.package-id-invalid");
+        }
+
+        return ApiEndpointResults.FromResult(await action(id));
+    }
 
     private static async Task<IResult> ToApiResultAsync<T>(
         string pluginId,

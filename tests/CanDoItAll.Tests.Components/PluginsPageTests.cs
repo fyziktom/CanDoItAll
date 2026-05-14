@@ -1,9 +1,13 @@
 using System.Net;
+using System.IO.Compression;
+using System.Text;
+using System.Text.Json;
 using Bunit;
 using CanDoItAll.Modules.Plugins;
 using CanDoItAll.Modules.Plugins.Pages;
 using CanDoItAll.Plugins.Abstractions;
 using CanDoItAll.SharedKernel.Configuration;
+using CanDoItAll.Tests.Support;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -106,4 +110,123 @@ public sealed class PluginsPageTests
         Assert.Contains(Office365PluginConstants.MailboxSettingsReadWriteScope, decodedAuthorizationUrl, StringComparison.Ordinal);
         Assert.Contains("prompt=consent", decodedAuthorizationUrl, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task Plugins_page_installs_catalog_package_and_requests_restart()
+    {
+        await using var environment = CanDoItAllTestEnvironment.Create("plugins-page-package-tests");
+        var profile = environment.CreateManagedSqliteProfile("primary");
+        var packagePaths = CreatePackagePathOverrides(environment.RootPath);
+        Directory.CreateDirectory(packagePaths.CatalogRootPath);
+        var manifest = CreatePackageManifest();
+        await File.WriteAllBytesAsync(
+            Path.Combine(packagePaths.CatalogRootPath, "page-runtime-package.zip"),
+            CreatePackageArchive(manifest));
+
+        await using var harness = await ComponentTestHarness.CreateAsync(options: new TestHarnessOptions
+        {
+            TestEnvironment = environment,
+            ActiveProfile = profile,
+            ConfigurationOverrides = packagePaths.ConfigurationOverrides
+        });
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var restartService = harness.Context.Services.GetRequiredService<PluginRuntimeRestartService>();
+        var lifetime = harness.Context.Services.GetRequiredService<TestHostApplicationLifetime>();
+
+        navigation.NavigateTo("/plugins");
+        var cut = harness.Context.RenderComponent<PluginsPage>();
+
+        cut.WaitForElement("[data-testid='plugin-package-upload']");
+        cut.Find("[data-testid='plugin-package-install-page-runtime-package']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Restart is required", cut.Markup, StringComparison.Ordinal);
+            Assert.Contains("Plugin runtime restart required", cut.Markup, StringComparison.Ordinal);
+        });
+
+        var status = await restartService.GetStatusAsync();
+        Assert.True(status.IsRestartRequired);
+
+        cut.Find("[data-testid='plugin-runtime-restart']").Click();
+        await Task.Delay(TimeSpan.FromMilliseconds(1500));
+
+        Assert.True(lifetime.ApplicationStopping.IsCancellationRequested);
+    }
+
+    private static PluginPackagePathOverrides CreatePackagePathOverrides(string rootPath)
+    {
+        var packageRootPath = Path.Combine(rootPath, "plugin-packages");
+        var catalogRootPath = Path.Combine(packageRootPath, "catalogue");
+        var installedRootPath = Path.Combine(packageRootPath, "installed");
+        var runtimeStateRootPath = Path.Combine(packageRootPath, "state");
+        return new PluginPackagePathOverrides(
+            CatalogRootPath: catalogRootPath,
+            ConfigurationOverrides: new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["PluginPackages:RootPath"] = packageRootPath,
+                ["PluginPackages:CatalogRootPath"] = catalogRootPath,
+                ["PluginPackages:InstalledRootPath"] = installedRootPath,
+                ["PluginPackages:RuntimeStateRootPath"] = runtimeStateRootPath,
+                ["PluginPackages:MaxPackageBytes"] = (20 * 1024 * 1024).ToString()
+            });
+    }
+
+    private static PluginPackageManifest CreatePackageManifest()
+        => new()
+        {
+            Plugin = new PluginDescriptor(
+                new PluginId("page.runtime"),
+                "Page runtime package",
+                "Runtime plugin package used by component tests.",
+                "1.0.0",
+                "CanDoItAll",
+                PluginSourceKind.LocalPackage,
+                PluginTrustLevel.LocalPackage,
+                "1.0.0",
+                PluginCapabilityKind.None,
+                [],
+                PluginSettingsDescriptor.Empty,
+                [],
+                new PluginPackageDescriptor(
+                    new PluginPackageId("page.runtime.package"),
+                    "1.0.0",
+                    "1.0.0",
+                    "sha256-test",
+                    "signature-test")),
+            IconPath = "icon.svg",
+            RequiresRestart = true
+        };
+
+    private static byte[] CreatePackageArchive(PluginPackageManifest manifest)
+    {
+        using var stream = new MemoryStream();
+        using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            AddArchiveEntry(
+                archive,
+                PluginPackageManifestStore.ManifestFileName,
+                JsonSerializer.SerializeToUtf8Bytes(manifest, new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+            AddArchiveEntry(
+                archive,
+                manifest.IconPath,
+                Encoding.UTF8.GetBytes("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 16 16\"><rect width=\"16\" height=\"16\"/></svg>"));
+        }
+
+        return stream.ToArray();
+    }
+
+    private static void AddArchiveEntry(
+        ZipArchive archive,
+        string entryName,
+        byte[] content)
+    {
+        var entry = archive.CreateEntry(entryName, CompressionLevel.Fastest);
+        using var entryStream = entry.Open();
+        entryStream.Write(content);
+    }
+
+    private sealed record PluginPackagePathOverrides(
+        string CatalogRootPath,
+        IReadOnlyDictionary<string, string?> ConfigurationOverrides);
 }

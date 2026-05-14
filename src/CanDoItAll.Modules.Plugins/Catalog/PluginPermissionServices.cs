@@ -352,7 +352,8 @@ public sealed class PluginGrantEvaluator(
 public sealed class PluginSettingsService(
     PluginCatalogService catalogService,
     PluginGrantStore grantStore,
-    PluginConnectionStore connectionStore)
+    PluginConnectionStore connectionStore,
+    PluginHostToolRecipeCatalogService hostToolRecipeCatalog)
 {
     public async Task<PluginSettingsDetail?> GetSettingsAsync(
         PluginId pluginId,
@@ -369,7 +370,7 @@ public sealed class PluginSettingsService(
             catalogItem,
             await ListEffectiveGrantsAsync(catalogItem, cancellationToken),
             await connectionStore.ListAsync(pluginId, cancellationToken),
-            PluginHostToolRecipeCatalog.ListForPlugin(catalogItem),
+            hostToolRecipeCatalog.ListForPlugin(catalogItem),
             catalogItem.Descriptor.Connections,
             catalogItem.Descriptor.OAuth2);
     }
@@ -393,7 +394,7 @@ public sealed class PluginSettingsService(
             result.Add(ResolveEffectiveGrant(catalogItem.PluginId, capability, recipeId: null, persisted));
         }
 
-        foreach (var recipe in PluginHostToolRecipeCatalog.ListForPlugin(catalogItem))
+        foreach (var recipe in hostToolRecipeCatalog.ListForPlugin(catalogItem))
         {
             result.Add(ResolveEffectiveGrant(catalogItem.PluginId, PluginCapabilityKind.HostCommand, recipe.RecipeId, persisted));
         }
@@ -481,19 +482,29 @@ public static class PluginCapabilityCatalog
             .ToArray();
 }
 
-public static class PluginHostToolRecipeCatalog
+public interface IPluginHostToolRecipeCatalogSource
 {
-    private static readonly PluginHostToolRecipeDescriptor[] DockerRecipes =
-    [
-        new(PluginHostToolRecipeIds.DockerListContainers, "List Docker containers", "Read Docker container metadata through docker ps.", PluginGrantRiskKind.High, MutatesHost: false),
-        new(PluginHostToolRecipeIds.DockerPullImage, "Pull Docker image", "Pull a Docker image through a constrained docker pull recipe.", PluginGrantRiskKind.High, MutatesHost: true),
-        new(PluginHostToolRecipeIds.DockerStartContainer, "Start Docker container", "Start or create a Docker container through a constrained docker run/start recipe.", PluginGrantRiskKind.High, MutatesHost: true),
-        new(PluginHostToolRecipeIds.DockerReadLogs, "Read Docker logs", "Read bounded Docker container logs.", PluginGrantRiskKind.High, MutatesHost: false)
-    ];
+    IReadOnlyList<PluginHostToolRecipeDescriptor> ListForPlugin(PluginCatalogItem catalogItem);
+}
 
-    public static IReadOnlyList<PluginHostToolRecipeDescriptor> ListForPlugin(PluginCatalogItem catalogItem)
-        => catalogItem.Capabilities.HasFlag(PluginCapabilityKind.HostCommand) &&
-           string.Equals(catalogItem.PluginId.Value, DockerPluginConstants.PluginId.Value, StringComparison.OrdinalIgnoreCase)
-            ? DockerRecipes
-            : [];
+public sealed class PluginHostToolRecipeCatalogService(IEnumerable<IPluginHostToolRecipeCatalogSource> sources)
+{
+    public IReadOnlyList<PluginHostToolRecipeDescriptor> ListForPlugin(PluginCatalogItem catalogItem)
+        => sources
+            .SelectMany(source => source.ListForPlugin(catalogItem))
+            .GroupBy(recipe => recipe.RecipeId, RecipeIdComparer.Instance)
+            .Select(group => group.First())
+            .OrderBy(recipe => recipe.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+}
+
+internal sealed class RecipeIdComparer : IEqualityComparer<PluginHostToolRecipeId>
+{
+    public static RecipeIdComparer Instance { get; } = new();
+
+    public bool Equals(PluginHostToolRecipeId x, PluginHostToolRecipeId y)
+        => string.Equals(x.Value, y.Value, StringComparison.OrdinalIgnoreCase);
+
+    public int GetHashCode(PluginHostToolRecipeId obj)
+        => StringComparer.OrdinalIgnoreCase.GetHashCode(obj.Value);
 }

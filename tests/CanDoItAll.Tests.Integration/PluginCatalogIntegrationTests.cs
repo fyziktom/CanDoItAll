@@ -1,7 +1,9 @@
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.IO.Compression;
 using System.Text.Json;
+using System.Text;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
@@ -98,6 +100,11 @@ public sealed class PluginCatalogIntegrationTests
         using var openApiPayload = JsonDocument.Parse(await host.Client.GetStringAsync("/openapi/v1.json"));
         var paths = openApiPayload.RootElement.GetProperty("paths");
         Assert.True(paths.TryGetProperty("/api/plugins/catalog", out _));
+        Assert.True(paths.TryGetProperty("/api/plugins/packages/catalog", out _));
+        Assert.True(paths.TryGetProperty("/api/plugins/packages/catalog/{packageId}/install", out _));
+        Assert.True(paths.TryGetProperty("/api/plugins/packages/upload", out _));
+        Assert.True(paths.TryGetProperty("/api/plugins/runtime/restart-status", out _));
+        Assert.True(paths.TryGetProperty("/api/plugins/runtime/restart", out _));
         Assert.True(paths.TryGetProperty("/api/plugins/{pluginId}/install", out _));
         Assert.True(paths.TryGetProperty("/api/plugins/{pluginId}/enable", out _));
         Assert.True(paths.TryGetProperty("/api/plugins/{pluginId}/disable", out _));
@@ -108,6 +115,124 @@ public sealed class PluginCatalogIntegrationTests
         Assert.True(paths.TryGetProperty("/api/plugins/{pluginId}/oauth/start", out _));
         Assert.True(paths.TryGetProperty("/api/plugins/{pluginId}/connections/{connectionId}/oauth/disconnect", out _));
         Assert.True(paths.TryGetProperty("/api/plugins/oauth/callback", out _));
+    }
+
+    [Fact]
+    public async Task Plugin_package_catalog_installs_package_and_exposes_descriptor_without_recompilation()
+    {
+        await using var environment = CanDoItAllTestEnvironment.Create("plugin-package-catalog-tests");
+        var profile = environment.CreateManagedSqliteProfile("plugins");
+        var packagePaths = CreatePackagePathOverrides(environment.RootPath);
+        Directory.CreateDirectory(packagePaths.CatalogRootPath);
+        var manifest = CreatePackageManifest(
+            pluginId: "integration.runtime.catalog",
+            packageId: "integration.runtime.catalog.package",
+            displayName: "Runtime catalog package",
+            requiresRestart: false);
+        await File.WriteAllBytesAsync(
+            Path.Combine(packagePaths.CatalogRootPath, "runtime-catalog-package.zip"),
+            CreatePackageArchive(manifest));
+
+        await using var services = await BuildServiceProviderAsync(profile, [], packagePaths.ConfigurationOverrides);
+        await using var scope = services.CreateAsyncScope();
+        var packageService = scope.ServiceProvider.GetRequiredService<PluginPackageService>();
+        var catalogService = scope.ServiceProvider.GetRequiredService<PluginCatalogService>();
+
+        var packages = await packageService.ListPackagesAsync();
+        var installResult = await packageService.InstallFromCatalogAsync(
+            manifest.Plugin.Package!.PackageId,
+            new PluginPackageInstallRequest(Enable: true, Actor: "integration-test"));
+        var catalog = await catalogService.ListCatalogAsync();
+
+        var package = Assert.Single(packages, item => item.PackageId == manifest.Plugin.Package!.PackageId);
+        Assert.False(package.IsInstalled);
+        Assert.Equal(PluginPackageCatalogSourceKind.Catalogue, package.CatalogSourceKind);
+        Assert.True(installResult.IsSuccess, FormatErrors(installResult.Errors));
+        Assert.False(installResult.Value!.RestartRequired);
+        Assert.Contains(
+            catalog,
+            item => item.PluginId == manifest.Plugin.Id &&
+                    item.InstallationState == PluginInstallationStateKind.InstalledEnabled &&
+                    item.Availability == PluginCatalogAvailabilityKind.Available);
+    }
+
+    [Fact]
+    public async Task Plugin_package_upload_installs_package_and_marks_restart_required()
+    {
+        await using var environment = CanDoItAllTestEnvironment.Create("plugin-package-upload-tests");
+        var profile = environment.CreateManagedSqliteProfile("plugins");
+        var packagePaths = CreatePackagePathOverrides(environment.RootPath);
+        var manifest = CreatePackageManifest(
+            pluginId: "integration.runtime.upload",
+            packageId: "integration.runtime.upload.package",
+            displayName: "Runtime upload package",
+            requiresRestart: true);
+
+        await using var services = await BuildServiceProviderAsync(profile, [], packagePaths.ConfigurationOverrides);
+        await using var scope = services.CreateAsyncScope();
+        var packageService = scope.ServiceProvider.GetRequiredService<PluginPackageService>();
+        var restartService = scope.ServiceProvider.GetRequiredService<PluginRuntimeRestartService>();
+        await using var stream = new MemoryStream(CreatePackageArchive(manifest));
+
+        var installResult = await packageService.InstallUploadedPackageAsync(
+            stream,
+            "runtime-upload-package.zip",
+            new PluginPackageInstallRequest(Enable: true, Actor: "integration-test"));
+        var restartStatus = await restartService.GetStatusAsync();
+
+        Assert.True(installResult.IsSuccess, FormatErrors(installResult.Errors));
+        Assert.True(installResult.Value!.RestartRequired);
+        Assert.True(restartStatus.IsRestartRequired);
+        Assert.Contains("Runtime upload package", restartStatus.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Plugin_package_upload_rejects_path_traversal_entries()
+    {
+        await using var environment = CanDoItAllTestEnvironment.Create("plugin-package-traversal-tests");
+        var profile = environment.CreateManagedSqliteProfile("plugins");
+        var packagePaths = CreatePackagePathOverrides(environment.RootPath);
+        var manifest = CreatePackageManifest(
+            pluginId: "integration.runtime.traversal",
+            packageId: "integration.runtime.traversal.package",
+            displayName: "Traversal package",
+            requiresRestart: false);
+        await using var services = await BuildServiceProviderAsync(profile, [], packagePaths.ConfigurationOverrides);
+        await using var scope = services.CreateAsyncScope();
+        var packageService = scope.ServiceProvider.GetRequiredService<PluginPackageService>();
+        await using var stream = new MemoryStream(CreatePackageArchive(
+            manifest,
+            new Dictionary<string, byte[]>(StringComparer.Ordinal)
+            {
+                ["../escape.txt"] = Encoding.UTF8.GetBytes("escaped")
+            }));
+
+        var installResult = await packageService.InstallUploadedPackageAsync(
+            stream,
+            "traversal-package.zip",
+            new PluginPackageInstallRequest(Enable: true, Actor: "integration-test"));
+
+        Assert.True(installResult.IsFailure);
+        Assert.Contains(installResult.Errors, error => error.Code == "plugins.package-invalid");
+        Assert.False(File.Exists(Path.Combine(environment.RootPath, "escape.txt")));
+    }
+
+    [Fact]
+    public async Task Plugin_runtime_restart_request_stops_host_lifetime()
+    {
+        await using var environment = CanDoItAllTestEnvironment.Create("plugin-runtime-restart-tests");
+        var profile = environment.CreateManagedSqliteProfile("plugins");
+        await using var services = await BuildServiceProviderAsync(profile, []);
+        var restartService = services.GetRequiredService<PluginRuntimeRestartService>();
+        var lifetime = services.GetRequiredService<TestHostApplicationLifetime>();
+
+        await restartService.MarkRestartRequiredAsync("Integration restart proof.", "integration-test");
+        var restartResult = await restartService.RequestRestartAsync(new PluginRuntimeRestartRequest("integration-test"));
+        await Task.Delay(TimeSpan.FromMilliseconds(1500));
+
+        Assert.True(restartResult.IsSuccess, FormatErrors(restartResult.Errors));
+        Assert.True(restartResult.Value!.IsRestartRequested);
+        Assert.True(lifetime.ApplicationStopping.IsCancellationRequested);
     }
 
     [Fact]
@@ -541,16 +666,103 @@ public sealed class PluginCatalogIntegrationTests
 
     private static async Task<ServiceProvider> BuildServiceProviderAsync(
         TestDatabaseProfile profile,
-        IReadOnlyList<PluginDescriptor> descriptors)
+        IReadOnlyList<PluginDescriptor> descriptors,
+        IReadOnlyDictionary<string, string?>? configurationOverrides = null)
     {
         return await TestApplicationBootstrap.BuildServiceProviderAsync(
             profile,
             "CanDoItAll.PluginCatalog.Tests",
             TestSchemaBootstrapModules.Full,
+            configurationOverrides,
             configureServices: services =>
             {
                 services.AddScoped<IPluginCatalogSource>(_ => new StaticPluginCatalogSource(descriptors));
             });
+    }
+
+    private static PluginPackagePathOverrides CreatePackagePathOverrides(string rootPath)
+    {
+        var packageRootPath = Path.Combine(rootPath, "plugin-packages");
+        var catalogRootPath = Path.Combine(packageRootPath, "catalogue");
+        var installedRootPath = Path.Combine(packageRootPath, "installed");
+        var runtimeStateRootPath = Path.Combine(packageRootPath, "state");
+        return new PluginPackagePathOverrides(
+            CatalogRootPath: catalogRootPath,
+            InstalledRootPath: installedRootPath,
+            RuntimeStateRootPath: runtimeStateRootPath,
+            ConfigurationOverrides: new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["PluginPackages:RootPath"] = packageRootPath,
+                ["PluginPackages:CatalogRootPath"] = catalogRootPath,
+                ["PluginPackages:InstalledRootPath"] = installedRootPath,
+                ["PluginPackages:RuntimeStateRootPath"] = runtimeStateRootPath,
+                ["PluginPackages:MaxPackageBytes"] = (20 * 1024 * 1024).ToString()
+            });
+    }
+
+    private static PluginPackageManifest CreatePackageManifest(
+        string pluginId,
+        string packageId,
+        string displayName,
+        bool requiresRestart)
+        => new()
+        {
+            Plugin = new PluginDescriptor(
+                new PluginId(pluginId),
+                displayName,
+                "Runtime plugin package used by integration tests.",
+                "1.0.0",
+                "CanDoItAll",
+                PluginSourceKind.LocalPackage,
+                PluginTrustLevel.LocalPackage,
+                "1.0.0",
+                PluginCapabilityKind.None,
+                [],
+                PluginSettingsDescriptor.Empty,
+                [],
+                new PluginPackageDescriptor(
+                    new PluginPackageId(packageId),
+                    "1.0.0",
+                    "1.0.0",
+                    "sha256-test",
+                    "signature-test")),
+            IconPath = "icon.svg",
+            RequiresRestart = requiresRestart
+        };
+
+    private static byte[] CreatePackageArchive(
+        PluginPackageManifest manifest,
+        IReadOnlyDictionary<string, byte[]>? extraEntries = null)
+    {
+        using var stream = new MemoryStream();
+        using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            AddArchiveEntry(
+                archive,
+                PluginPackageManifestStore.ManifestFileName,
+                JsonSerializer.SerializeToUtf8Bytes(manifest, JsonOptions));
+            AddArchiveEntry(
+                archive,
+                manifest.IconPath,
+                Encoding.UTF8.GetBytes("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 16 16\"><rect width=\"16\" height=\"16\"/></svg>"));
+
+            foreach (var entry in extraEntries ?? new Dictionary<string, byte[]>(StringComparer.Ordinal))
+            {
+                AddArchiveEntry(archive, entry.Key, entry.Value);
+            }
+        }
+
+        return stream.ToArray();
+    }
+
+    private static void AddArchiveEntry(
+        ZipArchive archive,
+        string entryName,
+        byte[] content)
+    {
+        var entry = archive.CreateEntry(entryName, CompressionLevel.Fastest);
+        using var entryStream = entry.Open();
+        entryStream.Write(content);
     }
 
     private static PluginDescriptor CreatePluginDescriptor()
@@ -803,6 +1015,12 @@ public sealed class PluginCatalogIntegrationTests
         public ValueTask<IReadOnlyList<PluginDescriptor>> ListPluginsAsync(CancellationToken cancellationToken = default)
             => ValueTask.FromResult(descriptors);
     }
+
+    private sealed record PluginPackagePathOverrides(
+        string CatalogRootPath,
+        string InstalledRootPath,
+        string RuntimeStateRootPath,
+        IReadOnlyDictionary<string, string?> ConfigurationOverrides);
 
     private sealed class DockerLogSummaryLlmInvoker : IWorkflowLlmComponentInvoker
     {

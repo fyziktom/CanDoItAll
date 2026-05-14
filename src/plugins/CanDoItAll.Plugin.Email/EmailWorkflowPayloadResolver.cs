@@ -4,7 +4,7 @@ using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.Modules.Plugins;
 
-internal static class EmailWorkflowPayloadResolver
+public static class EmailWorkflowPayloadResolver
 {
     public static string ResolveInputJsonString(
         WorkflowNodeInput input,
