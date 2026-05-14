@@ -489,6 +489,8 @@ public sealed record WorkflowProjectStructureExecutorSettings
 
     public bool ContentFromInput { get; init; }
 
+    public bool IncludeInputPayload { get; init; }
+
     public string SourceWorkspacePath { get; init; } = string.Empty;
 
     public string ContentType { get; init; } = "text/markdown";

@@ -261,6 +261,47 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
+    public async Task MafBackendRecordsFailedExecutorEventWithoutAmbiguousDataReflection()
+    {
+        var executor = new RecordingWorkflowExecutor { FailuresBeforeSuccess = 1 };
+        var catalog = new WorkflowExecutorCatalog([executor]);
+        var invoker = new WorkflowExecutorInvoker(catalog, [executor]);
+        var compiler = new MafWorkflowCompiler(new WorkflowDefinitionValidator(catalog), invoker);
+        var backend = new MafInProcessWorkflowExecutionBackend(compiler, []);
+        var definition = CreateDefinition(
+        [
+            CreateExecutorNode("tool", WorkflowExecutorIds.StorageFile),
+            CreateNode("end", WorkflowNodeKind.End)
+        ], [
+            CreateEdge("tool-end", "tool", "end")
+        ],
+        startNodeId: "tool") with
+        {
+            RuntimePolicy = new WorkflowRuntimePolicy(
+                WorkflowRuntimeBackendKind.InProcess,
+                AllowInProcessPreviewRuns: true,
+                RequireDurableProductionRuns: false,
+                ExposeAzureFunctionsStatusEndpoint: false,
+                ExposeAzureFunctionsMcpTool: false)
+        };
+
+        var result = await backend.StartAsync(
+            definition,
+            new WorkflowRunStartRequest(
+                definition.Id,
+                definition.VersionId,
+                "{\"input\":\"hello\"}",
+                WorkflowRuntimeBackendKind.InProcess,
+                SourceProcessRunId: null,
+                SourceProcessAssignmentId: null),
+            WorkflowRunId.New());
+
+        Assert.Equal(WorkflowRunState.Failed, result.Run.State);
+        Assert.Contains(result.Events, workflowEvent => workflowEvent.Kind is WorkflowEventKind.ExecutorFailed or WorkflowEventKind.Error);
+        Assert.DoesNotContain("Ambiguous match", result.Run.Summary, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task MafBackendRecordsConfiguredFileArtifactsForCompletedFileWrites()
     {
         var executor = new RecordingWorkflowExecutor();

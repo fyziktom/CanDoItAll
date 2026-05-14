@@ -2,6 +2,7 @@
 @using CanDoItAll.AgentFramework.Core
 @using CanDoItAll.Components.CanvasLib
 @using CanDoItAll.Components.OverlayLib
+@using CanDoItAll.Modules.AgentFramework.Pages
 @using CanDoItAll.Modules.Workspace.Pages.Components
 
 <SurfaceCard Class="workflow-canvas-editor"
@@ -1128,7 +1129,7 @@
                             }
                             @if (!string.IsNullOrWhiteSpace(testResult.ErrorMessage))
                             {
-                                <span>@testResult.ErrorMessage</span>
+                                <span>@WorkflowFailureDisplayFormatter.ToUserMessage(testResult.ErrorMessage)</span>
                             }
                         </div>
                     }
@@ -1137,6 +1138,108 @@
         </Inspector>
     </CanvasWorkbenchStage>
 </SurfaceCard>
+
+@if (isPreviewInputDialogOpen)
+{
+    <Dialog IsOpen="true"
+            Title="Preview inputs"
+            Eyebrow="Workflow preview"
+            Subtitle="@WorkflowPreviewInputSupport.BuildRequirementSummary(previewInputState.Requirements)"
+            Size="ModalSize.Wide"
+            DenseChrome="true"
+            OnClose="ClosePreviewInputDialog"
+            TestId="workflow-canvas-preview-input-dialog">
+        <ChildContent>
+            <div class="workflow-canvas-node-dialog workflow-canvas-node-dialog--single">
+                <main class="workflow-canvas-node-dialog__main">
+                    <section class="workflow-canvas-dialog-section">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Required context" />
+                        <p class="workflow-canvas-help">@WorkflowPreviewInputSupport.BuildRequirementSummary(previewInputState.Requirements)</p>
+                        @if (!string.IsNullOrWhiteSpace(previewInputState.ProjectLoadError))
+                        {
+                            <p class="workflow-canvas-error">@previewInputState.ProjectLoadError</p>
+                        }
+                    </section>
+
+                    <section class="workflow-canvas-dialog-section">
+                        <Grid Gap="LayoutGap.Small" ColumnsLg="2">
+                            @if (previewProjectOptions.Count > 0)
+                            {
+                                <label class="workflow-canvas-field">
+                                    <span>Project</span>
+                                    <select class="cda-input"
+                                            value="@previewInputState.ProjectId"
+                                            @onchange="HandlePreviewProjectChanged"
+                                            data-testid="workflow-canvas-preview-project-select">
+                                        <option value="">Choose project</option>
+                                        @foreach (var project in previewProjectOptions)
+                                        {
+                                            <option value="@project.Id.ToString("D")">@project.Name</option>
+                                        }
+                                    </select>
+                                </label>
+                            }
+
+                            <label class="workflow-canvas-field">
+                                <span>Project id</span>
+                                <input class="cda-input"
+                                       @bind="previewInputState.ProjectId"
+                                       data-testid="workflow-canvas-preview-project-id" />
+                            </label>
+
+                            <label class="workflow-canvas-field">
+                                <span>Parent node id</span>
+                                <input class="cda-input"
+                                       @bind="previewInputState.ParentNodeId"
+                                       data-testid="workflow-canvas-preview-node-id" />
+                            </label>
+                        </Grid>
+                    </section>
+
+                    @if (previewInputState.Requirements.HasProjectStructureWrites)
+                    {
+                        <section class="workflow-canvas-dialog-section">
+                            <label class="workflow-canvas-check-field">
+                                <input type="checkbox"
+                                       @bind="previewInputState.SkipProjectStructureWrites"
+                                       data-testid="workflow-canvas-preview-skip-project-writes" />
+                                <span>Skip project-structure write steps for this preview</span>
+                            </label>
+                        </section>
+                    }
+
+                    <section class="workflow-canvas-dialog-section">
+                        <label class="workflow-canvas-field">
+                            <span>Input JSON</span>
+                            <textarea class="cda-input cda-input--textarea workflow-canvas-textarea workflow-canvas-json-textarea"
+                                      @bind="previewInputState.InputJson"
+                                      data-testid="workflow-canvas-preview-input-json"></textarea>
+                        </label>
+                    </section>
+
+                    @if (!string.IsNullOrWhiteSpace(previewInputErrorMessage))
+                    {
+                        <p class="workflow-canvas-error" data-testid="workflow-canvas-preview-input-error">@previewInputErrorMessage</p>
+                    }
+                </main>
+            </div>
+        </ChildContent>
+        <Footer>
+            <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+                <Button Text="Cancel"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="ClosePreviewInputDialog"
+                        data-testid="workflow-canvas-preview-input-cancel" />
+                <Button Text="Run preview"
+                        Icon="play_arrow"
+                        Click="StartPreviewFromInputDialogAsync"
+                        Disabled="@isTesting"
+                        IsBusy="@isTesting"
+                        data-testid="workflow-canvas-preview-input-run" />
+            </Cluster>
+        </Footer>
+    </Dialog>
+}
 
 @if (isNodeDetailsDialogOpen && SelectedNode is { } modalNode)
 {

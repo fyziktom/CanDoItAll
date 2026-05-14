@@ -9,6 +9,7 @@ using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Components.OverlayLib;
 using CanDoItAll.SharedKernel.Configuration;
 using CanDoItAll.Modules.Security;
+using CanDoItAll.Modules.AgentFramework.Pages;
 using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
@@ -37,6 +38,9 @@ public partial class WorkflowCanvasEditor
 
     [Inject]
     public IWorkflowTestRunner TestRunner { get; set; } = default!;
+
+    [Inject]
+    public IProjectStructureRuntimeGateway ProjectStructureGateway { get; set; } = default!;
 
     [Inject]
     public SecretService SecretService { get; set; } = default!;
@@ -98,7 +102,11 @@ public partial class WorkflowCanvasEditor
     private string newComponentModel = string.Empty;
     private string workflowToolboxSearchText = string.Empty;
     private string? expandedWorkflowToolboxGroupKey = "workflow-decisions";
-    private string testInputJson = "{\"prompt\":\"Summarize this workflow input.\"}";
+    private string testInputJson = WorkflowPreviewInputSupport.DefaultInputJson;
+    private WorkflowPreviewInputState previewInputState = new();
+    private IReadOnlyList<ProjectStructureRuntimeProjectSummary> previewProjectOptions = [];
+    private WorkflowDefinition? previewInputDefinition;
+    private string previewInputErrorMessage = string.Empty;
     private string errorMessage = string.Empty;
     private IReadOnlyList<SecretListItem> secretPickerItems = [];
     private string secretPickerErrorMessage = string.Empty;
@@ -108,6 +116,7 @@ public partial class WorkflowCanvasEditor
     private CanvasWorkbenchWindowState selectionWindowState = CreateWindowState(width: 260, height: 320);
     private CanvasWorkbenchWindowState componentsWindowState = CreateWindowState(width: 320, height: 380, isVisible: false);
     private bool isNodeDetailsDialogOpen;
+    private bool isPreviewInputDialogOpen;
     private bool isBusy;
     private bool isTesting;
     private bool isLoadingSecrets;
@@ -196,6 +205,8 @@ public partial class WorkflowCanvasEditor
         canvasUiState = CreateWorkflowCanvasUiState(selectedNodeId);
         validationIssues = [];
         testResult = null;
+        isPreviewInputDialogOpen = false;
+        previewInputDefinition = null;
         SyncEdgeDefaults();
     }
 
@@ -649,32 +660,119 @@ public partial class WorkflowCanvasEditor
             return;
         }
 
+        var definition = WorkflowCanvasDefinitionMapper.ToDefinition(document);
+        var requirements = WorkflowPreviewInputSupport.Analyze(definition);
+        if (requirements.NeedsProjectContext)
+        {
+            await OpenPreviewInputDialogAsync(definition, requirements);
+            return;
+        }
+
+        await RunPreviewCoreAsync(definition, testInputJson);
+    }
+
+    private async Task OpenPreviewInputDialogAsync(
+        WorkflowDefinition definition,
+        WorkflowPreviewRequirements requirements)
+    {
+        previewInputDefinition = definition;
+        previewInputState = new WorkflowPreviewInputState
+        {
+            InputJson = testInputJson,
+            ProjectId = WorkflowPreviewInputSupport.TryReadJsonString(testInputJson, "$.projectId") ??
+                        WorkflowPreviewInputSupport.TryReadJsonString(testInputJson, "$.project.id") ??
+                        string.Empty,
+            ParentNodeId = WorkflowPreviewInputSupport.TryReadJsonString(testInputJson, "$.nodeId") ??
+                           WorkflowPreviewInputSupport.TryReadJsonString(testInputJson, "$.runContext.workflowNodeId") ??
+                           string.Empty,
+            Requirements = requirements
+        };
+        previewInputErrorMessage = string.Empty;
+        previewProjectOptions = [];
+        isPreviewInputDialogOpen = true;
+        await LoadPreviewProjectOptionsAsync();
+    }
+
+    private async Task LoadPreviewProjectOptionsAsync()
+    {
+        try
+        {
+            previewProjectOptions = await ProjectStructureGateway.ListProjectsAsync();
+            if (string.IsNullOrWhiteSpace(previewInputState.ProjectId) &&
+                previewProjectOptions.Count == 1)
+            {
+                previewInputState.ProjectId = previewProjectOptions[0].Id.ToString("D");
+            }
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or NotSupportedException)
+        {
+            previewInputState.ProjectLoadError = $"Project list unavailable: {exception.Message}";
+        }
+    }
+
+    private async Task StartPreviewFromInputDialogAsync()
+    {
+        if (previewInputDefinition is null)
+        {
+            return;
+        }
+
+        if (!WorkflowPreviewInputSupport.TryBuildInputJson(previewInputState, out var inputJson, out var inputError))
+        {
+            previewInputErrorMessage = inputError;
+            NotificationService.Error("Preview input needs attention", inputError);
+            return;
+        }
+
+        testInputJson = inputJson;
+        var definition = WorkflowPreviewInputSupport.ApplyPreviewOptions(previewInputDefinition, previewInputState);
+        isPreviewInputDialogOpen = false;
+        previewInputDefinition = null;
+        await RunPreviewCoreAsync(definition, inputJson);
+    }
+
+    private void ClosePreviewInputDialog()
+    {
+        isPreviewInputDialogOpen = false;
+        previewInputDefinition = null;
+        previewInputErrorMessage = string.Empty;
+    }
+
+    private void HandlePreviewProjectChanged(ChangeEventArgs args)
+    {
+        previewInputState.ProjectId = args.Value?.ToString() ?? string.Empty;
+    }
+
+    private async Task RunPreviewCoreAsync(
+        WorkflowDefinition definition,
+        string inputJson)
+    {
         isBusy = true;
         isTesting = true;
         errorMessage = string.Empty;
         try
         {
-            var definition = WorkflowCanvasDefinitionMapper.ToDefinition(document);
             testResult = await TestRunner.RunAsync(new WorkflowTestRunRequest(
                 WorkflowId: null,
                 VersionId: null,
                 DraftDefinition: definition,
-                InputJson: testInputJson,
+                InputJson: inputJson,
                 RequestedBackend: WorkflowRuntimeBackendKind.InProcess,
                 ValidateOnly: false));
             validationIssues = testResult.Validation.Issues;
-            if (!testResult.Succeeded)
-            {
-                errorMessage = testResult.ErrorMessage;
-                NotificationService.Error("Workflow preview failed", testResult.ErrorMessage);
-                return;
-            }
-
-            NotificationService.Success("Workflow preview completed", testResult.Run?.Summary ?? "Workflow preview completed.");
             if (testResult.Run is not null)
             {
                 await PreviewRunCompleted.InvokeAsync(testResult.Run);
             }
+
+            if (!testResult.Succeeded)
+            {
+                errorMessage = WorkflowFailureDisplayFormatter.ToUserMessage(testResult.ErrorMessage);
+                NotificationService.Error("Workflow preview failed", errorMessage);
+                return;
+            }
+
+            NotificationService.Success("Workflow preview completed", testResult.Run?.Summary ?? "Workflow preview completed.");
         }
         catch (Exception exception) when (exception is InvalidOperationException or ArgumentException)
         {

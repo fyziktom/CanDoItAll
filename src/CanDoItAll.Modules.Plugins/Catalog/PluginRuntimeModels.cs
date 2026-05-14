@@ -49,7 +49,9 @@ public sealed record PluginSettingsDetail(
     PluginCatalogItem CatalogItem,
     IReadOnlyList<PluginCapabilityGrantItem> Grants,
     IReadOnlyList<PluginConnectionItem> Connections,
-    IReadOnlyList<PluginHostToolRecipeDescriptor> HostToolRecipes);
+    IReadOnlyList<PluginHostToolRecipeDescriptor> HostToolRecipes,
+    IReadOnlyList<PluginConnectionDescriptor> ConnectionDescriptors,
+    PluginOAuth2Descriptor? OAuth2);
 
 public sealed record PluginHostToolRecipeDescriptor(
     PluginHostToolRecipeId RecipeId,

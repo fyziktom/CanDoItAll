@@ -233,7 +233,7 @@ public sealed class PluginCatalogService(
     private static PluginCatalogItem CreateAvailableItem(
         PluginDescriptor descriptor,
         PluginInstallationRecord? installation)
-        => new(
+        => new PluginCatalogItem(
             descriptor.Id,
             descriptor.DisplayName,
             descriptor.Description,
@@ -247,7 +247,10 @@ public sealed class PluginCatalogService(
             PluginCatalogAvailabilityKind.Available,
             string.Empty,
             installation?.InstalledAtUtc,
-            installation?.UpdatedAtUtc);
+            installation?.UpdatedAtUtc)
+        {
+            Descriptor = descriptor
+        };
 
     private static PluginCatalogItem CreateUnavailableItem(PluginInstallationRecord installation)
     {
@@ -272,7 +275,24 @@ public sealed class PluginCatalogService(
             PluginCatalogAvailabilityKind.Unavailable,
             "Plugin is installed, but no bundled catalog source currently provides its manifest.",
             installation.InstalledAtUtc,
-            installation.UpdatedAtUtc);
+            installation.UpdatedAtUtc)
+        {
+            Descriptor = snapshot ?? new PluginDescriptor(
+                new PluginId(installation.PluginId),
+                string.IsNullOrWhiteSpace(installation.DisplayNameSnapshot)
+                    ? installation.PluginId
+                    : installation.DisplayNameSnapshot,
+                string.Empty,
+                string.IsNullOrWhiteSpace(installation.Version) ? "0.0.0" : installation.Version,
+                string.Empty,
+                PluginSourceKind.Bundled,
+                PluginTrustLevel.Bundled,
+                "1.0.0",
+                PluginCapabilityKind.None,
+                [],
+                PluginSettingsDescriptor.Empty,
+                [])
+        };
     }
 
     private static PluginInstallationStateKind ResolveInstallationState(PluginInstallationRecord? installation)

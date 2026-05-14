@@ -1,6 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using Microsoft.Agents.AI.Workflows;
+using System.Reflection;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
@@ -91,14 +92,7 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
             ? WorkflowRunState.Completed
             : mappedState;
         var events = run.OutgoingEvents
-            .Select(workflowEvent => new WorkflowEventRecord(
-                Guid.NewGuid(),
-                runId,
-                MafWorkflowStatusMapper.MapEventKind(workflowEvent),
-                NodeId: null,
-                workflowEvent.ToString(),
-                PayloadJson: string.Empty,
-                DateTimeOffset.UtcNow))
+            .Select(workflowEvent => CreateEventRecord(runId, workflowEvent))
             .ToList();
         var failureEvent = events.LastOrDefault(workflowEvent =>
             workflowEvent.Kind is WorkflowEventKind.Error or WorkflowEventKind.ExecutorFailed);
@@ -138,10 +132,11 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
             finalState,
             Descriptor.Kind,
             BackendRunId: run.SessionId,
-            Summary: failureEvent?.Message ??
-                     (finalState == WorkflowRunState.Completed
-                         ? $"Workflow '{definition.Name}' completed."
-                         : $"Workflow '{definition.Name}' is {finalState}."),
+            Summary: failureEvent is not null
+                ? WorkflowFailureDisplayFormatter.ToUserMessage(failureEvent.Message)
+                : finalState == WorkflowRunState.Completed
+                    ? $"Workflow '{definition.Name}' completed."
+                    : $"Workflow '{definition.Name}' is {finalState}.",
             CreatedAtUtc: now,
             UpdatedAtUtc: DateTimeOffset.UtcNow);
         var artifacts = finalState == WorkflowRunState.Completed
@@ -150,6 +145,50 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
 
         return new WorkflowBackendStartResult(snapshot, events, [], artifacts);
     }
+
+    private static WorkflowEventRecord CreateEventRecord(
+        WorkflowRunId runId,
+        WorkflowEvent workflowEvent)
+    {
+        return new WorkflowEventRecord(
+            Guid.NewGuid(),
+            runId,
+            MafWorkflowStatusMapper.MapEventKind(workflowEvent),
+            NodeId: null,
+            workflowEvent.ToString() ?? string.Empty,
+            ResolveEventPayloadJson(workflowEvent),
+            DateTimeOffset.UtcNow);
+    }
+
+    private static string ResolveEventPayloadJson(WorkflowEvent workflowEvent)
+    {
+        foreach (var dataProperty in ResolveDataProperties(workflowEvent))
+        {
+            try
+            {
+                if (dataProperty.GetValue(workflowEvent) is WorkflowNodeInput input)
+                {
+                    return input.PayloadJson;
+                }
+            }
+            catch (Exception exception) when (exception is TargetInvocationException or InvalidOperationException)
+            {
+                continue;
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static IReadOnlyList<PropertyInfo> ResolveDataProperties(WorkflowEvent workflowEvent)
+        => workflowEvent.GetType()
+            .GetProperties(BindingFlags.Instance | BindingFlags.Public)
+            .Where(property =>
+                string.Equals(property.Name, "Data", StringComparison.Ordinal) &&
+                property.GetIndexParameters().Length == 0)
+            .OrderByDescending(property => property.PropertyType == typeof(WorkflowNodeInput))
+            .ThenBy(property => property.DeclaringType == workflowEvent.GetType() ? 0 : 1)
+            .ToArray();
 
     private static IReadOnlyList<WorkflowArtifactRecord> BuildConfiguredFileArtifacts(
         WorkflowDefinition definition,

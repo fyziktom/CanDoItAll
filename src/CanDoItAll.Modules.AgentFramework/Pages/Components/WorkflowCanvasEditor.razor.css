@@ -99,6 +99,11 @@
     height: min(74dvh, 48rem);
 }
 
+.workflow-canvas-node-dialog--single {
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+}
+
 .workflow-canvas-node-dialog__rail,
 .workflow-canvas-node-dialog__main {
     min-width: 0;

@@ -2,6 +2,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
 using Microsoft.AspNetCore.Components;
+using System.Text.Json;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages;
 
@@ -9,6 +10,13 @@ public partial class WorkflowsPage
 {
     private const int HistoryRunPageSize = 8;
     private const int HistoryEventPageSize = 8;
+    private static readonly string[] RunResultPreviewPropertyNames =
+    [
+        "summary",
+        "markdown",
+        "notes",
+        "message"
+    ];
 
     [Inject]
     public IWorkflowCatalogService CatalogService { get; set; } = default!;
@@ -32,6 +40,9 @@ public partial class WorkflowsPage
     public IWorkflowRunStore RunStore { get; set; } = default!;
 
     [Inject]
+    public IProjectStructureRuntimeGateway ProjectStructureGateway { get; set; } = default!;
+
+    [Inject]
     public NavigationManager Navigation { get; set; } = default!;
 
     [Inject]
@@ -50,9 +61,14 @@ public partial class WorkflowsPage
     private WorkflowRunSnapshot? selectedRun;
     private WorkflowRunSnapshot? runDetail;
     private WorkflowEventRecord? eventDetail;
+    private IReadOnlyList<WorkflowEventRecord> runDetailEvents = [];
+    private IReadOnlyList<WorkflowArtifactRecord> runDetailArtifacts = [];
     private WorkflowTestRunResult? testResult;
-    private string testInputJson = "{\"prompt\":\"Summarize this workflow input.\"}";
+    private string testInputJson = WorkflowPreviewInputSupport.DefaultInputJson;
     private string pendingResponseJson = "{\"approved\":true}";
+    private WorkflowPreviewInputState previewInputState = new();
+    private IReadOnlyList<ProjectStructureRuntimeProjectSummary> previewProjectOptions = [];
+    private string previewInputErrorMessage = string.Empty;
     private string errorMessage = string.Empty;
     private int activeWorkflowTabIndex;
     private int historyRunPageIndex;
@@ -62,6 +78,7 @@ public partial class WorkflowsPage
     private bool isLoading = true;
     private bool isBusy;
     private bool isRunningTest;
+    private bool isPreviewInputDialogOpen;
 
     private string SelectedDefinitionTitle => selectedDefinition?.Name ?? "Workflow detail";
 
@@ -245,6 +262,94 @@ public partial class WorkflowsPage
             return;
         }
 
+        var requirements = WorkflowPreviewInputSupport.Analyze(selectedDefinition);
+        if (requirements.NeedsProjectContext)
+        {
+            await OpenSelectedWorkflowPreviewInputDialogAsync(requirements);
+            return;
+        }
+
+        await RunSelectedWorkflowCoreAsync(testInputJson, draftDefinition: null);
+    }
+
+    private async Task OpenSelectedWorkflowPreviewInputDialogAsync(WorkflowPreviewRequirements requirements)
+    {
+        previewInputState = new WorkflowPreviewInputState
+        {
+            InputJson = testInputJson,
+            ProjectId = WorkflowPreviewInputSupport.TryReadJsonString(testInputJson, "$.projectId") ??
+                        WorkflowPreviewInputSupport.TryReadJsonString(testInputJson, "$.project.id") ??
+                        string.Empty,
+            ParentNodeId = WorkflowPreviewInputSupport.TryReadJsonString(testInputJson, "$.nodeId") ??
+                           WorkflowPreviewInputSupport.TryReadJsonString(testInputJson, "$.runContext.workflowNodeId") ??
+                           string.Empty,
+            Requirements = requirements
+        };
+        previewInputErrorMessage = string.Empty;
+        previewProjectOptions = [];
+        isPreviewInputDialogOpen = true;
+        await LoadPreviewProjectOptionsAsync();
+    }
+
+    private async Task LoadPreviewProjectOptionsAsync()
+    {
+        try
+        {
+            previewProjectOptions = await ProjectStructureGateway.ListProjectsAsync();
+            if (string.IsNullOrWhiteSpace(previewInputState.ProjectId) &&
+                previewProjectOptions.Count == 1)
+            {
+                previewInputState.ProjectId = previewProjectOptions[0].Id.ToString("D");
+            }
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or NotSupportedException)
+        {
+            previewInputState.ProjectLoadError = $"Project list unavailable: {exception.Message}";
+        }
+    }
+
+    private async Task StartSelectedWorkflowPreviewFromDialogAsync()
+    {
+        if (selectedDefinition is null)
+        {
+            return;
+        }
+
+        if (!WorkflowPreviewInputSupport.TryBuildInputJson(previewInputState, out var inputJson, out var inputError))
+        {
+            previewInputErrorMessage = inputError;
+            NotificationService.Error("Preview input needs attention", inputError);
+            return;
+        }
+
+        testInputJson = inputJson;
+        var draftDefinition = previewInputState.SkipProjectStructureWrites
+            ? WorkflowPreviewInputSupport.ApplyPreviewOptions(selectedDefinition, previewInputState)
+            : null;
+        isPreviewInputDialogOpen = false;
+        await RunSelectedWorkflowCoreAsync(inputJson, draftDefinition);
+    }
+
+    private void ClosePreviewInputDialog()
+    {
+        isPreviewInputDialogOpen = false;
+        previewInputErrorMessage = string.Empty;
+    }
+
+    private void HandlePreviewProjectChanged(ChangeEventArgs args)
+    {
+        previewInputState.ProjectId = args.Value?.ToString() ?? string.Empty;
+    }
+
+    private async Task RunSelectedWorkflowCoreAsync(
+        string inputJson,
+        WorkflowDefinition? draftDefinition)
+    {
+        if (selectedDefinition is null || isRunningTest)
+        {
+            return;
+        }
+
         isRunningTest = true;
         errorMessage = string.Empty;
 
@@ -253,14 +358,14 @@ public partial class WorkflowsPage
             testResult = await TestRunner.RunAsync(new WorkflowTestRunRequest(
                 selectedDefinition.Id,
                 selectedDefinition.VersionId,
-                DraftDefinition: null,
-                InputJson: testInputJson,
+                DraftDefinition: draftDefinition,
+                InputJson: inputJson,
                 RequestedBackend: WorkflowRuntimeBackendKind.InProcess,
                 ValidateOnly: false));
             if (!testResult.Succeeded)
             {
-                errorMessage = testResult.ErrorMessage;
-                NotificationService.Error("Workflow test failed", testResult.ErrorMessage);
+                errorMessage = WorkflowFailureDisplayFormatter.ToUserMessage(testResult.ErrorMessage);
+                NotificationService.Error("Workflow test failed", errorMessage);
             }
             else
             {
@@ -271,6 +376,10 @@ public partial class WorkflowsPage
                 selectedDefinition.Id,
                 pageIndex: 0,
                 preferredRunId: testResult.Run?.RunId);
+            if (testResult.Run is not null)
+            {
+                await OpenRunDetailDialogAsync(selectedRun ?? testResult.Run);
+            }
         }
         catch (Exception exception)
         {
@@ -377,14 +486,21 @@ public partial class WorkflowsPage
         await SelectRunAsync(selectedRun.RunId, resetEventPage: false);
     }
 
-    private void OpenRunDetailDialog(WorkflowRunSnapshot run)
+    private async Task OpenRunDetailDialogAsync(WorkflowRunSnapshot run)
     {
         runDetail = run;
+        var eventsTask = RuntimeManager.ListEventsAsync(run.RunId);
+        var artifactsTask = RunStore.ListArtifactsAsync(run.RunId);
+        await Task.WhenAll(eventsTask, artifactsTask);
+        runDetailEvents = await eventsTask;
+        runDetailArtifacts = await artifactsTask;
     }
 
     private void CloseRunDetailDialog()
     {
         runDetail = null;
+        runDetailEvents = [];
+        runDetailArtifacts = [];
     }
 
     private void OpenEventDetailDialog(WorkflowEventRecord workflowEvent)
@@ -440,6 +556,7 @@ public partial class WorkflowsPage
     private async Task HandleCanvasPreviewRunCompletedAsync(WorkflowRunSnapshot run)
     {
         await LoadRunsPageAsync(run.WorkflowId, pageIndex: 0, preferredRunId: run.RunId);
+        await OpenRunDetailDialogAsync(selectedRun ?? run);
     }
 
     private async Task RefreshComponentLibraryAsync()
@@ -580,6 +697,210 @@ public partial class WorkflowsPage
         return value.ToLocalTime().ToString("MMM d, yyyy HH:mm:ss");
     }
 
+    private static string ResolveRunResultPayload(IReadOnlyList<WorkflowEventRecord> events)
+    {
+        foreach (var outputEvent in events.Reverse().Where(workflowEvent => workflowEvent.Kind == WorkflowEventKind.Output))
+        {
+            var payloadJson = ResolveEventPayloadJson(outputEvent);
+            if (!string.IsNullOrWhiteSpace(payloadJson))
+            {
+                return payloadJson;
+            }
+        }
+
+        foreach (var completedEvent in events.Reverse().Where(workflowEvent => workflowEvent.Kind == WorkflowEventKind.ExecutorCompleted))
+        {
+            var payloadJson = ResolveEventPayloadJson(completedEvent);
+            if (!string.IsNullOrWhiteSpace(payloadJson))
+            {
+                return payloadJson;
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static string ResolveEventPayloadJson(WorkflowEventRecord workflowEvent)
+    {
+        if (!string.IsNullOrWhiteSpace(workflowEvent.PayloadJson))
+        {
+            return workflowEvent.PayloadJson;
+        }
+
+        return TryExtractLegacyPayloadJson(workflowEvent.Message, out var payloadJson)
+            ? payloadJson
+            : string.Empty;
+    }
+
+    private static bool TryExtractLegacyPayloadJson(string message, out string payloadJson)
+    {
+        payloadJson = string.Empty;
+        const string marker = "PayloadJson = ";
+        var start = message.LastIndexOf(marker, StringComparison.Ordinal);
+        if (start < 0)
+        {
+            return false;
+        }
+
+        start += marker.Length;
+        while (start < message.Length && char.IsWhiteSpace(message[start]))
+        {
+            start++;
+        }
+
+        if (start >= message.Length || message[start] is not ('{' or '['))
+        {
+            return false;
+        }
+
+        var stack = new Stack<char>();
+        var inString = false;
+        var escaped = false;
+        for (var index = start; index < message.Length; index++)
+        {
+            var character = message[index];
+            if (inString)
+            {
+                if (escaped)
+                {
+                    escaped = false;
+                }
+                else if (character == '\\')
+                {
+                    escaped = true;
+                }
+                else if (character == '"')
+                {
+                    inString = false;
+                }
+
+                continue;
+            }
+
+            if (character == '"')
+            {
+                inString = true;
+                continue;
+            }
+
+            if (character == '{')
+            {
+                stack.Push('}');
+                continue;
+            }
+
+            if (character == '[')
+            {
+                stack.Push(']');
+                continue;
+            }
+
+            if (character is not ('}' or ']'))
+            {
+                continue;
+            }
+
+            if (stack.Count == 0 || stack.Pop() != character)
+            {
+                return false;
+            }
+
+            if (stack.Count != 0)
+            {
+                continue;
+            }
+
+            var candidate = message[start..(index + 1)];
+            try
+            {
+                using var _ = JsonDocument.Parse(candidate);
+                payloadJson = candidate;
+                return true;
+            }
+            catch (JsonException)
+            {
+                return false;
+            }
+        }
+
+        return false;
+    }
+
+    private static string ResolveRunResultPreview(string payloadJson)
+    {
+        if (string.IsNullOrWhiteSpace(payloadJson))
+        {
+            return string.Empty;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(payloadJson);
+            if (TryFindResultPreviewText(document.RootElement, out var value))
+            {
+                return TruncatePreservingWhitespace(value, 3000);
+            }
+        }
+        catch (JsonException)
+        {
+            return TruncatePreservingWhitespace(payloadJson, 3000);
+        }
+
+        return TruncatePreservingWhitespace(payloadJson, 3000);
+    }
+
+    private static bool TryFindResultPreviewText(JsonElement element, out string value)
+    {
+        value = string.Empty;
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var propertyName in RunResultPreviewPropertyNames)
+            {
+                if (element.TryGetProperty(propertyName, out var property) &&
+                    property.ValueKind == JsonValueKind.String &&
+                    !string.IsNullOrWhiteSpace(property.GetString()))
+                {
+                    value = property.GetString()!;
+                    return true;
+                }
+            }
+
+            foreach (var property in element.EnumerateObject())
+            {
+                if (TryFindResultPreviewText(property.Value, out value))
+                {
+                    return true;
+                }
+            }
+        }
+
+        if (element.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in element.EnumerateArray())
+            {
+                if (TryFindResultPreviewText(item, out value))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static string TruncatePreservingWhitespace(string value, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var trimmed = value.Trim();
+        return trimmed.Length <= maxLength
+            ? trimmed
+            : $"{trimmed[..Math.Max(0, maxLength - 3)]}...";
+    }
+
     private static int CalculateTotalPages(int totalCount, int pageSize)
     {
         return totalCount <= 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize);
@@ -607,6 +928,21 @@ public partial class WorkflowsPage
             ? normalized
             : $"{normalized[..Math.Max(0, maxLength - 3)]}...";
     }
+
+    private static string FormatWorkflowMessage(string message)
+        => WorkflowFailureDisplayFormatter.ToUserMessage(message);
+
+    private static string ResolveEventDisplayMessage(WorkflowEventRecord workflowEvent)
+        => workflowEvent.Kind is WorkflowEventKind.Error or WorkflowEventKind.ExecutorFailed
+            ? WorkflowFailureDisplayFormatter.ToUserMessage(workflowEvent.Message)
+            : workflowEvent.Message;
+
+    private static bool HasTechnicalEventMessage(WorkflowEventRecord workflowEvent)
+        => workflowEvent.Kind is WorkflowEventKind.Error or WorkflowEventKind.ExecutorFailed &&
+           !string.Equals(
+               ResolveEventDisplayMessage(workflowEvent),
+               workflowEvent.Message,
+               StringComparison.Ordinal);
 
     private static string FormatShortId(Guid value)
     {

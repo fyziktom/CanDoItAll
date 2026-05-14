@@ -103,6 +103,148 @@ public sealed class PluginCatalogIntegrationTests
         Assert.True(paths.TryGetProperty("/api/plugins/{pluginId}/settings", out _));
         Assert.True(paths.TryGetProperty("/api/plugins/{pluginId}/grants", out _));
         Assert.True(paths.TryGetProperty("/api/plugins/{pluginId}/connections", out _));
+        Assert.True(paths.TryGetProperty("/api/plugins/{pluginId}/oauth/status", out _));
+        Assert.True(paths.TryGetProperty("/api/plugins/{pluginId}/oauth/start", out _));
+        Assert.True(paths.TryGetProperty("/api/plugins/{pluginId}/connections/{connectionId}/oauth/disconnect", out _));
+        Assert.True(paths.TryGetProperty("/api/plugins/oauth/callback", out _));
+    }
+
+    [Fact]
+    public async Task Gmail_oauth_start_creates_vault_backed_session_without_persisting_token_material()
+    {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
+        var installResponse = await host.Client.PostAsJsonAsync(
+            $"/api/plugins/{GmailPluginConstants.PluginId.Value}/install",
+            new PluginInstallRequest(Enable: true, Actor: "integration-test"));
+        var installBody = await installResponse.Content.ReadAsStringAsync();
+        Assert.True(installResponse.IsSuccessStatusCode, installBody);
+        await GrantAsync(host, GmailPluginConstants.PluginId, PluginCapabilityKind.OAuth2);
+
+        var startResponse = await host.Client.PostAsJsonAsync(
+            $"/api/plugins/{GmailPluginConstants.PluginId.Value}/oauth/start",
+            new PluginOAuthStartRequest(GmailPluginConstants.ConnectionKey, ReturnPath: "/plugins"));
+        var startBody = await startResponse.Content.ReadAsStringAsync();
+        Assert.True(startResponse.IsSuccessStatusCode, startBody);
+        var start = JsonSerializer.Deserialize<PluginOAuthStartResponse>(startBody, JsonOptions)!;
+
+        await using var scope = host.App.Services.CreateAsyncScope();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var connection = await dbContext.Set<PluginConnectionRecord>().SingleAsync(item => item.Id == start.ConnectionId.Value);
+        var session = await dbContext.Set<PluginOAuthSessionRecord>().SingleAsync(item => item.ConnectionId == start.ConnectionId.Value);
+
+        Assert.Contains("accounts.google.com", start.AuthorizationUrl, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("code_challenge=", start.AuthorizationUrl, StringComparison.Ordinal);
+        Assert.Contains(GmailPluginConstants.ClientId, start.AuthorizationUrl, StringComparison.Ordinal);
+        Assert.Contains(GmailPluginConstants.GmailModifyScope, WebUtility.UrlDecode(start.AuthorizationUrl), StringComparison.Ordinal);
+        Assert.Equal("{}", connection.SettingsJson);
+        Assert.DoesNotContain("access_token", connection.SettingsJson, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("refresh_token", connection.SettingsJson, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("client_secret", connection.SettingsJson, StringComparison.OrdinalIgnoreCase);
+        Assert.NotEmpty(session.StateHash);
+        Assert.NotEmpty(session.CodeVerifierVaultKey);
+    }
+
+    [Fact]
+    public async Task Office365_oauth_start_uses_connection_settings_client_id_and_redirect_uri()
+    {
+        const string clientId = "2f2a235f-7970-477b-93ba-656be29a8d03";
+        const string redirectUri = "http://localhost:5107/api/plugins/oauth/callback";
+
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
+        var installResponse = await host.Client.PostAsJsonAsync(
+            $"/api/plugins/{Office365PluginConstants.PluginId.Value}/install",
+            new PluginInstallRequest(Enable: true, Actor: "integration-test"));
+        var installBody = await installResponse.Content.ReadAsStringAsync();
+        Assert.True(installResponse.IsSuccessStatusCode, installBody);
+        await GrantAsync(host, Office365PluginConstants.PluginId, PluginCapabilityKind.OAuth2);
+
+        var connectionSettings = new ConfigurationState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            [PluginOAuthConnectionSettingKeys.ClientId] = clientId,
+            [PluginOAuthConnectionSettingKeys.RedirectUri] = redirectUri
+        });
+        var connectionResponse = await host.Client.PostAsJsonAsync(
+            $"/api/plugins/{Office365PluginConstants.PluginId.Value}/connections",
+            new PluginConnectionSaveRequest(
+                Id: null,
+                Office365PluginConstants.ConnectionKey,
+                "CanDoItAll Local Connector",
+                connectionSettings.ToJson(),
+                IsEnabled: true));
+        var connectionBody = await connectionResponse.Content.ReadAsStringAsync();
+        Assert.True(connectionResponse.IsSuccessStatusCode, connectionBody);
+        var connection = JsonSerializer.Deserialize<PluginConnectionItem>(connectionBody, JsonOptions)!;
+
+        var startResponse = await host.Client.PostAsJsonAsync(
+            $"/api/plugins/{Office365PluginConstants.PluginId.Value}/oauth/start",
+            new PluginOAuthStartRequest(
+                Office365PluginConstants.ConnectionKey,
+                connection.Id,
+                ReturnPath: "/plugins"));
+        var startBody = await startResponse.Content.ReadAsStringAsync();
+        Assert.True(startResponse.IsSuccessStatusCode, startBody);
+        var start = JsonSerializer.Deserialize<PluginOAuthStartResponse>(startBody, JsonOptions)!;
+        var decodedAuthorizationUrl = WebUtility.UrlDecode(start.AuthorizationUrl);
+
+        Assert.Contains("login.microsoftonline.com/common/oauth2/v2.0/authorize", start.AuthorizationUrl, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(clientId, decodedAuthorizationUrl, StringComparison.Ordinal);
+        Assert.Contains(redirectUri, decodedAuthorizationUrl, StringComparison.Ordinal);
+        Assert.Contains(Office365PluginConstants.MailReadScope, decodedAuthorizationUrl, StringComparison.Ordinal);
+        Assert.Contains(Office365PluginConstants.OfflineAccessScope, decodedAuthorizationUrl, StringComparison.Ordinal);
+        Assert.DoesNotContain("access_token", connection.SettingsJson, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("refresh_token", connection.SettingsJson, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("client_secret", connection.SettingsJson, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Gmail_oauth_status_requires_reconnect_when_existing_grant_is_missing_current_scope()
+    {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
+        var installResponse = await host.Client.PostAsJsonAsync(
+            $"/api/plugins/{GmailPluginConstants.PluginId.Value}/install",
+            new PluginInstallRequest(Enable: true, Actor: "integration-test"));
+        var installBody = await installResponse.Content.ReadAsStringAsync();
+        Assert.True(installResponse.IsSuccessStatusCode, installBody);
+        await GrantAsync(host, GmailPluginConstants.PluginId, PluginCapabilityKind.OAuth2);
+
+        var startResponse = await host.Client.PostAsJsonAsync(
+            $"/api/plugins/{GmailPluginConstants.PluginId.Value}/oauth/start",
+            new PluginOAuthStartRequest(GmailPluginConstants.ConnectionKey, ReturnPath: "/plugins"));
+        var startBody = await startResponse.Content.ReadAsStringAsync();
+        Assert.True(startResponse.IsSuccessStatusCode, startBody);
+        var start = JsonSerializer.Deserialize<PluginOAuthStartResponse>(startBody, JsonOptions)!;
+
+        await using var scope = host.App.Services.CreateAsyncScope();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var timestamp = DateTimeOffset.UtcNow;
+        dbContext.Set<PluginOAuthConnectionRecord>().Add(new PluginOAuthConnectionRecord
+        {
+            ConnectionId = start.ConnectionId.Value,
+            PluginId = GmailPluginConstants.PluginId.Value,
+            ConnectionKey = GmailPluginConstants.ConnectionKey.Value,
+            ProviderKey = $"{GmailPluginConstants.PluginId.Value}:{GmailPluginConstants.ConnectionKey.Value}",
+            TokenVaultKey = "plugins/oauth/test/token",
+            Status = nameof(PluginOAuthConnectionStatusKind.Connected),
+            GrantedScopesJson = JsonSerializer.Serialize(
+                new[] { "https://www.googleapis.com/auth/gmail.readonly" },
+                JsonOptions),
+            AccessTokenExpiresAtUtc = timestamp.AddHours(1),
+            CreatedAtUtc = timestamp,
+            UpdatedAtUtc = timestamp
+        });
+        await dbContext.SaveChangesAsync();
+
+        var statusResponse = await host.Client.GetAsync($"/api/plugins/{GmailPluginConstants.PluginId.Value}/oauth/status");
+        var statusBody = await statusResponse.Content.ReadAsStringAsync();
+        Assert.True(statusResponse.IsSuccessStatusCode, statusBody);
+        var statuses = JsonSerializer.Deserialize<IReadOnlyList<PluginOAuthConnectionStatusItem>>(statusBody, JsonOptions)!;
+        var status = Assert.Single(statuses);
+
+        Assert.Equal(PluginOAuthConnectionStatusKind.ReconnectRequired, status.Status);
+        Assert.Equal("oauth-scope-missing", status.LastErrorCode);
+        Assert.Contains(GmailPluginConstants.GmailModifyScope, status.LastErrorDescription, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -175,9 +317,9 @@ public sealed class PluginCatalogIntegrationTests
         var installBody = await installResponse.Content.ReadAsStringAsync();
         Assert.True(installResponse.IsSuccessStatusCode, installBody);
 
-        await GrantAsync(host, PluginCapabilityKind.WorkflowExecutor);
-        await GrantAsync(host, PluginCapabilityKind.HostCommand);
-        await GrantAsync(host, PluginCapabilityKind.HostCommand, PluginHostToolRecipeIds.DockerStartContainer);
+        await GrantAsync(host, DockerPluginConstants.PluginId, PluginCapabilityKind.WorkflowExecutor);
+        await GrantAsync(host, DockerPluginConstants.PluginId, PluginCapabilityKind.HostCommand);
+        await GrantAsync(host, DockerPluginConstants.PluginId, PluginCapabilityKind.HostCommand, PluginHostToolRecipeIds.DockerStartContainer);
 
         var updatedCatalog = await ReadWorkflowExecutorCatalogAsync(host);
         var updatedDockerStart = Assert.Single(updatedCatalog, item => item.Id == DockerPluginConstants.StartContainerExecutorId);
@@ -270,11 +412,12 @@ public sealed class PluginCatalogIntegrationTests
 
     private static async Task GrantAsync(
         ApiTestHost host,
+        PluginId pluginId,
         PluginCapabilityKind capability,
         PluginHostToolRecipeId? recipeId = null)
     {
         var response = await host.Client.PutAsJsonAsync(
-            $"/api/plugins/{DockerPluginConstants.PluginId.Value}/grants",
+            $"/api/plugins/{pluginId.Value}/grants",
             new PluginGrantUpdateRequest(
                 capability,
                 PluginGrantState.Granted,
@@ -292,11 +435,11 @@ public sealed class PluginCatalogIntegrationTests
         var installBody = await installResponse.Content.ReadAsStringAsync();
         Assert.True(installResponse.IsSuccessStatusCode, installBody);
 
-        await GrantAsync(host, PluginCapabilityKind.WorkflowExecutor);
-        await GrantAsync(host, PluginCapabilityKind.HostCommand);
-        await GrantAsync(host, PluginCapabilityKind.HostCommand, PluginHostToolRecipeIds.DockerPullImage);
-        await GrantAsync(host, PluginCapabilityKind.HostCommand, PluginHostToolRecipeIds.DockerStartContainer);
-        await GrantAsync(host, PluginCapabilityKind.HostCommand, PluginHostToolRecipeIds.DockerReadLogs);
+        await GrantAsync(host, DockerPluginConstants.PluginId, PluginCapabilityKind.WorkflowExecutor);
+        await GrantAsync(host, DockerPluginConstants.PluginId, PluginCapabilityKind.HostCommand);
+        await GrantAsync(host, DockerPluginConstants.PluginId, PluginCapabilityKind.HostCommand, PluginHostToolRecipeIds.DockerPullImage);
+        await GrantAsync(host, DockerPluginConstants.PluginId, PluginCapabilityKind.HostCommand, PluginHostToolRecipeIds.DockerStartContainer);
+        await GrantAsync(host, DockerPluginConstants.PluginId, PluginCapabilityKind.HostCommand, PluginHostToolRecipeIds.DockerReadLogs);
     }
 
     private static async Task<LlmCallComponent> SaveDockerLogSummaryComponentAsync(ApiTestHost host)

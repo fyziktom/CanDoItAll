@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.SharedKernel;
@@ -53,7 +54,42 @@ public sealed class ProjectStructureWorkflowExecutor(IProjectStructureRuntimeGat
             _ => throw new InvalidOperationException($"Project-structure operation '{settings.Operation}' is not supported.")
         };
 
+        result = settings.IncludeInputPayload
+            ? IncludeInputPayload(result, input)
+            : result;
+
         return WorkflowExecutorJson.Result(context, result);
+    }
+
+    private static object IncludeInputPayload(
+        object result,
+        WorkflowNodeInput input)
+    {
+        if (string.IsNullOrWhiteSpace(input.PayloadJson))
+        {
+            return new
+            {
+                result,
+                inputPayload = (JsonNode?)null
+            };
+        }
+
+        try
+        {
+            return new
+            {
+                result,
+                inputPayload = JsonNode.Parse(input.PayloadJson)
+            };
+        }
+        catch (JsonException)
+        {
+            return new
+            {
+                result,
+                inputPayload = input.PayloadJson
+            };
+        }
     }
 
     private static async Task<object> CreateTaskNodesAsync(

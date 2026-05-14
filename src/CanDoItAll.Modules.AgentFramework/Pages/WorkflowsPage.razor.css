@@ -147,6 +147,25 @@
     gap: 0.35rem;
 }
 
+.workflows-check-field {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    color: rgb(51 65 85);
+    font-size: 0.875rem;
+}
+
+.workflows-error-note {
+    margin: 0;
+    border: 1px solid rgba(185, 28, 28, 0.24);
+    border-radius: 0.5rem;
+    padding: 0.65rem 0.75rem;
+    background: rgba(254, 226, 226, 0.72);
+    color: #991b1b;
+    font-size: 0.85rem;
+    line-height: 1.45;
+}
+
 .workflows-input {
     min-height: 8rem;
     resize: vertical;

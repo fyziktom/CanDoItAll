@@ -130,6 +130,36 @@ public sealed class PluginConnectionStore(
     IDbContextFactory<AppDbContext> dbContextFactory,
     IClock clock)
 {
+    public async Task<PluginConnectionItem?> FindAsync(
+        PluginId pluginId,
+        PluginConnectionId connectionId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var record = await dbContext.Set<PluginConnectionRecord>()
+            .AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == connectionId.Value && item.PluginId == pluginId.Value, cancellationToken);
+
+        return record is null ? null : ToItem(record);
+    }
+
+    public async Task<PluginConnectionItem?> FindFirstByKeyAsync(
+        PluginId pluginId,
+        PluginConnectionKey connectionKey,
+        CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var records = await dbContext.Set<PluginConnectionRecord>()
+            .AsNoTracking()
+            .Where(item => item.PluginId == pluginId.Value && item.ConnectionKey == connectionKey.Value)
+            .ToArrayAsync(cancellationToken);
+        var record = records
+            .OrderByDescending(item => item.UpdatedAtUtc)
+            .FirstOrDefault();
+
+        return record is null ? null : ToItem(record);
+    }
+
     public async Task<IReadOnlyList<PluginConnectionItem>> ListAsync(
         PluginId pluginId,
         CancellationToken cancellationToken = default)
@@ -339,7 +369,9 @@ public sealed class PluginSettingsService(
             catalogItem,
             await ListEffectiveGrantsAsync(catalogItem, cancellationToken),
             await connectionStore.ListAsync(pluginId, cancellationToken),
-            PluginHostToolRecipeCatalog.ListForPlugin(catalogItem));
+            PluginHostToolRecipeCatalog.ListForPlugin(catalogItem),
+            catalogItem.Descriptor.Connections,
+            catalogItem.Descriptor.OAuth2);
     }
 
     public async Task<IReadOnlyList<PluginCapabilityGrantItem>> ListEffectiveGrantsAsync(

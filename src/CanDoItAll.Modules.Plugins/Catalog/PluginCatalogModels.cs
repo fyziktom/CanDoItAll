@@ -31,6 +31,23 @@ public sealed record PluginCatalogItem(
     DateTimeOffset? InstalledAtUtc,
     DateTimeOffset? UpdatedAtUtc)
 {
+    public PluginDescriptor Descriptor { get; init; } = new(
+        PluginId,
+        DisplayName,
+        Description,
+        Version,
+        Vendor,
+        SourceKind,
+        TrustLevel,
+        "1.0.0",
+        Capabilities,
+        [],
+        PluginSettingsDescriptor.Empty,
+        [],
+        PackageId is null
+            ? null
+            : new PluginPackageDescriptor(PackageId.Value, Version, "1.0.0", string.Empty, string.Empty));
+
     public bool IsInstalled => InstallationState != PluginInstallationStateKind.NotInstalled;
 
     public bool IsEnabled => InstallationState == PluginInstallationStateKind.InstalledEnabled;

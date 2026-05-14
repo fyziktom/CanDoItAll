@@ -381,7 +381,7 @@
                                                  Text="@(testResult.Succeeded ? "Succeeded" : "Failed")" />
                                     @if (!string.IsNullOrWhiteSpace(testResult.ErrorMessage))
                                     {
-                                        <p class="workflows-muted mt-2">@testResult.ErrorMessage</p>
+                                        <p class="workflows-muted mt-2">@FormatWorkflowMessage(testResult.ErrorMessage)</p>
                                     }
                                 </div>
                             }
@@ -423,7 +423,7 @@
                                                     Icon="open_in_full"
                                                     Size="ButtonSize.Small"
                                                     ButtonStyle="ButtonStyle.Light"
-                                                    Click="@(() => OpenRunDetailDialog(run))"
+                                                    Click="@(() => OpenRunDetailDialogAsync(run))"
                                                     data-testid="workflows-run-detail" />
                                         </div>
                                     }
@@ -639,12 +639,110 @@
                 </TabsItem>
             </Tabs>
 
+            @if (isPreviewInputDialogOpen)
+            {
+                <Dialog IsOpen="true"
+                        Title="Preview inputs"
+                        Eyebrow="Workflow preview"
+                        Subtitle="@WorkflowPreviewInputSupport.BuildRequirementSummary(previewInputState.Requirements)"
+                        Size="ModalSize.Wide"
+                        DenseChrome="true"
+                        OnClose="ClosePreviewInputDialog"
+                        TestId="workflows-preview-input-dialog">
+                    <ChildContent>
+                        <div class="workflows-detail-dialog">
+                            <SurfaceCard Soft="true">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Required context" />
+                                <p class="workflows-muted">@WorkflowPreviewInputSupport.BuildRequirementSummary(previewInputState.Requirements)</p>
+                                @if (!string.IsNullOrWhiteSpace(previewInputState.ProjectLoadError))
+                                {
+                                    <p class="workflows-error-note">@previewInputState.ProjectLoadError</p>
+                                }
+                            </SurfaceCard>
+
+                            <Grid Gap="LayoutGap.Small" ColumnsLg="2">
+                                @if (previewProjectOptions.Count > 0)
+                                {
+                                    <label class="workflows-field">
+                                        <span>Project</span>
+                                        <select class="cda-input"
+                                                value="@previewInputState.ProjectId"
+                                                @onchange="HandlePreviewProjectChanged"
+                                                data-testid="workflows-preview-project-select">
+                                            <option value="">Choose project</option>
+                                            @foreach (var project in previewProjectOptions)
+                                            {
+                                                <option value="@project.Id.ToString("D")">@project.Name</option>
+                                            }
+                                        </select>
+                                    </label>
+                                }
+
+                                <label class="workflows-field">
+                                    <span>Project id</span>
+                                    <input class="cda-input"
+                                           @bind="previewInputState.ProjectId"
+                                           data-testid="workflows-preview-project-id" />
+                                </label>
+
+                                <label class="workflows-field">
+                                    <span>Parent node id</span>
+                                    <input class="cda-input"
+                                           @bind="previewInputState.ParentNodeId"
+                                           data-testid="workflows-preview-node-id" />
+                                </label>
+                            </Grid>
+
+                            @if (previewInputState.Requirements.HasProjectStructureWrites)
+                            {
+                                <label class="workflows-check-field">
+                                    <input type="checkbox"
+                                           @bind="previewInputState.SkipProjectStructureWrites"
+                                           data-testid="workflows-preview-skip-project-writes" />
+                                    <span>Skip project-structure write steps for this preview</span>
+                                </label>
+                            }
+
+                            <label class="workflows-field">
+                                <span>Input JSON</span>
+                                <textarea class="cda-input cda-input--textarea workflows-input"
+                                          @bind="previewInputState.InputJson"
+                                          data-testid="workflows-preview-input-json"></textarea>
+                            </label>
+
+                            @if (!string.IsNullOrWhiteSpace(previewInputErrorMessage))
+                            {
+                                <p class="workflows-error-note" data-testid="workflows-preview-input-error">@previewInputErrorMessage</p>
+                            }
+                        </div>
+                    </ChildContent>
+                    <Footer>
+                        <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+                            <Button Text="Cancel"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Click="ClosePreviewInputDialog"
+                                    data-testid="workflows-preview-input-cancel" />
+                            <Button Text="Run preview"
+                                    Icon="play_arrow"
+                                    Click="StartSelectedWorkflowPreviewFromDialogAsync"
+                                    Disabled="@isRunningTest"
+                                    IsBusy="@isRunningTest"
+                                    data-testid="workflows-preview-input-run" />
+                        </Cluster>
+                    </Footer>
+                </Dialog>
+            }
+
             @if (runDetail is { } currentRunDetail)
             {
+                var resultPayloadJson = ResolveRunResultPayload(runDetailEvents);
+                var resultPreview = ResolveRunResultPreview(resultPayloadJson);
+                var summaryMessage = FormatWorkflowMessage(currentRunDetail.Summary);
+
                 <Dialog IsOpen="true"
                         Title="Workflow run"
                         Eyebrow="History detail"
-                        Subtitle="@currentRunDetail.Summary"
+                        Subtitle="@summaryMessage"
                         Size="ModalSize.Wide"
                         DenseChrome="true"
                         OnClose="CloseRunDetailDialog"
@@ -668,6 +766,67 @@
                                 <strong>@FormatFullDate(currentRunDetail.UpdatedAtUtc)</strong>
                             </div>
                         </Grid>
+
+                        <div class="workflows-section">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Summary" />
+                            <pre class="workflows-detail-pre" data-testid="workflows-run-detail-summary">@summaryMessage</pre>
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(resultPreview))
+                        {
+                            <div class="workflows-section">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Result" />
+                                <pre class="workflows-detail-pre" data-testid="workflows-run-detail-result">@resultPreview</pre>
+                            </div>
+                        }
+
+                        @if (runDetailArtifacts.Count > 0)
+                        {
+                            <div class="workflows-section">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Captured outputs" />
+                                <Stack GapScale="LayoutGap.Small" Class="mt-3">
+                                    @foreach (var artifact in runDetailArtifacts)
+                                    {
+                                        <div class="workflows-artifact" data-testid="workflows-run-detail-artifact">
+                                            <strong>@artifact.Name</strong>
+                                            <span>@artifact.Kind · @artifact.ContentType · @(artifact.NodeId?.Value ?? "workflow")</span>
+                                            <small>@artifact.Summary</small>
+                                            <small>@artifact.StoragePath</small>
+                                        </div>
+                                    }
+                                </Stack>
+                            </div>
+                        }
+
+                        @if (runDetailEvents.Count > 0)
+                        {
+                            <div class="workflows-section">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Events" />
+                                <Stack GapScale="LayoutGap.Small" Class="mt-3">
+                                    @foreach (var workflowEvent in runDetailEvents)
+                                    {
+                                        <div class="workflows-event" data-testid="workflows-run-detail-event">
+                                            <div class="workflows-event__summary">
+                                                <StatusBadge Tone="@ResolveEventTone(workflowEvent.Kind)" Text="@workflowEvent.Kind.ToString()" />
+                                                <small>@FormatFullDate(workflowEvent.CreatedAtUtc)</small>
+                                                <span>@ResolveEventDisplayMessage(workflowEvent)</span>
+                                                @if (!string.IsNullOrWhiteSpace(workflowEvent.PayloadJson))
+                                                {
+                                                    <pre class="workflows-detail-pre">@workflowEvent.PayloadJson</pre>
+                                                }
+                                                @if (HasTechnicalEventMessage(workflowEvent))
+                                                {
+                                                    <details>
+                                                        <summary>Technical details</summary>
+                                                        <pre class="workflows-detail-pre">@workflowEvent.Message</pre>
+                                                    </details>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                </Stack>
+                            </div>
+                        }
 
                         <div class="workflows-section">
                             <TextBlock TextStyle="TextStyle.Eyebrow" Value="Identifiers" />

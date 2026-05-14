@@ -99,6 +99,55 @@ internal static class PluginsApi
             await ToApiResultAsync(pluginId, id => settingsService.SaveConnectionAsync(id, request, ApiActor, cancellationToken)))
             .WithName("SavePluginConnection");
 
+        plugins.MapGet("/{pluginId}/oauth/status", async (
+                string pluginId,
+                PluginOAuthService oauthService,
+                CancellationToken cancellationToken) =>
+            await ToApiResultAsync(pluginId, async id =>
+                Result<IReadOnlyList<PluginOAuthConnectionStatusItem>>.Success(await oauthService.ListStatusesAsync(id, cancellationToken))))
+            .WithName("ListPluginOAuthStatuses");
+
+        plugins.MapPost("/{pluginId}/oauth/start", async (
+                string pluginId,
+                PluginOAuthStartRequest request,
+                HttpContext httpContext,
+                PluginOAuthService oauthService,
+                CancellationToken cancellationToken) =>
+            await ToApiResultAsync(pluginId, id => oauthService.StartAsync(
+                id,
+                request,
+                ResolveRequestBaseUri(httpContext),
+                ApiActor,
+                cancellationToken)))
+            .WithName("StartPluginOAuth");
+
+        plugins.MapPost("/{pluginId}/connections/{connectionId:guid}/oauth/disconnect", async (
+                string pluginId,
+                Guid connectionId,
+                PluginOAuthService oauthService,
+                CancellationToken cancellationToken) =>
+            await ToApiResultAsync(pluginId, id => oauthService.DisconnectAsync(
+                id,
+                new PluginConnectionId(connectionId),
+                cancellationToken)))
+            .WithName("DisconnectPluginOAuth");
+
+        plugins.MapGet("/oauth/callback", async (
+                string? state,
+                string? code,
+                string? error,
+                string? error_description,
+                PluginOAuthService oauthService,
+                CancellationToken cancellationToken) =>
+            Results.Redirect((await oauthService.CompleteCallbackAsync(
+                state,
+                code,
+                error,
+                error_description,
+                cancellationToken)).ToString()))
+            .AllowAnonymous()
+            .WithName("CompletePluginOAuthCallback");
+
         return group;
     }
 
@@ -122,5 +171,14 @@ internal static class PluginsApi
         }
 
         return ApiEndpointResults.FromResult(await action(id));
+    }
+
+    private static Uri ResolveRequestBaseUri(HttpContext httpContext)
+    {
+        var request = httpContext.Request;
+        var basePath = string.IsNullOrWhiteSpace(request.PathBase)
+            ? "/"
+            : $"{request.PathBase}/";
+        return new Uri($"{request.Scheme}://{request.Host}{basePath}");
     }
 }

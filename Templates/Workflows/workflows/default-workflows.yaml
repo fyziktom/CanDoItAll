@@ -201,6 +201,121 @@ workflows:
         - { source: store-reply, target: end }
         - { source: archive-summary, target: end }
 
+  - key: gmail-label-email-summary-to-project
+    name: Gmail Label Email Summary To Project
+    description: Downloads Gmail messages with a configured label, summarizes the batch, and stores the markdown result under the selected project-structure node.
+    routingInstructions: |-
+      Summarize the downloaded Gmail message batch.
+      Return route as `summarized`.
+      Preserve projectId and nodeId from the input payload.
+      Preserve runContext, including runContext.gmailProcessing, unchanged so the final Gmail step can move the processed label.
+      The markdown field must include the Gmail label, message count, sender/subject evidence, key decisions or requests, open gaps, and recommended next actions.
+      Do not include full message bodies unless a short excerpt is needed as evidence.
+    graph:
+      startNodeId: start
+      nodes:
+        - { id: start, kind: Start, name: Start, x: 80, y: 220 }
+        - id: download-gmail
+          kind: Executor
+          name: Download Gmail label
+          x: 340
+          y: 220
+          executor:
+            id: gmail.messages-by-label
+            settings:
+              connectionId: ""
+              label: CanDoItAllSummaryTest
+              processedLabel: CanDoItAllSummaryTestProcessed
+              maxMessages: 1
+          instructions: Download a bounded Gmail message batch from the configured OAuth connection and label.
+        - { id: summarize-gmail, kind: LlmCall, name: Summarize Gmail batch, x: 620, y: 220 }
+        - id: store-gmail-summary
+          kind: Executor
+          name: Store Gmail summary
+          x: 920
+          y: 220
+          executor:
+            id: project-structure
+            settings:
+              operation: CreateAsset
+              projectIdJsonPath: "$.projectId"
+              nodeIdJsonPath: "$.nodeId"
+              title: Gmail label email summary
+              assetKind: md
+              contentFromInput: true
+              includeInputPayload: true
+              contentType: text/markdown
+          instructions: Create a markdown asset in the selected project structure from the LLM summary payload.
+        - id: mark-gmail-processed
+          kind: Executor
+          name: Mark Gmail processed
+          x: 1210
+          y: 220
+          executor:
+            id: gmail.mark-message-processed
+            settings:
+              connectionId: ""
+              sourceLabel: CanDoItAllSummaryTest
+              processedLabel: CanDoItAllSummaryTestProcessed
+              messageIdJsonPath: "$.inputPayload.runContext.gmailProcessing.messageIds[0]"
+          instructions: Add the processed Gmail label and remove the source label after the summary asset is stored.
+        - { id: end, kind: End, name: End, x: 1500, y: 220 }
+      edges:
+        - { source: start, target: download-gmail }
+        - { source: download-gmail, target: summarize-gmail }
+        - { source: summarize-gmail, target: store-gmail-summary }
+        - { source: store-gmail-summary, target: mark-gmail-processed }
+        - { source: mark-gmail-processed, target: end }
+
+  - key: office365-category-email-summary-to-project
+    name: Office365 Category Email Summary To Project
+    description: Downloads Microsoft 365 mailbox messages in a configured Outlook category, summarizes the batch, and stores the markdown result under the selected project-structure node.
+    routingInstructions: |-
+      Summarize the downloaded Office365 message batch.
+      Return route as `summarized`.
+      Preserve projectId and nodeId from the input payload.
+      The markdown field must include the Outlook category, message count, sender/subject evidence, key decisions or requests, open gaps, and recommended next actions.
+      Do not include full message bodies unless a short excerpt is needed as evidence.
+    graph:
+      startNodeId: start
+      nodes:
+        - { id: start, kind: Start, name: Start, x: 80, y: 220 }
+        - id: download-office365
+          kind: Executor
+          name: Download Office365 category
+          x: 340
+          y: 220
+          executor:
+            id: office365.messages-by-category
+            settings:
+              connectionId: ""
+              category: CanDoItAllSummaryTest
+              maxMessages: 10
+          instructions: Download a bounded Microsoft Graph message batch from the configured OAuth connection and Outlook category.
+        - { id: summarize-office365, kind: LlmCall, name: Summarize Office365 batch, x: 620, y: 220 }
+        - id: store-office365-summary
+          kind: Executor
+          name: Store Office365 summary
+          x: 920
+          y: 220
+          executor:
+            id: project-structure
+            settings:
+              operation: CreateAsset
+              projectIdJsonPath: "$.projectId"
+              nodeIdJsonPath: "$.nodeId"
+              title: Office365 category email summary
+              assetKind: md
+              contentFromInput: true
+              contentType: text/markdown
+          instructions: Create a markdown asset in the selected project structure from the LLM summary payload.
+        - { id: end, kind: End, name: End, x: 1210, y: 220 }
+      edges:
+        - { source: start, target: download-office365 }
+        - { source: download-office365, target: summarize-office365 }
+        - { source: summarize-office365, target: store-office365-summary }
+        - { source: store-office365-summary, target: end }
+
   - key: invoice-workbook-risk-switch
     name: Invoice Workbook Risk Switch
     description: Reads invoice rows from XLSX, classifies risk, and writes a branch-specific decision back to an output workbook.
