@@ -426,14 +426,20 @@ public sealed class ProjectStructureWorkflowExecutor(IProjectStructureRuntimeGat
             return projectId;
         }
 
-        var rawProjectId = ResolveInputJsonString(input, settings.ProjectIdJsonPath, nameof(settings.ProjectIdJsonPath));
-        if (Guid.TryParse(rawProjectId, out var parsed) && parsed != Guid.Empty)
+        if (TryResolveInputJsonString(input, settings.ProjectIdJsonPath, out var rawProjectId) &&
+            !string.IsNullOrWhiteSpace(rawProjectId))
         {
-            return parsed;
+            if (Guid.TryParse(rawProjectId, out var parsedProjectId) && parsedProjectId != Guid.Empty)
+            {
+                return parsedProjectId;
+            }
+
+            throw new InvalidOperationException(
+                $"Project-structure executor setting '{nameof(settings.ProjectIdJsonPath)}' resolved invalid project id '{rawProjectId}'.");
         }
 
         if (TryResolveInputJsonString(input, "$.project.id", out rawProjectId) &&
-            Guid.TryParse(rawProjectId, out parsed) &&
+            Guid.TryParse(rawProjectId, out var parsed) &&
             parsed != Guid.Empty)
         {
             return parsed;
@@ -456,7 +462,18 @@ public sealed class ProjectStructureWorkflowExecutor(IProjectStructureRuntimeGat
             return settings.NodeId.Trim();
         }
 
-        return ResolveInputJsonString(input, settings.NodeIdJsonPath, nameof(settings.NodeIdJsonPath));
+        if (!TryResolveInputJsonString(input, settings.NodeIdJsonPath, out var nodeId))
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(nodeId))
+        {
+            return nodeId.Trim();
+        }
+
+        throw new InvalidOperationException(
+            $"Project-structure executor setting '{nameof(settings.NodeIdJsonPath)}' resolved an empty node id.");
     }
 
     private static string? ResolveWorkflowParentNodeId(WorkflowNodeInput input)

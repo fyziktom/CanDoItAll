@@ -44,14 +44,16 @@ public sealed class Office365DownloadByCategoryWorkflowExecutor(
     {
         var settings = JsonSerializer.Deserialize<Office365WorkflowExecutorSettings>(context.SettingsJson, JsonOptions)
                        ?? throw new InvalidOperationException("Office365 executor settings are invalid.");
-        if (!Guid.TryParse(settings.ConnectionId, out var connectionGuid) || connectionGuid == Guid.Empty)
-        {
-            throw new InvalidOperationException("Office365 executor requires a valid connectionId setting.");
-        }
 
+        var connectionId = await oauthService.ResolveWorkflowConnectionIdAsync(
+            Office365PluginConstants.PluginId,
+            Office365PluginConstants.ConnectionKey,
+            settings.ConnectionId,
+            [Office365PluginConstants.MailReadScope],
+            cancellationToken);
         var token = await oauthService.GetAccessTokenAsync(
             Office365PluginConstants.PluginId,
-            new PluginConnectionId(connectionGuid),
+            connectionId,
             [Office365PluginConstants.MailReadScope],
             cancellationToken);
         var batch = await graphClient.DownloadMessagesByCategoryAsync(

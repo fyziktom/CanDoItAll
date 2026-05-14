@@ -45,14 +45,16 @@ public sealed class GmailDownloadByLabelWorkflowExecutor(
     {
         var settings = JsonSerializer.Deserialize<GmailWorkflowExecutorSettings>(context.SettingsJson, JsonOptions)
                        ?? throw new InvalidOperationException("Gmail executor settings are invalid.");
-        if (!Guid.TryParse(settings.ConnectionId, out var connectionGuid) || connectionGuid == Guid.Empty)
-        {
-            throw new InvalidOperationException("Gmail executor requires a valid connectionId setting.");
-        }
 
+        var connectionId = await oauthService.ResolveWorkflowConnectionIdAsync(
+            GmailPluginConstants.PluginId,
+            GmailPluginConstants.ConnectionKey,
+            settings.ConnectionId,
+            [GmailPluginConstants.GmailModifyScope],
+            cancellationToken);
         var token = await oauthService.GetAccessTokenAsync(
             GmailPluginConstants.PluginId,
-            new PluginConnectionId(connectionGuid),
+            connectionId,
             [GmailPluginConstants.GmailModifyScope],
             cancellationToken);
         var batch = await gmailApiClient.DownloadMessagesByLabelAsync(
@@ -215,10 +217,6 @@ public sealed class GmailMarkProcessedWorkflowExecutor(
     {
         var settings = JsonSerializer.Deserialize<GmailMarkProcessedWorkflowExecutorSettings>(context.SettingsJson, JsonOptions)
                        ?? throw new InvalidOperationException("Gmail mark-processed executor settings are invalid.");
-        if (!Guid.TryParse(settings.ConnectionId, out var connectionGuid) || connectionGuid == Guid.Empty)
-        {
-            throw new InvalidOperationException("Gmail mark-processed executor requires a valid connectionId setting.");
-        }
 
         var messageId = ResolveInputJsonString(input, settings.MessageIdJsonPath, nameof(settings.MessageIdJsonPath));
         if (string.IsNullOrWhiteSpace(messageId))
@@ -226,9 +224,15 @@ public sealed class GmailMarkProcessedWorkflowExecutor(
             throw new InvalidOperationException("Gmail mark-processed executor resolved an empty message id.");
         }
 
+        var connectionId = await oauthService.ResolveWorkflowConnectionIdAsync(
+            GmailPluginConstants.PluginId,
+            GmailPluginConstants.ConnectionKey,
+            settings.ConnectionId,
+            [GmailPluginConstants.GmailModifyScope],
+            cancellationToken);
         var token = await oauthService.GetAccessTokenAsync(
             GmailPluginConstants.PluginId,
-            new PluginConnectionId(connectionGuid),
+            connectionId,
             [GmailPluginConstants.GmailModifyScope],
             cancellationToken);
         var result = await gmailApiClient.MarkMessageProcessedAsync(

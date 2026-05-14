@@ -109,6 +109,18 @@ public sealed class ProjectStructureWorkflowNodeService(
             cancellationToken);
     }
 
+    public async Task<IReadOnlyList<ProjectStructureWorkflowPreviewSimulationOption>> ListStartSimulationOptionsAsync(
+        Guid projectId,
+        string nodeId,
+        CancellationToken cancellationToken = default)
+    {
+        var context = await LoadNodeContextAsync(projectId, nodeId, cancellationToken);
+        var workflowMetadata = ResolveWorkflowMetadata(context.Node);
+        var detail = await LoadDefinitionAsync(workflowMetadata, cancellationToken);
+        EnsureValidDefinition(detail);
+        return ProjectStructureWorkflowPreviewSimulationSupport.Analyze(detail.Definition);
+    }
+
     public async Task<ProjectStructureWorkflowRunStatus> GetStatusAsync(
         Guid projectId,
         string nodeId,
@@ -250,6 +262,9 @@ public sealed class ProjectStructureWorkflowNodeService(
 
         var inputSettings = ProjectStructureWorkflowInputSettingsNormalizer.Normalize(workflowMetadata.InputSettings);
         workflowMetadata.InputSettings = inputSettings;
+        var simulationPlan = ProjectStructureWorkflowPreviewSimulationSupport.BuildPlan(
+            detail.Definition,
+            request.SimulatedNodeIds);
         var preview = BuildPreview(
             context.Project,
             context.ParentNode,
@@ -279,7 +294,10 @@ public sealed class ProjectStructureWorkflowNodeService(
                     preview.InputJson,
                     request.RequestedBackend,
                     SourceProcessRunId: null,
-                    SourceProcessAssignmentId: null),
+                    SourceProcessAssignmentId: null)
+                {
+                    PreviewSimulationPlan = simulationPlan
+                },
                 cancellationToken);
             var status = await BuildStatusAsync(detail.Definition, workflowMetadata, run, cancellationToken);
             var projection = await BuildResultProjectionAsync(projectId, existingNodeIds, cancellationToken);

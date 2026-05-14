@@ -441,6 +441,8 @@ public partial class ProjectStructurePage
                 .Append(':')
                 .Append(workflowStartDialog.Status?.StepCount ?? 0)
                 .Append(':')
+                .Append(workflowStartDialog.SimulatedNodeIds.Count)
+                .Append(':')
                 .Append(workflowStartDialog.Error);
         }
         else

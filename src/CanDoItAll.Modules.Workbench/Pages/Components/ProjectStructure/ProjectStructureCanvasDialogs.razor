@@ -490,6 +490,28 @@
                     </Stack>
                 </PanelCard>
 
+                @if (workflowStart.SimulationOptions.Count > 0)
+                {
+                    <PanelCard>
+                        <Stack GapScale="LayoutGap.Small">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Run Preview" />
+                            <TextBlock TextStyle="TextStyle.Note"
+                                       Value="Skip selected project-structure write steps during this preview run."
+                                       Class="cw-panel-copy" />
+                            @foreach (var option in workflowStart.SimulationOptions)
+                            {
+                                <label class="project-structure-checkbox-row">
+                                    <input type="checkbox"
+                                           checked="@workflowStart.SimulatedNodeIds.Contains(option.NodeId, StringComparer.OrdinalIgnoreCase)"
+                                           data-testid="@($"project-structure-workflow-start-simulate-{NormalizeTestIdToken(option.NodeId)}")"
+                                           @onchange="args => WorkflowStartSimulationChanged.InvokeAsync(new ProjectStructureWorkflowStartSimulationChange(option.NodeId, ParseCheckboxValue(args)))" />
+                                    <span>@option.NodeName: @option.Description</span>
+                                </label>
+                            }
+                        </Stack>
+                    </PanelCard>
+                }
+
                 @if (!string.IsNullOrWhiteSpace(workflowStart.Error))
                 {
                     <PanelCard Class="project-structure-inline-feedback"
@@ -1055,6 +1077,9 @@
     public EventCallback CloseWorkflowStart { get; set; }
 
     [Parameter]
+    public EventCallback<ProjectStructureWorkflowStartSimulationChange> WorkflowStartSimulationChanged { get; set; }
+
+    [Parameter]
     public EventCallback ExecuteWorkflowStart { get; set; }
 
     [Parameter]
@@ -1182,6 +1207,14 @@
             ProjectStructureWorkflowInputSourceKind.SelectedNode => "Selected node",
             ProjectStructureWorkflowInputSourceKind.ManualJson => "Manual JSON reference",
             _ => "File path"
+        };
+
+    private static bool ParseCheckboxValue(ChangeEventArgs args)
+        => args.Value switch
+        {
+            bool value => value,
+            string value when bool.TryParse(value, out var parsed) => parsed,
+            _ => false
         };
 
     private static IReadOnlyList<ProjectStructureProcessStartCandidateState> SelectVisibleProcessStartCandidates(

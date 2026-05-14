@@ -95,7 +95,7 @@ internal sealed class GmailBundledPlugin : IBundledPlugin
         => new(
             "1.0",
             [
-                new ConfigurationFieldDescriptor("connectionId", "Connection", ConfigurationFieldType.Text, IsRequired: true, "Plugin connection id."),
+                new ConfigurationFieldDescriptor("connectionId", "Connection", ConfigurationFieldType.Text, IsRequired: false, "Optional plugin connection id. Leave empty to use the latest connected Gmail OAuth connection."),
                 new ConfigurationFieldDescriptor("label", "Label", ConfigurationFieldType.Text, IsRequired: true, "Gmail label name or id."),
                 new ConfigurationFieldDescriptor("processedLabel", "Processed label", ConfigurationFieldType.Text, IsRequired: true, "Label applied after the workflow stores the summary."),
                 new ConfigurationFieldDescriptor("maxMessages", "Max messages", ConfigurationFieldType.Number, IsRequired: false, "Maximum messages to download. Use 1 for one-message processing.")
@@ -105,7 +105,7 @@ internal sealed class GmailBundledPlugin : IBundledPlugin
         => new(
             "1.0",
             [
-                new ConfigurationFieldDescriptor("connectionId", "Connection", ConfigurationFieldType.Text, IsRequired: true, "Plugin connection id."),
+                new ConfigurationFieldDescriptor("connectionId", "Connection", ConfigurationFieldType.Text, IsRequired: false, "Optional plugin connection id. Leave empty to use the latest connected Gmail OAuth connection."),
                 new ConfigurationFieldDescriptor("sourceLabel", "Source label", ConfigurationFieldType.Text, IsRequired: true, "Gmail label removed after successful processing."),
                 new ConfigurationFieldDescriptor("processedLabel", "Processed label", ConfigurationFieldType.Text, IsRequired: true, "Gmail label added after successful processing."),
                 new ConfigurationFieldDescriptor("messageIdJsonPath", "Message id JSON path", ConfigurationFieldType.Text, IsRequired: true, "Workflow JSON path resolving to the Gmail message id.")

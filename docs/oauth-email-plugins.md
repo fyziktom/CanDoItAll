@@ -34,7 +34,7 @@ Steps:
 5. Start CanDoItAll from a shell where `CANDOITALL_GMAIL_SECRET` is set.
 6. In Plugins, install and enable `Gmail Mail`, grant `WorkflowExecutor` and `OAuth2`, then click Login.
 7. For the workflow test, create or choose a Gmail label named `CanDoItAllSummaryTest` and apply it to one message.
-8. Get the connection id from `GET /api/plugins/gmail.mail/oauth/status`, then set that value in both Gmail executor `connectionId` settings of the `gmail-label-email-summary-to-project` workflow.
+8. Run the `gmail-label-email-summary-to-project` workflow. When its Gmail executor `connectionId` settings are empty, the workflow automatically uses the latest enabled connected Gmail OAuth connection with the required scopes.
 9. After the workflow stores the summary asset, it adds `CanDoItAllSummaryTestProcessed` to the processed message and removes `CanDoItAllSummaryTest`.
 
 Existing Gmail connections created with the old readonly scope show `ReconnectRequired`; click Login again so Google grants `https://www.googleapis.com/auth/gmail.modify`. Disconnect is optional.
@@ -57,7 +57,7 @@ Steps:
 4. In the Office365 plugin connection settings, set `clientId` to the app registration client id. Set `redirectUri` only when you need to force an exact callback URL.
 5. In Plugins, install and enable `Office365 Mail`, grant `WorkflowExecutor` and `OAuth2`, then click Login. OAuth login opens in a separate browser tab and asks Microsoft for consent again when reconnecting.
 6. For the workflow test, create or choose an Outlook category named `CanDoItAllSummaryTest` and assign it to a small set of messages.
-7. Get the connection id from `GET /api/plugins/office365.mail/oauth/status`, then set that value in the `connectionId` setting of the `office365-category-email-summary-to-project` workflow.
+7. Run the `office365-category-email-summary-to-project` workflow. When its Office365 executor `connectionId` setting is empty, the workflow automatically uses the latest enabled connected Office365 OAuth connection with the required scopes.
 
 ## Example workflows
 
@@ -66,4 +66,4 @@ The default workflow template pack includes:
 - `gmail-label-email-summary-to-project`: downloads one Gmail message by label, summarizes it with the workflow LLM component, stores markdown through the project-structure executor, then moves the message from `CanDoItAllSummaryTest` to `CanDoItAllSummaryTestProcessed`.
 - `office365-category-email-summary-to-project`: downloads a bounded Office365 category batch through Microsoft Graph, summarizes it, and stores markdown through the project-structure executor.
 
-Both templates require a real OAuth login and a filled `connectionId` before they can run.
+Both templates require a real OAuth login. The `connectionId` settings can stay empty unless you need to pin a workflow to a specific OAuth connection.

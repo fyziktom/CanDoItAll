@@ -286,6 +286,77 @@ public sealed class PluginCatalogIntegrationTests
     }
 
     [Fact]
+    public async Task OAuth_workflow_connection_resolver_selects_connected_connection_when_setting_is_blank()
+    {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
+        await using var scope = host.App.Services.CreateAsyncScope();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var oauthService = scope.ServiceProvider.GetRequiredService<PluginOAuthService>();
+        var connectionId = Guid.NewGuid();
+        var timestamp = DateTimeOffset.UtcNow;
+
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            dbContext.Set<PluginConnectionRecord>().Add(new PluginConnectionRecord
+            {
+                Id = connectionId,
+                PluginId = Office365PluginConstants.PluginId.Value,
+                ConnectionKey = Office365PluginConstants.ConnectionKey.Value,
+                DisplayName = "Office365 account",
+                SettingsJson = "{}",
+                IsEnabled = true,
+                HealthStatus = "Connected",
+                UpdatedBy = "integration-test",
+                CreatedAtUtc = timestamp,
+                UpdatedAtUtc = timestamp,
+                ConcurrencyToken = Guid.NewGuid()
+            });
+            dbContext.Set<PluginOAuthConnectionRecord>().Add(new PluginOAuthConnectionRecord
+            {
+                ConnectionId = connectionId,
+                PluginId = Office365PluginConstants.PluginId.Value,
+                ConnectionKey = Office365PluginConstants.ConnectionKey.Value,
+                ProviderKey = $"{Office365PluginConstants.PluginId.Value}:{Office365PluginConstants.ConnectionKey.Value}",
+                TokenVaultKey = "test-vault-key",
+                Status = nameof(PluginOAuthConnectionStatusKind.Connected),
+                AccountDisplay = "connected@example.test",
+                GrantedScopesJson = JsonSerializer.Serialize(new[] { Office365PluginConstants.MailReadScope }, JsonOptions),
+                AccessTokenExpiresAtUtc = timestamp.AddHours(1),
+                RefreshTokenExpiresAtUtc = timestamp.AddDays(1),
+                CreatedAtUtc = timestamp,
+                UpdatedAtUtc = timestamp,
+                ConcurrencyToken = Guid.NewGuid()
+            });
+            await dbContext.SaveChangesAsync();
+        }
+
+        var resolved = await oauthService.ResolveWorkflowConnectionIdAsync(
+            Office365PluginConstants.PluginId,
+            Office365PluginConstants.ConnectionKey,
+            configuredConnectionId: string.Empty,
+            [Office365PluginConstants.MailReadScope]);
+
+        Assert.Equal(connectionId, resolved.Value);
+    }
+
+    [Fact]
+    public async Task OAuth_workflow_connection_resolver_rejects_invalid_explicit_connection_id()
+    {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
+        await using var scope = host.App.Services.CreateAsyncScope();
+        var oauthService = scope.ServiceProvider.GetRequiredService<PluginOAuthService>();
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            oauthService.ResolveWorkflowConnectionIdAsync(
+                Office365PluginConstants.PluginId,
+                Office365PluginConstants.ConnectionKey,
+                "not-a-guid",
+                [Office365PluginConstants.MailReadScope]).AsTask());
+
+        Assert.Contains("valid GUID", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task Gmail_oauth_status_requires_reconnect_when_existing_grant_is_missing_current_scope()
     {
         await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);

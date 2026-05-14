@@ -179,12 +179,25 @@ public partial class ProjectStructurePage
         }
 
         var status = await TryRefreshWorkflowStatusAsync(node.Id, reloadSurface: false);
+        IReadOnlyList<ProjectStructureWorkflowPreviewSimulationOption> simulationOptions = [];
+        var error = string.Empty;
+        try
+        {
+            simulationOptions = await WorkflowNodeService.ListStartSimulationOptionsAsync(ProjectId, node.Id);
+        }
+        catch (Exception exception) when (IsWorkflowUiException(exception))
+        {
+            error = exception.GetBaseException().Message;
+        }
+
         workflowStartDialog = new ProjectStructureWorkflowStartDialogState(
             node.Id,
             node.Title,
             status,
+            simulationOptions,
+            [],
             false,
-            string.Empty);
+            error);
 
         await InvokeAsync(StateHasChanged);
     }
@@ -214,7 +227,9 @@ public partial class ProjectStructurePage
             var started = await WorkflowNodeService.StartAsync(
                 ProjectId,
                 dialog.NodeId,
-                new ProjectStructureWorkflowNodeStartInput(RequestedBy: "project-structure-ui"),
+                new ProjectStructureWorkflowNodeStartInput(
+                    RequestedBy: "project-structure-ui",
+                    SimulatedNodeIds: dialog.SimulatedNodeIds),
                 CreateProjectStructureUiAgentContext());
             selectedWorkflowStatus = started.Status;
             workflowStartDialog = null;
@@ -242,6 +257,33 @@ public partial class ProjectStructurePage
         }
 
         await InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleWorkflowStartSimulationChanged(ProjectStructureWorkflowStartSimulationChange change)
+    {
+        if (workflowStartDialog is null)
+        {
+            return;
+        }
+
+        var selected = workflowStartDialog.SimulatedNodeIds
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (change.IsEnabled)
+        {
+            selected.Add(change.NodeId);
+        }
+        else
+        {
+            selected.Remove(change.NodeId);
+        }
+
+        workflowStartDialog = workflowStartDialog with
+        {
+            SimulatedNodeIds = selected
+                .OrderBy(nodeId => nodeId, StringComparer.OrdinalIgnoreCase)
+                .ToArray(),
+            Error = string.Empty
+        };
     }
 
     private async Task RefreshSelectedWorkflowStatusAsync(string? nodeId)

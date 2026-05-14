@@ -326,6 +326,79 @@ public sealed class PluginOAuthService(
         }
     }
 
+    public async ValueTask<PluginConnectionId> ResolveWorkflowConnectionIdAsync(
+        PluginId pluginId,
+        PluginConnectionKey connectionKey,
+        string configuredConnectionId,
+        IReadOnlyList<string> scopes,
+        CancellationToken cancellationToken = default)
+    {
+        if (!string.IsNullOrWhiteSpace(configuredConnectionId))
+        {
+            return await ResolveConfiguredConnectionIdAsync(
+                pluginId,
+                connectionKey,
+                configuredConnectionId,
+                cancellationToken);
+        }
+
+        var requestedScopes = NormalizeScopes(scopes);
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var candidates = (await (
+                from connection in dbContext.Set<PluginConnectionRecord>().AsNoTracking()
+                join oauth in dbContext.Set<PluginOAuthConnectionRecord>().AsNoTracking()
+                    on new { ConnectionId = connection.Id, connection.PluginId, connection.ConnectionKey }
+                    equals new { oauth.ConnectionId, oauth.PluginId, oauth.ConnectionKey }
+                where connection.PluginId == pluginId.Value &&
+                      connection.ConnectionKey == connectionKey.Value &&
+                      connection.IsEnabled
+                select new
+                {
+                    connection.Id,
+                    oauth.Status,
+                    oauth.GrantedScopesJson,
+                    oauth.AccountDisplay,
+                    OAuthUpdatedAtUtc = oauth.UpdatedAtUtc,
+                    ConnectionUpdatedAtUtc = connection.UpdatedAtUtc
+                })
+            .ToArrayAsync(cancellationToken))
+            .OrderByDescending(candidate => candidate.OAuthUpdatedAtUtc)
+            .ThenByDescending(candidate => candidate.ConnectionUpdatedAtUtc)
+            .ToArray();
+
+        foreach (var candidate in candidates)
+        {
+            if (!string.Equals(candidate.Status, nameof(PluginOAuthConnectionStatusKind.Connected), StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var missingScopes = ResolveMissingScopes(requestedScopes, DeserializeScopes(candidate.GrantedScopesJson));
+            if (missingScopes.Length == 0)
+            {
+                return new PluginConnectionId(candidate.Id);
+            }
+        }
+
+        var latest = candidates.FirstOrDefault();
+        if (latest is null)
+        {
+            throw new InvalidOperationException(
+                $"No enabled OAuth connection is available for plugin '{pluginId}' connection '{connectionKey}'. Connect the plugin in Plugin settings first.");
+        }
+
+        var latestGrantedScopes = DeserializeScopes(latest.GrantedScopesJson);
+        var latestMissingScopes = ResolveMissingScopes(requestedScopes, latestGrantedScopes);
+        var scopeMessage = latestMissingScopes.Length == 0
+            ? string.Empty
+            : $" Missing required scope(s): {string.Join(", ", latestMissingScopes)}.";
+        var accountMessage = string.IsNullOrWhiteSpace(latest.AccountDisplay)
+            ? string.Empty
+            : $" Account='{latest.AccountDisplay}'.";
+        throw new InvalidOperationException(
+            $"No connected OAuth connection is available for plugin '{pluginId}' connection '{connectionKey}'. LatestStatus={latest.Status}.{scopeMessage}{accountMessage}");
+    }
+
     private async ValueTask<PluginOAuth2TokenSnapshot> GetAccessTokenCoreAsync(
         PluginId pluginId,
         PluginConnectionId connectionId,
@@ -393,6 +466,41 @@ public sealed class PluginOAuthService(
 
         EnsureScopesGranted(scopes, refreshed.Scopes);
         return new PluginOAuth2TokenSnapshot(refreshed.AccessToken, refreshed.AccessTokenExpiresAtUtc, refreshed.Scopes);
+    }
+
+    private async ValueTask<PluginConnectionId> ResolveConfiguredConnectionIdAsync(
+        PluginId pluginId,
+        PluginConnectionKey connectionKey,
+        string configuredConnectionId,
+        CancellationToken cancellationToken)
+    {
+        if (!Guid.TryParse(configuredConnectionId.Trim(), out var parsedConnectionId) || parsedConnectionId == Guid.Empty)
+        {
+            throw new InvalidOperationException(
+                $"Configured OAuth connection id '{configuredConnectionId}' is not a valid GUID for plugin '{pluginId}' connection '{connectionKey}'.");
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var connection = await dbContext.Set<PluginConnectionRecord>()
+            .AsNoTracking()
+            .SingleOrDefaultAsync(
+                item => item.Id == parsedConnectionId && item.PluginId == pluginId.Value,
+                cancellationToken)
+            ?? throw new InvalidOperationException(
+                $"Configured OAuth connection '{configuredConnectionId}' was not found for plugin '{pluginId}'.");
+        if (!string.Equals(connection.ConnectionKey, connectionKey.Value, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"Configured OAuth connection '{configuredConnectionId}' belongs to connection key '{connection.ConnectionKey}', not '{connectionKey}'.");
+        }
+
+        if (!connection.IsEnabled)
+        {
+            throw new InvalidOperationException(
+                $"Configured OAuth connection '{configuredConnectionId}' for plugin '{pluginId}' is disabled.");
+        }
+
+        return new PluginConnectionId(parsedConnectionId);
     }
 
     private async Task<Result<PluginConnectionItem>> ResolveOrCreateConnectionAsync(
@@ -803,14 +911,21 @@ public sealed class PluginOAuthService(
         IReadOnlyList<string> requestedScopes,
         IReadOnlyList<string> grantedScopes)
     {
-        var granted = grantedScopes.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var missing = requestedScopes
-            .Where(scope => !granted.Contains(scope))
-            .ToArray();
+        var missing = ResolveMissingScopes(requestedScopes, grantedScopes);
         if (missing.Length > 0)
         {
             throw new InvalidOperationException($"OAuth connection is missing required scope(s): {string.Join(", ", missing)}.");
         }
+    }
+
+    private static string[] ResolveMissingScopes(
+        IReadOnlyList<string> requestedScopes,
+        IReadOnlyList<string> grantedScopes)
+    {
+        var granted = grantedScopes.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return requestedScopes
+            .Where(scope => !granted.Contains(scope))
+            .ToArray();
     }
 
     private static IReadOnlyList<string> NormalizeScopes(IReadOnlyList<string> scopes)

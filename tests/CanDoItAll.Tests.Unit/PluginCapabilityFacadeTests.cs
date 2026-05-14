@@ -89,6 +89,44 @@ public sealed class PluginCapabilityFacadeTests
     }
 
     [Fact]
+    public async Task ProjectStructure_executor_falls_back_to_project_structure_workflow_context_when_alias_paths_are_absent()
+    {
+        var projectId = Guid.NewGuid();
+        var gateway = new RecordingProjectStructureGateway();
+        var payloadJson = $$"""
+            {
+              "project": {
+                "id": "{{projectId:D}}"
+              },
+              "runContext": {
+                "workflowNodeId": "workflow-node-1"
+              },
+              "tasks": [
+                {
+                  "title": "Summarize Office365 category",
+                  "summary": "Task created from project-structure workflow input."
+                }
+              ]
+            }
+            """;
+
+        await ExecuteProjectStructureAsync(
+            gateway,
+            new WorkflowProjectStructureExecutorSettings
+            {
+                Operation = WorkflowProjectStructureOperation.CreateTaskNodes,
+                ProjectIdJsonPath = "$.projectId",
+                NodeIdJsonPath = "$.nodeId",
+                TaskItemsJsonPath = "$.tasks"
+            },
+            payloadJson);
+
+        var created = Assert.Single(gateway.CreatedNodes);
+        Assert.Equal(projectId, created.ProjectId);
+        Assert.Equal("workflow-node-1", created.Request.ParentNodeKey);
+    }
+
+    [Fact]
     public async Task ProjectStructure_executor_reports_missing_runtime_gateway()
     {
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>

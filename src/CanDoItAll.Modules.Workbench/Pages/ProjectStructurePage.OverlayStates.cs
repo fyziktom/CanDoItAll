@@ -140,6 +140,8 @@ public sealed record ProjectStructureWorkflowStartDialogState(
     string NodeId,
     string NodeTitle,
     ProjectStructureWorkflowRunStatus? Status,
+    IReadOnlyList<ProjectStructureWorkflowPreviewSimulationOption> SimulationOptions,
+    IReadOnlyList<string> SimulatedNodeIds,
     bool IsBusy,
     string Error)
 {
@@ -149,6 +151,10 @@ public sealed record ProjectStructureWorkflowStartDialogState(
 
     public string SubmitLabel => "Start workflow";
 }
+
+public sealed record ProjectStructureWorkflowStartSimulationChange(
+    string NodeId,
+    bool IsEnabled);
 
 public enum ProjectStructureProcessStartStage
 {

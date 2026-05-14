@@ -26,6 +26,8 @@ using WorkflowNode = CanDoItAll.AgentFramework.Models.WorkflowNode;
 using WorkflowNodeId = CanDoItAll.AgentFramework.Models.WorkflowNodeId;
 using WorkflowNodeKind = CanDoItAll.AgentFramework.Models.WorkflowNodeKind;
 using WorkflowNodeSettings = CanDoItAll.AgentFramework.Models.WorkflowNodeSettings;
+using WorkflowProjectStructureOperation = CanDoItAll.AgentFramework.Models.WorkflowProjectStructureOperation;
+using WorkflowRunState = CanDoItAll.AgentFramework.Models.WorkflowRunState;
 using WorkflowRuntimeBackendKind = CanDoItAll.AgentFramework.Models.WorkflowRuntimeBackendKind;
 using WorkflowRuntimePolicy = CanDoItAll.AgentFramework.Models.WorkflowRuntimePolicy;
 using WorkflowValueShape = CanDoItAll.AgentFramework.Models.WorkflowValueShape;
@@ -34,6 +36,45 @@ namespace CanDoItAll.Tests.Components;
 
 public sealed class ProjectStructurePageTests
 {
+    [Fact]
+    public async Task Workflow_start_dialog_renders_project_structure_skip_options()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var changes = new List<ProjectStructureWorkflowStartSimulationChange>();
+        var cut = harness.Context.RenderComponent<ProjectStructureCanvasDialogs>(
+            parameters => parameters
+                .Add(component => component.WorkflowStartDialog, new ProjectStructureWorkflowStartDialogState(
+                    "workflow-node-1",
+                    "Office365 category email summary",
+                    CreateWorkflowStartStatus(),
+                    [
+                        new ProjectStructureWorkflowPreviewSimulationOption(
+                            "store-office365-summary",
+                            "Store Office365 summary",
+                            "project-structure",
+                            WorkflowProjectStructureOperation.CreateAsset,
+                            "Skip project-structure asset creation and keep the step input as preview output.")
+                    ],
+                    [],
+                    IsBusy: false,
+                    Error: string.Empty))
+                .Add(component => component.WorkflowStartSimulationChanged, change => changes.Add(change)));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("project-structure-workflow-start-dialog", cut.Markup);
+            Assert.Contains("Run Preview", cut.Markup);
+            Assert.Contains("Store Office365 summary", cut.Markup);
+            Assert.Contains("skip project-structure", cut.Markup, StringComparison.OrdinalIgnoreCase);
+        });
+
+        cut.Find("[data-testid='project-structure-workflow-start-simulate-store-office365-summary']").Change(true);
+
+        var change = Assert.Single(changes);
+        Assert.Equal("store-office365-summary", change.NodeId);
+        Assert.True(change.IsEnabled);
+    }
+
     [Fact]
     public async Task Storage_infrastructure_nodes_render_workspace_storage_summary_in_selection_panel() {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -2256,6 +2297,32 @@ public sealed class ProjectStructurePageTests
                 ExposeAzureFunctionsStatusEndpoint: false,
                 ExposeAzureFunctionsMcpTool: false)));
     }
+
+    private static ProjectStructureWorkflowRunStatus CreateWorkflowStartStatus()
+        => new(
+            RunId: null,
+            State: WorkflowRunState.NotStarted,
+            Status: "Ready",
+            ProgressMode: "progress",
+            ProgressPercent: 0,
+            MarkerIcon: "progress",
+            MarkerTone: "neutral",
+            MarkerLabel: "Ready",
+            CurrentStepIndex: 0,
+            StepCount: 0,
+            Message: "Workflow is ready to start from project structure.",
+            Summary: new ProjectStructureWorkflowExecutionSummary(
+                RunId: null,
+                State: WorkflowRunState.NotStarted,
+                WorkflowName: "Office365 category email summary",
+                RunSummary: "Workflow is ready to start from project structure.",
+                CurrentStepIndex: 0,
+                StepCount: 0,
+                Artifacts: [],
+                CreatedNodeIds: [],
+                CreatedAssetIds: [],
+                CreatedFilePaths: []),
+            RecentEvents: []);
 
     private static WorkflowNode CreateComponentWorkflowNode(
         WorkflowNodeId id,
