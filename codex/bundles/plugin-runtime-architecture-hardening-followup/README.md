@@ -52,7 +52,7 @@ Harden the plugin runtime after `plugin-runtime-package-install` by proving runt
 ## Validation Summary
 
 - Bundle preparation status: `Prepared`
-- Execution status: `Not started`
-- Subbundle gate review: `Not started`
-- Final closure gate: `Not started`
-- Browser validation analytics: `Not started`
+- Execution status: `Completed`
+- Subbundle gate review: `Passed`
+- Final closure gate: `Passed`
+- Browser validation analytics: `Captured`

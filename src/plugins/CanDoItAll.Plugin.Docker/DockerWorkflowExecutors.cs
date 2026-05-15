@@ -19,7 +19,9 @@ public abstract class DockerWorkflowExecutorBase(
         "Docker command JSON result");
     private static readonly WorkflowExecutorSourceDescriptor PluginSource = WorkflowExecutorSourceDescriptor.BundledPlugin(
         DockerPluginConstants.PluginId.Value,
-        "1.0.0");
+        "1.0.0",
+        "Docker",
+        DockerPluginConstants.Icon);
 
     protected abstract WorkflowExecutorId ExecutorId { get; }
 

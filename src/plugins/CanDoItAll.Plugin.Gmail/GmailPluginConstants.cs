@@ -9,6 +9,8 @@ public static class GmailPluginConstants
 
     public static PluginPackageId PackageId { get; } = new("gmail.mail.bundled");
 
+    public static UiIconDescriptor Icon { get; } = UiIconDescriptor.MaterialIcon("mail", "Gmail");
+
     public static PluginConnectionKey ConnectionKey { get; } = new("gmail");
 
     public static WorkflowExecutorId DownloadByLabelExecutorId { get; } = new("gmail.messages-by-label");

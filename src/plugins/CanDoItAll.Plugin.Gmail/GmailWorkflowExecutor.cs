@@ -17,7 +17,9 @@ public sealed class GmailDownloadByLabelWorkflowExecutor(
     private static readonly WorkflowValueShape ResultShape = new(WorkflowValueShapeKind.Json, "{}", "Gmail email message batch JSON.");
     private static readonly WorkflowExecutorSourceDescriptor PluginSource = WorkflowExecutorSourceDescriptor.BundledPlugin(
         GmailPluginConstants.PluginId.Value,
-        "1.0.0");
+        "1.0.0",
+        "Gmail",
+        GmailPluginConstants.Icon);
 
     public WorkflowExecutorDescriptor Descriptor => new(
         GmailPluginConstants.DownloadByLabelExecutorId,
@@ -191,7 +193,9 @@ public sealed class GmailMarkProcessedWorkflowExecutor(
     private static readonly WorkflowValueShape ResultShape = new(WorkflowValueShapeKind.Json, "{}", "Gmail processed label mutation JSON.");
     private static readonly WorkflowExecutorSourceDescriptor PluginSource = WorkflowExecutorSourceDescriptor.BundledPlugin(
         GmailPluginConstants.PluginId.Value,
-        "1.0.0");
+        "1.0.0",
+        "Gmail",
+        GmailPluginConstants.Icon);
 
     public WorkflowExecutorDescriptor Descriptor => new(
         GmailPluginConstants.MarkProcessedExecutorId,

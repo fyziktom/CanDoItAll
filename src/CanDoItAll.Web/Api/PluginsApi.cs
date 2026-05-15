@@ -26,6 +26,54 @@ internal static class PluginsApi
             Results.Ok(await packageService.ListPackagesAsync(cancellationToken)))
             .WithName("ListPluginPackageCatalog");
 
+        plugins.MapGet("/packages/{packageId}/icon", async (
+                string packageId,
+                PluginPackageAssetService assetService,
+                CancellationToken cancellationToken) =>
+            {
+                PluginPackageId id;
+                try
+                {
+                    id = new PluginPackageId(packageId);
+                }
+                catch (ArgumentException exception)
+                {
+                    return ApiEndpointResults.BadRequest(exception.Message, "plugins.package-id-invalid");
+                }
+
+                var asset = await assetService.ResolveIconAsync(id, cancellationToken);
+                return asset is null
+                    ? Results.NotFound()
+                    : Results.File(asset.FilePath, asset.ContentType, lastModified: asset.LastModifiedUtc);
+            })
+            .WithName("GetPluginPackageIcon");
+
+        plugins.MapGet("/logs", async (
+                PluginLogStreamKind? streamKind,
+                string? pluginId,
+                string? packageId,
+                PluginLogStore logStore,
+                CancellationToken cancellationToken) =>
+            {
+                var plugin = ResolveOptionalPluginId(pluginId);
+                if (plugin.IsFailure)
+                {
+                    return ApiEndpointResults.BadRequest(plugin.Errors[0].Message, plugin.Errors[0].Code);
+                }
+
+                var package = ResolveOptionalPackageId(packageId);
+                if (package.IsFailure)
+                {
+                    return ApiEndpointResults.BadRequest(package.Errors[0].Message, package.Errors[0].Code);
+                }
+
+                return Results.Ok(await logStore.ListAsync(new PluginLogQuery(
+                    streamKind,
+                    plugin.Value,
+                    package.Value), cancellationToken));
+            })
+            .WithName("ListPluginLogs");
+
         plugins.MapPost("/packages/catalog/{packageId}/install", async (
                 string packageId,
                 PluginPackageInstallRequest request,
@@ -241,6 +289,40 @@ internal static class PluginsApi
         }
 
         return ApiEndpointResults.FromResult(await action(id));
+    }
+
+    private static Result<PluginId?> ResolveOptionalPluginId(string? pluginId)
+    {
+        if (string.IsNullOrWhiteSpace(pluginId))
+        {
+            return Result<PluginId?>.Success(null);
+        }
+
+        try
+        {
+            return Result<PluginId?>.Success(new PluginId(pluginId));
+        }
+        catch (ArgumentException exception)
+        {
+            return Result<PluginId?>.Failure(Error.Validation(exception.Message, "plugins.plugin-id-invalid"));
+        }
+    }
+
+    private static Result<PluginPackageId?> ResolveOptionalPackageId(string? packageId)
+    {
+        if (string.IsNullOrWhiteSpace(packageId))
+        {
+            return Result<PluginPackageId?>.Success(null);
+        }
+
+        try
+        {
+            return Result<PluginPackageId?>.Success(new PluginPackageId(packageId));
+        }
+        catch (ArgumentException exception)
+        {
+            return Result<PluginPackageId?>.Failure(Error.Validation(exception.Message, "plugins.package-id-invalid"));
+        }
     }
 
     private static Uri ResolveRequestBaseUri(HttpContext httpContext)

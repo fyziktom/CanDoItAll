@@ -9,6 +9,8 @@ public static class Office365PluginConstants
 
     public static PluginPackageId PackageId { get; } = new("office365.mail.bundled");
 
+    public static UiIconDescriptor Icon { get; } = UiIconDescriptor.MaterialIcon("business_center", "Office365 Mail");
+
     public static PluginConnectionKey ConnectionKey { get; } = new("office365");
 
     public static WorkflowExecutorId DownloadByCategoryExecutorId { get; } = new("office365.messages-by-category");

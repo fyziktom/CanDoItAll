@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -89,14 +89,14 @@ Disable Docker as a default app plugin, build it as a runtime package ZIP, prove
 
 ## Acceptance Checklist
 
-- [ ] Docker default composition registration removed.
-- [ ] App builds without default Docker.
-- [ ] Docker package ZIP created.
-- [ ] ZIP checksum recorded.
-- [ ] Package install/activation test uses real package assembly output.
-- [ ] Docker executors appear after package install/activation.
-- [ ] Docker is absent in app before manual install.
-- [ ] Final app run state and artifact path are recorded.
+- [x] Docker default composition registration removed.
+- [x] App builds without default Docker.
+- [x] Docker package ZIP created.
+- [x] ZIP checksum recorded.
+- [x] Package install/activation test uses real package assembly output.
+- [x] Docker executors appear after package install/activation.
+- [x] Docker is absent in app before manual install.
+- [x] Final app run state and artifact path are recorded.
 
 ## Proof Required
 

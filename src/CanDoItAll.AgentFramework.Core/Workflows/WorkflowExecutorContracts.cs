@@ -259,6 +259,7 @@ public sealed class WorkflowExecutorInvoker(
             context.Descriptor.Id,
             context.Descriptor.Source.Kind,
             context.Descriptor.Source.PluginId,
+            context.Descriptor.Source.PackageId,
             context.PluginConnectionId,
             status,
             attemptIndex + 1,

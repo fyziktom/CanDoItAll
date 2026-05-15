@@ -16,7 +16,9 @@ public sealed class Office365DownloadByCategoryWorkflowExecutor(
     private static readonly WorkflowValueShape ResultShape = new(WorkflowValueShapeKind.Json, "{}", "Office365 email message batch JSON.");
     private static readonly WorkflowExecutorSourceDescriptor PluginSource = WorkflowExecutorSourceDescriptor.BundledPlugin(
         Office365PluginConstants.PluginId.Value,
-        "1.0.0");
+        "1.0.0",
+        "Office365 Mail",
+        Office365PluginConstants.Icon);
 
     public WorkflowExecutorDescriptor Descriptor => new(
         Office365PluginConstants.DownloadByCategoryExecutorId,
@@ -190,7 +192,9 @@ public sealed class Office365MarkProcessedWorkflowExecutor(
     private static readonly WorkflowValueShape ResultShape = new(WorkflowValueShapeKind.Json, "{}", "Office365 category mutation JSON.");
     private static readonly WorkflowExecutorSourceDescriptor PluginSource = WorkflowExecutorSourceDescriptor.BundledPlugin(
         Office365PluginConstants.PluginId.Value,
-        "1.0.0");
+        "1.0.0",
+        "Office365 Mail",
+        Office365PluginConstants.Icon);
 
     public WorkflowExecutorDescriptor Descriptor => new(
         Office365PluginConstants.MarkProcessedExecutorId,

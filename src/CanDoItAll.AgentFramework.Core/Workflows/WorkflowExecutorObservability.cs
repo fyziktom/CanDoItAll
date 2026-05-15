@@ -20,6 +20,7 @@ public sealed record WorkflowExecutorExecutionAuditRecord(
     WorkflowExecutorId ExecutorId,
     WorkflowExecutorSourceKind SourceKind,
     string PluginId,
+    string PackageId,
     string PluginConnectionId,
     WorkflowExecutorExecutionAuditStatus Status,
     int AttemptNumber,

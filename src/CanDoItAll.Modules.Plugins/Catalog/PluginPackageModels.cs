@@ -133,6 +133,11 @@ public sealed record PluginPackageInstallResult(
     bool RestartRequired,
     PluginRuntimeRestartStatus RestartStatus);
 
+public sealed record PluginPackageAsset(
+    string FilePath,
+    string ContentType,
+    DateTimeOffset LastModifiedUtc);
+
 public sealed record PluginRuntimeRestartStatus(
     bool IsRestartRequired,
     bool IsRestartRequested,

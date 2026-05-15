@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -88,13 +88,13 @@ Add durable plugin installation/runtime logging and expose it in a dedicated plu
 
 ## Acceptance Checklist
 
-- [ ] Installation logs persist for success and failure paths.
-- [ ] Runtime logs persist for plugin executor start/success/failure.
-- [ ] Logs expose plugin id/package id/workflow executor id when available.
-- [ ] Logs are sorted newest-first and filter by selected plugin/package.
-- [ ] Plugins page contains a dedicated logs subtab.
-- [ ] Tests prove redaction for settings/OAuth-sensitive fields.
-- [ ] Browser proof shows installation and runtime streams separately.
+- [x] Installation logs persist for success and failure paths.
+- [x] Runtime logs persist for plugin executor start/success/failure.
+- [x] Logs expose plugin id/package id/workflow executor id when available.
+- [x] Logs are sorted newest-first and filter by selected plugin/package.
+- [x] Plugins page contains a dedicated logs subtab.
+- [x] Tests prove redaction for settings/OAuth-sensitive fields.
+- [x] Browser proof shows installation and runtime streams separately.
 
 ## Proof Required
 

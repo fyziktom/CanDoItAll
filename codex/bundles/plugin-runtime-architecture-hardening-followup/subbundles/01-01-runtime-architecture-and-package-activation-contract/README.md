@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -82,12 +82,12 @@ Make runtime package activation generic and source-safe so installed packages ca
 
 ## Acceptance Checklist
 
-- [ ] Recursive installed manifest scans are gone or unreachable.
-- [ ] Installed package assembly activation no longer auto-registers bundled plugin descriptors.
-- [ ] Real package assembly fixture executor appears in the executor catalog after activation.
-- [ ] Nested manifest test passes.
-- [ ] Plugins page/catalog wording no longer implies all plugins are bundled.
-- [ ] Execution report records tests and residual risks.
+- [x] Recursive installed manifest scans are gone or unreachable.
+- [x] Installed package assembly activation no longer auto-registers bundled plugin descriptors.
+- [x] Real package assembly fixture executor appears in the executor catalog after activation.
+- [x] Nested manifest test passes.
+- [x] Plugins page/catalog wording no longer implies all plugins are bundled.
+- [x] Execution report records tests and residual risks.
 
 ## Proof Required
 

@@ -1380,11 +1380,22 @@ public partial class WorkflowCanvasEditor
             .Where(MatchesWorkflowToolboxSearch)
             .ToList();
 
-        var executorGroups = executorDescriptors
+        var builtInExecutorGroups = executorDescriptors
+            .Where(executor => !WorkflowExecutorCanvasCatalog.IsPluginExecutor(executor))
             .GroupBy(executor => executor.Category)
             .OrderBy(group => group.Key)
             .Select(group => BuildExecutorToolboxGroup(group.Key, group))
             .Where(group => group.Items.Count > 0)
+            .ToList();
+        var pluginExecutorGroups = executorDescriptors
+            .Where(WorkflowExecutorCanvasCatalog.IsPluginExecutor)
+            .GroupBy(executor => executor.Source.PluginId, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(group => WorkflowExecutorCanvasCatalog.ResolvePluginDisplayName(group), StringComparer.OrdinalIgnoreCase)
+            .Select(BuildPluginExecutorToolboxGroup)
+            .Where(group => group.Items.Count > 0)
+            .ToList();
+        var executorGroups = builtInExecutorGroups
+            .Concat(pluginExecutorGroups)
             .ToList();
 
         var sections = new List<OverlayToolboxSection>();
@@ -1480,6 +1491,65 @@ public partial class WorkflowCanvasEditor
             IsExpanded: IsWorkflowToolboxGroupExpanded(key),
             DataTestId: $"workflow-toolbox-group-{key}",
             BodyDataTestId: $"workflow-toolbox-group-body-{key}");
+    }
+
+    private OverlayToolboxGroup BuildPluginExecutorToolboxGroup(
+        IEnumerable<WorkflowExecutorDescriptor> descriptors)
+    {
+        var materialized = descriptors.ToList();
+        var pluginName = WorkflowExecutorCanvasCatalog.ResolvePluginDisplayName(materialized);
+        var pluginKey = materialized
+            .Select(executor => executor.Source.PluginId)
+            .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? SlugForDataTestId(pluginName);
+        var items = materialized
+            .OrderBy(executor => executor.CanExecute ? 0 : 1)
+            .ThenBy(executor => executor.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(executor => new OverlayToolboxItem(
+                WorkflowExecutorCanvasCatalog.BuildCreateActionId(executor.Id),
+                executor.Name,
+                executor.Description,
+                Icon: executor.IconName,
+                Tone: "accent",
+                IsDisabled: !executor.CanExecute,
+                DataTestId: $"workflow-toolbox-plugin-executor-{SlugForDataTestId(executor.Id.Value)}"))
+            .Where(MatchesWorkflowToolboxSearch)
+            .ToList();
+        var key = $"executor-plugin-{SlugForDataTestId(pluginKey)}";
+
+        return new OverlayToolboxGroup(
+            key,
+            pluginName,
+            $"Executors contributed by {pluginName}.",
+            items,
+            Icon: WorkflowExecutorCanvasCatalog.ResolvePluginIconName(materialized),
+            Tone: "accent",
+            IsExpanded: IsWorkflowToolboxGroupExpanded(key),
+            DataTestId: $"workflow-toolbox-group-{key}",
+            BodyDataTestId: $"workflow-toolbox-group-body-{key}");
+    }
+
+    private static string SlugForDataTestId(string value)
+    {
+        var builder = new StringBuilder(value.Length);
+        var lastWasSeparator = false;
+        foreach (var character in value)
+        {
+            if (char.IsLetterOrDigit(character))
+            {
+                builder.Append(char.ToLowerInvariant(character));
+                lastWasSeparator = false;
+                continue;
+            }
+
+            if (!lastWasSeparator && builder.Length > 0)
+            {
+                builder.Append('-');
+                lastWasSeparator = true;
+            }
+        }
+
+        var slug = builder.ToString().Trim('-');
+        return string.IsNullOrWhiteSpace(slug) ? "plugin" : slug;
     }
 
     private bool MatchesWorkflowToolboxSearch(OverlayToolboxItem item)

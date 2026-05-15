@@ -11,6 +11,10 @@ public sealed class PluginGrantStore(
     IClock clock,
     ILogger<PluginGrantStore> logger)
 {
+    private long revision;
+
+    public long Revision => Interlocked.Read(ref revision);
+
     public async Task<IReadOnlyList<PluginCapabilityGrantItem>> ListAsync(
         PluginId pluginId,
         CancellationToken cancellationToken = default)
@@ -89,6 +93,7 @@ public sealed class PluginGrantStore(
         record.UpdatedAtUtc = timestamp;
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        Interlocked.Increment(ref revision);
         logger.LogInformation(
             "Set plugin grant {PluginId} capability {Capability} recipe {RecipeId} state {State}. Actor={Actor}.",
             pluginId.Value,
@@ -149,13 +154,17 @@ public sealed class PluginConnectionStore(
         CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var records = await dbContext.Set<PluginConnectionRecord>()
+        var record = await dbContext.Set<PluginConnectionRecord>()
+            .FromSqlInterpolated($"""
+                SELECT *
+                FROM "Plugins_Connections"
+                WHERE "PluginId" = {pluginId.Value}
+                  AND "ConnectionKey" = {connectionKey.Value}
+                ORDER BY "UpdatedAtUtc" DESC, "CreatedAtUtc" DESC
+                LIMIT 1
+                """)
             .AsNoTracking()
-            .Where(item => item.PluginId == pluginId.Value && item.ConnectionKey == connectionKey.Value)
-            .ToArrayAsync(cancellationToken);
-        var record = records
-            .OrderByDescending(item => item.UpdatedAtUtc)
-            .FirstOrDefault();
+            .FirstOrDefaultAsync(cancellationToken);
 
         return record is null ? null : ToItem(record);
     }
@@ -238,12 +247,15 @@ public sealed class PluginGrantEvaluator(
     PluginInstallationStore installationStore,
     PluginGrantStore grantStore)
 {
+    private readonly Dictionary<string, CachedInstallation> installationCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, CachedGrants> grantCache = new(StringComparer.OrdinalIgnoreCase);
+
     public PluginGrantDecision Evaluate(
         PluginId pluginId,
         PluginCapabilityKind capability,
         PluginHostToolRecipeId? recipeId = null)
     {
-        var installation = installationStore.Find(pluginId);
+        var installation = FindInstallation(pluginId);
         if (installation is null)
         {
             return PluginGrantDecision.Deny(
@@ -275,7 +287,7 @@ public sealed class PluginGrantEvaluator(
                 recipeId);
         }
 
-        var grants = grantStore.List(pluginId);
+        var grants = ListGrants(pluginId);
         var capabilityDecision = EvaluateGrant(pluginId, capability, recipeId: null, grants);
         if (!capabilityDecision.Allowed)
         {
@@ -347,6 +359,40 @@ public sealed class PluginGrantEvaluator(
                 recipeId)
         };
     }
+
+    private PluginInstallationRecord? FindInstallation(PluginId pluginId)
+    {
+        var revision = installationStore.Revision;
+        if (installationCache.TryGetValue(pluginId.Value, out var cached) && cached.Revision == revision)
+        {
+            return cached.Installation;
+        }
+
+        var installation = installationStore.Find(pluginId);
+        installationCache[pluginId.Value] = new CachedInstallation(revision, installation);
+        return installation;
+    }
+
+    private IReadOnlyList<PluginCapabilityGrantItem> ListGrants(PluginId pluginId)
+    {
+        var revision = grantStore.Revision;
+        if (grantCache.TryGetValue(pluginId.Value, out var cached) && cached.Revision == revision)
+        {
+            return cached.Grants;
+        }
+
+        var grants = grantStore.List(pluginId);
+        grantCache[pluginId.Value] = new CachedGrants(revision, grants);
+        return grants;
+    }
+
+    private sealed record CachedInstallation(
+        long Revision,
+        PluginInstallationRecord? Installation);
+
+    private sealed record CachedGrants(
+        long Revision,
+        IReadOnlyList<PluginCapabilityGrantItem> Grants);
 }
 
 public sealed class PluginSettingsService(

@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -86,13 +86,13 @@ Add a typed plugin icon contract and local Docker/Gmail/Office365 icon assets so
 
 ## Acceptance Checklist
 
-- [ ] Plugin icon model is strongly typed.
-- [ ] Docker/Gmail/Office365 have icon assignments.
-- [ ] Package icon paths are validated against traversal.
-- [ ] Plugins page renders plugin icons.
-- [ ] Workflow context menu renders generic/plugin icons.
-- [ ] Executor nodes render a small plugin icon.
-- [ ] Tests and browser proof are captured.
+- [x] Plugin icon model is strongly typed.
+- [x] Docker/Gmail/Office365 have icon assignments.
+- [x] Package icon paths are validated against traversal.
+- [x] Plugins page renders plugin icons.
+- [x] Workflow context menu renders generic/plugin icons.
+- [x] Executor nodes render a small plugin icon.
+- [x] Tests and browser proof are captured.
 
 ## Proof Required
 

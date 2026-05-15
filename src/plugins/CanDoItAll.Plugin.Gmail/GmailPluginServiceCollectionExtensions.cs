@@ -7,12 +7,23 @@ namespace CanDoItAll.Modules.Plugins;
 
 public static class GmailPluginServiceCollectionExtensions
 {
-    public static IServiceCollection AddCanDoItAllGmailPlugin(this IServiceCollection services)
+    public static IServiceCollection AddCanDoItAllGmailPlugin(
+        this IServiceCollection services,
+        bool registerBundledDescriptor = true,
+        bool registerWorkflowExecutors = true)
     {
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<ICanDoItAllPlugin, GmailBundledPlugin>());
+        if (registerBundledDescriptor)
+        {
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<ICanDoItAllPlugin, GmailBundledPlugin>());
+        }
+
         services.AddScoped<GmailApiClient>();
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, GmailDownloadByLabelWorkflowExecutor>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, GmailMarkProcessedWorkflowExecutor>());
+        if (registerWorkflowExecutors)
+        {
+            services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, GmailDownloadByLabelWorkflowExecutor>());
+            services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, GmailMarkProcessedWorkflowExecutor>());
+        }
+
         return services;
     }
 }
@@ -23,6 +34,6 @@ public sealed class GmailRuntimePluginServiceRegistrar : IRuntimePluginServiceRe
 {
     public void ConfigureServices(IServiceCollection services)
     {
-        services.AddCanDoItAllGmailPlugin();
+        services.AddCanDoItAllGmailPlugin(registerBundledDescriptor: false, registerWorkflowExecutors: false);
     }
 }

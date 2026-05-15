@@ -7,15 +7,26 @@ namespace CanDoItAll.Modules.Plugins;
 
 public static class DockerPluginServiceCollectionExtensions
 {
-    public static IServiceCollection AddCanDoItAllDockerPlugin(this IServiceCollection services)
+    public static IServiceCollection AddCanDoItAllDockerPlugin(
+        this IServiceCollection services,
+        bool registerBundledDescriptor = true,
+        bool registerWorkflowExecutors = true)
     {
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<ICanDoItAllPlugin, DockerBundledPlugin>());
+        if (registerBundledDescriptor)
+        {
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<ICanDoItAllPlugin, DockerBundledPlugin>());
+        }
+
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IPluginHostToolRecipeCatalogSource, DockerHostToolRecipeCatalogSource>());
         services.AddScoped<IPluginHostToolService, DockerHostToolService>();
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, DockerListContainersWorkflowExecutor>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, DockerPullImageWorkflowExecutor>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, DockerStartContainerWorkflowExecutor>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, DockerReadLogsWorkflowExecutor>());
+        if (registerWorkflowExecutors)
+        {
+            services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, DockerListContainersWorkflowExecutor>());
+            services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, DockerPullImageWorkflowExecutor>());
+            services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, DockerStartContainerWorkflowExecutor>());
+            services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, DockerReadLogsWorkflowExecutor>());
+        }
+
         return services;
     }
 }
@@ -26,7 +37,7 @@ public sealed class DockerRuntimePluginServiceRegistrar : IRuntimePluginServiceR
 {
     public void ConfigureServices(IServiceCollection services)
     {
-        services.AddCanDoItAllDockerPlugin();
+        services.AddCanDoItAllDockerPlugin(registerBundledDescriptor: false, registerWorkflowExecutors: false);
     }
 }
 

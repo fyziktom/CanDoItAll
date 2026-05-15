@@ -83,7 +83,8 @@ internal sealed class Office365BundledPlugin : IBundledPlugin
             {
                 [PromptParameter] = ConsentPrompt
             }
-        });
+        },
+        Office365PluginConstants.Icon);
 
     public void ConfigurePluginServices(IPluginServiceRegistry services)
     {

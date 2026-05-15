@@ -7,7 +7,9 @@ public static class DockerPluginConstants
 {
     public static PluginId PluginId { get; } = new("candoitall.docker");
 
-    public static PluginPackageId PackageId { get; } = new("candoitall.docker.bundled");
+    public static PluginPackageId PackageId { get; } = new("candoitall.docker.package");
+
+    public static UiIconDescriptor Icon { get; } = UiIconDescriptor.MaterialIcon("deployed_code", "Docker");
 
     public static PluginRendererKey SettingsRendererKey { get; } = new("docker.workflow-settings");
 

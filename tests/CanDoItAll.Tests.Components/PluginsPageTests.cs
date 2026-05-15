@@ -154,6 +154,45 @@ public sealed class PluginsPageTests
         Assert.True(lifetime.ApplicationStopping.IsCancellationRequested);
     }
 
+    [Fact]
+    public async Task Plugins_page_shows_selected_plugin_installation_and_runtime_logs()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var logStore = harness.Context.Services.GetRequiredService<PluginLogStore>();
+
+        await logStore.WriteAsync(new PluginLogWriteRequest(
+            PluginLogStreamKind.Installation,
+            PluginLogOperationKind.PluginInstall,
+            PluginLogSeverity.Information,
+            "Installed",
+            "Office365 install recorded",
+            "{}",
+            Office365PluginConstants.PluginId,
+            Office365PluginConstants.PackageId));
+        await logStore.WriteAsync(new PluginLogWriteRequest(
+            PluginLogStreamKind.Runtime,
+            PluginLogOperationKind.ExecutorCompleted,
+            PluginLogSeverity.Information,
+            "Completed",
+            "Office365 runtime recorded",
+            "{}",
+            Office365PluginConstants.PluginId,
+            WorkflowExecutorId: Office365PluginConstants.DownloadByCategoryExecutorId));
+
+        navigation.NavigateTo("/plugins");
+        var cut = harness.Context.RenderComponent<PluginsPage>();
+
+        cut.WaitForElement("[data-testid='plugins-list-item-office365-mail']");
+        cut.Find("[data-testid='plugins-list-item-office365-mail']").Click();
+        cut.Find("[data-testid='plugins-tab-logs']").Click();
+
+        cut.WaitForElement("[data-testid='plugins-logs-installation-row']");
+        cut.WaitForElement("[data-testid='plugins-logs-runtime-row']");
+        Assert.Contains("Office365 install recorded", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Office365 runtime recorded", cut.Markup, StringComparison.Ordinal);
+    }
+
     private static PluginPackagePathOverrides CreatePackagePathOverrides(string rootPath)
     {
         var packageRootPath = Path.Combine(rootPath, "plugin-packages");

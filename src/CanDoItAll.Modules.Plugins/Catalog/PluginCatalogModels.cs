@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Plugins.Abstractions;
 
 namespace CanDoItAll.Modules.Plugins;
@@ -29,7 +30,8 @@ public sealed record PluginCatalogItem(
     PluginCatalogAvailabilityKind Availability,
     string UnavailableReason,
     DateTimeOffset? InstalledAtUtc,
-    DateTimeOffset? UpdatedAtUtc)
+    DateTimeOffset? UpdatedAtUtc,
+    UiIconDescriptor? Icon = null)
 {
     public PluginDescriptor Descriptor { get; init; } = new(
         PluginId,
@@ -46,7 +48,8 @@ public sealed record PluginCatalogItem(
         [],
         PackageId is null
             ? null
-            : new PluginPackageDescriptor(PackageId.Value, Version, "1.0.0", string.Empty, string.Empty));
+            : new PluginPackageDescriptor(PackageId.Value, Version, "1.0.0", string.Empty, string.Empty),
+        Icon: Icon ?? UiIconDescriptor.Default);
 
     public bool IsInstalled => InstallationState != PluginInstallationStateKind.NotInstalled;
 

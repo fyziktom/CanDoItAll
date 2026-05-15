@@ -50,7 +50,8 @@ internal sealed class DockerBundledPlugin : IBundledPlugin
             "1.0.0",
             "1.0.0",
             Sha256: string.Empty,
-            Signature: string.Empty));
+            Signature: string.Empty),
+        Icon: DockerPluginConstants.Icon);
 
     public void ConfigurePluginServices(IPluginServiceRegistry services)
     {

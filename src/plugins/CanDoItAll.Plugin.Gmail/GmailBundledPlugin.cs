@@ -77,7 +77,8 @@ internal sealed class GmailBundledPlugin : IBundledPlugin
                 ["prompt"] = "consent",
                 ["include_granted_scopes"] = "true"
             }
-        });
+        },
+        GmailPluginConstants.Icon);
 
     public void ConfigurePluginServices(IPluginServiceRegistry services)
     {

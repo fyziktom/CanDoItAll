@@ -7,12 +7,23 @@ namespace CanDoItAll.Modules.Plugins;
 
 public static class Office365PluginServiceCollectionExtensions
 {
-    public static IServiceCollection AddCanDoItAllOffice365Plugin(this IServiceCollection services)
+    public static IServiceCollection AddCanDoItAllOffice365Plugin(
+        this IServiceCollection services,
+        bool registerBundledDescriptor = true,
+        bool registerWorkflowExecutors = true)
     {
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<ICanDoItAllPlugin, Office365BundledPlugin>());
+        if (registerBundledDescriptor)
+        {
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<ICanDoItAllPlugin, Office365BundledPlugin>());
+        }
+
         services.AddScoped<Office365GraphClient>();
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, Office365DownloadByCategoryWorkflowExecutor>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, Office365MarkProcessedWorkflowExecutor>());
+        if (registerWorkflowExecutors)
+        {
+            services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, Office365DownloadByCategoryWorkflowExecutor>());
+            services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, Office365MarkProcessedWorkflowExecutor>());
+        }
+
         return services;
     }
 }
@@ -23,6 +34,6 @@ public sealed class Office365RuntimePluginServiceRegistrar : IRuntimePluginServi
 {
     public void ConfigureServices(IServiceCollection services)
     {
-        services.AddCanDoItAllOffice365Plugin();
+        services.AddCanDoItAllOffice365Plugin(registerBundledDescriptor: false, registerWorkflowExecutors: false);
     }
 }

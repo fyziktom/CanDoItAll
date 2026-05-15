@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -78,12 +78,12 @@ Fix the targeted plugin runtime performance and EF query issues found during pre
 
 ## Acceptance Checklist
 
-- [ ] `FindFirstByKeyAsync` query orders/selects in EF.
-- [ ] OAuth connection resolution narrows candidates before materialization.
-- [ ] Executor descriptor availability avoids repeated sync DB reads.
-- [ ] Direct-root manifest enumeration remains intact.
-- [ ] Tests cover ordering and availability behavior.
-- [ ] Execution report maps every PERF finding to resolved/deferred status.
+- [x] `FindFirstByKeyAsync` query orders/selects in EF.
+- [x] OAuth connection resolution narrows candidates before materialization.
+- [x] Executor descriptor availability avoids repeated sync DB reads.
+- [x] Direct-root manifest enumeration remains intact.
+- [x] Tests cover ordering and availability behavior.
+- [x] Execution report maps every PERF finding to resolved/deferred status.
 
 ## Proof Required
 

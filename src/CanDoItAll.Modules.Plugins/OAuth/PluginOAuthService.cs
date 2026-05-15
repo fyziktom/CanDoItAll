@@ -344,27 +344,23 @@ public sealed class PluginOAuthService(
 
         var requestedScopes = NormalizeScopes(scopes);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var candidates = (await (
-                from connection in dbContext.Set<PluginConnectionRecord>().AsNoTracking()
-                join oauth in dbContext.Set<PluginOAuthConnectionRecord>().AsNoTracking()
-                    on new { ConnectionId = connection.Id, connection.PluginId, connection.ConnectionKey }
-                    equals new { oauth.ConnectionId, oauth.PluginId, oauth.ConnectionKey }
-                where connection.PluginId == pluginId.Value &&
-                      connection.ConnectionKey == connectionKey.Value &&
-                      connection.IsEnabled
-                select new
-                {
-                    connection.Id,
-                    oauth.Status,
-                    oauth.GrantedScopesJson,
-                    oauth.AccountDisplay,
-                    OAuthUpdatedAtUtc = oauth.UpdatedAtUtc,
-                    ConnectionUpdatedAtUtc = connection.UpdatedAtUtc
-                })
-            .ToArrayAsync(cancellationToken))
-            .OrderByDescending(candidate => candidate.OAuthUpdatedAtUtc)
-            .ThenByDescending(candidate => candidate.ConnectionUpdatedAtUtc)
-            .ToArray();
+        var candidates = await dbContext.Set<PluginOAuthConnectionRecord>()
+            .FromSqlInterpolated($"""
+                SELECT oauth.*
+                FROM "Plugins_OAuthConnections" AS oauth
+                INNER JOIN "Plugins_Connections" AS connections
+                    ON connections."Id" = oauth."ConnectionId"
+                    AND connections."PluginId" = oauth."PluginId"
+                    AND connections."ConnectionKey" = oauth."ConnectionKey"
+                WHERE connections."PluginId" = {pluginId.Value}
+                  AND connections."ConnectionKey" = {connectionKey.Value}
+                  AND connections."IsEnabled" = TRUE
+                ORDER BY oauth."UpdatedAtUtc" DESC, connections."UpdatedAtUtc" DESC
+                LIMIT 25
+                """)
+            .AsNoTracking()
+            .Take(25)
+            .ToArrayAsync(cancellationToken);
 
         foreach (var candidate in candidates)
         {
@@ -376,7 +372,7 @@ public sealed class PluginOAuthService(
             var missingScopes = ResolveMissingScopes(requestedScopes, DeserializeScopes(candidate.GrantedScopesJson));
             if (missingScopes.Length == 0)
             {
-                return new PluginConnectionId(candidate.Id);
+                return new PluginConnectionId(candidate.ConnectionId);
             }
         }
 

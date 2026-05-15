@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -79,11 +79,11 @@ Change workflow canvas right-click executor creation so plugin executors are gro
 
 ## Acceptance Checklist
 
-- [ ] Generated action tree includes `Executors` -> `Plugins` -> plugin -> executor.
-- [ ] Plugin executors are absent from direct `Executors` children.
-- [ ] Multiple executors under Office365 stay grouped under Office365.
-- [ ] Built-in executors remain available.
-- [ ] Browser proof shows nested menu open and executor node creation.
+- [x] Generated action tree includes `Executors` -> `Plugins` -> plugin -> executor.
+- [x] Plugin executors are absent from direct `Executors` children.
+- [x] Multiple executors under Office365 stay grouped under Office365.
+- [x] Built-in executors remain available.
+- [x] Browser proof shows nested menu/grouping open in the workflow editor toolbox.
 
 ## Proof Required
 

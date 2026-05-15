@@ -77,6 +77,54 @@ public enum WorkflowExecutorTrustLevel
     Untrusted
 }
 
+public enum UiIconKind
+{
+    MaterialIcon,
+    StaticAsset,
+    PackageAsset
+}
+
+public sealed record UiIconDescriptor
+{
+    public UiIconDescriptor(
+        UiIconKind kind,
+        string value,
+        string packageId = "",
+        string label = "")
+    {
+        Kind = kind;
+        Value = string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+        PackageId = string.IsNullOrWhiteSpace(packageId) ? string.Empty : packageId.Trim();
+        Label = string.IsNullOrWhiteSpace(label) ? string.Empty : label.Trim();
+    }
+
+    public UiIconKind Kind { get; init; }
+
+    public string Value { get; init; }
+
+    public string PackageId { get; init; }
+
+    public string Label { get; init; }
+
+    public static UiIconDescriptor MaterialIcon(
+        string iconName,
+        string label = "")
+        => new(UiIconKind.MaterialIcon, iconName, label: label);
+
+    public static UiIconDescriptor StaticAsset(
+        string assetPath,
+        string label = "")
+        => new(UiIconKind.StaticAsset, assetPath, label: label);
+
+    public static UiIconDescriptor PackageAsset(
+        string packageId,
+        string assetPath,
+        string label = "")
+        => new(UiIconKind.PackageAsset, assetPath, packageId, label);
+
+    public static UiIconDescriptor Default { get; } = MaterialIcon("extension");
+}
+
 public enum WorkflowExecutorAvailabilityKind
 {
     Available,
@@ -105,7 +153,9 @@ public sealed record WorkflowExecutorSourceDescriptor
         string sourceVersion,
         string pluginId,
         string packageId,
-        WorkflowExecutorTrustLevel trustLevel)
+        WorkflowExecutorTrustLevel trustLevel,
+        string displayName = "",
+        UiIconDescriptor? icon = null)
     {
         if (string.IsNullOrWhiteSpace(sourceId))
         {
@@ -118,6 +168,8 @@ public sealed record WorkflowExecutorSourceDescriptor
         PluginId = string.IsNullOrWhiteSpace(pluginId) ? string.Empty : pluginId.Trim();
         PackageId = string.IsNullOrWhiteSpace(packageId) ? string.Empty : packageId.Trim();
         TrustLevel = trustLevel;
+        DisplayName = string.IsNullOrWhiteSpace(displayName) ? string.Empty : displayName.Trim();
+        Icon = icon ?? UiIconDescriptor.Default;
     }
 
     public WorkflowExecutorSourceKind Kind { get; init; }
@@ -132,6 +184,10 @@ public sealed record WorkflowExecutorSourceDescriptor
 
     public WorkflowExecutorTrustLevel TrustLevel { get; init; }
 
+    public string DisplayName { get; init; }
+
+    public UiIconDescriptor Icon { get; init; }
+
     public static WorkflowExecutorSourceDescriptor BuiltIn(string sourceVersion = "")
         => new(
             WorkflowExecutorSourceKind.BuiltIn,
@@ -139,18 +195,42 @@ public sealed record WorkflowExecutorSourceDescriptor
             sourceVersion,
             pluginId: string.Empty,
             packageId: string.Empty,
-            WorkflowExecutorTrustLevel.Application);
+            WorkflowExecutorTrustLevel.Application,
+            displayName: "Built-in",
+            UiIconDescriptor.MaterialIcon("bolt", "Built-in executor"));
 
     public static WorkflowExecutorSourceDescriptor BundledPlugin(
         string pluginId,
-        string sourceVersion)
+        string sourceVersion,
+        string displayName = "",
+        UiIconDescriptor? icon = null)
         => new(
             WorkflowExecutorSourceKind.BundledPlugin,
             pluginId,
             sourceVersion,
             pluginId,
             packageId: string.Empty,
-            WorkflowExecutorTrustLevel.BundledPlugin);
+            WorkflowExecutorTrustLevel.BundledPlugin,
+            displayName,
+            icon);
+
+    public static WorkflowExecutorSourceDescriptor Package(
+        WorkflowExecutorSourceKind kind,
+        string pluginId,
+        string packageId,
+        string sourceVersion,
+        WorkflowExecutorTrustLevel trustLevel,
+        string displayName,
+        UiIconDescriptor icon)
+        => new(
+            kind,
+            string.IsNullOrWhiteSpace(packageId) ? pluginId : packageId,
+            sourceVersion,
+            pluginId,
+            packageId,
+            trustLevel,
+            displayName,
+            icon);
 }
 
 public sealed record WorkflowExecutorAvailabilityDescriptor

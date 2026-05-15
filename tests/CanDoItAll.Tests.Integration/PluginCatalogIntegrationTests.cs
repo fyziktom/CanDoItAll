@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.IO.Compression;
+using System.Reflection;
 using System.Text.Json;
 using System.Text;
 using CanDoItAll.AgentFramework.Core;
@@ -81,7 +82,7 @@ public sealed class PluginCatalogIntegrationTests
         Assert.Equal(descriptor.Id, installed.PluginId);
         Assert.Equal(PluginInstallationStateKind.InstalledEnabled, installed.InstallationState);
         Assert.Equal(PluginCatalogAvailabilityKind.Unavailable, installed.Availability);
-        Assert.Contains("no bundled catalog source", installed.UnavailableReason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("no active catalog source", installed.UnavailableReason, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -95,12 +96,16 @@ public sealed class PluginCatalogIntegrationTests
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.NotNull(catalog);
-        Assert.Contains(catalog, item => item.PluginId == DockerPluginConstants.PluginId);
+        Assert.DoesNotContain(catalog, item => item.PluginId == DockerPluginConstants.PluginId);
+        Assert.Contains(catalog, item => item.PluginId == GmailPluginConstants.PluginId);
+        Assert.Contains(catalog, item => item.PluginId == Office365PluginConstants.PluginId);
 
         using var openApiPayload = JsonDocument.Parse(await host.Client.GetStringAsync("/openapi/v1.json"));
         var paths = openApiPayload.RootElement.GetProperty("paths");
         Assert.True(paths.TryGetProperty("/api/plugins/catalog", out _));
         Assert.True(paths.TryGetProperty("/api/plugins/packages/catalog", out _));
+        Assert.True(paths.TryGetProperty("/api/plugins/packages/{packageId}/icon", out _));
+        Assert.True(paths.TryGetProperty("/api/plugins/logs", out _));
         Assert.True(paths.TryGetProperty("/api/plugins/packages/catalog/{packageId}/install", out _));
         Assert.True(paths.TryGetProperty("/api/plugins/packages/upload", out _));
         Assert.True(paths.TryGetProperty("/api/plugins/runtime/restart-status", out _));
@@ -215,6 +220,179 @@ public sealed class PluginCatalogIntegrationTests
         Assert.True(installResult.IsFailure);
         Assert.Contains(installResult.Errors, error => error.Code == "plugins.package-invalid");
         Assert.False(File.Exists(Path.Combine(environment.RootPath, "escape.txt")));
+    }
+
+    [Fact]
+    public async Task Plugin_package_upload_rejects_unsafe_icon_path()
+    {
+        await using var environment = CanDoItAllTestEnvironment.Create("plugin-package-icon-path-tests");
+        var profile = environment.CreateManagedSqliteProfile("plugins");
+        var packagePaths = CreatePackagePathOverrides(environment.RootPath);
+        var manifest = CreatePackageManifest(
+            pluginId: "integration.runtime.unsafe-icon",
+            packageId: "integration.runtime.unsafe-icon.package",
+            displayName: "Unsafe icon package",
+            requiresRestart: false,
+            iconPath: "../icon.svg");
+        await using var services = await BuildServiceProviderAsync(profile, [], packagePaths.ConfigurationOverrides);
+        await using var scope = services.CreateAsyncScope();
+        var packageService = scope.ServiceProvider.GetRequiredService<PluginPackageService>();
+        await using var stream = new MemoryStream(CreatePackageArchive(manifest));
+
+        var installResult = await packageService.InstallUploadedPackageAsync(
+            stream,
+            "unsafe-icon-package.zip",
+            new PluginPackageInstallRequest(Enable: true, Actor: "integration-test"));
+
+        Assert.True(installResult.IsFailure);
+        Assert.Contains(installResult.Errors, error => error.Code == "plugins.package-invalid");
+        Assert.False(File.Exists(Path.Combine(packagePaths.InstalledRootPath, "icon.svg")));
+    }
+
+    [Fact]
+    public async Task Installed_package_discovery_ignores_nested_manifests()
+    {
+        await using var environment = CanDoItAllTestEnvironment.Create("plugin-package-direct-root-tests");
+        var profile = environment.CreateManagedSqliteProfile("plugins");
+        var packagePaths = CreatePackagePathOverrides(environment.RootPath);
+        var manifest = CreatePackageManifest(
+            pluginId: "integration.direct.root",
+            packageId: "integration.direct.root.package",
+            displayName: "Direct root package",
+            requiresRestart: false);
+        WriteInstalledPackage(packagePaths.InstalledRootPath, manifest);
+        var nestedManifest = CreatePackageManifest(
+            pluginId: "integration.nested.root",
+            packageId: "integration.nested.root.package",
+            displayName: "Nested package",
+            requiresRestart: false);
+        var nestedRoot = Path.Combine(packagePaths.InstalledRootPath, manifest.Plugin.Package!.PackageId.Value, "nested");
+        Directory.CreateDirectory(nestedRoot);
+        await File.WriteAllTextAsync(
+            Path.Combine(nestedRoot, PluginPackageManifestStore.ManifestFileName),
+            JsonSerializer.Serialize(nestedManifest, JsonOptions));
+
+        await using var services = await BuildServiceProviderAsync(profile, [], packagePaths.ConfigurationOverrides);
+        await using var scope = services.CreateAsyncScope();
+        var manifestStore = scope.ServiceProvider.GetRequiredService<PluginPackageManifestStore>();
+
+        var installed = await manifestStore.ListInstalledManifestsAsync();
+
+        var item = Assert.Single(installed);
+        Assert.Equal(manifest.Plugin.Id, item.Plugin.Id);
+        Assert.NotEqual(nestedManifest.Plugin.Id, item.Plugin.Id);
+    }
+
+    [Fact]
+    public async Task Runtime_package_assembly_registers_executor_without_bundled_descriptor()
+    {
+        await using var environment = CanDoItAllTestEnvironment.Create("plugin-package-assembly-tests");
+        var profile = environment.CreateManagedSqliteProfile("plugins");
+        var packagePaths = CreatePackagePathOverrides(environment.RootPath);
+        var assemblyName = Path.GetFileName(Assembly.GetExecutingAssembly().Location);
+        var manifest = new PluginPackageManifest
+        {
+            Plugin = new PluginDescriptor(
+                new PluginId("integration.runtime.assembly"),
+                "Runtime assembly package",
+                "Runtime plugin package used by integration tests.",
+                "1.0.0",
+                "CanDoItAll",
+                PluginSourceKind.LocalPackage,
+                PluginTrustLevel.LocalPackage,
+                "1.0.0",
+                PluginCapabilityKind.WorkflowExecutor,
+                [
+                    new PluginWorkflowExecutorDescriptor(
+                        RuntimePackageFixtureWorkflowExecutor.ExecutorId,
+                        "Runtime fixture executor",
+                        "Executor contributed by a runtime package assembly.",
+                        WorkflowExecutorCategoryKind.Utility,
+                        new PluginRendererKey("runtime.fixture"),
+                        ConfigurationSchema.Empty(),
+                        WorkflowValueShape.Text,
+                        WorkflowValueShape.Text,
+                        WorkflowExecutorExecutionPolicy.Default)
+                ],
+                PluginSettingsDescriptor.Empty,
+                [],
+                new PluginPackageDescriptor(
+                    new PluginPackageId("integration.runtime.assembly.package"),
+                    "1.0.0",
+                    "1.0.0",
+                    "sha256-test",
+                    "signature-test"),
+                Icon: UiIconDescriptor.MaterialIcon("extension", "Runtime assembly package")),
+            EntryAssembly = assemblyName,
+            Assemblies = [assemblyName],
+            IconPath = "icon.svg",
+            RequiresRestart = false
+        };
+        WriteInstalledPackage(
+            packagePaths.InstalledRootPath,
+            manifest,
+            new Dictionary<string, byte[]>(StringComparer.Ordinal)
+            {
+                [manifest.EntryAssembly] = await File.ReadAllBytesAsync(Assembly.GetExecutingAssembly().Location)
+            });
+
+        await using var services = await BuildServiceProviderAsync(profile, [], packagePaths.ConfigurationOverrides);
+        await using var scope = services.CreateAsyncScope();
+        var catalogService = scope.ServiceProvider.GetRequiredService<PluginCatalogService>();
+        var executorCatalog = scope.ServiceProvider.GetRequiredService<IWorkflowExecutorCatalog>();
+
+        var plugins = await catalogService.ListCatalogAsync();
+        var executors = executorCatalog.ListExecutors();
+        var executor = Assert.Single(executors, item => item.Id == RuntimePackageFixtureWorkflowExecutor.ExecutorId);
+
+        Assert.Contains(plugins, item => item.PluginId == manifest.Plugin.Id);
+        Assert.DoesNotContain(plugins, item => item.PluginId == RuntimePackageLeakedBundledPlugin.PluginId);
+        Assert.Equal(WorkflowExecutorSourceKind.LocalPackage, executor.Source.Kind);
+        Assert.Equal(manifest.Plugin.Id.Value, executor.Source.PluginId);
+        Assert.Equal(manifest.Plugin.Package!.PackageId.Value, executor.Source.PackageId);
+    }
+
+    [Fact]
+    public async Task Plugin_logs_persist_installation_runtime_and_redact_sensitive_values()
+    {
+        await using var environment = CanDoItAllTestEnvironment.Create("plugin-log-tests");
+        var profile = environment.CreateManagedSqliteProfile("plugins");
+        await using var services = await BuildServiceProviderAsync(profile, []);
+        await using var scope = services.CreateAsyncScope();
+        var logStore = scope.ServiceProvider.GetRequiredService<PluginLogStore>();
+
+        await logStore.WriteAsync(new PluginLogWriteRequest(
+            PluginLogStreamKind.Installation,
+            PluginLogOperationKind.PackageInstall,
+            PluginLogSeverity.Information,
+            "Installed",
+            "Installed package with token=super-secret",
+            "{\"clientSecret\":\"super-secret\",\"safe\":\"value\"}",
+            new PluginId("integration.logs"),
+            new PluginPackageId("integration.logs.package")));
+        await logStore.WriteAsync(new PluginLogWriteRequest(
+            PluginLogStreamKind.Runtime,
+            PluginLogOperationKind.ExecutorCompleted,
+            PluginLogSeverity.Information,
+            "Completed",
+            "Runtime event completed",
+            "{}",
+            new PluginId("integration.logs"),
+            WorkflowExecutorId: new WorkflowExecutorId("integration.logs.executor")));
+
+        var installationLogs = await logStore.ListAsync(new PluginLogQuery(
+            PluginLogStreamKind.Installation,
+            new PluginId("integration.logs")));
+        var runtimeLogs = await logStore.ListAsync(new PluginLogQuery(
+            PluginLogStreamKind.Runtime,
+            new PluginId("integration.logs")));
+
+        var installation = Assert.Single(installationLogs);
+        var runtime = Assert.Single(runtimeLogs);
+        Assert.DoesNotContain("super-secret", installation.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("super-secret", installation.DetailsJson, StringComparison.Ordinal);
+        Assert.Contains("[REDACTED]", installation.DetailsJson, StringComparison.Ordinal);
+        Assert.Equal(PluginLogOperationKind.ExecutorCompleted, runtime.OperationKind);
     }
 
     [Fact]
@@ -592,35 +770,84 @@ public sealed class PluginCatalogIntegrationTests
     }
 
     [Fact]
-    public async Task Plugin_api_controls_docker_plugin_settings_and_workflow_executor_availability()
+    public async Task Docker_runtime_package_install_activates_settings_and_workflow_executor_after_restart()
     {
-        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
-        var settingsResponse = await host.Client.GetAsync($"/api/plugins/{DockerPluginConstants.PluginId.Value}/settings");
-        var settingsBody = await settingsResponse.Content.ReadAsStringAsync();
-        Assert.True(settingsResponse.IsSuccessStatusCode, settingsBody);
-        var settings = JsonSerializer.Deserialize<PluginSettingsDetail>(settingsBody, JsonOptions)!;
+        await using var environment = CanDoItAllTestEnvironment.Create("docker-runtime-package-tests");
+        var profile = environment.CreateManagedSqliteProfile("plugins");
+        var packagePaths = CreatePackagePathOverrides(environment.RootPath);
+        Directory.CreateDirectory(packagePaths.CatalogRootPath);
+        var manifest = CreateDockerPackageManifest();
+        await File.WriteAllBytesAsync(
+            Path.Combine(packagePaths.CatalogRootPath, "docker-runtime-package.zip"),
+            await CreateDockerPackageArchiveAsync(manifest));
 
-        var initialCatalog = await ReadWorkflowExecutorCatalogAsync(host);
-        var initialDockerStart = Assert.Single(initialCatalog, item => item.Id == DockerPluginConstants.StartContainerExecutorId);
+        await using (var services = await BuildServiceProviderAsync(profile, [], packagePaths.ConfigurationOverrides))
+        await using (var scope = services.CreateAsyncScope())
+        {
+            var catalogService = scope.ServiceProvider.GetRequiredService<PluginCatalogService>();
+            var executorCatalog = scope.ServiceProvider.GetRequiredService<IWorkflowExecutorCatalog>();
+            var packageService = scope.ServiceProvider.GetRequiredService<PluginPackageService>();
 
-        var installResponse = await host.Client.PostAsJsonAsync(
-            $"/api/plugins/{DockerPluginConstants.PluginId.Value}/install",
-            new PluginInstallRequest(Enable: true, Actor: "integration-test"));
-        var installBody = await installResponse.Content.ReadAsStringAsync();
-        Assert.True(installResponse.IsSuccessStatusCode, installBody);
+            var initialPlugins = await catalogService.ListCatalogAsync();
+            var initialExecutors = executorCatalog.ListExecutors();
+            var installResult = await packageService.InstallFromCatalogAsync(
+                DockerPluginConstants.PackageId,
+                new PluginPackageInstallRequest(Enable: true, Actor: "integration-test"));
 
-        await GrantAsync(host, DockerPluginConstants.PluginId, PluginCapabilityKind.WorkflowExecutor);
-        await GrantAsync(host, DockerPluginConstants.PluginId, PluginCapabilityKind.HostCommand);
-        await GrantAsync(host, DockerPluginConstants.PluginId, PluginCapabilityKind.HostCommand, PluginHostToolRecipeIds.DockerStartContainer);
+            Assert.DoesNotContain(initialPlugins, item => item.PluginId == DockerPluginConstants.PluginId);
+            Assert.DoesNotContain(initialExecutors, item => item.Id == DockerPluginConstants.StartContainerExecutorId);
+            Assert.True(installResult.IsSuccess, FormatErrors(installResult.Errors));
+            Assert.True(installResult.Value!.RestartRequired);
+        }
 
-        var updatedCatalog = await ReadWorkflowExecutorCatalogAsync(host);
-        var updatedDockerStart = Assert.Single(updatedCatalog, item => item.Id == DockerPluginConstants.StartContainerExecutorId);
+        await using var activatedServices = await BuildServiceProviderAsync(profile, [], packagePaths.ConfigurationOverrides);
+        await using (var scope = activatedServices.CreateAsyncScope())
+        {
+            var catalogService = scope.ServiceProvider.GetRequiredService<PluginCatalogService>();
+            var settingsService = scope.ServiceProvider.GetRequiredService<PluginSettingsService>();
+            var executorCatalog = scope.ServiceProvider.GetRequiredService<IWorkflowExecutorCatalog>();
 
-        Assert.Contains(settings.Grants, item => item.Capability == PluginCapabilityKind.WorkflowExecutor);
-        Assert.Contains(settings.Grants, item => item.RecipeId == PluginHostToolRecipeIds.DockerStartContainer);
-        Assert.False(initialDockerStart.CanExecute);
-        Assert.Equal(WorkflowExecutorSourceKind.BundledPlugin, updatedDockerStart.Source.Kind);
-        Assert.Equal(DockerPluginConstants.PluginId.Value, updatedDockerStart.Source.PluginId);
+            var activatedPlugins = await catalogService.ListCatalogAsync();
+            var settings = await settingsService.GetSettingsAsync(DockerPluginConstants.PluginId);
+            var initialDockerStart = Assert.Single(
+                executorCatalog.ListExecutors(),
+                item => item.Id == DockerPluginConstants.StartContainerExecutorId);
+            var workflowGrant = await settingsService.UpdateGrantAsync(
+                DockerPluginConstants.PluginId,
+                new PluginGrantUpdateRequest(PluginCapabilityKind.WorkflowExecutor, PluginGrantState.Granted),
+                "integration-test");
+            var hostCommandGrant = await settingsService.UpdateGrantAsync(
+                DockerPluginConstants.PluginId,
+                new PluginGrantUpdateRequest(PluginCapabilityKind.HostCommand, PluginGrantState.Granted, RiskKind: PluginGrantRiskKind.High),
+                "integration-test");
+            var recipeGrant = await settingsService.UpdateGrantAsync(
+                DockerPluginConstants.PluginId,
+                new PluginGrantUpdateRequest(
+                    PluginCapabilityKind.HostCommand,
+                    PluginGrantState.Granted,
+                    PluginHostToolRecipeIds.DockerStartContainer.Value,
+                    RiskKind: PluginGrantRiskKind.High),
+                "integration-test");
+
+            Assert.Contains(activatedPlugins, item => item.PluginId == DockerPluginConstants.PluginId);
+            Assert.NotNull(settings);
+            Assert.Contains(settings!.Grants, item => item.Capability == PluginCapabilityKind.WorkflowExecutor);
+            Assert.Contains(settings.Grants, item => item.RecipeId == PluginHostToolRecipeIds.DockerStartContainer);
+            Assert.False(initialDockerStart.CanExecute);
+            Assert.Equal(WorkflowExecutorSourceKind.LocalPackage, initialDockerStart.Source.Kind);
+            Assert.Equal(DockerPluginConstants.PluginId.Value, initialDockerStart.Source.PluginId);
+            Assert.Equal(DockerPluginConstants.PackageId.Value, initialDockerStart.Source.PackageId);
+            Assert.True(workflowGrant.IsSuccess, FormatErrors(workflowGrant.Errors));
+            Assert.True(hostCommandGrant.IsSuccess, FormatErrors(hostCommandGrant.Errors));
+            Assert.True(recipeGrant.IsSuccess, FormatErrors(recipeGrant.Errors));
+        }
+
+        await using var verifiedScope = activatedServices.CreateAsyncScope();
+        var updatedCatalog = verifiedScope.ServiceProvider.GetRequiredService<IWorkflowExecutorCatalog>();
+        var updatedDockerStart = Assert.Single(
+            updatedCatalog.ListExecutors(),
+            item => item.Id == DockerPluginConstants.StartContainerExecutorId);
+
         Assert.True(updatedDockerStart.CanExecute);
     }
 
@@ -700,11 +927,34 @@ public sealed class PluginCatalogIntegrationTests
             });
     }
 
+    private static void WriteInstalledPackage(
+        string installedRootPath,
+        PluginPackageManifest manifest,
+        IReadOnlyDictionary<string, byte[]>? extraFiles = null)
+    {
+        var packageRootPath = Path.Combine(installedRootPath, manifest.Plugin.Package!.PackageId.Value);
+        Directory.CreateDirectory(packageRootPath);
+        File.WriteAllText(
+            Path.Combine(packageRootPath, PluginPackageManifestStore.ManifestFileName),
+            JsonSerializer.Serialize(manifest, JsonOptions));
+        File.WriteAllText(
+            Path.Combine(packageRootPath, manifest.IconPath),
+            "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 16 16\"><rect width=\"16\" height=\"16\"/></svg>");
+
+        foreach (var entry in extraFiles ?? new Dictionary<string, byte[]>(StringComparer.Ordinal))
+        {
+            var destinationPath = Path.Combine(packageRootPath, entry.Key);
+            Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
+            File.WriteAllBytes(destinationPath, entry.Value);
+        }
+    }
+
     private static PluginPackageManifest CreatePackageManifest(
         string pluginId,
         string packageId,
         string displayName,
-        bool requiresRestart)
+        bool requiresRestart,
+        string iconPath = "icon.svg")
         => new()
         {
             Plugin = new PluginDescriptor(
@@ -726,9 +976,89 @@ public sealed class PluginCatalogIntegrationTests
                     "1.0.0",
                     "sha256-test",
                     "signature-test")),
-            IconPath = "icon.svg",
+            IconPath = iconPath,
             RequiresRestart = requiresRestart
         };
+
+    private static PluginPackageManifest CreateDockerPackageManifest()
+    {
+        var assemblyName = Path.GetFileName(typeof(DockerPluginAssemblyMarker).Assembly.Location);
+        return new PluginPackageManifest
+        {
+            Plugin = new PluginDescriptor(
+                DockerPluginConstants.PluginId,
+                "Docker",
+                "Provides guarded workflow executors for listing containers, pulling images, starting containers, and reading bounded logs.",
+                "1.0.0",
+                "CanDoItAll",
+                PluginSourceKind.LocalPackage,
+                PluginTrustLevel.LocalPackage,
+                "1.0.0",
+                PluginCapabilityKind.WorkflowExecutor | PluginCapabilityKind.HostCommand,
+                [
+                    CreateDockerExecutor(
+                        DockerPluginConstants.ListContainersExecutorId,
+                        "Docker containers",
+                        "Lists running Docker containers through a constrained docker ps host-tool recipe.",
+                        WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 20 }),
+                    CreateDockerExecutor(
+                        DockerPluginConstants.PullImageExecutorId,
+                        "Docker pull image",
+                        "Pulls a validated Docker image reference through a constrained docker pull host-tool recipe.",
+                        WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 900, CaptureOutputArtifact = true }),
+                    CreateDockerExecutor(
+                        DockerPluginConstants.StartContainerExecutorId,
+                        "Docker start container",
+                        "Starts an existing container or creates a container from a validated image through constrained Docker recipes.",
+                        WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 120, CaptureOutputArtifact = true }),
+                    CreateDockerExecutor(
+                        DockerPluginConstants.ReadLogsExecutorId,
+                        "Docker logs",
+                        "Reads bounded logs from a validated running Docker container.",
+                        WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 30, CaptureOutputArtifact = true })
+                ],
+                PluginSettingsDescriptor.Empty,
+                [],
+                new PluginPackageDescriptor(
+                    DockerPluginConstants.PackageId,
+                    "1.0.0",
+                    "1.0.0",
+                    "sha256-test",
+                    "signature-test"),
+                Icon: DockerPluginConstants.Icon),
+            EntryAssembly = assemblyName,
+            Assemblies = [assemblyName],
+            IconPath = "icon.svg",
+            RequiresRestart = true
+        };
+    }
+
+    private static PluginWorkflowExecutorDescriptor CreateDockerExecutor(
+        WorkflowExecutorId executorId,
+        string name,
+        string description,
+        WorkflowExecutorExecutionPolicy defaultPolicy)
+        => new(
+            executorId,
+            name,
+            description,
+            WorkflowExecutorCategoryKind.Command,
+            DockerPluginConstants.SettingsRendererKey,
+            ConfigurationSchema.Empty(),
+            WorkflowValueShape.Text,
+            new WorkflowValueShape(WorkflowValueShapeKind.Json, "{}", "Docker command JSON result"),
+            defaultPolicy);
+
+    private static async Task<byte[]> CreateDockerPackageArchiveAsync(PluginPackageManifest manifest)
+    {
+        var assemblyPath = typeof(DockerPluginAssemblyMarker).Assembly.Location;
+        return CreatePackageArchive(
+            manifest,
+            new Dictionary<string, byte[]>(StringComparer.Ordinal)
+            {
+                [Path.GetFileName(assemblyPath)] = await File.ReadAllBytesAsync(assemblyPath)
+            });
+    }
 
     private static byte[] CreatePackageArchive(
         PluginPackageManifest manifest,
@@ -1040,7 +1370,54 @@ public sealed class PluginCatalogIntegrationTests
             return ValueTask.FromResult(new WorkflowNodeExecutionResult(
                 node.Id,
                 JsonSerializer.Serialize(summary, JsonOptions),
-                component.ResultShape));
+            component.ResultShape));
         }
     }
+}
+
+public sealed class RuntimePackageFixtureWorkflowExecutor : IWorkflowExecutor
+{
+    public static WorkflowExecutorId ExecutorId { get; } = new("integration.runtime.fixture");
+
+    public WorkflowExecutorDescriptor Descriptor { get; } = new(
+        ExecutorId,
+        "Runtime fixture executor",
+        "Executor contributed by a runtime package assembly.",
+        WorkflowExecutorCategoryKind.Utility,
+        "extension",
+        "runtime-fixture",
+        WorkflowValueShape.Text,
+        WorkflowValueShape.Text,
+        "{\"type\":\"object\"}",
+        "{}",
+        WorkflowExecutorExecutionPolicy.Default,
+        IsImplemented: true);
+
+    public ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
+        WorkflowExecutorExecutionContext context,
+        WorkflowNodeInput input,
+        CancellationToken cancellationToken = default)
+        => ValueTask.FromResult(new WorkflowNodeExecutionResult(
+            context.Node.Id,
+            "{\"ok\":true}",
+            WorkflowValueShape.Text));
+}
+
+public sealed class RuntimePackageLeakedBundledPlugin : ICanDoItAllPlugin
+{
+    public static PluginId PluginId { get; } = new("integration.runtime.leaked-bundled");
+
+    public PluginDescriptor Descriptor { get; } = new(
+        PluginId,
+        "Leaked bundled descriptor",
+        "Descriptor that must not be imported from a runtime package assembly.",
+        "1.0.0",
+        "CanDoItAll",
+        PluginSourceKind.Bundled,
+        PluginTrustLevel.Bundled,
+        "1.0.0",
+        PluginCapabilityKind.None,
+        [],
+        PluginSettingsDescriptor.Empty,
+        []);
 }

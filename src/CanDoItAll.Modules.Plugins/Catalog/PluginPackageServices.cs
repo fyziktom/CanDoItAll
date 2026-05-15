@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Runtime.Loader;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Plugins.Abstractions;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,6 +24,7 @@ public sealed class PluginPackageService(
     PluginPackageManifestStore manifestStore,
     PluginInstallationStore installationStore,
     PluginRuntimeRestartService restartService,
+    PluginLogStore logStore,
     ILogger<PluginPackageService> logger)
 {
     public async Task<IReadOnlyList<PluginPackageCatalogItem>> ListPackagesAsync(CancellationToken cancellationToken = default)
@@ -139,6 +141,15 @@ public sealed class PluginPackageService(
         }
         catch (Exception exception) when (IsPackageException(exception))
         {
+            await logStore.WriteAsync(new PluginLogWriteRequest(
+                PluginLogStreamKind.Installation,
+                PluginLogOperationKind.PackageUpload,
+                PluginLogSeverity.Error,
+                "Invalid",
+                $"Plugin package upload '{fileName}' is invalid: {exception.Message}",
+                PluginLogStore.SerializeDetails(new { fileName, exceptionType = exception.GetType().Name }),
+                CorrelationId: Path.GetFileNameWithoutExtension(temporaryArchivePath)),
+                cancellationToken);
             return Result<PluginPackageInstallResult>.Failure(Error.Validation(
                 $"Plugin package upload '{fileName}' is invalid: {exception.Message}",
                 "plugins.package-upload-invalid"));
@@ -159,10 +170,28 @@ public sealed class PluginPackageService(
         try
         {
             manifest = await manifestStore.ReadArchiveManifestAsync(archivePath, cancellationToken);
+            await logStore.WriteAsync(new PluginLogWriteRequest(
+                PluginLogStreamKind.Installation,
+                PluginLogOperationKind.PackageValidation,
+                PluginLogSeverity.Information,
+                "Valid",
+                $"Plugin package '{Path.GetFileName(archivePath)}' manifest was validated.",
+                PluginLogStore.SerializeDetails(new { archive = Path.GetFileName(archivePath), sourceKind }),
+                manifest.Plugin.Id,
+                manifest.Plugin.Package?.PackageId),
+                cancellationToken);
             await manifestStore.ExtractInstalledPackageAsync(archivePath, manifest, options.MaxPackageBytes, cancellationToken);
         }
         catch (Exception exception) when (IsPackageException(exception))
         {
+            await logStore.WriteAsync(new PluginLogWriteRequest(
+                PluginLogStreamKind.Installation,
+                PluginLogOperationKind.PackageValidation,
+                PluginLogSeverity.Error,
+                "Invalid",
+                $"Plugin package '{Path.GetFileName(archivePath)}' is invalid: {exception.Message}",
+                PluginLogStore.SerializeDetails(new { archive = Path.GetFileName(archivePath), sourceKind, exceptionType = exception.GetType().Name })),
+                cancellationToken);
             return Result<PluginPackageInstallResult>.Failure(Error.Validation(
                 $"Plugin package '{Path.GetFileName(archivePath)}' is invalid: {exception.Message}",
                 "plugins.package-invalid"));
@@ -175,6 +204,16 @@ public sealed class PluginPackageService(
             cancellationToken);
         if (installResult.IsFailure)
         {
+            await logStore.WriteAsync(new PluginLogWriteRequest(
+                PluginLogStreamKind.Installation,
+                PluginLogOperationKind.PackageInstall,
+                PluginLogSeverity.Error,
+                "Failed",
+                string.Join(" ", installResult.Errors.Select(error => error.Message)),
+                PluginLogStore.SerializeDetails(new { sourceKind, actor = request.Actor }),
+                manifest.Plugin.Id,
+                manifest.Plugin.Package?.PackageId),
+                cancellationToken);
             return Result<PluginPackageInstallResult>.Failure(installResult.Errors);
         }
 
@@ -193,6 +232,30 @@ public sealed class PluginPackageService(
             sourceKind,
             restartRequired,
             NormalizeActor(request.Actor));
+
+        await logStore.WriteAsync(new PluginLogWriteRequest(
+            PluginLogStreamKind.Installation,
+            PluginLogOperationKind.PackageInstall,
+            PluginLogSeverity.Information,
+            "Installed",
+            $"Plugin package '{manifest.Plugin.DisplayName}' was installed.",
+            PluginLogStore.SerializeDetails(new { sourceKind, restartRequired, actor = request.Actor }),
+            manifest.Plugin.Id,
+            manifest.Plugin.Package.PackageId),
+            cancellationToken);
+        if (restartRequired)
+        {
+            await logStore.WriteAsync(new PluginLogWriteRequest(
+                PluginLogStreamKind.Installation,
+                PluginLogOperationKind.RestartRequired,
+                PluginLogSeverity.Warning,
+                restartStatus.IsRestartRequested ? "RestartRequested" : "Required",
+                restartStatus.Reason,
+                PluginLogStore.SerializeDetails(new { restartStatus.ProcessId, restartStatus.RequiredAtUtc, actor = request.Actor }),
+                manifest.Plugin.Id,
+                manifest.Plugin.Package.PackageId),
+                cancellationToken);
+        }
 
         return Result<PluginPackageInstallResult>.Success(new PluginPackageInstallResult(
             manifest.Plugin.Package.PackageId,
@@ -296,10 +359,10 @@ public sealed class PluginPackageManifestStore(
         Directory.CreateDirectory(options.InstalledRootPath);
         var manifests = new List<PluginPackageManifest>();
 
-        foreach (var manifestPath in Directory.EnumerateFiles(options.InstalledRootPath, ManifestFileName, SearchOption.AllDirectories))
+        foreach (var packageRoot in ListInstalledPackageRoots(options.InstalledRootPath))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            manifests.Add(await ReadInstalledManifestAsync(manifestPath, cancellationToken));
+            manifests.Add(await ReadInstalledManifestAsync(packageRoot.ManifestPath, cancellationToken));
         }
 
         return manifests
@@ -332,7 +395,7 @@ public sealed class PluginPackageManifestStore(
             cancellationToken);
 
         ValidateManifest(manifest, archive);
-        return manifest!;
+        return NormalizePackageManifestIcon(manifest!);
     }
 
     public async Task ExtractInstalledPackageAsync(
@@ -417,6 +480,20 @@ public sealed class PluginPackageManifestStore(
         => !string.IsNullOrWhiteSpace(manifest.EntryAssembly) ||
            manifest.Assemblies.Any(path => !string.IsNullOrWhiteSpace(path));
 
+    internal static IReadOnlyList<InstalledPluginPackageRoot> ListInstalledPackageRoots(string installedRootPath)
+    {
+        if (!Directory.Exists(installedRootPath))
+        {
+            return [];
+        }
+
+        return Directory.EnumerateDirectories(installedRootPath, "*", SearchOption.TopDirectoryOnly)
+            .Select(path => new InstalledPluginPackageRoot(Path.GetFullPath(path), Path.Combine(Path.GetFullPath(path), ManifestFileName)))
+            .Where(root => File.Exists(root.ManifestPath))
+            .OrderBy(root => root.PackageRootPath, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
     internal static IReadOnlyList<string> ResolveAssemblyPaths(
         PluginPackageManifest manifest,
         string packageRootPath)
@@ -446,6 +523,14 @@ public sealed class PluginPackageManifestStore(
             .ToArray();
     }
 
+    internal static string NormalizePackageAssetPath(string path)
+        => NormalizeArchivePath(path);
+
+    internal static void EnsurePackageChildPath(
+        string rootPath,
+        string candidatePath)
+        => EnsureChildPath(rootPath, candidatePath);
+
     private static async Task<PluginPackageManifest> ReadInstalledManifestAsync(
         string manifestPath,
         CancellationToken cancellationToken)
@@ -456,7 +541,7 @@ public sealed class PluginPackageManifestStore(
             SerializerOptions,
             cancellationToken);
         ValidateManifest(manifest, packageRootPath: Path.GetDirectoryName(manifestPath));
-        return manifest!;
+        return NormalizePackageManifestIcon(manifest!);
     }
 
     private static void ValidateManifest(
@@ -486,6 +571,13 @@ public sealed class PluginPackageManifestStore(
         foreach (var assemblyPath in ResolveAssemblyRelativePaths(manifest))
         {
             AssertFileExists(packageRootPath, assemblyPath, "assembly");
+        }
+
+        var packageRootName = Path.GetFileName(Path.GetFullPath(packageRootPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        var packageId = manifest.Plugin.Package!.PackageId.Value;
+        if (!string.Equals(packageRootName, packageId, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidDataException($"Installed package root '{packageRootName}' must match package id '{packageId}'.");
         }
     }
 
@@ -609,6 +701,24 @@ public sealed class PluginPackageManifestStore(
         return string.Join('/', segments);
     }
 
+    private static PluginPackageManifest NormalizePackageManifestIcon(PluginPackageManifest manifest)
+    {
+        var packageId = manifest.Plugin.Package!.PackageId.Value;
+        var icon = manifest.Plugin.Icon ?? UiIconDescriptor.PackageAsset(
+            packageId,
+            NormalizeArchivePath(manifest.IconPath),
+            manifest.Plugin.DisplayName);
+
+        return new PluginPackageManifest
+        {
+            Plugin = manifest.Plugin with { Icon = icon },
+            EntryAssembly = manifest.EntryAssembly,
+            Assemblies = manifest.Assemblies,
+            IconPath = manifest.IconPath,
+            RequiresRestart = manifest.RequiresRestart
+        };
+    }
+
     private static void EnsureChildPath(
         string rootPath,
         string candidatePath)
@@ -625,6 +735,10 @@ public sealed class PluginPackageManifestStore(
         }
     }
 }
+
+internal sealed record InstalledPluginPackageRoot(
+    string PackageRootPath,
+    string ManifestPath);
 
 public sealed class PluginRuntimeRestartService(
     PluginPackageOptions options,
@@ -759,6 +873,53 @@ public sealed class PluginRuntimeRestartService(
         => string.IsNullOrWhiteSpace(actor) ? "system" : actor.Trim();
 }
 
+public sealed class PluginPackageAssetService(
+    PluginPackageOptions options,
+    PluginPackageManifestStore manifestStore)
+{
+    public async Task<PluginPackageAsset?> ResolveIconAsync(
+        PluginPackageId packageId,
+        CancellationToken cancellationToken = default)
+    {
+        var packageRootPath = Path.GetFullPath(Path.Combine(options.InstalledRootPath, packageId.Value));
+        var manifestPath = Path.Combine(packageRootPath, PluginPackageManifestStore.ManifestFileName);
+        if (!File.Exists(manifestPath))
+        {
+            return null;
+        }
+
+        var manifest = (await manifestStore.ListInstalledManifestsAsync(cancellationToken))
+            .SingleOrDefault(item => item.Plugin.Package?.PackageId == packageId);
+        if (manifest is null)
+        {
+            return null;
+        }
+
+        var relativePath = PluginPackageManifestStore.NormalizePackageAssetPath(manifest.IconPath);
+        var filePath = Path.GetFullPath(Path.Combine(packageRootPath, relativePath.Replace('/', Path.DirectorySeparatorChar)));
+        PluginPackageManifestStore.EnsurePackageChildPath(packageRootPath, filePath);
+        if (!File.Exists(filePath))
+        {
+            return null;
+        }
+
+        return new PluginPackageAsset(
+            filePath,
+            ResolveContentType(filePath),
+            new DateTimeOffset(File.GetLastWriteTimeUtc(filePath), TimeSpan.Zero));
+    }
+
+    private static string ResolveContentType(string filePath)
+        => Path.GetExtension(filePath).ToLowerInvariant() switch
+        {
+            ".svg" => "image/svg+xml",
+            ".png" => "image/png",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".webp" => "image/webp",
+            _ => "application/octet-stream"
+        };
+}
+
 public sealed class PluginPackageActivationHostedService(PluginRuntimeRestartService restartService) : IHostedService
 {
     public Task StartAsync(CancellationToken cancellationToken)
@@ -784,12 +945,10 @@ internal static class RuntimePluginAssemblyRegistrar
             return;
         }
 
-        foreach (var manifestPath in Directory.EnumerateFiles(options.InstalledRootPath, PluginPackageManifestStore.ManifestFileName, SearchOption.AllDirectories))
+        foreach (var packageRoot in PluginPackageManifestStore.ListInstalledPackageRoots(options.InstalledRootPath))
         {
-            var packageRootPath = Path.GetDirectoryName(manifestPath)
-                ?? throw new InvalidOperationException($"Installed plugin package manifest path '{manifestPath}' has no package root.");
-            var manifest = ReadManifestForStartup(manifestPath);
-            foreach (var assemblyPath in PluginPackageManifestStore.ResolveAssemblyPaths(manifest, packageRootPath))
+            var manifest = ReadManifestForStartup(packageRoot.ManifestPath, packageRoot.PackageRootPath);
+            foreach (var assemblyPath in PluginPackageManifestStore.ResolveAssemblyPaths(manifest, packageRoot.PackageRootPath))
             {
                 if (!File.Exists(assemblyPath))
                 {
@@ -798,26 +957,36 @@ internal static class RuntimePluginAssemblyRegistrar
 
                 var assembly = LoadPluginAssembly(assemblyPath);
                 InvokeRegistrars(services, assembly);
-                RegisterAssignableTypes<ICanDoItAllPlugin>(services, assembly, ServiceLifetime.Scoped);
-                RegisterAssignableTypes<IWorkflowExecutor>(services, assembly, ServiceLifetime.Scoped);
+                RegisterWorkflowExecutors(services, assembly, manifest);
                 RegisterAssignableTypes<IPluginHostToolRecipeCatalogSource>(services, assembly, ServiceLifetime.Singleton);
             }
         }
     }
 
-    private static PluginPackageManifest ReadManifestForStartup(string manifestPath)
+    private static PluginPackageManifest ReadManifestForStartup(
+        string manifestPath,
+        string packageRootPath)
     {
         using var stream = File.OpenRead(manifestPath);
-        return JsonSerializer.Deserialize<PluginPackageManifest>(
+        var manifest = JsonSerializer.Deserialize<PluginPackageManifest>(
                 stream,
                 new JsonSerializerOptions(JsonSerializerDefaults.Web))
             ?? throw new InvalidOperationException($"Installed plugin package manifest '{manifestPath}' could not be read.");
+        var packageId = manifest.Plugin.Package?.PackageId.Value
+            ?? throw new InvalidOperationException($"Installed plugin package manifest '{manifestPath}' does not contain package metadata.");
+        var packageRootName = Path.GetFileName(Path.GetFullPath(packageRootPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        if (!string.Equals(packageRootName, packageId, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException($"Installed plugin package root '{packageRootName}' must match package id '{packageId}'.");
+        }
+
+        return manifest;
     }
 
     private static Assembly LoadPluginAssembly(string assemblyPath)
     {
         var context = new RuntimePluginLoadContext(assemblyPath);
-        return context.LoadFromAssemblyPath(assemblyPath);
+        return context.LoadAssemblyWithoutFileLock(assemblyPath);
     }
 
     private static void InvokeRegistrars(
@@ -853,10 +1022,92 @@ internal static class RuntimePluginAssemblyRegistrar
         }
     }
 
+    private static void RegisterWorkflowExecutors(
+        IServiceCollection services,
+        Assembly assembly,
+        PluginPackageManifest manifest)
+    {
+        foreach (var implementationType in assembly.DefinedTypes
+            .Where(type => type is { IsClass: true, IsAbstract: false } && !type.ContainsGenericParameters)
+            .Select(type => type.AsType())
+            .Where(typeof(IWorkflowExecutor).IsAssignableFrom))
+        {
+            services.AddScoped(typeof(IWorkflowExecutor), serviceProvider =>
+            {
+                var executor = (IWorkflowExecutor)ActivatorUtilities.CreateInstance(serviceProvider, implementationType);
+                return new RuntimePackageWorkflowExecutor(executor, manifest.Plugin);
+            });
+        }
+    }
+
+    private sealed class RuntimePackageWorkflowExecutor(
+        IWorkflowExecutor inner,
+        PluginDescriptor pluginDescriptor) : IWorkflowExecutor
+    {
+        public WorkflowExecutorDescriptor Descriptor
+        {
+            get
+            {
+                var descriptor = inner.Descriptor;
+                var package = pluginDescriptor.Package
+                    ?? throw new InvalidOperationException($"Runtime package plugin '{pluginDescriptor.Id}' is missing package metadata.");
+                return descriptor with
+                {
+                    Source = WorkflowExecutorSourceDescriptor.Package(
+                        MapSourceKind(pluginDescriptor.SourceKind),
+                        pluginDescriptor.Id.Value,
+                        package.PackageId.Value,
+                        pluginDescriptor.Version,
+                        MapTrustLevel(pluginDescriptor.TrustLevel),
+                        pluginDescriptor.DisplayName,
+                        pluginDescriptor.Icon ?? UiIconDescriptor.Default)
+                };
+            }
+        }
+
+        public ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
+            WorkflowExecutorExecutionContext context,
+            WorkflowNodeInput input,
+            CancellationToken cancellationToken = default)
+            => inner.ExecuteAsync(context, input, cancellationToken);
+
+        private static WorkflowExecutorSourceKind MapSourceKind(PluginSourceKind sourceKind)
+            => sourceKind switch
+            {
+                PluginSourceKind.LocalPackage => WorkflowExecutorSourceKind.LocalPackage,
+                PluginSourceKind.RemotePackage or PluginSourceKind.ShopCatalog => WorkflowExecutorSourceKind.RemotePackage,
+                PluginSourceKind.Bundled => WorkflowExecutorSourceKind.BundledPlugin,
+                _ => WorkflowExecutorSourceKind.RemotePackage
+            };
+
+        private static WorkflowExecutorTrustLevel MapTrustLevel(PluginTrustLevel trustLevel)
+            => trustLevel switch
+            {
+                PluginTrustLevel.Application => WorkflowExecutorTrustLevel.Application,
+                PluginTrustLevel.Bundled => WorkflowExecutorTrustLevel.BundledPlugin,
+                PluginTrustLevel.LocalPackage => WorkflowExecutorTrustLevel.LocalPackage,
+                PluginTrustLevel.RemotePackage => WorkflowExecutorTrustLevel.RemotePackage,
+                _ => WorkflowExecutorTrustLevel.Untrusted
+            };
+    }
+
 #pragma warning disable CA1416
     private sealed class RuntimePluginLoadContext(string mainAssemblyPath) : AssemblyLoadContext(isCollectible: false)
     {
         private readonly AssemblyDependencyResolver resolver = new(mainAssemblyPath);
+
+        public Assembly LoadAssemblyWithoutFileLock(string assemblyPath)
+        {
+            using var assemblyStream = File.OpenRead(assemblyPath);
+            var symbolsPath = Path.ChangeExtension(assemblyPath, ".pdb");
+            if (!File.Exists(symbolsPath))
+            {
+                return LoadFromStream(assemblyStream);
+            }
+
+            using var symbolsStream = File.OpenRead(symbolsPath);
+            return LoadFromStream(assemblyStream, symbolsStream);
+        }
 
         protected override Assembly? Load(AssemblyName assemblyName)
         {
@@ -869,7 +1120,7 @@ internal static class RuntimePluginAssemblyRegistrar
             }
 
             var assemblyPath = resolver.ResolveAssemblyToPath(assemblyName);
-            return assemblyPath is null ? null : LoadFromAssemblyPath(assemblyPath);
+            return assemblyPath is null ? null : LoadAssemblyWithoutFileLock(assemblyPath);
         }
     }
 #pragma warning restore CA1416
