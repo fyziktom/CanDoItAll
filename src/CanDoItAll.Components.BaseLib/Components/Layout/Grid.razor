@@ -114,7 +114,7 @@ else
     private string ResolveCssClass()
     {
         return BuildClass(
-            "min-w-0 [&>*]:min-w-0 [gap:var(--cda-grid-gap)] [column-gap:var(--cda-grid-column-gap)] [row-gap:var(--cda-grid-row-gap)] [align-items:var(--cda-grid-align)] [justify-content:var(--cda-grid-justify)]",
+            "min-w-0 w-full max-w-full [&>*]:min-w-0 [gap:var(--cda-grid-gap)] [column-gap:var(--cda-grid-column-gap)] [row-gap:var(--cda-grid-row-gap)] [align-items:var(--cda-grid-align)] [justify-content:var(--cda-grid-justify)]",
             FillHeight ? "min-h-0" : null,
             "[grid-template-columns:var(--cda-grid-columns)]",
             HasResponsiveColumns(ColumnsSm, ColumnTemplateSm) ? "sm:[grid-template-columns:var(--cda-grid-columns-sm)]" : null,

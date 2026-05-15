@@ -680,7 +680,7 @@ public partial class ProjectStructurePage
         var requiresConfirmation = node.ObjectType != ProjectObjectType.Note ||
                                    descendantCount > 0 ||
                                    linkedNodeCount > 1 ||
-                                   HasManagedAttachment(node) ||
+                                   ProjectStructureNodeHelpers.HasManagedAttachment(node) ||
                                    node.ArtifactId.HasValue;
         var impactParts = new List<string>();
         if (descendantCount > 0)

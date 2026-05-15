@@ -76,6 +76,37 @@ public sealed class MainLayoutDatabaseProfileTests
     }
 
     [Fact]
+    public async Task Main_layout_renders_database_switch_flyout_with_safe_summary_and_recent_profiles()
+    {
+        await using var harness = await CreateUnlockedHarnessAsync();
+        harness.Context.JSInterop.Setup<bool>("CanDoItAll.browserState.isDatabaseStartupPromptDismissed")
+            .SetResult(true);
+
+        var profileService = harness.Context.Services.GetRequiredService<IDatabaseProfileService>();
+        var saveResult = await profileService.SaveAsync(new DatabaseProfileEditorModel
+        {
+            DisplayName = "Stage-01",
+            ProviderKind = DatabaseProviderKind.Sqlite,
+            SourceKind = DatabaseProfileSourceKind.ManagedSqlite
+        });
+        Assert.True(saveResult.IsSuccess);
+
+        var cut = harness.Context.RenderComponent<WebMainLayout>(parameters => parameters
+            .Add(layout => layout.Body, (RenderFragment)(builder => builder.AddMarkupContent(0, "<div data-testid=\"layout-body\">Body</div>"))));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("database-shell-flyout-card", cut.Markup);
+            Assert.Contains("Switch Database", cut.Markup);
+            Assert.Contains("Current Database", cut.Markup);
+            Assert.Contains("Copy safe summary", cut.Markup);
+            Assert.Contains("Recent Databases", cut.Markup);
+            Assert.Contains("Stage-01", cut.Markup);
+            Assert.Contains("database-shell-open-dialog", cut.Markup);
+        });
+    }
+
+    [Fact]
     public async Task Main_layout_renders_routed_body_after_startup_database_prompt_is_dismissed()
     {
         await using var harness = await CreateRuntimeOverrideHarnessAsync();

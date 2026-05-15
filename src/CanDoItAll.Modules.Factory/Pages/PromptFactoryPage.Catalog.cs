@@ -10,7 +10,6 @@ public partial class PromptFactoryPage
     private const string FlowCanvasNodeId = "selection:flow";
     private const string ComponentsRootCanvasNodeId = "selection:components";
     private const string InputsRootCanvasNodeId = "selection:inputs";
-    private const string ComponentSectionCanvasNodePrefix = "selection:component-section:";
     private const string ComponentGroupCanvasNodePrefix = "selection:component-group:";
     private const string ComponentCanvasNodePrefix = "selection:component:";
     private const string InputCanvasNodePrefix = "selection:input:";
@@ -68,343 +67,6 @@ public partial class PromptFactoryPage
         => TryParseComponentGroupNodeId(selectedCanvasNodeId, out var groupKey)
             ? libraryCatalog.Groups.FirstOrDefault(item => string.Equals(item.Key, groupKey, StringComparison.OrdinalIgnoreCase))
             : null;
-
-    private (List<CanvasWorkbenchNode> Nodes, List<CanvasWorkbenchLink> Links) BuildSelectionGraph()
-    {
-        var nodes = new List<CanvasWorkbenchNode>();
-        var links = new List<CanvasWorkbenchLink>();
-
-        AppendSetupSelectionGraph(nodes, links);
-
-        var blueprint = blueprints.FirstOrDefault(item => item.Id == editor.BlueprintId);
-        if (blueprint is not null)
-        {
-            nodes.Add(new CanvasWorkbenchNode
-            {
-                Id = BlueprintCanvasNodeId,
-                ParentId = "session-root",
-                Family = "special",
-                Kind = "blueprint",
-                Icon = "design_services",
-                Title = blueprint.Name,
-                Subtitle = blueprint.PromptType,
-                LeadText = string.IsNullOrWhiteSpace(blueprint.Guidance) ? blueprint.Summary : blueprint.Guidance,
-                Status = "Blueprint",
-                StatusPill = "Selected",
-                AccentColor = "#7c3aed",
-                PaletteKey = "violet",
-                IsRequired = true,
-                X = 520,
-                Y = 110,
-                Chips =
-                [
-                    new CanvasWorkbenchChip { Text = blueprint.PromptType, Tone = "accent" }
-                ],
-                FooterChips =
-                [
-                    new CanvasWorkbenchChip { Text = string.IsNullOrWhiteSpace(blueprint.RecommendedFlowKey) ? "No flow" : blueprint.RecommendedFlowKey, Tone = "neutral" }
-                ],
-                ContextActions = PromptFactoryCatalogToolbox.BuildBlueprintNodeActions(libraryCatalog).ToList()
-            });
-            links.Add(new CanvasWorkbenchLink { SourceId = "session-root", TargetId = BlueprintCanvasNodeId, Kind = "selection", IsUserAuthored = false });
-        }
-
-        var flow = templates.FirstOrDefault(item => item.Id == editor.FlowTemplateId);
-        if (flow is not null)
-        {
-            nodes.Add(new CanvasWorkbenchNode
-            {
-                Id = FlowCanvasNodeId,
-                ParentId = "session-root",
-                Family = "special",
-                Kind = "flow",
-                Icon = "account_tree",
-                Title = flow.Name,
-                Subtitle = $"{flow.AgentSequence.Count} agent step(s)",
-                LeadText = flow.Summary,
-                Status = "Flow",
-                StatusPill = "Selected",
-                AccentColor = "#2563eb",
-                PaletteKey = "sky",
-                IsRequired = true,
-                X = 520,
-                Y = 300,
-                Chips =
-                [
-                    new CanvasWorkbenchChip { Text = $"{flow.BlockKeys.Count} blocks", Tone = "accent" }
-                ],
-                FooterChips =
-                [
-                    new CanvasWorkbenchChip { Text = $"{flow.AgentSequence.Count} agent step(s)", Tone = "success" }
-                ],
-                ContextActions = PromptFactoryCatalogToolbox.BuildFlowNodeActions(libraryCatalog).ToList()
-            });
-            links.Add(new CanvasWorkbenchLink { SourceId = "session-root", TargetId = FlowCanvasNodeId, Kind = "selection", IsUserAuthored = false });
-        }
-
-        var selectedBlocks = blocks
-            .Where(item => editor.SelectedBlockIds.Contains(item.Id))
-            .OrderBy(item => ResolveComponentSectionOrder(item.GroupKey))
-            .ThenBy(item => ResolveGroupOrder(item.GroupKey))
-            .ThenBy(item => item.OrderIndex)
-            .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-        if (selectedBlocks.Count > 0)
-        {
-            nodes.Add(new CanvasWorkbenchNode
-            {
-                Id = ComponentsRootCanvasNodeId,
-                ParentId = "session-root",
-                Family = "group",
-                Kind = "components",
-                Icon = "widgets",
-                Title = "Prompt components",
-                Subtitle = $"{selectedBlocks.Count} selected",
-                LeadText = "Prompt library components currently active in this session.",
-                Status = "Components",
-                StatusPill = $"{selectedBlocks.Count} active",
-                AccentColor = "#7c3aed",
-                PaletteKey = "violet",
-                IsRequired = true,
-                IsCollapsible = true,
-                X = 520,
-                Y = 560,
-                Chips =
-                [
-                    new CanvasWorkbenchChip { Text = $"{selectedBlocks.Count} components", Tone = "accent" }
-                ],
-                FooterChips =
-                [
-                    new CanvasWorkbenchChip { Text = editor.ComponentCustomizations.Count(item => !string.IsNullOrWhiteSpace(item.RenderedContent)).ToString() + " customized", Tone = "success" }
-                ],
-                ContextActions = PromptFactoryCatalogToolbox.BuildSelectionContextActions(libraryCatalog, "components-root").ToList()
-            });
-            links.Add(new CanvasWorkbenchLink { SourceId = "session-root", TargetId = ComponentsRootCanvasNodeId, Kind = "selection", IsUserAuthored = false });
-
-            var sectionGroups = selectedBlocks
-                .GroupBy(item => ResolveComponentSectionKey(item.GroupKey))
-                .OrderBy(group => ResolveComponentSectionOrder(group.Key))
-                .ToList();
-
-            for (var sectionIndex = 0; sectionIndex < sectionGroups.Count; sectionIndex++)
-            {
-                var section = sectionGroups[sectionIndex];
-                var sectionNodeId = $"{ComponentSectionCanvasNodePrefix}{section.Key}";
-                nodes.Add(new CanvasWorkbenchNode
-                {
-                    Id = sectionNodeId,
-                    ParentId = ComponentsRootCanvasNodeId,
-                    Family = "group",
-                    Kind = "component section",
-                    Icon = "grid_view",
-                    Title = ResolveComponentSectionLabel(section.Key),
-                    Subtitle = $"{section.Count()} component(s)",
-                    LeadText = ResolveComponentSectionDescription(section.Key),
-                    Status = "Section",
-                    StatusPill = section.Count().ToString(),
-                    AccentColor = ResolveComponentSectionAccent(section.Key),
-                    PaletteKey = ResolveComponentSectionPalette(section.Key),
-                    IsCollapsible = true,
-                    X = 850,
-                    Y = 460 + (sectionIndex * 210),
-                    ContextActions = PromptFactoryCatalogToolbox.BuildSelectionContextActions(libraryCatalog, "component-section").ToList()
-                });
-                links.Add(new CanvasWorkbenchLink { SourceId = ComponentsRootCanvasNodeId, TargetId = sectionNodeId, Kind = "contains", IsUserAuthored = false });
-
-                var groupedBlocks = section
-                    .GroupBy(item => item.GroupKey)
-                    .OrderBy(group => ResolveGroupOrder(group.Key))
-                    .ThenBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
-                    .ToList();
-
-                for (var groupIndex = 0; groupIndex < groupedBlocks.Count; groupIndex++)
-                {
-                    var blockGroup = groupedBlocks[groupIndex];
-                    var groupNodeId = $"{ComponentGroupCanvasNodePrefix}{blockGroup.Key}";
-                    nodes.Add(new CanvasWorkbenchNode
-                    {
-                        Id = groupNodeId,
-                        ParentId = sectionNodeId,
-                        Family = "group",
-                        Kind = "component group",
-                        Icon = "folder",
-                        Title = ResolveLibraryGroupLabel(blockGroup.Key),
-                        Subtitle = $"{blockGroup.Count()} selected",
-                        LeadText = ResolveLibraryGroupSummary(blockGroup.Key),
-                        Status = "Group",
-                        StatusPill = blockGroup.Count().ToString(),
-                        AccentColor = ResolveGroupAccent(blockGroup.Key),
-                        PaletteKey = ResolveGroupPalette(blockGroup.Key),
-                        IsCollapsible = true,
-                        X = 1160,
-                        Y = 410 + (sectionIndex * 210) + (groupIndex * 120),
-                        ContextActions = PromptFactoryCatalogToolbox.BuildSelectionContextActions(libraryCatalog, "component-group").ToList()
-                    });
-                    links.Add(new CanvasWorkbenchLink { SourceId = sectionNodeId, TargetId = groupNodeId, Kind = "contains", IsUserAuthored = false });
-
-                    var blockIndex = 0;
-                    foreach (var block in blockGroup.OrderBy(item => item.OrderIndex).ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase))
-                    {
-                        var customization = editor.ComponentCustomizations.LastOrDefault(item => item.BlockId == block.Id);
-                        var componentNodeId = $"{ComponentCanvasNodePrefix}{block.Key}";
-                        nodes.Add(new CanvasWorkbenchNode
-                        {
-                            Id = componentNodeId,
-                            ParentId = groupNodeId,
-                            Family = "item",
-                            Kind = "component",
-                            Icon = "extension",
-                            Title = block.Name,
-                            Subtitle = block.BlockKind.ToString(),
-                            LeadText = ResolveComponentLeadText(block, customization),
-                            Status = "Component",
-                            StatusPill = customization?.TemplateValues.Count > 0 ? $"{customization.TemplateValues.Count} inputs" : "Ready",
-                            AccentColor = ResolveGroupAccent(block.GroupKey),
-                            PaletteKey = ResolveGroupPalette(block.GroupKey),
-                            IsRequired = true,
-                            X = 1440,
-                            Y = 385 + (sectionIndex * 210) + (groupIndex * 120) + (blockIndex * 92),
-                            Chips = block.Tags.Take(3)
-                                .Select(tag => new CanvasWorkbenchChip { Text = tag, Tone = "neutral" })
-                                .ToList(),
-                            FooterChips =
-                            [
-                                new CanvasWorkbenchChip { Text = ResolveLibraryGroupLabel(block.GroupKey), Tone = "accent" },
-                                new CanvasWorkbenchChip { Text = block.TemplateTokens.Count > 0 ? "Specified" : "Static", Tone = customization is null ? "neutral" : "success" }
-                            ],
-                            ContextActions = PromptFactoryCatalogToolbox.BuildComponentNodeActions(block).ToList()
-                        });
-                        links.Add(new CanvasWorkbenchLink { SourceId = groupNodeId, TargetId = componentNodeId, Kind = "contains", IsUserAuthored = false });
-                        blockIndex++;
-                    }
-                }
-            }
-        }
-
-        AppendInputSelectionGraph(nodes, links);
-        return (nodes, links);
-    }
-
-    private void AppendSetupSelectionGraph(List<CanvasWorkbenchNode> nodes, List<CanvasWorkbenchLink> links)
-    {
-        UpsertSetupAttachment();
-
-        nodes.Add(new CanvasWorkbenchNode
-        {
-            Id = SetupCanvasNodeId,
-            ParentId = "session-root",
-            Family = "special",
-            Kind = "setup",
-            Icon = "settings",
-            Title = "Session setup",
-            Subtitle = ResolveSetupSummaryLine(),
-            LeadText = ResolveSetupLeadCopy(),
-            Status = "Setup",
-            StatusPill = SetupIsReady ? "Ready" : $"{MissingSetupFieldCount} missing",
-            AccentColor = SetupIsReady ? "#0f766e" : "#0f172a",
-            PaletteKey = SetupIsReady ? "mint" : "sky",
-            IsRequired = true,
-            X = 520,
-            Y = -70,
-            Chips =
-            [
-                new CanvasWorkbenchChip { Text = ResolveSetupStatusLabel(), Tone = SetupIsReady ? "success" : "warn" }
-            ],
-            FooterChips =
-            [
-                new CanvasWorkbenchChip { Text = string.IsNullOrWhiteSpace(sessionSetup.WorkRepository) ? "Repository needed" : sessionSetup.WorkRepository, Tone = "neutral" }
-            ],
-            ContextActions =
-            [
-                new CanvasWorkbenchAction
-                {
-                    ActionId = "setup:open",
-                    Label = "Setup",
-                    MenuLabel = "Setup",
-                    Description = "Open the session setup guide.",
-                    Icon = "session",
-                    Tone = "sky"
-                }
-            ]
-        });
-
-        links.Add(new CanvasWorkbenchLink
-        {
-            SourceId = "session-root",
-            TargetId = SetupCanvasNodeId,
-            Kind = "selection",
-            IsUserAuthored = false
-        });
-    }
-
-    private void AppendInputSelectionGraph(List<CanvasWorkbenchNode> nodes, List<CanvasWorkbenchLink> links)
-    {
-        if (VisibleSessionAttachments.Count == 0)
-        {
-            return;
-        }
-
-        nodes.Add(new CanvasWorkbenchNode
-        {
-            Id = InputsRootCanvasNodeId,
-            ParentId = "session-root",
-            Family = "group",
-            Kind = "inputs",
-            Icon = "input",
-            Title = "Prompt inputs",
-            Subtitle = $"{VisibleSessionAttachments.Count} attached",
-            LeadText = "Files, media, links, and notes explicitly attached to the prompt session.",
-            Status = "Inputs",
-            StatusPill = VisibleSessionAttachments.Count.ToString(),
-            AccentColor = "#059669",
-            PaletteKey = "mint",
-            IsCollapsible = true,
-            X = 520,
-            Y = 860,
-            ContextActions = PromptFactoryCatalogToolbox.BuildSelectionContextActions(libraryCatalog, "inputs-root").ToList()
-        });
-        links.Add(new CanvasWorkbenchLink { SourceId = "session-root", TargetId = InputsRootCanvasNodeId, Kind = "selection", IsUserAuthored = false });
-
-        for (var index = 0; index < VisibleSessionAttachments.Count; index++)
-        {
-            var attachment = VisibleSessionAttachments[index];
-            var inputNodeId = $"{InputCanvasNodePrefix}{attachment.Id}";
-            nodes.Add(new CanvasWorkbenchNode
-            {
-                Id = inputNodeId,
-                ParentId = InputsRootCanvasNodeId,
-                Family = "special",
-                Kind = "input",
-                Icon = ResolveAttachmentNodeIcon(attachment),
-                Title = string.IsNullOrWhiteSpace(attachment.Title) ? $"Input {index + 1}" : attachment.Title,
-                Subtitle = ResolveAttachmentSubtitle(attachment),
-                LeadText = ResolveAttachmentLeadText(attachment),
-                Status = ResolveAttachmentVisualKind(attachment),
-                StatusPill = ResolveAttachmentStatusPill(attachment),
-                AccentColor = ResolveAttachmentAccent(attachment),
-                PaletteKey = ResolveAttachmentPalette(attachment),
-                X = 860,
-                Y = 780 + (index * 124),
-                MediaKind = ResolveAttachmentVisualKind(attachment),
-                MediaPreviewUrl = attachment.MediaRoute,
-                MediaPreviewAlt = string.IsNullOrWhiteSpace(attachment.Title) ? attachment.Kind : attachment.Title,
-                MediaContentType = attachment.MediaContentType,
-                MediaFileName = attachment.MediaOriginalFileName,
-                FooterChips =
-                [
-                    new CanvasWorkbenchChip
-                    {
-                        Text = string.IsNullOrWhiteSpace(attachment.MediaOriginalFileName)
-                            ? ResolveAttachmentStatusPill(attachment)
-                            : attachment.MediaOriginalFileName,
-                        Tone = "neutral"
-                    }
-                ],
-                ContextActions = PromptFactoryCatalogToolbox.BuildInputNodeActions(attachment.Id).ToList()
-            });
-            links.Add(new CanvasWorkbenchLink { SourceId = InputsRootCanvasNodeId, TargetId = inputNodeId, Kind = "contains", IsUserAuthored = false });
-        }
-    }
 
     private async Task<bool> HandleCatalogContextActionAsync(string actionId)
     {
@@ -743,7 +405,7 @@ public partial class PromptFactoryPage
     private async Task FocusCanvasNodeAsync(string canvasNodeId, string successMessage)
     {
         selectedCanvasNodeIds = [canvasNodeId];
-        editor.SelectedNodeId = TryParsePromptCanvasNodeId(canvasNodeId, out var promptNodeId) ? promptNodeId : null;
+        editor.SelectedNodeId = PromptFactoryPageHelpers.TryParsePromptCanvasNodeId(canvasNodeId, out var promptNodeId) ? promptNodeId : null;
         SyncSelectedPromptNodeDraft();
         await PersistCanvasUiStateAsync();
         SetMessage(successMessage);
@@ -797,16 +459,6 @@ public partial class PromptFactoryPage
 
         groupKey = canvasNodeId[ComponentGroupCanvasNodePrefix.Length..];
         return !string.IsNullOrWhiteSpace(groupKey);
-    }
-
-    private string ResolveComponentLeadText(PromptBlockSummary block, PromptSessionComponentCustomization? customization)
-    {
-        if (customization?.TemplateValues.Count > 0)
-        {
-            return string.Join(" | ", customization.TemplateValues.Select(item => $"{item.Key}: {item.Value}"));
-        }
-
-        return block.Summary;
     }
 
     private void UpdateSelectedComponentRenderedContent(string? value)
@@ -902,18 +554,6 @@ public partial class PromptFactoryPage
         return ResolveComponentBaseContent(block, customization);
     }
 
-    private string ResolveAttachmentSubtitle(PromptSessionAttachmentSummary attachment)
-    {
-        return ResolveAttachmentVisualKind(attachment) switch
-        {
-            "link" => attachment.LinkUrl,
-            "image" or "video" or "pdf" or "spreadsheet" or "document" or "text" or "archive" or "file" => string.IsNullOrWhiteSpace(attachment.MediaOriginalFileName)
-                ? ResolveAttachmentStatusPill(attachment)
-                : attachment.MediaOriginalFileName,
-            _ => string.IsNullOrWhiteSpace(attachment.Subtitle) ? attachment.Kind : attachment.Subtitle
-        };
-    }
-
     private static string ResolveAttachmentLeadText(PromptSessionAttachmentSummary attachment)
     {
         if (!string.IsNullOrWhiteSpace(attachment.Notes))
@@ -980,32 +620,6 @@ public partial class PromptFactoryPage
             _ => "Custom components created in this workspace."
         };
 
-    private static string ResolveComponentSectionAccent(string sectionKey)
-        => sectionKey switch
-        {
-            "foundation" => "#7c3aed",
-            "delivery" => "#2563eb",
-            "validation" => "#d97706",
-            "environment" => "#059669",
-            _ => "#374151"
-        };
-
-    private static string ResolveComponentSectionPalette(string sectionKey)
-        => sectionKey switch
-        {
-            "foundation" => "violet",
-            "delivery" => "sky",
-            "validation" => "warn",
-            "environment" => "mint",
-            _ => "neutral"
-        };
-
-    private static string ResolveGroupAccent(string groupKey)
-        => ResolveComponentSectionAccent(ResolveComponentSectionKey(groupKey));
-
-    private static string ResolveGroupPalette(string groupKey)
-        => ResolveComponentSectionPalette(ResolveComponentSectionKey(groupKey));
-
     private static string ResolveAttachmentVisualKind(PromptSessionAttachmentSummary attachment)
     {
         if (string.Equals(attachment.Kind, "image", StringComparison.OrdinalIgnoreCase))
@@ -1040,21 +654,6 @@ public partial class PromptFactoryPage
         };
     }
 
-    private static string ResolveAttachmentNodeIcon(PromptSessionAttachmentSummary attachment)
-        => ResolveAttachmentVisualKind(attachment) switch
-        {
-            "image" => "IMG",
-            "video" => "VID",
-            "link" => "URL",
-            "note" => "NOTE",
-            "pdf" => "PDF",
-            "spreadsheet" => "XLS",
-            "document" => "DOC",
-            "text" => "TXT",
-            "archive" => "ZIP",
-            _ => "FILE"
-        };
-
     private static string ResolveAttachmentStatusPill(PromptSessionAttachmentSummary attachment)
         => ResolveAttachmentVisualKind(attachment) switch
         {
@@ -1070,35 +669,6 @@ public partial class PromptFactoryPage
             _ => "File"
         };
 
-    private static string ResolveAttachmentAccent(PromptSessionAttachmentSummary attachment)
-        => ResolveAttachmentVisualKind(attachment) switch
-        {
-            "image" => "#2563eb",
-            "video" => "#7c3aed",
-            "link" => "#0284c7",
-            "note" => "#4b5563",
-            "pdf" => "#dc2626",
-            "spreadsheet" => "#15803d",
-            "document" => "#ea580c",
-            "text" => "#475569",
-            "archive" => "#7c2d12",
-            _ => "#059669"
-        };
-
-    private static string ResolveAttachmentPalette(PromptSessionAttachmentSummary attachment)
-        => ResolveAttachmentVisualKind(attachment) switch
-        {
-            "image" => "sky",
-            "video" => "violet",
-            "link" => "sky",
-            "note" => "neutral",
-            "pdf" => "danger",
-            "spreadsheet" => "mint",
-            "document" => "warn",
-            "text" => "neutral",
-            "archive" => "warn",
-            _ => "mint"
-        };
 }
 
 

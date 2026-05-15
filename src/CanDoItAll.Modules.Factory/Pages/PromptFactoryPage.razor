@@ -1301,7 +1301,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                                                             </span>
                                                             <input type="checkbox"
                                                                    checked="@isSelected"
-                                                                   @onchange="args => ToggleBlock(block.Id, ReadCheckboxValue(args))" />
+                                                                   @onchange="args => ToggleBlock(block.Id, PromptFactoryPageHelpers.ReadCheckboxValue(args))" />
                                                         </label>
                                                     }
                                                 </div>
@@ -1450,7 +1450,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                                                     </span>
                                                     <input type="checkbox"
                                                            checked="@isSelected"
-                                                           @onchange="args => ToggleTemplateBlock(block.Id, ReadCheckboxValue(args))" />
+                                                           @onchange="args => ToggleTemplateBlock(block.Id, PromptFactoryPageHelpers.ReadCheckboxValue(args))" />
                                                 </label>
                                             }
                                         </div>
@@ -1623,7 +1623,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                                             </span>
                                             <input type="checkbox"
                                                    checked="@isSelected"
-                                                   @onchange="args => ToggleResource(resource.Id, ReadCheckboxValue(args))" />
+                                                   @onchange="args => ToggleResource(resource.Id, PromptFactoryPageHelpers.ReadCheckboxValue(args))" />
                                         </label>
                                     }
                                 </div>
@@ -1840,16 +1840,17 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
         new() { Label = "Warnings", Value = editor.Warnings.Count.ToString(), Tone = "warn" }
     ];
 
-    private RecommendationOverlaySummary canvasRecommendationOverlay => ResolveCanvasRecommendationOverlay();
+    private RecommendationOverlaySummary canvasRecommendationOverlay
+        => PromptFactoryPageHelpers.ResolveRecommendationOverlay(BuildCanvasGraphRequest(new CanvasWorkbenchUiState()));
 
     private string? selectedCanvasNodeId => selectedCanvasNodeIds.FirstOrDefault();
 
-    private PromptRunNodeSummary? selectedPromptNode => TryParsePromptCanvasNodeId(selectedCanvasNodeId, out var nodeId)
+    private PromptRunNodeSummary? selectedPromptNode => PromptFactoryPageHelpers.TryParsePromptCanvasNodeId(selectedCanvasNodeId, out var nodeId)
         ? editor.Nodes.FirstOrDefault(node => node.Id == nodeId)
         : null;
 
     private string? selectedBranchLabel => selectedCanvasNodeId is { } canvasNodeId && canvasNodeId.StartsWith("branch:", StringComparison.Ordinal)
-        ? ResolveBranchLabel(canvasNodeId)
+        ? PromptFactoryPageHelpers.ResolveBranchLabel(canvasNodeId)
         : null;
 
     private IReadOnlyList<PromptRunNodeSummary> selectedBranchNodes => selectedBranchLabel is null
@@ -1939,7 +1940,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
     }
 
     private PromptFactorySessionGraphRequest BuildCanvasGraphRequest(CanvasWorkbenchUiState uiState)
-        => new(
+        => PromptFactoryPageHelpers.BuildGraphRequest(
             editor,
             libraryCatalog,
             blueprints,
@@ -1954,264 +1955,9 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
             SetupIsReady,
             MissingSetupFieldCount);
 
-    private RecommendationOverlaySummary ResolveCanvasRecommendationOverlay()
-    {
-        var summary = RecommendationOverlay.BuildSummary(
-            new PromptFactorySessionGraphRequest(
-                editor,
-                libraryCatalog,
-                blueprints,
-                templates,
-                blocks,
-                VisibleSessionAttachments,
-                sessionSetup,
-                new CanvasWorkbenchUiState(),
-                ResolveSetupSummaryLine(),
-                ResolveSetupLeadCopy(),
-                ResolveSetupStatusLabel(),
-                SetupIsReady,
-                MissingSetupFieldCount));
-
-        if (summary.IsVisible)
-        {
-            return summary;
-        }
-
-        var fallbackItems = new List<RecommendationOverlayItem>();
-        if (MissingSetupFieldCount > 0)
-        {
-            fallbackItems.Add(new RecommendationOverlayItem(
-                "Setup gaps",
-                $"{MissingSetupFieldCount} field(s) still need attention before the session is fully configured.",
-                "warn"));
-        }
-
-        if (editor.Nodes.Count == 0)
-        {
-            fallbackItems.Add(new RecommendationOverlayItem(
-                "Build branch lanes",
-                "The session has selected components but no prompt steps yet. Run the build flow to materialize the branch graph.",
-                "mint"));
-        }
-
-        return fallbackItems.Count > 0
-            ? new RecommendationOverlaySummary(
-                true,
-                "Recommendation overlay",
-                "Surface the next best Prompt Factory actions directly on the canvas instead of burying them in the inspector.",
-                fallbackItems,
-                CanApplyRecommendations: editor.Warnings.Count > 0 || editor.BlueprintId.HasValue,
-                CanBuildFlow: editor.Nodes.Count == 0)
-            : summary;
-    }
-
     private Task ApplyCanvasRecommendationsAsync() => ApplyRecommendationsAsync();
 
     private Task BuildCanvasFlowAsync() => BuildAsync();
-
-    private List<CanvasWorkbenchNode> BuildCanvasNodes()
-    {
-        var nodes = new List<CanvasWorkbenchNode>
-        {
-            new()
-            {
-                Id = "session-root",
-                Family = "root",
-                Kind = "session",
-                Icon = "auto_awesome",
-                Title = string.IsNullOrWhiteSpace(editor.SessionName) ? "Prompt session" : editor.SessionName,
-                Subtitle = string.IsNullOrWhiteSpace(editor.Phase) ? "Phase not selected" : editor.Phase,
-                LeadText = string.IsNullOrWhiteSpace(editor.DraftTitle) ? "Build the session to materialize prompt steps." : editor.DraftTitle,
-                Status = "Session",
-                StatusPill = string.IsNullOrWhiteSpace(editor.Phase) ? "Draft" : editor.Phase,
-                AccentColor = "#111827",
-                PaletteKey = "violet",
-                IsRequired = true,
-                IsCollapsible = true,
-                X = 210,
-                Y = 250,
-                Chips =
-                [
-                    new CanvasWorkbenchChip { Text = editor.ProjectId.HasValue ? "Project linked" : "No project", Tone = editor.ProjectId.HasValue ? "success" : "warning" },
-                    new CanvasWorkbenchChip { Text = editor.ProviderProfileId.HasValue ? "Provider set" : "Provider pending", Tone = editor.ProviderProfileId.HasValue ? "accent" : "warning" }
-                ],
-                FooterChips =
-                [
-                    new CanvasWorkbenchChip { Text = $"{editor.SelectedBlockIds.Count} components", Tone = "accent" },
-                    new CanvasWorkbenchChip { Text = $"{VisibleSessionAttachments.Count} inputs", Tone = "success" }
-                ],
-                ContextActions = PromptFactoryCatalogToolbox.BuildSessionContextActions(libraryCatalog).ToList()
-            }
-        };
-
-        var selectionGraph = BuildSelectionGraph();
-        nodes.AddRange(selectionGraph.Nodes);
-
-        var positions = new Dictionary<string, (double X, double Y)>
-        {
-            ["session-root"] = (210, 250)
-        };
-
-        var groupedNodes = editor.Nodes.Count == 0
-            ? [new { BranchKey = "main", BranchLabel = "Main", Items = new List<PromptRunNodeSummary>() }]
-            : editor.Nodes
-                .GroupBy(node => node.BranchKey)
-                .OrderBy(group => string.Equals(group.Key, "main", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
-                .ThenBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
-                .Select(group => new
-                {
-                    BranchKey = group.Key,
-                    BranchLabel = string.IsNullOrWhiteSpace(group.First().BranchLabel) ? group.Key : group.First().BranchLabel,
-                    Items = group.OrderBy(item => item.Sequence).ToList()
-                })
-                .ToArray();
-
-        var branchOffset = 0;
-        foreach (var branch in groupedNodes)
-        {
-            var groupId = $"branch:{branch.BranchKey}";
-            string parentCanvasId = "session-root";
-            double baseX = 1040;
-            double baseY = 200 + (branchOffset * 140);
-
-            var firstBranchItem = branch.Items.FirstOrDefault(item => item.ParentNodeId.HasValue);
-            if (firstBranchItem?.ParentNodeId is Guid parentNodeId &&
-                positions.TryGetValue($"node:{parentNodeId:N}", out var parentPosition))
-            {
-                parentCanvasId = $"node:{parentNodeId:N}";
-                baseX = parentPosition.X + 120;
-                baseY = parentPosition.Y + 190 + (branchOffset * 20);
-            }
-            else if (string.Equals(branch.BranchKey, "main", StringComparison.OrdinalIgnoreCase))
-            {
-                branchOffset = 0;
-            }
-
-            positions[groupId] = (baseX, baseY);
-            nodes.Add(new CanvasWorkbenchNode
-            {
-                Id = groupId,
-                ParentId = parentCanvasId,
-                Family = "group",
-                Kind = "branch",
-                Icon = "call_split",
-                Title = branch.BranchLabel,
-                Subtitle = branch.BranchKey,
-                LeadText = branch.Items.Count == 0 ? "Build the prompt to materialize steps in this branch." : $"{branch.Items.Count} step(s) in this branch.",
-                Status = "Branch",
-                StatusPill = branch.Items.Count == 0 ? "Ready" : $"{branch.Items.Count} steps",
-                AccentColor = "#8b5cf6",
-                PaletteKey = "violet",
-                IsRequired = true,
-                IsCollapsible = branch.Items.Count > 0,
-                X = baseX,
-                Y = baseY,
-                Chips =
-                [
-                    new CanvasWorkbenchChip { Text = string.Equals(branch.BranchKey, "main", StringComparison.OrdinalIgnoreCase) ? "Primary" : "Follow-up", Tone = "accent" }
-                ],
-                FooterChips =
-                [
-                    new CanvasWorkbenchChip { Text = branch.Items.Count == 0 ? "No steps yet" : $"{branch.Items.Count} steps", Tone = branch.Items.Count == 0 ? "warning" : "success" }
-                ],
-                ContextActions =
-                [
-                    new CanvasWorkbenchAction { ActionId = "build-flow", Label = "Build", Icon = "flow", Tone = "mint" },
-                    new CanvasWorkbenchAction { ActionId = "branch-selected", Label = "Branch", Icon = "fork", Tone = "warn" }
-                ]
-            });
-
-            var stepIndex = 0;
-            foreach (var node in branch.Items)
-            {
-                var nodeId = $"node:{node.Id:N}";
-                var x = baseX + 290 + (stepIndex * 238);
-                var y = baseY + (string.Equals(branch.BranchKey, "main", StringComparison.OrdinalIgnoreCase) ? 0 : stepIndex * 84);
-                positions[nodeId] = (x, y);
-
-                nodes.Add(new CanvasWorkbenchNode
-                {
-                    Id = nodeId,
-                    ParentId = groupId,
-                    Family = "item",
-                    Kind = "prompt step",
-                    Icon = "format_list_numbered",
-                    Title = node.Title,
-                    Subtitle = $"{node.BranchLabel} Â· step {node.Sequence}",
-                    LeadText = string.IsNullOrWhiteSpace(node.Notes) ? "Prompt step ready for review." : node.Notes,
-                    Status = node.State.ToString(),
-                    BranchLabel = node.BranchLabel,
-                    AccentColor = ResolvePromptNodeAccent(node.State),
-                    PaletteKey = ResolvePromptNodePalette(node.State),
-                    StatusPill = node.State.ToString(),
-                    IsRequired = true,
-                    X = x,
-                    Y = y,
-                    Chips =
-                    [
-                        new CanvasWorkbenchChip { Text = node.BranchKey, Tone = "accent" }
-                    ],
-                    FooterChips =
-                    [
-                        new CanvasWorkbenchChip { Text = node.PromptArtifactId.HasValue ? "Artifact" : "Draft only", Tone = node.PromptArtifactId.HasValue ? "success" : "warning" },
-                        new CanvasWorkbenchChip { Text = node.ParentNodeId.HasValue ? "Derived" : "Primary", Tone = "neutral" }
-                    ],
-                    ContextActions = BuildPromptNodeActions(node)
-                });
-
-                stepIndex++;
-            }
-
-            branchOffset++;
-        }
-
-        return nodes;
-    }
-
-    private List<CanvasWorkbenchLink> BuildCanvasLinks()
-    {
-        var selectionGraph = BuildSelectionGraph();
-        var links = selectionGraph.Links.ToList();
-        links.Add(new CanvasWorkbenchLink { SourceId = "session-root", TargetId = "branch:main", Kind = "contains", IsUserAuthored = false });
-
-        foreach (var node in editor.Nodes)
-        {
-            var nodeCanvasId = $"node:{node.Id:N}";
-            var branchCanvasId = $"branch:{node.BranchKey}";
-            links.Add(new CanvasWorkbenchLink
-            {
-                SourceId = branchCanvasId,
-                TargetId = nodeCanvasId,
-                Kind = "contains",
-                IsUserAuthored = false
-            });
-
-            if (node.ParentNodeId.HasValue)
-            {
-                links.Add(new CanvasWorkbenchLink
-                {
-                    SourceId = $"node:{node.ParentNodeId.Value:N}",
-                    TargetId = branchCanvasId,
-                    Kind = "derived",
-                    IsUserAuthored = true
-                });
-            }
-        }
-
-        return links
-            .GroupBy(link => $"{link.SourceId}|{link.TargetId}|{link.Kind}", StringComparer.Ordinal)
-            .Select(group => group.First())
-            .ToList();
-    }
-
-    private static List<CanvasWorkbenchAction> BuildPromptNodeActions(PromptRunNodeSummary node) =>
-    [
-        new() { ActionId = "branch", Label = "Branch", Icon = "fork", Tone = "accent" },
-        new() { ActionId = "mark-used", Label = "Used", Icon = "use", Tone = "mint" },
-        new() { ActionId = "validate-node", Label = "Validate", Icon = "fact_check", Tone = "mint" },
-        new() { ActionId = "skip-node", Label = "Skip", Icon = "skip", Tone = "warn" },
-        new() { ActionId = "open-prompt", Label = "Open", Icon = "open", Tone = "ghost" }
-    ];
 
     private string ResolveStageTitle()
         => string.IsNullOrWhiteSpace(editor.SessionName) ? "Prompt flow canvas" : editor.SessionName;
@@ -2307,7 +2053,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                 continue;
             }
 
-            if (TryParsePromptCanvasNodeId(selectedId, out var nodeId) &&
+            if (PromptFactoryPageHelpers.TryParsePromptCanvasNodeId(selectedId, out var nodeId) &&
                 editor.Nodes.FirstOrDefault(node => node.Id == nodeId) is { } promptNode)
             {
                 yield return (promptNode.Title, $"{promptNode.BranchLabel} Â· {promptNode.State}");
@@ -2320,7 +2066,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                 continue;
             }
 
-            yield return (ResolveBranchLabel(selectedId), "Branch group");
+            yield return (PromptFactoryPageHelpers.ResolveBranchLabel(selectedId), "Branch group");
         }
     }
 
@@ -2339,7 +2085,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
 
     private async Task HandleProjectSelectionChangedAsync(ChangeEventArgs args)
     {
-        editor.ProjectId = ParseOptionalGuid(args.Value);
+        editor.ProjectId = PromptFactoryPageHelpers.ParseOptionalGuid(args.Value);
         await HandleProjectChangedAsync();
     }
 
@@ -2356,30 +2102,23 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
 
     private async Task HandleBlueprintSelectionChangedAsync(ChangeEventArgs args)
     {
-        editor.BlueprintId = ParseOptionalGuid(args.Value);
+        editor.BlueprintId = PromptFactoryPageHelpers.ParseOptionalGuid(args.Value);
         await HandleBlueprintChangedAsync();
     }
 
     private Task HandleFlowTemplateSelectionChangedAsync(ChangeEventArgs args)
     {
-        editor.FlowTemplateId = ParseOptionalGuid(args.Value);
+        editor.FlowTemplateId = PromptFactoryPageHelpers.ParseOptionalGuid(args.Value);
         RefreshCanvasSurface();
         return Task.CompletedTask;
     }
 
     private Task HandleProviderSelectionChangedAsync(ChangeEventArgs args)
     {
-        editor.ProviderProfileId = ParseOptionalGuid(args.Value);
+        editor.ProviderProfileId = PromptFactoryPageHelpers.ParseOptionalGuid(args.Value);
         RefreshCanvasSurface();
         return Task.CompletedTask;
     }
-
-    private static Guid? ParseOptionalGuid(object? value)
-        => value is null || string.IsNullOrWhiteSpace(value.ToString())
-            ? null
-            : Guid.TryParse(value.ToString(), out var parsed)
-                ? parsed
-                : null;
 
     private async Task LoadResourcesAsync()
     {
@@ -2652,7 +2391,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
             canvasSurface.UiState = uiState;
         }
 
-        editor.SelectedNodeId = TryParsePromptCanvasNodeId(selectedCanvasNodeId, out var nodeId) ? nodeId : null;
+        editor.SelectedNodeId = PromptFactoryPageHelpers.TryParsePromptCanvasNodeId(selectedCanvasNodeId, out var nodeId) ? nodeId : null;
         SyncSelectedPromptNodeDraft();
     }
 
@@ -2732,7 +2471,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
 
     private async Task HandleCanvasNodeOpenedAsync(string nodeId)
     {
-        if (TryParsePromptCanvasNodeId(nodeId, out var promptNodeId) &&
+        if (PromptFactoryPageHelpers.TryParsePromptCanvasNodeId(nodeId, out var promptNodeId) &&
             editor.Nodes.FirstOrDefault(node => node.Id == promptNodeId)?.PromptArtifactId is Guid promptArtifactId)
         {
             OpenPromptArtifact(promptArtifactId);
@@ -2762,31 +2501,31 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                 break;
             case "branch":
             case "branch-selected":
-                if (TryParsePromptCanvasNodeId(sourceNodeId ?? selectedCanvasNodeId, out var branchNodeId))
+                if (PromptFactoryPageHelpers.TryParsePromptCanvasNodeId(sourceNodeId ?? selectedCanvasNodeId, out var branchNodeId))
                 {
                     await BranchAsync(branchNodeId);
                 }
                 break;
             case "mark-used":
-                if (TryParsePromptCanvasNodeId(sourceNodeId ?? selectedCanvasNodeId, out var usedNodeId))
+                if (PromptFactoryPageHelpers.TryParsePromptCanvasNodeId(sourceNodeId ?? selectedCanvasNodeId, out var usedNodeId))
                 {
                     await SetPromptNodeStateAsync(usedNodeId, PromptRunNodeState.Used);
                 }
                 break;
             case "validate-node":
-                if (TryParsePromptCanvasNodeId(sourceNodeId ?? selectedCanvasNodeId, out var validatedNodeId))
+                if (PromptFactoryPageHelpers.TryParsePromptCanvasNodeId(sourceNodeId ?? selectedCanvasNodeId, out var validatedNodeId))
                 {
                     await SetPromptNodeStateAsync(validatedNodeId, PromptRunNodeState.Validated);
                 }
                 break;
             case "skip-node":
-                if (TryParsePromptCanvasNodeId(sourceNodeId ?? selectedCanvasNodeId, out var skippedNodeId))
+                if (PromptFactoryPageHelpers.TryParsePromptCanvasNodeId(sourceNodeId ?? selectedCanvasNodeId, out var skippedNodeId))
                 {
                     await SetPromptNodeStateAsync(skippedNodeId, PromptRunNodeState.Skipped);
                 }
                 break;
             case "open-prompt":
-                if (TryParsePromptCanvasNodeId(sourceNodeId ?? selectedCanvasNodeId, out var openNodeId) &&
+                if (PromptFactoryPageHelpers.TryParsePromptCanvasNodeId(sourceNodeId ?? selectedCanvasNodeId, out var openNodeId) &&
                     editor.Nodes.FirstOrDefault(node => node.Id == openNodeId)?.PromptArtifactId is Guid promptArtifactId)
                 {
                     OpenPromptArtifact(promptArtifactId);
@@ -2820,7 +2559,7 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
     private async Task SelectCanvasNodeAsync(string canvasNodeId)
     {
         selectedCanvasNodeIds = [canvasNodeId];
-        editor.SelectedNodeId = TryParsePromptCanvasNodeId(canvasNodeId, out var nodeId) ? nodeId : null;
+        editor.SelectedNodeId = PromptFactoryPageHelpers.TryParsePromptCanvasNodeId(canvasNodeId, out var nodeId) ? nodeId : null;
         SyncSelectedPromptNodeDraft();
         await PersistCanvasUiStateAsync();
     }
@@ -2987,43 +2726,6 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
         NotificationService.Error("Prompt Factory update failed", string.Join(" ", errors.Select(error => error.Message)));
     }
 
-    private static bool TryParsePromptCanvasNodeId(string? canvasNodeId, out Guid nodeId)
-    {
-        nodeId = Guid.Empty;
-        return !string.IsNullOrWhiteSpace(canvasNodeId) &&
-               canvasNodeId.StartsWith("node:", StringComparison.Ordinal) &&
-               Guid.TryParse(canvasNodeId["node:".Length..], out nodeId);
-    }
-
-    private static string ResolveBranchLabel(string canvasNodeId)
-        => canvasNodeId.StartsWith("branch:", StringComparison.Ordinal)
-            ? canvasNodeId["branch:".Length..].Replace('-', ' ')
-            : "Branch";
-
-    private static string ResolvePromptNodeAccent(PromptRunNodeState state) => state switch
-    {
-        PromptRunNodeState.Validated => "#059669",
-        PromptRunNodeState.Used => "#0284c7",
-        PromptRunNodeState.Failed => "#e11d48",
-        PromptRunNodeState.Skipped or PromptRunNodeState.Superseded => "#f97316",
-        _ => "#7c3aed"
-    };
-
-    private static string ResolvePromptNodePalette(PromptRunNodeState state) => state switch
-    {
-        PromptRunNodeState.Validated => "mint",
-        PromptRunNodeState.Used => "sky",
-        PromptRunNodeState.Failed => "rose",
-        PromptRunNodeState.Skipped or PromptRunNodeState.Superseded => "amber",
-        _ => "violet"
-    };
-
-    private static bool ReadCheckboxValue(ChangeEventArgs args) => args.Value switch
-    {
-        bool value => value,
-        string text when bool.TryParse(text, out var value) => value,
-        _ => false
-    };
 }
 
 

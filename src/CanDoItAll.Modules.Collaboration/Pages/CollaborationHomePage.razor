@@ -138,7 +138,7 @@
                                 </div>
                                 <div class="mt-4">
                                     <label class="cda-field-label">First message</label>
-                                    <InputTextArea @bind-Value="newThreadEditor.MessageBody" class="cda-input min-h-[6rem]" data-testid="collaboration-thread-message" />
+                                    <InputTextArea @bind-Value="newThreadEditor.MessageBody" class="cda-input cda-input--textarea min-h-[6rem]" data-testid="collaboration-thread-message" />
                                     <ValidationMessage For="@(() => newThreadEditor.MessageBody)" />
                                 </div>
                                 <Cluster Gap="LayoutGap.Small" Class="mt-4">
@@ -334,7 +334,7 @@
                                     </Grid>
                                     <div class="mt-4">
                                         <label class="cda-field-label">Reply</label>
-                                        <InputTextArea @bind-Value="replyEditor.MessageBody" class="cda-input min-h-[6rem]" data-testid="collaboration-reply-message" />
+                                        <InputTextArea @bind-Value="replyEditor.MessageBody" class="cda-input cda-input--textarea min-h-[6rem]" data-testid="collaboration-reply-message" />
                                         <ValidationMessage For="@(() => replyEditor.MessageBody)" />
                                     </div>
                                     <Cluster Gap="LayoutGap.Small" Class="mt-4">

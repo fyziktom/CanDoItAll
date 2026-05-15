@@ -39,7 +39,7 @@ else
     public bool ReadOnly { get; set; }
 
     [Parameter]
-    public int Rows { get; set; } = 4;
+    public int Rows { get; set; } = 6;
 
     [Parameter]
     public bool Disabled { get; set; }
@@ -66,7 +66,7 @@ else
         return Look switch
         {
             InputLook.Plain => string.Empty,
-            _ => "rz-input w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800"
+            _ => "cda-input cda-input--textarea"
         };
     }
 

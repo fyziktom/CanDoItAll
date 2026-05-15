@@ -120,7 +120,7 @@ public partial class ProjectStructurePage
             _ => new ProjectObjectReclassificationRequest(
                 definition.ObjectType,
                 definition.ObjectSubtype,
-                BuildSimpleNoteTitle(string.IsNullOrWhiteSpace(node.Notes) ? node.Title : node.Notes),
+                ProjectStructureNodeHelpers.BuildSimpleNoteTitle(string.IsNullOrWhiteSpace(node.Notes) ? node.Title : node.Notes),
                 string.Empty,
                 string.IsNullOrWhiteSpace(node.Notes) ? node.Title : node.Notes,
                 "{}")
@@ -213,7 +213,7 @@ public partial class ProjectStructurePage
         editor.Description = $"Extracted from {sourceNode.Title} in {surface?.ProjectName ?? sourceProject.Name}.";
         editor.Objective = string.IsNullOrWhiteSpace(sourceNode.Notes)
             ? sourceNode.Title
-            : BuildSimpleNoteTitle(sourceNode.Notes);
+            : ProjectStructureNodeHelpers.BuildSimpleNoteTitle(sourceNode.Notes);
         editor.CurrentPhase = string.IsNullOrWhiteSpace(sourceProject.CurrentPhase)
             ? "Discovery"
             : sourceProject.CurrentPhase;

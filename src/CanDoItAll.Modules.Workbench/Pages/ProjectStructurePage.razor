@@ -257,11 +257,11 @@ else
                                                            EditPreviewNode="EditAttachmentPreviewNodeAsync"
                                                            CanShowLocalOpen="CanShowLocalOpen"
                                                            CanEditPreviewNode="CanEditNode"
-                                                           ResolveAttachmentDisplayName="ResolveAttachmentDisplayName"
-                                                           ResolveAttachmentLeadCopy="ResolveAttachmentLeadCopy"
-                                                           ResolveAttachmentPreviewKind="ResolveAttachmentPreviewKind"
-                                                           ResolveAttachmentPreviewSource="ResolveAttachmentPreviewSource"
-                                                           ResolveAttachmentTextContent="ResolveAttachmentTextContent" />
+                                                           ResolveAttachmentDisplayName="ProjectStructureNodeHelpers.ResolveAttachmentDisplayName"
+                                                           ResolveAttachmentLeadCopy="ProjectStructureNodeHelpers.ResolveAttachmentLeadCopy"
+                                                           ResolveAttachmentPreviewKind="ProjectStructureNodeHelpers.ResolveAttachmentPreviewKind"
+                                                           ResolveAttachmentPreviewSource="ProjectStructureNodeHelpers.ResolveAttachmentPreviewSource"
+                                                           ResolveAttachmentTextContent="ProjectStructureNodeHelpers.ResolveAttachmentTextContent" />
                         </ProjectStructureDeferredSurface>
                     </OverlayContent>
                 </CanvasWorkbench>
@@ -523,11 +523,11 @@ else
                                    EditPreviewNode="EditAttachmentPreviewNodeAsync"
                                    CanShowLocalOpen="CanShowLocalOpen"
                                    CanEditPreviewNode="CanEditNode"
-                                   ResolveAttachmentDisplayName="ResolveAttachmentDisplayName"
-                                   ResolveAttachmentLeadCopy="ResolveAttachmentLeadCopy"
-                                   ResolveAttachmentPreviewKind="ResolveAttachmentPreviewKind"
-                                   ResolveAttachmentPreviewSource="ResolveAttachmentPreviewSource"
-                                   ResolveAttachmentTextContent="ResolveAttachmentTextContent" />
+                                   ResolveAttachmentDisplayName="ProjectStructureNodeHelpers.ResolveAttachmentDisplayName"
+                                   ResolveAttachmentLeadCopy="ProjectStructureNodeHelpers.ResolveAttachmentLeadCopy"
+                                   ResolveAttachmentPreviewKind="ProjectStructureNodeHelpers.ResolveAttachmentPreviewKind"
+                                   ResolveAttachmentPreviewSource="ProjectStructureNodeHelpers.ResolveAttachmentPreviewSource"
+                                   ResolveAttachmentTextContent="ProjectStructureNodeHelpers.ResolveAttachmentTextContent" />
 </ProjectStructureDeferredSurface>
 
 @if (isSecretReferenceDialogOpen)
@@ -540,12 +540,15 @@ else
                                    Close="CloseSecretReferenceDialog">
         <Actions>
             <Button Text="Close"
+                    Icon="close"
                     Variant="Variant.Text"
                     ButtonStyle="ButtonStyle.Base"
                     Click="CloseSecretReferenceDialog" />
         </Actions>
         <Body>
-            <Stack GapScale="LayoutGap.Large" data-testid="project-structure-secret-dialog">
+            <Stack GapScale="LayoutGap.Large"
+                   AlignItems="AlignItems.Stretch"
+                   data-testid="project-structure-secret-dialog">
                 @if (!string.IsNullOrWhiteSpace(secretReferenceDialogError))
                 {
                     <Alert AlertStyle="AlertStyle.Warning">
@@ -599,6 +602,7 @@ else
 
                 <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                     <Button Text="@SecretReferenceUseSelectedButtonText"
+                            Icon="shield"
                             ButtonStyle="ButtonStyle.Info"
                             Disabled="@(isSecretReferenceDialogBusy || !SelectedSecretReferenceGuid.HasValue)"
                             IsBusy="@isSecretReferenceDialogBusy"
@@ -611,6 +615,7 @@ else
                     @if (isSecretReferenceEditMode)
                     {
                         <Button Text="Cancel"
+                                Icon="close"
                                 Variant="Variant.Text"
                                 ButtonStyle="ButtonStyle.Base"
                                 Disabled="@isSecretReferenceDialogBusy"
@@ -618,7 +623,9 @@ else
                     }
                 </Cluster>
 
-                <FormSection Title="Create new secret" Description="@SecretReferenceCreateSectionDescription">
+                <FormSection Title="Create new secret"
+                             Icon="shield"
+                             Description="@SecretReferenceCreateSectionDescription">
                     <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                         <div>
                             <label class="cda-field-label">Name</label>
@@ -649,6 +656,7 @@ else
                     </div>
                     <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="mt-4">
                         <Button Text="Create and use"
+                                Icon="save"
                                 ButtonStyle="ButtonStyle.Info"
                                 Disabled="@isSecretReferenceDialogBusy"
                                 IsBusy="@isSecretReferenceDialogBusy"
@@ -763,7 +771,7 @@ else
 
     private IReadOnlyList<ProjectStructureNode> outlineNodes =>
         surface?.Nodes
-            .OrderBy(node => ResolveOutlineWeight(node.ObjectType))
+            .OrderBy(node => ProjectStructureNodeHelpers.ResolveOutlineWeight(node.ObjectType))
             .ThenBy(node => node.Title, StringComparer.OrdinalIgnoreCase)
             .ToList() ?? [];
 
@@ -855,7 +863,7 @@ else
             1 => "Inspect the current node, jump into attachments, and create adjacent work without leaving the canvas.",
             _ => "Batch-update shared fields, review the selection set, and keep grouping actions close to the canvas."
         };
-    private bool CanApplySelectionStatus => selectedNodes.Count > 0 && selectedNodes.All(IsCanvasStatusMutable);
+    private bool CanApplySelectionStatus => selectedNodes.Count > 0 && selectedNodes.All(ProjectStructureNodeHelpers.IsCanvasStatusMutable);
     private Task RunSelectedValidationAsync()
         => selectedNode is null
             ? Task.CompletedTask
@@ -933,7 +941,7 @@ else
         }
         else if (selectedNodeIds.Count == 0)
         {
-            var rootNodeId = ResolveRootNodeId(reloadedSurface.Nodes);
+            var rootNodeId = ProjectStructureNodeHelpers.ResolveRootNodeId(reloadedSurface.Nodes);
             if (!string.IsNullOrWhiteSpace(rootNodeId))
             {
                 selectedNodeIds = [rootNodeId];
@@ -1196,7 +1204,7 @@ else
             return;
         }
 
-        if (CanRenderAttachmentPreview(node))
+        if (ProjectStructureNodeHelpers.CanRenderAttachmentPreview(node))
         {
             CloseQuickActionDialog();
             OpenAttachmentPreview(node);
@@ -1280,7 +1288,7 @@ else
         var updatedNode = await ProjectWorkbenchService.UpdateObjectAsync(
             ProjectId,
             targetNode.Id,
-            BuildSimpleNoteTitle(request.Notes),
+                ProjectStructureNodeHelpers.BuildSimpleNoteTitle(request.Notes),
             string.Empty,
             request.Notes);
         if (updatedNode is null)
@@ -1492,7 +1500,7 @@ else
         var attachmentNode = surface?.Nodes.FirstOrDefault(node => string.Equals(node.Id, targetNodeId, StringComparison.Ordinal));
         if (commandKind == ProjectStructureCommandKind.Open &&
             attachmentNode is not null &&
-            CanRenderAttachmentPreview(attachmentNode))
+            ProjectStructureNodeHelpers.CanRenderAttachmentPreview(attachmentNode))
         {
             CloseQuickActionDialog();
             OpenAttachmentPreview(attachmentNode);
@@ -1919,37 +1927,6 @@ else
         await InvokeAsync(StateHasChanged);
     }
 
-    private static IReadOnlyList<ProjectStructureCommandKind> ResolveInspectorCommands(ProjectStructureNode node)
-    {
-        var commands = new List<ProjectStructureCommandKind> { ProjectStructureCommandKind.Open };
-
-        if (node.ObjectType == ProjectObjectType.PromptFlow)
-        {
-            commands.Add(ProjectStructureCommandKind.Wizard);
-        }
-
-        if (node.ObjectType == ProjectObjectType.PromptStep)
-        {
-            commands.AddRange(
-            [
-                ProjectStructureCommandKind.Branch,
-                ProjectStructureCommandKind.MarkUsed,
-                ProjectStructureCommandKind.Skip
-            ]);
-        }
-
-        commands.Add(ProjectStructureCommandKind.Validate);
-        commands.Add(ProjectStructureCommandKind.Test);
-        return commands;
-    }
-
-    private static string ResolveCommandLabel(ProjectStructureCommandKind command)
-        => command switch
-        {
-            ProjectStructureCommandKind.MarkUsed => "Mark used",
-            _ => command.ToString()
-        };
-
     private async Task PersistSelectionAsync()
     {
         if (surface is null)
@@ -2063,7 +2040,7 @@ else
     private async Task ApplySelectionStatusAsync(string status)
     {
         var mutableNodeIds = selectedNodes
-            .Where(IsCanvasStatusMutable)
+            .Where(ProjectStructureNodeHelpers.IsCanvasStatusMutable)
             .Select(node => node.Id)
             .Distinct(StringComparer.Ordinal)
             .ToList();
@@ -2370,7 +2347,7 @@ else
             ? request.Title.Trim()
             : definition.ObjectType switch
             {
-                ProjectObjectType.Note when string.Equals(request.CreateMode, "quick-note", StringComparison.OrdinalIgnoreCase) => BuildSimpleNoteTitle(request.Notes),
+            ProjectObjectType.Note when string.Equals(request.CreateMode, "quick-note", StringComparison.OrdinalIgnoreCase) => ProjectStructureNodeHelpers.BuildSimpleNoteTitle(request.Notes),
                 _ when request.UploadedFile is not null && !string.IsNullOrWhiteSpace(request.UploadedFile.FileName) => System.IO.Path.GetFileNameWithoutExtension(request.UploadedFile.FileName),
                 _ => definition.DefaultTitle
             };
@@ -2388,9 +2365,6 @@ else
             : selectedNodes.Count == 1
                 ? selectedNodes[0].Title
                 : $"{selectedNodes.Count} nodes";
-
-    private static bool IsCanvasStatusMutable(ProjectStructureNode node)
-        => node.Id.StartsWith("custom:", StringComparison.Ordinal);
 
     private IReadOnlyList<string> ResolveActionTargetNodeIds(string? nodeId)
     {
@@ -2413,84 +2387,6 @@ else
             .ToList();
     }
 
-    private static bool TryResolveMarkerAction(string actionId, out string markerIcon, out string markerTone, out string markerLabel)
-    {
-        (markerIcon, markerTone, markerLabel) = actionId switch
-        {
-            "marker:none" => (string.Empty, string.Empty, string.Empty),
-            "marker:question" => ("question", "sky", "Question"),
-            "marker:alert" => ("alert", "danger", "Alert"),
-            "marker:thumbs-up" => ("thumbs-up", "mint", "Approved"),
-            "marker:thumbs-down" => ("thumbs-down", "danger", "Rejected"),
-            "marker:pause" => ("pause", "warn", "Paused"),
-            "marker:stop" => ("stop", "primary", "Stopped"),
-            "marker:money" => ("money", "mint", "Budget"),
-            "marker:car" => ("car", "sky", "Transport"),
-            "marker:idea" => ("idea", "accent", "Idea"),
-            "marker:risk" => ("risk", "danger", "Risk"),
-            _ => (string.Empty, string.Empty, string.Empty)
-        };
-
-        return actionId.StartsWith("marker:", StringComparison.OrdinalIgnoreCase) &&
-            (actionId.Equals("marker:none", StringComparison.OrdinalIgnoreCase) || !string.IsNullOrWhiteSpace(markerIcon));
-    }
-
-    private static bool TryResolvePriorityAction(string actionId, out int priority)
-    {
-        priority = 0;
-        if (!actionId.StartsWith("priority:", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        return int.TryParse(actionId["priority:".Length..], out priority);
-    }
-
-    private static string BuildSimpleNoteTitle(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return "New note";
-        }
-
-        var normalized = text
-            .Replace("\r\n", "\n", StringComparison.Ordinal)
-            .Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-            .FirstOrDefault();
-        normalized = string.IsNullOrWhiteSpace(normalized)
-            ? text.Trim()
-            : normalized.Trim();
-        return normalized.Length <= 64 ? normalized : $"{normalized[..61]}...";
-    }
-
-    private string ResolveProgressLabel(ProjectStructureNode node)
-        => node.ProgressPercent > 0 || string.Equals(node.ProgressMode, "progress", StringComparison.OrdinalIgnoreCase)
-            ? $"{Math.Clamp(node.ProgressPercent, 0, 100)}%"
-            : "Unset";
-
-    private static string ResolvePriorityLabel(ProjectStructureNode node)
-        => node.Priority > 0 ? $"P{node.Priority}" : "None";
-
-    private static string ResolveMarkerLabel(ProjectStructureNode node)
-        => node.Markers.Count switch
-        {
-            0 => string.IsNullOrWhiteSpace(node.MarkerLabel) ? "None" : node.MarkerLabel,
-            1 => node.Markers[0].Label,
-            <= 3 => string.Join(", ", node.Markers.Select(marker => marker.Label)),
-            _ => $"{string.Join(", ", node.Markers.Take(3).Select(marker => marker.Label))} +{node.Markers.Count - 3}"
-        };
-
-    private static string ResolveAttachmentKindLabel(ProjectStructureNode node)
-        => ResolveAttachmentPreviewKind(node) switch
-        {
-            AttachmentPreviewKind.Image => "Image",
-            AttachmentPreviewKind.Video => "Video",
-            AttachmentPreviewKind.Audio => "Audio",
-            AttachmentPreviewKind.TextDocument => "Text",
-            AttachmentPreviewKind.Document => "Document",
-            _ => "File"
-        };
-
     private bool CanShowLocalOpen(ProjectStructureNode? node)
         => LocalFileOpener.IsAvailable && LocalFileOpener.CanOpen(node);
 
@@ -2508,210 +2404,9 @@ else
     }
 
 
-    private static int ResolveOutlineWeight(ProjectObjectType objectType) => objectType switch
-    {
-        ProjectObjectType.ProjectRoot => 0,
-        ProjectObjectType.Phase => 1,
-        ProjectObjectType.ProjectBlock => 2,
-        ProjectObjectType.PromptFlow or ProjectObjectType.PromptSession => 3,
-        ProjectObjectType.PromptStep => 4,
-        _ => 5
-    };
-
-    private static string? ResolveRootNodeId(IReadOnlyList<ProjectStructureNode> nodes)
-        => nodes.FirstOrDefault(node => node.ObjectType == ProjectObjectType.ProjectRoot)?.Id
-            ?? nodes.FirstOrDefault(node => string.IsNullOrWhiteSpace(node.ParentId))?.Id
-            ?? nodes.FirstOrDefault()?.Id;
-
-    private static bool HasManagedAttachment(ProjectStructureNode? node)
-        => node is not null &&
-            !string.IsNullOrWhiteSpace(node.Route) &&
-            (!string.IsNullOrWhiteSpace(node.StorageObjectReferenceJson) ||
-             !string.IsNullOrWhiteSpace(node.MediaRelativePath) ||
-             node.Route.StartsWith("/managed-files/", StringComparison.OrdinalIgnoreCase) ||
-             node.Route.StartsWith("/storage/objects/", StringComparison.OrdinalIgnoreCase));
-
-    private static bool CanRenderAttachmentPreview(ProjectStructureNode? node)
-        => ResolveAttachmentPreviewKind(node) is not AttachmentPreviewKind.None;
-
-    private static AttachmentPreviewKind ResolveAttachmentPreviewKind(ProjectStructureNode? node)
-    {
-        if (HasInlineTextAssetPreview(node))
-        {
-            return AttachmentPreviewKind.TextDocument;
-        }
-
-        if (!HasManagedAttachment(node) || !SupportsInlinePreview(node))
-        {
-            return AttachmentPreviewKind.None;
-        }
-
-        var contentType = ResolveAttachmentContentType(node!);
-        if (node!.ObjectType == ProjectObjectType.ImageAsset ||
-            contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
-        {
-            return AttachmentPreviewKind.Image;
-        }
-
-        if (node.ObjectType == ProjectObjectType.VideoAsset ||
-            contentType.StartsWith("video/", StringComparison.OrdinalIgnoreCase))
-        {
-            return AttachmentPreviewKind.Video;
-        }
-
-        if (contentType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase))
-        {
-            return AttachmentPreviewKind.Audio;
-        }
-
-        if (IsTextAttachment(node, contentType))
-        {
-            return AttachmentPreviewKind.TextDocument;
-        }
-
-        if (IsDocumentAttachment(node, contentType))
-        {
-            return AttachmentPreviewKind.Document;
-        }
-
-        return AttachmentPreviewKind.None;
-    }
-
-    private static bool HasInlineTextAssetPreview(ProjectStructureNode? node)
-    {
-        return node?.ObjectType == ProjectObjectType.File &&
-               IsTextAssetSubtype(node.ObjectSubtype) &&
-               !string.IsNullOrWhiteSpace(node.Notes);
-    }
-
-    private static bool IsTextAssetSubtype(string? subtype)
-    {
-        return subtype?.Trim().ToLowerInvariant() switch
-        {
-            "md" or "markdown" or "txt" or "text" or "json" or "xml" or "csv" or "log" or "yaml" or "yml" => true,
-            _ => false
-        };
-    }
-
-    private static bool IsTextAttachment(ProjectStructureNode node, string contentType)
-    {
-        if (contentType.Equals("application/json", StringComparison.OrdinalIgnoreCase) ||
-            contentType.Equals("application/xml", StringComparison.OrdinalIgnoreCase) ||
-            contentType.Equals("text/xml", StringComparison.OrdinalIgnoreCase) ||
-            contentType.StartsWith("text/", StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
-        return ResolveAttachmentExtension(node) is ".txt" or ".md" or ".json" or ".xml" or ".csv" or ".log" or ".yaml" or ".yml";
-    }
-
-    private static bool IsDocumentAttachment(ProjectStructureNode node, string contentType)
-    {
-        if (contentType.Equals("application/pdf", StringComparison.OrdinalIgnoreCase) ||
-            contentType.Equals("application/json", StringComparison.OrdinalIgnoreCase) ||
-            contentType.Equals("application/xml", StringComparison.OrdinalIgnoreCase) ||
-            contentType.Equals("text/xml", StringComparison.OrdinalIgnoreCase) ||
-            contentType.StartsWith("text/", StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
-        return ResolveAttachmentExtension(node) is ".pdf" or ".txt" or ".md" or ".json" or ".xml" or ".csv" or ".log" or ".yaml" or ".yml";
-    }
-
-    private static bool SupportsInlinePreview(ProjectStructureNode? node)
-    {
-        if (node is null)
-        {
-            return false;
-        }
-
-        if (StorageJson.TryParseReference(node.StorageObjectReferenceJson, out var reference) &&
-            reference is not null)
-        {
-            return reference.ProviderKind != StorageProviderKind.Ftp;
-        }
-
-        return !string.IsNullOrWhiteSpace(node.MediaRelativePath) ||
-               node.Route.StartsWith("/managed-files/", StringComparison.OrdinalIgnoreCase) ||
-               node.Route.StartsWith("/storage/objects/", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string ResolveAttachmentContentType(ProjectStructureNode node)
-    {
-        if (!string.IsNullOrWhiteSpace(node.MediaContentType) &&
-            !string.Equals(node.MediaContentType, "application/octet-stream", StringComparison.OrdinalIgnoreCase))
-        {
-            return node.MediaContentType.Trim();
-        }
-
-        return ResolveAttachmentExtension(node) switch
-        {
-            ".mp3" => "audio/mpeg",
-            ".m4a" => "audio/mp4",
-            ".ogg" => "audio/ogg",
-            ".pdf" => "application/pdf",
-            ".json" => "application/json",
-            ".xml" => "application/xml",
-            ".txt" => "text/plain",
-            ".md" => "text/markdown",
-            ".csv" => "text/csv",
-            ".log" => "text/plain",
-            ".yaml" or ".yml" => "text/yaml",
-            ".wav" => "audio/wav",
-            ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            ".xls" => "application/vnd.ms-excel",
-            ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            ".pptx" => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-            _ => node.MediaContentType?.Trim() ?? string.Empty
-        };
-    }
-
-    private static string ResolveAttachmentExtension(ProjectStructureNode node)
-        => (System.IO.Path.GetExtension(node.MediaOriginalFileName) switch
-        {
-            { Length: > 0 } extension => extension,
-            _ => System.IO.Path.GetExtension(node.Route)
-        }).ToLowerInvariant();
-
-    private static string ResolveAttachmentDisplayName(ProjectStructureNode node)
-        => string.IsNullOrWhiteSpace(node.MediaOriginalFileName) ? node.Title : node.MediaOriginalFileName;
-
-    private static string ResolveAttachmentLeadCopy(ProjectStructureNode node)
-        => ResolveAttachmentPreviewKind(node) switch
-        {
-            AttachmentPreviewKind.Image => "The image stays attached to this node and can expand without leaving the structure canvas.",
-            AttachmentPreviewKind.Video => "The video stays attached to this node and can expand without leaving the structure canvas.",
-            AttachmentPreviewKind.Audio => "Audio files now stay playable in the selection panel and can still jump into a desktop app when needed.",
-            AttachmentPreviewKind.TextDocument => "Text-based assets open into a readable source preview before you choose whether to edit node details.",
-            AttachmentPreviewKind.Document when ResolveAttachmentContentType(node).Equals("application/pdf", StringComparison.OrdinalIgnoreCase)
-                => "PDF files now render directly in the inspector and can expand into a focused modal preview.",
-            AttachmentPreviewKind.Document
-                => "Supported document types can render directly in the inspector without leaving the workbench.",
-            _ => "This attachment is stored with the node even when the browser cannot embed it inline."
-        };
-
-    private static string ResolveAttachmentPreviewSource(ProjectStructureNode node)
-    {
-        var route = node.Route;
-        if (string.IsNullOrWhiteSpace(route))
-        {
-            return string.Empty;
-        }
-
-        return ResolveAttachmentContentType(node).Equals("application/pdf", StringComparison.OrdinalIgnoreCase) &&
-            !route.Contains('#', StringComparison.Ordinal)
-            ? $"{route}#toolbar=0&navpanes=0&view=FitH"
-            : route;
-    }
-
-    private static string ResolveAttachmentTextContent(ProjectStructureNode node)
-        => HasInlineTextAssetPreview(node) ? node.Notes : string.Empty;
-
     private void OpenAttachmentPreview(ProjectStructureNode node)
     {
-        if (!CanRenderAttachmentPreview(node))
+        if (!ProjectStructureNodeHelpers.CanRenderAttachmentPreview(node))
         {
             return;
         }

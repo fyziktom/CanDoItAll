@@ -1,154 +1,178 @@
 @namespace CanDoItAll.Modules.Processes
+@using CanDoItAll.Components.Common
 
-<Stack GapScale="LayoutGap.Large">
-    <FormSection Title="Definition identity"
-                 Description="Anchor the process to the correct scope and write the contract that later runs, assignments, and audit artifacts inherit.">
-        <Grid Gap="LayoutGap.Large"
-              ColumnsMd="2">
-            <FormField Text="Name">
-                <InputText @bind-Value="Model.Name"
-                           class="cda-input"
-                           data-testid="processes-name-input" />
-            </FormField>
-            <FormField Text="Scope">
-                <TextBox Value="@ScopeLabel"
-                         Class="cda-input"
-                         ReadOnly="true" />
-            </FormField>
-        </Grid>
+<Stack GapScale="LayoutGap.Large"
+       AlignItems="AlignItems.Stretch">
+    <FormSection Title="Definition"
+                 Icon="file"
+                 Description="Anchor the process, governance contract, and runtime expectations in a form that keeps long narrative fields readable.">
+        <Tabs Variant="TabsVariant.ModalCompact"
+              BorderMode="TabsBorderMode.Soft"
+              Tone="TabsTone.Info"
+              OverflowMode="TabsOverflowMode.Scroll"
+              AriaLabel="Process definition form sections">
+            <TabItems>
+                <TabsItem Text="Identity" Icon="badge">
+                    <Stack GapScale="LayoutGap.Large"
+                           AlignItems="AlignItems.Stretch">
+                        <Grid Gap="LayoutGap.Large"
+                              ColumnsMd="2">
+                            <FormField Text="Name">
+                                <InputText @bind-Value="Model.Name"
+                                           class="cda-input"
+                                           data-testid="processes-name-input" />
+                            </FormField>
+                            <FormField Text="Scope">
+                                <TextBox Value="@ScopeLabel"
+                                         Class="cda-input"
+                                         ReadOnly="true" />
+                            </FormField>
+                        </Grid>
 
-        <Grid Gap="LayoutGap.Large"
-              ColumnsMd="2">
-            <FormField Text="Customer">
-                <InputText @bind-Value="Model.CustomerName"
-                           class="cda-input" />
-            </FormField>
-            <FormField Text="Owner">
-                <InputText @bind-Value="Model.OwnerName"
-                           class="cda-input" />
-            </FormField>
-        </Grid>
+                        <Grid Gap="LayoutGap.Large"
+                              ColumnsMd="2">
+                            <FormField Text="Customer">
+                                <InputText @bind-Value="Model.CustomerName"
+                                           class="cda-input" />
+                            </FormField>
+                            <FormField Text="Owner">
+                                <InputText @bind-Value="Model.OwnerName"
+                                           class="cda-input" />
+                            </FormField>
+                        </Grid>
 
-        <FormField Text="Summary">
-            <InputTextArea @bind-Value="Model.Summary"
-                           class="cda-input cda-input--textarea min-h-24"
-                           data-testid="processes-summary-input" />
-        </FormField>
+                        <FormField Text="Summary">
+                            <InputTextArea @bind-Value="Model.Summary"
+                                           class="cda-input cda-input--textarea"
+                                           data-testid="processes-summary-input" />
+                        </FormField>
 
-        <FormField Text="Value statement">
-            <InputTextArea @bind-Value="Model.ValueStatement"
-                           class="cda-input cda-input--textarea min-h-24"
-                           data-testid="processes-value-statement-input" />
-        </FormField>
-    </FormSection>
+                        <FormField Text="Value statement">
+                            <InputTextArea @bind-Value="Model.ValueStatement"
+                                           class="cda-input cda-input--textarea"
+                                           data-testid="processes-value-statement-input" />
+                        </FormField>
+                    </Stack>
+                </TabsItem>
 
-    <FormSection Title="Governance and operating model"
-                 Description="Define the policy and autonomy contract now so runs, refusals, and safe non-actions can be judged against an explicit baseline.">
-        <Grid Gap="LayoutGap.Large"
-              ColumnsMd="3">
-            <FormField Text="Criticality">
-                <InputSelect @bind-Value="Model.Criticality"
-                             class="cda-input">
-                    @foreach (var criticality in Enum.GetValues<ProcessCriticality>())
-                    {
-                        <option value="@criticality">@criticality</option>
-                    }
-                </InputSelect>
-            </FormField>
-            <FormField Text="Autonomy level">
-                <InputSelect @bind-Value="Model.AutonomyLevel"
-                             class="cda-input">
-                    @foreach (var autonomyLevel in Enum.GetValues<ProcessAutonomyLevel>())
-                    {
-                        <option value="@autonomyLevel">@autonomyLevel</option>
-                    }
-                </InputSelect>
-            </FormField>
-            <FormField Text="Working status">
-                <TextBox Value="@Model.Status.ToString()"
-                         Class="cda-input"
-                         ReadOnly="true" />
-            </FormField>
-        </Grid>
+                <TabsItem Text="Governance" Icon="shield">
+                    <Stack GapScale="LayoutGap.Large"
+                           AlignItems="AlignItems.Stretch">
+                        <Grid Gap="LayoutGap.Large"
+                              ColumnsLg="3">
+                            <FormField Text="Criticality">
+                                <InputSelect @bind-Value="Model.Criticality"
+                                             class="cda-input">
+                                    @foreach (var criticality in Enum.GetValues<ProcessCriticality>())
+                                    {
+                                        <option value="@criticality">@criticality</option>
+                                    }
+                                </InputSelect>
+                            </FormField>
+                            <FormField Text="Autonomy level">
+                                <InputSelect @bind-Value="Model.AutonomyLevel"
+                                             class="cda-input">
+                                    @foreach (var autonomyLevel in Enum.GetValues<ProcessAutonomyLevel>())
+                                    {
+                                        <option value="@autonomyLevel">@autonomyLevel</option>
+                                    }
+                                </InputSelect>
+                            </FormField>
+                            <FormField Text="Working status">
+                                <TextBox Value="@Model.Status.ToString()"
+                                         Class="cda-input"
+                                         ReadOnly="true" />
+                            </FormField>
+                        </Grid>
 
-        <FormField Text="Manager agent override">
-            @if (ManagerAgentOptions.Count == 0)
-            {
-                <p class="text-sm leading-6 text-slate-600">Default process manager</p>
-            }
-            else
-            {
-                <select class="cda-input"
-                        value="@SelectedManagerAgentValue"
-                        @onchange="HandleManagerAgentChanged"
-                        data-testid="processes-manager-agent-select">
-                    <option value="">Default process manager</option>
-                    @foreach (var agent in ManagerAgentOptions)
-                    {
-                        <option value="@agent.PartyId">@BuildManagerAgentLabel(agent)</option>
-                    }
-                </select>
-            }
-        </FormField>
+                        <FormField Text="Manager agent override">
+                            @if (ManagerAgentOptions.Count == 0)
+                            {
+                                <p class="text-sm leading-6 text-slate-600">Default process manager</p>
+                            }
+                            else
+                            {
+                                <select class="cda-input"
+                                        value="@SelectedManagerAgentValue"
+                                        @onchange="HandleManagerAgentChanged"
+                                        data-testid="processes-manager-agent-select">
+                                    <option value="">Default process manager</option>
+                                    @foreach (var agent in ManagerAgentOptions)
+                                    {
+                                        <option value="@agent.PartyId">@BuildManagerAgentLabel(agent)</option>
+                                    }
+                                </select>
+                            }
+                        </FormField>
 
-        <FormField Text="Interface contract summary">
-            <InputTextArea @bind-Value="Model.InterfaceContractSummary"
-                           class="cda-input cda-input--textarea min-h-24" />
-        </FormField>
+                        <FormField Text="Governance notes">
+                            <InputTextArea @bind-Value="Model.GovernanceNotes"
+                                           class="cda-input cda-input--textarea" />
+                        </FormField>
 
-        <FormField Text="Governance notes">
-            <InputTextArea @bind-Value="Model.GovernanceNotes"
-                           class="cda-input cda-input--textarea min-h-24" />
-        </FormField>
+                        <Grid Gap="LayoutGap.Large"
+                              ColumnsLg="2">
+                            <FormField Text="Change summary">
+                                <InputTextArea @bind-Value="Model.ChangeSummary"
+                                               class="cda-input cda-input--textarea" />
+                            </FormField>
+                            <FormField Text="Governance policy summary">
+                                <InputTextArea @bind-Value="Model.GovernancePolicySummary"
+                                               class="cda-input cda-input--textarea" />
+                            </FormField>
+                        </Grid>
+                    </Stack>
+                </TabsItem>
 
-        <Grid Gap="LayoutGap.Large"
-              ColumnsMd="2">
-            <FormField Text="Change summary">
-                <InputTextArea @bind-Value="Model.ChangeSummary"
-                               class="cda-input cda-input--textarea min-h-24" />
-            </FormField>
-            <FormField Text="Governance policy summary">
-                <InputTextArea @bind-Value="Model.GovernancePolicySummary"
-                               class="cda-input cda-input--textarea min-h-24" />
-            </FormField>
-        </Grid>
+                <TabsItem Text="Contracts" Icon="link">
+                    <Stack GapScale="LayoutGap.Large"
+                           AlignItems="AlignItems.Stretch">
+                        <FormField Text="Interface contract summary">
+                            <InputTextArea @bind-Value="Model.InterfaceContractSummary"
+                                           class="cda-input cda-input--textarea" />
+                        </FormField>
 
-        <Grid Gap="LayoutGap.Large"
-              ColumnsMd="2">
-            <FormField Text="Constitution rule summary">
-                <InputTextArea @bind-Value="Model.ConstitutionRuleSummary"
-                               class="cda-input cda-input--textarea min-h-24" />
-            </FormField>
-            <FormField Text="Operating mode summary">
-                <InputTextArea @bind-Value="Model.OperatingModeSummary"
-                               class="cda-input cda-input--textarea min-h-24" />
-            </FormField>
-        </Grid>
+                        <Grid Gap="LayoutGap.Large"
+                              ColumnsLg="2">
+                            <FormField Text="Constitution rule summary">
+                                <InputTextArea @bind-Value="Model.ConstitutionRuleSummary"
+                                               class="cda-input cda-input--textarea" />
+                            </FormField>
+                            <FormField Text="Operating mode summary">
+                                <InputTextArea @bind-Value="Model.OperatingModeSummary"
+                                               class="cda-input cda-input--textarea" />
+                            </FormField>
+                        </Grid>
+                    </Stack>
+                </TabsItem>
 
-        <FormField Text="Simulation readiness summary">
-            <InputTextArea @bind-Value="Model.SimulationReadinessSummary"
-                           class="cda-input cda-input--textarea min-h-24" />
-        </FormField>
+                <TabsItem Text="Simulation" Icon="science">
+                    <Stack GapScale="LayoutGap.Large"
+                           AlignItems="AlignItems.Stretch">
+                        <FormField Text="Simulation readiness summary">
+                            <InputTextArea @bind-Value="Model.SimulationReadinessSummary"
+                                           class="cda-input cda-input--textarea" />
+                        </FormField>
+                    </Stack>
+                </TabsItem>
+            </TabItems>
+        </Tabs>
 
         @if (ShowActions)
         {
-            <Cluster Gap="LayoutGap.Small">
-                <Button Icon="save"
-                        Class="cda-button--quick"
-                        title="Save definition"
-                        aria-label="Save definition"
+            <Cluster Gap="LayoutGap.Small"
+                     JustifyContent="JustifyContent.End"
+                     Wrap="FlexWrap.Wrap">
+                <Button Text="Save definition"
+                        Icon="save"
                         Click="Save" />
-                <Button Icon="publish"
-                        Class="cda-button--quick"
+                <Button Text="Publish"
+                        Icon="publish"
                         ButtonStyle="ButtonStyle.Light"
-                        title="Publish definition"
-                        aria-label="Publish definition"
                         Click="Publish" />
-                <Button Icon="delete"
-                        Class="cda-button--quick"
+                <Button Text="Delete"
+                        Icon="delete"
                         ButtonStyle="ButtonStyle.Light"
-                        title="Delete definition"
-                        aria-label="Delete definition"
                         Click="Delete" />
             </Cluster>
         }

@@ -1,6 +1,11 @@
 @namespace CanDoItAll.Components.BaseLib
+@{
+    var iconName = ResolveIconName();
+}
+
 <Stack Section="true"
        GapScale="LayoutGap.Large"
+       AlignItems="AlignItems.Stretch"
        Class="w-full rounded-[1.5rem] border border-slate-200 bg-slate-50/80 p-5">
     <Split Breakpoint="LayoutBreakpoint.Md"
            Gap="LayoutGap.Medium"
@@ -8,6 +13,12 @@
            JustifyContent="JustifyContent.SpaceBetween">
         <Stack GapScale="LayoutGap.Tiny">
             <div class="inline-flex min-w-0 items-center gap-2">
+                @if (iconName is not null)
+                {
+                    <span class="inline-flex size-8 shrink-0 items-center justify-center rounded-lg border border-sky-200 bg-sky-50 text-sky-700">
+                        <span class="rz-icon cda-material-icon material-icons text-base" aria-hidden="true">@iconName</span>
+                    </span>
+                }
                 <h2 class="text-base font-semibold text-slate-950">@Title</h2>
                 @if (HasHelp)
                 {
@@ -45,6 +56,9 @@
     public string? Description { get; set; }
 
     [Parameter]
+    public string? Icon { get; set; }
+
+    [Parameter]
     public string? HelpText { get; set; }
 
     [Parameter]
@@ -61,6 +75,13 @@
     private string ResolvedHelpHeading => string.IsNullOrWhiteSpace(HelpHeading) ? Title : HelpHeading;
 
     private string ResolvedHelpAriaLabel => $"Show help for {Title}";
+
+    private string? ResolveIconName()
+    {
+        return MaterialIconCatalog.TryResolveIconName(Icon, out var iconName)
+            ? iconName
+            : null;
+    }
 }
 
 

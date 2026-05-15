@@ -139,9 +139,9 @@ public partial class ProjectStructurePage
             ProjectStructureCanvasCatalog.ResolveNodeLabel(node),
             SelectedNodeLeadText,
             node.Status,
-            ResolveProgressLabel(node),
-            ResolvePriorityLabel(node),
-            ResolveMarkerLabel(node),
+            ProjectStructureNodeHelpers.ResolveProgressLabel(node),
+            ProjectStructureNodeHelpers.ResolvePriorityLabel(node),
+            ProjectStructureNodeHelpers.ResolveMarkerLabel(node),
             SelectedNodeBadgePresentations,
             storageSummary,
             attachmentPreview,
@@ -190,7 +190,7 @@ public partial class ProjectStructurePage
             node.Status,
             string.IsNullOrWhiteSpace(message) ? "Workflow is ready to start from project structure." : message,
             stepCount > 0 ? $"{Math.Clamp(currentStep, 0, stepCount)} / {stepCount}" : "Not started",
-            cachedStatus is null ? ResolveProgressLabel(node) : $"{cachedStatus.ProgressPercent}%",
+            cachedStatus is null ? ProjectStructureNodeHelpers.ResolveProgressLabel(node) : $"{cachedStatus.ProgressPercent}%",
             (cachedStatus?.RunId ?? metadata.LastRunId)?.ToString() ?? string.Empty,
             lastUpdatedAtUtc.HasValue ? lastUpdatedAtUtc.Value.ToLocalTime().ToString("g") : "Not run yet",
             createdNodeIds,
@@ -200,22 +200,22 @@ public partial class ProjectStructurePage
 
     private ProjectStructureAttachmentPreviewCardState? BuildAttachmentPreviewCardState(ProjectStructureNode node)
     {
-        if (!HasManagedAttachment(node))
+        if (!ProjectStructureNodeHelpers.HasManagedAttachment(node))
         {
             return null;
         }
 
         return new ProjectStructureAttachmentPreviewCardState(
-            ResolveAttachmentPreviewKind(node),
-            ResolveAttachmentDisplayName(node),
-            ResolveAttachmentLeadCopy(node),
+            ProjectStructureNodeHelpers.ResolveAttachmentPreviewKind(node),
+            ProjectStructureNodeHelpers.ResolveAttachmentDisplayName(node),
+            ProjectStructureNodeHelpers.ResolveAttachmentLeadCopy(node),
             node.Route ?? string.Empty,
-            ResolveAttachmentPreviewSource(node),
-            ResolveAttachmentTextContent(node),
+            ProjectStructureNodeHelpers.ResolveAttachmentPreviewSource(node),
+            ProjectStructureNodeHelpers.ResolveAttachmentTextContent(node),
             node.MediaOriginalFileName ?? string.Empty,
-            ResolveAttachmentContentType(node),
+            ProjectStructureNodeHelpers.ResolveAttachmentContentType(node),
             CanShowLocalOpen(node),
-            CanRenderAttachmentPreview(node),
+            ProjectStructureNodeHelpers.CanRenderAttachmentPreview(node),
             IsLocalOpenFeedbackVisible(node) ? localOpenFeedback : null,
             localOpenFeedbackTone);
     }
@@ -545,9 +545,9 @@ public partial class ProjectStructurePage
             builder.Append("|preview:")
                 .Append(previewNode.Id)
                 .Append(':')
-                .Append(ResolveAttachmentDisplayName(previewNode))
+                .Append(ProjectStructureNodeHelpers.ResolveAttachmentDisplayName(previewNode))
                 .Append(':')
-                .Append(ResolveAttachmentPreviewKind(previewNode));
+                .Append(ProjectStructureNodeHelpers.ResolveAttachmentPreviewKind(previewNode));
         }
         else
         {
