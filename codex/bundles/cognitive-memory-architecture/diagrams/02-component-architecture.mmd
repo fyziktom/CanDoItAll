@@ -1,0 +1,59 @@
+flowchart TB
+    subgraph Existing[Existing CanDoItAll Components]
+        Workbench[Workbench Project Objects + Links]
+        ProcessRuntime[Process Runtime Records]
+        WorkflowRuntime[Workflow Runtime + Executors]
+        Storage[Storage Placement + IPFS/FileSystem]
+        Plugins[Plugins + OAuth + Host Tools]
+        Search[Relational Search Index]
+        Maf[Maf Adapter]
+        Rag[Standalone RAG/Qdrant Driver]
+        Sem[SemanticCompletion Driver]
+    end
+
+    subgraph Cognitive[Cognitive Memory Module]
+        SourceIngest[Source Ingestion Service]
+        SourceManifest[Source Manifest Store]
+        Canonical[Canonicalization Engine]
+        Feature[Feature Extraction]
+        Cluster[Multi-view Clusterer]
+        Graph[Memory Graph Service]
+        Items[Memory Item Store]
+        Activation[Activation + Confidence Engine]
+        Projection[Qdrant Projection Manager]
+        Recall[Recall Orchestrator]
+        Context[Context Pack Builder]
+        Consolidation[Consolidation Engine]
+        Review[Human Review Queue]
+        Audit[Memory Audit/Trace Service]
+    end
+
+    Workbench --> SourceIngest
+    ProcessRuntime --> SourceIngest
+    WorkflowRuntime --> SourceIngest
+    Plugins --> SourceIngest
+    SourceIngest --> SourceManifest
+    SourceIngest --> Canonical
+    Canonical --> Feature
+    Feature --> Sem
+    Feature --> Cluster
+    Cluster --> Graph
+    Canonical --> Items
+    Graph --> Items
+    Items --> Activation
+    Items --> Projection
+    Projection --> Rag
+    Recall --> Search
+    Recall --> Projection
+    Recall --> Graph
+    Recall --> Activation
+    Recall --> Context
+    Context --> Maf
+    Consolidation --> Canonical
+    Consolidation --> Cluster
+    Consolidation --> Graph
+    Consolidation --> Projection
+    Consolidation --> Review
+    Consolidation --> Audit
+    Storage --> SourceManifest
+    Storage --> Audit

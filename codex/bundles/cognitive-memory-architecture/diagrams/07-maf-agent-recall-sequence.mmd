@@ -1,0 +1,22 @@
+sequenceDiagram
+    participant Workflow as MAF Workflow Node
+    participant Agent as MAF Agent
+    participant Provider as CognitiveMemoryContextProvider
+    participant Recall as RecallOrchestrator
+    participant Tools as MemoryTools
+    participant Executor as MemoryWorkflowExecutor
+    participant Store as MemoryStore
+
+    Workflow->>Executor: Execute agent step
+    Executor->>Provider: Build context for goal
+    Provider->>Recall: RecallAsync(goal, project, access)
+    Recall->>Store: Load records/projections/relations
+    Store-->>Recall: Candidates
+    Recall-->>Provider: ContextPack
+    Provider-->>Agent: Context messages/tool hints
+    Agent->>Tools: Optional memory_recall / memory_open_source
+    Tools->>Recall: Focused recall request
+    Recall-->>Tools: Focused context/result
+    Tools-->>Agent: Tool result
+    Agent-->>Executor: Agent output
+    Executor->>Store: Persist recall trace and reflection source event

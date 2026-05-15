@@ -1,0 +1,30 @@
+sequenceDiagram
+    participant Agent as Agent/Workflow/User
+    participant Recall as RecallOrchestrator
+    participant Intent as IntentClassifier
+    participant Lex as LexicalSearch
+    participant Vec as VectorProjectionStore
+    participant Graph as MemoryGraphService
+    participant Act as ActivationEngine
+    participant Policy as AccessPolicy
+    participant Context as ContextPackBuilder
+    participant Trace as RecallTraceStore
+
+    Agent->>Recall: RecallAsync(request)
+    Recall->>Intent: Classify intent/scope
+    Intent-->>Recall: RecallIntent
+    Recall->>Lex: Search lexical candidates
+    Lex-->>Recall: Lexical candidates
+    Recall->>Vec: Search semantic candidates with filters
+    Vec-->>Recall: Vector candidates
+    Recall->>Graph: Expand associations and source relations
+    Graph-->>Recall: Related candidates
+    Recall->>Act: Score activation, confidence, recency, staleness
+    Act-->>Recall: Ranked candidates
+    Recall->>Policy: Filter/redact by access context
+    Policy-->>Recall: Allowed candidates
+    Recall->>Context: Build staged context pack
+    Context-->>Recall: ContextPack
+    Recall->>Trace: Persist recall trace
+    Trace-->>Recall: Trace id
+    Recall-->>Agent: RecallResult(ContextPack, TraceId)

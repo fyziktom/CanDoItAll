@@ -1,0 +1,33 @@
+sequenceDiagram
+    participant Scheduler as Automation/Quartz
+    participant Engine as ConsolidationEngine
+    participant Sources as SourceRegistry
+    participant Canon as CanonicalizationEngine
+    participant Feature as FeatureExtractor
+    participant Cluster as Clusterer
+    participant Graph as RelationDetector
+    participant Store as MemoryStore
+    participant Projection as ProjectionManager
+    participant Review as HumanReviewQueue
+    participant Report as ReportStorage
+
+    Scheduler->>Engine: Start consolidation(project, profile)
+    Engine->>Sources: Find changed sources by hash
+    Sources-->>Engine: Source delta
+    Engine->>Canon: Canonicalize changed items
+    Canon-->>Engine: Canonical records
+    Engine->>Feature: Extract semantic/spatial/graph features
+    Feature-->>Engine: Feature records
+    Engine->>Cluster: Run multi-view clustering
+    Cluster-->>Engine: Cluster candidates
+    Engine->>Graph: Detect relations/contradictions/supersession
+    Graph-->>Engine: Relation proposals
+    Engine->>Store: Upsert memory items and safe relations
+    Store-->>Engine: Stored memory ids
+    Engine->>Review: Create review tasks for risky/ambiguous items
+    Review-->>Engine: Review ids
+    Engine->>Projection: Rebuild/update Qdrant projections
+    Projection-->>Engine: Projection status
+    Engine->>Report: Store consolidation report
+    Report-->>Engine: Report path
+    Engine-->>Scheduler: Consolidation result

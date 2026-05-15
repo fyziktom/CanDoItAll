@@ -1,0 +1,44 @@
+flowchart TB
+    A[ProjectObjectRecord + ProjectObjectLinkRecord]
+    B[MindMapSourceAdapter]
+    C[SourceManifest + SourceItems]
+    D[Canonicalize Node Text]
+    E[Extract Spatial Features<br/>x,y,z, depth, density]
+    F[Extract Graph Features<br/>parent, children, links, distance]
+    G[Extract Semantic Embedding]
+    H[Detect Entities/Tags/Scope]
+    I[Multi-view Clustering]
+    J[Relation Detection]
+    K[Projection Builder]
+    L1[Atomic Node Record]
+    L2[Local Spatial Cluster Record]
+    L3[Semantic Topic Record]
+    L4[Project Canonical Topic Record]
+    L5[Procedure / Decision Record]
+    Q[Qdrant Projection]
+    DB[(Memory DB)]
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    D --> F
+    D --> G
+    D --> H
+    E --> I
+    F --> I
+    G --> I
+    H --> I
+    I --> J
+    J --> K
+    K --> L1
+    K --> L2
+    K --> L3
+    K --> L4
+    K --> L5
+    L1 --> DB
+    L2 --> DB
+    L3 --> DB
+    L4 --> DB
+    L5 --> DB
+    DB --> Q

@@ -1,1 +1,0 @@
-Save a markdown decision record for the workflow result. The output path must be captured in the workflow execution summary.
