@@ -805,6 +805,9 @@ internal static class WorkflowCanvasDefinitionMapper
             PaletteKey = issueCount == 0 ? ResolveTone(node, executor) : "danger",
             AccentColor = issueCount == 0 ? ResolveAccent(node.Kind) : "#b91c1c",
             DurationLabel = node.Kind == WorkflowNodeKind.HumanInput ? "Wait" : "Step",
+            MarkerIcon = ResolveSourceMarkerIcon(executor),
+            MarkerLabel = ResolveSourceMarkerLabel(executor),
+            MarkerTone = ResolveSourceMarkerTone(executor),
             X = node.CanvasX,
             Y = node.CanvasY,
             Chips = BuildNodeChips(node, component, executor),
@@ -1071,6 +1074,32 @@ internal static class WorkflowCanvasDefinitionMapper
 
         return ResolveIcon(node.Kind);
     }
+
+    private static string ResolveSourceMarkerIcon(WorkflowExecutorDescriptor? executor)
+        => executor is not null &&
+           executor.Source.Kind != WorkflowExecutorSourceKind.BuiltIn &&
+           !string.IsNullOrWhiteSpace(executor.Source.PluginId)
+            ? ResolveIconName(executor.Source.Icon)
+            : string.Empty;
+
+    private static string ResolveSourceMarkerLabel(WorkflowExecutorDescriptor? executor)
+        => executor is not null &&
+           executor.Source.Kind != WorkflowExecutorSourceKind.BuiltIn &&
+           !string.IsNullOrWhiteSpace(executor.Source.PluginId)
+            ? string.IsNullOrWhiteSpace(executor.Source.DisplayName) ? executor.Source.PluginId : executor.Source.DisplayName
+            : string.Empty;
+
+    private static string ResolveSourceMarkerTone(WorkflowExecutorDescriptor? executor)
+        => executor is not null &&
+           executor.Source.Kind != WorkflowExecutorSourceKind.BuiltIn &&
+           !string.IsNullOrWhiteSpace(executor.Source.PluginId)
+            ? "accent"
+            : string.Empty;
+
+    private static string ResolveIconName(UiIconDescriptor? icon)
+        => icon?.Kind == UiIconKind.MaterialIcon && !string.IsNullOrWhiteSpace(icon.Value)
+            ? icon.Value
+            : "extension";
 
     private static string ResolveAccent(WorkflowNodeKind kind)
     {

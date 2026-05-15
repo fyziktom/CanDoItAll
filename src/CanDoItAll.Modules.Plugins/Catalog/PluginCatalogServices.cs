@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Plugins.Abstractions;
 using CanDoItAll.SharedKernel;
@@ -30,6 +31,9 @@ public sealed class PluginInstallationStore(
     ILogger<PluginInstallationStore> logger)
 {
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
+    private long revision;
+
+    public long Revision => Interlocked.Read(ref revision);
 
     public async Task<IReadOnlyList<PluginInstallationRecord>> ListAsync(CancellationToken cancellationToken = default)
     {
@@ -97,6 +101,7 @@ public sealed class PluginInstallationStore(
         existing.UpdatedAtUtc = timestamp;
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        Interlocked.Increment(ref revision);
         logger.LogInformation(
             "Installed plugin {PluginId} version {Version}. Enabled={IsEnabled}. Actor={Actor}.",
             existing.PluginId,
@@ -124,6 +129,7 @@ public sealed class PluginInstallationStore(
         installation.InstalledBy = NormalizeActor(actor);
         installation.UpdatedAtUtc = clock.GetUtcNow();
         await dbContext.SaveChangesAsync(cancellationToken);
+        Interlocked.Increment(ref revision);
 
         logger.LogInformation(
             "Set plugin {PluginId} enabled state to {IsEnabled}. Actor={Actor}.",
@@ -153,7 +159,8 @@ public sealed class PluginInstallationStore(
 
 public sealed class PluginCatalogService(
     IEnumerable<IPluginCatalogSource> sources,
-    PluginInstallationStore installationStore)
+    PluginInstallationStore installationStore,
+    PluginLogStore logStore)
 {
     public async Task<IReadOnlyList<PluginCatalogItem>> ListCatalogAsync(CancellationToken cancellationToken = default)
     {
@@ -183,7 +190,7 @@ public sealed class PluginCatalogService(
             .SingleOrDefault(item => item.Id == pluginId);
         if (descriptor is null)
         {
-            return Result<PluginCatalogItem>.Failure(Error.Failure($"Plugin '{pluginId}' is not available in the bundled catalog.", "plugins.not-found"));
+            return Result<PluginCatalogItem>.Failure(Error.Failure($"Plugin '{pluginId}' is not available in the active plugin catalog.", "plugins.not-found"));
         }
 
         var installResult = await installationStore.InstallAsync(
@@ -191,9 +198,31 @@ public sealed class PluginCatalogService(
             request.Enable,
             request.Actor,
             cancellationToken);
-        return installResult.IsFailure
-            ? Result<PluginCatalogItem>.Failure(installResult.Errors)
-            : Result<PluginCatalogItem>.Success(CreateAvailableItem(descriptor, installResult.Value!));
+        if (installResult.IsFailure)
+        {
+            await logStore.WriteAsync(new PluginLogWriteRequest(
+                PluginLogStreamKind.Installation,
+                PluginLogOperationKind.PluginInstall,
+                PluginLogSeverity.Error,
+                "Failed",
+                string.Join(" ", installResult.Errors.Select(error => error.Message)),
+                PluginLogStore.SerializeDetails(new { pluginId = pluginId.Value, request.Enable }),
+                pluginId),
+                cancellationToken);
+            return Result<PluginCatalogItem>.Failure(installResult.Errors);
+        }
+
+        await logStore.WriteAsync(new PluginLogWriteRequest(
+            PluginLogStreamKind.Installation,
+            PluginLogOperationKind.PluginInstall,
+            PluginLogSeverity.Information,
+            "Installed",
+            $"Plugin '{descriptor.DisplayName}' was installed from the active catalog.",
+            PluginLogStore.SerializeDetails(new { pluginId = pluginId.Value, request.Enable, request.Actor }),
+            pluginId,
+            descriptor.Package?.PackageId),
+            cancellationToken);
+        return Result<PluginCatalogItem>.Success(CreateAvailableItem(descriptor, installResult.Value!));
     }
 
     public async Task<Result<PluginCatalogItem>> SetEnabledAsync(
@@ -206,11 +235,30 @@ public sealed class PluginCatalogService(
         var updateResult = await installationStore.SetEnabledAsync(pluginId, isEnabled, request.Actor, cancellationToken);
         if (updateResult.IsFailure)
         {
+            await logStore.WriteAsync(new PluginLogWriteRequest(
+                PluginLogStreamKind.Installation,
+                isEnabled ? PluginLogOperationKind.PluginEnable : PluginLogOperationKind.PluginDisable,
+                PluginLogSeverity.Error,
+                "Failed",
+                string.Join(" ", updateResult.Errors.Select(error => error.Message)),
+                PluginLogStore.SerializeDetails(new { pluginId = pluginId.Value, isEnabled, request.Actor }),
+                pluginId),
+                cancellationToken);
             return Result<PluginCatalogItem>.Failure(updateResult.Errors);
         }
 
         var descriptor = (await LoadDescriptorsAsync(cancellationToken))
             .SingleOrDefault(item => item.Id == pluginId);
+        await logStore.WriteAsync(new PluginLogWriteRequest(
+            PluginLogStreamKind.Installation,
+            isEnabled ? PluginLogOperationKind.PluginEnable : PluginLogOperationKind.PluginDisable,
+            PluginLogSeverity.Information,
+            isEnabled ? "Enabled" : "Disabled",
+            $"Plugin '{pluginId}' was {(isEnabled ? "enabled" : "disabled")}.",
+            PluginLogStore.SerializeDetails(new { pluginId = pluginId.Value, isEnabled, request.Actor }),
+            pluginId,
+            descriptor?.Package?.PackageId),
+            cancellationToken);
         return Result<PluginCatalogItem>.Success(
             descriptor is null
                 ? CreateUnavailableItem(updateResult.Value!)
@@ -247,7 +295,8 @@ public sealed class PluginCatalogService(
             PluginCatalogAvailabilityKind.Available,
             string.Empty,
             installation?.InstalledAtUtc,
-            installation?.UpdatedAtUtc)
+            installation?.UpdatedAtUtc,
+            descriptor.Icon ?? UiIconDescriptor.Default)
         {
             Descriptor = descriptor
         };
@@ -267,15 +316,16 @@ public sealed class PluginCatalogService(
             string.IsNullOrWhiteSpace(installation.Vendor)
                 ? snapshot?.Vendor ?? string.Empty
                 : installation.Vendor,
-            snapshot?.SourceKind ?? PluginSourceKind.Bundled,
-            snapshot?.TrustLevel ?? PluginTrustLevel.Bundled,
+            snapshot?.SourceKind ?? PluginSourceKind.LocalPackage,
+            snapshot?.TrustLevel ?? PluginTrustLevel.Untrusted,
             snapshot?.Capabilities ?? PluginCapabilityKind.None,
             snapshot?.Package?.PackageId,
             ResolveInstallationState(installation),
             PluginCatalogAvailabilityKind.Unavailable,
-            "Plugin is installed, but no bundled catalog source currently provides its manifest.",
+            "Plugin is installed, but no active catalog source currently provides its manifest.",
             installation.InstalledAtUtc,
-            installation.UpdatedAtUtc)
+            installation.UpdatedAtUtc,
+            snapshot?.Icon ?? UiIconDescriptor.Default)
         {
             Descriptor = snapshot ?? new PluginDescriptor(
                 new PluginId(installation.PluginId),
@@ -285,13 +335,17 @@ public sealed class PluginCatalogService(
                 string.Empty,
                 string.IsNullOrWhiteSpace(installation.Version) ? "0.0.0" : installation.Version,
                 string.Empty,
-                PluginSourceKind.Bundled,
-                PluginTrustLevel.Bundled,
+                PluginSourceKind.LocalPackage,
+                PluginTrustLevel.Untrusted,
                 "1.0.0",
                 PluginCapabilityKind.None,
                 [],
                 PluginSettingsDescriptor.Empty,
-                [])
+                [],
+                string.IsNullOrWhiteSpace(installation.PackageId)
+                    ? null
+                    : new PluginPackageDescriptor(new PluginPackageId(installation.PackageId), string.Empty, "1.0.0", string.Empty, string.Empty),
+                Icon: UiIconDescriptor.Default)
         };
     }
 

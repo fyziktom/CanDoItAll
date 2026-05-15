@@ -10,6 +10,7 @@
 - Support deterministic `IF/ELSE`, `SWITCH/default`, and multi-selection fan-out routing now, while keeping a clean replacement seam for the later ARTL DSL.
 - Preserve the existing workflow executor, LLM component, persistence, process-integration, and canvas boundaries.
 - Reopened 2026-05-11 to improve production workflow authoring: clean PostgreSQL datasource setup, richer decision-node canvas UX, setup-dialog renderer coverage, and practical seeded workflow examples that exercise IF/ELSE, SWITCH/default, and fan-out logic.
+- Repaired 2026-05-14 to make Run Preview step simulation generic, descriptor-driven, and payload-shape preserving for skipped project-structure and plugin executor steps.
 
 ## Outcome Contract
 
@@ -67,7 +68,7 @@
 
 - Bundle preparation status: `Prepared`
 - Bundle readiness gate: `Passed by local prepared-stage validator`
-- Execution status: `Completed follow-up implementation`
+- Execution status: `Completed follow-up implementation and run-preview simulation repair`
 - Subbundle gate review: `Subbundles 01-09 completed`
-- Final closure gate: `Passed follow-up validation`
-- Browser validation analytics: `Decision-node visual proof, nested menu proof, decision setup dialog proof, and executor setup dialog proof captured`
+- Final closure gate: `Passed follow-up and repair validation`
+- Browser validation analytics: `Decision-node visual proof, nested menu proof, decision setup dialog proof, executor setup dialog proof, and Run Preview simulation dialog proof captured`

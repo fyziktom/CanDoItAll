@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
@@ -125,7 +126,63 @@ public sealed class WorkflowTemplatePackLoader
     }
 
     internal static string SerializeSettings(IDictionary<string, object?> settings)
-        => settings.Count == 0 ? string.Empty : JsonSerializer.Serialize(settings, JsonOptions);
+        => settings.Count == 0
+            ? string.Empty
+            : JsonSerializer.Serialize(
+                settings.ToDictionary(
+                    item => item.Key,
+                    item => NormalizeSettingValue(item.Value),
+                    StringComparer.OrdinalIgnoreCase),
+                JsonOptions);
+
+    private static object? NormalizeSettingValue(object? value)
+    {
+        if (value is null)
+        {
+            return null;
+        }
+
+        if (value is string text)
+        {
+            return NormalizeStringSettingValue(text);
+        }
+
+        if (value is IDictionary<string, object?> objectDictionary)
+        {
+            return objectDictionary.ToDictionary(
+                item => item.Key,
+                item => NormalizeSettingValue(item.Value),
+                StringComparer.OrdinalIgnoreCase);
+        }
+
+        if (value is IEnumerable<object?> list)
+        {
+            return list.Select(NormalizeSettingValue).ToArray();
+        }
+
+        return value;
+    }
+
+    private static object NormalizeStringSettingValue(string value)
+    {
+        var trimmed = value.Trim();
+        if (bool.TryParse(trimmed, out var boolean))
+        {
+            return boolean;
+        }
+
+        if (int.TryParse(trimmed, NumberStyles.Integer, CultureInfo.InvariantCulture, out var integer))
+        {
+            return integer;
+        }
+
+        if (double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out var number))
+        {
+            return number;
+        }
+
+        return value;
+    }
 
     internal static string Require(string? value, string fieldName, string path)
         => string.IsNullOrWhiteSpace(value)

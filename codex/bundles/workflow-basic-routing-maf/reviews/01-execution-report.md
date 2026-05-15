@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Completed follow-up implementation and validation`
+- `Completed follow-up implementation, validation, and run-preview simulation repair`
 
 ## Subbundle Gate Results
 
@@ -26,6 +26,7 @@
 - Follow-up inspection showed the decision-node modal listed existing routes but could not add/edit route rules from the maximized canvas, and the node context menu did not expose a route command. Repair: added a renderer-backed route editor section to the node details dialog and a nested `Routes -> Add route` decision context action wired through `ContextActionRequested`.
 - The first model-comparison prompt produced 18/20 for both models because negative scenario names caused the models to answer the prose outcome instead of the predicate boolean. Repair: tightened the prompt contract and seeded LLM instructions so route fields are literal predicate data. Final comparison passed 20/20 for both models.
 - Component seed validation originally risked SQLite lock churn when asserting through a full render path. Repair: moved seed inventory proof to the catalog/service level while keeping the workflow page tests focused on the UI surface.
+- Run Preview skipped a project-structure write by rewriting it to pass-through strict logic, so the downstream Gmail mark-processed step failed when `$.inputPayload.runContext.gmailProcessing.messageIds[0]` was absent. Repair: added typed preview simulation plans, template-rendered simulated outputs, JSON-backed project-structure simulation templates, and plugin executor simulation descriptors for Gmail, Office365, and Docker.
 
 ## Follow-up Proof
 
@@ -34,6 +35,7 @@
 - Model comparison: `reviews/evidence/subbundle-09/model-comparison-20-scenarios.md` shows `gpt-5-mini-2025-08-07` correct 20/20, `gptoss20b64k:latest` correct 20/20, and 20/20 agreement. First-run mismatch proof is preserved in `reviews/evidence/subbundle-09/model-comparison-20-scenarios-first-run.md`.
 - Screenshots: `reviews/evidence/subbundle-07/decision-diamond-maximized.png`, `decision-context-submenu.png`, `decision-setup-dialog-maximized.png`, and `http-executor-setup-dialog-maximized.png`.
 - Follow-up decision route screenshots: `reviews/evidence/follow-up/workflow-decision-context-menu-add-route.png`, `workflow-decision-route-editor-maximized.png`, and `workflow-decision-route-added-maximized.png`.
+- Run Preview simulation repair screenshot: `.artifacts/run-preview-repair/preview-simulation-dialog.png` shows per-step simulation controls for Gmail download, project-structure asset creation, and Gmail mark-processed in the start dialog.
 
 ## Browser Validation Analytics
 
@@ -44,6 +46,7 @@
 | 07 Decision node canvas UX and setup renderers | `/agents/workflows` editor tab | Desktop maximized canvas, 1920x1080 | Confirmed SWITCH diamond decision, side anchors, branch labels, nested Decisions submenu, decision setup dialog, and HTTP executor setup dialog. | `reviews/evidence/subbundle-07/*.png` | Passed |
 | 08 Production examples and tuning | `/agents/workflows` editor tab | Desktop 1920x1080 plus PostgreSQL query | Confirmed seeded dashboard counts: 15 definitions, 15 LLM components, default backend DurableTask, and valid selected seeded workflow. | `reviews/evidence/follow-up/workflows-editor-decision-diamond.png`, `reviews/evidence/subbundle-08/workflow-example-inventory.txt` | Passed |
 | 07 Follow-up route editing | `/agents/workflows` editor tab | Desktop maximized canvas, 1920x1080 | Confirmed decision node right-click menu exposes nested `Routes -> Add route`; opened the maximized node dialog, added a new route, and verified route count increased from 4 to 5. | `reviews/evidence/follow-up/workflow-decision-context-menu-add-route.png`, `workflow-decision-route-editor-maximized.png`, `workflow-decision-route-added-maximized.png` | Passed |
+| 09 Run Preview simulation repair | `/agents/workflows` editor tab | Desktop 1425x1000 | Confirmed Preview inputs dialog exposes generic per-step simulation controls for Gmail download, project-structure asset creation, and Gmail mark-processed; selected all simulations and started preview without a UI or backend error. | `.artifacts/run-preview-repair/preview-simulation-dialog.png` | Passed |
 
 ## Analytics Review
 
@@ -58,6 +61,11 @@
 - Follow-up targeted integration tests passed: `dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~WorkflowApiIntegrationTests|FullyQualifiedName~ProcessWorkflowExecutorIntegrationTests" --verbosity minimal -m:1` with 11 passed.
 - Follow-up model comparison passed after prompt repair: `gpt-5-mini-2025-08-07` correct 20/20, local Ollama `gptoss20b64k:latest` correct 20/20, model agreement 20/20.
 - Completed-stage bundle validator passed: `python C:\Users\lucys\.codex\skills\candoitall-bundle-preparation\scripts\validate_bundle.py C:\repositories\CanDoItAll\codex\bundles\workflow-basic-routing-maf --profile initiative --stage completed`.
+- Run Preview repair web build passed: `dotnet build src\CanDoItAll.Web\CanDoItAll.Web.csproj -m:1 --verbosity minimal` with 0 warnings and 0 errors.
+- Run Preview repair unit tests passed: `dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~WorkflowPreviewSimulationTests|FullyQualifiedName~WorkflowExecutorTests" --verbosity minimal -m:1` with 24 passed.
+- Run Preview repair component tests passed: `dotnet test tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --filter FullyQualifiedName~WorkflowsPageTests --verbosity minimal -m:1` with 10 passed.
+- Run Preview repair integration tests passed: `dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~WorkflowApiIntegrationTests|FullyQualifiedName~PluginCatalogIntegrationTests" --verbosity minimal -m:1` with 17 passed.
+- Run Preview repair browser proof passed on `http://localhost:5107/agents/workflows`; the Preview inputs dialog showed per-step simulation checkboxes and the app log remained free of preview execution errors after starting the simulated preview.
 - ARTL remains deliberately unsupported in this bundle: `artl-v1` route language is rejected by validation and the current built-in compiler seam can be replaced later without making legacy `ConditionExpression` executable.
 
 ## Raw Note Closure
@@ -73,3 +81,4 @@
 | Improve decision block visuals and setup | Completed | Decision diamonds, split branches, nested menu/toolbox entries, and renderer-keyed setup dialogs are implemented with screenshots. |
 | Add production examples | Completed | 15 seeded workflows cover documents, email, XLSX, internet/project structure, and additional operational workflows. |
 | Observe workflows and repair trouble | Completed | 20-scenario model comparison and targeted tests passed; first-run prompt mismatch was recorded and repaired. |
+| Repair Run Preview skipped-step simulation | Completed | Preview simulation plans preserve downstream payload shape; project-structure simulation templates live in JSON; plugin executors publish simulation descriptors; targeted tests and browser proof passed. |

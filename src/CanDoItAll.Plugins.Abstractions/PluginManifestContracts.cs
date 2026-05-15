@@ -50,7 +50,8 @@ public sealed record PluginDescriptor(
     PluginSettingsDescriptor Settings,
     IReadOnlyList<PluginConnectionDescriptor> Connections,
     PluginPackageDescriptor? Package = null,
-    PluginOAuth2Descriptor? OAuth2 = null);
+    PluginOAuth2Descriptor? OAuth2 = null,
+    UiIconDescriptor? Icon = null);
 
 public sealed record PluginWorkflowExecutorDescriptor(
     WorkflowExecutorId ExecutorId,

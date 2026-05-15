@@ -484,6 +484,26 @@ public sealed record ProjectStructureWorkflowInputPreview(
     string InputJson,
     IReadOnlyList<ProjectStructureWorkflowInputPreviewSection> Sections);
 
+public sealed record ProjectStructureWorkflowPreviewSimulationOption(
+    string NodeId,
+    string NodeName,
+    string ExecutorId,
+    WorkflowProjectStructureOperation Operation,
+    string Description);
+
+public sealed record ProjectStructureWorkflowStartBackendOption(
+    WorkflowRuntimeBackendKind Backend,
+    string Label,
+    string Notes,
+    bool IsSelected);
+
+public sealed record ProjectStructureWorkflowStartOptionsResult(
+    IReadOnlyList<ProjectStructureWorkflowPreviewSimulationOption> SimulationOptions,
+    WorkflowRuntimeBackendKind PreferredBackend,
+    WorkflowRuntimeBackendKind RequestedBackend,
+    IReadOnlyList<ProjectStructureWorkflowStartBackendOption> BackendOptions,
+    string BackendWarning);
+
 public sealed record ProjectStructureWorkflowAddOptionsResult(
     Guid ProjectId,
     ProjectStructureNodeSummary ParentNode,
@@ -497,7 +517,8 @@ public sealed record ProjectStructureWorkflowAddOptionsResult(
 public sealed record ProjectStructureWorkflowNodeStartInput(
     WorkflowRuntimeBackendKind? RequestedBackend = null,
     string RequestedBy = "project-structure",
-    string? LeaseToken = null);
+    string? LeaseToken = null,
+    IReadOnlyList<string>? SimulatedNodeIds = null);
 
 public sealed record ProjectStructureWorkflowRunEventSummary(
     WorkflowEventKind Kind,

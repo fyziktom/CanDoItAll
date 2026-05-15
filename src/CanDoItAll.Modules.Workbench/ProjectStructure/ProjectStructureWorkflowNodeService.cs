@@ -14,6 +14,7 @@ public sealed class ProjectStructureWorkflowNodeService(
     IWorkflowCatalogService workflowCatalogService,
     IWorkflowRuntimeManager workflowRuntimeManager,
     IWorkflowRunStore workflowRunStore,
+    IEnumerable<IWorkflowExecutionBackend> workflowExecutionBackends,
     ProjectStructureLeaseService leaseService,
     ILogger<ProjectStructureWorkflowNodeService> logger)
 {
@@ -107,6 +108,30 @@ public sealed class ProjectStructureWorkflowNodeService(
             "start-workflow-node",
             cancellationToken => StartCoreAsync(projectId, nodeId, request, agent, cancellationToken),
             cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<ProjectStructureWorkflowPreviewSimulationOption>> ListStartSimulationOptionsAsync(
+        Guid projectId,
+        string nodeId,
+        CancellationToken cancellationToken = default)
+        => (await GetStartOptionsAsync(projectId, nodeId, cancellationToken)).SimulationOptions;
+
+    public async Task<ProjectStructureWorkflowStartOptionsResult> GetStartOptionsAsync(
+        Guid projectId,
+        string nodeId,
+        CancellationToken cancellationToken = default)
+    {
+        var context = await LoadNodeContextAsync(projectId, nodeId, cancellationToken);
+        var workflowMetadata = ResolveWorkflowMetadata(context.Node);
+        var detail = await LoadDefinitionAsync(workflowMetadata, cancellationToken);
+        EnsureValidDefinition(detail);
+        var backendSelection = ResolveStartBackendSelection(detail.Definition, requestedBackend: null);
+        return new ProjectStructureWorkflowStartOptionsResult(
+            ProjectStructureWorkflowPreviewSimulationSupport.Analyze(detail.Definition),
+            detail.Definition.RuntimePolicy.PreferredBackend,
+            backendSelection.Backend,
+            BuildStartBackendOptions(detail.Definition, backendSelection.Backend),
+            backendSelection.Warning);
     }
 
     public async Task<ProjectStructureWorkflowRunStatus> GetStatusAsync(
@@ -250,6 +275,9 @@ public sealed class ProjectStructureWorkflowNodeService(
 
         var inputSettings = ProjectStructureWorkflowInputSettingsNormalizer.Normalize(workflowMetadata.InputSettings);
         workflowMetadata.InputSettings = inputSettings;
+        var simulationPlan = ProjectStructureWorkflowPreviewSimulationSupport.BuildPlan(
+            detail.Definition,
+            request.SimulatedNodeIds);
         var preview = BuildPreview(
             context.Project,
             context.ParentNode,
@@ -259,6 +287,7 @@ public sealed class ProjectStructureWorkflowNodeService(
             context.Node,
             agent,
             request.RequestedBy);
+        var backendSelection = ResolveStartBackendSelection(detail.Definition, request.RequestedBackend);
         var startingStatus = BuildStatus(
             detail.Definition,
             workflowMetadata,
@@ -266,7 +295,7 @@ public sealed class ProjectStructureWorkflowNodeService(
             WorkflowRunState.Running,
             [],
             [],
-            "Workflow run is starting.");
+            $"Workflow run is starting on {backendSelection.Backend}.");
         await ApplyStatusAsync(projectId, nodeId, workflowMetadata, detail.Definition, startingStatus, null, cancellationToken);
 
         try
@@ -277,9 +306,12 @@ public sealed class ProjectStructureWorkflowNodeService(
                     detail.Definition.Id,
                     detail.Definition.VersionId,
                     preview.InputJson,
-                    request.RequestedBackend,
+                    backendSelection.Backend,
                     SourceProcessRunId: null,
-                    SourceProcessAssignmentId: null),
+                    SourceProcessAssignmentId: null)
+                {
+                    PreviewSimulationPlan = simulationPlan
+                },
                 cancellationToken);
             var status = await BuildStatusAsync(detail.Definition, workflowMetadata, run, cancellationToken);
             var projection = await BuildResultProjectionAsync(projectId, existingNodeIds, cancellationToken);
@@ -294,7 +326,7 @@ public sealed class ProjectStructureWorkflowNodeService(
                 run.RunId,
                 BuildWorkflowRunRoute(projectId, detail.Definition.Id, run.RunId),
                 status,
-                []);
+                string.IsNullOrWhiteSpace(backendSelection.Warning) ? [] : [backendSelection.Warning]);
         }
         catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or KeyNotFoundException)
         {
@@ -305,7 +337,7 @@ public sealed class ProjectStructureWorkflowNodeService(
                 nodeId,
                 detail.Definition.Id,
                 detail.Definition.VersionId,
-                request.RequestedBackend?.ToString() ?? detail.Definition.RuntimePolicy.PreferredBackend.ToString());
+                backendSelection.Backend);
             var failedStatus = BuildStatus(
                 detail.Definition,
                 workflowMetadata,
@@ -438,6 +470,77 @@ public sealed class ProjectStructureWorkflowNodeService(
             isSelectable ? string.Empty : "Only active workflow definitions can be added to project structure.");
     }
 
+    private ProjectStructureWorkflowStartBackendSelection ResolveStartBackendSelection(
+        WorkflowDefinition definition,
+        WorkflowRuntimeBackendKind? requestedBackend)
+    {
+        if (requestedBackend.HasValue)
+        {
+            return new ProjectStructureWorkflowStartBackendSelection(requestedBackend.Value, string.Empty);
+        }
+
+        var registeredBackends = ListRegisteredBackendKinds();
+        if (registeredBackends.Contains(definition.RuntimePolicy.PreferredBackend))
+        {
+            return new ProjectStructureWorkflowStartBackendSelection(definition.RuntimePolicy.PreferredBackend, string.Empty);
+        }
+
+        if (definition.RuntimePolicy.AllowInProcessPreviewRuns &&
+            registeredBackends.Contains(WorkflowRuntimeBackendKind.InProcess))
+        {
+            return new ProjectStructureWorkflowStartBackendSelection(
+                WorkflowRuntimeBackendKind.InProcess,
+                $"Workflow definition prefers {definition.RuntimePolicy.PreferredBackend}, but this host has not registered that runtime. Project Structure explicitly requested InProcess for this local start.");
+        }
+
+        return new ProjectStructureWorkflowStartBackendSelection(
+            definition.RuntimePolicy.PreferredBackend,
+            $"Workflow definition prefers {definition.RuntimePolicy.PreferredBackend}, but this host has not registered that runtime.");
+    }
+
+    private IReadOnlyList<ProjectStructureWorkflowStartBackendOption> BuildStartBackendOptions(
+        WorkflowDefinition definition,
+        WorkflowRuntimeBackendKind selectedBackend)
+    {
+        var descriptors = ListRegisteredBackendDescriptors();
+        if (descriptors.Count == 0)
+        {
+            return
+            [
+                new ProjectStructureWorkflowStartBackendOption(
+                    selectedBackend,
+                    selectedBackend.ToString(),
+                    "No executable workflow runtime backend is registered in this host.",
+                    IsSelected: true)
+            ];
+        }
+
+        return descriptors
+            .OrderByDescending(item => item.Kind == selectedBackend)
+            .ThenByDescending(item => item.Kind == definition.RuntimePolicy.PreferredBackend)
+            .ThenBy(item => item.Kind.ToString(), StringComparer.OrdinalIgnoreCase)
+            .Select(item => new ProjectStructureWorkflowStartBackendOption(
+                item.Kind,
+                item.Kind == definition.RuntimePolicy.PreferredBackend
+                    ? $"{item.Kind} (definition preference)"
+                    : item.Kind.ToString(),
+                item.OperationalNotes,
+                item.Kind == selectedBackend))
+            .ToList();
+    }
+
+    private IReadOnlySet<WorkflowRuntimeBackendKind> ListRegisteredBackendKinds()
+        => ListRegisteredBackendDescriptors()
+            .Select(item => item.Kind)
+            .ToHashSet();
+
+    private IReadOnlyList<WorkflowRuntimeBackendDescriptor> ListRegisteredBackendDescriptors()
+        => workflowExecutionBackends
+            .Select(item => item.Descriptor)
+            .GroupBy(item => item.Kind)
+            .Select(group => group.First())
+            .ToList();
+
     private static WorkflowId? ResolveSelectedWorkflowId(
         WorkflowId? requestedWorkflowId,
         IReadOnlyList<ProjectStructureWorkflowDefinitionOption> options)
@@ -501,6 +604,8 @@ public sealed class ProjectStructureWorkflowNodeService(
             ? ResolveDescendants(surface.Nodes, parentNode.Id)
             : [];
         var payload = new ProjectStructureWorkflowInputPayload(
+            project.Id.ToString("D"),
+            workflowNode?.Id ?? parentNode.Id,
             new ProjectStructureWorkflowProjectPayload(
                 project.Id,
                 project.Name,
@@ -1079,6 +1184,10 @@ public sealed class ProjectStructureWorkflowNodeService(
         return $"/agents/workflows?projectId={projectId:D}&workflowId={workflowId.Value:D}&runId={runId.Value:D}";
     }
 
+    private sealed record ProjectStructureWorkflowStartBackendSelection(
+        WorkflowRuntimeBackendKind Backend,
+        string Warning);
+
     private static JsonSerializerOptions BuildJsonOptions()
     {
         var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
@@ -1100,6 +1209,8 @@ public sealed class ProjectStructureWorkflowNodeService(
     }
 
     private sealed record ProjectStructureWorkflowInputPayload(
+        string ProjectId,
+        string NodeId,
         ProjectStructureWorkflowProjectPayload Project,
         ProjectStructureWorkflowRunContextPayload? RunContext,
         ProjectStructureWorkflowNodePayload ParentNode,

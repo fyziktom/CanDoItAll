@@ -661,14 +661,14 @@ public partial class WorkflowCanvasEditor
         }
 
         var definition = WorkflowCanvasDefinitionMapper.ToDefinition(document);
-        var requirements = WorkflowPreviewInputSupport.Analyze(definition);
-        if (requirements.NeedsProjectContext)
+        var requirements = WorkflowPreviewInputSupport.Analyze(definition, executorDescriptors);
+        if (requirements.NeedsPreviewDialog)
         {
             await OpenPreviewInputDialogAsync(definition, requirements);
             return;
         }
 
-        await RunPreviewCoreAsync(definition, testInputJson);
+        await RunPreviewCoreAsync(definition, testInputJson, WorkflowPreviewSimulationPlan.Empty);
     }
 
     private async Task OpenPreviewInputDialogAsync(
@@ -725,10 +725,11 @@ public partial class WorkflowCanvasEditor
         }
 
         testInputJson = inputJson;
-        var definition = WorkflowPreviewInputSupport.ApplyPreviewOptions(previewInputDefinition, previewInputState);
+        var simulationPlan = WorkflowPreviewInputSupport.BuildSimulationPlan(previewInputState);
+        var definition = previewInputDefinition;
         isPreviewInputDialogOpen = false;
         previewInputDefinition = null;
-        await RunPreviewCoreAsync(definition, inputJson);
+        await RunPreviewCoreAsync(definition, inputJson, simulationPlan);
     }
 
     private void ClosePreviewInputDialog()
@@ -743,22 +744,50 @@ public partial class WorkflowCanvasEditor
         previewInputState.ProjectId = args.Value?.ToString() ?? string.Empty;
     }
 
+    private bool IsPreviewSimulationEnabled(WorkflowPreviewSimulationRequirement requirement)
+        => previewInputState.SimulatedNodeIds.Contains(requirement.NodeId.Value);
+
+    private void HandlePreviewSimulationChanged(
+        WorkflowPreviewSimulationRequirement requirement,
+        ChangeEventArgs args)
+    {
+        var enabled = args.Value is bool value
+            ? value
+            : bool.TryParse(args.Value?.ToString(), out var parsed) && parsed;
+        if (enabled)
+        {
+            previewInputState.SimulatedNodeIds.Add(requirement.NodeId.Value);
+            return;
+        }
+
+        previewInputState.SimulatedNodeIds.Remove(requirement.NodeId.Value);
+    }
+
+    private static string BuildPreviewSimulationTestId(WorkflowPreviewSimulationRequirement requirement)
+        => $"workflow-canvas-preview-simulate-{requirement.NodeId.Value}";
+
     private async Task RunPreviewCoreAsync(
         WorkflowDefinition definition,
-        string inputJson)
+        string inputJson,
+        WorkflowPreviewSimulationPlan simulationPlan)
     {
         isBusy = true;
         isTesting = true;
         errorMessage = string.Empty;
         try
         {
-            testResult = await TestRunner.RunAsync(new WorkflowTestRunRequest(
-                WorkflowId: null,
-                VersionId: null,
-                DraftDefinition: definition,
-                InputJson: inputJson,
-                RequestedBackend: WorkflowRuntimeBackendKind.InProcess,
-                ValidateOnly: false));
+            using var progressScope = WorkflowNodeExecutionProgressScope.Push(new CanvasPreviewNodeSelectionObserver(this));
+            testResult = await TestRunner.RunAsync(
+                new WorkflowTestRunRequest(
+                    WorkflowId: null,
+                    VersionId: null,
+                    DraftDefinition: definition,
+                    InputJson: inputJson,
+                    RequestedBackend: WorkflowRuntimeBackendKind.InProcess,
+                    ValidateOnly: false)
+                {
+                    PreviewSimulationPlan = simulationPlan
+                });
             validationIssues = testResult.Validation.Issues;
             if (testResult.Run is not null)
             {
@@ -784,6 +813,18 @@ public partial class WorkflowCanvasEditor
             isTesting = false;
             isBusy = false;
         }
+    }
+
+    private Task SelectPreviewNodeAsync(WorkflowNodeId nodeId)
+    {
+        if (!document.Nodes.Any(node => node.Id == nodeId))
+        {
+            return Task.CompletedTask;
+        }
+
+        SelectNode(nodeId.Value);
+        StateHasChanged();
+        return Task.CompletedTask;
     }
 
     private async Task<WorkflowDefinition> ValidateCurrentDefinitionAsync()
@@ -1339,11 +1380,22 @@ public partial class WorkflowCanvasEditor
             .Where(MatchesWorkflowToolboxSearch)
             .ToList();
 
-        var executorGroups = executorDescriptors
+        var builtInExecutorGroups = executorDescriptors
+            .Where(executor => !WorkflowExecutorCanvasCatalog.IsPluginExecutor(executor))
             .GroupBy(executor => executor.Category)
             .OrderBy(group => group.Key)
             .Select(group => BuildExecutorToolboxGroup(group.Key, group))
             .Where(group => group.Items.Count > 0)
+            .ToList();
+        var pluginExecutorGroups = executorDescriptors
+            .Where(WorkflowExecutorCanvasCatalog.IsPluginExecutor)
+            .GroupBy(executor => executor.Source.PluginId, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(group => WorkflowExecutorCanvasCatalog.ResolvePluginDisplayName(group), StringComparer.OrdinalIgnoreCase)
+            .Select(BuildPluginExecutorToolboxGroup)
+            .Where(group => group.Items.Count > 0)
+            .ToList();
+        var executorGroups = builtInExecutorGroups
+            .Concat(pluginExecutorGroups)
             .ToList();
 
         var sections = new List<OverlayToolboxSection>();
@@ -1439,6 +1491,65 @@ public partial class WorkflowCanvasEditor
             IsExpanded: IsWorkflowToolboxGroupExpanded(key),
             DataTestId: $"workflow-toolbox-group-{key}",
             BodyDataTestId: $"workflow-toolbox-group-body-{key}");
+    }
+
+    private OverlayToolboxGroup BuildPluginExecutorToolboxGroup(
+        IEnumerable<WorkflowExecutorDescriptor> descriptors)
+    {
+        var materialized = descriptors.ToList();
+        var pluginName = WorkflowExecutorCanvasCatalog.ResolvePluginDisplayName(materialized);
+        var pluginKey = materialized
+            .Select(executor => executor.Source.PluginId)
+            .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? SlugForDataTestId(pluginName);
+        var items = materialized
+            .OrderBy(executor => executor.CanExecute ? 0 : 1)
+            .ThenBy(executor => executor.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(executor => new OverlayToolboxItem(
+                WorkflowExecutorCanvasCatalog.BuildCreateActionId(executor.Id),
+                executor.Name,
+                executor.Description,
+                Icon: executor.IconName,
+                Tone: "accent",
+                IsDisabled: !executor.CanExecute,
+                DataTestId: $"workflow-toolbox-plugin-executor-{SlugForDataTestId(executor.Id.Value)}"))
+            .Where(MatchesWorkflowToolboxSearch)
+            .ToList();
+        var key = $"executor-plugin-{SlugForDataTestId(pluginKey)}";
+
+        return new OverlayToolboxGroup(
+            key,
+            pluginName,
+            $"Executors contributed by {pluginName}.",
+            items,
+            Icon: WorkflowExecutorCanvasCatalog.ResolvePluginIconName(materialized),
+            Tone: "accent",
+            IsExpanded: IsWorkflowToolboxGroupExpanded(key),
+            DataTestId: $"workflow-toolbox-group-{key}",
+            BodyDataTestId: $"workflow-toolbox-group-body-{key}");
+    }
+
+    private static string SlugForDataTestId(string value)
+    {
+        var builder = new StringBuilder(value.Length);
+        var lastWasSeparator = false;
+        foreach (var character in value)
+        {
+            if (char.IsLetterOrDigit(character))
+            {
+                builder.Append(char.ToLowerInvariant(character));
+                lastWasSeparator = false;
+                continue;
+            }
+
+            if (!lastWasSeparator && builder.Length > 0)
+            {
+                builder.Append('-');
+                lastWasSeparator = true;
+            }
+        }
+
+        var slug = builder.ToString().Trim('-');
+        return string.IsNullOrWhiteSpace(slug) ? "plugin" : slug;
     }
 
     private bool MatchesWorkflowToolboxSearch(OverlayToolboxItem item)
@@ -1759,6 +1870,21 @@ public partial class WorkflowCanvasEditor
         string TargetName,
         string TargetInstructions,
         WorkflowEdgeRouting Routing);
+
+    private sealed class CanvasPreviewNodeSelectionObserver(WorkflowCanvasEditor editor) : IWorkflowNodeExecutionProgressObserver
+    {
+        public ValueTask RecordAsync(
+            WorkflowNodeExecutionProgress progress,
+            CancellationToken cancellationToken = default)
+        {
+            if (progress.State != WorkflowNodeExecutionProgressState.Started)
+            {
+                return ValueTask.CompletedTask;
+            }
+
+            return new ValueTask(editor.InvokeAsync(() => editor.SelectPreviewNodeAsync(progress.NodeId)));
+        }
+    }
 
     private static string ResolveWorkflowToolboxNodeIcon(WorkflowNodeKind kind)
         => kind switch

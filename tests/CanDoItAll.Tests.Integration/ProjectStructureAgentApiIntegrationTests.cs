@@ -422,6 +422,53 @@ public sealed class ProjectStructureAgentApiIntegrationTests
     }
 
     [Fact]
+    public async Task ProjectStructureAgentApi_explicitly_requests_inprocess_when_definition_prefers_unregistered_durable_backend()
+    {
+        await using var host = await ProjectStructureAgentApiTestHost.CreateAsync();
+        var project = await CreateWorkflowProjectAsync(host.Client, "Workflow local backend project");
+        var lease = await AcquireProjectLeaseAsync(host.Client, project.Id, "Start workflow with local backend");
+        var parent = await CreateProjectBlockAsync(host.Client, project.Id, lease.LeaseToken, "Office365 email source", "Category-triggered email summary.");
+
+        WorkflowDefinition definition;
+        await using (var scope = host.App.Services.CreateAsyncScope())
+        {
+            var catalogService = scope.ServiceProvider.GetRequiredService<IWorkflowCatalogService>();
+            definition = await catalogService.SaveDefinitionAsync(CreateWorkflowDefinitionSaveRequest(
+                "Office365 local backend workflow",
+                runtimePolicy: new WorkflowRuntimePolicy(
+                    WorkflowRuntimeBackendKind.DurableTask,
+                    AllowInProcessPreviewRuns: true,
+                    RequireDurableProductionRuns: true,
+                    ExposeAzureFunctionsStatusEndpoint: false,
+                    ExposeAzureFunctionsMcpTool: false)));
+        }
+
+        var workflowNode = await PostAndReadAsync<ProjectStructureWorkflowNodeCreateResult>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id}/nodes/{parent.Id}/workflow-definition",
+            new ProjectStructureWorkflowNodeCreateInput(
+                definition.Id,
+                definition.VersionId,
+                InputSettings: ProjectStructureWorkflowInputSettings.Default(),
+                LeaseToken: lease.LeaseToken));
+
+        var started = await PostAndReadAsync<ProjectStructureWorkflowNodeStartResult>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id}/nodes/{workflowNode.Node.Id}/workflow/start",
+            new ProjectStructureWorkflowNodeStartInput(LeaseToken: lease.LeaseToken));
+
+        Assert.Equal(WorkflowRunState.Completed, started.Status.State);
+        Assert.Contains(started.Warnings, warning => warning.Contains("explicitly requested InProcess", StringComparison.OrdinalIgnoreCase));
+
+        await using var verificationScope = host.App.Services.CreateAsyncScope();
+        var runStore = verificationScope.ServiceProvider.GetRequiredService<IWorkflowRunStore>();
+        var run = await runStore.GetRunAsync(started.RunId);
+
+        Assert.NotNull(run);
+        Assert.Equal(WorkflowRuntimeBackendKind.InProcess, run!.Backend);
+    }
+
+    [Fact]
     public async Task ProjectStructureAgentApi_projects_workflow_created_assets_under_workflow_node()
     {
         await using var host = await ProjectStructureAgentApiTestHost.CreateAsync();
@@ -960,7 +1007,8 @@ public sealed class ProjectStructureAgentApiIntegrationTests
 
     private static WorkflowDefinitionSaveRequest CreateWorkflowDefinitionSaveRequest(
         string name = "Order reconciliation workflow",
-        WorkflowLifecycleStatus status = WorkflowLifecycleStatus.Active)
+        WorkflowLifecycleStatus status = WorkflowLifecycleStatus.Active,
+        WorkflowRuntimePolicy? runtimePolicy = null)
     {
         return new WorkflowDefinitionSaveRequest(
             Id: null,
@@ -979,7 +1027,7 @@ public sealed class ProjectStructureAgentApiIntegrationTests
                     CreateWorkflowEdge("start-to-logic", "start", "logic"),
                     CreateWorkflowEdge("logic-to-end", "logic", "end")
                 ]),
-            RuntimePolicy: new WorkflowRuntimePolicy(
+            RuntimePolicy: runtimePolicy ?? new WorkflowRuntimePolicy(
                 WorkflowRuntimeBackendKind.InProcess,
                 AllowInProcessPreviewRuns: true,
                 RequireDurableProductionRuns: false,

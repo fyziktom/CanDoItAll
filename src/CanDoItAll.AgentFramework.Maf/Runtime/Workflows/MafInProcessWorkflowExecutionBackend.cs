@@ -55,7 +55,10 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
         var resolvedComponents = componentLibrary is null
             ? components ?? []
             : await componentLibrary.ListComponentsAsync(cancellationToken);
-        var build = compiler.Compile(definition, FilterReferencedComponents(definition, resolvedComponents));
+        var build = compiler.Compile(
+            definition,
+            FilterReferencedComponents(definition, resolvedComponents),
+            request.PreviewSimulationPlan);
         if (!build.Compilation.Succeeded || build.Workflow is null)
         {
             var failed = new WorkflowRunSnapshot(

@@ -703,7 +703,10 @@ public sealed class WorkflowTestRunner(
                     string.IsNullOrWhiteSpace(request.InputJson) ? "{}" : request.InputJson,
                     request.RequestedBackend,
                     SourceProcessRunId: null,
-                    SourceProcessAssignmentId: null),
+                    SourceProcessAssignmentId: null)
+                {
+                    PreviewSimulationPlan = request.PreviewSimulationPlan
+                },
                 cancellationToken);
             return new WorkflowTestRunResult(
                 run.State is WorkflowRunState.Completed or WorkflowRunState.WaitingForInput or WorkflowRunState.Idle,

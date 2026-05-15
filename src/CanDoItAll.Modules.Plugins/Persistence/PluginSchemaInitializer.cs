@@ -107,6 +107,25 @@ public static class PluginSchemaInitializer
             cancellationToken);
         await dbContext.Database.ExecuteSqlRawAsync(
             """
+            CREATE TABLE IF NOT EXISTS Plugins_Logs (
+                Id TEXT NOT NULL CONSTRAINT PK_Plugins_Logs PRIMARY KEY,
+                PluginId TEXT NOT NULL,
+                PackageId TEXT NOT NULL,
+                WorkflowExecutorId TEXT NOT NULL,
+                StreamKind TEXT NOT NULL,
+                OperationKind TEXT NOT NULL,
+                Severity TEXT NOT NULL,
+                Status TEXT NOT NULL,
+                Message TEXT NOT NULL,
+                DetailsJson TEXT NOT NULL,
+                CorrelationId TEXT NOT NULL,
+                CreatedAtUtc TEXT NOT NULL,
+                ConcurrencyToken TEXT NOT NULL
+            );
+            """,
+            cancellationToken);
+        await dbContext.Database.ExecuteSqlRawAsync(
+            """
             CREATE UNIQUE INDEX IF NOT EXISTS IX_Plugins_CapabilityGrants_PluginId_Capability_RecipeId_ScopeKind_ScopeKey
             ON Plugins_CapabilityGrants (PluginId, Capability, RecipeId, ScopeKind, ScopeKey);
             """,
@@ -145,6 +164,18 @@ public static class PluginSchemaInitializer
             """
             CREATE INDEX IF NOT EXISTS IX_Plugins_OAuthSessions_PluginId_ConnectionId_Status
             ON Plugins_OAuthSessions (PluginId, ConnectionId, Status);
+            """,
+            cancellationToken);
+        await dbContext.Database.ExecuteSqlRawAsync(
+            """
+            CREATE INDEX IF NOT EXISTS IX_Plugins_Logs_StreamKind_PluginId_CreatedAtUtc
+            ON Plugins_Logs (StreamKind, PluginId, CreatedAtUtc);
+            """,
+            cancellationToken);
+        await dbContext.Database.ExecuteSqlRawAsync(
+            """
+            CREATE INDEX IF NOT EXISTS IX_Plugins_Logs_PackageId_CreatedAtUtc
+            ON Plugins_Logs (PackageId, CreatedAtUtc);
             """,
             cancellationToken);
     }
@@ -234,6 +265,25 @@ public static class PluginSchemaInitializer
             cancellationToken);
         await dbContext.Database.ExecuteSqlRawAsync(
             """
+            CREATE TABLE IF NOT EXISTS "Plugins_Logs" (
+                "Id" uuid NOT NULL CONSTRAINT "PK_Plugins_Logs" PRIMARY KEY,
+                "PluginId" character varying(180) NOT NULL,
+                "PackageId" character varying(180) NOT NULL,
+                "WorkflowExecutorId" character varying(180) NOT NULL,
+                "StreamKind" character varying(40) NOT NULL,
+                "OperationKind" character varying(80) NOT NULL,
+                "Severity" character varying(40) NOT NULL,
+                "Status" character varying(80) NOT NULL,
+                "Message" character varying(1200) NOT NULL,
+                "DetailsJson" TEXT NOT NULL,
+                "CorrelationId" character varying(180) NOT NULL,
+                "CreatedAtUtc" timestamp with time zone NOT NULL,
+                "ConcurrencyToken" uuid NOT NULL
+            );
+            """,
+            cancellationToken);
+        await dbContext.Database.ExecuteSqlRawAsync(
+            """
             CREATE UNIQUE INDEX IF NOT EXISTS "IX_Plugins_CapabilityGrants_PluginId_Capability_RecipeId_ScopeKind_ScopeKey"
             ON "Plugins_CapabilityGrants" ("PluginId", "Capability", "RecipeId", "ScopeKind", "ScopeKey");
             """,
@@ -272,6 +322,18 @@ public static class PluginSchemaInitializer
             """
             CREATE INDEX IF NOT EXISTS "IX_Plugins_OAuthSessions_PluginId_ConnectionId_Status"
             ON "Plugins_OAuthSessions" ("PluginId", "ConnectionId", "Status");
+            """,
+            cancellationToken);
+        await dbContext.Database.ExecuteSqlRawAsync(
+            """
+            CREATE INDEX IF NOT EXISTS "IX_Plugins_Logs_StreamKind_PluginId_CreatedAtUtc"
+            ON "Plugins_Logs" ("StreamKind", "PluginId", "CreatedAtUtc");
+            """,
+            cancellationToken);
+        await dbContext.Database.ExecuteSqlRawAsync(
+            """
+            CREATE INDEX IF NOT EXISTS "IX_Plugins_Logs_PackageId_CreatedAtUtc"
+            ON "Plugins_Logs" ("PackageId", "CreatedAtUtc");
             """,
             cancellationToken);
     }

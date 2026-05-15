@@ -50,7 +50,9 @@ public static class RuntimeHostServiceCollectionExtensions
         services.AddResourcesModule();
         services.AddPromptsModule();
         services.AddFactoryModule();
-        services.AddPluginsModule();
+        services.AddPluginsModule(configuration, contentRootPath);
+        services.AddCanDoItAllGmailPlugin();
+        services.AddCanDoItAllOffice365Plugin();
         services.AddProcessesModule(configuration);
         services.AddValidationModule();
         services.AddTestLabModule();

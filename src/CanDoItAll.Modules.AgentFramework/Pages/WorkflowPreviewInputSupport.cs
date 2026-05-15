@@ -12,15 +12,25 @@ internal sealed record WorkflowPreviewProjectRequirement(
     WorkflowProjectStructureOperation Operation,
     bool IsWriteOperation);
 
+internal sealed record WorkflowPreviewSimulationRequirement(
+    WorkflowNodeId NodeId,
+    string NodeName,
+    WorkflowExecutorId SourceExecutorId,
+    string Description,
+    string OutputTemplateJson);
+
 internal sealed record WorkflowPreviewRequirements(
-    IReadOnlyList<WorkflowPreviewProjectRequirement> ProjectRequirements)
+    IReadOnlyList<WorkflowPreviewProjectRequirement> ProjectRequirements,
+    IReadOnlyList<WorkflowPreviewSimulationRequirement> SimulationRequirements)
 {
-    public static WorkflowPreviewRequirements Empty { get; } = new([]);
+    public static WorkflowPreviewRequirements Empty { get; } = new([], []);
 
     public bool NeedsProjectContext => ProjectRequirements.Any(requirement =>
         requirement.Operation != WorkflowProjectStructureOperation.ListProjects);
 
     public bool HasProjectStructureWrites => ProjectRequirements.Any(requirement => requirement.IsWriteOperation);
+
+    public bool NeedsPreviewDialog => NeedsProjectContext || SimulationRequirements.Count > 0;
 }
 
 internal sealed class WorkflowPreviewInputState
@@ -31,7 +41,7 @@ internal sealed class WorkflowPreviewInputState
 
     public string ParentNodeId { get; set; } = string.Empty;
 
-    public bool SkipProjectStructureWrites { get; set; }
+    public HashSet<string> SimulatedNodeIds { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     public WorkflowPreviewRequirements Requirements { get; set; } = WorkflowPreviewRequirements.Empty;
 
@@ -43,8 +53,11 @@ internal static class WorkflowPreviewInputSupport
     public const string DefaultInputJson = "{\"prompt\":\"Summarize this workflow input.\"}";
 
     private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
+    private static readonly Lazy<WorkflowPreviewSimulationTemplateCatalog> SimulationTemplateCatalog = new(LoadSimulationTemplateCatalog);
 
-    public static WorkflowPreviewRequirements Analyze(WorkflowDefinition definition)
+    public static WorkflowPreviewRequirements Analyze(
+        WorkflowDefinition definition,
+        IReadOnlyList<WorkflowExecutorDescriptor> executors)
     {
         var requirements = definition.Graph.Nodes
             .Where(node => node.Settings.ExecutorId == WorkflowExecutorIds.ProjectStructure)
@@ -53,9 +66,10 @@ internal static class WorkflowPreviewInputSupport
             .Select(requirement => requirement!)
             .ToArray();
 
-        return requirements.Length == 0
+        var simulationRequirements = CreateSimulationRequirements(definition, executors, requirements);
+        return requirements.Length == 0 && simulationRequirements.Count == 0
             ? WorkflowPreviewRequirements.Empty
-            : new WorkflowPreviewRequirements(requirements);
+            : new WorkflowPreviewRequirements(requirements, simulationRequirements);
     }
 
     public static bool TryBuildInputJson(
@@ -77,10 +91,11 @@ internal static class WorkflowPreviewInputSupport
             return false;
         }
 
+        var needsObjectInput = state.Requirements.NeedsProjectContext || !string.IsNullOrWhiteSpace(state.ParentNodeId);
         var root = rootNode as JsonObject;
-        if (root is null)
+        if (needsObjectInput && root is null)
         {
-            error = "Preview input must be a JSON object when the workflow needs project context.";
+            error = "Preview input must be a JSON object when the workflow needs project or parent-node context.";
             return false;
         }
 
@@ -92,7 +107,7 @@ internal static class WorkflowPreviewInputSupport
                 return false;
             }
 
-            root["projectId"] = projectId.ToString("D");
+            root!["projectId"] = projectId.ToString("D");
             var project = EnsureObject(root, "project", out error);
             if (project is null)
             {
@@ -105,7 +120,7 @@ internal static class WorkflowPreviewInputSupport
         if (!string.IsNullOrWhiteSpace(state.ParentNodeId))
         {
             var nodeId = state.ParentNodeId.Trim();
-            root["nodeId"] = nodeId;
+            root!["nodeId"] = nodeId;
             var runContext = EnsureObject(root, "runContext", out error);
             if (runContext is null)
             {
@@ -115,47 +130,49 @@ internal static class WorkflowPreviewInputSupport
             runContext["workflowNodeId"] = nodeId;
         }
 
-        inputJson = root.ToJsonString(JsonOptions);
+        inputJson = (root ?? rootNode)?.ToJsonString(JsonOptions) ?? "{}";
         return true;
     }
 
-    public static WorkflowDefinition ApplyPreviewOptions(
-        WorkflowDefinition definition,
+    public static WorkflowPreviewSimulationPlan BuildSimulationPlan(
         WorkflowPreviewInputState state)
     {
-        if (!state.SkipProjectStructureWrites || !state.Requirements.HasProjectStructureWrites)
-        {
-            return definition;
-        }
-
-        var skippedNodeIds = state.Requirements.ProjectRequirements
-            .Where(requirement => requirement.IsWriteOperation)
-            .Select(requirement => requirement.NodeId)
-            .ToHashSet();
-        var nodes = definition.Graph.Nodes
-            .Select(node => skippedNodeIds.Contains(node.Id) ? CreateSkippedNode(node) : node)
+        var steps = state.Requirements.SimulationRequirements
+            .Where(requirement => state.SimulatedNodeIds.Contains(requirement.NodeId.Value))
+            .Select(requirement => new WorkflowPreviewSimulationStep(
+                requirement.NodeId,
+                requirement.SourceExecutorId,
+                requirement.Description,
+                requirement.OutputTemplateJson))
             .ToArray();
 
-        return definition with
-        {
-            Graph = definition.Graph with
-            {
-                Nodes = nodes
-            }
-        };
+        return steps.Length == 0
+            ? WorkflowPreviewSimulationPlan.Empty
+            : new WorkflowPreviewSimulationPlan(steps);
     }
 
     public static string BuildRequirementSummary(WorkflowPreviewRequirements requirements)
     {
-        if (!requirements.NeedsProjectContext)
+        if (!requirements.NeedsProjectContext && requirements.SimulationRequirements.Count == 0)
         {
             return "This workflow can run with the JSON input below.";
         }
 
-        var nodes = string.Join(", ", requirements.ProjectRequirements
-            .Where(requirement => requirement.Operation != WorkflowProjectStructureOperation.ListProjects)
-            .Select(requirement => $"{requirement.NodeName} ({requirement.Operation})"));
-        return $"This workflow uses project-structure step(s): {nodes}. Provide project context before preview starts.";
+        var summaryParts = new List<string>();
+        if (requirements.NeedsProjectContext)
+        {
+            var nodes = string.Join(", ", requirements.ProjectRequirements
+                .Where(requirement => requirement.Operation != WorkflowProjectStructureOperation.ListProjects)
+                .Select(requirement => $"{requirement.NodeName} ({requirement.Operation})"));
+            summaryParts.Add($"This workflow uses project-structure step(s): {nodes}. Provide project context before preview starts.");
+        }
+
+        if (requirements.SimulationRequirements.Count > 0)
+        {
+            summaryParts.Add("You can simulate selected steps so preview runs avoid external mutations while preserving downstream payload shape.");
+        }
+
+        return string.Join(" ", summaryParts);
     }
 
     public static string? TryReadJsonString(
@@ -227,20 +244,85 @@ internal static class WorkflowPreviewInputSupport
             settings.Operation is WorkflowProjectStructureOperation.CreateAsset or WorkflowProjectStructureOperation.CreateTaskNodes);
     }
 
-    private static WorkflowNode CreateSkippedNode(WorkflowNode node)
-        => node with
+    private static IReadOnlyList<WorkflowPreviewSimulationRequirement> CreateSimulationRequirements(
+        WorkflowDefinition definition,
+        IReadOnlyList<WorkflowExecutorDescriptor> executors,
+        IReadOnlyList<WorkflowPreviewProjectRequirement> projectRequirements)
+    {
+        var executorsById = executors
+            .GroupBy(executor => executor.Id)
+            .ToDictionary(group => group.Key, group => group.First());
+        var projectRequirementsByNodeId = projectRequirements.ToDictionary(requirement => requirement.NodeId);
+        var requirements = new List<WorkflowPreviewSimulationRequirement>();
+
+        foreach (var node in definition.Graph.Nodes)
         {
-            Kind = WorkflowNodeKind.StrictLogic,
-            Name = $"{node.Name} (skipped)",
-            Settings = new WorkflowNodeSettings(
-                ComponentId: null,
-                AgentId: null,
-                SubworkflowId: null,
-                ExternalRequestKind: null,
-                Instructions: $"Project-structure write step '{node.Id}' was skipped for this preview.",
-                InputShape: node.Settings.InputShape,
-                ResultShape: node.Settings.ResultShape)
-        };
+            if (node.Settings.ExecutorId is not { } executorId)
+            {
+                continue;
+            }
+
+            if (projectRequirementsByNodeId.TryGetValue(node.Id, out var projectRequirement) &&
+                projectRequirement.IsWriteOperation &&
+                TryCreateConfiguredSimulationRequirement(node, executorId, projectRequirement.Operation.ToString(), out var configuredRequirement))
+            {
+                requirements.Add(configuredRequirement);
+                continue;
+            }
+
+            if (executorsById.TryGetValue(executorId, out var descriptor) &&
+                descriptor.Simulation.SupportsPreviewSimulation &&
+                !string.IsNullOrWhiteSpace(descriptor.Simulation.OutputTemplateJson))
+            {
+                requirements.Add(new WorkflowPreviewSimulationRequirement(
+                    node.Id,
+                    node.Name,
+                    executorId,
+                    descriptor.Simulation.Description,
+                    descriptor.Simulation.OutputTemplateJson));
+            }
+        }
+
+        return requirements;
+    }
+
+    private static bool TryCreateConfiguredSimulationRequirement(
+        WorkflowNode node,
+        WorkflowExecutorId executorId,
+        string operation,
+        out WorkflowPreviewSimulationRequirement requirement)
+    {
+        requirement = null!;
+        if (!TryGetConfiguredTemplate(executorId, operation, out var template))
+        {
+            return false;
+        }
+
+        requirement = new WorkflowPreviewSimulationRequirement(
+            node.Id,
+            node.Name,
+            executorId,
+            template.Description,
+            template.OutputTemplate.GetRawText());
+        return true;
+    }
+
+    private static bool TryGetConfiguredTemplate(
+        WorkflowExecutorId executorId,
+        string operation,
+        out WorkflowPreviewSimulationTemplate template)
+    {
+        template = null!;
+        if (!SimulationTemplateCatalog.Value.Executors.TryGetValue(executorId.Value, out var executorTemplates) ||
+            !executorTemplates.Operations.TryGetValue(operation, out var resolvedTemplate) ||
+            resolvedTemplate.OutputTemplate.ValueKind == JsonValueKind.Undefined)
+        {
+            return false;
+        }
+
+        template = resolvedTemplate;
+        return true;
+    }
 
     private static JsonObject? EnsureObject(
         JsonObject root,
@@ -269,5 +351,45 @@ internal static class WorkflowPreviewInputSupport
         var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
         options.Converters.Add(new JsonStringEnumConverter());
         return options;
+    }
+
+    private static WorkflowPreviewSimulationTemplateCatalog LoadSimulationTemplateCatalog()
+    {
+        var root = WorkflowTemplatePackLoader.FindPackRoot();
+        var path = Path.Combine(root, "preview-simulations", "executors.json");
+        if (!File.Exists(path))
+        {
+            return new WorkflowPreviewSimulationTemplateCatalog();
+        }
+
+        try
+        {
+            using var stream = File.OpenRead(path);
+            return JsonSerializer.Deserialize<WorkflowPreviewSimulationTemplateCatalog>(stream, JsonOptions) ??
+                   new WorkflowPreviewSimulationTemplateCatalog();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
+        {
+            throw new InvalidOperationException(
+                $"Workflow preview simulation template file '{path}' could not be loaded: {exception.Message}",
+                exception);
+        }
+    }
+
+    private sealed class WorkflowPreviewSimulationTemplateCatalog
+    {
+        public Dictionary<string, WorkflowPreviewSimulationExecutorTemplates> Executors { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private sealed class WorkflowPreviewSimulationExecutorTemplates
+    {
+        public Dictionary<string, WorkflowPreviewSimulationTemplate> Operations { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private sealed class WorkflowPreviewSimulationTemplate
+    {
+        public string Description { get; set; } = string.Empty;
+
+        public JsonElement OutputTemplate { get; set; }
     }
 }

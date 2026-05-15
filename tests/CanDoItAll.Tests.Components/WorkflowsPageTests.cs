@@ -55,7 +55,9 @@ public sealed class WorkflowsPageTests
             Assert.Equal(expectedModel, component.Model);
         }
 
-        cut.Find("[data-testid='workflows-tab-processes']").Click();
+        var workflowsTab = cut.Find("[data-testid='workflows-tab-workflows']");
+        Assert.Contains("Workflows", workflowsTab.TextContent);
+        workflowsTab.Click();
         cut.WaitForAssertion(() =>
         {
             Assert.NotEmpty(cut.FindAll("[data-testid='workflows-catalog-item']"));
@@ -136,7 +138,7 @@ public sealed class WorkflowsPageTests
             Assert.Contains(notificationService.Messages, message => message.Summary == "Workflow saved");
         });
 
-        cut.Find("[data-testid='workflows-tab-processes']").Click();
+        cut.Find("[data-testid='workflows-tab-workflows']").Click();
         cut.WaitForAssertion(() =>
         {
             Assert.NotEmpty(cut.FindAll("[data-testid='workflows-catalog-item']"));
@@ -180,7 +182,7 @@ public sealed class WorkflowsPageTests
         });
 
         cut.Find("[data-testid='workflow-canvas-preview-node-id']").Change("custom:test-parent-node");
-        cut.Find("[data-testid='workflow-canvas-preview-skip-project-writes']").Change(true);
+        cut.Find("[data-testid='workflow-canvas-preview-simulate-store']").Change(true);
         cut.Find("[data-testid='workflow-canvas-preview-input-run']").Click();
 
         cut.WaitForAssertion(() =>
@@ -196,8 +198,40 @@ public sealed class WorkflowsPageTests
         Assert.Equal("custom:test-parent-node", inputDocument.RootElement.GetProperty("nodeId").GetString());
         Assert.Equal("custom:test-parent-node", inputDocument.RootElement.GetProperty("runContext").GetProperty("workflowNodeId").GetString());
         var storeNode = Assert.Single(runner.LastRequest.DraftDefinition!.Graph.Nodes, node => node.Id.Value == "store");
-        Assert.Equal(WorkflowNodeKind.StrictLogic, storeNode.Kind);
-        Assert.Null(storeNode.Settings.ExecutorId);
+        Assert.Equal(WorkflowNodeKind.Executor, storeNode.Kind);
+        Assert.Equal(WorkflowExecutorIds.ProjectStructure, storeNode.Settings.ExecutorId);
+        var simulatedStep = Assert.Single(runner.LastRequest.PreviewSimulationPlan.Steps);
+        Assert.Equal(storeNode.Id, simulatedStep.NodeId);
+        Assert.Equal(WorkflowExecutorIds.ProjectStructure, simulatedStep.SourceExecutorId);
+        Assert.Contains("inputPayload", simulatedStep.OutputTemplateJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Workflow_canvas_preview_selects_running_node_from_progress()
+    {
+        var runner = new NodeProgressWorkflowTestRunner(new WorkflowNodeId("work"));
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+        {
+            services.RemoveAll<IWorkflowTestRunner>();
+            services.AddSingleton<IWorkflowTestRunner>(runner);
+        });
+        var definition = CreatePreviewProgressDefinition();
+
+        var cut = harness.Context.RenderComponent<WorkflowCanvasEditor>(parameters => parameters
+            .Add(component => component.Definition, definition)
+            .Add(component => component.Components, [])
+            .Add(component => component.ProviderOptions, []));
+
+        cut.WaitForElement("[data-testid='workflow-canvas-run-preview']");
+        cut.Find("[data-testid='workflow-canvas-run-preview']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.True(runner.HadProgressObserver);
+            Assert.Contains("Succeeded", cut.Find("[data-testid='workflow-canvas-test-result']").TextContent);
+            var surface = cut.FindComponent<CanvasWorkbench>().Instance.Surface;
+            Assert.Equal(["work"], surface.UiState.SelectedNodeIds);
+        });
     }
 
     [Fact]
@@ -718,6 +752,53 @@ public sealed class WorkflowsPageTests
             now);
     }
 
+    private static WorkflowDefinition CreatePreviewProgressDefinition()
+    {
+        var start = new WorkflowNodeId("start");
+        var work = new WorkflowNodeId("work");
+        var end = new WorkflowNodeId("end");
+        var now = DateTimeOffset.UtcNow;
+        return new WorkflowDefinition(
+            WorkflowId.New(),
+            WorkflowVersionId.New(),
+            "Preview progress workflow",
+            "Workflow used to verify canvas selection follows preview execution.",
+            WorkflowLifecycleStatus.Draft,
+            new WorkflowGraph(
+                start,
+                [
+                    CreateHistoryNode(start, WorkflowNodeKind.Start, resultShape: WorkflowValueShape.Text),
+                    CreateHistoryNode(work, WorkflowNodeKind.StrictLogic, inputShape: WorkflowValueShape.Text, resultShape: WorkflowValueShape.Text),
+                    CreateHistoryNode(end, WorkflowNodeKind.End, inputShape: WorkflowValueShape.Text)
+                ],
+                [
+                    new WorkflowEdge(
+                        new WorkflowEdgeId("start-to-work"),
+                        start,
+                        SourcePortId: null,
+                        work,
+                        TargetPortId: null,
+                        WorkflowEdgeKind.Direct,
+                        ConditionExpression: string.Empty),
+                    new WorkflowEdge(
+                        new WorkflowEdgeId("work-to-end"),
+                        work,
+                        SourcePortId: null,
+                        end,
+                        TargetPortId: null,
+                        WorkflowEdgeKind.Direct,
+                        ConditionExpression: string.Empty)
+                ]),
+            new WorkflowRuntimePolicy(
+                WorkflowRuntimeBackendKind.InProcess,
+                AllowInProcessPreviewRuns: true,
+                RequireDurableProductionRuns: false,
+                ExposeAzureFunctionsStatusEndpoint: false,
+                ExposeAzureFunctionsMcpTool: false),
+            now,
+            now);
+    }
+
     private static WorkflowNode CreateHistoryNode(
         WorkflowNodeId id,
         WorkflowNodeKind kind,
@@ -782,6 +863,52 @@ public sealed class WorkflowsPageTests
                 Artifacts: [],
                 PendingExternalRequests: [],
                 ErrorMessage: string.Empty));
+        }
+    }
+
+    private sealed class NodeProgressWorkflowTestRunner(WorkflowNodeId runningNodeId) : IWorkflowTestRunner
+    {
+        public bool HadProgressObserver { get; private set; }
+
+        public async Task<WorkflowTestRunResult> RunAsync(
+            WorkflowTestRunRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            var definition = request.DraftDefinition ?? CreatePreviewProgressDefinition();
+            var observer = WorkflowNodeExecutionProgressScope.Current;
+            HadProgressObserver = observer is not null;
+            if (observer is not null)
+            {
+                await observer.RecordAsync(
+                    new WorkflowNodeExecutionProgress(
+                        definition.Id,
+                        definition.VersionId,
+                        RunId: null,
+                        runningNodeId,
+                        WorkflowNodeExecutionProgressState.Started,
+                        DateTimeOffset.UtcNow),
+                    cancellationToken);
+            }
+
+            var now = DateTimeOffset.UtcNow;
+            var run = new WorkflowRunSnapshot(
+                WorkflowRunId.New(),
+                definition.Id,
+                definition.VersionId,
+                WorkflowRunState.Completed,
+                WorkflowRuntimeBackendKind.InProcess,
+                BackendRunId: "progress-preview",
+                Summary: "Progress preview completed.",
+                now,
+                now);
+            return new WorkflowTestRunResult(
+                Succeeded: true,
+                WorkflowValidationResult.Success,
+                run,
+                Events: [],
+                Artifacts: [],
+                PendingExternalRequests: [],
+                ErrorMessage: string.Empty);
         }
     }
 

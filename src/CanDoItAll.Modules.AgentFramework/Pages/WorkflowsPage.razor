@@ -170,10 +170,10 @@
                     </Grid>
                 </TabsItem>
 
-                <TabsItem Text="Processes"
+                <TabsItem Text="Workflows"
                           Icon="list_alt"
                           BadgeText="@definitions.Count.ToString()"
-                          data-testid="workflows-tab-processes">
+                          data-testid="workflows-tab-workflows">
                     <Grid Gap="LayoutGap.Large"
                           Class="workflows-layout"
                           ColumnTemplateXl="minmax(18rem,0.85fr) minmax(0,1.45fr)">
@@ -693,14 +693,24 @@
                                 </label>
                             </Grid>
 
-                            @if (previewInputState.Requirements.HasProjectStructureWrites)
+                            @if (previewInputState.Requirements.SimulationRequirements.Count > 0)
                             {
-                                <label class="workflows-check-field">
-                                    <input type="checkbox"
-                                           @bind="previewInputState.SkipProjectStructureWrites"
-                                           data-testid="workflows-preview-skip-project-writes" />
-                                    <span>Skip project-structure write steps for this preview</span>
-                                </label>
+                                <SurfaceCard Soft="true">
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Simulation" />
+                                    <p class="workflows-muted">Select steps to replace with simulated output during this preview.</p>
+                                    <Stack Gap="LayoutGap.XSmall">
+                                        @foreach (var requirement in previewInputState.Requirements.SimulationRequirements)
+                                        {
+                                            <label class="workflows-check-field">
+                                                <input type="checkbox"
+                                                       checked="@IsPreviewSimulationEnabled(requirement)"
+                                                       @onchange="args => HandlePreviewSimulationChanged(requirement, args)"
+                                                       data-testid="@BuildPreviewSimulationTestId(requirement)" />
+                                                <span>@requirement.NodeName: @requirement.Description</span>
+                                            </label>
+                                        }
+                                    </Stack>
+                                </SurfaceCard>
                             }
 
                             <label class="workflows-field">

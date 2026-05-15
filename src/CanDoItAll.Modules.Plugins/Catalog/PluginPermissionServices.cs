@@ -11,6 +11,10 @@ public sealed class PluginGrantStore(
     IClock clock,
     ILogger<PluginGrantStore> logger)
 {
+    private long revision;
+
+    public long Revision => Interlocked.Read(ref revision);
+
     public async Task<IReadOnlyList<PluginCapabilityGrantItem>> ListAsync(
         PluginId pluginId,
         CancellationToken cancellationToken = default)
@@ -89,6 +93,7 @@ public sealed class PluginGrantStore(
         record.UpdatedAtUtc = timestamp;
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        Interlocked.Increment(ref revision);
         logger.LogInformation(
             "Set plugin grant {PluginId} capability {Capability} recipe {RecipeId} state {State}. Actor={Actor}.",
             pluginId.Value,
@@ -149,13 +154,17 @@ public sealed class PluginConnectionStore(
         CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var records = await dbContext.Set<PluginConnectionRecord>()
+        var record = await dbContext.Set<PluginConnectionRecord>()
+            .FromSqlInterpolated($"""
+                SELECT *
+                FROM "Plugins_Connections"
+                WHERE "PluginId" = {pluginId.Value}
+                  AND "ConnectionKey" = {connectionKey.Value}
+                ORDER BY "UpdatedAtUtc" DESC, "CreatedAtUtc" DESC
+                LIMIT 1
+                """)
             .AsNoTracking()
-            .Where(item => item.PluginId == pluginId.Value && item.ConnectionKey == connectionKey.Value)
-            .ToArrayAsync(cancellationToken);
-        var record = records
-            .OrderByDescending(item => item.UpdatedAtUtc)
-            .FirstOrDefault();
+            .FirstOrDefaultAsync(cancellationToken);
 
         return record is null ? null : ToItem(record);
     }
@@ -238,12 +247,15 @@ public sealed class PluginGrantEvaluator(
     PluginInstallationStore installationStore,
     PluginGrantStore grantStore)
 {
+    private readonly Dictionary<string, CachedInstallation> installationCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, CachedGrants> grantCache = new(StringComparer.OrdinalIgnoreCase);
+
     public PluginGrantDecision Evaluate(
         PluginId pluginId,
         PluginCapabilityKind capability,
         PluginHostToolRecipeId? recipeId = null)
     {
-        var installation = installationStore.Find(pluginId);
+        var installation = FindInstallation(pluginId);
         if (installation is null)
         {
             return PluginGrantDecision.Deny(
@@ -275,7 +287,7 @@ public sealed class PluginGrantEvaluator(
                 recipeId);
         }
 
-        var grants = grantStore.List(pluginId);
+        var grants = ListGrants(pluginId);
         var capabilityDecision = EvaluateGrant(pluginId, capability, recipeId: null, grants);
         if (!capabilityDecision.Allowed)
         {
@@ -347,12 +359,47 @@ public sealed class PluginGrantEvaluator(
                 recipeId)
         };
     }
+
+    private PluginInstallationRecord? FindInstallation(PluginId pluginId)
+    {
+        var revision = installationStore.Revision;
+        if (installationCache.TryGetValue(pluginId.Value, out var cached) && cached.Revision == revision)
+        {
+            return cached.Installation;
+        }
+
+        var installation = installationStore.Find(pluginId);
+        installationCache[pluginId.Value] = new CachedInstallation(revision, installation);
+        return installation;
+    }
+
+    private IReadOnlyList<PluginCapabilityGrantItem> ListGrants(PluginId pluginId)
+    {
+        var revision = grantStore.Revision;
+        if (grantCache.TryGetValue(pluginId.Value, out var cached) && cached.Revision == revision)
+        {
+            return cached.Grants;
+        }
+
+        var grants = grantStore.List(pluginId);
+        grantCache[pluginId.Value] = new CachedGrants(revision, grants);
+        return grants;
+    }
+
+    private sealed record CachedInstallation(
+        long Revision,
+        PluginInstallationRecord? Installation);
+
+    private sealed record CachedGrants(
+        long Revision,
+        IReadOnlyList<PluginCapabilityGrantItem> Grants);
 }
 
 public sealed class PluginSettingsService(
     PluginCatalogService catalogService,
     PluginGrantStore grantStore,
-    PluginConnectionStore connectionStore)
+    PluginConnectionStore connectionStore,
+    PluginHostToolRecipeCatalogService hostToolRecipeCatalog)
 {
     public async Task<PluginSettingsDetail?> GetSettingsAsync(
         PluginId pluginId,
@@ -369,7 +416,7 @@ public sealed class PluginSettingsService(
             catalogItem,
             await ListEffectiveGrantsAsync(catalogItem, cancellationToken),
             await connectionStore.ListAsync(pluginId, cancellationToken),
-            PluginHostToolRecipeCatalog.ListForPlugin(catalogItem),
+            hostToolRecipeCatalog.ListForPlugin(catalogItem),
             catalogItem.Descriptor.Connections,
             catalogItem.Descriptor.OAuth2);
     }
@@ -393,7 +440,7 @@ public sealed class PluginSettingsService(
             result.Add(ResolveEffectiveGrant(catalogItem.PluginId, capability, recipeId: null, persisted));
         }
 
-        foreach (var recipe in PluginHostToolRecipeCatalog.ListForPlugin(catalogItem))
+        foreach (var recipe in hostToolRecipeCatalog.ListForPlugin(catalogItem))
         {
             result.Add(ResolveEffectiveGrant(catalogItem.PluginId, PluginCapabilityKind.HostCommand, recipe.RecipeId, persisted));
         }
@@ -481,19 +528,29 @@ public static class PluginCapabilityCatalog
             .ToArray();
 }
 
-public static class PluginHostToolRecipeCatalog
+public interface IPluginHostToolRecipeCatalogSource
 {
-    private static readonly PluginHostToolRecipeDescriptor[] DockerRecipes =
-    [
-        new(PluginHostToolRecipeIds.DockerListContainers, "List Docker containers", "Read Docker container metadata through docker ps.", PluginGrantRiskKind.High, MutatesHost: false),
-        new(PluginHostToolRecipeIds.DockerPullImage, "Pull Docker image", "Pull a Docker image through a constrained docker pull recipe.", PluginGrantRiskKind.High, MutatesHost: true),
-        new(PluginHostToolRecipeIds.DockerStartContainer, "Start Docker container", "Start or create a Docker container through a constrained docker run/start recipe.", PluginGrantRiskKind.High, MutatesHost: true),
-        new(PluginHostToolRecipeIds.DockerReadLogs, "Read Docker logs", "Read bounded Docker container logs.", PluginGrantRiskKind.High, MutatesHost: false)
-    ];
+    IReadOnlyList<PluginHostToolRecipeDescriptor> ListForPlugin(PluginCatalogItem catalogItem);
+}
 
-    public static IReadOnlyList<PluginHostToolRecipeDescriptor> ListForPlugin(PluginCatalogItem catalogItem)
-        => catalogItem.Capabilities.HasFlag(PluginCapabilityKind.HostCommand) &&
-           string.Equals(catalogItem.PluginId.Value, DockerPluginConstants.PluginId.Value, StringComparison.OrdinalIgnoreCase)
-            ? DockerRecipes
-            : [];
+public sealed class PluginHostToolRecipeCatalogService(IEnumerable<IPluginHostToolRecipeCatalogSource> sources)
+{
+    public IReadOnlyList<PluginHostToolRecipeDescriptor> ListForPlugin(PluginCatalogItem catalogItem)
+        => sources
+            .SelectMany(source => source.ListForPlugin(catalogItem))
+            .GroupBy(recipe => recipe.RecipeId, RecipeIdComparer.Instance)
+            .Select(group => group.First())
+            .OrderBy(recipe => recipe.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+}
+
+internal sealed class RecipeIdComparer : IEqualityComparer<PluginHostToolRecipeId>
+{
+    public static RecipeIdComparer Instance { get; } = new();
+
+    public bool Equals(PluginHostToolRecipeId x, PluginHostToolRecipeId y)
+        => string.Equals(x.Value, y.Value, StringComparison.OrdinalIgnoreCase);
+
+    public int GetHashCode(PluginHostToolRecipeId obj)
+        => StringComparer.OrdinalIgnoreCase.GetHashCode(obj.Value);
 }

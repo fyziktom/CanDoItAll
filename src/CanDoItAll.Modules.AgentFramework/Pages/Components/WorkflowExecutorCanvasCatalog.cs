@@ -6,9 +6,10 @@ using CanDoItAll.Modules.Security;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
-internal static class WorkflowExecutorCanvasCatalog
+public static class WorkflowExecutorCanvasCatalog
 {
     private const string CreateExecutorActionPrefix = "workflow-executor:create:";
+    private const string PluginExecutorsActionId = "workflow-executor:plugins";
     private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
 
     public static IReadOnlyList<CanvasWorkbenchAction> BuildQuickCreateActions(
@@ -19,12 +20,20 @@ internal static class WorkflowExecutorCanvasCatalog
             .Where(executor => executor.CanExecute)
             .OrderBy(executor => executor.Category)
             .ThenBy(executor => executor.Name, StringComparer.OrdinalIgnoreCase)
-            .Select(executor => BuildCreateAction(executor, secrets))
             .ToList();
         if (implemented.Count == 0)
         {
             return [];
         }
+
+        var builtInActions = implemented
+            .Where(executor => !IsPluginExecutor(executor))
+            .Select(executor => BuildCreateAction(executor, secrets))
+            .ToList();
+        var pluginAction = BuildPluginExecutorsAction(implemented, secrets);
+        var children = pluginAction is null
+            ? builtInActions
+            : builtInActions.Append(pluginAction).ToList();
 
         return
         [
@@ -36,7 +45,7 @@ internal static class WorkflowExecutorCanvasCatalog
                 Description = "Run typed tools with explicit settings, timeout, retry, and result contracts.",
                 Icon = "bolt",
                 Tone = "info",
-                Children = implemented
+                Children = children
             }
         ];
     }
@@ -142,6 +151,77 @@ internal static class WorkflowExecutorCanvasCatalog
             WorkflowExecutorCategoryKind.Command => "terminal",
             _ => "bolt"
         };
+
+    private static CanvasWorkbenchAction? BuildPluginExecutorsAction(
+        IReadOnlyList<WorkflowExecutorDescriptor> executors,
+        IReadOnlyList<SecretListItem> secrets)
+    {
+        var pluginGroups = executors
+            .Where(IsPluginExecutor)
+            .GroupBy(executor => executor.Source.PluginId, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(group => ResolvePluginDisplayName(group), StringComparer.OrdinalIgnoreCase)
+            .Select(group => new CanvasWorkbenchAction
+            {
+                ActionId = $"{PluginExecutorsActionId}:{group.Key}",
+                Label = ResolvePluginDisplayName(group),
+                MenuLabel = ResolvePluginDisplayName(group),
+                Description = $"Create workflow executors contributed by {ResolvePluginDisplayName(group)}.",
+                Icon = ResolveIconName(group.First().Source.Icon),
+                Tone = "accent",
+                Children = group
+                    .OrderBy(executor => executor.Name, StringComparer.OrdinalIgnoreCase)
+                    .Select(executor => BuildCreateAction(executor, secrets))
+                    .ToList()
+            })
+            .ToList();
+
+        if (pluginGroups.Count == 0)
+        {
+            return null;
+        }
+
+        return new CanvasWorkbenchAction
+        {
+            ActionId = PluginExecutorsActionId,
+            Label = "Plugins",
+            MenuLabel = "Plugins",
+            Description = "Create executors contributed by installed or bundled plugins.",
+            Icon = "extension",
+            Tone = "accent",
+            Children = pluginGroups
+        };
+    }
+
+    public static bool IsPluginExecutor(WorkflowExecutorDescriptor executor)
+        => executor.Source.Kind != WorkflowExecutorSourceKind.BuiltIn &&
+           !string.IsNullOrWhiteSpace(executor.Source.PluginId);
+
+    public static string ResolvePluginDisplayName(IEnumerable<WorkflowExecutorDescriptor> executors)
+    {
+        var materialized = executors.ToList();
+        var displayName = materialized
+            .Select(executor => executor.Source.DisplayName)
+            .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
+        if (!string.IsNullOrWhiteSpace(displayName))
+        {
+            return displayName;
+        }
+
+        return materialized
+            .Select(executor => executor.Source.PluginId)
+            .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? "Plugin";
+    }
+
+    public static string ResolvePluginIconName(IEnumerable<WorkflowExecutorDescriptor> executors)
+        => ResolveIconName(executors.Select(executor => executor.Source.Icon).FirstOrDefault(icon => icon is not null));
+
+    private static string ResolvePluginDisplayName(IGrouping<string, WorkflowExecutorDescriptor> group)
+        => ResolvePluginDisplayName(group.AsEnumerable());
+
+    private static string ResolveIconName(UiIconDescriptor? icon)
+        => icon?.Kind == UiIconKind.MaterialIcon && !string.IsNullOrWhiteSpace(icon.Value)
+            ? icon.Value
+            : "extension";
 
     private static string TrimMenuLabel(string label)
     {
