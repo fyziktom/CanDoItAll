@@ -1,6 +1,7 @@
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
+using System.Net;
 using System.Text.Json;
 
 namespace CanDoItAll.Modules.Workbench;
@@ -14,9 +15,12 @@ public sealed class ProjectStructureAgentService(
     IProjectStructureRuntimeLauncher runtimeLauncher,
     IProjectStructureLocalFileOpener localFileOpener,
     IWorkspacePathAccessGuard pathAccessGuard,
+    IHttpClientFactory httpClientFactory,
     ProjectStructureProcessNodeService processNodeService,
     ProjectStructureWorkflowNodeService workflowNodeService)
 {
+    private const long MaxExternalAssetSourceBytes = 25L * 1024L * 1024L;
+
     private static readonly ProjectStructureReadRequest FullNodeReadRequest = new(
         IncludeLinks: true,
         IncludeLayout: true,
@@ -1160,15 +1164,35 @@ public sealed class ProjectStructureAgentService(
             return request.Media;
         }
 
-        if (string.IsNullOrWhiteSpace(request.SourceWorkspacePath))
+        if (!string.IsNullOrWhiteSpace(request.SourceWorkspacePath))
         {
-            throw new ProjectStructureAgentException(
-                400,
-                "MediaSourceRequired",
-                "Asset creation requires either a media payload or a source workspace path.");
+            if (TryResolveHttpSourceUri(request.SourceWorkspacePath, out var workspacePathSourceUri))
+            {
+                return await ResolveExternalSourceMediaAsync(request, workspacePathSourceUri, cancellationToken);
+            }
+
+            return await ResolveWorkspaceSourceMediaAsync(request, cancellationToken);
         }
 
-        var resolution = pathAccessGuard.ResolveWorkspacePath(request.SourceWorkspacePath);
+        if (!string.IsNullOrWhiteSpace(request.SourceUrl))
+        {
+            return await ResolveExternalSourceMediaAsync(
+                request,
+                ResolveExternalSourceUri(request.SourceUrl),
+                cancellationToken);
+        }
+
+        throw new ProjectStructureAgentException(
+            400,
+            "MediaSourceRequired",
+            "Asset creation requires a media payload, a source workspace path, or an external source URL.");
+    }
+
+    private async Task<ProjectObjectMediaPayload> ResolveWorkspaceSourceMediaAsync(
+        ProjectStructureAssetCreateInput request,
+        CancellationToken cancellationToken)
+    {
+        var resolution = pathAccessGuard.ResolveWorkspacePath(request.SourceWorkspacePath!);
         if (!resolution.IsSuccess)
         {
             throw new ProjectStructureAgentException(
@@ -1192,6 +1216,195 @@ public sealed class ProjectStructureAgentService(
             fileName,
             contentType,
             Convert.ToBase64String(bytes));
+    }
+
+    private async Task<ProjectObjectMediaPayload> ResolveExternalSourceMediaAsync(
+        ProjectStructureAssetCreateInput request,
+        Uri sourceUri,
+        CancellationToken cancellationToken)
+    {
+        ValidateExternalSourceUri(sourceUri);
+
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(60));
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Get, sourceUri);
+        var httpClient = httpClientFactory.CreateClient("ProjectStructureExternalAssetSource");
+
+        HttpResponseMessage response;
+        try
+        {
+            response = await httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
+        }
+        catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new ProjectStructureAgentException(
+                504,
+                "SourceUrlTimeout",
+                $"External asset source '{sourceUri}' did not respond before the download timeout.",
+                ex.Message);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new ProjectStructureAgentException(
+                502,
+                "SourceUrlDownloadFailed",
+                $"External asset source '{sourceUri}' could not be downloaded.",
+                ex.Message);
+        }
+
+        using (response)
+        {
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new ProjectStructureAgentException(
+                    502,
+                    "SourceUrlDownloadFailed",
+                    $"External asset source '{sourceUri}' returned {(int)response.StatusCode} {response.ReasonPhrase}.");
+            }
+
+            var declaredLength = response.Content.Headers.ContentLength;
+            if (declaredLength is > MaxExternalAssetSourceBytes)
+            {
+                throw new ProjectStructureAgentException(
+                    413,
+                    "SourceUrlTooLarge",
+                    $"External asset source '{sourceUri}' is larger than the {MaxExternalAssetSourceBytes} byte limit.");
+            }
+
+            var bytes = await ReadExternalSourceBytesAsync(response.Content, sourceUri, timeout.Token);
+            var fileName = ResolveSourceAssetFileName(request.SourceFileName, sourceUri);
+            var contentType = ResolveSourceAssetContentType(
+                string.IsNullOrWhiteSpace(request.SourceContentType)
+                    ? response.Content.Headers.ContentType?.MediaType
+                    : request.SourceContentType,
+                fileName);
+
+            return new ProjectObjectMediaPayload(
+                fileName,
+                contentType,
+                Convert.ToBase64String(bytes));
+        }
+    }
+
+    private static async Task<byte[]> ReadExternalSourceBytesAsync(
+        HttpContent content,
+        Uri sourceUri,
+        CancellationToken cancellationToken)
+    {
+        await using var stream = await content.ReadAsStreamAsync(cancellationToken);
+        using var memory = new MemoryStream();
+        var buffer = new byte[81920];
+        long totalBytes = 0;
+
+        while (true)
+        {
+            var read = await stream.ReadAsync(buffer, cancellationToken);
+            if (read == 0)
+            {
+                break;
+            }
+
+            totalBytes += read;
+            if (totalBytes > MaxExternalAssetSourceBytes)
+            {
+                throw new ProjectStructureAgentException(
+                    413,
+                    "SourceUrlTooLarge",
+                    $"External asset source '{sourceUri}' is larger than the {MaxExternalAssetSourceBytes} byte limit.");
+            }
+
+            memory.Write(buffer, 0, read);
+        }
+
+        if (memory.Length == 0)
+        {
+            throw new ProjectStructureAgentException(
+                400,
+                "SourceUrlEmpty",
+                $"External asset source '{sourceUri}' returned no content.");
+        }
+
+        return memory.ToArray();
+    }
+
+    private static Uri ResolveExternalSourceUri(string? sourceUrl)
+    {
+        if (!TryResolveHttpSourceUri(sourceUrl, out var uri))
+        {
+            throw new ProjectStructureAgentException(
+                400,
+                "SourceUrlInvalid",
+                "External asset source URLs must be absolute http or https URLs.");
+        }
+
+        return uri;
+    }
+
+    private static bool TryResolveHttpSourceUri(string? sourceUrl, out Uri uri)
+    {
+        uri = null!;
+        return !string.IsNullOrWhiteSpace(sourceUrl) &&
+               Uri.TryCreate(sourceUrl.Trim(), UriKind.Absolute, out uri!) &&
+               uri.Scheme is "http" or "https";
+    }
+
+    private static void ValidateExternalSourceUri(Uri sourceUri)
+    {
+        if (!string.IsNullOrWhiteSpace(sourceUri.UserInfo))
+        {
+            throw new ProjectStructureAgentException(
+                400,
+                "SourceUrlNotAllowed",
+                "External asset source URLs must not contain embedded credentials.");
+        }
+
+        if (sourceUri.IsLoopback ||
+            sourceUri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
+            sourceUri.Host.EndsWith(".local", StringComparison.OrdinalIgnoreCase) ||
+            (IPAddress.TryParse(sourceUri.Host, out var address) && IsBlockedSourceAddress(address)))
+        {
+            throw new ProjectStructureAgentException(
+                400,
+                "SourceUrlNotAllowed",
+                "External asset source URLs must point to public http or https hosts.");
+        }
+    }
+
+    private static bool IsBlockedSourceAddress(IPAddress address)
+    {
+        if (IPAddress.IsLoopback(address))
+        {
+            return true;
+        }
+
+        if (address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+        {
+            var bytes = address.GetAddressBytes();
+            return bytes[0] == 10 ||
+                   bytes[0] == 127 ||
+                   (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) ||
+                   (bytes[0] == 192 && bytes[1] == 168) ||
+                   (bytes[0] == 169 && bytes[1] == 254) ||
+                   bytes[0] == 0;
+        }
+
+        if (address.IsIPv6LinkLocal || address.IsIPv6SiteLocal || address.IsIPv6Multicast)
+        {
+            return true;
+        }
+
+        return address.Equals(IPAddress.IPv6Loopback) || address.Equals(IPAddress.IPv6None);
+    }
+
+    private static string ResolveSourceAssetFileName(string? requestedFileName, Uri sourceUri)
+    {
+        var pathFileName = Uri.UnescapeDataString(Path.GetFileName(sourceUri.AbsolutePath));
+        var candidate = string.IsNullOrWhiteSpace(requestedFileName)
+            ? pathFileName
+            : Path.GetFileName(requestedFileName.Trim());
+        return string.IsNullOrWhiteSpace(candidate)
+            ? "project-asset.bin"
+            : candidate;
     }
 
     private static string ResolveSourceAssetFileName(string? requestedFileName, string fullPath)

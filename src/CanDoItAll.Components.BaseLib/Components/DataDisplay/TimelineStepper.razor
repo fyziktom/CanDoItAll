@@ -1,0 +1,271 @@
+@namespace CanDoItAll.Components.BaseLib
+@using System.Globalization
+
+<section @attributes='AdditionalAttributes.WithClass("cda-timeline-stepper")' aria-label="@AriaLabel">
+    <div class="cda-timeline-stepper__summary">
+        <div class="cda-timeline-stepper__identity">
+            @if (ShowModeToggle)
+            {
+                <div class="cda-timeline-stepper__mode" role="group" aria-label="@ModeAriaLabel">
+                    <button type="button"
+                            class="@ModeButtonClass(TimelineStepperMode.Automatic)"
+                            aria-pressed="@(Mode == TimelineStepperMode.Automatic)"
+                            @onclick="@(() => SetModeAsync(TimelineStepperMode.Automatic))">
+                        <span class="material-icons" aria-hidden="true">play_circle</span>
+                        <span>@AutomaticText</span>
+                    </button>
+                    <button type="button"
+                            class="@ModeButtonClass(TimelineStepperMode.Manual)"
+                            aria-pressed="@(Mode == TimelineStepperMode.Manual)"
+                            @onclick="@(() => SetModeAsync(TimelineStepperMode.Manual))">
+                        <span class="material-icons" aria-hidden="true">touch_app</span>
+                        <span>@ManualText</span>
+                    </button>
+                </div>
+            }
+            else
+            {
+                <span class="cda-timeline-stepper__mode-pill">@ModeText</span>
+            }
+
+            <div class="cda-timeline-stepper__copy">
+                <span>@StepLabel</span>
+                <strong>@CurrentStepText</strong>
+                @if (!string.IsNullOrWhiteSpace(CurrentLabel))
+                {
+                    <small>@CurrentLabel</small>
+                }
+            </div>
+        </div>
+
+        <div class="cda-timeline-stepper__status">
+            <span class="@StatusDotClass" aria-hidden="true"></span>
+            <span>@StatusText</span>
+        </div>
+    </div>
+
+    <div class="cda-timeline-stepper__rail-wrap">
+        <div class="cda-timeline-stepper__rail" role="slider" aria-valuemin="1" aria-valuemax="@SafeTotalSteps" aria-valuenow="@SafeCurrentStep" aria-valuetext="@CurrentStepText">
+            <span class="cda-timeline-stepper__rail-fill cda-timeline-stepper__rail-fill--available" style="@AvailableFillStyle"></span>
+            <span class="cda-timeline-stepper__rail-fill cda-timeline-stepper__rail-fill--selected" style="@SelectedFillStyle"></span>
+            <span class="cda-timeline-stepper__marker" style="@MarkerStyle" aria-hidden="true"></span>
+            @foreach (TimelineStepperTick tick in NormalizedTicks)
+            {
+                <button type="button"
+                        class="@TickClass(tick)"
+                        style="@TickStyle(tick.Step)"
+                        title="@TickTitle(tick)"
+                        disabled="@tick.Disabled"
+                        aria-label="@TickTitle(tick)"
+                        @onclick="@(() => SelectStepAsync(tick.Step))">
+                    <span>@tick.Label</span>
+                </button>
+            }
+        </div>
+    </div>
+
+    <div class="cda-timeline-stepper__footer">
+        <div class="cda-timeline-stepper__legend">
+            <span><i class="cda-timeline-stepper__legend-swatch cda-timeline-stepper__legend-swatch--available"></i>@AvailableText</span>
+            <span><i class="cda-timeline-stepper__legend-swatch cda-timeline-stepper__legend-swatch--future"></i>@FutureText</span>
+        </div>
+        <div class="cda-timeline-stepper__actions">
+            <Button Icon="chevron_left"
+                    ButtonStyle="ButtonStyle.Secondary"
+                    Variant="Variant.Outlined"
+                    Size="ButtonSize.Small"
+                    Disabled="@(!CanStepBack)"
+                    Click="PreviousClicked"
+                    aria-label="@PreviousText"
+                    data-testid="timeline-stepper-previous" />
+            @if (ShowPlayPause)
+            {
+                <Button Icon="@PlayPauseIcon"
+                        ButtonStyle="ButtonStyle.Secondary"
+                        Variant="Variant.Outlined"
+                        Size="ButtonSize.Small"
+                        Disabled="@(!CanPlayPause)"
+                        Click="PlayPauseClicked"
+                        aria-label="@PlayPauseText"
+                        data-testid="timeline-stepper-play-pause" />
+            }
+            <Button Text="@NextText"
+                    Icon="chevron_right"
+                    ButtonStyle="ButtonStyle.Primary"
+                    Size="ButtonSize.Small"
+                    Disabled="@(!CanStepForward)"
+                    Click="NextClicked"
+                    data-testid="timeline-stepper-next" />
+        </div>
+    </div>
+</section>
+
+@code {
+    [Parameter]
+    public int CurrentStep { get; set; } = 1;
+
+    [Parameter]
+    public int TotalSteps { get; set; } = 1;
+
+    [Parameter]
+    public int AvailableStep { get; set; } = 1;
+
+    [Parameter]
+    public TimelineStepperMode Mode { get; set; } = TimelineStepperMode.Manual;
+
+    [Parameter]
+    public EventCallback<TimelineStepperMode> ModeChanged { get; set; }
+
+    [Parameter]
+    public bool ShowModeToggle { get; set; }
+
+    [Parameter]
+    public string AutomaticText { get; set; } = "Automatic";
+
+    [Parameter]
+    public string ManualText { get; set; } = "Manual stepping";
+
+    [Parameter]
+    public string StepLabel { get; set; } = "Timeline";
+
+    [Parameter]
+    public string? CurrentLabel { get; set; }
+
+    [Parameter]
+    public string StatusText { get; set; } = "Data available";
+
+    [Parameter]
+    public string StatusTone { get; set; } = "success";
+
+    [Parameter]
+    public string AvailableText { get; set; } = "Data available";
+
+    [Parameter]
+    public string FutureText { get; set; } = "Not simulated yet";
+
+    [Parameter]
+    public string PreviousText { get; set; } = "Previous step";
+
+    [Parameter]
+    public string NextText { get; set; } = "Next step";
+
+    [Parameter]
+    public string PlayText { get; set; } = "Start automatic mode";
+
+    [Parameter]
+    public string PauseText { get; set; } = "Pause";
+
+    [Parameter]
+    public bool IsPlaying { get; set; }
+
+    [Parameter]
+    public bool ShowPlayPause { get; set; }
+
+    [Parameter]
+    public bool CanPlayPause { get; set; } = true;
+
+    [Parameter]
+    public bool CanStepBack { get; set; } = true;
+
+    [Parameter]
+    public bool CanStepForward { get; set; } = true;
+
+    [Parameter]
+    public EventCallback PreviousClicked { get; set; }
+
+    [Parameter]
+    public EventCallback NextClicked { get; set; }
+
+    [Parameter]
+    public EventCallback PlayPauseClicked { get; set; }
+
+    [Parameter]
+    public EventCallback<int> StepSelected { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<TimelineStepperTick> Ticks { get; set; } = [];
+
+    [Parameter]
+    public string AriaLabel { get; set; } = "Timeline stepper";
+
+    [Parameter]
+    public string ModeAriaLabel { get; set; } = "Timeline mode";
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private int SafeTotalSteps => Math.Max(1, TotalSteps);
+
+    private int SafeCurrentStep => Math.Clamp(CurrentStep, 1, SafeTotalSteps);
+
+    private int SafeAvailableStep => Math.Clamp(AvailableStep, 1, SafeTotalSteps);
+
+    private string CurrentStepText => $"Step {SafeCurrentStep.ToString(CultureInfo.InvariantCulture)} of {SafeTotalSteps.ToString(CultureInfo.InvariantCulture)}";
+
+    private string ModeText => Mode == TimelineStepperMode.Automatic ? AutomaticText : ManualText;
+
+    private string PlayPauseText => IsPlaying ? PauseText : PlayText;
+
+    private string PlayPauseIcon => IsPlaying ? "pause" : "play_arrow";
+
+    private string AvailableFillStyle => $"width:{StepPercent(SafeAvailableStep).ToString("0.###", CultureInfo.InvariantCulture)}%;";
+
+    private string SelectedFillStyle => $"width:{StepPercent(SafeCurrentStep).ToString("0.###", CultureInfo.InvariantCulture)}%;";
+
+    private string MarkerStyle => $"left:{StepPercent(SafeCurrentStep).ToString("0.###", CultureInfo.InvariantCulture)}%;";
+
+    private string StatusDotClass => $"cda-timeline-stepper__status-dot cda-timeline-stepper__status-dot--{NormalizeTone(StatusTone)}";
+
+    private IReadOnlyList<TimelineStepperTick> NormalizedTicks
+        => Ticks.Count > 0
+            ? Ticks
+            : [new TimelineStepperTick { Step = 1, Label = "1", Major = true }, new TimelineStepperTick { Step = SafeTotalSteps, Label = SafeTotalSteps.ToString(CultureInfo.InvariantCulture), Major = true }];
+
+    private async Task SetModeAsync(TimelineStepperMode mode)
+    {
+        if (mode == Mode)
+        {
+            return;
+        }
+
+        Mode = mode;
+        await ModeChanged.InvokeAsync(mode);
+    }
+
+    private Task SelectStepAsync(int step)
+        => StepSelected.InvokeAsync(Math.Clamp(step, 1, SafeTotalSteps));
+
+    private double StepPercent(int step)
+    {
+        if (SafeTotalSteps <= 1)
+        {
+            return 100d;
+        }
+
+        return Math.Clamp((Math.Clamp(step, 1, SafeTotalSteps) - 1d) * 100d / (SafeTotalSteps - 1d), 0d, 100d);
+    }
+
+    private string ModeButtonClass(TimelineStepperMode mode)
+        => mode == Mode
+            ? "cda-timeline-stepper__mode-button cda-timeline-stepper__mode-button--active"
+            : "cda-timeline-stepper__mode-button";
+
+    private string TickClass(TimelineStepperTick tick)
+    {
+        string state = tick.Step <= SafeAvailableStep ? "available" : "future";
+        string selected = tick.Step == SafeCurrentStep ? " cda-timeline-stepper__tick--selected" : string.Empty;
+        string major = tick.Major ? " cda-timeline-stepper__tick--major" : string.Empty;
+        return $"cda-timeline-stepper__tick cda-timeline-stepper__tick--{state}{selected}{major}";
+    }
+
+    private string TickStyle(int step)
+        => $"left:{StepPercent(step).ToString("0.###", CultureInfo.InvariantCulture)}%;";
+
+    private string TickTitle(TimelineStepperTick tick)
+        => string.IsNullOrWhiteSpace(tick.Description)
+            ? $"Step {tick.Step.ToString(CultureInfo.InvariantCulture)}"
+            : $"Step {tick.Step.ToString(CultureInfo.InvariantCulture)}: {tick.Description}";
+
+    private static string NormalizeTone(string tone)
+        => string.IsNullOrWhiteSpace(tone) ? "neutral" : tone.Trim().ToLowerInvariant();
+}

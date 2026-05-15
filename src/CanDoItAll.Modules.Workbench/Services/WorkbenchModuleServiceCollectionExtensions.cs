@@ -11,6 +11,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
 {
     public static IServiceCollection AddWorkbenchModule(this IServiceCollection services)
     {
+        services.AddHttpClient();
         services.AddScoped<WorkbenchStateService>();
         services.AddScoped<ProjectCrossModuleMutationCoordinator>();
         services.AddScoped<ProjectCrossModuleMutationProcessor>();

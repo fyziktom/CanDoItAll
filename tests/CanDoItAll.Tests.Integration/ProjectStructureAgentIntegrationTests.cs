@@ -1,11 +1,14 @@
 using System.IO.Compression;
+using System.Net;
 using System.Text;
 using System.Text.Json;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CanDoItAll.Tests.Integration;
 
@@ -579,6 +582,139 @@ public sealed class ProjectStructureAgentIntegrationTests
     }
 
     [Fact]
+    public async Task AgentService_CreateAssetAsync_accepts_external_source_url()
+    {
+        var pdfBytes = Encoding.UTF8.GetBytes("%PDF-1.7 external brochure");
+        var handler = new DelegateHttpMessageHandler(request =>
+        {
+            Assert.Equal(HttpMethod.Get, request.Method);
+            Assert.Equal("https://assets.example.test/pax/A35-PINpad-PAX-EMEA-February2026.pdf", request.RequestUri?.ToString());
+            return CreateBinaryResponse(pdfBytes, "application/pdf");
+        });
+
+        await using var application = await TestApplication.CreateAsync(new TestHarnessOptions
+        {
+            ConfigureServices = services =>
+            {
+                services.RemoveAll<IHttpClientFactory>();
+                services.AddSingleton<IHttpClientFactory>(_ => new StaticHttpClientFactory(handler));
+            }
+        });
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var workspacePathResolver = scope.ServiceProvider.GetRequiredService<IWorkspacePathResolver>();
+
+        var projectId = await CreateProjectAsync(projects, "External source PDF asset");
+        var created = await agentService.CreateAssetAsync(
+            projectId,
+            new ProjectStructureAssetCreateInput(
+                ProjectObjectType.File,
+                "A35 PINpad brochure",
+                "Downloaded PDF",
+                "Asset should be downloaded from a public URL.",
+                null,
+                $"project:{projectId}",
+                "pdf",
+                null,
+                null,
+                null,
+                "A35-PINpad-PAX-EMEA-February2026.pdf",
+                null,
+                "https://assets.example.test/pax/A35-PINpad-PAX-EMEA-February2026.pdf"),
+            DefaultAgent);
+
+        var surface = await workbench.GetStructureAsync(projectId);
+        var node = Assert.Single(surface.Nodes, item => item.Id == created.Id);
+
+        Assert.Equal(ProjectObjectType.File, node.ObjectType);
+        Assert.Equal("pdf", node.ObjectSubtype);
+        Assert.Equal("A35-PINpad-PAX-EMEA-February2026.pdf", node.MediaOriginalFileName);
+        Assert.Equal("application/pdf", node.MediaContentType);
+        Assert.False(string.IsNullOrWhiteSpace(node.MediaRelativePath));
+
+        var storedBytes = await File.ReadAllBytesAsync(Path.Combine(workspacePathResolver.ResolveWorkspaceRoot(), node.MediaRelativePath));
+        Assert.Equal(pdfBytes, storedBytes);
+    }
+
+    [Fact]
+    public async Task AgentService_CreateAssetAsync_downloads_http_source_workspace_path_as_compatibility_fallback()
+    {
+        var pdfBytes = Encoding.UTF8.GetBytes("%PDF-1.7 compatibility path");
+        var handler = new DelegateHttpMessageHandler(_ => CreateBinaryResponse(pdfBytes, "application/pdf"));
+
+        await using var application = await TestApplication.CreateAsync(new TestHarnessOptions
+        {
+            ConfigureServices = services =>
+            {
+                services.RemoveAll<IHttpClientFactory>();
+                services.AddSingleton<IHttpClientFactory>(_ => new StaticHttpClientFactory(handler));
+            }
+        });
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+
+        var projectId = await CreateProjectAsync(projects, "External URL in sourceWorkspacePath");
+        var created = await agentService.CreateAssetAsync(
+            projectId,
+            new ProjectStructureAssetCreateInput(
+                ProjectObjectType.File,
+                "A8900 mobile brochure",
+                "Downloaded PDF",
+                "Asset should download even when an agent supplies the URL in sourceWorkspacePath.",
+                null,
+                $"project:{projectId}",
+                "pdf",
+                null,
+                null,
+                "https://assets.example.test/pax/A8900-Mobile-PAX-EMEA-July2024.pdf",
+                "A8900-Mobile-PAX-EMEA-July2024.pdf",
+                "application/pdf"),
+            DefaultAgent);
+
+        var surface = await workbench.GetStructureAsync(projectId);
+        var node = Assert.Single(surface.Nodes, item => item.Id == created.Id);
+
+        Assert.Equal("pdf", node.ObjectSubtype);
+        Assert.Equal("A8900-Mobile-PAX-EMEA-July2024.pdf", node.MediaOriginalFileName);
+        Assert.Equal("application/pdf", node.MediaContentType);
+    }
+
+    [Fact]
+    public async Task AgentService_CreateAssetAsync_rejects_loopback_external_source_url()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+
+        var projectId = await CreateProjectAsync(projects, "Blocked loopback PDF asset");
+        var exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
+            agentService.CreateAssetAsync(
+                projectId,
+                new ProjectStructureAssetCreateInput(
+                    ProjectObjectType.File,
+                    "Internal PDF",
+                    "Blocked",
+                    "Loopback downloads should not be allowed from agent asset creation.",
+                    null,
+                    $"project:{projectId}",
+                    "pdf",
+                    null,
+                    null,
+                    null,
+                    "internal.pdf",
+                    "application/pdf",
+                    "http://127.0.0.1/internal.pdf"),
+                DefaultAgent));
+
+        Assert.Equal("SourceUrlNotAllowed", exception.ErrorCode);
+    }
+
+    [Fact]
     public async Task AgentService_ImportAsync_accepts_mermaid_mindmap()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -742,6 +878,29 @@ public sealed class ProjectStructureAgentIntegrationTests
             fileName,
             contentType,
             Convert.ToBase64String(bytes));
+    }
+
+    private static HttpResponseMessage CreateBinaryResponse(byte[] bytes, string contentType)
+    {
+        var response = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent(bytes)
+        };
+        response.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+        return response;
+    }
+
+    private sealed class StaticHttpClientFactory(HttpMessageHandler handler) : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) => new(handler, disposeHandler: false);
+    }
+
+    private sealed class DelegateHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> handler) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(handler(request));
+        }
     }
 
     private static byte[] BuildDocx(string rootHeading, params (string Style, string Text)[] children)

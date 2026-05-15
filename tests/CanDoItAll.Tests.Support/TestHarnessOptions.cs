@@ -1,3 +1,5 @@
+using Microsoft.Extensions.DependencyInjection;
+
 namespace CanDoItAll.Tests.Support;
 
 public sealed class TestHarnessOptions
@@ -9,4 +11,6 @@ public sealed class TestHarnessOptions
     public TestSchemaBootstrapModules SchemaModules { get; init; } = TestSchemaBootstrapModules.Full;
 
     public IReadOnlyDictionary<string, string?>? ConfigurationOverrides { get; init; }
+
+    public Action<IServiceCollection>? ConfigureServices { get; init; }
 }

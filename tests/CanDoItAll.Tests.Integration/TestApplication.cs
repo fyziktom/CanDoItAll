@@ -42,7 +42,8 @@ internal sealed class TestApplication : IAsyncDisposable
             activeProfile,
             "CanDoItAll.Tests",
             options?.SchemaModules ?? TestSchemaBootstrapModules.Full,
-            options?.ConfigurationOverrides);
+            options?.ConfigurationOverrides,
+            options?.ConfigureServices);
 
         return new TestApplication(testEnvironment, ownsTestEnvironment, activeProfile, provider);
     }
