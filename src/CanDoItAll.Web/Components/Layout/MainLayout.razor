@@ -3,7 +3,6 @@
 @using CanDoItAll.Components
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.Common
-@using CanDoItAll.Infrastructure.Configuration
 @using CanDoItAll.Infrastructure.ControlPlane
 @using CanDoItAll.Infrastructure.Persistence
 @using CanDoItAll.Modules.Collaboration
@@ -13,11 +12,7 @@
 @using CanDoItAll.Modules.Workspace
 @using CanDoItAll.SharedKernel
 @using CanDoItAll.Web.Composition
-@using CanDoItAll.Web.Infrastructure
 @inject NavigationManager Navigation
-@inject Microsoft.Extensions.Options.IOptions<DevelopmentManagerOptions> DevelopmentManagerOptions
-@inject DevelopmentManagerClient DevelopmentManagerClient
-@inject TuningCoordinator TuningCoordinator
 @inject WorkbenchStateService Workbench
 @inject IDatabaseSwitchNotificationService DatabaseSwitchNotificationService
 @inject CollaborationService CollaborationService
@@ -28,10 +23,8 @@
 
 <AppShell NavigationItems="@NavigationItems"
           Mode="ShellMode"
-          ShowRightRail="ShowStandardRail"
-          ShowCollapsedRail="ShowCollapsedRail"
+          ShowRightRail="false"
           ShowTabSummary="@(ShellMode == AppShellMode.FocusWorkbench)"
-          CollapsedRailLabel="@(ShellMode == AppShellMode.FocusWorkbench ? "Workbench utilities" : "Workspace context")"
           Workspaces="workspaces"
           ActiveWorkspaceId="@activeWorkspaceId"
           CurrentRoute="@CurrentRouteBase"
@@ -155,51 +148,11 @@
                         Title="Continue with the active database to load the workspace"
                         Description="The routed page stays paused until the startup database profile is confirmed, so module dashboards do not initialize against a false zero-state." />
         }
-        else if (CurrentTuningSurface is { } tuningSurface)
-        {
-            <TunableComponentBoundary IsEnabled="@TuningEnabled"
-                                      CapsuleKey="@tuningSurface.CapsuleKey"
-                                      ComponentName="@tuningSurface.ComponentName"
-                                      ContextSummary="@tuningSurface.ContextSummary"
-                                      Route="@CurrentRouteDisplay"
-                                      ProjectId="@Workbench.GetActiveTab()?.ProjectId"
-                                      TabId="@Workbench.ActiveTabId">
-                @Body
-            </TunableComponentBoundary>
-        }
         else
         {
             @Body
         }
     </Body>
-    <RightRail>
-        <Stack GapScale="LayoutGap.Large">
-            <MainLayoutWorkbenchRail ShowStandardRail="@ShowStandardRail"
-                                     CurrentRouteDisplay="@CurrentRouteDisplay"
-                                     ActiveTabTitle="@ActiveTabTitle"
-                                     RestoredCount="@Workbench.LastRestoreReport?.RestoredCount"
-                                     RestoreFailureCount="@(Workbench.LastRestoreReport?.Failures.Count ?? 0)"
-                                     OpenedProjectCount="@OpenedProjectTabs.Count"
-                                     OpenedPromptSessionCount="@OpenedPromptSessionTabs.Count"
-                                     RecentTabCount="@Workbench.RecentTabs.Count" />
-            @if (DevelopmentManagerOptions.Value.TuningModeEnabled)
-            {
-                <MainLayoutTuningRail CurrentRequest="@TuningCoordinator.CurrentRequest"
-                                      TuningInstruction="@tuningInstruction"
-                                      TuningInstructionChanged="HandleTuningInstructionChanged"
-                                      TuningAttachments="@tuningAttachments"
-                                      TuningBusy="@tuningBusy"
-                                      TuningMessage="@tuningMessage"
-                                      PendingTuningRequest="@pendingTuningRequest"
-                                      SendTuningRequest="SendTuningRequestAsync"
-                                      ClearTuningRequest="ClearTuningRequest"
-                                      SubmitPendingTuningRequest="SubmitPendingTuningRequestAsync"
-                                      HandleTuningFilesSelected="HandleTuningFilesSelectedAsync"
-                                      PasteClipboardImage="PasteClipboardImageAsync"
-                                      RemoveTuningAttachment="RemoveTuningAttachmentAsync" />
-            }
-        </Stack>
-    </RightRail>
 </AppShell>
 
 <DialogHost />
