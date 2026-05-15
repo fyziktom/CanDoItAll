@@ -29,6 +29,7 @@
 
   <ItemGroup>
     <Compile Include="Components\AppShellMode.cs" />
+    <Compile Include="Components\AppShellNavigationMode.cs" />
     <Compile Include="Components\TuningBoundaryRequest.cs" />
     <Content Include="Components\AppShell.razor" />
     <Content Include="Components\AppTabStrip.razor" />

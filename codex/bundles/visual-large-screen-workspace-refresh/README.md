@@ -59,7 +59,7 @@ This initiative bundle prepares a phased visual refresh for the CanDoItAll Blazo
 
 - Bundle preparation status: `Ready for implementation`
 - Prepared-stage validator: `Passed 2026-05-15 UTC after page-input/proposal repair`
-- Execution status: `Not started`
-- Subbundle gate review: `Prepared-stage gates defined`
-- Final closure gate: `Planned`
-- Browser validation analytics: `Planned large-screen first`
+- Execution status: `Executed with scoped closure 2026-05-15`
+- Subbundle gate review: `Recorded in reviews/01-execution-report.md`
+- Final closure gate: `Closed for standard shell/components/screens; canvas/WebGL residuals documented as explicit scope exceptions`
+- Browser validation analytics: `Passed for representative 1920x1080 shell, projects, processes, workflows, and settings routes`

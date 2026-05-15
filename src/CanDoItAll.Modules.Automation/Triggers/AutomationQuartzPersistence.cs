@@ -20,7 +20,18 @@ internal static class AutomationQuartzPersistentStoreConfigurator
         ArgumentNullException.ThrowIfNull(configuration);
 
         var databaseOptions = configuration.GetSection("Database").Get<DatabaseOptions>() ?? new DatabaseOptions();
-        var provider = databaseOptions.Provider.Trim();
+        var provider = databaseOptions.Provider?.Trim();
+        if (string.IsNullOrWhiteSpace(provider))
+        {
+            if (string.IsNullOrWhiteSpace(databaseOptions.ConnectionString))
+            {
+                return;
+            }
+
+            throw new InvalidOperationException(
+                "Quartz persistent automation scheduling requires Database:Provider when Database:ConnectionString is configured.");
+        }
+
         if (provider.Equals("InMemory", StringComparison.OrdinalIgnoreCase) ||
             provider.Equals("Memory", StringComparison.OrdinalIgnoreCase))
         {

@@ -212,25 +212,63 @@
         </Toolbar>
     </Stack>
 
-    <div class="projects-board__cards-scroll min-h-0 flex-1 overflow-y-auto p-4 sm:p-5" data-testid="projects-cards-scroll">
-        @if (FilteredProjectSummaries.Count == 0)
-        {
-            <EmptyState Eyebrow="No matching projects"
-                        Title="Adjust the filters or start a new project"
-                        Description="When projects match the current filters, they appear here as compact cards with overview and dashboard actions.">
-                <Actions>
-                    <Button Text="New project" Click="OpenNewProject" />
-                </Actions>
-            </EmptyState>
-        }
-        else
-        {
-            <Grid Gap="LayoutGap.Large"
-                  ColumnsMd="2"
-                  Columns2Xl="3">
-                @foreach (var project in FilteredProjectSummaries)
+    <ListDetailShell ListPaneWidth="22rem"
+                     Dense="true"
+                     ListPaneClass="min-h-0"
+                     DetailPaneClass="min-h-0"
+                     data-testid="projects-tree-workspace">
+        <ListHeader>
+            <ListPanelHeader Title="Portfolio tree"
+                             Dense="true"
+                             Count="@($"{ProjectTreeNodes.Count} root(s)")"
+                             HelpText="Use the hierarchy tree to choose a project without leaving the portfolio board." />
+        </ListHeader>
+        <ListContent>
+            <div class="h-full min-h-0 overflow-y-auto pr-1"
+                 style="scrollbar-gutter:stable;"
+                 data-testid="projects-tree-scroll">
+                <TreeView Items="@ProjectTreeNodes"
+                          Style="TreeViewStyle.Workbench"
+                          AriaLabel="Project hierarchy"
+                          EmptyText="No projects match the current filters."
+                          OnSelect="HandleProjectTreeSelectAsync"
+                          OnToggle="HandleProjectTreeToggleAsync" />
+            </div>
+        </ListContent>
+        <DetailHeader>
+            <Cluster Gap="LayoutGap.Small"
+                     JustifyContent="JustifyContent.SpaceBetween"
+                     Class="min-w-0">
+                <div class="min-w-0">
+                    <p class="cda-eyebrow cda-eyebrow--tight">Portfolio board</p>
+                    <h3 class="truncate text-base font-semibold text-slate-950">@SelectedTreeProjectName</h3>
+                </div>
+                <Pill Tone="PillTone.Info"
+                      Text="@($"{FilteredProjectSummaries.Count} visible")" />
+            </Cluster>
+        </DetailHeader>
+        <DetailContent>
+            <div class="projects-board__cards-scroll h-full min-h-0 overflow-y-auto pr-1"
+                 style="scrollbar-gutter:stable;"
+                 data-testid="projects-cards-scroll">
+                @if (FilteredProjectSummaries.Count == 0)
                 {
-                    <article class="@ProjectsPresentation.GetProjectCardCss(project.Status)" data-testid="project-card">
+                    <EmptyState Eyebrow="No matching projects"
+                                Title="Adjust the filters or start a new project"
+                                Description="When projects match the current filters, they appear here as compact cards with overview and dashboard actions.">
+                        <Actions>
+                            <Button Text="New project" Click="OpenNewProject" />
+                        </Actions>
+                    </EmptyState>
+                }
+                else
+                {
+                    <Grid Gap="LayoutGap.Medium"
+                          ColumnsLg="2"
+                          Columns2Xl="3">
+                        @foreach (var project in FilteredProjectSummaries)
+                        {
+                            <article class="@ProjectsPresentation.GetProjectCardCss(project.Status)" data-testid="project-card">
                         <Cluster AlignItems="AlignItems.Start"
                                  Wrap="FlexWrap.NoWrap"
                                  Gap="LayoutGap.Medium">
@@ -347,11 +385,13 @@
                                         Click="@(() => OpenGanttPreview.InvokeAsync(project.Id))" />
                             </Cluster>
                         </CardActions>
-                    </article>
+                            </article>
+                        }
+                    </Grid>
                 }
-            </Grid>
-        }
-    </div>
+            </div>
+        </DetailContent>
+    </ListDetailShell>
 </section>
 
 @code {
@@ -360,6 +400,9 @@
 
     [Parameter, EditorRequired]
     public IReadOnlyList<ProjectSummary> FilteredProjectSummaries { get; set; } = default!;
+
+    [Parameter]
+    public IReadOnlyList<ProjectHierarchyLinkSummary> HierarchyLinks { get; set; } = [];
 
     [Parameter]
     public string ProjectSearch { get; set; } = string.Empty;
@@ -459,6 +502,42 @@
 
     [Parameter]
     public EventCallback ImportProjectsPackage { get; set; }
+
+    private readonly HashSet<string> expandedProjectTreeNodeIds = [];
+    private Guid? selectedTreeProjectId;
+
+    private IReadOnlyList<TreeViewNode> ProjectTreeNodes
+        => ProjectPortfolioTreeNodeBuilder.Build(
+            FilteredProjectSummaries,
+            HierarchyLinks,
+            selectedTreeProjectId,
+            expandedProjectTreeNodeIds);
+
+    private string SelectedTreeProjectName
+        => selectedTreeProjectId.HasValue
+            ? FilteredProjectSummaries.FirstOrDefault(project => project.Id == selectedTreeProjectId.Value)?.Name ?? "Selected project"
+            : "All filtered projects";
+
+    private async Task HandleProjectTreeSelectAsync(string nodeId)
+    {
+        if (!ProjectPortfolioTreeNodeBuilder.TryReadProjectId(nodeId, out var projectId))
+        {
+            return;
+        }
+
+        selectedTreeProjectId = projectId;
+        await OpenProjectPreview.InvokeAsync(projectId);
+    }
+
+    private Task HandleProjectTreeToggleAsync(string nodeId)
+    {
+        if (!expandedProjectTreeNodeIds.Add(nodeId))
+        {
+            expandedProjectTreeNodeIds.Remove(nodeId);
+        }
+
+        return Task.CompletedTask;
+    }
 
     private string ProjectSearchProxy
     {

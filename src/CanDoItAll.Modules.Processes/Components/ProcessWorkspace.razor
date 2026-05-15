@@ -110,38 +110,12 @@
                         }
                         else
                         {
-                            <Stack GapScale="LayoutGap.Small">
-                                @foreach (var definition in FilteredDefinitions)
-                                {
-                                    var definitionRunCounts = ResolveDefinitionRunCounts(definition.Id);
-                                    <SelectionListItem Title="@definition.Name"
-                                                       Eyebrow="@(string.IsNullOrWhiteSpace(definition.ProjectName) ? "Global process" : definition.ProjectName)"
-                                                       Meta="@BuildDefinitionSummary(definition)"
-                                                       Summary="@definition.Summary"
-                                                       Dense="true"
-                                                       IsSelected="@(selectedProcessId == definition.Id)"
-                                                       OnSelect="@(() => SelectDefinitionAsync(definition.Id))">
-                                        <Status>
-                                            <Cluster Gap="LayoutGap.Small">
-                                                <StatusBadge Tone="@ResolveDefinitionStatusTone(definition.Status)"
-                                                             Text="@definition.Status.ToString()" />
-                                                <StatusBadge Tone="info"
-                                                             Text="@FormatCount(definitionRunCounts.Active, "active run", "active runs")" />
-                                                @if (definitionRunCounts.Blocked > 0)
-                                                {
-                                                    <StatusBadge Tone="warning"
-                                                                 Text="@FormatCount(definitionRunCounts.Blocked, "blocked run", "blocked runs")" />
-                                                }
-                                                @if (definitionRunCounts.Failed > 0)
-                                                {
-                                                    <StatusBadge Tone="danger"
-                                                                 Text="@FormatCount(definitionRunCounts.Failed, "failed run", "failed runs")" />
-                                                }
-                                            </Cluster>
-                                        </Status>
-                                    </SelectionListItem>
-                                }
-                            </Stack>
+                            <TreeView Items="@ProcessDefinitionTreeNodes"
+                                      Style="TreeViewStyle.Workbench"
+                                      AriaLabel="Process definitions by scope"
+                                      EmptyText="No process definitions match the current filters."
+                                      OnSelect="HandleProcessTreeSelectAsync"
+                                      OnToggle="HandleProcessTreeToggleAsync" />
                         }
                     </div>
                 </ListContent>

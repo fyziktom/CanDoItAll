@@ -63,7 +63,7 @@ public partial class MainLayout
 
     private AppShellMode ShellMode => IsFocusWorkbenchRoute ? AppShellMode.FocusWorkbench : AppShellMode.StandardPage;
 
-    private bool ShowStandardRail => ShellMode == AppShellMode.StandardPage;
+    private bool ShowStandardRail => ShellMode == AppShellMode.StandardPage && DevelopmentManagerOptions.Value.TuningModeEnabled;
 
     private bool ShowCollapsedRail => ShellMode == AppShellMode.FocusWorkbench && DevelopmentManagerOptions.Value.TuningModeEnabled;
 

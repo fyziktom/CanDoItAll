@@ -6,104 +6,180 @@
      style="@ResolveRootStyle()">
     <div class="@ResolveFrameClass()"
          style="@ResolveFrameStyle()">
-        <aside class="cda-shell-sidebar @(Mode == AppShellMode.FocusWorkbench ? "cda-shell-sidebar--focus" : "cda-shell-sidebar--standard")">
-                <Stack GapScale="LayoutGap.Large"
-                       Class="mb-7">
-                    <Stack GapScale="LayoutGap.Tiny">
-                        <p class="cda-eyebrow text-sky-300 tracking-[0.35em]">CanDoItAll</p>
-                        <h1 class="@(Mode == AppShellMode.FocusWorkbench ? "text-xl" : "text-2xl") font-semibold tracking-tight text-white">Local delivery workbench</h1>
-                        <p class="text-sm leading-6 text-slate-400">Projects, prompts, validation, scheduling, and evidence in one recoverable workspace.</p>
+        <aside class="@ResolveSidebarClass()"
+               data-testid="app-shell-sidebar"
+               data-navigation-mode="@navigationMode.ToString().ToLowerInvariant()">
+            <div class="cda-shell-sidebar__inner">
+                <div class="cda-shell-sidebar__top">
+                    <div class="@ResolveBrandClass()">
+                        <span class="cda-shell-brand-mark" aria-hidden="true">CD</span>
+                        @if (IsNavigationExpanded)
+                        {
+                            <div class="min-w-0">
+                                <p class="cda-eyebrow text-sky-300 tracking-[0.28em]">CanDoItAll</p>
+                                <h1 class="cda-shell-brand-title">Local delivery workbench</h1>
+                            </div>
+                        }
+                        else
+                        {
+                            <span class="sr-only">CanDoItAll local delivery workbench</span>
+                        }
+                    </div>
+
+                    @if (AllowNavigationExpansion)
+                    {
+                        <button type="button"
+                                class="cda-shell-toggle-button"
+                                aria-label="@ResolveNavigationToggleLabel()"
+                                aria-pressed="@IsNavigationExpanded"
+                                data-testid="shell-navigation-toggle"
+                                @onclick="ToggleNavigationMode">
+                            <Icon Name="@(IsNavigationExpanded ? "chevron_left" : "chevron_right")" />
+                        </button>
+                    }
+                </div>
+
+                @if (IsNavigationExpanded)
+                {
+                    <Stack GapScale="LayoutGap.Medium"
+                           Class="cda-shell-expanded-context">
+                        @if (Workspaces.Count > 0)
+                        {
+                            <Stack GapScale="LayoutGap.Small"
+                                   Class="cda-shell-card-dark">
+                                <p class="cda-eyebrow cda-eyebrow--tight text-slate-400 tracking-[0.28em]">Workspace</p>
+                                @foreach (var workspace in Workspaces)
+                                {
+                                    <button type="button"
+                                            class="cda-shell-pick-button @(workspace.Id == ActiveWorkspaceId ? "cda-shell-pick-button--active" : "cda-shell-pick-button--inactive")"
+                                            @onclick="() => SelectWorkspace.InvokeAsync(workspace.Id)">
+                                        <span class="block text-sm font-semibold">@workspace.Title</span>
+                                        <span class="mt-1 block text-xs leading-5 text-slate-400">@workspace.Description</span>
+                                    </button>
+                                }
+                            </Stack>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(ProjectContextTitle))
+                        {
+                            <div class="cda-shell-card-info">
+                                <p class="cda-eyebrow cda-eyebrow--tight text-sky-300 tracking-[0.28em]">Project Context</p>
+                                <p class="mt-2 text-sm font-semibold text-white">@ProjectContextTitle</p>
+                                @if (!string.IsNullOrWhiteSpace(PhaseContextTitle))
+                                {
+                                    <p class="mt-1 text-xs text-slate-300">@PhaseContextTitle</p>
+                                }
+                            </div>
+                        }
                     </Stack>
+                }
 
-                    @if (Workspaces.Count > 0)
-                    {
-                        <Stack GapScale="LayoutGap.Small"
-                               Class="cda-shell-card-dark">
-                            <p class="cda-eyebrow cda-eyebrow--tight text-slate-400 tracking-[0.28em]">Workspace</p>
-                            @foreach (var workspace in Workspaces)
-                            {
-                                <button type="button"
-                                        class="cda-shell-pick-button @(workspace.Id == ActiveWorkspaceId ? "cda-shell-pick-button--active" : "cda-shell-pick-button--inactive")"
-                                        @onclick="() => SelectWorkspace.InvokeAsync(workspace.Id)">
-                                    <span class="block text-sm font-semibold">@workspace.Title</span>
-                                    <span class="mt-1 block text-xs leading-5 text-slate-400">@workspace.Description</span>
-                                </button>
-                            }
-                        </Stack>
-                    }
-
-                    @if (!string.IsNullOrWhiteSpace(ProjectContextTitle))
-                    {
-                        <div class="cda-shell-card-info">
-                            <p class="cda-eyebrow cda-eyebrow--tight text-sky-300 tracking-[0.28em]">Project Context</p>
-                            <p class="mt-2 text-sm font-semibold text-white">@ProjectContextTitle</p>
-                            @if (!string.IsNullOrWhiteSpace(PhaseContextTitle))
-                            {
-                                <p class="mt-1 text-xs text-slate-300">@PhaseContextTitle</p>
-                            }
-                        </div>
-                    }
-                </Stack>
-
-                <nav class="space-y-2">
+                <nav class="@ResolveNavigationClass()" aria-label="Primary navigation">
                     @foreach (var item in NavigationItems)
                     {
                         var normalizedCurrentRoute = string.IsNullOrWhiteSpace(CurrentRoute) ? "/" : $"/{CurrentRoute.TrimStart('/')}";
                         var isActive = IsRouteMatch(normalizedCurrentRoute, item.Route);
-                    <button type="button"
-                            class="cda-shell-nav-button @(isActive ? "cda-shell-nav-button--active" : "cda-shell-nav-button--inactive")"
-                            @onclick="() => Navigate.InvokeAsync(item.Route)">
-                        <span class="cda-shell-nav-icon" aria-hidden="true"><Icon Name="@item.Icon" /></span>
-                        <span class="space-y-1 min-w-0 flex-1">
-                            <span class="flex items-start gap-2">
-                                <span class="block text-sm font-semibold">@item.Title</span>
-                                @if (!string.IsNullOrWhiteSpace(item.BadgeText))
-                                {
-                                    <span class="inline-flex min-w-6 items-center justify-center rounded-full bg-sky-400/15 px-2 py-1 text-[0.65rem] font-semibold leading-none text-sky-200"
-                                          data-testid="@($"shell-nav-badge-{item.Route.Trim('/').Replace('/', '-') }")">
-                                        @item.BadgeText
+                        if (IsNavigationExpanded)
+                        {
+                            <button type="button"
+                                    class="@ResolveNavigationButtonClass(isActive)"
+                                    data-testid="@BuildNavigationButtonTestId(item.Route)"
+                                    @onclick="() => Navigate.InvokeAsync(item.Route)">
+                                <span class="cda-shell-nav-icon" aria-hidden="true"><Icon Name="@item.Icon" /></span>
+                                <span class="space-y-1 min-w-0 flex-1">
+                                    <span class="flex items-start gap-2">
+                                        <span class="block text-sm font-semibold">@item.Title</span>
+                                        @if (!string.IsNullOrWhiteSpace(item.BadgeText))
+                                        {
+                                            <span class="inline-flex min-w-6 items-center justify-center rounded-full bg-sky-400/15 px-2 py-1 text-[0.65rem] font-semibold leading-none text-sky-200"
+                                                  data-testid="@($"shell-nav-badge-{item.Route.Trim('/').Replace('/', '-') }")">
+                                                @item.BadgeText
+                                            </span>
+                                        }
                                     </span>
-                                }
-                            </span>
-                            <span class="block text-xs leading-5 text-slate-400">@item.Description</span>
-                        </span>
-                    </button>
-                }
-            </nav>
+                                    <span class="block text-xs leading-5 text-slate-400">@item.Description</span>
+                                </span>
+                            </button>
+                        }
+                        else
+                        {
+                            <TooltipTarget Position="TooltipPosition.Right"
+                                           TriggerClass="w-full"
+                                           TooltipClass="cda-shell-nav-tooltip"
+                                           TestId="@BuildNavigationTooltipTestId(item.Route)">
+                                <TooltipContent Context="_">
+                                    <div class="cda-shell-tooltip-card">
+                                        <p class="cda-shell-tooltip-title">@item.Title</p>
+                                        <p class="cda-shell-tooltip-body">@item.Description</p>
+                                        @if (!string.IsNullOrWhiteSpace(item.BadgeText))
+                                        {
+                                            <span class="cda-shell-tooltip-badge">@item.BadgeText</span>
+                                        }
+                                    </div>
+                                </TooltipContent>
+                                <ChildContent>
+                                    <button type="button"
+                                            class="@ResolveNavigationButtonClass(isActive)"
+                                            aria-label="@item.Title"
+                                            data-testid="@BuildNavigationButtonTestId(item.Route)"
+                                            @onclick="() => Navigate.InvokeAsync(item.Route)">
+                                        <span class="cda-shell-nav-icon" aria-hidden="true"><Icon Name="@item.Icon" /></span>
+                                        @if (!string.IsNullOrWhiteSpace(item.BadgeText))
+                                        {
+                                            <span class="cda-shell-nav-badge-dot"
+                                                  data-testid="@($"shell-nav-badge-{item.Route.Trim('/').Replace('/', '-') }")">
+                                                @item.BadgeText
+                                            </span>
+                                        }
+                                    </button>
+                                </ChildContent>
+                            </TooltipTarget>
+                        }
+                    }
+                </nav>
 
-                @if (OpenedProjects.Count > 0)
-                    {
-                        <Stack GapScale="LayoutGap.Small"
-                               Class="mt-8">
-                            <p class="cda-eyebrow cda-eyebrow--tight text-slate-400 tracking-[0.3em]">Opened Projects</p>
-                            @foreach (var item in OpenedProjects)
-                            {
-                                <button type="button"
+                @if (IsNavigationExpanded && OpenedProjects.Count > 0)
+                {
+                    <Stack GapScale="LayoutGap.Small"
+                           Class="cda-shell-opened-list">
+                        <p class="cda-eyebrow cda-eyebrow--tight text-slate-400 tracking-[0.3em]">Opened Projects</p>
+                        @foreach (var item in OpenedProjects)
+                        {
+                            <button type="button"
                                     class="cda-shell-card-dark w-full text-left transition hover:bg-white/10"
                                     @onclick="() => OpenWorkbenchItem.InvokeAsync(item.TabId)">
                                 <span class="block text-sm font-semibold text-white">@item.Title</span>
                                 <span class="mt-1 block text-xs text-slate-400">@item.TabKind / @item.Route</span>
-                                </button>
-                            }
-                        </Stack>
+                            </button>
+                        }
+                    </Stack>
                 }
 
-                @if (OpenedSessions.Count > 0)
-                    {
-                        <Stack GapScale="LayoutGap.Small"
-                               Class="mt-8">
-                            <p class="cda-eyebrow cda-eyebrow--tight text-slate-400 tracking-[0.3em]">Prompt Sessions</p>
-                            @foreach (var item in OpenedSessions)
-                            {
-                                <button type="button"
+                @if (IsNavigationExpanded && OpenedSessions.Count > 0)
+                {
+                    <Stack GapScale="LayoutGap.Small"
+                           Class="cda-shell-opened-list">
+                        <p class="cda-eyebrow cda-eyebrow--tight text-slate-400 tracking-[0.3em]">Prompt Sessions</p>
+                        @foreach (var item in OpenedSessions)
+                        {
+                            <button type="button"
                                     class="cda-shell-card-dark w-full text-left transition hover:bg-white/10"
                                     @onclick="() => OpenWorkbenchItem.InvokeAsync(item.TabId)">
                                 <span class="block text-sm font-semibold text-white">@item.Title</span>
                                 <span class="mt-1 block text-xs text-slate-400">@item.Route</span>
-                                </button>
-                            }
-                        </Stack>
+                            </button>
+                        }
+                    </Stack>
                 }
+
+                @if (BottomUtilities is not null)
+                {
+                    <div class="cda-shell-utility-area"
+                         data-testid="shell-bottom-utilities">
+                        @BottomUtilities
+                    </div>
+                }
+            </div>
         </aside>
 
         <main class="flex min-w-0 min-h-0 flex-1 flex-col gap-2">
@@ -259,8 +335,17 @@
 </div>
 
 @code {
+    private AppShellNavigationMode navigationMode;
+    private bool hasInitializedNavigationMode;
+
     [Parameter]
     public AppShellMode Mode { get; set; } = AppShellMode.StandardPage;
+
+    [Parameter]
+    public AppShellNavigationMode DefaultNavigationMode { get; set; } = AppShellNavigationMode.Collapsed;
+
+    [Parameter]
+    public bool AllowNavigationExpansion { get; set; } = true;
 
     [Parameter]
     public bool ShowRightRail { get; set; } = true;
@@ -346,6 +431,38 @@
     [Parameter]
     public EventCallback<string> ReopenRecentTab { get; set; }
 
+    [Parameter]
+    public RenderFragment? TopBar { get; set; }
+
+    [Parameter]
+    public RenderFragment? Body { get; set; }
+
+    [Parameter]
+    public RenderFragment? RightRail { get; set; }
+
+    [Parameter]
+    public RenderFragment? BottomUtilities { get; set; }
+
+    private bool IsNavigationExpanded => navigationMode == AppShellNavigationMode.Expanded;
+
+    protected override void OnParametersSet()
+    {
+        if (hasInitializedNavigationMode)
+        {
+            return;
+        }
+
+        navigationMode = DefaultNavigationMode;
+        hasInitializedNavigationMode = true;
+    }
+
+    private void ToggleNavigationMode()
+    {
+        navigationMode = IsNavigationExpanded
+            ? AppShellNavigationMode.Collapsed
+            : AppShellNavigationMode.Expanded;
+    }
+
     private string ResolveBodyRegionClass()
     {
         if (ShowRightRail)
@@ -384,6 +501,36 @@
             : "cda-shell-frame";
     }
 
+    private string ResolveSidebarClass()
+    {
+        return CssClassBuilder.Join(
+            "cda-shell-sidebar",
+            Mode == AppShellMode.FocusWorkbench ? "cda-shell-sidebar--focus" : "cda-shell-sidebar--standard",
+            IsNavigationExpanded ? "cda-shell-sidebar--expanded" : "cda-shell-sidebar--collapsed");
+    }
+
+    private string ResolveBrandClass()
+    {
+        return IsNavigationExpanded
+            ? "cda-shell-brand cda-shell-brand--expanded"
+            : "cda-shell-brand cda-shell-brand--collapsed";
+    }
+
+    private string ResolveNavigationClass()
+    {
+        return IsNavigationExpanded
+            ? "cda-shell-nav cda-shell-nav--expanded"
+            : "cda-shell-nav cda-shell-nav--collapsed";
+    }
+
+    private string ResolveNavigationButtonClass(bool isActive)
+    {
+        return CssClassBuilder.Join(
+            "cda-shell-nav-button",
+            isActive ? "cda-shell-nav-button--active" : "cda-shell-nav-button--inactive",
+            IsNavigationExpanded ? "cda-shell-nav-button--expanded" : "cda-shell-nav-button--collapsed");
+    }
+
     private string? ResolveRootStyle()
     {
         return Mode == AppShellMode.FocusWorkbench
@@ -398,14 +545,30 @@
             : null;
     }
 
-    [Parameter]
-    public RenderFragment? TopBar { get; set; }
+    private string ResolveNavigationToggleLabel()
+    {
+        return IsNavigationExpanded
+            ? "Collapse navigation"
+            : "Expand navigation";
+    }
 
-    [Parameter]
-    public RenderFragment? Body { get; set; }
+    private static string BuildNavigationButtonTestId(string route)
+    {
+        return $"shell-nav-{NormalizeRouteForTestId(route)}";
+    }
 
-    [Parameter]
-    public RenderFragment? RightRail { get; set; }
+    private static string BuildNavigationTooltipTestId(string route)
+    {
+        return $"shell-nav-tooltip-{NormalizeRouteForTestId(route)}";
+    }
+
+    private static string NormalizeRouteForTestId(string route)
+    {
+        var normalized = route.Trim('/');
+        return string.IsNullOrWhiteSpace(normalized)
+            ? "dashboard"
+            : normalized.Replace('/', '-');
+    }
 
     private static bool IsRouteMatch(string currentRoute, string navigationRoute)
     {

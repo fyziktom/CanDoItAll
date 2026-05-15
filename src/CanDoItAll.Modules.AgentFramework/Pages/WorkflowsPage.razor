@@ -2,7 +2,7 @@
 
 <PageTitle>Workflows</PageTitle>
 
-<PageScaffold>
+<PageScaffold MaxWidthClass="max-w-full">
     <Header>
         <PageHeader Eyebrow="AgentFramework"
                     Title="Workflows"
@@ -194,18 +194,16 @@
                             }
                             else
                             {
-                                <Stack GapScale="LayoutGap.Small" Class="mt-4">
-                                    @foreach (var definition in definitions)
-                                    {
-                                        <button type="button"
-                                                class="workflows-catalog-item @(IsSelectedDefinition(definition) ? "workflows-catalog-item--selected" : string.Empty)"
-                                                @onclick="@(() => SelectDefinitionAsync(definition.Id))"
-                                                data-testid="workflows-catalog-item">
-                                            <span class="workflows-catalog-item__title">@definition.Name</span>
-                                            <span class="workflows-catalog-item__meta">@definition.Status · @definition.PreferredBackend · @FormatDate(definition.UpdatedAtUtc)</span>
-                                        </button>
-                                    }
-                                </Stack>
+                                <div class="mt-4 max-h-[34rem] overflow-y-auto pr-1"
+                                     style="scrollbar-gutter:stable;"
+                                     data-testid="workflows-tree-scroll">
+                                    <TreeView Items="@WorkflowDefinitionTreeNodes"
+                                              Style="TreeViewStyle.Workbench"
+                                              AriaLabel="Workflow definitions by lifecycle"
+                                              EmptyText="No workflows are available."
+                                              OnSelect="HandleWorkflowTreeSelectAsync"
+                                              OnToggle="HandleWorkflowTreeToggleAsync" />
+                                </div>
                             }
                         </SurfaceCard>
 

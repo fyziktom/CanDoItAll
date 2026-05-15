@@ -14,6 +14,9 @@ public partial class MainLayout
         await ResolveAndTrackCurrentTabAsync();
     }
 
+    private Task OpenSettingsFromShellAsync()
+        => HandleNavigateAsync("/settings");
+
     private Task HandleOpenWorkbenchItemAsync(string tabId) => HandleSelectTabAsync(tabId);
 
     private Task HandleSelectWorkspaceAsync(string workspaceId)
