@@ -19,9 +19,11 @@ public sealed class MainLayoutDatabaseProfileTests
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains("Active database", cut.Markup);
-            Assert.Contains("Persisted active SQLite workspace", cut.Markup);
+            Assert.Contains("database-shell-action", cut.Markup);
+            Assert.Contains("shell-settings-action", cut.Markup);
             Assert.Contains("data-testid=\"layout-body\"", cut.Markup, StringComparison.Ordinal);
+            Assert.DoesNotContain("active-database-indicator", cut.Markup);
+            Assert.DoesNotContain("database-topbar-switcher", cut.Markup);
             Assert.DoesNotContain("database-startup-modal", cut.Markup);
             Assert.DoesNotContain("Continue with the active database to load the workspace", cut.Markup);
         });
@@ -37,7 +39,6 @@ public sealed class MainLayoutDatabaseProfileTests
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains("Active database", cut.Markup);
             Assert.Contains("database-startup-modal", cut.Markup);
             Assert.Contains("database-startup-continue", cut.Markup);
             Assert.Contains("database-startup-create-managed", cut.Markup);
@@ -48,7 +49,7 @@ public sealed class MainLayoutDatabaseProfileTests
     }
 
     [Fact]
-    public async Task Main_layout_reopens_database_switcher_from_top_bar()
+    public async Task Main_layout_reopens_database_switcher_from_shell_utility()
     {
         await using var harness = await CreateUnlockedHarnessAsync();
         harness.Context.JSInterop.Setup<bool>("CanDoItAll.browserState.isDatabaseStartupPromptDismissed")
@@ -59,11 +60,12 @@ public sealed class MainLayoutDatabaseProfileTests
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains("database-topbar-switcher", cut.Markup);
+            Assert.Contains("database-shell-action", cut.Markup);
+            Assert.DoesNotContain("database-topbar-switcher", cut.Markup);
             Assert.DoesNotContain("database-startup-modal", cut.Markup);
         });
 
-        cut.Find("[data-testid='database-topbar-switcher']").Click();
+        cut.Find("[data-testid='database-shell-action']").Click();
 
         cut.WaitForAssertion(() =>
         {

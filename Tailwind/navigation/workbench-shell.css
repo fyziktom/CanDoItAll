@@ -4,7 +4,7 @@
   }
 
   .cda-shell-frame {
-    @apply mx-auto flex min-h-screen w-full max-w-[1940px] gap-3 px-3 py-3 sm:px-4 xl:px-5;
+    @apply mx-auto flex min-h-screen w-full max-w-none gap-2 px-2 py-2 sm:px-3 xl:px-4;
   }
 
   .cda-shell-frame--focus {
@@ -12,15 +12,55 @@
   }
 
   .cda-shell-sidebar {
-    @apply hidden shrink-0 overflow-y-auto rounded-[2rem] border border-white/70 bg-slate-950 text-slate-100 shadow-2xl shadow-slate-900/10 xl:block;
+    @apply hidden shrink-0 overflow-hidden rounded-[1.35rem] border border-white/70 bg-slate-950 text-slate-100 shadow-2xl shadow-slate-900/10 transition-[width] duration-200 xl:block;
   }
 
   .cda-shell-sidebar--focus {
-    @apply w-64 p-4;
+    @apply p-2.5;
   }
 
   .cda-shell-sidebar--standard {
-    @apply w-72 p-5;
+    @apply p-2.5;
+  }
+
+  .cda-shell-sidebar--collapsed {
+    @apply w-[4.75rem];
+  }
+
+  .cda-shell-sidebar--expanded {
+    @apply w-72;
+  }
+
+  .cda-shell-sidebar__inner {
+    @apply flex h-full min-h-0 flex-col gap-2;
+  }
+
+  .cda-shell-sidebar__top {
+    @apply flex shrink-0 items-center justify-between gap-2;
+  }
+
+  .cda-shell-brand {
+    @apply flex min-w-0 items-center gap-2;
+  }
+
+  .cda-shell-brand--collapsed {
+    @apply w-full justify-center;
+  }
+
+  .cda-shell-brand-title {
+    @apply truncate text-sm font-semibold tracking-tight text-white;
+  }
+
+  .cda-shell-brand-mark {
+    @apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/10 text-[0.68rem] font-bold uppercase tracking-[0.14em] text-sky-100;
+  }
+
+  .cda-shell-toggle-button {
+    @apply inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-300 transition hover:bg-white/10 hover:text-white;
+  }
+
+  .cda-shell-expanded-context {
+    @apply shrink-0 overflow-hidden;
   }
 
   .cda-shell-card-dark {
@@ -44,7 +84,27 @@
   }
 
   .cda-shell-nav-button {
-    @apply flex w-full items-start gap-3 rounded-2xl px-3 py-3 text-left transition;
+    @apply relative flex w-full text-left transition;
+  }
+
+  .cda-shell-nav {
+    @apply min-h-0 flex-1 overflow-y-auto py-1;
+  }
+
+  .cda-shell-nav--expanded {
+    @apply space-y-1.5;
+  }
+
+  .cda-shell-nav--collapsed {
+    @apply flex flex-col items-center gap-1.5 overflow-x-visible;
+  }
+
+  .cda-shell-nav-button--expanded {
+    @apply items-start gap-3 rounded-xl px-3 py-2.5;
+  }
+
+  .cda-shell-nav-button--collapsed {
+    @apply h-11 w-11 items-center justify-center rounded-xl px-0 py-0;
   }
 
   .cda-shell-nav-button--active {
@@ -56,7 +116,108 @@
   }
 
   .cda-shell-nav-icon {
-    @apply mt-0.5 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-xs font-semibold uppercase;
+    @apply inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-xs font-semibold uppercase;
+  }
+
+  .cda-shell-nav-button--expanded .cda-shell-nav-icon {
+    @apply mt-0.5;
+  }
+
+  .cda-shell-nav-button--collapsed .cda-shell-nav-icon {
+    @apply h-10 w-10;
+  }
+
+  .cda-shell-nav-badge-dot {
+    @apply absolute right-0.5 top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-sky-300 px-1 text-[0.55rem] font-bold leading-none text-slate-950;
+  }
+
+  .cda-shell-nav-tooltip {
+    @apply max-w-[18rem] rounded-xl border border-slate-700 bg-slate-950 p-0 text-slate-100 shadow-2xl shadow-slate-950/20;
+  }
+
+  .cda-shell-tooltip-card {
+    @apply w-64 space-y-1.5 px-3 py-2.5;
+  }
+
+  .cda-shell-tooltip-title {
+    @apply text-sm font-semibold text-white;
+  }
+
+  .cda-shell-tooltip-body {
+    @apply text-xs leading-5 text-slate-300;
+  }
+
+  .cda-shell-tooltip-badge {
+    @apply inline-flex rounded-full bg-sky-400/15 px-2 py-0.5 text-[0.62rem] font-semibold text-sky-100;
+  }
+
+  .cda-shell-opened-list {
+    @apply shrink-0;
+  }
+
+  .cda-shell-utility-area {
+    @apply mt-auto shrink-0 border-t border-white/10 pt-2;
+  }
+
+  .cda-shell-utility-stack {
+    @apply flex flex-col gap-1.5;
+  }
+
+  .cda-shell-utility-button {
+    @apply relative flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-2 text-left text-slate-300 transition hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300;
+  }
+
+  .cda-shell-sidebar--expanded .cda-shell-utility-button,
+  .cda-shell-utility-button--expanded {
+    @apply justify-start px-3;
+  }
+
+  .cda-shell-utility-icon {
+    @apply inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-xs font-semibold uppercase;
+  }
+
+  .cda-shell-utility-label {
+    @apply min-w-0 truncate text-sm font-semibold;
+  }
+
+  .cda-shell-sidebar--collapsed .cda-shell-utility-label {
+    @apply sr-only;
+  }
+
+  .cda-shell-db-flyout {
+    @apply max-w-[24rem] rounded-xl border border-slate-200 bg-white p-0 text-slate-900 shadow-2xl shadow-slate-950/20;
+  }
+
+  .cda-shell-db-flyout-card {
+    @apply w-80 space-y-3 px-4 py-3;
+  }
+
+  .cda-shell-db-flyout__header {
+    @apply flex items-start justify-between gap-3;
+  }
+
+  .cda-shell-db-flyout__title {
+    @apply truncate text-sm font-semibold text-slate-950;
+  }
+
+  .cda-shell-db-flyout__meta {
+    @apply text-xs leading-5 text-slate-500;
+  }
+
+  .cda-shell-db-flyout__facts {
+    @apply grid gap-2 text-xs;
+  }
+
+  .cda-shell-db-flyout__fact {
+    @apply flex items-start justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2;
+  }
+
+  .cda-shell-db-flyout__fact span {
+    @apply font-semibold uppercase tracking-[0.12em] text-slate-400;
+  }
+
+  .cda-shell-db-flyout__fact strong {
+    @apply max-w-[12rem] truncate text-right font-semibold text-slate-800;
   }
 
   .cda-shell-mobile-panel {

@@ -14,6 +14,9 @@ public partial class MainLayout
         await ResolveAndTrackCurrentTabAsync();
     }
 
+    private Task OpenSettingsFromShellAsync()
+        => HandleNavigateAsync("/settings");
+
     private Task HandleOpenWorkbenchItemAsync(string tabId) => HandleSelectTabAsync(tabId);
 
     private Task HandleSelectWorkspaceAsync(string workspaceId)
@@ -255,43 +258,6 @@ public partial class MainLayout
             TabGroup: ResolvePageGroup(path),
             IsPinned: navigation.PinnedByDefault,
             CanClose: !navigation.PinnedByDefault);
-    }
-
-    private static TuningSurfaceDefinition? ResolveTuningSurface(string path)
-    {
-        var normalized = path.Trim().ToLowerInvariant();
-        if (normalized.EndsWith("/structure", StringComparison.Ordinal))
-        {
-            return new TuningSurfaceDefinition("page-projectstructurepage", "ProjectStructurePage", "Project structure canvas and outline coordination.");
-        }
-
-        if (normalized.EndsWith("/calendar", StringComparison.Ordinal))
-        {
-            return new TuningSurfaceDefinition("page-projectcalendarpage", "ProjectCalendarPage", "Project events calendar surface and artifact navigation.");
-        }
-
-        return normalized switch
-        {
-            "/" => new TuningSurfaceDefinition("page-home", "Home", "Dashboard summary and startup guidance."),
-            "/projects" => new TuningSurfaceDefinition("page-projectspage", "ProjectsPage", "Project list, editor, and phase planning."),
-            "/processes" => new TuningSurfaceDefinition("page-processespage", "ProcessesPage", "Process definition and runtime management workspace."),
-            "/processes/live" => new TuningSurfaceDefinition("page-liveprocessespage", "LiveProcessesPage", "Live process observation dashboard with cards, active agents, metrics, and tool analytics."),
-            "/crm-hr" => new TuningSurfaceDefinition("page-crmhrhomepage", "CrmHrHomePage", "CRM / HR module summary and route hub."),
-            "/crm-hr/directory" => new TuningSurfaceDefinition("page-crmhrdirectorypage", "CrmHrDirectoryPage", "Unified party directory and editor."),
-            "/crm-hr/crm" => new TuningSurfaceDefinition("page-crmhrcrmpage", "CrmHrCrmPage", "CRM workspace shell for accounts and opportunities."),
-            "/crm-hr/workforce" => new TuningSurfaceDefinition("page-crmhrworkforcepage", "CrmHrWorkforcePage", "Workforce shell for delivery units and staffing supply."),
-            "/crm-hr/recruiting" => new TuningSurfaceDefinition("page-crmhrrecruitingpage", "CrmHrRecruitingPage", "Recruiting shell for candidates and lifecycle tasks."),
-            "/crm-hr/agents" => new TuningSurfaceDefinition("page-crmhragentspage", "CrmHrAgentsPage", "AI agent directory and governance shell."),
-            "/crm-hr/assignments" => new TuningSurfaceDefinition("page-crmhrassignmentspage", "CrmHrAssignmentsPage", "Project-linked assignment shell."),
-            "/resources" => new TuningSurfaceDefinition("page-resourcespage", "ResourcesPage", "Resource registry and connector editing."),
-            "/prompt-gallery" => new TuningSurfaceDefinition("page-promptgallerypage", "PromptGalleryPage", "Prompt library, versions, and usage history."),
-            "/prompt-factory" => new TuningSurfaceDefinition("page-promptfactorypage", "PromptFactoryPage", "Prompt assembly, flow templates, and provider sends."),
-            "/validation" => new TuningSurfaceDefinition("page-validationcenterpage", "ValidationCenterPage", "Validation runs, findings, and review decisions."),
-            "/test-lab" => new TuningSurfaceDefinition("page-testlabpage", "TestLabPage", "Test plans, evidence, and execution records."),
-            "/activity" => new TuningSurfaceDefinition("page-activitypage", "ActivityPage", "Activity timeline and cross-entity search."),
-            "/automation" => new TuningSurfaceDefinition("page-automationpage", "AutomationPage", "Background job visibility and diagnostics."),
-            _ => null
-        };
     }
 
     private static bool TryReadGuid(IDictionary<string, Microsoft.Extensions.Primitives.StringValues> query, string key, out Guid value)

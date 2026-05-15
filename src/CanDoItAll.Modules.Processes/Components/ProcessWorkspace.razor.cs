@@ -131,6 +131,7 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private Guid? selectedAssignmentId;
     private string detailTab = DetailTabDefinition;
     private string definitionSearch = string.Empty;
+    private readonly HashSet<string> expandedProcessTreeNodeIds = [];
     private readonly ProcessRunListFilterState runHistoryFilter = new();
     private readonly ProcessRunListFilterState analyticsRunFilter = new();
     private readonly ProcessImprovementFilterState improvementFilter = new();
@@ -182,6 +183,12 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
             definition.ValueStatement.Contains(definitionSearch, StringComparison.OrdinalIgnoreCase))
         .OrderByDescending(definition => definition.UpdatedAtUtc)
         .ToList();
+
+    private IReadOnlyList<TreeViewNode> ProcessDefinitionTreeNodes
+        => ProcessDefinitionTreeNodeBuilder.Build(
+            FilteredDefinitions,
+            selectedProcessId,
+            expandedProcessTreeNodeIds);
 
     private ProcessDefinitionListItem? SelectedDefinitionSummary
         => selectedProcessId.HasValue

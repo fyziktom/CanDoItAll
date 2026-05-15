@@ -7,23 +7,23 @@ public static class ShellNavigation
 {
     public static readonly IReadOnlyList<ShellNavigationItem> Items =
     [
-        new("Dashboard", "/", "DB", "Operational summary, provider health, and recent work.", PinnedByDefault: true),
-        new("Projects", "/projects", "PR", "Project setup, phases, stack profile, and delivery context.", PinnedByDefault: false),
-        new("Processes", "/processes", "PM", "Role-first process definitions, runtime orchestration, evidence, and improvement signals.", PinnedByDefault: false),
-        new("Live Processes", "/processes/live", "LP", "Live projection of running processes, active agents, metrics, and tool usage.", PinnedByDefault: false),
-        new("Collaboration", "/collaboration", "CO", "Human escalation, inbox, and process-scoped conversations.", PinnedByDefault: false),
-        new("CRM / HR", "/crm-hr", "CH", "Unified party directory, CRM, workforce, recruiting, agents, and assignments.", PinnedByDefault: false),
-        new("Agents", "/agents", "AG", "Integrated AgentFramework foundation, imported tabs, and runtime governance.", PinnedByDefault: false),
-        new("Resources", "/resources", "RS", "Typed resources, connectors, and validation status.", PinnedByDefault: false),
-        new("Plugins", "/plugins", "PL", "Plugin catalog, runtime packages, installation state, and availability.", PinnedByDefault: false),
-        new("Prompt Gallery", "/prompt-gallery", "PG", "Prompt library, collections, versions, and usage.", PinnedByDefault: false),
-        new("Prompt Factory", "/prompt-factory", "PF", "Guided prompt assembly with flow templates and blueprints.", PinnedByDefault: false),
-        new("Validation Center", "/validation", "VC", "Checklists, findings, review decisions, and coverage.", PinnedByDefault: false),
-        new("Test Lab", "/test-lab", "TL", "Plans, evidence, linked tests, and execution records.", PinnedByDefault: false),
-        new("Activity", "/activity", "AC", "Timeline and cross-entity search for recent work.", PinnedByDefault: false),
-        new("Automation", "/automation", "AU", "Background jobs, exports, sends, and operational diagnostics.", PinnedByDefault: false),
-        new("Scheduler", "/scheduler", "SC", "Calendar-backed workflow and process run planning.", PinnedByDefault: false),
-        new("Settings", "/settings", "ST", "Workspace defaults, providers, secrets, and environment settings.", PinnedByDefault: true)
+        new("Dashboard", "/", "dashboard", "Operational summary, provider health, and recent work.", PinnedByDefault: true),
+        new("Projects", "/projects", "folder_open", "Project setup, phases, stack profile, and delivery context.", PinnedByDefault: false),
+        new("Processes", "/processes", "account_tree", "Role-first process definitions, runtime orchestration, evidence, and improvement signals.", PinnedByDefault: false),
+        new("Live Processes", "/processes/live", "monitor_heart", "Live projection of running processes, active agents, metrics, and tool usage.", PinnedByDefault: false),
+        new("Collaboration", "/collaboration", "forum", "Human escalation, inbox, and process-scoped conversations.", PinnedByDefault: false),
+        new("CRM / HR", "/crm-hr", "groups", "Unified party directory, CRM, workforce, recruiting, agents, and assignments.", PinnedByDefault: false),
+        new("Agents", "/agents", "smart_toy", "Integrated AgentFramework foundation, imported tabs, and runtime governance.", PinnedByDefault: false),
+        new("Resources", "/resources", "inventory_2", "Typed resources, connectors, and validation status.", PinnedByDefault: false),
+        new("Plugins", "/plugins", "extension", "Plugin catalog, runtime packages, installation state, and availability.", PinnedByDefault: false),
+        new("Prompt Gallery", "/prompt-gallery", "library_books", "Prompt library, collections, versions, and usage.", PinnedByDefault: false),
+        new("Prompt Factory", "/prompt-factory", "construction", "Guided prompt assembly with flow templates and blueprints.", PinnedByDefault: false),
+        new("Validation Center", "/validation", "fact_check", "Checklists, findings, review decisions, and coverage.", PinnedByDefault: false),
+        new("Test Lab", "/test-lab", "science", "Plans, evidence, linked tests, and execution records.", PinnedByDefault: false),
+        new("Activity", "/activity", "timeline", "Timeline and cross-entity search for recent work.", PinnedByDefault: false),
+        new("Automation", "/automation", "autorenew", "Background jobs, exports, sends, and operational diagnostics.", PinnedByDefault: false),
+        new("Scheduler", "/scheduler", "calendar_month", "Calendar-backed workflow and process run planning.", PinnedByDefault: false),
+        new("Settings", "/settings", "settings", "Workspace defaults, providers, secrets, and environment settings.", PinnedByDefault: true)
     ];
 
     public static IReadOnlyList<ShellNavigationItem> GetItems(int collaborationUnreadCount)

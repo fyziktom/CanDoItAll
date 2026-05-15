@@ -136,6 +136,8 @@ public sealed class PluginsPageTests
         navigation.NavigateTo("/plugins");
         var cut = harness.Context.RenderComponent<PluginsPage>();
 
+        Assert.DoesNotContain("plugin-package-upload", cut.Markup, StringComparison.Ordinal);
+        cut.Find("[data-testid='plugin-packages-open']").Click();
         cut.WaitForElement("[data-testid='plugin-package-upload']");
         cut.Find("[data-testid='plugin-package-install-page-runtime-package']").Click();
 

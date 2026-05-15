@@ -17,7 +17,7 @@ tests: component:ProjectCalendarPageTests, e2e:workbench-calendar
 
 @if (unavailableState is not null)
 {
-    <PageScaffold>
+    <PageScaffold MaxWidthClass="max-w-full">
         <Header>
             <PageHeader Eyebrow="Workbench"
                         Title="Project calendar unavailable"
@@ -37,7 +37,7 @@ tests: component:ProjectCalendarPageTests, e2e:workbench-calendar
 }
 else if (surface is null)
 {
-    <PageScaffold>
+    <PageScaffold MaxWidthClass="max-w-full">
         <Header>
             <PageHeader Eyebrow="Workbench"
                         Title="Project calendar"
@@ -52,7 +52,7 @@ else if (surface is null)
 }
 else
 {
-    <PageScaffold>
+    <PageScaffold MaxWidthClass="max-w-full">
         <Header>
             <PageHeader Eyebrow="Workbench"
                         Title="@($"{surface.ProjectName} calendar")"

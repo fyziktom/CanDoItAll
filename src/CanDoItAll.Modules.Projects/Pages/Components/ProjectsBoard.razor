@@ -45,15 +45,17 @@
            
 
                 <Cluster JustifyContent="JustifyContent.End">
-                    <Button Class="h-9 px-3"
+                    <Button Class="cda-button--quick"
                             Icon="add"
-                            Text="New"
+                            title="Create project"
+                            aria-label="Create project"
                             data-testid="projects-new-button"
                             Click="OpenNewProject" />
                     <Button ButtonStyle="ButtonStyle.Light"
-                            Class="h-9 px-3"
+                            Class="cda-button--quick"
                             Icon="dashboard"
-                            Text="Dashboard"
+                            title="Open dashboard"
+                            aria-label="Open dashboard"
                             Click="NavigateHome" />
                     <HelpPopover RootClass="pf-help-popover flex items-center"
                                  ToggleClass="pf-help-popover__toggle pf-help-popover__toggle--compact"
@@ -155,9 +157,10 @@
                     </InputSelect>
                 </PrefixedField>
                 <Button ButtonStyle="ButtonStyle.Light"
-                        Class="h-10 w-full px-3 xl:w-auto"
-                        Token="RST"
-                        Text="Reset"
+                        Class="cda-button--quick"
+                        Icon="restart_alt"
+                        title="Reset filters"
+                        aria-label="Reset filters"
                         Click="ResetFilters" />
             </div>
         </Toolbar>
@@ -186,17 +189,19 @@
                 <Cluster Gap="LayoutGap.Small"
                          JustifyContent="JustifyContent.End"
                          Class="min-w-0">
-                    <Button Class="h-10 px-3"
+                    <Button Class="cda-button--quick"
                             Icon="file_download"
-                            Text="Export"
+                            title="Export projects package"
+                            aria-label="Export projects package"
                             Disabled="@IsProjectPackageBusy"
                             IsBusy="@IsProjectPackageBusy"
                             data-testid="projects-export-package-button"
                             Click="ExportProjectsPackage" />
                     <Button ButtonStyle="ButtonStyle.Light"
-                            Class="h-10 px-3"
+                            Class="cda-button--quick"
                             Icon="file_upload"
-                            Text="Import"
+                            title="Import projects package"
+                            aria-label="Import projects package"
                             Disabled="@IsProjectPackageBusy"
                             data-testid="projects-import-package-button"
                             Click="ImportProjectsPackage" />
@@ -212,25 +217,63 @@
         </Toolbar>
     </Stack>
 
-    <div class="projects-board__cards-scroll min-h-0 flex-1 overflow-y-auto p-4 sm:p-5" data-testid="projects-cards-scroll">
-        @if (FilteredProjectSummaries.Count == 0)
-        {
-            <EmptyState Eyebrow="No matching projects"
-                        Title="Adjust the filters or start a new project"
-                        Description="When projects match the current filters, they appear here as compact cards with overview and dashboard actions.">
-                <Actions>
-                    <Button Text="New project" Click="OpenNewProject" />
-                </Actions>
-            </EmptyState>
-        }
-        else
-        {
-            <Grid Gap="LayoutGap.Large"
-                  ColumnsMd="2"
-                  Columns2Xl="3">
-                @foreach (var project in FilteredProjectSummaries)
+    <ListDetailShell ListPaneWidth="22rem"
+                     Dense="true"
+                     ListPaneClass="min-h-0"
+                     DetailPaneClass="min-h-0"
+                     data-testid="projects-tree-workspace">
+        <ListHeader>
+            <ListPanelHeader Title="Portfolio tree"
+                             Dense="true"
+                             Count="@($"{ProjectTreeNodes.Count} root(s)")"
+                             HelpText="Use the hierarchy tree to choose a project without leaving the portfolio board." />
+        </ListHeader>
+        <ListContent>
+            <div class="h-full min-h-0 overflow-y-auto pr-1"
+                 style="scrollbar-gutter:stable;"
+                 data-testid="projects-tree-scroll">
+                <TreeView Items="@ProjectTreeNodes"
+                          Style="TreeViewStyle.Workbench"
+                          AriaLabel="Project hierarchy"
+                          EmptyText="No projects match the current filters."
+                          OnSelect="HandleProjectTreeSelectAsync"
+                          OnToggle="HandleProjectTreeToggleAsync" />
+            </div>
+        </ListContent>
+        <DetailHeader>
+            <Cluster Gap="LayoutGap.Small"
+                     JustifyContent="JustifyContent.SpaceBetween"
+                     Class="min-w-0">
+                <div class="min-w-0">
+                    <p class="cda-eyebrow cda-eyebrow--tight">Portfolio board</p>
+                    <h3 class="truncate text-base font-semibold text-slate-950">@SelectedTreeProjectName</h3>
+                </div>
+                <Pill Tone="PillTone.Info"
+                      Text="@($"{FilteredProjectSummaries.Count} visible")" />
+            </Cluster>
+        </DetailHeader>
+        <DetailContent>
+            <div class="projects-board__cards-scroll h-full min-h-0 overflow-y-auto pr-1"
+                 style="scrollbar-gutter:stable;"
+                 data-testid="projects-cards-scroll">
+                @if (FilteredProjectSummaries.Count == 0)
                 {
-                    <article class="@ProjectsPresentation.GetProjectCardCss(project.Status)" data-testid="project-card">
+                    <EmptyState Eyebrow="No matching projects"
+                                Title="Adjust the filters or start a new project"
+                                Description="When projects match the current filters, they appear here as compact cards with overview and dashboard actions.">
+                        <Actions>
+                            <Button Text="New project" Click="OpenNewProject" />
+                        </Actions>
+                    </EmptyState>
+                }
+                else
+                {
+                    <Grid Gap="LayoutGap.Medium"
+                          ColumnsLg="2"
+                          Columns2Xl="3">
+                        @foreach (var project in FilteredProjectSummaries)
+                        {
+                            <article class="@ProjectsPresentation.GetProjectCardCss(project.Status)" data-testid="project-card">
                         <Cluster AlignItems="AlignItems.Start"
                                  Wrap="FlexWrap.NoWrap"
                                  Gap="LayoutGap.Medium">
@@ -284,26 +327,27 @@
                             </div>
                         </Cluster>
 
-                        <Grid Gap="LayoutGap.Small"
-                              ColumnsSm="4"
-                              Class="mt-4">
-                            <MetricCard Label="Phases" Value="@project.PhaseCount.ToString()" />
-                            <MetricCard Label="Parents" Value="@project.ParentCount.ToString()" />
-                            <MetricCard Label="Subprojects" Value="@project.ChildCount.ToString()" />
-                            <MetricCard Label="Updated" Value="@project.UpdatedAtUtc.LocalDateTime.ToString("g")" />
-                        </Grid>
+                        <Cluster Gap="LayoutGap.XSmall"
+                                 Class="mt-4">
+                            <StatusBadge Tone="neutral" Text="@($"{project.PhaseCount} phases")" />
+                            <StatusBadge Tone="neutral" Text="@($"{project.ParentCount} parents")" />
+                            <StatusBadge Tone="info" Text="@($"{project.ChildCount} subprojects")" />
+                            <StatusBadge Tone="neutral" Text="@($"Updated {project.UpdatedAtUtc.LocalDateTime:g}")" />
+                        </Cluster>
 
                         <CardActions Secondary="true" Class="mt-4 border-white/70">
                             <Cluster>
-                                <Button Class="h-9 px-3"
+                                <Button Class="cda-button--quick"
                                         Icon="visibility"
-                                        Text=""
+                                        title="Preview project"
+                                        aria-label="Preview project"
                                         data-testid="project-card-details-button"
                                         Click="@(() => OpenProjectPreview.InvokeAsync(project.Id))" />
                                 <Button ButtonStyle="ButtonStyle.Light"
-                                        Class="h-9 px-3"
+                                        Class="cda-button--quick"
                                         Icon="subdirectory_arrow_right"
-                                        Text=""
+                                        title="Open hierarchy"
+                                        aria-label="Open hierarchy"
                                         data-testid="project-card-subprojects-button"
                                         Click="@(() => OpenHierarchyModal.InvokeAsync(project.Id))" />
                             </Cluster>
@@ -340,18 +384,19 @@
                                         Size="ButtonSize.Small"
                                         Class="cda-button--quick"
                                         Icon="timeline"
-                                        Text="Gantt"
                                         title="Open Mermaid Gantt"
                                         aria-label="Open Mermaid Gantt"
                                         data-testid="project-card-gantt-button"
                                         Click="@(() => OpenGanttPreview.InvokeAsync(project.Id))" />
                             </Cluster>
                         </CardActions>
-                    </article>
+                            </article>
+                        }
+                    </Grid>
                 }
-            </Grid>
-        }
-    </div>
+            </div>
+        </DetailContent>
+    </ListDetailShell>
 </section>
 
 @code {
@@ -360,6 +405,9 @@
 
     [Parameter, EditorRequired]
     public IReadOnlyList<ProjectSummary> FilteredProjectSummaries { get; set; } = default!;
+
+    [Parameter]
+    public IReadOnlyList<ProjectHierarchyLinkSummary> HierarchyLinks { get; set; } = [];
 
     [Parameter]
     public string ProjectSearch { get; set; } = string.Empty;
@@ -459,6 +507,42 @@
 
     [Parameter]
     public EventCallback ImportProjectsPackage { get; set; }
+
+    private readonly HashSet<string> expandedProjectTreeNodeIds = [];
+    private Guid? selectedTreeProjectId;
+
+    private IReadOnlyList<TreeViewNode> ProjectTreeNodes
+        => ProjectPortfolioTreeNodeBuilder.Build(
+            FilteredProjectSummaries,
+            HierarchyLinks,
+            selectedTreeProjectId,
+            expandedProjectTreeNodeIds);
+
+    private string SelectedTreeProjectName
+        => selectedTreeProjectId.HasValue
+            ? FilteredProjectSummaries.FirstOrDefault(project => project.Id == selectedTreeProjectId.Value)?.Name ?? "Selected project"
+            : "All filtered projects";
+
+    private async Task HandleProjectTreeSelectAsync(string nodeId)
+    {
+        if (!ProjectPortfolioTreeNodeBuilder.TryReadProjectId(nodeId, out var projectId))
+        {
+            return;
+        }
+
+        selectedTreeProjectId = projectId;
+        await OpenProjectPreview.InvokeAsync(projectId);
+    }
+
+    private Task HandleProjectTreeToggleAsync(string nodeId)
+    {
+        if (!expandedProjectTreeNodeIds.Add(nodeId))
+        {
+            expandedProjectTreeNodeIds.Remove(nodeId);
+        }
+
+        return Task.CompletedTask;
+    }
 
     private string ProjectSearchProxy
     {

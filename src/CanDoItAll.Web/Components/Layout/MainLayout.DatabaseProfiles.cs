@@ -1,3 +1,4 @@
+using System.IO;
 using System.Text.Json;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
@@ -387,6 +388,46 @@ public partial class MainLayout
             DatabaseProfileResolutionSource.AutoProvisionedManagedSqlite => "Auto-provisioned managed SQLite",
             _ => resolutionSource.ToString()
         };
+    }
+
+    private static string BuildSafeDatabaseDescriptor(DatabaseSelectionStateModel? selection)
+    {
+        if (selection is null)
+        {
+            return "Runtime selection is loading.";
+        }
+
+        if (string.IsNullOrWhiteSpace(selection.Descriptor))
+        {
+            return DescribeDatabaseProvider(selection.ProviderKind);
+        }
+
+        return selection.ProviderKind switch
+        {
+            DatabaseProviderKind.Sqlite => Path.GetFileName(selection.Descriptor),
+            DatabaseProviderKind.PostgreSql => selection.Descriptor,
+            DatabaseProviderKind.InMemory => selection.Descriptor,
+            _ => DescribeDatabaseProvider(selection.ProviderKind)
+        };
+    }
+
+    private static string BuildSafeDatabaseSummary(DatabaseSelectionStateModel? selection)
+    {
+        if (selection is null)
+        {
+            return "Database profile: loading";
+        }
+
+        return string.Join(
+            Environment.NewLine,
+            [
+                $"Profile: {selection.DisplayName}",
+                $"Provider: {DescribeDatabaseProvider(selection.ProviderKind)}",
+                $"Source: {DescribeDatabaseSource(selection.SourceKind)}",
+                $"Resolution: {DescribeResolutionSource(selection.ResolutionSource)}",
+                $"Runtime: {(selection.IsRuntimeLocked ? "Config locked" : "Switchable")}",
+                $"Descriptor: {BuildSafeDatabaseDescriptor(selection)}"
+            ]);
     }
 
     private void HandleDatabaseSwitchChanged(object? sender, DatabaseProfileChangedNotification notification)

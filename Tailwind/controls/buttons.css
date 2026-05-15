@@ -339,7 +339,26 @@
   }
 
   .cda-button--quick {
-    @apply h-9 w-11 justify-center px-0 text-[10px] font-bold uppercase tracking-[0.18em];
+    @apply h-9 w-9 min-w-9 justify-center px-0 text-[10px] font-bold uppercase tracking-[0.18em];
+  }
+
+  .cda-tunable-boundary {
+    @apply relative min-w-0;
+  }
+
+  .cda-tunable-boundary__button {
+    @apply absolute right-3 top-3 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full border shadow-sm transition-colors;
+    border-color: var(--cad-tone-info-soft-border);
+    background: var(--cad-tone-info-soft-bg);
+    color: var(--cad-tone-info-soft-fg);
+  }
+
+  .cda-tunable-boundary__button:hover {
+    background: var(--cad-tone-info-soft-hover);
+  }
+
+  .cda-tunable-boundary__icon {
+    @apply text-base leading-none;
   }
 
   .cad-card-button,

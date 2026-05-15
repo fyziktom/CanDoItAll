@@ -30,6 +30,10 @@
     color: var(--cad-color-text-strong);
   }
 
+  .cda-page-header__title:focus {
+    outline: none;
+  }
+
   .cda-page-header__title--compact {
     @apply text-lg xl:text-xl;
   }

@@ -1,7 +1,6 @@
 .workflows-summary ::deep .cda-summary-tile--badge {
-    flex: 0 1 13.5rem;
-    padding: 0.65rem 0.85rem;
-    border-radius: 0.75rem;
+    flex: 0 1 11.25rem;
+    padding: 0.45rem 0.7rem;
 }
 
 .workflows-layout {
@@ -271,7 +270,7 @@
 
 @media (max-width: 900px) {
     .workflows-summary ::deep .cda-summary-tile--badge {
-        flex-basis: 11.75rem;
+        flex-basis: 10.5rem;
     }
 
     .workflows-run-item,

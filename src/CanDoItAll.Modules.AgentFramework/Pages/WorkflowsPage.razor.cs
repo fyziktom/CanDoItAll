@@ -82,6 +82,7 @@ public partial class WorkflowsPage
     private bool isBusy;
     private bool isRunningTest;
     private bool isPreviewInputDialogOpen;
+    private readonly HashSet<string> expandedWorkflowTreeNodeIds = [];
 
     private string SelectedDefinitionTitle => selectedDefinition?.Name ?? "Workflow detail";
 
@@ -92,6 +93,12 @@ public partial class WorkflowsPage
     private string RunText => selectedRun is null ? "No run selected" : selectedRun.State.ToString();
 
     private string RunTone => selectedRun is null ? "neutral" : ResolveRunTone(selectedRun.State);
+
+    private IReadOnlyList<TreeViewNode> WorkflowDefinitionTreeNodes
+        => WorkflowDefinitionTreeNodeBuilder.Build(
+            definitions,
+            selectedDefinition?.Id,
+            expandedWorkflowTreeNodeIds);
 
     private int HistoryRunTotalPages => CalculateTotalPages(historyRunTotalCount, HistoryRunPageSize);
 
@@ -186,6 +193,26 @@ public partial class WorkflowsPage
         errorMessage = string.Empty;
         await LoadDefinitionAsync(definitionId);
         await LoadRunsPageAsync(definitionId, pageIndex: 0);
+    }
+
+    private async Task HandleWorkflowTreeSelectAsync(string nodeId)
+    {
+        if (!WorkflowDefinitionTreeNodeBuilder.TryReadDefinitionId(nodeId, out var definitionId))
+        {
+            return;
+        }
+
+        await SelectDefinitionAsync(definitionId);
+    }
+
+    private Task HandleWorkflowTreeToggleAsync(string nodeId)
+    {
+        if (!expandedWorkflowTreeNodeIds.Add(nodeId))
+        {
+            expandedWorkflowTreeNodeIds.Remove(nodeId);
+        }
+
+        return Task.CompletedTask;
     }
 
     private async Task LoadDefinitionAsync(WorkflowId definitionId)

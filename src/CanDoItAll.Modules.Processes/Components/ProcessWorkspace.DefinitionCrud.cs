@@ -53,6 +53,26 @@ public partial class ProcessWorkspace
         await LoadWorkspaceAsync();
     }
 
+    private async Task HandleProcessTreeSelectAsync(string nodeId)
+    {
+        if (!ProcessDefinitionTreeNodeBuilder.TryReadDefinitionId(nodeId, out var definitionId))
+        {
+            return;
+        }
+
+        await SelectDefinitionAsync(definitionId);
+    }
+
+    private Task HandleProcessTreeToggleAsync(string nodeId)
+    {
+        if (!expandedProcessTreeNodeIds.Add(nodeId))
+        {
+            expandedProcessTreeNodeIds.Remove(nodeId);
+        }
+
+        return Task.CompletedTask;
+    }
+
     private async Task SaveAsync()
     {
         await QuiesceDefinitionCanvasPersistenceAsync(DefinitionCanvasPersistenceQuiescenceMode.CancelPendingChanges);

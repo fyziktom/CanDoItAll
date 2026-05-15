@@ -20,7 +20,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
 
 <PageTitle>Projects</PageTitle>
 
-<PageScaffold>
+<PageScaffold MaxWidthClass="max-w-full">
     <Header>
         <div class="pr-20 sm:pr-24">
             <PageHeader Eyebrow="Projects"
@@ -32,6 +32,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     <ChildContent>
         <ProjectsBoard ProjectSummaries="projectSummaries"
                        FilteredProjectSummaries="FilteredProjectSummaries"
+                       HierarchyLinks="hierarchyLinks"
                        ProjectSearch="@projectSearch"
                        ProjectSearchChanged="@(value => { projectSearch = value; })"
                        StatusFilter="@statusFilter"

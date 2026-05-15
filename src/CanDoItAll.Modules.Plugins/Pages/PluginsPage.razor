@@ -19,13 +19,21 @@
 
 <PageTitle>Plugins</PageTitle>
 
-<PageScaffold>
+<PageScaffold MaxWidthClass="max-w-full">
     <Header>
         <PageHeader Eyebrow="Plugins"
                     Title="Plugin catalog"
                     Description="Review plugin manifests, runtime packages, grants, connection settings, OAuth status, and logs.">
             <Actions>
-                <Button Text="Refresh" ButtonStyle="ButtonStyle.Light" Click="LoadAsync" />
+                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" JustifyContent="JustifyContent.End">
+                    <StatusBadge Tone="info" Text="@($"{packageCatalog.Count} packages")" />
+                    <Button Text="Install packages"
+                            Icon="inventory_2"
+                            ButtonStyle="ButtonStyle.Light"
+                            data-testid="plugin-packages-open"
+                            Click="OpenPackageDialog" />
+                    <Button Text="Refresh" ButtonStyle="ButtonStyle.Light" Click="LoadAsync" />
+                </Cluster>
             </Actions>
         </PageHeader>
     </Header>
@@ -58,80 +66,13 @@
             </Alert>
         }
 
-        <FormSection Title="Plugin packages" Description="Install runtime plugin packages from the configured catalogue or upload a package archive.">
-            <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                <Stack GapScale="LayoutGap.Medium">
-                    <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.SpaceBetween">
-                        <h2 class="cda-title-md">Catalogue</h2>
-                        <StatusBadge Tone="info" Text="@($"{packageCatalog.Count} package(s)")" />
-                    </Cluster>
-
-                    @if (packageCatalog.Count == 0)
-                    {
-                        <EmptyState Eyebrow="Packages"
-                                    Title="No package catalogue entries"
-                                    Description="Configured package archives appear here after the catalogue folder contains valid plugin packages." />
-                    }
-                    else
-                    {
-                        <Stack GapScale="LayoutGap.Small">
-                            @foreach (var package in packageCatalog)
-                            {
-                                <div class="grid gap-3 rounded-lg border border-[var(--cda-border-subtle)] bg-[var(--cda-surface-muted)] p-3 md:grid-cols-[minmax(0,1fr)_auto]">
-                                    <Stack GapScale="LayoutGap.Tiny">
-                                        <Cluster Gap="LayoutGap.Small">
-                                            <StatusBadge Tone="@ResolvePackageTone(package)" Text="@(package.IsInstalled ? "Installed" : "Available")" />
-                                            <StatusBadge Tone="neutral" Text="@package.CatalogSourceKind.ToString()" />
-                                            @if (package.RequiresRestart)
-                                            {
-                                                <StatusBadge Tone="warning" Text="Restart" />
-                                            }
-                                        </Cluster>
-                                        <span class="text-sm font-medium text-[var(--cda-text)]">@package.DisplayName</span>
-                                        <span class="break-all text-xs text-[var(--cda-text-muted)]">@package.PackageId.Value</span>
-                                        <span class="text-sm text-[var(--cda-text-muted)]">@package.Description</span>
-                                    </Stack>
-                                    <Cluster Gap="LayoutGap.Tiny" Class="self-start">
-                                        <Button Text="Install"
-                                                Icon="download"
-                                                ButtonStyle="ButtonStyle.Primary"
-                                                Size="ButtonSize.Small"
-                                                data-testid="@BuildPackageInstallTestId(package)"
-                                                Disabled="@package.IsInstalled"
-                                                IsBusy="@IsPackageBusy(package, PackageInstallAction)"
-                                                Click="@(() => InstallPackageAsync(package))" />
-                                    </Cluster>
-                                </div>
-                            }
-                        </Stack>
-                    }
-                </Stack>
-
-                <Stack GapScale="LayoutGap.Medium">
-                    <h2 class="cda-title-md">Upload zip</h2>
-                    <div>
-                        <label class="cda-field-label" for="plugin-package-upload">Package archive</label>
-                        <InputFile id="plugin-package-upload"
-                                   class="cda-input"
-                                   accept=".zip,application/zip"
-                                   data-testid="plugin-package-upload"
-                                   OnChange="UploadPackageAsync" />
-                    </div>
-                    @if (!string.IsNullOrWhiteSpace(packageUploadFileName))
-                    {
-                        <p class="cda-body-muted break-all">@packageUploadFileName</p>
-                    }
-                </Stack>
-            </Grid>
-        </FormSection>
-
-        <SummaryTiles>
-            <SummaryTile Label="Catalog" Value="@catalog.Count.ToString()" HelperText="Plugins visible to the catalog." />
-            <SummaryTile Label="Installed" Value="@catalog.Count(item => item.IsInstalled).ToString()" HelperText="Persisted installations." Tone="info" />
-            <SummaryTile Label="Enabled" Value="@catalog.Count(item => item.IsEnabled).ToString()" HelperText="Installations enabled for runtime use." Tone="success" />
-            <SummaryTile Label="Packages" Value="@packageCatalog.Count.ToString()" HelperText="Runtime package archives visible to the installer." Tone="info" />
-            <SummaryTile Label="Unavailable" Value="@catalog.Count(item => item.Availability == PluginCatalogAvailabilityKind.Unavailable).ToString()" HelperText="Installed plugins missing from active catalog sources." Tone="warning" />
-        </SummaryTiles>
+        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="mb-4">
+            <StatusBadge Tone="neutral" Text="@($"{catalog.Count} catalog")" />
+            <StatusBadge Tone="info" Text="@($"{catalog.Count(item => item.IsInstalled)} installed")" />
+            <StatusBadge Tone="success" Text="@($"{catalog.Count(item => item.IsEnabled)} enabled")" />
+            <StatusBadge Tone="info" Text="@($"{packageCatalog.Count} packages")" />
+            <StatusBadge Tone="warning" Text="@($"{catalog.Count(item => item.Availability == PluginCatalogAvailabilityKind.Unavailable)} unavailable")" />
+        </Cluster>
 
         @if (catalog.Count == 0)
         {
@@ -556,6 +497,91 @@
     </ChildContent>
 </PageScaffold>
 
+<Dialog IsOpen="@showPackageDialog"
+        Eyebrow="Plugin packages"
+        Title="Install runtime packages"
+        Subtitle="Install from the configured catalogue or upload a package archive."
+        Size="ModalSize.Wide"
+        TestId="plugin-packages-dialog"
+        OnClose="ClosePackageDialog">
+    <HeaderActions>
+        <StatusBadge Tone="info" Text="@($"{packageCatalog.Count} packages")" />
+    </HeaderActions>
+    <ChildContent>
+        <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+            <Stack GapScale="LayoutGap.Medium">
+                <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.SpaceBetween">
+                    <h2 class="cda-title-md">Catalogue</h2>
+                    <StatusBadge Tone="info" Text="@($"{packageCatalog.Count} package(s)")" />
+                </Cluster>
+
+                @if (packageCatalog.Count == 0)
+                {
+                    <EmptyState Eyebrow="Packages"
+                                Title="No package catalogue entries"
+                                Description="Configured package archives appear here after the catalogue folder contains valid plugin packages." />
+                }
+                else
+                {
+                    <Stack GapScale="LayoutGap.Small">
+                        @foreach (var package in packageCatalog)
+                        {
+                            <div class="grid gap-3 rounded-lg border border-[var(--cda-border-subtle)] bg-[var(--cda-surface-muted)] p-3 md:grid-cols-[minmax(0,1fr)_auto]">
+                                <Stack GapScale="LayoutGap.Tiny">
+                                    <Cluster Gap="LayoutGap.Small">
+                                        <StatusBadge Tone="@ResolvePackageTone(package)" Text="@(package.IsInstalled ? "Installed" : "Available")" />
+                                        <StatusBadge Tone="neutral" Text="@package.CatalogSourceKind.ToString()" />
+                                        @if (package.RequiresRestart)
+                                        {
+                                            <StatusBadge Tone="warning" Text="Restart" />
+                                        }
+                                    </Cluster>
+                                    <span class="text-sm font-medium text-[var(--cda-text)]">@package.DisplayName</span>
+                                    <span class="break-all text-xs text-[var(--cda-text-muted)]">@package.PackageId.Value</span>
+                                    <span class="text-sm text-[var(--cda-text-muted)]">@package.Description</span>
+                                </Stack>
+                                <Cluster Gap="LayoutGap.Tiny" Class="self-start">
+                                    <Button Text="Install"
+                                            Icon="download"
+                                            ButtonStyle="ButtonStyle.Primary"
+                                            Size="ButtonSize.Small"
+                                            data-testid="@BuildPackageInstallTestId(package)"
+                                            Disabled="@package.IsInstalled"
+                                            IsBusy="@IsPackageBusy(package, PackageInstallAction)"
+                                            Click="@(() => InstallPackageAsync(package))" />
+                                </Cluster>
+                            </div>
+                        }
+                    </Stack>
+                }
+            </Stack>
+
+            <Stack GapScale="LayoutGap.Medium">
+                <h2 class="cda-title-md">Upload zip</h2>
+                <div>
+                    <label class="cda-field-label" for="plugin-package-upload">Package archive</label>
+                    <InputFile id="plugin-package-upload"
+                               class="cda-input"
+                               accept=".zip,application/zip"
+                               data-testid="plugin-package-upload"
+                               OnChange="UploadPackageAsync" />
+                </div>
+                @if (!string.IsNullOrWhiteSpace(packageUploadFileName))
+                {
+                    <p class="cda-body-muted break-all">@packageUploadFileName</p>
+                }
+            </Stack>
+        </Grid>
+    </ChildContent>
+    <Footer>
+        <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">
+            <Button Text="Close"
+                    ButtonStyle="ButtonStyle.Light"
+                    Click="ClosePackageDialog" />
+        </Cluster>
+    </Footer>
+</Dialog>
+
 @code {
     private const string InstallAction = "install";
     private const string EnableAction = "enable";
@@ -578,6 +604,7 @@
     private PluginRuntimeRestartStatus restartStatus = new(false, false, string.Empty, null, string.Empty, null, Environment.ProcessId);
     private string? selectedPluginId;
     private bool showAllPluginLogs;
+    private bool showPackageDialog;
     private int selectedPluginTabIndex;
     private string statusMessage = string.Empty;
     private AlertStyle statusAlertStyle = AlertStyle.Info;
@@ -632,6 +659,18 @@
     {
         showAllPluginLogs = showAll;
         await LoadPluginLogsAsync();
+    }
+
+    private Task OpenPackageDialog()
+    {
+        showPackageDialog = true;
+        return Task.CompletedTask;
+    }
+
+    private Task ClosePackageDialog()
+    {
+        showPackageDialog = false;
+        return Task.CompletedTask;
     }
 
     private async Task LoadPluginLogsAsync()

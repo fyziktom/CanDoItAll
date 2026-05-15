@@ -7,7 +7,7 @@ public sealed partial class AppSmokeTests
 {
     [Fact]
     [Trait("Category", "Quarantined")]
-    public async Task Startup_modal_topbar_switcher_and_settings_data_sources_flow_render_cleanly()
+    public async Task Startup_modal_shell_switcher_and_settings_data_sources_flow_render_cleanly()
     {
         await using var host = await DatabaseSwitchPlaywrightHost.CreateAsync();
         var initialProfile = await host.GetCurrentProfileAsync();
@@ -40,18 +40,19 @@ public sealed partial class AppSmokeTests
         await page.GetByTestId("database-startup-continue").ClickAsync();
         await startupDialog.WaitForAsync(new() { State = WaitForSelectorState.Detached });
 
-        await page.GetByTestId("database-topbar-switcher").ClickAsync();
+        await page.GetByTestId("database-shell-action").ClickAsync();
         var switcherDialog = page.GetByTestId("database-switcher-dialog");
         await switcherDialog.WaitForAsync();
         await page.GetByTestId($"database-dialog-profile-row-{secondProfile.Id:N}").ClickAsync();
-        await SaveDatabaseEvidenceAsync(page, host.RepoRoot, "db-switch-topbar-switcher-desktop.png");
+        await SaveDatabaseEvidenceAsync(page, host.RepoRoot, "db-switch-shell-switcher-desktop.png");
 
         await Task.WhenAll(
             page.WaitForURLAsync("**/projects", new() { Timeout = 20_000 }),
             page.GetByTestId("database-startup-switch").ClickAsync());
         await page.GetByTestId("database-switch-alert").WaitForAsync();
 
-        var activeDatabaseText = await page.GetByTestId("active-database-indicator").TextContentAsync();
+        await page.GetByTestId("database-shell-action").HoverAsync();
+        var activeDatabaseText = await page.GetByTestId("database-shell-flyout-card").TextContentAsync();
         Assert.Contains(secondProfile.DisplayName, activeDatabaseText ?? string.Empty, StringComparison.Ordinal);
 
         response = await page.GotoAsync($"{host.BaseUrl}/settings?tab=data-sources");

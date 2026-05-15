@@ -1,9 +1,7 @@
 using CanDoItAll.Components;
-using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Web.Composition;
-using CanDoItAll.Web.Infrastructure;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 
@@ -19,11 +17,6 @@ public partial class MainLayout
     ];
 
     private string activeWorkspaceId = "delivery";
-    private string tuningInstruction = string.Empty;
-    private string? tuningMessage;
-    private bool tuningBusy;
-    private readonly List<TuningAttachmentRequest> tuningAttachments = [];
-    private DevelopmentTuningRequestResult? pendingTuningRequest;
     private DotNetObjectReference<MainLayout>? databaseSwitchListenerReference;
     private IReadOnlyList<DatabaseProfileSummary> databaseProfiles = [];
     private DatabaseSelectionStateModel? databaseSelection;
@@ -63,10 +56,6 @@ public partial class MainLayout
 
     private AppShellMode ShellMode => IsFocusWorkbenchRoute ? AppShellMode.FocusWorkbench : AppShellMode.StandardPage;
 
-    private bool ShowStandardRail => ShellMode == AppShellMode.StandardPage;
-
-    private bool ShowCollapsedRail => ShellMode == AppShellMode.FocusWorkbench && DevelopmentManagerOptions.Value.TuningModeEnabled;
-
     private bool IsFocusWorkbenchRoute
         => CurrentUri.AbsolutePath.EndsWith("/structure", StringComparison.OrdinalIgnoreCase) ||
            string.Equals(CurrentUri.AbsolutePath, "/processes", StringComparison.OrdinalIgnoreCase) ||
@@ -82,10 +71,6 @@ public partial class MainLayout
     private IReadOnlyList<WorkbenchTabState> OpenedPromptSessionTabs => Workbench.Tabs
         .Where(tab => string.Equals(tab.TabKind, WorkbenchTabKinds.PromptWizardSession, StringComparison.Ordinal))
         .ToList();
-
-    private bool TuningEnabled => DevelopmentManagerOptions.Value.TuningModeEnabled && CurrentTuningSurface is not null;
-
-    private TuningSurfaceDefinition? CurrentTuningSurface => ResolveTuningSurface(CurrentUri.AbsolutePath);
 
     private bool CanManageDatabases => databaseSelection?.IsRuntimeLocked != true;
 
@@ -105,7 +90,6 @@ public partial class MainLayout
     {
         Navigation.LocationChanged += HandleLocationChanged;
         Workbench.Changed += HandleWorkbenchChanged;
-        TuningCoordinator.Changed += HandleWorkbenchChanged;
         DatabaseSwitchNotificationService.Changed += HandleDatabaseSwitchChanged;
         CollaborationService.Changed += HandleCollaborationChanged;
         activeWorkspaceId = ResolveWorkspaceId(CurrentUri.AbsolutePath);
@@ -145,11 +129,9 @@ public partial class MainLayout
     {
         Navigation.LocationChanged -= HandleLocationChanged;
         Workbench.Changed -= HandleWorkbenchChanged;
-        TuningCoordinator.Changed -= HandleWorkbenchChanged;
         DatabaseSwitchNotificationService.Changed -= HandleDatabaseSwitchChanged;
         CollaborationService.Changed -= HandleCollaborationChanged;
         databaseSwitchListenerReference?.Dispose();
     }
 
-    private sealed record TuningSurfaceDefinition(string CapsuleKey, string ComponentName, string ContextSummary);
 }
