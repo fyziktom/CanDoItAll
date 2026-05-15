@@ -54,7 +54,7 @@ public partial class ProjectStructurePage
             actions.Add(new ProjectStructureInspectorAction("open-new-tab", "Open in New Tab", "open", "accent"));
         }
 
-        actions.AddRange(ResolveInspectorCommands(node).Select(MapCommandAction));
+        actions.AddRange(ProjectStructureNodeHelpers.ResolveInspectorCommands(node).Select(MapCommandAction));
         actions.Add(new ProjectStructureInspectorAction("summary", "Summary", "summary", "sky"));
 
         if (node.ObjectType == ProjectObjectType.ProcessDefinition)
@@ -143,13 +143,13 @@ public partial class ProjectStructurePage
     private static ProjectStructureInspectorAction MapCommandAction(ProjectStructureCommandKind command)
         => command switch
         {
-            ProjectStructureCommandKind.Open => new ProjectStructureInspectorAction("command:open", ResolveCommandLabel(command), "open", "primary"),
-            ProjectStructureCommandKind.Wizard => new ProjectStructureInspectorAction("command:wizard", ResolveCommandLabel(command), "prompt", "accent"),
-            ProjectStructureCommandKind.Branch => new ProjectStructureInspectorAction("command:branch", ResolveCommandLabel(command), "fork", "accent"),
-            ProjectStructureCommandKind.MarkUsed => new ProjectStructureInspectorAction("command:mark-used", ResolveCommandLabel(command), "use", "mint"),
-            ProjectStructureCommandKind.Skip => new ProjectStructureInspectorAction("command:skip", ResolveCommandLabel(command), "skip", "ghost"),
-            ProjectStructureCommandKind.Validate => new ProjectStructureInspectorAction("command:validate", ResolveCommandLabel(command), "qa", "primary"),
-            _ => new ProjectStructureInspectorAction("command:test", ResolveCommandLabel(command), "test", "warn")
+            ProjectStructureCommandKind.Open => new ProjectStructureInspectorAction("command:open", ProjectStructureNodeHelpers.ResolveCommandLabel(command), "open", "primary"),
+            ProjectStructureCommandKind.Wizard => new ProjectStructureInspectorAction("command:wizard", ProjectStructureNodeHelpers.ResolveCommandLabel(command), "prompt", "accent"),
+            ProjectStructureCommandKind.Branch => new ProjectStructureInspectorAction("command:branch", ProjectStructureNodeHelpers.ResolveCommandLabel(command), "fork", "accent"),
+            ProjectStructureCommandKind.MarkUsed => new ProjectStructureInspectorAction("command:mark-used", ProjectStructureNodeHelpers.ResolveCommandLabel(command), "use", "mint"),
+            ProjectStructureCommandKind.Skip => new ProjectStructureInspectorAction("command:skip", ProjectStructureNodeHelpers.ResolveCommandLabel(command), "skip", "ghost"),
+            ProjectStructureCommandKind.Validate => new ProjectStructureInspectorAction("command:validate", ProjectStructureNodeHelpers.ResolveCommandLabel(command), "qa", "primary"),
+            _ => new ProjectStructureInspectorAction("command:test", ProjectStructureNodeHelpers.ResolveCommandLabel(command), "test", "warn")
         };
 
     private IReadOnlyList<ProjectStructureSupportPanelContextAction> ResolveSupportPanelContextActions(ProjectStructureNode node)

@@ -98,17 +98,17 @@
                                                Eyebrow="@plugin.SourceKind.ToString()"
                                                Meta="@plugin.PluginId.Value"
                                                Summary="@plugin.Description"
-                                               DataTestId="@BuildPluginListTestId(plugin)"
+                                               DataTestId="@PluginsPageHelpers.BuildPluginListTestId(plugin)"
                                                IsSelected="@(plugin.PluginId == selectedPlugin.PluginId)"
                                                OnSelect="@(() => SelectPluginAsync(plugin))">
                                 <ChildContent>
                                     <Cluster Gap="LayoutGap.Small">
-                                        @RenderPluginIcon(plugin.Icon, "h-5 w-5")
-                                        <span class="text-xs text-[var(--cda-text-muted)]">@ResolveIconLabel(plugin.Icon)</span>
+                                        @PluginsPageHelpers.RenderPluginIcon(plugin.Icon, "h-5 w-5")
+                                        <span class="text-xs text-[var(--cda-text-muted)]">@PluginsPageHelpers.ResolveIconLabel(plugin.Icon)</span>
                                     </Cluster>
                                 </ChildContent>
                                 <Status>
-                                    <StatusBadge Tone="@ResolveInstallationTone(plugin)" Text="@plugin.InstallationState.ToString()" />
+                                    <StatusBadge Tone="@PluginsPageHelpers.ResolveInstallationTone(plugin)" Text="@plugin.InstallationState.ToString()" />
                                 </Status>
                             </SelectionListItem>
                         }
@@ -119,12 +119,12 @@
                     <Split Gap="LayoutGap.Medium" AlignItems="AlignItems.Start">
                         <Stack GapScale="LayoutGap.Tiny">
                             <Cluster Gap="LayoutGap.Small">
-                                @RenderPluginIcon(selectedPlugin.Icon, "h-8 w-8")
-                                <span class="cda-eyebrow">@ResolveIconLabel(selectedPlugin.Icon)</span>
+                                @PluginsPageHelpers.RenderPluginIcon(selectedPlugin.Icon, "h-8 w-8")
+                                <span class="cda-eyebrow">@PluginsPageHelpers.ResolveIconLabel(selectedPlugin.Icon)</span>
                             </Cluster>
                             <Cluster Gap="LayoutGap.Small">
-                                <StatusBadge Tone="@ResolveAvailabilityTone(selectedPlugin)" Text="@selectedPlugin.Availability.ToString()" />
-                                <StatusBadge Tone="@ResolveInstallationTone(selectedPlugin)" Text="@selectedPlugin.InstallationState.ToString()" />
+                                <StatusBadge Tone="@PluginsPageHelpers.ResolveAvailabilityTone(selectedPlugin)" Text="@selectedPlugin.Availability.ToString()" />
+                                <StatusBadge Tone="@PluginsPageHelpers.ResolveInstallationTone(selectedPlugin)" Text="@selectedPlugin.InstallationState.ToString()" />
                                 <StatusBadge Tone="neutral" Text="@selectedPlugin.SourceKind.ToString()" />
                             </Cluster>
                             <h2 class="cda-title-xl">@selectedPlugin.DisplayName</h2>
@@ -203,7 +203,7 @@
                                             <Stack GapScale="LayoutGap.Tiny">
                                                 <p class="cda-eyebrow">Capabilities</p>
                                                 <Cluster Gap="LayoutGap.Tiny">
-                                                    @foreach (var capability in ResolveDeclaredCapabilities(selectedPlugin))
+                                                    @foreach (var capability in PluginsPageHelpers.ResolveDeclaredCapabilities(selectedPlugin))
                                                     {
                                                         <StatusBadge Tone="info" Text="@capability.ToString()" />
                                                     }
@@ -220,7 +220,7 @@
                                     </Stack>
                                 </TabsItem>
 
-                                <TabsItem Text="Settings" Icon="tune" BadgeText="@ResolveSettingsBadge(selectedSettings)" data-testid="plugins-tab-settings">
+                                <TabsItem Text="Settings" Icon="tune" BadgeText="@PluginsPageHelpers.ResolveSettingsBadge(selectedSettings)" data-testid="plugins-tab-settings">
                                     @if (selectedSettings.ConnectionDescriptors.Count == 0)
                                     {
                                         <EmptyState Eyebrow="Settings"
@@ -240,7 +240,7 @@
                                                             <label class="cda-field-label">Connection name</label>
                                                             <input class="cda-input"
                                                                    value="@editor.DisplayName"
-                                                                   data-testid="@BuildConnectionNameTestId(selectedPlugin.PluginId, connectionDescriptor)"
+                                                                   data-testid="@PluginsPageHelpers.BuildConnectionNameTestId(selectedPlugin.PluginId, connectionDescriptor)"
                                                                    @onchange="args => HandleConnectionDisplayNameChanged(editor, args.Value?.ToString())" />
                                                         </div>
                                                         <div>
@@ -248,8 +248,8 @@
                                                             <label class="cda-inline-option">
                                                                 <input type="checkbox"
                                                                        checked="@editor.IsEnabled"
-                                                                       data-testid="@BuildConnectionEnabledTestId(selectedPlugin.PluginId, connectionDescriptor)"
-                                                                       @onchange="args => HandleConnectionEnabledChanged(editor, ResolveCheckboxValue(args))" />
+                                                                       data-testid="@PluginsPageHelpers.BuildConnectionEnabledTestId(selectedPlugin.PluginId, connectionDescriptor)"
+                                                                       @onchange="args => HandleConnectionEnabledChanged(editor, PluginsPageHelpers.ResolveCheckboxValue(args))" />
                                                                 Enabled
                                                             </label>
                                                         </div>
@@ -280,21 +280,21 @@
                                                                             <label class="cda-inline-option">
                                                                                 <input type="checkbox"
                                                                                        checked="@editor.State.GetBoolean(field.Key)"
-                                                                                       data-testid="@BuildConnectionFieldTestId(selectedPlugin.PluginId, connectionDescriptor, field)"
-                                                                                       @onchange="args => HandleConnectionSettingChanged(editor, field.Key, ResolveCheckboxValue(args) ? bool.TrueString : bool.FalseString)" />
+                                                                                       data-testid="@PluginsPageHelpers.BuildConnectionFieldTestId(selectedPlugin.PluginId, connectionDescriptor, field)"
+                                                                                       @onchange="args => HandleConnectionSettingChanged(editor, field.Key, PluginsPageHelpers.ResolveCheckboxValue(args) ? bool.TrueString : bool.FalseString)" />
                                                                                 @field.HelpText
                                                                             </label>
                                                                             break;
                                                                         case ConfigurationFieldType.Json:
                                                                         case ConfigurationFieldType.MultilineText:
                                                                             <textarea class="cda-input cda-input--textarea min-h-24"
-                                                                                      data-testid="@BuildConnectionFieldTestId(selectedPlugin.PluginId, connectionDescriptor, field)"
+                                                                                      data-testid="@PluginsPageHelpers.BuildConnectionFieldTestId(selectedPlugin.PluginId, connectionDescriptor, field)"
                                                                                       @onchange="args => HandleConnectionSettingChanged(editor, field.Key, args.Value?.ToString())">@fieldValue</textarea>
                                                                             break;
                                                                         case ConfigurationFieldType.Select:
                                                                             <select class="cda-input"
                                                                                     value="@fieldValue"
-                                                                                    data-testid="@BuildConnectionFieldTestId(selectedPlugin.PluginId, connectionDescriptor, field)"
+                                                                                    data-testid="@PluginsPageHelpers.BuildConnectionFieldTestId(selectedPlugin.PluginId, connectionDescriptor, field)"
                                                                                     @onchange="args => HandleConnectionSettingChanged(editor, field.Key, args.Value?.ToString())">
                                                                                 <option value="">Select value</option>
                                                                                 @foreach (var option in field.Options)
@@ -305,10 +305,10 @@
                                                                             break;
                                                                         default:
                                                                             <input class="cda-input"
-                                                                                   type="@ResolveInputType(field)"
+                                                                                   type="@PluginsPageHelpers.ResolveInputType(field)"
                                                                                    value="@fieldValue"
-                                                                                   placeholder="@ResolveFieldPlaceholder(selectedSettings, field)"
-                                                                                   data-testid="@BuildConnectionFieldTestId(selectedPlugin.PluginId, connectionDescriptor, field)"
+                                                                                   placeholder="@(PluginsPageHelpers.ResolveFieldPlaceholder(selectedSettings, field, Navigation.ToAbsoluteUri("/api/plugins/oauth/callback").ToString()))"
+                                                                                   data-testid="@PluginsPageHelpers.BuildConnectionFieldTestId(selectedPlugin.PluginId, connectionDescriptor, field)"
                                                                                    @onchange="args => HandleConnectionSettingChanged(editor, field.Key, args.Value?.ToString())" />
                                                                             break;
                                                                     }
@@ -318,7 +318,7 @@
                                                                         <p class="cda-body-muted mt-2">@field.HelpText</p>
                                                                     }
 
-                                                                    @foreach (var issue in ResolveValidationIssues(editor, field))
+                                                                    @foreach (var issue in PluginsPageHelpers.ResolveValidationIssues(editor, field))
                                                                     {
                                                                         <p class="workflow-canvas-error">@issue.Message</p>
                                                                     }
@@ -332,8 +332,8 @@
                                                                 Icon="save"
                                                                 ButtonStyle="ButtonStyle.Primary"
                                                                 Size="ButtonSize.Small"
-                                                                data-testid="@BuildConnectionSaveTestId(selectedPlugin.PluginId, connectionDescriptor)"
-                                                                IsBusy="@IsBusy(selectedPlugin.PluginId, ConnectionSaveBusyKey(connectionDescriptor))"
+                                                                data-testid="@PluginsPageHelpers.BuildConnectionSaveTestId(selectedPlugin.PluginId, connectionDescriptor)"
+                                                                IsBusy="@IsBusy(selectedPlugin.PluginId, PluginsPageHelpers.ConnectionSaveBusyKey(connectionDescriptor))"
                                                                 Click="@(() => SaveConnectionSettingsAsync(selectedPlugin, selectedSettings, connectionDescriptor))" />
                                                     </Cluster>
                                                 </FormSection>
@@ -354,13 +354,14 @@
                                         <Stack GapScale="LayoutGap.Medium">
                                             @foreach (var connectionDescriptor in selectedSettings.ConnectionDescriptors.Where(item => item.AuthKind == PluginConnectionAuthKind.OAuth2))
                                             {
-                                                var connection = ResolveConnection(selectedSettings, connectionDescriptor);
+                                                var connection = PluginsPageHelpers.ResolveConnection(selectedSettings, connectionDescriptor);
+                                                var editor = ResolveConnectionEditor(selectedPlugin.PluginId, selectedSettings, connectionDescriptor);
                                                 var oauthStatus = ResolveOAuthStatus(selectedPlugin.PluginId, connection?.Id, connectionDescriptor.Key);
-                                                var canStartOAuth = CanStartOAuth(selectedPlugin, selectedSettings, connectionDescriptor);
+                                                var canStartOAuth = PluginsPageHelpers.CanStartOAuth(selectedPlugin, selectedSettings, connectionDescriptor, editor, ConnectionSettingsValidator);
                                                 <div class="grid gap-3 rounded-lg border border-[var(--cda-border-subtle)] bg-[var(--cda-surface-muted)] p-3 md:grid-cols-[minmax(0,1fr)_auto]">
                                                     <Stack GapScale="LayoutGap.Tiny">
                                                         <Cluster Gap="LayoutGap.Small">
-                                                            <StatusBadge Tone="@ResolveOAuthTone(oauthStatus?.Status)" Text="@(oauthStatus?.Status.ToString() ?? "NotConnected")" />
+                                                            <StatusBadge Tone="@PluginsPageHelpers.ResolveOAuthTone(oauthStatus?.Status)" Text="@(oauthStatus?.Status.ToString() ?? "NotConnected")" />
                                                             <StatusBadge Tone="neutral" Text="@connectionDescriptor.Key.Value" />
                                                         </Cluster>
                                                         <span class="text-sm font-medium text-[var(--cda-text)]">@connectionDescriptor.DisplayName</span>
@@ -375,17 +376,17 @@
                                                         }
                                                         @if (!canStartOAuth)
                                                         {
-                                                            <span class="text-sm text-[var(--cda-warning)]">@ResolveOAuthActionHint(selectedPlugin, selectedSettings, connectionDescriptor)</span>
+                                                            <span class="text-sm text-[var(--cda-warning)]">@PluginsPageHelpers.ResolveOAuthActionHint(selectedPlugin, selectedSettings, connectionDescriptor, editor, ConnectionSettingsValidator)</span>
                                                         }
                                                     </Stack>
                                                     <Cluster Gap="LayoutGap.Tiny" Class="self-start">
-                                                        <Button Text="@ResolveOAuthActionText(oauthStatus?.Status)"
+                                                        <Button Text="@PluginsPageHelpers.ResolveOAuthActionText(oauthStatus?.Status)"
                                                                 Icon="login"
                                                                 ButtonStyle="ButtonStyle.Primary"
                                                                 Size="ButtonSize.Small"
-                                                                data-testid="@BuildOAuthLoginTestId(selectedPlugin.PluginId, connectionDescriptor)"
+                                                                data-testid="@PluginsPageHelpers.BuildOAuthLoginTestId(selectedPlugin.PluginId, connectionDescriptor)"
                                                                 Disabled="@(!canStartOAuth)"
-                                                                IsBusy="@IsBusy(selectedPlugin.PluginId, OAuthBusyKey(connectionDescriptor, "login"))"
+                                                                IsBusy="@IsBusy(selectedPlugin.PluginId, PluginsPageHelpers.OAuthBusyKey(connectionDescriptor, "login"))"
                                                                 Click="@(() => StartOAuthAsync(selectedPlugin, selectedSettings, connectionDescriptor))" />
                                                         <Button Text="Disconnect"
                                                                 Icon="link_off"
@@ -393,7 +394,7 @@
                                                                 Variant="Variant.Outlined"
                                                                 Size="ButtonSize.Small"
                                                                 Disabled="@(connection is null || oauthStatus?.Status != PluginOAuthConnectionStatusKind.Connected)"
-                                                                IsBusy="@IsBusy(selectedPlugin.PluginId, OAuthBusyKey(connectionDescriptor, "disconnect"))"
+                                                                IsBusy="@IsBusy(selectedPlugin.PluginId, PluginsPageHelpers.OAuthBusyKey(connectionDescriptor, "disconnect"))"
                                                                 Click="@(() => DisconnectOAuthAsync(selectedPlugin, connection))" />
                                                     </Cluster>
                                                 </div>
@@ -424,10 +425,10 @@
 
                                         <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                             <FormSection Title="Installation logs" Description="Package and plugin lifecycle records, newest first.">
-                                                @RenderLogList(installationLogs, "installation")
+                                                @PluginsPageHelpers.RenderLogList(installationLogs, "installation")
                                             </FormSection>
                                             <FormSection Title="Runtime logs" Description="Plugin executor and runtime event records, newest first.">
-                                                @RenderLogList(runtimeLogs, "runtime")
+                                                @PluginsPageHelpers.RenderLogList(runtimeLogs, "runtime")
                                             </FormSection>
                                         </Grid>
                                     </Stack>
@@ -448,11 +449,11 @@
                                                 <div class="grid gap-3 rounded-lg border border-[var(--cda-border-subtle)] bg-[var(--cda-surface-muted)] p-3 md:grid-cols-[minmax(0,1fr)_auto]">
                                                     <Stack GapScale="LayoutGap.Tiny">
                                                         <Cluster Gap="LayoutGap.Small">
-                                                            <StatusBadge Tone="@ResolveGrantTone(grant.State)" Text="@grant.State.ToString()" />
-                                                            <StatusBadge Tone="@ResolveRiskTone(grant.RiskKind)" Text="@grant.RiskKind.ToString()" />
+                                                            <StatusBadge Tone="@PluginsPageHelpers.ResolveGrantTone(grant.State)" Text="@grant.State.ToString()" />
+                                                            <StatusBadge Tone="@PluginsPageHelpers.ResolveRiskTone(grant.RiskKind)" Text="@grant.RiskKind.ToString()" />
                                                             <StatusBadge Tone="neutral" Text="@grant.Capability.ToString()" />
                                                         </Cluster>
-                                                        <span class="text-sm font-medium text-[var(--cda-text)]">@ResolveGrantName(grant)</span>
+                                                        <span class="text-sm font-medium text-[var(--cda-text)]">@PluginsPageHelpers.ResolveGrantName(grant)</span>
                                                         @if (!string.IsNullOrWhiteSpace(grant.Reason))
                                                         {
                                                             <span class="text-sm text-[var(--cda-text-muted)]">@grant.Reason</span>
@@ -464,7 +465,7 @@
                                                                 ButtonStyle="ButtonStyle.Success"
                                                                 Size="ButtonSize.Small"
                                                                 Disabled="@(grant.State == PluginGrantState.Granted)"
-                                                                IsBusy="@IsBusy(selectedPlugin.PluginId, GrantBusyKey(grant, "grant"))"
+                                                                IsBusy="@IsBusy(selectedPlugin.PluginId, PluginsPageHelpers.GrantBusyKey(grant, "grant"))"
                                                                 Click="@(() => UpdateGrantAsync(selectedPlugin, grant, PluginGrantState.Granted))" />
                                                         <Button Text="Deny"
                                                                 Icon="close"
@@ -472,7 +473,7 @@
                                                                 Variant="Variant.Outlined"
                                                                 Size="ButtonSize.Small"
                                                                 Disabled="@(grant.State == PluginGrantState.Denied)"
-                                                                IsBusy="@IsBusy(selectedPlugin.PluginId, GrantBusyKey(grant, "deny"))"
+                                                                IsBusy="@IsBusy(selectedPlugin.PluginId, PluginsPageHelpers.GrantBusyKey(grant, "deny"))"
                                                                 Click="@(() => UpdateGrantAsync(selectedPlugin, grant, PluginGrantState.Denied))" />
                                                         <Button Text="Revoke"
                                                                 Icon="undo"
@@ -480,7 +481,7 @@
                                                                 Variant="Variant.Outlined"
                                                                 Size="ButtonSize.Small"
                                                                 Disabled="@(grant.State == PluginGrantState.Revoked)"
-                                                                IsBusy="@IsBusy(selectedPlugin.PluginId, GrantBusyKey(grant, "revoke"))"
+                                                                IsBusy="@IsBusy(selectedPlugin.PluginId, PluginsPageHelpers.GrantBusyKey(grant, "revoke"))"
                                                                 Click="@(() => UpdateGrantAsync(selectedPlugin, grant, PluginGrantState.Revoked))" />
                                                     </Cluster>
                                                 </div>
@@ -529,7 +530,7 @@
                             <div class="grid gap-3 rounded-lg border border-[var(--cda-border-subtle)] bg-[var(--cda-surface-muted)] p-3 md:grid-cols-[minmax(0,1fr)_auto]">
                                 <Stack GapScale="LayoutGap.Tiny">
                                     <Cluster Gap="LayoutGap.Small">
-                                        <StatusBadge Tone="@ResolvePackageTone(package)" Text="@(package.IsInstalled ? "Installed" : "Available")" />
+                                        <StatusBadge Tone="@PluginsPageHelpers.ResolvePackageTone(package)" Text="@(package.IsInstalled ? "Installed" : "Available")" />
                                         <StatusBadge Tone="neutral" Text="@package.CatalogSourceKind.ToString()" />
                                         @if (package.RequiresRestart)
                                         {
@@ -545,7 +546,7 @@
                                             Icon="download"
                                             ButtonStyle="ButtonStyle.Primary"
                                             Size="ButtonSize.Small"
-                                            data-testid="@BuildPackageInstallTestId(package)"
+                                            data-testid="@PluginsPageHelpers.BuildPackageInstallTestId(package)"
                                             Disabled="@package.IsInstalled"
                                             IsBusy="@IsPackageBusy(package, PackageInstallAction)"
                                             Click="@(() => InstallPackageAsync(package))" />
@@ -594,7 +595,7 @@
     private static readonly ConfigurationSchemaValidator ConnectionSettingsValidator = new();
 
     private readonly HashSet<string> busyActions = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, ConnectionEditorState> connectionEditors = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, PluginConnectionEditorState> connectionEditors = new(StringComparer.OrdinalIgnoreCase);
     private IReadOnlyList<PluginCatalogItem> catalog = [];
     private IReadOnlyList<PluginPackageCatalogItem> packageCatalog = [];
     private IReadOnlyList<PluginLogItem> installationLogs = [];
@@ -746,7 +747,7 @@
         PluginCatalogItem plugin,
         PluginCapabilityGrantItem grant,
         PluginGrantState state)
-        => RunPluginActionAsync(plugin.PluginId, GrantBusyKey(grant, state.ToString()), async () =>
+        => RunPluginActionAsync(plugin.PluginId, PluginsPageHelpers.GrantBusyKey(grant, state.ToString()), async () =>
         {
             var request = new PluginGrantUpdateRequest(
                 grant.Capability,
@@ -757,7 +758,7 @@
                 grant.RiskKind,
                 $"{state} from plugin settings UI.");
             var result = await PluginSettings.UpdateGrantAsync(plugin.PluginId, request, UiActor);
-            ApplyStatus(result, $"{state} {ResolveGrantName(grant)} for {plugin.DisplayName}.");
+            ApplyStatus(result, $"{state} {PluginsPageHelpers.ResolveGrantName(grant)} for {plugin.DisplayName}.");
         });
 
     private async Task SaveConnectionSettingsAsync(
@@ -777,7 +778,7 @@
             return;
         }
 
-        await RunPluginActionAsync(plugin.PluginId, ConnectionSaveBusyKey(descriptor), async () =>
+        await RunPluginActionAsync(plugin.PluginId, PluginsPageHelpers.ConnectionSaveBusyKey(descriptor), async () =>
         {
             var result = await PluginSettings.SaveConnectionAsync(
                 plugin.PluginId,
@@ -796,9 +797,9 @@
         PluginCatalogItem plugin,
         PluginSettingsDetail settings,
         PluginConnectionDescriptor connectionDescriptor)
-        => RunPluginActionAsync(plugin.PluginId, OAuthBusyKey(connectionDescriptor, "login"), async () =>
+        => RunPluginActionAsync(plugin.PluginId, PluginsPageHelpers.OAuthBusyKey(connectionDescriptor, "login"), async () =>
         {
-            var connection = ResolveConnection(settings, connectionDescriptor);
+            var connection = PluginsPageHelpers.ResolveConnection(settings, connectionDescriptor);
             var result = await PluginOAuth.StartAsync(
                 plugin.PluginId,
                 new PluginOAuthStartRequest(
@@ -834,18 +835,18 @@
         PluginId pluginId,
         string action,
         Func<Task> operation)
-        => await RunBusyActionAsync(BusyKey(pluginId, action), operation);
+        => await RunBusyActionAsync(PluginsPageHelpers.BusyKey(pluginId, action), operation);
 
     private async Task RunPackageActionAsync(
         PluginPackageId packageId,
         string action,
         Func<Task> operation)
-        => await RunBusyActionAsync(PackageBusyKey(packageId, action), operation);
+        => await RunBusyActionAsync(PluginsPageHelpers.PackageBusyKey(packageId, action), operation);
 
     private async Task RunPageActionAsync(
         string action,
         Func<Task> operation)
-        => await RunBusyActionAsync(PageBusyKey(action), operation);
+        => await RunBusyActionAsync(PluginsPageHelpers.PageBusyKey(action), operation);
 
     private async Task RunBusyActionAsync(
         string key,
@@ -903,10 +904,10 @@
 
             foreach (var descriptor in settings.ConnectionDescriptors)
             {
-                var editorKey = ConnectionEditorKey(plugin.PluginId, descriptor.Key);
+                var editorKey = PluginsPageHelpers.ConnectionEditorKey(plugin.PluginId, descriptor.Key);
                 validKeys.Add(editorKey);
-                var connection = ResolveConnection(settings, descriptor);
-                connectionEditors[editorKey] = ConnectionEditorState.Create(descriptor, connection);
+                var connection = PluginsPageHelpers.ResolveConnection(settings, descriptor);
+                connectionEditors[editorKey] = PluginConnectionEditorState.Create(descriptor, connection);
             }
         }
 
@@ -916,22 +917,22 @@
         }
     }
 
-    private ConnectionEditorState ResolveConnectionEditor(
+    private PluginConnectionEditorState ResolveConnectionEditor(
         PluginId pluginId,
         PluginSettingsDetail settings,
         PluginConnectionDescriptor descriptor)
     {
-        var key = ConnectionEditorKey(pluginId, descriptor.Key);
+        var key = PluginsPageHelpers.ConnectionEditorKey(pluginId, descriptor.Key);
         if (!connectionEditors.TryGetValue(key, out var editor))
         {
-            editor = ConnectionEditorState.Create(descriptor, ResolveConnection(settings, descriptor));
+            editor = PluginConnectionEditorState.Create(descriptor, PluginsPageHelpers.ResolveConnection(settings, descriptor));
             connectionEditors[key] = editor;
         }
 
         return editor;
     }
 
-    private void HandleConnectionDisplayNameChanged(ConnectionEditorState editor, string? value)
+    private void HandleConnectionDisplayNameChanged(PluginConnectionEditorState editor, string? value)
     {
         editor.DisplayName = string.IsNullOrWhiteSpace(value)
             ? editor.ConnectionKey.Value
@@ -939,13 +940,13 @@
         editor.IsDirty = true;
     }
 
-    private static void HandleConnectionEnabledChanged(ConnectionEditorState editor, bool value)
+    private static void HandleConnectionEnabledChanged(PluginConnectionEditorState editor, bool value)
     {
         editor.IsEnabled = value;
         editor.IsDirty = true;
     }
 
-    private static void HandleConnectionSettingChanged(ConnectionEditorState editor, string key, string? value)
+    private static void HandleConnectionSettingChanged(PluginConnectionEditorState editor, string key, string? value)
     {
         var state = editor.State.Clone();
         state.SetText(key, value);
@@ -954,128 +955,14 @@
         editor.IsDirty = true;
     }
 
-    private bool CanStartOAuth(
-        PluginCatalogItem plugin,
-        PluginSettingsDetail settings,
-        PluginConnectionDescriptor descriptor)
-    {
-        var editor = ResolveConnectionEditor(plugin.PluginId, settings, descriptor);
-        return plugin.IsEnabled &&
-               HasGrantedCapability(settings, PluginCapabilityKind.OAuth2) &&
-               !editor.IsDirty &&
-               ConnectionSettingsValidator.Validate(descriptor.SettingsSchema, editor.State).Succeeded;
-    }
-
-    private string ResolveOAuthActionHint(
-        PluginCatalogItem plugin,
-        PluginSettingsDetail settings,
-        PluginConnectionDescriptor descriptor)
-    {
-        var editor = ResolveConnectionEditor(plugin.PluginId, settings, descriptor);
-        if (!plugin.IsEnabled)
-        {
-            return "Install and enable the plugin before login.";
-        }
-
-        if (!HasGrantedCapability(settings, PluginCapabilityKind.OAuth2))
-        {
-            return "Grant OAuth2 capability before login.";
-        }
-
-        if (editor.IsDirty)
-        {
-            return "Save connection settings before login.";
-        }
-
-        var validation = ConnectionSettingsValidator.Validate(descriptor.SettingsSchema, editor.State);
-        return validation.Succeeded
-            ? string.Empty
-            : string.Join(" ", validation.Issues.Select(issue => issue.Message));
-    }
-
-    private static bool ResolveCheckboxValue(ChangeEventArgs args)
-        => args.Value is bool value && value;
-
-    private IReadOnlyList<ConfigurationValidationIssue> ResolveValidationIssues(
-        ConnectionEditorState editor,
-        ConfigurationFieldDescriptor field)
-        => editor.Validation.Issues
-            .Where(issue => string.Equals(issue.FieldKey, field.Key, StringComparison.OrdinalIgnoreCase))
-            .ToArray();
-
-    private string ResolveFieldPlaceholder(
-        PluginSettingsDetail settings,
-        ConfigurationFieldDescriptor field)
-    {
-        if (string.Equals(field.Key, PluginOAuthConnectionSettingKeys.ClientId, StringComparison.OrdinalIgnoreCase) &&
-            !string.IsNullOrWhiteSpace(settings.OAuth2?.ClientId))
-        {
-            return "Using bundled client id";
-        }
-
-        if (string.Equals(field.Key, PluginOAuthConnectionSettingKeys.RedirectUri, StringComparison.OrdinalIgnoreCase))
-        {
-            return Navigation.ToAbsoluteUri("/api/plugins/oauth/callback").ToString();
-        }
-
-        return string.Empty;
-    }
-
-    private static string ResolveInputType(ConfigurationFieldDescriptor field)
-        => field.FieldType switch
-        {
-            ConfigurationFieldType.Number => "number",
-            ConfigurationFieldType.Url => "url",
-            _ => "text"
-        };
-
     private bool IsBusy(PluginId pluginId, string action)
-        => busyActions.Contains(BusyKey(pluginId, action));
+        => busyActions.Contains(PluginsPageHelpers.BusyKey(pluginId, action));
 
     private bool IsPackageBusy(PluginPackageCatalogItem package, string action)
-        => busyActions.Contains(PackageBusyKey(package.PackageId, action));
+        => busyActions.Contains(PluginsPageHelpers.PackageBusyKey(package.PackageId, action));
 
     private bool IsPageBusy(string action)
-        => busyActions.Contains(PageBusyKey(action));
-
-    private static string BusyKey(PluginId pluginId, string action)
-        => $"{pluginId.Value}:{action}";
-
-    private static string PackageBusyKey(PluginPackageId packageId, string action)
-        => $"package:{packageId.Value}:{action}";
-
-    private static string PageBusyKey(string action)
-        => $"page:{action}";
-
-    private static string GrantBusyKey(PluginCapabilityGrantItem grant, string action)
-        => $"{action}:{grant.Capability}:{grant.RecipeId?.Value ?? "capability"}";
-
-    private static string OAuthBusyKey(PluginConnectionDescriptor descriptor, string action)
-        => $"oauth-{action}:{descriptor.Key.Value}";
-
-    private static string ConnectionSaveBusyKey(PluginConnectionDescriptor descriptor)
-        => $"connection-save:{descriptor.Key.Value}";
-
-    private static string ConnectionEditorKey(PluginId pluginId, PluginConnectionKey connectionKey)
-        => $"{pluginId.Value}:{connectionKey.Value}";
-
-    private static PluginConnectionItem? ResolveConnection(
-        PluginSettingsDetail settings,
-        PluginConnectionDescriptor descriptor)
-        => settings.Connections
-            .Where(connection => connection.ConnectionKey == descriptor.Key)
-            .OrderByDescending(connection => connection.UpdatedAtUtc)
-            .FirstOrDefault();
-
-    private static bool HasGrantedCapability(
-        PluginSettingsDetail settings,
-        PluginCapabilityKind capability)
-        => settings.Grants.Any(grant =>
-            grant.Capability == capability &&
-            grant.RecipeId is null &&
-            grant.ScopeKind == PluginGrantScopeKind.Plugin &&
-            string.IsNullOrWhiteSpace(grant.ScopeKey) &&
-            grant.State == PluginGrantState.Granted);
+        => busyActions.Contains(PluginsPageHelpers.PageBusyKey(action));
 
     private PluginOAuthConnectionStatusItem? ResolveOAuthStatus(
         PluginId pluginId,
@@ -1098,247 +985,4 @@
             .FirstOrDefault();
     }
 
-    private static IReadOnlyList<PluginCapabilityKind> ResolveDeclaredCapabilities(PluginCatalogItem plugin)
-        => Enum.GetValues<PluginCapabilityKind>()
-            .Where(capability => capability != PluginCapabilityKind.None && plugin.Capabilities.HasFlag(capability))
-            .OrderBy(capability => capability.ToString(), StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-
-    private static string ResolveGrantName(PluginCapabilityGrantItem grant)
-        => grant.RecipeId is { } recipeId
-            ? $"{grant.Capability}: {recipeId.Value}"
-            : grant.Capability.ToString();
-
-    private static string ResolveAvailabilityTone(PluginCatalogItem plugin)
-        => plugin.Availability == PluginCatalogAvailabilityKind.Available
-            ? "success"
-            : "warning";
-
-    private static string ResolveInstallationTone(PluginCatalogItem plugin)
-        => plugin.InstallationState switch
-        {
-            PluginInstallationStateKind.InstalledEnabled => "success",
-            PluginInstallationStateKind.InstalledDisabled => "warning",
-            _ => "neutral"
-        };
-
-    private static string ResolvePackageTone(PluginPackageCatalogItem package)
-        => package.IsInstalled ? "success" : "info";
-
-    private static string ResolveGrantTone(PluginGrantState state)
-        => state switch
-        {
-            PluginGrantState.Granted => "success",
-            PluginGrantState.Denied or PluginGrantState.Revoked => "danger",
-            PluginGrantState.Requested => "warning",
-            _ => "neutral"
-        };
-
-    private static string ResolveRiskTone(PluginGrantRiskKind riskKind)
-        => riskKind switch
-        {
-            PluginGrantRiskKind.High => "danger",
-            PluginGrantRiskKind.Medium => "warning",
-            _ => "info"
-        };
-
-    private static string ResolveOAuthTone(PluginOAuthConnectionStatusKind? status)
-        => status switch
-        {
-            PluginOAuthConnectionStatusKind.Connected => "success",
-            PluginOAuthConnectionStatusKind.ReconnectRequired => "warning",
-            PluginOAuthConnectionStatusKind.Error => "danger",
-            _ => "neutral"
-        };
-
-    private static string ResolveOAuthActionText(PluginOAuthConnectionStatusKind? status)
-        => status == PluginOAuthConnectionStatusKind.ReconnectRequired ? "Reconnect" : "Login";
-
-    private static string ResolveSettingsBadge(PluginSettingsDetail settings)
-        => settings.ConnectionDescriptors
-            .Count(descriptor => descriptor.SettingsSchema.Fields.Count > 0)
-            .ToString();
-
-    private static string BuildPluginListTestId(PluginCatalogItem plugin)
-        => $"plugins-list-item-{NormalizeTestId(plugin.PluginId.Value)}";
-
-    private static string BuildPackageInstallTestId(PluginPackageCatalogItem package)
-        => $"plugin-package-install-{NormalizeTestId(package.PackageId.Value)}";
-
-    private static string BuildConnectionNameTestId(PluginId pluginId, PluginConnectionDescriptor descriptor)
-        => $"plugin-connection-name-{NormalizeTestId(pluginId.Value)}-{NormalizeTestId(descriptor.Key.Value)}";
-
-    private static string BuildConnectionEnabledTestId(PluginId pluginId, PluginConnectionDescriptor descriptor)
-        => $"plugin-connection-enabled-{NormalizeTestId(pluginId.Value)}-{NormalizeTestId(descriptor.Key.Value)}";
-
-    private static string BuildConnectionFieldTestId(
-        PluginId pluginId,
-        PluginConnectionDescriptor descriptor,
-        ConfigurationFieldDescriptor field)
-        => $"plugin-setting-{NormalizeTestId(pluginId.Value)}-{NormalizeTestId(descriptor.Key.Value)}-{field.Key}";
-
-    private static string BuildConnectionSaveTestId(PluginId pluginId, PluginConnectionDescriptor descriptor)
-        => $"plugin-connection-save-{NormalizeTestId(pluginId.Value)}-{NormalizeTestId(descriptor.Key.Value)}";
-
-    private static string BuildOAuthLoginTestId(PluginId pluginId, PluginConnectionDescriptor descriptor)
-        => $"plugin-oauth-login-{NormalizeTestId(pluginId.Value)}-{NormalizeTestId(descriptor.Key.Value)}";
-
-    private static RenderFragment RenderPluginIcon(UiIconDescriptor? icon, string cssClass)
-        => builder =>
-        {
-            var resolvedIcon = icon ?? UiIconDescriptor.Default;
-            if (resolvedIcon.Kind is UiIconKind.StaticAsset or UiIconKind.PackageAsset && !string.IsNullOrWhiteSpace(resolvedIcon.Value))
-            {
-                builder.OpenElement(0, "img");
-                builder.AddAttribute(1, "src", ResolveIconSource(resolvedIcon));
-                builder.AddAttribute(2, "alt", ResolveIconLabel(resolvedIcon));
-                builder.AddAttribute(3, "class", $"{cssClass} rounded object-contain");
-                builder.CloseElement();
-                return;
-            }
-
-            builder.OpenElement(4, "span");
-            builder.AddAttribute(5, "class", $"material-icons inline-flex items-center justify-center text-[var(--cda-text-muted)] {cssClass}");
-            builder.AddAttribute(6, "aria-hidden", "true");
-            builder.AddContent(7, string.IsNullOrWhiteSpace(resolvedIcon.Value) ? UiIconDescriptor.Default.Value : resolvedIcon.Value);
-            builder.CloseElement();
-        };
-
-    private static RenderFragment RenderLogList(IReadOnlyList<PluginLogItem> logs, string testIdPrefix)
-        => builder =>
-        {
-            if (logs.Count == 0)
-            {
-                builder.OpenElement(0, "p");
-                builder.AddAttribute(1, "class", "cda-body-muted");
-                builder.AddAttribute(2, "data-testid", $"plugins-logs-{testIdPrefix}-empty");
-                builder.AddContent(3, "No log records.");
-                builder.CloseElement();
-                return;
-            }
-
-            builder.OpenElement(4, "div");
-            builder.AddAttribute(5, "class", "grid gap-2");
-            foreach (var log in logs)
-            {
-                builder.OpenElement(6, "div");
-                builder.AddAttribute(7, "class", "rounded-lg border border-[var(--cda-border-subtle)] bg-[var(--cda-surface-muted)] p-3");
-                builder.AddAttribute(8, "data-testid", $"plugins-logs-{testIdPrefix}-row");
-                builder.OpenElement(9, "div");
-                builder.AddAttribute(10, "class", "mb-2 flex flex-wrap items-center gap-2 text-xs");
-                builder.OpenElement(11, "span");
-                builder.AddAttribute(12, "class", "font-semibold text-[var(--cda-text)]");
-                builder.AddContent(13, log.OperationKind.ToString());
-                builder.CloseElement();
-                builder.OpenElement(14, "span");
-                builder.AddAttribute(15, "class", "text-[var(--cda-text-muted)]");
-                builder.AddContent(16, log.Severity.ToString());
-                builder.CloseElement();
-                builder.OpenElement(17, "span");
-                builder.AddAttribute(18, "class", "text-[var(--cda-text-muted)]");
-                builder.AddContent(19, log.CreatedAtUtc.ToLocalTime().ToString("g"));
-                builder.CloseElement();
-                builder.CloseElement();
-                builder.OpenElement(20, "p");
-                builder.AddAttribute(21, "class", "text-sm text-[var(--cda-text)]");
-                builder.AddContent(22, log.Message);
-                builder.CloseElement();
-                if (log.PluginId is not null || log.PackageId is not null || log.WorkflowExecutorId is not null)
-                {
-                    builder.OpenElement(23, "p");
-                    builder.AddAttribute(24, "class", "mt-2 break-all text-xs text-[var(--cda-text-muted)]");
-                    builder.AddContent(25, string.Join(" | ", new[]
-                    {
-                        log.PluginId?.Value,
-                        log.PackageId?.Value,
-                        log.WorkflowExecutorId?.Value
-                    }.Where(value => !string.IsNullOrWhiteSpace(value))));
-                    builder.CloseElement();
-                }
-
-                builder.CloseElement();
-            }
-
-            builder.CloseElement();
-        };
-
-    private static string ResolveIconSource(UiIconDescriptor icon)
-        => icon.Kind switch
-        {
-            UiIconKind.PackageAsset when !string.IsNullOrWhiteSpace(icon.PackageId) => $"/api/plugins/packages/{Uri.EscapeDataString(icon.PackageId)}/icon",
-            _ => icon.Value
-        };
-
-    private static string ResolveIconLabel(UiIconDescriptor? icon)
-    {
-        var resolvedIcon = icon ?? UiIconDescriptor.Default;
-        if (!string.IsNullOrWhiteSpace(resolvedIcon.Label))
-        {
-            return resolvedIcon.Label;
-        }
-
-        return resolvedIcon.Kind switch
-        {
-            UiIconKind.MaterialIcon => resolvedIcon.Value,
-            UiIconKind.PackageAsset => "Package icon",
-            UiIconKind.StaticAsset => "Plugin icon",
-            _ => "Plugin icon"
-        };
-    }
-
-    private static string NormalizeTestId(string value)
-    {
-        var chars = value
-            .Trim()
-            .Select(character => char.IsLetterOrDigit(character) ? char.ToLowerInvariant(character) : '-')
-            .ToArray();
-        var normalized = new string(chars);
-        while (normalized.Contains("--", StringComparison.Ordinal))
-        {
-            normalized = normalized.Replace("--", "-", StringComparison.Ordinal);
-        }
-
-        return normalized.Trim('-');
-    }
-
-    private sealed class ConnectionEditorState
-    {
-        private ConnectionEditorState(
-            PluginConnectionId? connectionId,
-            PluginConnectionKey connectionKey,
-            string displayName,
-            ConfigurationState state,
-            bool isEnabled)
-        {
-            ConnectionId = connectionId;
-            ConnectionKey = connectionKey;
-            DisplayName = displayName;
-            State = state;
-            IsEnabled = isEnabled;
-        }
-
-        public PluginConnectionId? ConnectionId { get; }
-
-        public PluginConnectionKey ConnectionKey { get; }
-
-        public string DisplayName { get; set; }
-
-        public ConfigurationState State { get; set; }
-
-        public bool IsEnabled { get; set; }
-
-        public ConfigurationValidationResult Validation { get; set; } = ConfigurationValidationResult.Success;
-
-        public bool IsDirty { get; set; }
-
-        public static ConnectionEditorState Create(
-            PluginConnectionDescriptor descriptor,
-            PluginConnectionItem? connection)
-            => new(
-                connection?.Id,
-                descriptor.Key,
-                string.IsNullOrWhiteSpace(connection?.DisplayName) ? descriptor.DisplayName : connection.DisplayName,
-                ConfigurationState.FromJson(connection?.SettingsJson),
-                connection?.IsEnabled ?? true);
-    }
 }
