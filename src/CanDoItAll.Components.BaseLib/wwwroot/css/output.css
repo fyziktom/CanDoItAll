@@ -381,6 +381,10 @@
   .inline-flex {
     display: inline-flex;
   }
+  .size-8 {
+    width: calc(var(--spacing) * 8);
+    height: calc(var(--spacing) * 8);
+  }
   .h-2 {
     height: calc(var(--spacing) * 2);
   }
@@ -2293,6 +2297,8 @@
     background: var(--cad-color-surface);
   }
   .cda-surface-card {
+    width: 100%;
+    min-width: calc(var(--spacing) * 0);
     border-style: var(--tw-border-style);
     border-width: 1px;
     padding: calc(var(--spacing) * 5);
@@ -2303,6 +2309,8 @@
     box-shadow: var(--cad-shadow-soft);
   }
   .cda-surface-card--soft {
+    width: 100%;
+    min-width: calc(var(--spacing) * 0);
     border-style: var(--tw-border-style);
     border-width: 1px;
     padding: calc(var(--spacing) * 5);
@@ -3466,9 +3474,12 @@
       box-shadow: 0 0 0 3px color-mix(in srgb, var(--cad-tone-primary-soft-bg) 70%, transparent);
     }
   }
-  .cda-input--textarea {
-    --tw-leading: calc(var(--spacing) * 6);
-    line-height: calc(var(--spacing) * 6);
+  :where(.cda-input--textarea) {
+    display: block;
+    width: 100%;
+    min-height: var(--cda-textarea-min-height, 9rem);
+    resize: vertical;
+    line-height: 1.5rem;
   }
   .cda-input--mono {
     font-family: var(--font-mono);

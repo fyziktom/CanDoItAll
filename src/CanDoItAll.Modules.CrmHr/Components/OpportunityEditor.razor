@@ -121,13 +121,13 @@
                     <div>
                         <label class="cda-field-label">Summary</label>
                         <InputTextArea @bind-Value="Model.Summary"
-                                       class="cda-input min-h-[9rem]"
+                                       class="cda-input cda-input--textarea min-h-[9rem]"
                                        data-testid="crmhr-opportunity-summary" />
                     </div>
                     <div>
                         <label class="cda-field-label">Notes</label>
                         <InputTextArea @bind-Value="Model.Notes"
-                                       class="cda-input min-h-[9rem]"
+                                       class="cda-input cda-input--textarea min-h-[9rem]"
                                        data-testid="crmhr-opportunity-notes" />
                     </div>
                 </Grid>
@@ -136,7 +136,7 @@
                     <div>
                         <label class="cda-field-label">Stage note</label>
                         <InputTextArea @bind-Value="Model.StageNotes"
-                                       class="cda-input min-h-[7rem]"
+                                       class="cda-input cda-input--textarea min-h-[7rem]"
                                        data-testid="crmhr-opportunity-stage-notes" />
                     </div>
                     <div>
@@ -149,7 +149,7 @@
                             <div class="mt-4">
                                 <label class="cda-field-label">Lost reason</label>
                                 <InputTextArea @bind-Value="Model.LostReason"
-                                               class="cda-input min-h-[7rem]"
+                                               class="cda-input cda-input--textarea min-h-[7rem]"
                                                data-testid="crmhr-opportunity-lost-reason" />
                             </div>
                         }
@@ -157,7 +157,7 @@
                     <div>
                         <label class="cda-field-label">Partner contribution</label>
                         <InputTextArea @bind-Value="Model.PartnerContributionSummary"
-                                       class="cda-input min-h-[7rem]"
+                                       class="cda-input cda-input--textarea min-h-[7rem]"
                                        data-testid="crmhr-opportunity-partner-contribution" />
                         @if (!string.IsNullOrWhiteSpace(LinkedProjectName))
                         {

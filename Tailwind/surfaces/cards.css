@@ -61,7 +61,7 @@
   }
 
   .cda-surface-card {
-    @apply border p-5;
+    @apply min-w-0 w-full border p-5;
     border-radius: var(--cad-radius-panel);
     border-color: var(--cad-color-border-soft);
     background: var(--cad-color-surface);
@@ -70,7 +70,7 @@
   }
 
   .cda-surface-card--soft {
-    @apply border p-5;
+    @apply min-w-0 w-full border p-5;
     border-radius: var(--cad-radius-panel);
     border-color: var(--cad-color-border-soft);
     background: var(--cad-color-surface-soft);

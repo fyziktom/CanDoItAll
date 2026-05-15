@@ -32,7 +32,9 @@
         {
             <EditForm Model="settingsModel" OnValidSubmit="SaveSettingsAsync">
                 <Stack Class="min-h-full" GapScale="LayoutGap.XXLarge">
-                    <FormSection Title="Workspace defaults" Description="These values define how the rest of the app boots and which provider profile new prompt sessions prefer.">
+                    <FormSection Title="Workspace defaults"
+                                 Icon="settings"
+                                 Description="These values define how the rest of the app boots and which provider profile new prompt sessions prefer.">
                         <div>
                             <label class="cda-field-label">Workspace name</label>
                             <InputText @bind-Value="settingsModel.WorkspaceName" class="cda-input" />
@@ -55,7 +57,9 @@
                         </Grid>
                     </FormSection>
 
-                    <FormSection Title="Workspace notes" Description="Keep any operating notes or setup caveats close to the defaults.">
+                    <FormSection Title="Workspace notes"
+                                 Icon="note"
+                                 Description="Keep any operating notes or setup caveats close to the defaults.">
                         <div>
                             <label class="cda-field-label">Notes</label>
                             <InputTextArea @bind-Value="settingsModel.Notes" class="cda-input cda-input--textarea min-h-32" />
@@ -64,7 +68,7 @@
 
                     <StickyActionFooter StatusLabel="Workspace defaults">
                         <PrimaryActions>
-                            <Button Text="Save defaults" Type="submit" />
+                            <Button Text="Save defaults" Icon="save" Type="submit" />
                         </PrimaryActions>
                     </StickyActionFooter>
                 </Stack>
@@ -84,7 +88,7 @@
                 <ListHeader>
                     <ListPanelHeader Title="Secret vault" Description="Encrypted secrets are stored once and referenced from other modules." Count="@($"{FilteredSecrets.Count} secret(s)")">
                         <Actions>
-                            <Button Text="New secret" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetSecretAsync" />
+                            <Button Text="New secret" Icon="add" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetSecretAsync" />
                         </Actions>
                         <Filters>
                             <FilterBar ResultText="@($"{FilteredSecrets.Count} matching secret(s)")">
@@ -135,7 +139,9 @@
                 <DetailContent>
                     <EditForm Model="secretModel" OnValidSubmit="SaveSecretAsync">
                         <Stack Class="min-h-full" GapScale="LayoutGap.XXLarge">
-                            <FormSection Title="Secret metadata" Description="Name the secret clearly and capture its usage scope.">
+                            <FormSection Title="Secret metadata"
+                                         Icon="shield"
+                                         Description="Name the secret clearly and capture its usage scope.">
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
                                         <label class="cda-field-label">Name</label>
@@ -163,7 +169,9 @@
                                 </Grid>
                             </FormSection>
 
-                            <FormSection Title="Encrypted payload" Description="The raw value is only edited here, while other areas consume references to the saved record.">
+                            <FormSection Title="Encrypted payload"
+                                         Icon="lock"
+                                         Description="The raw value is only edited here, while other areas consume references to the saved record.">
                                 <div>
                                     <label class="cda-field-label">Secret value</label>
                                     <SecretField @bind-Value="secretModel.SecretValue"
@@ -176,21 +184,21 @@
                                 </div>
                                 <div>
                                     <label class="cda-field-label">Metadata JSON</label>
-                                    <InputTextArea @bind-Value="secretModel.MetadataJson" class="cda-input cda-input--textarea min-h-24" />
+                                    <InputTextArea @bind-Value="secretModel.MetadataJson" class="cda-input cda-input--textarea" />
                                 </div>
                             </FormSection>
 
                             <StickyActionFooter StatusLabel="Secret vault">
                                 <SecondaryActions>
-                                    <Button Text="Clear" ButtonStyle="ButtonStyle.Light" Click="ResetSecretAsync" />
+                                    <Button Text="Clear" Icon="restart_alt" ButtonStyle="ButtonStyle.Light" Click="ResetSecretAsync" />
                                 </SecondaryActions>
                                 <PrimaryActions>
-                                    <Button Text="Save secret" Type="submit" />
+                                    <Button Text="Save secret" Icon="save" Type="submit" />
                                 </PrimaryActions>
                                 <DangerActions>
                                     @if (secretModel.Id.HasValue)
                                     {
-                                        <Button Text="Delete" ButtonStyle="ButtonStyle.Danger" Click="DeleteSecretAsync" />
+                                        <Button Text="Delete" Icon="delete" ButtonStyle="ButtonStyle.Danger" Click="DeleteSecretAsync" />
                                     }
                                 </DangerActions>
                             </StickyActionFooter>
@@ -205,7 +213,7 @@
                 <ListHeader>
                     <ListPanelHeader Title="Provider profiles" Description="Provider-specific settings live here, while the rest of the product consumes the neutral provider contract." Count="@($"{FilteredProviders.Count} profile(s)")">
                         <Actions>
-                            <Button Text="New provider" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetProviderAsync" />
+                            <Button Text="New provider" Icon="add" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetProviderAsync" />
                         </Actions>
                         <Filters>
                             <FilterBar ResultText="@($"{FilteredProviders.Count} matching profile(s)")">
@@ -252,7 +260,9 @@
                 <DetailContent>
                     <EditForm Model="providerModel" OnValidSubmit="SaveProviderAsync">
                         <Stack Class="min-h-full" GapScale="LayoutGap.XXLarge">
-                            <FormSection Title="Connector identity" Description="Choose the connector plugin first, then fill only the schema fields that plugin exposes.">
+                            <FormSection Title="Connector identity"
+                                         Icon="plug"
+                                         Description="Choose the connector plugin first, then fill only the schema fields that plugin exposes.">
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
                                         <label class="cda-field-label">Profile name</label>
@@ -290,7 +300,9 @@
                                 </Grid>
                             </FormSection>
 
-                            <FormSection Title="Auth and capabilities" Description="Attach the secret reference and advertise what the profile supports.">
+                            <FormSection Title="Auth and capabilities"
+                                         Icon="shield"
+                                         Description="Attach the secret reference and advertise what the profile supports.">
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
                                         <label class="cda-field-label">API key secret</label>
@@ -315,19 +327,19 @@
 
                             <StickyActionFooter StatusLabel="Provider profiles">
                                 <SecondaryActions>
-                                    <Button Text="Clear" ButtonStyle="ButtonStyle.Light" Click="ResetProviderAsync" />
+                                    <Button Text="Clear" Icon="restart_alt" ButtonStyle="ButtonStyle.Light" Click="ResetProviderAsync" />
                                     @if (providerModel.Id.HasValue)
                                     {
-                                        <Button Text="Health" ButtonStyle="ButtonStyle.Info" Click="@(() => TestProviderAsync(providerModel.Id.Value))" />
+                                        <Button Text="Health" Icon="fact_check" ButtonStyle="ButtonStyle.Info" Click="@(() => TestProviderAsync(providerModel.Id.Value))" />
                                     }
                                 </SecondaryActions>
                                 <PrimaryActions>
-                                    <Button Text="Save provider" Type="submit" data-testid="provider-save-button" />
+                                    <Button Text="Save provider" Icon="save" Type="submit" data-testid="provider-save-button" />
                                 </PrimaryActions>
                                 <DangerActions>
                                     @if (providerModel.Id.HasValue)
                                     {
-                                        <Button Text="Delete" ButtonStyle="ButtonStyle.Danger" Click="@(() => DeleteProviderAsync(providerModel.Id.Value))" />
+                                        <Button Text="Delete" Icon="delete" ButtonStyle="ButtonStyle.Danger" Click="@(() => DeleteProviderAsync(providerModel.Id.Value))" />
                                     }
                                 </DangerActions>
                             </StickyActionFooter>
@@ -339,7 +351,9 @@
         else if (string.Equals(settingsTab, "api-access", StringComparison.Ordinal))
         {
             <Stack Class="min-h-full" GapScale="LayoutGap.XXLarge">
-                <FormSection Title="API access" Description="Control the local API surface and create JWT bearer tokens when authorization is active.">
+                <FormSection Title="API access"
+                             Icon="console"
+                             Description="Control the local API surface and create JWT bearer tokens when authorization is active.">
                     <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                         <Stack GapScale="LayoutGap.Small">
                             <p class="cda-eyebrow">API</p>
@@ -385,7 +399,7 @@
                                         <p class="cda-body-muted mt-1">Separate scopes with spaces or commas.</p>
                                     </div>
                                 </Grid>
-                                <Button Text="Create token" Type="submit" />
+                                <Button Text="Create token" Icon="key" Type="submit" />
                             </Stack>
                         </EditForm>
 

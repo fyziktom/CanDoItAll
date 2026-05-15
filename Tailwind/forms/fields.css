@@ -81,8 +81,12 @@
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--cad-tone-primary-soft-bg) 70%, transparent);
   }
 
-  .cda-input--textarea {
-    @apply leading-6;
+  :where(.cda-input--textarea) {
+    display: block;
+    width: 100%;
+    min-height: var(--cda-textarea-min-height, 9rem);
+    resize: vertical;
+    line-height: 1.5rem;
   }
 
   .cda-input--mono {

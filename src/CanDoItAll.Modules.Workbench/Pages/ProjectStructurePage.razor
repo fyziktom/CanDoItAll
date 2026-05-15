@@ -540,12 +540,15 @@ else
                                    Close="CloseSecretReferenceDialog">
         <Actions>
             <Button Text="Close"
+                    Icon="close"
                     Variant="Variant.Text"
                     ButtonStyle="ButtonStyle.Base"
                     Click="CloseSecretReferenceDialog" />
         </Actions>
         <Body>
-            <Stack GapScale="LayoutGap.Large" data-testid="project-structure-secret-dialog">
+            <Stack GapScale="LayoutGap.Large"
+                   AlignItems="AlignItems.Stretch"
+                   data-testid="project-structure-secret-dialog">
                 @if (!string.IsNullOrWhiteSpace(secretReferenceDialogError))
                 {
                     <Alert AlertStyle="AlertStyle.Warning">
@@ -599,6 +602,7 @@ else
 
                 <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                     <Button Text="@SecretReferenceUseSelectedButtonText"
+                            Icon="shield"
                             ButtonStyle="ButtonStyle.Info"
                             Disabled="@(isSecretReferenceDialogBusy || !SelectedSecretReferenceGuid.HasValue)"
                             IsBusy="@isSecretReferenceDialogBusy"
@@ -611,6 +615,7 @@ else
                     @if (isSecretReferenceEditMode)
                     {
                         <Button Text="Cancel"
+                                Icon="close"
                                 Variant="Variant.Text"
                                 ButtonStyle="ButtonStyle.Base"
                                 Disabled="@isSecretReferenceDialogBusy"
@@ -618,7 +623,9 @@ else
                     }
                 </Cluster>
 
-                <FormSection Title="Create new secret" Description="@SecretReferenceCreateSectionDescription">
+                <FormSection Title="Create new secret"
+                             Icon="shield"
+                             Description="@SecretReferenceCreateSectionDescription">
                     <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                         <div>
                             <label class="cda-field-label">Name</label>
@@ -649,6 +656,7 @@ else
                     </div>
                     <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="mt-4">
                         <Button Text="Create and use"
+                                Icon="save"
                                 ButtonStyle="ButtonStyle.Info"
                                 Disabled="@isSecretReferenceDialogBusy"
                                 IsBusy="@isSecretReferenceDialogBusy"
