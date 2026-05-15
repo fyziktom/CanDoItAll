@@ -65,68 +65,125 @@
                 </ChildContent>
             </TooltipTarget>
 
-            <TooltipTarget Position="TooltipPosition.RightBottom"
-                           TriggerClass="w-full"
-                           TooltipClass="cda-shell-db-flyout"
-                           Duration="TimeSpan.FromSeconds(30)"
-                           TestId="database-shell-flyout">
-                <TooltipContent Context="_">
-                    <div class="cda-shell-db-flyout-card"
-                         data-testid="database-shell-flyout-card">
-                        <div class="cda-shell-db-flyout__header">
-                            <div class="min-w-0">
-                                <p class="cda-eyebrow cda-eyebrow--tight">Active database</p>
-                                <p class="cda-shell-db-flyout__title">@(databaseSelection?.DisplayName ?? "Loading runtime profile")</p>
-                                <p class="cda-shell-db-flyout__meta">@BuildSafeDatabaseDescriptor(databaseSelection)</p>
-                            </div>
-                            @if (databaseSelection is not null)
-                            {
-                                <StatusBadge Tone="info" Text="@DescribeDatabaseProvider(databaseSelection.ProviderKind)" />
-                            }
-                        </div>
+            @{
+                var safeDatabaseDetails = BuildSafeDatabaseDetails(databaseSelection, currentDatabaseEditor);
+                var recentDatabaseProfiles = RecentDatabaseProfiles;
+            }
+            <div class="cda-shell-db-flyout-anchor"
+                 data-testid="database-shell-flyout-anchor">
+                <button type="button"
+                        class="cda-shell-utility-button cda-shell-utility-button--database"
+                        disabled="@databaseDialogBusy"
+                        aria-haspopup="dialog"
+                        data-testid="database-shell-action"
+                        @onclick="OpenDatabaseDialogAsync">
+                    <span class="cda-shell-utility-icon" aria-hidden="true"><Icon Name="database" /></span>
+                    <span class="cda-shell-utility-label">Switch Database</span>
+                </button>
 
-                        <div class="cda-shell-db-flyout__facts">
-                            <div class="cda-shell-db-flyout__fact">
-                                <span>Source</span>
-                                <strong>@(databaseSelection is null ? "Loading" : DescribeDatabaseSource(databaseSelection.SourceKind))</strong>
-                            </div>
-                            <div class="cda-shell-db-flyout__fact">
-                                <span>Resolution</span>
-                                <strong>@(databaseSelection is null ? "Loading" : DescribeResolutionSource(databaseSelection.ResolutionSource))</strong>
-                            </div>
-                            <div class="cda-shell-db-flyout__fact">
-                                <span>Runtime</span>
-                                <strong>@(databaseSelection?.IsRuntimeLocked == true ? "Config locked" : "Switchable")</strong>
-                            </div>
-                        </div>
+                <section class="cda-shell-db-flyout"
+                         aria-label="Switch database"
+                         data-testid="database-shell-flyout">
+                    <span class="cda-shell-db-flyout__arrow" aria-hidden="true"></span>
+                    <Stack GapScale="LayoutGap.Medium"
+                           Class="cda-shell-db-flyout-card"
+                           data-testid="database-shell-flyout-card">
+                        <Cluster Gap="LayoutGap.Small"
+                                 Wrap="FlexWrap.NoWrap"
+                                 AlignItems="AlignItems.Center">
+                            <span class="cda-shell-db-flyout__icon" aria-hidden="true"><Icon Name="database" /></span>
+                            <h2 class="cda-shell-db-flyout__heading">Switch Database</h2>
+                        </Cluster>
 
-                        <Cluster JustifyContent="JustifyContent.SpaceBetween"
-                                 Gap="LayoutGap.Small">
-                            <CopyButton Value="@BuildSafeDatabaseSummary(databaseSelection)"
-                                        DisplayMode="CopyButtonDisplayMode.IconButton"
+                        <Stack GapScale="LayoutGap.Small"
+                               Class="cda-shell-db-flyout__section">
+                            <p class="cda-shell-db-flyout__section-title">Current Database</p>
+                            <Cluster Gap="LayoutGap.Small"
+                                     Wrap="FlexWrap.NoWrap"
+                                     AlignItems="AlignItems.Center"
+                                     Class="w-full">
+                                <span class="cda-shell-db-flyout__status-dot" aria-hidden="true"></span>
+                                <span class="cda-shell-db-flyout__current-name">@(databaseSelection?.DisplayName ?? "Loading runtime profile")</span>
+                                <StatusBadge Tone="success" Text="Active" />
+                            </Cluster>
+
+                            <div class="cda-shell-db-flyout__facts">
+                                <div class="cda-shell-db-flyout__fact">
+                                    <span>Server</span>
+                                    <strong>@safeDatabaseDetails.Server</strong>
+                                    <CopyButton Value="@safeDatabaseDetails.Server"
+                                                DisplayMode="CopyButtonDisplayMode.IconOnly"
+                                                Size="CopyButtonSize.ExtraSmall"
+                                                AriaLabel="Copy safe database server"
+                                                data-testid="database-shell-copy-server" />
+                                </div>
+                                <div class="cda-shell-db-flyout__fact">
+                                    <span>Database</span>
+                                    <strong>@safeDatabaseDetails.Database</strong>
+                                    <CopyButton Value="@safeDatabaseDetails.Database"
+                                                DisplayMode="CopyButtonDisplayMode.IconOnly"
+                                                Size="CopyButtonSize.ExtraSmall"
+                                                AriaLabel="Copy safe database name"
+                                                data-testid="database-shell-copy-database" />
+                                </div>
+                                <div class="cda-shell-db-flyout__fact">
+                                    <span>User</span>
+                                    <strong>@safeDatabaseDetails.User</strong>
+                                    <CopyButton Value="@safeDatabaseDetails.User"
+                                                DisplayMode="CopyButtonDisplayMode.IconOnly"
+                                                Size="CopyButtonSize.ExtraSmall"
+                                                AriaLabel="Copy safe database user"
+                                                data-testid="database-shell-copy-user" />
+                                </div>
+                            </div>
+
+                            <CopyButton Value="@BuildSafeDatabaseSummary(databaseSelection, currentDatabaseEditor)"
+                                        Text="Copy safe summary"
+                                        DisplayMode="CopyButtonDisplayMode.TextWithIcon"
                                         Size="CopyButtonSize.Small"
+                                        ButtonStyle="ButtonStyle.Info"
+                                        Variant="Variant.Outlined"
+                                        Class="cda-shell-db-flyout__copy"
                                         AriaLabel="Copy safe database summary"
                                         data-testid="database-shell-copy-summary" />
-                            <Button ButtonStyle="ButtonStyle.Light"
-                                    Size="ButtonSize.Small"
-                                    Text="Manage"
-                                    Disabled="@databaseDialogBusy"
-                                    Click="OpenDatabaseDialogAsync"
-                                    data-testid="database-shell-manage-button" />
-                        </Cluster>
-                    </div>
-                </TooltipContent>
-                <ChildContent>
-                    <button type="button"
-                            class="cda-shell-utility-button"
-                            disabled="@databaseDialogBusy"
-                            data-testid="database-shell-action"
-                            @onclick="OpenDatabaseDialogAsync">
-                        <span class="cda-shell-utility-icon" aria-hidden="true"><Icon Name="database" /></span>
-                        <span class="cda-shell-utility-label">Database</span>
-                    </button>
-                </ChildContent>
-            </TooltipTarget>
+                        </Stack>
+
+                        <Stack GapScale="LayoutGap.Small"
+                               Class="cda-shell-db-flyout__section">
+                            <p class="cda-shell-db-flyout__section-title">Recent Databases</p>
+                            @if (recentDatabaseProfiles.Count == 0)
+                            {
+                                <p class="cda-shell-db-flyout__empty">No recent databases yet.</p>
+                            }
+                            else
+                            {
+                                <div class="cda-shell-db-flyout__recent-list">
+                                    @foreach (var profile in recentDatabaseProfiles)
+                                    {
+                                        <button type="button"
+                                                class="cda-shell-db-flyout__recent-button"
+                                                disabled="@(databaseDialogBusy || !CanManageDatabases)"
+                                                data-testid="@($"database-shell-recent-profile-{profile.Id:N}")"
+                                                @onclick="@(() => SwitchDatabaseProfileFromFlyoutAsync(profile.Id))">
+                                            <span>@profile.DisplayName</span>
+                                            <Icon Name="chevron_right" />
+                                        </button>
+                                    }
+                                </div>
+                            }
+                        </Stack>
+
+                        <Button Text="Open database dialog..."
+                                ButtonStyle="ButtonStyle.Info"
+                                Variant="Variant.Text"
+                                Size="ButtonSize.Small"
+                                Disabled="@databaseDialogBusy"
+                                Class="cda-shell-db-flyout__dialog-button"
+                                Click="OpenDatabaseDialogAsync"
+                                data-testid="database-shell-open-dialog" />
+                    </Stack>
+                </section>
+            </div>
         </div>
     </BottomUtilities>
     <TopBar>

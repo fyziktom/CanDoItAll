@@ -20,6 +20,7 @@ public partial class MainLayout
     private DotNetObjectReference<MainLayout>? databaseSwitchListenerReference;
     private IReadOnlyList<DatabaseProfileSummary> databaseProfiles = [];
     private DatabaseSelectionStateModel? databaseSelection;
+    private DatabaseProfileEditorModel? currentDatabaseEditor;
     private Guid? selectedDatabaseProfileId;
     private Guid? pendingCreatedDatabaseProfileId;
     private string pendingCreatedDatabaseName = string.Empty;

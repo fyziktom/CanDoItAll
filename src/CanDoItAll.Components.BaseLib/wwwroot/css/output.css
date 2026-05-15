@@ -86,6 +86,7 @@
     --radius-xl: 0.75rem;
     --radius-2xl: 1rem;
     --radius-3xl: 1.5rem;
+    --ease-out: cubic-bezier(0, 0, 0.2, 1);
     --animate-spin: spin 1s linear infinite;
     --animate-pulse: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     --blur-sm: 8px;
@@ -5220,8 +5221,24 @@
     white-space: nowrap;
     border-width: 0;
   }
+  .cda-shell-db-flyout-anchor {
+    position: relative;
+  }
+  .cda-shell-utility-button--database {
+    background-color: color-mix(in srgb, #fff 3%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--color-white) 3%, transparent);
+    }
+  }
   .cda-shell-db-flyout {
-    max-width: 24rem;
+    pointer-events: none;
+    visibility: hidden;
+    position: fixed;
+    z-index: 96;
+    max-height: calc(100vh - 2rem);
+    width: 23.5rem;
+    max-width: calc(100vw - 7rem);
+    overflow-y: auto;
     border-radius: var(--radius-xl);
     border-style: var(--tw-border-style);
     border-width: 1px;
@@ -5229,82 +5246,224 @@
     background-color: var(--color-white);
     padding: calc(var(--spacing) * 0);
     color: var(--color-slate-900);
+    opacity: 0%;
     --tw-shadow: 0 25px 50px -12px var(--tw-shadow-color, rgb(0 0 0 / 0.25));
     box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
     --tw-shadow-color: color-mix(in srgb, oklch(12.9% 0.042 264.695) 20%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
       --tw-shadow-color: color-mix(in oklab, color-mix(in oklab, var(--color-slate-950) 20%, transparent) var(--tw-shadow-alpha), transparent);
     }
+    transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to, opacity, box-shadow, transform, translate, scale, rotate, filter, -webkit-backdrop-filter, backdrop-filter, display, content-visibility, overlay, pointer-events;
+    transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
+    transition-duration: var(--tw-duration, var(--default-transition-duration));
+    --tw-duration: 150ms;
+    transition-duration: 150ms;
+    --tw-ease: var(--ease-out);
+    transition-timing-function: var(--ease-out);
+    bottom: 1.125rem;
+    left: calc(1rem + 18rem + 0.75rem);
+    transform: translate3d(-0.35rem, 0.5rem, 0);
+  }
+  .cda-shell-sidebar--collapsed .cda-shell-db-flyout {
+    left: calc(1rem + 4.75rem + 0.75rem);
+  }
+  .cda-shell-db-flyout-anchor:hover .cda-shell-db-flyout, .cda-shell-db-flyout-anchor:focus-within .cda-shell-db-flyout {
+    pointer-events: auto;
+    visibility: visible;
+    opacity: 100%;
+    transform: translate3d(0, 0, 0);
+  }
+  .cda-shell-db-flyout::before {
+    position: absolute;
+    top: calc(var(--spacing) * 0);
+    bottom: calc(var(--spacing) * 0);
+    left: -1rem;
+    width: calc(var(--spacing) * 4);
+    --tw-content: '';
+    content: var(--tw-content);
+  }
+  .cda-shell-db-flyout__arrow {
+    position: absolute;
+    bottom: calc(var(--spacing) * 4);
+    left: -0.45rem;
+    height: calc(var(--spacing) * 3.5);
+    width: calc(var(--spacing) * 3.5);
+    rotate: 45deg;
+    border-bottom-style: var(--tw-border-style);
+    border-bottom-width: 1px;
+    border-left-style: var(--tw-border-style);
+    border-left-width: 1px;
+    border-color: var(--color-slate-200);
+    background-color: var(--color-white);
   }
   .cda-shell-db-flyout-card {
-    width: calc(var(--spacing) * 80);
-    :where(& > :not(:last-child)) {
-      --tw-space-y-reverse: 0;
-      margin-block-start: calc(calc(var(--spacing) * 3) * var(--tw-space-y-reverse));
-      margin-block-end: calc(calc(var(--spacing) * 3) * calc(1 - var(--tw-space-y-reverse)));
-    }
+    position: relative;
+    width: 100%;
     padding-inline: calc(var(--spacing) * 4);
-    padding-block: calc(var(--spacing) * 3);
+    padding-block: calc(var(--spacing) * 3.5);
   }
-  .cda-shell-db-flyout__header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: calc(var(--spacing) * 3);
+  .cda-shell-db-flyout__icon {
+    display: inline-flex;
+    height: calc(var(--spacing) * 8);
+    width: calc(var(--spacing) * 8);
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-lg);
+    background-color: var(--color-slate-100);
+    color: var(--color-slate-700);
   }
-  .cda-shell-db-flyout__title {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  .cda-shell-db-flyout__heading {
     font-size: var(--text-sm);
     line-height: var(--tw-leading, var(--text-sm--line-height));
     --tw-font-weight: var(--font-weight-semibold);
     font-weight: var(--font-weight-semibold);
     color: var(--color-slate-950);
   }
-  .cda-shell-db-flyout__meta {
+  .cda-shell-db-flyout__section {
+    width: 100%;
+    border-top-style: var(--tw-border-style);
+    border-top-width: 1px;
+    border-color: var(--color-slate-200);
+    padding-top: calc(var(--spacing) * 3);
+  }
+  .cda-shell-db-flyout__section-title {
     font-size: var(--text-xs);
     line-height: var(--tw-leading, var(--text-xs--line-height));
-    --tw-leading: calc(var(--spacing) * 5);
-    line-height: calc(var(--spacing) * 5);
-    color: var(--color-slate-500);
+    --tw-font-weight: var(--font-weight-semibold);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-slate-700);
+  }
+  .cda-shell-db-flyout__status-dot {
+    display: inline-flex;
+    height: calc(var(--spacing) * 2.5);
+    width: calc(var(--spacing) * 2.5);
+    flex-shrink: 0;
+    border-radius: calc(infinity * 1px);
+    background-color: var(--color-emerald-500);
+    --tw-shadow: 0 0 0 3px var(--tw-shadow-color, rgba(16,185,129,0.14));
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  }
+  .cda-shell-db-flyout__current-name {
+    min-width: calc(var(--spacing) * 0);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--text-sm);
+    line-height: var(--tw-leading, var(--text-sm--line-height));
+    --tw-font-weight: var(--font-weight-medium);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-slate-800);
   }
   .cda-shell-db-flyout__facts {
     display: grid;
-    gap: calc(var(--spacing) * 2);
+    width: 100%;
+    gap: calc(var(--spacing) * 1);
     font-size: var(--text-xs);
     line-height: var(--tw-leading, var(--text-xs--line-height));
   }
   .cda-shell-db-flyout__fact {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: calc(var(--spacing) * 3);
-    border-radius: var(--radius-lg);
-    border-style: var(--tw-border-style);
-    border-width: 1px;
-    border-color: var(--color-slate-200);
-    background-color: var(--color-slate-50);
-    padding-inline: calc(var(--spacing) * 2.5);
-    padding-block: calc(var(--spacing) * 2);
+    display: grid;
+    min-height: calc(var(--spacing) * 7);
+    grid-template-columns: 4.5rem minmax(0,1fr) 1.75rem;
+    align-items: center;
+    gap: calc(var(--spacing) * 2);
   }
   .cda-shell-db-flyout__fact span {
-    --tw-font-weight: var(--font-weight-semibold);
-    font-weight: var(--font-weight-semibold);
-    --tw-tracking: 0.12em;
-    letter-spacing: 0.12em;
-    color: var(--color-slate-400);
-    text-transform: uppercase;
+    color: var(--color-slate-500);
   }
   .cda-shell-db-flyout__fact strong {
-    max-width: 12rem;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     text-align: right;
-    --tw-font-weight: var(--font-weight-semibold);
-    font-weight: var(--font-weight-semibold);
+    --tw-font-weight: var(--font-weight-medium);
+    font-weight: var(--font-weight-medium);
     color: var(--color-slate-800);
+  }
+  .cda-shell-db-flyout__fact .cda-copy-button-icon {
+    justify-self: flex-end;
+  }
+  .cda-shell-db-flyout__copy {
+    width: 100%;
+    justify-content: center;
+  }
+  .cda-shell-db-flyout__recent-list {
+    width: 100%;
+    overflow: hidden;
+    border-radius: var(--radius-xl);
+    border-style: var(--tw-border-style);
+    border-width: 1px;
+    border-color: var(--color-slate-200);
+    background-color: color-mix(in srgb, oklch(98.4% 0.003 247.858) 70%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--color-slate-50) 70%, transparent);
+    }
+  }
+  .cda-shell-db-flyout__recent-button {
+    display: flex;
+    min-height: calc(var(--spacing) * 10);
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: calc(var(--spacing) * 2);
+    background-color: var(--color-white);
+    padding-inline: calc(var(--spacing) * 3);
+    text-align: left;
+    font-size: var(--text-sm);
+    line-height: var(--tw-leading, var(--text-sm--line-height));
+    --tw-font-weight: var(--font-weight-medium);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-slate-700);
+    transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to, opacity, box-shadow, transform, translate, scale, rotate, filter, -webkit-backdrop-filter, backdrop-filter, display, content-visibility, overlay, pointer-events;
+    transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
+    transition-duration: var(--tw-duration, var(--default-transition-duration));
+    &:hover {
+      @media (hover: hover) {
+        background-color: var(--color-slate-50);
+      }
+    }
+    &:hover {
+      @media (hover: hover) {
+        color: var(--color-slate-950);
+      }
+    }
+    &:disabled {
+      cursor: not-allowed;
+    }
+    &:disabled {
+      opacity: 50%;
+    }
+  }
+  .cda-shell-db-flyout__recent-button + .cda-shell-db-flyout__recent-button {
+    border-top-style: var(--tw-border-style);
+    border-top-width: 1px;
+    border-color: var(--color-slate-200);
+  }
+  .cda-shell-db-flyout__recent-button .cda-material-icon {
+    font-size: var(--text-base);
+    line-height: var(--tw-leading, var(--text-base--line-height));
+    color: var(--color-slate-400);
+  }
+  .cda-shell-db-flyout__empty {
+    width: 100%;
+    border-radius: var(--radius-xl);
+    border-style: var(--tw-border-style);
+    border-width: 1px;
+    --tw-border-style: dashed;
+    border-style: dashed;
+    border-color: var(--color-slate-200);
+    background-color: var(--color-slate-50);
+    padding-inline: calc(var(--spacing) * 3);
+    padding-block: calc(var(--spacing) * 2);
+    font-size: var(--text-sm);
+    line-height: var(--tw-leading, var(--text-sm--line-height));
+    color: var(--color-slate-500);
+  }
+  .cda-shell-db-flyout__dialog-button {
+    width: fit-content;
+    padding-inline: calc(var(--spacing) * 0);
   }
   .cda-shell-mobile-panel {
     border-radius: 1.5rem;
@@ -5675,6 +5834,15 @@
   inherits: false;
   initial-value: solid;
 }
+@property --tw-ease {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-content {
+  syntax: "*";
+  inherits: false;
+  initial-value: "";
+}
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -5721,6 +5889,8 @@
       --tw-backdrop-sepia: initial;
       --tw-duration: initial;
       --tw-outline-style: solid;
+      --tw-ease: initial;
+      --tw-content: "";
     }
   }
 }

@@ -13,6 +13,7 @@ public partial class MainLayout
     {
         databaseProfiles = await DatabaseProfileWorkspaceService.ListProfilesAsync();
         databaseSelection = await DatabaseProfileWorkspaceService.GetCurrentSelectionAsync();
+        currentDatabaseEditor = await DatabaseProfileWorkspaceService.GetCurrentEditorAsync();
         selectedDatabaseProfileId ??= databaseSelection.ActiveProfileId;
         if (databaseProfiles.Count > 0 &&
             !databaseProfiles.Any(profile => profile.Id == selectedDatabaseProfileId))
@@ -41,6 +42,13 @@ public partial class MainLayout
             DatabaseProfileResolutionSource.LegacyDiscovery or
             DatabaseProfileResolutionSource.AutoProvisionedManagedSqlite;
     }
+
+    private IReadOnlyList<DatabaseProfileSummary> RecentDatabaseProfiles => databaseProfiles
+        .Where(profile => databaseSelection is null || profile.Id != databaseSelection.ActiveProfileId)
+        .OrderByDescending(profile => profile.LastUsedUtc ?? profile.CreatedUtc)
+        .ThenBy(profile => profile.DisplayName, StringComparer.OrdinalIgnoreCase)
+        .Take(2)
+        .ToList();
 
     private async Task OpenDatabaseDialogAsync()
     {
@@ -316,6 +324,17 @@ public partial class MainLayout
         databaseDialogStartupMode = false;
     }
 
+    private async Task SwitchDatabaseProfileFromFlyoutAsync(Guid profileId)
+    {
+        if (!CanManageDatabases || databaseDialogBusy)
+        {
+            return;
+        }
+
+        selectedDatabaseProfileId = profileId;
+        await SwitchDatabaseProfileAsync();
+    }
+
     private async Task DismissStartupPromptIfNeededAsync()
     {
         if (!databaseDialogStartupMode)
@@ -411,23 +430,93 @@ public partial class MainLayout
         };
     }
 
-    private static string BuildSafeDatabaseSummary(DatabaseSelectionStateModel? selection)
+    private static DatabaseFlyoutDetails BuildSafeDatabaseDetails(
+        DatabaseSelectionStateModel? selection,
+        DatabaseProfileEditorModel? editor)
+    {
+        if (selection is null)
+        {
+            return new DatabaseFlyoutDetails("Loading", "Loading", "Loading");
+        }
+
+        return selection.ProviderKind switch
+        {
+            DatabaseProviderKind.PostgreSql => new DatabaseFlyoutDetails(
+                MaskHostName(editor?.PostgresHost),
+                MaskIdentifier(editor?.PostgresDatabaseName),
+                string.IsNullOrWhiteSpace(editor?.PostgresUsername) ? "Unavailable" : editor.PostgresUsername.Trim()),
+            DatabaseProviderKind.Sqlite => new DatabaseFlyoutDetails(
+                "Local SQLite",
+                BuildSafeDatabaseDescriptor(selection),
+                DescribeDatabaseSource(selection.SourceKind)),
+            DatabaseProviderKind.InMemory => new DatabaseFlyoutDetails(
+                "Process memory",
+                BuildSafeDatabaseDescriptor(selection),
+                "In-memory"),
+            _ => new DatabaseFlyoutDetails(
+                DescribeDatabaseProvider(selection.ProviderKind),
+                BuildSafeDatabaseDescriptor(selection),
+                DescribeDatabaseSource(selection.SourceKind))
+        };
+    }
+
+    private static string BuildSafeDatabaseSummary(
+        DatabaseSelectionStateModel? selection,
+        DatabaseProfileEditorModel? editor)
     {
         if (selection is null)
         {
             return "Database profile: loading";
         }
 
+        var details = BuildSafeDatabaseDetails(selection, editor);
         return string.Join(
             Environment.NewLine,
             [
                 $"Profile: {selection.DisplayName}",
                 $"Provider: {DescribeDatabaseProvider(selection.ProviderKind)}",
+                $"Server: {details.Server}",
+                $"Database: {details.Database}",
+                $"User: {details.User}",
                 $"Source: {DescribeDatabaseSource(selection.SourceKind)}",
                 $"Resolution: {DescribeResolutionSource(selection.ResolutionSource)}",
-                $"Runtime: {(selection.IsRuntimeLocked ? "Config locked" : "Switchable")}",
-                $"Descriptor: {BuildSafeDatabaseDescriptor(selection)}"
+                $"Runtime: {(selection.IsRuntimeLocked ? "Config locked" : "Switchable")}"
             ]);
+    }
+
+    private static string MaskHostName(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "Unavailable";
+        }
+
+        var trimmed = value.Trim();
+        var separatorIndex = trimmed.IndexOf('.');
+        if (separatorIndex <= 0)
+        {
+            return MaskIdentifier(trimmed);
+        }
+
+        return $"{MaskIdentifier(trimmed[..separatorIndex])}{trimmed[separatorIndex..]}";
+    }
+
+    private static string MaskIdentifier(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "Unavailable";
+        }
+
+        var trimmed = value.Trim();
+        if (trimmed.Length <= 4)
+        {
+            return trimmed;
+        }
+
+        var visiblePrefixLength = Math.Min(4, Math.Max(2, trimmed.Length / 3));
+        var maskLength = Math.Min(10, Math.Max(3, trimmed.Length - visiblePrefixLength));
+        return $"{trimmed[..visiblePrefixLength]}{new string('*', maskLength)}";
     }
 
     private void HandleDatabaseSwitchChanged(object? sender, DatabaseProfileChangedNotification notification)
@@ -512,4 +601,9 @@ public partial class MainLayout
         string CurrentFingerprint,
         long Generation,
         bool HadDirtyTabs);
+
+    private sealed record DatabaseFlyoutDetails(
+        string Server,
+        string Database,
+        string User);
 }
