@@ -1,4 +1,4 @@
-using CanDoItAll.Infrastructure.Configuration;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -19,21 +19,9 @@ internal static class AutomationQuartzPersistentStoreConfigurator
         ArgumentNullException.ThrowIfNull(quartz);
         ArgumentNullException.ThrowIfNull(configuration);
 
-        var databaseOptions = configuration.GetSection("Database").Get<DatabaseOptions>() ?? new DatabaseOptions();
-        var provider = databaseOptions.Provider?.Trim();
-        if (string.IsNullOrWhiteSpace(provider))
-        {
-            if (string.IsNullOrWhiteSpace(databaseOptions.ConnectionString))
-            {
-                return;
-            }
-
-            throw new InvalidOperationException(
-                "Quartz persistent automation scheduling requires Database:Provider when Database:ConnectionString is configured.");
-        }
-
-        if (provider.Equals("InMemory", StringComparison.OrdinalIgnoreCase) ||
-            provider.Equals("Memory", StringComparison.OrdinalIgnoreCase))
+        var databaseOptions = DatabaseProfileStartupConnectionResolver.TryResolve(configuration, contentRootPath);
+        if (databaseOptions is null ||
+            databaseOptions.ProviderKind == DatabaseProviderKind.InMemory)
         {
             return;
         }
@@ -45,8 +33,7 @@ internal static class AutomationQuartzPersistentStoreConfigurator
             store.RetryInterval = TimeSpan.FromSeconds(10);
             store.UseNewtonsoftJsonSerializer();
 
-            if (provider.Equals("Sqlite", StringComparison.OrdinalIgnoreCase) ||
-                provider.Equals("SQLite", StringComparison.OrdinalIgnoreCase))
+            if (databaseOptions.ProviderKind == DatabaseProviderKind.Sqlite)
             {
                 var connectionString = ResolveSqliteConnectionString(databaseOptions.ConnectionString, contentRootPath);
                 store.UseMicrosoftSQLite(ado =>
@@ -57,9 +44,7 @@ internal static class AutomationQuartzPersistentStoreConfigurator
                 return;
             }
 
-            if (provider.Equals("Postgres", StringComparison.OrdinalIgnoreCase) ||
-                provider.Equals("PostgreSql", StringComparison.OrdinalIgnoreCase) ||
-                provider.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase))
+            if (databaseOptions.ProviderKind == DatabaseProviderKind.PostgreSql)
             {
                 store.UseGenericDatabase<PostgreSQLDelegate>("Npgsql", ado =>
                 {
@@ -72,7 +57,7 @@ internal static class AutomationQuartzPersistentStoreConfigurator
             }
 
             throw new InvalidOperationException(
-                $"Quartz persistent automation scheduling does not support database provider '{databaseOptions.Provider}'.");
+                $"Quartz persistent automation scheduling does not support database provider '{databaseOptions.ProviderKind}'.");
         });
     }
 

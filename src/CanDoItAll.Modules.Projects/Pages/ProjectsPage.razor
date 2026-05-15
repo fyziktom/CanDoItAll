@@ -9,6 +9,8 @@ risks: route-driven-modal-state, modal-save-regressions
 tests: component:ProjectsPageTests, e2e:projects-smoke
 *@
 @using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
+@using CanDoItAll.Components.Mermaid
 @using CanDoItAll.Modules.Projects
 @using CanDoItAll.Modules.Projects.Pages.Components
 @using CanDoItAll.SharedKernel
@@ -160,12 +162,37 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
                         </Grid>
                     </SurfaceCard>
 
-                    <SurfaceCard>
-                        <p class="cda-eyebrow">Mermaid source</p>
-                        <h3 class="mt-1 text-lg font-semibold text-slate-950">Gantt graph</h3>
-                        <pre class="mt-4 max-h-[32rem] overflow-auto rounded-[1.35rem] border border-slate-200 bg-slate-950 p-4 text-sm leading-6 text-slate-100"
-                             data-testid="projects-gantt-mermaid-source">@ganttPreviewDialog.MermaidText</pre>
-                    </SurfaceCard>
+                    <Stack GapScale="LayoutGap.Medium"
+                           Class="min-w-0">
+                        <SurfaceCard>
+                            <Split Gap="LayoutGap.Small"
+                                   Breakpoint="LayoutBreakpoint.None"
+                                   Wrap="FlexWrap.Wrap">
+                                <Stack GapScale="LayoutGap.Tiny"
+                                       Class="min-w-0 flex-1">
+                                    <p class="cda-eyebrow">Mermaid render</p>
+                                    <h3 class="mt-1 text-lg font-semibold text-slate-950">Gantt graph</h3>
+                                </Stack>
+                                <CopyButton Value="@ganttPreviewDialog.MermaidText"
+                                            DisplayMode="CopyButtonDisplayMode.IconButton"
+                                            Size="CopyButtonSize.Small"
+                                            AriaLabel="Copy Mermaid Gantt source"
+                                            data-testid="projects-gantt-copy-source-button" />
+                            </Split>
+                            <MermaidDiagram Source="@ganttPreviewDialog.MermaidText"
+                                            PanZoomEnabled="true"
+                                            ShowControls="true"
+                                            Class="mt-4"
+                                            Style="--cda-mermaid-height: 28rem; --cda-mermaid-min-height: 24rem;"
+                                            data-testid="projects-gantt-mermaid-diagram" />
+                        </SurfaceCard>
+
+                        <SurfaceCard>
+                            <p class="cda-eyebrow">Mermaid source</p>
+                            <pre class="mt-4 max-h-60 overflow-auto rounded-[1.35rem] border border-slate-200 bg-slate-950 p-4 text-sm leading-6 text-slate-100"
+                                 data-testid="projects-gantt-mermaid-source">@ganttPreviewDialog.MermaidText</pre>
+                        </SurfaceCard>
+                    </Stack>
                 </Grid>
             }
         </ChildContent>

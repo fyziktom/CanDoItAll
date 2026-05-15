@@ -172,9 +172,12 @@ public sealed class ProjectsPageTests
         cut.WaitForAssertion(() =>
         {
             var modal = cut.Find("[data-testid='projects-gantt-modal']");
+            var diagram = cut.Find("[data-testid='projects-gantt-mermaid-diagram']");
             var source = cut.Find("[data-testid='projects-gantt-mermaid-source']");
 
             Assert.Contains("Gantt preview project", modal.TextContent);
+            Assert.Contains("cda-mermaid", diagram.ClassList);
+            Assert.NotNull(cut.Find("[data-testid='projects-gantt-copy-source-button']"));
             Assert.Contains("Architect plan", source.TextContent);
             Assert.Contains("Implement feature", source.TextContent);
             Assert.Contains("gantt", source.TextContent, StringComparison.OrdinalIgnoreCase);

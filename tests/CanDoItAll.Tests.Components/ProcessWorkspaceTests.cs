@@ -66,6 +66,8 @@ public sealed class ProcessWorkspaceTests
 
         var detailTabs = cut.Find("[data-testid='processes-detail-tabs']");
         Assert.Contains("cad-tabs--fill-height", detailTabs.ClassName, StringComparison.Ordinal);
+        Assert.Contains("cad-tabs--overflow-auto", detailTabs.ClassName, StringComparison.Ordinal);
+        Assert.DoesNotContain("cad-tabs--overflow-scroll", detailTabs.ClassName, StringComparison.Ordinal);
         Assert.Contains("cad-tabs--panel-overflow-auto", detailTabs.ClassName, StringComparison.Ordinal);
     }
 

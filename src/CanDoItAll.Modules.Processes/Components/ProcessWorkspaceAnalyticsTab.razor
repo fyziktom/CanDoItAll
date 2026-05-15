@@ -119,7 +119,8 @@
                       Class="processes-run-history-grid mt-5">
                     @foreach (var run in filteredRuns)
                     {
-                        <SelectionListItem Title="@run.Name"
+                        <SelectionListItem @key="run.Id"
+                                           Title="@run.Name"
                                            Eyebrow="@run.OperatingMode.ToString()"
                                            Meta="@Presenter.BuildRunSummary(run)"
                                            Summary="@Presenter.BuildRunCostText(run)"
@@ -140,7 +141,8 @@
                                          Class="processes-run-card-tags">
                                     @foreach (var tag in Presenter.BuildRunTags(run))
                                     {
-                                        <StatusBadge Tone="@tag.Tone"
+                                        <StatusBadge @key="tag.Text"
+                                                     Tone="@tag.Tone"
                                                      Text="@tag.Text" />
                                     }
                                 </Cluster>
@@ -210,7 +212,8 @@
                       Class="processes-improvement-grid mt-5">
                     @foreach (var improvement in filteredImprovements)
                     {
-                        <SurfaceCard Class="processes-improvement-card">
+                        <SurfaceCard @key="improvement.Id"
+                                     Class="processes-improvement-card">
                             <Split Gap="LayoutGap.Small"
                                    Breakpoint="LayoutBreakpoint.None"
                                    Wrap="FlexWrap.Wrap">
@@ -223,7 +226,8 @@
                                          Class="processes-improvement-card__badges">
                                     @foreach (var tag in Presenter.BuildImprovementTags(improvement))
                                     {
-                                        <StatusBadge Tone="@tag.Tone"
+                                        <StatusBadge @key="tag.Text"
+                                                     Tone="@tag.Tone"
                                                      Text="@tag.Text" />
                                     }
                                 </Cluster>

@@ -215,6 +215,94 @@ public sealed class DatabaseProfileOverrideTests
         Assert.DoesNotContain("first-secret", firstProfile.Profile.Storage.WorkspaceRoot, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("second-secret", secondProfile.Profile.Storage.WorkspaceRoot, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public async Task StartupConnectionResolver_uses_persisted_active_postgres_profile_without_database_override()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("control-plane-startup-postgres");
+
+        Guid postgresProfileId;
+        await using (var provider = DatabaseProfileControlPlaneTestHost.BuildServiceProvider(
+            testEnvironment,
+            includeDatabaseOverride: false))
+        {
+            var service = provider.GetRequiredService<IDatabaseProfileService>();
+            var saveResult = await service.SaveAsync(new DatabaseProfileEditorModel
+            {
+                DisplayName = "Local postgres",
+                ProviderKind = DatabaseProviderKind.PostgreSql,
+                SourceKind = DatabaseProfileSourceKind.PostgresConnection,
+                PostgresHost = "localhost",
+                PostgresPort = 5432,
+                PostgresDatabaseName = "candoitall",
+                PostgresUsername = "postgres",
+                PostgresPassword = "super-secret",
+                WorkspaceRoot = Path.Combine(testEnvironment.RootPath, "profiles", "postgres-workspace")
+            });
+
+            Assert.True(saveResult.IsSuccess);
+            postgresProfileId = saveResult.Value;
+            Assert.True((await service.ActivateAsync(postgresProfileId)).IsSuccess);
+        }
+
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["ControlPlane:RootPath"] = testEnvironment.ControlPlaneRootPath
+            })
+            .Build();
+
+        var resolution = DatabaseProfileStartupConnectionResolver.TryResolve(
+            configuration,
+            testEnvironment.RootPath);
+
+        Assert.NotNull(resolution);
+        Assert.Equal(DatabaseProfileResolutionSource.PersistedActiveProfile, resolution!.ResolutionSource);
+        Assert.Equal(postgresProfileId, resolution.ProfileId);
+        Assert.Equal(DatabaseProviderKind.PostgreSql, resolution.ProviderKind);
+        Assert.Contains("Password=super-secret", resolution.ConnectionString, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task StartupConnectionResolver_prefers_explicit_database_override_over_control_plane_profile()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("control-plane-startup-override");
+
+        await using (var provider = DatabaseProfileControlPlaneTestHost.BuildServiceProvider(
+            testEnvironment,
+            includeDatabaseOverride: false))
+        {
+            var service = provider.GetRequiredService<IDatabaseProfileService>();
+            var saveResult = await service.SaveAsync(new DatabaseProfileEditorModel
+            {
+                DisplayName = "Managed profile",
+                ProviderKind = DatabaseProviderKind.Sqlite,
+                SourceKind = DatabaseProfileSourceKind.ManagedSqlite
+            });
+
+            Assert.True(saveResult.IsSuccess);
+            Assert.True((await service.ActivateAsync(saveResult.Value)).IsSuccess);
+        }
+
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["ControlPlane:RootPath"] = testEnvironment.ControlPlaneRootPath,
+                ["Database:Provider"] = "InMemory",
+                ["Database:ConnectionString"] = "startup-override"
+            })
+            .Build();
+
+        var resolution = DatabaseProfileStartupConnectionResolver.TryResolve(
+            configuration,
+            testEnvironment.RootPath);
+
+        Assert.NotNull(resolution);
+        Assert.Equal(DatabaseProfileResolutionSource.ExplicitOverride, resolution!.ResolutionSource);
+        Assert.Null(resolution.ProfileId);
+        Assert.Equal(DatabaseProviderKind.InMemory, resolution.ProviderKind);
+        Assert.Equal("startup-override", resolution.ConnectionString);
+    }
 }
 
 public sealed class SnapshotBackedProfileCatalogTests
