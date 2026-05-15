@@ -42,12 +42,34 @@ tests: component:HomePageTests, e2e:smoke-dashboard
     </Header>
 
     <ChildContent>
-        <SummaryTiles>
-            <SummaryTile Label="Projects" Value="@projectCount.ToString()" HelperText="Saved project workspaces available to reopen." />
-            <SummaryTile Label="Open work items" Value="@openWorkItems.Count.ToString()" HelperText="Tabs currently active in the recoverable workbench." Tone="info" />
-            <SummaryTile Label="Validation runs" Value="@validationRunCount.ToString()" HelperText="Persisted review runs available for follow-up." />
-            <SummaryTile Label="Failed jobs" Value="@failedJobs.Count.ToString()" HelperText="Operational issues that likely need attention." Tone="@(failedJobs.Count > 0 ? "warning" : "success")" />
-        </SummaryTiles>
+        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+            <SummaryTile Label="Projects"
+                         Value="@projectCount.ToString()"
+                         HelperText="Saved project workspaces available to reopen."
+                         Badge="true"
+                         Compact="true"
+                         ShowHelperTextAsTooltip="true" />
+            <SummaryTile Label="Open work items"
+                         Value="@openWorkItems.Count.ToString()"
+                         HelperText="Tabs currently active in the recoverable workbench."
+                         Tone="info"
+                         Badge="true"
+                         Compact="true"
+                         ShowHelperTextAsTooltip="true" />
+            <SummaryTile Label="Validation runs"
+                         Value="@validationRunCount.ToString()"
+                         HelperText="Persisted review runs available for follow-up."
+                         Badge="true"
+                         Compact="true"
+                         ShowHelperTextAsTooltip="true" />
+            <SummaryTile Label="Failed jobs"
+                         Value="@failedJobs.Count.ToString()"
+                         HelperText="Operational issues that likely need attention."
+                         Tone="@(failedJobs.Count > 0 ? "warning" : "success")"
+                         Badge="true"
+                         Compact="true"
+                         ShowHelperTextAsTooltip="true" />
+        </Cluster>
 
         <Grid Gap="LayoutGap.XXLarge"
               ColumnTemplateXl="minmax(0,1.05fr) minmax(0,0.95fr)">

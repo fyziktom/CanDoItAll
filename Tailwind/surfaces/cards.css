@@ -119,15 +119,16 @@
   }
 
   .cda-summary-tile--badge {
-    @apply px-4 py-3;
+    @apply inline-flex min-w-0 px-3 py-1.5 shadow-none;
+    border-radius: 9999px;
   }
 
   .cda-summary-tile--badge .cda-summary-tile__row {
-    @apply flex items-center justify-between gap-2;
+    @apply flex min-w-0 items-center justify-between gap-2;
   }
 
   .cda-summary-tile--badge .cda-eyebrow {
-    @apply text-[11px] tracking-[0.18em];
+    @apply min-w-0 truncate text-[10px] tracking-[0.16em];
   }
 
   .cda-summary-tile--tone-info {
@@ -165,7 +166,7 @@
   }
 
   .cda-summary-tile--badge .cda-summary-tile__value {
-    @apply mt-0 text-lg;
+    @apply mt-0 text-sm font-bold leading-none tracking-normal;
   }
 
   .cda-summary-tile__helper {

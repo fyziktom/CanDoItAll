@@ -133,13 +133,22 @@
         @if (ShowActions)
         {
             <Cluster Gap="LayoutGap.Small">
-                <Button Text="Save definition"
+                <Button Icon="save"
+                        Class="cda-button--quick"
+                        title="Save definition"
+                        aria-label="Save definition"
                         Click="Save" />
-                <Button Text="Publish"
+                <Button Icon="publish"
+                        Class="cda-button--quick"
                         ButtonStyle="ButtonStyle.Light"
+                        title="Publish definition"
+                        aria-label="Publish definition"
                         Click="Publish" />
-                <Button Text="Delete"
+                <Button Icon="delete"
+                        Class="cda-button--quick"
                         ButtonStyle="ButtonStyle.Light"
+                        title="Delete definition"
+                        aria-label="Delete definition"
                         Click="Delete" />
             </Cluster>
         }

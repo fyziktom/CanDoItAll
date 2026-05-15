@@ -31,23 +31,29 @@
                 </Cluster>
 
                 <ToolbarActions Class="processes-command-strip__actions">
-                    <Button Text="Feed defaults"
-                            Icon="cloud_sync"
+                    <Button Icon="cloud_sync"
+                            Class="cda-button--quick"
                             ButtonStyle="ButtonStyle.Light"
                             Size="ButtonSize.Small"
+                            title="Feed defaults"
+                            aria-label="Feed defaults"
                             Click="FeedDefaultsAsync"
                             Disabled="@isFeedingDefaults"
                             IsBusy="@isFeedingDefaults"
                             data-testid="processes-feed-defaults-button" />
-                    <Button Text="New definition"
-                            Icon="add"
+                    <Button Icon="add"
+                            Class="cda-button--quick"
                             Size="ButtonSize.Small"
+                            title="New definition"
+                            aria-label="New definition"
                             Click="CreateNewAsync"
                             data-testid="processes-new-definition-button" />
-                    <Button Text="Templates"
-                            Icon="category"
+                    <Button Icon="category"
+                            Class="cda-button--quick"
                             ButtonStyle="ButtonStyle.Light"
                             Size="ButtonSize.Small"
+                            title="Templates"
+                            aria-label="Templates"
                             Click="OpenTemplateLibraryAsync"
                             data-testid="processes-templates-button" />
                 </ToolbarActions>
@@ -76,13 +82,19 @@
                                    class="cda-input min-w-[16rem] flex-1"
                                    placeholder="Search name, summary, or value statement"
                                    data-testid="processes-definition-search" />
-                            <Button Text="Clear search"
+                            <Button Icon="close"
+                                    Class="cda-button--quick"
                                     ButtonStyle="ButtonStyle.Light"
                                     Size="ButtonSize.Small"
+                                    title="Clear search"
+                                    aria-label="Clear search"
                                     Click="@(() => definitionSearch = string.Empty)" />
-                            <Button Text="New"
+                            <Button Icon="add"
+                                    Class="cda-button--quick"
                                     ButtonStyle="ButtonStyle.Light"
                                     Size="ButtonSize.Small"
+                                    title="New definition"
+                                    aria-label="New definition"
                                     Click="CreateNewAsync" />
                         </FilterBar>
                     </Filters>
@@ -183,12 +195,18 @@
                                      Description=""
                                      HelpText="Define who the process needs first. Exact person, supplier, or agent binding happens later at runtime without changing the process contract.">
                             <Actions>
-                                <Button Text="Add role"
+                                <Button Icon="add"
+                                        Class="cda-button--quick"
                                         ButtonStyle="ButtonStyle.Light"
+                                        title="Add role"
+                                        aria-label="Add role"
                                         Click="AddRole"
                                         data-testid="processes-add-role-button" />
-                                <Button Text="Templates"
+                                <Button Icon="category"
+                                        Class="cda-button--quick"
                                         ButtonStyle="ButtonStyle.Light"
+                                        title="Templates"
+                                        aria-label="Templates"
                                         Click="OpenTemplateLibraryAsync"
                                         data-testid="processes-role-templates-button" />
                             </Actions>
@@ -258,10 +276,12 @@
 
                                                     <div class="processes-role-card__footer">
                                                         <span>@ResolveRoleTemplateLabel(role)</span>
-                                                        <Button Text="Details"
-                                                                Icon="edit"
+                                                        <Button Icon="edit"
                                                                 Size="ButtonSize.Small"
+                                                                Class="cda-button--quick"
                                                                 ButtonStyle="ButtonStyle.Light"
+                                                                title="Edit role"
+                                                                aria-label="Edit role"
                                                                 Click="@(() => OpenRoleDetails(role))"
                                                                 data-testid="processes-role-details-button" />
                                                     </div>
@@ -272,10 +292,16 @@
                                 }
 
                                 <Cluster Gap="LayoutGap.Small">
-                                    <Button Text="Save definition"
+                                    <Button Icon="save"
+                                            Class="cda-button--quick"
+                                            title="Save definition"
+                                            aria-label="Save definition"
                                             Click="SaveAsync" />
-                                    <Button Text="Publish"
+                                    <Button Icon="publish"
+                                            Class="cda-button--quick"
                                             ButtonStyle="ButtonStyle.Light"
+                                            title="Publish definition"
+                                            aria-label="Publish definition"
                                             Click="PublishAsync" />
                                 </Cluster>
                             </ChildContent>
@@ -302,7 +328,10 @@
                                     <h3 class="mt-1 text-lg font-semibold text-slate-950">Definition envelope</h3>
                                     <Cluster Gap="LayoutGap.Small"
                                              Class="mt-4">
-                                        <Button Text="Export current definition"
+                                        <Button Icon="file_download"
+                                                Class="cda-button--quick"
+                                                title="Export current definition"
+                                                aria-label="Export current definition"
                                                 Click="ExportAsync"
                                                 data-testid="processes-export-button" />
                                     </Cluster>
@@ -325,7 +354,10 @@
                                     </div>
                                     <Cluster Gap="LayoutGap.Small"
                                              Class="mt-4">
-                                        <Button Text="Import definition"
+                                        <Button Icon="file_upload"
+                                                Class="cda-button--quick"
+                                                title="Import definition"
+                                                aria-label="Import definition"
                                                 Click="ImportAsync"
                                                 data-testid="processes-import-button" />
                                     </Cluster>
@@ -477,7 +509,10 @@
             OnClose="CloseRoleDialogAsync">
         <HeaderActions>
             <Button ButtonStyle="ButtonStyle.Light"
-                    Text="Close"
+                    Icon="close"
+                    Class="cda-button--quick"
+                    title="Close"
+                    aria-label="Close"
                     Click="CloseRoleDialogAsync" />
         </HeaderActions>
         <ChildContent>
@@ -531,8 +566,11 @@
                 <Cluster Gap="LayoutGap.Small">
                     @if (!roleDialogIsNew)
                     {
-                        <Button Text="Remove role"
+                        <Button Icon="delete"
+                                Class="cda-button--quick"
                                 ButtonStyle="ButtonStyle.Light"
+                                title="Remove role"
+                                aria-label="Remove role"
                                 Click="RemoveRoleFromDialog"
                                 data-testid="processes-role-dialog-remove" />
                     }
@@ -542,7 +580,10 @@
                     <Button Text="Cancel"
                             ButtonStyle="ButtonStyle.Light"
                             Click="CloseRoleDialogAsync" />
-                    <Button Text="Save role"
+                    <Button Icon="save"
+                            Class="cda-button--quick"
+                            title="Save role"
+                            aria-label="Save role"
                             Click="SaveRoleDialog"
                             data-testid="processes-role-dialog-save" />
                 </Cluster>

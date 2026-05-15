@@ -5,7 +5,7 @@
 - `Executed with scoped closure`
 - Execution date: `2026-05-15`
 - Scope applied: standard shell, standard components, and standard screens only. Canvas/WebGL implementation files were not edited.
-- Closure note: the requested core visual refresh is implemented and proven on representative large-screen routes. Full-suite closure remains blocked by pre-existing/out-of-scope canvas and WebGL component failures plus suite-level test isolation flakes; targeted standard-screen validation passes.
+- Closure note: the requested core visual refresh plus the enterprise-density screenshot follow-up are implemented and proven on representative large-screen routes. Full-suite closure remains blocked by pre-existing/out-of-scope canvas and WebGL component failures plus suite-level test cleanup locks; targeted standard-screen validation passes.
 
 ## Subbundle Gate Results
 
@@ -35,6 +35,11 @@
 | SB03 | `/projects` | 1920x1080 | Confirmed `projects-board`, `projects-tree-workspace`, 10 project tree rows, and 10 project cards | `evidence/runtime/visual-refresh-projects-tree-detail.png` | Passed |
 | SB03 | `/processes` | 1920x1080 | Confirmed `processes-workspace-shell`, process tree scope rows, 8 process definition rows, and detail tabs | `evidence/runtime/visual-refresh-processes-tree-detail.png` | Passed |
 | SB03 | `/agents/workflows` Workflows tab | 1920x1080 | Confirmed full width, catalog tree, 36 workflow rows, 3 lifecycle status rows, and detail pane | `evidence/runtime/visual-refresh-workflows-tree-detail.png` | Passed |
+| Enterprise follow-up | `/` | 1900x1200 | Confirmed real nav icons, compact top metric badges, icon tuning affordance, and no raw focused-title outline | `evidence/runtime/enterprise-refresh-home-shell-final.png` | Passed |
+| Enterprise follow-up | `/projects` | 1900x1200 | Confirmed menu icons, icon-first project actions, compact filter/export controls, and project card metrics reduced to badges | `evidence/runtime/enterprise-refresh-projects-board-final.png` | Passed |
+| Enterprise follow-up | `/processes` | 1900x1200 | Confirmed menu icons, icon-first clear/add/refresh controls, compact top status badges, and standard process detail screen unchanged from canvas scope | `evidence/runtime/enterprise-refresh-processes-workspace-final.png` | Passed |
+| Enterprise follow-up | `/agents/workflows` | 1900x1200 | Confirmed top workflow stats and dashboard signal/fact blocks use compact badges, with icon-first clear actions retained | `evidence/runtime/enterprise-refresh-workflows-page-final.png` | Passed |
+| Enterprise follow-up | Expanded shell on `/agents/workflows` | 1900x1200 | Confirmed expanded main menu uses recognizable icons beside labels instead of two-letter item tokens | `evidence/runtime/enterprise-refresh-shell-expanded-final.png` | Passed |
 
 ## Validation Commands
 
@@ -51,6 +56,14 @@
 | `dotnet test tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --no-restore --filter "FullyQualifiedName~MainLayoutCollaborationTests\|FullyQualifiedName~SettingsPageDataSourcesTests"` | Passed | 4 tests. |
 | Non-canvas `ProcessWorkspaceTests` focused slice | Passed with one cleanup flake, then isolated rerun passed | The initial failure was a SQLite `primary.db` cleanup lock after test assertions; isolated rerun passed. |
 | `dotnet test tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --no-restore` | 423 passed, 7 failed | Residual failures listed below. |
+| `npm --prefix Tailwind run build` | Passed | Regenerated shared CSS after enterprise icon/badge/focus updates. |
+| `dotnet build src\CanDoItAll.Web\CanDoItAll.Web.csproj --no-restore` | Passed | 0 warnings, 0 errors after the enterprise follow-up changes. |
+| `dotnet test tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --no-restore --filter "FullyQualifiedName~WorkflowsPageTests.Workflows_page_creates_starter_workflow_and_runs_preview\|FullyQualifiedName~WorkflowsPageTests.Workflow_history_paginates_runs_and_events_and_moves_full_payload_to_detail_dialog"` | Passed | 2 tests after workflow badge-density changes. |
+| `dotnet test tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --no-restore --filter "FullyQualifiedName=CanDoItAll.Tests.Components.ProcessWorkspaceTests.Templates_dialog_adds_artifact_templates_into_the_selected_definition_step_without_closing_the_modal"` | Passed | 1 isolated process workspace test; validates icon-only templates entry still opens the dialog and applies artifact templates. |
+| `dotnet test tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --no-restore --filter "FullyQualifiedName=CanDoItAll.Tests.Components.ProcessWorkspaceTests.Roles_tab_add_role_uses_details_dialog_before_card_creation_and_allows_editing"` | Passed | 1 isolated process workspace test; validates icon-only add/save role actions still drive the dialog flow. |
+| Standard-screen focused slice with serial runsettings | 35 passed, 1 failed | Remaining failure was `ProcessWorkspaceTests.Steps_canvas_node_moves_update_role_and_branch_positions_in_editor_state` cleanup lock on `primary.db`; the test is canvas-named and outside implementation scope. |
+| `ProcessWorkspaceTests` excluding canvas-named tests with serial runsettings | 7 passed, 3 failed | Failures were SQLite cleanup locks on `primary.db` during harness disposal, not assertion mismatches. The affected behavior-specific process tests pass when rerun in isolation. |
+| `python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py codex\bundles\visual-large-screen-workspace-refresh --profile initiative --stage completed` | Passed | Completed-stage bundle validator passed after report and evidence sync. |
 
 ## Residual Full-Suite Failures
 
@@ -70,6 +83,10 @@
 - The active database flyout is useful and safe: it shows provider/source/resolution/runtime state and masks SQLite path detail to file name. It does not expose raw credentials.
 - Project, process, and workflow workspaces now use left tree navigation with detail panels, which improves scanning on 1920px desktop screens.
 - Standard page wrappers now favor full-width layouts instead of narrow centered content.
+- Main menu items now use recognizable Material icons in both collapsed and expanded shell modes instead of two-letter item tokens.
+- Clear, standardized actions such as add, refresh, import, export, reset, save, publish, delete, details, and navigation use icon-first compact buttons with titles and aria labels where the function is obvious.
+- Large summary cards were compressed into badge-style value chips on dashboard, projects, processes, and workflows; the workflows dashboard fact blocks were also reduced to badges after screenshot review.
+- The tuning affordance is now a compact icon button positioned by shipped shared CSS, and programmatic page-title focus no longer leaves a raw browser outline in screenshots.
 - No page-local CSS was added. Styling changes stayed in shared Tailwind shell/navigation output.
 - Canvas implementation files were not changed. Process/workflow pages still render existing canvas components where already present.
 
@@ -90,3 +107,4 @@
 | RN-011 | Scoped closure | Canvas-specific work intentionally untouched per user instruction. |
 | RN-012 | Closed with residual risk | Build and targeted tests passed; full-suite residuals documented above. |
 | Latest page-input/proposal request | Closed for changed scope | `inputs/page-inputs`, `analysis/03-imagegen-proposal-review.md`, inventories, code changes, and runtime evidence. |
+| Latest enterprise screenshot tuning request | Closed for standard screens | Final large-screen screenshots listed under `Enterprise follow-up`; nav initials replaced with icons, obvious actions converted to icon-first buttons, and oversized stats compressed into badges. |

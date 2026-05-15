@@ -9,9 +9,12 @@
                     Description="Build, validate, test, and observe workflow executions as a peer option beside technical agents."
                     Compact="true">
             <Actions>
-                <Button Text="Refresh"
-                        Icon="refresh"
+                <Button Icon="refresh"
                         ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Class="cda-button--quick"
+                        title="Refresh"
+                        aria-label="Refresh"
                         Click="RefreshAsync"
                         Disabled="@isBusy"
                         IsBusy="@isBusy"
@@ -21,9 +24,12 @@
                         Click="CreateStarterWorkflowAsync"
                         Disabled="@isBusy"
                         data-testid="workflows-create-starter" />
-                <Button Text="Open agents"
-                        Icon="support_agent"
+                <Button Icon="support_agent"
                         ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Class="cda-button--quick"
+                        title="Open agents"
+                        aria-label="Open agents"
                         Click="OpenAgents"
                         data-testid="workflows-open-agents" />
             </Actions>
@@ -124,48 +130,28 @@
                             else
                             {
                                 <p class="workflows-muted mt-3">@selectedDefinition.Description</p>
-                                <Grid Gap="LayoutGap.Small" ColumnsLg="4" Class="mt-4">
-                                    <div class="workflows-fact">
-                                        <span>Status</span>
-                                        <strong>@selectedDefinition.Status</strong>
-                                    </div>
-                                    <div class="workflows-fact">
-                                        <span>Backend</span>
-                                        <strong>@selectedDefinition.RuntimePolicy.PreferredBackend</strong>
-                                    </div>
-                                    <div class="workflows-fact">
-                                        <span>Nodes</span>
-                                        <strong>@selectedDefinition.Graph.Nodes.Count</strong>
-                                    </div>
-                                    <div class="workflows-fact">
-                                        <span>Edges</span>
-                                        <strong>@selectedDefinition.Graph.Edges.Count</strong>
-                                    </div>
-                                </Grid>
+                                <Cluster Gap="LayoutGap.Small"
+                                         Wrap="FlexWrap.Wrap"
+                                         Class="mt-4">
+                                    <StatusBadge Tone="@ValidationTone" Text="@($"Status {selectedDefinition.Status}")" />
+                                    <StatusBadge Tone="info" Text="@($"Backend {selectedDefinition.RuntimePolicy.PreferredBackend}")" />
+                                    <StatusBadge Tone="secondary" Text="@($"{selectedDefinition.Graph.Nodes.Count} node(s)")" />
+                                    <StatusBadge Tone="secondary" Text="@($"{selectedDefinition.Graph.Edges.Count} edge(s)")" />
+                                </Cluster>
                             }
                         </SurfaceCard>
 
                         <SurfaceCard data-testid="workflows-dashboard-activity">
                             <TextBlock TextStyle="TextStyle.Eyebrow" Value="Activity" />
                             <h2 class="workflows-card-title">Current signals</h2>
-                            <Stack GapScale="LayoutGap.Small" Class="mt-4">
-                                <div class="workflows-fact">
-                                    <span>Validation</span>
-                                    <strong>@ValidationText</strong>
-                                </div>
-                                <div class="workflows-fact">
-                                    <span>Pending input</span>
-                                    <strong>@pendingRequests.Count</strong>
-                                </div>
-                                <div class="workflows-fact">
-                                    <span>Artifacts</span>
-                                    <strong>@artifacts.Count</strong>
-                                </div>
-                                <div class="workflows-fact">
-                                    <span>Settings</span>
-                                    <strong>@settings.DefaultRuntimePolicy.PreferredBackend</strong>
-                                </div>
-                            </Stack>
+                            <Cluster Gap="LayoutGap.Small"
+                                     Wrap="FlexWrap.Wrap"
+                                     Class="mt-4">
+                                <StatusBadge Tone="@ValidationTone" Text="@($"Validation {ValidationText}")" />
+                                <StatusBadge Tone="warning" Text="@($"{pendingRequests.Count} pending input")" />
+                                <StatusBadge Tone="info" Text="@($"{artifacts.Count} artifact(s)")" />
+                                <StatusBadge Tone="secondary" Text="@($"Backend {settings.DefaultRuntimePolicy.PreferredBackend}")" />
+                            </Cluster>
                         </SurfaceCard>
                     </Grid>
                 </TabsItem>
@@ -225,24 +211,14 @@
                             else
                             {
                                 <p class="workflows-muted mt-3">@selectedDefinition.Description</p>
-                                <Grid Gap="LayoutGap.Small" ColumnsLg="2" Class="mt-4">
-                                    <div class="workflows-fact">
-                                        <span>Status</span>
-                                        <strong>@selectedDefinition.Status</strong>
-                                    </div>
-                                    <div class="workflows-fact">
-                                        <span>Preferred backend</span>
-                                        <strong>@selectedDefinition.RuntimePolicy.PreferredBackend</strong>
-                                    </div>
-                                    <div class="workflows-fact">
-                                        <span>Nodes</span>
-                                        <strong>@selectedDefinition.Graph.Nodes.Count</strong>
-                                    </div>
-                                    <div class="workflows-fact">
-                                        <span>Edges</span>
-                                        <strong>@selectedDefinition.Graph.Edges.Count</strong>
-                                    </div>
-                                </Grid>
+                                <Cluster Gap="LayoutGap.Small"
+                                         Wrap="FlexWrap.Wrap"
+                                         Class="mt-4">
+                                    <StatusBadge Tone="@ValidationTone" Text="@($"Status {selectedDefinition.Status}")" />
+                                    <StatusBadge Tone="info" Text="@($"Backend {selectedDefinition.RuntimePolicy.PreferredBackend}")" />
+                                    <StatusBadge Tone="secondary" Text="@($"{selectedDefinition.Graph.Nodes.Count} node(s)")" />
+                                    <StatusBadge Tone="secondary" Text="@($"{selectedDefinition.Graph.Edges.Count} edge(s)")" />
+                                </Cluster>
 
                                 <div class="workflows-section">
                                     <TextBlock TextStyle="TextStyle.Eyebrow" Value="Validation" />
@@ -358,15 +334,19 @@
                             </label>
 
                             <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="mt-4">
-                                <Button Text="Run test"
-                                        Icon="play_arrow"
+                                <Button Icon="play_arrow"
+                                        Class="cda-button--quick"
+                                        title="Run test"
+                                        aria-label="Run test"
                                         Click="RunSelectedWorkflowAsync"
                                         Disabled="@(selectedDefinition is null || isRunningTest)"
                                         IsBusy="@isRunningTest"
                                         data-testid="workflows-run-test" />
-                                <Button Text="Cancel selected run"
-                                        Icon="stop"
+                                <Button Icon="stop"
+                                        Class="cda-button--quick"
                                         ButtonStyle="ButtonStyle.Light"
+                                        title="Cancel selected run"
+                                        aria-label="Cancel selected run"
                                         Click="CancelSelectedRunAsync"
                                         Disabled="@(selectedRun is null || IsTerminalRun(selectedRun))"
                                         data-testid="workflows-cancel-run" />
@@ -417,10 +397,12 @@
                                                 </span>
                                                 <span class="workflows-clamped-text">@Truncate(run.Summary, 120)</span>
                                             </button>
-                                            <Button Text="Details"
-                                                    Icon="open_in_full"
+                                            <Button Icon="open_in_full"
                                                     Size="ButtonSize.Small"
+                                                    Class="cda-button--quick"
                                                     ButtonStyle="ButtonStyle.Light"
+                                                    title="Open run details"
+                                                    aria-label="Open run details"
                                                     Click="@(() => OpenRunDetailDialogAsync(run))"
                                                     data-testid="workflows-run-detail" />
                                         </div>
@@ -431,17 +413,21 @@
                                      data-testid="workflows-run-pager">
                                     <span>@FormatPageLabel(historyRunPageIndex, HistoryRunTotalPages, historyRunTotalCount, "runs")</span>
                                     <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.NoWrap">
-                                        <Button Text="Previous"
-                                                Icon="chevron_left"
+                                        <Button Icon="chevron_left"
                                                 Size="ButtonSize.Small"
+                                                Class="cda-button--quick"
                                                 ButtonStyle="ButtonStyle.Light"
+                                                title="Previous run page"
+                                                aria-label="Previous run page"
                                                 Disabled="@(!CanGoToPreviousRunPage)"
                                                 Click="@(() => ChangeRunPageAsync(-1))"
                                                 data-testid="workflows-run-page-previous" />
-                                        <Button Text="Next"
-                                                Icon="chevron_right"
+                                        <Button Icon="chevron_right"
                                                 Size="ButtonSize.Small"
+                                                Class="cda-button--quick"
                                                 ButtonStyle="ButtonStyle.Light"
+                                                title="Next run page"
+                                                aria-label="Next run page"
                                                 Disabled="@(!CanGoToNextRunPage)"
                                                 Click="@(() => ChangeRunPageAsync(1))"
                                                 data-testid="workflows-run-page-next" />
@@ -478,10 +464,12 @@
                                                     <small>@FormatDate(workflowEvent.CreatedAtUtc)</small>
                                                     <span class="workflows-clamped-text">@Truncate(workflowEvent.Message, 140)</span>
                                                 </div>
-                                                <Button Text="Details"
-                                                        Icon="open_in_full"
+                                                <Button Icon="open_in_full"
                                                         Size="ButtonSize.Small"
+                                                        Class="cda-button--quick"
                                                         ButtonStyle="ButtonStyle.Light"
+                                                        title="Open event details"
+                                                        aria-label="Open event details"
                                                         Click="@(() => OpenEventDetailDialog(workflowEvent))"
                                                         data-testid="workflows-event-detail" />
                                             </div>
@@ -492,17 +480,21 @@
                                          data-testid="workflows-event-pager">
                                         <span>@FormatPageLabel(historyEventPageIndex, HistoryEventTotalPages, historyEventTotalCount, "events")</span>
                                         <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.NoWrap">
-                                            <Button Text="Previous"
-                                                    Icon="chevron_left"
+                                            <Button Icon="chevron_left"
                                                     Size="ButtonSize.Small"
+                                                    Class="cda-button--quick"
                                                     ButtonStyle="ButtonStyle.Light"
+                                                    title="Previous event page"
+                                                    aria-label="Previous event page"
                                                     Disabled="@(!CanGoToPreviousEventPage)"
                                                     Click="@(() => ChangeEventPageAsync(-1))"
                                                     data-testid="workflows-event-page-previous" />
-                                            <Button Text="Next"
-                                                    Icon="chevron_right"
+                                            <Button Icon="chevron_right"
                                                     Size="ButtonSize.Small"
+                                                    Class="cda-button--quick"
                                                     ButtonStyle="ButtonStyle.Light"
+                                                    title="Next event page"
+                                                    aria-label="Next event page"
                                                     Disabled="@(!CanGoToNextEventPage)"
                                                     Click="@(() => ChangeEventPageAsync(1))"
                                                     data-testid="workflows-event-page-next" />
@@ -563,9 +555,11 @@
                                                               @bind="pendingResponseJson"
                                                               data-testid="workflows-pending-response"></textarea>
                                                 </label>
-                                                <Button Text="Respond"
-                                                        Icon="send"
+                                                <Button Icon="send"
                                                         Size="ButtonSize.Small"
+                                                        Class="cda-button--quick"
+                                                        title="Respond"
+                                                        aria-label="Respond"
                                                         Click="@(() => RespondToRequestAsync(request))"
                                                         Disabled="@isBusy"
                                                         data-testid="workflows-respond-request" />
