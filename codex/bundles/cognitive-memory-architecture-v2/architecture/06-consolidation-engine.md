@@ -172,3 +172,33 @@ Consolidation should consume probe evidence after normal source, staleness, cont
 - create learning proposal evidence.
 
 Consolidation must not promote a user correction directly into approved canonical memory unless policy allows it and required review has passed.
+
+## Neuro-Cognitive Consolidation Updates
+
+Consolidation must consume neuro-cognitive signals without bypassing source truth.
+
+Additional inputs:
+
+- evidence anchors,
+- claim support/attack evidence,
+- belief state changes,
+- entity/context binding results,
+- prediction expectation/error records,
+- cognitive signal records,
+- temporal episodes and steps,
+- replay job results,
+- procedure skill validation evidence,
+- answer-gate abstentions and warnings.
+
+Additional outputs:
+
+- claim mutation candidates through `IMemoryMutationAuthority`,
+- belief state recalculation,
+- source anchor refresh requests,
+- replay jobs,
+- procedure skill maturity updates,
+- failure-mode updates,
+- review items for contested claims or high-risk procedures,
+- Epistemic Drive evidence refs from prediction errors, signals, answer-gate decisions, and replay outcomes.
+
+Consolidation agents may propose claim/procedure changes, but authoritative changes must be command-based, idempotent, audited, and review-aware. Replay output can create drafts, review items, regression results, or projection invalidation requests; replay must not directly promote truth.

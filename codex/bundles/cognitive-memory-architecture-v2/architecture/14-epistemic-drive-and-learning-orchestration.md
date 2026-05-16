@@ -414,3 +414,30 @@ Probe evidence should affect vector dimensions without replacing the vector mode
 | User repeatedly probes topic | Raises user interest signal and expected reuse. |
 
 Probe evidence must remain explainable and auditable.
+
+## Neuro-Cognitive Evidence Inputs
+
+Epistemic Drive must consume neuro-cognitive records as evidence contributors without weakening its vector model:
+
+- cognitive signal vectors,
+- prediction errors,
+- answer-gate warnings and abstentions,
+- workspace open questions,
+- claim belief states and contested/attacked claims,
+- replay outcomes,
+- procedure skill maturity and failure modes,
+- source anchor weakness,
+- context-boundary inhibition frequency.
+
+`KnowledgeNeedVector` must store or reference dimension schema version, normalization profile, evidence contributors, missing-dimension policy, and calculation confidence. A display score remains optional UI data only.
+
+Examples:
+
+- repeated wrong-scope prediction errors raise context-separation pressure and calibration risk,
+- high rework cost raises risk impact and business value,
+- source weakness signals raise source quality concern,
+- answer-gate abstention raises source availability or confidence weakness,
+- replay failures raise failure recurrence,
+- procedure skill usefulness raises expected reuse.
+
+Epistemic Drive can request probing, source audit, replay, or learning proposal. It still cannot start external study or promote learning outputs without approval.

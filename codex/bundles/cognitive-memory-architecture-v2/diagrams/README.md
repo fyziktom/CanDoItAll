@@ -20,3 +20,10 @@ Recommended review order:
 - `11-interactive-memory-probing-flow.mmd` shows the evidence-preserving probe loop.
 - `12-probing-session-sequence.mmd` shows the user/UI/probe/recall/review/Epistemic sequence.
 - `13-probing-to-epistemic-drive-loop.mmd` shows how probe outcomes feed coverage maps and Epistemic Drive.
+
+## Neuro-Cognitive Diagrams
+
+- `14-neuro-cognitive-overview.mmd` shows the added control layer across workspace, attention, claim/evidence, signals, replay, procedures, and answer gating.
+- `15-attention-recall-probing-loop.mmd` shows the request -> workspace -> attention -> recall/probe/source audit/answer gate loop.
+- `16-claim-evidence-belief-ledger.mmd` shows source anchors, evidence direction, claims, belief state, mutation authority, and projection invalidation.
+- `17-replay-and-procedural-memory-flow.mmd` shows episodes, prediction errors, replay scheduling, procedure skill maturity, and simulation safety.

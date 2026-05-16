@@ -1,6 +1,6 @@
 # Implementation Prompt
 
-You are implementing one subbundle from `C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture`.
+You are implementing one subbundle from `C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2`.
 
 Before editing code:
 
@@ -11,6 +11,11 @@ Before editing code:
 - Use strongly typed modes, ids, policy contexts, and result objects.
 - Do not introduce fallback mechanisms that hide provider, source, or projection failures.
 - Do not collapse Epistemic Drive into a simple scalar priority score.
+- Do not collapse salience signals into a scalar-only priority score.
+- Do not expose public direct upsert operations for authoritative memory; use mutation authority.
+- Do not treat `RecallContextPack` as working memory; use cognitive workspace frames.
+- Do not let replay, simulation, probing feedback, distributed worker output, or generated summaries directly promote truth.
+- Do not render answers that bypass the metamemory answer gate where that subbundle has landed.
 - Human approval is required before external study or high-impact memory updates.
 - All learning-derived canonical records and procedures require source refs.
 - Preserve multi-dimensional evidence for knowledge gaps, learning proposals, and learning outcomes.

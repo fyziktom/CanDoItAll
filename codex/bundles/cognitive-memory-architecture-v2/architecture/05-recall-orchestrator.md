@@ -226,3 +226,41 @@ Interactive probing needs recall traces with enough detail to support explanatio
 - context-separation warnings when semantic similarity is high but graph/spatial/scope signals disagree.
 
 Probe answers should call recall with trace enabled and persist the trace id on every probe turn. A probing failure without a trace is not actionable.
+
+## Neuro-Cognitive Recall Updates
+
+Recall is now a tool used by the attention router, not the whole cognitive loop.
+
+Required pre-stage:
+
+```text
+request
+  -> load/create cognitive workspace frame
+  -> run attention router
+  -> decide recall, answer-from-workspace, clarification, source audit, probe, review, replay, learning proposal, or abstention
+```
+
+When the router chooses recall, the recall orchestrator must:
+
+- receive or create a `WorkspaceFrameId`,
+- consider focus slots and goal stack,
+- use entity/context binding before final candidate ranking,
+- rank claim-level candidates where claims exist,
+- record candidates inhibited by context boundaries,
+- include selected claim ids and evidence anchor ids in trace details,
+- preserve score components and answer-gate inputs,
+- send the final recall result to the metamemory answer gate before rendering.
+
+Recall traces must include:
+
+- workspace frame id,
+- attention decision id,
+- selected claim ids,
+- selected source/evidence anchor ids,
+- inhibited candidates and reasons,
+- source sufficiency and redaction limitations,
+- context-boundary decisions,
+- answer gate decision id,
+- projection/fallback status and budget exclusions.
+
+The Docker context-separation fixture is a mandatory first validation case. A production Docker query must inhibit local/test/CI Docker procedures as authoritative answers unless the user explicitly asks for those contexts.

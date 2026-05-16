@@ -115,3 +115,21 @@ Regression tests are durable memory quality artifacts. They should be stored in 
 - The result links to recall trace and probe turn.
 - The result can create review/gap evidence without mutating truth directly.
 - The Docker fixture proves context separation.
+
+## Neuro-Cognitive Regression And Calibration Updates
+
+Regression replay is a `MemoryReplayJobRecord` kind. The replay scheduler, not ad hoc test code, should decide when probe regressions are repeated because of salience, prediction error, risk, staleness, or repeated use.
+
+Regression tests should store expected claim-level constraints:
+
+- required claim ids,
+- forbidden claim ids,
+- required context frames,
+- forbidden context substitutions,
+- required evidence anchors,
+- required answer-gate decision or warning,
+- required uncertainty statement.
+
+Calibration records feed the metamemory answer gate. A pattern of overconfident wrong-scope answers should cause future answers with similar context boundaries to warn, clarify, probe, or abstain before rendering.
+
+Replay and calibration output can create signals, prediction errors, review items, and mutation candidates. They cannot directly promote truth.

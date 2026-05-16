@@ -57,6 +57,50 @@ Add to:
 
 Use the existing `AppDbContextModelRegistry`. The module must include `IEntityTypeConfiguration<T>` classes. No direct `DbSet<T>` properties are required on `AppDbContext`.
 
+## Common Driver And Helper Boundary
+
+Before source ingestion, recall, projection, consolidation, review, probing, or learning phases start, add a small shared test/support layer for deterministic source snapshots, embeddings, vector/search responses, policy decisions, clocks, ids, hashing, paging assertions, and EF query-shape assertions.
+
+This layer is not a second architecture framework. It exists to keep downstream tests consistent and to prevent every phase from inventing its own fake providers, unbounded list helpers, JSON payload conventions, and EF paging patterns. Anything added here must have at least one downstream consumer or enforce a cross-phase invariant.
+
+The common layer should own:
+
+- deterministic fake source snapshot providers,
+- deterministic embedding and vector-search drivers,
+- paging/cursor request and result helpers,
+- source hashing and content-normalization test fixtures,
+- policy/redaction fakes,
+- EF no-tracking/query-count/assertion helpers,
+- serialization options/converters for repeated payloads,
+- strongly typed ids/statuses/shared enum-like values used across phase boundaries.
+
+It must not own feature orchestration, canonicalization policy, recall scoring, probe correction policy, or learning proposal behavior. Those remain in the feature phases.
+
+## Neuro-Cognitive Control Boundary
+
+Add a neuro-cognitive control layer inside Cognitive Memory. It is an application/domain layer, not a separate runtime or autonomous agent:
+
+```text
+source adapters
+  -> entity/context binding
+  -> evidence anchors
+  -> claim/evidence/belief ledger
+  -> mutation authority
+  -> memory items/procedures/projections
+
+recall/probing/workflows
+  <-> cognitive workspace
+  <-> attention router
+  <-> metamemory answer gate
+  <-> prediction error engine
+  <-> salience signal ledger
+  <-> replay scheduler
+```
+
+The layer owns active workspace frames, attention decisions, claim-level belief state, prediction errors, cognitive signal vectors, replay scheduling, procedural skill maturity, simulation speculation labels, and answer-gate decisions.
+
+It must not own raw source truth, Qdrant truth, MAF execution state, Workbench state, workflow state, or direct memory writes from external systems. Those remain behind existing module/source boundaries and mutation authority.
+
 ## MAF Integration Boundary
 
 Do not add Cognitive Memory directly to the private MAF context builder. Consume the existing general MAF context contribution boundary from the target branch. If that boundary is missing in a branch, stop and re-run the prerequisite boundary bundle before Cognitive Memory work continues.

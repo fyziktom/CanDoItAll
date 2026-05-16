@@ -73,6 +73,31 @@ Use partitioned, incremental processing:
 - Store large raw snapshots, context packs, reports, and worker outputs in storage/IPFS; keep relational rows as metadata and references.
 - Keep recall interactive by querying bounded candidate sets and loading detailed source only after focus selection.
 
+## EF Core Query Rules
+
+Cognitive Memory will be read-heavy during recall, review, trace inspection, source scans, projection health checks, probing, and Epistemic Drive analysis. Every implementation subbundle that touches persistence must prove the following where applicable:
+
+- Read-only queries use `AsNoTracking()`.
+- Query handlers project to DTOs instead of materializing full entity graphs.
+- Large lists use cursor/keyset pagination or stable bounded page tokens, not unbounded `ToListAsync()`.
+- `Include` is avoided for review, trace, recall, source, and proposal screens unless the data shape is deliberately small; use explicit projections instead.
+- If multiple child collections are ever loaded for detail views, use split-query strategy deliberately and document consistency tradeoffs.
+- Repeated hot-path recall/projection queries become compiled-query candidates after the query shape stabilizes.
+- Bulk state transitions such as activation decay, stale projection marking, supersession candidate expiration, and old worker lease expiry use set-based updates where audit policy allows it.
+- No lazy loading proxies are allowed.
+- Client-side evaluation warnings are treated as test failures for recall, consolidation, probing, and Epistemic Drive queries.
+
+## Performance Guardrails
+
+Use the common guardrail subbundle before implementation starts:
+
+- Source scans, recall, consolidation, probing replay, projection rebuild, and Epistemic scans must have item-count, byte-count, elapsed-time, and cancellation budgets.
+- Vector arrays are adapter boundary data. Hot projection and similarity code should avoid repeated `float[]` copies and should batch embeddings/search calls.
+- Context-pack rendering must be allocation-conscious because it runs on interactive paths; store large packs in storage/IPFS and keep DB rows as metadata/reference records.
+- JSON serialization must use source-generated contexts or cached serializer options for durable high-volume payloads.
+- Qdrant outage, embedding provider outage, and source adapter failure must be explicit trace states, not silent lower-quality fallback.
+- Performance proof must include the scan/checklist from the .NET performance review skill for any newly written hot-path code.
+
 ## Data Size Classes
 
 | Class | Example | Expected handling |
@@ -149,3 +174,26 @@ Track at minimum:
 ## V1 Scale Target
 
 V1 should prove correctness on project-scoped Workbench and process/workflow sources before optimizing for cross-project scale. The architecture must still include batching, cursors, hashes, and projection state from the first implementation because retrofitting them later would corrupt trust in existing memory records.
+
+## Neuro-Cognitive Scale Rules
+
+The neuro-cognitive records add several high-cardinality surfaces. Treat them as first-class scale concerns:
+
+- evidence anchors can grow faster than memory items,
+- claims can outnumber memory items,
+- workspace slots and attention decisions can grow with active sessions,
+- signals and prediction errors are event-like ledgers,
+- episodes and replay jobs can grow with workflow/process/probe activity,
+- answer-gate decisions can grow with recall/probe/MAF usage.
+
+Required scale behavior:
+
+- all list surfaces are paged or cursor-based,
+- read screens use DTO projections and no-tracking queries,
+- event ledgers are partition/filterable by project/time/kind,
+- replay queues have bounded claim/lease behavior,
+- workspace frames expire by default,
+- detailed context packs, replay reports, and simulation outputs use storage references when large,
+- signal/replay priority calculations preserve dimensions but may cache derived display scores.
+
+Do not treat event-like ledgers as small lookup tables. Define indexes and retention/compaction policy before implementation starts.

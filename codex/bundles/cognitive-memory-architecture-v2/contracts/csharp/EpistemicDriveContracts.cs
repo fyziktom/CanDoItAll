@@ -100,6 +100,10 @@ public sealed record ProjectDirectionVector(
     IReadOnlyDictionary<string, string> Metadata);
 
 public sealed record KnowledgeNeedVector(
+    string SchemaVersion,
+    string NormalizationProfile,
+    IReadOnlyDictionary<string, string> DimensionMetadata,
+    IReadOnlyList<KnowledgeGapEvidenceRef> EvidenceContributors,
     double UsageFrequency,
     double ConfidenceWeakness,
     double RiskImpact,

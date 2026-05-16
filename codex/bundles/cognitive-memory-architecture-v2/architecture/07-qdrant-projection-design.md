@@ -105,6 +105,26 @@ Search can run multiple channels and combine scores in the recall orchestrator.
 
 ## Payload Indexes
 
+Projection payloads must be typed and validated before they reach Qdrant. Do not use an unrestricted `object` payload surface for Cognitive Memory projections.
+
+Required payload fields now include:
+
+- schema/profile version,
+- memory item id,
+- selected claim ids,
+- belief state summary,
+- evidence anchor ids or anchor summary keys,
+- entity ids,
+- context frame ids,
+- context-boundary flags,
+- memory/projection type,
+- validation state,
+- source hash and payload hash,
+- redaction/access classification,
+- algorithm/profile versions.
+
+The projection builder must reject payloads that contain non-Qdrant-compatible values, missing schema versions, missing source/projection hashes, or query-critical fields hidden in opaque JSON. Qdrant can accelerate recall, but claim/evidence/belief state remains durable relational state.
+
 Create indexes for frequently filtered fields:
 
 - `projectId`

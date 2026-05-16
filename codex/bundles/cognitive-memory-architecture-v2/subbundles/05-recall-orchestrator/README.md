@@ -17,13 +17,17 @@
 
 - `04-memory-taxonomy-and-projections` must provide canonical memory, relations, and projection state.
 - `03-semantic-and-rag-adapters` must provide semantic and projection channel adapters.
+- `01a-common-drivers-helpers-and-ef-guardrails` must provide recall budgets, typed trace stage/section ids, fake providers, and EF query policy.
+- `14-neuro-foundation-claim-evidence-ledger` must provide claim/evidence/context data.
+- `15-cognitive-workspace-attention-router` must provide workspace frame and attention decision contracts.
+- `16-prediction-error-salience-signals` must provide signal inputs for activation and trace evidence.
 - Projection-backed recall modes must consume the completed `codex/bundles/cognitive-memory-projection-boundary-hardening` contracts so vector search is scoped through typed RAG filters instead of global search plus post-filtering.
 
 ## Exact Source References
 
-- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture\architecture\05-recall-orchestrator.md
-- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture\architecture\13-operational-modes-and-scale.md
-- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture\contracts\csharp\RecallContracts.cs
+- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\architecture\05-recall-orchestrator.md
+- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\architecture\13-operational-modes-and-scale.md
+- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\contracts\csharp\RecallContracts.cs
 - C:\repositories\CanDoItAll\src\CanDoItAll.Infrastructure\Search\SearchIndexing.cs
 - C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Context.cs
 
@@ -45,6 +49,7 @@
 
 - Unit tests for scoring, budget exclusion, and mode behavior.
 - Integration tests for lexical, vector, graph, and source fallback paths.
+- EF/performance tests proving candidate queries are paged, no-tracking for reads, projected to DTOs, and bounded by recall budgets.
 
 ## Implementation Steps
 

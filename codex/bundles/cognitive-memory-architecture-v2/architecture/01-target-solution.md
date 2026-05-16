@@ -18,6 +18,24 @@ Source adapters
   -> context packs, tools, UI, workflow executors
 ```
 
+## Phase Foundation Boundary
+
+The first implementation-ready capability after prerequisite validation is not source ingestion or recall. It is the common driver/helper/EF guardrail layer used by all later phases. That layer should provide deterministic source, embedding, vector/search, policy, clock, id, hashing, paging, serialization, and EF query-shape test helpers.
+
+This is intentionally a small shared foundation, not a new platform inside the platform. It should contain only cross-phase contracts and helpers that prevent duplicated test drivers, stringly typed state, unbounded query surfaces, hidden JSON persistence, and inconsistent provider-failure behavior.
+
+## Neuro-Cognitive Foundation Boundary
+
+The next foundation after common guardrails is the neuro-cognitive foundation: claim/evidence/belief ledger, evidence anchors, entity/context binding, and memory mutation authority. This must land before ingestion, taxonomy/projection, recall, consolidation, probing, or learning phases create durable memory semantics.
+
+The design rule is:
+
+```text
+source anchor -> evidence anchor -> atomic claim -> belief state -> memory item/procedure/projection
+```
+
+`MemoryItem` remains useful as a chunk/container and summary surface, but it is no longer the only belief unit. Authoritative memory changes go through mutation commands with idempotency, evidence checks, optimistic concurrency, review policy, audit events, and projection invalidation.
+
 ## Recommended Project Shape
 
 | Project | Responsibility |

@@ -172,3 +172,30 @@ Add optional MAF/workflow wrappers for probing:
 - `memory.probe.learning.validate`
 
 These wrappers call Cognitive Memory services. MAF does not own probe state and must not directly mutate memory records. Probing tools should be especially careful with access context, redaction, and generated source explanations.
+
+## Workspace-Aware Agent Context
+
+MAF context contribution should become workspace-aware:
+
+```text
+agent/workflow request
+  -> Cognitive Memory loads or creates workspace frame
+  -> attention router decides recall/source audit/probe/clarification/abstention
+  -> recall fills workspace focus slots and inhibition records
+  -> metamemory answer gate decides what may be rendered
+  -> MAF receives compact context pack and available detail tools
+```
+
+MAF must not own workspace persistence, attention policy, mutation authority, prediction errors, salience signals, or answer-gate decisions. It may pass run ids and access context into Cognitive Memory and receive trace ids for audit.
+
+Additional wrapper tools/executors may be added only after their backend services exist:
+
+- `memory.workspace.open`
+- `memory.attention.route`
+- `memory.claim.propose`
+- `memory.replay.enqueue`
+- `memory.answerGate.evaluate`
+- `memory.procedureSkill.propose`
+- `memory.simulation.create`
+
+All write-capable wrappers submit commands to Cognitive Memory mutation authority or dedicated application services. They must never write canonical memory, claims, procedure skills, replay results, or projections directly.

@@ -331,6 +331,17 @@ Reuse existing Canvas/BaseLib patterns:
 - `LearningApprovalDecisionPanel`
 - `LearningOutcomeReviewPanel`
 - `ProbingQuestionSetPanel`
+- `ClaimEvidenceLedgerPanel`
+- `EvidenceAnchorList`
+- `ContextFrameBadge`
+- `WorkspaceFocusPanel`
+- `AttentionDecisionPanel`
+- `PredictionErrorTimeline`
+- `CognitiveSignalVectorPanel`
+- `ReplayJobQueue`
+- `ProcedureSkillMaturityPanel`
+- `SimulationHypothesisPanel`
+- `MetamemoryAnswerGatePanel`
 
 ## UI Integration Points
 
@@ -384,3 +395,21 @@ Important screens/components:
 - `MemoryProbeCorrectionDialog`
 - `MemoryRegressionTestEditor`
 - `MemoryCalibrationDashboard`
+
+## Neuro-Cognitive UI Requirements
+
+Any UI that presents recalled or probed memory should be able to expose:
+
+- selected claims and belief states,
+- source/evidence anchors,
+- context frames and context-boundary warnings,
+- inhibited candidates and reasons,
+- workspace focus slots and open questions,
+- attention decision and next action,
+- prediction errors and cognitive signals,
+- replay jobs created from failures or staleness,
+- procedure skill maturity and failure modes,
+- simulation hypothesis labels,
+- answer-gate warning, clarification, source-audit, probe, review, learning, or abstention decisions.
+
+Do not render answer-gate abstention or warning states as normal answers. The user should see why the system is uncertain and which next action is proposed.

@@ -1,37 +1,87 @@
-# Subbundle 07-maf-workflow-integration
+# 07 MAF Workflow Integration
+
+## Status
+
+- Ready after recall, consolidation, and prerequisite MAF boundary.
 
 ## Objective
 
-Add MAF context provider, memory tools, and workflow executors for recall/consolidation/projection/reflection.
+- Expose Cognitive Memory to MAF agents and workflow executors through extension contracts, tools, and context packs.
 
-## Inputs
+## Covered Inputs
 
-- Existing CanDoItAll main solution.
-- Existing RAG/Qdrant driver where relevant.
-- Existing SemanticCompletion/semantic driver where relevant.
-- This architecture bundle.
+- Requirements FR-011, FR-017, FR-018, FR-020, and NFR-013.
+- MAF integration architecture and prerequisite boundary decision.
 
-## Implementation Rules
+## Prerequisites
 
-- Preserve source provenance.
-- Do not make Qdrant the source of truth.
-- Keep comments in source code in English.
-- Keep module boundaries explicit.
-- Add unit tests for non-happy paths.
-- Prefer typed models over unstructured JSON, but allow JSON metadata for future extension.
+- `00-prerequisite-boundary-gate` must be closed.
+- `05-recall-orchestrator` must provide traceable context packs.
+- `06-consolidation-engine` must define reflection and run-memory behavior.
+- `15-cognitive-workspace-attention-router` must provide workspace-aware context routing.
+- `18-procedural-skill-memory-simulation` must exist before MAF exposes procedure-skill guidance.
+- `19-metamemory-abstention-calibration` must close before MAF answer injection is treated as complete.
 
-## Required Output
+## Exact Source References
 
-- Code changes.
-- Tests.
-- Short implementation report.
-- List of any architectural deviations.
-- Evidence of build/test results when applicable.
+- C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Context.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.AgentFramework\Services\AgentFrameworkModuleServiceCollectionExtensions.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowExecutorContracts.cs
+- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\architecture\08-maf-workflow-agent-integration.md
+- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\contracts\csharp\MafIntegrationContracts.cs
 
-## QA Questions
+## Deliverables
 
-1. Does the implementation preserve raw source references?
-2. Can derived data be rebuilt?
-3. Is access/redaction policy respected?
-4. Are failures and edge cases tested?
-5. Does the implementation avoid merging semantically similar but context-separated knowledge incorrectly?
+- MAF context contributor adapter.
+- Memory recall tools and workflow executors.
+- Working memory lifecycle for agent/workflow runs.
+- Reflection hooks that feed consolidation without direct table writes.
+
+## Dependency Impact
+
+- MAF consumes memory context; it does not own memory policy.
+- Workflow executors call application services with authorization and trace context.
+- Existing workspace memory remains compatibility fallback.
+
+## Validation Depth
+
+- Unit tests for context contributor selection and policy checks.
+- Integration tests for workflow executor registration and recall tool output.
+
+## Implementation Steps
+
+- Register Cognitive Memory context contributor through the new MAF boundary.
+- Add workflow executors for recall, note capture, reflection request, and review creation.
+- Add working memory scoping by agent run/workflow run.
+- Record trace ids in MAF outputs.
+
+## Do Not Do
+
+- Do not hardwire Cognitive Memory into private MAF context-builder internals.
+- Do not bypass authorization or redaction policy.
+- Do not make workflow executors directly mutate projection stores.
+
+## Acceptance Checklist
+
+- MAF context is supplied through a general extension point.
+- Tools and executors return traceable, bounded context.
+- Existing MAF behavior remains compatible when memory is disabled.
+
+## Proof Required
+
+- MAF adapter tests.
+- Workflow executor tests.
+- Trace evidence for context-pack injection.
+
+## Browser Validation Logging
+
+- Browser proof is optional unless workflow UI changes are included.
+- If included, capture workflow route and evidence in `reviews/01-execution-report.md`.
+
+## Progression Gate
+
+- Proceed to UI only after MAF integration is traceable and policy-aware.
+
+## Suggested Agent Prompt
+
+- Integrate Cognitive Memory with MAF and workflows through extension contracts without moving durable memory policy into MAF.

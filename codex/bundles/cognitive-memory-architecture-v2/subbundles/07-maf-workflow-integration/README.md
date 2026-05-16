@@ -18,14 +18,17 @@
 - `00-prerequisite-boundary-gate` must be closed.
 - `05-recall-orchestrator` must provide traceable context packs.
 - `06-consolidation-engine` must define reflection and run-memory behavior.
+- `15-cognitive-workspace-attention-router` must provide workspace-aware context routing.
+- `18-procedural-skill-memory-simulation` must exist before MAF exposes procedure-skill guidance.
+- `19-metamemory-abstention-calibration` must close before MAF answer injection is treated as complete.
 
 ## Exact Source References
 
 - C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.Context.cs
 - C:\repositories\CanDoItAll\src\CanDoItAll.Modules.AgentFramework\Services\AgentFrameworkModuleServiceCollectionExtensions.cs
 - C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowExecutorContracts.cs
-- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture\architecture\08-maf-workflow-agent-integration.md
-- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture\contracts\csharp\MafIntegrationContracts.cs
+- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\architecture\08-maf-workflow-agent-integration.md
+- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\contracts\csharp\MafIntegrationContracts.cs
 
 ## Deliverables
 

@@ -3,14 +3,27 @@
 ## Status
 
 - Architecture preparation remains complete. Source/MAF prerequisite boundaries, the boundary-hardening bundle, and the projection-boundary-hardening bundle are implemented and validated; Cognitive Memory implementation has not started. Projection-backed recall and strict vector context integration must consume the completed generic RAG and SemanticCompletion projection contracts.
+- 2026-05-16 architecture-only v2 repair added a common driver/helper/EF guardrail phase, split probing backend core from probing UI/workbench work, reordered Epistemic Drive and distributed compute behind safer prerequisites, and strengthened EF/performance/contract gates. Product code was not modified.
+- Prepared-stage bundle validation passed with `validate_bundle.py C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2 --profile initiative --stage prepared`.
+- Final prepared-stage validation passed again after neuro-cognitive patch integration and manifest regeneration.
+- 2026-05-16 neuro-cognitive patch integration added workspace/attention, claim/evidence/belief, mutation authority, prediction error/salience, temporal replay, procedure skill/simulation, metamemory answer gate, new diagrams/contracts/requirements/validation, and subbundles `14` through `20`. Product code was not modified.
 
 ## Subbundle Gate Results
 
 | Subbundle | Entry gate | Closure gate | Downstream dependencies checked | Progression result | Notes |
 |---|---|---|---|---|---|
 | 00-prerequisite-boundary-gate | Passed | Passed | Checked | Passed - module foundation and source ingestion may start only by consuming the approved hardened boundaries | `cognitive-memory-prerequisite-boundaries`, `cognitive-memory-boundary-hardening`, and `cognitive-memory-projection-boundary-hardening` are validated prerequisites. Direct MAF private-provider edits, ad hoc source table reads, direct Qdrant calls, and unscoped vector post-filtering remain out of bounds. |
-| 13-interactive-memory-probing-workbench | Ready | Not started | Checked | Ready after recall traces, consolidation basics, MAF integration, and human review UI | Added architecture, contracts, diagrams, validation matrix, Codex prompt, and subbundle plan. Implementation is intentionally not started. |
-| 12-epistemic-drive-engine | Ready | Not started | Checked | Ready after recall, consolidation, MAF, review UI, and probing evidence where possible | Added architecture, contracts, diagrams, traceability, validation, prompts, and subbundle plan. Implementation is intentionally not started. |
+| 01a-common-drivers-helpers-and-ef-guardrails | Ready | Not started | Checked | Must run after module foundation and before feature subbundles | Added to prevent duplicated fakes, unbounded query helpers, JSON-only persistence shortcuts, and inconsistent provider-failure behavior. |
+| 13a-probing-core-regression-calibration | Ready | Not started | Checked | Must run after recall traces, human review, MAF context contribution, and source ingestion foundations | Backend probe state, feedback, findings, correction gating, regression tests, and confidence calibration are now separated from UI work. |
+| 14-neuro-foundation-claim-evidence-ledger | Ready | Not started | Checked | Must run after common guardrails and before source ingestion/taxonomy/recall | Adds evidence anchors, atomic claims, entity/context binding, and mutation authority as a critical foundation. |
+| 15-cognitive-workspace-attention-router | Ready | Not started | Checked | Must run before recall/probing/MAF flows depend on context | Adds active workspace frames, focus/inhibition, and explainable operation routing. |
+| 16-prediction-error-salience-signals | Ready | Not started | Checked | Must run before recall activation, replay, probing evidence, and Epistemic Drive consume signals | Adds prediction errors and dimensional cognitive signals without scalar-only salience. |
+| 17-temporal-replay-scheduler | Ready | Not started | Checked | Must run after consolidation/signals and before procedure/distributed replay | Adds ordered episodes, causal links, and non-promoting replay jobs. |
+| 18-procedural-skill-memory-simulation | Ready | Not started | Checked | Must run before MAF procedure guidance or procedure learning proposals | Adds skill graph/maturity/failure-mode model and speculative simulation policy. |
+| 19-metamemory-abstention-calibration | Ready | Not started | Checked | Must run before Dialogue Workbench completion and safe answer injection | Adds answer-time gate for warnings, clarification, source audit, probing, review, learning request, and abstention. |
+| 20-architecture-integration-closure | Ready | Not started | Checked | Must run before final validation closure | Confirms neuro patch integration, traceability, diagrams, phase order, and safety invariants. |
+| 13-interactive-memory-probing-workbench | Ready | Not started | Checked | Ready only after probing core/regression/calibration closes | Dialogue Workbench UI and workflow/tool wrappers consume backend probing contracts; implementation is intentionally not started. |
+| 12-epistemic-drive-engine | Ready | Not started | Checked | Ready after recall, consolidation, MAF, review UI, and probing-core evidence where possible | Added architecture, contracts, diagrams, traceability, validation, prompts, and subbundle plan. Implementation is intentionally not started. |
 
 ## Browser Validation Analytics
 
@@ -43,6 +56,10 @@ Added:
 
 - Interactive Memory Probing architecture.
 - Regression and confidence calibration loop.
+- Common drivers/helpers/EF guardrails subbundle.
+- Backend probing core/regression/calibration subbundle.
+- Reordered phase plan with architecture review gates between dependent phases.
+- EF Core query-shape and .NET performance guardrails across architecture, validation, traceability, and acceptance criteria.
 - C# probing contracts.
 - Three probing diagrams.
 - Plan/root subbundles for probing implementation.

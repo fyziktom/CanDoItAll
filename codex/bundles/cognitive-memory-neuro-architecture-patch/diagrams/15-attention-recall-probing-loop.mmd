@@ -1,0 +1,23 @@
+sequenceDiagram
+  participant User
+  participant UI as Dialogue/Workflow UI
+  participant Workspace as Cognitive Workspace
+  participant Attention as Attention Router
+  participant Recall as Recall Orchestrator
+  participant Claims as Claim/Evidence Ledger
+  participant Gate as Metamemory Gate
+  participant Signals as Signal + Prediction Error Ledger
+  participant Review as Review / Epistemic Drive
+
+  User->>UI: Ask question / run step
+  UI->>Workspace: Get or create active frame
+  Workspace->>Attention: Current goal, focus, open questions
+  Attention-->>UI: Decision: Recall
+  Attention->>Recall: Recall request with workspace context
+  Recall->>Claims: Load selected claims and belief states
+  Recall-->>Workspace: Focus slots + inhibited candidates
+  Workspace->>Gate: Evaluate answer readiness
+  Gate-->>UI: Answer / warning / clarification / probe / abstain
+  User->>UI: Confirm, correct, challenge, or continue
+  UI->>Signals: Record observation and prediction error
+  Signals->>Review: Publish evidence for review / gap / regression

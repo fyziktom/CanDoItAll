@@ -267,3 +267,21 @@ MVP should implement:
 - Automatic question bank balancing across project regions.
 - Calibration dashboards for confidence vs correctness.
 - Cross-project reusable probe packs.
+
+## Neuro-Cognitive Probing Updates
+
+Every probe session must attach to or create a cognitive workspace frame. Probe turns update focus slots, open questions, inhibited candidates, and answer-gate decisions.
+
+Important probe turns should record:
+
+- prediction expectation before answer where risk or ambiguity warrants it,
+- prediction error after feedback when observed outcome differs from expected behavior,
+- cognitive signals such as user interest, wrong scope, source weakness, overconfidence, usefulness, or rework cost,
+- selected claim ids and evidence anchors,
+- claim-level correction candidates submitted through mutation authority,
+- context-frame expectations and violations,
+- answer-gate decision and warnings.
+
+Probe corrections must become claim operations such as propose, attack, narrow scope, supersede, or request source anchor. The correction itself does not update active truth.
+
+The Dialogue Workbench should show workspace focus, inhibited candidates, selected claims, evidence anchors, prediction errors, signal records, and answer-gate decision where available.

@@ -289,3 +289,40 @@ Rules:
 5. High-risk corrections require human review before active memory changes.
 6. Regression tests created from restricted probes must not leak restricted text in globally shared fixtures.
 7. Cross-project probing may share only approved summaries and reusable test constraints.
+
+## Neuro-Cognitive Governance Rules
+
+### Rule 10: Evidence Anchors Are Required For Belief Changes
+
+Atomic claims, belief state changes, procedure maturity changes, and projection invalidations must cite evidence anchors or an explicit generated/draft reason. Source refs that only identify a broad source item are not enough for high-risk or contested claims; use structured paths, spans, quote hashes, source hashes, trust level, and redaction state where available.
+
+### Rule 11: Mutation Authority Is The Public Write Boundary
+
+Authoritative memory writes must use mutation commands with:
+
+- idempotency key,
+- actor identity,
+- evidence anchor refs,
+- expected version/concurrency token,
+- policy decision,
+- review requirement,
+- audit event,
+- projection invalidation.
+
+Low-level repository upserts may exist as internal persistence mechanics only.
+
+### Rule 12: Workspace Is Not Truth
+
+Cognitive workspace frames are active control state. They can reference claims, sources, procedures, and traces, but they do not become raw source truth. Important frames may be persisted as episodic input only through source/evidence policy.
+
+### Rule 13: Salience Does Not Override Policy
+
+Novelty, risk, reward, usefulness, and user interest can affect priority, activation, replay, and attention. They cannot create truth, bypass access control, promote generated output, or leak project-private content into global memory.
+
+### Rule 14: Simulation Is Speculative
+
+Simulation and cross-project analogy outputs must remain hypotheses until source-backed, reviewed, and validated. A simulated procedure cannot become executable automation or active procedure guidance without maturity and review policy.
+
+### Rule 15: Metamemory Must Block Unsafe Fluent Answers
+
+The answer gate must support warnings, clarification, source audit, probing, review, learning proposal, and abstention. It is a security and correctness boundary, not only a UI annotation.

@@ -16,6 +16,8 @@
 ## Prerequisites
 
 - `01-module-foundation` must define provider-neutral projection and embedding abstractions.
+- `01a-common-drivers-helpers-and-ef-guardrails` must provide fake embedding/vector providers, profile value objects, serialization rules, and bounded batch helpers.
+- `14-neuro-foundation-claim-evidence-ledger` must define typed projection payload requirements for claim ids, context frames, evidence anchors, and belief state.
 - `02-workbench-and-source-ingestion` should supply source items for end-to-end projection tests.
 - `codex/bundles/cognitive-memory-projection-boundary-hardening` is completed and must be consumed as the approved projection boundary for typed RAG filtering, payload-indexed search, delete-by-source cleanup, and embedding-profile based rebuild logic.
 
@@ -51,6 +53,7 @@
 - Unit tests with deterministic fake embeddings.
 - Integration tests with Qdrant where available.
 - Failure tests for Qdrant and embedding provider unavailability.
+- Allocation review for vector ownership so hot paths do not copy `float[]` unnecessarily outside adapter boundaries.
 
 ## Implementation Steps
 

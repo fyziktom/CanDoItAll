@@ -1,37 +1,87 @@
-# Subbundle 09-distributed-idle-compute
+# 09 Distributed Idle Compute
+
+## Status
+
+- Ready after deterministic consolidation exists.
 
 ## Objective
 
-Add deterministic job coordinator and worker protocol for LAN devices. Workers return outputs only; coordinator validates before applying.
+- Allow trusted LAN devices to process deterministic memory jobs without directly mutating authoritative memory or projection state.
 
-## Inputs
+## Covered Inputs
 
-- Existing CanDoItAll main solution.
-- Existing RAG/Qdrant driver where relevant.
-- Existing SemanticCompletion/semantic driver where relevant.
-- This architecture bundle.
+- Requirements FR-019, FR-020, FR-021, FR-022, NFR-001, NFR-012, and NFR-013.
+- Distributed idle compute architecture and operational modes.
 
-## Implementation Rules
+## Prerequisites
 
-- Preserve source provenance.
-- Do not make Qdrant the source of truth.
-- Keep comments in source code in English.
-- Keep module boundaries explicit.
-- Add unit tests for non-happy paths.
-- Prefer typed models over unstructured JSON, but allow JSON metadata for future extension.
+- `06-consolidation-engine` must provide deterministic job inputs and idempotent acceptance.
+- `04-memory-taxonomy-and-projections` must define authoritative write paths.
+- `12-epistemic-drive-engine` must have proven approval-gated learning/proposal behavior before distributed workers can process learning-adjacent jobs.
+- `17-temporal-replay-scheduler` must define deterministic replay job boundaries before distributed replay work is allowed.
+- `18-procedural-skill-memory-simulation` must define procedure skill maturity before distributed procedure validation work is accepted.
+- Mutation authority from `14-neuro-foundation-claim-evidence-ledger` must be the only path for accepting worker-produced memory changes.
 
-## Required Output
+## Exact Source References
 
-- Code changes.
-- Tests.
-- Short implementation report.
-- List of any architectural deviations.
-- Evidence of build/test results when applicable.
+- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\architecture\09-distributed-idle-compute.md
+- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\architecture\13-operational-modes-and-scale.md
+- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\contracts\csharp\DistributedComputeContracts.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Automation\CanDoItAll.Modules.Automation.csproj
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.SchedulerPlanner\CanDoItAll.Modules.SchedulerPlanner.csproj
 
-## QA Questions
+## Deliverables
 
-1. Does the implementation preserve raw source references?
-2. Can derived data be rebuilt?
-3. Is access/redaction policy respected?
-4. Are failures and edge cases tested?
-5. Does the implementation avoid merging semantically similar but context-separated knowledge incorrectly?
+- Job package and lease model.
+- Worker registration and capability model.
+- Output verification and authoritative acceptance flow.
+- Failure, stale lease, incompatible version, and rejected output behavior.
+
+## Dependency Impact
+
+- Coordinator remains authoritative.
+- Workers receive bounded immutable inputs and return signed/hashed outputs.
+- Projection updates happen only after coordinator validation.
+
+## Validation Depth
+
+- Unit tests for lease expiry and idempotency.
+- Integration tests for stale, duplicate, tampered, and incompatible outputs.
+
+## Implementation Steps
+
+- Define distributed job package format.
+- Add coordinator lease and claim flow.
+- Add worker output verification.
+- Accept outputs through the same consolidation/projection services used locally.
+
+## Do Not Do
+
+- Do not give workers direct database or Qdrant write access.
+- Do not accept output without input hash, output hash, algorithm version, and lease token.
+- Do not use distributed compute for interactive recall.
+
+## Acceptance Checklist
+
+- Worker outputs can be rejected predictably.
+- Coordinator can requeue expired jobs.
+- Accepted output is indistinguishable from local deterministic job output except for worker provenance.
+
+## Proof Required
+
+- Lease and rejection tests.
+- Integration evidence for one accepted and one rejected worker output.
+- Metrics/log evidence for claim, accept, reject, and expiry counts.
+
+## Browser Validation Logging
+
+- Browser proof is required only if worker/job health UI is included.
+- If included, record route and viewport evidence in `reviews/01-execution-report.md`.
+
+## Progression Gate
+
+- Proceed to cross-project memory only after distributed outputs cannot corrupt authoritative state.
+
+## Suggested Agent Prompt
+
+- Implement distributed idle compute as deterministic delegated work with coordinator-controlled acceptance and no direct worker writes.

@@ -93,6 +93,43 @@ Software implication:
 - Do not delete raw source by default.
 - Use soft forgetting: activation decay, dormant state, superseded-by links, staleness penalties, and projection retirement.
 
+## 9. Prediction Error Drives Learning
+
+Humans learn strongly from mismatches between expected and observed outcomes. The system equivalent is a durable prediction-error ledger that records expectation, observation, cause hypothesis, magnitude, and suggested adaptation.
+
+Software implication:
+
+- Probing failures, workflow rework, QA failures, stale source conflicts, and wrong-scope answers should publish typed prediction errors.
+- Prediction errors should feed replay scheduling, Epistemic Drive, confidence calibration, and procedure improvement.
+
+## 10. Belief Revision Is Evidence-Based
+
+Human memory updates are not just appending summaries. A disciplined software memory needs atomic claims with support, attack, scope, temporal validity, and revision lineage.
+
+Software implication:
+
+- Store claims below memory items.
+- Use evidence anchors with spans/paths/hashes/trust/redaction state.
+- Preserve contested or scope-limited claims instead of hiding them inside fluent summaries.
+
+## 11. Procedural Skill Needs Practice And Validation
+
+Procedural memory becomes reliable through repeated execution, feedback, and failure recovery.
+
+Software implication:
+
+- Model procedures as skill graphs with preconditions, steps, postconditions, failure modes, validation evidence, maturity, and automation policy.
+- Simulation can explore hypotheses, but validated execution evidence is required before automation.
+
+## 12. Metamemory Controls Confidence
+
+Humans can sometimes know that they do not know. A memory system needs the same answer-time gate.
+
+Software implication:
+
+- The system must be able to answer with warnings, ask clarification, request source audit, probe, create review, request learning, or abstain.
+- Confidence calibration must affect answer rendering, not only dashboards.
+
 ## References
 
 - Squire et al. describe memory consolidation as a process involving hippocampal dependence and later reorganization into longer-term memory systems.

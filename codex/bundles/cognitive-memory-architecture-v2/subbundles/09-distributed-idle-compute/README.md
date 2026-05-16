@@ -17,12 +17,16 @@
 
 - `06-consolidation-engine` must provide deterministic job inputs and idempotent acceptance.
 - `04-memory-taxonomy-and-projections` must define authoritative write paths.
+- `12-epistemic-drive-engine` must have proven approval-gated learning/proposal behavior before distributed workers can process learning-adjacent jobs.
+- `17-temporal-replay-scheduler` must define deterministic replay job boundaries before distributed replay work is allowed.
+- `18-procedural-skill-memory-simulation` must define procedure skill maturity before distributed procedure validation work is accepted.
+- Mutation authority from `14-neuro-foundation-claim-evidence-ledger` must be the only path for accepting worker-produced memory changes.
 
 ## Exact Source References
 
-- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture\architecture\09-distributed-idle-compute.md
-- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture\architecture\13-operational-modes-and-scale.md
-- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture\contracts\csharp\DistributedComputeContracts.cs
+- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\architecture\09-distributed-idle-compute.md
+- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\architecture\13-operational-modes-and-scale.md
+- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\contracts\csharp\DistributedComputeContracts.cs
 - C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Automation\CanDoItAll.Modules.Automation.csproj
 - C:\repositories\CanDoItAll\src\CanDoItAll.Modules.SchedulerPlanner\CanDoItAll.Modules.SchedulerPlanner.csproj
 

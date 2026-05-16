@@ -17,6 +17,8 @@
 
 - `05-recall-orchestrator` must provide traces.
 - `06-consolidation-engine` must create review items.
+- `14-neuro-foundation-claim-evidence-ledger` must provide claim/evidence/context/review targets.
+- `17-temporal-replay-scheduler` and `18-procedural-skill-memory-simulation` should exist when review queues expose replay or procedure skill decisions.
 - Existing UI component conventions must be followed.
 
 ## Exact Source References
@@ -24,7 +26,7 @@
 - C:\repositories\CanDoItAll\src\CanDoItAll.Components.BaseLib\CanDoItAll.Components.BaseLib.csproj
 - C:\repositories\CanDoItAll\src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor
 - C:\repositories\CanDoItAll\src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor.cs
-- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture\architecture\11-ui-and-operator-experience.md
+- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\architecture\11-ui-and-operator-experience.md
 - C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj
 
 ## Deliverables

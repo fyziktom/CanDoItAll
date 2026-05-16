@@ -17,13 +17,15 @@
 
 - `02-workbench-and-source-ingestion` supplies deterministic source records.
 - `03-semantic-and-rag-adapters` supplies projection and semantic utilities.
+- `01a-common-drivers-helpers-and-ef-guardrails` supplies typed state/profile/evidence contracts, JSON rules, and EF query/index policy.
+- `14-neuro-foundation-claim-evidence-ledger` must define claims, evidence anchors, entity/context binding, mutation authority, and typed projection payload rules.
 
 ## Exact Source References
 
-- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture\architecture\03-memory-taxonomy-and-data-model.md
-- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture\architecture\07-qdrant-projection-design.md
-- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture\contracts\csharp\MemoryDomainModels.cs
-- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture\contracts\csharp\ProjectionContracts.cs
+- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\architecture\03-memory-taxonomy-and-data-model.md
+- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\architecture\07-qdrant-projection-design.md
+- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\contracts\csharp\MemoryDomainModels.cs
+- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\contracts\csharp\ProjectionContracts.cs
 - C:\repositories\CanDoItAll\src\CanDoItAll.Infrastructure\Persistence\AppDbContextModelRegistry.cs
 
 ## Deliverables
@@ -42,6 +44,7 @@
 
 - Unit tests for taxonomy invariants and relation constraints.
 - Integration tests for projection rebuild and stale projection detection.
+- EF model tests proving query-relevant refs, relations, review state, projection state, and evidence lookup are indexed and not hidden only in JSON.
 
 ## Implementation Steps
 

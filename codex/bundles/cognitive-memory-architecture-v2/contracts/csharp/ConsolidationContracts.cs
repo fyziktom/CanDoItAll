@@ -71,7 +71,7 @@ public interface IEpisodeExtractor
 
 public interface IProcedureExtractor
 {
-    Task<IReadOnlyList<MemoryItem>> ExtractProceduresAsync(
+    Task<IReadOnlyList<ProcedureSkillRecord>> ExtractProcedureSkillsAsync(
         ProcedureExtractionRequest request,
         CancellationToken cancellationToken = default);
 }

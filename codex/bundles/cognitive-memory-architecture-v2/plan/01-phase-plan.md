@@ -2,90 +2,172 @@
 
 ## Execution Order
 
+Dependency order is authoritative. Folder numbers for `12`, `13`, and `14-20` are historical patch identifiers, not permission to execute them late.
+
 1. `00-prerequisite-boundary-gate`
 2. `01-module-foundation`
-3. `02-workbench-and-source-ingestion`
-4. `03-semantic-and-rag-adapters`
-5. `04-memory-taxonomy-and-projections`
-6. `05-recall-orchestrator`
-7. `06-consolidation-engine`
-8. `07-maf-workflow-integration`
-9. `08-human-review-ui`
-10. `12-interactive-memory-probing-workbench` in `plan/subbundles`, mirrored as `subbundles/13-interactive-memory-probing-workbench`
-11. `09-distributed-idle-compute`
-12. `10-cross-project-memory`
-13. `11-epistemic-drive-engine` in `plan/subbundles`, mirrored as `subbundles/12-epistemic-drive-engine`
-14. `11-validation-and-architecture-closure`
+3. `01a-common-drivers-helpers-and-ef-guardrails`
+4. `14-neuro-foundation-claim-evidence-ledger`
+5. `02-workbench-and-source-ingestion`
+6. `03-semantic-and-rag-adapters`
+7. `04-memory-taxonomy-and-projections`
+8. `15-cognitive-workspace-attention-router`
+9. `16-prediction-error-salience-signals`
+10. `05-recall-orchestrator`
+11. `06-consolidation-engine`
+12. `17-temporal-replay-scheduler`
+13. `18-procedural-skill-memory-simulation`
+14. `08-human-review-ui`
+15. `07-maf-workflow-integration`
+16. `13a-probing-core-regression-calibration`
+17. `19-metamemory-abstention-calibration`
+18. `13-interactive-memory-probing-workbench`
+19. `12-epistemic-drive-engine`
+20. `10-cross-project-memory`
+21. `09-distributed-idle-compute`
+22. `20-architecture-integration-closure`
+23. `11-validation-and-architecture-closure`
 
-Root subbundle `11-validation-and-architecture-closure` already existed before Epistemic Drive was added, so the mirrored root execution subbundle uses `12-epistemic-drive-engine`. Interactive Probing was added later and uses root `13-interactive-memory-probing-workbench`. Dependency order overrides folder numbers: run probing as soon as recall/consolidation/MAF/review basics exist, then run Epistemic Drive before validation closure.
+Rationale:
+
+- Common drivers, helpers, fake providers, serialization policy, EF query policy, and performance guardrails must exist before source ingestion, adapters, taxonomy, recall, or probing start.
+- Claim/evidence/belief, evidence anchors, entity/context binding, and mutation authority are foundations. If they are added after source ingestion or recall, downstream records will have the wrong shape.
+- Workspace and attention must exist before recall/probing/MAF flows claim to be cognitive. A context pack is rendered output, not active working memory.
+- Prediction error and salience signals must exist before recall, consolidation, probing, replay, and Epistemic Drive depend on activation and learning evidence.
+- Replay and procedural skill memory should be built after consolidation basics but before MAF, probing, learning, cross-project, or distributed execution can promote procedural behavior.
+- Metamemory answer gating depends on recall, workspace, claims, signals, calibration, procedure maturity, and access policy. It must close before the Dialogue Workbench and MAF answer injection are treated as complete.
+- Epistemic Drive runs after project-scoped recall, consolidation, review, probing evidence, answer-gate evidence, and salience/replay signals are stable.
+- Cross-project memory and distributed compute remain scale/promotion extensions after project-scoped safety is proven.
 
 ## Subbundle Dependency Map
 
 ```mermaid
 flowchart TD
     S00["00 prerequisite boundary gate"] --> S01["01 module foundation"]
-    S01 --> S02["02 workbench and source ingestion"]
-    S01 --> S03["03 semantic and RAG adapters"]
+    S01 --> S01A["01a common drivers, helpers, EF guardrails"]
+    S01A --> S14["14 neuro foundation: claims, evidence, context, mutation"]
+    S14 --> S02["02 workbench and source ingestion"]
+    S14 --> S03["03 semantic and RAG adapters"]
     S02 --> S04["04 memory taxonomy and projections"]
     S03 --> S04
-    S04 --> S05["05 recall orchestrator"]
-    S04 --> S06["06 consolidation engine"]
-    S05 --> S07["07 MAF workflow integration"]
-    S06 --> S07
-    S05 --> S08["08 human review UI"]
+    S14 --> S04
+    S04 --> S15["15 cognitive workspace and attention router"]
+    S15 --> S16["16 prediction error and salience signals"]
+    S16 --> S05["05 recall orchestrator"]
+    S15 --> S05
+    S14 --> S05
+    S05 --> S06["06 consolidation engine"]
+    S16 --> S06
+    S14 --> S06
+    S06 --> S17["17 temporal replay scheduler"]
+    S16 --> S17
+    S17 --> S18["18 procedural skill memory and simulation"]
+    S18 --> S08["08 human review UI"]
+    S05 --> S08
     S06 --> S08
-    S06 --> S09["09 distributed idle compute"]
-    S05 --> S10["10 cross project memory"]
-    S06 --> S10
-    S05 --> S12["12 epistemic drive engine"]
-    S06 --> S12
-    S07 --> S12
-    S08 --> S12
-    S10 --> S12
-    S05 --> S13["13 interactive memory probing"]
-    S06 --> S13
+    S08 --> S07["07 MAF workflow integration"]
+    S18 --> S07
+    S15 --> S07
+    S05 --> S13A["13a probing core regression calibration"]
+    S06 --> S13A
+    S08 --> S13A
+    S15 --> S13A
+    S16 --> S13A
+    S17 --> S13A
+    S13A --> S19["19 metamemory abstention calibration"]
+    S18 --> S19
+    S19 --> S13["13 interactive memory probing workbench"]
     S07 --> S13
     S08 --> S13
-    S13 --> S12
-    S12 --> S11["11 validation and architecture closure"]
-    S09 --> S11
-    S10 --> S11
-    S13 --> S11
+    S13 --> S12["12 epistemic drive engine"]
+    S19 --> S12
+    S16 --> S12
+    S17 --> S12
+    S18 --> S12
+    S12 --> S10["10 cross project memory"]
+    S10 --> S09["09 distributed idle compute"]
+    S09 --> S20["20 neuro architecture integration closure"]
+    S13 --> S20
+    S12 --> S20
+    S20 --> S11["11 validation and architecture closure"]
 ```
 
 ## Critical Subbundles
 
-- `00-prerequisite-boundary-gate` is now a validation gate rather than a redesign gate for the supplied current code. It must verify that the existing MAF context-contribution boundary and source snapshot providers are present in the target branch and compatible with Cognitive Memory.
-- `01-module-foundation` defines durable state, migrations, registration, policy surfaces, and test seams.
-- `04-memory-taxonomy-and-projections` must land before recall because Qdrant/search are rebuildable projections, not source truth.
-- `05-recall-orchestrator` must record traces and budget exclusions before MAF integration uses the output.
-- `06-consolidation-engine` must prove idempotency, versioning, and review handoff before distributed compute is allowed.
-- `13-interactive-memory-probing-workbench` should run before or alongside Epistemic Drive because it adds probe evidence, user corrections, regression tests, and calibration data.
-- `12-epistemic-drive-engine` must run before validation closure because it adds metacognitive gap detection, learning proposals, and approval-gated learning workflows on top of recall, consolidation, MAF, review, and probing evidence.
+- `00-prerequisite-boundary-gate` validates the target branch boundary contracts. If the MAF context contribution or source snapshot contracts regress, implementation stops.
+- `01-module-foundation` owns the durable state boundary, module registration, policy surfaces, and identity model.
+- `01a-common-drivers-helpers-and-ef-guardrails` prevents later phases from creating local string state, unbounded list contracts, ad hoc JSON payloads, inconsistent fake providers, or expensive EF query patterns.
+- `14-neuro-foundation-claim-evidence-ledger` is a critical foundation. It defines evidence anchors, atomic claims, entity/context binding, and mutation authority before any downstream durable memory is shaped.
+- `02-workbench-and-source-ingestion` proves deterministic source identity, cursor behavior, redaction, and layout/graph metadata before canonical memory exists.
+- `04-memory-taxonomy-and-projections` proves durable source truth, relation semantics, claim/context projection payloads, projection state, and rebuildability before recall.
+- `15-cognitive-workspace-attention-router` proves working memory and executive routing are explicit before recall/probing/MAF flows use context.
+- `16-prediction-error-salience-signals` proves cognitive signal vectors and prediction errors are durable, dimensional, and auditable before activation, replay, probing, or Epistemic Drive consume them.
+- `05-recall-orchestrator` proves staged, bounded, workspace-aware, claim-aware, traceable recall and Docker context separation before MAF, probing, learning, or answer gates use memory answers.
+- `06-consolidation-engine` proves idempotent, mutation-authority-based, review-aware durable mutation before replay, distributed compute, or Epistemic Drive.
+- `17-temporal-replay-scheduler` proves episodic order, causal links, and replay safety before procedure skill reinforcement or distributed replay.
+- `18-procedural-skill-memory-simulation` proves procedures are skill graphs with maturity and simulation is speculative before workflow automation or MAF procedure guidance.
+- `13a-probing-core-regression-calibration` proves corrections are evidence, regression tests replay, and calibration records exist before UI and learning consume probing results.
+- `19-metamemory-abstention-calibration` proves answer-time warnings, clarification, source audit, probing, review, learning request, and abstention before answer rendering is treated as safe.
+- `12-epistemic-drive-engine` proves vector-based knowledge need, approval-gated learning, signal/error/replay evidence consumption, and source-grounded proposals before cross-project and distributed extensions.
 
 ## Phase Gates
 
 | Gate | Required proof |
 |---|---|
-| Prerequisite gate | MAF context contributor boundary and source snapshot contracts are approved or implemented by their own bundle. |
-| Foundation gate | EF model registration, storage references, source hashes, algorithm versions, and policies exist in the design and tests. |
-| Workbench gate | Workbench source snapshots produce deterministic source item ids, hashes, links, layout metadata, and provenance. |
-| Projection gate | Projection state can be rebuilt from durable memory and can survive Qdrant unavailability. |
-| Recall gate | Recall traces explain included, excluded, unavailable, and budget-limited memory channels. |
-| Consolidation gate | Consolidation is resumable, idempotent, review-aware, and never promotes high-risk generated memory silently. |
-| MAF gate | MAF consumes context packs through extension contracts and does not own durable memory policy. |
-| UI gate | Operator pages show source evidence, trace reasons, review decisions, and projection/consolidation health. |
-| Distributed gate | Worker outputs are accepted only through leases, hashes, versions, and authoritative coordinator validation. |
-| Interactive Probing gate | Probe sessions persist trace-backed answers, correction feedback is review-gated, probe failures create evidence/regression tests, and no probe directly mutates active memory. |
-| Epistemic Drive gate | Knowledge need vectors preserve dimensions, proposal evidence is inspectable, external study is approval-gated, probing evidence is consumed safely, and scalar-only prioritization is rejected. |
-| Closure gate | Golden datasets, failure cases, browser evidence, and architecture review are complete. |
+| Prerequisite gate | MAF context contributor boundary and source snapshot contracts are present, tested, and approved for consumption. |
+| Foundation gate | EF model registration, storage references, source hashes, algorithm versions, policy surfaces, and typed identities exist in the design and tests. |
+| Common guardrail gate | Shared fake providers, paging/budget helpers, source-generated JSON plan, strongly typed state/profile/evidence contracts, and EF query/index rules are available to downstream subbundles. |
+| Neuro foundation gate | Evidence anchors, atomic claims, support/attack links, context frames, entity aliases, mutation commands, audit records, and projection invalidation rules are modeled relationally and cannot be bypassed by public writes. |
+| Source ingestion gate | Workbench/process/workflow source snapshots produce deterministic source item ids, hashes, cursors, links, layout metadata, provenance, evidence anchors, context hints, and redaction decisions. |
+| Adapter gate | Semantic and RAG adapters use typed filters, typed projection payloads, payload indexes, delete-by-filter, provider availability traces, and deterministic fake providers. |
+| Taxonomy/projection gate | Canonical memory, claims, source refs, evidence anchors, relations, activation state, projection records, and rebuild rules are durable and do not depend on Qdrant as truth. |
+| Workspace/attention gate | Workspace frames, focus slots, open questions, inhibited candidates, attention decisions, and context budgets are persisted/auditable where required and expire safely by default. |
+| Signal gate | Prediction expectations/errors and cognitive signals preserve dimensions, evidence, actor, timestamp, algorithm/profile version, and cannot create truth or bypass policy. |
+| Recall gate | Recall traces explain workspace, attention, selected claims, evidence anchors, included/excluded/unavailable/redacted/stale/contradicted/budget-limited channels; Docker context separation passes. |
+| Consolidation gate | Consolidation is resumable, idempotent, mutation-authority based, review-aware, versioned, and never promotes high-risk generated memory silently. |
+| Replay gate | Episodes preserve order/causality; replay jobs are prioritized by signals/errors/risk/staleness/usefulness; replay output creates drafts/review/projection invalidations only. |
+| Procedural skill gate | Skills have preconditions, steps, postconditions, failure modes, validation evidence, maturity, risk, and automation policy; simulation output remains speculative. |
+| Review/UI gate | Operator pages show source evidence, claim evidence, trace reasons, review decisions, projection/consolidation/procedure health, and browser evidence for dense views. |
+| MAF gate | MAF consumes workspace-aware context packs through extension contracts and does not own workspace, mutation authority, durable memory policy, or projection writes. |
+| Probing core gate | Probe answers persist recall traces, workspace frame ids, selected claims, prediction errors/signals where relevant; feedback cannot mutate active truth; correction/review/regression/evidence/calibration flows pass without UI. |
+| Answer gate | Metamemory gate uses source sufficiency, context fit, belief state, calibration, contradiction risk, staleness, redaction, risk, and policy to answer, warn, clarify, audit, probe, review, request learning, or abstain. |
+| Probing workbench gate | Browser proof shows dialogue, workspace/focus, trace/source/claim panels, correction, feedback, answer-gate warning, and regression flows without overlap, hidden evidence, or leaked restricted content. |
+| Epistemic Drive gate | Knowledge need vectors preserve dimensions and metadata; proposal evidence consumes signals/errors/replay/abstention safely; external study is approval-gated; scalar-only prioritization is rejected. |
+| Cross-project gate | Promotion/demotion is reviewable and reversible; project-private evidence does not leak; context/entity boundaries prevent unsafe global merges; recall traces show included/excluded global candidates. |
+| Distributed gate | Worker outputs are accepted only through leases, hashes, versions, source scope checks, replay/projection job boundaries, and authoritative coordinator validation. |
+| Neuro integration closure | Patch artifacts, requirements, traceability, diagrams, contracts, subbundles, safety invariants, and phase order are consistent. |
+| Closure gate | Golden datasets, failure cases, build/test proof, browser evidence, traceability, and architecture review are complete or explicitly deferred by owner decision. |
+
+## Generic Architecture Review Between Phases
+
+Before moving from any phase to the next, run a short architecture review and record the result in `reviews/01-execution-report.md`:
+
+- dependency direction still matches module boundaries,
+- source-of-truth hierarchy is preserved,
+- no new stringly typed state or unbounded query/list contract was introduced,
+- EF queries are paged, projected, no-tracking for reads, and indexed for their filters,
+- failure paths are explicit rather than silent fallbacks,
+- source refs, evidence anchors, hashes, algorithm versions, and audit events are present for generated outputs,
+- mutation authority is the public write boundary for authoritative memory changes,
+- high-risk or ambiguous memory changes are review-gated,
+- workspace frames remain control state, not source truth,
+- salience signals and prediction errors influence priority but cannot create truth,
+- simulation output remains speculative,
+- answer gates expose uncertainty instead of hiding it,
+- performance-sensitive paths have budgets and do not require Qdrant for correctness.
+
+If a phase fails one of these checks, reopen that phase or the earlier foundation it depends on. Do not push the problem downstream.
 
 ## Implementation Policy
 
 - Do not implement Cognitive Memory before `00-prerequisite-boundary-gate` validates the target branch boundary contracts.
 - Do not let generated summaries become raw source truth.
 - Do not write memory directly from distributed workers.
-- Do not add stringly typed mode flags; use enums/options and persisted mode/version state.
-- Do not collapse Epistemic Drive into a simple scalar priority score.
+- Do not add stringly typed mode, status, operation, evidence, evaluator, or section flags; use enums/options/value objects and persisted mode/version state.
+- Do not hide query-relevant source refs, evidence refs, relation endpoints, review state, proposal state, claim state, signal state, replay state, answer-gate state, or regression state only inside JSON.
+- Do not expose public direct upsert operations for authoritative memory. Use mutation authority.
+- Do not treat `RecallContextPack` as working memory. Use cognitive workspace frames.
+- Do not collapse salience, Epistemic Drive, or knowledge need into a simple scalar priority score.
 - Do not run learning tasks against external sources or promote high-impact learning outputs without required approval.
 - Do not let interactive probing feedback or user corrections directly mutate approved memory.
+- Do not let replay jobs, simulation output, distributed worker output, or generated summaries directly promote truth.

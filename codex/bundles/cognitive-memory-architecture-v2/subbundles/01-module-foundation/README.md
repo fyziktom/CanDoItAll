@@ -24,7 +24,7 @@
 - C:\repositories\CanDoItAll\src\CanDoItAll.Composition\RuntimeHostServiceCollectionExtensions.cs
 - C:\repositories\CanDoItAll\src\CanDoItAll.Infrastructure\Persistence\AppDbContextModelRegistry.cs
 - C:\repositories\CanDoItAll\src\CanDoItAll.Infrastructure\DependencyInjection\InfrastructureServiceCollectionExtensions.cs
-- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture\architecture\01-target-solution.md
+- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\architecture\01-target-solution.md
 
 ## Deliverables
 

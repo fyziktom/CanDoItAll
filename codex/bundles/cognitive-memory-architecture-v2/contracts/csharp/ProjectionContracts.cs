@@ -18,6 +18,27 @@ public enum MemoryProjectionType
     Reflection = 8
 }
 
+public enum ProjectionPayloadValueKind
+{
+    String = 0,
+    Number = 1,
+    Boolean = 2,
+    StringArray = 3,
+    NumberArray = 4
+}
+
+public sealed record ProjectionPayloadValue(
+    ProjectionPayloadValueKind Kind,
+    string? StringValue,
+    double? NumberValue,
+    bool? BooleanValue,
+    IReadOnlyList<string> StringValues,
+    IReadOnlyList<double> NumberValues);
+
+public sealed record MemoryProjectionPayload(
+    string SchemaVersion,
+    IReadOnlyDictionary<string, ProjectionPayloadValue> Values);
+
 public sealed record MemoryProjectionRequest(
     Guid ProjectId,
     IReadOnlyList<Guid> MemoryItemIds,
@@ -38,7 +59,7 @@ public sealed record MemoryProjectionPoint(
     string CollectionName,
     string VectorProfile,
     float[] Vector,
-    IReadOnlyDictionary<string, object?> Payload);
+    MemoryProjectionPayload Payload);
 
 public sealed record VectorSearchRequest(
     Guid ProjectId,
@@ -66,7 +87,7 @@ public sealed record VectorSearchHit(
     string PointId,
     Guid MemoryItemId,
     double Score,
-    IReadOnlyDictionary<string, object?> Payload);
+    MemoryProjectionPayload Payload);
 
 public interface ICognitiveVectorProjectionStore
 {

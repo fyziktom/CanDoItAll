@@ -100,3 +100,26 @@ V1.1:
 - LAN worker API,
 - mobile/tablet idle worker,
 - duplicate verification for high-value outputs.
+
+## Neuro-Cognitive Distributed Boundaries
+
+Distributed workers may run deterministic subjobs for:
+
+- embedding refresh,
+- clustering,
+- source hash checks,
+- feature extraction,
+- replay regression execution,
+- source anchor refresh proposals,
+- context-boundary drill evaluation,
+- procedure validation checks that produce evidence only.
+
+Workers must not:
+
+- approve mutation commands,
+- write claims, belief states, procedure maturity, replay results, or Qdrant points directly,
+- promote simulation output,
+- create learning outcomes as accepted truth,
+- bypass access policy or source scope.
+
+Coordinator acceptance must validate input hash, output hash, source scope, worker capability, algorithm/profile version, policy scope, and idempotency state before any result is submitted to mutation authority or review.

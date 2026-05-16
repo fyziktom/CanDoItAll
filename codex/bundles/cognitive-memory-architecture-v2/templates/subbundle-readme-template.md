@@ -18,7 +18,7 @@
 
 ## Exact Source References
 
-- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture\README.md
+- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\README.md
 
 ## Deliverables
 

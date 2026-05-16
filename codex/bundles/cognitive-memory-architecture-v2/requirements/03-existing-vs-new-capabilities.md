@@ -45,6 +45,18 @@
 | Learning task planner | convert approved proposals into scoped learning tasks. |
 | Knowledge probing integration | generate probing questions and consume probing outcomes as gap evidence. |
 | Night Reflection UI | show top knowledge improvement opportunities and approval actions. |
+| Evidence anchor ledger | fine-grained source grounding for claims, procedures, reviews, and regressions. |
+| Claim/evidence/belief ledger | atomize truth below memory items and preserve support/attack/scope/validity state. |
+| Memory mutation authority | command-based authoritative writes with idempotency, audit, review, and projection invalidation. |
+| Entity/context binding | prevent semantically similar but operationally incompatible memories from merging or substituting. |
+| Cognitive workspace service | active scoped working memory with focus slots, goals, open questions, and inhibition. |
+| Attention router | choose recall, answer, clarification, source audit, probe, review, replay, learning proposal, or abstention. |
+| Prediction error engine | record expected-vs-observed mismatches from probes, workflows, QA, procedures, and high-risk answers. |
+| Salience signal ledger | preserve novelty, surprise, risk, usefulness, rework, user interest, source weakness, and calibration risk as dimensions. |
+| Temporal episode/replay scheduler | preserve ordered experience and prioritize replay/rehearsal without promoting truth directly. |
+| Procedural skill memory | model procedures as skill graphs with maturity, validation, failure modes, and automation policy. |
+| Simulation sandbox | keep planning and analogies speculative until source-backed and reviewed. |
+| Metamemory answer gate | decide whether to answer, warn, clarify, source-audit, probe, review, request learning, or abstain. |
 
 ## Closed Projection-Boundary Changes to Existing RAG Driver
 
@@ -109,6 +121,7 @@ V1.1:
 
 - A display priority score may exist only for UI sorting.
 - Core decisions must preserve vector dimensions, evidence refs, Pareto/category metadata, ROI estimate, and explanation.
+- Prediction errors, salience signals, replay outcomes, answer-gate decisions, and contested claims may become evidence contributors but never direct truth.
 - Learning tasks must respect local-first/offline mode and source approval policy.
 - Learning-derived memory remains draft until source refs and validation requirements are satisfied.
 - Cross-project learning opportunities must not leak project-private source content.

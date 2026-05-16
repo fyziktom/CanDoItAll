@@ -18,12 +18,15 @@
 - `05-recall-orchestrator` must distinguish scope and project context.
 - `06-consolidation-engine` must create reviewable promotion candidates.
 - `08-human-review-ui` should expose promotion decisions before high-risk activation.
+- `12-epistemic-drive-engine` should be available when cross-project gaps or learning opportunities are promoted globally.
+- `14-neuro-foundation-claim-evidence-ledger` must provide entity/context boundary policy and mutation authority for global promotion.
+- `19-metamemory-abstention-calibration` must provide answer-gate context-boundary behavior for cross-project recall.
 
 ## Exact Source References
 
-- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture\architecture\03-memory-taxonomy-and-data-model.md
-- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture\architecture\05-recall-orchestrator.md
-- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture\architecture\10-security-governance-and-provenance.md
+- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\architecture\03-memory-taxonomy-and-data-model.md
+- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\architecture\05-recall-orchestrator.md
+- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\architecture\10-security-governance-and-provenance.md
 - C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench\Workbench\ProjectWorkbenchModels.cs
 - C:\repositories\CanDoItAll.AgentFramework.SemanticCompletion\src\CanDoItAll.AgentFramework.SemanticCompletion.Driver\Semantics\SemanticClassifier.cs
 

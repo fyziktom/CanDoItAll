@@ -1,37 +1,88 @@
-# Subbundle 08-human-review-ui
+# 08 Human Review UI
+
+## Status
+
+- Ready after recall and consolidation traces exist.
 
 ## Objective
 
-Add review queue, memory item detail, recall trace viewer, consolidation run viewer, and procedure library V1.
+- Provide operator UI for memory review, source evidence, recall traces, consolidation health, projection health, and memory detail inspection.
 
-## Inputs
+## Covered Inputs
 
-- Existing CanDoItAll main solution.
-- Existing RAG/Qdrant driver where relevant.
-- Existing SemanticCompletion/semantic driver where relevant.
-- This architecture bundle.
+- Requirements FR-016, FR-020, NFR-007, NFR-008, and NFR-011.
+- UI/operator experience architecture.
 
-## Implementation Rules
+## Prerequisites
 
-- Preserve source provenance.
-- Do not make Qdrant the source of truth.
-- Keep comments in source code in English.
-- Keep module boundaries explicit.
-- Add unit tests for non-happy paths.
-- Prefer typed models over unstructured JSON, but allow JSON metadata for future extension.
+- `05-recall-orchestrator` must provide traces.
+- `06-consolidation-engine` must create review items.
+- `14-neuro-foundation-claim-evidence-ledger` must provide claim/evidence/context/review targets.
+- `17-temporal-replay-scheduler` and `18-procedural-skill-memory-simulation` should exist when review queues expose replay or procedure skill decisions.
+- Existing UI component conventions must be followed.
 
-## Required Output
+## Exact Source References
 
-- Code changes.
-- Tests.
-- Short implementation report.
-- List of any architectural deviations.
-- Evidence of build/test results when applicable.
+- C:\repositories\CanDoItAll\src\CanDoItAll.Components.BaseLib\CanDoItAll.Components.BaseLib.csproj
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor.cs
+- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\architecture\11-ui-and-operator-experience.md
+- C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj
 
-## QA Questions
+## Deliverables
 
-1. Does the implementation preserve raw source references?
-2. Can derived data be rebuilt?
-3. Is access/redaction policy respected?
-4. Are failures and edge cases tested?
-5. Does the implementation avoid merging semantically similar but context-separated knowledge incorrectly?
+- Memory explorer page.
+- Review queue page.
+- Recall trace viewer.
+- Consolidation and projection health views.
+- Component/browser validation evidence.
+
+## Dependency Impact
+
+- UI consumes application services only.
+- Review decisions mutate memory through service methods with policy and trace.
+- Components should fit existing BaseLib/Radzen patterns if present in the host project.
+
+## Validation Depth
+
+- Component tests for rendering and state transitions.
+- Playwright evidence for review, trace, and health routes.
+- Accessibility and responsive checks for dense operational pages.
+
+## Implementation Steps
+
+- Add review list/detail views.
+- Add recall trace and source evidence panels.
+- Add consolidation/projection health views.
+- Wire accept/reject/defer review actions through services.
+
+## Do Not Do
+
+- Do not build a marketing or landing page.
+- Do not put domain logic in Blazor components.
+- Do not hide evidence behind generated summaries only.
+
+## Acceptance Checklist
+
+- Operators can see why memory was recalled or flagged.
+- Review actions are explicit and auditable.
+- UI shows unavailable projection or failed consolidation state clearly.
+
+## Proof Required
+
+- Component test results.
+- Playwright screenshots for desktop and mobile/dense viewport where relevant.
+- Review action persistence evidence.
+
+## Browser Validation Logging
+
+- Record route, viewport, screenshot path, and result in `reviews/01-execution-report.md`.
+- Include at least review queue, trace viewer, and projection/consolidation health routes.
+
+## Progression Gate
+
+- Proceed to closure only after review and trace evidence are visible to operators.
+
+## Suggested Agent Prompt
+
+- Implement the Cognitive Memory operator UI using existing component conventions and provide browser evidence for review, trace, and health workflows.

@@ -114,7 +114,10 @@ public sealed record MemoryItemQuery(
     IReadOnlyList<MemoryType> Types,
     IReadOnlyList<string> Tags,
     IReadOnlyList<string> Scopes,
-    MemoryValidationState? MinimumValidationState,
+    IReadOnlyList<MemoryValidationState> AllowedValidationStates,
+    IReadOnlyList<MemoryValidationState> ExcludedValidationStates,
+    bool RequireHumanApprovedForHighRisk,
+    bool AllowDraftOnlyForReviewMode,
     int Limit);
 
 public sealed record MemoryRelationQuery(

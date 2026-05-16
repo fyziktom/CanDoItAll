@@ -23,6 +23,7 @@ public sealed record RecallRequest(
     Guid ProjectId,
     string Query,
     RecallIntent Intent,
+    Guid? WorkspaceFrameId,
     MemoryAccessContext AccessContext,
     RecallOptions Options);
 
@@ -49,6 +50,9 @@ public sealed record MemoryAccessContext(
 
 public sealed record RecallResult(
     Guid TraceId,
+    Guid? WorkspaceFrameId,
+    Guid? AttentionDecisionId,
+    Guid? AnswerGateDecisionId,
     RecallIntent Intent,
     IReadOnlyList<RecallCandidate> Candidates,
     MemoryContextPack ContextPack,
@@ -64,6 +68,9 @@ public sealed record RecallCandidate(
     double ActivationScore,
     double ConfidenceScore,
     double FinalScore,
+    IReadOnlyList<Guid> SelectedClaimIds,
+    IReadOnlyList<Guid> InhibitedByContextFrameIds,
+    string? InhibitionReason,
     string SelectionReason);
 
 public sealed record MemoryContextPack(
@@ -87,6 +94,9 @@ public sealed record RecallTrace(
     Guid ProjectId,
     string Query,
     RecallIntent Intent,
+    Guid? WorkspaceFrameId,
+    Guid? AttentionDecisionId,
+    Guid? AnswerGateDecisionId,
     IReadOnlyList<RecallTraceStage> Stages,
     Guid? ContextPackId,
     DateTimeOffset CreatedAtUtc);

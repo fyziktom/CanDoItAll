@@ -16,15 +16,18 @@
 ## Prerequisites
 
 - `04-memory-taxonomy-and-projections` must provide canonical memory and projection state.
+- `01a-common-drivers-helpers-and-ef-guardrails` must provide lease, idempotency, batch, source-generated JSON, and EF bulk-operation guidance.
+- `14-neuro-foundation-claim-evidence-ledger` must provide mutation authority, evidence anchors, claims, and context frames.
+- `16-prediction-error-salience-signals` must provide durable signal/error evidence that consolidation can consume.
 - Source snapshot contracts for Process and Workflow data must be available or explicitly staged.
 
 ## Exact Source References
 
 - C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Persistence\Entities\ProcessRuntimeModels.cs
 - C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowExecutorContracts.cs
-- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture\architecture\06-consolidation-engine.md
-- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture\contracts\csharp\ConsolidationContracts.cs
-- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture\architecture\13-operational-modes-and-scale.md
+- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\architecture\06-consolidation-engine.md
+- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\contracts\csharp\ConsolidationContracts.cs
+- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\architecture\13-operational-modes-and-scale.md
 
 ## Deliverables
 
@@ -43,6 +46,7 @@
 
 - Unit tests for idempotent extraction and duplicate suppression.
 - Integration tests for run resume, failure recording, and review handoff.
+- EF/performance tests for bounded batches, cursor advancement, stale projection marking, and safe bulk state transitions.
 
 ## Implementation Steps
 
