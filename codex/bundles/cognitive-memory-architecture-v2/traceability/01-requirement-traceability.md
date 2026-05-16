@@ -12,10 +12,10 @@
 | FR-008 Qdrant Projection | `03-semantic-and-rag-adapters` | Projection adapter integration tests. |
 | FR-009 Rebuildable Projection | `04-memory-taxonomy-and-projections` | Projection rebuild test from durable records. |
 | FR-010 Recall Orchestration | `05-recall-orchestrator` | Context-pack and trace tests. |
-| FR-011 Working Memory | `07-maf-workflow-integration` | Workflow/agent run context isolation test. |
-| FR-012 Episodic Memory | `06-consolidation-engine` | Process/workflow episode extraction test. |
-| FR-013 Procedural Memory | `06-consolidation-engine` | Procedure mining and review handoff test. |
-| FR-014 Reflection | `06-consolidation-engine` | Reflection record creation with evidence. |
+| FR-011 Working Memory | `15-cognitive-workspace-attention-router` + `07-maf-workflow-integration` | Workspace frame, focus/inhibition, expiry, and MAF context isolation tests. |
+| FR-012 Episodic Memory | `06-consolidation-engine` + `17-temporal-replay-scheduler` | Process/workflow episode extraction plus ordered episode/replay tests. |
+| FR-013 Procedural Memory | `18-procedural-skill-memory-simulation` + `06-consolidation-engine` | Procedure skill graph, maturity, failure-mode, review, and consolidation handoff tests. |
+| FR-014 Reflection | `06-consolidation-engine` + `17-temporal-replay-scheduler` | Reflection evidence, episode linkage, replay safety, and source-backed revision tests. |
 | FR-015 Consolidation | `06-consolidation-engine` | Idempotent consolidation run and cursor tests. |
 | FR-016 Human Review | `08-human-review-ui` | Review decision persistence and browser evidence. |
 | FR-017 MAF Integration | `07-maf-workflow-integration` | MAF context contributor contract test. |
@@ -73,6 +73,17 @@
 | NFR-034 No Scalar-Only Behavior Scoring | `01b-score-geometry-driver` | Analyzer/grep and contract tests reject behavior-affecting `FinalScore`, untyped `ScoreBreakdown`, scalar-only replay priority, and scalar-only answer confidence. |
 | NFR-035 Versioned Score Spaces | `01b-score-geometry-driver` | Score vector/shape/evaluation records store score space kind, schema version, normalization profile, algorithm version, evidence refs, and missing-dimension policy. |
 | NFR-036 Score Geometry Queryability And Performance | `01b-score-geometry-driver` | EF query/index proof for score components/evaluation traces and performance scan for hot score evaluation paths. |
+
+## Execution Control Traceability Addendum
+
+| Requirement | Primary artifact | Validation proof |
+|---|---|---|
+| EXC-001 Durable Phase Ledger | `checklists/cognitive-memory-implementation-control.xlsx` | `Phase Gates` contains all 24 phases with status, prerequisites, gate evidence, and downstream dependency notes. |
+| EXC-002 Phase Checklist Tracking | `checklists/cognitive-memory-implementation-control.xlsx` | `Phase Acceptance Checklist` maps every phase to concrete checklist items and required proof. |
+| EXC-003 Proof Path Tracking | `checklists/cognitive-memory-implementation-control.xlsx` + `reviews/01-execution-report.md` | `Validation Evidence` rows and execution-report rows agree before phase closure. |
+| EXC-004 Handoff Safety | `checklists/cognitive-memory-implementation-control.xlsx` + `plan/01-phase-plan.md` | `Handoff Log` records current phase, branch/commit, blockers, downstream permission, and reopened prerequisites. |
+| EXC-005 Subbundle Mirror Consistency | `subbundles/` + `plan/subbundles/` | Mirror folders remain byte-equivalent after edits; divergence blocks implementation. |
+| EXC-006 Reopen Discipline | `analysis/02-assumptions-and-risks.md` + `checklists/cognitive-memory-implementation-control.xlsx` | Reopen triggers mark upstream rows `Reopened` or downstream rows `Blocked` instead of pushing weak proof downstream. |
 
 ## Score Geometry Artifact Map
 

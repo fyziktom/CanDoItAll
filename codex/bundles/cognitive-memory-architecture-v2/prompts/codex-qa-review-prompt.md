@@ -19,6 +19,8 @@ Review the implemented Cognitive Memory subbundle for correctness, durability, s
 11. Does Epistemic Drive preserve vectors/evidence instead of scalar-only priority?
 12. Are learning proposals approval-gated and source-grounded?
 13. Do probing results update gap evidence without becoming automatic truth?
+14. Do workbook phase rows, proof paths, handoff log, and `reviews/01-execution-report.md` agree?
+15. Do corrections, stale refresh, probing, and learning outcomes preserve mutation authority, revision lineage, audit, and projection invalidation?
 
 ## Required Output
 
@@ -45,3 +47,6 @@ Fail the implementation if any of these occur:
 - Epistemic Drive implemented as only a final scalar score,
 - external source study or high-impact memory update without required approval,
 - learning-derived canonical/procedure record without source refs.
+- workbook/execution-report mismatch for status, proof, blockers, or downstream permission,
+- downstream phase started while prerequisite proof is blocked, reopened, or missing,
+- active claim or belief state overwritten without revision lineage and audit.

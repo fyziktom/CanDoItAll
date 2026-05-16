@@ -5,8 +5,14 @@
 - Ready after `01a-common-drivers-helpers-and-ef-guardrails`.
 - Critical foundation for recall, attention, belief, salience, replay, probing, answer gating, Epistemic Drive, and cross-project promotion.
 
-## Objective
+## Execution Control
 
+- Before editing code, update `C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\checklists\cognitive-memory-implementation-control.xlsx`.
+- Mark this subbundle `In Progress`, verify prerequisite rows are `Passed`, and record target branch/commit.
+- During implementation, update owned checklist rows and proof paths.
+- Before closure, update workbook `Phase Gates`, `Phase Acceptance Checklist`, `Validation Evidence`, `Handoff Log`, and `reviews/01-execution-report.md`.
+- If evidence is missing or an upstream assumption fails, mark the subbundle `Blocked` and stop downstream work.
+## Objective
 Implement the generic score geometry foundation: typed score spaces, reusable dimensions, vector snapshots, shapes/regions, scalar projection policy, evaluation traces, deterministic fakes, and validation helpers.
 
 ## Covered Inputs

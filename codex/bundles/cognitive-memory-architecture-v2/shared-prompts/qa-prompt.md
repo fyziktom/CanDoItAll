@@ -15,6 +15,8 @@ Prioritize:
 - learning proposal approval gates,
 - source-grounded learning outcomes,
 - high-volume processing limits,
+- implementation-control workbook consistency,
+- reconsolidation/revision lineage for corrected memory,
 - browser evidence for operator UI.
 
 Reject the subbundle if:
@@ -30,5 +32,9 @@ Reject the subbundle if:
 - Epistemic Drive stores only a scalar priority score,
 - learning workflows read external sources without required approval,
 - learning-derived records lack source refs.
+- workbook rows, proof paths, and `reviews/01-execution-report.md` disagree,
+- a downstream phase starts with a prerequisite phase blocked, reopened, or lacking proof,
+- correction/probe/learning paths overwrite active claims without mutation authority, revision lineage, audit, and projection invalidation.
 
 Record findings in `reviews/01-execution-report.md`.
+Also update `checklists/cognitive-memory-implementation-control.xlsx` with the QA decision and evidence paths.

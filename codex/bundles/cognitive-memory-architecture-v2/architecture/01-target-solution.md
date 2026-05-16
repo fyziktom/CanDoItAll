@@ -36,29 +36,41 @@ source anchor -> evidence anchor -> atomic claim -> belief state -> memory item/
 
 `MemoryItem` remains useful as a chunk/container and summary surface, but it is no longer the only belief unit. Authoritative memory changes go through mutation commands with idempotency, evidence checks, optimistic concurrency, review policy, audit events, and projection invalidation.
 
-## Recommended Project Shape
+## Minimum Viable Project Shape
+
+Start smaller than the earlier project split implied. The first implementation must prove module composition, EF model registration, source snapshot consumption, mutation authority, and recall traces before creating a wide set of sibling projects.
 
 | Project | Responsibility |
 |---|---|
-| `CanDoItAll.CognitiveMemory.Abstractions` | Contracts shared by source adapters, MAF, workflows, plugins, and tests. |
-| `CanDoItAll.CognitiveMemory.Core` | Source hashing, canonicalization orchestration, activation, recall, consolidation, relation detection, policy-independent logic. |
-| `CanDoItAll.CognitiveMemory.Rag` | Adapter over `IRagDriver` and Qdrant projection behavior. |
-| `CanDoItAll.CognitiveMemory.Semantics` | Adapter over SemanticCompletion embeddings, ranking, and classification. |
-| `CanDoItAll.CognitiveMemory.Maf` | MAF context contributor, memory tools, workflow executor integration. |
-| `CanDoItAll.Modules.CognitiveMemory` | EF entities, configurations, repositories, application services, source adapter registration, UI route registration. |
-| `CanDoItAll.Modules.CognitiveMemory.Components` | Blazor components for dashboard, detail, trace, review, and run viewers. |
+| `CanDoItAll.Modules.CognitiveMemory` | Initial owning module: EF entities/configurations, application services, source adapter registration, mutation authority, recall/consolidation services, workflow registration, and UI route registration. |
+| `CanDoItAll.CognitiveMemory.Abstractions` | Add only if another product project must reference stable contracts without depending on the module implementation. Candidate contracts: MAF context contribution, workflow executors, source adapter contracts, and typed recall/query DTOs. |
+
+Deferred splits:
+
+- `CanDoItAll.CognitiveMemory.Core` only after policy-independent domain logic is large enough to justify separate test/build ownership.
+- `CanDoItAll.CognitiveMemory.Rag` only after the RAG adapter needs independent packaging or provider-specific test isolation.
+- `CanDoItAll.CognitiveMemory.Semantics` only after SemanticCompletion wrapping becomes more than a thin adapter.
+- `CanDoItAll.CognitiveMemory.Maf` only if MAF integration requires a separate dependency direction from the module.
+- `CanDoItAll.Modules.CognitiveMemory.Components` only if UI components need to be reused outside the module.
+
+This keeps the first change set maintainable and prevents premature project sprawl.
 
 ## First Vertical Slice
 
 ```text
 Workbench source snapshot
   -> source manifest/items
-  -> canonical memory item
-  -> relation/projection metadata
-  -> Qdrant or lexical projection
-  -> recall context pack
-  -> recall trace viewer
+  -> evidence anchors and context frames
+  -> atomic claims through mutation authority
+  -> canonical memory item and relation metadata
+  -> lexical/relational projection first, Qdrant optional after adapter gate
+  -> score-geometry-backed recall trace
+  -> workspace focus and inhibition update
+  -> metamemory answer gate decision
+  -> recall context pack and trace/review UI
 ```
+
+Do not skip the claim/evidence, score-geometry, workspace, and answer-gate surfaces just to reach a visible recall demo faster. A projection-first demo would prove the wrong architecture.
 
 ## Critical Boundaries
 

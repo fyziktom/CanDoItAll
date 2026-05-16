@@ -5,8 +5,14 @@
 - Ready after `01b-score-geometry-driver`, `13a-probing-core-regression-calibration`, `18-procedural-skill-memory-simulation`, and `05-recall-orchestrator`.
 - Required before user/agent answer rendering is considered safe.
 
-## Objective
+## Execution Control
 
+- Before editing code, update `C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\checklists\cognitive-memory-implementation-control.xlsx`.
+- Mark this subbundle `In Progress`, verify prerequisite rows are `Passed`, and record target branch/commit.
+- During implementation, update owned checklist rows and proof paths.
+- Before closure, update workbook `Phase Gates`, `Phase Acceptance Checklist`, `Validation Evidence`, `Handoff Log`, and `reviews/01-execution-report.md`.
+- If evidence is missing or an upstream assumption fails, mark the subbundle `Blocked` and stop downstream work.
+## Objective
 Add an answer-time metamemory gate that uses source sufficiency, context fit, belief state, confidence calibration, contradiction risk, staleness, redaction, procedure maturity, risk level, and access policy to decide whether to answer, warn, clarify, audit, probe, review, request learning, or abstain.
 
 ## Covered Inputs

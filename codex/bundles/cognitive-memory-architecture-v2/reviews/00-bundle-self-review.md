@@ -17,6 +17,9 @@
 - Epistemic Drive and distributed compute were too early in the old order. They now wait until project-scoped recall, consolidation, review, MAF integration, and probing evidence are stable enough to consume safely.
 - The neuro-cognitive patch exposed a deeper issue: claim/evidence/context/mutation authority, workspace/attention, signal ledgers, replay, procedure skill maturity, and answer gating affect earlier phases. They are now prerequisites rather than late appendix work.
 - The scoring review exposed a cross-cutting flaw: recall, attention, belief, replay, probing, answer confidence, and cross-project promotion could still regress to local weighted-sum scoring. A new score geometry foundation now closes that before downstream phases start.
+- The execution-control review exposed a delivery flaw: markdown phase gates alone are not enough for a long multi-agent implementation. A structured workbook phase ledger is now required and must stay synchronized with the execution report.
+- The original project split was too eager. The implementation plan now starts with the smallest viable module/abstraction shape and defers additional Cognitive Memory projects until dependency direction or test isolation proves they are useful.
+- The first visible vertical slice previously risked becoming projection-first. It now explicitly includes evidence anchors, claims, context frames, mutation authority, score geometry, workspace focus/inhibition, and answer gating before recall is treated as architecturally valid.
 - Contract sketches now make mutation authority the public write boundary, replace ordinal validation-state filtering with allowed/excluded policy filters, and replace untyped projection payloads with typed payload values.
 - Epistemic Drive is now modeled as evidence-driven metacognition, not random curiosity or scalar-only priority.
 - Learning proposals are approval-gated and source-grounded; generated learning output remains draft until validated.
@@ -33,6 +36,8 @@
 - Before source ingestion starts, validate evidence anchor, claim, context frame, entity alias, mutation command, and audit persistence shape. If this is wrong, all downstream memory proof becomes suspect.
 - Before source ingestion or recall starts, validate score-space definitions, score vector persistence, shape evaluation, scalar projection policy, and scalar-only rejection checks. If this is wrong, downstream recall/replay/learning proof becomes suspect.
 - Before recall starts, validate workspace, attention, prediction error, and salience signal contracts. If recall bypasses these, the system regresses to context-pack RAG.
+- Before each implementation phase starts or closes, update `checklists/cognitive-memory-implementation-control.xlsx` and confirm it matches `reviews/01-execution-report.md`.
+- Before accepting correction, probing, stale refresh, or learning implementation, validate reconsolidation/revision lineage: previous claim version, evidence anchors, mutation command, audit event, review state where required, and projection invalidation.
 
 ## Score Geometry Review
 

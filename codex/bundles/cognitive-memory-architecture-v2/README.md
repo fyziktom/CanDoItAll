@@ -14,6 +14,8 @@ The neuro-cognitive patch adds the missing control and belief-management layer: 
 
 The score-geometry update adds the missing reusable scoring foundation. Recall, attention, belief, salience, replay, probing, answer gating, Epistemic Drive, and cross-project promotion must use typed score spaces, vectors, shapes/regions, scalar projection policy, and evaluation traces instead of local add/subtract formulas.
 
+The execution-control update adds a durable phase ledger for implementation agents. The implementation is long enough that markdown alone is not a reliable memory surface; agents must keep the checklist workbook and execution report synchronized after every phase.
+
 This bundle is architecture and planning only. It does not authorize implementation of the Cognitive Memory module.
 
 ## Outcome Contract
@@ -45,10 +47,13 @@ Qdrant/RAG is not the memory. It is a rebuildable projection layer. The durable 
 This bundle was refreshed against the live repositories:
 
 - `C:\repositories\CanDoItAll`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Core`
 - `C:\repositories\CanDoItAll.AgentFramework.Rag`
 - `C:\repositories\CanDoItAll.AgentFramework.SemanticCompletion`
 
 The CodeAnalytics snapshot used for the main CanDoItAll source inspection was `snap-20260515230800-1b0ae250`, scoped to composition, infrastructure, Workbench, Processes, Automation, SchedulerPlanner, AgentFramework, and SharedKernel projects. Separate snapshots were taken for the RAG driver, Qdrant driver, and SemanticCompletion driver. Since the first architecture pass, the source/MAF boundary and projection-boundary prerequisite bundles were implemented and validated; Cognitive Memory implementation itself has still not started.
+
+The 2026-05-16 execution-control review also used CodeAnalytics snapshot `snap-20260516150857-2c8fb8f3`, focused on `CanDoItAll.AgentFramework.Maf`, `CanDoItAll.AgentFramework.Core`, source snapshot providers, Workbench, Processes, Automation, SchedulerPlanner, Infrastructure, SharedKernel, and relevant test projects.
 
 Additional inspection of the supplied current code confirms that Workbench, Process, and Workflow source snapshot providers are already present and registered; integration tests validate deterministic paging, redaction, restricted hash policy, and Workbench z-index metadata extraction. This update therefore focuses on consuming those boundaries and adding the missing probing/evaluation layer rather than reopening the prerequisite boundary design.
 
@@ -87,6 +92,7 @@ Additional inspection of the supplied current code confirms that Workbench, Proc
 - `traceability/` requirement-to-subbundle mapping
 - `shared-prompts/` reusable implementation and QA prompts
 - `subbundles/` numbered execution-ready workstreams
+- `checklists/` implementation-control workbook and checklist rules
 - `reviews/` bundle self-review and execution report seed
 
 ## Recommended Reading Order
@@ -152,11 +158,21 @@ Root validation closure remains named `11-validation-and-architecture-closure` f
 
 - Keep the mermaid dependency map, critical-subbundle notes, and phase gates current in `plan/01-phase-plan.md`.
 - If the bundle is resumed after compaction or by a different agent, use this README, the active subbundle README, and `reviews/01-execution-report.md` as durable state.
+- Also use `checklists/cognitive-memory-implementation-control.xlsx` as the authoritative phase ledger. Do not advance a downstream phase when the workbook and execution report disagree.
+
+## Implementation Control
+
+- Workbook: `checklists/cognitive-memory-implementation-control.xlsx`
+- Rules: `checklists/README.md`
+- Every implementation phase must update the workbook before starting, during execution, and before closure.
+- The root `subbundles/` files are authoritative. The `plan/subbundles/` files are synchronized mirrors and must remain byte-equivalent when edited.
+- If an agent resumes after context compaction, it must read the workbook `Summary`, `Phase Gates`, active subbundle README, and `reviews/01-execution-report.md` before making changes.
+- A phase cannot be marked `Passed` without proof paths in the workbook and a matching execution-report row.
 
 ## Validation Summary
 
-- Bundle preparation status: `Prepared after prerequisite sync`
-- Bundle readiness gate: `Prepared-stage validation passed`
+- Bundle preparation status: `Prepared after execution-control repair`
+- Bundle readiness gate: `Prepared-stage validation passed after execution-control repair`
 - Epistemic Drive status: `Architecture added, implementation not started`
 - Interactive Memory Probing status: `Architecture added, implementation not started`
 - Neuro-cognitive patch status: `Architecture integrated, implementation not started`

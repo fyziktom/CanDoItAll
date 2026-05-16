@@ -5,8 +5,14 @@
 - Ready after `01b-score-geometry-driver`, `04-memory-taxonomy-and-projections`, and `14-neuro-foundation-claim-evidence-ledger`.
 - Critical foundation for recall, probing, MAF, and answer gating.
 
-## Objective
+## Execution Control
 
+- Before editing code, update `C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\checklists\cognitive-memory-implementation-control.xlsx`.
+- Mark this subbundle `In Progress`, verify prerequisite rows are `Passed`, and record target branch/commit.
+- During implementation, update owned checklist rows and proof paths.
+- Before closure, update workbook `Phase Gates`, `Phase Acceptance Checklist`, `Validation Evidence`, `Handoff Log`, and `reviews/01-execution-report.md`.
+- If evidence is missing or an upstream assumption fails, mark the subbundle `Blocked` and stop downstream work.
+## Objective
 Add active working-memory frames and explainable attention routing so recall/probing/MAF flows know what is currently in focus and which operation should happen next.
 
 ## Covered Inputs

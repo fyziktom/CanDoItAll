@@ -4,8 +4,14 @@
 
 - Ready after `01b-score-geometry-driver`, `06-consolidation-engine`, and `16-prediction-error-salience-signals`.
 
-## Objective
+## Execution Control
 
+- Before editing code, update `C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\checklists\cognitive-memory-implementation-control.xlsx`.
+- Mark this subbundle `In Progress`, verify prerequisite rows are `Passed`, and record target branch/commit.
+- During implementation, update owned checklist rows and proof paths.
+- Before closure, update workbook `Phase Gates`, `Phase Acceptance Checklist`, `Validation Evidence`, `Handoff Log`, and `reviews/01-execution-report.md`.
+- If evidence is missing or an upstream assumption fails, mark the subbundle `Blocked` and stop downstream work.
+## Objective
 Make episodic memory sequence-aware and add prioritized replay/rehearsal scheduling driven by signals, prediction errors, risk, staleness, usefulness, contradiction pressure, and procedure maturity.
 
 ## Covered Inputs

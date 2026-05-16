@@ -98,6 +98,17 @@
 - [ ] Tests reject scalar-only recall ranking, attention routing, belief state, replay priority, probing assessment, answer confidence, and cross-project promotion.
 - [ ] Negative tests cover unapproved external study, missing learning source refs, high-risk draft promotion, duplicate proposal creation, probing failure handling, and Qdrant outage during proposal generation.
 
+## Implementation Control And Handoff
+
+- [ ] `checklists/cognitive-memory-implementation-control.xlsx` exists and contains all 24 phases from `plan/01-phase-plan.md`.
+- [ ] Every implementation phase updates workbook status before start, during execution, and before closure.
+- [ ] Every phase has owned checklist items with expected proof type and proof path columns.
+- [ ] Every closed phase has matching rows in workbook `Phase Gates`, workbook `Validation Evidence`, workbook `Handoff Log`, and `reviews/01-execution-report.md`.
+- [ ] No downstream phase starts while a prerequisite phase is `Blocked`, `Reopened`, `Not Started`, or missing proof.
+- [ ] The root `subbundles/` and mirrored `plan/subbundles/` README files remain byte-equivalent when subbundle plans change.
+- [ ] Any context-compaction or handoff resume begins from workbook `Summary`, workbook `Phase Gates`, active subbundle README, and `reviews/01-execution-report.md`.
+- [ ] Corrections, probe failures, stale-source refresh, and learning outcomes preserve reconsolidation/revision lineage before active claim or belief-state changes.
+
 ## Score Geometry
 
 - [ ] Score spaces are strongly typed and versioned for recall, attention, belief, salience, replay, probe assessment, answer gate, Epistemic need, mindmap similarity, activation, procedure maturity, and cross-project promotion.

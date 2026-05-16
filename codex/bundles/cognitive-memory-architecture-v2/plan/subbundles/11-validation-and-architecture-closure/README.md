@@ -4,8 +4,14 @@
 
 - Ready after all implementation subbundles.
 
-## Objective
+## Execution Control
 
+- Before editing code, update `C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\checklists\cognitive-memory-implementation-control.xlsx`.
+- Mark this subbundle `In Progress`, verify prerequisite rows are `Passed`, and record target branch/commit.
+- During implementation, update owned checklist rows and proof paths.
+- Before closure, update workbook `Phase Gates`, `Phase Acceptance Checklist`, `Validation Evidence`, `Handoff Log`, and `reviews/01-execution-report.md`.
+- If evidence is missing or an upstream assumption fails, mark the subbundle `Blocked` and stop downstream work.
+## Objective
 - Prove the full Cognitive Memory architecture meets source truth, recall, consolidation, projection, UI, distributed compute, and cross-project safety requirements.
 
 ## Covered Inputs

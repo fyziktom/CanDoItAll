@@ -4,6 +4,14 @@
 
 - Ready after prerequisite gate.
 
+## Execution Control
+
+- Before editing code, update `C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\checklists\cognitive-memory-implementation-control.xlsx`.
+- Mark this phase `In Progress`, verify prerequisite rows are `Passed`, and record the target branch/commit.
+- During implementation, update owned checklist rows and proof paths.
+- Before closure, update workbook `Phase Gates`, `Phase Acceptance Checklist`, `Validation Evidence`, `Handoff Log`, and `reviews/01-execution-report.md`.
+- If evidence is missing or an upstream assumption fails, mark the phase `Blocked` and stop downstream work.
+
 ## Objective
 
 - State the smallest implementation objective.

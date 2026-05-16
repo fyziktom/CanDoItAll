@@ -122,6 +122,10 @@
 ## Phase Progression
 
 - [ ] Each subbundle closes with a generic architecture review before the next dependent phase starts.
+- [ ] `checklists/cognitive-memory-implementation-control.xlsx` is current before each subbundle starts and closes.
+- [ ] Workbook `Phase Gates`, `Phase Acceptance Checklist`, `Validation Evidence`, `Handoff Log`, and `reviews/01-execution-report.md` agree for the active phase.
+- [ ] The root `subbundles/` and mirrored `plan/subbundles/` README files are still byte-equivalent after any subbundle-plan edit.
+- [ ] Blocked or reopened prerequisites stop downstream work instead of becoming residual risk notes.
 - [ ] The common driver/helper/EF guardrail phase closes before source ingestion, projection, recall, consolidation, review, probing, and learning phases start.
 - [ ] Score geometry closes before neuro foundation, taxonomy/projection, workspace/attention, salience, recall, replay, probing, answer gate, Epistemic Drive, cross-project, or distributed phases start.
 - [ ] Neuro foundation closes before source ingestion, taxonomy/projection, recall, consolidation, probing, learning, cross-project, or distributed phases start.
@@ -131,3 +135,11 @@
 - [ ] Probing backend core closes before the Dialogue Workbench UI phase starts.
 - [ ] Epistemic Drive does not consume probe outcomes until the probing core has durable evidence/regression/calibration records.
 - [ ] Distributed compute starts only after project-scoped recall, consolidation, review, probing, and learning proposal behavior are validated.
+
+## Reconsolidation And Revision Lineage
+
+- [ ] Corrections from users or probes create evidence/review/mutation commands before active claims change.
+- [ ] Stale source refresh preserves old claim versions, source hashes, supersession links, and belief-state transitions.
+- [ ] Learning outcomes produce draft records until source-backed validation and policy review close.
+- [ ] Projection invalidation follows authoritative memory mutation and does not run as a standalone truth update.
+- [ ] Soft forgetting uses dormant, stale, superseded, or retired-projection states; raw source deletion is not used as memory cleanup.

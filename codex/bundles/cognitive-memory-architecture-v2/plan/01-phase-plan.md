@@ -29,6 +29,25 @@ Dependency order is authoritative. Folder numbers for `12`, `13`, and `14-20` ar
 23. `20-architecture-integration-closure`
 24. `11-validation-and-architecture-closure`
 
+## Execution Control Ledger
+
+The implementation-control workbook is a required durable state artifact:
+
+- `C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\checklists\cognitive-memory-implementation-control.xlsx`
+
+The workbook owns structured status, checklist, proof, risk, and handoff tracking. `reviews/01-execution-report.md` remains the narrative execution report. Both must agree before a phase can close.
+
+Required workflow for every subbundle:
+
+1. Before implementation starts, set the phase row in `Phase Gates` to `In Progress`, confirm prerequisite rows are `Passed`, and record the branch/commit being used.
+2. During implementation, update owned rows in `Phase Acceptance Checklist` and add proof paths in `Validation Evidence` as soon as they exist.
+3. Before closure, set every owned checklist row to `Passed`, `Deferred`, or `Blocked`; add a `Handoff Log` row; update `reviews/01-execution-report.md`; then set the phase row to `Passed` only if the progression gate is satisfied.
+4. If downstream work exposes a weak upstream assumption, mark the current phase `Blocked`, reopen the upstream phase, and stop. Do not compensate in later phases.
+
+Status values are fixed: `Not Started`, `Ready`, `In Progress`, `Blocked`, `Passed`, `Deferred`, `Reopened`.
+
+The root `subbundles/` directory is authoritative. `plan/subbundles/` is a synchronized mirror and must remain byte-equivalent when subbundle plans change.
+
 Rationale:
 
 - Common drivers, helpers, fake providers, serialization policy, EF query policy, and performance guardrails must exist before source ingestion, adapters, taxonomy, recall, or probing start.
@@ -173,7 +192,7 @@ Before moving from any phase to the next, run a short architecture review and re
 - answer gates expose uncertainty instead of hiding it,
 - performance-sensitive paths have budgets and do not require Qdrant for correctness.
 
-If a phase fails one of these checks, reopen that phase or the earlier foundation it depends on. Do not push the problem downstream.
+Also update the workbook `Architecture Invariants` and `Handoff Log` sheets. If a phase fails one of these checks, reopen that phase or the earlier foundation it depends on. Do not push the problem downstream.
 
 ## Implementation Policy
 

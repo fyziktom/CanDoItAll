@@ -5,6 +5,7 @@ You are implementing one subbundle from `C:\repositories\CanDoItAll\codex\bundle
 Before editing code:
 
 - Read the root README, `plan/01-phase-plan.md`, the active subbundle README, `analysis/03-prerequisite-refactor-decision.md`, and `traceability/01-requirement-traceability.md`.
+- Read `checklists/README.md` and open `checklists/cognitive-memory-implementation-control.xlsx`. Set the active phase to `In Progress` only after prerequisite phase rows are `Passed`.
 - Confirm `00-prerequisite-boundary-gate` validates the target branch before starting any Cognitive Memory implementation. The current supplied code already contains the expected boundaries, but implementation must not assume that another branch does.
 - Keep changes limited to the active subbundle and its declared dependency impact.
 - Preserve source-of-truth boundaries: raw sources remain authoritative, durable memory remains authoritative over projections, and Qdrant/search/context packs remain rebuildable projections.
@@ -18,6 +19,9 @@ Before editing code:
 - Do not treat `RecallContextPack` as working memory; use cognitive workspace frames.
 - Do not let replay, simulation, probing feedback, distributed worker output, or generated summaries directly promote truth.
 - Do not render answers that bypass the metamemory answer gate where that subbundle has landed.
+- Do not add the full theoretical Cognitive Memory project split unless the active subbundle proves a real dependency-direction or test-isolation need. Start with the smallest viable module/abstraction shape.
+- Do not overwrite active claims or belief state from corrections, probes, stale refresh, or learning outcomes without mutation authority, evidence anchors, revision lineage, audit, and projection invalidation.
+- Do not proceed when the workbook and `reviews/01-execution-report.md` disagree about status, blockers, proof, or downstream permission.
 - Human approval is required before external study or high-impact memory updates.
 - All learning-derived canonical records and procedures require source refs.
 - Preserve multi-dimensional evidence for knowledge gaps, learning proposals, and learning outcomes.
@@ -28,3 +32,4 @@ Expected output:
 - Explain the smallest correct design choice.
 - Provide build/test/browser proof required by the subbundle.
 - Update `reviews/01-execution-report.md` for the active subbundle.
+- Update `checklists/cognitive-memory-implementation-control.xlsx`: phase status, checklist rows, validation evidence, risk/handoff rows, and downstream permission.

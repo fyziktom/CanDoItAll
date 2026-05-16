@@ -5,8 +5,14 @@
 - Ready after probing core, recall traces, human review UI, MAF context contribution, and source ingestion foundations are available.
 - Recommended to implement before or alongside full Epistemic Drive rollout.
 
-## Objective
+## Execution Control
 
+- Before editing code, update `C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\checklists\cognitive-memory-implementation-control.xlsx`.
+- Mark this subbundle `In Progress`, verify prerequisite rows are `Passed`, and record target branch/commit.
+- During implementation, update owned checklist rows and proof paths.
+- Before closure, update workbook `Phase Gates`, `Phase Acceptance Checklist`, `Validation Evidence`, `Handoff Log`, and `reviews/01-execution-report.md`.
+- If evidence is missing or an upstream assumption fails, mark the subbundle `Blocked` and stop downstream work.
+## Objective
 Implement the user-facing Dialogue Workbench and workflow/tool wrapper layer for the probing core. The backend probing truth-mutation, regression, and calibration rules belong to `13a-probing-core-regression-calibration`.
 
 ## Covered Inputs

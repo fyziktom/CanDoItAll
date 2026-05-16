@@ -17,6 +17,7 @@
 | Score geometry tests | score-space definitions, vector snapshots, shape matching, missing dimensions, scalar projections, and trace reproducibility. |
 | EF query-shape tests | no-tracking read queries, index coverage, paged result contracts, DTO projections, and no client evaluation on hot paths. |
 | Performance guardrail scans | .NET performance anti-pattern scan for hot-path implementation files plus allocation review for vector/context-pack paths. |
+| Execution-control checks | workbook/report agreement, phase prerequisite status, proof path completeness, and subbundle mirror consistency. |
 
 ## Golden Mindmap Test
 
@@ -44,6 +45,7 @@ Expected behavior:
 - Metadata-only change updates metadata hash if configured.
 - Deleted source produces retire/supersede candidate, not immediate raw deletion.
 - Large Workbench source fixtures prove source scanning is paged and does not materialize unbounded graph/source data before pagination.
+- Source refresh that changes a claim preserves previous claim version, evidence anchors, belief-state transition, mutation audit, and projection invalidation.
 
 ## EF And Persistence Tests
 
@@ -209,6 +211,7 @@ Test score-geometry effects:
 - Source availability and source quality affect category/action without erasing risk or uncertainty dimensions.
 - Learning proposal state transitions are audited.
 - Learning outcome records remain draft until validation requirements are met.
+- Reconsolidation after correction, probing, or learning creates mutation/review evidence before active belief state changes.
 
 ## Probing Integration Tests
 
@@ -255,6 +258,8 @@ Test score-geometry effects:
 - No learning-derived record replaces human-validated memory silently.
 - No simulation output or probe correction directly promotes active truth.
 - No public authoritative write path bypasses mutation authority.
+- Workbook `Phase Gates`, `Validation Evidence`, `Handoff Log`, and `reviews/01-execution-report.md` agree before a phase is approved.
+- Root and mirrored subbundle plans remain synchronized.
 
 ## Interactive Memory Probing Tests
 
