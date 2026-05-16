@@ -2,13 +2,13 @@
 
 ## Status
 
-- Architecture preparation only. No implementation has started.
+- Architecture preparation remains complete. Prerequisite boundaries and the follow-up boundary-hardening bundle are implemented and validated; Cognitive Memory implementation has not started.
 
 ## Subbundle Gate Results
 
 | Subbundle | Entry gate | Closure gate | Downstream dependencies checked | Progression result | Notes |
 |---|---|---|---|---|---|
-| 00-prerequisite-boundary-gate | Pending | Pending | Pending | Blocked until prerequisite-boundaries bundle is approved | Required before implementation. |
+| 00-prerequisite-boundary-gate | Passed | Passed | Checked | Passed - Cognitive Memory may start only by consuming the approved hardened boundaries | `cognitive-memory-prerequisite-boundaries` and `cognitive-memory-boundary-hardening` are validated prerequisites. Direct MAF private-provider edits and ad hoc source table reads remain out of bounds. |
 
 ## Browser Validation Analytics
 
@@ -19,7 +19,7 @@
 ## Analytics Review
 
 - Browser analytics are planned for UI and workflow subbundles only after implementation begins.
-- Architecture validation relies on source inspection, traceability, and prepared-stage bundle validation in this round.
+- Architecture validation now also relies on the completed boundary-hardening proof: targeted context contributor tests, source snapshot integration tests, and completed-stage validation for `codex/bundles/cognitive-memory-boundary-hardening`.
 
 ## Raw Note Closure
 

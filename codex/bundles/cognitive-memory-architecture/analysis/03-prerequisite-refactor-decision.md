@@ -36,17 +36,21 @@ Required refactor goals:
 ## Impact Projected Into Cognitive Memory
 
 - `subbundles/00-prerequisite-boundary-gate` has passed; Cognitive Memory implementation can start only by consuming the approved boundaries.
+- `codex/bundles/cognitive-memory-boundary-hardening` has also passed; source ingestion, recall, and MAF integration must consume the hardened paging/cursor, redaction/hash, and contributor-trace contracts.
 - `subbundles/02-workbench-and-source-ingestion` consumes the source snapshot contracts instead of direct table reads.
-- `subbundles/07-maf-workflow-integration` consumes the context contribution boundary instead of editing private MAF internals.
-- `subbundles/06-consolidation-engine` consumes source cursors and hashes, making idle processing resumable and incremental.
+- `subbundles/07-maf-workflow-integration` consumes the context contribution boundary and retained contributor traces instead of editing private MAF internals.
+- `subbundles/06-consolidation-engine` consumes source cursors and restricted hash policies, making idle processing resumable and incremental without projecting raw sensitive integrity hashes.
 
 ## Closure Evidence
 
 - `AgentContextContributionContracts.cs` defines the generic MAF context contribution contract and result model.
-- `MemorySourceSnapshotContracts.cs` defines source snapshot identity, hash, cursor, provenance, layout, permission, links, references, and storage contracts.
+- `AgentContextContributionContracts.cs` also defines contributor trace records and a trace collector for future recall/context audit.
+- `MemorySourceSnapshotContracts.cs` defines source snapshot identity, typed cursor failure, page/hash scope, restricted hash policy, provenance, layout, permission, links, references, and storage contracts.
 - Workbench, Process, and Workflow modules now provide read-only source adapters without referencing Cognitive Memory.
+- Process and Workflow source adapters now page through query-backed source slices. Workbench project-structure paging remains a documented bounded-source exception because the canvas assembly service currently returns the complete surface.
 - `dotnet build .\CanDoItAll.slnx --no-restore` passed with 0 warnings and 0 errors.
 - Targeted unit and integration tests for context contributors, Workbench snapshots, and runtime evidence providers passed.
+- Boundary-hardening targeted tests and completed-stage bundle validation passed.
 
 ## Non-Goals
 

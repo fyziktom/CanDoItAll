@@ -2,7 +2,7 @@
 
 ## Status
 
-- Ready after source paging and cursor contracts.
+- Completed
 
 ## Objective
 

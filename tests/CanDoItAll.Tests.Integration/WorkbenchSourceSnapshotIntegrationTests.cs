@@ -27,7 +27,7 @@ public sealed class WorkbenchSourceSnapshotIntegrationTests
                 ProjectObjectType.WorkItem,
                 "Snapshot task",
                 "Deterministic source item",
-                "This note is source evidence.",
+                "This note is source evidence. token=super-secret-token",
                 ParentNodeKey: null,
                 X: 42,
                 Y: 84,
@@ -35,7 +35,7 @@ public sealed class WorkbenchSourceSnapshotIntegrationTests
         await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
         {
             var record = await dbContext.Set<ProjectObjectRecord>().SingleAsync(item => item.NodeKey == customNode.Id);
-            record.MetadataJson = """{"zIndex":7,"workItem":{"description":"Metadata-backed layout extension"}}""";
+            record.MetadataJson = """{"zIndex":7,"workItem":{"description":"Metadata-backed layout extension"},"apiKey":"sk-workbench-secret123"}""";
             await dbContext.SaveChangesAsync();
         }
 
@@ -49,6 +49,8 @@ public sealed class WorkbenchSourceSnapshotIntegrationTests
         Assert.True(first.Manifest.TotalItemCount > first.Items.Count);
         Assert.True(first.Manifest.HasMore);
         Assert.NotNull(first.Manifest.NextCursor);
+        Assert.Equal(MemorySourceSnapshotHashScope.FullSnapshot, first.Manifest.SnapshotHashScope);
+        Assert.Equal(MemorySourceSnapshotProviderVersions.WorkbenchProjectStructure, first.Manifest.ProviderVersion);
 
         var resumed = await provider.ReadSnapshotAsync(new ProjectStructureSourceSnapshotRequest(
             projectId,
@@ -69,7 +71,46 @@ public sealed class WorkbenchSourceSnapshotIntegrationTests
         Assert.NotNull(snapshotNode.CreatedAtUtc);
         Assert.NotNull(snapshotNode.UpdatedAtUtc);
         Assert.Contains("This note is source evidence.", snapshotNode.Content, StringComparison.Ordinal);
+        Assert.Contains("[REDACTED]", snapshotNode.Content, StringComparison.Ordinal);
+        Assert.DoesNotContain("super-secret-token", snapshotNode.Content, StringComparison.Ordinal);
+        Assert.DoesNotContain("sk-workbench-secret123", snapshotNode.Layout?.MetadataJson ?? string.Empty, StringComparison.Ordinal);
+        Assert.Equal(MemorySourceAccessMode.Redacted, snapshotNode.Permission.AccessMode);
+        Assert.Equal(MemorySourceSensitivity.Sensitive, snapshotNode.Permission.Sensitivity);
+        Assert.True(snapshotNode.Permission.ContainsSensitivePayload);
+        Assert.Equal(MemorySourceHashClassification.RestrictedIntegrity, snapshotNode.HashPolicy.Classification);
+        Assert.False(snapshotNode.HashPolicy.Exportable);
         Assert.Contains(snapshotNode.Links, link => link.Kind == ProjectObjectLinkKind.Contains.ToString());
+
+        var invalidCursorException = await Assert.ThrowsAsync<MemorySourceSnapshotCursorException>(async () =>
+            await provider.ReadSnapshotAsync(new ProjectStructureSourceSnapshotRequest(
+                projectId,
+                new MemorySourceSnapshotCursor("not-a-supported-cursor"),
+                Take: 2)));
+        Assert.Equal(MemorySourceSnapshotCursorFailureReason.InvalidFormat, invalidCursorException.Reason);
+
+        var wrongKindCursor = MemorySourceSnapshotCursor.Create(
+            MemorySourceKind.ProcessRuntime,
+            projectId,
+            MemorySourceSnapshotProviderVersions.WorkbenchProjectStructure,
+            1,
+            first.Items[0].Id);
+        var wrongKindException = await Assert.ThrowsAsync<MemorySourceSnapshotCursorException>(async () =>
+            await provider.ReadSnapshotAsync(new ProjectStructureSourceSnapshotRequest(projectId, wrongKindCursor, Take: 2)));
+        Assert.Equal(MemorySourceSnapshotCursorFailureReason.SourceKindMismatch, wrongKindException.Reason);
+
+        var staleCursor = MemorySourceSnapshotCursor.Create(
+            MemorySourceKind.WorkbenchProjectStructure,
+            projectId,
+            MemorySourceSnapshotProviderVersions.WorkbenchProjectStructure,
+            1,
+            MemorySourceItemId.Create(
+                MemorySourceKind.WorkbenchProjectStructure,
+                projectId,
+                MemorySourceEntityKind.ProjectNode,
+                "deleted-node"));
+        var staleException = await Assert.ThrowsAsync<MemorySourceSnapshotCursorException>(async () =>
+            await provider.ReadSnapshotAsync(new ProjectStructureSourceSnapshotRequest(projectId, staleCursor, Take: 2)));
+        Assert.Equal(MemorySourceSnapshotCursorFailureReason.StaleAnchor, staleException.Reason);
     }
 
     private static async Task<Guid> CreateProjectAsync(ProjectsService projects)

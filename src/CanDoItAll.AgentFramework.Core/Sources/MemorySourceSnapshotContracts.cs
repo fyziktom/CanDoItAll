@@ -1,8 +1,16 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Core;
+
+public static class MemorySourceSnapshotProviderVersions
+{
+    public const string WorkbenchProjectStructure = "workbench-project-structure-v2";
+    public const string ProcessRuntime = "process-runtime-evidence-v2";
+    public const string WorkflowRuntime = "workflow-runtime-evidence-v2";
+}
 
 public interface IProjectStructureSourceSnapshotProvider
 {
@@ -35,6 +43,23 @@ public readonly record struct MemorySourceItemId
 
     public string Value { get; }
 
+    public static bool TryParse(MemorySourceItemId id, out MemorySourceItemKey key)
+    {
+        var parts = id.Value.Split(':', 4, StringSplitOptions.TrimEntries);
+        if (parts.Length != 4 ||
+            !Enum.TryParse(parts[0], ignoreCase: false, out MemorySourceKind sourceKind) ||
+            !Guid.TryParseExact(parts[1], "N", out var scopeId) ||
+            !Enum.TryParse(parts[2], ignoreCase: false, out MemorySourceEntityKind entityKind) ||
+            string.IsNullOrWhiteSpace(parts[3]))
+        {
+            key = default;
+            return false;
+        }
+
+        key = new MemorySourceItemKey(sourceKind, scopeId, entityKind, parts[3]);
+        return true;
+    }
+
     public static MemorySourceItemId Create(
         MemorySourceKind sourceKind,
         Guid scopeId,
@@ -47,6 +72,12 @@ public readonly record struct MemorySourceItemId
 
     public override string ToString() => Value;
 }
+
+public readonly record struct MemorySourceItemKey(
+    MemorySourceKind SourceKind,
+    Guid ScopeId,
+    MemorySourceEntityKind EntityKind,
+    string SourceEntityId);
 
 public readonly record struct MemorySourceSnapshotId
 {
@@ -80,7 +111,225 @@ public readonly record struct MemorySourceSnapshotCursor
 
     public string Value { get; }
 
+    public static MemorySourceSnapshotCursor Create(
+        MemorySourceKind sourceKind,
+        Guid scopeId,
+        string providerVersion,
+        int position,
+        MemorySourceItemId lastItemId,
+        string snapshotAnchor = "")
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(providerVersion);
+        if (position <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(position), "Cursor position must be greater than zero.");
+        }
+
+        var payload = new MemorySourceSnapshotCursorPayload(
+            sourceKind.ToString(),
+            scopeId,
+            providerVersion.Trim(),
+            position,
+            lastItemId.Value,
+            snapshotAnchor.Trim());
+        var json = JsonSerializer.Serialize(payload);
+        return new MemorySourceSnapshotCursor(Convert.ToBase64String(Encoding.UTF8.GetBytes(json)));
+    }
+
+    public static MemorySourceSnapshotCursorDescriptor? ReadDescriptorOrThrow(
+        MemorySourceSnapshotCursor? cursor,
+        MemorySourceKind expectedSourceKind,
+        Guid expectedScopeId,
+        string expectedProviderVersion)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(expectedProviderVersion);
+        if (!cursor.HasValue)
+        {
+            return null;
+        }
+
+        MemorySourceSnapshotCursorPayload payload;
+        try
+        {
+            var json = Encoding.UTF8.GetString(Convert.FromBase64String(cursor.Value.Value));
+            payload = JsonSerializer.Deserialize<MemorySourceSnapshotCursorPayload>(json)
+                ?? throw new JsonException("Cursor payload is empty.");
+        }
+        catch (Exception exception) when (exception is FormatException or JsonException or ArgumentException)
+        {
+            throw new MemorySourceSnapshotCursorException(
+                MemorySourceSnapshotCursorFailureReason.InvalidFormat,
+                expectedSourceKind,
+                expectedScopeId,
+                expectedProviderVersion,
+                cursor.Value,
+                "Memory source snapshot cursor is not a supported cursor payload.",
+                exception);
+        }
+
+        if (!Enum.TryParse(payload.SourceKind, ignoreCase: false, out MemorySourceKind sourceKind))
+        {
+            throw new MemorySourceSnapshotCursorException(
+                MemorySourceSnapshotCursorFailureReason.InvalidFormat,
+                expectedSourceKind,
+                expectedScopeId,
+                expectedProviderVersion,
+                cursor.Value,
+                $"Memory source snapshot cursor has unsupported source kind '{payload.SourceKind}'.");
+        }
+
+        if (!string.Equals(payload.ProviderVersion, expectedProviderVersion, StringComparison.Ordinal))
+        {
+            throw new MemorySourceSnapshotCursorException(
+                MemorySourceSnapshotCursorFailureReason.ProviderVersionMismatch,
+                expectedSourceKind,
+                expectedScopeId,
+                expectedProviderVersion,
+                cursor.Value,
+                $"Memory source snapshot cursor provider version '{payload.ProviderVersion}' does not match expected version '{expectedProviderVersion}'.");
+        }
+
+        if (sourceKind != expectedSourceKind)
+        {
+            throw new MemorySourceSnapshotCursorException(
+                MemorySourceSnapshotCursorFailureReason.SourceKindMismatch,
+                expectedSourceKind,
+                expectedScopeId,
+                expectedProviderVersion,
+                cursor.Value,
+                $"Memory source snapshot cursor source kind '{sourceKind}' does not match expected kind '{expectedSourceKind}'.");
+        }
+
+        if (payload.ScopeId != expectedScopeId)
+        {
+            throw new MemorySourceSnapshotCursorException(
+                MemorySourceSnapshotCursorFailureReason.ScopeMismatch,
+                expectedSourceKind,
+                expectedScopeId,
+                expectedProviderVersion,
+                cursor.Value,
+                $"Memory source snapshot cursor scope '{payload.ScopeId:D}' does not match expected scope '{expectedScopeId:D}'.");
+        }
+
+        if (payload.Position <= 0)
+        {
+            throw new MemorySourceSnapshotCursorException(
+                MemorySourceSnapshotCursorFailureReason.InvalidFormat,
+                expectedSourceKind,
+                expectedScopeId,
+                expectedProviderVersion,
+                cursor.Value,
+                "Memory source snapshot cursor position must be greater than zero.");
+        }
+
+        MemorySourceItemId lastItemId;
+        try
+        {
+            lastItemId = new MemorySourceItemId(payload.LastItemId);
+        }
+        catch (ArgumentException exception)
+        {
+            throw new MemorySourceSnapshotCursorException(
+                MemorySourceSnapshotCursorFailureReason.InvalidFormat,
+                expectedSourceKind,
+                expectedScopeId,
+                expectedProviderVersion,
+                cursor.Value,
+                "Memory source snapshot cursor last item anchor is empty or unsupported.",
+                exception);
+        }
+
+        if (!MemorySourceItemId.TryParse(lastItemId, out var lastItemKey) ||
+            lastItemKey.SourceKind != expectedSourceKind)
+        {
+            throw new MemorySourceSnapshotCursorException(
+                MemorySourceSnapshotCursorFailureReason.InvalidFormat,
+                expectedSourceKind,
+                expectedScopeId,
+                expectedProviderVersion,
+                cursor.Value,
+                "Memory source snapshot cursor last item anchor is not a supported source item id.");
+        }
+
+        return new MemorySourceSnapshotCursorDescriptor(
+            sourceKind,
+            payload.ScopeId,
+            payload.ProviderVersion,
+            payload.Position,
+            lastItemId,
+            payload.SnapshotAnchor ?? string.Empty);
+    }
+
+    public static void ThrowStaleAnchor(
+        MemorySourceSnapshotCursor cursor,
+        MemorySourceKind expectedSourceKind,
+        Guid expectedScopeId,
+        string expectedProviderVersion,
+        string message)
+        => throw new MemorySourceSnapshotCursorException(
+            MemorySourceSnapshotCursorFailureReason.StaleAnchor,
+            expectedSourceKind,
+            expectedScopeId,
+            expectedProviderVersion,
+            cursor,
+            message);
+
     public override string ToString() => Value;
+
+    private sealed record MemorySourceSnapshotCursorPayload(
+        string SourceKind,
+        Guid ScopeId,
+        string ProviderVersion,
+        int Position,
+        string LastItemId,
+        string? SnapshotAnchor);
+}
+
+public sealed record MemorySourceSnapshotCursorDescriptor(
+    MemorySourceKind SourceKind,
+    Guid ScopeId,
+    string ProviderVersion,
+    int Position,
+    MemorySourceItemId LastItemId,
+    string SnapshotAnchor);
+
+public enum MemorySourceSnapshotCursorFailureReason
+{
+    InvalidFormat,
+    SourceKindMismatch,
+    ScopeMismatch,
+    ProviderVersionMismatch,
+    StaleAnchor
+}
+
+public sealed class MemorySourceSnapshotCursorException : InvalidOperationException
+{
+    public MemorySourceSnapshotCursorException(
+        MemorySourceSnapshotCursorFailureReason reason,
+        MemorySourceKind expectedSourceKind,
+        Guid expectedScopeId,
+        string expectedProviderVersion,
+        MemorySourceSnapshotCursor cursor,
+        string message,
+        Exception? innerException = null)
+        : base(message, innerException)
+    {
+        Reason = reason;
+        ExpectedSourceKind = expectedSourceKind;
+        ExpectedScopeId = expectedScopeId;
+        ExpectedProviderVersion = expectedProviderVersion;
+        Cursor = cursor;
+    }
+
+    public MemorySourceSnapshotCursorFailureReason Reason { get; }
+
+    public MemorySourceKind ExpectedSourceKind { get; }
+
+    public Guid ExpectedScopeId { get; }
+
+    public string ExpectedProviderVersion { get; }
+
+    public MemorySourceSnapshotCursor Cursor { get; }
 }
 
 public enum MemorySourceKind
@@ -124,6 +373,59 @@ public enum MemorySourceAccessMode
     Redacted
 }
 
+public enum MemorySourceSnapshotPageStatus
+{
+    PageReturned,
+    EndOfSource
+}
+
+public enum MemorySourceSnapshotHashScope
+{
+    FullSnapshot,
+    PageScoped,
+    ProviderScope
+}
+
+public enum MemorySourceHashClassification
+{
+    PublicExportable,
+    InternalIntegrity,
+    RestrictedIntegrity
+}
+
+public enum MemorySourceHashPayloadBasis
+{
+    RedactedContent,
+    SourceMetadata,
+    RawSensitivePayload
+}
+
+public sealed record MemorySourceHashPolicy(
+    MemorySourceHashClassification Classification,
+    MemorySourceHashPayloadBasis PayloadBasis,
+    bool Exportable,
+    string UsageSummary)
+{
+    public static MemorySourceHashPolicy InternalIntegrity { get; } = new(
+        MemorySourceHashClassification.InternalIntegrity,
+        MemorySourceHashPayloadBasis.SourceMetadata,
+        Exportable: false,
+        "Internal source-change detection only. Do not expose as browser-visible metadata or vector payload data.");
+
+    public static MemorySourceHashPolicy PublicRedactedContent { get; } = new(
+        MemorySourceHashClassification.PublicExportable,
+        MemorySourceHashPayloadBasis.RedactedContent,
+        Exportable: true,
+        "Hash is derived from redacted exposed content and may be used for non-sensitive public integrity checks.");
+
+    public static MemorySourceHashPolicy RestrictedRawPayloadIntegrity(string usageSummary)
+        => new(
+            MemorySourceHashClassification.RestrictedIntegrity,
+            MemorySourceHashPayloadBasis.RawSensitivePayload,
+            Exportable: false,
+            usageSummary);
+}
+
 public sealed record ProjectStructureSourceSnapshotRequest(
     Guid ProjectId,
     MemorySourceSnapshotCursor? Cursor = null,
@@ -150,7 +452,10 @@ public sealed record MemorySourceSnapshotManifest(
     DateTimeOffset CapturedAtUtc,
     int TotalItemCount,
     MemorySourceSnapshotCursor? NextCursor,
-    bool HasMore);
+    bool HasMore,
+    MemorySourceSnapshotPageStatus PageStatus = MemorySourceSnapshotPageStatus.PageReturned,
+    MemorySourceSnapshotHashScope SnapshotHashScope = MemorySourceSnapshotHashScope.FullSnapshot,
+    string ProviderVersion = "");
 
 public sealed record MemorySourceItem(
     MemorySourceItemId Id,
@@ -167,7 +472,10 @@ public sealed record MemorySourceItem(
     IReadOnlyList<MemorySourceLink> Links,
     IReadOnlyList<MemorySourceReference> References,
     MemorySourceStorageReference? StorageReference,
-    IReadOnlyDictionary<string, string> Metadata);
+    IReadOnlyDictionary<string, string> Metadata)
+{
+    public MemorySourceHashPolicy HashPolicy { get; init; } = MemorySourceHashPolicy.InternalIntegrity;
+}
 
 public sealed record MemorySourceProvenance(
     MemorySourceKind SourceKind,
@@ -220,18 +528,37 @@ public static class MemorySourceSnapshotPage
         IReadOnlyList<MemorySourceItem> items,
         MemorySourceSnapshotCursor? cursor,
         int? take,
+        MemorySourceKind sourceKind,
+        Guid scopeId,
+        string providerVersion,
         out MemorySourceSnapshotCursor? nextCursor,
-        out bool hasMore)
+        out bool hasMore,
+        string snapshotAnchor = "")
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(providerVersion);
         var orderedItems = items
             .OrderBy(item => item.Id.Value, StringComparer.Ordinal)
             .ToList();
-        var startIndex = 0;
-        if (cursor.HasValue)
+
+        var descriptor = MemorySourceSnapshotCursor.ReadDescriptorOrThrow(
+            cursor,
+            sourceKind,
+            scopeId,
+            providerVersion);
+        var startIndex = descriptor?.Position ?? 0;
+        if (descriptor is not null)
         {
-            var cursorValue = cursor.Value.Value;
-            startIndex = orderedItems.FindIndex(item => string.Equals(item.Id.Value, cursorValue, StringComparison.Ordinal));
-            startIndex = startIndex < 0 ? 0 : startIndex + 1;
+            var anchorIndex = descriptor.Position - 1;
+            if (anchorIndex >= orderedItems.Count ||
+                orderedItems[anchorIndex].Id != descriptor.LastItemId)
+            {
+                MemorySourceSnapshotCursor.ThrowStaleAnchor(
+                    cursor!.Value,
+                    sourceKind,
+                    scopeId,
+                    providerVersion,
+                    "Memory source snapshot cursor anchor is stale or no longer matches the ordered source item at the recorded position.");
+            }
         }
 
         var pageSize = NormalizeTake(take);
@@ -241,7 +568,13 @@ public static class MemorySourceSnapshotPage
             .ToList();
         hasMore = startIndex + page.Count < orderedItems.Count;
         nextCursor = hasMore && page.Count > 0
-            ? new MemorySourceSnapshotCursor(page[^1].Id.Value)
+            ? MemorySourceSnapshotCursor.Create(
+                sourceKind,
+                scopeId,
+                providerVersion,
+                startIndex + page.Count,
+                page[^1].Id,
+                snapshotAnchor)
             : null;
         return page;
     }

@@ -31,6 +31,8 @@ public sealed class RuntimeEvidenceSourceIntegrationTests
         Assert.True(first.Manifest.TotalItemCount > first.Items.Count);
         Assert.True(first.Manifest.HasMore);
         Assert.NotNull(first.Manifest.NextCursor);
+        Assert.Equal(MemorySourceSnapshotHashScope.PageScoped, first.Manifest.SnapshotHashScope);
+        Assert.Equal(MemorySourceSnapshotProviderVersions.ProcessRuntime, first.Manifest.ProviderVersion);
 
         var resumed = await provider.ReadSnapshotAsync(new ProcessRuntimeEvidenceSourceRequest(
             runId,
@@ -61,6 +63,38 @@ public sealed class RuntimeEvidenceSourceIntegrationTests
         var journal = Assert.Single(full.Items, item => item.Title == "Secret replay entry");
         Assert.Contains("[REDACTED]", journal.Content, StringComparison.Ordinal);
         Assert.DoesNotContain("super-secret-token", journal.Content, StringComparison.Ordinal);
+        Assert.Equal(MemorySourceHashClassification.RestrictedIntegrity, journal.HashPolicy.Classification);
+        Assert.Equal(MemorySourceHashPayloadBasis.RawSensitivePayload, journal.HashPolicy.PayloadBasis);
+        Assert.False(journal.HashPolicy.Exportable);
+
+        var processRun = Assert.Single(full.Items, item => item.EntityKind == MemorySourceEntityKind.ProcessRun);
+        Assert.Contains("[REDACTED]", processRun.Content, StringComparison.Ordinal);
+        Assert.DoesNotContain("sk-runtime-secret123", processRun.Content, StringComparison.Ordinal);
+        Assert.Equal(MemorySourceHashClassification.RestrictedIntegrity, processRun.HashPolicy.Classification);
+
+        var wrongScopeCursor = MemorySourceSnapshotCursor.Create(
+            MemorySourceKind.ProcessRuntime,
+            Guid.NewGuid(),
+            MemorySourceSnapshotProviderVersions.ProcessRuntime,
+            1,
+            first.Items[0].Id);
+        var wrongScopeException = await Assert.ThrowsAsync<MemorySourceSnapshotCursorException>(async () =>
+            await provider.ReadSnapshotAsync(new ProcessRuntimeEvidenceSourceRequest(runId, wrongScopeCursor, Take: 2)));
+        Assert.Equal(MemorySourceSnapshotCursorFailureReason.ScopeMismatch, wrongScopeException.Reason);
+
+        var staleCursor = MemorySourceSnapshotCursor.Create(
+            MemorySourceKind.ProcessRuntime,
+            runId,
+            MemorySourceSnapshotProviderVersions.ProcessRuntime,
+            1,
+            MemorySourceItemId.Create(
+                MemorySourceKind.ProcessRuntime,
+                runId,
+                MemorySourceEntityKind.ProcessRun,
+                Guid.NewGuid().ToString("D")));
+        var staleException = await Assert.ThrowsAsync<MemorySourceSnapshotCursorException>(async () =>
+            await provider.ReadSnapshotAsync(new ProcessRuntimeEvidenceSourceRequest(runId, staleCursor, Take: 2)));
+        Assert.Equal(MemorySourceSnapshotCursorFailureReason.StaleAnchor, staleException.Reason);
     }
 
     [Fact]
@@ -81,6 +115,8 @@ public sealed class RuntimeEvidenceSourceIntegrationTests
             second.Items.Select(item => item.Id.Value));
         Assert.True(first.Manifest.HasMore);
         Assert.NotNull(first.Manifest.NextCursor);
+        Assert.Equal(MemorySourceSnapshotHashScope.PageScoped, first.Manifest.SnapshotHashScope);
+        Assert.Equal(MemorySourceSnapshotProviderVersions.WorkflowRuntime, first.Manifest.ProviderVersion);
 
         var resumed = await provider.ReadSnapshotAsync(new WorkflowRuntimeEvidenceSourceRequest(
             runId,
@@ -101,15 +137,26 @@ public sealed class RuntimeEvidenceSourceIntegrationTests
         Assert.Contains("[REDACTED]", workflowEvent.Content, StringComparison.Ordinal);
         Assert.DoesNotContain("super-secret-token", workflowEvent.Content, StringComparison.Ordinal);
         Assert.DoesNotContain("sk-runtime-secret123", workflowEvent.Content, StringComparison.Ordinal);
+        Assert.Equal(MemorySourceHashClassification.RestrictedIntegrity, workflowEvent.HashPolicy.Classification);
+        Assert.Equal(MemorySourceHashPayloadBasis.RawSensitivePayload, workflowEvent.HashPolicy.PayloadBasis);
+        Assert.False(workflowEvent.HashPolicy.Exportable);
 
         var externalRequest = Assert.Single(full.Items, item => item.EntityKind == MemorySourceEntityKind.WorkflowExternalRequest);
         Assert.Equal(MemorySourceAccessMode.Redacted, externalRequest.Permission.AccessMode);
         Assert.Contains("[REDACTED]", externalRequest.Content, StringComparison.Ordinal);
         Assert.DoesNotContain("workflow-password", externalRequest.Content, StringComparison.Ordinal);
+        Assert.Equal(MemorySourceHashClassification.RestrictedIntegrity, externalRequest.HashPolicy.Classification);
 
         var artifact = Assert.Single(full.Items, item => item.EntityKind == MemorySourceEntityKind.WorkflowArtifact);
         Assert.Equal("workflow-runtime", artifact.StorageReference?.Provider);
         Assert.Equal("workflows/runtime/report.md", artifact.StorageReference?.Locator);
+
+        var invalidCursorException = await Assert.ThrowsAsync<MemorySourceSnapshotCursorException>(async () =>
+            await provider.ReadSnapshotAsync(new WorkflowRuntimeEvidenceSourceRequest(
+                runId,
+                new MemorySourceSnapshotCursor("not-a-supported-cursor"),
+                Take: 2)));
+        Assert.Equal(MemorySourceSnapshotCursorFailureReason.InvalidFormat, invalidCursorException.Reason);
     }
 
     private static async Task<Guid> SeedProcessRuntimeEvidenceAsync(

@@ -2,7 +2,7 @@
 
 ## Status
 
-- Ready.
+- Completed
 
 ## Objective
 

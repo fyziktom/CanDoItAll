@@ -161,7 +161,8 @@ public sealed partial class MafAgentRuntime
             capabilityState.HasApprovalTools,
             ShouldOmitTemperature(effectiveProvider, model, forceOmitTemperature),
             finalizerCapture,
-            toolInvocationTraceRecorder);
+            toolInvocationTraceRecorder,
+            capabilityState.ContextContributionTraceCollector);
     }
 
     private async Task<RuntimeBuildResult> CreateHandoffRuntimeBuildAsync(
@@ -241,6 +242,7 @@ public sealed partial class MafAgentRuntime
                 entryBuild.IsTemperatureOmitted,
                 finalizerCapture: null,
                 toolInvocationTraceRecorder: null,
+                contextContributionTraceCollector: null,
                 snapshotFinalizerInvocations: () => participantBuilds
                     .SelectMany(item => item.SnapshotFinalizerInvocations())
                     .OrderBy(item => item.Sequence)
@@ -248,6 +250,9 @@ public sealed partial class MafAgentRuntime
                 snapshotToolInvocationTraces: () => participantBuilds
                     .SelectMany(item => item.SnapshotToolInvocationTraces())
                     .OrderBy(item => item.Sequence)
+                    .ToList(),
+                snapshotContextContributionTraces: () => participantBuilds
+                    .SelectMany(item => item.SnapshotContextContributionTraces())
                     .ToList());
         }
         catch
@@ -1244,8 +1249,10 @@ public sealed partial class MafAgentRuntime
         bool isTemperatureOmitted,
         FinalizerCapture? finalizerCapture,
         ToolInvocationTraceRecorder? toolInvocationTraceRecorder,
+        AgentContextContributionTraceCollector? contextContributionTraceCollector,
         Func<IReadOnlyList<AgentFinalizerInvocation>>? snapshotFinalizerInvocations = null,
-        Func<IReadOnlyList<AgentToolInvocationTrace>>? snapshotToolInvocationTraces = null) : IAsyncDisposable
+        Func<IReadOnlyList<AgentToolInvocationTrace>>? snapshotToolInvocationTraces = null,
+        Func<IReadOnlyList<AgentContextContributionTrace>>? snapshotContextContributionTraces = null) : IAsyncDisposable
     {
         public AIAgent Agent { get; } = agent;
 
@@ -1262,6 +1269,9 @@ public sealed partial class MafAgentRuntime
 
         public IReadOnlyList<AgentToolInvocationTrace> SnapshotToolInvocationTraces()
             => snapshotToolInvocationTraces?.Invoke() ?? toolInvocationTraceRecorder?.Snapshot() ?? [];
+
+        public IReadOnlyList<AgentContextContributionTrace> SnapshotContextContributionTraces()
+            => snapshotContextContributionTraces?.Invoke() ?? contextContributionTraceCollector?.Snapshot() ?? [];
 
         public async ValueTask DisposeAsync()
         {
@@ -1304,6 +1314,8 @@ public sealed partial class MafAgentRuntime
         public List<AITool> Tools { get; } = [];
 
         public List<AIContextProvider> ContextProviders { get; } = [];
+
+        public AgentContextContributionTraceCollector ContextContributionTraceCollector { get; } = new();
 
         public HashSet<string> FrameworkToolNames { get; } = new(StringComparer.OrdinalIgnoreCase);
 

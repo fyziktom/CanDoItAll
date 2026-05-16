@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using Microsoft.Agents.AI;
@@ -9,7 +10,8 @@ internal sealed class MafAgentContextContributionProvider(
     IAgentContextContributor contributor,
     AgentDefinition agent,
     ProviderProfile provider,
-    AgentContextContributionPolicy policy) : MessageAIContextProvider
+    AgentContextContributionPolicy policy,
+    IAgentContextContributionTraceSink? traceSink = null) : MessageAIContextProvider
 {
     public AgentContextContributorId ContributorId => contributor.Descriptor.Id;
 
@@ -24,6 +26,7 @@ internal sealed class MafAgentContextContributionProvider(
             policy);
 
         AgentContextContributionResult result;
+        var stopwatch = Stopwatch.StartNew();
         try
         {
             result = await contributor.ContributeAsync(request, cancellationToken);
@@ -34,11 +37,27 @@ internal sealed class MafAgentContextContributionProvider(
         }
         catch (Exception exception)
         {
+            stopwatch.Stop();
+            traceSink?.Record(new AgentContextContributionTrace(
+                ContributorId,
+                AgentContextContributionStatus.Failed,
+                GeneratedMessageCount: 0,
+                new Dictionary<string, string>(StringComparer.Ordinal),
+                WorkflowExecutorRedaction.RedactText(exception.Message),
+                stopwatch.Elapsed));
             throw new AgentContextContributionException(
                 ContributorId,
                 $"Agent context contributor '{ContributorId}' failed while building MAF context.",
                 exception);
         }
+        stopwatch.Stop();
+        traceSink?.Record(new AgentContextContributionTrace(
+            ContributorId,
+            result.Status,
+            result.Messages.Count,
+            result.TraceMetadata,
+            result.FailureMessage,
+            stopwatch.Elapsed));
 
         return result.Status switch
         {

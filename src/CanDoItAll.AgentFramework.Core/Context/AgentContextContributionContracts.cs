@@ -118,6 +118,41 @@ public sealed record AgentContextContributionResult(
                     StringComparer.Ordinal);
 }
 
+public sealed record AgentContextContributionTrace(
+    AgentContextContributorId ContributorId,
+    AgentContextContributionStatus Status,
+    int GeneratedMessageCount,
+    IReadOnlyDictionary<string, string> TraceMetadata,
+    string FailureMessage,
+    TimeSpan? Elapsed);
+
+public interface IAgentContextContributionTraceSink
+{
+    void Record(AgentContextContributionTrace trace);
+}
+
+public sealed class AgentContextContributionTraceCollector : IAgentContextContributionTraceSink
+{
+    private readonly object gate = new();
+    private readonly List<AgentContextContributionTrace> traces = [];
+
+    public void Record(AgentContextContributionTrace trace)
+    {
+        lock (gate)
+        {
+            traces.Add(trace);
+        }
+    }
+
+    public IReadOnlyList<AgentContextContributionTrace> Snapshot()
+    {
+        lock (gate)
+        {
+            return traces.ToList();
+        }
+    }
+}
+
 public sealed class AgentContextContributionException : InvalidOperationException
 {
     public AgentContextContributionException(

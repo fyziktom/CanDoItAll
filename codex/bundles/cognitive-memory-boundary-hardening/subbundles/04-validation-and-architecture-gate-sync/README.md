@@ -2,7 +2,7 @@
 
 ## Status
 
-- Ready after hardening subbundles.
+- Completed
 
 ## Objective
 

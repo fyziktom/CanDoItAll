@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Linq.Expressions;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
@@ -16,61 +18,210 @@ public sealed class ProcessRuntimeEvidenceSourceProvider(
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var scopeId = request.ProcessRunId ?? Guid.Empty;
-        var items = new List<MemorySourceItem>();
-
-        items.AddRange((await FilterByRun(dbContext.Set<ProcessRun>().AsNoTracking(), request.ProcessRunId)
-                .ToListAsync(cancellationToken))
-            .Select(MapRun));
-        items.AddRange((await FilterByProcessRunId(dbContext.Set<ProcessStepRun>().AsNoTracking(), request.ProcessRunId)
-                .ToListAsync(cancellationToken))
-            .Select(MapStepRun));
-        items.AddRange((await FilterByProcessRunId(dbContext.Set<ProcessRunAssignment>().AsNoTracking(), request.ProcessRunId)
-                .ToListAsync(cancellationToken))
-            .Select(MapAssignment));
-        items.AddRange((await FilterByProcessRunId(dbContext.Set<ProcessWorkBrief>().AsNoTracking(), request.ProcessRunId)
-                .ToListAsync(cancellationToken))
-            .Select(MapWorkBrief));
-        items.AddRange((await FilterByProcessRunId(dbContext.Set<ProcessDecisionRecord>().AsNoTracking(), request.ProcessRunId)
-                .ToListAsync(cancellationToken))
-            .Select(MapDecision));
-        items.AddRange((await FilterByProcessRunId(dbContext.Set<ProcessArtifactRecord>().AsNoTracking(), request.ProcessRunId)
-                .ToListAsync(cancellationToken))
-            .Select(MapArtifact));
-        items.AddRange((await FilterByProcessRunId(dbContext.Set<ProcessJournalEntry>().AsNoTracking(), request.ProcessRunId)
-                .ToListAsync(cancellationToken))
-            .Select(MapJournal));
-        items.AddRange((await FilterByProcessRunId(dbContext.Set<ProcessConformanceObservation>().AsNoTracking(), request.ProcessRunId)
-                .ToListAsync(cancellationToken))
-            .Select(MapConformanceObservation));
-        items.AddRange((await FilterByNullableProcessRunId(dbContext.Set<ProcessImprovementCandidate>().AsNoTracking(), request.ProcessRunId)
-                .ToListAsync(cancellationToken))
-            .Select(MapImprovementCandidate));
-        items.AddRange((await FilterByProcessRunId(dbContext.Set<ProcessWorkflowRunLink>().AsNoTracking(), request.ProcessRunId)
-                .ToListAsync(cancellationToken))
-            .Select(MapWorkflowRunLink));
-
-        var allItems = items
-            .OrderBy(item => item.Id.Value, StringComparer.Ordinal)
+        var sources = new[]
+            {
+                CreateSource(
+                    MemorySourceEntityKind.ProcessRun,
+                    FilterByRun(dbContext.Set<ProcessRun>().AsNoTracking(), request.ProcessRunId),
+                    item => item.Id,
+                    MapRun),
+                CreateSource(
+                    MemorySourceEntityKind.ProcessStepRun,
+                    FilterByProcessRunId(dbContext.Set<ProcessStepRun>().AsNoTracking(), request.ProcessRunId),
+                    item => item.Id,
+                    MapStepRun),
+                CreateSource(
+                    MemorySourceEntityKind.ProcessRunAssignment,
+                    FilterByProcessRunId(dbContext.Set<ProcessRunAssignment>().AsNoTracking(), request.ProcessRunId),
+                    item => item.Id,
+                    MapAssignment),
+                CreateSource(
+                    MemorySourceEntityKind.ProcessWorkBrief,
+                    FilterByProcessRunId(dbContext.Set<ProcessWorkBrief>().AsNoTracking(), request.ProcessRunId),
+                    item => item.Id,
+                    MapWorkBrief),
+                CreateSource(
+                    MemorySourceEntityKind.ProcessDecision,
+                    FilterByProcessRunId(dbContext.Set<ProcessDecisionRecord>().AsNoTracking(), request.ProcessRunId),
+                    item => item.Id,
+                    MapDecision),
+                CreateSource(
+                    MemorySourceEntityKind.ProcessArtifact,
+                    FilterByProcessRunId(dbContext.Set<ProcessArtifactRecord>().AsNoTracking(), request.ProcessRunId),
+                    item => item.Id,
+                    MapArtifact),
+                CreateSource(
+                    MemorySourceEntityKind.ProcessJournal,
+                    FilterByProcessRunId(dbContext.Set<ProcessJournalEntry>().AsNoTracking(), request.ProcessRunId),
+                    item => item.Id,
+                    MapJournal),
+                CreateSource(
+                    MemorySourceEntityKind.ProcessConformanceObservation,
+                    FilterByProcessRunId(dbContext.Set<ProcessConformanceObservation>().AsNoTracking(), request.ProcessRunId),
+                    item => item.Id,
+                    MapConformanceObservation),
+                CreateSource(
+                    MemorySourceEntityKind.ProcessImprovementCandidate,
+                    FilterByNullableProcessRunId(dbContext.Set<ProcessImprovementCandidate>().AsNoTracking(), request.ProcessRunId),
+                    item => item.Id,
+                    MapImprovementCandidate),
+                CreateSource(
+                    MemorySourceEntityKind.ProcessWorkflowRunLink,
+                    FilterByProcessRunId(dbContext.Set<ProcessWorkflowRunLink>().AsNoTracking(), request.ProcessRunId),
+                    item => item.Id,
+                    MapWorkflowRunLink)
+            }
+            .OrderBy(source => source.EntityKind.ToString(), StringComparer.Ordinal)
             .ToList();
-        var pageItems = MemorySourceSnapshotPage.Apply(
-            allItems,
+        var page = await ReadPageAsync(
+            sources,
             request.Cursor,
             request.Take,
-            out var nextCursor,
-            out var hasMore);
-        var snapshotHash = MemorySourceSnapshotHasher.Compute(allItems.Select(item => item.ContentHash).ToArray());
+            scopeId,
+            cancellationToken);
 
         return new MemorySourceSnapshot(
             new MemorySourceSnapshotManifest(
-                MemorySourceSnapshotId.Create(MemorySourceKind.ProcessRuntime, scopeId, snapshotHash),
+                MemorySourceSnapshotId.Create(MemorySourceKind.ProcessRuntime, scopeId, page.SnapshotHash),
                 MemorySourceKind.ProcessRuntime,
                 scopeId,
                 DateTimeOffset.UtcNow,
-                allItems.Count,
-                nextCursor,
-                hasMore),
-            pageItems);
+                page.TotalItemCount,
+                page.NextCursor,
+                page.HasMore,
+                page.HasMore ? MemorySourceSnapshotPageStatus.PageReturned : MemorySourceSnapshotPageStatus.EndOfSource,
+                MemorySourceSnapshotHashScope.PageScoped,
+                MemorySourceSnapshotProviderVersions.ProcessRuntime),
+            page.Items);
     }
+
+    private static async Task<MemorySourcePageSlice> ReadPageAsync(
+        IReadOnlyList<ProcessSourcePage> sources,
+        MemorySourceSnapshotCursor? cursor,
+        int? take,
+        Guid scopeId,
+        CancellationToken cancellationToken)
+    {
+        var descriptor = MemorySourceSnapshotCursor.ReadDescriptorOrThrow(
+            cursor,
+            MemorySourceKind.ProcessRuntime,
+            scopeId,
+            MemorySourceSnapshotProviderVersions.ProcessRuntime);
+        var sourceCounts = new List<ProcessSourcePageCount>(sources.Count);
+        foreach (var source in sources)
+        {
+            sourceCounts.Add(new ProcessSourcePageCount(source, await source.CountAsync(cancellationToken)));
+        }
+
+        var totalItemCount = sourceCounts.Sum(item => item.Count);
+        var startPosition = descriptor?.Position ?? 0;
+        if (descriptor is not null)
+        {
+            var anchor = await ReadItemIdAtPositionAsync(sourceCounts, descriptor.Position - 1, cancellationToken);
+            if (anchor is null || anchor.Value != descriptor.LastItemId)
+            {
+                MemorySourceSnapshotCursor.ThrowStaleAnchor(
+                    cursor!.Value,
+                    MemorySourceKind.ProcessRuntime,
+                    scopeId,
+                    MemorySourceSnapshotProviderVersions.ProcessRuntime,
+                    "Process runtime source cursor anchor is stale or no longer matches the ordered source item at the recorded position.");
+            }
+        }
+
+        var pageSize = MemorySourceSnapshotPage.NormalizeTake(take);
+        var pageItems = new List<MemorySourceItem>(pageSize);
+        var remainingSkip = startPosition;
+        foreach (var sourceCount in sourceCounts)
+        {
+            if (pageItems.Count == pageSize)
+            {
+                break;
+            }
+
+            if (remainingSkip >= sourceCount.Count)
+            {
+                remainingSkip -= sourceCount.Count;
+                continue;
+            }
+
+            var sourceSkip = remainingSkip;
+            remainingSkip = 0;
+            var sourceTake = Math.Min(pageSize - pageItems.Count, sourceCount.Count - sourceSkip);
+            if (sourceTake <= 0)
+            {
+                continue;
+            }
+
+            pageItems.AddRange(await sourceCount.Source.ReadPageAsync(sourceSkip, sourceTake, cancellationToken));
+        }
+
+        var hasMore = startPosition + pageItems.Count < totalItemCount;
+        MemorySourceSnapshotCursor? nextCursor = hasMore && pageItems.Count > 0
+            ? MemorySourceSnapshotCursor.Create(
+                MemorySourceKind.ProcessRuntime,
+                scopeId,
+                MemorySourceSnapshotProviderVersions.ProcessRuntime,
+                startPosition + pageItems.Count,
+                pageItems[^1].Id)
+            : null;
+        var snapshotHash = MemorySourceSnapshotHasher.Compute(
+            MemorySourceSnapshotProviderVersions.ProcessRuntime,
+            scopeId.ToString("D"),
+            startPosition.ToString(CultureInfo.InvariantCulture),
+            string.Join("|", pageItems.Select(item => item.ContentHash)));
+        return new MemorySourcePageSlice(pageItems, totalItemCount, nextCursor, hasMore, snapshotHash);
+    }
+
+    private static async Task<MemorySourceItemId?> ReadItemIdAtPositionAsync(
+        IReadOnlyList<ProcessSourcePageCount> sourceCounts,
+        int position,
+        CancellationToken cancellationToken)
+    {
+        if (position < 0)
+        {
+            return null;
+        }
+
+        var remaining = position;
+        foreach (var sourceCount in sourceCounts)
+        {
+            if (remaining >= sourceCount.Count)
+            {
+                remaining -= sourceCount.Count;
+                continue;
+            }
+
+            return await sourceCount.Source.ReadItemIdAsync(remaining, cancellationToken);
+        }
+
+        return null;
+    }
+
+    private static ProcessSourcePage CreateSource<T>(
+        MemorySourceEntityKind entityKind,
+        IQueryable<T> query,
+        Expression<Func<T, Guid>> orderKey,
+        Func<T, MemorySourceItem> map)
+        where T : class
+        => new(
+            entityKind,
+            cancellationToken => query.CountAsync(cancellationToken),
+            async (skip, take, cancellationToken) => (await query
+                    .OrderBy(orderKey)
+                    .Skip(skip)
+                    .Take(take)
+                    .ToListAsync(cancellationToken))
+                .Select(map)
+                .ToList(),
+            async (index, cancellationToken) => (await query
+                    .OrderBy(orderKey)
+                    .Skip(index)
+                    .Take(1)
+                    .ToListAsync(cancellationToken))
+                .Select(map)
+                .FirstOrDefault()
+                ?.Id);
 
     private static IQueryable<ProcessRun> FilterByRun(IQueryable<ProcessRun> query, Guid? processRunId)
         => processRunId.HasValue
@@ -93,6 +244,7 @@ public sealed class ProcessRuntimeEvidenceSourceProvider(
     private static MemorySourceItem MapRun(ProcessRun run)
     {
         var itemId = BuildItemId(run.Id, MemorySourceEntityKind.ProcessRun, run.Id);
+        var hasPolicyPayload = HasPayload(run.GovernanceSnapshot) || HasPayload(run.PolicySnapshot);
         var content = BuildContent(
             ("Name", run.Name),
             ("Status", run.Status.ToString()),
@@ -143,7 +295,7 @@ public sealed class ProcessRuntimeEvidenceSourceProvider(
             run.UpdatedAtUtc,
             BuildProvenance(run.Id, MemorySourceEntityKind.ProcessRun, run.Id, $"/processes/runs/{run.Id:D}"),
             InternalRedactedPermission(
-                HasPayload(run.GovernanceSnapshot) || HasPayload(run.PolicySnapshot),
+                hasPolicyPayload,
                 "Process run snapshots redact stored policy and governance payloads before exposure."),
             Layout: null,
             Links: BuildNullableLinks(run.Id, itemId, [
@@ -168,7 +320,13 @@ public sealed class ProcessRuntimeEvidenceSourceProvider(
                 ("definitionId", run.ProcessDefinitionId.ToString("D")),
                 ("definitionVersionId", run.ProcessDefinitionVersionId.ToString("D")),
                 ("projectId", run.ProjectId?.ToString("D") ?? string.Empty),
-                ("hierarchyDepth", run.HierarchyDepth.ToString())));
+                ("hierarchyDepth", run.HierarchyDepth.ToString())))
+        {
+            HashPolicy = hasPolicyPayload
+                ? MemorySourceHashPolicy.RestrictedRawPayloadIntegrity(
+                    "Process run hash includes raw governance or policy snapshot payloads. Use only for non-exportable source integrity checks.")
+                : MemorySourceHashPolicy.InternalIntegrity
+        };
     }
 
     private static MemorySourceItem MapStepRun(ProcessStepRun step)
@@ -529,7 +687,13 @@ public sealed class ProcessRuntimeEvidenceSourceProvider(
                 ("eventType", journal.EventType),
                 ("correlationId", journal.CorrelationId),
                 ("policyVersion", journal.PolicyVersion),
-                ("environmentMode", journal.EnvironmentMode)));
+                ("environmentMode", journal.EnvironmentMode)))
+        {
+            HashPolicy = hasReplayPayload
+                ? MemorySourceHashPolicy.RestrictedRawPayloadIntegrity(
+                    "Process journal hash includes raw replay context payloads. Use only for non-exportable source integrity checks.")
+                : MemorySourceHashPolicy.InternalIntegrity
+        };
     }
 
     private static MemorySourceItem MapConformanceObservation(ProcessConformanceObservation observation)
@@ -816,6 +980,23 @@ public sealed class ProcessRuntimeEvidenceSourceProvider(
             value => value.Key,
             value => value.Value,
             StringComparer.Ordinal);
+
+    private sealed record MemorySourcePageSlice(
+        IReadOnlyList<MemorySourceItem> Items,
+        int TotalItemCount,
+        MemorySourceSnapshotCursor? NextCursor,
+        bool HasMore,
+        string SnapshotHash);
+
+    private sealed record ProcessSourcePage(
+        MemorySourceEntityKind EntityKind,
+        Func<CancellationToken, Task<int>> CountAsync,
+        Func<int, int, CancellationToken, Task<IReadOnlyList<MemorySourceItem>>> ReadPageAsync,
+        Func<int, CancellationToken, Task<MemorySourceItemId?>> ReadItemIdAsync);
+
+    private sealed record ProcessSourcePageCount(
+        ProcessSourcePage Source,
+        int Count);
 
     private sealed record LinkTarget(
         MemorySourceEntityKind EntityKind,

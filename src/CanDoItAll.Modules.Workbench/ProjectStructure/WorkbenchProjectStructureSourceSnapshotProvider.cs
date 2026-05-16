@@ -38,6 +38,9 @@ public sealed class WorkbenchProjectStructureSourceSnapshotProvider(
             allItems,
             request.Cursor,
             request.Take,
+            MemorySourceKind.WorkbenchProjectStructure,
+            request.ProjectId,
+            MemorySourceSnapshotProviderVersions.WorkbenchProjectStructure,
             out var nextCursor,
             out var hasMore);
         var snapshotHash = MemorySourceSnapshotHasher.Compute(allItems.Select(item => item.ContentHash).ToArray());
@@ -50,7 +53,10 @@ public sealed class WorkbenchProjectStructureSourceSnapshotProvider(
                 DateTimeOffset.UtcNow,
                 allItems.Count,
                 nextCursor,
-                hasMore),
+                hasMore,
+                hasMore ? MemorySourceSnapshotPageStatus.PageReturned : MemorySourceSnapshotPageStatus.EndOfSource,
+                MemorySourceSnapshotHashScope.FullSnapshot,
+                MemorySourceSnapshotProviderVersions.WorkbenchProjectStructure),
             pageItems);
     }
 
@@ -105,19 +111,15 @@ public sealed class WorkbenchProjectStructureSourceSnapshotProvider(
                 reference.ReferenceId.Trim(),
                 reference.OrderIndex))
             .ToList() ?? [];
-        var content = string.Join(
-            Environment.NewLine,
-            new[]
-            {
-                $"Title: {node.Title}",
-                $"Subtitle: {node.Subtitle}",
-                $"Object type: {node.ObjectType}",
-                $"Subtype: {node.ObjectSubtype}",
-                $"Status: {node.Status}",
-                $"Progress: {node.ProgressMode} {node.ProgressPercent}",
-                $"Notes: {node.Notes}",
-                $"Route: {node.Route}"
-            });
+        var content = BuildContent(
+            ("Title", node.Title),
+            ("Subtitle", node.Subtitle),
+            ("Object type", node.ObjectType.ToString()),
+            ("Subtype", node.ObjectSubtype),
+            ("Status", node.Status),
+            ("Progress", $"{node.ProgressMode} {node.ProgressPercent}"),
+            ("Notes", node.Notes),
+            ("Route", node.Route));
         var contentHash = MemorySourceSnapshotHasher.Compute(
             node.Id,
             node.ParentId,
@@ -143,6 +145,7 @@ public sealed class WorkbenchProjectStructureSourceSnapshotProvider(
             node.StorageObjectReferenceJson,
             string.Join("|", links.Select(link => $"{link.SourceId.Value}>{link.TargetId.Value}>{link.Kind}>{link.IsUserAuthored}")),
             string.Join("|", references.Select(reference => $"{reference.ReferenceKind}>{reference.ReferenceId}>{reference.OrderIndex}")));
+        var containsSensitivePayload = HasWorkbenchPayload(node);
 
         return new MemorySourceItem(
             itemId,
@@ -160,11 +163,13 @@ public sealed class WorkbenchProjectStructureSourceSnapshotProvider(
                 node.Id,
                 node.Route),
             new MemorySourcePermissionContext(
-                MemorySourceAccessMode.ReadOnly,
-                MemorySourceSensitivity.Internal,
-                ContainsSensitivePayload: false,
-                RedactionPolicy: "Workbench snapshots expose source metadata and summaries only.",
-                AllowedFutureUsageSummary: "Source-grounded project structure evidence."),
+                containsSensitivePayload ? MemorySourceAccessMode.Redacted : MemorySourceAccessMode.ReadOnly,
+                containsSensitivePayload ? MemorySourceSensitivity.Sensitive : MemorySourceSensitivity.Internal,
+                containsSensitivePayload,
+                containsSensitivePayload
+                    ? "Workbench snapshots redact known secrets from notes, metadata, and storage locators; arbitrary note text remains sensitivity-marked for downstream projection policy."
+                    : "Workbench snapshots expose source metadata and summaries only.",
+                "Source-grounded project structure evidence. Note-bearing items require redaction-aware projection and context review."),
             new MemorySourceLayoutMetadata(
                 node.X,
                 node.Y,
@@ -173,7 +178,7 @@ public sealed class WorkbenchProjectStructureSourceSnapshotProvider(
                 node.EndUtc,
                 node.DurationSeconds,
                 SurfaceKind,
-                string.IsNullOrWhiteSpace(node.MetadataJson) ? "{}" : node.MetadataJson),
+                RedactJson(node.MetadataJson)),
             links,
             references,
             ResolveStorageReference(node),
@@ -186,7 +191,13 @@ public sealed class WorkbenchProjectStructureSourceSnapshotProvider(
                 ["artifactKind"] = node.ArtifactKind,
                 ["artifactId"] = node.ArtifactId?.ToString("D") ?? string.Empty,
                 ["projectRole"] = node.ProjectRole.ToString()
-            });
+            })
+        {
+            HashPolicy = containsSensitivePayload
+                ? MemorySourceHashPolicy.RestrictedRawPayloadIntegrity(
+                    "Workbench node hash may include raw notes, metadata JSON, or storage locator values. Use only for non-exportable source integrity checks.")
+                : MemorySourceHashPolicy.InternalIntegrity
+        };
     }
 
     private static MemorySourceItem MapLink(Guid projectId, ProjectStructureLink link)
@@ -237,7 +248,10 @@ public sealed class WorkbenchProjectStructureSourceSnapshotProvider(
                 ["targetId"] = link.TargetId,
                 ["kind"] = link.Kind.ToString(),
                 ["isUserAuthored"] = link.IsUserAuthored.ToString()
-            });
+            })
+        {
+            HashPolicy = MemorySourceHashPolicy.InternalIntegrity
+        };
     }
 
     private static MemorySourceItemId BuildItemId(
@@ -289,7 +303,7 @@ public sealed class WorkbenchProjectStructureSourceSnapshotProvider(
             return new MemorySourceStorageReference(
                 "workbench",
                 "storage-reference-json",
-                node.StorageObjectReferenceJson.Trim(),
+                RedactJson(node.StorageObjectReferenceJson),
                 node.MediaContentType,
                 node.MediaOriginalFileName);
         }
@@ -302,10 +316,30 @@ public sealed class WorkbenchProjectStructureSourceSnapshotProvider(
         return new MemorySourceStorageReference(
             "workbench",
             "relative-path",
-            node.MediaRelativePath.Trim(),
+            WorkflowExecutorRedaction.RedactText(node.MediaRelativePath),
             node.MediaContentType,
             node.MediaOriginalFileName);
     }
+
+    private static bool HasWorkbenchPayload(ProjectStructureNode node)
+        => !string.IsNullOrWhiteSpace(node.Notes) ||
+           HasPayload(node.MetadataJson) ||
+           HasPayload(node.StorageObjectReferenceJson) ||
+           !string.IsNullOrWhiteSpace(node.MediaRelativePath);
+
+    private static string BuildContent(params (string Label, string? Value)[] fields)
+        => string.Join(
+            Environment.NewLine,
+            fields
+                .Where(field => !string.IsNullOrWhiteSpace(field.Value))
+                .Select(field => $"{field.Label}: {WorkflowExecutorRedaction.RedactText(field.Value)}"));
+
+    private static string RedactJson(string? json)
+        => HasPayload(json) ? WorkflowExecutorRedaction.RedactSettingsJson(json) : "{}";
+
+    private static bool HasPayload(string? value)
+        => !string.IsNullOrWhiteSpace(value) &&
+           !string.Equals(value.Trim(), "{}", StringComparison.Ordinal);
 
     private sealed record NodeTimestamp(DateTimeOffset CreatedAtUtc, DateTimeOffset UpdatedAtUtc);
 }

@@ -17,6 +17,7 @@
 ## Prerequisites
 
 - The separate prerequisite bundle must be prepared and accepted.
+- The follow-up `cognitive-memory-boundary-hardening` bundle must be closed before source ingestion, recall, or MAF integration implementation starts.
 - No Cognitive Memory project references should be added before this gate closes.
 
 ## Exact Source References
@@ -35,6 +36,7 @@
 ## Deliverables
 
 - Approved prerequisite-boundaries bundle.
+- Approved boundary-hardening bundle with paging/cursor, redaction/hash, and MAF trace proof.
 - Explicit go/no-go decision for Cognitive Memory implementation.
 - Dependency impact note for MAF, Workbench, Process, and Workflow boundaries.
 
@@ -67,6 +69,8 @@
 - Prerequisite bundle has source-grounded subbundles.
 - MAF context contribution is an extension point, not a cognitive memory special case.
 - Source snapshot contracts expose deterministic ids, hashes, cursors, provenance, and layout/reference data.
+- Source snapshot contracts expose typed cursor failure, hash classification, and redaction-aware Workbench metadata.
+- MAF context contribution traces are retained for future Cognitive Memory inspection.
 
 ## Proof Required
 
@@ -75,7 +79,8 @@
 - File references and source evidence captured in review notes.
 - Closure proof: `dotnet build .\CanDoItAll.slnx --no-restore` passed with 0 warnings and 0 errors.
 - Closure proof: targeted context contributor, Workbench snapshot, and runtime evidence integration tests passed.
-- Gate decision: Cognitive Memory implementation may proceed using these boundaries; direct MAF private-provider edits and ad hoc source table reads remain out of bounds.
+- Closure proof: `cognitive-memory-boundary-hardening` completed-stage validation passed after targeted unit and integration tests.
+- Gate decision: Cognitive Memory implementation may proceed using these hardened boundaries; direct MAF private-provider edits and ad hoc source table reads remain out of bounds.
 
 ## Browser Validation Logging
 
@@ -84,7 +89,7 @@
 
 ## Progression Gate
 
-- Proceed to `01-module-foundation`; the prerequisite boundary decision is accepted and validated.
+- Proceed to `01-module-foundation`; the prerequisite boundary and hardening decisions are accepted and validated.
 
 ## Suggested Agent Prompt
 

@@ -30,7 +30,8 @@ public sealed class AgentContextContributionTests
             {
                 ["source"] = "unit-test"
             }));
-        var provider = CreateProvider(contributor);
+        var traceCollector = new AgentContextContributionTraceCollector();
+        var provider = CreateProvider(contributor, traceCollector);
 
         var messages = await provider.ContributeAsync(
         [
@@ -40,6 +41,36 @@ public sealed class AgentContextContributionTests
         var message = Assert.Single(messages);
         Assert.Equal(ChatRole.System, message.Role);
         Assert.Equal("Injected context", message.Text);
+
+        var trace = Assert.Single(traceCollector.Snapshot());
+        Assert.Equal(new AgentContextContributorId("test.context"), trace.ContributorId);
+        Assert.Equal(AgentContextContributionStatus.Provided, trace.Status);
+        Assert.Equal(1, trace.GeneratedMessageCount);
+        Assert.Equal("unit-test", trace.TraceMetadata["source"]);
+        Assert.True(trace.Elapsed > TimeSpan.Zero);
+    }
+
+    [Fact]
+    public async Task Maf_provider_records_skipped_contribution_trace()
+    {
+        var contributor = new TestContextContributor(
+            "test.skipped",
+            10,
+            _ => AgentContextContributionResult.Skipped(new Dictionary<string, string>
+            {
+                ["reason"] = "not-applicable"
+            }));
+        var traceCollector = new AgentContextContributionTraceCollector();
+        var provider = CreateProvider(contributor, traceCollector);
+
+        var messages = await provider.ContributeAsync([]);
+
+        Assert.Empty(messages);
+        var trace = Assert.Single(traceCollector.Snapshot());
+        Assert.Equal(new AgentContextContributorId("test.skipped"), trace.ContributorId);
+        Assert.Equal(AgentContextContributionStatus.Skipped, trace.Status);
+        Assert.Equal(0, trace.GeneratedMessageCount);
+        Assert.Equal("not-applicable", trace.TraceMetadata["reason"]);
     }
 
     [Fact]
@@ -49,13 +80,19 @@ public sealed class AgentContextContributionTests
             "test.failure",
             10,
             _ => AgentContextContributionResult.Failed("Policy denied context."));
-        var provider = CreateProvider(contributor);
+        var traceCollector = new AgentContextContributionTraceCollector();
+        var provider = CreateProvider(contributor, traceCollector);
 
         var exception = await Assert.ThrowsAsync<AgentContextContributionException>(async () =>
             await provider.ContributeAsync([]));
 
         Assert.Equal(new AgentContextContributorId("test.failure"), exception.ContributorId);
         Assert.Contains("Policy denied context", exception.Message, StringComparison.Ordinal);
+
+        var trace = Assert.Single(traceCollector.Snapshot());
+        Assert.Equal(new AgentContextContributorId("test.failure"), trace.ContributorId);
+        Assert.Equal(AgentContextContributionStatus.Failed, trace.Status);
+        Assert.Equal("Policy denied context.", trace.FailureMessage);
     }
 
     [Fact]
@@ -68,14 +105,16 @@ public sealed class AgentContextContributionTests
             {
                 _ = request;
                 return AgentContextContributionResult.Provided([]);
-            });
+        });
         using var cancellation = new CancellationTokenSource();
         await cancellation.CancelAsync();
         contributor.CancellationProbe = token => token.ThrowIfCancellationRequested();
-        var provider = CreateProvider(contributor);
+        var traceCollector = new AgentContextContributionTraceCollector();
+        var provider = CreateProvider(contributor, traceCollector);
 
         await Assert.ThrowsAsync<OperationCanceledException>(async () =>
             await provider.ContributeAsync([], cancellation.Token));
+        Assert.Empty(traceCollector.Snapshot());
     }
 
     [Fact]
@@ -105,9 +144,40 @@ public sealed class AgentContextContributionTests
         Assert.Contains(
             progressMessages,
             message => message.Contains("registered agent context contributor", StringComparison.Ordinal));
+
+        var traceCollector = ReadContextContributionTraceCollector(state);
+        var firstProvider = contextProviders
+            .OfType<MafAgentContextContributionProvider>()
+            .First(provider => provider.ContributorId.Value == "early");
+        var messages = await firstProvider.ContributeAsync([]);
+
+        Assert.Empty(messages);
+        var trace = Assert.Single(traceCollector.Snapshot());
+        Assert.Equal(new AgentContextContributorId("early"), trace.ContributorId);
+        Assert.Equal(AgentContextContributionStatus.Skipped, trace.Status);
     }
 
-    private static MafAgentContextContributionProvider CreateProvider(IAgentContextContributor contributor)
+    [Fact]
+    public async Task Maf_runtime_rejects_duplicate_contributor_ids()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IAgentContextContributor>(new TestContextContributor("duplicate", 10, _ => AgentContextContributionResult.Skipped()));
+        services.AddSingleton<IAgentContextContributor>(new TestContextContributor("duplicate", 20, _ => AgentContextContributionResult.Skipped()));
+        var runtime = new MafAgentRuntime(Path.GetTempPath(), services.BuildServiceProvider());
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await InvokeCreateCapabilityStateAsync(
+                runtime,
+                CreateAgent(),
+                CreateProviderProfile(),
+                []));
+
+        Assert.Contains("must be unique", exception.Message, StringComparison.Ordinal);
+    }
+
+    private static MafAgentContextContributionProvider CreateProvider(
+        IAgentContextContributor contributor,
+        IAgentContextContributionTraceSink? traceSink = null)
         => new(
             contributor,
             CreateAgent(),
@@ -115,7 +185,8 @@ public sealed class AgentContextContributionTests
             new AgentContextContributionPolicy(
                 AgentContextExecutionMode.InteractiveChat,
                 SuppressApprovalRequirements: false,
-                WorkspaceScopeDescriptor.Sandbox));
+                WorkspaceScopeDescriptor.Sandbox),
+            traceSink);
 
     private static AgentDefinition CreateAgent()
         => new(
@@ -197,6 +268,10 @@ public sealed class AgentContextContributionTests
         return task.GetType().GetProperty("Result", BindingFlags.Public | BindingFlags.Instance)?.GetValue(task)
                ?? throw new InvalidOperationException("CreateCapabilityStateAsync did not produce a result.");
     }
+
+    private static AgentContextContributionTraceCollector ReadContextContributionTraceCollector(object state)
+        => Assert.IsType<AgentContextContributionTraceCollector>(
+            state.GetType().GetProperty("ContextContributionTraceCollector", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state));
 
     private sealed class TestContextContributor(
         string id,

@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Linq.Expressions;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
@@ -17,43 +19,180 @@ public sealed class WorkflowRuntimeEvidenceSourceProvider(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var runId = request.RunId?.Value;
         var scopeId = runId ?? Guid.Empty;
-        var items = new List<MemorySourceItem>();
-
-        items.AddRange((await FilterByRunId(dbContext.Set<WorkflowRunRecordEntity>().AsNoTracking(), runId)
-                .ToListAsync(cancellationToken))
-            .Select(MapRun));
-        items.AddRange((await FilterByRunId(dbContext.Set<WorkflowEventRecordEntity>().AsNoTracking(), runId)
-                .ToListAsync(cancellationToken))
-            .Select(MapEvent));
-        items.AddRange((await FilterByRunId(dbContext.Set<WorkflowExternalRequestRecordEntity>().AsNoTracking(), runId)
-                .ToListAsync(cancellationToken))
-            .Select(MapExternalRequest));
-        items.AddRange((await FilterByRunId(dbContext.Set<WorkflowArtifactRecordEntity>().AsNoTracking(), runId)
-                .ToListAsync(cancellationToken))
-            .Select(MapArtifact));
-
-        var allItems = items
-            .OrderBy(item => item.Id.Value, StringComparer.Ordinal)
+        var sources = new[]
+            {
+                CreateSource(
+                    MemorySourceEntityKind.WorkflowRun,
+                    FilterByRunId(dbContext.Set<WorkflowRunRecordEntity>().AsNoTracking(), runId),
+                    item => item.RunId,
+                    MapRun),
+                CreateSource(
+                    MemorySourceEntityKind.WorkflowEvent,
+                    FilterByRunId(dbContext.Set<WorkflowEventRecordEntity>().AsNoTracking(), runId),
+                    item => item.Id,
+                    MapEvent),
+                CreateSource(
+                    MemorySourceEntityKind.WorkflowExternalRequest,
+                    FilterByRunId(dbContext.Set<WorkflowExternalRequestRecordEntity>().AsNoTracking(), runId),
+                    item => item.Id,
+                    MapExternalRequest),
+                CreateSource(
+                    MemorySourceEntityKind.WorkflowArtifact,
+                    FilterByRunId(dbContext.Set<WorkflowArtifactRecordEntity>().AsNoTracking(), runId),
+                    item => item.Id,
+                    MapArtifact)
+            }
+            .OrderBy(source => source.EntityKind.ToString(), StringComparer.Ordinal)
             .ToList();
-        var pageItems = MemorySourceSnapshotPage.Apply(
-            allItems,
+        var page = await ReadPageAsync(
+            sources,
             request.Cursor,
             request.Take,
-            out var nextCursor,
-            out var hasMore);
-        var snapshotHash = MemorySourceSnapshotHasher.Compute(allItems.Select(item => item.ContentHash).ToArray());
+            scopeId,
+            cancellationToken);
 
         return new MemorySourceSnapshot(
             new MemorySourceSnapshotManifest(
-                MemorySourceSnapshotId.Create(MemorySourceKind.WorkflowRuntime, scopeId, snapshotHash),
+                MemorySourceSnapshotId.Create(MemorySourceKind.WorkflowRuntime, scopeId, page.SnapshotHash),
                 MemorySourceKind.WorkflowRuntime,
                 scopeId,
                 DateTimeOffset.UtcNow,
-                allItems.Count,
-                nextCursor,
-                hasMore),
-            pageItems);
+                page.TotalItemCount,
+                page.NextCursor,
+                page.HasMore,
+                page.HasMore ? MemorySourceSnapshotPageStatus.PageReturned : MemorySourceSnapshotPageStatus.EndOfSource,
+                MemorySourceSnapshotHashScope.PageScoped,
+                MemorySourceSnapshotProviderVersions.WorkflowRuntime),
+            page.Items);
     }
+
+    private static async Task<MemorySourcePageSlice> ReadPageAsync(
+        IReadOnlyList<WorkflowSourcePage> sources,
+        MemorySourceSnapshotCursor? cursor,
+        int? take,
+        Guid scopeId,
+        CancellationToken cancellationToken)
+    {
+        var descriptor = MemorySourceSnapshotCursor.ReadDescriptorOrThrow(
+            cursor,
+            MemorySourceKind.WorkflowRuntime,
+            scopeId,
+            MemorySourceSnapshotProviderVersions.WorkflowRuntime);
+        var sourceCounts = new List<WorkflowSourcePageCount>(sources.Count);
+        foreach (var source in sources)
+        {
+            sourceCounts.Add(new WorkflowSourcePageCount(source, await source.CountAsync(cancellationToken)));
+        }
+
+        var totalItemCount = sourceCounts.Sum(item => item.Count);
+        var startPosition = descriptor?.Position ?? 0;
+        if (descriptor is not null)
+        {
+            var anchor = await ReadItemIdAtPositionAsync(sourceCounts, descriptor.Position - 1, cancellationToken);
+            if (anchor is null || anchor.Value != descriptor.LastItemId)
+            {
+                MemorySourceSnapshotCursor.ThrowStaleAnchor(
+                    cursor!.Value,
+                    MemorySourceKind.WorkflowRuntime,
+                    scopeId,
+                    MemorySourceSnapshotProviderVersions.WorkflowRuntime,
+                    "Workflow runtime source cursor anchor is stale or no longer matches the ordered source item at the recorded position.");
+            }
+        }
+
+        var pageSize = MemorySourceSnapshotPage.NormalizeTake(take);
+        var pageItems = new List<MemorySourceItem>(pageSize);
+        var remainingSkip = startPosition;
+        foreach (var sourceCount in sourceCounts)
+        {
+            if (pageItems.Count == pageSize)
+            {
+                break;
+            }
+
+            if (remainingSkip >= sourceCount.Count)
+            {
+                remainingSkip -= sourceCount.Count;
+                continue;
+            }
+
+            var sourceSkip = remainingSkip;
+            remainingSkip = 0;
+            var sourceTake = Math.Min(pageSize - pageItems.Count, sourceCount.Count - sourceSkip);
+            if (sourceTake <= 0)
+            {
+                continue;
+            }
+
+            pageItems.AddRange(await sourceCount.Source.ReadPageAsync(sourceSkip, sourceTake, cancellationToken));
+        }
+
+        var hasMore = startPosition + pageItems.Count < totalItemCount;
+        MemorySourceSnapshotCursor? nextCursor = hasMore && pageItems.Count > 0
+            ? MemorySourceSnapshotCursor.Create(
+                MemorySourceKind.WorkflowRuntime,
+                scopeId,
+                MemorySourceSnapshotProviderVersions.WorkflowRuntime,
+                startPosition + pageItems.Count,
+                pageItems[^1].Id)
+            : null;
+        var snapshotHash = MemorySourceSnapshotHasher.Compute(
+            MemorySourceSnapshotProviderVersions.WorkflowRuntime,
+            scopeId.ToString("D"),
+            startPosition.ToString(CultureInfo.InvariantCulture),
+            string.Join("|", pageItems.Select(item => item.ContentHash)));
+        return new MemorySourcePageSlice(pageItems, totalItemCount, nextCursor, hasMore, snapshotHash);
+    }
+
+    private static async Task<MemorySourceItemId?> ReadItemIdAtPositionAsync(
+        IReadOnlyList<WorkflowSourcePageCount> sourceCounts,
+        int position,
+        CancellationToken cancellationToken)
+    {
+        if (position < 0)
+        {
+            return null;
+        }
+
+        var remaining = position;
+        foreach (var sourceCount in sourceCounts)
+        {
+            if (remaining >= sourceCount.Count)
+            {
+                remaining -= sourceCount.Count;
+                continue;
+            }
+
+            return await sourceCount.Source.ReadItemIdAsync(remaining, cancellationToken);
+        }
+
+        return null;
+    }
+
+    private static WorkflowSourcePage CreateSource<T>(
+        MemorySourceEntityKind entityKind,
+        IQueryable<T> query,
+        Expression<Func<T, Guid>> orderKey,
+        Func<T, MemorySourceItem> map)
+        where T : class
+        => new(
+            entityKind,
+            cancellationToken => query.CountAsync(cancellationToken),
+            async (skip, take, cancellationToken) => (await query
+                    .OrderBy(orderKey)
+                    .Skip(skip)
+                    .Take(take)
+                    .ToListAsync(cancellationToken))
+                .Select(map)
+                .ToList(),
+            async (index, cancellationToken) => (await query
+                    .OrderBy(orderKey)
+                    .Skip(index)
+                    .Take(1)
+                    .ToListAsync(cancellationToken))
+                .Select(map)
+                .FirstOrDefault()
+                ?.Id);
 
     private static IQueryable<T> FilterByRunId<T>(IQueryable<T> query, Guid? runId)
         where T : class
@@ -142,7 +281,13 @@ public sealed class WorkflowRuntimeEvidenceSourceProvider(
             StorageReference: null,
             Metadata(
                 ("kind", workflowEvent.Kind.ToString()),
-                ("nodeId", workflowEvent.NodeId ?? string.Empty)));
+                ("nodeId", workflowEvent.NodeId ?? string.Empty)))
+        {
+            HashPolicy = hasPayload
+                ? MemorySourceHashPolicy.RestrictedRawPayloadIntegrity(
+                    "Workflow event hash includes raw payload JSON. Use only for non-exportable source integrity checks.")
+                : MemorySourceHashPolicy.InternalIntegrity
+        };
     }
 
     private static MemorySourceItem MapExternalRequest(WorkflowExternalRequestRecordEntity request)
@@ -188,7 +333,13 @@ public sealed class WorkflowRuntimeEvidenceSourceProvider(
                 ("kind", request.Kind.ToString()),
                 ("nodeId", request.NodeId),
                 ("eventName", request.EventName),
-                ("responded", request.RespondedAtUtc.HasValue.ToString())));
+                ("responded", request.RespondedAtUtc.HasValue.ToString())))
+        {
+            HashPolicy = hasPayload
+                ? MemorySourceHashPolicy.RestrictedRawPayloadIntegrity(
+                    "Workflow external request hash includes raw request or response JSON. Use only for non-exportable source integrity checks.")
+                : MemorySourceHashPolicy.InternalIntegrity
+        };
     }
 
     private static MemorySourceItem MapArtifact(WorkflowArtifactRecordEntity artifact)
@@ -328,6 +479,23 @@ public sealed class WorkflowRuntimeEvidenceSourceProvider(
             value => value.Key,
             value => value.Value,
             StringComparer.Ordinal);
+
+    private sealed record MemorySourcePageSlice(
+        IReadOnlyList<MemorySourceItem> Items,
+        int TotalItemCount,
+        MemorySourceSnapshotCursor? NextCursor,
+        bool HasMore,
+        string SnapshotHash);
+
+    private sealed record WorkflowSourcePage(
+        MemorySourceEntityKind EntityKind,
+        Func<CancellationToken, Task<int>> CountAsync,
+        Func<int, int, CancellationToken, Task<IReadOnlyList<MemorySourceItem>>> ReadPageAsync,
+        Func<int, CancellationToken, Task<MemorySourceItemId?>> ReadItemIdAsync);
+
+    private sealed record WorkflowSourcePageCount(
+        WorkflowSourcePage Source,
+        int Count);
 
     private sealed record LinkTarget(
         MemorySourceEntityKind EntityKind,

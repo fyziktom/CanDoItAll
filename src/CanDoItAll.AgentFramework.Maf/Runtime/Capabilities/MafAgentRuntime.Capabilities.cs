@@ -175,7 +175,8 @@ public sealed partial class MafAgentRuntime
                 contributor,
                 agent,
                 provider,
-                policy));
+                policy,
+                composition.State.ContextContributionTraceCollector));
         }
 
         await progressCallback(
