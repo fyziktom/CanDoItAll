@@ -1,0 +1,10 @@
+flowchart LR
+    Probe["Probe outcome"] --> Classify["Classify: confirmed, missing, wrong scope, contradiction, overconfident"]
+    Classify --> Evidence["KnowledgeGapEvidenceRef"]
+    Evidence --> Coverage["Coverage map refresh"]
+    Coverage --> Vector["KnowledgeNeedVector update"]
+    Vector --> Tension["Epistemic tension evaluation"]
+    Tension --> Proposal["Learning proposal or probe question set"]
+    Proposal --> Human["Human approval / request more probing"]
+    Human --> NewQuestions["New guided probe questions"]
+    NewQuestions --> Probe

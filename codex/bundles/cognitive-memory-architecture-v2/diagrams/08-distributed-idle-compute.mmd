@@ -1,0 +1,27 @@
+flowchart LR
+    Coordinator[Memory Job Coordinator]
+    DB[(Authoritative Memory DB)]
+    Queue[(Job Queue)]
+    WorkerA[Desktop Worker]
+    WorkerB[Tablet Worker]
+    WorkerC[Mobile Worker]
+    Validator[Output Validator]
+    Store[Accepted Output Store]
+    Reject[Rejected Output Audit]
+
+    Coordinator --> DB
+    Coordinator --> Queue
+    Queue --> WorkerA
+    Queue --> WorkerB
+    Queue --> WorkerC
+    WorkerA --> Validator
+    WorkerB --> Validator
+    WorkerC --> Validator
+    Validator -->|valid| Store
+    Validator -->|invalid| Reject
+    Store --> Coordinator
+    Coordinator --> DB
+
+    subgraph Rule[Critical Rule]
+        R1[Workers never mutate DB or Qdrant directly]
+    end
