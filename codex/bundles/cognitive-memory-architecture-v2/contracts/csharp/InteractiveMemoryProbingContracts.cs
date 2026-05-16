@@ -137,20 +137,20 @@ public sealed record MemoryProbeTurnRequest(
     IReadOnlyDictionary<string, string> Options);
 
 public sealed record MemoryProbeAnswerMetadata(
-    double Confidence,
-    double CalibrationRisk,
+    ScoreEvaluationTrace AnswerEvaluationTrace,
+    ScoreScalarProjection? DisplayConfidence,
     bool ContainsUnverifiedClaims,
     bool ContainsGeneratedSummaryClaims,
     bool HasRequiredSourceRefs,
     bool HasContradictionWarnings,
-    bool HasStalenessWarnings,
-    IReadOnlyDictionary<string, string> ScoreBreakdown);
+    bool HasStalenessWarnings);
 
 public sealed record MemoryProbeFinding(
     Guid Id,
     MemoryProbeFindingKind Kind,
     string Summary,
-    double Confidence,
+    ScoreEvaluationTrace FindingTrace,
+    ScoreScalarProjection? DisplayConfidence,
     IReadOnlyList<Guid> RelatedMemoryItemIds,
     IReadOnlyList<MemorySourceRef> SourceRefs,
     IReadOnlyList<KnowledgeGapEvidenceRef> EvidenceRefs,

@@ -2,7 +2,7 @@
 
 ## Status
 
-- Ready after recall traces, consolidation evidence intake, review records, and MAF/tool boundaries are available.
+- Ready after score geometry, recall traces, consolidation evidence intake, review records, and MAF/tool boundaries are available.
 
 ## Objective
 
@@ -21,6 +21,7 @@
 - `06-consolidation-engine` must expose an evidence intake path that can later consume probe findings.
 - `08-human-review-ui` or its backend services must provide review item creation and decision state.
 - `01a-common-drivers-helpers-and-ef-guardrails` must be closed so probe state, evaluator profiles, evidence kinds, and status fields are strongly typed.
+- `01b-score-geometry-driver` must provide probe assessment, calibration-risk, and regression-value score spaces.
 - `14-neuro-foundation-claim-evidence-ledger` must provide claim-level correction candidates, evidence anchors, context frames, and mutation authority.
 - `15-cognitive-workspace-attention-router` must provide probe workspace frames.
 - `16-prediction-error-salience-signals` must provide prediction error and signal publication.
@@ -57,6 +58,7 @@
 - Negative tests proving direct canonical memory mutation is impossible from probe feedback.
 - Replay tests for the Docker context-separation fixture.
 - EF tests for indexes on project/session/state/created timestamps, trace ids, review links, and regression test state.
+- Score geometry tests for probe assessment traces and scalar-only rejection.
 
 ## Implementation Steps
 
@@ -75,7 +77,7 @@
 - Do not generate broad question queues here beyond deterministic regression fixtures.
 - Do not mutate active canonical memory from feedback or correction records.
 - Do not use Qdrant as a required dependency for probing core tests.
-- Do not store only a final score; preserve findings, evidence refs, trace ids, and calibration dimensions.
+- Do not store only a final score; preserve score evaluation traces, findings, evidence refs, trace ids, and calibration dimensions.
 
 ## Acceptance Checklist
 
@@ -84,6 +86,7 @@
 - High-risk corrections remain draft/review-only.
 - Regression tests replay recall and store pass/fail results linked to new traces.
 - Calibration records distinguish overconfidence, missing source, wrong scope, and redaction-limited answers.
+- Probe answer metadata references score evaluation traces rather than untyped score breakdowns.
 
 ## Proof Required
 

@@ -7,7 +7,7 @@
 | FR-003 Canonicalization | `04-memory-taxonomy-and-projections` | Canonical item creation with source references and confidence. |
 | FR-004 Memory Taxonomy | `04-memory-taxonomy-and-projections` | Typed memory records and relation tests. |
 | FR-005 Mindmap Spatial Processing | `02-workbench-and-source-ingestion` | Layout metadata and relation extraction tests. |
-| FR-006 Multi-View Similarity | `05-recall-orchestrator` | Recall scoring trace covers semantic, spatial, graph, lexical, metadata, temporal, and activation signals. |
+| FR-006 Multi-View Similarity | `01b-score-geometry-driver` + `05-recall-orchestrator` | Score geometry and recall traces cover semantic, spatial, graph, lexical, metadata, temporal, activation, source, and context dimensions. |
 | FR-007 Context-Separated Relatedness | `02-workbench-and-source-ingestion` + `04-memory-taxonomy-and-projections` + `05-recall-orchestrator` + `10-cross-project-memory` | Docker production/test/local/CI fixture proves separation at source layout, relation, projection, recall, and later cross-project promotion gates. |
 | FR-008 Qdrant Projection | `03-semantic-and-rag-adapters` | Projection adapter integration tests. |
 | FR-009 Rebuildable Projection | `04-memory-taxonomy-and-projections` | Projection rebuild test from durable records. |
@@ -33,13 +33,13 @@
 | FR-029 Learning Workflow Orchestration | `12-epistemic-drive-engine` | MAF learning task executor contract and approval gate tests. |
 | FR-030 Knowledge Probing Integration | `13a-probing-core-regression-calibration` + `13-interactive-memory-probing-workbench` + `12-epistemic-drive-engine` | Probing question generation, probe outcome evidence publication, regression replay, calibration, and Epistemic evidence consumption tests. |
 | FR-031 Learning Outcomes | `12-epistemic-drive-engine` | Learning outcome report, draft memory/procedure records, QA findings, and source refs. |
-| NFR-001 Deterministic Core | `01a-common-drivers-helpers-and-ef-guardrails` + `04-memory-taxonomy-and-projections` | Deterministic hashing, paging, fake providers, scoring, and projection payload tests. |
+| NFR-001 Deterministic Core | `01a-common-drivers-helpers-and-ef-guardrails` + `01b-score-geometry-driver` + `04-memory-taxonomy-and-projections` | Deterministic hashing, paging, fake providers, score geometry, and projection payload tests. |
 | NFR-002 Provenance First | `01-module-foundation` | Persistence rejects memory without source evidence or explicit generated reason. |
 | NFR-003 Provider Independence | `01a-common-drivers-helpers-and-ef-guardrails` + `03-semantic-and-rag-adapters` | Shared fake embedding/vector/source providers plus adapter contract tests. |
 | NFR-004 Offline Capability | `03-semantic-and-rag-adapters` | Local SemanticCompletion path and no mandatory external API. |
 | NFR-005 Incremental Processing | `02-workbench-and-source-ingestion` | Source cursor and content hash diff tests. |
 | NFR-006 Safe Degradation | `05-recall-orchestrator` | Qdrant unavailable trace and fallback test. |
-| NFR-007 Explainability | `05-recall-orchestrator` | Trace explains score, exclusion, source, and budget decisions. |
+| NFR-007 Explainability | `01b-score-geometry-driver` + `05-recall-orchestrator` | Trace explains score vectors, matched shapes, scalar projections, exclusion, source, and budget decisions. |
 | NFR-008 Secret Safety | `01-module-foundation` | Redaction/access-policy tests and review gate for high-risk memory. |
 | NFR-009 Versioning | `04-memory-taxonomy-and-projections` | Algorithm, projection, and embedding profile version checks. |
 | NFR-010 Performance | `01a-common-drivers-helpers-and-ef-guardrails` + `05-recall-orchestrator` + `06-consolidation-engine` | Bounded recall budgets, EF query-shape checks, vector allocation review, and background consolidation separation. |
@@ -63,6 +63,27 @@
 | `plan/subbundles/12-epistemic-drive-engine/README.md` | Implementation-ready plan subbundle. |
 | `subbundles/12-epistemic-drive-engine/README.md` | Root execution mirror with numbering note. |
 | `validation/test-and-quality-plan.md` | Unit, integration, UI, and negative tests for Epistemic Drive. |
+
+## Score Geometry Traceability Addendum
+
+| Requirement | Primary subbundle | Validation proof |
+|---|---|---|
+| FR-053 Generic Score Geometry Driver | `01b-score-geometry-driver` | Score-space registry, vector snapshot, shape evaluation, scalar projection, evaluation trace, fake driver, and EF/index tests. |
+| FR-054 Score Geometry Consumption | `01b-score-geometry-driver` + `05-recall-orchestrator` + `15-cognitive-workspace-attention-router` + `16-prediction-error-salience-signals` + `17-temporal-replay-scheduler` + `19-metamemory-abstention-calibration` + `12-epistemic-drive-engine` + `10-cross-project-memory` | Contract/model tests reject local scalar scoring and downstream tests prove each consumer references declared score spaces and evaluation traces. |
+| NFR-034 No Scalar-Only Behavior Scoring | `01b-score-geometry-driver` | Analyzer/grep and contract tests reject behavior-affecting `FinalScore`, untyped `ScoreBreakdown`, scalar-only replay priority, and scalar-only answer confidence. |
+| NFR-035 Versioned Score Spaces | `01b-score-geometry-driver` | Score vector/shape/evaluation records store score space kind, schema version, normalization profile, algorithm version, evidence refs, and missing-dimension policy. |
+| NFR-036 Score Geometry Queryability And Performance | `01b-score-geometry-driver` | EF query/index proof for score components/evaluation traces and performance scan for hot score evaluation paths. |
+
+## Score Geometry Artifact Map
+
+| Artifact | Covers |
+|---|---|
+| `inputs/06-score-geometry-review-request.md` | Raw scoring review request and required outcome. |
+| `analysis/08-score-geometry-architecture-review.md` | Scalar leakage findings and required repairs. |
+| `architecture/26-score-geometry-driver.md` | Generic score-space/vector/shape/evaluation architecture. |
+| `contracts/csharp/CognitiveMemory.ScoringContracts.cs` | Architecture-level scoring contracts. |
+| `subbundles/01b-score-geometry-driver/README.md` | Implementation-ready score geometry foundation plan. |
+| `validation/test-and-quality-plan.md` | Score geometry tests, EF proof, and scalar-only rejection checks. |
 
 ## Interactive Memory Probing Traceability Addendum
 
@@ -115,8 +136,8 @@
 | FR-052 Workspace-Aware Probing | `15-cognitive-workspace-attention-router` + `16-prediction-error-salience-signals` + `13a-probing-core-regression-calibration` + `19-metamemory-abstention-calibration` | Probe workspace, prediction-error/signal publication, claim correction, and answer-gate trace tests. |
 | NFR-025 No Direct Public Upsert For Authoritative Memory | `14-neuro-foundation-claim-evidence-ledger` | Public contract review and mutation-authority negative tests. |
 | NFR-026 No Silent Claim Merge | `14-neuro-foundation-claim-evidence-ledger` | Claim/context/evidence mismatch tests prevent automatic merge. |
-| NFR-027 No Scalar-Only Salience | `16-prediction-error-salience-signals` | Signal dimensions and metadata persistence tests. |
-| NFR-028 Explainable Attention | `15-cognitive-workspace-attention-router` | Attention score breakdown and reason trace tests. |
+| NFR-027 No Scalar-Only Salience | `01b-score-geometry-driver` + `16-prediction-error-salience-signals` | Signal dimensions, score vector metadata, and scalar projection tests. |
+| NFR-028 Explainable Attention | `01b-score-geometry-driver` + `15-cognitive-workspace-attention-router` | Attention score vector, matched shape, scalar projection, and reason trace tests. |
 | NFR-029 Replay Safety | `17-temporal-replay-scheduler` | Replay cannot directly promote truth or bypass mutation authority. |
 | NFR-030 Speculation Labeling | `18-procedural-skill-memory-simulation` | Simulation output cannot become active procedure without review and validation. |
 | NFR-031 Answer Abstention Safety | `19-metamemory-abstention-calibration` | Abstention/clarification/source-audit tests for unsafe fluent answers. |

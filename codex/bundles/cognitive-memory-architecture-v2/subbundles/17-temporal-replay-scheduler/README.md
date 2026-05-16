@@ -2,7 +2,7 @@
 
 ## Status
 
-- Ready after `06-consolidation-engine` and `16-prediction-error-salience-signals`.
+- Ready after `01b-score-geometry-driver`, `06-consolidation-engine`, and `16-prediction-error-salience-signals`.
 
 ## Objective
 
@@ -18,6 +18,7 @@ Make episodic memory sequence-aware and add prioritized replay/rehearsal schedul
 
 - Source ingestion and consolidation basics exist.
 - Prediction errors and salience signals are durable.
+- `01b-score-geometry-driver` provides replay-priority score spaces, urgency shapes, and scalar queue projection policy.
 - Mutation authority is available for any replay output that proposes authoritative change.
 
 ## Exact Source References
@@ -48,6 +49,7 @@ Make episodic memory sequence-aware and add prioritized replay/rehearsal schedul
 
 - Unit/integration tests for episode order, actors, artifacts, decisions, outcomes, and causal links.
 - Replay priority tests for high-risk stale procedure, repeated wrong-scope errors, failed probe regressions, and source anchor refresh.
+- Score geometry tests proving replay queue priority is derived from replay vectors and urgency shapes.
 - Negative tests proving replay creates draft/review/projection invalidation only.
 - Distributed replay hash/version/policy rejection tests.
 - EF/performance tests for episode timelines and replay queues.
@@ -77,6 +79,7 @@ Make episodic memory sequence-aware and add prioritized replay/rehearsal schedul
 - Episode steps preserve order and actors.
 - Episodes link prediction errors, claims, procedures, decisions, and artifacts.
 - Replay jobs are prioritized by signal vectors and risk.
+- Replay jobs preserve priority evaluation traces and derived scalar queue projections.
 - Replay output remains draft/review/projection invalidation until mutation authority/review policy applies.
 - Distributed replay output is validated by hashes, versions, source scope, and policy.
 
@@ -96,9 +99,8 @@ Make episodic memory sequence-aware and add prioritized replay/rehearsal schedul
 ## Progression Gate
 
 - Do not proceed to procedural skill memory, distributed replay, or Epistemic Drive replay consumption until episode sequence and replay safety tests pass.
-- Reopen this subbundle if replay output can mutate truth directly or cannot cite evidence/signals.
+- Reopen this subbundle if replay output can mutate truth directly, cannot cite evidence/signals, or stores only scalar priority.
 
 ## Suggested Agent Prompt
 
 Implement temporal episodic memory and replay scheduling. Preserve episode order and causality, prioritize replay from prediction errors and signal vectors, and ensure replay output cannot promote truth without mutation authority and review policy.
-

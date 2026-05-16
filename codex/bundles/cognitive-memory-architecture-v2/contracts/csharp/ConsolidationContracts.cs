@@ -98,5 +98,6 @@ public sealed record ContradictionCandidate(
     Guid SourceMemoryItemId,
     Guid TargetMemoryItemId,
     string Summary,
-    double Confidence,
+    ScoreEvaluationTrace ContradictionTrace,
+    ScoreScalarProjection? DisplayConfidence,
     IReadOnlyList<RelationEvidence> Evidence);

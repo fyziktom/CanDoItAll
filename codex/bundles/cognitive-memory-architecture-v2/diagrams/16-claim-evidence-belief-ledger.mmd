@@ -22,18 +22,17 @@ classDiagram
     string ObjectKey
     DateTime ValidFromUtc
     DateTime ValidToUtc
-    double Confidence
+    ScoreVector ConfidenceVector
+    ScalarProjection DisplayConfidence
     MemoryValidationState ValidationState
   }
 
   class MemoryBeliefState {
     Guid Id
     MemoryBeliefStateKind StateKind
-    double SupportScore
-    double AttackScore
-    double SourceQualityScore
-    double ContextFitScore
-    double StalenessScore
+    ScoreVector BeliefVector
+    ScoreEvaluationTrace EvaluationTrace
+    ScalarProjection DisplayBelief
     string Explanation
   }
 

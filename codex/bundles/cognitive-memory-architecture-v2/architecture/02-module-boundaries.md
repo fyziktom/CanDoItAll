@@ -74,7 +74,9 @@ The common layer should own:
 - serialization options/converters for repeated payloads,
 - strongly typed ids/statuses/shared enum-like values used across phase boundaries.
 
-It must not own feature orchestration, canonicalization policy, recall scoring, probe correction policy, or learning proposal behavior. Those remain in the feature phases.
+It must not own feature orchestration, canonicalization policy, probe correction policy, or learning proposal behavior. Those remain in the feature phases.
+
+Score geometry is a separate foundation after this common layer. The common layer provides typed ids, serialization, paging, EF proof helpers, and deterministic fake primitives. `01b-score-geometry-driver` owns score spaces, vectors, shapes, scalar projections, and score evaluation traces. Feature phases own the policy that consumes those evaluations.
 
 ## Neuro-Cognitive Control Boundary
 

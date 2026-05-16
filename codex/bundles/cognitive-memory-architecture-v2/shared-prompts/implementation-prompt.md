@@ -10,6 +10,8 @@ Before editing code:
 - Preserve source-of-truth boundaries: raw sources remain authoritative, durable memory remains authoritative over projections, and Qdrant/search/context packs remain rebuildable projections.
 - Use strongly typed modes, ids, policy contexts, and result objects.
 - Do not introduce fallback mechanisms that hide provider, source, or projection failures.
+- Do not implement behavior-affecting add/subtract scoring outside `01b-score-geometry-driver`.
+- Do not introduce `FinalScore`, untyped `ScoreBreakdown`, scalar-only replay priority, scalar-only answer confidence, or local weighted formulas for recall, attention, belief, salience, probing, answer gating, Epistemic Drive, or cross-project promotion.
 - Do not collapse Epistemic Drive into a simple scalar priority score.
 - Do not collapse salience signals into a scalar-only priority score.
 - Do not expose public direct upsert operations for authoritative memory; use mutation authority.

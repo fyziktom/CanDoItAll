@@ -93,7 +93,8 @@ Key fields:
 - `TopicKey`
 - `TagsJson`
 - `EntitiesJson`
-- `ConfidenceScore`
+- `ConfidenceVectorId`
+- `DisplayConfidenceProjection`
 - `HumanValidationStatus`
 - `SourceRefsJson`
 - `CurrentState`
@@ -139,8 +140,9 @@ Key fields:
 - `SourceMemoryItemId`
 - `TargetMemoryItemId`
 - `RelationKind`
-- `Weight`
-- `ConfidenceScore`
+- `RelationVectorId`
+- `DisplayStrengthProjection`
+- `DisplayConfidenceProjection`
 - `EvidenceJson`
 - `Reason`
 - `CreatedBy`
@@ -148,21 +150,19 @@ Key fields:
 
 ### `MemoryActivationRecord`
 
-Represents salience and retrieval dynamics.
+Represents derived activation geometry and retrieval dynamics.
 
 Key fields:
 
 - `MemoryItemId`
-- `ActivationScore`
-- `ImportanceScore`
-- `RecencyScore`
+- `ActivationVectorId`
+- `ActivationEvaluationTraceId`
+- `DisplayActivationProjection`
+- `LastScalarProjectionKind`
 - `UsageCount`
 - `LastUsedAtUtc`
-- `HumanValidationBoost`
-- `RiskBoost`
-- `FailureImpactBoost`
-- `StalenessPenalty`
-- `ContradictionPenalty`
+- `DominantDimensionKinds`
+- `MatchedShapeKinds`
 - `DormantUntilUtc`
 
 ### `MemoryProjectionRecord`
@@ -343,7 +343,8 @@ Key fields:
 - `KnowledgeNeedVectorId`
 - `Category`
 - `ParetoRank`
-- `DisplayPriorityScore`
+- `ScoreEvaluationTraceId`
+- `DisplayPriorityProjection`
 - `LearningRoiEstimateJson`
 - `IntersectingProjectDirectionIdsJson`
 - `EvidenceRefsJson`
@@ -351,7 +352,22 @@ Key fields:
 - `AlgorithmVersion`
 - `CalculatedAtUtc`
 
-`DisplayPriorityScore` is optional and secondary. It must not be the only stored decision basis.
+`DisplayPriorityProjection` is optional and secondary. It must not be the only stored decision basis.
+
+## Generic Score Geometry Records
+
+The score geometry driver adds reusable score records used by recall, attention, belief, salience, replay, probing, answer gating, Epistemic Drive, and cross-project promotion.
+
+| Entity | Purpose |
+|---|---|
+| `ScoreSpaceDefinitionRecord` | Versioned score space, dimensions, normalization profile, missing-dimension policy, and scalar projection policy. |
+| `ScoreVectorSnapshotRecord` | Immutable vector snapshot for one evaluation input or output. |
+| `ScoreComponentRecord` | Queryable dimension value with confidence, evidence ref, owner, schema version, and algorithm version. |
+| `ScoreShapeSnapshotRecord` | Region, envelope, centroid, boundary, Pareto frontier, or trajectory used by an evaluation. |
+| `ScoreEvaluationTraceRecord` | Full decision trace: input vectors, matched shapes, missing dimensions, scalar projection, explanation, and algorithm version. |
+| `ScoreScalarProjectionRecord` | Derived display/sorting/queue projection. It is not authoritative scoring state. |
+
+Score components that affect behavior must be queryable by project, owner record, score space kind, dimension kind, schema version, calculated time, and evidence ref. Full vector/shape payloads may be stored as bounded versioned payloads when the query-critical component rows exist.
 
 ### `LearningProposalRecord`
 
@@ -568,7 +584,7 @@ Use relational rows and indexes for data that must be filtered, joined, reviewed
 - probe session/turn/feedback/finding/correction/regression/calibration links,
 - evidence anchors, claim support/attack links, claim revision lineage, belief state, mutation command/audit state,
 - entity aliases, context frame dimensions, workspace slots, inhibited candidates, attention decisions,
-- prediction expectation/error links, cognitive signal vectors, episode steps, replay job targets, procedure maturity/failure modes, answer-gate decisions,
+- prediction expectation/error links, cognitive signal vectors, score vectors/shapes/evaluation traces, episode steps, replay job targets, procedure maturity/failure modes, answer-gate decisions,
 - required and forbidden regression memory refs.
 
 JSON remains acceptable for:
@@ -576,7 +592,7 @@ JSON remains acceptable for:
 - supplemental connector metadata,
 - small versioned request snapshots,
 - immutable report summaries,
-- display-only score breakdowns,
+- display-only scalar projections reproducible from score evaluation traces,
 - optional provider-specific payload fragments,
 - storage references to large artifacts.
 
@@ -597,7 +613,8 @@ The implementation must define indexes before large data arrives. At minimum:
 - `CanonicalMemoryItemRecord`: `(ProjectId, MemoryKind, CurrentState)`, `(ProjectId, TopicKey)`, `(HumanValidationStatus)`, `(SupersededById)`, `(UpdatedAtUtc)`.
 - `MemorySourceRefRecord`: `(MemoryItemId)`, `(SourceItemId)`, `(ProjectId, SourceType, SourceItemKey)`.
 - `MemoryRelationRecord`: `(ProjectId, SourceMemoryItemId, RelationKind)`, `(ProjectId, TargetMemoryItemId, RelationKind)`, `(ProjectId, RelationKind)`.
-- `MemoryActivationRecord`: `(ProjectId, ActivationScore)`, `(ProjectId, LastUsedAtUtc)`, `(DormantUntilUtc)`.
+- `MemoryActivationRecord`: `(ProjectId, DisplayActivationProjection)`, `(ProjectId, LastUsedAtUtc)`, `(DormantUntilUtc)`, `(ActivationEvaluationTraceId)`.
+- Score geometry records: vector snapshots `(ProjectId, SpaceKind, SchemaVersion, CalculatedAtUtc)`, score components `(ProjectId, OwnerRecordId, SpaceKind, DimensionKind)`, shapes `(ProjectId, SpaceKind, ShapeKind, SchemaVersion)`, evaluation traces `(ProjectId, SpaceKind, CalculatedAtUtc)`.
 - `MemoryProjectionRecord`: `(MemoryItemId, ProjectionStoreKind, ProjectionVersion, EmbeddingProfile)` unique, `(ProjectId, CollectionName, State)`, `(SourceHash)`, `(PayloadHash)`.
 - `MemoryRecallTraceRecord`: `(ProjectId, CreatedAtUtc)`, `(RunId)`, `(AgentId)`, `(Intent)`.
 - `MemoryConsolidationRunRecord`: `(ProjectId, Status, StartedAtUtc)`, `(TriggerKind, Mode)`.
@@ -606,6 +623,6 @@ The implementation must define indexes before large data arrives. At minimum:
 - Neuro-cognitive foundation records: evidence anchors `(ProjectId, SourceItemId, AnchorKind)`, claims `(ProjectId, ClaimKind, ValidationState)`, claim/context links `(ClaimId, ContextFrameId)`, support/attack evidence `(ClaimId, EvidenceAnchorId, Direction)`, mutation commands `(ProjectId, IdempotencyKey)` unique, mutation audits `(ProjectId, CreatedAtUtc, ActorKind)`.
 - Entity/context records: entities `(ProjectId, EntityKind, CanonicalName)`, aliases `(ProjectId, AliasNormalized)`, context frames `(ProjectId, FrameKind)`, context dimensions `(ContextFrameId, DimensionKind, Value)`.
 - Workspace/attention records: workspace frames `(ProjectId, FrameKind, ExpiresAtUtc)`, focus slots `(WorkspaceFrameId, Kind)`, inhibited candidates `(WorkspaceFrameId, CandidateId)`, attention decisions `(ProjectId, WorkspaceFrameId, CreatedAtUtc, DecisionKind)`.
-- Prediction/signal/replay/procedure records: prediction errors `(ProjectId, ErrorKind, ObservedAtUtc)`, cognitive signals `(ProjectId, SignalKind, ObservedAtUtc)`, episodes `(ProjectId, EpisodeKind, StartedAtUtc)`, episode steps `(EpisodeId, SequenceIndex)` unique, replay jobs `(ProjectId, JobKind, State, ScheduledAtUtc)`, procedure skills `(ProjectId, Maturity, RiskLevel)`, answer-gate decisions `(ProjectId, WorkspaceFrameId, CreatedAtUtc, DecisionKind)`.
+- Prediction/signal/replay/procedure records: prediction errors `(ProjectId, ErrorKind, ObservedAtUtc)`, cognitive signals `(ProjectId, SignalKind, ObservedAtUtc)`, episodes `(ProjectId, EpisodeKind, StartedAtUtc)`, episode steps `(EpisodeId, SequenceIndex)` unique, replay jobs `(ProjectId, JobKind, State, ScheduledAtUtc)`, procedure skills `(ProjectId, Maturity)`, answer-gate decisions `(ProjectId, WorkspaceFrameId, CreatedAtUtc, DecisionKind)`.
 
 Read paths for dashboards, review queues, recall traces, source items, projections, proposals, and probes must be paged and must project to DTOs. Do not load full entity graphs with broad `Include` chains for operator screens or recall hot paths.

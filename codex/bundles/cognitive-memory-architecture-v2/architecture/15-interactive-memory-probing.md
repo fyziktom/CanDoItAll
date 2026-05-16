@@ -20,7 +20,7 @@ The system should learn where its memory is weak by being questioned. Human conv
 - Do not treat user corrections as automatically validated source truth.
 - Do not run external learning without approval.
 - Do not hide low-confidence, stale, contradictory, or source-poor answers behind fluent wording.
-- Do not let probing become only a scalar score or a generic chatbot metric.
+- Do not let probing become only a scalar score or a generic chatbot metric. Probe assessment must use the shared score geometry model.
 
 ## Relationship To Existing Memory Layers
 
@@ -56,7 +56,7 @@ start probe session
   -> choose mode and project scope
   -> user or system asks a question
   -> recall orchestrator builds context with trace
-  -> answer renderer produces answer + confidence + source summary
+  -> answer renderer produces answer + answer-gate confidence projection + source summary
   -> probe assessor classifies quality and uncertainty
   -> user confirms/corrects/challenges/asks why
   -> system creates evidence records and suggested actions
@@ -73,7 +73,7 @@ Each turn should store:
 - recall request and recall trace id,
 - context pack id,
 - answer text,
-- confidence and calibration risk,
+- score evaluation trace, confidence projection, and calibration risk,
 - source refs used,
 - redaction/access decisions,
 - missing source warnings,
@@ -167,6 +167,8 @@ Low-risk preference corrections may be accepted faster. High-risk procedural, de
 | `WrongScope` | Answer used related but wrong context. | Context-separation relation/test. |
 | `TooGeneric` | Answer lacked project-specific memory. | Gap evidence and source request. |
 | `Overconfident` | Confidence high but answer rejected. | Calibration ledger update. |
+
+Probe assessment should reference `ProbeAssessment` and `AnswerGate` score evaluation traces. UI may show a compact confidence value, but the backend must preserve the score vector, matched shapes, missing dimensions, and evidence refs.
 | `UnsafeOrRedacted` | Policy prevented answer/source exposure. | Access review or safe explanation. |
 
 ## Regression Test Generation

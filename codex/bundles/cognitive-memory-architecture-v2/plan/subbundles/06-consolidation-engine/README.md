@@ -17,6 +17,7 @@
 
 - `04-memory-taxonomy-and-projections` must provide canonical memory and projection state.
 - `01a-common-drivers-helpers-and-ef-guardrails` must provide lease, idempotency, batch, source-generated JSON, and EF bulk-operation guidance.
+- `01b-score-geometry-driver` must provide activation, contradiction, and consolidation candidate score evaluation contracts.
 - `14-neuro-foundation-claim-evidence-ledger` must provide mutation authority, evidence anchors, claims, and context frames.
 - `16-prediction-error-salience-signals` must provide durable signal/error evidence that consolidation can consume.
 - Source snapshot contracts for Process and Workflow data must be available or explicitly staged.
@@ -47,6 +48,7 @@
 - Unit tests for idempotent extraction and duplicate suppression.
 - Integration tests for run resume, failure recording, and review handoff.
 - EF/performance tests for bounded batches, cursor advancement, stale projection marking, and safe bulk state transitions.
+- Score geometry tests proving consolidation updates vectors/traces rather than direct scalar boosts/penalties.
 
 ## Implementation Steps
 
@@ -66,6 +68,7 @@
 - Consolidation can retry safely.
 - Review-required output is not active until accepted.
 - Every generated record keeps source evidence, algorithm version, and run id.
+- Activation, contradiction, and review priority changes are backed by score evaluation traces.
 
 ## Proof Required
 

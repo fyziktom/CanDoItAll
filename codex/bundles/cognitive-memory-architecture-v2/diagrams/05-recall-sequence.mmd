@@ -19,8 +19,8 @@ sequenceDiagram
     Vec-->>Recall: Vector candidates
     Recall->>Graph: Expand associations and source relations
     Graph-->>Recall: Related candidates
-    Recall->>Act: Score activation, confidence, recency, staleness
-    Act-->>Recall: Ranked candidates
+    Recall->>Act: Build recall score vectors and shape matches
+    Act-->>Recall: Evaluation traces and display rank projections
     Recall->>Policy: Filter/redact by access context
     Policy-->>Recall: Allowed candidates
     Recall->>Context: Build staged context pack

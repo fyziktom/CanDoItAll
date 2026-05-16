@@ -39,6 +39,7 @@
 | Workflow memory executors | use memory inside workflows. |
 | Procedure extraction | convert successful runs into reusable knowledge. |
 | Contradiction/supersession logic | avoid stale or conflicting truth. |
+| Score geometry driver | provide reusable typed score spaces, vectors, shapes, scalar projections, and evaluation traces instead of local weighted-sum formulas. |
 | Knowledge coverage maps | represent coverage/confidence/staleness/risk by topic region. |
 | Epistemic Drive engine | detect important knowledge gaps and evaluate multi-dimensional epistemic tension. |
 | Learning proposal service | create human-reviewable learning proposals with evidence, sources, risks, and acceptance criteria. |
@@ -121,7 +122,15 @@ V1.1:
 
 - A display priority score may exist only for UI sorting.
 - Core decisions must preserve vector dimensions, evidence refs, Pareto/category metadata, ROI estimate, and explanation.
+- Epistemic Drive must use the generic `EpistemicNeed` score space so dimensions, shapes, normalization, and scalar projection are comparable to other cognitive score evaluations.
 - Prediction errors, salience signals, replay outcomes, answer-gate decisions, and contested claims may become evidence contributors but never direct truth.
 - Learning tasks must respect local-first/offline mode and source approval policy.
 - Learning-derived memory remains draft until source refs and validation requirements are satisfied.
 - Cross-project learning opportunities must not leak project-private source content.
+
+## New Score Geometry Constraints
+
+- Recall, attention, belief, salience, replay, probing, answer gating, Epistemic Drive, mindmap similarity, activation, procedure maturity, and cross-project promotion must declare score spaces.
+- Qdrant and SemanticCompletion similarity results are dimensions, not final ranks.
+- A behavior-affecting scalar score, priority, confidence, or weight is invalid unless it is a derived `ScoreScalarProjection` linked to a `ScoreEvaluationTrace`.
+- Score dimensions used for filtering, review, replay, calibration, or dashboards must be relational/indexable, not hidden only in JSON.

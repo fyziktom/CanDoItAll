@@ -62,8 +62,10 @@ public sealed record MemoryItem(
     string Title,
     string CanonicalText,
     string? SummaryText,
-    double Confidence,
-    double Activation,
+    ScoreVectorSnapshot ConfidenceVector,
+    ScoreVectorSnapshot ActivationVector,
+    ScoreScalarProjection? DisplayConfidence,
+    ScoreScalarProjection? DisplayActivation,
     MemoryValidationState ValidationState,
     MemoryStabilityState StabilityState,
     IReadOnlyList<MemorySourceRef> SourceRefs,
@@ -97,8 +99,9 @@ public sealed record MemoryRelation(
     Guid SourceMemoryItemId,
     Guid TargetMemoryItemId,
     MemoryRelationType RelationType,
-    double Strength,
-    double Confidence,
+    ScoreVectorSnapshot RelationVector,
+    ScoreScalarProjection? DisplayStrength,
+    ScoreScalarProjection? DisplayConfidence,
     IReadOnlyList<RelationEvidence> Evidence,
     string AlgorithmVersion,
     DateTimeOffset CreatedAtUtc);
@@ -106,7 +109,7 @@ public sealed record MemoryRelation(
 public sealed record RelationEvidence(
     string EvidenceType,
     string Summary,
-    double Weight,
+    ScoreComponent WeightComponent,
     IReadOnlyDictionary<string, string> Properties);
 
 public sealed record MemoryItemQuery(

@@ -43,7 +43,7 @@ A memory regression test should store:
 | Mode | Use |
 |---|---|
 | Deterministic | Required/forbidden ids, states, tags, source refs, and warnings. |
-| Heuristic | Text constraints, uncertainty phrases, trace shape, score ranges. |
+| Heuristic | Text constraints, uncertainty phrases, trace shape, score vectors, shape matches, and scalar projection ranges. |
 | LLM-assisted | Complex semantic answer quality; must be reviewable and not sole proof for high-risk tests. |
 | Human-reviewed | Critical procedures, policy, security, finance, compliance, or destructive automation. |
 
@@ -57,14 +57,14 @@ Every probe answer should compare confidence against outcome:
 | High confidence + corrected | Dangerous overconfidence. Penalize feature pattern and create review evidence. |
 | Low confidence + confirmed | System may be too hesitant; source coverage may be better than estimated. |
 | Low confidence + missing | Gap model is aligned. |
-| Medium confidence + wrong scope | Context-separation scoring needs adjustment. |
+| Medium confidence + wrong scope | Context-separation score shape or projection needs adjustment. |
 
-Calibration records should not immediately change canonical truth. They should tune ranking, answer confidence display, and future question generation.
+Calibration records should not immediately change canonical truth. They should tune score-space definitions, shape thresholds, answer confidence display, and future question generation through reviewable profile/version changes.
 
 ## Calibration Inputs
 
-- Final answer confidence.
-- Recall candidate scores.
+- Final answer confidence projection and answer-gate evaluation trace.
+- Recall candidate score vectors and shape matches.
 - Number and quality of source refs.
 - Validation state of memory items.
 - Staleness and contradiction pressure.
@@ -75,9 +75,9 @@ Calibration records should not immediately change canonical truth. They should t
 
 ## Integration With Recall Scoring
 
-The recall orchestrator should expose feature-level scores, not only final score. Calibration needs to know whether the failure was caused by:
+The recall orchestrator should expose feature-level score dimensions, matched shapes, and scalar projections. Calibration needs to know whether the failure was caused by:
 
-- semantic score overpowering scope/graph separation,
+- semantic similarity overpowering scope/graph separation,
 - low activation of a correct dormant record,
 - stale records being selected,
 - budget excluding a required detail,

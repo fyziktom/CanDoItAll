@@ -12,6 +12,8 @@ The refreshed architecture also adds Epistemic Drive: a metacognitive layer that
 
 The neuro-cognitive patch adds the missing control and belief-management layer: cognitive workspace frames, attention routing, prediction error, salience signals, claim/evidence/belief ledger, entity/context binding, temporal replay, procedural skill memory, simulation safety, and metamemory answer gating. These are now integrated as prerequisites where they affect source ingestion, projection, recall, probing, learning, cross-project promotion, and distributed compute.
 
+The score-geometry update adds the missing reusable scoring foundation. Recall, attention, belief, salience, replay, probing, answer gating, Epistemic Drive, and cross-project promotion must use typed score spaces, vectors, shapes/regions, scalar projection policy, and evaluation traces instead of local add/subtract formulas.
+
 This bundle is architecture and planning only. It does not authorize implementation of the Cognitive Memory module.
 
 ## Outcome Contract
@@ -35,6 +37,7 @@ Qdrant/RAG is not the memory. It is a rebuildable projection layer. The durable 
 - recall traces and consolidation runs,
 - interactive probe sessions, probe turns, user correction evidence, calibration records, and memory regression tests,
 - cognitive workspace frames, attention decisions, evidence anchors, atomic claims, belief states, context frames, prediction errors, salience signals, temporal episodes, replay jobs, procedure skills, simulation hypotheses, and answer-gate decisions,
+- score-space definitions, score vector snapshots, score shapes, score evaluation traces, and derived scalar projections,
 - Qdrant projections with rich payload metadata.
 
 ## Source Inspection Scope
@@ -66,6 +69,7 @@ Additional inspection of the supplied current code confirms that Workbench, Proc
 - Do not treat high semantic similarity as identity. Spatial, graph, scope, source confidence, and human validation can override semantic similarity.
 - Do not plan distributed idle compute until local deterministic job packets, leases, hashes, and acceptance validation work.
 - Do not reduce Epistemic Drive to a scalar priority score. Preserve vector dimensions, evidence refs, Pareto/category/ROI metadata, project-direction intersections, and explanation text.
+- Do not allow any behavior-affecting scoring surface to use only add/subtract sub-scores or a final scalar. Recall rank, attention routing, belief state, replay priority, answer confidence, probing assessment, and cross-project promotion must go through score geometry.
 - Do not run external learning or promote high-impact learning outputs without human/policy approval and source refs.
 - Do not let interactive probing mutate authoritative truth directly. Probe feedback creates evidence, correction candidates, review items, regression tests, and learning signals; durable memory changes still pass through Cognitive Memory authority services and review policy.
 - Do not treat `RecallContextPack` as working memory. Working memory is an active scoped workspace frame; a context pack is only rendered output.
@@ -110,37 +114,39 @@ Additional inspection of the supplied current code confirms that Workbench, Proc
 21. `architecture/22-temporal-episodic-memory-and-replay.md`
 22. `architecture/23-procedural-skill-memory-and-simulation.md`
 23. `architecture/24-metamemory-confidence-and-abstention.md`
-24. `plan/01-phase-plan.md`
-25. `subbundles/*/README.md`
-26. `validation/test-and-quality-plan.md`
+24. `architecture/26-score-geometry-driver.md`
+25. `plan/01-phase-plan.md`
+26. `subbundles/*/README.md`
+27. `validation/test-and-quality-plan.md`
 
 ## Recommended Execution Order
 
 1. `subbundles/00-prerequisite-boundary-gate`
 2. `subbundles/01-module-foundation`
 3. `subbundles/01a-common-drivers-helpers-and-ef-guardrails`
-4. `subbundles/14-neuro-foundation-claim-evidence-ledger`
-5. `subbundles/02-workbench-and-source-ingestion`
-6. `subbundles/03-semantic-and-rag-adapters`
-7. `subbundles/04-memory-taxonomy-and-projections`
-8. `subbundles/15-cognitive-workspace-attention-router`
-9. `subbundles/16-prediction-error-salience-signals`
-10. `subbundles/05-recall-orchestrator`
-11. `subbundles/06-consolidation-engine`
-12. `subbundles/17-temporal-replay-scheduler`
-13. `subbundles/18-procedural-skill-memory-simulation`
-14. `subbundles/08-human-review-ui`
-15. `subbundles/07-maf-workflow-integration`
-16. `subbundles/13a-probing-core-regression-calibration`
-17. `subbundles/19-metamemory-abstention-calibration`
-18. `subbundles/13-interactive-memory-probing-workbench`
-19. `subbundles/12-epistemic-drive-engine`
-20. `subbundles/10-cross-project-memory`
-21. `subbundles/09-distributed-idle-compute`
-22. `subbundles/20-architecture-integration-closure`
-23. `subbundles/11-validation-and-architecture-closure`
+4. `subbundles/01b-score-geometry-driver`
+5. `subbundles/14-neuro-foundation-claim-evidence-ledger`
+6. `subbundles/02-workbench-and-source-ingestion`
+7. `subbundles/03-semantic-and-rag-adapters`
+8. `subbundles/04-memory-taxonomy-and-projections`
+9. `subbundles/15-cognitive-workspace-attention-router`
+10. `subbundles/16-prediction-error-salience-signals`
+11. `subbundles/05-recall-orchestrator`
+12. `subbundles/06-consolidation-engine`
+13. `subbundles/17-temporal-replay-scheduler`
+14. `subbundles/18-procedural-skill-memory-simulation`
+15. `subbundles/08-human-review-ui`
+16. `subbundles/07-maf-workflow-integration`
+17. `subbundles/13a-probing-core-regression-calibration`
+18. `subbundles/19-metamemory-abstention-calibration`
+19. `subbundles/13-interactive-memory-probing-workbench`
+20. `subbundles/12-epistemic-drive-engine`
+21. `subbundles/10-cross-project-memory`
+22. `subbundles/09-distributed-idle-compute`
+23. `subbundles/20-architecture-integration-closure`
+24. `subbundles/11-validation-and-architecture-closure`
 
-Root validation closure remains named `11-validation-and-architecture-closure` for compatibility with the existing bundle. Run common helper/driver/EF guardrails first, then neuro claim/evidence/context/mutation foundation before any source, projection, recall, or probing implementation. Run workspace/attention and signal ledgers before recall. Run probing core before answer gate and Dialogue Workbench UI. Run Epistemic Drive after project-scoped recall, consolidation, review, MAF integration, probing evidence, replay evidence, and answer-gate evidence are available. Treat cross-project memory and distributed compute as extensions after project-scoped memory safety is proven.
+Root validation closure remains named `11-validation-and-architecture-closure` for compatibility with the existing bundle. Run common helper/driver/EF guardrails first, then score geometry, then neuro claim/evidence/context/mutation foundation before any source, projection, recall, or probing implementation. Run workspace/attention and signal ledgers before recall. Run probing core before answer gate and Dialogue Workbench UI. Run Epistemic Drive after project-scoped recall, consolidation, review, MAF integration, probing evidence, replay evidence, and answer-gate evidence are available. Treat cross-project memory and distributed compute as extensions after project-scoped memory safety is proven.
 
 ## Dependency And Validation Map
 

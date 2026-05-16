@@ -43,7 +43,7 @@ Output:
 
 - candidate memory areas,
 - candidate items,
-- preliminary scores,
+- preliminary score vectors,
 - channel evidence.
 
 ### Stage 3: Association Expansion
@@ -128,26 +128,37 @@ Persist recall trace. Later feedback can update activation:
 
 ## Scoring Model
 
-Example:
+Recall must use the generic Score Geometry Driver. It must not own a local weighted-sum formula.
+
+The recall score space should preserve dimensions such as:
+
+- semantic similarity,
+- lexical match,
+- graph proximity,
+- spatial proximity,
+- metadata fit,
+- temporal recency,
+- workspace focus fit,
+- context fit,
+- source sufficiency,
+- evidence support,
+- contradiction pressure,
+- staleness pressure,
+- activation,
+- calibration risk,
+- access/redaction pressure.
+
+Example evaluation:
 
 ```text
-score =
-    semanticScore * semanticWeight
-  + lexicalScore * lexicalWeight
-  + graphScore * graphWeight
-  + spatialScore * spatialWeight
-  + activationScore * activationWeight
-  + confidenceScore * confidenceWeight
-  + humanValidationBoost
-  + roleRelevanceBoost
-  + currentProcessBoost
-  + sourceExactMatchBoost
-  - stalenessPenalty
-  - contradictionPenalty
-  - wrongScopePenalty
+candidate evidence
+  -> RecallCandidate score vector
+  -> compare with task/workspace/context shapes
+  -> record matched focus region or inhibited boundary
+  -> optional display rank projection for UI/order only
 ```
 
-The scoring formula should be versioned and persisted in recall traces.
+The score space schema, normalization profile, matched shapes, missing dimensions, evidence refs, scalar projection, and algorithm version must be persisted or referenced in recall traces. A scalar display rank may be cached, but it is not authoritative and must be reproducible from the trace.
 
 ## Recall Evidence For Epistemic Drive
 
@@ -217,7 +228,7 @@ Recall should return:
 Interactive probing needs recall traces with enough detail to support explanation, feedback, and regression tests. Recall traces should include:
 
 - selected and excluded candidates,
-- score components, not only final score,
+- score vector components, shape matches, and scalar projections when present,
 - access/redaction decisions,
 - staleness and contradiction warnings,
 - budget exclusions,
@@ -248,7 +259,7 @@ When the router chooses recall, the recall orchestrator must:
 - rank claim-level candidates where claims exist,
 - record candidates inhibited by context boundaries,
 - include selected claim ids and evidence anchor ids in trace details,
-- preserve score components and answer-gate inputs,
+- preserve score vectors, matched/inhibited shapes, scalar projections, and answer-gate inputs,
 - send the final recall result to the metamemory answer gate before rendering.
 
 Recall traces must include:

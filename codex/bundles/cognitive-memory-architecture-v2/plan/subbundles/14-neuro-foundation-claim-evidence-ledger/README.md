@@ -2,7 +2,7 @@
 
 ## Status
 
-- Ready after `01a-common-drivers-helpers-and-ef-guardrails`.
+- Ready after `01a-common-drivers-helpers-and-ef-guardrails` and `01b-score-geometry-driver`.
 - Critical foundation.
 
 ## Objective
@@ -20,6 +20,7 @@ Add the architecture and implementation plan for atomic claims, evidence anchors
 - `00-prerequisite-boundary-gate` has confirmed source snapshot and MAF context contribution boundaries.
 - `01-module-foundation` has established the module/persistence boundary.
 - `01a-common-drivers-helpers-and-ef-guardrails` has shared ids, fakes, paging, serialization, and EF query-shape helpers.
+- `01b-score-geometry-driver` provides belief-state score spaces, vector snapshots, shapes, scalar projection policy, and evaluation traces.
 
 ## Exact Source References
 
@@ -37,7 +38,7 @@ Add the architecture and implementation plan for atomic claims, evidence anchors
 - Claim/evidence/belief records and support/attack relation model.
 - Entity registry, alias, context frame, and context boundary model.
 - Mutation authority command/result/audit design.
-- Query/index rules for claims, anchors, contexts, mutation commands, and audit events.
+- Query/index rules for claims, anchors, contexts, belief score components, mutation commands, and audit events.
 - Projection payload enrichment rules for claim ids, context frame ids, and belief state.
 
 ## Dependency Impact
@@ -52,6 +53,7 @@ Add the architecture and implementation plan for atomic claims, evidence anchors
 
 - EF model/index tests for anchors, claims, support/attack links, context frames, aliases, mutation commands, and audit rows.
 - Unit tests for claim support/attack/belief-state calculation.
+- Score geometry tests proving belief state is not support-minus-attack scalar arithmetic.
 - Negative tests for generated-summary promotion without evidence anchors.
 - Mutation idempotency, stale version token, review-required, and audit-event tests.
 - Docker context-boundary test proving production/test/local/CI contexts are related but not substitutable.
@@ -88,6 +90,7 @@ Add the architecture and implementation plan for atomic claims, evidence anchors
 - Context frames prevent unsafe semantic substitution.
 - Mutation authority is the public write boundary.
 - Public contracts avoid ordinal `MinimumValidationState` semantics and untyped projection payloads.
+- Belief state persists score vector/evaluation evidence, not only support and attack totals.
 
 ## Proof Required
 
@@ -105,9 +108,8 @@ Add the architecture and implementation plan for atomic claims, evidence anchors
 ## Progression Gate
 
 - Do not proceed to source ingestion, taxonomy/projection, recall, consolidation, probing, learning, cross-project, or distributed phases until claim/evidence/context/mutation authority contracts and tests pass.
-- Reopen this subbundle if any downstream phase needs direct authoritative upsert, JSON-only claim lookup, or context-insensitive semantic merge.
+- Reopen this subbundle if any downstream phase needs direct authoritative upsert, JSON-only claim lookup, context-insensitive semantic merge, or scalar-only belief scoring.
 
 ## Suggested Agent Prompt
 
 Implement the neuro-cognitive foundation for Cognitive Memory: evidence anchors, atomic claims, belief state, entity/context binding, and mutation authority. Preserve raw source truth, keep Qdrant a projection, and make authoritative writes command-based, idempotent, audited, and review-aware.
-

@@ -58,10 +58,13 @@ The gate should output:
 - answer policy,
 - warnings,
 - source sufficiency summary,
-- confidence/certainty level,
+- score-geometry evaluation trace,
+- derived confidence/certainty projection,
 - required next actions,
 - blocked claims or candidates,
 - audit metadata for trace.
+
+The gate must use the shared `AnswerGate` score space. Abstention and warning behavior should come from matched shapes such as source-poor high-risk answer, contested claim, redaction-limited source, ambiguous context, low procedure maturity, or poor calibration. Display confidence is a rendering aid only.
 
 ## Relationship To Probing
 

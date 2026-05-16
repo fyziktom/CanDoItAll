@@ -33,7 +33,8 @@ classDiagram
         string CanonicalText
         string EntityJson
         string ScopeJson
-        double Confidence
+        ScoreVector ConfidenceVector
+        ScalarProjection DisplayConfidence
         string AlgorithmVersion
         string ContentHash
     }
@@ -45,8 +46,10 @@ classDiagram
         string Title
         string CanonicalText
         string SummaryText
-        double Confidence
-        double Activation
+        ScoreVector ConfidenceVector
+        ScoreVector ActivationVector
+        ScalarProjection DisplayConfidence
+        ScalarProjection DisplayActivation
         string ValidationState
         string StabilityState
         string SourceRefsJson
@@ -60,8 +63,9 @@ classDiagram
         Guid SourceMemoryItemId
         Guid TargetMemoryItemId
         string RelationType
-        double Strength
-        double Confidence
+        ScoreVector RelationVector
+        ScalarProjection DisplayStrength
+        ScalarProjection DisplayConfidence
         string EvidenceJson
         string AlgorithmVersion
     }

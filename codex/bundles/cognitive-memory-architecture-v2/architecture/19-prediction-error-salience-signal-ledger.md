@@ -88,6 +88,8 @@ Consumers:
 - confidence calibration,
 - review queue priority.
 
+Signal vectors must use the shared `SalienceSignal` score space. The signal ledger stores typed score components with evidence, actor, timestamp, schema version, normalization profile, and algorithm version. A signal event may expose a display magnitude, but that magnitude is derived from the vector and cannot be the only persisted decision basis.
+
 ## Signal Publication Sources
 
 | Source | Example signals |
@@ -105,10 +107,13 @@ Consumers:
 Activation should become derived state, not the only record.
 
 ```text
-signals + policy + time decay + validation state + access context -> activation score
+signals + policy + time decay + validation state + access context
+  -> MemoryActivation score vector
+  -> activation evaluation trace
+  -> optional display activation projection
 ```
 
-Activation can change over time. The signal ledger explains why.
+Activation can change over time. The signal ledger and score evaluation trace explain why.
 
 ## Relationship To Epistemic Drive
 

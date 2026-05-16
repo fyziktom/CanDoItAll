@@ -2,7 +2,7 @@
 
 ## Status
 
-- Ready after `17-temporal-replay-scheduler`.
+- Ready after `01b-score-geometry-driver` and `17-temporal-replay-scheduler`.
 - Required before workflow automation promotion or MAF procedure guidance is considered complete.
 
 ## Objective
@@ -19,6 +19,7 @@ Upgrade procedural memory from passive runbooks into validated skill records, an
 
 - Mutation authority exists.
 - Evidence anchors, claims, context frames, episodes, replay jobs, and signals exist.
+- `01b-score-geometry-driver` provides procedure maturity/risk score spaces and simulation-risk projection policy.
 - Consolidation can extract candidate procedural evidence.
 
 ## Exact Source References
@@ -52,6 +53,7 @@ Upgrade procedural memory from passive runbooks into validated skill records, an
 - Simulation labeling tests proving outputs remain speculative.
 - Policy tests for high-risk automation and cross-project analogy access.
 - EF/performance tests for procedure skill lists/details and failure-mode queries.
+- Score geometry tests for maturity, risk, usefulness, and failure-mode dimensions.
 
 ## Implementation Steps
 
@@ -78,6 +80,7 @@ Upgrade procedural memory from passive runbooks into validated skill records, an
 
 - Procedure skills are not generic memory items only.
 - Skill maturity gates automation binding.
+- Skill maturity and risk preserve score vector/evaluation traces.
 - Failure modes are first-class and linked to prediction errors/episodes.
 - Simulation output is visibly speculative.
 - Cross-project analogies are access-policy filtered.
@@ -98,9 +101,8 @@ Upgrade procedural memory from passive runbooks into validated skill records, an
 ## Progression Gate
 
 - Do not proceed to MAF procedure guidance, answer-gate procedure decisions, Epistemic Drive procedure learning, or distributed procedure replay until skill maturity and simulation-safety tests pass.
-- Reopen this subbundle if generated/simulated procedures can become active without validation.
+- Reopen this subbundle if generated/simulated procedures can become active without validation or if maturity/risk becomes scalar-only.
 
 ## Suggested Agent Prompt
 
 Implement procedural skill memory and simulation sandbox. Model procedures as validated skill graphs with failure modes and maturity, keep simulation speculative, and gate workflow/automation promotion through evidence and review policy.
-

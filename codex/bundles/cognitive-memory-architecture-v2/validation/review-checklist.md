@@ -45,10 +45,21 @@
 ## Contract Strength
 
 - [ ] Mode, status, operation, stage, section, evidence, evaluator, profile, and decision values are strongly typed.
+- [ ] Behavior-affecting score spaces, dimensions, shapes, scalar projections, and evaluation traces are strongly typed.
 - [ ] Any remaining string/JSON protocol fields are external-boundary exceptions with schema/profile versioning.
 - [ ] Public query contracts return paged results for growing collections.
 - [ ] Public APIs do not expose mutable entity graphs where DTOs are sufficient.
 - [ ] Common fake source, embedding, vector, and policy providers are reused by downstream tests.
+
+## Score Geometry
+
+- [ ] Recall ranking uses `RecallCandidate` score vectors and shape evaluations, not a final scalar formula.
+- [ ] Attention routing uses `AttentionRouting` score geometry, not untyped score breakdown dictionaries.
+- [ ] Belief state uses support/attack/source/context/staleness as dimensions in a belief score space.
+- [ ] Salience signals, replay priority, probing assessment, answer confidence, Epistemic need, and cross-project promotion all declare score spaces.
+- [ ] Scalar display/priority/confidence projections are derived from evaluation traces and cannot be the only persisted decision basis.
+- [ ] Qdrant similarity is one dimension in score geometry, not final memory identity or rank.
+- [ ] Missing required score dimensions are explicit and testable.
 
 ## Retrieval Quality
 
@@ -59,7 +70,7 @@
 - [ ] Context-separated relatedness is explicit.
 - [ ] Recall intent changes candidate weighting.
 - [ ] Recall traces support debugging.
-- [ ] Recall/probe traces include workspace frame, attention decision, selected claims, inhibited candidates, evidence anchors, and answer-gate decision when available.
+- [ ] Recall/probe traces include workspace frame, attention decision, score evaluation traces, selected claims, inhibited candidates, evidence anchors, and answer-gate decision when available.
 
 ## Security and Governance
 
@@ -112,6 +123,7 @@
 
 - [ ] Each subbundle closes with a generic architecture review before the next dependent phase starts.
 - [ ] The common driver/helper/EF guardrail phase closes before source ingestion, projection, recall, consolidation, review, probing, and learning phases start.
+- [ ] Score geometry closes before neuro foundation, taxonomy/projection, workspace/attention, salience, recall, replay, probing, answer gate, Epistemic Drive, cross-project, or distributed phases start.
 - [ ] Neuro foundation closes before source ingestion, taxonomy/projection, recall, consolidation, probing, learning, cross-project, or distributed phases start.
 - [ ] Workspace/attention and signal ledgers close before recall/probing/Epistemic Drive consume them.
 - [ ] Replay/procedural skill phases close before distributed replay or workflow automation promotion starts.

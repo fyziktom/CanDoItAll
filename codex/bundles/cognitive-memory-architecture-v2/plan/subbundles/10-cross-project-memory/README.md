@@ -2,7 +2,7 @@
 
 ## Status
 
-- Ready after project-scoped recall and consolidation are stable.
+- Ready after score geometry, project-scoped recall, consolidation, answer gating, and Epistemic Drive are stable.
 
 ## Objective
 
@@ -21,6 +21,7 @@
 - `12-epistemic-drive-engine` should be available when cross-project gaps or learning opportunities are promoted globally.
 - `14-neuro-foundation-claim-evidence-ledger` must provide entity/context boundary policy and mutation authority for global promotion.
 - `19-metamemory-abstention-calibration` must provide answer-gate context-boundary behavior for cross-project recall.
+- `01b-score-geometry-driver` must provide cross-project similarity/separation score spaces and promotion eligibility shapes.
 
 ## Exact Source References
 
@@ -34,7 +35,7 @@
 
 - Cross-project scope model.
 - Promotion and demotion rules.
-- Similarity-with-separation scoring.
+- Similarity-with-separation score geometry.
 - Review workflow for global procedures and high-risk knowledge.
 
 ## Dependency Impact
@@ -51,7 +52,7 @@
 ## Implementation Steps
 
 - Define cross-project scope and promotion states.
-- Add similarity and separation scoring.
+- Add similarity/separation vector and shape evaluation.
 - Route promotion candidates to review.
 - Add recall policy checks for global memory.
 
@@ -64,6 +65,7 @@
 ## Acceptance Checklist
 
 - Similar records can remain separate.
+- Similarity and separation decisions preserve score evaluation traces.
 - Global promotion is traceable and reversible.
 - Access policy applies before context pack rendering.
 

@@ -62,12 +62,9 @@ public sealed record RecallCandidate(
     Guid MemoryItemId,
     string Title,
     MemoryType Type,
-    double SemanticScore,
-    double LexicalScore,
-    double GraphScore,
-    double ActivationScore,
-    double ConfidenceScore,
-    double FinalScore,
+    ScoreVectorSnapshot CandidateVector,
+    ScoreEvaluationTrace RankingTrace,
+    ScoreScalarProjection? DisplayRank,
     IReadOnlyList<Guid> SelectedClaimIds,
     IReadOnlyList<Guid> InhibitedByContextFrameIds,
     string? InhibitionReason,
@@ -114,11 +111,16 @@ public interface IRecallOrchestrator
 
 public interface IActivationEngine
 {
-    double CalculateActivation(MemoryItem item, ActivationContext context);
+    Task<ScoreEvaluationTrace> CalculateActivationAsync(
+        MemoryItem item,
+        ActivationContext context,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed record ActivationContext(
     DateTimeOffset NowUtc,
     RecallIntent Intent,
+    Guid? WorkspaceFrameId,
+    ScoreVectorSnapshot? GoalVector,
     IReadOnlyList<string> ActiveTopics,
     IReadOnlyDictionary<string, string> Properties);

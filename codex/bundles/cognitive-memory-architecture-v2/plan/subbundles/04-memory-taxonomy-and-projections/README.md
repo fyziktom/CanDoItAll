@@ -18,6 +18,7 @@
 - `02-workbench-and-source-ingestion` supplies deterministic source records.
 - `03-semantic-and-rag-adapters` supplies projection and semantic utilities.
 - `01a-common-drivers-helpers-and-ef-guardrails` supplies typed state/profile/evidence contracts, JSON rules, and EF query/index policy.
+- `01b-score-geometry-driver` supplies score-space definitions for memory activation, relation confidence, mindmap similarity, and projection-derived similarity dimensions.
 - `14-neuro-foundation-claim-evidence-ledger` must define claims, evidence anchors, entity/context binding, mutation authority, and typed projection payload rules.
 
 ## Exact Source References
@@ -45,6 +46,7 @@
 - Unit tests for taxonomy invariants and relation constraints.
 - Integration tests for projection rebuild and stale projection detection.
 - EF model tests proving query-relevant refs, relations, review state, projection state, and evidence lookup are indexed and not hidden only in JSON.
+- Score geometry model tests proving confidence, activation, relation strength, and projection similarity are vector/shape-backed where they affect behavior.
 
 ## Implementation Steps
 
@@ -64,6 +66,7 @@
 - Every memory record points to source evidence.
 - Projection records are deleteable and rebuildable.
 - Relation confidence and source evidence are explicit.
+- Projection similarity is stored as a projection signal dimension, not as final memory rank.
 
 ## Proof Required
 
@@ -78,7 +81,7 @@
 
 ## Progression Gate
 
-- Proceed to recall only after canonical memory and projection lifecycle are trustworthy.
+- Proceed to recall only after canonical memory, projection lifecycle, and score-geometry-backed activation/relation signals are trustworthy.
 
 ## Suggested Agent Prompt
 

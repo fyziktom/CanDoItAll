@@ -140,6 +140,8 @@ Evidence refs should include the observed signal, timestamp, weight or confidenc
 
 The core model is a vector and evidence set, not a scalar.
 
+`KnowledgeNeedVector` is the domain-specific view of the generic `EpistemicNeed` score space. It must carry the named dimensions below and reference the shared score vector/shape evaluation trace so normalization, Pareto/category selection, ROI estimates, and scalar display projections are reproducible.
+
 `KnowledgeNeedVector` should preserve these dimensions:
 
 | Dimension | Meaning |

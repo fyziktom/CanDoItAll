@@ -57,7 +57,8 @@ public sealed record CanonicalSourceItem(
     IReadOnlyList<string> Entities,
     IReadOnlyList<string> Tags,
     IReadOnlyList<string> Scopes,
-    double Confidence,
+    ScoreVectorSnapshot ConfidenceVector,
+    ScoreScalarProjection? DisplayConfidence,
     string AlgorithmVersion,
     string ContentHash);
 

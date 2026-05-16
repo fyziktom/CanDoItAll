@@ -27,3 +27,7 @@ Recommended review order:
 - `15-attention-recall-probing-loop.mmd` shows the request -> workspace -> attention -> recall/probe/source audit/answer gate loop.
 - `16-claim-evidence-belief-ledger.mmd` shows source anchors, evidence direction, claims, belief state, mutation authority, and projection invalidation.
 - `17-replay-and-procedural-memory-flow.mmd` shows episodes, prediction errors, replay scheduling, procedure skill maturity, and simulation safety.
+
+## Score Geometry Diagrams
+
+- `18-score-geometry-driver.mmd` shows evidence -> score vector -> shape evaluation -> trace -> optional scalar projection -> consumer policy.

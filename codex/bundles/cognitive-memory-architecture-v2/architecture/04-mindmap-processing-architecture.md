@@ -116,19 +116,17 @@ metadataSimilarity
 temporalSimilarity
 ```
 
-Example hybrid score:
+Use the Score Geometry Driver for hybrid decisions. Mindmap processing should produce a `MindMapSimilarity` score vector and compare it to cluster, separation, or promotion shapes:
 
 ```text
-recallCandidateScore =
-    0.35 * semanticSimilarity
-  + 0.20 * graphSimilarity
-  + 0.15 * spatialSimilarity
-  + 0.15 * metadataSimilarity
-  + 0.10 * activationScore
-  + 0.05 * sourceConfidence
+node features
+  -> MindMapSimilarity score vector
+  -> semantic cluster shape / spatial cluster shape / context-separation boundary
+  -> cluster assignment trace or separated-relation trace
+  -> optional display confidence
 ```
 
-Task-specific weights override this default.
+Task-specific profiles may define different shapes or scalar display projections, but they must not erase the individual semantic, graph, spatial, metadata, temporal, activation, and source-confidence dimensions.
 
 ## Context-Separation Detection
 

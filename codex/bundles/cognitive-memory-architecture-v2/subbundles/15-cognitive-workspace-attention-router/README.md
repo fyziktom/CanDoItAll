@@ -2,7 +2,7 @@
 
 ## Status
 
-- Ready after `04-memory-taxonomy-and-projections` and `14-neuro-foundation-claim-evidence-ledger`.
+- Ready after `01b-score-geometry-driver`, `04-memory-taxonomy-and-projections`, and `14-neuro-foundation-claim-evidence-ledger`.
 - Critical foundation for recall, probing, MAF, and answer gating.
 
 ## Objective
@@ -18,6 +18,7 @@ Add active working-memory frames and explainable attention routing so recall/pro
 ## Prerequisites
 
 - `14-neuro-foundation-claim-evidence-ledger` provides context frames, claims, evidence anchors, and mutation authority.
+- `01b-score-geometry-driver` provides attention-routing and workspace-focus score spaces and evaluation traces.
 - `02-workbench-and-source-ingestion` and `04-memory-taxonomy-and-projections` have enough source/projection state to test workspace focus and inhibition.
 - `03-semantic-and-rag-adapters` is available for candidate sources but not required for correctness.
 
@@ -54,6 +55,7 @@ Add active working-memory frames and explainable attention routing so recall/pro
 - Trace tests proving selected and inhibited candidates include structured reasons.
 - Negative tests proving workspace content is not source truth.
 - EF/performance review for active workspace and trace query paths.
+- Score geometry tests for attention operation shapes, cognitive-load evaluation, and candidate inhibition traces.
 
 ## Implementation Steps
 
@@ -79,7 +81,7 @@ Add active working-memory frames and explainable attention routing so recall/pro
 
 - Workspace frames can be scoped to user conversation, agent run, workflow run, process step, probe session, review session, or learning task.
 - Focus and inhibition records are durable/auditable where required.
-- Attention decisions include structured reason and score breakdown.
+- Attention decisions include structured reason, score vector, matched shape, missing dimensions, and scalar projection where needed.
 - Trace records can reference workspace frame and attention decision ids.
 - Context-budget behavior is testable.
 
@@ -99,9 +101,8 @@ Add active working-memory frames and explainable attention routing so recall/pro
 ## Progression Gate
 
 - Do not proceed to recall/probing/MAF answer integration until workspace frames and attention decisions are traceable and tested.
-- Reopen this subbundle if downstream flows bypass attention routing or cannot explain inhibited candidates.
+- Reopen this subbundle if downstream flows bypass attention routing, cannot explain inhibited candidates, or introduce untyped attention score breakdowns.
 
 ## Suggested Agent Prompt
 
 Implement Cognitive Workspace and Attention Router as the active control layer for Cognitive Memory. Keep context packs as rendered outputs, make inhibition explicit, and record attention decisions before recall/probing/MAF flows act.
-

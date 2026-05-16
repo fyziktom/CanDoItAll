@@ -34,7 +34,7 @@ A claim should include:
 - claim type,
 - scope/context frame ids,
 - temporal validity window,
-- confidence,
+- confidence score vector and derived display confidence,
 - validation state,
 - stability state,
 - source/evidence refs,
@@ -92,6 +92,8 @@ Suggested states:
 - `Validated`.
 
 Do not treat belief state as universal truth. It is always relative to scope, source trust, and time.
+
+Belief state must use the shared `BeliefState` score space. Support evidence, attack evidence, source quality, context fit, temporal validity, review state, contradiction pressure, and staleness are score dimensions. Do not calculate belief as a simple support-minus-attack scalar.
 
 ## Relation To Existing `MemoryItem`
 
@@ -172,5 +174,6 @@ Required tests:
 - contradiction between two claims is visible even if item summary is fluent,
 - unsupported generated summary cannot be promoted without source anchors,
 - high-confidence recall with attacked claim produces warning/answer gate action,
+- scalar-only belief calculation is rejected by contract/model tests,
 - user correction creates claim mutation candidate, not direct truth update,
 - projection rebuild includes claim ids and belief state payload.

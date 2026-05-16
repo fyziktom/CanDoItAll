@@ -329,6 +329,14 @@ The system shall evaluate answer readiness before rendering answers using source
 
 Probe sessions shall attach to or create workspace frames, publish prediction errors and salience signals, and create claim-level correction candidates without directly mutating authoritative truth.
 
+### FR-053: Generic Score Geometry Driver
+
+The system shall provide a reusable score geometry driver with typed score spaces, dimension definitions, vector snapshots, shapes/regions, normalization profiles, missing-dimension policy, scalar projection policy, and evaluation traces.
+
+### FR-054: Score Geometry Consumption
+
+Recall ranking, attention routing, belief-state calculation, salience consumption, replay scheduling, probe assessment, answer gating, Epistemic Drive, mindmap similarity, and cross-project promotion shall use declared score spaces and preserve score vectors/shapes instead of relying on local scalar-only formulas.
+
 ### NFR-025: No Direct Public Upsert For Authoritative Memory
 
 Public write operations must use mutation authority. Repository-style upsert methods may exist internally only.
@@ -364,3 +372,15 @@ Context boundaries must be evaluated before answer rendering and procedure execu
 ### NFR-033: Auditability Of Cognitive Signals
 
 Signals, prediction errors, attention decisions, and answer gate decisions must be traceable to evidence, actor, time, and algorithm/profile version.
+
+### NFR-034: No Scalar-Only Behavior Scoring
+
+No behavior-affecting decision may store only a final score, priority, confidence, weight, or untyped score breakdown. Scalar projections are allowed only as derived display, sorting, queue, or tie-breaker data backed by score evaluation traces.
+
+### NFR-035: Versioned Score Spaces
+
+Every score vector, shape, scalar projection, and evaluation trace must record score space kind, schema version, normalization profile, algorithm version, evidence refs, and missing-dimension behavior.
+
+### NFR-036: Score Geometry Queryability And Performance
+
+Query-critical score dimensions must be relational/indexable, while full vector/shape payloads must be bounded and versioned. Hot score evaluation paths must avoid dictionary-heavy allocation patterns and repeated vector-array copies.

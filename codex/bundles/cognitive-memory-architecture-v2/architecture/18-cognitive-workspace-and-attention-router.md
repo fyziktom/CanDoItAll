@@ -31,7 +31,7 @@ A workspace frame should be scoped to one of:
 | `InhibitedCandidates` | Relevant-but-blocked candidates and reasons. |
 | `OpenQuestions` | Unknowns that need clarification/probing/source audit. |
 | `ContextBudget` | Token/section/detail budget. |
-| `CognitiveLoad` | Saturation indicator; helps decide summarization/abstention. |
+| `CognitiveLoadTrace` | Score-geometry evaluation of saturation and missing dimensions; helps decide summarization/abstention. |
 | `LastAttentionDecision` | What operation was selected and why. |
 | `ExpiresAtUtc` | Working frames are temporary by default. |
 
@@ -51,7 +51,7 @@ A focus slot can point to:
 
 Each slot should store:
 
-- attention weight,
+- attention score vector and derived display projection,
 - reason for inclusion,
 - source sufficiency,
 - risk level,
@@ -91,6 +91,8 @@ The attention router decides the next operation from current context.
 - access/redaction policy,
 - risk profile,
 - available tools/workflows.
+
+The router must evaluate these inputs through the `AttentionRouting` score space. Operation choices are shape matches such as recall, answer-from-workspace, clarification, source audit, probe, review, learning proposal, replay, or abstention. A scalar projection can help order candidate operations, but the routing decision must persist the vector dimensions, matched shape, missing dimensions, and explanation.
 
 ### Decision Types
 

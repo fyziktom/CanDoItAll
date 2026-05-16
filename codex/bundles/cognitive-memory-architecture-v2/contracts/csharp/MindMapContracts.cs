@@ -75,8 +75,8 @@ public sealed record ClusterAssignment(
     string NodeKey,
     string ClusterKind,
     string ClusterId,
-    double Confidence,
-    IReadOnlyDictionary<string, double> Scores);
+    ScoreEvaluationTrace AssignmentTrace,
+    ScoreScalarProjection? DisplayConfidence);
 
 public sealed record ClusterSummaryCandidate(
     string ClusterKind,
@@ -84,7 +84,8 @@ public sealed record ClusterSummaryCandidate(
     string Title,
     string Summary,
     IReadOnlyList<string> NodeKeys,
-    double Confidence);
+    ScoreEvaluationTrace SummaryTrace,
+    ScoreScalarProjection? DisplayConfidence);
 
 public interface IMindMapFeatureExtractor
 {
@@ -110,10 +111,9 @@ public sealed record MindMapFeatureOptions(
     IReadOnlyDictionary<string, string> Properties);
 
 public sealed record MindMapClusterOptions(
-    double SemanticWeight,
-    double SpatialWeight,
-    double GraphWeight,
-    double MetadataWeight,
+    ScoreSpaceKind ScoreSpaceKind,
+    string ScoreSchemaVersion,
+    IReadOnlyList<ScoreShapeSnapshot> CandidateShapes,
     int? SpatialClusterCount,
     int? SemanticClusterCount,
     IReadOnlyDictionary<string, string> Properties);

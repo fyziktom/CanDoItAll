@@ -28,7 +28,7 @@
 - [ ] Recall can run without Qdrant using lexical/graph fallback.
 - [ ] Recall can run with Qdrant when available.
 - [ ] Recall returns a context pack, not only raw chunks.
-- [ ] Recall records a trace with candidate scores and selected items.
+- [ ] Recall records a trace with candidate score vectors, matched/inhibited shapes, scalar projections, and selected items.
 - [ ] Recall supports intent/scope such as implementation, architecture, test, procedure, decision, history.
 - [ ] Recall can distinguish production deployment from test/simulation deployment when both use Docker.
 
@@ -87,7 +87,7 @@
 
 ## Quality
 
-- [ ] Unit tests cover scoring, activation, source hashing, relation detection, and projection mapping.
+- [ ] Unit tests cover score geometry, activation, source hashing, relation detection, and projection mapping.
 - [ ] Unit and integration tests use the shared deterministic drivers/helpers rather than ad hoc provider stubs.
 - [ ] Integration tests cover ingestion -> canonicalization -> projection -> recall.
 - [ ] Persistence tests prove no-tracking read paths, DTO projections, expected index coverage, no client-side evaluation, and bounded command counts for recall, projection, source, review, probing, and consolidation queries.
@@ -95,7 +95,18 @@
 - [ ] UI tests cover review queue and recall trace inspection.
 - [ ] Hot-path code introduced by each phase passes the .NET performance scan for sync-over-async, unbounded materialization, avoidable vector copies, uncached serialization options, missing `StringComparison`, accidental regex allocation, and LINQ-heavy loops.
 - [ ] Tests reject scalar-only Epistemic Drive scoring.
+- [ ] Tests reject scalar-only recall ranking, attention routing, belief state, replay priority, probing assessment, answer confidence, and cross-project promotion.
 - [ ] Negative tests cover unapproved external study, missing learning source refs, high-risk draft promotion, duplicate proposal creation, probing failure handling, and Qdrant outage during proposal generation.
+
+## Score Geometry
+
+- [ ] Score spaces are strongly typed and versioned for recall, attention, belief, salience, replay, probe assessment, answer gate, Epistemic need, mindmap similarity, activation, procedure maturity, and cross-project promotion.
+- [ ] Score vector snapshots preserve normalized components, confidence, evidence refs, schema version, normalization profile, algorithm version, calculated time, and input hash.
+- [ ] Score shapes support focus regions, context-boundary inhibition, abstention envelopes, replay urgency, cross-project promotion eligibility, and Epistemic weak-region selection.
+- [ ] Scalar projections are marked as display, sorting, queue ordering, or tie-breaker only and can be reproduced from vector/shape traces.
+- [ ] Missing required score dimensions are explicit and can block or warn according to score-space policy.
+- [ ] Qdrant vector similarity is treated as one score dimension, never the final recall rank.
+- [ ] Docker production/test/local/CI fixtures prove high semantic similarity can still be inhibited by context-separation shapes.
 
 ## Interactive Memory Probing
 

@@ -69,7 +69,7 @@ public sealed record VectorSearchRequest(
     string VectorProfile,
     MemoryVectorFilter Filter,
     int Limit,
-    double? MinimumScore);
+    double? MinimumVectorSimilarity);
 
 public sealed record MemoryVectorFilter(
     IReadOnlyList<Guid> ProjectIds,
@@ -86,7 +86,7 @@ public sealed record VectorSearchResult(
 public sealed record VectorSearchHit(
     string PointId,
     Guid MemoryItemId,
-    double Score,
+    double VectorSimilarity,
     MemoryProjectionPayload Payload);
 
 public interface ICognitiveVectorProjectionStore

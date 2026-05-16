@@ -41,6 +41,7 @@
 ## Dependency Impact
 
 - Source ingestion, projection, recall, consolidation, probing, and Epistemic Drive must use these shared helpers instead of inventing local paging, hashing, serialization, status strings, or fake drivers.
+- `01b-score-geometry-driver` consumes these helper contracts for score-space ids, serialization, EF query proof, deterministic fakes, and performance guardrails.
 - EF model subbundles must use the same index and query-shape rules so later performance proof is comparable.
 - Any later subbundle that needs a new string status, JSON payload, unbounded list, or vector array must justify it in its progression gate.
 
@@ -89,6 +90,7 @@
 ## Progression Gate
 
 - Proceed to source ingestion, adapters, taxonomy, and recall only when the common helper tests pass and the EF/performance rules are recorded in the execution report.
+- Proceed to score geometry only when common typed ids, serialization rules, deterministic fakes, and EF proof helpers are ready.
 - If downstream phases need to bypass these helper contracts, reopen this subbundle instead of adding phase-local substitutes.
 
 ## Suggested Agent Prompt

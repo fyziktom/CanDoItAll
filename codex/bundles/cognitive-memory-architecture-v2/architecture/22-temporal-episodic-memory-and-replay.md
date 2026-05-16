@@ -106,6 +106,8 @@ Replay is a scheduled cognitive maintenance operation.
 - strategic alignment,
 - recurrence/frequency.
 
+Replay must use the shared `ReplayPriority` score space. The scheduler compares replay vectors against urgency shapes such as high-risk stale procedure, repeated wrong-scope context boundary, failed regression, source-anchor refresh, or contradiction resolution. A queue priority number may be cached for scheduling, but the replay job must retain the evaluation trace and scalar projection kind.
+
 ## Replay Safety
 
 Replay jobs can produce:

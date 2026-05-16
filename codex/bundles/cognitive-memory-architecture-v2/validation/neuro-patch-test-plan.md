@@ -18,7 +18,7 @@
 - Weak topic routes to probe before learning.
 - Sufficient workspace routes to answer from workspace.
 - High-risk unsupported procedure routes to review or abstention.
-- Routing decision includes score breakdown and explanation.
+- Routing decision includes score vector, matched shape, scalar projection, missing dimensions, and explanation.
 
 ### 3. Claim/Evidence/Belief Tests
 

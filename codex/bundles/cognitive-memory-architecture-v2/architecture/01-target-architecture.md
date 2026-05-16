@@ -50,7 +50,7 @@ Recall Orchestrator
         v
 Reflection + Consolidation Engine
         |
-        +--> activation updates
+        +--> score-geometry activation updates
         +--> summaries
         +--> contradiction detection
         +--> human-review queue
@@ -110,10 +110,11 @@ src/CanDoItAll.CognitiveMemory.Plugins
 | `IMindMapSourceAdapter` | Read workbench/mindmap nodes and links with spatial metadata. |
 | `IMemoryFeatureExtractor` | Extract semantic, graph, spatial, metadata, and temporal features. |
 | `IMemoryClusterer` | Build clustering results from multi-view features. |
+| `IScoreGeometryDriver` | Evaluate typed score spaces, vectors, shapes, scalar projections, and trace evidence shared by recall, attention, belief, replay, probing, answer gates, Epistemic Drive, and cross-project promotion. |
 | `IQdrantProjectionService` | Maintain Qdrant collections/points and projection metadata. |
-| `IRecallOrchestrator` | Multi-stage recall, scoring, association expansion, focus, and context pack output. |
+| `IRecallOrchestrator` | Multi-stage recall, score-geometry evaluation, association expansion, focus, and context pack output. |
 | `IMemoryConsolidationEngine` | Idle/night source replay, canonical updates, summaries, contradictions, activation changes. |
-| `IMemoryActivationService` | Recency, importance, confidence, staleness, validation, and salience scoring. |
+| `IMemoryActivationService` | Derived activation score vectors from recency, importance, confidence, staleness, validation, and salience evidence. |
 | `IMemoryReflectionService` | Convert process/workflow/agent outcomes into episodes and learnings. |
 | `IMemoryReviewQueue` | Human review tasks for uncertain merges, contradictions, and stale knowledge. |
 | `IDistributedMemoryJobCoordinator` | Issue deterministic idle compute jobs to LAN devices. |
@@ -122,7 +123,7 @@ src/CanDoItAll.CognitiveMemory.Plugins
 
 | Store | Use |
 |---|---|
-| CanDoItAll relational DB | Memory metadata, source manifests, canonical items, relations, activations, jobs, recall traces. |
+| CanDoItAll relational DB | Memory metadata, source manifests, canonical items, relations, score components/evaluation traces, activations, jobs, recall traces. |
 | Storage/IPFS | Large raw snapshots, canonical bundles, generated summaries, evidence packs. |
 | Qdrant | Vector projections for semantic/episodic/procedural/topic recall. |
 | Existing relational search index | Lexical search and UI search support. |
@@ -138,7 +139,7 @@ Detected source item
   -> canonical memory candidates created
   -> relation detection updates graph
   -> projection records created/updated
-  -> activation initialized or updated
+  -> activation score vector initialized or updated
   -> human review if uncertain
 ```
 
@@ -153,7 +154,7 @@ Recall request
   -> fetch details only for selected items
   -> build bounded context pack
   -> persist recall trace
-  -> feedback updates activation
+  -> feedback publishes evidence for activation score re-evaluation
 ```
 
 ## Consolidation Lifecycle
@@ -166,7 +167,7 @@ Idle/night trigger
   -> update canonical summaries
   -> detect contradictions/supersession
   -> update clusters/projections
-  -> update activation decay/boosts
+  -> update activation score vectors and scalar display projections
   -> generate human review tasks
   -> persist consolidation report
 ```

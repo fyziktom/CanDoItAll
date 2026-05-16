@@ -2,7 +2,7 @@
 
 ## Status
 
-- Ready after recall traces, consolidation, human review UI, MAF integration, and probing-core evidence records are available.
+- Ready after score geometry, recall traces, consolidation, human review UI, MAF integration, and probing-core evidence records are available.
 
 ## Objective
 
@@ -28,6 +28,7 @@
 - `16-prediction-error-salience-signals` must provide signal/error evidence.
 - `17-temporal-replay-scheduler` must provide replay outcome evidence.
 - `18-procedural-skill-memory-simulation` must provide procedure maturity and simulation labels where learning touches procedures.
+- `01b-score-geometry-driver` must provide the `EpistemicNeed` score space and region/Pareto shape evaluation.
 - `13a-probing-core-regression-calibration` must exist when probe evidence is consumed.
 - `19-metamemory-abstention-calibration` must exist when answer-gate warnings/abstentions are consumed as gap evidence.
 - `13-interactive-memory-probing-workbench` should exist when proposal actions include request-probing or probing-after-learning browser proof.
@@ -57,7 +58,8 @@
 
 ## Validation Depth
 
-- Unit tests for vector preservation, Pareto selection, ROI estimates, and category classification.
+- Unit tests for vector preservation, score-geometry backing, Pareto selection, ROI estimates, and category classification.
+- Score geometry tests proving `KnowledgeNeedVector` references generic score vectors/shapes and display priority is derived.
 - Integration tests for trace evidence to proposal generation and approval-gated task planning.
 - Negative tests for scalar-only collapse, missing source refs, unapproved external study, duplicate scans, high-risk draft promotion, and Qdrant outage.
 - Browser proof for Night Reflection / Cognitive Briefing and proposal detail.
@@ -75,6 +77,7 @@
 
 - Do not implement autonomous external study.
 - Do not use a single score as the core model.
+- Do not implement Epistemic scoring outside the generic score geometry driver.
 - Do not store facts only in Qdrant.
 - Do not promote generated learning output without source refs and validation state.
 - Do not leak project-private source evidence into cross-project proposals.
@@ -82,6 +85,7 @@
 ## Acceptance Checklist
 
 - Knowledge need vectors preserve all dimensions.
+- Knowledge need vectors are backed by score vector snapshots and evaluation traces.
 - Proposal explanations cite evidence refs.
 - Human approval is required where policy requires it.
 - Probing can be requested before learning and used after learning.
@@ -104,7 +108,7 @@
 
 ## Progression Gate
 
-- Proceed to validation closure only after Epistemic Drive cannot create unapproved learning updates, scalar-only scoring is rejected by tests, and proposal evidence is inspectable.
+- Proceed to validation closure only after Epistemic Drive cannot create unapproved learning updates, scalar-only scoring is rejected by tests, generic score-geometry backing is proven, and proposal evidence is inspectable.
 
 ## Suggested Agent Prompt
 

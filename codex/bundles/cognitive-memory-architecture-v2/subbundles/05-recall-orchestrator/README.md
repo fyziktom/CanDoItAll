@@ -2,7 +2,7 @@
 
 ## Status
 
-- Ready after taxonomy and projections.
+- Ready after taxonomy, projections, workspace/attention, signals, and score geometry.
 
 ## Objective
 
@@ -18,6 +18,7 @@
 - `04-memory-taxonomy-and-projections` must provide canonical memory, relations, and projection state.
 - `03-semantic-and-rag-adapters` must provide semantic and projection channel adapters.
 - `01a-common-drivers-helpers-and-ef-guardrails` must provide recall budgets, typed trace stage/section ids, fake providers, and EF query policy.
+- `01b-score-geometry-driver` must provide recall candidate score spaces, vector/shape evaluation, scalar projection policy, and deterministic score fixtures.
 - `14-neuro-foundation-claim-evidence-ledger` must provide claim/evidence/context data.
 - `15-cognitive-workspace-attention-router` must provide workspace frame and attention decision contracts.
 - `16-prediction-error-salience-signals` must provide signal inputs for activation and trace evidence.
@@ -36,6 +37,7 @@
 - Recall request/mode/budget contracts.
 - Multi-channel recall orchestration.
 - Recall trace persistence.
+- Score evaluation traces for ranking, focus, inhibition, and context-boundary decisions.
 - Context-pack renderer with source refs and exclusions.
 
 ## Dependency Impact
@@ -47,7 +49,7 @@
 
 ## Validation Depth
 
-- Unit tests for scoring, budget exclusion, and mode behavior.
+- Unit tests for score geometry consumption, budget exclusion, and mode behavior.
 - Integration tests for lexical, vector, graph, and source fallback paths.
 - EF/performance tests proving candidate queries are paged, no-tracking for reads, projected to DTOs, and bounded by recall budgets.
 
@@ -55,6 +57,7 @@
 
 - Define recall modes and budgets.
 - Implement staged candidate activation and focus selection.
+- Evaluate recall candidates through score geometry and persist vector/shape traces.
 - Add trace recording for inclusions, exclusions, failures, and budget limits.
 - Render context packs without leaking restricted source content.
 
@@ -64,10 +67,12 @@
 - Do not inject raw secrets or restricted content into context packs.
 - Do not call Qdrant directly from MAF.
 - Do not rely on unscoped vector search followed by local post-filtering for project/user/security scoped recall.
+- Do not implement a local weighted-sum final score.
 
 ## Acceptance Checklist
 
 - Recall traces explain every channel used or skipped.
+- Recall traces include score vector snapshots, matched shapes, scalar projections, and missing dimensions.
 - Qdrant unavailability degrades predictably.
 - Context packs cite source evidence and budget exclusions.
 
@@ -86,6 +91,7 @@
 
 - Proceed to MAF integration only after recall output is stable and traceable.
 - Proceed to MAF integration only after recall output is stable, traceable, and projection-backed channels consume the completed projection boundary hardening gate.
+- Reopen `01b-score-geometry-driver` if recall requires score dimensions or shapes not covered by the registered score space.
 
 ## Suggested Agent Prompt
 

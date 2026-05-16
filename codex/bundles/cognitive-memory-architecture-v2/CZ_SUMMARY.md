@@ -104,3 +104,5 @@ Architekt přidal důležitou vrstvu, která posouvá návrh od dobrého enterpr
 - metamemory answer gate: systém musí před odpovědí umět říct, že nemá dost zdrojů, kontext je nejasný, claim je sporný, procedura je riziková nebo je lepší abstain.
 
 Nejdůležitější dopad na plán: tyto části nejsou pozdní rozšíření. `claim/evidence/context/mutation authority` musí vzniknout ještě před source ingestion a recall. Workspace/attention a salience/prediction-error ledger musí vzniknout před recall/probing/Epistemic Drive. Teprve potom dává smysl stavět Dialogue Workbench, learning proposals, cross-project memory a distributed compute.
+
+Další oprava: skórování nesmí být sada lokálních add/subtract vzorců. Přidáváme `01b-score-geometry-driver`, který zavádí typed score spaces, vektory, tvary/regiony, scalar projections a evaluation traces. Recall rank, attention routing, belief state, replay priority, probing assessment, answer confidence, Epistemic Drive i cross-project promotion musí používat tento společný model. Jedno číslo smí být jen odvozená hodnota pro UI sorting/frontu, ne zdroj rozhodnutí.

@@ -93,15 +93,16 @@ public sealed record ProjectDirectionVector(
     Guid ProjectId,
     string DirectionKey,
     string DisplayName,
-    double StrategicWeight,
-    double RiskWeight,
-    double TimeHorizonWeight,
+    ScoreVectorSnapshot DirectionVector,
+    ScoreScalarProjection? DisplayStrategicWeight,
     IReadOnlyList<Guid> SourceMemoryItemIds,
     IReadOnlyDictionary<string, string> Metadata);
 
 public sealed record KnowledgeNeedVector(
     string SchemaVersion,
     string NormalizationProfile,
+    ScoreVectorSnapshot ScoreVector,
+    IReadOnlyList<ScoreShapeSnapshot> RegionShapes,
     IReadOnlyDictionary<string, string> DimensionMetadata,
     IReadOnlyList<KnowledgeGapEvidenceRef> EvidenceContributors,
     double UsageFrequency,
@@ -123,7 +124,8 @@ public sealed record KnowledgeNeedVector(
 public sealed record LearningRoiEstimate(
     double ExpectedBenefit,
     double EstimatedEffort,
-    double Confidence,
+    ScoreVectorSnapshot EstimateVector,
+    ScoreScalarProjection? DisplayConfidence,
     string Explanation,
     IReadOnlyDictionary<string, string> Assumptions);
 
@@ -131,7 +133,7 @@ public sealed record KnowledgeGapEvidenceRef(
     string EvidenceKind,
     Guid EvidenceId,
     string Summary,
-    double Weight,
+    ScoreComponent InfluenceComponent,
     DateTimeOffset ObservedAtUtc,
     IReadOnlyDictionary<string, string> Metadata);
 
@@ -143,8 +145,8 @@ public sealed record KnowledgeGapRecord(
     string Title,
     string Description,
     KnowledgeGapSeverity Severity,
-    double ConfidenceWeakness,
-    double CoverageWeakness,
+    ScoreVectorSnapshot GapVector,
+    ScoreScalarProjection? DisplayGapStrength,
     IReadOnlyList<KnowledgeGapEvidenceRef> EvidenceRefs,
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset UpdatedAtUtc);
@@ -152,10 +154,8 @@ public sealed record KnowledgeGapRecord(
 public sealed record KnowledgeCoverageSubregion(
     Guid KnowledgeRegionId,
     string DisplayName,
-    double Coverage,
-    double Confidence,
-    double Staleness,
-    double RiskImpact,
+    ScoreVectorSnapshot CoverageVector,
+    ScoreScalarProjection? DisplayCoverage,
     int SourceRefCount,
     int OpenQuestionCount);
 
@@ -173,9 +173,10 @@ public sealed record EpistemicTensionResult(
     Guid ProjectId,
     Guid KnowledgeRegionId,
     KnowledgeNeedVector Vector,
+    ScoreEvaluationTrace EvaluationTrace,
     KnowledgeNeedCategory Category,
     int ParetoRank,
-    double? DisplayPriorityScore,
+    ScoreScalarProjection? DisplayPriority,
     LearningRoiEstimate RoiEstimate,
     IReadOnlyList<Guid> IntersectingProjectDirectionIds,
     IReadOnlyList<KnowledgeGapEvidenceRef> EvidenceRefs,

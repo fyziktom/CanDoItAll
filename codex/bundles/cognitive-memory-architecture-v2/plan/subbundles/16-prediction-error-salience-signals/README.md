@@ -2,7 +2,7 @@
 
 ## Status
 
-- Ready after `15-cognitive-workspace-attention-router`.
+- Ready after `01b-score-geometry-driver` and `15-cognitive-workspace-attention-router`.
 - Critical foundation for recall activation, replay, probing, Epistemic Drive, and calibration.
 
 ## Objective
@@ -19,6 +19,7 @@ Add prediction expectation/error records and a durable multi-dimensional cogniti
 
 - `14-neuro-foundation-claim-evidence-ledger` provides evidence anchors, claims, and context frames.
 - `15-cognitive-workspace-attention-router` provides workspace and attention decision ids.
+- `01b-score-geometry-driver` provides salience signal, prediction-error severity, and activation score spaces.
 
 ## Exact Source References
 
@@ -36,6 +37,7 @@ Add prediction expectation/error records and a durable multi-dimensional cogniti
 - Cognitive signal records and publication/query services.
 - Signal consumption rules for activation, replay, probing, Epistemic Drive, procedure maturity, and answer-gate calibration.
 - Vector/schema metadata requirements for salience and `KnowledgeNeedVector`.
+- Score geometry integration for signal vectors, activation vectors, and consumer-specific scalar projections.
 
 ## Dependency Impact
 
@@ -48,6 +50,7 @@ Add prediction expectation/error records and a durable multi-dimensional cogniti
 ## Validation Depth
 
 - Unit tests for expectation/error classification and signal vector preservation.
+- Unit tests proving signal magnitude/display priority is derived from score geometry.
 - Integration tests for probe feedback, workflow failure, stale source, user correction, and confirmed useful procedure publishing expected signals.
 - Negative tests proving salience cannot bypass source truth, access policy, or review policy.
 - EF query/index tests for signal and prediction-error lists.
@@ -65,6 +68,7 @@ Add prediction expectation/error records and a durable multi-dimensional cogniti
 
 - Do not implement replay scheduling, probing feedback, or Epistemic Drive proposal generation here.
 - Do not tune final activation weights without later profiling and regression evidence.
+- Do not create local salience or activation score formulas outside score geometry.
 
 ## Do Not Do
 
@@ -102,4 +106,3 @@ Add prediction expectation/error records and a durable multi-dimensional cogniti
 ## Suggested Agent Prompt
 
 Implement Prediction Error and Salience Signal Ledger as auditable, dimensional evidence. Preserve source truth and policy boundaries; signals influence prioritization and calibration but never create truth directly.
-

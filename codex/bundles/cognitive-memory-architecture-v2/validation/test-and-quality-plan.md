@@ -4,7 +4,7 @@
 
 | Test type | Purpose |
 |---|---|
-| Unit tests | scoring, hashing, relation detection, activation, mapping. |
+| Unit tests | score geometry, hashing, relation detection, activation, mapping. |
 | Integration tests | DB + source ingest + projection + recall. |
 | Contract tests | RAG adapter, embedding adapter, MAF executor contracts. |
 | Golden dataset tests | ensure stable recall/clustering on known mindmaps. |
@@ -14,6 +14,7 @@
 | Distributed worker tests | job claim, output validation, tampering rejection. |
 | Epistemic Drive tests | coverage maps, gap detection, vector preservation, Pareto/ROI selection, proposal lifecycle. |
 | Neuro-cognitive tests | workspace frames, attention routing, claim/evidence/belief state, prediction errors, salience signals, replay, procedural skills, simulation, and answer gating. |
+| Score geometry tests | score-space definitions, vector snapshots, shape matching, missing dimensions, scalar projections, and trace reproducibility. |
 | EF query-shape tests | no-tracking read queries, index coverage, paged result contracts, DTO projections, and no client evaluation on hot paths. |
 | Performance guardrail scans | .NET performance anti-pattern scan for hot-path implementation files plus allocation review for vector/context-pack paths. |
 
@@ -50,6 +51,7 @@ Expected behavior:
 - List/detail screens project to DTOs and do not load broad entity graphs through accidental `Include` chains.
 - Required unique/indexed keys exist for source items, memory source refs, relations, projections, recall traces, review items, proposals, and probe/regression records.
 - Required unique/indexed keys exist for evidence anchors, claims, claim/evidence links, mutation commands/audits, entity aliases, context frames, workspace slots, attention decisions, prediction errors, cognitive signals, episodes, replay jobs, procedure skills, simulation records, and answer-gate decisions.
+- Required unique/indexed keys exist for score spaces, vector snapshots, score components, shape snapshots, evaluation traces, and scalar projections where those records are queried by project, owner, score space, dimension, schema version, or timestamp.
 - Query-relevant evidence/source/review/proposal/probe/neuro-cognitive state is available through relational columns/tables, not JSON-only lookup.
 - Hot-path recall candidate queries and projection-state queries are bounded by configured limits.
 - Client-side query evaluation warnings fail tests.
@@ -64,6 +66,18 @@ Expected behavior:
 - No broad string comparison without explicit `StringComparison` in new parser/filter code.
 - No silent provider fallback; lower-quality fallback requires active mode permission and trace evidence.
 - No scalar-only salience or untyped status/mode/operation fields in neuro-cognitive hot paths.
+- No behavior-affecting scalar-only score, priority, confidence, weight, or score-breakdown dictionary in recall, attention, belief, replay, probing, answer gate, Epistemic Drive, or cross-project promotion hot paths.
+
+## Score Geometry Tests
+
+- Score-space registry returns versioned definitions for recall candidate, attention routing, belief state, salience signal, replay priority, probe assessment, answer gate, Epistemic need, cross-project promotion, procedure maturity, mindmap similarity, and memory activation.
+- Vector snapshots preserve score space kind, schema version, normalization profile, typed dimensions, confidence, evidence refs, algorithm version, calculated timestamp, and input hash.
+- Shape evaluation supports point vector, weighted region, centroid/radius, threshold envelope, boundary plane, Pareto frontier, and time-decayed trajectory where applicable.
+- Missing required dimensions fail or warn according to score-space policy; they do not silently become zero or neutral.
+- Scalar projections are reproducible from evaluation traces and are labeled as display, UI sorting, queue ordering, or tie-breaker only.
+- Qdrant vector similarity enters recall as `SemanticSimilarity` or provider-specific projection evidence, not as final rank.
+- Docker production/test/local/CI fixture proves context-separation boundary shapes inhibit semantically similar but operationally incompatible candidates.
+- Analyzer or grep checks reject `FinalScore`, behavior-affecting `Priority`, untyped `ScoreBreakdown`, and `Dictionary<string,double>` scoring surfaces outside the score geometry foundation.
 
 ## Neuro-Cognitive Tests
 
@@ -79,7 +93,7 @@ Expected behavior:
 - Weak topic routes to probe before learning.
 - Sufficient workspace routes to answer from workspace.
 - High-risk unsupported procedure routes to review or abstention.
-- Routing decision includes score breakdown and explanation.
+- Routing decision includes score vector, matched shape, scalar projection, missing dimensions, and explanation.
 
 ### Claim/Evidence/Belief And Mutation Authority
 
@@ -145,12 +159,12 @@ Expected behavior:
 
 ## Activation Tests
 
-Test score effects:
+Test score-geometry effects:
 
-- human approval boosts retrieval,
-- stale state penalizes retrieval,
-- recent successful use boosts activation,
-- contradiction penalizes context-pack selection,
+- human approval changes the memory activation vector and derived projection,
+- stale state changes staleness pressure and derived projection,
+- recent successful use changes usefulness/reward/recency dimensions,
+- contradiction changes contradiction pressure and can inhibit context-pack selection,
 - high semantic score alone cannot override access policy.
 
 ## Projection Tests
@@ -184,6 +198,7 @@ Test score effects:
 ## Epistemic Drive Tests
 
 - Knowledge need vectors preserve all dimensions.
+- Knowledge need vectors reference generic `EpistemicNeed` score vector snapshots and evaluation traces.
 - Candidate selection stores Pareto rank, category, ROI estimate, and explanation.
 - Scalar-only scoring is rejected by contract/model tests.
 - Proposal explanations cite evidence refs.

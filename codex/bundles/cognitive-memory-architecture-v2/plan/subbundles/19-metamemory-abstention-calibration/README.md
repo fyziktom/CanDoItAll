@@ -2,7 +2,7 @@
 
 ## Status
 
-- Ready after `13a-probing-core-regression-calibration`, `18-procedural-skill-memory-simulation`, and `05-recall-orchestrator`.
+- Ready after `01b-score-geometry-driver`, `13a-probing-core-regression-calibration`, `18-procedural-skill-memory-simulation`, and `05-recall-orchestrator`.
 - Required before user/agent answer rendering is considered safe.
 
 ## Objective
@@ -23,6 +23,7 @@ Add an answer-time metamemory gate that uses source sufficiency, context fit, be
 - Recall traces include selected claims/evidence and inhibited candidates.
 - Probe calibration records exist.
 - Procedure skill maturity exists.
+- `01b-score-geometry-driver` provides answer-gate score spaces, abstention/warning shapes, and scalar confidence projection policy.
 
 ## Exact Source References
 
@@ -56,6 +57,7 @@ Add an answer-time metamemory gate that uses source sufficiency, context fit, be
 - Trace tests proving answer gate decisions are persisted and visible.
 - Browser proof where the decision/warnings render in Dialogue Workbench or recall trace UI.
 - Performance review for answer-gate hot path.
+- Score geometry tests for source-poor, contested, ambiguous, redacted, and high-risk answer-gate shapes.
 
 ## Implementation Steps
 
@@ -69,6 +71,7 @@ Add an answer-time metamemory gate that uses source sufficiency, context fit, be
 
 - Do not implement full Dialogue Workbench UI here except minimal proof surfaces needed for answer-gate visibility.
 - Do not tune final confidence thresholds without later calibration evidence.
+- Do not use display confidence as the decision model.
 
 ## Do Not Do
 
@@ -81,6 +84,7 @@ Add an answer-time metamemory gate that uses source sufficiency, context fit, be
 
 - Answer gate can answer, warn, clarify, audit, probe, review, request learning, or abstain.
 - Source sufficiency, context fit, belief state, calibration, contradiction, staleness, redaction, risk, and procedure maturity affect decisions.
+- Answer-gate decisions preserve score vectors, matched shapes, missing dimensions, and derived confidence projection.
 - Decision is persisted in recall/probe trace.
 - UI/workbench can show warnings and required next actions.
 - Abstention can become Epistemic Drive evidence without creating truth.
@@ -102,9 +106,8 @@ Add an answer-time metamemory gate that uses source sufficiency, context fit, be
 ## Progression Gate
 
 - Do not proceed to Dialogue Workbench completion, MAF answer injection completion, or Epistemic Drive answer-gate evidence consumption until answer-gate decisions are persisted, traceable, tested, and visible where relevant.
-- Reopen this subbundle if any answer path bypasses the gate.
+- Reopen this subbundle if any answer path bypasses the gate or uses scalar confidence as the decision model.
 
 ## Suggested Agent Prompt
 
 Implement Metamemory Answer Gate as an answer-time safety and uncertainty boundary. Use claims, evidence, context, calibration, redaction, procedure maturity, and policy to decide whether to answer, warn, clarify, audit, probe, review, request learning, or abstain.
-

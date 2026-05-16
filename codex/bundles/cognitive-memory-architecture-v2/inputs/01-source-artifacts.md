@@ -24,6 +24,7 @@
 - Existing C# contract sketches under `contracts/csharp`.
 - Current source observations captured in `analysis/01-current-state.md`.
 - Neuro patch source captured in `inputs/04-neuro-architecture-patch-reference.md`.
+- Score geometry review request captured in `inputs/06-score-geometry-review-request.md`.
 
 ## Artifact Limitations
 

@@ -65,7 +65,7 @@ Each point has one semantic vector, plus payloads:
   "graphCommunityId": "...",
   "confidence": 0.87,
   "humanValidationStatus": "Unreviewed",
-  "activationScore": 0.74,
+  "displayActivationProjection": 0.74,
   "updatedAtUtc": "..."
 }
 ```
@@ -101,7 +101,7 @@ If named vectors are supported:
 - `graph` vector: graph/community embedding,
 - `activation` pseudo-vector is not recommended; keep activation in payload/DB.
 
-Search can run multiple channels and combine scores in the recall orchestrator.
+Search can run multiple channels and pass vector similarity as one dimension into the recall score geometry evaluation.
 
 ## Payload Indexes
 
@@ -177,4 +177,4 @@ candidateSet =
   + highActivationProcedures
 ```
 
-Then merge, score, and focus in `IRecallOrchestrator`.
+Then merge, evaluate score geometry, and focus in `IRecallOrchestrator`.
