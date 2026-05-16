@@ -29,6 +29,7 @@ public sealed partial class MafAgentRuntime
         var composition = CreateCapabilityComposition(agent, capabilities);
 
         await AttachWorkspaceMemoryAsync(composition, memory, progressCallback);
+        await AttachContextContributorsAsync(composition, agent, provider, progressCallback, suppressApprovalRequirements);
         await AttachSkillsAsync(composition, capabilities, progressCallback, suppressApprovalRequirements);
         await AttachConfiguredWorkspaceToolsAsync(composition, agent, progressCallback, suppressApprovalRequirements);
         await AttachInternalProjectStructureToolsAsync(composition, agent, progressCallback);
@@ -65,6 +66,7 @@ public sealed partial class MafAgentRuntime
         var storagePlugin = CreateStorageRuntimePlugin(workspaceToolAccess);
         var skillBuilder = new SkillCapabilityBuilder(this);
         var contextBuilder = new ContextCapabilityBuilder(this);
+        var contextContributors = services.GetServices<IAgentContextContributor>().ToList();
         var mcpBuilder = new McpCapabilityBuilder(this);
         var projectStructureToolBuilder = CreateProjectStructureToolBuilder(workspaceCommandExecutionService);
         var processToolBuilder = CreateProcessToolBuilder();
@@ -76,6 +78,7 @@ public sealed partial class MafAgentRuntime
             agentConfiguration,
             skillBuilder,
             contextBuilder,
+            contextContributors,
             mcpBuilder,
             projectStructureToolBuilder,
             processToolBuilder,
@@ -126,6 +129,59 @@ public sealed partial class MafAgentRuntime
             ExecutionState.Preparing,
             "Memory",
             $"Attached {Math.Min(memory.Count, maxInjectedMemoryItems)} workspace memory item(s) as AI context.");
+    }
+
+    private async Task AttachContextContributorsAsync(
+        RuntimeCapabilityComposition composition,
+        AgentDefinition agent,
+        ProviderProfile provider,
+        Func<ExecutionState, string, string, Task> progressCallback,
+        bool suppressApprovalRequirements)
+    {
+        if (composition.ContextContributors.Count == 0)
+        {
+            return;
+        }
+
+        var duplicateContributorIds = composition.ContextContributors
+            .GroupBy(contributor => contributor.Descriptor.Id)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key.Value)
+            .OrderBy(id => id, StringComparer.Ordinal)
+            .ToList();
+        if (duplicateContributorIds.Count > 0)
+        {
+            throw new InvalidOperationException($"Agent context contributor id(s) must be unique: {string.Join(", ", duplicateContributorIds)}.");
+        }
+
+        var enabledContributors = composition.ContextContributors
+            .Where(contributor => contributor.Descriptor.Enabled)
+            .OrderBy(contributor => contributor.Descriptor.Order)
+            .ThenBy(contributor => contributor.Descriptor.Id.Value, StringComparer.Ordinal)
+            .ToList();
+        if (enabledContributors.Count == 0)
+        {
+            return;
+        }
+
+        var policy = new AgentContextContributionPolicy(
+            MapContextContributionExecutionMode(ResolveContextPolicyKind(agent, suppressApprovalRequirements)),
+            suppressApprovalRequirements,
+            workspaceScope);
+
+        foreach (var contributor in enabledContributors)
+        {
+            composition.State.ContextProviders.Add(new MafAgentContextContributionProvider(
+                contributor,
+                agent,
+                provider,
+                policy));
+        }
+
+        await progressCallback(
+            ExecutionState.Preparing,
+            "Context contributors",
+            $"Attached {enabledContributors.Count} registered agent context contributor(s) in deterministic order.");
     }
 
     private async Task AttachSkillsAsync(
@@ -605,6 +661,16 @@ public sealed partial class MafAgentRuntime
             : AgentRuntimeContextPolicyKind.InteractiveChat;
     }
 
+    private static AgentContextExecutionMode MapContextContributionExecutionMode(AgentRuntimeContextPolicyKind policyKind)
+        => policyKind switch
+        {
+            AgentRuntimeContextPolicyKind.GovernedProcessAutomation => AgentContextExecutionMode.GovernedProcessAutomation,
+            AgentRuntimeContextPolicyKind.AutoApprovedNonInteractive => AgentContextExecutionMode.AutoApprovedNonInteractive,
+            AgentRuntimeContextPolicyKind.A2AEndpoint => AgentContextExecutionMode.A2AEndpoint,
+            AgentRuntimeContextPolicyKind.InteractiveChat => AgentContextExecutionMode.InteractiveChat,
+            _ => AgentContextExecutionMode.InteractiveChat
+        };
+
     private static bool IsGovernedProcessAutomationRun()
     {
         var auditScope = WorkspaceExecutionAuditContext.Current;
@@ -836,6 +902,7 @@ public sealed partial class MafAgentRuntime
         AgentRuntimeConfiguration AgentConfiguration,
         SkillCapabilityBuilder SkillBuilder,
         ContextCapabilityBuilder ContextBuilder,
+        IReadOnlyList<IAgentContextContributor> ContextContributors,
         McpCapabilityBuilder McpBuilder,
         ProjectStructureToolBuilder? ProjectStructureToolBuilder,
         ProcessToolBuilder? ProcessToolBuilder,

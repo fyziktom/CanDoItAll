@@ -2,7 +2,7 @@
 
 ## Status
 
-- Ready after contract location decision.
+- Completed
 
 ## Objective
 
@@ -70,6 +70,8 @@
 - Snapshot unit tests.
 - Workbench integration tests.
 - Dependency review showing Workbench does not reference Cognitive Memory.
+- Proof captured: `dotnet test .\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~WorkbenchSourceSnapshotIntegrationTests|FullyQualifiedName~RuntimeEvidenceSourceIntegrationTests" --no-restore` passed the Workbench snapshot test as part of 3 integration tests.
+- Source review: `WorkbenchProjectStructureSourceSnapshotProvider` implements read-only snapshot output through `IProjectStructureSourceSnapshotProvider`; Workbench has no Cognitive Memory dependency.
 
 ## Browser Validation Logging
 

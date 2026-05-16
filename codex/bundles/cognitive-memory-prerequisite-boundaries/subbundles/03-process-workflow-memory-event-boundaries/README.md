@@ -2,7 +2,7 @@
 
 ## Status
 
-- Ready after source snapshot shape is stable.
+- Completed
 
 ## Objective
 
@@ -69,6 +69,8 @@
 - Unit tests for source evidence identity and hash semantics.
 - Integration tests for representative process and workflow records.
 - Dependency review showing no Cognitive Memory dependency from process/workflow modules.
+- Proof captured: `dotnet test .\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter RuntimeEvidenceSourceIntegrationTests --no-restore` passed 2 tests.
+- Source review: `ProcessRuntimeEvidenceSourceProvider` and `WorkflowRuntimeEvidenceSourceProvider` expose read-only evidence snapshots with explicit redaction metadata and no Cognitive Memory table writes.
 
 ## Browser Validation Logging
 

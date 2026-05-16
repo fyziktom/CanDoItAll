@@ -39,6 +39,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<ProjectStructureWorkflowNodeService>();
         services.AddScoped<ProjectStructureAgentService>();
         services.AddScoped<IProjectStructureRuntimeGateway, WorkbenchProjectStructureRuntimeGateway>();
+        services.AddScoped<IProjectStructureSourceSnapshotProvider, WorkbenchProjectStructureSourceSnapshotProvider>();
         services.AddScoped<IProjectGanttPreviewService, ProjectGanttPreviewService>();
         services.AddScoped<IProjectStructureLocalFileOpener, ProjectStructureLocalFileOpener>();
         services.AddScoped<IProjectStructureRuntimeLauncher, ProjectStructureRuntimeLauncher>();

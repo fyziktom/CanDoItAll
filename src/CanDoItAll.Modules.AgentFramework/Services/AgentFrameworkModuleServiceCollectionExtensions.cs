@@ -98,6 +98,7 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddScoped<IWorkflowRunStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
         services.TryAddScoped<IWorkflowArtifactStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
         services.TryAddScoped<IWorkflowExternalRequestStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
+        services.TryAddScoped<IWorkflowRuntimeEvidenceSourceProvider, WorkflowRuntimeEvidenceSourceProvider>();
         services.TryAddSingleton<IWorkflowEventSink, NullWorkflowEventSink>();
         services.TryAddScoped<MafWorkflowCompiler>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutionBackend, MafInProcessWorkflowExecutionBackend>());

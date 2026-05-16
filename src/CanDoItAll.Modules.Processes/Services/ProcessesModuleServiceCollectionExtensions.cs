@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.SharedKernel;
@@ -36,6 +37,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.AddScoped<IProcessObservationService, ProcessObservationService>();
         services.AddScoped<IProcessManagerChatService, ProcessManagerChatService>();
         services.AddScoped<IProcessObservationIntentResolver, ProcessObservationIntentResolver>();
+        services.AddScoped<IProcessRuntimeEvidenceSourceProvider, ProcessRuntimeEvidenceSourceProvider>();
         services.AddScoped<ProcessObservationDashboardState>();
         services.AddScoped<ProcessRuntimeStateOverviewService>();
         services.AddScoped<ProcessWorkspaceRunDetailsLoader>();
