@@ -18,11 +18,11 @@ Validation rerun during this review:
 - `python .\codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py .\codex\bundles\cognitive-memory-boundary-hardening --profile initiative --stage completed` passed.
 - `python .\codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py .\codex\bundles\cognitive-memory-architecture --profile initiative --stage prepared` passed.
 
-## Remaining Projection Gap
+## Original Projection Gap
 
-The remaining prerequisite is projection-side, not source-ingestion-side.
+At preparation time, the remaining prerequisite was projection-side, not source-ingestion-side. The implementation closed this gap through typed RAG filters, payload indexes, delete-by-filter cleanup, and SemanticCompletion embedding profiles; see `reviews/01-execution-report.md`.
 
-Current RAG driver state:
+Preparation-time RAG driver state:
 
 - `IRagDriver` supports ensure collection, upsert, delete by explicit ids, and search.
 - `RagSearchRequest` supports collection, query text, optional vector, limit, and minimum score.
@@ -37,7 +37,7 @@ Impact:
 - Stale projection cleanup would require Cognitive Memory to track every projected point id and delete individually, instead of deleting by source scope, projection version, embedding profile, or source item key.
 - Payload indexes are not modeled, so high-volume filtered search would be accidental and provider-specific.
 
-Current SemanticCompletion state:
+Preparation-time SemanticCompletion state:
 
 - `IAgentTextEmbeddingGenerator.GenerateAsync` returns `AgentTextEmbedding`.
 - `AgentTextEmbedding` contains source text and vector only.
@@ -50,6 +50,6 @@ Impact:
 
 ## Decision
 
-Create this follow-up bundle as a prerequisite before Cognitive Memory starts vector projection, projection-backed recall, cross-project recall, or strict-mode memory context injection.
+This follow-up bundle was the correct prerequisite before Cognitive Memory starts vector projection, projection-backed recall, cross-project recall, or strict-mode memory context injection.
 
 Do not block Cognitive Memory module foundation or source snapshot ingestion on this bundle. Those phases can proceed against the hardened source contracts.

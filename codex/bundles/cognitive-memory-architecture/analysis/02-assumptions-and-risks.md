@@ -12,7 +12,7 @@
 
 - If MAF context integration is hardwired into `MafAgentRuntime.Capabilities.Context.cs`, Cognitive Memory will leak durable-memory policy into the executive-control adapter and become hard to test or replace.
 - If source ingestion reads EF tables ad hoc instead of through stable source snapshot adapters, later schema changes in Workbench, Processes, or Workflows will break memory silently.
-- If Qdrant filters are deferred too long, large projects will force expensive post-filtering and recall quality will degrade under realistic data volume.
+- If Cognitive Memory adapters fail to consume the completed typed RAG filters, large projects will fall back into expensive post-filtering and recall quality will degrade under realistic data volume.
 - If source hashes, projection hashes, and algorithm versions are not in the first model, consolidation and projection rebuilds will not be trustworthy.
 - If the recall trace is weak, wrong-agent-context bugs will be nearly impossible to debug.
 - If generated summaries are allowed to feed back as raw source truth, the system can produce circular hallucination.

@@ -180,20 +180,17 @@ Findings:
 
 - Provider-neutral RAG driver exists.
 - Qdrant implementation exists.
-- Current driver supports one unnamed vector per collection and basic tags.
-- Current `RagSearchRequest` has no payload filter model.
+- Current driver supports one unnamed vector per collection, tags, typed filters, payload index requests, delete-by-filter cleanup, and capability discovery.
+- Current `RagSearchRequest` carries a provider-neutral filter tree.
 - Current Qdrant mapping stores metadata as payload and preserves reserved keys for knowledge id/text/tags.
+- Current Qdrant mapping translates typed filters and lifecycle cleanup filters to Qdrant payload filters.
 
-Required extensions for Cognitive Memory:
+Remaining extensions for Cognitive Memory:
 
-- payload filters,
-- payload index setup helper,
 - collection/point schema versioning,
-- projection type payloads,
 - optional named vectors or a compatible multi-collection fallback,
-- batch upsert/delete with source-hash driven replacement,
 - search by IDs/source refs,
-- projection rebuild/retire APIs.
+- projection adapter policies over the generic delete-by-filter and payload-index contracts.
 
 ## Standalone SemanticCompletion Repository
 
@@ -210,6 +207,7 @@ Relevant files:
 Findings:
 
 - This module provides local ONNX embeddings and deterministic local hashing fallback.
+- Embedding results include stable profile metadata for provider/model/profile identity, dimension, normalization, tokenizer, and max-token signals.
 - `SemanticTextRanker` and `SemanticClassifier<TLabel>` are useful for semantic ranking, classification, and fallback intent checks.
 - It should not become the memory source of truth.
 - It should be wrapped as an embedding provider for the Cognitive Memory projection engine and as a classifier for recall intent/projection-type decisions.
@@ -238,7 +236,7 @@ Findings:
 2. No canonical memory model.
 3. No explicit memory relation graph.
 4. No multi-stage recall orchestrator.
-5. No Qdrant filter/named-vector projection contract.
+5. No Cognitive Memory projection manager or payload schema yet; generic RAG typed filters and delete-by-filter are now available, while named vectors remain optional/future.
 6. No mindmap feature extractor using spatial + graph + semantic signals.
 7. No idle/night consolidation run model.
 8. No activation/staleness/confidence model.

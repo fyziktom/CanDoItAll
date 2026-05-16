@@ -17,15 +17,19 @@
 
 - `01-module-foundation` must define provider-neutral projection and embedding abstractions.
 - `02-workbench-and-source-ingestion` should supply source items for end-to-end projection tests.
-- `codex/bundles/cognitive-memory-projection-boundary-hardening` must be completed before implementing production projection-backed recall, typed RAG filtering, payload-indexed search, delete-by-source cleanup, or embedding-profile based rebuild logic.
+- `codex/bundles/cognitive-memory-projection-boundary-hardening` is completed and must be consumed as the approved projection boundary for typed RAG filtering, payload-indexed search, delete-by-source cleanup, and embedding-profile based rebuild logic.
 
 ## Exact Source References
 
 - C:\repositories\CanDoItAll.AgentFramework.Rag\src\CanDoItAll.AgentFramework.Rag.Driver\Abstractions\IRagDriver.cs
 - C:\repositories\CanDoItAll.AgentFramework.Rag\src\CanDoItAll.AgentFramework.Rag.Driver\Models\RagSearchRequest.cs
+- C:\repositories\CanDoItAll.AgentFramework.Rag\src\CanDoItAll.AgentFramework.Rag.Driver\Models\RagFilter.cs
+- C:\repositories\CanDoItAll.AgentFramework.Rag\src\CanDoItAll.AgentFramework.Rag.Driver\Models\RagPayloadIndexRequest.cs
+- C:\repositories\CanDoItAll.AgentFramework.Rag\src\CanDoItAll.AgentFramework.Rag.Driver\Models\RagDeleteByFilterRequest.cs
 - C:\repositories\CanDoItAll.AgentFramework.Rag\src\CanDoItAll.AgentFramework.Rag.Driver\Models\RagKnowledgeEntry.cs
 - C:\repositories\CanDoItAll.AgentFramework.Rag\src\CanDoItAll.AgentFramework.Rag.Qdrant\QdrantRagDriver.cs
 - C:\repositories\CanDoItAll.AgentFramework.SemanticCompletion\src\CanDoItAll.AgentFramework.SemanticCompletion.Driver\Embeddings\IAgentTextEmbeddingGenerator.cs
+- C:\repositories\CanDoItAll.AgentFramework.SemanticCompletion\src\CanDoItAll.AgentFramework.SemanticCompletion.Driver\Embeddings\AgentTextEmbeddingProfile.cs
 - C:\repositories\CanDoItAll.AgentFramework.SemanticCompletion\src\CanDoItAll.AgentFramework.SemanticCompletion.Driver\Semantics\SemanticTextRanker.cs
 - C:\repositories\CanDoItAll.AgentFramework.SemanticCompletion\src\CanDoItAll.AgentFramework.SemanticCompletion.Driver\Semantics\SemanticClassifier.cs
 
@@ -40,7 +44,7 @@
 
 - Cognitive Memory depends on generic driver contracts.
 - Qdrant remains a replaceable projection backend.
-- Filter and lifecycle extensions are owned by the projection boundary hardening follow-up and must remain generic.
+- Filter, payload index, lifecycle cleanup, and embedding profile extensions are closed in the projection boundary hardening follow-up and must remain generic.
 
 ## Validation Depth
 
@@ -53,7 +57,7 @@
 - Add provider-neutral adapter contracts.
 - Implement SemanticCompletion adapter.
 - Implement RAG projection adapter.
-- Consume typed filter, payload index, delete-by-source, and embedding-profile contracts after the projection boundary follow-up closes.
+- Consume typed filter, payload index, delete-by-source, and embedding-profile contracts from the completed projection boundary follow-up.
 
 ## Do Not Do
 
@@ -80,7 +84,7 @@
 
 ## Progression Gate
 
-- Proceed to taxonomy/projection modeling only after adapter boundaries, failure behavior, and the projection boundary hardening proof are clear.
+- Proceed to taxonomy/projection modeling only after adapter boundaries and failure behavior consume the completed projection boundary hardening proof.
 
 ## Suggested Agent Prompt
 

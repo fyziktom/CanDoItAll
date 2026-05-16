@@ -17,7 +17,7 @@
 
 - `04-memory-taxonomy-and-projections` must provide canonical memory, relations, and projection state.
 - `03-semantic-and-rag-adapters` must provide semantic and projection channel adapters.
-- Projection-backed recall modes must wait for `codex/bundles/cognitive-memory-projection-boundary-hardening` so vector search can be scoped through typed RAG filters instead of global search plus post-filtering.
+- Projection-backed recall modes must consume the completed `codex/bundles/cognitive-memory-projection-boundary-hardening` contracts so vector search is scoped through typed RAG filters instead of global search plus post-filtering.
 
 ## Exact Source References
 
@@ -80,7 +80,7 @@
 ## Progression Gate
 
 - Proceed to MAF integration only after recall output is stable and traceable.
-- Proceed to MAF integration only after recall output is stable, traceable, and projection-backed channels have passed the projection boundary hardening gate.
+- Proceed to MAF integration only after recall output is stable, traceable, and projection-backed channels consume the completed projection boundary hardening gate.
 
 ## Suggested Agent Prompt
 

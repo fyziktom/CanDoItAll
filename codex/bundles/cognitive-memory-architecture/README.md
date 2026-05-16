@@ -38,15 +38,15 @@ This bundle was refreshed against the live repositories:
 - `C:\repositories\CanDoItAll.AgentFramework.Rag`
 - `C:\repositories\CanDoItAll.AgentFramework.SemanticCompletion`
 
-The CodeAnalytics snapshot used for the main CanDoItAll source inspection was `snap-20260515230800-1b0ae250`, scoped to composition, infrastructure, Workbench, Processes, Automation, SchedulerPlanner, AgentFramework, and SharedKernel projects. Separate snapshots were taken for the RAG driver, Qdrant driver, and SemanticCompletion driver. The bundle remains source-level architecture work; no product implementation or build/test run was performed.
+The CodeAnalytics snapshot used for the main CanDoItAll source inspection was `snap-20260515230800-1b0ae250`, scoped to composition, infrastructure, Workbench, Processes, Automation, SchedulerPlanner, AgentFramework, and SharedKernel projects. Separate snapshots were taken for the RAG driver, Qdrant driver, and SemanticCompletion driver. Since the first architecture pass, the source/MAF boundary and projection-boundary prerequisite bundles were implemented and validated; Cognitive Memory implementation itself has still not started.
 
 ## Existing Building Blocks Found
 
 - CanDoItAll targets `.NET 10` and already has modular runtime composition, EF model configuration discovery, switchable database profiles, storage drivers, relational search indexing, Workbench project structures, process/workflow runtime persistence, workflow executors, and MAF agent runtime integration.
 - Workbench/project structure stores project nodes, links, metadata, notes, references, and 2D layout coordinates. Z must start as metadata unless a later Workbench migration makes it first-class.
 - The current MAF runtime has useful context provider hooks, Mem0 support, workflow executors, process/project-structure tools, and workspace memory, but its context provider composition is private and hardwired.
-- The RAG repository has provider-neutral `IRagDriver`, `IRagEmbeddingGenerator`, and a Qdrant driver, but only basic tags and no typed filters, payload index contract, or projection lifecycle.
-- The SemanticCompletion repository has ONNX/local hashing embeddings, vector similarity, semantic ranker/classifier, intent registry, sandbox, tests, and benchmark support. It is a semantic utility, not the memory model.
+- The RAG repository has provider-neutral `IRagDriver`, `IRagEmbeddingGenerator`, typed filters, payload index contracts, delete-by-filter projection cleanup, capability discovery, and a Qdrant driver. It remains a projection backend, not the memory model.
+- The SemanticCompletion repository has ONNX/local hashing embeddings with stable profile metadata, vector similarity, semantic ranker/classifier, intent registry, sandbox, tests, and benchmark support. It is a semantic utility, not the memory model.
 
 ## Critical Architecture Corrections
 
@@ -109,10 +109,10 @@ The CodeAnalytics snapshot used for the main CanDoItAll source inspection was `s
 
 ## Validation Summary
 
-- Bundle preparation status: `Repaired for first architecture review`
-- Bundle readiness gate: `Prepared-stage validation required after this repair`
+- Bundle preparation status: `Prepared after prerequisite sync`
+- Bundle readiness gate: `Prepared-stage validation passed`
 - Execution status: `Not started`
-- Subbundle gate review: `Seeded`
+- Subbundle gate review: `Prerequisite gates passed`
 - Final closure gate: `Not started`
 - Browser validation analytics: `Planned only`
 

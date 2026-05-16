@@ -15,7 +15,7 @@ Status: `Passed`
 Status: `Passed`
 
 - The bundle correctly treats `cognitive-memory-boundary-hardening` as closed and does not reopen source ingestion or MAF contributor boundaries.
-- The remaining issue is projection-side: RAG lacks typed filters, indexes, and lifecycle cleanup; SemanticCompletion lacks stable embedding profile metadata.
+- At preparation time, the remaining issue was projection-side: RAG lacked typed filters, indexes, and lifecycle cleanup; SemanticCompletion lacked stable embedding profile metadata. The completed execution report records those gaps as closed.
 - The subbundle split is coherent and dependency-aware.
 - The architecture keeps Cognitive Memory as canonical truth and RAG/Qdrant as rebuildable projections.
 - No UI, Blazor, or browser-visible work is planned.

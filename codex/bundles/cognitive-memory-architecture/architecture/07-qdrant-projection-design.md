@@ -11,22 +11,23 @@ Current `QdrantRagDriver` supports:
 - collection creation,
 - single vector per point,
 - upsert/delete/search,
+- typed payload filters on search,
+- payload index creation through generic contracts,
+- delete by generic payload filter,
+- capability discovery,
 - metadata payload,
 - tags.
 
-Current missing features for Cognitive Memory:
+Remaining optional or adapter-owned features for Cognitive Memory:
 
-- payload filtering,
-- payload index creation,
 - named vectors or multi-vector model,
-- projection rebuild lifecycle,
-- source-based deletion/replacement,
-- structured payload schema,
+- Cognitive Memory-owned structured payload schema,
+- Cognitive Memory-owned projection rebuild state and version metadata,
 - collection health/diagnostics.
 
 ## Recommended V1 Compatible Design
 
-Use multiple collections instead of named vectors if driver extension is not ready:
+Use typed filters and payload indexes for scoped recall. Use multiple collections instead of named vectors in V1 because named vectors remain optional:
 
 ```text
 cm_project_{projectId}_semantic
@@ -71,16 +72,18 @@ Each point has one semantic vector, plus payloads:
 
 ## Recommended V1.1 Driver Extensions
 
-Add to RAG abstractions:
+Closed by `codex/bundles/cognitive-memory-projection-boundary-hardening`:
 
 - `RagFilter`
 - `RagFilterCondition`
+- `RagFilterGroup`
+- `RagFilterValue`
 - `RagPayloadIndexRequest`
-- `RagProjectionState`
-- optional `RagNamedVectorCollectionOptions`
-- optional `RagNamedVectorSearchRequest`
+- `RagPayloadIndexResult`
+- `RagDeleteByFilterRequest`
+- capability flags for filters, payload indexes, delete-by-filter, and optional named vectors
 
-The Cognitive Memory module can then perform filtered searches such as:
+The Cognitive Memory module should build typed filters over its own payload fields, such as:
 
 ```text
 projectId = currentProject
@@ -131,11 +134,13 @@ Projection rebuild is required when:
 Recommended algorithm:
 
 ```text
-for each stale projection:
+ensure payload indexes for scoped/filter-heavy fields
+delete stale projections by generic metadata filter
+for each current projection:
   build projection text
-  embed text
-  upsert Qdrant point
-  update MemoryProjectionRecord hash/version
+  embed text and persist embedding profile metadata
+  upsert Qdrant point with projection payload
+  update MemoryProjectionRecord hash/version/profile
 ```
 
 ## Search Strategy

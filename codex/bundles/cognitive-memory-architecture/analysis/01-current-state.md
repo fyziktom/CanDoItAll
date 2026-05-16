@@ -45,16 +45,16 @@ Relevant files:
 
 Confirmed state:
 
-- `IRagDriver` supports collection creation, upsert, delete by ids, and search.
-- `RagSearchRequest` has query text, optional vector, limit, and min score.
+- `IRagDriver` supports collection creation, upsert, delete by ids, delete by typed filter, payload index ensure, and search.
+- `RagSearchRequest` has query text, optional vector, limit, min score, and typed filters.
 - `RagKnowledgeEntry` carries text, metadata, tags, and optional vector.
-- `RagDriverCapabilities` only advertises tag support.
-- `QdrantRagDriver.SearchAsync` does not pass a payload filter to Qdrant.
+- `RagDriverCapabilities` advertises tags, filters, payload indexes, delete-by-filter, and optional named-vector support.
+- `QdrantRagDriver.SearchAsync` passes translated payload filters to Qdrant.
 
 Implication:
 
-- V1 can use multi-collection projection and post-filtering for small slices.
-- Production-scale recall needs typed filters, payload indexes, projection lifecycle, delete-by-source, and schema/version metadata in the RAG abstraction or in a Cognitive Memory adapter over the current driver.
+- V1 projection-backed recall can use typed RAG filters instead of global vector search followed by local post-filtering.
+- Cognitive Memory still owns canonical memory, projection payload schema, and adapter-level field naming; the RAG repo only provides generic projection controls.
 
 ## SemanticCompletion Repository
 
@@ -68,6 +68,7 @@ Relevant files:
 Confirmed state:
 
 - The driver provides local ONNX and hashing embedding implementations.
+- `AgentTextEmbedding` carries stable profile metadata including provider, model/profile identity, dimension, normalization, tokenizer, and max-token signals where applicable.
 - The ranker embeds fixed candidate sets and ranks with cosine similarity.
 - The classifier supports semantic intent classification with thresholds, margins, and guard hits.
 - It does not own source manifests, canonical memory, graph relations, consolidation, projection lifecycle, or access policy.

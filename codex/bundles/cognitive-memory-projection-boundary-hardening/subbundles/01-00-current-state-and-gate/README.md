@@ -2,11 +2,11 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
-- Confirm the implemented source boundary hardening is closed, identify the projection-side gap, and prevent duplicate source-boundary refactoring before editing RAG or SemanticCompletion.
+- Confirm the implemented source boundary hardening is closed, identify the original projection-side gap, and prevent duplicate source-boundary refactoring before editing RAG or SemanticCompletion.
 
 ## Success Criteria
 

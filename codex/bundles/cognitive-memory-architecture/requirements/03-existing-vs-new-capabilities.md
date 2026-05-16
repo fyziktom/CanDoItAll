@@ -40,22 +40,28 @@
 | Procedure extraction | convert successful runs into reusable knowledge. |
 | Contradiction/supersession logic | avoid stale or conflicting truth. |
 
-## Required Changes to Existing RAG Driver
+## Closed Projection-Boundary Changes to Existing RAG Driver
 
-Minimum V1 changes:
+Implemented by `codex/bundles/cognitive-memory-projection-boundary-hardening`:
 
-- add filter support,
-- add delete by metadata/source id support,
-- add projection metadata fields,
-- add batch upsert lifecycle,
-- add collection schema/version metadata.
+- typed filter support,
+- payload index request/result contracts,
+- delete by generic metadata filter,
+- capability discovery for filters, payload indexes, delete-by-filter, and named vectors,
+- Qdrant mapper/driver translation for filtered search and cleanup.
+
+Remaining Cognitive Memory adapter responsibilities:
+
+- define projection payload field names in the Cognitive Memory module,
+- create payload indexes for frequently filtered projection fields,
+- store collection/schema/profile version metadata in Cognitive Memory projection records,
+- use existing batch upsert with deterministic projection ids and delete-by-filter for stale cleanup.
 
 Future changes:
 
 - named vectors,
 - hybrid vector + sparse/lexical search,
-- multi-vector per memory item,
-- payload index setup helper.
+- multi-vector per memory item.
 
 ## Required Changes to Workbench Model
 

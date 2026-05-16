@@ -8,7 +8,7 @@ This bundle was prepared from source-level inspection of the uploaded ZIPs. The 
 4. The workflow runtime already contains executors, run persistence, artifacts, events, and external requests.
 5. The MAF adapter already has context-provider concepts and simple workspace memory behavior.
 6. The plugins module already exposes host capabilities useful for source ingestion and procedural execution.
-7. The RAG repository already provides a provider-neutral driver and Qdrant implementation, but needs filter/projection lifecycle enhancements.
-8. The SemanticCompletion repository already provides local embedding/ranking primitives that should be adapted into the memory module.
+7. The RAG repository already provides a provider-neutral driver, Qdrant implementation, typed filters, payload index contracts, delete-by-filter cleanup, and capability discovery.
+8. The SemanticCompletion repository already provides local embedding/ranking primitives and stable embedding profile metadata that should be adapted into the memory module.
 
-No full source build/test run is claimed in this bundle.
+No Cognitive Memory implementation build/test run is claimed in this bundle. Prerequisite boundary bundles recorded their own targeted build/test proof.
