@@ -17,6 +17,7 @@
 
 - `01-module-foundation` must define provider-neutral projection and embedding abstractions.
 - `02-workbench-and-source-ingestion` should supply source items for end-to-end projection tests.
+- `codex/bundles/cognitive-memory-projection-boundary-hardening` must be completed before implementing production projection-backed recall, typed RAG filtering, payload-indexed search, delete-by-source cleanup, or embedding-profile based rebuild logic.
 
 ## Exact Source References
 
@@ -33,13 +34,13 @@
 - Cognitive embedding adapter over SemanticCompletion.
 - Recall intent classifier/ranker adapter.
 - Projection adapter over `IRagDriver`.
-- RAG extension plan for typed filters, payload indexes, delete-by-source, and projection metadata.
+- Consumption of the hardened RAG extension contracts for typed filters, payload indexes, delete-by-source cleanup, and projection metadata.
 
 ## Dependency Impact
 
 - Cognitive Memory depends on generic driver contracts.
 - Qdrant remains a replaceable projection backend.
-- Filter and lifecycle extensions may require changes in the RAG repo, but they must remain generic.
+- Filter and lifecycle extensions are owned by the projection boundary hardening follow-up and must remain generic.
 
 ## Validation Depth
 
@@ -52,7 +53,7 @@
 - Add provider-neutral adapter contracts.
 - Implement SemanticCompletion adapter.
 - Implement RAG projection adapter.
-- Define typed filter and delete-by-source requirements for RAG driver evolution.
+- Consume typed filter, payload index, delete-by-source, and embedding-profile contracts after the projection boundary follow-up closes.
 
 ## Do Not Do
 
@@ -79,7 +80,7 @@
 
 ## Progression Gate
 
-- Proceed to taxonomy/projection modeling only after adapter boundaries and failure behavior are clear.
+- Proceed to taxonomy/projection modeling only after adapter boundaries, failure behavior, and the projection boundary hardening proof are clear.
 
 ## Suggested Agent Prompt
 

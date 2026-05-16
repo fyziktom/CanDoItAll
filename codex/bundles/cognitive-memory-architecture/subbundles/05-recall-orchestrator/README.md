@@ -17,6 +17,7 @@
 
 - `04-memory-taxonomy-and-projections` must provide canonical memory, relations, and projection state.
 - `03-semantic-and-rag-adapters` must provide semantic and projection channel adapters.
+- Projection-backed recall modes must wait for `codex/bundles/cognitive-memory-projection-boundary-hardening` so vector search can be scoped through typed RAG filters instead of global search plus post-filtering.
 
 ## Exact Source References
 
@@ -38,6 +39,7 @@
 - MAF and workflows consume recall output later.
 - UI consumes traces and context-pack details.
 - Search/RAG/source channels report availability rather than hiding failure.
+- Vector channels must use scoped provider filters or explicit unavailable-channel traces; unscoped projection search plus local post-filtering is not acceptable for strict modes.
 
 ## Validation Depth
 
@@ -56,6 +58,7 @@
 - Do not truncate silently.
 - Do not inject raw secrets or restricted content into context packs.
 - Do not call Qdrant directly from MAF.
+- Do not rely on unscoped vector search followed by local post-filtering for project/user/security scoped recall.
 
 ## Acceptance Checklist
 
@@ -77,6 +80,7 @@
 ## Progression Gate
 
 - Proceed to MAF integration only after recall output is stable and traceable.
+- Proceed to MAF integration only after recall output is stable, traceable, and projection-backed channels have passed the projection boundary hardening gate.
 
 ## Suggested Agent Prompt
 
