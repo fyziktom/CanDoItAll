@@ -32,6 +32,12 @@ Expose safe tools:
 - `memory_record_reflection`
 - `memory_request_review`
 - `memory_mark_used`
+- `memory_epistemic_scan`
+- `memory_learning_propose`
+- `memory_learning_plan`
+- `memory_learning_execute_approved`
+- `memory_learning_submit_outcome`
+- `memory_probing_generate_questions`
 
 Dangerous mutations should require policy/approval.
 
@@ -47,6 +53,12 @@ Add workflow executors:
 | `memory.consolidate` | Run consolidation for project/global scope. |
 | `memory.reflect` | Convert process/workflow output into episode/reflection records. |
 | `memory.review.enqueue` | Create human review tasks. |
+| `memory.epistemic.scan` | Run coverage/gap/tension analysis for an approved scope. |
+| `memory.learning.propose` | Create or refresh human-reviewable learning proposals. |
+| `memory.learning.plan` | Convert an approved proposal into a scoped learning task. |
+| `memory.learning.execute.approved` | Run an approved source study workflow. |
+| `memory.learning.qa` | Verify source refs, risk state, and draft output before promotion. |
+| `memory.probing.generate` | Generate probing questions for a knowledge region or proposal. |
 
 ### 4. Process Reflection Hook
 
@@ -70,6 +82,10 @@ Create default workflow templates:
 - `Qdrant Projection Rebuild`
 - `Contradiction Review`
 - `Procedure Mining`
+- `Night Reflection / Epistemic Drive Scan`
+- `Learning Proposal Review`
+- `Approved Source Study`
+- `Learning Outcome QA`
 
 ## MAF Handoff Use
 
@@ -80,9 +96,33 @@ Memory Manager Agent
   -> Source Curator Agent
   -> Procedure Miner Agent
   -> Contradiction Analyst Agent
+  -> Epistemic Drive Agent
+  -> Knowledge Gap Analyst Agent
+  -> Learning Planner Agent
+  -> Source Study Agent
+  -> Learning QA Agent
   -> Projection Builder Agent
   -> Memory QA Agent
 ```
+
+## Learning Workflow Boundary
+
+MAF may orchestrate learning tasks, but Cognitive Memory owns durable memory state.
+
+Required boundary:
+
+```text
+Learning proposal approved by human/policy
+  -> MAF runs Learning Planner Agent
+  -> MAF runs approved Source Study Agent if source policy allows it
+  -> MAF runs Procedure/Runbook Miner Agent and Learning QA Agent
+  -> agents submit draft records and report
+  -> Cognitive Memory validates source refs and policy
+  -> Cognitive Memory writes durable draft/approved records
+  -> Projection manager refreshes Qdrant/search projections
+```
+
+MAF agents must not directly write canonical memory, proposal decisions, or projections.
 
 ## Context Pack Rendering Rules
 
@@ -104,6 +144,10 @@ Available detail tools: memory_get_source_detail(...)
 - `memory_record_decision` should require confidence/source refs or human review.
 - `memory_consolidate` should require project-level permission.
 - `memory_projection_rebuild` can be background/admin only.
+- `memory_epistemic_scan` can run under project-level consolidation permission.
+- `memory_learning_propose` creates reviewable proposals only.
+- `memory_learning_execute_approved` requires recorded approval and approved source scope.
+- `memory_learning_submit_outcome` creates draft output until QA/human review accepts it.
 - `memory_delete_raw_source` should not exist in V1.
 
 ## Existing Code Touchpoints

@@ -103,6 +103,38 @@ The system shall support large source sets through cursors, hashes, idempotency 
 
 The implementation shall consume MAF context contribution and source snapshot contracts instead of adding cognitive memory logic directly to private MAF context internals or ad hoc EF read paths.
 
+### FR-024: Knowledge Coverage Modeling
+
+The system shall maintain knowledge regions and coverage maps that represent topic/subtopic coverage, confidence, staleness, risk, source count, open questions, and contradiction pressure.
+
+### FR-025: Knowledge Gap Detection
+
+The system shall detect knowledge gap regions from recall traces, failed or reworked workflow/process runs, user corrections, contradiction records, stale records, repeated topic usage, unresolved questions, weak source coverage, probing failures, active process needs, and mindmap/project graph relevance.
+
+### FR-026: Multi-Dimensional Knowledge Need Modeling
+
+The system shall model knowledge need as a `KnowledgeNeedVector` with preserved dimensions including usage frequency, confidence weakness, risk impact, staleness, failure recurrence, strategic alignment, question density, business value, estimated learning effort, source availability, source quality, contradiction pressure, user interest signal, volatility, and expected reuse.
+
+### FR-027: Explainable Learning Proposal Generation
+
+The system shall generate human-reviewable learning proposals that include topic, subtopic coverage map, evidence summary, why it matters, uncertainty/gap explanation, related project directions, suggested sources, source trust level, estimated effort, expected outputs, proposed depth, risks, required approval, probing questions, and acceptance criteria.
+
+### FR-028: Human Approval For Learning
+
+The system shall allow users to approve, reject, snooze, narrow scope, expand scope, add sources, request probing first, turn a proposal into a Codex bundle, or assign the learning task to a human or approved agent.
+
+### FR-029: Learning Workflow Orchestration
+
+The system shall orchestrate approved learning tasks through MAF or equivalent workflow infrastructure while keeping durable memory authority inside Cognitive Memory.
+
+### FR-030: Knowledge Probing Integration
+
+The system shall support bidirectional integration with knowledge probing so probing can reveal gaps, Epistemic Drive can generate probing questions, probing can validate learning outcomes, and probing results can update gap evidence without becoming automatic truth.
+
+### FR-031: Learning Outcomes
+
+The system shall produce auditable learning outcomes with source-grounded draft canonical records, draft procedures/runbooks, non-happy-path notes, probing questions, QA findings, and coverage map updates.
+
 ## Non-Functional Requirements
 
 ### NFR-001: Deterministic Core
@@ -157,6 +189,30 @@ All mutating memory operations must use deterministic identities that include so
 
 MAF, Workbench, Process, Workflow, RAG, and SemanticCompletion integrations must depend on explicit contracts and adapters so Cognitive Memory can evolve without direct coupling to private implementation details.
 
+### NFR-014: No Scalar-Only Epistemic Scoring
+
+Epistemic Drive must not collapse knowledge need into a single authoritative score. Any display priority score must be secondary to preserved vector components, evidence refs, category, Pareto rank, ROI estimate, and explanation.
+
+### NFR-015: Learning Approval Safety
+
+External source study and high-impact memory updates must be approval-gated according to policy.
+
+### NFR-016: Source-Grounded Learning Outputs
+
+Learning-derived canonical records and procedures must require source refs and remain draft until validated.
+
+### NFR-017: Auditable Learning Decisions
+
+Learning proposals, approval decisions, learning tasks, outcomes, QA findings, and promotion decisions must be auditable.
+
+### NFR-018: Idempotent And Resumable Learning Processing
+
+Epistemic scans and learning tasks must use deterministic input hashes, source versions, algorithm versions, leases, and retry-safe writes.
+
+### NFR-019: Projection Boundary Preservation
+
+Qdrant/search projections may accelerate learning proposal discovery or UI search, but they must never be the only source of knowledge gaps, proposals, learning outcomes, or source truth.
+
 ## Constraints
 
 - The module must fit the existing CanDoItAll modular architecture.
@@ -166,3 +222,5 @@ MAF, Workbench, Process, Workflow, RAG, and SemanticCompletion integrations must
 - It must integrate with Microsoft Agent Framework workflows and tools.
 - It must allow future plugin-based sources.
 - It must preserve raw evidence and avoid treating generated summaries as source truth.
+- It must keep Epistemic Drive local-first and compatible with offline operation.
+- It must prevent project-private evidence leakage when aggregating cross-project learning opportunities.

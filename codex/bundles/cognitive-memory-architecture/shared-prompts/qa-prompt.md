@@ -10,6 +10,9 @@ Prioritize:
 - access policy and redaction,
 - recall trace explainability,
 - Qdrant/search projection rebuildability,
+- Epistemic Drive vector/evidence preservation,
+- learning proposal approval gates,
+- source-grounded learning outcomes,
 - high-volume processing limits,
 - browser evidence for operator UI.
 
@@ -21,5 +24,8 @@ Reject the subbundle if:
 - distributed workers can directly mutate memory state,
 - recall truncates or skips channels without trace evidence,
 - high-risk memory becomes active without review.
+- Epistemic Drive stores only a scalar priority score,
+- learning workflows read external sources without required approval,
+- learning-derived records lack source refs.
 
 Record findings in `reviews/01-execution-report.md`.

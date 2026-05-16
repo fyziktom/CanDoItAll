@@ -31,6 +31,17 @@ Qdrant není zdroj pravdy. Qdrant je pouze rychlá projekce nad pamětí. Skute�
 - human review queue,
 - MAF context provider a workflow executory,
 - distributed idle compute job protocol.
+- Epistemic Drive vrstvu: knowledge coverage mapy, knowledge gapy, multi-dimensional knowledge need vector, learning proposal workflow a approval-gated learning tasky.
+
+## Epistemic Drive
+
+Epistemic Drive není náhodná zvědavost agenta. Je to metakognitivní vrstva, která během noční/idle konsolidace sleduje, kde se protíná vysoké používání, riziko, nejistota, zastaralost, chyby, strategický směr projektu a slabé zdrojové pokrytí.
+
+Důležité pravidlo: nesmí se z toho udělat jen jedno číslo `priority score`. Systém musí ukládat celý vektor signálů, evidence refs, vazbu na aktivní projektové směry, ROI odhad, kategorii a vysvětlení.
+
+Výstupem není automatické učení z internetu. Výstupem je human-reviewable learning proposal. Uživatel může návrh schválit, odmítnout, odložit, zúžit scope, přidat zdroje, nejdřív požádat o probing, převést ho na Codex bundle nebo přiřadit člověku/agentovi.
+
+Typický příklad je Docker operational knowledge: systém vidí, že Docker se často používá pro plugin isolation, deployment, local development a workflow executor sandboxing, ale znalost je slabá v networkingu, volumes, secrets/configs, Compose failure modes a Swarm. Navrhne cílený learning task nad oficiální dokumentací, ale spustí ho až po schválení.
 
 ## Důležité pro mindmapy
 
@@ -60,6 +71,9 @@ Tento řez rychle ověří hodnotu systému bez toho, aby se hned implementovala
 - embedování secretů,
 - používání Qdrantu jako DB,
 - chybějící review pro high-risk procedury.
+- redukce Epistemic Drive na jedno skóre,
+- neřízené externí učení bez schválení,
+- learning-derived znalosti bez source refs.
 
 ## Závěr
 

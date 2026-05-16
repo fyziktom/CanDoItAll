@@ -25,6 +25,14 @@
 | FR-021 Explicit Operating Modes | `01-module-foundation` | Strongly typed modes persisted in scans, runs, projections, and traces. |
 | FR-022 High-Volume Operations | `02-workbench-and-source-ingestion` | Cursor, batch, idempotency, and resumability tests. |
 | FR-023 Prerequisite Boundaries | `00-prerequisite-boundary-gate` | Separate prerequisite-boundaries bundle and source-backed review. |
+| FR-024 Knowledge Coverage Modeling | `12-epistemic-drive-engine` | Coverage map persistence, refresh, UI inspection, and Docker fixture. |
+| FR-025 Knowledge Gap Detection | `12-epistemic-drive-engine` | Gap detection tests from recall traces, failures, stale records, contradictions, probing, and corrections. |
+| FR-026 Multi-Dimensional Knowledge Need Modeling | `12-epistemic-drive-engine` | `KnowledgeNeedVector` storage and scalar-only rejection tests. |
+| FR-027 Explainable Learning Proposal Generation | `12-epistemic-drive-engine` | Proposal fixture with evidence refs, coverage map, project directions, sources, risks, outputs, and acceptance criteria. |
+| FR-028 Human Approval For Learning | `12-epistemic-drive-engine` | Approval/reject/snooze/scope/probing actions persisted and audited. |
+| FR-029 Learning Workflow Orchestration | `12-epistemic-drive-engine` | MAF learning task executor contract and approval gate tests. |
+| FR-030 Knowledge Probing Integration | `12-epistemic-drive-engine` | Probing question generation and probing outcome evidence tests. |
+| FR-031 Learning Outcomes | `12-epistemic-drive-engine` | Learning outcome report, draft memory/procedure records, QA findings, and source refs. |
 | NFR-001 Deterministic Core | `04-memory-taxonomy-and-projections` | Deterministic hashing/scoring tests. |
 | NFR-002 Provenance First | `01-module-foundation` | Persistence rejects memory without source evidence or explicit generated reason. |
 | NFR-003 Provider Independence | `03-semantic-and-rag-adapters` | Fake embedding and fake RAG driver tests. |
@@ -38,3 +46,20 @@
 | NFR-011 No Silent Truncation | `05-recall-orchestrator` | Budget exclusion trace assertions. |
 | NFR-012 Idempotent Mutations | `06-consolidation-engine` | Duplicate job and retry tests. |
 | NFR-013 Boundary Stability | `00-prerequisite-boundary-gate` | Dependency review against MAF, Workbench, Process, Workflow, RAG, and SemanticCompletion boundaries. |
+| NFR-014 No Scalar-Only Epistemic Scoring | `12-epistemic-drive-engine` | Tests and review checklist require preserved vector dimensions and evidence. |
+| NFR-015 Learning Approval Safety | `12-epistemic-drive-engine` | External study and high-impact update approval-gate tests. |
+| NFR-016 Source-Grounded Learning Outputs | `12-epistemic-drive-engine` | Persistence rejects learning-derived canonical/procedure records without source refs. |
+| NFR-017 Auditable Learning Decisions | `12-epistemic-drive-engine` | Audit events for proposal decisions, learning task lifecycle, and outcome promotion. |
+| NFR-018 Idempotent And Resumable Learning Processing | `12-epistemic-drive-engine` | Input hash, retry, duplicate proposal, and resume tests. |
+| NFR-019 Projection Boundary Preservation | `12-epistemic-drive-engine` | Qdrant outage and rebuild tests prove proposals/outcomes are durable outside projections. |
+
+## Epistemic Drive Artifact Map
+
+| Artifact | Covers |
+|---|---|
+| `architecture/14-epistemic-drive-and-learning-orchestration.md` | FR-024 through FR-031 and NFR-014 through NFR-019. |
+| `contracts/csharp/EpistemicDriveContracts.cs` | Architecture-level interfaces/models for coverage, gaps, vectors, proposals, tasks, and outcomes. |
+| `diagrams/10-epistemic-drive-flow.mmd` | Evidence-to-learning lifecycle. |
+| `plan/subbundles/11-epistemic-drive-engine/README.md` | Implementation-ready plan subbundle. |
+| `subbundles/12-epistemic-drive-engine/README.md` | Root execution mirror with numbering note. |
+| `validation/test-and-quality-plan.md` | Unit, integration, UI, and negative tests for Epistemic Drive. |

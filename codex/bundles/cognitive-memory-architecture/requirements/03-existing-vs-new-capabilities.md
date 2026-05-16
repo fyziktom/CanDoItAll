@@ -39,6 +39,12 @@
 | Workflow memory executors | use memory inside workflows. |
 | Procedure extraction | convert successful runs into reusable knowledge. |
 | Contradiction/supersession logic | avoid stale or conflicting truth. |
+| Knowledge coverage maps | represent coverage/confidence/staleness/risk by topic region. |
+| Epistemic Drive engine | detect important knowledge gaps and evaluate multi-dimensional epistemic tension. |
+| Learning proposal service | create human-reviewable learning proposals with evidence, sources, risks, and acceptance criteria. |
+| Learning task planner | convert approved proposals into scoped learning tasks. |
+| Knowledge probing integration | generate probing questions and consume probing outcomes as gap evidence. |
+| Night Reflection UI | show top knowledge improvement opportunities and approval actions. |
 
 ## Closed Projection-Boundary Changes to Existing RAG Driver
 
@@ -80,6 +86,10 @@ V1.1:
 - add workflow executors,
 - add recall trace persistence,
 - add post-run reflection hook.
+- add Epistemic Drive scan executors,
+- add learning proposal/task executors,
+- add approval-gated source study workflows,
+- add learning QA handoff.
 
 ## Required UI Additions
 
@@ -89,4 +99,16 @@ V1.1:
 - recall trace viewer,
 - consolidation run viewer,
 - human review queue,
-- procedure library.
+- procedure library,
+- Night Reflection / Cognitive Briefing,
+- knowledge coverage map,
+- learning proposal detail,
+- learning outcome review.
+
+## New Epistemic Drive Constraints
+
+- A display priority score may exist only for UI sorting.
+- Core decisions must preserve vector dimensions, evidence refs, Pareto/category metadata, ROI estimate, and explanation.
+- Learning tasks must respect local-first/offline mode and source approval policy.
+- Learning-derived memory remains draft until source refs and validation requirements are satisfied.
+- Cross-project learning opportunities must not leak project-private source content.

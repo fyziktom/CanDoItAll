@@ -7,6 +7,8 @@ sequenceDiagram
     participant Cluster as Clusterer
     participant Graph as RelationDetector
     participant Store as MemoryStore
+    participant Coverage as KnowledgeCoverageService
+    participant Drive as EpistemicDriveEngine
     participant Projection as ProjectionManager
     participant Review as HumanReviewQueue
     participant Report as ReportStorage
@@ -24,6 +26,12 @@ sequenceDiagram
     Graph-->>Engine: Relation proposals
     Engine->>Store: Upsert memory items and safe relations
     Store-->>Engine: Stored memory ids
+    Engine->>Coverage: Refresh coverage maps from memory and evidence
+    Coverage-->>Engine: Coverage maps and weak subregions
+    Engine->>Drive: Evaluate gap regions and epistemic tension
+    Drive-->>Engine: Tension vectors, Pareto candidates, probing questions
+    Engine->>Review: Create learning proposals needing approval
+    Review-->>Engine: Learning proposal review ids
     Engine->>Review: Create review tasks for risky/ambiguous items
     Review-->>Engine: Review ids
     Engine->>Projection: Rebuild/update Qdrant projections

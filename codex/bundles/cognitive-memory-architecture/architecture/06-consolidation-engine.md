@@ -24,6 +24,9 @@ The consolidation engine is the software equivalent of sleep/rest memory process
 | `ContradictionReview` | Focus on stale/conflicting records. |
 | `ProcedureMining` | Extract reusable procedures from successful episodes. |
 | `FailureLearning` | Extract lessons from failed/reworked episodes. |
+| `KnowledgeCoverageRefresh` | Recompute topic/subtopic coverage maps from durable memory and evidence traces. |
+| `EpistemicDriveScan` | Detect gap regions and evaluate multi-dimensional epistemic tension. |
+| `LearningOpportunityReview` | Refresh draft learning proposals and probing question candidates for human review. |
 
 ## Pipeline
 
@@ -40,11 +43,20 @@ Start consolidation run
   -> detect contradictions and supersession
   -> update memory graph
   -> update activation/staleness
+  -> extract weak topic evidence
+  -> update knowledge coverage maps
+  -> detect knowledge gap regions
+  -> compute epistemic tension vectors
+  -> find Pareto/ROI learning candidates
+  -> create human-reviewable learning proposals
+  -> generate probing question candidates
   -> update Qdrant/search projections
   -> create human review tasks
   -> write report artifact
   -> release lease
 ```
+
+Epistemic Drive stages run after activation/staleness/contradiction analysis because they depend on those signals. They can create durable metacognitive records and review items, but they cannot execute external study or high-impact memory updates without approval.
 
 ## Safety Rules
 
@@ -69,6 +81,12 @@ Recommended MAF agents/workflows:
 | `Contradiction Analyst Agent` | Finds stale/conflicting records. |
 | `Projection Builder Agent` | Prepares Qdrant/search projection updates. |
 | `Memory QA Agent` | Checks source refs, confidence, and hallucination risk. |
+| `Epistemic Drive Agent` | Coordinates coverage refresh, gap detection, and proposal creation. |
+| `Knowledge Gap Analyst Agent` | Extracts weak-topic evidence from traces, failures, corrections, stale records, and probing sessions. |
+| `Learning Planner Agent` | Converts approved proposals into scoped learning tasks. |
+| `Source Study Agent` | Reads only approved sources and creates source-grounded draft knowledge. |
+| `Procedure/Runbook Miner Agent` | Extracts procedures, troubleshooting paths, and non-happy-path notes from approved learning output. |
+| `Learning QA Agent` | Verifies source refs, trust level, scope, and high-risk validation requirements. |
 
 ## Human Review Queue
 
@@ -80,6 +98,9 @@ Create review tasks when:
 - human-validated record would be superseded,
 - source is sensitive/high-risk,
 - procedure affects production deployment/security/finance/legal decisions.
+- learning proposal requires external source reading.
+- learning-derived output would update high-impact procedures or security guidance.
+- Epistemic Drive asks to promote a gap or learning outcome across project boundaries.
 
 ## Activation Updates
 
@@ -96,6 +117,30 @@ Consolidation should update:
 - contradiction penalty,
 - dormancy state.
 
+## Epistemic Drive Updates
+
+Consolidation should update:
+
+- knowledge coverage maps,
+- knowledge gap records,
+- open question sets,
+- probing question candidates,
+- epistemic tension records,
+- learning ROI estimates,
+- learning proposal state when source/evidence conditions change,
+- proposal snooze/retry eligibility.
+
+The scan must preserve:
+
+- vector components,
+- evidence refs,
+- project direction intersections,
+- Pareto/category decision metadata,
+- optional display priority score,
+- algorithm and input hashes.
+
+Scalar-only prioritization is invalid. Any implementation that stores only a final priority number fails the architecture.
+
 ## Output Report
 
 Each run writes a report with:
@@ -109,4 +154,7 @@ Each run writes a report with:
 - human review tasks,
 - errors/retries,
 - performance metrics,
+- coverage/gap changes,
+- learning proposals created or updated,
+- probing question sets created,
 - next recommended run.

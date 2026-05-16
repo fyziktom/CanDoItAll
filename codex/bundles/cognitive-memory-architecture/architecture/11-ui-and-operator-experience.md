@@ -14,6 +14,7 @@ The UI should not expose a raw database view. It should expose a cognitive map:
 - decisions,
 - review queue,
 - recall traces.
+- night reflection and learning opportunities.
 
 ## Main Screens
 
@@ -145,6 +146,116 @@ Each procedure should show:
 - confidence based on successful runs,
 - ability to create a process/workflow instance.
 
+### 8. Night Reflection / Cognitive Briefing
+
+Purpose: show what the system learned from idle/night consolidation and which knowledge areas deserve human attention.
+
+Sections:
+
+- top knowledge improvement opportunities,
+- topic coverage maps,
+- weak subtopics,
+- evidence summary,
+- related active project directions,
+- suggested learning actions,
+- estimated effort,
+- expected outputs,
+- source trust summary,
+- required approvals,
+- probing-before-learning option.
+
+Example rows:
+
+1. Docker operational knowledge
+   Priority: High
+   Why: frequently used in workflows, several failures, incomplete non-happy paths
+   Suggested action: study approved Docker docs and generate runbooks
+   Estimated cost: 1 hour
+   Approval: required
+
+2. Microsoft Graph mail categories
+   Priority: Medium
+   Why: Office365 plugin work depends on it, current memory is weaker than Gmail
+   Suggested action: inspect official Graph docs
+   Estimated cost: 35 minutes
+
+3. Plugin ZIP installation lifecycle
+   Priority: Medium
+   Why: active refactoring area, high architectural impact
+   Suggested action: generate probing questions and review implementation
+
+4. WebSocket proxy handling
+   Priority: Low
+   Why: older unresolved area, not currently active
+
+### 9. Knowledge Coverage Map
+
+Purpose: inspect topic regions and subregions.
+
+The map should show:
+
+- region hierarchy,
+- coverage,
+- confidence,
+- staleness,
+- risk,
+- source count,
+- open question count,
+- contradiction pressure,
+- project direction intersections.
+
+The UI can include a scalar priority label for sorting, but the detail view must expose vector dimensions and evidence.
+
+### 10. Learning Proposal Detail
+
+Purpose: let the operator decide whether to improve knowledge.
+
+Sections:
+
+- topic and subtopic coverage map,
+- why this topic,
+- why now,
+- weak subareas,
+- evidence refs,
+- active project direction intersections,
+- suggested sources and trust levels,
+- estimated effort,
+- expected outputs,
+- proposed depth,
+- risks,
+- suggested probing questions,
+- acceptance criteria,
+- audit history.
+
+Actions:
+
+- approve,
+- reject,
+- snooze,
+- narrow scope,
+- expand scope,
+- add source,
+- request probing first,
+- turn into a Codex bundle,
+- assign to human,
+- assign to approved agent workflow.
+
+### 11. Learning Outcome Review
+
+Purpose: inspect outputs from approved learning tasks before memory promotion.
+
+Sections:
+
+- sources actually read,
+- source refs and trust levels,
+- draft canonical records,
+- draft procedures/runbooks,
+- non-happy-path notes,
+- probing questions,
+- QA findings,
+- high-risk validation requirements,
+- projection refresh status after acceptance.
+
 ## UX Principles
 
 ### Progressive Disclosure
@@ -168,9 +279,24 @@ This item was selected because:
 - not stale
 ```
 
+Learning proposals must be equally explainable:
+
+```text
+This proposal exists because:
+- Docker networking is high-risk for workflow executor sandboxing
+- recall traces show repeated uncertainty
+- Compose failures appeared in workflow runs
+- official Docker docs are available
+- expected reuse is high across plugin isolation and local development
+```
+
 ### Memory Correction Is Normal
 
 The UI should make it easy to correct memory. Corrections should create events and not silently rewrite history.
+
+### Approval Is A Workflow
+
+Learning proposal actions must be explicit and auditable. Approving a proposal authorizes only the selected scope and sources. Expanding scope or using new external sources should require another policy check.
 
 ### Separate Similarity From Identity
 
@@ -198,6 +324,13 @@ Reuse existing Canvas/BaseLib patterns:
 - `HumanReviewDecisionPanel`
 - `ProcedureMemoryCard`
 - `MemoryProjectionStatusPanel`
+- `NightReflectionSummary`
+- `KnowledgeCoverageMap`
+- `KnowledgeNeedVectorPanel`
+- `LearningProposalDetail`
+- `LearningApprovalDecisionPanel`
+- `LearningOutcomeReviewPanel`
+- `ProbingQuestionSetPanel`
 
 ## UI Integration Points
 
@@ -209,6 +342,8 @@ Reuse existing Canvas/BaseLib patterns:
 | Plugin catalog | source ingestion capabilities. |
 | Admin/settings | embedding profiles, consolidation schedule, worker registration. |
 | Agent configuration | memory access policy and context-pack limits. |
+| Nightly consolidation report | Night Reflection summary and learning proposal links. |
+| Human review queue | learning proposal approval and learning outcome review. |
 
 ## Minimal V1 UI
 
@@ -220,5 +355,7 @@ V1 should not try to build the full visual brain. Implement:
 4. Human review queue.
 5. Consolidation run viewer.
 6. Basic recall trace viewer.
+7. Night Reflection summary.
+8. Learning proposal detail with approval/snooze/request-probing actions.
 
 The spatial/graph canvas can arrive in V1.5 after the domain model stabilizes.

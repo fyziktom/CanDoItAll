@@ -13,6 +13,7 @@ Cognitive Memory will run in different modes and over large data volumes. The ar
 | Projection | `Disabled`, `RelationalSearchOnly`, `QdrantSingleVector`, `QdrantMultiCollection`, `NamedVectorsFuture` | Projection manager |
 | Recall | `QuickAssociative`, `FocusedTaskContext`, `DeepSourceGrounded`, `ProcedureLookup`, `DecisionLookup`, `IncidentLearning`, `CrossProjectAnalogy` | Recall orchestrator |
 | Consolidation | `IncrementalRecent`, `ProjectNightly`, `ProjectionRebuild`, `ContradictionReview`, `ProcedureMining`, `FailureLearning`, `CrossProjectWeekly` | Consolidation engine |
+| Epistemic Drive | `Disabled`, `ObserveOnly`, `KnowledgeCoverageRefresh`, `EpistemicDriveScan`, `LearningOpportunityReview`, `ApprovedLearningTask` | Epistemic Drive engine and learning orchestrator |
 | Trust/write policy | `ObserveOnly`, `DraftOnly`, `AutoAcceptLowRisk`, `HumanReviewRequired`, `LockedApprovedRecords` | Memory governance |
 | Compute placement | `InlineSmallBatch`, `BackgroundLocal`, `LocalIdleWorker`, `DistributedLanWorker` | Job coordinator |
 
@@ -21,7 +22,44 @@ Cognitive Memory will run in different modes and over large data volumes. The ar
 - Modes must be explicit enum values or strongly typed options, not stringly typed ad hoc flags.
 - Each mode must declare read authority, write authority, source scope, batch limit, retry behavior, and review behavior.
 - The active mode must be persisted in source scan records, consolidation runs, projection runs, and recall traces.
+- Epistemic Drive modes must persist source approval policy, proposal state, vector algorithm version, and evidence input hash.
 - Changing modes must not reinterpret previous outputs without recording algorithm/profile version changes.
+
+## Epistemic Drive By Operating Mode
+
+### Local / Single-User Mode
+
+- Run coverage refresh and proposal creation locally.
+- Use local project sources, repositories, uploaded files, and approved local documentation.
+- If internet is disabled, create proposals that ask for sources or probing rather than external study.
+- Human approval can be the local user, but high-risk procedures still need explicit validation.
+
+### Project Mode
+
+- Scope coverage maps and proposals to the active project.
+- Project graph and mindmap directions determine active project direction vectors.
+- Recall traces, workflow failures, process runs, and user corrections remain project-scoped.
+- Learning tasks update project memory first; cross-project promotion is separate.
+
+### Cross-Project Memory Mode
+
+- Aggregate repeated gaps across projects into reusable opportunities only after policy filtering.
+- Do not leak project-private source text, source locators, or evidence details across project boundaries.
+- Global proposals must use sources approved for global reuse.
+- Maintain separate project coverage/confidence and global coverage/confidence.
+
+### Distributed Idle Compute Mode
+
+- Workers may compute embeddings, clusters, coverage projections, candidate gap evidence, and source-independent statistics.
+- Workers cannot create authoritative proposals, approve learning tasks, write durable memory, or update Qdrant directly.
+- Coordinator validates input hashes, output hashes, source scope, worker identity, algorithm version, and policy.
+
+### Enterprise / Team Mode
+
+- Learning proposals can be assigned to humans, teams, or approved agent workflows.
+- Approval policy may require role-based signoff for security, deployment, compliance, customer, or legal knowledge.
+- Audit records must show approver, scope, source trust, learning outputs, and promotion decisions.
+- Team-level dashboards should show proposal age, high-risk pending items, and repeated cross-project gaps.
 
 ## High-Volume Data Strategy
 
@@ -97,6 +135,12 @@ Track at minimum:
 - projection queue depth,
 - Qdrant upsert/search latency,
 - recall latency by stage,
+- knowledge coverage refresh duration,
+- knowledge gaps by severity,
+- learning proposals by category/state,
+- proposal approval/snooze/rejection counts,
+- approved learning task duration,
+- probing-before-learning and probing-after-learning results,
 - context-pack size,
 - review queue age,
 - consolidation run duration,

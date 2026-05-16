@@ -67,9 +67,26 @@
 - [ ] The coordinator validates and accepts/rejects worker output.
 - [ ] Workers cannot directly mutate memory tables or Qdrant.
 
+## Epistemic Drive And Learning
+
+- [ ] Knowledge regions and subregions can be stored and inspected.
+- [ ] Knowledge coverage maps preserve coverage, confidence, staleness, risk, source count, open question count, and contradiction pressure.
+- [ ] Knowledge gaps can be created from recall traces, workflow/process failures, user corrections, stale records, contradictions, weak source coverage, probing failures, and project direction relevance.
+- [ ] `KnowledgeNeedVector` persists all required dimensions and is not replaced by a scalar priority.
+- [ ] Candidate selection records Pareto/category/ROI metadata and evidence refs.
+- [ ] Learning proposals explain why this topic, why now, weak subareas, project direction intersections, suggested sources, source trust, expected outputs, risks, and approval needs.
+- [ ] Human review supports approve, reject, snooze, narrow scope, expand scope, add source, request probing, convert to bundle, and assign actions.
+- [ ] Approved learning tasks use only approved source scope.
+- [ ] Learning outputs remain draft until QA/human validation where required.
+- [ ] Every learning-derived canonical/procedure record has source refs.
+- [ ] Probing can be requested before learning and used after learning to validate improvement.
+- [ ] Qdrant/search projections refresh only after durable records exist.
+
 ## Quality
 
 - [ ] Unit tests cover scoring, activation, source hashing, relation detection, and projection mapping.
 - [ ] Integration tests cover ingestion -> canonicalization -> projection -> recall.
 - [ ] Negative tests cover secret redaction, stale data, contradictions, rejected merges, and Qdrant outage fallback.
 - [ ] UI tests cover review queue and recall trace inspection.
+- [ ] Tests reject scalar-only Epistemic Drive scoring.
+- [ ] Negative tests cover unapproved external study, missing learning source refs, high-risk draft promotion, duplicate proposal creation, probing failure handling, and Qdrant outage during proposal generation.

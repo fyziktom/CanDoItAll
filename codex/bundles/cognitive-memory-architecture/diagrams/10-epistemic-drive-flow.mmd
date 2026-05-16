@@ -1,0 +1,28 @@
+flowchart TD
+    Evidence["Evidence Sources<br/>Recall traces, workflow runs, corrections, contradictions, stale records, probing sessions, project graph"]
+    Feature["Knowledge Feature Extraction<br/>usage, confidence, failures, staleness, questions, source coverage"]
+    Region["Knowledge Region / Coverage Modeling<br/>topic regions, subregions, coverage maps"]
+    Gap["Gap Region Detection<br/>weak coverage, low confidence, missing sources"]
+    Direction["Project Direction Intersection<br/>active processes, mindmap directions, roadmap signals"]
+    Tension["Epistemic Tension Evaluation<br/>multi-dimensional vector + explanation"]
+    Selection["Pareto / ROI Candidate Selection<br/>category classification, effort, source trust"]
+    Proposal["Learning Proposal<br/>coverage map, evidence, questions, sources, risks"]
+    Approval{"Human Approval"}
+    Workflow["Learning Workflow<br/>planner, source study, runbook mining"]
+    Drafts["Draft Canonical Records / Procedures / Probing Questions"]
+    Qa["QA / Human Review<br/>source refs, risk, validation"]
+    Update["Memory Update / Projection Refresh<br/>durable state first, Qdrant after"]
+
+    Evidence --> Feature
+    Feature --> Region
+    Region --> Gap
+    Gap --> Direction
+    Direction --> Tension
+    Tension --> Selection
+    Selection --> Proposal
+    Proposal --> Approval
+    Approval -- approved --> Workflow
+    Approval -- reject/snooze/scope/probe --> Proposal
+    Workflow --> Drafts
+    Drafts --> Qa
+    Qa --> Update

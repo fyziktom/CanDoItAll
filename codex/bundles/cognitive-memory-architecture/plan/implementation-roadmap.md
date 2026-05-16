@@ -197,6 +197,40 @@ Exit criteria:
 - project-specific context remains preserved,
 - cross-project recall can be scoped and explained.
 
+## Phase 11: Epistemic Drive And Learning Orchestration
+
+Deliverables:
+
+- knowledge region and project direction models,
+- knowledge coverage maps,
+- knowledge gap records with evidence refs,
+- `KnowledgeNeedVector` persistence,
+- epistemic tension evaluation with Pareto/category/ROI metadata,
+- human-reviewable learning proposals,
+- probing question generation,
+- approval-gated learning task planning,
+- learning outcome reports with draft canonical/procedure/probing outputs,
+- Night Reflection / Cognitive Briefing UI.
+
+Dependencies:
+
+- source ingestion,
+- memory taxonomy and durable records,
+- recall traces and feedback,
+- consolidation engine,
+- human review UI,
+- MAF workflow integration,
+- probing dialog contracts when available,
+- optional cross-project memory for global gap aggregation.
+
+Exit criteria:
+
+- Docker operational knowledge fixture produces a proposal with subtopic coverage, evidence refs, project direction intersections, suggested sources, effort estimate, probing questions, and approval actions,
+- vector dimensions are preserved and tested,
+- proposals cannot execute external study without required approval,
+- learning-derived canonical records require source refs and remain draft until validated,
+- projection refresh happens only after durable memory updates.
+
 ## First Vertical Slice
 
 Recommended first implementation slice:
@@ -206,3 +240,9 @@ Workbench nodes -> source items -> canonical memory -> Qdrant projection -> reca
 ```
 
 This slice proves the core value while avoiding early complexity from distributed compute and full process reflection.
+
+After the first recall/consolidation/review path is stable, add the Epistemic Drive vertical slice:
+
+```text
+Recall/consolidation evidence -> coverage map -> gap region -> epistemic tension vector -> learning proposal -> human decision -> planned learning task
+```

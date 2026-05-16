@@ -149,6 +149,35 @@ score =
 
 The scoring formula should be versioned and persisted in recall traces.
 
+## Recall Evidence For Epistemic Drive
+
+Recall traces feed Epistemic Drive, but recall must not directly mutate authoritative knowledge.
+
+Trace records should expose typed evidence for:
+
+- low-confidence selected candidates,
+- missing or weak source references,
+- repeated user corrections,
+- failed answer validation,
+- repeated fallback to broad/generic sources,
+- uncertain contradiction resolution,
+- stale records repeatedly used for active tasks,
+- budget exclusions that repeatedly hide detail needed by agents,
+- probing failures attached to the recall goal.
+
+Epistemic Drive consumes these signals during consolidation. A single weak trace should usually lower confidence only slightly; repeated traces across active work can create a `KnowledgeGapRecord` or `EpistemicTensionRecord`.
+
+Recall evidence must include:
+
+- trace id,
+- project id,
+- intent,
+- selected/excluded item ids,
+- confidence and source-coverage signals,
+- user/agent feedback,
+- linked process/workflow/probing ids where available,
+- a compact explanation of the weak signal.
+
 ## Output Boundaries
 
 The recall orchestrator must never hide uncertainty. Include:

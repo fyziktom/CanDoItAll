@@ -50,6 +50,21 @@
 - [ ] Worker identities and capabilities are tracked.
 - [ ] Coordinator validates before accepting output.
 
+## Epistemic Drive And Learning
+
+- [ ] Knowledge need is modeled as a vector with preserved dimensions.
+- [ ] Scalar priority is secondary display/sorting data only.
+- [ ] Gap detection cites evidence refs.
+- [ ] Learning proposals explain why this topic, why now, weak subareas, project directions, sources, outputs, risks, and approval needs.
+- [ ] No learning workflow reads external sources without required approval.
+- [ ] Source trust classification is stored for suggested/approved sources.
+- [ ] Generated learning output remains draft until QA/human validation where required.
+- [ ] Learning-derived canonical records and procedures require source refs.
+- [ ] Probing failures update gap evidence but do not become automatic truth.
+- [ ] Stale or contradictory records do not silently overwrite validated records.
+- [ ] Qdrant/search remains projection only for learning proposals and outcomes.
+- [ ] Cross-project proposals do not leak project-private source content.
+
 ## UI/UX
 
 - [ ] User can inspect why a memory was recalled.
@@ -57,3 +72,5 @@
 - [ ] User can approve/reject review items.
 - [ ] Consolidation run results are visible.
 - [ ] Procedure memory can become actionable workflow/process work.
+- [ ] User can inspect Night Reflection opportunities, coverage maps, evidence, estimated effort, and approval actions.
+- [ ] User can request probing before learning and review probing-after-learning results.

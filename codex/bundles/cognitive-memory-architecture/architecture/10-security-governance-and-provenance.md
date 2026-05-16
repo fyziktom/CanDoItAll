@@ -19,6 +19,7 @@ No derived memory item is authoritative unless it can be traced to source eviden
 | Canonical source item | Medium-high | Versioned | Normalize source content into typed facts. |
 | Memory item | Medium | Versioned/superseded | Store semantic, episodic, procedural, decision, or reflection meaning. |
 | Memory graph relation | Medium | Versioned | Store explicit associations and reasoning evidence. |
+| Epistemic Drive records | Medium | Versioned | Store coverage, gaps, proposals, and learning outcomes with evidence refs. |
 | Qdrant projection | Low | Rebuildable | Retrieval acceleration only. |
 | Recall context pack | Low | Ephemeral/versioned | Working context for a task/agent. |
 
@@ -72,6 +73,20 @@ public enum MemoryValidationState
 }
 ```
 
+## Source Trust Classification
+
+Learning workflows must classify every proposed source before use.
+
+Recommended trust levels:
+
+- `LocalProjectSource`: project docs, repository files, uploaded files, source snapshots.
+- `InternalApprovedSource`: internal knowledge bases or approved team material.
+- `OfficialVendorDocumentation`: official product/vendor docs.
+- `CommunitySource`: community posts, examples, issues, blogs, or forums.
+- `UntrustedSource`: unknown, low quality, prompt-injection-risk, or policy-blocked sources.
+
+Community and untrusted sources can help form questions, but they should not become canonical truth without stronger corroboration and review.
+
 ## High-Risk Memory Categories
 
 These memory categories should require stronger provenance and optional human validation:
@@ -85,6 +100,21 @@ These memory categories should require stronger provenance and optional human va
 - destructive automation procedures,
 - migration plans,
 - code-generation instructions that affect production systems.
+- learning-derived updates to any of the above categories.
+
+## Learning Approval Policy
+
+Epistemic Drive may create draft learning proposals during consolidation. It must not execute external source study, create high-impact active procedures, or promote learning-derived canonical records without required approval.
+
+Approval policy should be explicit per scope:
+
+- local-only source review may be allowed in observe/draft mode,
+- external internet reading requires approval when policy requires it,
+- high-risk procedures always require human validation,
+- cross-project promotion requires project/source sharing approval,
+- generated learning outcomes remain draft until QA and review complete.
+
+Learning proposal decisions must be audited with user/agent id, scope, source list, approved depth, timestamp, and reason.
 
 ## Secret Handling
 
@@ -147,6 +177,15 @@ The following events should be recorded:
 - memory injected into agent context,
 - human review decision,
 - distributed worker output accepted/rejected.
+- knowledge gap detected,
+- knowledge coverage map refreshed,
+- epistemic tension evaluated,
+- learning proposal created/updated,
+- learning proposal approved/rejected/snoozed/scoped,
+- probing requested from learning proposal,
+- learning task planned/started/completed/failed,
+- learning outcome accepted/rejected,
+- projection refreshed after learning outcome.
 
 ## Governance Rules
 
@@ -175,6 +214,22 @@ When the system finds ambiguous merges, contradictions, or high-risk new procedu
 
 All embedding, summarization, classification, clustering, and relation detection outputs must store model/provider/algorithm versions.
 
+### Rule 6: Epistemic Drive Is Evidence-Driven
+
+Knowledge need decisions must preserve vector components, evidence refs, project direction intersections, ROI assumptions, and explanation text. A scalar display score cannot be the authoritative decision model.
+
+### Rule 7: Learning Output Is Draft Until Validated
+
+Generated learning output can create draft canonical records, procedures, runbooks, and probing questions. It cannot silently replace human-validated records or become active high-risk guidance without review.
+
+### Rule 8: External Study Is Policy-Gated
+
+Any learning task that reads external sources must use approved source scope and source trust classification. If policy denies external access, Epistemic Drive can propose local sources, ask the user for sources, or request probing instead.
+
+### Rule 9: Anti-Hallucination Requirements
+
+Learning-derived canonical records must include source refs. Summaries must state uncertainty and unresolved contradictions. Contradictory or stale source evidence must be preserved, not hidden by generated synthesis.
+
 ## Threat Model
 
 | Threat | Example | Mitigation |
@@ -185,6 +240,8 @@ All embedding, summarization, classification, clustering, and relation detection
 | Stale knowledge | Old deployment procedure retrieved as current | supersession, staleness penalty, validity intervals. |
 | Circular hallucination | Agent summary becomes source for future summaries | strict provenance levels; generated summaries cannot become raw truth. |
 | Worker tampering | Distributed device returns bad cluster output | job input hash, output hash, worker identity, deterministic validation, coordinator acceptance. |
+| Unapproved autonomous learning | Agent studies external source and updates memory without approval | learning approval policy, source trust classification, proposal lifecycle, audit gates. |
+| Scalar-only knowledge desire | Important dimensions hidden behind one score | durable vector fields, evidence refs, category/Pareto/ROI metadata, validation test. |
 
 ## Recommended EF Tables
 
@@ -196,6 +253,17 @@ All embedding, summarization, classification, clustering, and relation detection
 - `MemoryProjectionRecords`
 - `MemoryRecallTraceRecords`
 - `MemoryConsolidationRunRecords`
+- `KnowledgeRegionRecords`
+- `ProjectDirectionVectorRecords`
+- `KnowledgeCoverageMapRecords`
+- `KnowledgeGapRecords`
+- `KnowledgeNeedVectorRecords`
+- `EpistemicTensionRecords`
+- `LearningProposalRecords`
+- `LearningTaskRecords`
+- `LearningOutcomeRecords`
+- `OpenQuestionSetRecords`
+- `ProbingQuestionSetRecords`
 - `MemoryHumanReviewItems`
 - `MemoryAccessAuditRecords`
 

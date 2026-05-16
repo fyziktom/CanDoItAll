@@ -11,9 +11,13 @@
 - RAG and SemanticCompletion are useful infrastructure, but neither should become durable memory truth.
 - Large-data behavior must be part of V1 design through cursors, hashes, idempotency, bounded batches, and trace budgets.
 - Root subbundles and traceability are now structured around dependency gates rather than feature wish lists.
+- Epistemic Drive is now modeled as evidence-driven metacognition, not random curiosity or scalar-only priority.
+- Learning proposals are approval-gated and source-grounded; generated learning output remains draft until validated.
 
 ## Remaining Review Needs
 
 - Re-run prepared-stage validation after all subbundle READMEs and the prerequisite-boundaries bundle are present.
 - Review whether the first vertical slice should include Qdrant or start with lexical/relational projection only.
 - Decide whether Workbench 3D coordinates remain metadata-backed for V1 or get a dedicated schema migration later.
+- Decide the exact probing-session contract name once the dialog probing feature is implemented.
+- Decide whether external source approval is global policy, per project, or per learning proposal.

@@ -20,6 +20,9 @@ flowchart TB
         Graph[Memory Graph Service]
         Items[Memory Item Store]
         Activation[Activation + Confidence Engine]
+        Coverage[Knowledge Coverage Service]
+        Epistemic[Epistemic Drive Engine]
+        Learning[Learning Task Orchestrator]
         Projection[Qdrant Projection Manager]
         Recall[Recall Orchestrator]
         Context[Context Pack Builder]
@@ -41,6 +44,12 @@ flowchart TB
     Canonical --> Items
     Graph --> Items
     Items --> Activation
+    Items --> Coverage
+    Recall --> Epistemic
+    Activation --> Epistemic
+    Coverage --> Epistemic
+    Epistemic --> Learning
+    Epistemic --> Review
     Items --> Projection
     Projection --> Rag
     Recall --> Search
@@ -52,8 +61,13 @@ flowchart TB
     Consolidation --> Canonical
     Consolidation --> Cluster
     Consolidation --> Graph
+    Consolidation --> Coverage
+    Consolidation --> Epistemic
     Consolidation --> Projection
     Consolidation --> Review
+    Learning --> Maf
+    Learning --> Review
+    Learning --> Items
     Consolidation --> Audit
     Storage --> SourceManifest
     Storage --> Audit

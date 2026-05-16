@@ -16,6 +16,9 @@ Review the implemented Cognitive Memory subbundle for correctness, durability, s
 8. Are workflow/MAF integrations typed and testable?
 9. Are EF models configured correctly?
 10. Are non-happy paths tested?
+11. Does Epistemic Drive preserve vectors/evidence instead of scalar-only priority?
+12. Are learning proposals approval-gated and source-grounded?
+13. Do probing results update gap evidence without becoming automatic truth?
 
 ## Required Output
 
@@ -39,3 +42,6 @@ Fail the implementation if any of these occur:
 - direct worker mutation of authoritative memory state,
 - silent merge of context-separated topics,
 - no negative tests for access/redaction/projection failure.
+- Epistemic Drive implemented as only a final scalar score,
+- external source study or high-impact memory update without required approval,
+- learning-derived canonical/procedure record without source refs.

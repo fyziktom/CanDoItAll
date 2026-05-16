@@ -8,6 +8,8 @@
 
 Design a biologically inspired, enterprise-grade Cognitive Memory module for CanDoItAll. The module must behave less like a flat RAG index and more like a disciplined memory system: coarse associative recall first, focused attention second, detail retrieval third, and idle-time consolidation afterwards.
 
+The refreshed architecture also adds Epistemic Drive: a metacognitive layer that detects important knowledge gaps, models knowledge need as a multi-dimensional vector, and creates human-reviewable learning proposals instead of behaving like passive retrieval or random curiosity.
+
 This bundle is architecture and planning only. It does not authorize implementation of the Cognitive Memory module.
 
 ## Outcome Contract
@@ -27,6 +29,7 @@ Qdrant/RAG is not the memory. It is a rebuildable projection layer. The durable 
 - episodic records from process, workflow, and agent execution,
 - procedural records extracted from successful work,
 - activation, confidence, staleness, supersession, and contradiction state,
+- metacognitive coverage maps, knowledge gaps, epistemic tension records, and learning proposals,
 - recall traces and consolidation runs,
 - Qdrant projections with rich payload metadata.
 
@@ -56,13 +59,15 @@ The CodeAnalytics snapshot used for the main CanDoItAll source inspection was `s
 - Do not require named vectors in V1. Use typed multi-collection projection if the RAG driver has not yet been extended.
 - Do not treat high semantic similarity as identity. Spatial, graph, scope, source confidence, and human validation can override semantic similarity.
 - Do not plan distributed idle compute until local deterministic job packets, leases, hashes, and acceptance validation work.
+- Do not reduce Epistemic Drive to a scalar priority score. Preserve vector dimensions, evidence refs, Pareto/category/ROI metadata, project-direction intersections, and explanation text.
+- Do not run external learning or promote high-impact learning outputs without human/policy approval and source refs.
 
 ## Bundle Layout
 
 - `inputs/` raw request, source artifacts, and structured input
 - `analysis/` current state, corrections, assumptions, risks, and refactor decision
 - `requirements/` normalized requirements and acceptance criteria
-- `architecture/` target architecture, boundaries, modes, scale, security, UI, and integration notes
+- `architecture/` target architecture, boundaries, modes, scale, security, UI, Epistemic Drive, and integration notes
 - `plan/` execution order, dependencies, critical foundations, and gates
 - `traceability/` requirement-to-subbundle mapping
 - `shared-prompts/` reusable implementation and QA prompts
@@ -83,9 +88,10 @@ The CodeAnalytics snapshot used for the main CanDoItAll source inspection was `s
 10. `architecture/06-consolidation-engine.md`
 11. `architecture/07-qdrant-projection-design.md`
 12. `architecture/08-maf-workflow-agent-integration.md`
-13. `plan/01-phase-plan.md`
-14. `subbundles/*/README.md`
-15. `validation/test-and-quality-plan.md`
+13. `architecture/14-epistemic-drive-and-learning-orchestration.md`
+14. `plan/01-phase-plan.md`
+15. `subbundles/*/README.md`
+16. `validation/test-and-quality-plan.md`
 
 ## Recommended Execution Order
 
@@ -100,7 +106,10 @@ The CodeAnalytics snapshot used for the main CanDoItAll source inspection was `s
 9. `subbundles/08-human-review-ui`
 10. `subbundles/09-distributed-idle-compute`
 11. `subbundles/10-cross-project-memory`
-12. `subbundles/11-validation-and-architecture-closure`
+12. `subbundles/12-epistemic-drive-engine`
+13. `subbundles/11-validation-and-architecture-closure`
+
+Root validation closure remains named `11-validation-and-architecture-closure` for compatibility with the existing bundle. Run `12-epistemic-drive-engine` before closure.
 
 ## Dependency And Validation Map
 
@@ -111,6 +120,7 @@ The CodeAnalytics snapshot used for the main CanDoItAll source inspection was `s
 
 - Bundle preparation status: `Prepared after prerequisite sync`
 - Bundle readiness gate: `Prepared-stage validation passed`
+- Epistemic Drive status: `Architecture added, implementation not started`
 - Execution status: `Not started`
 - Subbundle gate review: `Prerequisite gates passed`
 - Final closure gate: `Not started`

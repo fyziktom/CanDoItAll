@@ -9,6 +9,7 @@
 | Subbundle | Entry gate | Closure gate | Downstream dependencies checked | Progression result | Notes |
 |---|---|---|---|---|---|
 | 00-prerequisite-boundary-gate | Passed | Passed | Checked | Passed - module foundation and source ingestion may start only by consuming the approved hardened boundaries | `cognitive-memory-prerequisite-boundaries`, `cognitive-memory-boundary-hardening`, and `cognitive-memory-projection-boundary-hardening` are validated prerequisites. Direct MAF private-provider edits, ad hoc source table reads, direct Qdrant calls, and unscoped vector post-filtering remain out of bounds. |
+| 12-epistemic-drive-engine | Ready | Not started | Checked | Ready after recall, consolidation, MAF, review UI, and optional probing contracts | Added architecture, contracts, diagrams, traceability, validation, prompts, and subbundle plan. Implementation is intentionally not started. |
 
 ## Browser Validation Analytics
 
@@ -29,4 +30,5 @@
 | Analyze existing bundle deeply | Covered | Updated architecture, requirements, plan, risks, traceability, and subbundles. |
 | Use RAG and SemanticCompletion repos | Covered | Source audit records how both repos are adapters/projections, not canonical memory truth. |
 | Identify prerequisite refactors | Covered | `analysis/03-prerequisite-refactor-decision.md`, `cognitive-memory-boundary-hardening`, and completed `cognitive-memory-projection-boundary-hardening` proof. |
+| Add Epistemic Drive / Knowledge Desire layer | Covered | Added `architecture/14-epistemic-drive-and-learning-orchestration.md`, `contracts/csharp/EpistemicDriveContracts.cs`, `diagrams/10-epistemic-drive-flow.mmd`, and `subbundles/12-epistemic-drive-engine/README.md`. |
 | Do not implement | Covered | Product code was not modified. |

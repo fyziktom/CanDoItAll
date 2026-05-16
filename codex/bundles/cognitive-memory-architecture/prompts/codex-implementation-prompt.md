@@ -16,6 +16,10 @@ Implement the next approved subbundle from `plan/subbundles`. The module must be
 6. Do not silently merge semantically similar but context-separated records.
 7. Source code comments must be in English.
 8. Add tests, including non-happy paths.
+9. Do not collapse Epistemic Drive into a simple scalar priority score.
+10. Preserve multi-dimensional evidence, vector components, Pareto/category/ROI metadata, and explanation text.
+11. Human approval is required before external study or high-impact memory updates.
+12. All learning-derived canonical records and procedures require source refs and draft/validation state.
 
 ## Required Process
 
@@ -59,4 +63,6 @@ Before finalizing, check:
 - no Qdrant-only truth,
 - no secret projection,
 - recall/consolidation traces are explainable,
+- Epistemic Drive proposals preserve evidence and vectors,
+- learning workflows are approval-gated,
 - EF configurations are registered through the module pattern.

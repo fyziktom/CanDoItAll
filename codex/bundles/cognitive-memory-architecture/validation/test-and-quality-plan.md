@@ -12,6 +12,7 @@
 | UI tests | review queue, recall trace viewer, memory detail. |
 | Workflow tests | recall/consolidation executors inside workflow runtime. |
 | Distributed worker tests | job claim, output validation, tampering rejection. |
+| Epistemic Drive tests | coverage maps, gap detection, vector preservation, Pareto/ROI selection, proposal lifecycle. |
 
 ## Golden Mindmap Test
 
@@ -74,6 +75,30 @@ Test score effects:
 - Contradictions create contradiction candidates.
 - Supersession updates stale records.
 - Run report is persisted.
+- Epistemic Drive stages run after activation/staleness/contradiction analysis.
+- Duplicate scans do not create duplicate learning proposals.
+
+## Epistemic Drive Tests
+
+- Knowledge need vectors preserve all dimensions.
+- Candidate selection stores Pareto rank, category, ROI estimate, and explanation.
+- Scalar-only scoring is rejected by contract/model tests.
+- Proposal explanations cite evidence refs.
+- Docker operational knowledge fixture produces weak subareas for Compose, volumes, networking, secrets/configs, Swarm, and non-happy paths.
+- Active project direction intersection raises relevant weak regions.
+- Low uncertainty/low usage topics do not create urgent proposals.
+- High uncertainty/low usage topics are tracked as known unknowns, not auto-studied.
+- Source availability and source quality affect category/action without erasing risk or uncertainty dimensions.
+- Learning proposal state transitions are audited.
+- Learning outcome records remain draft until validation requirements are met.
+
+## Probing Integration Tests
+
+- Epistemic Drive generates probing question sets from gap regions.
+- Failed probing answers increase gap evidence without overwriting validated memory.
+- Successful probing can increase confidence/coverage through an auditable update.
+- Probing before learning can cancel or narrow a learning task.
+- Probing after learning validates improvement and updates the coverage map.
 
 ## Security Tests
 
@@ -81,6 +106,10 @@ Test score effects:
 - Memory access policy denies unauthorized agent/user roles.
 - External model context policy blocks restricted records.
 - Prompt-injection-like source text is marked as untrusted source text, not instruction.
+- External source study is blocked without required approval.
+- Learning-derived canonical records without source refs are rejected.
+- High-risk learning-derived procedures cannot become active without human review.
+- Cross-project learning proposals do not expose project-private source text without approval.
 
 ## Distributed Compute Tests
 
@@ -89,6 +118,7 @@ Test score effects:
 - Worker output with wrong algorithm version is rejected.
 - Duplicate result submission is idempotent.
 - Worker cannot directly apply memory mutations.
+- Worker cannot directly approve proposals, create learning outcomes, or update projections.
 
 ## Review Checklist Before Merge
 
@@ -101,3 +131,6 @@ Test score effects:
 - No generated memory item lacks source refs.
 - No Qdrant point lacks payload metadata.
 - No secret-like data is projected.
+- No Epistemic Drive implementation stores only a final priority score.
+- No learning task reads external sources without required approval.
+- No learning-derived record replaces human-validated memory silently.

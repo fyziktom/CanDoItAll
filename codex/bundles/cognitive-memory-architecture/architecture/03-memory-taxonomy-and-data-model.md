@@ -29,6 +29,9 @@
 | `Decision` | Architectural/process decision. |
 | `Episode` | Historical event. |
 | `Reflection` | Lesson and improvement candidate. |
+| `KnowledgeRegion` | Topic/subtopic area used for coverage and gap modeling. |
+| `KnowledgeCoverage` | Rebuildable projection of durable coverage map state. |
+| `LearningOpportunity` | Searchable projection of approved/draft learning proposals, never source truth. |
 
 ## Core Entities
 
@@ -122,6 +125,13 @@ Relation kinds:
 - `MentionedBy`
 - `ValidatedBy`
 - `FailedBecauseOf`
+- `HasKnowledgeGap`
+- `NeedsEvidence`
+- `SupportsLearningProposal`
+- `ProbedBy`
+- `ImprovedByLearning`
+- `AlignedWithProjectDirection`
+- `RaisesQuestion`
 
 Key fields:
 
@@ -219,6 +229,252 @@ Key fields:
 - `ProjectionUpdateCount`
 - `HumanReviewTaskCount`
 - `ReportStorageReferenceJson`
+
+## Epistemic Drive Entities
+
+Epistemic Drive records are metacognitive memory. They describe what the system knows about its own knowledge state. They must preserve vector components and evidence refs; a scalar priority may exist only as a secondary display/sorting field.
+
+### `KnowledgeRegionRecord`
+
+Represents a topic region or subregion such as `Docker`, `Docker.Networking`, or `Docker.Compose.NonHappyPaths`.
+
+Key fields:
+
+- `Id`
+- `ProjectId`
+- `ParentRegionId`
+- `TopicKey`
+- `DisplayName`
+- `Scope`
+- `TagsJson`
+- `MetadataJson`
+- `CreatedAtUtc`
+- `UpdatedAtUtc`
+
+### `ProjectDirectionVectorRecord`
+
+Represents an active project direction derived from project graph, mindmap, process/workflow needs, roadmap sources, or explicit user priorities.
+
+Key fields:
+
+- `Id`
+- `ProjectId`
+- `DirectionKey`
+- `DisplayName`
+- `StrategicWeight`
+- `RiskWeight`
+- `TimeHorizonWeight`
+- `SourceMemoryItemIdsJson`
+- `MetadataJson`
+- `CreatedAtUtc`
+- `UpdatedAtUtc`
+
+### `KnowledgeCoverageMapRecord`
+
+Represents coverage/confidence/staleness/risk state for a region and its subregions.
+
+Key fields:
+
+- `Id`
+- `ProjectId`
+- `RootKnowledgeRegionId`
+- `CoverageVersion`
+- `SubregionsJson`
+- `EvidenceRefsJson`
+- `AlgorithmVersion`
+- `InputHash`
+- `CalculatedAtUtc`
+
+### `KnowledgeGapRecord`
+
+Represents a specific weak region, not just a generic topic.
+
+Key fields:
+
+- `Id`
+- `ProjectId`
+- `KnowledgeRegionId`
+- `GapKey`
+- `Title`
+- `Description`
+- `Severity`
+- `ConfidenceWeakness`
+- `CoverageWeakness`
+- `EvidenceRefsJson`
+- `CreatedAtUtc`
+- `UpdatedAtUtc`
+
+### `KnowledgeNeedVectorRecord`
+
+Represents the multi-dimensional state used by Epistemic Drive. Store each core dimension as a typed numeric field so the model can be queried, explained, and tested.
+
+Key fields:
+
+- `Id`
+- `ProjectId`
+- `KnowledgeRegionId`
+- `UsageFrequency`
+- `ConfidenceWeakness`
+- `RiskImpact`
+- `Staleness`
+- `FailureRecurrence`
+- `StrategicAlignment`
+- `QuestionDensity`
+- `BusinessValue`
+- `EstimatedLearningEffort`
+- `SourceAvailability`
+- `SourceQuality`
+- `ContradictionPressure`
+- `UserInterestSignal`
+- `Volatility`
+- `ExpectedReuse`
+- `AlgorithmVersion`
+- `CalculatedAtUtc`
+
+### `EpistemicTensionRecord`
+
+Represents the evaluated tension and candidate classification for one region.
+
+Key fields:
+
+- `Id`
+- `ProjectId`
+- `KnowledgeRegionId`
+- `KnowledgeNeedVectorId`
+- `Category`
+- `ParetoRank`
+- `DisplayPriorityScore`
+- `LearningRoiEstimateJson`
+- `IntersectingProjectDirectionIdsJson`
+- `EvidenceRefsJson`
+- `Explanation`
+- `AlgorithmVersion`
+- `CalculatedAtUtc`
+
+`DisplayPriorityScore` is optional and secondary. It must not be the only stored decision basis.
+
+### `LearningProposalRecord`
+
+Represents a human-reviewable proposal to improve knowledge.
+
+Key fields:
+
+- `Id`
+- `ProjectId`
+- `KnowledgeRegionId`
+- `Topic`
+- `Summary`
+- `KnowledgeNeedVectorId`
+- `Category`
+- `CoverageMapId`
+- `EvidenceRefsJson`
+- `RelatedProjectDirectionIdsJson`
+- `SuggestedSourcesJson`
+- `SourceTrustSummary`
+- `EstimatedEffort`
+- `SuggestedOutputsJson`
+- `SuggestedAcceptanceCriteriaJson`
+- `SuggestedProbingQuestionSetId`
+- `ProposedDepth`
+- `RiskSummary`
+- `RequiresHumanApproval`
+- `State`
+- `SnoozedUntilUtc`
+- `DecisionAuditJson`
+- `CreatedAtUtc`
+- `UpdatedAtUtc`
+
+### `LearningTaskRecord`
+
+Represents approved learning work assigned to a human or agent.
+
+Key fields:
+
+- `Id`
+- `ProjectId`
+- `ProposalId`
+- `Title`
+- `Scope`
+- `ApprovedSourcesJson`
+- `ExpectedOutputsJson`
+- `AcceptanceCriteriaJson`
+- `AssignedTo`
+- `State`
+- `InputHash`
+- `StartedAtUtc`
+- `CompletedAtUtc`
+- `ReportStorageReferenceJson`
+
+### `LearningOutcomeRecord`
+
+Represents the auditable output from a learning task.
+
+Key fields:
+
+- `Id`
+- `ProjectId`
+- `LearningTaskId`
+- `Summary`
+- `DraftMemoryItemIdsJson`
+- `DraftProcedureItemIdsJson`
+- `ProbingQuestionSetIdsJson`
+- `SourceEvidenceRefsJson`
+- `QaFindingsJson`
+- `ValidationState`
+- `CreatedAtUtc`
+
+### `OpenQuestionSetRecord`
+
+Represents unresolved questions for a knowledge region.
+
+Key fields:
+
+- `Id`
+- `ProjectId`
+- `KnowledgeRegionId`
+- `QuestionsJson`
+- `EvidenceRefsJson`
+- `UpdatedAtUtc`
+
+### `ProbingQuestionSetRecord`
+
+Represents generated questions used before or after learning.
+
+Key fields:
+
+- `Id`
+- `ProjectId`
+- `KnowledgeRegionId`
+- `QuestionsJson`
+- `Purpose`
+- `EvidenceRefsJson`
+- `CreatedAtUtc`
+
+## Evidence Reference Model
+
+Epistemic records should store typed evidence refs rather than embedding source-specific payloads directly.
+
+Required evidence fields:
+
+- `EvidenceKind`
+- `EvidenceId`
+- `Summary`
+- `Weight`
+- `ObservedAtUtc`
+- `MetadataJson`
+
+Allowed evidence kinds include:
+
+- `RecallTrace`
+- `WorkflowRun`
+- `ProcessRun`
+- `SourceItem`
+- `CanonicalMemoryItem`
+- `Contradiction`
+- `ProbingSession`
+- `UserCorrection`
+- `ProjectDirection`
+- `HumanReviewItem`
 
 ## Human Validation States
 

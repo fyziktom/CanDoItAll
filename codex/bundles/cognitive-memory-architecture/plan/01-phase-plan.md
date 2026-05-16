@@ -13,7 +13,10 @@
 9. `08-human-review-ui`
 10. `09-distributed-idle-compute`
 11. `10-cross-project-memory`
-12. `11-validation-and-architecture-closure`
+12. `11-epistemic-drive-engine` in `plan/subbundles`, mirrored as `subbundles/12-epistemic-drive-engine`
+13. `11-validation-and-architecture-closure`
+
+Root subbundle `11-validation-and-architecture-closure` already existed before Epistemic Drive was added, so the mirrored root execution subbundle uses `12-epistemic-drive-engine`. Run Epistemic Drive before validation closure even though the existing validation folder keeps its original number.
 
 ## Subbundle Dependency Map
 
@@ -33,7 +36,12 @@ flowchart TD
     S06 --> S09["09 distributed idle compute"]
     S05 --> S10["10 cross project memory"]
     S06 --> S10
-    S08 --> S11["11 validation and architecture closure"]
+    S05 --> S12["12 epistemic drive engine"]
+    S06 --> S12
+    S07 --> S12
+    S08 --> S12
+    S10 --> S12
+    S12 --> S11["11 validation and architecture closure"]
     S09 --> S11
     S10 --> S11
 ```
@@ -45,6 +53,7 @@ flowchart TD
 - `04-memory-taxonomy-and-projections` must land before recall because Qdrant/search are rebuildable projections, not source truth.
 - `05-recall-orchestrator` must record traces and budget exclusions before MAF integration uses the output.
 - `06-consolidation-engine` must prove idempotency, versioning, and review handoff before distributed compute is allowed.
+- `12-epistemic-drive-engine` must run before validation closure because it adds metacognitive gap detection, learning proposals, and approval-gated learning workflows on top of recall, consolidation, MAF, and review.
 
 ## Phase Gates
 
@@ -59,6 +68,7 @@ flowchart TD
 | MAF gate | MAF consumes context packs through extension contracts and does not own durable memory policy. |
 | UI gate | Operator pages show source evidence, trace reasons, review decisions, and projection/consolidation health. |
 | Distributed gate | Worker outputs are accepted only through leases, hashes, versions, and authoritative coordinator validation. |
+| Epistemic Drive gate | Knowledge need vectors preserve dimensions, proposal evidence is inspectable, external study is approval-gated, and scalar-only prioritization is rejected. |
 | Closure gate | Golden datasets, failure cases, browser evidence, and architecture review are complete. |
 
 ## Implementation Policy
@@ -67,3 +77,5 @@ flowchart TD
 - Do not let generated summaries become raw source truth.
 - Do not write memory directly from distributed workers.
 - Do not add stringly typed mode flags; use enums/options and persisted mode/version state.
+- Do not collapse Epistemic Drive into a simple scalar priority score.
+- Do not run learning tasks against external sources or promote high-impact learning outputs without required approval.
