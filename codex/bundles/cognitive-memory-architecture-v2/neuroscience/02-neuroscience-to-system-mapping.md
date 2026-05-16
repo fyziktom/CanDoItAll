@@ -23,6 +23,7 @@
 | Procedural skill | Validated action policy | Procedure skills, failure modes, maturity, automation binding | Workflow/process templates | `IProcedureSkillMemoryService` |
 | Simulation/metaphor | Hypothetical planning | Speculative simulation sandbox | Learning proposals and process planning | `ISimulationSandboxService` |
 | Metamemory gate | Confidence/uncertainty awareness | Answer gate decisions and abstention | Calibration records and warnings | `IMetamemoryAnswerGate` |
+| Cognitive self-regulation | Metacognitive control | Self-model, calibration health, humility triggers, answer posture, professor review, and outcome recovery | Workspace, probing, calibration, answer gate, review queue | `ISelfRegulationOrchestrator`, `ICognitiveSelfModelStore`, `ICalibrationHealthService`, `IProfessorReviewService` |
 
 ## Important Architectural Rule
 
@@ -32,4 +33,5 @@ The system should not imitate biology literally. The mapping is used to design r
 - neocortex-like = stable canonical abstractions,
 - executive-control-like = workflow/process/recall orchestration,
 - sleep-like = scheduled consolidation and replay,
-- salience-like = activation scoring and risk-aware ranking.
+- salience-like = activation scoring and risk-aware ranking,
+- self-regulation-like = calibrated control over when to answer, ask, audit, probe, review, escalate, or abstain.

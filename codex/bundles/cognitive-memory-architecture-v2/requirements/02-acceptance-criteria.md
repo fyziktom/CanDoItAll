@@ -100,7 +100,7 @@
 
 ## Implementation Control And Handoff
 
-- [ ] `checklists/cognitive-memory-implementation-control.xlsx` exists and contains all 24 phases from `plan/01-phase-plan.md`.
+- [ ] `checklists/cognitive-memory-implementation-control.xlsx` exists and contains all 30 phases from `plan/01-phase-plan.md`.
 - [ ] Every implementation phase updates workbook status before start, during execution, and before closure.
 - [ ] Every phase has owned checklist items with expected proof type and proof path columns.
 - [ ] Every closed phase has matching rows in workbook `Phase Gates`, workbook `Validation Evidence`, workbook `Handoff Log`, and `reviews/01-execution-report.md`.
@@ -174,3 +174,22 @@
 - [ ] Source-poor high-confidence answers are blocked or warning-rendered.
 - [ ] Contested claims and high-risk unvalidated procedures trigger warning, review, clarification, source audit, or abstention.
 - [ ] Answer gate decisions are included in recall/probe traces and visible in relevant UI/workbench proof.
+- [ ] Answer gate consumes Self-Regulation Assessment and Answer Posture.
+- [ ] Answer gate cannot become looser than Self-Regulation without a new score trace.
+
+## Cognitive Self-Regulation
+
+- [ ] Cognitive self-model is structured data, not prompt persona.
+- [ ] Domain competence is scoped by project, domain, task, model profile, and role.
+- [ ] Known failure patterns preserve trigger conditions, score shapes, mitigation steps, related probes/regressions, and review requirement.
+- [ ] Self-model updates require evidence and profile versioning.
+- [ ] Self-regulation assessment includes workspace frame id, self-model id, competence profiles, calibration health, known failure pattern matches, score trace, state, warnings, humility triggers, confidence reinforcements, and required operations.
+- [ ] Assessment can classify calibrated, exploratory, overconfident, underconfident, defensive, fragmented, source-poor, high-risk-unverified, and professor-review-needed states.
+- [ ] Humility triggers cover source-poor high-risk answers, contradiction pressure, wrong-scope patterns, recent corrections, generated-summary primary support, weak domain, high-impact unvalidated procedures, redaction-limited proof, stale volatile sources, and cognitive load saturation.
+- [ ] Answer posture supports direct confident, direct with caveats, preliminary reaction, hypothesis, clarification question, source audit request, probe question, review required, professor review required, and abstain.
+- [ ] Calibration health aggregates include expected calibration error or equivalent, Brier/squared loss, signed bias, overconfidence, underconfidence, abstention quality, wrong-scope, and source-insufficient rates.
+- [ ] Calibration/profile changes are versioned and old traces are not silently reinterpreted.
+- [ ] Professor review supports challenge, contradiction hunt, architecture review, calibration review, source sufficiency review, alternative hypotheses, failure modes, and learning expansion.
+- [ ] Professor review suggestions become probes, source audits, reviews, regressions, learning proposals, or mutation candidates only through governance.
+- [ ] Self-regulation, professor review, generated summaries, salience, prediction errors, and probing feedback cannot directly mutate canonical truth.
+- [ ] Score geometry rejects scalar-only self-regulation assessment, posture selection, calibration health, and professor-review routing.

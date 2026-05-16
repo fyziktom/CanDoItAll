@@ -18,6 +18,7 @@
 - The neuro-cognitive patch exposed a deeper issue: claim/evidence/context/mutation authority, workspace/attention, signal ledgers, replay, procedure skill maturity, and answer gating affect earlier phases. They are now prerequisites rather than late appendix work.
 - The scoring review exposed a cross-cutting flaw: recall, attention, belief, replay, probing, answer confidence, and cross-project promotion could still regress to local weighted-sum scoring. A new score geometry foundation now closes that before downstream phases start.
 - The execution-control review exposed a delivery flaw: markdown phase gates alone are not enough for a long multi-agent implementation. A structured workbook phase ledger is now required and must stay synchronized with the execution report.
+- The cognitive self-regulation patch exposed an integration flaw: workspace, attention, probing calibration, salience, score geometry, and answer gating existed, but there was no explicit self-model/orchestrator connecting them into stable answer posture, humility trigger, calibration health, and professor-review behavior.
 - The original project split was too eager. The implementation plan now starts with the smallest viable module/abstraction shape and defers additional Cognitive Memory projects until dependency direction or test isolation proves they are useful.
 - The first visible vertical slice previously risked becoming projection-first. It now explicitly includes evidence anchors, claims, context frames, mutation authority, score geometry, workspace focus/inhibition, and answer gating before recall is treated as architecturally valid.
 - Contract sketches now make mutation authority the public write boundary, replace ordinal validation-state filtering with allowed/excluded policy filters, and replace untyped projection payloads with typed payload values.
@@ -38,6 +39,15 @@
 - Before recall starts, validate workspace, attention, prediction error, and salience signal contracts. If recall bypasses these, the system regresses to context-pack RAG.
 - Before each implementation phase starts or closes, update `checklists/cognitive-memory-implementation-control.xlsx` and confirm it matches `reviews/01-execution-report.md`.
 - Before accepting correction, probing, stale refresh, or learning implementation, validate reconsolidation/revision lineage: previous claim version, evidence anchors, mutation command, audit event, review state where required, and projection invalidation.
+- Before accepting answer rendering after self-regulation lands, validate that the answer gate consumes self-regulation assessment/posture and cannot become looser without a new score trace.
+- Before accepting professor review, validate that model output is governed challenge input only and cannot mutate truth or bypass access/redaction/mutation policy.
+
+## Cognitive Self-Regulation Review
+
+- Added architecture files `27` through `30`, diagrams `19` through `22`, requirements FR-055 through FR-061 and NFR-037 through NFR-041, `CognitiveMemory.SelfRegulationContracts.cs`, validation matrix, prompts, and subbundles `21` through `26`.
+- Main correction: self-regulation is sequenced after probing-core calibration evidence and before answer-gate closure, not as a late appendix after architecture closure.
+- Preserved core v2 rules: self-model, professor review, salience, prediction error, calibration outcome, generated summary, and probing feedback are evidence/control inputs only; they cannot directly create canonical truth.
+- Remaining implementation decision: initial calibration bins, posture shapes, and humility trigger thresholds should start as deterministic fixtures and be tuned only from reviewed calibration evidence.
 
 ## Score Geometry Review
 

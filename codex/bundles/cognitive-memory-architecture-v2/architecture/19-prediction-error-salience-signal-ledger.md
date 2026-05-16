@@ -71,6 +71,15 @@ The signal ledger stores durable events that influence memory behavior.
 | `StalenessPressure` | Source or procedure may be outdated. |
 | `SourceWeakness` | Evidence is sparse, low trust, redacted, or missing anchors. |
 | `CalibrationRisk` | Confidence is poorly calibrated for a feature pattern. |
+| `OverconfidencePressure` | Historical or current evidence shows confidence is too high for the feature pattern. |
+| `UnderconfidencePressure` | Evidence repeatedly supports stronger posture than the system selected. |
+| `KnownFailurePatternMatched` | A known self-model failure pattern matched the current request or answer. |
+| `ProfessorReviewRequired` | Self-regulation requires governed challenge/audit before final synthesis. |
+| `ProfessorReviewDisagreement` | Professor review disagreed with local assessment or answer posture. |
+| `SelfModelUpdated` | A reviewed self-model or policy profile update landed. |
+| `CalibrationDrift` | Aggregate calibration moved outside acceptable bounds. |
+| `HumilityTriggerFired` | A humility trigger constrained posture or required an operation. |
+| `ConfidenceReinforced` | Reviewable evidence supports stronger confidence for a scoped feature pattern. |
 
 ## Signal Vector
 
@@ -87,6 +96,7 @@ Consumers:
 - procedure maturity evaluator,
 - confidence calibration,
 - review queue priority.
+- self-regulation assessment and posture policy.
 
 Signal vectors must use the shared `SalienceSignal` score space. The signal ledger stores typed score components with evidence, actor, timestamp, schema version, normalization profile, and algorithm version. A signal event may expose a display magnitude, but that magnitude is derived from the vector and cannot be the only persisted decision basis.
 
@@ -101,6 +111,8 @@ Signal vectors must use the shared `SalienceSignal` score space. The signal ledg
 | Source ingestion | novelty, schema drift, source trust changes. |
 | Human review | approval, rejection, correction confidence. |
 | Regression replay | persistent failure or repaired behavior. |
+| Self-regulation | humility trigger, posture downgrade, confidence reinforcement, professor-review requirement, calibration drift. |
+| Professor review | disagreement, missing evidence, alternative hypothesis, recommended posture. |
 
 ## Relationship To Activation
 
@@ -142,6 +154,7 @@ Replay scheduler should use signal policy:
 - User interest must not leak project-private content into cross-project memory.
 - Reward/usefulness must not let a wrong answer become trusted.
 - Prediction error records should preserve both expected and observed evidence.
+- Self-regulation signals can trigger review, probing, audit, replay, or posture changes, but cannot update belief state or source truth directly.
 
 ## Required Updates
 

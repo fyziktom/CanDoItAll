@@ -11,6 +11,8 @@
 - Final prepared-stage validation passed again after score-geometry integration and manifest regeneration.
 - 2026-05-16 execution-control repair added durable workbook tracking, complete phase ledger rows, minimal-project-shape correction, reconsolidation/revision-lineage gates, and stronger implementation prompts. Product code was not modified.
 - Prepared-stage validation passed after execution-control repair.
+- 2026-05-16 cognitive self-regulation integration added self-model, calibration health, humility trigger, answer posture, professor review, self-regulation diagrams/contracts/requirements/validation, and subbundles `21` through `26`. Existing answer-gate sequencing was reopened so it consumes self-regulation assessment/posture. Product code was not modified.
+- Prepared-stage validation passed after cognitive self-regulation integration and manifest regeneration.
 
 ## Subbundle Gate Results
 
@@ -38,8 +40,14 @@
 | 16-prediction-error-salience-signals | Ready | Not started | Checked | Must run before recall activation, replay, probing evidence, and Epistemic Drive consume signals | Adds prediction errors and dimensional cognitive signals without scalar-only salience. |
 | 17-temporal-replay-scheduler | Ready | Not started | Checked | Must run after consolidation/signals and before procedure/distributed replay | Adds ordered episodes, causal links, and non-promoting replay jobs. |
 | 18-procedural-skill-memory-simulation | Ready | Not started | Checked | Must run before MAF procedure guidance or procedure learning proposals | Adds skill graph/maturity/failure-mode model and speculative simulation policy. |
-| 19-metamemory-abstention-calibration | Ready | Not started | Checked | Must run before Dialogue Workbench completion and safe answer injection | Adds answer-time gate for warnings, clarification, source audit, probing, review, learning request, and abstention. |
-| 20-architecture-integration-closure | Ready | Not started | Checked | Must run before final validation closure | Confirms score-geometry and neuro patch integration, traceability, diagrams, phase order, and safety invariants. |
+| 19-metamemory-abstention-calibration | Ready | Not started | Checked | Must run after self-regulation orchestrator, calibration health, professor review, and before Dialogue Workbench completion/safe answer injection | Adds answer-time gate for warnings, clarification, source audit, probing, review, professor review, learning request, and abstention. |
+| 20-architecture-integration-closure | Ready | Not started | Checked | Must run after self-regulation closure and before final validation closure | Confirms score-geometry, neuro patch, self-regulation integration, traceability, diagrams, phase order, and safety invariants. |
+| 21-cognitive-self-model | Ready | Not started | Checked | Must run after probing core, score geometry, claims, workspace, and signals | Adds structured self-model, competence profiles, known failure patterns, and policy profiles. |
+| 22-self-regulation-orchestrator | Ready | Not started | Checked | Must run after self-model and calibration health | Adds assessment, humility triggers, confidence reinforcement, posture decisions, attention integration, and answer-gate inputs. |
+| 23-calibration-health-and-probing-training | Ready | Not started | Checked | Must run after probing core and self-model | Adds aggregate calibration health, bins, profile versioning, outcome feedback, and over/underconfidence metrics. |
+| 24-professor-review-escalation | Ready | Not started | Checked | Must run after self-regulation orchestrator and before high-impact professor-review-required answer paths close | Adds governed professor/challenge review that cannot mutate truth directly. |
+| 25-self-regulation-ui | Ready | Not started | Checked | Must run after answer gate, professor review, probing workbench, and Epistemic Drive evidence are available | Adds operator-visible posture, warnings, calibration health, professor review, and required next actions. |
+| 26-cognitive-self-regulation-integration-closure | Ready | Not started | Checked | Must run before cross-project memory and distributed idle compute | Confirms self-regulation contracts, proof, traceability, UI evidence, governance, and no-direct-truth-mutation invariants. |
 
 The structured phase ledger is `checklists/cognitive-memory-implementation-control.xlsx`. During implementation, this report and the workbook must agree before any phase is considered closed.
 
@@ -67,6 +75,7 @@ The structured phase ledger is `checklists/cognitive-memory-implementation-contr
 | Review advanced scoring/vector-shape model | Covered | Added `analysis/08-score-geometry-architecture-review.md`, `architecture/26-score-geometry-driver.md`, `contracts/csharp/CognitiveMemory.ScoringContracts.cs`, diagram `18`, requirements FR-053/FR-054 and NFR-034 through NFR-036, and `subbundles/01b-score-geometry-driver/README.md`. |
 | Improve architecture design and implementation flow control | Covered | Added `analysis/09-architecture-gap-review-and-execution-control.md`, `checklists/README.md`, execution-control phase ledger requirements, complete subbundle gate rows, minimal project-shape correction, reconsolidation gates, and workbook tracking. |
 | Add detailed xlsx checklists for refactoring phases | Covered | Added `checklists/cognitive-memory-implementation-control.xlsx` as the durable phase ledger with phase gates, acceptance checklist, evidence, invariants, risks, source refs, and handoff log. |
+| Add Cognitive Self-Regulation from supplied patch | Covered | Added `inputs/07-cognitive-self-regulation-patch-reference.md`, `analysis/10-cognitive-self-regulation-integration-review.md`, `architecture/27` through `30`, `contracts/csharp/CognitiveMemory.SelfRegulationContracts.cs`, diagrams `19` through `22`, requirements FR-055 through FR-061 and NFR-037 through NFR-041, validation matrix, prompts, traceability, and subbundles `21` through `26`. |
 | Do not implement | Covered | Product code was not modified. |
 
 ## 2026-05-16 Interactive Probing Architecture Update

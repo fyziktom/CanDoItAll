@@ -66,11 +66,18 @@ Workbench source snapshot
   -> lexical/relational projection first, Qdrant optional after adapter gate
   -> score-geometry-backed recall trace
   -> workspace focus and inhibition update
+  -> self-regulation assessment and answer posture
   -> metamemory answer gate decision
   -> recall context pack and trace/review UI
 ```
 
 Do not skip the claim/evidence, score-geometry, workspace, and answer-gate surfaces just to reach a visible recall demo faster. A projection-first demo would prove the wrong architecture.
+
+## Self-Regulation Control Boundary
+
+Cognitive Self-Regulation is the control layer that coordinates self-model, competence profiles, known failure patterns, calibration health, humility triggers, professor review, answer posture, attention routing, and answer gating.
+
+It is not a truth source and not an anthropomorphic identity. It can require source audit, clarification, probing, review, professor review, learning proposal, replay, or abstention. It can submit governed mutation candidates. It cannot mutate canonical claims, bypass access/redaction policy, or treat generated summaries or professor output as source truth.
 
 ## Critical Boundaries
 

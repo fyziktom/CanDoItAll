@@ -73,6 +73,8 @@ Each turn should store:
 - recall request and recall trace id,
 - context pack id,
 - answer text,
+- self-regulation assessment id,
+- answer posture decision id,
 - score evaluation trace, confidence projection, and calibration risk,
 - source refs used,
 - redaction/access decisions,
@@ -84,6 +86,8 @@ Each turn should store:
 - suggested next probes,
 - optional review item ids,
 - optional regression test ids.
+
+Probe turns train self-regulation as well as memory content. The system should compare predicted posture/confidence with the observed outcome and publish calibration, prediction error, salience, regression, review, and known failure pattern evidence where appropriate.
 
 ## Answer Requirements
 

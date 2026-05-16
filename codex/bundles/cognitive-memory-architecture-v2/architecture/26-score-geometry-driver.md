@@ -4,7 +4,7 @@
 
 Provide one reusable scoring foundation for Cognitive Memory instead of many local weighted-sum formulas.
 
-The module needs scoring for recall, attention, belief, salience, replay, probing, answer gating, Epistemic Drive, cross-project promotion, and UI sorting. These are related but not identical. The shared layer should provide the mechanics for typed score spaces, vectors, shapes, normalization, scalar projections, and traceability. Feature services still own policy decisions.
+The module needs scoring for recall, attention, belief, salience, replay, probing, answer gating, Self-Regulation, Epistemic Drive, cross-project promotion, and UI sorting. These are related but not identical. The shared layer should provide the mechanics for typed score spaces, vectors, shapes, normalization, scalar projections, and traceability. Feature services still own policy decisions.
 
 ## Problem
 
@@ -77,7 +77,30 @@ Reusable dimensions include:
 - procedure maturity,
 - expected effort,
 - expected reuse,
-- cognitive load.
+- cognitive load,
+- evidence strength,
+- evidence coverage,
+- source reliability,
+- recency fit,
+- novelty risk,
+- consequence risk,
+- model uncertainty,
+- historical calibration fit,
+- domain competence fit,
+- known failure pattern similarity,
+- scope ambiguity,
+- user correction pressure,
+- self-model stability,
+- professor review value,
+- escalation cost,
+- abstention cost,
+- confidence bias,
+- overconfidence rate,
+- underconfidence rate,
+- human review agreement,
+- professor review agreement,
+- humility trigger pressure,
+- confidence reinforcement pressure.
 
 Not every score space uses every dimension. Missing dimensions must be explicit: unavailable, not applicable, or blocked by policy.
 
@@ -151,6 +174,18 @@ Probe findings and regression value must use the same score geometry contracts. 
 
 Answer confidence must be an answer-gate evaluation trace. Display confidence is a rendering aid, not the decision model.
 
+### Self-Regulation
+
+Self-regulation assessment, self-model competence, calibration health, professor-review routing, and answer posture selection must use declared score spaces. Examples:
+
+- `SelfRegulationAssessment` evaluates evidence strength, evidence coverage, source reliability, context fit, contradiction pressure, novelty/consequence risk, historical calibration fit, domain competence fit, known failure pattern similarity, scope ambiguity, access/redaction pressure, cognitive load, and model uncertainty.
+- `SelfModelCompetence` evaluates source coverage, probe success, regression success, human review agreement, workflow validation, correction pressure, confidence bias, and profile stability.
+- `CalibrationHealth` evaluates overconfidence, underconfidence, Brier/squared loss, expected calibration error or equivalent, abstention quality, wrong-scope recurrence, source-insufficient recurrence, and drift.
+- `ProfessorReviewRouting` evaluates review value, consequence risk, novelty, weak competence, contradiction pressure, source sufficiency, escalation cost, access/redaction pressure, and expected learning value.
+- `AnswerPosture` evaluates the assessment result against posture shapes such as direct confident, caveated, hypothesis, clarification, source audit, probe, review, professor review, or abstain.
+
+Scalar display confidence is a projection only. It cannot select posture by itself.
+
 ### Epistemic Drive
 
 `KnowledgeNeedVector` remains domain-specific, but it must be backed by a generic score vector snapshot and region/shape evaluation so the same driver can normalize, compare, and trace dimensions.
@@ -194,8 +229,8 @@ Do not hide query-critical dimensions only in JSON.
 ## Validation Requirements
 
 - Contract tests reject scalar-only behavior for recall, attention, belief, replay, probing, answer gate, Epistemic Drive, and cross-project promotion.
+- Contract tests reject scalar-only behavior for self-regulation assessment, self-model competence, calibration health, professor-review routing, and answer posture.
 - Golden Docker fixtures prove high semantic similarity can still be inhibited by a context-boundary shape.
 - Score geometry tests prove missing dimensions are explicit and do not silently default to neutral when required.
 - Scalar projections are reproducible from vector/shape traces.
 - Changing a score schema version does not reinterpret old traces without migration or recalculation.
-

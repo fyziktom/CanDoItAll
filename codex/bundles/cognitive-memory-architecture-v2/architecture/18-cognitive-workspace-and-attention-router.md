@@ -33,6 +33,8 @@ A workspace frame should be scoped to one of:
 | `ContextBudget` | Token/section/detail budget. |
 | `CognitiveLoadTrace` | Score-geometry evaluation of saturation and missing dimensions; helps decide summarization/abstention. |
 | `LastAttentionDecision` | What operation was selected and why. |
+| `LastSelfRegulationAssessmentId` | Most recent self-regulation assessment that constrained routing. |
+| `LastAnswerPostureDecisionId` | Most recent answer posture decision that must be respected by answer rendering. |
 | `ExpiresAtUtc` | Working frames are temporary by default. |
 
 ## Focus Slots
@@ -90,9 +92,13 @@ The attention router decides the next operation from current context.
 - prediction error history,
 - access/redaction policy,
 - risk profile,
+- self-regulation assessment,
+- answer posture decision,
 - available tools/workflows.
 
 The router must evaluate these inputs through the `AttentionRouting` score space. Operation choices are shape matches such as recall, answer-from-workspace, clarification, source audit, probe, review, learning proposal, replay, or abstention. A scalar projection can help order candidate operations, but the routing decision must persist the vector dimensions, matched shape, missing dimensions, and explanation.
+
+When Self-Regulation requires clarification, source audit, probe, review, professor review, or abstention, the router must either select the required operation or create a new score trace explaining why the constraint no longer applies. It must not silently choose `AnswerFromWorkspace` because the workspace happens to contain fluent-looking content.
 
 ### Decision Types
 
@@ -117,6 +123,7 @@ Recommended flow:
 ```text
 request
   -> load/create workspace frame
+  -> self-regulation assessment selects posture/required operations
   -> attention router chooses Recall
   -> recall orchestrator returns candidates/trace/context pack
   -> workspace updates focus and inhibition
@@ -135,6 +142,8 @@ This layer enables the "short immediate reaction, detailed answer later" behavio
 
 The system must not pretend the quick response is fully verified. It should label it as preliminary when necessary.
 
+The preliminary label should come from `AnswerPostureDecision`, not from UI text alone.
+
 ## Persistence Rules
 
 - Workspace frames are ephemeral by default.
@@ -147,5 +156,6 @@ The system must not pretend the quick response is fully verified. It should labe
 - `architecture/05-recall-orchestrator.md`: add workspace frame and attention decision to recall trace.
 - `architecture/15-interactive-memory-probing.md`: probe sessions should own or attach to a workspace frame.
 - `architecture/08-maf-workflow-agent-integration.md`: agent context contribution should come from workspace-aware recall, not raw recall alone.
+- `architecture/27-cognitive-self-regulation-layer.md`: attention routing consumes self-regulation assessment and answer posture.
 - `requirements/01-normalized-requirements.md`: add requirements for working frame and attention decisions.
 - `validation/test-and-quality-plan.md`: add tests for inhibition and context-budget behavior.

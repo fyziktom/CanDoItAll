@@ -78,7 +78,7 @@
 
 | Requirement | Primary artifact | Validation proof |
 |---|---|---|
-| EXC-001 Durable Phase Ledger | `checklists/cognitive-memory-implementation-control.xlsx` | `Phase Gates` contains all 24 phases with status, prerequisites, gate evidence, and downstream dependency notes. |
+| EXC-001 Durable Phase Ledger | `checklists/cognitive-memory-implementation-control.xlsx` | `Phase Gates` contains all 30 phases with status, prerequisites, gate evidence, and downstream dependency notes. |
 | EXC-002 Phase Checklist Tracking | `checklists/cognitive-memory-implementation-control.xlsx` | `Phase Acceptance Checklist` maps every phase to concrete checklist items and required proof. |
 | EXC-003 Proof Path Tracking | `checklists/cognitive-memory-implementation-control.xlsx` + `reviews/01-execution-report.md` | `Validation Evidence` rows and execution-report rows agree before phase closure. |
 | EXC-004 Handoff Safety | `checklists/cognitive-memory-implementation-control.xlsx` + `plan/01-phase-plan.md` | `Handoff Log` records current phase, branch/commit, blockers, downstream permission, and reopened prerequisites. |
@@ -171,3 +171,36 @@
 | `diagrams/14-neuro-cognitive-overview.mmd` through `diagrams/17-replay-and-procedural-memory-flow.mmd` | Neuro-cognitive flow and relationship diagrams. |
 | `subbundles/14-neuro-foundation-claim-evidence-ledger/README.md` through `subbundles/20-architecture-integration-closure/README.md` | Execution workstreams and closure gate. |
 | `validation/neuro-patch-test-plan.md` | Patch-specific test groups and Docker golden scenario. |
+
+## Cognitive Self-Regulation Traceability Addendum
+
+| Requirement | Primary subbundle | Validation proof |
+|---|---|---|
+| FR-055 Cognitive Self-Model | `21-cognitive-self-model` | Self-model scoping, competence profile, known failure pattern, policy profile, evidence-backed update, and profile versioning tests. |
+| FR-056 Self-Regulation Assessment | `22-self-regulation-orchestrator` | Assessment trace, state classification, attention integration, answer-gate input, and audit metadata tests. |
+| FR-057 Humility Trigger Engine | `22-self-regulation-orchestrator` | Trigger tests for source-poor high-risk, contradiction, wrong-scope, recent correction, generated-summary, weak domain, redaction, stale source, and cognitive load cases. |
+| FR-058 Answer Posture Selection | `22-self-regulation-orchestrator` + `19-metamemory-abstention-calibration` + `25-self-regulation-ui` | Posture selection tests, answer-gate enforcement tests, and browser proof of posture/warning visibility. |
+| FR-059 Calibration Health Aggregates | `23-calibration-health-and-probing-training` | Calibration bins, expected calibration error or equivalent, Brier/squared loss, signed bias, over/underconfidence, abstention quality, wrong-scope, source-insufficient, and profile version tests. |
+| FR-060 Professor Review Escalation | `24-professor-review-escalation` | Escalation trigger, model/profile/access trace, governed action conversion, and no-direct-truth-mutation tests. |
+| FR-061 Post-Outcome Self-Regulation Feedback | `23-calibration-health-and-probing-training` + `16-prediction-error-salience-signals` + `17-temporal-replay-scheduler` + `13a-probing-core-regression-calibration` | Outcome-to-calibration, prediction error, salience, regression, probe, replay, review, and self-model proposal tests. |
+| NFR-037 Self-Regulation Auditability | `21-cognitive-self-model` + `22-self-regulation-orchestrator` + `23-calibration-health-and-probing-training` + `24-professor-review-escalation` | Score trace, evidence ref, actor/model profile, algorithm/profile version, and timestamp tests. |
+| NFR-038 Non-Anthropomorphic Self-Regulation Safety | `26-cognitive-self-regulation-integration-closure` | Architecture review rejects consciousness, emotion, autonomous ego, and prompt-persona framing. |
+| NFR-039 Calibration Profile Versioning | `23-calibration-health-and-probing-training` | Old trace/profile version tests and no silent reinterpretation proof. |
+| NFR-040 Professor Review Governance | `24-professor-review-escalation` | Negative tests prove professor review cannot bypass source truth, access policy, redaction, mutation authority, human review, or safety policy. |
+| NFR-041 No Scalar-Only Self-Regulation | `01b-score-geometry-driver` + `22-self-regulation-orchestrator` + `23-calibration-health-and-probing-training` + `24-professor-review-escalation` | Contract/model tests reject scalar-only assessment, posture, calibration health, and professor-review routing. |
+
+## Cognitive Self-Regulation Artifact Map
+
+| Artifact | Covers |
+|---|---|
+| `inputs/07-cognitive-self-regulation-patch-reference.md` | Patch source, integration decision, and preserved hard constraints. |
+| `analysis/10-cognitive-self-regulation-integration-review.md` | Patch review, sequencing decision, risks, and required repairs. |
+| `architecture/27-cognitive-self-regulation-layer.md` | Self-regulation placement, responsibilities, states, and component relationships. |
+| `architecture/28-self-model-and-epistemic-identity.md` | Self-model, competence profiles, known failure patterns, and policy profiles. |
+| `architecture/29-calibration-health-and-probing-training.md` | Calibration events, aggregates, bins, profile updates, overconfidence, and underconfidence handling. |
+| `architecture/30-professor-review-and-escalation.md` | Professor review modes, triggers, governance, and answer-gate relationship. |
+| `contracts/csharp/CognitiveMemory.SelfRegulationContracts.cs` | Architecture-level contracts for self-model, assessment, posture, calibration, professor review, and services. |
+| `diagrams/19-cognitive-self-regulation-overview.mmd` through `diagrams/22-professor-review-flow.mmd` | Self-regulation, answer-time, calibration, and professor-review flows. |
+| `subbundles/21-cognitive-self-model/README.md` through `subbundles/26-cognitive-self-regulation-integration-closure/README.md` | Execution workstreams and self-regulation closure gate. |
+| `validation/self-regulation-test-matrix.md` | Scenario and negative validation matrix. |
+| `shared-prompts/self-regulation-implementation-prompt.md` and `shared-prompts/self-regulation-qa-prompt.md` | Reusable implementation and QA prompts. |

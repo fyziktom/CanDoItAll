@@ -342,6 +342,11 @@ Reuse existing Canvas/BaseLib patterns:
 - `ProcedureSkillMaturityPanel`
 - `SimulationHypothesisPanel`
 - `MetamemoryAnswerGatePanel`
+- `SelfRegulationAssessmentPanel`
+- `AnswerPosturePanel`
+- `HumilityTriggerList`
+- `CalibrationHealthDashboard`
+- `ProfessorReviewDetail`
 
 ## UI Integration Points
 
@@ -411,5 +416,25 @@ Any UI that presents recalled or probed memory should be able to expose:
 - procedure skill maturity and failure modes,
 - simulation hypothesis labels,
 - answer-gate warning, clarification, source-audit, probe, review, learning, or abstention decisions.
+- self-regulation state, answer posture, humility triggers, confidence reinforcement, calibration drift, professor-review-required state, and required next actions.
 
 Do not render answer-gate abstention or warning states as normal answers. The user should see why the system is uncertain and which next action is proposed.
+
+## Cognitive Self-Regulation UI Requirements
+
+Self-regulation UI is operational diagnostic UI, not an explanatory landing page.
+
+The user/operator should be able to inspect:
+
+- current self-regulation state,
+- answer posture decision,
+- humility triggers that constrained the answer,
+- confidence reinforcement evidence when posture became stronger,
+- calibration health by domain/task/model/risk/feature pattern,
+- known failure pattern matches,
+- professor review mode, critique, missing evidence, recommended posture, output hash, and governed resulting actions,
+- why the answer gate enforced, tightened, or blocked the posture.
+
+Display confidence must be labeled as a derived projection. It must not be shown as the decision model.
+
+The UI must not expose restricted evidence, redacted source text, or raw professor-review context unless access policy allows it.

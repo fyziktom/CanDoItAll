@@ -12,13 +12,16 @@ Before editing code:
 - Use strongly typed modes, ids, policy contexts, and result objects.
 - Do not introduce fallback mechanisms that hide provider, source, or projection failures.
 - Do not implement behavior-affecting add/subtract scoring outside `01b-score-geometry-driver`.
-- Do not introduce `FinalScore`, untyped `ScoreBreakdown`, scalar-only replay priority, scalar-only answer confidence, or local weighted formulas for recall, attention, belief, salience, probing, answer gating, Epistemic Drive, or cross-project promotion.
+- Do not introduce `FinalScore`, untyped `ScoreBreakdown`, scalar-only replay priority, scalar-only answer confidence, or local weighted formulas for recall, attention, belief, salience, probing, answer gating, self-regulation, Epistemic Drive, or cross-project promotion.
 - Do not collapse Epistemic Drive into a simple scalar priority score.
 - Do not collapse salience signals into a scalar-only priority score.
 - Do not expose public direct upsert operations for authoritative memory; use mutation authority.
 - Do not treat `RecallContextPack` as working memory; use cognitive workspace frames.
 - Do not let replay, simulation, probing feedback, distributed worker output, or generated summaries directly promote truth.
 - Do not render answers that bypass the metamemory answer gate where that subbundle has landed.
+- Do not model Cognitive Self-Regulation as prompt persona, consciousness, emotion, or autonomous identity.
+- Do not let self-model, professor review, salience, prediction error, calibration outcome, self-regulation outcome, or generated summary directly promote truth.
+- Do not let the answer gate become looser than self-regulation posture without a new score trace.
 - Do not add the full theoretical Cognitive Memory project split unless the active subbundle proves a real dependency-direction or test-isolation need. Start with the smallest viable module/abstraction shape.
 - Do not overwrite active claims or belief state from corrections, probes, stale refresh, or learning outcomes without mutation authority, evidence anchors, revision lineage, audit, and projection invalidation.
 - Do not proceed when the workbook and `reviews/01-execution-report.md` disagree about status, blockers, proof, or downstream permission.

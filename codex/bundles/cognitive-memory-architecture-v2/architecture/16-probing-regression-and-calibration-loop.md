@@ -6,6 +6,7 @@ Interactive probing should not only reveal one-off mistakes. It should create a 
 
 1. **Regression tests** for repeated recall/answer behavior.
 2. **Confidence calibration records** for tuning how strongly the system trusts its own answers.
+3. **Self-regulation training evidence** for posture, humility triggers, known failure patterns, and confidence reinforcement.
 
 ## Why This Is Needed
 
@@ -64,6 +65,7 @@ Calibration records should not immediately change canonical truth. They should t
 ## Calibration Inputs
 
 - Final answer confidence projection and answer-gate evaluation trace.
+- Self-regulation assessment and answer posture decision.
 - Recall candidate score vectors and shape matches.
 - Number and quality of source refs.
 - Validation state of memory items.
@@ -132,4 +134,6 @@ Regression tests should store expected claim-level constraints:
 
 Calibration records feed the metamemory answer gate. A pattern of overconfident wrong-scope answers should cause future answers with similar context boundaries to warn, clarify, probe, or abstain before rendering.
 
-Replay and calibration output can create signals, prediction errors, review items, and mutation candidates. They cannot directly promote truth.
+Calibration records also feed Self-Regulation. They can update calibration health aggregates, known failure pattern proposals, humility triggers, confidence reinforcement records, professor-review routing, and answer posture thresholds through versioned profile changes.
+
+Replay and calibration output can create signals, prediction errors, review items, replay jobs, probing drills, self-model update proposals, and mutation candidates. They cannot directly promote truth.

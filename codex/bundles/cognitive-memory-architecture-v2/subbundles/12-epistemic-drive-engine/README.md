@@ -2,7 +2,7 @@
 
 ## Status
 
-- Ready after score geometry, recall traces, consolidation, human review UI, MAF integration, and probing-core evidence records are available.
+- Ready after score geometry, recall traces, consolidation, human review UI, MAF integration, probing-core evidence records, answer-gate evidence, and self-regulation evidence records are available.
 
 ## Execution Control
 
@@ -37,11 +37,17 @@
 - `01b-score-geometry-driver` must provide the `EpistemicNeed` score space and region/Pareto shape evaluation.
 - `13a-probing-core-regression-calibration` must exist when probe evidence is consumed.
 - `19-metamemory-abstention-calibration` must exist when answer-gate warnings/abstentions are consumed as gap evidence.
+- `22-self-regulation-orchestrator` must exist when self-regulation outcomes are consumed as gap evidence.
+- `23-calibration-health-and-probing-training` must exist when overconfidence, underconfidence, wrong-scope, source-insufficient, or abstention-quality metrics affect learning proposals.
+- `24-professor-review-escalation` must exist when professor-review learning expansion or missing-evidence suggestions are consumed.
 - `13-interactive-memory-probing-workbench` should exist when proposal actions include request-probing or probing-after-learning browser proof.
 
 ## Exact Source References
 
 - C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\architecture\14-epistemic-drive-and-learning-orchestration.md
+- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\architecture\27-cognitive-self-regulation-layer.md
+- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\architecture\29-calibration-health-and-probing-training.md
+- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\architecture\30-professor-review-and-escalation.md
 - C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\contracts\csharp\EpistemicDriveContracts.cs
 - C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\diagrams\10-epistemic-drive-flow.mmd
 - C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\plan\subbundles\12-epistemic-drive-engine\README.md
@@ -53,6 +59,7 @@
 - Human-reviewable learning proposal UI and audit events.
 - MAF learning workflow entry points with approval gates.
 - Probing question generation and probing feedback ingestion.
+- Self-regulation evidence ingestion for repeated source insufficiency, wrong-scope, overconfidence, underconfidence, professor-review disagreement, and abstention.
 
 ## Dependency Impact
 
@@ -61,6 +68,7 @@
 - Human review queue gains learning proposal decisions.
 - MAF orchestrates approved learning tasks but Cognitive Memory owns durable records.
 - Qdrant projections refresh only after durable records exist.
+- Self-regulation outcomes can create gap evidence or learning expansion proposals but cannot create truth directly.
 
 ## Validation Depth
 
@@ -68,6 +76,7 @@
 - Score geometry tests proving `KnowledgeNeedVector` references generic score vectors/shapes and display priority is derived.
 - Integration tests for trace evidence to proposal generation and approval-gated task planning.
 - Negative tests for scalar-only collapse, missing source refs, unapproved external study, duplicate scans, high-risk draft promotion, and Qdrant outage.
+- Negative tests proving self-regulation/professor-review evidence cannot bypass approval or source-truth requirements.
 - Browser proof for Night Reflection / Cognitive Briefing and proposal detail.
 
 ## Implementation Steps

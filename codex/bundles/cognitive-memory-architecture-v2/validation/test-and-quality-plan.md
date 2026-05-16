@@ -212,6 +212,7 @@ Test score-geometry effects:
 - Learning proposal state transitions are audited.
 - Learning outcome records remain draft until validation requirements are met.
 - Reconsolidation after correction, probing, or learning creates mutation/review evidence before active belief state changes.
+- Self-regulation outcomes such as repeated source insufficiency, overconfidence, wrong-scope recurrence, professor-review disagreement, and abstention can become gap evidence without becoming source truth.
 
 ## Probing Integration Tests
 
@@ -231,6 +232,9 @@ Test score-geometry effects:
 - Learning-derived canonical records without source refs are rejected.
 - High-risk learning-derived procedures cannot become active without human review.
 - Cross-project learning proposals do not expose project-private source text without approval.
+- Self-model cannot grant access to redacted content.
+- Professor review cannot inspect restricted context unless access policy allows it.
+- Self-regulation required operations cannot bypass mutation authority or review policy.
 
 ## Distributed Compute Tests
 
@@ -258,6 +262,8 @@ Test score-geometry effects:
 - No learning-derived record replaces human-validated memory silently.
 - No simulation output or probe correction directly promotes active truth.
 - No public authoritative write path bypasses mutation authority.
+- No self-model, professor review, salience, prediction error, generated summary, or self-regulation outcome directly promotes active truth.
+- No answer gate path becomes looser than self-regulation without a new score trace.
 - Workbook `Phase Gates`, `Validation Evidence`, `Handoff Log`, and `reviews/01-execution-report.md` agree before a phase is approved.
 - Root and mirrored subbundle plans remain synchronized.
 
@@ -275,3 +281,30 @@ Test score-geometry effects:
 - Confidence calibration tests cover high-confidence rejected answers, low-confidence confirmed answers, wrong-scope answers, missing-source answers, and redaction-limited answers.
 - Docker context-separation probe pack catches production/test/local/CI conflation.
 - Qdrant outage fallback still allows probing through lexical/graph/source recall.
+
+## Cognitive Self-Regulation Tests
+
+- `CognitiveSelfModelRecord` is scoped by project, domain/task, model profile, and role.
+- `DomainCompetenceProfileRecord` references score geometry and calibration aggregate evidence.
+- `KnownFailurePatternRecord` contains trigger kinds, score shape, mitigation, and regression/probe links.
+- Self-model update without evidence is rejected.
+- Prompt persona cannot replace self-model records.
+- Source-poor high-risk answer triggers source audit, review, professor review, or abstention.
+- Wrong-scope known failure pattern triggers clarification and candidate inhibition.
+- Generated summary as primary support prevents direct confident answer.
+- Redaction-limited source triggers warning or abstention.
+- Stale volatile topic triggers source audit.
+- Sufficient evidence, good calibration, and low risk produce direct confident posture.
+- Medium evidence and low risk produce direct with caveats.
+- Weak evidence and exploratory mode produce hypothesis posture.
+- Ambiguous scope produces clarification posture.
+- High-risk novelty produces professor review or human review.
+- Unsafe or misleading answer produces abstention.
+- High confidence with wrong answer increments overconfidence rate.
+- Low confidence with correct answer increments underconfidence rate.
+- Binned calibration computes signed bias and Brier/squared loss.
+- Profile version changes do not reinterpret old traces.
+- Single event does not silently retune policy.
+- Professor review suggestions create probe, source-audit, review, regression, learning, or mutation-candidate actions through governance only.
+- Display confidence cannot drive answer posture alone.
+- Scalar-only self-regulation assessment, posture, calibration health, and professor-review routing are rejected.

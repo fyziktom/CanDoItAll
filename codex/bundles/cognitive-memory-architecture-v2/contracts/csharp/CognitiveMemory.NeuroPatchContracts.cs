@@ -63,7 +63,16 @@ public enum CognitiveSignalKind
     StrategicAlignment = 9,
     StalenessPressure = 10,
     SourceWeakness = 11,
-    CalibrationRisk = 12
+    CalibrationRisk = 12,
+    OverconfidencePressure = 13,
+    UnderconfidencePressure = 14,
+    KnownFailurePatternMatched = 15,
+    ProfessorReviewRequired = 16,
+    ProfessorReviewDisagreement = 17,
+    SelfModelUpdated = 18,
+    CalibrationDrift = 19,
+    HumilityTriggerFired = 20,
+    ConfidenceReinforced = 21
 }
 
 public enum PredictionErrorKind
@@ -323,6 +332,8 @@ public sealed record CognitiveWorkspaceFrame(
     int ContextBudgetTokens,
     ScoreEvaluationTrace CognitiveLoadTrace,
     Guid? LastAttentionDecisionId,
+    Guid? LastSelfRegulationAssessmentId,
+    Guid? LastAnswerPostureDecisionId,
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset UpdatedAtUtc,
     DateTimeOffset? ExpiresAtUtc,
@@ -358,6 +369,8 @@ public sealed record AttentionRoutingRequest(
     Guid ProjectId,
     string RequestText,
     Guid WorkspaceFrameId,
+    Guid? SelfRegulationAssessmentId,
+    Guid? AnswerPostureDecisionId,
     RecallIntent? RequestedIntent,
     MemoryAccessContext AccessContext,
     IReadOnlyDictionary<string, string> Options);
@@ -366,6 +379,8 @@ public sealed record AttentionRoutingDecision(
     Guid Id,
     Guid ProjectId,
     Guid WorkspaceFrameId,
+    Guid? SelfRegulationAssessmentId,
+    Guid? AnswerPostureDecisionId,
     AttentionDecisionKind DecisionKind,
     string Explanation,
     IReadOnlyList<string> RequiredNextActions,
@@ -637,6 +652,8 @@ public sealed record MetamemoryAnswerGateRequest(
     Guid WorkspaceFrameId,
     RecallResult RecallResult,
     IReadOnlyList<Guid> SelectedClaimIds,
+    SelfRegulationAssessment? SelfRegulationAssessment,
+    AnswerPostureDecision? AnswerPostureDecision,
     MemoryAccessContext AccessContext,
     IReadOnlyDictionary<string, string> Options);
 
@@ -644,6 +661,8 @@ public sealed record MetamemoryAnswerGateDecision(
     Guid Id,
     Guid ProjectId,
     Guid WorkspaceFrameId,
+    Guid? SelfRegulationAssessmentId,
+    Guid? AnswerPostureDecisionId,
     MetamemoryAnswerDecisionKind DecisionKind,
     string Explanation,
     ScoreEvaluationTrace AnswerGateTrace,

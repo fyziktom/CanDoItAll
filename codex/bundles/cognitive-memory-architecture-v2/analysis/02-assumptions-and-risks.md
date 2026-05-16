@@ -9,6 +9,7 @@
 - The current simple workspace memory remains as compatibility fallback while Cognitive Memory becomes the primary context provider later.
 - The first implementation should start with the smallest viable project shape and split additional Cognitive Memory projects only when dependency direction or test isolation proves the need.
 - `checklists/cognitive-memory-implementation-control.xlsx` will be updated by the implementation agent after every phase so execution state survives context compaction and handoff.
+- Cognitive Self-Regulation will be implemented as structured control state over evidence, calibration, posture, and review policy. It will not be implemented as prompt persona or anthropomorphic identity.
 
 ## Critical Path Risks
 
@@ -22,6 +23,10 @@
 - If the implementation agent treats the markdown phase plan as the only state store, long-horizon work can skip a phase, close weak proof, or forget a reopened prerequisite after context compaction.
 - If the first implementation creates the full theoretical project split before proving boundaries, the architecture will accumulate project-reference churn and trivial abstractions before the domain invariants are tested.
 - If corrections, probe failures, or learning outcomes update active claims without a reconsolidation/revision lineage, the system will overwrite belief state instead of preserving evidence and temporal validity.
+- If Self-Regulation becomes a prompt-persona layer, competence, known failure patterns, and posture decisions will drift without auditability.
+- If professor review output is treated as source truth, the architecture will replace one hallucination risk with another.
+- If answer posture uses display confidence instead of score geometry, self-regulation will regress to scalar-only behavior and hide why it acted, asked, audited, reviewed, or abstained.
+- If calibration health silently retunes thresholds from one event, downstream answer behavior will become unstable and hard to reproduce.
 
 ## Validation Risks
 
@@ -32,6 +37,7 @@
 - Distributed worker validation cannot be accepted from happy-path job completion alone; wrong hashes, stale lease tokens, and incompatible algorithm versions must be rejected.
 - The workbook can become false assurance if agents mark rows passed without proof paths. Closure gates must compare workbook rows, execution report entries, and actual artifacts.
 - Source inspection must include `CanDoItAll.AgentFramework.Core`; otherwise MAF context contribution and source snapshot contract drift can be missed while implementation still appears to compile.
+- Browser validation must prove self-regulation warnings, posture, calibration health, professor review status, and abstention states are visible where user-facing answers are rendered.
 
 ## Reopen Triggers
 
@@ -46,3 +52,8 @@
 - The workbook and `reviews/01-execution-report.md` disagree about active phase, status, blockers, proof paths, or downstream permission.
 - An implementation phase needs to add broad sibling Cognitive Memory projects before the module and abstraction boundary have proven insufficient.
 - A correction/probe/learning flow overwrites active claim text or belief state without preserving previous claim version, evidence anchors, mutation command, audit record, and projection invalidation.
+- Any answer path ignores `SelfRegulationAssessment` or `AnswerPostureDecision` after those phases are closed.
+- The answer gate becomes looser than self-regulation without a new score trace.
+- A self-model update is accepted without evidence, profile version, and audit record.
+- Professor review output creates or updates canonical memory without source/review/mutation authority.
+- Calibration profile changes reinterpret old traces without migration or recalculation.

@@ -2,7 +2,7 @@
 
 ## Status
 
-- Ready after score-geometry and neuro-cognitive phases and before final `11-validation-and-architecture-closure`.
+- Ready after score-geometry, neuro-cognitive, and cognitive self-regulation phases and before final `11-validation-and-architecture-closure`.
 
 ## Execution Control
 
@@ -12,18 +12,19 @@
 - Before closure, update workbook `Phase Gates`, `Phase Acceptance Checklist`, `Validation Evidence`, `Handoff Log`, and `reviews/01-execution-report.md`.
 - If evidence is missing or an upstream assumption fails, mark the subbundle `Blocked` and stop downstream work.
 ## Objective
-Validate that the score-geometry update and neuro-cognitive patch are fully integrated with v2 and do not contradict source truth, Qdrant projection, probing safety, Epistemic Drive, review, distributed compute, mutation authority, or answer-gating rules.
+Validate that the score-geometry update, neuro-cognitive patch, and cognitive self-regulation patch are fully integrated with v2 and do not contradict source truth, Qdrant projection, probing safety, Epistemic Drive, review, distributed compute, mutation authority, self-regulation, professor-review governance, or answer-gating rules.
 
 ## Covered Inputs
 
 - All imported neuro patch architecture, requirements, diagrams, contracts, validation, traceability, and subbundles.
 - Score geometry architecture, requirements, diagram, contracts, validation, traceability, and subbundle.
+- Cognitive Self-Regulation architecture, requirements, diagrams, contracts, validation, traceability, and subbundles.
 - Patch apply checklist.
 - v2 execution order, review checklist, and test plan.
 
 ## Prerequisites
 
-- `01b-score-geometry-driver` and `14-neuro-foundation-claim-evidence-ledger` through `19-metamemory-abstention-calibration` have gate results or owner-approved deferrals.
+- `01b-score-geometry-driver`, `14-neuro-foundation-claim-evidence-ledger` through `19-metamemory-abstention-calibration`, and `21-cognitive-self-model` through `26-cognitive-self-regulation-integration-closure` have gate results or owner-approved deferrals.
 - Existing v2 project-scoped phases have gate results or owner-approved deferrals.
 - Traceability and validation docs are current.
 
@@ -34,15 +35,19 @@ Validate that the score-geometry update and neuro-cognitive patch are fully inte
 - C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\traceability\01-requirement-traceability.md
 - C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\traceability\02-neuro-patch-traceability.md
 - C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\architecture\26-score-geometry-driver.md
+- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\architecture\27-cognitive-self-regulation-layer.md
+- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\subbundles\26-cognitive-self-regulation-integration-closure\README.md
 - C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\subbundles\01b-score-geometry-driver\README.md
 - C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\validation\test-and-quality-plan.md
 - C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\validation\neuro-patch-test-plan.md
+- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\validation\self-regulation-test-matrix.md
 - C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\reviews\02-neuro-patch-self-review.md
+- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\reviews\03-self-regulation-self-review.md
 
 ## Deliverables
 
 - Updated README, manifest, reading order, and execution order.
-- Updated traceability for FR-039 through FR-054 and NFR-025 through NFR-036.
+- Updated traceability for FR-039 through FR-061 and NFR-025 through NFR-041.
 - Updated validation/test plan and review checklist.
 - Updated diagrams README.
 - Self-review and execution-report notes.
@@ -50,7 +55,7 @@ Validate that the score-geometry update and neuro-cognitive patch are fully inte
 
 ## Dependency Impact
 
-- Final validation closure can trust that score-geometry and neuro-cognitive additions are not dangling appendix docs.
+- Final validation closure can trust that score-geometry, neuro-cognitive, and self-regulation additions are not dangling appendix docs.
 - Implementation agents can execute root subbundles in dependency order without needing the separate patch bundle.
 - Any remaining drift between root `subbundles/`, `plan/subbundles/`, README, and manifest is treated as a blocker.
 
@@ -59,14 +64,14 @@ Validate that the score-geometry update and neuro-cognitive patch are fully inte
 - Run prepared-stage bundle validator.
 - Audit traceability rows for all new requirements.
 - Audit exact source references in new subbundles.
-- Audit safety invariants: Qdrant projection only, source truth, probing evidence not direct truth, simulation speculative, replay non-promoting, salience policy-limited, score projections non-authoritative, mutation authority public write boundary.
+- Audit safety invariants: Qdrant projection only, source truth, probing evidence not direct truth, simulation speculative, replay non-promoting, salience policy-limited, score projections non-authoritative, mutation authority public write boundary, self-model non-authoritative, professor review governed, answer gate not looser than self-regulation without new trace.
 - Audit plan order against subbundle prerequisites.
 
 ## Implementation Steps
 
-1. Verify score-geometry and imported neuro architecture, diagrams, contracts, requirements, validation, and traceability are self-contained in v2.
+1. Verify score-geometry, imported neuro architecture, and cognitive self-regulation architecture, diagrams, contracts, requirements, validation, and traceability are self-contained in v2.
 2. Verify root and plan subbundles are mirrored.
-3. Verify execution order and dependency map include neuro phases in the correct prerequisite positions.
+3. Verify execution order and dependency map include neuro and self-regulation phases in the correct prerequisite positions.
 4. Verify reviews and execution report record the patch.
 5. Regenerate manifest.
 6. Run prepared-stage validation.

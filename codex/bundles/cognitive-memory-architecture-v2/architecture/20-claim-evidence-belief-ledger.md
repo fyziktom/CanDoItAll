@@ -73,6 +73,11 @@ Evidence can:
 - broaden scope,
 - provide example,
 - provide counterexample.
+- provide self-regulation assessment context,
+- provide professor-review challenge or critique,
+- provide calibration evidence after outcome validation.
+
+Self-regulation, professor review, and calibration evidence are evidence directions only. They do not directly create belief state or source truth.
 
 ## Belief State
 
@@ -166,6 +171,21 @@ A user correction should create one or more candidate claim operations:
 
 High-risk changes require review before belief state changes.
 
+## Self-Regulation And Professor Review
+
+Self-Regulation may submit claim mutation candidates through `IMemoryMutationAuthority` when an assessment, humility trigger, calibration outcome, or professor review identifies a weak claim, contradiction, missing source, wrong scope, or stale procedure.
+
+The ledger must preserve the difference between:
+
+- source evidence,
+- generated synthesis,
+- professor critique,
+- self-regulation warning,
+- calibration outcome,
+- human review decision.
+
+Only governed mutation commands can change authoritative claim or belief state. Professor review and self-regulation output are challenge/review inputs until accepted by policy.
+
 ## Tests
 
 Required tests:
@@ -176,4 +196,5 @@ Required tests:
 - high-confidence recall with attacked claim produces warning/answer gate action,
 - scalar-only belief calculation is rejected by contract/model tests,
 - user correction creates claim mutation candidate, not direct truth update,
+- self-regulation and professor review cannot directly mutate claim truth,
 - projection rebuild includes claim ids and belief state payload.

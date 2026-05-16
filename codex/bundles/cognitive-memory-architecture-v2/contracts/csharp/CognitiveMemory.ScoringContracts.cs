@@ -19,7 +19,12 @@ public enum ScoreSpaceKind
     CrossProjectPromotion = 9,
     ProcedureMaturity = 10,
     MindMapSimilarity = 11,
-    MemoryActivation = 12
+    MemoryActivation = 12,
+    SelfRegulationAssessment = 13,
+    SelfModelCompetence = 14,
+    CalibrationHealth = 15,
+    ProfessorReviewRouting = 16,
+    AnswerPosture = 17
 }
 
 public enum ScoreDimensionKind
@@ -62,7 +67,30 @@ public enum ScoreDimensionKind
     WorkspaceFocusFit = 35,
     MissingKnowledgePressure = 36,
     ActionCost = 37,
-    OutcomeMismatch = 38
+    OutcomeMismatch = 38,
+    EvidenceStrength = 39,
+    EvidenceCoverage = 40,
+    SourceReliability = 41,
+    RecencyFit = 42,
+    NoveltyRisk = 43,
+    ConsequenceRisk = 44,
+    ModelUncertainty = 45,
+    HistoricalCalibrationFit = 46,
+    DomainCompetenceFit = 47,
+    KnownFailurePatternSimilarity = 48,
+    ScopeAmbiguity = 49,
+    UserCorrectionPressure = 50,
+    SelfModelStability = 51,
+    ProfessorReviewValue = 52,
+    EscalationCost = 53,
+    AbstentionCost = 54,
+    ConfidenceBias = 55,
+    OverconfidenceRate = 56,
+    UnderconfidenceRate = 57,
+    HumanReviewAgreement = 58,
+    ProfessorReviewAgreement = 59,
+    HumilityTriggerPressure = 60,
+    ConfidenceReinforcementPressure = 61
 }
 
 public enum ScoreShapeKind
@@ -125,7 +153,16 @@ public enum ScoreEvidenceKind
     ProcedureSkill = 13,
     AnswerGateDecision = 14,
     ProjectDirection = 15,
-    CoverageMap = 16
+    CoverageMap = 16,
+    SelfModel = 17,
+    DomainCompetenceProfile = 18,
+    KnownFailurePattern = 19,
+    CalibrationAggregate = 20,
+    SelfRegulationAssessment = 21,
+    AnswerPostureDecision = 22,
+    ProfessorReview = 23,
+    HumilityTrigger = 24,
+    ConfidenceReinforcement = 25
 }
 
 public sealed record ScoreDimensionDefinition(
@@ -227,4 +264,3 @@ public interface IScoreGeometryDriver
         ScoreEvaluationRequest request,
         CancellationToken cancellationToken = default);
 }
-

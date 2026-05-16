@@ -21,13 +21,19 @@ Dependency order is authoritative. Folder numbers for `12`, `13`, and `14-20` ar
 15. `08-human-review-ui`
 16. `07-maf-workflow-integration`
 17. `13a-probing-core-regression-calibration`
-18. `19-metamemory-abstention-calibration`
-19. `13-interactive-memory-probing-workbench`
-20. `12-epistemic-drive-engine`
-21. `10-cross-project-memory`
-22. `09-distributed-idle-compute`
-23. `20-architecture-integration-closure`
-24. `11-validation-and-architecture-closure`
+18. `21-cognitive-self-model`
+19. `23-calibration-health-and-probing-training`
+20. `22-self-regulation-orchestrator`
+21. `24-professor-review-escalation`
+22. `19-metamemory-abstention-calibration`
+23. `13-interactive-memory-probing-workbench`
+24. `12-epistemic-drive-engine`
+25. `25-self-regulation-ui`
+26. `26-cognitive-self-regulation-integration-closure`
+27. `10-cross-project-memory`
+28. `09-distributed-idle-compute`
+29. `20-architecture-integration-closure`
+30. `11-validation-and-architecture-closure`
 
 ## Execution Control Ledger
 
@@ -56,9 +62,11 @@ Rationale:
 - Workspace and attention must exist before recall/probing/MAF flows claim to be cognitive. A context pack is rendered output, not active working memory.
 - Prediction error and salience signals must exist before recall, consolidation, probing, replay, and Epistemic Drive depend on activation and learning evidence.
 - Replay and procedural skill memory should be built after consolidation basics but before MAF, probing, learning, cross-project, or distributed execution can promote procedural behavior.
-- Metamemory answer gating depends on recall, workspace, claims, signals, calibration, procedure maturity, and access policy. It must close before the Dialogue Workbench and MAF answer injection are treated as complete.
-- Epistemic Drive runs after project-scoped recall, consolidation, review, probing evidence, answer-gate evidence, and salience/replay signals are stable.
-- Cross-project memory and distributed compute remain scale/promotion extensions after project-scoped safety is proven.
+- Cognitive Self-Regulation must not start until probing-core evidence, claims, workspace, signals, and score geometry exist. A self-model without observed calibration evidence would collapse into prompt persona.
+- Calibration health must close before posture selection is trusted. The orchestrator can handle missing aggregates explicitly, but the normal path must have versioned calibration aggregates.
+- Metamemory answer gating is reopened after self-regulation orchestration and professor review so answer decisions consume assessment/posture instead of recomputing local uncertainty.
+- Epistemic Drive runs after project-scoped recall, consolidation, review, probing evidence, answer-gate evidence, salience/replay signals, and self-regulation evidence are stable.
+- Cross-project memory and distributed compute remain scale/promotion extensions after project-scoped safety and self-regulation closure are proven.
 
 ## Subbundle Dependency Map
 
@@ -104,7 +112,23 @@ flowchart TD
     S16 --> S13A
     S17 --> S13A
     S01B --> S13A
-    S13A --> S19["19 metamemory abstention calibration"]
+    S13A --> S21["21 cognitive self model"]
+    S14 --> S21
+    S15 --> S21
+    S16 --> S21
+    S01B --> S21
+    S21 --> S23["23 calibration health and probing training"]
+    S13A --> S23
+    S16 --> S23
+    S23 --> S22["22 self regulation orchestrator"]
+    S21 --> S22
+    S15 --> S22
+    S14 --> S22
+    S01B --> S22
+    S22 --> S24["24 professor review escalation"]
+    S22 --> S19["19 metamemory abstention calibration"]
+    S24 --> S19
+    S23 --> S19
     S18 --> S19
     S01B --> S19
     S19 --> S13["13 interactive memory probing workbench"]
@@ -112,16 +136,27 @@ flowchart TD
     S08 --> S13
     S13 --> S12["12 epistemic drive engine"]
     S19 --> S12
+    S22 --> S12
+    S23 --> S12
+    S24 --> S12
     S16 --> S12
     S17 --> S12
     S18 --> S12
     S01B --> S12
-    S12 --> S10["10 cross project memory"]
+    S12 --> S25["25 self regulation UI"]
+    S13 --> S25
+    S19 --> S25
+    S24 --> S25
+    S23 --> S25
+    S25 --> S26["26 cognitive self regulation integration closure"]
+    S12 --> S26
+    S26 --> S10["10 cross project memory"]
     S01B --> S10
     S10 --> S09["09 distributed idle compute"]
     S09 --> S20["20 architecture integration closure"]
     S13 --> S20
     S12 --> S20
+    S26 --> S20
     S20 --> S11["11 validation and architecture closure"]
 ```
 
@@ -141,8 +176,14 @@ flowchart TD
 - `17-temporal-replay-scheduler` proves episodic order, causal links, and replay safety before procedure skill reinforcement or distributed replay.
 - `18-procedural-skill-memory-simulation` proves procedures are skill graphs with maturity and simulation is speculative before workflow automation or MAF procedure guidance.
 - `13a-probing-core-regression-calibration` proves corrections are evidence, regression tests replay, and calibration records exist before UI and learning consume probing results.
-- `19-metamemory-abstention-calibration` proves answer-time warnings, clarification, source audit, probing, review, learning request, and abstention before answer rendering is treated as safe.
-- `12-epistemic-drive-engine` proves vector-based knowledge need, approval-gated learning, signal/error/replay evidence consumption, and source-grounded proposals before cross-project and distributed extensions.
+- `21-cognitive-self-model` is a critical foundation. It proves self-model, competence, policy, and known failure pattern records are structured, scoped, evidence-backed, and versioned before orchestration can depend on them.
+- `23-calibration-health-and-probing-training` proves calibration aggregates, bins, profile versioning, overconfidence/underconfidence metrics, and post-outcome feedback before posture decisions consume calibration.
+- `22-self-regulation-orchestrator` is a critical foundation. It proves assessment, humility triggers, confidence reinforcement, answer posture, attention integration, and answer-gate input integration before answers are treated as self-regulated.
+- `24-professor-review-escalation` proves large-model/expert review is governed challenge input and cannot directly mutate truth or bypass policy.
+- `19-metamemory-abstention-calibration` proves answer-time warnings, clarification, source audit, probing, review, professor review, learning request, and abstention before answer rendering is treated as safe.
+- `12-epistemic-drive-engine` proves vector-based knowledge need, approval-gated learning, signal/error/replay/abstention/self-regulation evidence consumption, and source-grounded proposals before cross-project and distributed extensions.
+- `25-self-regulation-ui` proves posture, warnings, calibration health, and professor review are visible and access-safe before self-regulation closure.
+- `26-cognitive-self-regulation-integration-closure` proves the self-regulation patch is integrated before cross-project or distributed scale phases consume its evidence.
 
 ## Phase Gates
 
@@ -165,9 +206,15 @@ flowchart TD
 | Review/UI gate | Operator pages show source evidence, claim evidence, trace reasons, review decisions, projection/consolidation/procedure health, and browser evidence for dense views. |
 | MAF gate | MAF consumes workspace-aware context packs through extension contracts and does not own workspace, mutation authority, durable memory policy, or projection writes. |
 | Probing core gate | Probe answers persist recall traces, workspace frame ids, selected claims, prediction errors/signals where relevant; feedback cannot mutate active truth; correction/review/regression/evidence/calibration flows pass without UI. |
-| Answer gate | Metamemory gate uses answer-gate score geometry over source sufficiency, context fit, belief state, calibration, contradiction risk, staleness, redaction, risk, and policy to answer, warn, clarify, audit, probe, review, request learning, or abstain. |
+| Self-model gate | Self-model, competence, known failure pattern, and policy records are structured, scoped, evidence-backed, versioned, and cannot mutate truth or bypass policy. |
+| Calibration health gate | Calibration aggregates preserve bins, expected calibration error or equivalent, Brier/squared loss, signed bias, overconfidence, underconfidence, abstention quality, wrong-scope, source-insufficient, and profile version evidence. |
+| Self-regulation orchestration gate | Assessment, humility trigger, confidence reinforcement, answer posture, attention integration, and answer-gate input integration use score geometry and reject scalar-only behavior. |
+| Professor review gate | Professor review records model/profile/access traces, routes suggestions through governance, and cannot directly mutate truth or inspect redacted context without policy. |
+| Answer gate | Metamemory gate uses answer-gate score geometry plus self-regulation assessment/posture over source sufficiency, context fit, belief state, calibration, contradiction risk, staleness, redaction, risk, and policy to answer, warn, clarify, audit, probe, review, request professor review, request learning, or abstain. |
 | Probing workbench gate | Browser proof shows dialogue, workspace/focus, trace/source/claim panels, correction, feedback, answer-gate warning, and regression flows without overlap, hidden evidence, or leaked restricted content. |
-| Epistemic Drive gate | Knowledge need vectors are backed by score geometry, preserve dimensions and metadata; proposal evidence consumes signals/errors/replay/abstention safely; external study is approval-gated; scalar-only prioritization is rejected. |
+| Epistemic Drive gate | Knowledge need vectors are backed by score geometry, preserve dimensions and metadata; proposal evidence consumes signals/errors/replay/abstention/self-regulation evidence safely; external study is approval-gated; scalar-only prioritization is rejected. |
+| Self-regulation UI gate | Browser proof shows posture, warnings, triggers, calibration health, professor review, and required next actions without hiding redaction/source limits or styling abstention as a normal answer. |
+| Self-regulation closure | Contracts, traceability, proof, UI evidence, answer-gate consumption, professor governance, calibration versioning, and no-direct-truth-mutation checks pass before cross-project/distributed work. |
 | Cross-project gate | Promotion/demotion is reviewable and reversible; project-private evidence does not leak; score-geometry similarity/separation shapes and context/entity boundaries prevent unsafe global merges; recall traces show included/excluded global candidates. |
 | Distributed gate | Worker outputs are accepted only through leases, hashes, versions, source scope checks, replay/projection job boundaries, and authoritative coordinator validation. |
 | Architecture integration closure | Score-geometry and neuro patch artifacts, requirements, traceability, diagrams, contracts, subbundles, safety invariants, and phase order are consistent. |
@@ -190,6 +237,9 @@ Before moving from any phase to the next, run a short architecture review and re
 - salience signals, prediction errors, score projections, and shape matches influence priority but cannot create truth,
 - simulation output remains speculative,
 - answer gates expose uncertainty instead of hiding it,
+- self-regulation assessment and answer posture are structured, traceable, and score-geometry-backed,
+- professor review remains governed challenge input and not source truth,
+- calibration/profile updates are versioned and do not reinterpret old traces silently,
 - performance-sensitive paths have budgets and do not require Qdrant for correctness.
 
 Also update the workbook `Architecture Invariants` and `Handoff Log` sheets. If a phase fails one of these checks, reopen that phase or the earlier foundation it depends on. Do not push the problem downstream.
@@ -205,6 +255,8 @@ Also update the workbook `Architecture Invariants` and `Handoff Log` sheets. If 
 - Do not expose public direct upsert operations for authoritative memory. Use mutation authority.
 - Do not treat `RecallContextPack` as working memory. Use cognitive workspace frames.
 - Do not collapse recall ranking, attention routing, belief state, salience, replay priority, probing assessment, answer confidence, Epistemic Drive, cross-project promotion, or knowledge need into a simple scalar score.
+- Do not collapse self-regulation assessment, self-model competence, calibration health, professor-review routing, or answer posture into a simple scalar confidence.
 - Do not run learning tasks against external sources or promote high-impact learning outputs without required approval.
 - Do not let interactive probing feedback or user corrections directly mutate approved memory.
 - Do not let replay jobs, simulation output, distributed worker output, or generated summaries directly promote truth.
+- Do not let self-model, professor review, salience, prediction error, calibration outcome, or self-regulation outcome directly promote truth.

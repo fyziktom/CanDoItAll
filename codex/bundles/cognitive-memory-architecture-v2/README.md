@@ -14,6 +14,8 @@ The neuro-cognitive patch adds the missing control and belief-management layer: 
 
 The score-geometry update adds the missing reusable scoring foundation. Recall, attention, belief, salience, replay, probing, answer gating, Epistemic Drive, and cross-project promotion must use typed score spaces, vectors, shapes/regions, scalar projection policy, and evaluation traces instead of local add/subtract formulas.
 
+The cognitive self-regulation update connects the distributed control pieces into an explicit self-model, calibration health, humility trigger, answer posture, and professor-review layer. This layer is calibrated agency under epistemic uncertainty, not consciousness or prompt persona. It coordinates when the system should act, caveat, clarify, source-audit, probe, review, escalate, learn, replay, or abstain.
+
 The execution-control update adds a durable phase ledger for implementation agents. The implementation is long enough that markdown alone is not a reliable memory surface; agents must keep the checklist workbook and execution report synchronized after every phase.
 
 This bundle is architecture and planning only. It does not authorize implementation of the Cognitive Memory module.
@@ -40,6 +42,7 @@ Qdrant/RAG is not the memory. It is a rebuildable projection layer. The durable 
 - interactive probe sessions, probe turns, user correction evidence, calibration records, and memory regression tests,
 - cognitive workspace frames, attention decisions, evidence anchors, atomic claims, belief states, context frames, prediction errors, salience signals, temporal episodes, replay jobs, procedure skills, simulation hypotheses, and answer-gate decisions,
 - score-space definitions, score vector snapshots, score shapes, score evaluation traces, and derived scalar projections,
+- self-model records, domain competence profiles, known failure patterns, self-regulation assessments, answer posture decisions, calibration aggregates, professor review traces, and self-regulation outcome records,
 - Qdrant projections with rich payload metadata.
 
 ## Source Inspection Scope
@@ -75,6 +78,9 @@ Additional inspection of the supplied current code confirms that Workbench, Proc
 - Do not plan distributed idle compute until local deterministic job packets, leases, hashes, and acceptance validation work.
 - Do not reduce Epistemic Drive to a scalar priority score. Preserve vector dimensions, evidence refs, Pareto/category/ROI metadata, project-direction intersections, and explanation text.
 - Do not allow any behavior-affecting scoring surface to use only add/subtract sub-scores or a final scalar. Recall rank, attention routing, belief state, replay priority, answer confidence, probing assessment, and cross-project promotion must go through score geometry.
+- Do not model Cognitive Self-Regulation as prompt persona, consciousness, emotion, or autonomous ego. It is structured control state over evidence, calibration, risk, posture, and policy.
+- Do not let self-model, professor review, salience, prediction error, probing feedback, or generated summaries directly create canonical truth.
+- Do not let answer posture selection use display confidence as the decision model.
 - Do not run external learning or promote high-impact learning outputs without human/policy approval and source refs.
 - Do not let interactive probing mutate authoritative truth directly. Probe feedback creates evidence, correction candidates, review items, regression tests, and learning signals; durable memory changes still pass through Cognitive Memory authority services and review policy.
 - Do not treat `RecallContextPack` as working memory. Working memory is an active scoped workspace frame; a context pack is only rendered output.
@@ -87,7 +93,7 @@ Additional inspection of the supplied current code confirms that Workbench, Proc
 - `inputs/` raw request, source artifacts, and structured input
 - `analysis/` current state, corrections, assumptions, risks, and refactor decision
 - `requirements/` normalized requirements and acceptance criteria
-- `architecture/` target architecture, boundaries, modes, scale, security, UI, Epistemic Drive, Interactive Memory Probing, regression/calibration, and integration notes
+- `architecture/` target architecture, boundaries, modes, scale, security, UI, Epistemic Drive, Interactive Memory Probing, regression/calibration, Cognitive Self-Regulation, and integration notes
 - `plan/` execution order, dependencies, critical foundations, and gates
 - `traceability/` requirement-to-subbundle mapping
 - `shared-prompts/` reusable implementation and QA prompts
@@ -121,9 +127,13 @@ Additional inspection of the supplied current code confirms that Workbench, Proc
 22. `architecture/23-procedural-skill-memory-and-simulation.md`
 23. `architecture/24-metamemory-confidence-and-abstention.md`
 24. `architecture/26-score-geometry-driver.md`
-25. `plan/01-phase-plan.md`
-26. `subbundles/*/README.md`
-27. `validation/test-and-quality-plan.md`
+25. `architecture/27-cognitive-self-regulation-layer.md`
+26. `architecture/28-self-model-and-epistemic-identity.md`
+27. `architecture/29-calibration-health-and-probing-training.md`
+28. `architecture/30-professor-review-and-escalation.md`
+29. `plan/01-phase-plan.md`
+30. `subbundles/*/README.md`
+31. `validation/test-and-quality-plan.md`
 
 ## Recommended Execution Order
 
@@ -144,15 +154,21 @@ Additional inspection of the supplied current code confirms that Workbench, Proc
 15. `subbundles/08-human-review-ui`
 16. `subbundles/07-maf-workflow-integration`
 17. `subbundles/13a-probing-core-regression-calibration`
-18. `subbundles/19-metamemory-abstention-calibration`
-19. `subbundles/13-interactive-memory-probing-workbench`
-20. `subbundles/12-epistemic-drive-engine`
-21. `subbundles/10-cross-project-memory`
-22. `subbundles/09-distributed-idle-compute`
-23. `subbundles/20-architecture-integration-closure`
-24. `subbundles/11-validation-and-architecture-closure`
+18. `subbundles/21-cognitive-self-model`
+19. `subbundles/23-calibration-health-and-probing-training`
+20. `subbundles/22-self-regulation-orchestrator`
+21. `subbundles/24-professor-review-escalation`
+22. `subbundles/19-metamemory-abstention-calibration`
+23. `subbundles/13-interactive-memory-probing-workbench`
+24. `subbundles/12-epistemic-drive-engine`
+25. `subbundles/25-self-regulation-ui`
+26. `subbundles/26-cognitive-self-regulation-integration-closure`
+27. `subbundles/10-cross-project-memory`
+28. `subbundles/09-distributed-idle-compute`
+29. `subbundles/20-architecture-integration-closure`
+30. `subbundles/11-validation-and-architecture-closure`
 
-Root validation closure remains named `11-validation-and-architecture-closure` for compatibility with the existing bundle. Run common helper/driver/EF guardrails first, then score geometry, then neuro claim/evidence/context/mutation foundation before any source, projection, recall, or probing implementation. Run workspace/attention and signal ledgers before recall. Run probing core before answer gate and Dialogue Workbench UI. Run Epistemic Drive after project-scoped recall, consolidation, review, MAF integration, probing evidence, replay evidence, and answer-gate evidence are available. Treat cross-project memory and distributed compute as extensions after project-scoped memory safety is proven.
+Root validation closure remains named `11-validation-and-architecture-closure` for compatibility with the existing bundle. Run common helper/driver/EF guardrails first, then score geometry, then neuro claim/evidence/context/mutation foundation before any source, projection, recall, or probing implementation. Run workspace/attention and signal ledgers before recall. Run probing core before self-model and calibration health so self-regulation has evidence to learn from. Reopen answer gating after self-regulation orchestration and professor review are available, then run Dialogue Workbench, Epistemic Drive, and Self-Regulation UI before cross-project or distributed extensions. Treat cross-project memory and distributed compute as extensions after project-scoped memory safety and self-regulation closure are proven.
 
 ## Dependency And Validation Map
 
@@ -176,6 +192,7 @@ Root validation closure remains named `11-validation-and-architecture-closure` f
 - Epistemic Drive status: `Architecture added, implementation not started`
 - Interactive Memory Probing status: `Architecture added, implementation not started`
 - Neuro-cognitive patch status: `Architecture integrated, implementation not started`
+- Cognitive Self-Regulation status: `Architecture integrated, implementation not started`
 - Execution status: `Not started`
 - Subbundle gate review: `Prerequisite gates passed`
 - Final closure gate: `Not started`

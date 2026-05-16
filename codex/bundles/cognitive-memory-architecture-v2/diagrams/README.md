@@ -31,3 +31,10 @@ Recommended review order:
 ## Score Geometry Diagrams
 
 - `18-score-geometry-driver.mmd` shows evidence -> score vector -> shape evaluation -> trace -> optional scalar projection -> consumer policy.
+
+## Cognitive Self-Regulation Diagrams
+
+- `19-cognitive-self-regulation-overview.mmd` shows request -> workspace -> self-regulation -> attention -> recall/gate/output -> outcome feedback.
+- `20-self-regulation-answer-sequence.mmd` shows answer-time assessment, posture, attention, recall, and answer-gate flow.
+- `21-calibration-training-loop.mmd` shows predicted confidence/posture -> outcome -> aggregate calibration -> profile update/replay/probing.
+- `22-professor-review-flow.mmd` shows governed professor review escalation and action conversion.

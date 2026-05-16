@@ -35,6 +35,8 @@ This root subbundle uses number `13` to match the plan folder. Dependency order 
 - `08-human-review-ui` can display and decide review items.
 - `13a-probing-core-regression-calibration` provides durable probe sessions, feedback, regression tests, and calibration services.
 - `19-metamemory-abstention-calibration` provides answer-gate decisions and warnings that the workbench must render.
+- `22-self-regulation-orchestrator` provides assessment and answer posture ids that probe answers must carry.
+- `23-calibration-health-and-probing-training` consumes probe outcomes as confidence training evidence.
 - `12-epistemic-drive-engine` can either already exist or consume probing evidence after this subbundle lands.
 
 ## Exact Source References

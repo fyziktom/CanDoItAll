@@ -264,6 +264,11 @@ Learning-derived canonical records must include source refs. Summaries must stat
 - `LearningOutcomeRecords`
 - `OpenQuestionSetRecords`
 - `ProbingQuestionSetRecords`
+- `CognitiveSelfModelRecords`
+- `SelfRegulationAssessmentRecords`
+- `AnswerPostureDecisionRecords`
+- `CalibrationAggregateRecords`
+- `ProfessorReviewRecords`
 - `MemoryHumanReviewItems`
 - `MemoryAccessAuditRecords`
 
@@ -326,3 +331,9 @@ Simulation and cross-project analogy outputs must remain hypotheses until source
 ### Rule 15: Metamemory Must Block Unsafe Fluent Answers
 
 The answer gate must support warnings, clarification, source audit, probing, review, learning proposal, and abstention. It is a security and correctness boundary, not only a UI annotation.
+
+### Rule 16: Self-Regulation Is Not Authority
+
+Self-model, calibration health, humility triggers, answer posture, professor review, prediction errors, salience signals, and probing outcomes are control/evidence surfaces. They can require review, source audit, probing, learning, replay, or abstention. They cannot directly create canonical truth, grant access, bypass redaction, or mutate claims/procedures outside mutation authority.
+
+Professor review records must preserve model profile, prompt/profile version, source access level, input ids, output hash, and resulting governed actions. External professor review must not receive restricted context unless policy explicitly allows it.

@@ -419,7 +419,7 @@ Probe evidence must remain explainable and auditable.
 
 ## Neuro-Cognitive Evidence Inputs
 
-Epistemic Drive must consume neuro-cognitive records as evidence contributors without weakening its vector model:
+Epistemic Drive must consume neuro-cognitive and self-regulation records as evidence contributors without weakening its vector model:
 
 - cognitive signal vectors,
 - prediction errors,
@@ -429,7 +429,11 @@ Epistemic Drive must consume neuro-cognitive records as evidence contributors wi
 - replay outcomes,
 - procedure skill maturity and failure modes,
 - source anchor weakness,
-- context-boundary inhibition frequency.
+- context-boundary inhibition frequency,
+- self-regulation outcomes,
+- calibration health drift,
+- humility triggers,
+- professor-review missing evidence or learning expansion suggestions.
 
 `KnowledgeNeedVector` must store or reference dimension schema version, normalization profile, evidence contributors, missing-dimension policy, and calculation confidence. A display score remains optional UI data only.
 
@@ -439,6 +443,9 @@ Examples:
 - high rework cost raises risk impact and business value,
 - source weakness signals raise source quality concern,
 - answer-gate abstention raises source availability or confidence weakness,
+- self-regulation source-poor posture raises source availability/source quality concern,
+- professor-review disagreement raises contradiction pressure or missing evidence,
+- repeated overconfidence raises calibration risk and failure recurrence,
 - replay failures raise failure recurrence,
 - procedure skill usefulness raises expected reuse.
 

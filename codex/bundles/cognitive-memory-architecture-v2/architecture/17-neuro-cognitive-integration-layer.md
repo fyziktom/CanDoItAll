@@ -17,6 +17,7 @@ This layer does not claim to simulate a biological brain. It translates useful c
 | Replay | Scheduled rehearsal/reprocessing of important weak memories. |
 | Procedural skill | Validated step graph with preconditions and failure modes. |
 | Metamemory | Answer-time awareness of uncertainty and source sufficiency. |
+| Self-regulation | Project-aware metacognitive control over confidence, humility triggers, posture, escalation, and recovery. |
 
 ## Why This Layer Is Needed
 
@@ -42,6 +43,7 @@ Source adapters
 
 Recall / Probing / Workflows
   <-> Cognitive workspace
+  <-> Self-regulation orchestrator
   <-> Attention router
   <-> Metamemory answer gate
   <-> Prediction error engine
@@ -101,6 +103,12 @@ Schedules replay/rehearsal jobs using cognitive signals and memory risk.
 
 Prevents unsafe fluent answers by enforcing source sufficiency, confidence calibration, redaction awareness, and abstention rules.
 
+### `ISelfRegulationOrchestrator`
+
+Coordinates self-model, calibration health, known failure patterns, humility triggers, confidence reinforcement, answer posture, and professor-review escalation before attention routing and answer gating.
+
+Self-Regulation is not a truth source. It can publish evidence, required operations, warnings, posture constraints, review/probe/regression candidates, and mutation candidates. It must not directly update claims, belief states, source truth, access policy, or projection state.
+
 ## Integration With Existing Architecture
 
 ### Source Ingestion
@@ -112,6 +120,8 @@ The ingestion pipeline should add schema/entity/context binding before canonical
 Recall should read from the cognitive workspace and claim ledger, not only memory item projections. Recall traces should include:
 
 - workspace frame id,
+- self-regulation assessment id,
+- answer posture decision id,
 - attention routing decision,
 - selected claims,
 - inhibited candidates,
@@ -130,9 +140,13 @@ Probe feedback should publish:
 
 Probe feedback must still not directly mutate authoritative memory.
 
+Probe answers should also record the self-regulation assessment, predicted answer posture, actual outcome, and calibration health evidence so probing can train confidence, not only facts.
+
 ### Epistemic Drive
 
 Epistemic Drive should consume cognitive signals and prediction error records as evidence, while preserving the existing multi-dimensional vector model.
+
+Self-regulation outcomes can contribute to Epistemic Drive when they expose repeated source insufficiency, wrong-scope failures, overconfidence, underconfidence, professor-review gaps, or high-value learning expansion. They remain evidence contributors, not source truth.
 
 ### Consolidation
 
@@ -157,5 +171,6 @@ For V1, implement the architecture documentation and contract sketches for:
 5. Metamemory answer gate.
 6. Replay scheduler design.
 7. Procedure skill memory model.
+8. Cognitive self-regulation, self-model, calibration health, professor review, and answer posture.
 
 Implementation may come later in separate execution bundles.

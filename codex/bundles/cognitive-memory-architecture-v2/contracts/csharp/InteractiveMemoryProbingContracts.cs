@@ -138,6 +138,10 @@ public sealed record MemoryProbeTurnRequest(
 
 public sealed record MemoryProbeAnswerMetadata(
     ScoreEvaluationTrace AnswerEvaluationTrace,
+    Guid? SelfRegulationAssessmentId,
+    Guid? AnswerPostureDecisionId,
+    AnswerPostureKind? PredictedAnswerPosture,
+    SelfRegulationOutcomeKind? ActualOutcomeKind,
     ScoreScalarProjection? DisplayConfidence,
     bool ContainsUnverifiedClaims,
     bool ContainsGeneratedSummaryClaims,

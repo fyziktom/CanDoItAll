@@ -56,7 +56,7 @@
 - [ ] Recall ranking uses `RecallCandidate` score vectors and shape evaluations, not a final scalar formula.
 - [ ] Attention routing uses `AttentionRouting` score geometry, not untyped score breakdown dictionaries.
 - [ ] Belief state uses support/attack/source/context/staleness as dimensions in a belief score space.
-- [ ] Salience signals, replay priority, probing assessment, answer confidence, Epistemic need, and cross-project promotion all declare score spaces.
+- [ ] Salience signals, replay priority, probing assessment, answer confidence, self-regulation assessment, answer posture, calibration health, professor-review routing, Epistemic need, and cross-project promotion all declare score spaces.
 - [ ] Scalar display/priority/confidence projections are derived from evaluation traces and cannot be the only persisted decision basis.
 - [ ] Qdrant similarity is one dimension in score geometry, not final memory identity or rank.
 - [ ] Missing required score dimensions are explicit and testable.
@@ -83,6 +83,9 @@
 - [ ] Evidence anchors are fine-grained enough for high-risk or contested claim review.
 - [ ] Simulation and analogy output remains speculative until source-backed and reviewed.
 - [ ] Answer gate can warn, clarify, source-audit, probe, review, request learning, or abstain.
+- [ ] Self-model, professor review, salience, prediction error, calibration outcome, and self-regulation outcome cannot directly promote truth.
+- [ ] Professor review cannot bypass source/access/redaction/review/mutation policy.
+- [ ] Answer gate cannot become looser than self-regulation without a new score trace.
 
 ## Distributed Compute
 
@@ -104,6 +107,7 @@
 - [ ] Learning-derived canonical records and procedures require source refs.
 - [ ] Probing failures update gap evidence but do not become automatic truth.
 - [ ] Prediction errors, salience signals, answer-gate abstentions, replay outcomes, and contested claims can become evidence without becoming truth.
+- [ ] Self-regulation outcomes, calibration drift, and professor-review learning expansion suggestions can become evidence without becoming truth.
 - [ ] Stale or contradictory records do not silently overwrite validated records.
 - [ ] Qdrant/search remains projection only for learning proposals and outcomes.
 - [ ] Cross-project proposals do not leak project-private source content.
@@ -118,6 +122,7 @@
 - [ ] Procedure memory can become actionable workflow/process work.
 - [ ] User can inspect Night Reflection opportunities, coverage maps, evidence, estimated effort, and approval actions.
 - [ ] User can request probing before learning and review probing-after-learning results.
+- [ ] User/operator can inspect self-regulation posture, warnings, humility triggers, calibration health, professor-review status, and required next actions where they affect answers or reviews.
 
 ## Phase Progression
 
@@ -134,7 +139,10 @@
 - [ ] Metamemory answer gate closes before answer-rendering UI and MAF answer injection are considered complete.
 - [ ] Probing backend core closes before the Dialogue Workbench UI phase starts.
 - [ ] Epistemic Drive does not consume probe outcomes until the probing core has durable evidence/regression/calibration records.
-- [ ] Distributed compute starts only after project-scoped recall, consolidation, review, probing, and learning proposal behavior are validated.
+- [ ] Self-model and calibration health close after probing core and before self-regulation orchestration.
+- [ ] Metamemory answer gate is reopened after self-regulation orchestration so it consumes assessment/posture.
+- [ ] Self-regulation closure passes before cross-project or distributed phases consume self-regulation evidence.
+- [ ] Distributed compute starts only after project-scoped recall, consolidation, review, probing, self-regulation, and learning proposal behavior are validated.
 
 ## Reconsolidation And Revision Lineage
 

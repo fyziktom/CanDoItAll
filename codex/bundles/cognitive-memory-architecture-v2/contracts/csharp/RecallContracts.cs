@@ -24,6 +24,8 @@ public sealed record RecallRequest(
     string Query,
     RecallIntent Intent,
     Guid? WorkspaceFrameId,
+    Guid? SelfRegulationAssessmentId,
+    Guid? AnswerPostureDecisionId,
     MemoryAccessContext AccessContext,
     RecallOptions Options);
 
@@ -52,6 +54,8 @@ public sealed record RecallResult(
     Guid TraceId,
     Guid? WorkspaceFrameId,
     Guid? AttentionDecisionId,
+    Guid? SelfRegulationAssessmentId,
+    Guid? AnswerPostureDecisionId,
     Guid? AnswerGateDecisionId,
     RecallIntent Intent,
     IReadOnlyList<RecallCandidate> Candidates,
@@ -93,6 +97,8 @@ public sealed record RecallTrace(
     RecallIntent Intent,
     Guid? WorkspaceFrameId,
     Guid? AttentionDecisionId,
+    Guid? SelfRegulationAssessmentId,
+    Guid? AnswerPostureDecisionId,
     Guid? AnswerGateDecisionId,
     IReadOnlyList<RecallTraceStage> Stages,
     Guid? ContextPackId,

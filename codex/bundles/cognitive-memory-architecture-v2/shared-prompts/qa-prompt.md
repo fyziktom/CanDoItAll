@@ -10,6 +10,7 @@ Prioritize:
 - access policy and redaction,
 - recall trace explainability,
 - score geometry vector/shape/evaluation trace preservation,
+- self-regulation assessment, posture, calibration health, and professor review governance,
 - Qdrant/search projection rebuildability,
 - Epistemic Drive vector/evidence preservation,
 - learning proposal approval gates,
@@ -27,8 +28,12 @@ Reject the subbundle if:
 - distributed workers can directly mutate memory state,
 - recall truncates or skips channels without trace evidence,
 - high-risk memory becomes active without review.
-- recall, attention, belief, replay, probing, answer gate, Epistemic Drive, or cross-project promotion uses scalar-only scoring,
+- recall, attention, belief, replay, probing, answer gate, self-regulation, Epistemic Drive, or cross-project promotion uses scalar-only scoring,
 - scalar projections are stored without reproducible score vector/shape traces,
+- self-model is prompt persona instead of structured, scoped, evidence-backed data,
+- answer gate becomes looser than self-regulation without a new score trace,
+- professor review output directly mutates truth or bypasses source/access/redaction/review/mutation policy,
+- calibration profile changes silently reinterpret old traces,
 - Epistemic Drive stores only a scalar priority score,
 - learning workflows read external sources without required approval,
 - learning-derived records lack source refs.

@@ -2,7 +2,7 @@
 
 ## Status
 
-- Ready after score geometry, project-scoped recall, consolidation, answer gating, and Epistemic Drive are stable.
+- Ready after score geometry, project-scoped recall, consolidation, answer gating, Epistemic Drive, and Cognitive Self-Regulation closure are stable.
 
 ## Execution Control
 
@@ -27,6 +27,7 @@
 - `12-epistemic-drive-engine` should be available when cross-project gaps or learning opportunities are promoted globally.
 - `14-neuro-foundation-claim-evidence-ledger` must provide entity/context boundary policy and mutation authority for global promotion.
 - `19-metamemory-abstention-calibration` must provide answer-gate context-boundary behavior for cross-project recall.
+- `26-cognitive-self-regulation-integration-closure` must prove self-model, calibration, professor review, and self-regulation evidence do not leak project-private state or bypass promotion review.
 - `01b-score-geometry-driver` must provide cross-project similarity/separation score spaces and promotion eligibility shapes.
 
 ## Exact Source References
@@ -34,6 +35,7 @@
 - C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\architecture\03-memory-taxonomy-and-data-model.md
 - C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\architecture\05-recall-orchestrator.md
 - C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\architecture\10-security-governance-and-provenance.md
+- C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-architecture-v2\architecture\27-cognitive-self-regulation-layer.md
 - C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench\Workbench\ProjectWorkbenchModels.cs
 - C:\repositories\CanDoItAll.AgentFramework.SemanticCompletion\src\CanDoItAll.AgentFramework.SemanticCompletion.Driver\Semantics\SemanticClassifier.cs
 

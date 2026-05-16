@@ -247,6 +247,7 @@ Required pre-stage:
 ```text
 request
   -> load/create cognitive workspace frame
+  -> run self-regulation assessment when answer/tool behavior is likely
   -> run attention router
   -> decide recall, answer-from-workspace, clarification, source audit, probe, review, replay, learning proposal, or abstention
 ```
@@ -254,6 +255,7 @@ request
 When the router chooses recall, the recall orchestrator must:
 
 - receive or create a `WorkspaceFrameId`,
+- preserve `SelfRegulationAssessmentId` and `AnswerPostureDecisionId` when present,
 - consider focus slots and goal stack,
 - use entity/context binding before final candidate ranking,
 - rank claim-level candidates where claims exist,
@@ -265,6 +267,8 @@ When the router chooses recall, the recall orchestrator must:
 Recall traces must include:
 
 - workspace frame id,
+- self-regulation assessment id,
+- answer posture decision id,
 - attention decision id,
 - selected claim ids,
 - selected source/evidence anchor ids,

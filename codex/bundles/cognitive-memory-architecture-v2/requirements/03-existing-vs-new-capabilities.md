@@ -58,6 +58,11 @@
 | Procedural skill memory | model procedures as skill graphs with maturity, validation, failure modes, and automation policy. |
 | Simulation sandbox | keep planning and analogies speculative until source-backed and reviewed. |
 | Metamemory answer gate | decide whether to answer, warn, clarify, source-audit, probe, review, request learning, or abstain. |
+| Cognitive self-model | store scoped competence, limits, operating principles, weak domains, known failure patterns, and self-regulation policy. |
+| Self-regulation orchestrator | evaluate workspace, evidence, calibration, risk, and self-model state into assessment, required operations, and answer posture. |
+| Humility trigger engine | detect when confidence must be reduced and when clarification, audit, probe, review, professor review, or abstention is required. |
+| Calibration health service | aggregate confidence-vs-outcome evidence by domain, task, model profile, risk, and feature pattern. |
+| Professor review service | use larger model/expert review as governed challenge/audit input, not as source truth. |
 
 ## Closed Projection-Boundary Changes to Existing RAG Driver
 
@@ -131,6 +136,15 @@ V1.1:
 ## New Score Geometry Constraints
 
 - Recall, attention, belief, salience, replay, probing, answer gating, Epistemic Drive, mindmap similarity, activation, procedure maturity, and cross-project promotion must declare score spaces.
+- Self-regulation assessment, self-model competence, calibration health, professor-review routing, and answer posture must declare score spaces.
 - Qdrant and SemanticCompletion similarity results are dimensions, not final ranks.
 - A behavior-affecting scalar score, priority, confidence, or weight is invalid unless it is a derived `ScoreScalarProjection` linked to a `ScoreEvaluationTrace`.
 - Score dimensions used for filtering, review, replay, calibration, or dashboards must be relational/indexable, not hidden only in JSON.
+
+## New Self-Regulation Constraints
+
+- Self-Regulation is calibrated agency under epistemic uncertainty, not consciousness or prompt persona.
+- Self-model, professor review, salience, prediction error, probing feedback, and generated summaries cannot become canonical truth directly.
+- Answer gate consumes self-regulation assessment/posture and can become stricter, but not looser without a new trace.
+- Professor review output becomes governed evidence, probe/source-audit/regression/review/learning input, or mutation candidate only.
+- Calibration health changes must be versioned and reviewable where behavior-affecting thresholds or score shapes change.
