@@ -28,6 +28,8 @@ public sealed class AppTabStripTests : TestContext
         Assert.Contains("push_pin", cut.Markup);
         Assert.Contains("bedtime", cut.Markup);
         Assert.Contains("cda-inline-tab__actions", cut.Markup);
+        Assert.Contains("app-tab-strip-main-row", cut.Markup);
+        Assert.Contains("cda-tab-strip__controls", cut.Markup);
 
         cut.Find("button[title='Move right']").Click();
         cut.Find("button[title='Sleep/wake']").Click();
