@@ -1,0 +1,28 @@
+mindmap
+  root((Docker Delivery Platform))
+    Container baseline
+      Base image ownership
+      Non root runtime
+      SBOM
+      Health checks
+      Version pinning
+    Local compose
+      App service
+      Database
+      Queue
+      Fake external services
+      Observability collector
+    CI pipeline
+      Build once
+      Test same digest
+      Scan
+      Sign
+      Promote by digest
+    Security
+      No secrets in image layers
+      Runtime injection
+      Secret scan before promotion
+    Developer experience
+      Clean machine first run
+      Explicit reset commands
+      Named heavy profiles

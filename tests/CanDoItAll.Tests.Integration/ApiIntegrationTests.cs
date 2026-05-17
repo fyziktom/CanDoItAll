@@ -161,6 +161,12 @@ public sealed class ApiIntegrationTests
         Assert.True(paths.TryGetProperty("/api/processes/runs/{runId}/manager-directives", out _));
         Assert.True(paths.TryGetProperty("/api/agents/{agentId}/execution-runs/{executionRunId}/artifacts", out _));
         Assert.True(paths.TryGetProperty("/api/agents/{agentId}/execution-runs/{executionRunId}/log", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/status", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/snapshot", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/sources/ingest", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/consolidation/runs", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/recall", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/review-items/{reviewItemId}/decisions", out _));
     }
 
     private static ProcessDefinitionEditorModel BuildFilterTestDefinition()
