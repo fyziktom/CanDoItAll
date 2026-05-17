@@ -2,7 +2,7 @@
 
 ## Status
 
-- Ready after `01b-score-geometry-driver` and `15-cognitive-workspace-attention-router`.
+- Passed on 2026-05-16 after `01b-score-geometry-driver`, `15-cognitive-workspace-attention-router`, and `14-neuro-foundation-claim-evidence-ledger`.
 - Critical foundation for recall activation, replay, probing, Epistemic Drive, and calibration.
 
 ## Execution Control
@@ -98,6 +98,40 @@ Add prediction expectation/error records and a durable multi-dimensional cogniti
 - Signal vector preservation tests.
 - Negative policy tests.
 - Implementation report with deviations.
+
+## Implementation Result
+
+- Added typed prediction expectation/error and cognitive signal contracts, ids, signal source/consumer enums, suggested action enums, request/query/result DTOs, and ledger/engine interfaces.
+- Added durable prediction expectation/error, signal, evidence-anchor link, error-signal link, and signal consumer policy records with EF configurations and query indexes.
+- Added `CognitiveMemorySignalLedger`, implementing signal publication/query and prediction expectation/error observation. Publication requires actor, policy profile, evidence anchors, score components, and consumer policy. Signal consumer policies always record `CanCreateTruthDirectly = false`.
+- Added `PredictionErrorSeverity` score space and expanded the salience signal score space with context-separation/wrong-scope dimensions. Prediction error severity uses score geometry-derived display severity; salience signals persist dimensions and score traces without scalar-only priority.
+- Registered `ICognitiveMemorySignalLedger` and `ICognitiveMemoryPredictionErrorEngine` in module DI.
+- Added SQLite/PostgreSQL migrations:
+  - `src/CanDoItAll.Migrations.Sqlite/Migrations/20260516200140_AddCognitiveMemoryPredictionSignals.cs`
+  - `src/CanDoItAll.Migrations.PostgreSql/Migrations/20260516200210_AddCognitiveMemoryPredictionSignals.cs`
+- Added unit tests in `tests/CanDoItAll.Tests.Unit/CognitiveMemorySignalLedgerTests.cs` and integration tests in `tests/CanDoItAll.Tests.Integration/CognitiveMemorySignalPersistenceModelTests.cs`.
+
+## Closure Proof
+
+- `dotnet build .\src\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj --no-restore` passed with zero warnings.
+- `dotnet build .\tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-restore` passed with zero warnings.
+- `dotnet build .\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-restore` passed with zero warnings.
+- `dotnet build .\src\CanDoItAll.Migrations.Sqlite\CanDoItAll.Migrations.Sqlite.csproj --no-restore` passed with zero warnings.
+- `dotnet build .\src\CanDoItAll.Migrations.PostgreSql\CanDoItAll.Migrations.PostgreSql.csproj --no-restore` passed with zero warnings.
+- `dotnet test .\tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~CognitiveMemorySignalLedgerTests"` passed 4/4.
+- `dotnet test .\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --filter "FullyQualifiedName~CognitiveMemorySignalPersistenceModelTests"` passed 2/2.
+- `dotnet test .\tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~CognitiveMemory"` passed 59/59.
+- `dotnet test .\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --filter "FullyQualifiedName~CognitiveMemory"` passed 16/16.
+- SQLite and PostgreSQL `dotnet ef migrations has-pending-model-changes` reported no model changes.
+- Static production grep found no direct authoritative upsert/direct write/final scalar score/score-breakdown dictionary/signal-priority/salience-priority surfaces in `src/CanDoItAll.Modules.CognitiveMemory`.
+- Hot-path performance scan over `src/CanDoItAll.Modules.CognitiveMemory/Signals` found no critical findings: 0 `IndexOf`, 0 `Substring`, 0 casing conversions, 0 `Replace`, 0 `params`, 0 regex, and 17/17 classes sealed. LINQ hits are bounded EF query shaping or small component/evidence shaping.
+- `dotnet build .\CanDoItAll.slnx --no-restore` passed with zero warnings.
+
+## Deviations
+
+- No UI/browser proof was run because this subbundle is backend foundation only and no UI files changed.
+- Replay scheduling, probing workflows, Epistemic Drive proposal generation, answer gate behavior, and final activation tuning remain intentionally gated to later subbundles.
+- Salience signals do not persist a local scalar priority. Any future display magnitude must come from score geometry trace/projection; in this phase salience score space remains dimensional and trace-backed.
 
 ## Browser Validation Logging
 

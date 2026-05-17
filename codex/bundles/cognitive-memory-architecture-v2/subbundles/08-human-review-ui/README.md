@@ -2,7 +2,7 @@
 
 ## Status
 
-- Ready after recall and consolidation traces exist.
+- Passed on 2026-05-16. Closure recorded in `checklists/cognitive-memory-implementation-control.xlsx` and `reviews/01-execution-report.md`.
 
 ## Execution Control
 
@@ -84,6 +84,39 @@
 
 - Record route, viewport, screenshot path, and result in `reviews/01-execution-report.md`.
 - Include at least review queue, trace viewer, and projection/consolidation health routes.
+
+## Implementation Summary
+
+- Added `ICognitiveMemoryReviewUiService` and DTO contracts for the operator dashboard, memory explorer/detail, source links, review queue/detail, recall trace stages/candidates/source references, consolidation runs, projection health, replay jobs, procedure skills, and simulation review counts.
+- Added `/cognitive-memory` and `/memory` routes using existing BaseLib `PageScaffold`, `PageHeader`, `Tabs`, `Grid`, `Stack`, `SurfaceCard`, `SummaryTile`, `StatusBadge`, `SelectionListItem`, `Button`, and `EmptyState` patterns.
+- Added shell navigation entry `Cognitive Memory`.
+- Wired supported V1 review decisions through the service: approve, reject, request changes, and defer. The service records actor id, notes, decision timestamp, concurrency token, and review status only; it does not mutate canonical memory truth directly.
+- Added human-readable enum labels, provider-safe bounded reads, SQLite-safe client-side ordering for `DateTimeOffset` fields, and explicit provider-backed adapter failures when optional semantic/RAG drivers are resolved without registrations.
+- Did not fake split/merge/reopen actions; those remain future backend-contract scope.
+
+## Validation Evidence
+
+- `dotnet build src\CanDoItAll.Web\CanDoItAll.Web.csproj --no-restore` passed with zero warnings.
+- `dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-restore --filter FullyQualifiedName~CognitiveMemoryReviewUiServiceTests` passed 2/2.
+- `dotnet test tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --no-restore --filter FullyQualifiedName~CognitiveMemoryPageTests` passed 1/1.
+- `dotnet test tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj --no-restore --filter FullyQualifiedName~CognitiveMemoryReviewUiPlaywrightTests` passed 1/1.
+- `dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-restore --filter FullyQualifiedName~CognitiveMemory` passed 76/76.
+- Static scans found no direct truth/upsert/final-score mutation, blocking async calls, TODOs, or unimplemented stubs in the review UI surface. Expected matches were limited to supported review decisions, service/test `SaveChangesAsync`, and Blazor injection defaults.
+
+## Browser Evidence
+
+- `.artifacts/playwright/cognitive-memory-review-ui/review-dashboard-desktop.png`
+- `.artifacts/playwright/cognitive-memory-review-ui/memory-explorer-desktop.png`
+- `.artifacts/playwright/cognitive-memory-review-ui/review-queue-desktop.png`
+- `.artifacts/playwright/cognitive-memory-review-ui/trace-viewer-desktop.png`
+- `.artifacts/playwright/cognitive-memory-review-ui/health-mobile.png`
+- `.artifacts/playwright/cognitive-memory-review-ui/browser-plugin-route.png`
+- `.artifacts/playwright/cognitive-memory-review-ui/browser-plugin-route-snapshot.md`
+
+## Closure Notes
+
+- The CanDoItAll components MCP transport was unavailable (`Transport closed`), so component selection used local BaseLib and existing page-source inspection as the fallback. Build, component tests, Playwright, and Browser plugin proof validate the fallback.
+- `07-maf-workflow-integration` may start. Probing workbench, answer gate UI, Epistemic Drive UI, cross-project memory UI, and distributed compute remain blocked until their own gates.
 
 ## Progression Gate
 

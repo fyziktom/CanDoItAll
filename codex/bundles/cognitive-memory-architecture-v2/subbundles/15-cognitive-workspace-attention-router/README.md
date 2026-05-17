@@ -2,7 +2,7 @@
 
 ## Status
 
-- Ready after `01b-score-geometry-driver`, `04-memory-taxonomy-and-projections`, and `14-neuro-foundation-claim-evidence-ledger`.
+- Passed on 2026-05-16 after `01b-score-geometry-driver`, `04-memory-taxonomy-and-projections`, and `14-neuro-foundation-claim-evidence-ledger`.
 - Critical foundation for recall, probing, MAF, and answer gating.
 
 ## Execution Control
@@ -98,6 +98,37 @@ Add active working-memory frames and explainable attention routing so recall/pro
 - Attention-routing fixture output.
 - Trace sample showing focus and inhibited candidates.
 - Implementation report with deviations.
+
+## Implementation Result
+
+- Added typed workspace/attention contracts, frame/goal/focus/open-question/inhibition/attention-decision records, EF configurations, index guardrails, and DI registration.
+- Added `ICognitiveMemoryWorkspaceService` for scoped frame get/create/update, expiry handling, goal stack/open question/focus state, context-budget enforcement, and explicit budget/context-boundary inhibition.
+- Added `ICognitiveMemoryAttentionRouter` over the existing score geometry driver. Decisions persist score traces, matched-shape counts, missing-dimension counts, scalar projection bucket, structured reason kind, required next actions, workspace frame id, and self-regulation/posture hooks.
+- Added recall trace columns for workspace frame id, attention decision id, self-regulation assessment id, answer posture decision id, selected claim/evidence counts, inhibited candidate count, and limiting budget.
+- Added SQLite/PostgreSQL migrations:
+  - `src/CanDoItAll.Migrations.Sqlite/Migrations/20260516193656_AddCognitiveMemoryWorkspaceAttention.cs`
+  - `src/CanDoItAll.Migrations.PostgreSql/Migrations/20260516193736_AddCognitiveMemoryWorkspaceAttention.cs`
+- Added unit tests in `tests/CanDoItAll.Tests.Unit/CognitiveMemoryWorkspaceAttentionTests.cs` and integration tests in `tests/CanDoItAll.Tests.Integration/CognitiveMemoryWorkspacePersistenceModelTests.cs`.
+
+## Closure Proof
+
+- `dotnet build .\src\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj --no-restore` passed with zero warnings.
+- `dotnet build .\tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-restore` passed with zero warnings.
+- `dotnet build .\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-restore` passed with zero warnings.
+- `dotnet build .\src\CanDoItAll.Migrations.Sqlite\CanDoItAll.Migrations.Sqlite.csproj --no-restore` passed with zero warnings.
+- `dotnet build .\src\CanDoItAll.Migrations.PostgreSql\CanDoItAll.Migrations.PostgreSql.csproj --no-restore` passed with zero warnings.
+- `dotnet test .\tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~CognitiveMemoryWorkspaceAttentionTests"` passed 6/6.
+- `dotnet test .\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --filter "FullyQualifiedName~CognitiveMemoryWorkspacePersistenceModelTests"` passed 2/2.
+- `dotnet test .\tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~CognitiveMemory"` passed 55/55.
+- `dotnet test .\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --filter "FullyQualifiedName~CognitiveMemory"` passed 14/14.
+- SQLite and PostgreSQL `dotnet ef migrations has-pending-model-changes` reported no model changes.
+- Static production grep found no direct authoritative upsert/direct write/final scalar score/score-breakdown dictionary surfaces in `src/CanDoItAll.Modules.CognitiveMemory`.
+- `dotnet build .\CanDoItAll.slnx --no-restore` passed with zero warnings.
+
+## Deviations
+
+- No UI/browser proof was run because this subbundle is backend foundation only and no UI files changed.
+- The MAF and probing work here is intentionally a typed attachment seam and trace hook only. Full MAF context contribution, probing workflows, recall ranking, answer rendering, salience, replay, and answer gate behavior remain gated to later subbundles.
 
 ## Browser Validation Logging
 

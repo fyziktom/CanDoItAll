@@ -6,6 +6,7 @@ using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.Modules.Activity;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Automation;
+using CanDoItAll.Modules.CognitiveMemory;
 using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Factory;
@@ -59,6 +60,7 @@ public static class RuntimeHostServiceCollectionExtensions
         services.AddActivityModule();
         services.AddAgentFrameworkModule(configuration);
         services.AddAutomationModule(configuration, contentRootPath);
+        services.AddCognitiveMemoryModule();
         services.AddSchedulerPlannerModule();
         services.AddCollaborationModule();
         services.AddCrmHrModule();

@@ -2,7 +2,8 @@
 
 ## Status
 
-- Ready after taxonomy, projections, workspace/attention, signals, and score geometry.
+- Passed on 2026-05-16. `06-consolidation-engine` may start.
+- Backend-only phase; no UI files changed and browser proof remains deferred until trace/review UI work.
 
 ## Execution Control
 
@@ -13,6 +14,15 @@
 - If evidence is missing or an upstream assumption fails, mark the subbundle `Blocked` and stop downstream work.
 ## Objective
 - Implement staged recall with explicit modes, budgets, traces, source loading, context-pack construction, and safe degradation.
+
+## Implementation Result
+
+- Added typed recall modes, intent kinds, budgets, trace stages, channel decisions, candidate ids, context-pack ids, context sections, source refs, and the `ICognitiveMemoryRecallOrchestrator` service contract.
+- Implemented bounded staged recall across lexical durable-memory reads, typed-filter projection search, workspace focus, signal activation, and graph expansion.
+- Integrated `RecallCandidate` score geometry vectors/shapes for ranking, inhibition, context-boundary decisions, and persisted score trace/component rows.
+- Persisted recall trace stages, recall candidates, context packs, context sections, source refs, answer-gate/context-pack hooks, and provider-specific migrations for SQLite and PostgreSQL.
+- Rendered context packs with source/evidence refs, explicit selected/inhibited/excluded candidates, budget exclusions, and restricted-source redaction behavior.
+- Recorded unavailable projection/filter/embedding channels as trace stages instead of falling back to unscoped vector search plus local post-filtering.
 
 ## Covered Inputs
 
@@ -82,6 +92,25 @@
 - Qdrant unavailability degrades predictably.
 - Context packs cite source evidence and budget exclusions.
 
+## Closure Proof
+
+- `dotnet build .\src\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj --no-restore` passed with zero warnings.
+- `dotnet build .\src\CanDoItAll.Migrations.Sqlite\CanDoItAll.Migrations.Sqlite.csproj --no-restore` passed with zero warnings.
+- `dotnet build .\src\CanDoItAll.Migrations.PostgreSql\CanDoItAll.Migrations.PostgreSql.csproj --no-restore` passed with zero warnings.
+- `dotnet ef migrations has-pending-model-changes` passed for SQLite and PostgreSQL; both reported no model changes after the recall migration.
+- `dotnet test .\tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~CognitiveMemoryRecallOrchestratorTests"` passed 4/4.
+- `dotnet test .\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --filter "FullyQualifiedName~CognitiveMemoryRecallPersistenceModelTests"` passed 2/2.
+- `dotnet test .\tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~CognitiveMemory"` passed 63/63.
+- `dotnet test .\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --filter "FullyQualifiedName~CognitiveMemory"` passed 18/18.
+- `dotnet build .\CanDoItAll.slnx --no-restore` passed with zero warnings.
+- Static grep proof found no local final-score, `Dictionary<string,double>`, authoritative upsert, direct truth mutation, unscoped vector, or local post-filtering surfaces under recall.
+- .NET hot-path performance scan found no critical issues after removing the avoidable token-estimation `params` allocation and metadata dictionary allocations.
+
+## Deviations
+
+- Browser proof remains not applicable for this backend-only phase and is still owned by `08-human-review-ui`.
+- Answer-gate, MAF integration, probing, consolidation, Epistemic Drive, cross-project promotion, and distributed compute behavior remain downstream work.
+
 ## Proof Required
 
 - Recall unit and integration tests.
@@ -95,8 +124,8 @@
 
 ## Progression Gate
 
-- Proceed to MAF integration only after recall output is stable and traceable.
-- Proceed to MAF integration only after recall output is stable, traceable, and projection-backed channels consume the completed projection boundary hardening gate.
+- Proceed to consolidation next. Proceed to MAF integration only after recall output is stable, traceable, and downstream review/UI/procedure/replay gates permit it.
+- Projection-backed channels consume the completed projection boundary hardening gate through typed filters; unscoped search plus local post-filtering remains forbidden.
 - Reopen `01b-score-geometry-driver` if recall requires score dimensions or shapes not covered by the registered score space.
 
 ## Suggested Agent Prompt

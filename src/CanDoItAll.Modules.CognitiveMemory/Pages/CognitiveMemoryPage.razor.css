@@ -1,0 +1,135 @@
+.cognitive-memory-summary ::deep .cda-summary-tile--badge {
+    flex: 0 1 11.5rem;
+    padding: 0.45rem 0.7rem;
+}
+
+.cognitive-memory-layout {
+    align-items: start;
+    margin-top: 1rem;
+    min-width: 0;
+}
+
+.cognitive-memory-layout > * {
+    min-width: 0;
+}
+
+.cognitive-memory-card-title {
+    margin-top: 0.25rem;
+    color: rgb(15 23 42);
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.cognitive-memory-muted {
+    margin: 0.5rem 0 0;
+    color: rgb(71 85 105);
+    font-size: 0.875rem;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+}
+
+::deep .cognitive-memory-detail-stack {
+    display: grid;
+    gap: 1rem;
+    margin-top: 1rem;
+    min-width: 0;
+}
+
+::deep .cognitive-memory-detail-stack--compact {
+    gap: 0.75rem;
+}
+
+::deep .cognitive-memory-facts {
+    display: grid;
+    gap: 0.65rem;
+    grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+    min-width: 0;
+}
+
+::deep .cognitive-memory-fact {
+    display: grid;
+    gap: 0.2rem;
+    min-width: 0;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid rgb(226 232 240);
+    border-radius: 0.5rem;
+    background: rgb(248 250 252);
+}
+
+::deep .cognitive-memory-fact span,
+::deep .cognitive-memory-field span {
+    color: rgb(100 116 139);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+::deep .cognitive-memory-fact strong {
+    min-width: 0;
+    color: rgb(15 23 42);
+    font-size: 0.9rem;
+    overflow-wrap: anywhere;
+}
+
+::deep .cognitive-memory-field {
+    display: grid;
+    gap: 0.35rem;
+}
+
+::deep .cognitive-memory-notes {
+    min-height: 5.5rem;
+    resize: vertical;
+}
+
+::deep .cognitive-memory-section {
+    padding-top: 1rem;
+    border-top: 1px solid rgb(226 232 240);
+}
+
+::deep .cognitive-memory-section h3 {
+    margin: 0 0 0.75rem;
+    color: rgb(15 23 42);
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+::deep .cognitive-memory-list {
+    display: grid;
+    gap: 0.65rem;
+}
+
+::deep .cognitive-memory-row {
+    display: grid;
+    gap: 0.35rem;
+    min-width: 0;
+    padding: 0.7rem 0.8rem;
+    border: 1px solid rgb(226 232 240);
+    border-radius: 0.5rem;
+    background: rgb(248 250 252);
+    color: rgb(51 65 85);
+    font-size: 0.875rem;
+}
+
+::deep .cognitive-memory-row strong {
+    min-width: 0;
+    color: rgb(15 23 42);
+    overflow-wrap: anywhere;
+}
+
+::deep .cognitive-memory-row span,
+::deep .cognitive-memory-row small {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+::deep .cognitive-memory-row small {
+    color: rgb(100 116 139);
+    font-size: 0.75rem;
+    line-height: 1.45;
+}
+
+@media (max-width: 900px) {
+    .cognitive-memory-summary ::deep .cda-summary-tile--badge {
+        flex-basis: 10.5rem;
+    }
+}

@@ -2,7 +2,7 @@
 
 ## Status
 
-- Ready after module foundation.
+- Passed on 2026-05-16.
 
 ## Execution Control
 
@@ -76,15 +76,24 @@
 
 ## Acceptance Checklist
 
-- Projections are rebuildable from durable memory.
-- Search failures are visible in recall/projection traces.
-- Adapter tests do not require external API access.
+- Passed: projection entries require durable memory ids, source hashes, payload hashes, evidence anchors, embedding/projection profiles, and typed claim/context/belief metadata.
+- Passed: search failures are visible at the adapter boundary when required payload metadata such as `memoryRecordId` or `payloadHash` is missing.
+- Passed: adapter tests use deterministic in-memory fakes and do not require external API access.
+- Passed: public Cognitive Memory projection uses `ProjectAsync`, not direct authoritative upsert semantics.
 
 ## Proof Required
 
-- Adapter unit tests.
-- Optional Qdrant integration test evidence.
-- Projection failure and rebuild test evidence.
+- `src/CanDoItAll.Modules.CognitiveMemory/Projection/CognitiveMemoryProjectionAdapterContracts.cs`
+- `src/CanDoItAll.Modules.CognitiveMemory/Projection/CognitiveMemoryProjectionAdapters.cs`
+- `src/CanDoItAll.Modules.CognitiveMemory/CognitiveMemoryModuleServiceCollectionExtensions.cs`
+- `tests/CanDoItAll.Tests.Unit/CognitiveMemoryProjectionAdapterTests.cs`
+- `dotnet build .\src\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj --no-restore`
+- `dotnet build .\tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-restore`
+- `dotnet test .\tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --filter FullyQualifiedName~CognitiveMemoryProjectionAdapterTests` passed 10/10.
+- `dotnet test .\tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --filter CognitiveMemory` passed 43/43.
+- `dotnet test .\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --filter CognitiveMemory` passed 10/10.
+- `dotnet build .\CanDoItAll.slnx --no-restore` passed with zero warnings.
+- Optional Qdrant integration was not run; this phase proves provider-neutral adapter behavior without requiring a local Qdrant endpoint.
 
 ## Browser Validation Logging
 
@@ -93,7 +102,7 @@
 
 ## Progression Gate
 
-- Proceed to taxonomy/projection modeling only after adapter boundaries and failure behavior consume the completed projection boundary hardening proof.
+- Passed: taxonomy/projection modeling may start. It must consume the projection adapter as rebuildable projection state and must not treat RAG/Qdrant as canonical memory truth.
 
 ## Suggested Agent Prompt
 

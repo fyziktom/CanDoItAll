@@ -18,7 +18,7 @@ The cognitive self-regulation update connects the distributed control pieces int
 
 The execution-control update adds a durable phase ledger for implementation agents. The implementation is long enough that markdown alone is not a reliable memory surface; agents must keep the checklist workbook and execution report synchronized after every phase.
 
-This bundle is architecture and planning only. It does not authorize implementation of the Cognitive Memory module.
+This bundle was prepared as architecture and planning. The current execution thread is implementing it under the separate user implementation request and tracking each phase in the workbook and execution report.
 
 ## Outcome Contract
 
@@ -58,7 +58,7 @@ The CodeAnalytics snapshot used for the main CanDoItAll source inspection was `s
 
 The 2026-05-16 execution-control review also used CodeAnalytics snapshot `snap-20260516150857-2c8fb8f3`, focused on `CanDoItAll.AgentFramework.Maf`, `CanDoItAll.AgentFramework.Core`, source snapshot providers, Workbench, Processes, Automation, SchedulerPlanner, Infrastructure, SharedKernel, and relevant test projects.
 
-Additional inspection of the supplied current code confirms that Workbench, Process, and Workflow source snapshot providers are already present and registered; integration tests validate deterministic paging, redaction, restricted hash policy, and Workbench z-index metadata extraction. This update therefore focuses on consuming those boundaries and adding the missing probing/evaluation layer rather than reopening the prerequisite boundary design.
+Additional inspection of the supplied current code confirms that Workbench, Process, and Workflow source snapshot providers are already present and registered; integration tests validate deterministic paging, redaction, restricted hash policy, and Workbench z-index metadata extraction. Implementation is now proceeding phase by phase from this bundle: module foundation, common guardrails, score geometry, neuro claim/evidence foundation, source ingestion, SemanticCompletion/RAG adapter boundaries, durable taxonomy/projection lifecycle, cognitive workspace/attention routing, prediction-error/salience signal foundations, staged recall orchestration, consolidation engine foundations, temporal replay scheduler foundations, procedural skill memory/simulation foundations, and human review UI are complete.
 
 ## Existing Building Blocks Found
 
@@ -193,10 +193,10 @@ Root validation closure remains named `11-validation-and-architecture-closure` f
 - Interactive Memory Probing status: `Architecture added, implementation not started`
 - Neuro-cognitive patch status: `Architecture integrated, implementation not started`
 - Cognitive Self-Regulation status: `Architecture integrated, implementation not started`
-- Execution status: `Not started`
-- Subbundle gate review: `Prerequisite gates passed`
+- Execution status: `In progress - 08-human-review-ui completed`
+- Subbundle gate review: `Prerequisite, module foundation, common helper guardrail, score geometry, neuro foundation, source ingestion, semantic/RAG adapter, durable taxonomy/projection, workspace/attention, prediction-error/salience, recall, consolidation, temporal replay, procedure skill/simulation, and human review UI gates passed`
 - Final closure gate: `Not started`
-- Browser validation analytics: `Planned only`
+- Browser validation analytics: `08-human-review-ui passed with Playwright and Browser plugin evidence`
 
 ## Source Notes
 

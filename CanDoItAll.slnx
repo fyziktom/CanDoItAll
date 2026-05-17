@@ -31,6 +31,7 @@
     <Project Path="src/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj" />
     <Project Path="src/CanDoItAll.Modules.Automation/CanDoItAll.Modules.Automation.csproj" />
     <Project Path="src/CanDoItAll.Modules.Collaboration/CanDoItAll.Modules.Collaboration.csproj" />
+    <Project Path="src/CanDoItAll.Modules.CognitiveMemory/CanDoItAll.Modules.CognitiveMemory.csproj" />
     <Project Path="src/CanDoItAll.Modules.CrmHr/CanDoItAll.Modules.CrmHr.csproj" />
     <Project Path="src/CanDoItAll.Modules.Factory/CanDoItAll.Modules.Factory.csproj" />
     <Project Path="src/CanDoItAll.Modules.Plugins/CanDoItAll.Modules.Plugins.csproj" />

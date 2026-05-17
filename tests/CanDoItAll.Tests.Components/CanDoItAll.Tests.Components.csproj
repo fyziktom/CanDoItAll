@@ -34,6 +34,7 @@
     <ProjectReference Include="..\..\src\CanDoItAll.Components.WebGlLib\CanDoItAll.Components.WebGlLib.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Components.WebGlSandbox\CanDoItAll.Components.WebGlSandbox.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.SchedulerPlanner\CanDoItAll.Modules.SchedulerPlanner.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj" />

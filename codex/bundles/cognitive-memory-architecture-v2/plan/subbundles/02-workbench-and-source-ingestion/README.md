@@ -2,7 +2,8 @@
 
 ## Status
 
-- Ready after prerequisite gate and module foundation.
+- Completed on 2026-05-16.
+- Closure gate passed after deterministic source ingestion implementation, targeted unit/integration proof, EF migration proof, static boundary checks, and full solution build.
 
 ## Execution Control
 
@@ -36,10 +37,10 @@
 
 ## Deliverables
 
-- Workbench source adapter design.
-- Source cursor/hash strategy.
-- Layout and relation extraction rules.
-- Golden source fixture with semantically similar but context-separated nodes.
+- Source ingestion service consuming existing Workbench, Process runtime, and Workflow runtime source snapshot providers.
+- Source cursor/hash/idempotency strategy through typed ingestion requests, source-scan runs, source manifests, and provider-owned cursors.
+- Layout, graph-link, context-hint, evidence-anchor, provenance, tombstone, and scan-failure persistence.
+- Golden source fixture coverage with Workbench nodes that preserve semantically similar but context-separated source identities and hashes.
 
 ## Dependency Impact
 
@@ -50,8 +51,8 @@
 ## Validation Depth
 
 - Unit tests for source item keys and content hashes.
-- Integration tests for snapshot scan, incremental scan, deletion/tombstone behavior, and cursor resume.
-- Performance review for large Workbench surfaces so the adapter does not materialize unbounded source graphs before paging.
+- Integration tests for first scan, duplicate idempotency rejection, incremental rescan, deletion/tombstone behavior, source failure persistence, EF indexes, and source text persistence.
+- Static boundary checks confirmed no direct Workbench persistence types, no `PositionZ` dependency, and no forbidden direct-write/upsert/projection markers in the Cognitive Memory module.
 
 ## Implementation Steps
 
@@ -68,15 +69,21 @@
 
 ## Acceptance Checklist
 
-- Source scans are resumable.
+- Source scans are resumable through provider-owned cursors and idempotent run records.
 - Source hashes change only when authoritative source content changes.
-- Layout metadata and graph links are available for later recall scoring.
+- Layout metadata, graph links, context hints, evidence anchors, and tombstones are available for later recall/scoring phases.
+- Source snapshot providers remain authoritative; Cognitive Memory stores source references and immutable scan artifacts without writing Workbench-owned state.
 
 ## Proof Required
 
-- Source adapter unit tests.
-- Integration test covering first scan and incremental rescan.
-- Traceable fixture data committed with expected hashes.
+- `tests/CanDoItAll.Tests.Unit/CognitiveMemorySourceIngestionTests.cs`
+- `tests/CanDoItAll.Tests.Integration/CognitiveMemorySourceIngestionPersistenceTests.cs`
+- `src/CanDoItAll.Migrations.Sqlite/Migrations/20260516182243_AddCognitiveMemorySourceIngestion.cs`
+- `src/CanDoItAll.Migrations.PostgreSql/Migrations/20260516182244_AddCognitiveMemorySourceIngestion.cs`
+- `dotnet test tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~CognitiveMemory"` passed 33/33.
+- `dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~CognitiveMemory"` passed 10/10.
+- `dotnet ef migrations has-pending-model-changes` passed for SQLite and PostgreSQL with no model changes.
+- `dotnet build CanDoItAll.slnx --no-restore` passed with zero warnings.
 
 ## Browser Validation Logging
 
@@ -85,7 +92,8 @@
 
 ## Progression Gate
 
-- Proceed to projections only after source snapshots can be replayed deterministically.
+- Passed. `03-semantic-and-rag-adapters` may start.
+- `04-memory-taxonomy-and-projections` remains blocked until SemanticCompletion/RAG adapter boundaries close.
 
 ## Suggested Agent Prompt
 

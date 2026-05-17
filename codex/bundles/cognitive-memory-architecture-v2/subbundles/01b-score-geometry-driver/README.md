@@ -2,7 +2,8 @@
 
 ## Status
 
-- Ready after `01a-common-drivers-helpers-and-ef-guardrails`.
+- Completed on 2026-05-16.
+- Closure proof: score geometry module/support/unit/integration/migration builds passed; targeted score geometry unit tests passed 6/6; score persistence model guardrail integration test passed 1/1; SQLite/PostgreSQL score migrations generated; production grep proof found no scalar-only behavior scoring surfaces.
 - Critical foundation for recall, attention, belief, salience, replay, probing, answer gating, Epistemic Drive, and cross-project promotion.
 
 ## Execution Control
@@ -120,4 +121,3 @@ Implement the generic score geometry foundation: typed score spaces, reusable di
 ## Suggested Agent Prompt
 
 Implement the generic Cognitive Memory score geometry foundation only. Provide strongly typed score spaces, vectors, shapes, scalar projections, evaluation traces, deterministic fakes, persistence/index proof, and tests that reject scalar-only behavior. Do not implement feature policy or tune final weights.
-

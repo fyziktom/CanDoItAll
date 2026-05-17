@@ -2,7 +2,7 @@
 
 ## Status
 
-- Ready after source ingestion and adapters.
+- Passed on 2026-05-16.
 
 ## Execution Control
 
@@ -69,16 +69,29 @@
 
 ## Acceptance Checklist
 
-- Every memory record points to source evidence.
-- Projection records are deleteable and rebuildable.
-- Relation confidence and source evidence are explicit.
-- Projection similarity is stored as a projection signal dimension, not as final memory rank.
+- Passed: canonical memory projection requests require source links and evidence anchors; record-to-evidence-anchor links are queryable rows.
+- Passed: projection records are item-level, deleteable, rebuildable, and keyed by store/kind/profile/source hash/payload hash.
+- Passed: relation confidence and source evidence are explicit through score trace ids, buckets, relation evidence rows, and evidence anchors.
+- Passed: projection/activation/relation strength use score trace hooks and display-only projections; no final rank/final score production surface was added.
 
 ## Proof Required
 
-- Taxonomy invariant tests.
-- Projection rebuild tests.
-- Golden dataset proving context-separated relatedness.
+- `src/CanDoItAll.Modules.CognitiveMemory/Taxonomy/CognitiveMemoryTaxonomyContracts.cs`
+- `src/CanDoItAll.Modules.CognitiveMemory/Taxonomy/CognitiveMemoryTaxonomyEntities.cs`
+- `src/CanDoItAll.Modules.CognitiveMemory/Taxonomy/CognitiveMemoryTaxonomyEntityConfigurations.cs`
+- `src/CanDoItAll.Modules.CognitiveMemory/Taxonomy/CognitiveMemoryTaxonomyServices.cs`
+- `src/CanDoItAll.Modules.CognitiveMemory/Foundation/CognitiveMemoryEntities.cs`
+- `src/CanDoItAll.Modules.CognitiveMemory/Foundation/CognitiveMemoryEntityConfigurations.cs`
+- `src/CanDoItAll.Migrations.Sqlite/Migrations/20260516190839_AddCognitiveMemoryTaxonomyAndProjections.cs`
+- `src/CanDoItAll.Migrations.PostgreSql/Migrations/20260516191004_AddCognitiveMemoryTaxonomyAndProjections.cs`
+- `tests/CanDoItAll.Tests.Unit/CognitiveMemoryTaxonomyTests.cs`
+- `tests/CanDoItAll.Tests.Integration/CognitiveMemoryTaxonomyPersistenceModelTests.cs`
+- `dotnet test .\tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --filter FullyQualifiedName~CognitiveMemoryTaxonomyTests` passed 6/6.
+- `dotnet test .\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --filter FullyQualifiedName~CognitiveMemoryTaxonomyPersistenceModelTests` passed 2/2.
+- `dotnet test .\tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --filter CognitiveMemory` passed 49/49.
+- `dotnet test .\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --filter CognitiveMemory` passed 12/12.
+- SQLite/PostgreSQL pending-model checks reported no changes.
+- `dotnet build .\CanDoItAll.slnx --no-restore` passed with zero warnings.
 
 ## Browser Validation Logging
 
@@ -87,7 +100,7 @@
 
 ## Progression Gate
 
-- Proceed to recall only after canonical memory, projection lifecycle, and score-geometry-backed activation/relation signals are trustworthy.
+- Passed for workspace/attention. Recall remains blocked until workspace/attention and prediction-error/salience foundations close.
 
 ## Suggested Agent Prompt
 

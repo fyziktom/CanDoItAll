@@ -1,0 +1,646 @@
+@page "/cognitive-memory"
+@page "/memory"
+@namespace CanDoItAll.Modules.CognitiveMemory.Pages
+
+<PageTitle>Cognitive Memory</PageTitle>
+
+<PageScaffold MaxWidthClass="max-w-full" data-testid="cognitive-memory-page">
+    <Header>
+        <PageHeader Eyebrow="Cognitive Memory"
+                    Title="Memory review"
+                    Description="Inspect recall evidence, review decisions, consolidation health, projection health, replay queues, and procedure maturity.">
+            <Actions>
+                <Button Icon="refresh"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Class="cda-button--quick"
+                        title="Refresh memory review"
+                        aria-label="Refresh memory review"
+                        Click="RefreshAsync"
+                        Disabled="@isBusy"
+                        IsBusy="@isBusy"
+                        data-testid="cognitive-memory-refresh" />
+            </Actions>
+        </PageHeader>
+    </Header>
+
+    <Lead>
+        <Cluster Gap="LayoutGap.Small"
+                 Wrap="FlexWrap.Wrap"
+                 Class="cognitive-memory-summary"
+                 data-testid="cognitive-memory-summary">
+            <SummaryTile Label="Memory items"
+                         Value="@SummaryValue(snapshot?.Summary.MemoryRecordCount)"
+                         HelperText="Canonical memory records available to inspect."
+                         Tone="info"
+                         Badge="true"
+                         Compact="true"
+                         ShowHelperTextAsTooltip="true" />
+            <SummaryTile Label="Pending review"
+                         Value="@SummaryValue(snapshot?.Summary.PendingReviewCount)"
+                         HelperText="Review items waiting for an explicit operator decision."
+                         Tone="warning"
+                         Badge="true"
+                         Compact="true"
+                         ShowHelperTextAsTooltip="true" />
+            <SummaryTile Label="Recall traces"
+                         Value="@SummaryValue(snapshot?.Summary.RecallTraceCount)"
+                         HelperText="Trace records explaining staged retrieval and context-pack selection."
+                         Tone="secondary"
+                         Badge="true"
+                         Compact="true"
+                         ShowHelperTextAsTooltip="true" />
+            <SummaryTile Label="Projection issues"
+                         Value="@SummaryValue(snapshot?.Summary.ProjectionIssueCount)"
+                         HelperText="Projection records that failed or require rebuild."
+                         Tone="@(snapshot?.Summary.ProjectionIssueCount > 0 ? "danger" : "success")"
+                         Badge="true"
+                         Compact="true"
+                         ShowHelperTextAsTooltip="true" />
+            <SummaryTile Label="Procedure review"
+                         Value="@SummaryValue(snapshot?.Summary.ProcedureReviewCount)"
+                         HelperText="Procedure skills that are draft, observed, high-risk, or waiting for validation."
+                         Tone="@(snapshot?.Summary.ProcedureReviewCount > 0 ? "warning" : "success")"
+                         Badge="true"
+                         Compact="true"
+                         ShowHelperTextAsTooltip="true" />
+            <SummaryTile Label="Simulation review"
+                         Value="@SummaryValue(snapshot?.Summary.SimulationReviewCount)"
+                         HelperText="Speculative procedure simulations that require review."
+                         Tone="@(snapshot?.Summary.SimulationReviewCount > 0 ? "warning" : "success")"
+                         Badge="true"
+                         Compact="true"
+                         ShowHelperTextAsTooltip="true" />
+        </Cluster>
+    </Lead>
+
+    <ChildContent>
+        @if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <SurfaceCard Soft="true" data-testid="cognitive-memory-error">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Action required" />
+                <h2 class="cognitive-memory-card-title">Memory review refresh failed</h2>
+                <p class="cognitive-memory-muted">@errorMessage</p>
+            </SurfaceCard>
+        }
+
+        @if (isLoading)
+        {
+            <SurfaceCard data-testid="cognitive-memory-loading">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Loading" />
+                <h2 class="cognitive-memory-card-title">Refreshing memory evidence</h2>
+                <p class="cognitive-memory-muted">Loading review items, recall traces, consolidation runs, projection states, replay jobs, and procedure skills.</p>
+            </SurfaceCard>
+        }
+        else if (snapshot is null)
+        {
+            <EmptyState Eyebrow="No snapshot"
+                        Title="Memory review data is unavailable"
+                        Description="Refresh the page after the runtime database is ready." />
+        }
+        else
+        {
+            <div class="cognitive-memory-tab-scope">
+                <Tabs @bind-SelectedIndex="activeTabIndex"
+                      RenderMode="TabRenderMode.Server"
+                      Variant="TabsVariant.WorkspacePrimary"
+                      OverflowMode="TabsOverflowMode.Wrap"
+                      AriaLabel="Cognitive Memory review tabs"
+                      data-testid="cognitive-memory-tabs">
+                    <TabsItem Text="Dashboard"
+                              Icon="dashboard"
+                              data-testid="cognitive-memory-tab-dashboard">
+                        <Grid Gap="LayoutGap.Large"
+                              Class="cognitive-memory-layout"
+                              ColumnTemplateXl="minmax(22rem,0.85fr) minmax(0,1.15fr)">
+                            <SurfaceCard data-testid="cognitive-memory-dashboard-review">
+                                <Split Gap="LayoutGap.Small"
+                                       AlignItems="AlignItems.Start">
+                                    <div>
+                                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Review queue" />
+                                        <h2 class="cognitive-memory-card-title">Pending evidence decisions</h2>
+                                    </div>
+                                    <StatusBadge Tone="@ReviewQueueTone" Text="@($"{snapshot.Summary.PendingReviewCount} pending")" />
+                                </Split>
+                                @ReviewQueueList()
+                            </SurfaceCard>
+
+                            <SurfaceCard data-testid="cognitive-memory-dashboard-trace">
+                                <Split Gap="LayoutGap.Small"
+                                       AlignItems="AlignItems.Start">
+                                    <div>
+                                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Recall trace" />
+                                        <h2 class="cognitive-memory-card-title">Why memory entered context</h2>
+                                    </div>
+                                    <StatusBadge Tone="info" Text="@($"{snapshot.RecallTraces.Count} loaded")" />
+                                </Split>
+                                @RecallTraceDetail(Compact: true)
+                            </SurfaceCard>
+                        </Grid>
+
+                        <Grid Gap="LayoutGap.Large"
+                              Class="cognitive-memory-layout"
+                              ColumnTemplateXl="minmax(0,1fr) minmax(0,1fr)">
+                            @ProjectionHealthPanel()
+                            @ProcedurePanel()
+                        </Grid>
+                    </TabsItem>
+
+                    <TabsItem Text="Memory"
+                              Icon="storage"
+                              BadgeText="@snapshot.MemoryRecords.Count.ToString()"
+                              data-testid="cognitive-memory-tab-memory">
+                        <Grid Gap="LayoutGap.Large"
+                              Class="cognitive-memory-layout"
+                              ColumnTemplateXl="minmax(20rem,0.85fr) minmax(0,1.15fr)"
+                              data-testid="cognitive-memory-explorer">
+                            <SurfaceCard>
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Explorer" />
+                                <h2 class="cognitive-memory-card-title">Memory items</h2>
+                                @MemoryExplorerList()
+                            </SurfaceCard>
+
+                            <SurfaceCard data-testid="cognitive-memory-detail">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Detail" />
+                                <h2 class="cognitive-memory-card-title">Memory source evidence</h2>
+                                @MemoryDetailPanel()
+                            </SurfaceCard>
+                        </Grid>
+                    </TabsItem>
+
+                    <TabsItem Text="Review queue"
+                              Icon="fact_check"
+                              BadgeText="@snapshot.Summary.PendingReviewCount.ToString()"
+                              data-testid="cognitive-memory-tab-review">
+                        <Grid Gap="LayoutGap.Large"
+                              Class="cognitive-memory-layout"
+                              ColumnTemplateXl="minmax(20rem,0.85fr) minmax(0,1.15fr)"
+                              data-testid="cognitive-memory-review-queue">
+                            <SurfaceCard>
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Queue" />
+                                <h2 class="cognitive-memory-card-title">Review items</h2>
+                                @ReviewQueueList()
+                            </SurfaceCard>
+
+                            <SurfaceCard data-testid="cognitive-memory-review-detail">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Decision" />
+                                <h2 class="cognitive-memory-card-title">Selected review item</h2>
+                                @ReviewDecisionPanel()
+                            </SurfaceCard>
+                        </Grid>
+                    </TabsItem>
+
+                    <TabsItem Text="Recall traces"
+                              Icon="travel_explore"
+                              BadgeText="@snapshot.RecallTraces.Count.ToString()"
+                              data-testid="cognitive-memory-tab-traces">
+                        <Grid Gap="LayoutGap.Large"
+                              Class="cognitive-memory-layout"
+                              ColumnTemplateXl="minmax(20rem,0.8fr) minmax(0,1.2fr)"
+                              data-testid="cognitive-memory-trace-viewer">
+                            <SurfaceCard>
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Trace list" />
+                                <h2 class="cognitive-memory-card-title">Recent recall traces</h2>
+                                @if (snapshot.RecallTraces.Count == 0)
+                                {
+                                    <EmptyState Eyebrow="No traces"
+                                                Title="No recall traces yet"
+                                                Description="Run recall-backed workflows to populate staged trace evidence." />
+                                }
+                                else
+                                {
+                                    <Stack GapScale="LayoutGap.Small" Class="mt-4">
+                                        @foreach (var trace in snapshot.RecallTraces)
+                                        {
+                                            <SelectionListItem Title="@($"{FormatLabel(trace.RecallMode)} / {FormatLabel(trace.Outcome)}")"
+                                                               Meta="@FormatDate(trace.StartedAtUtc)"
+                                                               Summary="@($"{trace.IncludedRecordCount} included, {trace.ExcludedRecordCount} excluded, {trace.InhibitedCandidateCount} inhibited")"
+                                                               Dense="true"
+                                                               IsSelected="@(selectedRecallTraceId == trace.Id)"
+                                                               DataTestId="@($"cognitive-memory-trace-{trace.Id:N}")"
+                                                               OnSelect="@(() => SelectRecallTrace(trace.Id))">
+                                                <Status>
+                                                    <StatusBadge Tone="@RunTone(trace.Outcome)" Text="@FormatLabel(trace.Outcome)" />
+                                                </Status>
+                                            </SelectionListItem>
+                                        }
+                                    </Stack>
+                                }
+                            </SurfaceCard>
+
+                            <SurfaceCard>
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Trace detail" />
+                                <h2 class="cognitive-memory-card-title">Stage, candidate, and source evidence</h2>
+                                @RecallTraceDetail()
+                            </SurfaceCard>
+                        </Grid>
+                    </TabsItem>
+
+                    <TabsItem Text="Health"
+                              Icon="monitor_heart"
+                              BadgeText="@HealthBadgeText"
+                              data-testid="cognitive-memory-tab-health">
+                        <Grid Gap="LayoutGap.Large"
+                              Class="cognitive-memory-layout"
+                              ColumnTemplateXl="minmax(0,1fr) minmax(0,1fr)"
+                              data-testid="cognitive-memory-health">
+                            @ProjectionHealthPanel()
+                            @ConsolidationPanel()
+                            @ReplayPanel()
+                            @ProcedurePanel()
+                        </Grid>
+                    </TabsItem>
+                </Tabs>
+            </div>
+        }
+    </ChildContent>
+</PageScaffold>
+
+@code {
+    private RenderFragment MemoryExplorerList() => builder =>
+    {
+        if (snapshot is null)
+        {
+            return;
+        }
+
+        if (snapshot.MemoryRecords.Count == 0)
+        {
+            builder.OpenComponent<EmptyState>(0);
+            builder.AddAttribute(1, nameof(EmptyState.Eyebrow), "No records");
+            builder.AddAttribute(2, nameof(EmptyState.Title), "No memory records yet");
+            builder.AddAttribute(3, nameof(EmptyState.Description), "Canonical memory items will appear here after source ingestion, consolidation, and review gates create durable records.");
+            builder.CloseComponent();
+            return;
+        }
+
+        builder.OpenComponent<Stack>(4);
+        builder.AddAttribute(5, nameof(Stack.GapScale), LayoutGap.Small);
+        builder.AddAttribute(6, nameof(Stack.Class), "mt-4");
+        builder.AddAttribute(7, nameof(Stack.ChildContent), (RenderFragment)(stackBuilder =>
+        {
+            var sequence = 0;
+            foreach (var record in snapshot.MemoryRecords)
+            {
+                stackBuilder.OpenComponent<SelectionListItem>(sequence++);
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.Title), record.Title);
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.Eyebrow), FormatLabel(record.Kind));
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.Meta), $"{FormatLabel(record.ValidationState)} / {FormatDate(record.UpdatedAtUtc)}");
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.Summary), FirstNonEmpty(record.SummaryText, record.TopicKey, "No summary available."));
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.Dense), true);
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.IsSelected), selectedMemoryRecordId == record.Id.Value);
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.DataTestId), $"cognitive-memory-record-{record.Id.Value:N}");
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.OnSelect), EventCallback.Factory.Create(this, () => SelectMemoryRecord(record.Id.Value)));
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.Status), (RenderFragment)(statusBuilder =>
+                {
+                    statusBuilder.OpenComponent<StatusBadge>(0);
+                    statusBuilder.AddAttribute(1, nameof(StatusBadge.Tone), RecordTone(record.ValidationState, record.RiskLevel));
+                    statusBuilder.AddAttribute(2, nameof(StatusBadge.Text), $"{FormatLabel(record.ValidationState)} / {FormatLabel(record.RiskLevel)}");
+                    statusBuilder.CloseComponent();
+                }));
+                stackBuilder.CloseComponent();
+            }
+        }));
+        builder.CloseComponent();
+    };
+
+    private RenderFragment MemoryDetailPanel() => builder =>
+    {
+        var record = SelectedMemoryRecord;
+        if (record is null)
+        {
+            builder.OpenComponent<EmptyState>(0);
+            builder.AddAttribute(1, nameof(EmptyState.Eyebrow), "No selection");
+            builder.AddAttribute(2, nameof(EmptyState.Title), "Select a memory record");
+            builder.AddAttribute(3, nameof(EmptyState.Description), "Choose a record to inspect validation state, source evidence counts, score buckets, and source links.");
+            builder.CloseComponent();
+            return;
+        }
+
+        builder.OpenElement(4, "div");
+        builder.AddAttribute(5, "class", "cognitive-memory-detail-stack");
+        builder.OpenElement(6, "div");
+        builder.AddAttribute(7, "class", "cognitive-memory-facts");
+        RenderFact(builder, 8, "Kind", FormatLabel(record.Kind));
+        RenderFact(builder, 20, "Validation", FormatLabel(record.ValidationState));
+        RenderFact(builder, 32, "Risk", FormatLabel(record.RiskLevel));
+        RenderFact(builder, 44, "Sources", $"{VisibleSourceEvidenceCount(record)} source / {record.EvidenceAnchorCount} anchors");
+        RenderFact(builder, 56, "Confidence", FormatLabel(record.ConfidenceBucket));
+        RenderFact(builder, 68, "Activation", FormatLabel(record.ActivationBucket));
+        builder.CloseElement();
+
+        builder.OpenElement(80, "p");
+        builder.AddAttribute(81, "class", "cognitive-memory-muted");
+        builder.AddContent(82, FirstNonEmpty(record.SummaryText, record.TopicKey, "No summary available."));
+        builder.CloseElement();
+
+        builder.OpenElement(83, "div");
+        builder.AddAttribute(84, "class", "cognitive-memory-section");
+        builder.OpenElement(85, "h3");
+        builder.AddContent(86, "Source links");
+        builder.CloseElement();
+        if (record.SourceLinks.Count == 0)
+        {
+            RenderEmptyLine(builder, 87, "No source links are attached to this memory record.");
+        }
+        else
+        {
+            RenderMemorySourceRows(builder, 88, record.SourceLinks);
+        }
+
+        builder.CloseElement();
+        builder.CloseElement();
+    };
+
+    private RenderFragment ReviewQueueList() => builder =>
+    {
+        if (snapshot is null)
+        {
+            return;
+        }
+
+        if (snapshot.ReviewItems.Count == 0)
+        {
+            builder.OpenComponent<EmptyState>(0);
+            builder.AddAttribute(1, nameof(EmptyState.Eyebrow), "Queue clear");
+            builder.AddAttribute(2, nameof(EmptyState.Title), "No review items");
+            builder.AddAttribute(3, nameof(EmptyState.Description), "Generated memory, procedures, replay output, and projection issues will appear here when review is required.");
+            builder.CloseComponent();
+            return;
+        }
+
+        builder.OpenComponent<Stack>(4);
+        builder.AddAttribute(5, nameof(Stack.GapScale), LayoutGap.Small);
+        builder.AddAttribute(6, nameof(Stack.Class), "mt-4");
+        builder.AddAttribute(7, nameof(Stack.ChildContent), (RenderFragment)(stackBuilder =>
+        {
+            var sequence = 0;
+            foreach (var item in snapshot.ReviewItems)
+            {
+                stackBuilder.OpenComponent<SelectionListItem>(sequence++);
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.Title), item.SubjectTitle);
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.Eyebrow), FormatLabel(item.ReviewKind));
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.Meta), $"{FormatLabel(item.SubjectKind)} / {FormatDate(item.CreatedAtUtc)}");
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.Summary), item.ReasonText);
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.Dense), true);
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.IsSelected), selectedReviewItemId == item.Id.Value);
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.DataTestId), $"cognitive-memory-review-item-{item.Id.Value:N}");
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.OnSelect), EventCallback.Factory.Create(this, () => SelectReviewItem(item.Id.Value)));
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.Status), (RenderFragment)(statusBuilder =>
+                {
+                    statusBuilder.OpenComponent<StatusBadge>(0);
+                    statusBuilder.AddAttribute(1, nameof(StatusBadge.Tone), ReviewTone(item.Status, item.RiskLevel));
+                    statusBuilder.AddAttribute(2, nameof(StatusBadge.Text), FormatLabel(item.Status));
+                    statusBuilder.CloseComponent();
+                }));
+                stackBuilder.CloseComponent();
+            }
+        }));
+        builder.CloseComponent();
+    };
+
+    private RenderFragment ReviewDecisionPanel() => builder =>
+    {
+        var item = SelectedReviewItem;
+        if (item is null)
+        {
+            builder.OpenComponent<EmptyState>(0);
+            builder.AddAttribute(1, nameof(EmptyState.Eyebrow), "No selection");
+            builder.AddAttribute(2, nameof(EmptyState.Title), "Select a review item");
+            builder.AddAttribute(3, nameof(EmptyState.Description), "Choose a review item to inspect its subject, source evidence count, risk, and decision state.");
+            builder.CloseComponent();
+            return;
+        }
+
+        builder.OpenElement(4, "div");
+        builder.AddAttribute(5, "class", "cognitive-memory-detail-stack");
+        builder.OpenElement(6, "div");
+        builder.AddAttribute(7, "class", "cognitive-memory-facts");
+        RenderFact(builder, 8, "Subject", FormatLabel(item.SubjectKind));
+        RenderFact(builder, 20, "Risk", FormatLabel(item.RiskLevel));
+        RenderFact(builder, 32, "Evidence", item.SourceEvidenceCount.ToString());
+        RenderFact(builder, 44, "Created", FormatDate(item.CreatedAtUtc));
+        builder.CloseElement();
+        builder.OpenElement(56, "p");
+        builder.AddAttribute(57, "class", "cognitive-memory-muted");
+        builder.AddContent(58, item.ReasonText);
+        builder.CloseElement();
+        builder.OpenElement(59, "label");
+        builder.AddAttribute(60, "class", "cognitive-memory-field");
+        builder.OpenElement(61, "span");
+        builder.AddContent(62, "Decision notes");
+        builder.CloseElement();
+        builder.OpenElement(63, "textarea");
+        builder.AddAttribute(64, "class", "cda-input cda-input--textarea cognitive-memory-notes");
+        builder.AddAttribute(65, "value", reviewNotes);
+        builder.AddAttribute(66, "data-testid", "cognitive-memory-review-notes");
+        builder.AddAttribute(67, "onchange", EventCallback.Factory.CreateBinder<string>(this, value => reviewNotes = value, reviewNotes));
+        builder.CloseElement();
+        builder.CloseElement();
+        builder.OpenComponent<Cluster>(68);
+        builder.AddAttribute(69, nameof(Cluster.Gap), LayoutGap.Small);
+        builder.AddAttribute(70, nameof(Cluster.Wrap), FlexWrap.Wrap);
+        builder.AddAttribute(71, nameof(Cluster.ChildContent), (RenderFragment)(actionsBuilder =>
+        {
+            RenderDecisionButton(actionsBuilder, 0, "Approve", "check", ButtonStyle.Success, CognitiveMemoryReviewDecisionKind.Approve, "cognitive-memory-review-approve");
+            RenderDecisionButton(actionsBuilder, 10, "Reject", "close", ButtonStyle.Danger, CognitiveMemoryReviewDecisionKind.Reject, "cognitive-memory-review-reject");
+            RenderDecisionButton(actionsBuilder, 20, "Needs changes", "edit_note", ButtonStyle.Warning, CognitiveMemoryReviewDecisionKind.RequestChanges, "cognitive-memory-review-needs-changes");
+            RenderDecisionButton(actionsBuilder, 30, "Defer", "schedule", ButtonStyle.Light, CognitiveMemoryReviewDecisionKind.Defer, "cognitive-memory-review-defer");
+        }));
+        builder.CloseComponent();
+        builder.CloseElement();
+    };
+
+    private RenderFragment RecallTraceDetail(bool Compact = false) => builder =>
+    {
+        var trace = SelectedRecallTrace;
+        if (trace is null)
+        {
+            builder.OpenComponent<EmptyState>(0);
+            builder.AddAttribute(1, nameof(EmptyState.Eyebrow), "No trace");
+            builder.AddAttribute(2, nameof(EmptyState.Title), "No recall trace selected");
+            builder.AddAttribute(3, nameof(EmptyState.Description), "Recall stage, candidate, and source evidence appears once traces are recorded.");
+            builder.CloseComponent();
+            return;
+        }
+
+        builder.OpenElement(4, "div");
+        builder.AddAttribute(5, "class", Compact ? "cognitive-memory-detail-stack cognitive-memory-detail-stack--compact" : "cognitive-memory-detail-stack");
+        builder.OpenElement(6, "div");
+        builder.AddAttribute(7, "class", "cognitive-memory-facts");
+        RenderFact(builder, 8, "Mode", FormatLabel(trace.RecallMode));
+        RenderFact(builder, 20, "Outcome", FormatLabel(trace.Outcome));
+        RenderFact(builder, 32, "Claims", trace.SelectedClaimCount.ToString());
+        RenderFact(builder, 44, "Evidence", trace.SelectedEvidenceAnchorCount.ToString());
+        builder.CloseElement();
+
+        builder.OpenComponent<Stack>(56);
+        builder.AddAttribute(57, nameof(Stack.GapScale), LayoutGap.Small);
+        builder.AddAttribute(58, nameof(Stack.ChildContent), (RenderFragment)(stageBuilder =>
+        {
+            var sequence = 0;
+            foreach (var stage in trace.Stages)
+            {
+                stageBuilder.OpenElement(sequence++, "div");
+                stageBuilder.AddAttribute(sequence++, "class", "cognitive-memory-row");
+                stageBuilder.OpenElement(sequence++, "strong");
+                stageBuilder.AddContent(sequence++, $"{FormatLabel(stage.StageKind)} / {FormatLabel(stage.ChannelKind)}");
+                stageBuilder.CloseElement();
+                stageBuilder.OpenElement(sequence++, "span");
+                stageBuilder.AddContent(sequence++, $"{FormatLabel(stage.Status)}: {stage.SelectedCount} selected from {stage.CandidateCount}");
+                stageBuilder.CloseElement();
+                if (!string.IsNullOrWhiteSpace(stage.FailureMessage))
+                {
+                    stageBuilder.OpenElement(sequence++, "small");
+                    stageBuilder.AddContent(sequence++, stage.FailureMessage);
+                    stageBuilder.CloseElement();
+                }
+                stageBuilder.CloseElement();
+            }
+        }));
+        builder.CloseComponent();
+
+        if (!Compact)
+        {
+            RenderTraceCollections(builder, 100, trace);
+        }
+
+        builder.CloseElement();
+    };
+
+    private RenderFragment ProjectionHealthPanel() => builder =>
+    {
+        if (snapshot is null)
+        {
+            return;
+        }
+
+        builder.OpenComponent<SurfaceCard>(0);
+        builder.AddAttribute(1, "data-testid", "cognitive-memory-projection-health");
+        builder.AddAttribute(2, nameof(SurfaceCard.ChildContent), (RenderFragment)(contentBuilder =>
+        {
+            contentBuilder.OpenComponent<TextBlock>(0);
+            contentBuilder.AddAttribute(1, nameof(TextBlock.TextStyle), TextStyle.Eyebrow);
+            contentBuilder.AddAttribute(2, nameof(TextBlock.Value), "Projection health");
+            contentBuilder.CloseComponent();
+            contentBuilder.OpenElement(3, "h2");
+            contentBuilder.AddAttribute(4, "class", "cognitive-memory-card-title");
+            contentBuilder.AddContent(5, "Rebuild and failure state");
+            contentBuilder.CloseElement();
+            if (snapshot.ProjectionHealth.Count == 0)
+            {
+                contentBuilder.OpenComponent<EmptyState>(6);
+                contentBuilder.AddAttribute(7, nameof(EmptyState.Eyebrow), "No projections");
+                contentBuilder.AddAttribute(8, nameof(EmptyState.Title), "Projection lifecycle has no records");
+                contentBuilder.AddAttribute(9, nameof(EmptyState.Description), "Projection rows appear after canonical memory records are projected.");
+                contentBuilder.CloseComponent();
+                return;
+            }
+
+            RenderProjectionRows(contentBuilder, 10);
+        }));
+        builder.CloseComponent();
+    };
+
+    private RenderFragment ConsolidationPanel() => builder =>
+    {
+        if (snapshot is null)
+        {
+            return;
+        }
+
+        builder.OpenComponent<SurfaceCard>(0);
+        builder.AddAttribute(1, "data-testid", "cognitive-memory-consolidation-health");
+        builder.AddAttribute(2, nameof(SurfaceCard.ChildContent), (RenderFragment)(contentBuilder =>
+        {
+            contentBuilder.OpenComponent<TextBlock>(0);
+            contentBuilder.AddAttribute(1, nameof(TextBlock.TextStyle), TextStyle.Eyebrow);
+            contentBuilder.AddAttribute(2, nameof(TextBlock.Value), "Consolidation");
+            contentBuilder.CloseComponent();
+            contentBuilder.OpenElement(3, "h2");
+            contentBuilder.AddAttribute(4, "class", "cognitive-memory-card-title");
+            contentBuilder.AddContent(5, "Run output and review handoff");
+            contentBuilder.CloseElement();
+            if (snapshot.ConsolidationRuns.Count == 0)
+            {
+                contentBuilder.OpenComponent<EmptyState>(6);
+                contentBuilder.AddAttribute(7, nameof(EmptyState.Eyebrow), "No runs");
+                contentBuilder.AddAttribute(8, nameof(EmptyState.Title), "No consolidation runs yet");
+                contentBuilder.AddAttribute(9, nameof(EmptyState.Description), "Runs will show source scans, candidate creation, review handoff, and projection invalidations.");
+                contentBuilder.CloseComponent();
+                return;
+            }
+
+            RenderConsolidationRows(contentBuilder, 10);
+        }));
+        builder.CloseComponent();
+    };
+
+    private RenderFragment ReplayPanel() => builder =>
+    {
+        if (snapshot is null)
+        {
+            return;
+        }
+
+        builder.OpenComponent<SurfaceCard>(0);
+        builder.AddAttribute(1, "data-testid", "cognitive-memory-replay-health");
+        builder.AddAttribute(2, nameof(SurfaceCard.ChildContent), (RenderFragment)(contentBuilder =>
+        {
+            contentBuilder.OpenComponent<TextBlock>(0);
+            contentBuilder.AddAttribute(1, nameof(TextBlock.TextStyle), TextStyle.Eyebrow);
+            contentBuilder.AddAttribute(2, nameof(TextBlock.Value), "Replay queue");
+            contentBuilder.CloseComponent();
+            contentBuilder.OpenElement(3, "h2");
+            contentBuilder.AddAttribute(4, "class", "cognitive-memory-card-title");
+            contentBuilder.AddContent(5, "Priority and worker safety");
+            contentBuilder.CloseElement();
+            if (snapshot.ReplayJobs.Count == 0)
+            {
+                contentBuilder.OpenComponent<EmptyState>(6);
+                contentBuilder.AddAttribute(7, nameof(EmptyState.Eyebrow), "No jobs");
+                contentBuilder.AddAttribute(8, nameof(EmptyState.Title), "Replay queue is empty");
+                contentBuilder.AddAttribute(9, nameof(EmptyState.Description), "Prediction errors and salience signals will schedule replay jobs here.");
+                contentBuilder.CloseComponent();
+                return;
+            }
+
+            RenderReplayRows(contentBuilder, 10);
+        }));
+        builder.CloseComponent();
+    };
+
+    private RenderFragment ProcedurePanel() => builder =>
+    {
+        if (snapshot is null)
+        {
+            return;
+        }
+
+        builder.OpenComponent<SurfaceCard>(0);
+        builder.AddAttribute(1, "data-testid", "cognitive-memory-procedure-library");
+        builder.AddAttribute(2, nameof(SurfaceCard.ChildContent), (RenderFragment)(contentBuilder =>
+        {
+            contentBuilder.OpenComponent<TextBlock>(0);
+            contentBuilder.AddAttribute(1, nameof(TextBlock.TextStyle), TextStyle.Eyebrow);
+            contentBuilder.AddAttribute(2, nameof(TextBlock.Value), "Procedure library");
+            contentBuilder.CloseComponent();
+            contentBuilder.OpenElement(3, "h2");
+            contentBuilder.AddAttribute(4, "class", "cognitive-memory-card-title");
+            contentBuilder.AddContent(5, "Maturity, risk, and validation");
+            contentBuilder.CloseElement();
+            if (snapshot.ProcedureSkills.Count == 0)
+            {
+                contentBuilder.OpenComponent<EmptyState>(6);
+                contentBuilder.AddAttribute(7, nameof(EmptyState.Eyebrow), "No procedures");
+                contentBuilder.AddAttribute(8, nameof(EmptyState.Title), "No procedure skills yet");
+                contentBuilder.AddAttribute(9, nameof(EmptyState.Description), "Procedure skills will show maturity, risk, failure modes, and validation evidence.");
+                contentBuilder.CloseComponent();
+                return;
+            }
+
+            RenderProcedureRows(contentBuilder, 10);
+        }));
+        builder.CloseComponent();
+    };
+}

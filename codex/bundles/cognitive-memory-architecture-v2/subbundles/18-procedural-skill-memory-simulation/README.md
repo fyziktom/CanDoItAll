@@ -2,8 +2,16 @@
 
 ## Status
 
-- Ready after `01b-score-geometry-driver` and `17-temporal-replay-scheduler`.
-- Required before workflow automation promotion or MAF procedure guidance is considered complete.
+- Completed 2026-05-16 after `01b-score-geometry-driver`, `17-temporal-replay-scheduler`, `14-neuro-foundation-claim-evidence-ledger`, and `06-consolidation-engine`.
+- `08-human-review-ui` may start. Workflow automation promotion, MAF procedure guidance, answer-gate procedure decisions, Epistemic Drive procedure learning, cross-project procedure reuse, and distributed procedure replay remain blocked until their own gates close.
+
+## Implementation Result
+
+- Added typed procedural contracts, EF entities/configurations, service boundaries, DI registration, and SQLite/PostgreSQL migrations for procedure skills, ordered steps, validation evidence, failure modes, automation bindings, and speculative simulations.
+- Added `ProcedureMaturity` and `SimulationRisk` score-space coverage with persisted score traces/components for procedure maturity, validation strength, source sufficiency, risk, context separation, and review decisions.
+- Automation binding is blocked for draft/immature, source-weak, unreviewed, and high-risk procedures unless validation evidence and human review policy allow it.
+- Simulation output is always persisted as speculative with `speculative-hypothesis`, cannot become authoritative truth, and cross-project analogies are filtered by access policy.
+- Browser validation is not applicable in this backend-only phase; procedure review/detail browser proof is deferred to `08-human-review-ui`.
 
 ## Execution Control
 

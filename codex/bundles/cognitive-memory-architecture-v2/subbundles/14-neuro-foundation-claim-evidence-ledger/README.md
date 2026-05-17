@@ -2,8 +2,9 @@
 
 ## Status
 
-- Ready after `01a-common-drivers-helpers-and-ef-guardrails` and `01b-score-geometry-driver`.
+- Completed on 2026-05-16 after `01a-common-drivers-helpers-and-ef-guardrails` and `01b-score-geometry-driver`.
 - Critical foundation.
+- Downstream permission: `02-workbench-and-source-ingestion` may start.
 
 ## Execution Control
 
@@ -105,6 +106,16 @@ Add the architecture and implementation plan for atomic claims, evidence anchors
 - Mutation authority idempotency/audit proof.
 - Docker context-boundary fixture output.
 - Implementation report with deviations and reopened assumptions.
+
+## Implementation Closure
+
+- Added neuro foundation contracts/entities/configurations for evidence anchors, atomic claims, claim/evidence links, belief states, entity aliases, context frames/dimensions/boundaries, mutation commands, and mutation audit rows.
+- Added `ICognitiveMemoryMutationAuthority` implementation that records idempotent, evidence-gated, review-aware command/audit rows without directly mutating claim truth in this foundation phase.
+- Added query DTOs with bounded paging for evidence anchors, claims, context frames, and mutation audit reads.
+- Added typed projection payload validation for claim ids, context frame ids, belief state, entity ids, context boundary policies, schema kind, and schema version.
+- Generated SQLite migration `20260516175044_AddCognitiveMemoryNeuroFoundation` and PostgreSQL migration `20260516175113_AddCognitiveMemoryNeuroFoundation`.
+- Proof passed: `dotnet build` for module/unit/integration/migration projects; targeted unit tests `CognitiveMemoryNeuroFoundationTests` passed 11/11; targeted integration tests `CognitiveMemoryNeuroFoundationPersistenceModelTests` passed 3/3; FK migration grep and forbidden direct-upsert/minimum-validation/scalar-belief/untyped-projection grep passed.
+- Deviation note: full reconsolidation execution remains in downstream consolidation/replay phases. This phase added revision-lineage and version-token hooks plus audited mutation command boundaries.
 
 ## Browser Validation Logging
 
