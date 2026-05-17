@@ -96,6 +96,7 @@ public sealed class CognitiveMemoryConsolidationPersistenceModelTests
         return new CognitiveMemoryConsolidationEngine(
             fixture.Factory,
             new CognitiveMemoryMutationAuthority(fixture.Factory, fixture.Clock),
+            new CognitiveMemoryConsolidationCandidateApplicator(new CognitiveMemoryRecordValidator()),
             driver,
             fixture.Clock,
             NullLogger<CognitiveMemoryConsolidationEngine>.Instance);

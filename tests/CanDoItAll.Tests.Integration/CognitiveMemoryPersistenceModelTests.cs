@@ -37,6 +37,8 @@ public sealed class CognitiveMemoryPersistenceModelTests
         AssertEntityTable<CognitiveMemoryRecallTraceRecord>(entityTypes, "CognitiveMemory_RecallTraces");
         AssertEntityTable<CognitiveMemoryReviewItemRecord>(entityTypes, "CognitiveMemory_ReviewItems");
         AssertEntityTable<CognitiveMemoryRunRecord>(entityTypes, "CognitiveMemory_Runs");
+        AssertEntityTable<CognitiveMemoryAutomationSettingsRecord>(entityTypes, "CognitiveMemory_AutomationSettings");
+        AssertEntityTable<CognitiveMemoryExternalSourceIngestionRecord>(entityTypes, "CognitiveMemory_ExternalSourceIngestions");
         AssertFoundationIndexes(entityTypes);
         AssertEnumStateFieldsAreNotPersistedAsStrings(entityTypes);
 
@@ -82,7 +84,9 @@ public sealed class CognitiveMemoryPersistenceModelTests
             [typeof(CognitiveMemoryProjectionStateRecord)] = [nameof(CognitiveMemoryProjectionStateRecord.ProjectionKind), nameof(CognitiveMemoryProjectionStateRecord.Status)],
             [typeof(CognitiveMemoryRecallTraceRecord)] = [nameof(CognitiveMemoryRecallTraceRecord.OperationMode), nameof(CognitiveMemoryRecallTraceRecord.Outcome)],
             [typeof(CognitiveMemoryReviewItemRecord)] = [nameof(CognitiveMemoryReviewItemRecord.ReviewKind), nameof(CognitiveMemoryReviewItemRecord.Status), nameof(CognitiveMemoryReviewItemRecord.SubjectKind), nameof(CognitiveMemoryReviewItemRecord.RiskLevel)],
-            [typeof(CognitiveMemoryRunRecord)] = [nameof(CognitiveMemoryRunRecord.RunKind), nameof(CognitiveMemoryRunRecord.Status), nameof(CognitiveMemoryRunRecord.OperationMode)]
+            [typeof(CognitiveMemoryRunRecord)] = [nameof(CognitiveMemoryRunRecord.RunKind), nameof(CognitiveMemoryRunRecord.Status), nameof(CognitiveMemoryRunRecord.OperationMode)],
+            [typeof(CognitiveMemoryAutomationSettingsRecord)] = [nameof(CognitiveMemoryAutomationSettingsRecord.ScheduleMode)],
+            [typeof(CognitiveMemoryExternalSourceIngestionRecord)] = [nameof(CognitiveMemoryExternalSourceIngestionRecord.SourceKind), nameof(CognitiveMemoryExternalSourceIngestionRecord.Status)]
         };
 
         foreach (var (entityClrType, propertyNames) in stateProperties)

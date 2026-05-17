@@ -1,6 +1,8 @@
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.Common;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Rendering;
 using System.Text;
 
@@ -12,6 +14,15 @@ public partial class CognitiveMemoryPage
 
     [Inject]
     public ICognitiveMemoryReviewUiService ReviewUiService { get; set; } = default!;
+
+    [Inject]
+    public ICognitiveMemoryAutomationSettingsService AutomationSettingsService { get; set; } = default!;
+
+    [Inject]
+    public ICognitiveMemorySourceIngestionService SourceIngestionService { get; set; } = default!;
+
+    [Inject]
+    public ICognitiveMemoryExternalSourceIngestionService ExternalSourceIngestionService { get; set; } = default!;
 
     [Inject]
     public NotificationService NotificationService { get; set; } = default!;
@@ -28,6 +39,21 @@ public partial class CognitiveMemoryPage
     private int activeTabIndex;
     private bool isLoading = true;
     private bool isBusy;
+    private CognitiveMemoryAutomationScheduleMode automationScheduleMode = CognitiveMemoryAutomationScheduleMode.ManualOnly;
+    private string nightlyLocalTime = "02:00";
+    private int idleMinutes = 30;
+    private string scheduledLocalTimesText = string.Empty;
+    private bool autoIngestProjectStructure = true;
+    private bool autoIngestProcessRuntime = true;
+    private bool autoConsolidateAfterIngestion = true;
+    private string manualSourceScopeText = string.Empty;
+    private int manualSourceTake = 250;
+    private string manualIngestionStatus = "Ready.";
+    private int manualIngestionProgress;
+    private string externalSourceUrl = string.Empty;
+    private string externalSourceStatus = "Ready.";
+    private int externalSourceProgress;
+    private CognitiveMemoryExternalSourceIngestResult? lastExternalSourceResult;
 
     private CognitiveMemoryReviewQueueItem? SelectedReviewItem
         => snapshot?.ReviewItems.FirstOrDefault(item => item.Id.Value == selectedReviewItemId);
@@ -37,6 +63,9 @@ public partial class CognitiveMemoryPage
 
     private CognitiveMemoryRecallTraceView? SelectedRecallTrace
         => snapshot?.RecallTraces.FirstOrDefault(trace => trace.Id == selectedRecallTraceId);
+
+    private string ProjectScopePlaceholder
+        => ProjectId?.ToString("D") ?? "Optional process scope id";
 
     private string ReviewQueueTone
         => snapshot?.Summary.HighRiskReviewCount > 0
@@ -89,7 +118,28 @@ public partial class CognitiveMemoryPage
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadAutomationSettingsAsync();
         await RefreshAsync();
+    }
+
+    private async Task LoadAutomationSettingsAsync()
+    {
+        try
+        {
+            var settings = await AutomationSettingsService.GetAsync(CancellationToken.None);
+            automationScheduleMode = settings.ScheduleMode;
+            nightlyLocalTime = settings.NightlyLocalTime;
+            idleMinutes = settings.IdleMinutes;
+            scheduledLocalTimesText = string.Join(Environment.NewLine, settings.ScheduledLocalTimes);
+            autoIngestProjectStructure = settings.AutoIngestProjectStructure;
+            autoIngestProcessRuntime = settings.AutoIngestProcessRuntime;
+            autoConsolidateAfterIngestion = settings.AutoConsolidateAfterIngestion;
+        }
+        catch (Exception exception)
+        {
+            errorMessage = exception.Message;
+            NotificationService.Error("Memory settings failed", exception.Message);
+        }
     }
 
     private async Task RefreshAsync()
@@ -175,12 +225,234 @@ public partial class CognitiveMemoryPage
 
     private async Task LoadAfterDecisionAsync()
     {
+        await ReloadSnapshotAsync();
+    }
+
+    private async Task ReloadSnapshotAsync()
+    {
         snapshot = await ReviewUiService.GetSnapshotAsync(
             new CognitiveMemoryReviewUiQuery(ProjectId),
             CancellationToken.None);
         selectedMemoryRecordId = ResolveSelectedMemoryRecordId(snapshot, selectedMemoryRecordId);
         selectedReviewItemId = ResolveSelectedReviewItemId(snapshot, selectedReviewItemId);
         selectedRecallTraceId = ResolveSelectedRecallTraceId(snapshot, selectedRecallTraceId);
+    }
+
+    private async Task SaveAutomationSettingsAsync()
+    {
+        if (isBusy)
+        {
+            return;
+        }
+
+        isBusy = true;
+        errorMessage = string.Empty;
+
+        try
+        {
+            var settings = await AutomationSettingsService.SaveAsync(new CognitiveMemoryAutomationSettingsUpdate(
+                automationScheduleMode,
+                nightlyLocalTime,
+                idleMinutes,
+                ParseScheduledLocalTimes(),
+                autoIngestProjectStructure,
+                autoIngestProcessRuntime,
+                autoConsolidateAfterIngestion,
+                OperatorActorId));
+            scheduledLocalTimesText = string.Join(Environment.NewLine, settings.ScheduledLocalTimes);
+            NotificationService.Success("Memory settings saved", FormatLabel(settings.ScheduleMode));
+        }
+        catch (Exception exception)
+        {
+            errorMessage = exception.Message;
+            NotificationService.Error("Memory settings failed", exception.Message);
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private async Task IngestProjectStructureAsync()
+    {
+        await RunManualSourceIngestionAsync(MemorySourceKind.WorkbenchProjectStructure);
+    }
+
+    private async Task IngestProcessesAsync()
+    {
+        await RunManualSourceIngestionAsync(MemorySourceKind.ProcessRuntime);
+    }
+
+    private async Task RunManualSourceIngestionAsync(MemorySourceKind sourceKind)
+    {
+        if (isBusy)
+        {
+            return;
+        }
+
+        isBusy = true;
+        errorMessage = string.Empty;
+        manualIngestionProgress = 15;
+        manualIngestionStatus = $"Starting {FormatLabel(sourceKind).ToLowerInvariant()} ingestion.";
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
+
+        try
+        {
+            var scopeId = ResolveManualScopeId(sourceKind);
+            var result = await SourceIngestionService.IngestAsync(new CognitiveMemorySourceIngestionRequest(
+                sourceKind,
+                scopeId,
+                new CognitiveMemoryIdempotencyKey($"ui:{sourceKind}:{Guid.NewGuid():N}"),
+                Take: manualSourceTake,
+                ProjectId: ProjectId ?? (sourceKind == MemorySourceKind.WorkbenchProjectStructure ? scopeId : null)));
+
+            manualIngestionProgress = 100;
+            manualIngestionStatus = $"{FormatLabel(result.Status)}: {result.CreatedSourceItemCount} created, {result.UpdatedSourceItemCount} updated, {result.CreatedEvidenceAnchorCount} anchors.";
+            NotificationService.Success("Memory ingestion finished", manualIngestionStatus);
+            await ReloadSnapshotAsync();
+        }
+        catch (Exception exception)
+        {
+            manualIngestionProgress = 100;
+            manualIngestionStatus = exception.Message;
+            errorMessage = exception.Message;
+            NotificationService.Error("Memory ingestion failed", exception.Message);
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private async Task UploadExternalSourceAsync(InputFileChangeEventArgs args)
+    {
+        if (isBusy)
+        {
+            return;
+        }
+
+        var file = args.File;
+        isBusy = true;
+        errorMessage = string.Empty;
+        externalSourceProgress = 15;
+        externalSourceStatus = $"Uploading {file.Name}.";
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
+
+        try
+        {
+            await using var stream = file.OpenReadStream(10 * 1024 * 1024);
+            lastExternalSourceResult = await ExternalSourceIngestionService.IngestFileAsync(
+                ProjectId,
+                file.Name,
+                file.ContentType,
+                stream,
+                file.Size,
+                OperatorActorId);
+
+            ApplyExternalSourceResult(lastExternalSourceResult);
+            NotificationService.Success("External source ingested", externalSourceStatus);
+            await ReloadSnapshotAsync();
+        }
+        catch (Exception exception)
+        {
+            externalSourceProgress = 100;
+            externalSourceStatus = exception.Message;
+            errorMessage = exception.Message;
+            NotificationService.Error("External source failed", exception.Message);
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private async Task IngestExternalLinkAsync()
+    {
+        if (isBusy)
+        {
+            return;
+        }
+
+        if (!Uri.TryCreate(externalSourceUrl, UriKind.Absolute, out var uri) ||
+            uri.Scheme is not ("http" or "https"))
+        {
+            externalSourceStatus = "Enter an absolute HTTP or HTTPS URL.";
+            return;
+        }
+
+        isBusy = true;
+        errorMessage = string.Empty;
+        externalSourceProgress = 15;
+        externalSourceStatus = $"Fetching {uri.Host}.";
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
+
+        try
+        {
+            lastExternalSourceResult = await ExternalSourceIngestionService.IngestWebsiteAsync(
+                ProjectId,
+                uri,
+                OperatorActorId);
+
+            ApplyExternalSourceResult(lastExternalSourceResult);
+            NotificationService.Success("Website ingested", externalSourceStatus);
+            await ReloadSnapshotAsync();
+        }
+        catch (Exception exception)
+        {
+            externalSourceProgress = 100;
+            externalSourceStatus = exception.Message;
+            errorMessage = exception.Message;
+            NotificationService.Error("Website ingestion failed", exception.Message);
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private IReadOnlyList<string> ParseScheduledLocalTimes()
+    {
+        if (string.IsNullOrWhiteSpace(scheduledLocalTimesText))
+        {
+            return [];
+        }
+
+        return scheduledLocalTimesText
+            .Split(['\r', '\n', ',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToList();
+    }
+
+    private Guid ResolveManualScopeId(MemorySourceKind sourceKind)
+    {
+        if (string.IsNullOrWhiteSpace(manualSourceScopeText))
+        {
+            if (ProjectId.HasValue)
+            {
+                return ProjectId.Value;
+            }
+
+            if (sourceKind == MemorySourceKind.ProcessRuntime)
+            {
+                return Guid.Empty;
+            }
+
+            throw new InvalidOperationException("Project structure ingestion requires a project id or scope id.");
+        }
+
+        return Guid.TryParse(manualSourceScopeText, out var scopeId)
+            ? scopeId
+            : throw new InvalidOperationException("Scope id must be a GUID.");
+    }
+
+    private void ApplyExternalSourceResult(CognitiveMemoryExternalSourceIngestResult result)
+    {
+        externalSourceProgress = result.ProgressPercent;
+        externalSourceStatus = result.FailureMessage is null
+            ? $"{FormatLabel(result.Status)}: {result.StatusMessage}"
+            : result.FailureMessage;
     }
 
     private static Guid? ResolveSelectedMemoryRecordId(
@@ -937,6 +1209,14 @@ public partial class CognitiveMemoryPage
         builder.CloseElement();
     }
 
-    private static string FirstNonEmpty(params string[] values)
+    private static string FirstNonEmpty(params string?[] values)
         => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
+
+    private static string TruncateListText(string value, int maxLength)
+    {
+        var normalized = string.Join(" ", value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        return normalized.Length <= maxLength
+            ? normalized
+            : $"{normalized[..Math.Max(0, maxLength - 1)]}...";
+    }
 }

@@ -17,6 +17,8 @@ public sealed class CognitiveMemoryRecallOrchestrator(
     IClock clock,
     ILogger<CognitiveMemoryRecallOrchestrator> logger) : ICognitiveMemoryRecallOrchestrator
 {
+    private const int OverlapDeduplicationMinimumCharacters = 80;
+
     public async ValueTask<CognitiveMemoryRecallResult> RecallAsync(
         CognitiveMemoryRecallRequest request,
         CancellationToken cancellationToken = default)
@@ -821,10 +823,8 @@ public sealed class CognitiveMemoryRecallOrchestrator(
         List<string> warnings)
     {
         var builder = new StringBuilder();
-        if (!string.IsNullOrWhiteSpace(candidate.Record.SummaryText))
-        {
-            builder.AppendLine(candidate.Record.SummaryText.Trim());
-        }
+        var appendedBlocks = new HashSet<string>(StringComparer.Ordinal);
+        _ = AppendDistinctBlock(builder, candidate.Record.SummaryText, prefix: null, appendedBlocks);
 
         var canonical = candidate.Record.CanonicalText.Trim();
         if (canonical.Length > 0)
@@ -832,8 +832,10 @@ public sealed class CognitiveMemoryRecallOrchestrator(
             var bytes = Encoding.UTF8.GetByteCount(canonical);
             if (bytes <= remainingSourceBytes && PolicyCanRead(candidate.Record.AccessLevel, policyContext))
             {
-                builder.AppendLine(canonical);
-                remainingSourceBytes -= bytes;
+                if (AppendDistinctBlock(builder, canonical, prefix: null, appendedBlocks))
+                {
+                    remainingSourceBytes -= bytes;
+                }
             }
             else
             {
@@ -852,17 +854,22 @@ public sealed class CognitiveMemoryRecallOrchestrator(
             var bytes = Encoding.UTF8.GetByteCount(sourceSummary);
             if (bytes <= remainingSourceBytes)
             {
-                builder.AppendLine($"Source detail: {sourceSummary}");
-                remainingSourceBytes -= bytes;
+                if (AppendDistinctBlock(builder, sourceSummary, "Source detail: ", appendedBlocks))
+                {
+                    remainingSourceBytes -= bytes;
+                }
+
                 continue;
             }
 
             if (remainingSourceBytes > 0)
             {
                 var snippet = sourceSummary[..Math.Min(sourceSummary.Length, remainingSourceBytes)];
-                builder.AppendLine($"Source detail: {snippet}");
-                warnings.Add($"Source byte budget truncated source detail for '{candidate.Record.Title}'.");
-                remainingSourceBytes = 0;
+                if (AppendDistinctBlock(builder, snippet, "Source detail: ", appendedBlocks))
+                {
+                    warnings.Add($"Source byte budget truncated source detail for '{candidate.Record.Title}'.");
+                    remainingSourceBytes = 0;
+                }
             }
             else
             {
@@ -870,13 +877,66 @@ public sealed class CognitiveMemoryRecallOrchestrator(
             }
         }
 
+        var unavailableReasons = new HashSet<CognitiveMemoryRecallExclusionReasonKind>();
         foreach (var sourceRef in sourceRefs.Where(sourceRef => !sourceRef.IncludedInContext))
         {
+            if (!unavailableReasons.Add(sourceRef.ExclusionReasonKind))
+            {
+                continue;
+            }
+
             builder.AppendLine($"Source unavailable: {sourceRef.ExclusionReasonKind}.");
         }
 
         return builder.ToString().Trim();
     }
+
+    private static bool AppendDistinctBlock(
+        StringBuilder builder,
+        string? text,
+        string? prefix,
+        HashSet<string> appendedBlocks)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        var normalized = NormalizeContextBlock(text);
+        if (normalized.Length == 0 || IsRepeatedContextBlock(normalized, appendedBlocks))
+        {
+            return false;
+        }
+
+        appendedBlocks.Add(normalized);
+        builder.AppendLine(string.IsNullOrEmpty(prefix) ? text.Trim() : $"{prefix}{text.Trim()}");
+        return true;
+    }
+
+    private static bool IsRepeatedContextBlock(
+        string normalized,
+        HashSet<string> appendedBlocks)
+    {
+        foreach (var appendedBlock in appendedBlocks)
+        {
+            if (appendedBlock.Equals(normalized, StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            if (Math.Min(appendedBlock.Length, normalized.Length) >= OverlapDeduplicationMinimumCharacters &&
+                (appendedBlock.Contains(normalized, StringComparison.Ordinal) ||
+                 normalized.Contains(appendedBlock, StringComparison.Ordinal)))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static string NormalizeContextBlock(string text)
+        => string.Join(" ", text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
 
     private async Task<IReadOnlyList<CognitiveMemoryRecallSourceRef>> LoadSourceRefsAsync(
         AppDbContext dbContext,

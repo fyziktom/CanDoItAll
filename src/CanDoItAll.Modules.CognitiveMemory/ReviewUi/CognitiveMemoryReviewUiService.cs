@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -6,7 +7,8 @@ namespace CanDoItAll.Modules.CognitiveMemory;
 
 public sealed class CognitiveMemoryReviewUiService(
     IDbContextFactory<AppDbContext> dbContextFactory,
-    IClock clock) : ICognitiveMemoryReviewUiService
+    IClock clock,
+    ICognitiveMemoryConsolidationCandidateApplicator consolidationCandidateApplicator) : ICognitiveMemoryReviewUiService
 {
     private const int MaximumTake = 50;
 
@@ -73,9 +75,11 @@ public sealed class CognitiveMemoryReviewUiService(
         reviewItem.DecisionNotes = request.Notes.Trim();
         reviewItem.ConcurrencyToken = Guid.NewGuid();
 
+        await ApplyConsolidationReviewDecisionAsync(dbContext, reviewItem, request, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
         var subjectTitles = await ResolveSubjectTitlesAsync(dbContext, [reviewItem], cancellationToken);
-        return MapReviewItem(reviewItem, subjectTitles);
+        var candidatePreviews = await LoadCandidatePreviewsAsync(dbContext, [reviewItem], cancellationToken);
+        return MapReviewItem(reviewItem, subjectTitles, candidatePreviews);
     }
 
     private static void ValidateQuery(CognitiveMemoryReviewUiQuery query)
@@ -120,6 +124,46 @@ public sealed class CognitiveMemoryReviewUiService(
             CognitiveMemoryReviewDecisionKind.Defer => CognitiveMemoryReviewStatus.Deferred,
             _ => throw new ArgumentOutOfRangeException(nameof(decisionKind), decisionKind, "Review decision is not supported.")
         };
+
+    private async Task ApplyConsolidationReviewDecisionAsync(
+        AppDbContext dbContext,
+        CognitiveMemoryReviewItemRecord reviewItem,
+        CognitiveMemoryReviewDecisionRequest request,
+        CancellationToken cancellationToken)
+    {
+        var candidate = await dbContext.Set<CognitiveMemoryConsolidationCandidateRecord>()
+            .SingleOrDefaultAsync(item => item.ReviewItemId == reviewItem.Id, cancellationToken);
+        if (candidate is null)
+        {
+            return;
+        }
+
+        if (request.DecisionKind == CognitiveMemoryReviewDecisionKind.Reject)
+        {
+            candidate.Status = CognitiveMemoryConsolidationCandidateStatus.Rejected;
+            candidate.ConcurrencyToken = Guid.NewGuid();
+            return;
+        }
+
+        if (request.DecisionKind != CognitiveMemoryReviewDecisionKind.Approve)
+        {
+            return;
+        }
+
+        var payload = JsonSerializer.Deserialize(
+            candidate.PayloadJson,
+            CognitiveMemoryJsonSerializerContext.Default.CognitiveMemoryConsolidationCandidatePayload)
+            ?? throw new JsonException($"Consolidation candidate '{candidate.Id:D}' payload was empty.");
+        _ = await consolidationCandidateApplicator.ApplyAsync(
+            dbContext,
+            candidate,
+            payload,
+            CognitiveMemoryValidationState.Approved,
+            CognitiveMemoryStabilityState.Active,
+            request.ActorId,
+            clock.GetUtcNow(),
+            cancellationToken);
+    }
 
     private static async Task<CognitiveMemoryReviewUiSummary> LoadSummaryAsync(
         AppDbContext dbContext,
@@ -302,14 +346,16 @@ public sealed class CognitiveMemoryReviewUiService(
             .Take(query.Take)
             .ToArray();
         var subjectTitles = await ResolveSubjectTitlesAsync(dbContext, reviewItems, cancellationToken);
+        var candidatePreviews = await LoadCandidatePreviewsAsync(dbContext, reviewItems, cancellationToken);
         return reviewItems
-            .Select(item => MapReviewItem(item, subjectTitles))
+            .Select(item => MapReviewItem(item, subjectTitles, candidatePreviews))
             .ToArray();
     }
 
     private static CognitiveMemoryReviewQueueItem MapReviewItem(
         CognitiveMemoryReviewItemRecord item,
-        IReadOnlyDictionary<Guid, string> subjectTitles)
+        IReadOnlyDictionary<Guid, string> subjectTitles,
+        IReadOnlyDictionary<Guid, CognitiveMemoryReviewCandidatePreview> candidatePreviews)
         => new(
             new CognitiveMemoryReviewItemId(item.Id),
             item.ProjectId,
@@ -326,7 +372,99 @@ public sealed class CognitiveMemoryReviewUiService(
             item.DecidedAtUtc,
             item.DecidedByActorId,
             item.DecisionNotes,
-            item.ConcurrencyToken);
+            item.ConcurrencyToken,
+            candidatePreviews.TryGetValue(item.Id, out var preview) ? preview : null);
+
+    private static async Task<IReadOnlyDictionary<Guid, CognitiveMemoryReviewCandidatePreview>> LoadCandidatePreviewsAsync(
+        AppDbContext dbContext,
+        IReadOnlyList<CognitiveMemoryReviewItemRecord> reviewItems,
+        CancellationToken cancellationToken)
+    {
+        var reviewItemIds = reviewItems
+            .Select(item => item.Id)
+            .ToArray();
+        if (reviewItemIds.Length == 0)
+        {
+            return new Dictionary<Guid, CognitiveMemoryReviewCandidatePreview>();
+        }
+
+        var candidates = await dbContext.Set<CognitiveMemoryConsolidationCandidateRecord>()
+            .AsNoTracking()
+            .Where(candidate => candidate.ReviewItemId != null && reviewItemIds.Contains(candidate.ReviewItemId.Value))
+            .ToListAsync(cancellationToken);
+        var sourceItemIds = candidates
+            .Where(candidate => candidate.SourceItemId is not null)
+            .Select(candidate => candidate.SourceItemId!.Value)
+            .Distinct()
+            .ToArray();
+        var sourceItems = sourceItemIds.Length == 0
+            ? new Dictionary<Guid, CognitiveMemorySourceItemRecord>()
+            : await dbContext.Set<CognitiveMemorySourceItemRecord>()
+                .AsNoTracking()
+                .Where(sourceItem => sourceItemIds.Contains(sourceItem.Id))
+                .ToDictionaryAsync(sourceItem => sourceItem.Id, cancellationToken);
+
+        var previews = new Dictionary<Guid, CognitiveMemoryReviewCandidatePreview>();
+        foreach (var candidate in candidates)
+        {
+            if (candidate.ReviewItemId is not { } reviewItemId)
+            {
+                continue;
+            }
+
+            var payload = DeserializeCandidatePayload(candidate);
+            sourceItems.TryGetValue(candidate.SourceItemId ?? Guid.Empty, out var sourceItem);
+            previews[reviewItemId] = new CognitiveMemoryReviewCandidatePreview(
+                candidate.Id,
+                candidate.CandidateKind,
+                candidate.Status,
+                candidate.SourceItemId,
+                candidate.EvidenceAnchorId,
+                candidate.MemoryRecordId,
+                candidate.MutationCommandId,
+                candidate.ScoreBucket,
+                candidate.DisplayPriorityProjection,
+                FirstNonEmpty(payload?.Title, sourceItem?.Title, FormatSubjectFallback(CognitiveMemoryReviewSubjectKind.Run, candidate.RunId)),
+                FirstNonEmpty(payload?.Summary, sourceItem?.ContentText, string.Empty),
+                FirstNonEmpty(payload?.Reason, candidate.ReasonText),
+                FirstNonEmpty(payload?.SourceSystem, sourceItem?.SourceSystem, string.Empty),
+                FirstNonEmpty(payload?.SourceItemType, sourceItem?.SourceItemType, string.Empty),
+                FirstNonEmpty(sourceItem?.Title, payload?.Title, string.Empty),
+                sourceItem?.Locator ?? string.Empty,
+                BuildSourceExcerpt(sourceItem?.ContentText, payload?.Summary),
+                FirstNonEmpty(candidate.SourceContentHash, sourceItem?.ContentHash, payload?.SourceContentHash, string.Empty));
+        }
+
+        return previews;
+    }
+
+    private static CognitiveMemoryConsolidationCandidatePayload? DeserializeCandidatePayload(
+        CognitiveMemoryConsolidationCandidateRecord candidate)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize(
+                candidate.PayloadJson,
+                CognitiveMemoryJsonSerializerContext.Default.CognitiveMemoryConsolidationCandidatePayload);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static string BuildSourceExcerpt(string? sourceContent, string? fallback)
+        => TruncateForReview(
+            FirstNonEmpty(sourceContent, fallback, string.Empty),
+            1800);
+
+    private static string TruncateForReview(string value, int maxLength)
+    {
+        var trimmed = value.Trim();
+        return trimmed.Length <= maxLength
+            ? trimmed
+            : $"{trimmed[..maxLength]}...";
+    }
 
     private static async Task<IReadOnlyDictionary<Guid, string>> ResolveSubjectTitlesAsync(
         AppDbContext dbContext,
@@ -514,7 +652,7 @@ public sealed class CognitiveMemoryReviewUiService(
             .Distinct()
             .ToArray();
 
-    private static string FirstNonEmpty(params string[] values)
+    private static string FirstNonEmpty(params string?[] values)
         => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
 
     private static string FormatSubjectFallback(CognitiveMemoryReviewSubjectKind subjectKind, Guid subjectId)

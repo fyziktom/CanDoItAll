@@ -17,7 +17,10 @@ public static class CognitiveMemoryModuleServiceCollectionExtensions
         services.TryAddSingleton<ICognitiveMemoryScoreSpaceRegistry, CognitiveMemoryScoreSpaceRegistry>();
         services.TryAddSingleton<ICognitiveMemoryScoreGeometryDriver, CognitiveMemoryScoreGeometryDriver>();
         services.TryAddScoped<ICognitiveMemoryMutationAuthority, CognitiveMemoryMutationAuthority>();
+        services.TryAddScoped<ICognitiveMemoryConsolidationCandidateApplicator, CognitiveMemoryConsolidationCandidateApplicator>();
         services.TryAddScoped<ICognitiveMemorySourceIngestionService, CognitiveMemorySourceIngestionService>();
+        services.TryAddScoped<ICognitiveMemoryAutomationSettingsService, CognitiveMemoryAutomationSettingsService>();
+        services.TryAddScoped<ICognitiveMemoryExternalSourceIngestionService, CognitiveMemoryExternalSourceIngestionService>();
         services.TryAddSingleton<ICognitiveMemoryTaxonomyValidator, CognitiveMemoryTaxonomyValidator>();
         services.TryAddScoped<ICognitiveMemoryEmbeddingProvider>(provider =>
         {

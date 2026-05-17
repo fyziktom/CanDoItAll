@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.CognitiveMemory;
@@ -41,6 +42,123 @@ public sealed class CognitiveMemoryConsolidationEngineTests
         Assert.False(string.IsNullOrWhiteSpace(cursor.Cursor));
         Assert.Contains(scoreComponents, component => component.SpaceKind == CognitiveMemoryScoreSpaceKind.ConsolidationCandidate);
         Assert.Equal(0, await dbContext.Set<CognitiveMemoryRecord>().CountAsync());
+
+        var reviewUiService = new CognitiveMemoryReviewUiService(
+            fixture.Factory,
+            fixture.Clock,
+            new CognitiveMemoryConsolidationCandidateApplicator(new CognitiveMemoryRecordValidator()));
+        var snapshot = await reviewUiService.GetSnapshotAsync(new CognitiveMemoryReviewUiQuery(projectId));
+        var reviewQueueItem = Assert.Single(snapshot.ReviewItems);
+        Assert.NotNull(reviewQueueItem.CandidatePreview);
+        Assert.Equal(CognitiveMemoryConsolidationCandidateKind.Episode, reviewQueueItem.CandidatePreview.CandidateKind);
+        Assert.Contains("Docker deployment process completed", reviewQueueItem.CandidatePreview.ProposedMemoryText, StringComparison.Ordinal);
+        Assert.Contains("Docker deployment process completed", reviewQueueItem.CandidatePreview.SourceExcerpt, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RunAsync_AppliesAcceptedCandidateToCanonicalMemoryWhenReviewIsDisabled()
+    {
+        await using var fixture = await CreateFixtureAsync();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        await SeedSourceAsync(fixture, projectId, "ProjectStructure", "CapabilityNode", "FieldOps Planner uses offline-first route planning for dispatchers.", withEvidence: true);
+        var profile = CognitiveMemoryConsolidationProfile.IncrementalRecent with
+        {
+            Name = "direct-canonicalization",
+            CreateHumanReviewItems = false
+        };
+        var engine = CreateEngine(fixture);
+
+        var result = await engine.RunAsync(Request(projectId, "consolidation-direct", profile));
+
+        await using var dbContext = fixture.Factory.CreateDbContext();
+        var candidate = Assert.Single(await dbContext.Set<CognitiveMemoryConsolidationCandidateRecord>().ToListAsync());
+        var mutation = Assert.Single(await dbContext.Set<CognitiveMemoryMutationCommandRecord>().ToListAsync());
+        var memoryRecord = Assert.Single(await dbContext.Set<CognitiveMemoryRecord>().ToListAsync());
+        var claim = Assert.Single(await dbContext.Set<CognitiveMemoryClaimRecord>().ToListAsync());
+        var sourceLink = Assert.Single(await dbContext.Set<CognitiveMemorySourceLinkRecord>().ToListAsync());
+        var recordEvidence = Assert.Single(await dbContext.Set<CognitiveMemoryRecordEvidenceAnchorRecord>().ToListAsync());
+        var claimEvidence = Assert.Single(await dbContext.Set<CognitiveMemoryClaimEvidenceLinkRecord>().ToListAsync());
+        var affectedMemoryIds = JsonSerializer.Deserialize<Guid[]>(mutation.AffectedMemoryRecordIdsJson);
+        var affectedClaimIds = JsonSerializer.Deserialize<Guid[]>(mutation.AffectedClaimIdsJson);
+
+        Assert.Equal(CognitiveMemoryRunStatus.Succeeded, result.Status);
+        Assert.Equal(1, result.CandidatesCreated);
+        Assert.Equal(0, result.ReviewItemsCreated);
+        Assert.Equal(CognitiveMemoryConsolidationCandidateStatus.MutationSubmitted, candidate.Status);
+        Assert.Equal(memoryRecord.Id, candidate.MemoryRecordId);
+        Assert.Equal(CognitiveMemoryMutationCommandStatus.Accepted, mutation.Status);
+        Assert.False(mutation.RequiresHumanReview);
+        Assert.Equal(CognitiveMemoryValidationState.MachineGenerated, memoryRecord.ValidationState);
+        Assert.Equal(CognitiveMemoryStabilityState.Experimental, memoryRecord.StabilityState);
+        Assert.Equal(memoryRecord.Id, claim.MemoryRecordId);
+        Assert.Equal(memoryRecord.Id, sourceLink.MemoryRecordId);
+        Assert.Equal(memoryRecord.Id, recordEvidence.MemoryRecordId);
+        Assert.Equal(claim.Id, claimEvidence.ClaimId);
+        Assert.Contains(memoryRecord.Id, affectedMemoryIds ?? []);
+        Assert.Contains(claim.Id, affectedClaimIds ?? []);
+    }
+
+    [Fact]
+    public async Task RunAsync_PrefersProjectNodesAndSkipsNonMemoryProjectStructureRows()
+    {
+        await using var fixture = await CreateFixtureAsync();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        await SeedSourceAsync(fixture, projectId, "ExternalFile", "UploadedFileChunk", "External markdown section about offline sync.", withEvidence: true);
+        await SeedSourceAsync(fixture, projectId, "WorkbenchProjectStructure", "ProjectLink", "project contains custom node", withEvidence: true);
+        await SeedSourceAsync(fixture, projectId, "WorkbenchProjectStructure", "ProjectNode", "Title: Follow-up sample source document\nObject type: File\nRoute: /storage/objects/preview?ref=abc", withEvidence: true);
+        await SeedSourceAsync(fixture, projectId, "WorkbenchProjectStructure", "ProjectNode", "Title: Offline sync architecture\nObject type: ProjectBlock\nNotes: Project node: offline sync architecture and queue conflict review.", withEvidence: true);
+        var profile = CognitiveMemoryConsolidationProfile.IncrementalRecent with
+        {
+            MaxItems = 1
+        };
+        var engine = CreateEngine(fixture);
+
+        var result = await engine.RunAsync(Request(projectId, "consolidation-source-priority", profile));
+
+        await using var dbContext = fixture.Factory.CreateDbContext();
+        var candidate = Assert.Single(await dbContext.Set<CognitiveMemoryConsolidationCandidateRecord>().ToListAsync());
+        var sourceItem = await dbContext.Set<CognitiveMemorySourceItemRecord>().SingleAsync(item => item.Id == candidate.SourceItemId);
+
+        Assert.Equal(CognitiveMemoryRunStatus.Succeeded, result.Status);
+        Assert.Equal(1, result.SourceItemsScanned);
+        Assert.Equal("WorkbenchProjectStructure", sourceItem.SourceSystem);
+        Assert.Equal("ProjectNode", sourceItem.SourceItemType);
+        Assert.DoesNotContain("Object type: File", sourceItem.ContentText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task DecideReviewItemAsync_ApproveConsolidationCandidateAppliesCanonicalMemory()
+    {
+        await using var fixture = await CreateFixtureAsync();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        await SeedSourceAsync(fixture, projectId, "ProcessRuntime", "ProcessRun", "Docker deployment process completed.", withEvidence: true);
+        var engine = CreateEngine(fixture);
+        await engine.RunAsync(Request(projectId, "consolidation-review-approval"));
+        await using var readContext = fixture.Factory.CreateDbContext();
+        var review = Assert.Single(await readContext.Set<CognitiveMemoryReviewItemRecord>().ToListAsync());
+        var service = new CognitiveMemoryReviewUiService(
+            fixture.Factory,
+            fixture.Clock,
+            new CognitiveMemoryConsolidationCandidateApplicator(new CognitiveMemoryRecordValidator()));
+
+        var result = await service.DecideReviewItemAsync(new CognitiveMemoryReviewDecisionRequest(
+            new CognitiveMemoryReviewItemId(review.Id),
+            CognitiveMemoryReviewDecisionKind.Approve,
+            "agent:reviewer",
+            string.Empty,
+            review.ConcurrencyToken));
+
+        await using var dbContext = fixture.Factory.CreateDbContext();
+        var candidate = Assert.Single(await dbContext.Set<CognitiveMemoryConsolidationCandidateRecord>().ToListAsync());
+        var memoryRecord = Assert.Single(await dbContext.Set<CognitiveMemoryRecord>().ToListAsync());
+        var mutation = Assert.Single(await dbContext.Set<CognitiveMemoryMutationCommandRecord>().ToListAsync());
+
+        Assert.Equal(CognitiveMemoryReviewStatus.Approved, result.Status);
+        Assert.Equal(CognitiveMemoryConsolidationCandidateStatus.MutationSubmitted, candidate.Status);
+        Assert.Equal(memoryRecord.Id, candidate.MemoryRecordId);
+        Assert.Equal(CognitiveMemoryValidationState.Approved, memoryRecord.ValidationState);
+        Assert.Equal(CognitiveMemoryStabilityState.Active, memoryRecord.StabilityState);
+        Assert.Equal(CognitiveMemoryMutationCommandStatus.Accepted, mutation.Status);
     }
 
     [Fact]
@@ -93,17 +211,24 @@ public sealed class CognitiveMemoryConsolidationEngineTests
         return new CognitiveMemoryConsolidationEngine(
             fixture.Factory,
             new CognitiveMemoryMutationAuthority(fixture.Factory, fixture.Clock),
+            new CognitiveMemoryConsolidationCandidateApplicator(new CognitiveMemoryRecordValidator()),
             driver,
             fixture.Clock,
             NullLogger<CognitiveMemoryConsolidationEngine>.Instance);
     }
 
     private static CognitiveMemoryConsolidationRunRequest Request(Guid projectId, string idempotencyKey)
+        => Request(projectId, idempotencyKey, CognitiveMemoryConsolidationProfile.IncrementalRecent);
+
+    private static CognitiveMemoryConsolidationRunRequest Request(
+        Guid projectId,
+        string idempotencyKey,
+        CognitiveMemoryConsolidationProfile profile)
         => new(
             projectId,
             CognitiveMemoryConsolidationMode.IncrementalRecent,
             CognitiveMemoryConsolidationTriggerKind.Manual,
-            CognitiveMemoryConsolidationProfile.IncrementalRecent,
+            profile,
             Policy(projectId),
             new CognitiveMemoryIdempotencyKey(idempotencyKey),
             new CognitiveMemoryConsolidationBudget(10, 10, 10, 4096, TimeSpan.FromMinutes(5)));
@@ -125,13 +250,15 @@ public sealed class CognitiveMemoryConsolidationEngineTests
         string content,
         bool withEvidence)
     {
+        var contentHash = CognitiveMemoryHash.FromUtf8(content).Value;
+        var sourceKeySuffix = contentHash[..12];
         var manifest = new CognitiveMemorySourceManifestRecord
         {
             ProjectId = projectId,
             SourceSystem = sourceSystem,
             SourceScopeKey = projectId.ToString("D"),
-            SourceSnapshotId = $"snapshot-{sourceSystem}",
-            SnapshotHash = CognitiveMemoryHash.FromUtf8($"snapshot-{sourceSystem}").Value,
+            SourceSnapshotId = $"snapshot-{sourceSystem}-{sourceItemType}-{sourceKeySuffix}",
+            SnapshotHash = contentHash,
             ProviderVersion = "test-provider-v1",
             ScanStatus = CognitiveMemoryRunStatus.Succeeded,
             ObservedAtUtc = fixture.Clock.GetUtcNow(),
@@ -144,12 +271,12 @@ public sealed class CognitiveMemoryConsolidationEngineTests
             ProjectId = projectId,
             SourceManifestId = manifest.Id,
             SourceSystem = sourceSystem,
-            SourceItemKey = $"{sourceSystem}-{sourceItemType}",
+            SourceItemKey = $"{sourceSystem}-{sourceItemType}-{sourceKeySuffix}",
             SourceItemType = sourceItemType,
             Title = sourceItemType,
             ContentText = content,
             Locator = $"/{sourceSystem}/{sourceItemType}",
-            ContentHash = CognitiveMemoryHash.FromUtf8(content).Value,
+            ContentHash = contentHash,
             RedactionState = CognitiveMemoryRedactionState.Safe,
             AccessLevel = CognitiveMemoryAccessLevel.Project,
             AccessScope = "test",

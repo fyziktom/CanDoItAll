@@ -94,7 +94,28 @@ public sealed record CognitiveMemoryReviewQueueItem(
     DateTimeOffset? DecidedAtUtc,
     string DecidedByActorId,
     string DecisionNotes,
-    Guid ConcurrencyToken);
+    Guid ConcurrencyToken,
+    CognitiveMemoryReviewCandidatePreview? CandidatePreview = null);
+
+public sealed record CognitiveMemoryReviewCandidatePreview(
+    Guid CandidateId,
+    CognitiveMemoryConsolidationCandidateKind CandidateKind,
+    CognitiveMemoryConsolidationCandidateStatus CandidateStatus,
+    Guid? SourceItemId,
+    Guid? EvidenceAnchorId,
+    Guid? MemoryRecordId,
+    Guid? MutationCommandId,
+    CognitiveMemoryScoreProjectionBucket ScoreBucket,
+    double? DisplayPriorityProjection,
+    string ProposedTitle,
+    string ProposedMemoryText,
+    string ProposedReason,
+    string SourceSystem,
+    string SourceItemType,
+    string SourceTitle,
+    string SourceLocator,
+    string SourceExcerpt,
+    string SourceContentHash);
 
 public sealed record CognitiveMemoryRecallTraceView(
     Guid Id,

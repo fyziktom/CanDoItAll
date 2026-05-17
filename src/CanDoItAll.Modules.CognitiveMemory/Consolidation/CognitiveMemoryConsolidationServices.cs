@@ -10,12 +10,17 @@ namespace CanDoItAll.Modules.CognitiveMemory;
 public sealed class CognitiveMemoryConsolidationEngine(
     IDbContextFactory<AppDbContext> dbContextFactory,
     ICognitiveMemoryMutationAuthority mutationAuthority,
+    ICognitiveMemoryConsolidationCandidateApplicator candidateApplicator,
     ICognitiveMemoryScoreGeometryDriver scoreGeometryDriver,
     IClock clock,
     ILogger<CognitiveMemoryConsolidationEngine> logger) : ICognitiveMemoryConsolidationEngine
 {
     private const string AlgorithmVersion = "consolidation-v1";
     private const string ConsolidationCursorSource = "CognitiveMemorySourceItems";
+    private const string WorkbenchProjectStructureSourceSystem = "WorkbenchProjectStructure";
+    private const string ProjectNodeSourceItemType = "ProjectNode";
+    private const string ProjectLinkSourceItemType = "ProjectLink";
+    private const string ProjectFileNodeMarker = "Object type: File";
     private const int MaxEvidenceAnchorsPerCandidate = 8;
     private static readonly IReadOnlyList<CognitiveMemoryScoreShapeSnapshot> CandidateShapes = BuildCandidateShapes();
 
@@ -242,6 +247,19 @@ public sealed class CognitiveMemoryConsolidationEngine(
                 ConcurrencyToken = Guid.NewGuid()
             };
             dbContext.Add(candidate);
+            if (candidate.Status == CognitiveMemoryConsolidationCandidateStatus.MutationSubmitted)
+            {
+                _ = await candidateApplicator.ApplyAsync(
+                    dbContext,
+                    candidate,
+                    resolvedPayload,
+                    CognitiveMemoryValidationState.MachineGenerated,
+                    CognitiveMemoryStabilityState.Experimental,
+                    request.PolicyContext.ActorId,
+                    startedAtUtc,
+                    cancellationToken);
+            }
+
             createdCandidateIds.Add(candidate.Id);
             createdSourceItemIds.Add(sourceItem.Id);
         }
@@ -463,11 +481,18 @@ public sealed class CognitiveMemoryConsolidationEngine(
         }
 
         query = query.Where(item =>
-            item.AccessLevel <= request.PolicyContext.AccessLevel ||
-            item.AccessLevel == CognitiveMemoryAccessLevel.Restricted && request.PolicyContext.AllowRestrictedContent);
+            (item.AccessLevel <= request.PolicyContext.AccessLevel ||
+             item.AccessLevel == CognitiveMemoryAccessLevel.Restricted && request.PolicyContext.AllowRestrictedContent) &&
+            !(item.SourceSystem == WorkbenchProjectStructureSourceSystem && item.SourceItemType == ProjectLinkSourceItemType) &&
+            !(item.SourceSystem == WorkbenchProjectStructureSourceSystem &&
+              item.SourceItemType == ProjectNodeSourceItemType &&
+              item.ContentText.Contains(ProjectFileNodeMarker)));
 
         return await query
-            .OrderBy(item => item.Id)
+            .OrderBy(item => item.SourceSystem == WorkbenchProjectStructureSourceSystem ? 0 : 1)
+            .ThenBy(item => item.SourceItemType == ProjectNodeSourceItemType ? 0 : 1)
+            .ThenBy(item => item.ContentText.Length)
+            .ThenBy(item => item.Id)
             .Take(take)
             .Select(item => new SourceItemSnapshot(
                 item.Id,
@@ -639,7 +664,7 @@ public sealed class CognitiveMemoryConsolidationEngine(
             evidenceAnchorIds,
             payloadJson,
             ExpectedVersionToken: null,
-            RequiresHumanReview: true,
+            RequiresHumanReview: request.Profile.CreateHumanReviewItems,
             new Dictionary<string, string>
             {
                 ["consolidationMode"] = request.Mode.ToString(),

@@ -1246,6 +1246,64 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.ToTable("CognitiveMemory_AttentionDecisions", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryAutomationSettingsRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("AutoConsolidateAfterIngestion")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("AutoIngestProcessRuntime")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("AutoIngestProjectStructure")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("ConcurrencyToken")
+                        .IsConcurrencyToken()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("IdleMinutes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("NightlyLocalTime")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ScheduleMode")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ScheduledLocalTimes")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SettingsKey")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UpdatedByActorId")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SettingsKey")
+                        .IsUnique();
+
+                    b.ToTable("CognitiveMemory_AutomationSettings", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryBeliefStateRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2797,6 +2855,88 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.HasIndex("ProjectId", "SourceManifestId", "SourceItemId");
 
                     b.ToTable("CognitiveMemory_EvidenceAnchors", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryExternalSourceIngestionRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ConcurrencyToken")
+                        .IsConcurrencyToken()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("ContentLength")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("EvidenceAnchorId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FailureMessage")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Locator")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ProgressPercent")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("SourceItemId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SourceKind")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("SourceManifestId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("StatusMessage")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EvidenceAnchorId");
+
+                    b.HasIndex("SourceItemId");
+
+                    b.HasIndex("SourceManifestId");
+
+                    b.HasIndex("Status", "UpdatedAtUtc");
+
+                    b.HasIndex("ProjectId", "SourceKind", "CreatedAtUtc");
+
+                    b.ToTable("CognitiveMemory_ExternalSourceIngestions", (string)null);
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryHumilityTriggerRecord", b =>
@@ -13719,6 +13859,24 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .WithMany()
                         .HasForeignKey("SourceManifestId")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryExternalSourceIngestionRecord", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryEvidenceAnchorRecord", null)
+                        .WithMany()
+                        .HasForeignKey("EvidenceAnchorId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemorySourceItemRecord", null)
+                        .WithMany()
+                        .HasForeignKey("SourceItemId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemorySourceManifestRecord", null)
+                        .WithMany()
+                        .HasForeignKey("SourceManifestId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryInhibitedCandidateRecord", b =>

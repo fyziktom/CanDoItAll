@@ -1,0 +1,425 @@
+{
+  "sourceDocument": "sample-projects.md",
+  "sourceMindmap": "sample-projects.mmd",
+  "projects": [
+    {
+      "key": "fieldops-mobile",
+      "documentHeading": "Project A: FieldOps Mobile App",
+      "mindmapBranch": "FieldOps Mobile App",
+      "name": "FieldOps Mobile App",
+      "description": "Offline-first mobile application for field technicians, inspections, photos, and work order sync.",
+      "objective": "Deliver a source-backed app plan that separates mobile queue behavior, backend work-order ownership, and audit evidence.",
+      "currentPhase": "Implementation planning",
+      "nodes": [
+        {
+          "key": "product-scope",
+          "type": "ProjectBlock",
+          "subtype": "feature",
+          "title": "Product scope",
+          "subtitle": "Technician inspection workflow",
+          "notes": "Technicians need assigned work orders, inspection checklist steps, barcode scanning, photo evidence, supervisor comments, and visible sync state.",
+          "x": 80,
+          "y": 80
+        },
+        {
+          "key": "offline-architecture",
+          "type": "ProjectBlock",
+          "subtype": "architecture",
+          "title": "Offline sync architecture",
+          "subtitle": "Local queue and conflict decisions",
+          "notes": "The mobile app owns a local mutation queue. The backend API remains the canonical owner of work order state. Idempotency keys are mandatory for each queued mutation.",
+          "x": 360,
+          "y": 80
+        },
+        {
+          "key": "evidence-storage",
+          "type": "ProjectBlock",
+          "subtype": "implementation",
+          "title": "Evidence storage",
+          "subtitle": "Photos, notes, and upload retry",
+          "notes": "Inspection photos must be attached to work order checkpoints. Failed uploads remain visible and retryable; the system must not silently drop technician notes or images.",
+          "parent": "offline-architecture",
+          "x": 620,
+          "y": 130
+        },
+        {
+          "key": "testing-matrix",
+          "type": "ProjectBlock",
+          "subtype": "testing",
+          "title": "Offline testing matrix",
+          "subtitle": "Airplane mode, conflicts, and token expiry",
+          "notes": "Test airplane mode, concurrent edit conflict, expired auth token during sync, partial photo upload, large image batch, and device storage exhaustion.",
+          "x": 360,
+          "y": 300
+        },
+        {
+          "key": "observability",
+          "type": "ProjectBlock",
+          "subtype": "operations",
+          "title": "Operational telemetry",
+          "subtitle": "Sync latency and failure visibility",
+          "notes": "Metrics include sync latency, failed upload count, conflict count, retry attempts, queue age, and storage warnings. Logs must mask customer data.",
+          "x": 640,
+          "y": 300
+        },
+        {
+          "key": "risk-controls",
+          "type": "ProjectBlock",
+          "subtype": "risk",
+          "title": "Risk controls",
+          "subtitle": "Audit and permissions",
+          "notes": "Primary risks are ambiguous conflict resolution, photo upload loss, weak customer asset permissions, and missing audit history for offline edits.",
+          "x": 900,
+          "y": 210
+        }
+      ],
+      "links": [
+        { "source": "product-scope", "target": "offline-architecture", "kind": "DependsOn" },
+        { "source": "offline-architecture", "target": "evidence-storage", "kind": "Uses" },
+        { "source": "testing-matrix", "target": "offline-architecture", "kind": "Tests" },
+        { "source": "observability", "target": "risk-controls", "kind": "Validates" },
+        { "source": "risk-controls", "target": "testing-matrix", "kind": "Blocks" }
+      ]
+    },
+    {
+      "key": "knowledgeops-dashboard",
+      "documentHeading": "Project B: KnowledgeOps Dashboard",
+      "mindmapBranch": "KnowledgeOps Dashboard",
+      "name": "KnowledgeOps Dashboard",
+      "description": "Blazor support engineering dashboard for incident triage, runbook recall, and post-incident learning.",
+      "objective": "Build a dense operator tool that cites official sources and keeps generated memory review-gated.",
+      "currentPhase": "Architecture review",
+      "nodes": [
+        {
+          "key": "incident-intake",
+          "type": "ProjectBlock",
+          "subtype": "feature",
+          "title": "Incident intake",
+          "subtitle": "Severity, customer impact, owner",
+          "notes": "The dashboard captures severity, affected customer, product area, current owner, symptom summary, and immediate mitigation state.",
+          "x": 80,
+          "y": 80
+        },
+        {
+          "key": "runbook-ranking",
+          "type": "ProjectBlock",
+          "subtype": "architecture",
+          "title": "Runbook ranking",
+          "subtitle": "Official source before generated summary",
+          "notes": "Search must distinguish official runbooks from generated summaries. Memory-backed suggestions need source links and stale-runbook warnings.",
+          "x": 360,
+          "y": 80
+        },
+        {
+          "key": "operator-ui",
+          "type": "ProjectBlock",
+          "subtype": "implementation",
+          "title": "Operator UI",
+          "subtitle": "Dense, repeatable incident workflow",
+          "notes": "Use compact lists, keyboard-friendly navigation, stable status badges, and action panels. Avoid marketing-style cards and decorative layouts.",
+          "x": 640,
+          "y": 80
+        },
+        {
+          "key": "learning-loop",
+          "type": "ProjectBlock",
+          "subtype": "research",
+          "title": "Post-incident learning",
+          "subtitle": "Review-gated memory proposals",
+          "notes": "Postmortems, validated fixes, and regression proposals are captured as review-gated learning records, not direct truth mutation.",
+          "x": 360,
+          "y": 300
+        },
+        {
+          "key": "source-policy",
+          "type": "ProjectBlock",
+          "subtype": "risk",
+          "title": "Source policy",
+          "subtitle": "Citations and stale evidence",
+          "notes": "Every suggested runbook needs a source reference. Stale or generated-only recommendations should be marked as caveated.",
+          "x": 640,
+          "y": 300
+        }
+      ],
+      "links": [
+        { "source": "incident-intake", "target": "runbook-ranking", "kind": "DependsOn" },
+        { "source": "runbook-ranking", "target": "operator-ui", "kind": "Uses" },
+        { "source": "learning-loop", "target": "runbook-ranking", "kind": "DerivedFrom" },
+        { "source": "source-policy", "target": "operator-ui", "kind": "Validates" },
+        { "source": "source-policy", "target": "learning-loop", "kind": "Blocks" }
+      ]
+    },
+    {
+      "key": "clinicflow-saas",
+      "documentHeading": "Project C: ClinicFlow SaaS Business Plan",
+      "mindmapBranch": "ClinicFlow SaaS",
+      "name": "ClinicFlow SaaS Business Plan",
+      "description": "Business plan for appointment reminders and no-show reduction in small clinics.",
+      "objective": "Validate a SaaS opportunity while separating product, go-to-market, compliance, and unit economics assumptions.",
+      "currentPhase": "Discovery",
+      "nodes": [
+        {
+          "key": "market-segment",
+          "type": "ProjectBlock",
+          "subtype": "research",
+          "title": "Market segment",
+          "subtitle": "Small clinics with limited IT staffing",
+          "notes": "Target independent clinics with 2-20 providers. Buyer is often a clinic manager or owner-operator; users include front desk staff and providers.",
+          "x": 80,
+          "y": 80
+        },
+        {
+          "key": "mvp-scope",
+          "type": "ProjectBlock",
+          "subtype": "feature",
+          "title": "MVP scope",
+          "subtitle": "Scheduling, reminders, no-show dashboard",
+          "notes": "Avoid billing integrations in first pilot. Build schedule import, calendar view, reminder templates, no-show dashboard, and opt-out tracking.",
+          "x": 360,
+          "y": 80
+        },
+        {
+          "key": "pricing",
+          "type": "ProjectBlock",
+          "subtype": "delivery",
+          "title": "Pricing hypothesis",
+          "subtitle": "Per-provider subscription plus SMS pass-through",
+          "notes": "Pricing hypothesis is provider-based subscription. SMS usage should be tracked separately to avoid margin surprises.",
+          "x": 640,
+          "y": 80
+        },
+        {
+          "key": "compliance",
+          "type": "ProjectBlock",
+          "subtype": "risk",
+          "title": "Compliance posture",
+          "subtitle": "Privacy before pilot expansion",
+          "notes": "Compliance and privacy posture must be explicit before pilots. Patient data handling, opt-out behavior, and retention must be documented.",
+          "x": 360,
+          "y": 300
+        },
+        {
+          "key": "pilot-plan",
+          "type": "ProjectBlock",
+          "subtype": "delivery",
+          "title": "Pilot plan",
+          "subtitle": "Interviews before paid acquisition",
+          "notes": "Start with clinic manager interviews, then a narrow pilot and case study. Broad paid advertising is not the first motion.",
+          "x": 640,
+          "y": 300
+        }
+      ],
+      "links": [
+        { "source": "market-segment", "target": "mvp-scope", "kind": "DependsOn" },
+        { "source": "mvp-scope", "target": "pricing", "kind": "Uses" },
+        { "source": "compliance", "target": "pilot-plan", "kind": "Blocks" },
+        { "source": "pilot-plan", "target": "market-segment", "kind": "Validates" },
+        { "source": "pricing", "target": "pilot-plan", "kind": "DependsOn" }
+      ]
+    },
+    {
+      "key": "docker-platform",
+      "documentHeading": "Project D: Docker Development Platform Analysis",
+      "mindmapBranch": "Docker Platform Analysis",
+      "name": "Docker Development Platform Analysis",
+      "description": "Analysis of Docker usage for local dependencies, CI tests, and deployment parity boundaries.",
+      "objective": "Improve repeatability without hiding configuration failures or confusing local Compose with production architecture.",
+      "currentPhase": "Technical analysis",
+      "nodes": [
+        {
+          "key": "local-deps",
+          "type": "ProjectBlock",
+          "subtype": "dockers",
+          "title": "Local dependencies",
+          "subtitle": "PostgreSQL, Redis, object storage mock",
+          "notes": "Docker should standardize PostgreSQL, Redis, mail sink, and object storage mock startup for developers.",
+          "x": 80,
+          "y": 80
+        },
+        {
+          "key": "compose-profiles",
+          "type": "ProjectBlock",
+          "subtype": "operations",
+          "title": "Compose profiles",
+          "subtitle": "Core versus optional dependencies",
+          "notes": "Compose profiles should separate core dependencies from optional heavyweight services. Health checks must expose failed startup states.",
+          "x": 360,
+          "y": 80
+        },
+        {
+          "key": "build-cache",
+          "type": "ProjectBlock",
+          "subtype": "implementation",
+          "title": "Build caching",
+          "subtitle": "Fast restore and rebuild loops",
+          "notes": "Image build caching matters for daily development. Restore layers, test image, and runtime image should be structured for stable cache reuse.",
+          "x": 640,
+          "y": 80
+        },
+        {
+          "key": "ci-evidence",
+          "type": "ProjectBlock",
+          "subtype": "testing",
+          "title": "CI evidence",
+          "subtitle": "Ephemeral DB and migration proof",
+          "notes": "Test pipelines should use ephemeral databases, apply migrations explicitly, run API smoke checks, and tear down volumes.",
+          "x": 360,
+          "y": 300
+        },
+        {
+          "key": "risk-boundary",
+          "type": "ProjectBlock",
+          "subtype": "risk",
+          "title": "Production parity boundary",
+          "subtitle": "Local convenience is not deployment truth",
+          "notes": "Production deployment decisions must not be inferred from local Compose convenience. Secrets, networking, readiness, and scaling differ.",
+          "x": 640,
+          "y": 300
+        }
+      ],
+      "links": [
+        { "source": "local-deps", "target": "compose-profiles", "kind": "Uses" },
+        { "source": "compose-profiles", "target": "build-cache", "kind": "Uses" },
+        { "source": "ci-evidence", "target": "local-deps", "kind": "Tests" },
+        { "source": "risk-boundary", "target": "compose-profiles", "kind": "Blocks" },
+        { "source": "ci-evidence", "target": "risk-boundary", "kind": "Validates" }
+      ]
+    },
+    {
+      "key": "regional-economy",
+      "documentHeading": "Project E: Regional Inflation And Small Business Economy Analysis",
+      "mindmapBranch": "Regional Economy",
+      "name": "Regional Inflation And Small Business Economy Analysis",
+      "description": "Non-programming economic analysis of inflation, credit, wages, and small business responses.",
+      "objective": "Separate observed indicators from scenarios and policy recommendations for regional small businesses.",
+      "currentPhase": "Analysis",
+      "nodes": [
+        {
+          "key": "indicators",
+          "type": "ProjectBlock",
+          "subtype": "research",
+          "title": "Observed indicators",
+          "subtitle": "Prices, wages, rates, credit spreads",
+          "notes": "Track consumer prices, producer input costs, wage growth, credit spreads, default rates, rent, and business formation.",
+          "x": 80,
+          "y": 80
+        },
+        {
+          "key": "business-responses",
+          "type": "ProjectBlock",
+          "subtype": "research",
+          "title": "Business responses",
+          "subtitle": "Inventory, hiring, pricing, debt caution",
+          "notes": "Small businesses may preserve cash by reducing inventory depth, delaying expansion, adjusting pricing, and limiting new debt.",
+          "x": 360,
+          "y": 80
+        },
+        {
+          "key": "sector-split",
+          "type": "ProjectBlock",
+          "subtype": "analysis",
+          "title": "Sector split",
+          "subtitle": "Retail, food service, trades, healthcare, logistics",
+          "notes": "Analyze food service, retail, construction trades, healthcare services, and local logistics separately because margin and demand responses differ.",
+          "x": 640,
+          "y": 80
+        },
+        {
+          "key": "scenarios",
+          "type": "ProjectBlock",
+          "subtype": "analysis",
+          "title": "Scenarios",
+          "subtitle": "Base, persistent inflation, credit crunch, rebound",
+          "notes": "Forecasts need scenario labels and should not be mixed with observed indicators. Each scenario has different credit and demand assumptions.",
+          "x": 360,
+          "y": 300
+        },
+        {
+          "key": "policy-options",
+          "type": "ProjectBlock",
+          "subtype": "delivery",
+          "title": "Policy options",
+          "subtitle": "Credit guarantees and local procurement",
+          "notes": "Policy options include credit guarantees, targeted training, local procurement, and tax relief. Each must state tradeoffs and eligible sectors.",
+          "x": 640,
+          "y": 300
+        }
+      ],
+      "links": [
+        { "source": "indicators", "target": "business-responses", "kind": "DerivedFrom" },
+        { "source": "sector-split", "target": "scenarios", "kind": "Uses" },
+        { "source": "scenarios", "target": "policy-options", "kind": "DependsOn" },
+        { "source": "indicators", "target": "scenarios", "kind": "Validates" },
+        { "source": "business-responses", "target": "policy-options", "kind": "DerivedFrom" }
+      ]
+    },
+    {
+      "key": "community-learning",
+      "documentHeading": "Project F: Community Learning Program",
+      "mindmapBranch": "Community Learning Program",
+      "name": "Community Learning Program",
+      "description": "Non-programming adult education program for financial literacy, job search, and digital confidence.",
+      "objective": "Design modular community sessions with privacy-aware operations and measurable participant outcomes.",
+      "currentPhase": "Program design",
+      "nodes": [
+        {
+          "key": "learner-needs",
+          "type": "ProjectBlock",
+          "subtype": "research",
+          "title": "Learner needs",
+          "subtitle": "Uneven schedules and varied digital skills",
+          "notes": "Adults have uneven schedules, varied digital skills, and different comfort levels discussing money or job history.",
+          "x": 80,
+          "y": 80
+        },
+        {
+          "key": "curriculum",
+          "type": "ProjectBlock",
+          "subtype": "feature",
+          "title": "Curriculum modules",
+          "subtitle": "Budgeting, resume, interviews, account safety",
+          "notes": "Modules include budgeting basics, avoiding predatory debt, resume refresh, interview practice, account safety, and benefits navigation.",
+          "x": 360,
+          "y": 80
+        },
+        {
+          "key": "delivery",
+          "type": "ProjectBlock",
+          "subtype": "delivery",
+          "title": "Delivery model",
+          "subtitle": "Short sessions with plain-language handouts",
+          "notes": "Sessions should be short, modular, repeatable, and supported by printed handouts and phone-friendly reminders.",
+          "x": 640,
+          "y": 80
+        },
+        {
+          "key": "partners",
+          "type": "ProjectBlock",
+          "subtype": "operations",
+          "title": "Partners",
+          "subtitle": "Libraries, employers, nonprofits",
+          "notes": "Libraries, local employers, and nonprofits reduce outreach cost and provide venue, referral, and facilitator support.",
+          "x": 360,
+          "y": 300
+        },
+        {
+          "key": "evaluation",
+          "type": "ProjectBlock",
+          "subtype": "testing",
+          "title": "Evaluation",
+          "subtitle": "Attendance, confidence, resumes, referrals",
+          "notes": "Measure attendance, confidence surveys, completed resumes, budget plans, referral follow-through, and participant consent boundaries.",
+          "x": 640,
+          "y": 300
+        }
+      ],
+      "links": [
+        { "source": "learner-needs", "target": "curriculum", "kind": "DependsOn" },
+        { "source": "curriculum", "target": "delivery", "kind": "Uses" },
+        { "source": "partners", "target": "delivery", "kind": "Uses" },
+        { "source": "evaluation", "target": "curriculum", "kind": "Validates" },
+        { "source": "learner-needs", "target": "evaluation", "kind": "DependsOn" }
+      ]
+    }
+  ]
+}

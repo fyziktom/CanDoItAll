@@ -165,6 +165,28 @@ public sealed class CognitiveMemoryRecallOrchestratorTests
         Assert.Equal(0, await fixture.DbContext.Set<CognitiveMemoryMutationCommandRecord>().CountAsync());
     }
 
+    [Fact]
+    public async Task RecallAsync_DeduplicatesRepeatedMemoryAndSourceTextInContextPack()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var repeated = "Offline sync uses a local queue, idempotency keys, explicit conflict review, retry visibility, supervisor approval, and audit-safe evidence retention.";
+        await SeedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-000000000007"),
+            "Offline sync architecture",
+            repeated,
+            $"{repeated} Additional source-only detail should not duplicate the memory summary prefix.");
+        var orchestrator = CreateOrchestrator(fixture, new RecordingProjectionAdapter([]));
+
+        var result = await orchestrator.RecallAsync(CreateRequest(projectId, "offline sync queue conflict"));
+
+        var section = Assert.Single(result.ContextPack.Sections);
+        Assert.Equal(1, CountOccurrences(section.Content, repeated));
+        Assert.DoesNotContain($"Source detail: {repeated}", section.Content, StringComparison.Ordinal);
+    }
+
     private static CognitiveMemoryRecallOrchestrator CreateOrchestrator(
         TestFixture fixture,
         RecordingProjectionAdapter adapter)
@@ -211,6 +233,23 @@ public sealed class CognitiveMemoryRecallOrchestratorTests
             new CognitiveMemoryPolicyProfileId("policy:test"),
             CognitiveMemoryRiskLevel.Low,
             AllowRestrictedContent: false);
+
+    private static int CountOccurrences(string text, string value)
+    {
+        var count = 0;
+        var index = 0;
+        while (true)
+        {
+            index = text.IndexOf(value, index, StringComparison.Ordinal);
+            if (index < 0)
+            {
+                return count;
+            }
+
+            count++;
+            index += value.Length;
+        }
+    }
 
     private static async Task<SeededMemory> SeedMemoryAsync(
         TestFixture fixture,

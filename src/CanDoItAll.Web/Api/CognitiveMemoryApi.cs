@@ -1,6 +1,8 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.CognitiveMemory;
+using CanDoItAll.SharedKernel;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CanDoItAll.Web.Api;
@@ -23,6 +25,157 @@ internal static class CognitiveMemoryApi
                 return Results.Ok(CognitiveMemoryStatusApiResponse.From(profile));
             })
             .WithName("GetCognitiveMemoryStatus");
+
+        memory.MapGet("/database/selection", (
+                IDatabaseProfileRuntimeAccessor profileAccessor) =>
+            {
+                var profile = profileAccessor.ResolveCurrentProfile();
+                return Results.Ok(CognitiveMemoryDatabaseProfileApiResponse.From(profile));
+            })
+            .WithName("GetCognitiveMemoryDatabaseSelection");
+
+        memory.MapGet("/database/profiles", async (
+                IDatabaseProfileService profileService,
+                CancellationToken cancellationToken) =>
+            Results.Ok(await profileService.ListAsync(cancellationToken)))
+            .WithName("ListCognitiveMemoryDatabaseProfiles");
+
+        memory.MapPost("/database/profiles/postgresql", async (
+                CognitiveMemoryPostgreSqlDatabaseProfileApiRequest request,
+                IDatabaseProfileService profileService,
+                IDatabaseProfileRuntimeAccessor profileAccessor,
+                IDatabaseDriverRegistry driverRegistry,
+                IAppDatabaseBootstrapper bootstrapper,
+                IDatabaseSwitchCoordinator switchCoordinator,
+                CancellationToken cancellationToken) =>
+            await ExecuteAsync(() => CreatePostgreSqlDatabaseProfileAsync(
+                request,
+                profileService,
+                profileAccessor,
+                driverRegistry,
+                bootstrapper,
+                switchCoordinator,
+                cancellationToken)))
+            .WithName("CreateCognitiveMemoryPostgreSqlDatabaseProfile");
+
+        memory.MapPost("/database/switch/{profileId:guid}", async (
+                Guid profileId,
+                IDatabaseSwitchCoordinator switchCoordinator,
+                IDatabaseProfileRuntimeAccessor profileAccessor,
+                CancellationToken cancellationToken) =>
+            await ExecuteAsync(async () =>
+            {
+                var switchResult = await switchCoordinator.SwitchAsync(
+                    EnsureNonEmpty(profileId, nameof(profileId)),
+                    cancellationToken);
+                if (switchResult.IsFailure)
+                {
+                    throw new InvalidOperationException(BuildErrorMessage(switchResult.Errors));
+                }
+
+                var profile = profileAccessor.ResolveCurrentProfile();
+                return new CognitiveMemoryDatabaseSwitchApiResponse(
+                    switchResult.Value!.PreviousProfileId,
+                    switchResult.Value.CurrentProfileId,
+                    switchResult.Value.Generation,
+                    switchResult.Value.ProcessId,
+                    CognitiveMemoryDatabaseProfileApiResponse.From(profile));
+            }))
+            .WithName("SwitchCognitiveMemoryDatabaseProfile");
+
+        memory.MapGet("/settings", async (
+                ICognitiveMemoryAutomationSettingsService settingsService,
+                CancellationToken cancellationToken) =>
+            await ExecuteAsync(() => settingsService.GetAsync(cancellationToken)))
+            .WithName("GetCognitiveMemorySettings");
+
+        memory.MapPut("/settings", async (
+                CognitiveMemoryAutomationSettingsApiRequest request,
+                ICognitiveMemoryAutomationSettingsService settingsService,
+                CancellationToken cancellationToken) =>
+            await ExecuteAsync(() => settingsService.SaveAsync(
+                BuildAutomationSettingsUpdate(request),
+                cancellationToken)))
+            .WithName("UpdateCognitiveMemorySettings");
+
+        memory.MapPost("/ingestion/project-structure", async (
+                CognitiveMemoryManualSourceIngestApiRequest request,
+                ICognitiveMemorySourceIngestionService ingestionService,
+                CancellationToken cancellationToken) =>
+            await ExecuteAsync(() => ingestionService.IngestAsync(
+                BuildManualSourceIngestionRequest(
+                    request,
+                    MemorySourceKind.WorkbenchProjectStructure,
+                    requireScope: true,
+                    "project-structure"),
+                cancellationToken)))
+            .WithName("IngestCognitiveMemoryProjectStructure");
+
+        memory.MapPost("/ingestion/processes", async (
+                CognitiveMemoryManualSourceIngestApiRequest request,
+                ICognitiveMemorySourceIngestionService ingestionService,
+                CancellationToken cancellationToken) =>
+            await ExecuteAsync(() => ingestionService.IngestAsync(
+                BuildManualSourceIngestionRequest(
+                    request,
+                    MemorySourceKind.ProcessRuntime,
+                    requireScope: false,
+                    "process-runtime"),
+                cancellationToken)))
+            .WithName("IngestCognitiveMemoryProcesses");
+
+        memory.MapPost("/external-sources/files", async (
+                [FromForm] CognitiveMemoryExternalFileUploadApiRequest request,
+                ICognitiveMemoryExternalSourceIngestionService ingestionService,
+                CancellationToken cancellationToken) =>
+            await ExecuteAsync(async () =>
+            {
+                if (request.File is null)
+                {
+                    throw new ArgumentException("A file is required.", nameof(request.File));
+                }
+
+                if (request.File.Length > 10 * 1024 * 1024)
+                {
+                    throw new InvalidOperationException("File uploads for cognitive memory ingestion are limited to 10 MB.");
+                }
+
+                await using var stream = request.File.OpenReadStream();
+                return await ingestionService.IngestFileAsync(
+                    request.ProjectId,
+                    request.File.FileName,
+                    request.File.ContentType,
+                    stream,
+                    request.File.Length,
+                    NormalizeActorId(request.ActorId),
+                    request.IdempotencyKey,
+                    cancellationToken);
+            }))
+            .WithName("IngestCognitiveMemoryExternalFile")
+            .Accepts<CognitiveMemoryExternalFileUploadApiRequest>("multipart/form-data");
+
+        memory.MapPost("/external-sources/web-links", async (
+                CognitiveMemoryExternalWebLinkApiRequest request,
+                ICognitiveMemoryExternalSourceIngestionService ingestionService,
+                CancellationToken cancellationToken) =>
+            await ExecuteAsync(() => ingestionService.IngestWebsiteAsync(
+                request.ProjectId,
+                BuildHttpUri(request.Url),
+                NormalizeActorId(request.ActorId),
+                request.IdempotencyKey,
+                cancellationToken)))
+            .WithName("IngestCognitiveMemoryExternalWebLink");
+
+        memory.MapGet("/external-sources/ingestions/{operationId:guid}", async (
+                Guid operationId,
+                ICognitiveMemoryExternalSourceIngestionService ingestionService,
+                CancellationToken cancellationToken) =>
+            await ExecuteAsync(async () =>
+                await ingestionService.GetAsync(
+                    EnsureNonEmpty(operationId, nameof(operationId)),
+                    cancellationToken)
+                ?? throw new InvalidOperationException("External source ingestion operation was not found.")))
+            .WithName("GetCognitiveMemoryExternalSourceIngestion");
 
         memory.MapGet("/snapshot", async (
                 [AsParameters] CognitiveMemorySnapshotApiQuery query,
@@ -268,6 +421,116 @@ internal static class CognitiveMemoryApi
             .WithName("SubmitCognitiveMemoryDistributedResult");
 
         return group;
+    }
+
+    private static async ValueTask<CognitiveMemoryPostgreSqlDatabaseProfileApiResponse> CreatePostgreSqlDatabaseProfileAsync(
+        CognitiveMemoryPostgreSqlDatabaseProfileApiRequest request,
+        IDatabaseProfileService profileService,
+        IDatabaseProfileRuntimeAccessor profileAccessor,
+        IDatabaseDriverRegistry driverRegistry,
+        IAppDatabaseBootstrapper bootstrapper,
+        IDatabaseSwitchCoordinator switchCoordinator,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var databaseName = EnsureText(request.DatabaseName, nameof(request.DatabaseName));
+        var username = EnsureText(request.Username, nameof(request.Username));
+        var saveResult = await profileService.SaveAsync(new DatabaseProfileEditorModel
+        {
+            DisplayName = string.IsNullOrWhiteSpace(request.DisplayName)
+                ? $"PostgreSQL {databaseName}"
+                : request.DisplayName.Trim(),
+            ProviderKind = DatabaseProviderKind.PostgreSql,
+            SourceKind = DatabaseProfileSourceKind.PostgresConnection,
+            WorkspaceRoot = NormalizeOptionalText(request.WorkspaceRoot),
+            PostgresHost = string.IsNullOrWhiteSpace(request.Host) ? "127.0.0.1" : request.Host.Trim(),
+            PostgresPort = request.Port is > 0 ? request.Port.Value : 5432,
+            PostgresDatabaseName = databaseName,
+            PostgresUsername = username,
+            PostgresPassword = request.Password ?? string.Empty,
+            PostgresAdminDatabaseName = string.IsNullOrWhiteSpace(request.AdminDatabaseName)
+                ? "postgres"
+                : request.AdminDatabaseName.Trim(),
+            PostgresTrustServerCertificate = request.TrustServerCertificate ?? false
+        }, cancellationToken);
+        if (saveResult.IsFailure)
+        {
+            throw new InvalidOperationException(BuildErrorMessage(saveResult.Errors));
+        }
+
+        var profile = profileAccessor.ResolveProfile(saveResult.Value);
+        await driverRegistry.Resolve(profile.Profile.ProviderKind).CreateEmptyAsync(profile, cancellationToken);
+        await bootstrapper.EnsureProfileReadyAsync(profile, cancellationToken);
+
+        CognitiveMemoryDatabaseSwitchSummaryApiResponse? switchResponse = null;
+        if (request.Activate != false)
+        {
+            var switchResult = await switchCoordinator.SwitchAsync(profile.Profile.Id, cancellationToken);
+            if (switchResult.IsFailure)
+            {
+                throw new InvalidOperationException(BuildErrorMessage(switchResult.Errors));
+            }
+
+            switchResponse = CognitiveMemoryDatabaseSwitchSummaryApiResponse.From(switchResult.Value!);
+            profile = profileAccessor.ResolveCurrentProfile();
+        }
+
+        return new CognitiveMemoryPostgreSqlDatabaseProfileApiResponse(
+            CognitiveMemoryDatabaseProfileApiResponse.From(profile),
+            switchResponse);
+    }
+
+    private static CognitiveMemoryAutomationSettingsUpdate BuildAutomationSettingsUpdate(
+        CognitiveMemoryAutomationSettingsApiRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return new CognitiveMemoryAutomationSettingsUpdate(
+            ParseEnum(
+                request.ScheduleMode,
+                CognitiveMemoryAutomationScheduleMode.ManualOnly,
+                nameof(request.ScheduleMode)),
+            EnsureText(request.NightlyLocalTime, nameof(request.NightlyLocalTime)),
+            NormalizePositive(request.IdleMinutes, nameof(request.IdleMinutes)),
+            request.ScheduledLocalTimes ?? [],
+            request.AutoIngestProjectStructure,
+            request.AutoIngestProcessRuntime,
+            request.AutoConsolidateAfterIngestion,
+            NormalizeActorId(request.ActorId));
+    }
+
+    private static CognitiveMemorySourceIngestionRequest BuildManualSourceIngestionRequest(
+        CognitiveMemoryManualSourceIngestApiRequest request,
+        MemorySourceKind sourceKind,
+        bool requireScope,
+        string operationName)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var scopeId = request.ScopeId ?? request.ProjectId ?? Guid.Empty;
+        if (requireScope && scopeId == Guid.Empty)
+        {
+            throw new ArgumentException("A non-empty scopeId or projectId is required.", nameof(request.ScopeId));
+        }
+
+        return new CognitiveMemorySourceIngestionRequest(
+            sourceKind,
+            scopeId,
+            BuildIdempotencyKey(request.IdempotencyKey, operationName),
+            BuildCursor(request.Cursor),
+            request.Take,
+            request.ProjectId);
+    }
+
+    private static Uri BuildHttpUri(string? value)
+    {
+        var text = EnsureText(value, nameof(CognitiveMemoryExternalWebLinkApiRequest.Url));
+        if (!Uri.TryCreate(text, UriKind.Absolute, out var uri) ||
+            uri.Scheme is not ("http" or "https"))
+        {
+            throw new ArgumentException("URL must be an absolute HTTP or HTTPS URL.", nameof(CognitiveMemoryExternalWebLinkApiRequest.Url));
+        }
+
+        return uri;
     }
 
     private static async Task<IResult> ExecuteAsync<T>(Func<ValueTask<T>> action)
@@ -599,6 +862,11 @@ internal static class CognitiveMemoryApi
     {
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
+
+    private static string BuildErrorMessage(IReadOnlyList<Error> errors)
+    {
+        return string.Join(" | ", errors.Select(error => error.Message));
+    }
 }
 
 internal sealed record CognitiveMemoryStatusApiResponse(
@@ -630,6 +898,17 @@ internal sealed record CognitiveMemoryStatusApiResponse(
             BuildDescriptor(profile),
             [
                 "GET /api/cognitive-memory/status",
+                "GET /api/cognitive-memory/database/selection",
+                "GET /api/cognitive-memory/database/profiles",
+                "POST /api/cognitive-memory/database/profiles/postgresql",
+                "POST /api/cognitive-memory/database/switch/{profileId}",
+                "GET /api/cognitive-memory/settings",
+                "PUT /api/cognitive-memory/settings",
+                "POST /api/cognitive-memory/ingestion/project-structure",
+                "POST /api/cognitive-memory/ingestion/processes",
+                "POST /api/cognitive-memory/external-sources/files",
+                "POST /api/cognitive-memory/external-sources/web-links",
+                "GET /api/cognitive-memory/external-sources/ingestions/{operationId}",
                 "GET /api/cognitive-memory/snapshot",
                 "POST /api/cognitive-memory/sources/ingest",
                 "POST /api/cognitive-memory/consolidation/runs",
@@ -652,7 +931,7 @@ internal sealed record CognitiveMemoryStatusApiResponse(
             ]);
     }
 
-    private static string BuildDescriptor(DatabaseProfileRecord profile)
+    public static string BuildDescriptor(DatabaseProfileRecord profile)
     {
         return profile.ProviderKind switch
         {
@@ -667,11 +946,146 @@ internal sealed record CognitiveMemoryStatusApiResponse(
     }
 }
 
+internal sealed record CognitiveMemoryDatabaseProfileApiResponse(
+    Guid Id,
+    string DisplayName,
+    DatabaseProviderKind ProviderKind,
+    string ProviderKindName,
+    DatabaseProfileSourceKind SourceKind,
+    string SourceKindName,
+    string Fingerprint,
+    string WorkspaceRoot,
+    string Descriptor,
+    string ConnectionString,
+    bool IsPostgreSql)
+{
+    public static CognitiveMemoryDatabaseProfileApiResponse From(ResolvedDatabaseProfile resolvedProfile)
+    {
+        var profile = resolvedProfile.Profile;
+        return new CognitiveMemoryDatabaseProfileApiResponse(
+            profile.Id,
+            profile.DisplayName,
+            profile.ProviderKind,
+            profile.ProviderKind.ToString(),
+            profile.SourceKind,
+            profile.SourceKind.ToString(),
+            profile.Runtime.Fingerprint,
+            profile.Storage.WorkspaceRoot,
+            CognitiveMemoryStatusApiResponse.BuildDescriptor(profile),
+            resolvedProfile.ConnectionString,
+            profile.ProviderKind == DatabaseProviderKind.PostgreSql);
+    }
+}
+
+internal sealed record CognitiveMemoryPostgreSqlDatabaseProfileApiResponse(
+    CognitiveMemoryDatabaseProfileApiResponse Profile,
+    CognitiveMemoryDatabaseSwitchSummaryApiResponse? Switch);
+
+internal sealed record CognitiveMemoryDatabaseSwitchSummaryApiResponse(
+    Guid PreviousProfileId,
+    Guid CurrentProfileId,
+    long Generation,
+    int ProcessId)
+{
+    public static CognitiveMemoryDatabaseSwitchSummaryApiResponse From(DatabaseSwitchResult result)
+    {
+        return new CognitiveMemoryDatabaseSwitchSummaryApiResponse(
+            result.PreviousProfileId,
+            result.CurrentProfileId,
+            result.Generation,
+            result.ProcessId);
+    }
+}
+
+internal sealed record CognitiveMemoryDatabaseSwitchApiResponse(
+    Guid PreviousProfileId,
+    Guid CurrentProfileId,
+    long Generation,
+    int ProcessId,
+    CognitiveMemoryDatabaseProfileApiResponse Profile);
+
 internal sealed class CognitiveMemorySnapshotApiQuery
 {
     public Guid? ProjectId { get; set; }
 
     public int? Take { get; set; }
+}
+
+internal sealed class CognitiveMemoryPostgreSqlDatabaseProfileApiRequest
+{
+    public string? DisplayName { get; set; }
+
+    public string? Host { get; set; }
+
+    public int? Port { get; set; }
+
+    public string? DatabaseName { get; set; }
+
+    public string? Username { get; set; }
+
+    public string? Password { get; set; }
+
+    public string? AdminDatabaseName { get; set; }
+
+    public bool? TrustServerCertificate { get; set; }
+
+    public string? WorkspaceRoot { get; set; }
+
+    public bool? Activate { get; set; }
+}
+
+internal sealed class CognitiveMemoryAutomationSettingsApiRequest
+{
+    public string? ScheduleMode { get; set; }
+
+    public string NightlyLocalTime { get; set; } = "02:00";
+
+    public int? IdleMinutes { get; set; } = 30;
+
+    public IReadOnlyList<string>? ScheduledLocalTimes { get; set; }
+
+    public bool AutoIngestProjectStructure { get; set; } = true;
+
+    public bool AutoIngestProcessRuntime { get; set; } = true;
+
+    public bool AutoConsolidateAfterIngestion { get; set; } = true;
+
+    public string? ActorId { get; set; }
+}
+
+internal sealed class CognitiveMemoryManualSourceIngestApiRequest
+{
+    public Guid? ScopeId { get; set; }
+
+    public Guid? ProjectId { get; set; }
+
+    public string? IdempotencyKey { get; set; }
+
+    public string? Cursor { get; set; }
+
+    public int? Take { get; set; }
+}
+
+internal sealed class CognitiveMemoryExternalFileUploadApiRequest
+{
+    public IFormFile? File { get; set; }
+
+    public Guid? ProjectId { get; set; }
+
+    public string? ActorId { get; set; }
+
+    public string? IdempotencyKey { get; set; }
+}
+
+internal sealed class CognitiveMemoryExternalWebLinkApiRequest
+{
+    public string Url { get; set; } = string.Empty;
+
+    public Guid? ProjectId { get; set; }
+
+    public string? ActorId { get; set; }
+
+    public string? IdempotencyKey { get; set; }
 }
 
 internal sealed class CognitiveMemorySourceIngestApiRequest

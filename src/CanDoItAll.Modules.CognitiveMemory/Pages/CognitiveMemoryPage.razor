@@ -1,6 +1,7 @@
 @page "/cognitive-memory"
 @page "/memory"
 @namespace CanDoItAll.Modules.CognitiveMemory.Pages
+@using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Rendering
 
 <PageTitle>Cognitive Memory</PageTitle>
@@ -165,6 +166,189 @@
                               ColumnTemplateXl="minmax(0,1fr) minmax(0,1fr)">
                             @ProjectionHealthPanel()
                             @ProcedurePanel()
+                        </Grid>
+                    </TabsItem>
+
+                    <TabsItem Text="Settings"
+                              Icon="tune"
+                              data-testid="cognitive-memory-tab-settings">
+                        <Grid Gap="LayoutGap.Large"
+                              Class="cognitive-memory-layout"
+                              ColumnTemplateXl="minmax(23rem,0.85fr) minmax(0,1.15fr)"
+                              data-testid="cognitive-memory-settings">
+                            <SurfaceCard data-testid="cognitive-memory-automation-settings">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Automatic sorting" />
+                                <h2 class="cognitive-memory-card-title">Schedule and consolidation triggers</h2>
+                                <Stack GapScale="LayoutGap.Medium" Class="mt-4">
+                                    <label class="cognitive-memory-field">
+                                        <span>Mode</span>
+                                        <InputSelect class="cda-input"
+                                                     @bind-Value="automationScheduleMode"
+                                                     data-testid="cognitive-memory-schedule-mode">
+                                            <option value="@CognitiveMemoryAutomationScheduleMode.ManualOnly">Manual only</option>
+                                            <option value="@CognitiveMemoryAutomationScheduleMode.Nightly">Nightly</option>
+                                            <option value="@CognitiveMemoryAutomationScheduleMode.IdleTimeout">When app is idle</option>
+                                            <option value="@CognitiveMemoryAutomationScheduleMode.ScheduledMoments">Scheduled moments</option>
+                                        </InputSelect>
+                                    </label>
+                                    <Grid Gap="LayoutGap.Medium"
+                                          ColumnTemplateLg="minmax(0,1fr) minmax(0,1fr)">
+                                        <label class="cognitive-memory-field">
+                                            <span>Night time</span>
+                                            <InputText class="cda-input"
+                                                       @bind-Value="nightlyLocalTime"
+                                                       data-testid="cognitive-memory-nightly-time" />
+                                        </label>
+                                        <label class="cognitive-memory-field">
+                                            <span>Idle minutes</span>
+                                            <InputNumber class="cda-input"
+                                                         @bind-Value="idleMinutes"
+                                                         data-testid="cognitive-memory-idle-minutes" />
+                                        </label>
+                                    </Grid>
+                                    <label class="cognitive-memory-field">
+                                        <span>Scheduled moments</span>
+                                        <textarea class="cda-input cda-input--textarea cognitive-memory-notes"
+                                                  @bind="scheduledLocalTimesText"
+                                                  data-testid="cognitive-memory-scheduled-times"></textarea>
+                                    </label>
+                                    <div class="cognitive-memory-checks">
+                                        <label>
+                                            <InputCheckbox @bind-Value="autoIngestProjectStructure" />
+                                            <span>Project structure</span>
+                                        </label>
+                                        <label>
+                                            <InputCheckbox @bind-Value="autoIngestProcessRuntime" />
+                                            <span>Processes</span>
+                                        </label>
+                                        <label>
+                                            <InputCheckbox @bind-Value="autoConsolidateAfterIngestion" />
+                                            <span>Consolidate after ingest</span>
+                                        </label>
+                                    </div>
+                                    <Button Text="Save settings"
+                                            Icon="save"
+                                            ButtonStyle="ButtonStyle.Primary"
+                                            Size="ButtonSize.Small"
+                                            Click="SaveAutomationSettingsAsync"
+                                            Disabled="@isBusy"
+                                            IsBusy="@isBusy"
+                                            data-testid="cognitive-memory-save-settings" />
+                                </Stack>
+                            </SurfaceCard>
+
+                            <SurfaceCard data-testid="cognitive-memory-manual-ingestion">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Manual ingestion" />
+                                <h2 class="cognitive-memory-card-title">Project and process sources</h2>
+                                <Stack GapScale="LayoutGap.Medium" Class="mt-4">
+                                    <Grid Gap="LayoutGap.Medium"
+                                          ColumnTemplateLg="minmax(0,1fr) minmax(9rem,0.35fr)">
+                                        <label class="cognitive-memory-field">
+                                            <span>Scope id</span>
+                                            <InputText class="cda-input"
+                                                       @bind-Value="manualSourceScopeText"
+                                                       placeholder="@ProjectScopePlaceholder"
+                                                       data-testid="cognitive-memory-manual-scope" />
+                                        </label>
+                                        <label class="cognitive-memory-field">
+                                            <span>Take</span>
+                                            <InputNumber class="cda-input"
+                                                         @bind-Value="manualSourceTake"
+                                                         data-testid="cognitive-memory-manual-take" />
+                                        </label>
+                                    </Grid>
+                                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                        <Button Text="Ingest projects"
+                                                Icon="account_tree"
+                                                ButtonStyle="ButtonStyle.Primary"
+                                                Size="ButtonSize.Small"
+                                                Click="IngestProjectStructureAsync"
+                                                Disabled="@isBusy"
+                                                IsBusy="@isBusy"
+                                                data-testid="cognitive-memory-ingest-projects" />
+                                        <Button Text="Ingest processes"
+                                                Icon="route"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Size="ButtonSize.Small"
+                                                Click="IngestProcessesAsync"
+                                                Disabled="@isBusy"
+                                                IsBusy="@isBusy"
+                                                data-testid="cognitive-memory-ingest-processes" />
+                                    </Cluster>
+                                    <div class="cognitive-memory-progress" data-testid="cognitive-memory-manual-progress">
+                                        <progress value="@manualIngestionProgress" max="100"></progress>
+                                        <span>@manualIngestionStatus</span>
+                                    </div>
+                                </Stack>
+                            </SurfaceCard>
+                        </Grid>
+                    </TabsItem>
+
+                    <TabsItem Text="Sources"
+                              Icon="upload_file"
+                              data-testid="cognitive-memory-tab-sources">
+                        <Grid Gap="LayoutGap.Large"
+                              Class="cognitive-memory-layout"
+                              ColumnTemplateXl="minmax(23rem,0.85fr) minmax(0,1.15fr)"
+                              data-testid="cognitive-memory-external-sources">
+                            <SurfaceCard data-testid="cognitive-memory-file-ingestion">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="File source" />
+                                <h2 class="cognitive-memory-card-title">Drop a source document</h2>
+                                <Stack GapScale="LayoutGap.Medium" Class="mt-4">
+                                    <label class="cognitive-memory-file-drop">
+                                        <span>Select file</span>
+                                        <InputFile OnChange="UploadExternalSourceAsync"
+                                                   data-testid="cognitive-memory-file-input" />
+                                    </label>
+                                </Stack>
+                            </SurfaceCard>
+
+                            <SurfaceCard data-testid="cognitive-memory-link-ingestion">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Website source" />
+                                <h2 class="cognitive-memory-card-title">Ingest a website link</h2>
+                                <Stack GapScale="LayoutGap.Medium" Class="mt-4">
+                                    <label class="cognitive-memory-field">
+                                        <span>URL</span>
+                                        <InputText class="cda-input"
+                                                   @bind-Value="externalSourceUrl"
+                                                   data-testid="cognitive-memory-url-input" />
+                                    </label>
+                                    <Button Text="Ingest link"
+                                            Icon="link"
+                                            ButtonStyle="ButtonStyle.Primary"
+                                            Size="ButtonSize.Small"
+                                            Click="IngestExternalLinkAsync"
+                                            Disabled="@isBusy"
+                                            IsBusy="@isBusy"
+                                            data-testid="cognitive-memory-ingest-link" />
+                                </Stack>
+                            </SurfaceCard>
+
+                            <SurfaceCard data-testid="cognitive-memory-external-progress">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Progress" />
+                                <h2 class="cognitive-memory-card-title">External source status</h2>
+                                <div class="cognitive-memory-progress">
+                                    <progress value="@externalSourceProgress" max="100"></progress>
+                                    <span>@externalSourceStatus</span>
+                                </div>
+                                @if (lastExternalSourceResult is not null)
+                                {
+                                    <div class="cognitive-memory-facts mt-4">
+                                        <div class="cognitive-memory-fact">
+                                            <span>Operation</span>
+                                            <strong>@FormatShortId(lastExternalSourceResult.OperationId)</strong>
+                                        </div>
+                                        <div class="cognitive-memory-fact">
+                                            <span>Item</span>
+                                            <strong>@(lastExternalSourceResult.SourceItemId.HasValue ? FormatShortId(lastExternalSourceResult.SourceItemId.Value) : "n/a")</strong>
+                                        </div>
+                                        <div class="cognitive-memory-fact">
+                                            <span>Evidence</span>
+                                            <strong>@(lastExternalSourceResult.EvidenceAnchorId.HasValue ? FormatShortId(lastExternalSourceResult.EvidenceAnchorId.Value) : "n/a")</strong>
+                                        </div>
+                                    </div>
+                                }
+                            </SurfaceCard>
                         </Grid>
                     </TabsItem>
 
@@ -428,11 +612,12 @@
             var sequence = 0;
             foreach (var item in snapshot.ReviewItems)
             {
+                var preview = item.CandidatePreview;
                 stackBuilder.OpenComponent<SelectionListItem>(sequence++);
-                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.Title), item.SubjectTitle);
-                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.Eyebrow), FormatLabel(item.ReviewKind));
-                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.Meta), $"{FormatLabel(item.SubjectKind)} / {FormatDate(item.CreatedAtUtc)}");
-                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.Summary), item.ReasonText);
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.Title), FirstNonEmpty(preview?.ProposedTitle, item.SubjectTitle));
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.Eyebrow), preview is null ? FormatLabel(item.ReviewKind) : $"{FormatLabel(item.ReviewKind)} / {FormatLabel(preview.CandidateKind)}");
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.Meta), preview is null ? $"{FormatLabel(item.SubjectKind)} / {FormatDate(item.CreatedAtUtc)}" : $"{preview.SourceSystem} / {preview.SourceItemType} / {FormatDate(item.CreatedAtUtc)}");
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.Summary), TruncateListText(FirstNonEmpty(preview?.ProposedMemoryText, item.ReasonText), 420));
                 stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.Dense), true);
                 stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.IsSelected), selectedReviewItemId == item.Id.Value);
                 stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.DataTestId), $"cognitive-memory-review-item-{item.Id.Value:N}");
@@ -476,22 +661,61 @@
         builder.AddAttribute(57, "class", "cognitive-memory-muted");
         builder.AddContent(58, item.ReasonText);
         builder.CloseElement();
-        builder.OpenElement(59, "label");
-        builder.AddAttribute(60, "class", "cognitive-memory-field");
-        builder.OpenElement(61, "span");
-        builder.AddContent(62, "Decision notes");
+        if (item.CandidatePreview is { } preview)
+        {
+            builder.OpenElement(59, "section");
+            builder.AddAttribute(60, "class", "cognitive-memory-review-preview");
+            builder.OpenElement(61, "h3");
+            builder.AddContent(62, "Proposed memory");
+            builder.CloseElement();
+            builder.OpenElement(63, "div");
+            builder.AddAttribute(64, "class", "cognitive-memory-facts");
+            RenderFact(builder, 65, "Candidate", FormatLabel(preview.CandidateKind));
+            RenderFact(builder, 77, "State", FormatLabel(preview.CandidateStatus));
+            RenderFact(builder, 89, "Score", FormatLabel(preview.ScoreBucket));
+            RenderFact(builder, 101, "Source", FirstNonEmpty(preview.SourceSystem, "source"));
+            builder.CloseElement();
+            builder.OpenElement(113, "h4");
+            builder.AddContent(114, FirstNonEmpty(preview.ProposedTitle, item.SubjectTitle));
+            builder.CloseElement();
+            builder.OpenElement(115, "p");
+            builder.AddAttribute(116, "class", "cognitive-memory-review-memory-text");
+            builder.AddContent(117, FirstNonEmpty(preview.ProposedMemoryText, "No proposed memory text is available."));
+            builder.CloseElement();
+            builder.OpenElement(118, "p");
+            builder.AddAttribute(119, "class", "cognitive-memory-muted");
+            builder.AddContent(120, FirstNonEmpty(preview.ProposedReason, item.ReasonText));
+            builder.CloseElement();
+            builder.OpenElement(121, "h3");
+            builder.AddContent(122, "Source excerpt");
+            builder.CloseElement();
+            builder.OpenElement(123, "p");
+            builder.AddAttribute(124, "class", "cognitive-memory-muted");
+            builder.AddContent(125, FirstNonEmpty(preview.SourceTitle, preview.SourceLocator, FormatShortId(preview.SourceItemId ?? Guid.Empty)));
+            builder.CloseElement();
+            builder.OpenElement(126, "pre");
+            builder.AddAttribute(127, "class", "cognitive-memory-source-excerpt");
+            builder.AddContent(128, FirstNonEmpty(preview.SourceExcerpt, "No source excerpt is available."));
+            builder.CloseElement();
+            builder.CloseElement();
+        }
+
+        builder.OpenElement(130, "label");
+        builder.AddAttribute(131, "class", "cognitive-memory-field");
+        builder.OpenElement(132, "span");
+        builder.AddContent(133, "Decision notes");
         builder.CloseElement();
-        builder.OpenElement(63, "textarea");
-        builder.AddAttribute(64, "class", "cda-input cda-input--textarea cognitive-memory-notes");
-        builder.AddAttribute(65, "value", reviewNotes);
-        builder.AddAttribute(66, "data-testid", "cognitive-memory-review-notes");
-        builder.AddAttribute(67, "onchange", EventCallback.Factory.CreateBinder<string>(this, value => reviewNotes = value, reviewNotes));
+        builder.OpenElement(134, "textarea");
+        builder.AddAttribute(135, "class", "cda-input cda-input--textarea cognitive-memory-notes");
+        builder.AddAttribute(136, "value", reviewNotes);
+        builder.AddAttribute(137, "data-testid", "cognitive-memory-review-notes");
+        builder.AddAttribute(138, "onchange", EventCallback.Factory.CreateBinder<string>(this, value => reviewNotes = value, reviewNotes));
         builder.CloseElement();
         builder.CloseElement();
-        builder.OpenComponent<Cluster>(68);
-        builder.AddAttribute(69, nameof(Cluster.Gap), LayoutGap.Small);
-        builder.AddAttribute(70, nameof(Cluster.Wrap), FlexWrap.Wrap);
-        builder.AddAttribute(71, nameof(Cluster.ChildContent), (RenderFragment)(actionsBuilder =>
+        builder.OpenComponent<Cluster>(139);
+        builder.AddAttribute(140, nameof(Cluster.Gap), LayoutGap.Small);
+        builder.AddAttribute(141, nameof(Cluster.Wrap), FlexWrap.Wrap);
+        builder.AddAttribute(142, nameof(Cluster.ChildContent), (RenderFragment)(actionsBuilder =>
         {
             RenderDecisionButton(actionsBuilder, 0, "Approve", "check", ButtonStyle.Success, CognitiveMemoryReviewDecisionKind.Approve, "cognitive-memory-review-approve");
             RenderDecisionButton(actionsBuilder, 10, "Reject", "close", ButtonStyle.Danger, CognitiveMemoryReviewDecisionKind.Reject, "cognitive-memory-review-reject");

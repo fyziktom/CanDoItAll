@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Bunit;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.CognitiveMemory;
@@ -37,6 +38,18 @@ public sealed class CognitiveMemoryPageTests
             Assert.Contains("Procedure library", cut.Markup);
         });
 
+        cut.Find("[data-testid='cognitive-memory-tab-settings']").Click();
+        cut.WaitForElement("[data-testid='cognitive-memory-settings']");
+        Assert.Contains("Schedule and consolidation triggers", cut.Markup);
+        Assert.Contains("Project and process sources", cut.Markup);
+        Assert.Contains("Ready.", cut.Markup);
+
+        cut.Find("[data-testid='cognitive-memory-tab-sources']").Click();
+        cut.WaitForElement("[data-testid='cognitive-memory-external-sources']");
+        Assert.Contains("Drop a source document", cut.Markup);
+        Assert.Contains("Ingest a website link", cut.Markup);
+        Assert.Contains("External source status", cut.Markup);
+
         cut.Find("[data-testid='cognitive-memory-tab-memory']").Click();
         cut.WaitForElement("[data-testid='cognitive-memory-explorer']");
         Assert.Contains("Memory source evidence", cut.Markup);
@@ -44,6 +57,9 @@ public sealed class CognitiveMemoryPageTests
 
         cut.Find("[data-testid='cognitive-memory-tab-review']").Click();
         cut.WaitForElement("[data-testid='cognitive-memory-review-queue']");
+        Assert.Contains("Proposed memory", cut.Markup);
+        Assert.Contains("Docker rollback candidate", cut.Markup);
+        Assert.Contains("Rollback source evidence.", cut.Markup);
         cut.Find("[data-testid='cognitive-memory-review-notes']").Change("Needs source-backed rollback validation.");
         cut.Find("[data-testid='cognitive-memory-review-needs-changes']").Click();
 
@@ -300,6 +316,41 @@ public sealed class CognitiveMemoryPageTests
             CompletedAtUtc = now.AddMinutes(2),
             ConcurrencyToken = Guid.NewGuid()
         };
+        var candidatePayload = new CognitiveMemoryConsolidationCandidatePayload(
+            CognitiveMemoryConsolidationCandidateKind.Procedure,
+            sourceItem.Id,
+            evidenceAnchor.Id,
+            null,
+            reviewItem.Id,
+            "unit-test",
+            "runbook",
+            "Docker rollback candidate",
+            "Docker rollback requires health check validation and explicit source evidence.",
+            sourceItem.ContentHash,
+            "Generated from unit rollback source evidence.");
+        var consolidationCandidate = new CognitiveMemoryConsolidationCandidateRecord
+        {
+            Id = Guid.NewGuid(),
+            RunId = consolidationRun.Id,
+            ProjectId = projectId,
+            CandidateKind = CognitiveMemoryConsolidationCandidateKind.Procedure,
+            Status = CognitiveMemoryConsolidationCandidateStatus.ReviewRequired,
+            SourceItemId = sourceItem.Id,
+            EvidenceAnchorId = evidenceAnchor.Id,
+            ReviewItemId = reviewItem.Id,
+            ScoreBucket = CognitiveMemoryScoreProjectionBucket.NeedsReview,
+            DisplayPriorityProjection = 0.58,
+            SourceContentHash = sourceItem.ContentHash,
+            OutputHash = CognitiveMemoryHash.FromUtf8(candidatePayload.Summary).Value,
+            AlgorithmVersion = "component-test",
+            ReasonCode = "GeneratedCandidate",
+            ReasonText = candidatePayload.Reason,
+            PayloadJson = JsonSerializer.Serialize(
+                candidatePayload,
+                CognitiveMemoryJsonSerializerContext.Default.CognitiveMemoryConsolidationCandidatePayload),
+            CreatedAtUtc = now,
+            ConcurrencyToken = Guid.NewGuid()
+        };
         var projectionState = new CognitiveMemoryProjectionStateRecord
         {
             Id = Guid.NewGuid(),
@@ -417,6 +468,7 @@ public sealed class CognitiveMemoryPageTests
             recallCandidate,
             sourceReference,
             consolidationRun,
+            consolidationCandidate,
             projectionState,
             simulation,
             replayJob);

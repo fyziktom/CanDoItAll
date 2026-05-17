@@ -162,6 +162,16 @@ public sealed class ApiIntegrationTests
         Assert.True(paths.TryGetProperty("/api/agents/{agentId}/execution-runs/{executionRunId}/artifacts", out _));
         Assert.True(paths.TryGetProperty("/api/agents/{agentId}/execution-runs/{executionRunId}/log", out _));
         Assert.True(paths.TryGetProperty("/api/cognitive-memory/status", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/database/selection", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/database/profiles", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/database/profiles/postgresql", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/database/switch/{profileId}", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/settings", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/ingestion/project-structure", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/ingestion/processes", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/external-sources/files", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/external-sources/web-links", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/external-sources/ingestions/{operationId}", out _));
         Assert.True(paths.TryGetProperty("/api/cognitive-memory/snapshot", out _));
         Assert.True(paths.TryGetProperty("/api/cognitive-memory/sources/ingest", out _));
         Assert.True(paths.TryGetProperty("/api/cognitive-memory/consolidation/runs", out _));

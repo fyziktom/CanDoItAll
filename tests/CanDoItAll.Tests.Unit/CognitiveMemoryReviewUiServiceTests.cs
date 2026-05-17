@@ -13,7 +13,7 @@ public sealed class CognitiveMemoryReviewUiServiceTests
         var fixture = CreateFixture();
         var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         await SeedOperatorEvidenceAsync(fixture, projectId);
-        var service = new CognitiveMemoryReviewUiService(fixture.Factory, fixture.Clock);
+        var service = CreateService(fixture);
 
         var snapshot = await service.GetSnapshotAsync(new CognitiveMemoryReviewUiQuery(projectId));
 
@@ -59,7 +59,7 @@ public sealed class CognitiveMemoryReviewUiServiceTests
         var fixture = CreateFixture();
         var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         var reviewItemId = await SeedOperatorEvidenceAsync(fixture, projectId);
-        var service = new CognitiveMemoryReviewUiService(fixture.Factory, fixture.Clock);
+        var service = CreateService(fixture);
         var snapshot = await service.GetSnapshotAsync(new CognitiveMemoryReviewUiQuery(projectId));
         var reviewItem = Assert.Single(snapshot.ReviewItems);
 
@@ -493,6 +493,12 @@ public sealed class CognitiveMemoryReviewUiServiceTests
             .Options;
         return new TestFixture(new TestDbContextFactory(options), new FixedClock());
     }
+
+    private static CognitiveMemoryReviewUiService CreateService(TestFixture fixture)
+        => new(
+            fixture.Factory,
+            fixture.Clock,
+            new CognitiveMemoryConsolidationCandidateApplicator(new CognitiveMemoryRecordValidator()));
 
     private sealed class FixedClock : IClock
     {
