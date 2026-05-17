@@ -2,6 +2,7 @@ using System.Reflection;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.CognitiveMemory;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -175,6 +176,69 @@ public sealed class AgentContextContributionTests
         Assert.Contains("must be unique", exception.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task Cognitive_memory_contributor_accepts_explicit_project_marker_for_chat_scope()
+    {
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var orchestrator = new RecordingRecallOrchestrator(projectId);
+        var contributor = new CognitiveMemoryAgentContextContributor(orchestrator);
+
+        var result = await contributor.ContributeAsync(new AgentContextContributionRequest(
+            CreateAgent(),
+            CreateProviderProfile(),
+            [
+                new AgentContextRequestMessage(
+                    AgentContextMessageRole.User,
+                    $"CognitiveMemoryProjectId: {projectId:D}\nWhich ClinicFlow instruction should be remembered?")
+            ],
+            new AgentContextContributionPolicy(
+                AgentContextExecutionMode.InteractiveChat,
+                SuppressApprovalRequirements: false,
+                WorkspaceScopeDescriptor.Organization("unit"))));
+
+        Assert.Equal(AgentContextContributionStatus.Provided, result.Status);
+        Assert.Equal(projectId, orchestrator.LastRequest?.ProjectId);
+        Assert.Equal("Which ClinicFlow instruction should be remembered?", orchestrator.LastRequest?.Query);
+        Assert.Contains("Cognitive Memory context pack", Assert.Single(result.Messages).Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Cognitive_memory_contributor_strips_chat_prompt_controls_before_recall()
+    {
+        var projectId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        var orchestrator = new RecordingRecallOrchestrator(projectId);
+        var contributor = new CognitiveMemoryAgentContextContributor(orchestrator);
+
+        var result = await contributor.ContributeAsync(new AgentContextContributionRequest(
+            CreateAgent(),
+            CreateProviderProfile(),
+            [
+                new AgentContextRequestMessage(
+                    AgentContextMessageRole.User,
+                    $"""
+                    CognitiveMemoryProjectId: {projectId:D}
+
+                    Answer using CanDoItAll Cognitive Memory context only.
+                    If no memory context is available, answer with exactly: NO_MEMORY_CONTEXT.
+                    Return concise JSON with keys: answer, sourceFilename, confidence.
+
+                    Project key: clinicflow-saas
+                    Question: Which ClinicFlow instruction should be remembered for future product positioning, and what phrase must not be overgeneralized?
+                    """)
+            ],
+            new AgentContextContributionPolicy(
+                AgentContextExecutionMode.InteractiveChat,
+                SuppressApprovalRequirements: false,
+                WorkspaceScopeDescriptor.Organization("unit"))));
+
+        var context = Assert.Single(result.Messages).Text;
+        Assert.Equal(AgentContextContributionStatus.Provided, result.Status);
+        Assert.Equal(
+            "Which ClinicFlow instruction should be remembered for future product positioning, and what phrase must not be overgeneralized?",
+            orchestrator.LastRequest?.Query);
+        Assert.Contains("clinicflow-saas-s04.md#section-02-email-2-instruction", context, StringComparison.Ordinal);
+    }
+
     private static MafAgentContextContributionProvider CreateProvider(
         IAgentContextContributor contributor,
         IAgentContextContributionTraceSink? traceSink = null)
@@ -293,6 +357,55 @@ public sealed class AgentContextContributionTests
         {
             CancellationProbe?.Invoke(cancellationToken);
             return ValueTask.FromResult(resultFactory(request));
+        }
+    }
+
+    private sealed class RecordingRecallOrchestrator(Guid expectedProjectId) : ICognitiveMemoryRecallOrchestrator
+    {
+        public CognitiveMemoryRecallRequest? LastRequest { get; private set; }
+
+        public ValueTask<CognitiveMemoryRecallResult> RecallAsync(
+            CognitiveMemoryRecallRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            Assert.Equal(expectedProjectId, request.ProjectId);
+            LastRequest = request;
+            var recordId = CognitiveMemoryRecordId.New();
+            var sourceRef = new CognitiveMemoryRecallSourceRef(
+                recordId,
+                CognitiveMemorySourceItemId.New(),
+                CognitiveMemoryEvidenceAnchorId.New(),
+                "ExternalFile",
+                "clinicflow-saas-s04.md#section-02-email-2-instruction",
+                "Replace clinical prioritization wording with administrative waitlist ranking.",
+                CognitiveMemoryAccessLevel.Project,
+                CognitiveMemoryRedactionState.Safe,
+                IncludedInContext: true,
+                CognitiveMemoryRecallExclusionReasonKind.None);
+            var section = new CognitiveMemoryRecallContextSection(
+                new CognitiveMemorySectionId("unit-section"),
+                CognitiveMemoryRecallContextSectionKind.SelectedMemory,
+                "ClinicFlow instruction",
+                "Use administrative waitlist ranking, not clinical prioritization automation.",
+                [recordId],
+                [],
+                [sourceRef]);
+            var contextPack = new CognitiveMemoryRecallContextPack(
+                CognitiveMemoryRecallContextPackId.New(),
+                expectedProjectId,
+                WorkspaceFrameId: null,
+                "Recall context for unit test",
+                "Selected 1 source-backed memory candidate.",
+                [section],
+                [sourceRef],
+                [],
+                new Dictionary<string, string>());
+            return ValueTask.FromResult(new CognitiveMemoryRecallResult(
+                Guid.NewGuid(),
+                contextPack,
+                [],
+                [],
+                []));
         }
     }
 }

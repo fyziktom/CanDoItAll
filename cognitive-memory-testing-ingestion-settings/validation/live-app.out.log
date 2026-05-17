@@ -70,3 +70,27 @@ warn: Microsoft.AspNetCore.HttpsPolicy.HttpsRedirectionMiddleware[3]
       Failed to determine the https port for redirect.
 info: CanDoItAll.Modules.AgentFramework.AgentFrameworkCatalogWarmupService[0]
       Completed AgentFramework catalog repair and projection warmup in 6094 ms.
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]
+      Resolved database profile Configured PostgreSQL override (6ff8a740-f32a-b19f-4df2-94203b71e07a) via ExplicitOverride. Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:candoitall_cognitive_memory_followup_20260517_12:candoitall. RuntimeLocked=True.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring runtime database profile c962f90a-e772-4a1e-9074-e11371d4484b (Cognitive Memory multi-cycle demo validation) is ready. Provider=PostgreSql, Source=PostgresConnection.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Preparing legacy SQLite compatibility for profile c962f90a-e772-4a1e-9074-e11371d4484b.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Releasing stale SQLite EF migration locks for profile c962f90a-e772-4a1e-9074-e11371d4484b.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Applying EF migrations for profile c962f90a-e772-4a1e-9074-e11371d4484b.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring CRM/HR schema for profile c962f90a-e772-4a1e-9074-e11371d4484b.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring Quartz automation schema for profile c962f90a-e772-4a1e-9074-e11371d4484b.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring plugin runtime schema for profile c962f90a-e772-4a1e-9074-e11371d4484b.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring scheduler planner schema for profile c962f90a-e772-4a1e-9074-e11371d4484b.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring managed SQLite staffing bootstrap for profile c962f90a-e772-4a1e-9074-e11371d4484b.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring managed SQLite agent provider bootstrap for profile c962f90a-e772-4a1e-9074-e11371d4484b.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Runtime database profile c962f90a-e772-4a1e-9074-e11371d4484b is ready.

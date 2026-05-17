@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 
@@ -7,6 +8,10 @@ namespace CanDoItAll.Modules.CognitiveMemory;
 public sealed class CognitiveMemoryAgentContextContributor(
     ICognitiveMemoryRecallOrchestrator recallOrchestrator) : IAgentContextContributor
 {
+    private static readonly Regex ProjectIdMarkerRegex = new(
+        @"\b(?:CognitiveMemoryProjectId|ProjectId)\s*[:=]\s*(?<projectId>[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\b",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+
     public AgentContextContributorDescriptor Descriptor { get; } = new(
         new AgentContextContributorId("cognitive-memory.context"),
         "Cognitive Memory",
@@ -17,21 +22,15 @@ public sealed class CognitiveMemoryAgentContextContributor(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
-        if (request.Policy.WorkspaceScope.Kind != WorkspaceScopeKind.Project ||
-            !Guid.TryParse(request.Policy.WorkspaceScope.Key, out var projectId))
+        if (!TryResolveProjectId(request, out var projectId))
         {
             return AgentContextContributionResult.Skipped(new Dictionary<string, string>
             {
-                ["reason"] = "workspace-scope-not-project"
+                ["reason"] = "project-scope-not-provided"
             });
         }
 
-        var query = string.Join(
-            Environment.NewLine,
-            request.RequestMessages
-                .Where(message => message.Role == AgentContextMessageRole.User)
-                .Select(message => message.Text)
-                .Where(message => !string.IsNullOrWhiteSpace(message)));
+        var query = BuildRecallQuery(request);
         if (string.IsNullOrWhiteSpace(query))
         {
             return AgentContextContributionResult.Skipped(new Dictionary<string, string>
@@ -59,9 +58,9 @@ public sealed class CognitiveMemoryAgentContextContributor(
                         coarseCandidateLimit: 24,
                         graphExpansionDepth: 1,
                         vectorResultLimit: 8,
-                        focusLimit: 6,
-                        detailItemLimit: 6,
-                        contextCharacterBudget: 5000,
+                        focusLimit: 8,
+                        detailItemLimit: 8,
+                        contextCharacterBudget: 8000,
                         maxSourceBytes: 20000)),
                 cancellationToken);
             var contextText = RenderContextPack(result.ContextPack);
@@ -80,7 +79,8 @@ public sealed class CognitiveMemoryAgentContextContributor(
                 {
                     ["traceId"] = result.TraceId.ToString("D"),
                     ["contextPackId"] = result.ContextPack.Id.Value.ToString("D"),
-                    ["includedSections"] = result.ContextPack.Sections.Count.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                    ["includedSections"] = result.ContextPack.Sections.Count.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    ["queryLength"] = query.Length.ToString(System.Globalization.CultureInfo.InvariantCulture)
                 });
         }
         catch (InvalidOperationException exception)
@@ -93,12 +93,106 @@ public sealed class CognitiveMemoryAgentContextContributor(
         }
     }
 
+    private static bool TryResolveProjectId(
+        AgentContextContributionRequest request,
+        out Guid projectId)
+    {
+        if (request.Policy.WorkspaceScope.Kind == WorkspaceScopeKind.Project &&
+            Guid.TryParse(request.Policy.WorkspaceScope.Key, out projectId))
+        {
+            return true;
+        }
+
+        foreach (var message in request.RequestMessages.Where(message => message.Role == AgentContextMessageRole.User))
+        {
+            var match = ProjectIdMarkerRegex.Match(message.Text);
+            if (match.Success &&
+                Guid.TryParse(match.Groups["projectId"].Value, out projectId))
+            {
+                return true;
+            }
+        }
+
+        projectId = Guid.Empty;
+        return false;
+    }
+
+    private static string BuildRecallQuery(AgentContextContributionRequest request)
+    {
+        var userMessages = request.RequestMessages
+            .Where(message => message.Role == AgentContextMessageRole.User)
+            .Select(message => NormalizeRecallQuery(message.Text))
+            .Where(message => !string.IsNullOrWhiteSpace(message))
+            .ToList();
+        return string.Join(Environment.NewLine, userMessages).Trim();
+    }
+
+    private static string NormalizeRecallQuery(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return string.Empty;
+        }
+
+        var lines = text.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+        var questionLines = ExtractQuestionLines(lines);
+        if (questionLines.Count > 0)
+        {
+            return string.Join(Environment.NewLine, questionLines).Trim();
+        }
+
+        var filteredLines = lines
+            .Select(line => line.Trim())
+            .Where(line => !string.IsNullOrWhiteSpace(line))
+            .Where(line => !ProjectIdMarkerRegex.IsMatch(line))
+            .Where(line => !IsPromptControlLine(line))
+            .ToList();
+        return string.Join(Environment.NewLine, filteredLines).Trim();
+    }
+
+    private static List<string> ExtractQuestionLines(IReadOnlyList<string> lines)
+    {
+        var result = new List<string>();
+        var capture = false;
+        foreach (var rawLine in lines)
+        {
+            var line = rawLine.Trim();
+            if (line.StartsWith("Question:", StringComparison.OrdinalIgnoreCase))
+            {
+                capture = true;
+                var question = line["Question:".Length..].Trim();
+                if (!string.IsNullOrWhiteSpace(question))
+                {
+                    result.Add(question);
+                }
+
+                continue;
+            }
+
+            if (!capture || string.IsNullOrWhiteSpace(line) || IsPromptControlLine(line))
+            {
+                continue;
+            }
+
+            result.Add(line);
+        }
+
+        return result;
+    }
+
+    private static bool IsPromptControlLine(string line)
+        => line.StartsWith("Answer using ", StringComparison.OrdinalIgnoreCase)
+           || line.StartsWith("If no memory context ", StringComparison.OrdinalIgnoreCase)
+           || line.StartsWith("Return concise JSON", StringComparison.OrdinalIgnoreCase)
+           || line.StartsWith("Project key:", StringComparison.OrdinalIgnoreCase)
+           || line.StartsWith("Use only ", StringComparison.OrdinalIgnoreCase);
+
     private static string RenderContextPack(CognitiveMemoryRecallContextPack contextPack)
     {
         var sections = contextPack.Sections
             .Where(section => !string.IsNullOrWhiteSpace(section.Content))
             .Take(8)
-            .Select(section => $"## {section.Title}\n{section.Content.Trim()}");
+            .Select(RenderContextSection);
         var body = string.Join(Environment.NewLine + Environment.NewLine, sections);
         if (string.IsNullOrWhiteSpace(body))
         {
@@ -106,6 +200,21 @@ public sealed class CognitiveMemoryAgentContextContributor(
         }
 
         return $"Cognitive Memory context pack: {contextPack.Title}\n{contextPack.Summary}\n\n{body}".Trim();
+    }
+
+    private static string RenderContextSection(CognitiveMemoryRecallContextSection section)
+    {
+        var locators = section.SourceRefs
+            .Where(sourceRef => sourceRef.IncludedInContext)
+            .Select(sourceRef => sourceRef.Locator)
+            .Where(locator => !string.IsNullOrWhiteSpace(locator))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(6)
+            .ToList();
+        var sourceLine = locators.Count == 0
+            ? string.Empty
+            : $"{Environment.NewLine}Source locators: {string.Join("; ", locators)}{Environment.NewLine}";
+        return $"## {section.Title}{sourceLine}{section.Content.Trim()}";
     }
 }
 

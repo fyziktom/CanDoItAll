@@ -104,6 +104,33 @@ public sealed class CognitiveMemoryRecallOrchestratorTests
     }
 
     [Fact]
+    public async Task RecallAsync_FallsBackToScoredProjectLexicalScanWhenFirstTermMisses()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var memory = await SeedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-000000000103"),
+            "FieldOps Mobile App",
+            "Pilot added barcode scanning for asset identity and a route-day view for customer-site grouping.",
+            "Operational update source evidence.");
+        var adapter = new RecordingProjectionAdapter([]);
+        var orchestrator = CreateOrchestrator(fixture, adapter);
+
+        var result = await orchestrator.RecallAsync(CreateRequest(
+            projectId,
+            "What changed after the operational update for FieldOps Mobile App?"));
+
+        Assert.Contains(result.Candidates, candidate =>
+            candidate.MemoryRecordId.Value == memory.RecordId &&
+            candidate.DecisionKind == CognitiveMemoryRecallCandidateDecisionKind.Selected);
+        Assert.Contains(result.Stages, stage =>
+            stage.ChannelKind == CognitiveMemoryRecallChannelKind.Lexical &&
+            stage.ProviderTrace.Contains("fallback", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public async Task RecallAsync_RecordsBudgetExclusionsInsteadOfSilentTruncation()
     {
         var fixture = CreateFixture();

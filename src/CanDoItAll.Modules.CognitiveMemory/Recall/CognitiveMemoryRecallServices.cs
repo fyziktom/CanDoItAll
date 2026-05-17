@@ -18,6 +18,41 @@ public sealed class CognitiveMemoryRecallOrchestrator(
     ILogger<CognitiveMemoryRecallOrchestrator> logger) : ICognitiveMemoryRecallOrchestrator
 {
     private const int OverlapDeduplicationMinimumCharacters = 80;
+    private const int LexicalFallbackScanLimit = 500;
+    private static readonly HashSet<string> LexicalStopWords = new(StringComparer.Ordinal)
+    {
+        "a",
+        "about",
+        "after",
+        "and",
+        "are",
+        "as",
+        "be",
+        "but",
+        "by",
+        "do",
+        "does",
+        "for",
+        "from",
+        "how",
+        "in",
+        "is",
+        "it",
+        "not",
+        "of",
+        "or",
+        "should",
+        "that",
+        "the",
+        "to",
+        "was",
+        "what",
+        "when",
+        "which",
+        "who",
+        "why",
+        "with"
+    };
 
     public async ValueTask<CognitiveMemoryRecallResult> RecallAsync(
         CognitiveMemoryRecallRequest request,
@@ -239,6 +274,49 @@ public sealed class CognitiveMemoryRecallOrchestrator(
                 record.RiskLevel,
                 record.UpdatedAtUtc))
             .ToListAsync(cancellationToken);
+        var fallbackCount = 0;
+        if (records.Count < request.Budget.CoarseCandidateLimit)
+        {
+            var existingRecordIds = records
+                .Select(record => record.Id)
+                .ToHashSet();
+            var fallbackRecords = await BuildRecordQuery(dbContext, request)
+                .Where(record => !existingRecordIds.Contains(record.Id))
+                .OrderByDescending(record => record.UpdatedAtUtc)
+                .Take(LexicalFallbackScanLimit)
+                .Select(record => new MemoryRecordSnapshot(
+                    record.Id,
+                    record.ProjectId,
+                    record.Kind,
+                    record.Title,
+                    record.SummaryText,
+                    record.CanonicalText,
+                    record.TopicKey,
+                    record.ValidationState,
+                    record.StabilityState,
+                    record.SourceEvidenceCount,
+                    record.EvidenceAnchorCount,
+                    record.PrimaryClaimId,
+                    record.PrimaryContextFrameId,
+                    record.AccessLevel,
+                    record.RiskLevel,
+                    record.UpdatedAtUtc))
+                .ToListAsync(cancellationToken);
+            var fallbackMatches = fallbackRecords
+                .Select(record => new
+                {
+                    Record = record,
+                    Score = ComputeLexicalMatch(record, queryTerms)
+                })
+                .Where(match => match.Score > 0)
+                .OrderByDescending(match => match.Score)
+                .ThenByDescending(match => match.Record.UpdatedAtUtc)
+                .Take(request.Budget.CoarseCandidateLimit - records.Count)
+                .Select(match => match.Record)
+                .ToList();
+            fallbackCount = fallbackMatches.Count;
+            records.AddRange(fallbackMatches);
+        }
 
         foreach (var record in records)
         {
@@ -255,7 +333,9 @@ public sealed class CognitiveMemoryRecallOrchestrator(
             records.Count,
             records.Count,
             0,
-            $"lexical:records:{records.Count}",
+            fallbackCount == 0
+                ? $"lexical:records:{records.Count}"
+                : $"lexical:records:{records.Count}:fallback:{fallbackCount}",
             limitingBudget: records.Count >= request.Budget.CoarseCandidateLimit ? CognitiveMemoryBudgetLimit.ItemCount : null,
             completedAtUtc: nowUtc));
     }
@@ -1706,13 +1786,21 @@ public sealed class CognitiveMemoryRecallOrchestrator(
     }
 
     private static IReadOnlyList<string> NormalizeTerms(string query)
-        => query
+    {
+        var terms = query
             .Split([' ', '\t', '\r', '\n', '.', ',', ';', ':', '?', '!', '/', '\\', '-', '_'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Where(term => term.Length >= 2)
             .Select(term => term.ToLowerInvariant())
             .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        var meaningfulTerms = terms
+            .Where(term => !LexicalStopWords.Contains(term))
             .Take(12)
             .ToArray();
+        return meaningfulTerms.Length == 0
+            ? terms.Take(12).ToArray()
+            : meaningfulTerms;
+    }
 
     private static IReadOnlyList<CognitiveMemoryRecordKind> NormalizePreferredKinds(IReadOnlyList<CognitiveMemoryRecordKind>? preferredKinds)
         => preferredKinds?
