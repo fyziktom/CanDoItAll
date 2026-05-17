@@ -2,7 +2,8 @@
 
 ## Status
 
-- Completed 2026-05-16 after `01b-score-geometry-driver`, `17-temporal-replay-scheduler`, `14-neuro-foundation-claim-evidence-ledger`, and `06-consolidation-engine`.
+- Completed
+- Completion detail: Completed 2026-05-16 after `01b-score-geometry-driver`, `17-temporal-replay-scheduler`, `14-neuro-foundation-claim-evidence-ledger`, and `06-consolidation-engine`.
 - `08-human-review-ui` may start. Workflow automation promotion, MAF procedure guidance, answer-gate procedure decisions, Epistemic Drive procedure learning, cross-project procedure reuse, and distributed procedure replay remain blocked until their own gates close.
 
 ## Implementation Result

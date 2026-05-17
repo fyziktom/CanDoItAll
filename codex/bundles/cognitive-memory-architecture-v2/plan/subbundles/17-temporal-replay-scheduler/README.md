@@ -2,7 +2,8 @@
 
 ## Status
 
-- Completed 2026-05-16 after `01b-score-geometry-driver`, `06-consolidation-engine`, and `16-prediction-error-salience-signals`.
+- Completed
+- Completion detail: Completed 2026-05-16 after `01b-score-geometry-driver`, `06-consolidation-engine`, and `16-prediction-error-salience-signals`.
 - Workbook, execution report, provider migrations, tests, and root bundle README were synchronized at closure.
 
 ## Execution Control

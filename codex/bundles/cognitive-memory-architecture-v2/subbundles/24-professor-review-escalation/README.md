@@ -2,9 +2,9 @@
 
 ## Status
 
-- Ready after `22-self-regulation-orchestrator`.
-- Required before high-impact professor-review-needed states are treated as closed by `19-metamemory-abstention-calibration`, `25-self-regulation-ui`, or `12-epistemic-drive-engine`.
-- Implementation not started.
+- Completed
+- Completion detail: Passed on 2026-05-16 follow-up implementation.
+- Closure proof: professor review creation/completion APIs persist governed challenge-review suggestions and outcomes without direct truth mutation; verified by focused unit/integration tests and PostgreSQL smoke counts at `validation/postgres-smoke/evidence/20260516-231507/postgres-advanced-table-counts.csv`.
 
 ## Execution Control
 

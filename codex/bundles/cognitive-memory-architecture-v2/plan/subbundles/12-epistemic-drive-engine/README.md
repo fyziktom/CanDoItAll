@@ -2,7 +2,9 @@
 
 ## Status
 
-- Ready after score geometry, recall traces, consolidation, human review UI, MAF integration, probing-core evidence records, answer-gate evidence, and self-regulation evidence records are available.
+- Completed
+- Completion detail: Passed on 2026-05-16 follow-up implementation.
+- Closure proof: Epistemic Drive scan and learning proposal decision APIs are implemented with evidence-backed proposals and approval decisions; verified by focused unit/integration tests and PostgreSQL smoke evidence at `validation/postgres-smoke/evidence/20260516-231507/99-summary.json`.
 
 ## Execution Control
 

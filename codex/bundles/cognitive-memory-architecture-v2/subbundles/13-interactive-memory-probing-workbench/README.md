@@ -2,8 +2,9 @@
 
 ## Status
 
-- Ready after probing core, recall traces, human review UI, MAF context contribution, and source ingestion foundations are available.
-- Recommended to implement before or alongside full Epistemic Drive rollout.
+- Completed
+- Completion detail: Passed on 2026-05-16 follow-up implementation.
+- Closure proof: probing session/turn/feedback APIs, review UI panels, and workflow/tool wrappers consume backend probing contracts without direct truth mutation; verified by focused unit/component/integration tests and PostgreSQL smoke UI evidence under `validation/postgres-smoke/evidence/20260516-231507`.
 
 ## Execution Control
 

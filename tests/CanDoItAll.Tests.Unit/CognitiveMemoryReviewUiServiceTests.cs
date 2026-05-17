@@ -25,6 +25,13 @@ public sealed class CognitiveMemoryReviewUiServiceTests
         Assert.Equal(1, snapshot.Summary.ProjectionIssueCount);
         Assert.Equal(1, snapshot.Summary.ProcedureReviewCount);
         Assert.Equal(1, snapshot.Summary.SimulationReviewCount);
+        Assert.Equal(1, snapshot.Summary.ProbeSessionCount);
+        Assert.Equal(1, snapshot.Summary.SelfRegulationActionCount);
+        Assert.Equal(1, snapshot.Summary.AnswerGateInterventionCount);
+        Assert.Equal(1, snapshot.Summary.ProfessorReviewCount);
+        Assert.Equal(1, snapshot.Summary.LearningProposalCount);
+        Assert.Equal(1, snapshot.Summary.CrossProjectReviewCount);
+        Assert.Equal(1, snapshot.Summary.DistributedIssueCount);
         var memory = Assert.Single(snapshot.MemoryRecords);
         Assert.Equal("Docker deploy memory", memory.Title);
         Assert.Single(memory.SourceLinks);
@@ -36,6 +43,13 @@ public sealed class CognitiveMemoryReviewUiServiceTests
         Assert.Single(snapshot.ProjectionHealth);
         Assert.Single(snapshot.ProcedureSkills);
         Assert.Single(snapshot.ReplayJobs);
+        Assert.Single(snapshot.ProbeSessions);
+        Assert.Single(snapshot.SelfRegulationAssessments);
+        Assert.Single(snapshot.AnswerGateDecisions);
+        Assert.Single(snapshot.ProfessorReviews);
+        Assert.Single(snapshot.LearningProposals);
+        Assert.Single(snapshot.CrossProjectPromotions);
+        Assert.Single(snapshot.DistributedJobs);
         Assert.Contains("Deployment rollback", snapshot.ReviewItems[0].SubjectTitle, StringComparison.Ordinal);
     }
 
@@ -327,6 +341,122 @@ public sealed class CognitiveMemoryReviewUiServiceTests
             UpdatedAtUtc = now,
             ConcurrencyToken = Guid.NewGuid()
         };
+        var probeSession = new CognitiveMemoryProbeSessionRecord
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = projectId,
+            Status = CognitiveMemoryProbeSessionStatus.Active,
+            RecallMode = CognitiveMemoryRecallMode.FocusedTaskContext,
+            Title = "Docker memory oral exam",
+            ActorId = "agent:test",
+            PolicyProfileId = "policy:test",
+            AlgorithmVersion = "unit-test",
+            TurnCount = 2,
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now,
+            ConcurrencyToken = Guid.NewGuid()
+        };
+        var selfRegulationAssessment = new CognitiveMemorySelfRegulationAssessmentRecord
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = projectId,
+            RecallTraceId = recallTrace.Id,
+            ActorId = "agent:test",
+            ModelProfileId = new CognitiveMemoryModelProfileId("unit-model"),
+            DomainKey = "docker",
+            TaskTypeKey = "deployment",
+            State = CognitiveMemorySelfRegulationStateKind.SourcePoor,
+            AssessmentScoreEvaluationTraceId = Guid.NewGuid(),
+            AssessmentBucket = CognitiveMemoryScoreProjectionBucket.NeedsReview,
+            DisplayAssessmentScore = 0.38,
+            WarningsJson = "[\"source-poor\"]",
+            RequiredOperationsJson = "[\"SourceAudit\"]",
+            AlgorithmVersion = "unit-test",
+            CreatedAtUtc = now,
+            ConcurrencyToken = Guid.NewGuid()
+        };
+        var answerGateDecision = new CognitiveMemoryAnswerGateDecisionRecord
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = projectId,
+            RecallTraceId = recallTrace.Id,
+            SelfRegulationAssessmentId = selfRegulationAssessment.Id,
+            DecisionKind = CognitiveMemoryAnswerGateDecisionKind.SourceAudit,
+            ScoreEvaluationTraceId = Guid.NewGuid(),
+            DecisionBucket = CognitiveMemoryScoreProjectionBucket.NeedsReview,
+            DisplayConfidenceProjection = 0.41,
+            WarningsJson = "[\"source-sufficiency-limited\"]",
+            RequiredOperationsJson = "[\"SourceAudit\"]",
+            Reason = "Answer gate selected source audit.",
+            DraftAnswerSummary = "Docker deployment answer needs more source evidence.",
+            CreatedAtUtc = now,
+            ConcurrencyToken = Guid.NewGuid()
+        };
+        var professorReview = new CognitiveMemoryProfessorReviewRecord
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = projectId,
+            ReviewMode = CognitiveMemoryProfessorReviewMode.SourceSufficiencyReview,
+            Status = CognitiveMemoryProfessorReviewStatus.Requested,
+            RequestedByActorId = "agent:test",
+            ModelProfileId = new CognitiveMemoryModelProfileId("unit-professor"),
+            PromptProfileVersion = "unit-test",
+            PolicyProfileId = "policy:test",
+            RoutingScoreEvaluationTraceId = Guid.NewGuid(),
+            InputSummary = "Review source sufficiency for Docker rollback guidance.",
+            ContextSummary = "[redacted by unit test]",
+            OutputHash = CognitiveMemoryHash.FromUtf8("professor-request").Value,
+            RequiresHumanReview = true,
+            CreatedAtUtc = now,
+            ConcurrencyToken = Guid.NewGuid()
+        };
+        var learningProposal = new CognitiveMemoryLearningProposalRecord
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = projectId,
+            KnowledgeGapId = Guid.NewGuid(),
+            Status = CognitiveMemoryLearningProposalStatus.PendingApproval,
+            Title = "Expand Docker rollback source coverage",
+            Explanation = "Source audit found thin rollback evidence.",
+            EvidenceRefsJson = "[]",
+            Risks = new CognitiveMemoryRiskNotes("Learning output must stay review-gated."),
+            AcceptanceCriteria = "Add source refs before canonical truth.",
+            NeedScoreEvaluationTraceId = Guid.NewGuid(),
+            NeedBucket = CognitiveMemoryScoreProjectionBucket.NeedsReview,
+            DisplayPriorityProjection = 0.82,
+            CreatedAtUtc = now,
+            ConcurrencyToken = Guid.NewGuid()
+        };
+        var crossProjectPromotion = new CognitiveMemoryCrossProjectPromotionCandidateRecord
+        {
+            Id = Guid.NewGuid(),
+            SourceProjectId = projectId,
+            SourceMemoryRecordId = memoryRecord.Id,
+            Status = CognitiveMemoryCrossProjectPromotionStatus.PendingReview,
+            PromotionScoreEvaluationTraceId = Guid.NewGuid(),
+            PromotionBucket = CognitiveMemoryScoreProjectionBucket.NeedsReview,
+            RequestedByActorId = "agent:test",
+            Reason = "Candidate may be reusable after review.",
+            ReviewItemId = reviewItem.Id,
+            CreatedAtUtc = now,
+            ConcurrencyToken = Guid.NewGuid()
+        };
+        var distributedJob = new CognitiveMemoryDistributedJobRecord
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = projectId,
+            JobKind = CognitiveMemoryDistributedJobKind.ReplayAnalysis,
+            State = CognitiveMemoryDistributedJobState.Rejected,
+            SourceScopeKey = "project:docker",
+            InputPayloadJson = "{}",
+            InputHash = CognitiveMemoryHash.FromUtf8("{}").Value,
+            ExpectedOutputSchema = "unit-schema",
+            AlgorithmVersion = "unit-test",
+            PolicyProfileId = "policy:test",
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now,
+            ConcurrencyToken = Guid.NewGuid()
+        };
 
         dbContext.AddRange(
             sourceManifest,
@@ -343,7 +473,14 @@ public sealed class CognitiveMemoryReviewUiServiceTests
             consolidationRun,
             projectionState,
             simulation,
-            replayJob);
+            replayJob,
+            probeSession,
+            selfRegulationAssessment,
+            answerGateDecision,
+            professorReview,
+            learningProposal,
+            crossProjectPromotion,
+            distributedJob);
         await dbContext.SaveChangesAsync();
         return reviewItem.Id;
     }

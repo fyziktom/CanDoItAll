@@ -2,7 +2,8 @@
 
 ## Status
 
-- Completed on 2026-05-16. Closure gate passed with module/composition/migration builds and targeted foundation tests.
+- Completed
+- Completion detail: Completed on 2026-05-16. Closure gate passed with module/composition/migration builds and targeted foundation tests.
 
 ## Execution Control
 

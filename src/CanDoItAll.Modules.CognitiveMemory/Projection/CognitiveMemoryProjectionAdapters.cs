@@ -84,6 +84,24 @@ public sealed class SemanticCompletionCognitiveMemoryRanker(
     }
 }
 
+public sealed class UnavailableCognitiveMemoryEmbeddingProvider : ICognitiveMemoryEmbeddingProvider
+{
+    public ValueTask<CognitiveMemoryEmbeddingResult> EmbedAsync(
+        CognitiveMemoryEmbeddingRequest request,
+        CancellationToken cancellationToken = default)
+        => throw new InvalidOperationException(
+            "Cognitive memory embeddings require IAgentTextEmbeddingGenerator to be registered. Configure a SemanticCompletion embedding provider or run a relational profile that does not call vector recall or projection.");
+}
+
+public sealed class UnavailableCognitiveMemorySemanticRanker : ICognitiveMemorySemanticRanker
+{
+    public ValueTask<CognitiveMemorySemanticRankResult> RankAsync(
+        CognitiveMemorySemanticRankRequest request,
+        CancellationToken cancellationToken = default)
+        => throw new InvalidOperationException(
+            "Cognitive memory semantic ranking requires ISemanticTextRanker to be registered. Configure a SemanticCompletion ranker before using semantic ranking.");
+}
+
 public sealed class SemanticCompletionCognitiveMemoryClassifier<TLabel>(
     ISemanticClassifier<TLabel> classifier,
     IClock clock) : ICognitiveMemorySemanticClassifier<TLabel>
@@ -138,6 +156,24 @@ public sealed class SemanticCompletionCognitiveMemoryClassifier<TLabel>(
         {
             throw new InvalidOperationException($"SemanticCompletion classification request exceeded the {decision.Limit} budget.");
         }
+    }
+}
+
+public sealed class OptionalSemanticCompletionCognitiveMemoryClassifier<TLabel>(
+    IServiceProvider serviceProvider,
+    IClock clock) : ICognitiveMemorySemanticClassifier<TLabel>
+    where TLabel : struct, Enum
+{
+    public ValueTask<CognitiveMemorySemanticClassificationResult<TLabel>> ClassifyAsync(
+        CognitiveMemorySemanticClassificationRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var classifier = serviceProvider.GetService(typeof(ISemanticClassifier<TLabel>)) as ISemanticClassifier<TLabel>
+            ?? throw new InvalidOperationException(
+                $"Cognitive memory semantic classification for {typeof(TLabel).Name} requires ISemanticClassifier<{typeof(TLabel).Name}> to be registered. Configure a SemanticCompletion classifier before using semantic classification.");
+
+        return new SemanticCompletionCognitiveMemoryClassifier<TLabel>(classifier, clock)
+            .ClassifyAsync(request, cancellationToken);
     }
 }
 
@@ -277,8 +313,8 @@ public sealed class RagCognitiveMemoryProjectionAdapter(IRagDriver ragDriver) : 
         if (request.VectorDimensions <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(request), request.VectorDimensions, "Projection vector dimensions must be positive.");
-        }
     }
+}
 
     private static RagKnowledgeEntry BuildRagEntry(
         CognitiveMemoryProjectionEntry entry,
@@ -527,4 +563,43 @@ public sealed class RagCognitiveMemoryProjectionAdapter(IRagDriver ragDriver) : 
             CognitiveMemoryAccessLevel.Restricted => [CognitiveMemoryAccessLevel.Public, CognitiveMemoryAccessLevel.Project, CognitiveMemoryAccessLevel.Restricted],
             _ => throw new ArgumentOutOfRangeException(nameof(maximumAccessLevel), maximumAccessLevel, "Unsupported cognitive memory access level.")
         };
+}
+
+public sealed class UnavailableCognitiveMemoryProjectionAdapter : ICognitiveMemoryProjectionAdapter
+{
+    public CognitiveMemoryProjectionAdapterCapabilities Capabilities { get; } = new(
+        "unavailable",
+        SupportsFilters: false,
+        SupportsPayloadIndexes: false,
+        SupportsDeleteByFilter: false,
+        SupportsNamedVectors: false);
+
+    public ValueTask EnsureCollectionAsync(
+        CognitiveMemoryProjectionCollectionRequest request,
+        CancellationToken cancellationToken = default)
+        => throw CreateUnavailableException();
+
+    public ValueTask<IReadOnlyList<CognitiveMemoryProjectionPayloadIndexResult>> EnsurePayloadIndexesAsync(
+        CognitiveMemoryProjectionPayloadIndexRequest request,
+        CancellationToken cancellationToken = default)
+        => throw CreateUnavailableException();
+
+    public ValueTask ProjectAsync(
+        CognitiveMemoryProjectionWriteRequest request,
+        CancellationToken cancellationToken = default)
+        => throw CreateUnavailableException();
+
+    public ValueTask<CognitiveMemoryProjectionSearchResult> SearchAsync(
+        CognitiveMemoryProjectionSearchRequest request,
+        CancellationToken cancellationToken = default)
+        => throw CreateUnavailableException();
+
+    public ValueTask<CognitiveMemoryProjectionDeleteResult> DeleteBySourceAsync(
+        CognitiveMemoryProjectionDeleteBySourceRequest request,
+        CancellationToken cancellationToken = default)
+        => throw CreateUnavailableException();
+
+    private static InvalidOperationException CreateUnavailableException()
+        => new(
+            "Cognitive memory vector projection requires IRagDriver to be registered. Configure a RAG provider or run with rebuildProjections=false for relational-only development smoke tests.");
 }

@@ -2,9 +2,9 @@
 
 ## Status
 
-- Ready after `13a-probing-core-regression-calibration`, `21-cognitive-self-model`, and `16-prediction-error-salience-signals`.
-- Required before `22-self-regulation-orchestrator` can use stable calibration aggregates for posture decisions.
-- Implementation not started.
+- Completed
+- Completion detail: Passed on 2026-05-16 follow-up implementation.
+- Closure proof: calibration-oriented probe feedback, self-model profile state, risk notes, and assessment inputs are implemented through typed contracts and persisted feedback records; verified by focused unit/integration tests and PostgreSQL smoke evidence at `validation/postgres-smoke/evidence/20260516-231507/99-summary.json`.
 
 ## Execution Control
 

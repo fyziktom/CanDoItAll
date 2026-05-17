@@ -167,6 +167,20 @@ public sealed class ApiIntegrationTests
         Assert.True(paths.TryGetProperty("/api/cognitive-memory/consolidation/runs", out _));
         Assert.True(paths.TryGetProperty("/api/cognitive-memory/recall", out _));
         Assert.True(paths.TryGetProperty("/api/cognitive-memory/review-items/{reviewItemId}/decisions", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/probes/sessions", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/probes/sessions/{sessionId}/turns", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/probes/turns/{turnId}/feedback", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/self-regulation/assessments", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/answer-gate/decisions", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/professor-reviews", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/professor-reviews/{reviewId}/complete", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/epistemic-drive/scans", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/epistemic-drive/proposals/{proposalId}/decisions", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/cross-project/promotions", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/distributed/workers", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/distributed/jobs", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/distributed/jobs/claim", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/distributed/jobs/{jobId}/results", out _));
     }
 
     private static ProcessDefinitionEditorModel BuildFilterTestDefinition()

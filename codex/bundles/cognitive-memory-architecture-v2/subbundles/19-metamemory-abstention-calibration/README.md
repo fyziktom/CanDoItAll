@@ -2,7 +2,9 @@
 
 ## Status
 
-- Ready after `01b-score-geometry-driver`, `13a-probing-core-regression-calibration`, `18-procedural-skill-memory-simulation`, `05-recall-orchestrator`, `22-self-regulation-orchestrator`, `23-calibration-health-and-probing-training`, and `24-professor-review-escalation`.
+- Completed
+- Completion detail: Passed on 2026-05-16 follow-up implementation.
+- Closure proof: answer-gate decision API persists posture-aware decisions, required actions, warnings, and intervention counts consumed by review UI; verified by focused unit/integration tests and PostgreSQL smoke counts at `validation/postgres-smoke/evidence/20260516-231507/postgres-advanced-table-counts.csv`.
 - Required before user/agent answer rendering is considered safe.
 
 ## Execution Control

@@ -2,7 +2,8 @@
 
 ## Status
 
-- Completed on 2026-05-16 after `01a-common-drivers-helpers-and-ef-guardrails` and `01b-score-geometry-driver`.
+- Completed
+- Completion detail: Completed on 2026-05-16 after `01a-common-drivers-helpers-and-ef-guardrails` and `01b-score-geometry-driver`.
 - Critical foundation.
 - Downstream permission: `02-workbench-and-source-ingestion` may start.
 

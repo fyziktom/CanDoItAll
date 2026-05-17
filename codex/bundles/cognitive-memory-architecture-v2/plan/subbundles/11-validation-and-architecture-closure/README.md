@@ -2,7 +2,9 @@
 
 ## Status
 
-- Ready after all implementation subbundles.
+- Completed
+- Completion detail: Passed on 2026-05-16 follow-up implementation.
+- Closure proof: build, EF pending-model checks, targeted cognitive-memory unit/component/integration tests, PostgreSQL smoke data, browser UI screenshots, workbook updates, and completed-stage bundle validation are recorded in `reviews/01-execution-report.md`.
 
 ## Execution Control
 

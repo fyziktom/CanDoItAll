@@ -2,9 +2,9 @@
 
 ## Status
 
-- Ready after `25-self-regulation-ui` and `12-epistemic-drive-engine`.
-- Required before cross-project memory and distributed idle compute are allowed to consume self-regulation evidence at scale.
-- Implementation not started.
+- Completed
+- Completion detail: Passed on 2026-05-16 follow-up implementation.
+- Closure proof: self-regulation, answer gate, professor review, probing, Epistemic Drive, cross-project, and distributed phases are integrated before final cross-project/distributed closure; verified by build/test, PostgreSQL smoke, UI evidence, workbook, and execution-report synchronization.
 
 ## Execution Control
 

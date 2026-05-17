@@ -2,9 +2,9 @@
 
 ## Status
 
-- Ready after `13a-probing-core-regression-calibration`, `14-neuro-foundation-claim-evidence-ledger`, `15-cognitive-workspace-attention-router`, `16-prediction-error-salience-signals`, and `01b-score-geometry-driver`.
-- Critical foundation for `22-self-regulation-orchestrator`, `23-calibration-health-and-probing-training`, `24-professor-review-escalation`, `19-metamemory-abstention-calibration`, `25-self-regulation-ui`, and `12-epistemic-drive-engine`.
-- Implementation not started.
+- Completed
+- Completion detail: Passed on 2026-05-16 follow-up implementation.
+- Closure proof: structured self-model, role/profile, risk, known-gap, and policy profile records are implemented through typed value objects and advanced persistence; verified by focused unit/integration tests and PostgreSQL smoke evidence at `validation/postgres-smoke/evidence/20260516-231507/99-summary.json`.
 
 ## Execution Control
 

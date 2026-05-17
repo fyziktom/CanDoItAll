@@ -2,7 +2,8 @@
 
 ## Status
 
-- Passed on 2026-05-16.
+- Completed
+- Completion detail: Passed on 2026-05-16.
 
 ## Execution Control
 

@@ -2,7 +2,9 @@
 
 ## Status
 
-- Ready after deterministic consolidation exists.
+- Completed
+- Completion detail: Passed on 2026-05-16 follow-up implementation.
+- Closure proof: coordinator-issued distributed workers, job creation, claim, and result acceptance paths are implemented with persisted worker/job/result records; verified by focused unit/integration tests and PostgreSQL smoke counts at `validation/postgres-smoke/evidence/20260516-231507/postgres-advanced-table-counts.csv`.
 
 ## Execution Control
 

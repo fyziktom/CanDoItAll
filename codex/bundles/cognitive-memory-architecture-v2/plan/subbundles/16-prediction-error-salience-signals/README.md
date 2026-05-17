@@ -2,7 +2,8 @@
 
 ## Status
 
-- Passed on 2026-05-16 after `01b-score-geometry-driver`, `15-cognitive-workspace-attention-router`, and `14-neuro-foundation-claim-evidence-ledger`.
+- Completed
+- Completion detail: Passed on 2026-05-16 after `01b-score-geometry-driver`, `15-cognitive-workspace-attention-router`, and `14-neuro-foundation-claim-evidence-ledger`.
 - Critical foundation for recall activation, replay, probing, Epistemic Drive, and calibration.
 
 ## Execution Control

@@ -18,14 +18,14 @@ The cognitive self-regulation update connects the distributed control pieces int
 
 The execution-control update adds a durable phase ledger for implementation agents. The implementation is long enough that markdown alone is not a reliable memory surface; agents must keep the checklist workbook and execution report synchronized after every phase.
 
-This bundle was prepared as architecture and planning. The current execution thread is implementing it under the separate user implementation request and tracking each phase in the workbook and execution report.
+This bundle was prepared as architecture and planning, then completed under the separate user implementation request. Product implementation, follow-up developer API/skill support, PostgreSQL-first smoke data, validation evidence, workbook tracking, and execution-report closure are now tracked in this bundle.
 
 ## Outcome Contract
 
 - Requested outcome: a validated architecture bundle that another implementation agent can execute phase by phase without rediscovering the memory model, data ownership, integration boundaries, or proof obligations.
 - Hard constraints: Qdrant is a rebuildable projection, raw source provenance is mandatory, generated summaries are not source truth, MAF is executive control rather than durable memory storage, and distributed workers cannot mutate authoritative memory.
-- Evidence required before closure: source-backed architecture updates, dependency-aware subbundles, explicit progression gates, traceability rows, current-source inspection notes, and a separate prerequisite-refactor bundle if existing code must change before implementation starts.
-- Known blockers or explicit scope exceptions: no implementation is included; build/test proof is not required for this architecture repair. The supplied current code indicates that the MAF/source-boundary prerequisite has already been implemented and tested; Codex must still validate the target branch before consuming it.
+- Evidence required before closure: source-backed architecture updates, dependency-aware subbundles, explicit progression gates, traceability rows, current-source inspection notes, build/test proof, browser proof for implemented UI surfaces, PostgreSQL smoke data, and completed-stage bundle validation.
+- Known blockers or explicit scope exceptions: none for the implemented v2 closure. Richer future UX, additional analytics, or provider-specific tuning can continue as normal product work, but the bundle implementation is no longer blocked.
 
 ## Key Decision
 
@@ -54,11 +54,11 @@ This bundle was refreshed against the live repositories:
 - `C:\repositories\CanDoItAll.AgentFramework.Rag`
 - `C:\repositories\CanDoItAll.AgentFramework.SemanticCompletion`
 
-The CodeAnalytics snapshot used for the main CanDoItAll source inspection was `snap-20260515230800-1b0ae250`, scoped to composition, infrastructure, Workbench, Processes, Automation, SchedulerPlanner, AgentFramework, and SharedKernel projects. Separate snapshots were taken for the RAG driver, Qdrant driver, and SemanticCompletion driver. Since the first architecture pass, the source/MAF boundary and projection-boundary prerequisite bundles were implemented and validated; Cognitive Memory implementation itself has still not started.
+The CodeAnalytics snapshot used for the main CanDoItAll source inspection was `snap-20260515230800-1b0ae250`, scoped to composition, infrastructure, Workbench, Processes, Automation, SchedulerPlanner, AgentFramework, and SharedKernel projects. Separate snapshots were taken for the RAG driver, Qdrant driver, and SemanticCompletion driver. Since the first architecture pass, the source/MAF boundary and projection-boundary prerequisite bundles were implemented and validated. Cognitive Memory v2 is now implemented through advanced API, review UI, self-regulation, answer gate, probing, Epistemic Drive, cross-project, distributed worker, MAF/workflow executor, PostgreSQL-first smoke, and closure proof surfaces.
 
 The 2026-05-16 execution-control review also used CodeAnalytics snapshot `snap-20260516150857-2c8fb8f3`, focused on `CanDoItAll.AgentFramework.Maf`, `CanDoItAll.AgentFramework.Core`, source snapshot providers, Workbench, Processes, Automation, SchedulerPlanner, Infrastructure, SharedKernel, and relevant test projects.
 
-Additional inspection of the supplied current code confirms that Workbench, Process, and Workflow source snapshot providers are already present and registered; integration tests validate deterministic paging, redaction, restricted hash policy, and Workbench z-index metadata extraction. Implementation is now proceeding phase by phase from this bundle: module foundation, common guardrails, score geometry, neuro claim/evidence foundation, source ingestion, SemanticCompletion/RAG adapter boundaries, durable taxonomy/projection lifecycle, cognitive workspace/attention routing, prediction-error/salience signal foundations, staged recall orchestration, consolidation engine foundations, temporal replay scheduler foundations, procedural skill memory/simulation foundations, and human review UI are complete.
+Additional inspection of the supplied current code confirms that Workbench, Process, and Workflow source snapshot providers are already present and registered; integration tests validate deterministic paging, redaction, restricted hash policy, and Workbench z-index metadata extraction. Implementation proceeded phase by phase from this bundle and is complete through module foundation, common guardrails, score geometry, neuro claim/evidence foundation, source ingestion, SemanticCompletion/RAG adapter boundaries, durable taxonomy/projection lifecycle, cognitive workspace/attention routing, prediction-error/salience signal foundations, staged recall orchestration, consolidation engine foundations, temporal replay scheduler foundations, procedural skill memory/simulation foundations, human review UI, MAF/workflow integration, probing core, self-model, calibration health, self-regulation, professor review, answer gate, interactive probing API/UI panels, Epistemic Drive, cross-project promotion review, distributed worker coordination, architecture closure, and validation closure.
 
 ## Existing Building Blocks Found
 
@@ -189,14 +189,16 @@ Root validation closure remains named `11-validation-and-architecture-closure` f
 
 - Bundle preparation status: `Prepared after execution-control repair`
 - Bundle readiness gate: `Prepared-stage validation passed after execution-control repair`
-- Epistemic Drive status: `Architecture added, implementation not started`
-- Interactive Memory Probing status: `Architecture added, implementation not started`
-- Neuro-cognitive patch status: `Architecture integrated, implementation not started`
-- Cognitive Self-Regulation status: `Architecture integrated, implementation not started`
-- Execution status: `In progress - 08-human-review-ui completed`
-- Subbundle gate review: `Prerequisite, module foundation, common helper guardrail, score geometry, neuro foundation, source ingestion, semantic/RAG adapter, durable taxonomy/projection, workspace/attention, prediction-error/salience, recall, consolidation, temporal replay, procedure skill/simulation, and human review UI gates passed`
-- Final closure gate: `Not started`
-- Browser validation analytics: `08-human-review-ui passed with Playwright and Browser plugin evidence`
+- Epistemic Drive status: `Implemented and smoke-tested`
+- Interactive Memory Probing status: `Implemented through API, persisted probe state/feedback, and operator UI panels`
+- Neuro-cognitive patch status: `Integrated and implemented`
+- Cognitive Self-Regulation status: `Implemented with self-model, calibration health, posture, answer gate, professor review, and UI evidence`
+- Execution status: `Completed`
+- PostgreSQL-first status: `Confirmed through configured PostgreSQL override and fresh database smoke run`
+- Developer API/skill status: `HTTP API extended and local candoitall-api-cognitive-memory skill updated`
+- Subbundle gate review: `All v2 implementation subbundle gates passed or closed by final integration validation`
+- Final closure gate: `Passed`
+- Browser validation analytics: `08-human-review-ui passed with Playwright and Browser plugin evidence; final self-regulation and scale views passed against PostgreSQL smoke data`
 
 ## Source Notes
 

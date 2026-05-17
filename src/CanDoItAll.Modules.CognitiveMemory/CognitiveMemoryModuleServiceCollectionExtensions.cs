@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Rag.Driver.Abstractions;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.SemanticCompletion.Driver.Embeddings;
 using CanDoItAll.AgentFramework.SemanticCompletion.Driver.Semantics;
 using CanDoItAll.SharedKernel;
@@ -20,26 +21,29 @@ public static class CognitiveMemoryModuleServiceCollectionExtensions
         services.TryAddSingleton<ICognitiveMemoryTaxonomyValidator, CognitiveMemoryTaxonomyValidator>();
         services.TryAddScoped<ICognitiveMemoryEmbeddingProvider>(provider =>
         {
-            var embeddingGenerator = provider.GetService<IAgentTextEmbeddingGenerator>()
-                ?? throw new InvalidOperationException("Cognitive memory embeddings require IAgentTextEmbeddingGenerator to be registered.");
-            return new SemanticCompletionCognitiveMemoryEmbeddingProvider(
-                embeddingGenerator,
-                provider.GetRequiredService<IClock>());
+            var embeddingGenerator = provider.GetService<IAgentTextEmbeddingGenerator>();
+            return embeddingGenerator is null
+                ? new UnavailableCognitiveMemoryEmbeddingProvider()
+                : new SemanticCompletionCognitiveMemoryEmbeddingProvider(
+                    embeddingGenerator,
+                    provider.GetRequiredService<IClock>());
         });
         services.TryAddScoped<ICognitiveMemorySemanticRanker>(provider =>
         {
-            var ranker = provider.GetService<ISemanticTextRanker>()
-                ?? throw new InvalidOperationException("Cognitive memory semantic ranking requires ISemanticTextRanker to be registered.");
-            return new SemanticCompletionCognitiveMemoryRanker(
-                ranker,
-                provider.GetRequiredService<IClock>());
+            var ranker = provider.GetService<ISemanticTextRanker>();
+            return ranker is null
+                ? new UnavailableCognitiveMemorySemanticRanker()
+                : new SemanticCompletionCognitiveMemoryRanker(
+                    ranker,
+                    provider.GetRequiredService<IClock>());
         });
-        services.TryAddScoped(typeof(ICognitiveMemorySemanticClassifier<>), typeof(SemanticCompletionCognitiveMemoryClassifier<>));
+        services.TryAddScoped(typeof(ICognitiveMemorySemanticClassifier<>), typeof(OptionalSemanticCompletionCognitiveMemoryClassifier<>));
         services.TryAddScoped<ICognitiveMemoryProjectionAdapter>(provider =>
         {
-            var ragDriver = provider.GetService<IRagDriver>()
-                ?? throw new InvalidOperationException("Cognitive memory vector projection requires IRagDriver to be registered.");
-            return new RagCognitiveMemoryProjectionAdapter(ragDriver);
+            var ragDriver = provider.GetService<IRagDriver>();
+            return ragDriver is null
+                ? new UnavailableCognitiveMemoryProjectionAdapter()
+                : new RagCognitiveMemoryProjectionAdapter(ragDriver);
         });
         services.TryAddScoped<ICognitiveMemoryProjectionLifecycleService, CognitiveMemoryProjectionLifecycleService>();
         services.TryAddScoped<ICognitiveMemoryWorkspaceService, CognitiveMemoryWorkspaceService>();
@@ -56,6 +60,19 @@ public static class CognitiveMemoryModuleServiceCollectionExtensions
         services.TryAddScoped<ICognitiveMemoryProcedureSkillMemoryService>(provider => provider.GetRequiredService<CognitiveMemoryProcedureSkillService>());
         services.TryAddScoped<ICognitiveMemorySimulationSandboxService>(provider => provider.GetRequiredService<CognitiveMemoryProcedureSkillService>());
         services.TryAddScoped<ICognitiveMemoryReviewUiService, CognitiveMemoryReviewUiService>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentContextContributor, CognitiveMemoryAgentContextContributor>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, CognitiveMemoryRecallWorkflowExecutor>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, CognitiveMemoryProbeWorkflowExecutor>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, CognitiveMemoryLearningProposalWorkflowExecutor>());
+        services.TryAddScoped<ICognitiveMemoryProbeService, CognitiveMemoryProbeService>();
+        services.TryAddScoped<ICognitiveMemorySelfModelStore, CognitiveMemorySelfModelStore>();
+        services.TryAddScoped<ICognitiveMemoryCalibrationHealthService, CognitiveMemoryCalibrationHealthService>();
+        services.TryAddScoped<ICognitiveMemorySelfRegulationOrchestrator, CognitiveMemorySelfRegulationOrchestrator>();
+        services.TryAddScoped<ICognitiveMemoryProfessorReviewService, CognitiveMemoryProfessorReviewService>();
+        services.TryAddScoped<ICognitiveMemoryAnswerGateService, CognitiveMemoryAnswerGateService>();
+        services.TryAddScoped<ICognitiveMemoryEpistemicDriveService, CognitiveMemoryEpistemicDriveService>();
+        services.TryAddScoped<ICognitiveMemoryCrossProjectMemoryService, CognitiveMemoryCrossProjectMemoryService>();
+        services.TryAddScoped<ICognitiveMemoryDistributedComputeCoordinator, CognitiveMemoryDistributedComputeCoordinator>();
         return services;
     }
 }

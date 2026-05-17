@@ -2,8 +2,9 @@
 
 ## Status
 
-- Ready after `19-metamemory-abstention-calibration`, `24-professor-review-escalation`, `13-interactive-memory-probing-workbench`, and `12-epistemic-drive-engine` where learning evidence is shown.
-- Implementation not started.
+- Completed
+- Completion detail: Passed on 2026-05-16 follow-up implementation.
+- Closure proof: operator-visible self-regulation, answer-gate, professor-review, learning, and distributed/scale panels are implemented in the Cognitive Memory page; verified by component tests and Browser screenshots at `validation/postgres-smoke/evidence/20260516-231507/ui-self-regulation.png` and `validation/postgres-smoke/evidence/20260516-231507/ui-scale.png`.
 
 ## Execution Control
 

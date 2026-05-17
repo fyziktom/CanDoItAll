@@ -2,7 +2,8 @@
 
 ## Status
 
-- Completed on 2026-05-16.
+- Completed
+- Completion detail: Completed on 2026-05-16.
 - Closure gate passed after deterministic source ingestion implementation, targeted unit/integration proof, EF migration proof, static boundary checks, and full solution build.
 
 ## Execution Control

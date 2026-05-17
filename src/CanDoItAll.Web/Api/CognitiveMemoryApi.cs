@@ -76,6 +76,197 @@ internal static class CognitiveMemoryApi
                 cancellationToken)))
             .WithName("DecideCognitiveMemoryReviewItem");
 
+        memory.MapPost("/probes/sessions", async (
+                CognitiveMemoryProbeStartApiRequest request,
+                ICognitiveMemoryProbeService probeService,
+                CancellationToken cancellationToken) =>
+            await ExecuteAsync(() => probeService.StartAsync(
+                new CognitiveMemoryProbeStartRequest(
+                    EnsureNonEmpty(request.ProjectId, nameof(request.ProjectId)),
+                    EnsureText(request.Title, nameof(request.Title)),
+                    BuildPolicyContext(request.ProjectId, request.Policy),
+                    ParseEnum(request.RecallMode, CognitiveMemoryRecallMode.FocusedTaskContext, nameof(request.RecallMode))),
+                cancellationToken)))
+            .WithName("StartCognitiveMemoryProbeSession");
+
+        memory.MapPost("/probes/sessions/{sessionId:guid}/turns", async (
+                Guid sessionId,
+                CognitiveMemoryProbeAskApiRequest request,
+                ICognitiveMemoryProbeService probeService,
+                CancellationToken cancellationToken) =>
+            await ExecuteAsync(() => probeService.AskAsync(
+                new CognitiveMemoryProbeAskRequest(
+                    EnsureNonEmpty(sessionId, nameof(sessionId)),
+                    EnsureText(request.Question, nameof(request.Question)),
+                    ParseEnum(request.Intent, CognitiveMemoryRecallIntentKind.Testing, nameof(request.Intent)),
+                    BuildRecallBudget(request.Budget),
+                    request.Metadata),
+                cancellationToken)))
+            .WithName("AskCognitiveMemoryProbeQuestion");
+
+        memory.MapPost("/probes/turns/{turnId:guid}/feedback", async (
+                Guid turnId,
+                CognitiveMemoryProbeFeedbackApiRequest request,
+                ICognitiveMemoryProbeService probeService,
+                CancellationToken cancellationToken) =>
+            await ExecuteAsync(() => probeService.RecordFeedbackAsync(
+                new CognitiveMemoryProbeFeedbackRequest(
+                    EnsureNonEmpty(turnId, nameof(turnId)),
+                    ParseEnum(request.Action, CognitiveMemoryProbeFeedbackAction.MarkCorrect, nameof(request.Action)),
+                    request.Notes?.Trim() ?? string.Empty,
+                    request.CorrectionText?.Trim() ?? string.Empty,
+                    ParseEnum(request.RiskLevel, CognitiveMemoryRiskLevel.Low, nameof(request.RiskLevel)),
+                    request.CreateRegressionTest,
+                    request.RequestHumanReview,
+                    ParseEnum(request.CalibrationOutcome, CognitiveMemoryCalibrationOutcomeKind.Unknown, nameof(request.CalibrationOutcome))),
+                cancellationToken)))
+            .WithName("RecordCognitiveMemoryProbeFeedback");
+
+        memory.MapPost("/self-regulation/assessments", async (
+                CognitiveMemorySelfRegulationAssessmentApiRequest request,
+                ICognitiveMemorySelfRegulationOrchestrator orchestrator,
+                CancellationToken cancellationToken) =>
+            await ExecuteAsync(() => orchestrator.AssessAsync(
+                BuildSelfRegulationAssessmentRequest(request),
+                cancellationToken)))
+            .WithName("AssessCognitiveMemorySelfRegulation");
+
+        memory.MapPost("/answer-gate/decisions", async (
+                CognitiveMemoryAnswerGateApiRequest request,
+                ICognitiveMemoryAnswerGateService answerGateService,
+                CancellationToken cancellationToken) =>
+            await ExecuteAsync(() => answerGateService.DecideAsync(
+                BuildAnswerGateRequest(request),
+                cancellationToken)))
+            .WithName("DecideCognitiveMemoryAnswerGate");
+
+        memory.MapPost("/professor-reviews", async (
+                CognitiveMemoryProfessorReviewApiRequest request,
+                ICognitiveMemoryProfessorReviewService professorReviewService,
+                CancellationToken cancellationToken) =>
+            await ExecuteAsync(() => professorReviewService.RequestReviewAsync(
+                BuildProfessorReviewRequest(request),
+                cancellationToken)))
+            .WithName("RequestCognitiveMemoryProfessorReview");
+
+        memory.MapPost("/professor-reviews/{reviewId:guid}/complete", async (
+                Guid reviewId,
+                CognitiveMemoryProfessorReviewCompleteApiRequest request,
+                ICognitiveMemoryProfessorReviewService professorReviewService,
+                CancellationToken cancellationToken) =>
+            await ExecuteAsync(() => professorReviewService.CompleteReviewAsync(
+                EnsureNonEmpty(reviewId, nameof(reviewId)),
+                EnsureText(request.Critique, nameof(request.Critique)),
+                request.MissingEvidence?.Trim() ?? string.Empty,
+                ParseEnum(request.RecommendedPosture, CognitiveMemoryAnswerPostureKind.Caveated, nameof(request.RecommendedPosture)),
+                request.SuggestionKinds
+                    .Select(item => ParseEnum(item, CognitiveMemoryProfessorSuggestionKind.NoAction, nameof(request.SuggestionKinds)))
+                    .ToArray(),
+                cancellationToken)))
+            .WithName("CompleteCognitiveMemoryProfessorReview");
+
+        memory.MapPost("/epistemic-drive/scans", async (
+                CognitiveMemoryEpistemicScanApiRequest request,
+                ICognitiveMemoryEpistemicDriveService epistemicDriveService,
+                CancellationToken cancellationToken) =>
+            await ExecuteAsync(() => epistemicDriveService.ScanAsync(
+                new CognitiveMemoryEpistemicScanRequest(
+                    EnsureNonEmpty(request.ProjectId, nameof(request.ProjectId)),
+                    BuildPolicyContext(request.ProjectId, request.Policy),
+                    NormalizeActorId(request.ActorId)),
+                cancellationToken)))
+            .WithName("ScanCognitiveMemoryEpistemicDrive");
+
+        memory.MapPost("/epistemic-drive/proposals/{proposalId:guid}/decisions", async (
+                Guid proposalId,
+                CognitiveMemoryLearningProposalDecisionApiRequest request,
+                ICognitiveMemoryEpistemicDriveService epistemicDriveService,
+                CancellationToken cancellationToken) =>
+            await ExecuteAsync(() => epistemicDriveService.DecideProposalAsync(
+                EnsureNonEmpty(proposalId, nameof(proposalId)),
+                ParseEnum(request.Decision, CognitiveMemoryLearningProposalStatus.Approved, nameof(request.Decision)),
+                NormalizeActorId(request.ActorId),
+                request.Notes?.Trim() ?? string.Empty,
+                cancellationToken)))
+            .WithName("DecideCognitiveMemoryLearningProposal");
+
+        memory.MapPost("/cross-project/promotions", async (
+                CognitiveMemoryCrossProjectPromotionApiRequest request,
+                ICognitiveMemoryCrossProjectMemoryService crossProjectMemoryService,
+                CancellationToken cancellationToken) =>
+            await ExecuteAsync(() => crossProjectMemoryService.CreateCandidateAsync(
+                new CognitiveMemoryCrossProjectPromotionRequest(
+                    EnsureNonEmpty(request.SourceMemoryRecordId, nameof(request.SourceMemoryRecordId)),
+                    EnsureNonEmpty(request.SourceProjectId, nameof(request.SourceProjectId)),
+                    NormalizeActorId(request.ActorId),
+                    BuildPolicyContext(request.SourceProjectId, request.Policy),
+                    request.SemanticSimilarity,
+                    request.EntityEquivalence,
+                    request.ContextSeparation,
+                    request.SourceReusePermission,
+                    request.PolicyCompatibility,
+                    EnsureText(request.Reason, nameof(request.Reason))),
+                cancellationToken)))
+            .WithName("CreateCognitiveMemoryCrossProjectPromotion");
+
+        memory.MapPost("/distributed/workers", async (
+                CognitiveMemoryDistributedWorkerApiRequest request,
+                ICognitiveMemoryDistributedComputeCoordinator coordinator,
+                CancellationToken cancellationToken) =>
+            await ExecuteAsync(() => coordinator.RegisterWorkerAsync(
+                EnsureText(request.WorkerId, nameof(request.WorkerId)),
+                EnsureText(request.MachineName, nameof(request.MachineName)),
+                request.Capabilities
+                    .Select(item => ParseEnum(item, CognitiveMemoryDistributedJobKind.ProjectionRebuild, nameof(request.Capabilities)))
+                    .ToArray(),
+                cancellationToken)))
+            .WithName("RegisterCognitiveMemoryDistributedWorker");
+
+        memory.MapPost("/distributed/jobs", async (
+                CognitiveMemoryDistributedJobApiRequest request,
+                ICognitiveMemoryDistributedComputeCoordinator coordinator,
+                CancellationToken cancellationToken) =>
+            await ExecuteAsync(() => coordinator.EnqueueAsync(
+                new CognitiveMemoryDistributedJobEnqueueRequest(
+                    EnsureNonEmpty(request.ProjectId, nameof(request.ProjectId)),
+                    ParseEnum(request.JobKind, CognitiveMemoryDistributedJobKind.ProjectionRebuild, nameof(request.JobKind)),
+                    EnsureText(request.SourceScopeKey, nameof(request.SourceScopeKey)),
+                    EnsureText(request.InputPayloadJson, nameof(request.InputPayloadJson)),
+                    EnsureText(request.ExpectedOutputSchema, nameof(request.ExpectedOutputSchema)),
+                    EnsureText(request.AlgorithmVersion, nameof(request.AlgorithmVersion)),
+                    EnsureText(request.PolicyProfileId, nameof(request.PolicyProfileId))),
+                cancellationToken)))
+            .WithName("EnqueueCognitiveMemoryDistributedJob");
+
+        memory.MapPost("/distributed/jobs/claim", async (
+                CognitiveMemoryDistributedClaimApiRequest request,
+                ICognitiveMemoryDistributedComputeCoordinator coordinator,
+                CancellationToken cancellationToken) =>
+            await ExecuteAsync(() => coordinator.ClaimAsync(
+                EnsureText(request.WorkerId, nameof(request.WorkerId)),
+                request.Capabilities
+                    .Select(item => ParseEnum(item, CognitiveMemoryDistributedJobKind.ProjectionRebuild, nameof(request.Capabilities)))
+                    .ToArray(),
+                TimeSpan.FromMinutes(NormalizePositive(request.LeaseMinutes, nameof(request.LeaseMinutes))),
+                cancellationToken)))
+            .WithName("ClaimCognitiveMemoryDistributedJob");
+
+        memory.MapPost("/distributed/jobs/{jobId:guid}/results", async (
+                Guid jobId,
+                CognitiveMemoryDistributedResultApiRequest request,
+                ICognitiveMemoryDistributedComputeCoordinator coordinator,
+                CancellationToken cancellationToken) =>
+            await ExecuteAsync(() => coordinator.SubmitResultAsync(
+                EnsureNonEmpty(jobId, nameof(jobId)),
+                EnsureText(request.WorkerId, nameof(request.WorkerId)),
+                EnsureText(request.LeaseToken, nameof(request.LeaseToken)),
+                EnsureText(request.InputHash, nameof(request.InputHash)),
+                EnsureText(request.OutputPayloadJson, nameof(request.OutputPayloadJson)),
+                EnsureText(request.AlgorithmVersion, nameof(request.AlgorithmVersion)),
+                EnsureText(request.OutputSchema, nameof(request.OutputSchema)),
+                cancellationToken)))
+            .WithName("SubmitCognitiveMemoryDistributedResult");
+
         return group;
     }
 
@@ -93,6 +284,80 @@ internal static class CognitiveMemoryApi
         {
             return ApiEndpointResults.BadRequest(exception.Message, "cognitive-memory.operation-unavailable");
         }
+    }
+
+    private static CognitiveMemorySelfRegulationAssessmentRequest BuildSelfRegulationAssessmentRequest(
+        CognitiveMemorySelfRegulationAssessmentApiRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var projectId = request.ProjectId == Guid.Empty ? (Guid?)null : request.ProjectId;
+        return new CognitiveMemorySelfRegulationAssessmentRequest(
+            projectId,
+            NormalizeActorId(request.ActorId),
+            new CognitiveMemoryModelProfileId(EnsureText(request.ModelProfileId, nameof(request.ModelProfileId))),
+            new CognitiveMemoryRoleKey(string.IsNullOrWhiteSpace(request.RoleKey) ? "developer" : request.RoleKey.Trim()),
+            EnsureText(request.DomainKey, nameof(request.DomainKey)),
+            EnsureText(request.TaskTypeKey, nameof(request.TaskTypeKey)),
+            ParseEnum(request.RiskLevel, CognitiveMemoryRiskLevel.Low, nameof(request.RiskLevel)),
+            BuildPolicyContext(projectId, request.Policy),
+            request.SourceSufficiency,
+            request.EvidenceCoverage,
+            request.ContextFit,
+            request.ContradictionPressure,
+            request.RedactionPressure,
+            request.CognitiveLoad,
+            request.HighImpact,
+            request.RecentCorrection,
+            request.RecallTraceId,
+            request.WorkspaceFrameId,
+            request.AttentionDecisionId);
+    }
+
+    private static CognitiveMemoryAnswerGateRequest BuildAnswerGateRequest(
+        CognitiveMemoryAnswerGateApiRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var projectId = EnsureNonEmpty(request.ProjectId, nameof(request.ProjectId));
+        return new CognitiveMemoryAnswerGateRequest(
+            projectId,
+            NormalizeActorId(request.ActorId),
+            BuildPolicyContext(projectId, request.Policy),
+            request.RecallTraceId,
+            request.SelfRegulationAssessmentId,
+            request.AnswerPostureDecisionId,
+            request.ProfessorReviewId,
+            request.SourceSufficiency,
+            request.ContextFit,
+            request.EvidenceSupport,
+            request.ContradictionPressure,
+            request.StalenessPressure,
+            request.RedactionPressure,
+            request.CalibrationRisk,
+            ParseEnum(request.RiskLevel, CognitiveMemoryRiskLevel.Low, nameof(request.RiskLevel)),
+            request.ProcedureUnvalidated,
+            request.ProfessorReviewRequired,
+            request.DraftAnswerSummary?.Trim() ?? string.Empty);
+    }
+
+    private static CognitiveMemoryProfessorReviewRequest BuildProfessorReviewRequest(
+        CognitiveMemoryProfessorReviewApiRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var projectId = request.ProjectId == Guid.Empty ? (Guid?)null : request.ProjectId;
+        return new CognitiveMemoryProfessorReviewRequest(
+            projectId,
+            ParseEnum(request.ReviewMode, CognitiveMemoryProfessorReviewMode.SocraticChallenge, nameof(request.ReviewMode)),
+            NormalizeActorId(request.ActorId),
+            new CognitiveMemoryModelProfileId(EnsureText(request.ModelProfileId, nameof(request.ModelProfileId))),
+            string.IsNullOrWhiteSpace(request.PromptProfileVersion) ? "professor-review-v1" : request.PromptProfileVersion.Trim(),
+            BuildPolicyContext(projectId, request.Policy),
+            request.SelfRegulationAssessmentId,
+            request.AnswerPostureDecisionId,
+            EnsureText(request.InputSummary, nameof(request.InputSummary)),
+            request.ContextSummary?.Trim() ?? string.Empty,
+            request.SuggestionKinds
+                .Select(item => ParseEnum(item, CognitiveMemoryProfessorSuggestionKind.NoAction, nameof(request.SuggestionKinds)))
+                .ToArray());
     }
 
     private static CognitiveMemorySourceIngestionRequest BuildSourceIngestionRequest(
@@ -369,7 +634,21 @@ internal sealed record CognitiveMemoryStatusApiResponse(
                 "POST /api/cognitive-memory/sources/ingest",
                 "POST /api/cognitive-memory/consolidation/runs",
                 "POST /api/cognitive-memory/recall",
-                "POST /api/cognitive-memory/review-items/{reviewItemId}/decisions"
+                "POST /api/cognitive-memory/review-items/{reviewItemId}/decisions",
+                "POST /api/cognitive-memory/probes/sessions",
+                "POST /api/cognitive-memory/probes/sessions/{sessionId}/turns",
+                "POST /api/cognitive-memory/probes/turns/{turnId}/feedback",
+                "POST /api/cognitive-memory/self-regulation/assessments",
+                "POST /api/cognitive-memory/answer-gate/decisions",
+                "POST /api/cognitive-memory/professor-reviews",
+                "POST /api/cognitive-memory/professor-reviews/{reviewId}/complete",
+                "POST /api/cognitive-memory/epistemic-drive/scans",
+                "POST /api/cognitive-memory/epistemic-drive/proposals/{proposalId}/decisions",
+                "POST /api/cognitive-memory/cross-project/promotions",
+                "POST /api/cognitive-memory/distributed/workers",
+                "POST /api/cognitive-memory/distributed/jobs",
+                "POST /api/cognitive-memory/distributed/jobs/claim",
+                "POST /api/cognitive-memory/distributed/jobs/{jobId}/results"
             ]);
     }
 
@@ -519,4 +798,250 @@ internal sealed class CognitiveMemoryReviewDecisionApiRequest
     public string? Notes { get; set; }
 
     public Guid ExpectedConcurrencyToken { get; set; }
+}
+
+internal sealed class CognitiveMemoryProbeStartApiRequest
+{
+    public Guid ProjectId { get; set; }
+
+    public string Title { get; set; } = string.Empty;
+
+    public string? RecallMode { get; set; }
+
+    public CognitiveMemoryPolicyApiRequest? Policy { get; set; }
+}
+
+internal sealed class CognitiveMemoryProbeAskApiRequest
+{
+    public string Question { get; set; } = string.Empty;
+
+    public string? Intent { get; set; }
+
+    public CognitiveMemoryRecallBudgetApiRequest? Budget { get; set; }
+
+    public IReadOnlyDictionary<string, string>? Metadata { get; set; }
+}
+
+internal sealed class CognitiveMemoryProbeFeedbackApiRequest
+{
+    public string? Action { get; set; }
+
+    public string? Notes { get; set; }
+
+    public string? CorrectionText { get; set; }
+
+    public string? RiskLevel { get; set; }
+
+    public bool CreateRegressionTest { get; set; }
+
+    public bool RequestHumanReview { get; set; }
+
+    public string? CalibrationOutcome { get; set; }
+}
+
+internal sealed class CognitiveMemorySelfRegulationAssessmentApiRequest
+{
+    public Guid ProjectId { get; set; }
+
+    public string? ActorId { get; set; }
+
+    public string ModelProfileId { get; set; } = string.Empty;
+
+    public string RoleKey { get; set; } = "developer";
+
+    public string DomainKey { get; set; } = string.Empty;
+
+    public string TaskTypeKey { get; set; } = string.Empty;
+
+    public string? RiskLevel { get; set; }
+
+    public CognitiveMemoryPolicyApiRequest? Policy { get; set; }
+
+    public double SourceSufficiency { get; set; } = 0.5;
+
+    public double EvidenceCoverage { get; set; } = 0.5;
+
+    public double ContextFit { get; set; } = 0.5;
+
+    public double ContradictionPressure { get; set; }
+
+    public double RedactionPressure { get; set; }
+
+    public double CognitiveLoad { get; set; }
+
+    public bool HighImpact { get; set; }
+
+    public bool RecentCorrection { get; set; }
+
+    public Guid? RecallTraceId { get; set; }
+
+    public Guid? WorkspaceFrameId { get; set; }
+
+    public Guid? AttentionDecisionId { get; set; }
+}
+
+internal sealed class CognitiveMemoryAnswerGateApiRequest
+{
+    public Guid ProjectId { get; set; }
+
+    public string? ActorId { get; set; }
+
+    public CognitiveMemoryPolicyApiRequest? Policy { get; set; }
+
+    public Guid? RecallTraceId { get; set; }
+
+    public Guid? SelfRegulationAssessmentId { get; set; }
+
+    public Guid? AnswerPostureDecisionId { get; set; }
+
+    public Guid? ProfessorReviewId { get; set; }
+
+    public double SourceSufficiency { get; set; } = 0.5;
+
+    public double ContextFit { get; set; } = 0.5;
+
+    public double EvidenceSupport { get; set; } = 0.5;
+
+    public double ContradictionPressure { get; set; }
+
+    public double StalenessPressure { get; set; }
+
+    public double RedactionPressure { get; set; }
+
+    public double CalibrationRisk { get; set; }
+
+    public string? RiskLevel { get; set; }
+
+    public bool ProcedureUnvalidated { get; set; }
+
+    public bool ProfessorReviewRequired { get; set; }
+
+    public string? DraftAnswerSummary { get; set; }
+}
+
+internal sealed class CognitiveMemoryProfessorReviewApiRequest
+{
+    public Guid ProjectId { get; set; }
+
+    public string? ReviewMode { get; set; }
+
+    public string? ActorId { get; set; }
+
+    public string ModelProfileId { get; set; } = string.Empty;
+
+    public string? PromptProfileVersion { get; set; }
+
+    public CognitiveMemoryPolicyApiRequest? Policy { get; set; }
+
+    public Guid? SelfRegulationAssessmentId { get; set; }
+
+    public Guid? AnswerPostureDecisionId { get; set; }
+
+    public string InputSummary { get; set; } = string.Empty;
+
+    public string? ContextSummary { get; set; }
+
+    public IReadOnlyList<string> SuggestionKinds { get; set; } = [];
+}
+
+internal sealed class CognitiveMemoryProfessorReviewCompleteApiRequest
+{
+    public string Critique { get; set; } = string.Empty;
+
+    public string? MissingEvidence { get; set; }
+
+    public string? RecommendedPosture { get; set; }
+
+    public IReadOnlyList<string> SuggestionKinds { get; set; } = [];
+}
+
+internal sealed class CognitiveMemoryEpistemicScanApiRequest
+{
+    public Guid ProjectId { get; set; }
+
+    public string? ActorId { get; set; }
+
+    public CognitiveMemoryPolicyApiRequest? Policy { get; set; }
+}
+
+internal sealed class CognitiveMemoryLearningProposalDecisionApiRequest
+{
+    public string? Decision { get; set; }
+
+    public string? ActorId { get; set; }
+
+    public string? Notes { get; set; }
+}
+
+internal sealed class CognitiveMemoryCrossProjectPromotionApiRequest
+{
+    public Guid SourceMemoryRecordId { get; set; }
+
+    public Guid SourceProjectId { get; set; }
+
+    public string? ActorId { get; set; }
+
+    public CognitiveMemoryPolicyApiRequest? Policy { get; set; }
+
+    public double SemanticSimilarity { get; set; } = 0.5;
+
+    public double EntityEquivalence { get; set; } = 0.5;
+
+    public double ContextSeparation { get; set; } = 0.5;
+
+    public double SourceReusePermission { get; set; } = 0.5;
+
+    public double PolicyCompatibility { get; set; } = 0.5;
+
+    public string Reason { get; set; } = string.Empty;
+}
+
+internal sealed class CognitiveMemoryDistributedWorkerApiRequest
+{
+    public string WorkerId { get; set; } = string.Empty;
+
+    public string MachineName { get; set; } = string.Empty;
+
+    public IReadOnlyList<string> Capabilities { get; set; } = [];
+}
+
+internal sealed class CognitiveMemoryDistributedJobApiRequest
+{
+    public Guid ProjectId { get; set; }
+
+    public string? JobKind { get; set; }
+
+    public string SourceScopeKey { get; set; } = string.Empty;
+
+    public string InputPayloadJson { get; set; } = "{}";
+
+    public string ExpectedOutputSchema { get; set; } = string.Empty;
+
+    public string AlgorithmVersion { get; set; } = string.Empty;
+
+    public string PolicyProfileId { get; set; } = string.Empty;
+}
+
+internal sealed class CognitiveMemoryDistributedClaimApiRequest
+{
+    public string WorkerId { get; set; } = string.Empty;
+
+    public IReadOnlyList<string> Capabilities { get; set; } = [];
+
+    public int? LeaseMinutes { get; set; } = 5;
+}
+
+internal sealed class CognitiveMemoryDistributedResultApiRequest
+{
+    public string WorkerId { get; set; } = string.Empty;
+
+    public string LeaseToken { get; set; } = string.Empty;
+
+    public string InputHash { get; set; } = string.Empty;
+
+    public string OutputPayloadJson { get; set; } = "{}";
+
+    public string AlgorithmVersion { get; set; } = string.Empty;
+
+    public string OutputSchema { get; set; } = string.Empty;
 }

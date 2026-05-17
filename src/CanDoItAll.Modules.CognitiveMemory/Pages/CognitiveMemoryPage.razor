@@ -1,6 +1,7 @@
 @page "/cognitive-memory"
 @page "/memory"
 @namespace CanDoItAll.Modules.CognitiveMemory.Pages
+@using Microsoft.AspNetCore.Components.Rendering
 
 <PageTitle>Cognitive Memory</PageTitle>
 
@@ -8,7 +9,7 @@
     <Header>
         <PageHeader Eyebrow="Cognitive Memory"
                     Title="Memory review"
-                    Description="Inspect recall evidence, review decisions, consolidation health, projection health, replay queues, and procedure maturity.">
+                    Description="Inspect recall evidence, review decisions, probing, self-regulation, answer gates, learning proposals, projection health, and worker safety.">
             <Actions>
                 <Button Icon="refresh"
                         ButtonStyle="ButtonStyle.Light"
@@ -68,6 +69,27 @@
                          Value="@SummaryValue(snapshot?.Summary.SimulationReviewCount)"
                          HelperText="Speculative procedure simulations that require review."
                          Tone="@(snapshot?.Summary.SimulationReviewCount > 0 ? "warning" : "success")"
+                         Badge="true"
+                         Compact="true"
+                         ShowHelperTextAsTooltip="true" />
+            <SummaryTile Label="Answer gates"
+                         Value="@SummaryValue(snapshot?.Summary.AnswerGateInterventionCount)"
+                         HelperText="Answer-gate decisions that warned, requested evidence, review, learning, or abstention."
+                         Tone="@(snapshot?.Summary.AnswerGateInterventionCount > 0 ? "warning" : "success")"
+                         Badge="true"
+                         Compact="true"
+                         ShowHelperTextAsTooltip="true" />
+            <SummaryTile Label="Learning proposals"
+                         Value="@SummaryValue(snapshot?.Summary.LearningProposalCount)"
+                         HelperText="Epistemic Drive learning proposals waiting for approval."
+                         Tone="@(snapshot?.Summary.LearningProposalCount > 0 ? "warning" : "success")"
+                         Badge="true"
+                         Compact="true"
+                         ShowHelperTextAsTooltip="true" />
+            <SummaryTile Label="Worker issues"
+                         Value="@SummaryValue(snapshot?.Summary.DistributedIssueCount)"
+                         HelperText="Distributed jobs or worker results rejected by lease, hash, schema, version, or policy checks."
+                         Tone="@(snapshot?.Summary.DistributedIssueCount > 0 ? "danger" : "success")"
                          Badge="true"
                          Compact="true"
                          ShowHelperTextAsTooltip="true" />
@@ -248,6 +270,35 @@
                             @ConsolidationPanel()
                             @ReplayPanel()
                             @ProcedurePanel()
+                        </Grid>
+                    </TabsItem>
+
+                    <TabsItem Text="Self-regulation"
+                              Icon="psychology"
+                              BadgeText="@RegulationBadgeText"
+                              data-testid="cognitive-memory-tab-self-regulation">
+                        <Grid Gap="LayoutGap.Large"
+                              Class="cognitive-memory-layout"
+                              ColumnTemplateXl="minmax(0,1fr) minmax(0,1fr)"
+                              data-testid="cognitive-memory-self-regulation">
+                            @ProbePanel()
+                            @SelfRegulationPanel()
+                            @AnswerGatePanel()
+                            @ProfessorReviewPanel()
+                            @LearningProposalPanel()
+                        </Grid>
+                    </TabsItem>
+
+                    <TabsItem Text="Scale"
+                              Icon="hub"
+                              BadgeText="@ScaleBadgeText"
+                              data-testid="cognitive-memory-tab-scale">
+                        <Grid Gap="LayoutGap.Large"
+                              Class="cognitive-memory-layout"
+                              ColumnTemplateXl="minmax(0,1fr) minmax(0,1fr)"
+                              data-testid="cognitive-memory-scale">
+                            @CrossProjectPanel()
+                            @DistributedPanel()
                         </Grid>
                     </TabsItem>
                 </Tabs>
@@ -643,4 +694,119 @@
         }));
         builder.CloseComponent();
     };
+
+    private RenderFragment ProbePanel()
+        => AdvancedCollectionPanel(
+            "cognitive-memory-probe-sessions",
+            "Interactive probing",
+            "Probe sessions and turns",
+            "No probes",
+            "No probe sessions yet",
+            "Probe sessions appear after memory is interrogated through the developer API or workbench.",
+            snapshot?.ProbeSessions.Count ?? 0,
+            RenderProbeRows);
+
+    private RenderFragment SelfRegulationPanel()
+        => AdvancedCollectionPanel(
+            "cognitive-memory-self-regulation-assessments",
+            "Self-regulation",
+            "State, posture inputs, and required actions",
+            "No assessments",
+            "No self-regulation decisions yet",
+            "Assessments appear after answer preparation evaluates evidence, calibration, domain competence, and risk.",
+            snapshot?.SelfRegulationAssessments.Count ?? 0,
+            RenderSelfRegulationRows);
+
+    private RenderFragment AnswerGatePanel()
+        => AdvancedCollectionPanel(
+            "cognitive-memory-answer-gates",
+            "Answer gate",
+            "Warnings, review, learning, and abstention",
+            "No gates",
+            "No answer-gate decisions yet",
+            "Answer-gate rows appear after answer-time metamemory checks run.",
+            snapshot?.AnswerGateDecisions.Count ?? 0,
+            RenderAnswerGateRows);
+
+    private RenderFragment ProfessorReviewPanel()
+        => AdvancedCollectionPanel(
+            "cognitive-memory-professor-reviews",
+            "Professor review",
+            "Governed challenge input",
+            "No reviews",
+            "No professor review requests",
+            "Review records appear when self-regulation routes uncertainty to a governed challenge model.",
+            snapshot?.ProfessorReviews.Count ?? 0,
+            RenderProfessorReviewRows);
+
+    private RenderFragment LearningProposalPanel()
+        => AdvancedCollectionPanel(
+            "cognitive-memory-learning-proposals",
+            "Epistemic Drive",
+            "Learning proposals",
+            "No proposals",
+            "No learning proposals yet",
+            "Knowledge gaps become approval-gated learning proposals after scan.",
+            snapshot?.LearningProposals.Count ?? 0,
+            RenderLearningProposalRows);
+
+    private RenderFragment CrossProjectPanel()
+        => AdvancedCollectionPanel(
+            "cognitive-memory-cross-project-promotions",
+            "Cross-project memory",
+            "Promotion review candidates",
+            "No candidates",
+            "No cross-project promotions",
+            "Promotion candidates remain reviewable and do not merge project-private evidence directly.",
+            snapshot?.CrossProjectPromotions.Count ?? 0,
+            RenderCrossProjectRows);
+
+    private RenderFragment DistributedPanel()
+        => AdvancedCollectionPanel(
+            "cognitive-memory-distributed-jobs",
+            "Distributed compute",
+            "Leases, hashes, and schema validation",
+            "No jobs",
+            "No distributed jobs",
+            "Coordinator jobs appear after deterministic work packets are queued.",
+            snapshot?.DistributedJobs.Count ?? 0,
+            RenderDistributedRows);
+
+    private static RenderFragment AdvancedCollectionPanel(
+        string testId,
+        string eyebrow,
+        string title,
+        string emptyEyebrow,
+        string emptyTitle,
+        string emptyDescription,
+        int count,
+        Action<RenderTreeBuilder, int> renderRows)
+        => builder =>
+        {
+            builder.OpenComponent<SurfaceCard>(0);
+            builder.AddAttribute(1, "data-testid", testId);
+            builder.AddAttribute(2, nameof(SurfaceCard.ChildContent), (RenderFragment)(contentBuilder =>
+            {
+                contentBuilder.OpenComponent<TextBlock>(0);
+                contentBuilder.AddAttribute(1, nameof(TextBlock.TextStyle), TextStyle.Eyebrow);
+                contentBuilder.AddAttribute(2, nameof(TextBlock.Value), eyebrow);
+                contentBuilder.CloseComponent();
+                contentBuilder.OpenElement(3, "h2");
+                contentBuilder.AddAttribute(4, "class", "cognitive-memory-card-title");
+                contentBuilder.AddContent(5, title);
+                contentBuilder.CloseElement();
+                if (count == 0)
+                {
+                    contentBuilder.OpenComponent<EmptyState>(6);
+                    contentBuilder.AddAttribute(7, nameof(EmptyState.Eyebrow), emptyEyebrow);
+                    contentBuilder.AddAttribute(8, nameof(EmptyState.Title), emptyTitle);
+                    contentBuilder.AddAttribute(9, nameof(EmptyState.Description), emptyDescription);
+                    contentBuilder.CloseComponent();
+                    return;
+                }
+
+                renderRows(contentBuilder, 10);
+            }));
+            builder.CloseComponent();
+        };
 }

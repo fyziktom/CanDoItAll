@@ -220,7 +220,10 @@ public enum CognitiveMemoryScoreOwnerKind
     TemporalEpisode = 19,
     EpisodeStep = 20,
     ProcedureSimulation = 21,
-    ProcedureFailureMode = 22
+    ProcedureFailureMode = 22,
+    ProfessorReview = 23,
+    CalibrationAggregate = 24,
+    DistributedJob = 25
 }
 
 public readonly record struct CognitiveMemoryScoreEvaluationId

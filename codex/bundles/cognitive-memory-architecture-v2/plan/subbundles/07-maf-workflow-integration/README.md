@@ -2,7 +2,9 @@
 
 ## Status
 
-- Ready after recall, consolidation, and prerequisite MAF boundary.
+- Completed
+- Completion detail: Passed on 2026-05-16 follow-up implementation.
+- Closure proof: MAF context contribution and workflow executor integration are implemented through advanced Cognitive Memory contracts/services and API registration; verified by focused unit/integration tests and PostgreSQL smoke evidence at `validation/postgres-smoke/evidence/20260516-231507/99-summary.json`.
 
 ## Execution Control
 

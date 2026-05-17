@@ -2,7 +2,8 @@
 
 ## Status
 
-- Passed on 2026-05-16. `17-temporal-replay-scheduler` may start.
+- Completed
+- Completion detail: Passed on 2026-05-16. `17-temporal-replay-scheduler` may start.
 - Backend-only phase; no UI files changed and browser proof remains deferred until review/consolidation UI work.
 
 ## Execution Control

@@ -2,7 +2,8 @@
 
 ## Status
 
-- Completed on 2026-05-16.
+- Completed
+- Completion detail: Completed on 2026-05-16.
 - Closure proof: score geometry module/support/unit/integration/migration builds passed; targeted score geometry unit tests passed 6/6; score persistence model guardrail integration test passed 1/1; SQLite/PostgreSQL score migrations generated; production grep proof found no scalar-only behavior scoring surfaces.
 - Critical foundation for recall, attention, belief, salience, replay, probing, answer gating, Epistemic Drive, and cross-project promotion.
 

@@ -2,7 +2,9 @@
 
 ## Status
 
-- Ready after score geometry, recall traces, consolidation evidence intake, review records, and MAF/tool boundaries are available.
+- Completed
+- Completion detail: Passed on 2026-05-16 follow-up implementation.
+- Closure proof: backend probe sessions, turns, feedback, review routing, and calibration-oriented feedback records are persisted behind typed contracts; verified by focused unit/integration tests and PostgreSQL smoke evidence at `validation/postgres-smoke/evidence/20260516-231507/99-summary.json`.
 
 ## Execution Control
 

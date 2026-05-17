@@ -58,6 +58,35 @@ public partial class CognitiveMemoryPage
         }
     }
 
+    private string RegulationBadgeText
+    {
+        get
+        {
+            if (snapshot is null)
+            {
+                return "0";
+            }
+
+            return (snapshot.Summary.SelfRegulationActionCount +
+                    snapshot.Summary.AnswerGateInterventionCount +
+                    snapshot.Summary.ProfessorReviewCount +
+                    snapshot.Summary.LearningProposalCount).ToString();
+        }
+    }
+
+    private string ScaleBadgeText
+    {
+        get
+        {
+            if (snapshot is null)
+            {
+                return "0";
+            }
+
+            return (snapshot.Summary.CrossProjectReviewCount + snapshot.Summary.DistributedIssueCount).ToString();
+        }
+    }
+
     protected override async Task OnInitializedAsync()
     {
         await RefreshAsync();
@@ -305,6 +334,82 @@ public partial class CognitiveMemoryPage
                 CognitiveMemoryProcedureSkillMaturity.Draft or CognitiveMemoryProcedureSkillMaturity.Observed => "warning",
                 _ => "secondary"
             };
+
+    private static string ProbeTone(CognitiveMemoryProbeSessionStatus status)
+        => status switch
+        {
+            CognitiveMemoryProbeSessionStatus.Active => "info",
+            CognitiveMemoryProbeSessionStatus.Closed => "success",
+            CognitiveMemoryProbeSessionStatus.Abandoned => "warning",
+            _ => "secondary"
+        };
+
+    private static string SelfRegulationTone(CognitiveMemorySelfRegulationStateKind state)
+        => state switch
+        {
+            CognitiveMemorySelfRegulationStateKind.Calibrated => "success",
+            CognitiveMemorySelfRegulationStateKind.ProfessorReviewNeeded or
+            CognitiveMemorySelfRegulationStateKind.HighRiskUnverified or
+            CognitiveMemorySelfRegulationStateKind.AccessLimited => "danger",
+            CognitiveMemorySelfRegulationStateKind.Overconfident or
+            CognitiveMemorySelfRegulationStateKind.SourcePoor or
+            CognitiveMemorySelfRegulationStateKind.Fragmented => "warning",
+            CognitiveMemorySelfRegulationStateKind.Underconfident or
+            CognitiveMemorySelfRegulationStateKind.Exploratory => "info",
+            _ => "secondary"
+        };
+
+    private static string AnswerGateTone(CognitiveMemoryAnswerGateDecisionKind decisionKind)
+        => decisionKind switch
+        {
+            CognitiveMemoryAnswerGateDecisionKind.Answer => "success",
+            CognitiveMemoryAnswerGateDecisionKind.Warn => "warning",
+            CognitiveMemoryAnswerGateDecisionKind.Abstain or
+            CognitiveMemoryAnswerGateDecisionKind.Review or
+            CognitiveMemoryAnswerGateDecisionKind.ProfessorReview => "danger",
+            CognitiveMemoryAnswerGateDecisionKind.Clarify or
+            CognitiveMemoryAnswerGateDecisionKind.SourceAudit or
+            CognitiveMemoryAnswerGateDecisionKind.Probe or
+            CognitiveMemoryAnswerGateDecisionKind.LearningRequest => "info",
+            _ => "secondary"
+        };
+
+    private static string ProfessorReviewTone(CognitiveMemoryProfessorReviewStatus status)
+        => status switch
+        {
+            CognitiveMemoryProfessorReviewStatus.Completed or CognitiveMemoryProfessorReviewStatus.Routed => "success",
+            CognitiveMemoryProfessorReviewStatus.RejectedByPolicy => "danger",
+            CognitiveMemoryProfessorReviewStatus.Requested => "warning",
+            _ => "secondary"
+        };
+
+    private static string LearningProposalTone(CognitiveMemoryLearningProposalStatus status)
+        => status switch
+        {
+            CognitiveMemoryLearningProposalStatus.Approved or CognitiveMemoryLearningProposalStatus.Completed => "success",
+            CognitiveMemoryLearningProposalStatus.Rejected or CognitiveMemoryLearningProposalStatus.Snoozed => "secondary",
+            CognitiveMemoryLearningProposalStatus.PendingApproval => "warning",
+            _ => "info"
+        };
+
+    private static string CrossProjectTone(CognitiveMemoryCrossProjectPromotionStatus status)
+        => status switch
+        {
+            CognitiveMemoryCrossProjectPromotionStatus.Approved => "success",
+            CognitiveMemoryCrossProjectPromotionStatus.Rejected or CognitiveMemoryCrossProjectPromotionStatus.Demoted => "danger",
+            CognitiveMemoryCrossProjectPromotionStatus.PendingReview => "warning",
+            _ => "secondary"
+        };
+
+    private static string DistributedJobTone(CognitiveMemoryDistributedJobState state)
+        => state switch
+        {
+            CognitiveMemoryDistributedJobState.Completed => "success",
+            CognitiveMemoryDistributedJobState.Rejected or CognitiveMemoryDistributedJobState.Expired => "danger",
+            CognitiveMemoryDistributedJobState.Leased => "info",
+            CognitiveMemoryDistributedJobState.Queued => "warning",
+            _ => "secondary"
+        };
 
     private static void RenderFact(
         RenderTreeBuilder builder,
@@ -610,6 +715,218 @@ public partial class CognitiveMemoryPage
             }
         }));
         builder.CloseComponent();
+    }
+
+    private void RenderProbeRows(RenderTreeBuilder builder, int sequence)
+    {
+        if (snapshot is null)
+        {
+            return;
+        }
+
+        RenderRows(
+            builder,
+            sequence,
+            snapshot.ProbeSessions,
+            (contentBuilder, session, itemSequence) =>
+            {
+                RenderRowStart(contentBuilder, ref itemSequence, session.Title);
+                RenderStatus(contentBuilder, ref itemSequence, ProbeTone(session.Status), FormatLabel(session.Status));
+                RenderRowText(contentBuilder, ref itemSequence, $"{FormatLabel(session.RecallMode)} / {session.TurnCount} turn(s) / updated {FormatDate(session.UpdatedAtUtc)}");
+                contentBuilder.CloseElement();
+            });
+    }
+
+    private void RenderSelfRegulationRows(RenderTreeBuilder builder, int sequence)
+    {
+        if (snapshot is null)
+        {
+            return;
+        }
+
+        RenderRows(
+            builder,
+            sequence,
+            snapshot.SelfRegulationAssessments,
+            (contentBuilder, assessment, itemSequence) =>
+            {
+                RenderRowStart(contentBuilder, ref itemSequence, $"{FirstNonEmpty(assessment.DomainKey, "domain")} / {FirstNonEmpty(assessment.TaskTypeKey, "task")}");
+                RenderStatus(contentBuilder, ref itemSequence, SelfRegulationTone(assessment.State), FormatLabel(assessment.State));
+                RenderRowText(contentBuilder, ref itemSequence, $"{FormatLabel(assessment.AssessmentBucket)} / score {ScoreText(assessment.DisplayAssessmentScore)}");
+                contentBuilder.CloseElement();
+            });
+    }
+
+    private void RenderAnswerGateRows(RenderTreeBuilder builder, int sequence)
+    {
+        if (snapshot is null)
+        {
+            return;
+        }
+
+        RenderRows(
+            builder,
+            sequence,
+            snapshot.AnswerGateDecisions,
+            (contentBuilder, decision, itemSequence) =>
+            {
+                RenderRowStart(contentBuilder, ref itemSequence, $"{FormatLabel(decision.DecisionKind)} / {FormatShortId(decision.Id)}");
+                RenderStatus(contentBuilder, ref itemSequence, AnswerGateTone(decision.DecisionKind), FormatLabel(decision.DecisionBucket));
+                RenderRowText(contentBuilder, ref itemSequence, FirstNonEmpty(decision.Reason, $"Confidence {ScoreText(decision.DisplayConfidenceProjection)}"));
+                contentBuilder.CloseElement();
+            });
+    }
+
+    private void RenderProfessorReviewRows(RenderTreeBuilder builder, int sequence)
+    {
+        if (snapshot is null)
+        {
+            return;
+        }
+
+        RenderRows(
+            builder,
+            sequence,
+            snapshot.ProfessorReviews,
+            (contentBuilder, review, itemSequence) =>
+            {
+                RenderRowStart(contentBuilder, ref itemSequence, FirstNonEmpty(review.InputSummary, FormatLabel(review.ReviewMode)));
+                RenderStatus(contentBuilder, ref itemSequence, ProfessorReviewTone(review.Status), FormatLabel(review.Status));
+                RenderRowText(contentBuilder, ref itemSequence, $"{FormatLabel(review.ReviewMode)} / requested by {review.RequestedByActorId}");
+                if (!string.IsNullOrWhiteSpace(review.MissingEvidence))
+                {
+                    RenderRowSmall(contentBuilder, ref itemSequence, review.MissingEvidence);
+                }
+
+                contentBuilder.CloseElement();
+            });
+    }
+
+    private void RenderLearningProposalRows(RenderTreeBuilder builder, int sequence)
+    {
+        if (snapshot is null)
+        {
+            return;
+        }
+
+        RenderRows(
+            builder,
+            sequence,
+            snapshot.LearningProposals,
+            (contentBuilder, proposal, itemSequence) =>
+            {
+                RenderRowStart(contentBuilder, ref itemSequence, proposal.Title);
+                RenderStatus(contentBuilder, ref itemSequence, LearningProposalTone(proposal.Status), FormatLabel(proposal.Status));
+                RenderRowText(contentBuilder, ref itemSequence, $"{FormatLabel(proposal.NeedBucket)} / priority {ScoreText(proposal.DisplayPriorityProjection)}");
+                contentBuilder.CloseElement();
+            });
+    }
+
+    private void RenderCrossProjectRows(RenderTreeBuilder builder, int sequence)
+    {
+        if (snapshot is null)
+        {
+            return;
+        }
+
+        RenderRows(
+            builder,
+            sequence,
+            snapshot.CrossProjectPromotions,
+            (contentBuilder, candidate, itemSequence) =>
+            {
+                RenderRowStart(contentBuilder, ref itemSequence, $"Memory {FormatShortId(candidate.SourceMemoryRecordId)}");
+                RenderStatus(contentBuilder, ref itemSequence, CrossProjectTone(candidate.Status), $"{FormatLabel(candidate.Status)} / {FormatLabel(candidate.PromotionBucket)}");
+                RenderRowText(contentBuilder, ref itemSequence, FirstNonEmpty(candidate.Reason, "Cross-project promotion requires review."));
+                contentBuilder.CloseElement();
+            });
+    }
+
+    private void RenderDistributedRows(RenderTreeBuilder builder, int sequence)
+    {
+        if (snapshot is null)
+        {
+            return;
+        }
+
+        RenderRows(
+            builder,
+            sequence,
+            snapshot.DistributedJobs,
+            (contentBuilder, job, itemSequence) =>
+            {
+                RenderRowStart(contentBuilder, ref itemSequence, $"{FormatLabel(job.JobKind)} / {FirstNonEmpty(job.SourceScopeKey, FormatShortId(job.Id))}");
+                RenderStatus(contentBuilder, ref itemSequence, DistributedJobTone(job.State), FormatLabel(job.State));
+                RenderRowText(contentBuilder, ref itemSequence, string.IsNullOrWhiteSpace(job.LeasedWorkerId)
+                    ? $"Created {FormatDate(job.CreatedAtUtc)}"
+                    : $"Worker {job.LeasedWorkerId} / updated {FormatDate(job.UpdatedAtUtc)}");
+                contentBuilder.CloseElement();
+            });
+    }
+
+    private static void RenderRows<TItem>(
+        RenderTreeBuilder builder,
+        int sequence,
+        IReadOnlyList<TItem> items,
+        Action<RenderTreeBuilder, TItem, int> renderItem)
+    {
+        builder.OpenComponent<Stack>(sequence);
+        builder.AddAttribute(sequence + 1, nameof(Stack.GapScale), LayoutGap.Small);
+        builder.AddAttribute(sequence + 2, nameof(Stack.Class), "mt-4");
+        builder.AddAttribute(sequence + 3, nameof(Stack.ChildContent), (RenderFragment)(contentBuilder =>
+        {
+            var itemSequence = 0;
+            foreach (var item in items)
+            {
+                renderItem(contentBuilder, item, itemSequence);
+                itemSequence += 20;
+            }
+        }));
+        builder.CloseComponent();
+    }
+
+    private static void RenderRowStart(
+        RenderTreeBuilder builder,
+        ref int sequence,
+        string title)
+    {
+        builder.OpenElement(sequence++, "div");
+        builder.AddAttribute(sequence++, "class", "cognitive-memory-row");
+        builder.OpenElement(sequence++, "strong");
+        builder.AddContent(sequence++, title);
+        builder.CloseElement();
+    }
+
+    private static void RenderStatus(
+        RenderTreeBuilder builder,
+        ref int sequence,
+        string tone,
+        string text)
+    {
+        builder.OpenComponent<StatusBadge>(sequence++);
+        builder.AddAttribute(sequence++, nameof(StatusBadge.Tone), tone);
+        builder.AddAttribute(sequence++, nameof(StatusBadge.Text), text);
+        builder.CloseComponent();
+    }
+
+    private static void RenderRowText(
+        RenderTreeBuilder builder,
+        ref int sequence,
+        string text)
+    {
+        builder.OpenElement(sequence++, "span");
+        builder.AddContent(sequence++, text);
+        builder.CloseElement();
+    }
+
+    private static void RenderRowSmall(
+        RenderTreeBuilder builder,
+        ref int sequence,
+        string text)
+    {
+        builder.OpenElement(sequence++, "small");
+        builder.AddContent(sequence++, text);
+        builder.CloseElement();
     }
 
     private static void RenderEmptyLine(RenderTreeBuilder builder, int sequence, string text)

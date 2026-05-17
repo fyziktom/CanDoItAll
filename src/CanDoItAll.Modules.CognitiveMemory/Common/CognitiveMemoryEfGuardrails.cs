@@ -189,6 +189,30 @@ public static class CognitiveMemoryEfGuardrails
         new(typeof(CognitiveMemorySourceScanFailureRecord), [nameof(CognitiveMemorySourceScanFailureRecord.ProjectId), nameof(CognitiveMemorySourceScanFailureRecord.SourceSystem), nameof(CognitiveMemorySourceScanFailureRecord.CreatedAtUtc)], false)
     ];
 
+    public static IReadOnlyList<CognitiveMemoryIndexExpectation> AdvancedIndexExpectations { get; } =
+    [
+        new(typeof(CognitiveMemoryProbeSessionRecord), [nameof(CognitiveMemoryProbeSessionRecord.ProjectId), nameof(CognitiveMemoryProbeSessionRecord.Status), nameof(CognitiveMemoryProbeSessionRecord.CreatedAtUtc)], false),
+        new(typeof(CognitiveMemoryProbeTurnRecord), [nameof(CognitiveMemoryProbeTurnRecord.ProbeSessionId), nameof(CognitiveMemoryProbeTurnRecord.Sequence)], true),
+        new(typeof(CognitiveMemoryProbeFeedbackRecord), [nameof(CognitiveMemoryProbeFeedbackRecord.ProjectId), nameof(CognitiveMemoryProbeFeedbackRecord.CalibrationOutcome), nameof(CognitiveMemoryProbeFeedbackRecord.CreatedAtUtc)], false),
+        new(typeof(CognitiveMemoryProbeFindingRecord), [nameof(CognitiveMemoryProbeFindingRecord.ProjectId), nameof(CognitiveMemoryProbeFindingRecord.FindingKind), nameof(CognitiveMemoryProbeFindingRecord.CreatedAtUtc)], false),
+        new(typeof(CognitiveMemoryProbeRegressionTestCaseRecord), [nameof(CognitiveMemoryProbeRegressionTestCaseRecord.ProjectId), nameof(CognitiveMemoryProbeRegressionTestCaseRecord.Status), nameof(CognitiveMemoryProbeRegressionTestCaseRecord.CreatedAtUtc)], false),
+        new(typeof(CognitiveMemorySelfModelProfileRecord), [nameof(CognitiveMemorySelfModelProfileRecord.ProjectId), nameof(CognitiveMemorySelfModelProfileRecord.ModelProfileId), nameof(CognitiveMemorySelfModelProfileRecord.RoleKey), nameof(CognitiveMemorySelfModelProfileRecord.Status)], false),
+        new(typeof(CognitiveMemoryDomainCompetenceProfileRecord), [nameof(CognitiveMemoryDomainCompetenceProfileRecord.ProjectId), nameof(CognitiveMemoryDomainCompetenceProfileRecord.ModelProfileId), nameof(CognitiveMemoryDomainCompetenceProfileRecord.DomainKey), nameof(CognitiveMemoryDomainCompetenceProfileRecord.TaskTypeKey), nameof(CognitiveMemoryDomainCompetenceProfileRecord.ProfileVersion)], true),
+        new(typeof(CognitiveMemorySelfRegulationPolicyProfileRecord), [nameof(CognitiveMemorySelfRegulationPolicyProfileRecord.ProjectId), nameof(CognitiveMemorySelfRegulationPolicyProfileRecord.PolicyKey), nameof(CognitiveMemorySelfRegulationPolicyProfileRecord.ProfileVersion)], true),
+        new(typeof(CognitiveMemoryCalibrationAggregateRecord), [nameof(CognitiveMemoryCalibrationAggregateRecord.ProjectId), nameof(CognitiveMemoryCalibrationAggregateRecord.DomainKey), nameof(CognitiveMemoryCalibrationAggregateRecord.TaskTypeKey), nameof(CognitiveMemoryCalibrationAggregateRecord.ModelProfileId), nameof(CognitiveMemoryCalibrationAggregateRecord.RiskKey), nameof(CognitiveMemoryCalibrationAggregateRecord.FeaturePatternKey), nameof(CognitiveMemoryCalibrationAggregateRecord.ProfileVersion)], true),
+        new(typeof(CognitiveMemorySelfRegulationAssessmentRecord), [nameof(CognitiveMemorySelfRegulationAssessmentRecord.ProjectId), nameof(CognitiveMemorySelfRegulationAssessmentRecord.State), nameof(CognitiveMemorySelfRegulationAssessmentRecord.CreatedAtUtc)], false),
+        new(typeof(CognitiveMemoryAnswerPostureDecisionRecord), [nameof(CognitiveMemoryAnswerPostureDecisionRecord.ProjectId), nameof(CognitiveMemoryAnswerPostureDecisionRecord.Posture), nameof(CognitiveMemoryAnswerPostureDecisionRecord.CreatedAtUtc)], false),
+        new(typeof(CognitiveMemoryProfessorReviewRecord), [nameof(CognitiveMemoryProfessorReviewRecord.ProjectId), nameof(CognitiveMemoryProfessorReviewRecord.ReviewMode), nameof(CognitiveMemoryProfessorReviewRecord.Status), nameof(CognitiveMemoryProfessorReviewRecord.CreatedAtUtc)], false),
+        new(typeof(CognitiveMemoryAnswerGateDecisionRecord), [nameof(CognitiveMemoryAnswerGateDecisionRecord.ProjectId), nameof(CognitiveMemoryAnswerGateDecisionRecord.DecisionKind), nameof(CognitiveMemoryAnswerGateDecisionRecord.CreatedAtUtc)], false),
+        new(typeof(CognitiveMemoryKnowledgeRegionRecord), [nameof(CognitiveMemoryKnowledgeRegionRecord.ProjectId), nameof(CognitiveMemoryKnowledgeRegionRecord.RegionKind), nameof(CognitiveMemoryKnowledgeRegionRecord.RegionKey)], true),
+        new(typeof(CognitiveMemoryCoverageMapRecord), [nameof(CognitiveMemoryCoverageMapRecord.ProjectId), nameof(CognitiveMemoryCoverageMapRecord.KnowledgeRegionId)], true),
+        new(typeof(CognitiveMemoryLearningProposalRecord), [nameof(CognitiveMemoryLearningProposalRecord.ProjectId), nameof(CognitiveMemoryLearningProposalRecord.Status), nameof(CognitiveMemoryLearningProposalRecord.CreatedAtUtc)], false),
+        new(typeof(CognitiveMemoryCrossProjectPromotionCandidateRecord), [nameof(CognitiveMemoryCrossProjectPromotionCandidateRecord.SourceProjectId), nameof(CognitiveMemoryCrossProjectPromotionCandidateRecord.SourceMemoryRecordId), nameof(CognitiveMemoryCrossProjectPromotionCandidateRecord.Status)], false),
+        new(typeof(CognitiveMemoryDistributedWorkerRecord), [nameof(CognitiveMemoryDistributedWorkerRecord.WorkerId)], true),
+        new(typeof(CognitiveMemoryDistributedJobRecord), [nameof(CognitiveMemoryDistributedJobRecord.ProjectId), nameof(CognitiveMemoryDistributedJobRecord.JobKind), nameof(CognitiveMemoryDistributedJobRecord.InputHash)], true),
+        new(typeof(CognitiveMemoryDistributedWorkerResultRecord), [nameof(CognitiveMemoryDistributedWorkerResultRecord.ProjectId), nameof(CognitiveMemoryDistributedWorkerResultRecord.Status), nameof(CognitiveMemoryDistributedWorkerResultRecord.SubmittedAtUtc)], false)
+    ];
+
     public static bool HasExpectedIndex(IEntityType entityType, CognitiveMemoryIndexExpectation expectation)
         => entityType.GetIndexes().Any(index =>
             index.IsUnique == expectation.IsUnique &&

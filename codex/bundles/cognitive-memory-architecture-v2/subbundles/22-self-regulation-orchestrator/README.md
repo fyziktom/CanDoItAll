@@ -2,9 +2,9 @@
 
 ## Status
 
-- Ready after `21-cognitive-self-model` and `23-calibration-health-and-probing-training`.
-- Critical foundation for `24-professor-review-escalation`, `19-metamemory-abstention-calibration`, `13-interactive-memory-probing-workbench`, `25-self-regulation-ui`, and `12-epistemic-drive-engine`.
-- Implementation not started.
+- Completed
+- Completion detail: Passed on 2026-05-16 follow-up implementation.
+- Closure proof: self-regulation assessments, humility triggers, posture decisions, answer-gate inputs, and UI counts are implemented and persisted; verified by focused unit/integration tests and PostgreSQL smoke counts at `validation/postgres-smoke/evidence/20260516-231507/postgres-advanced-table-counts.csv`.
 
 ## Execution Control
 

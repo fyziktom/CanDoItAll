@@ -2,7 +2,8 @@
 
 ## Status
 
-- Passed on 2026-05-16. Closure recorded in `checklists/cognitive-memory-implementation-control.xlsx` and `reviews/01-execution-report.md`.
+- Completed
+- Completion detail: Passed on 2026-05-16. Closure recorded in `checklists/cognitive-memory-implementation-control.xlsx` and `reviews/01-execution-report.md`.
 
 ## Execution Control
 

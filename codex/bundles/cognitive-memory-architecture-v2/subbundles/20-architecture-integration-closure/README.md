@@ -2,7 +2,9 @@
 
 ## Status
 
-- Ready after score-geometry, neuro-cognitive, and cognitive self-regulation phases and before final `11-validation-and-architecture-closure`.
+- Completed
+- Completion detail: Passed on 2026-05-16 follow-up implementation.
+- Closure proof: score-geometry, neuro-cognitive, self-regulation, Epistemic Drive, cross-project, distributed compute, API, UI, PostgreSQL smoke, workbook, and execution-report artifacts are synchronized for final validation closure.
 
 ## Execution Control
 
@@ -78,8 +80,8 @@ Validate that the score-geometry update, neuro-cognitive patch, and cognitive se
 
 ## Scope Exceptions
 
-- Does not implement product code.
-- Does not produce final completed-stage proof because implementation has not started.
+- Product implementation is complete for the v2 bundle scope.
+- Future product polish remains outside this closure unless it changes the recorded architecture or safety invariants.
 
 ## Do Not Do
 

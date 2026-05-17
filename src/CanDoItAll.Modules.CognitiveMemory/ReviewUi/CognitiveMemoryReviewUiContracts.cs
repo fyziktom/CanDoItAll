@@ -27,7 +27,14 @@ public sealed record CognitiveMemoryReviewUiSnapshot(
     IReadOnlyList<CognitiveMemoryConsolidationRunView> ConsolidationRuns,
     IReadOnlyList<CognitiveMemoryProjectionHealthView> ProjectionHealth,
     IReadOnlyList<CognitiveMemoryProcedureSkillView> ProcedureSkills,
-    IReadOnlyList<CognitiveMemoryReplayJobView> ReplayJobs);
+    IReadOnlyList<CognitiveMemoryReplayJobView> ReplayJobs,
+    IReadOnlyList<CognitiveMemoryProbeSessionView> ProbeSessions,
+    IReadOnlyList<CognitiveMemorySelfRegulationView> SelfRegulationAssessments,
+    IReadOnlyList<CognitiveMemoryAnswerGateView> AnswerGateDecisions,
+    IReadOnlyList<CognitiveMemoryProfessorReviewView> ProfessorReviews,
+    IReadOnlyList<CognitiveMemoryLearningProposalView> LearningProposals,
+    IReadOnlyList<CognitiveMemoryCrossProjectPromotionView> CrossProjectPromotions,
+    IReadOnlyList<CognitiveMemoryDistributedJobView> DistributedJobs);
 
 public sealed record CognitiveMemoryReviewUiSummary(
     int MemoryRecordCount,
@@ -37,7 +44,14 @@ public sealed record CognitiveMemoryReviewUiSummary(
     int ConsolidationIssueCount,
     int ProjectionIssueCount,
     int ProcedureReviewCount,
-    int SimulationReviewCount);
+    int SimulationReviewCount,
+    int ProbeSessionCount,
+    int SelfRegulationActionCount,
+    int AnswerGateInterventionCount,
+    int ProfessorReviewCount,
+    int LearningProposalCount,
+    int CrossProjectReviewCount,
+    int DistributedIssueCount);
 
 public sealed record CognitiveMemoryExplorerItem(
     CognitiveMemoryRecordId Id,
@@ -183,6 +197,80 @@ public sealed record CognitiveMemoryReplayJobView(
     string Reason,
     string FailureCode,
     string FailureMessage,
+    DateTimeOffset UpdatedAtUtc);
+
+public sealed record CognitiveMemoryProbeSessionView(
+    Guid Id,
+    Guid ProjectId,
+    CognitiveMemoryProbeSessionStatus Status,
+    CognitiveMemoryRecallMode RecallMode,
+    string Title,
+    int TurnCount,
+    DateTimeOffset UpdatedAtUtc);
+
+public sealed record CognitiveMemorySelfRegulationView(
+    Guid Id,
+    Guid? ProjectId,
+    CognitiveMemorySelfRegulationStateKind State,
+    CognitiveMemoryScoreProjectionBucket AssessmentBucket,
+    double? DisplayAssessmentScore,
+    string DomainKey,
+    string TaskTypeKey,
+    string WarningsJson,
+    string RequiredOperationsJson,
+    DateTimeOffset CreatedAtUtc);
+
+public sealed record CognitiveMemoryAnswerGateView(
+    Guid Id,
+    Guid ProjectId,
+    CognitiveMemoryAnswerGateDecisionKind DecisionKind,
+    CognitiveMemoryScoreProjectionBucket DecisionBucket,
+    double? DisplayConfidenceProjection,
+    string Reason,
+    string WarningsJson,
+    string RequiredOperationsJson,
+    DateTimeOffset CreatedAtUtc);
+
+public sealed record CognitiveMemoryProfessorReviewView(
+    Guid Id,
+    Guid? ProjectId,
+    CognitiveMemoryProfessorReviewMode ReviewMode,
+    CognitiveMemoryProfessorReviewStatus Status,
+    string RequestedByActorId,
+    string InputSummary,
+    string MissingEvidence,
+    bool RequiresHumanReview,
+    DateTimeOffset CreatedAtUtc,
+    DateTimeOffset? CompletedAtUtc);
+
+public sealed record CognitiveMemoryLearningProposalView(
+    Guid Id,
+    Guid ProjectId,
+    CognitiveMemoryLearningProposalStatus Status,
+    string Title,
+    string Explanation,
+    CognitiveMemoryScoreProjectionBucket NeedBucket,
+    double? DisplayPriorityProjection,
+    DateTimeOffset CreatedAtUtc);
+
+public sealed record CognitiveMemoryCrossProjectPromotionView(
+    Guid Id,
+    Guid SourceProjectId,
+    Guid SourceMemoryRecordId,
+    CognitiveMemoryCrossProjectPromotionStatus Status,
+    CognitiveMemoryScoreProjectionBucket PromotionBucket,
+    string Reason,
+    Guid? ReviewItemId,
+    DateTimeOffset CreatedAtUtc);
+
+public sealed record CognitiveMemoryDistributedJobView(
+    Guid Id,
+    Guid ProjectId,
+    CognitiveMemoryDistributedJobKind JobKind,
+    CognitiveMemoryDistributedJobState State,
+    string SourceScopeKey,
+    string LeasedWorkerId,
+    DateTimeOffset CreatedAtUtc,
     DateTimeOffset UpdatedAtUtc);
 
 public interface ICognitiveMemoryReviewUiService

@@ -2,7 +2,8 @@
 
 ## Status
 
-- Passed on 2026-05-16 after `01b-score-geometry-driver`, `04-memory-taxonomy-and-projections`, and `14-neuro-foundation-claim-evidence-ledger`.
+- Completed
+- Completion detail: Passed on 2026-05-16 after `01b-score-geometry-driver`, `04-memory-taxonomy-and-projections`, and `14-neuro-foundation-claim-evidence-ledger`.
 - Critical foundation for recall, probing, MAF, and answer gating.
 
 ## Execution Control

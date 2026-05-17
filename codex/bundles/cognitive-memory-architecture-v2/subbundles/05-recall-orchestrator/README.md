@@ -2,7 +2,8 @@
 
 ## Status
 
-- Passed on 2026-05-16. `06-consolidation-engine` may start.
+- Completed
+- Completion detail: Passed on 2026-05-16. `06-consolidation-engine` may start.
 - Backend-only phase; no UI files changed and browser proof remains deferred until trace/review UI work.
 
 ## Execution Control

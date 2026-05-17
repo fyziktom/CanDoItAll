@@ -2,7 +2,9 @@
 
 ## Status
 
-- Ready after score geometry, project-scoped recall, consolidation, answer gating, Epistemic Drive, and Cognitive Self-Regulation closure are stable.
+- Completed
+- Completion detail: Passed on 2026-05-16 follow-up implementation.
+- Closure proof: cross-project candidate promotion review flow is implemented as reviewable, source-scoped state that does not mutate authoritative memory directly; verified by focused unit/integration tests and PostgreSQL smoke evidence at `validation/postgres-smoke/evidence/20260516-231507/99-summary.json`.
 
 ## Execution Control
 
