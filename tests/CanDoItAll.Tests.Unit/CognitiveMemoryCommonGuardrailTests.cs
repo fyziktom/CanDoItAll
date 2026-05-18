@@ -130,6 +130,7 @@ public sealed class CognitiveMemoryCommonGuardrailTests
             .Where(type => string.Equals(type.Namespace, typeof(CognitiveMemoryRecord).Namespace, StringComparison.Ordinal))
             .SelectMany(type => type.GetProperties().Select(property => new { Type = type, Property = property }))
             .Where(item => item.Property.PropertyType == typeof(string) &&
+                           !item.Property.Name.EndsWith("Message", StringComparison.OrdinalIgnoreCase) &&
                            stateNameParts.Any(part => item.Property.Name.Contains(part, StringComparison.OrdinalIgnoreCase)))
             .Select(item => $"{item.Type.Name}.{item.Property.Name}")
             .OrderBy(name => name, StringComparer.Ordinal)

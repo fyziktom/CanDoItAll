@@ -1211,7 +1211,7 @@ public sealed class PluginCatalogIntegrationTests
     {
         var settings = new DockerWorkflowExecutorSettings
         {
-            Image = "qdrant/qdrant:latest",
+            Image = "qdrant/qdrant:v1.15.3",
             ContainerName = "candoitall-qdrant-proof",
             PullIfMissing = true,
             Tail = 160,
