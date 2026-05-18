@@ -287,7 +287,25 @@
                                                 IsBusy="@isBusy"
                                                 Click="AskProbeAsync"
                                                 data-testid="cognitive-memory-probe-ask" />
+                                        <Button Text="Audio mode"
+                                                Icon="hearing"
+                                                ButtonStyle="@(probeVoiceModeEnabled ? ButtonStyle.Info : ButtonStyle.Light)"
+                                                Size="ButtonSize.Small"
+                                                Disabled="@isBusy"
+                                                Click="ToggleProbeVoiceModeAsync"
+                                                data-testid="cognitive-memory-probe-voice-mode" />
+                                        <Button Text="@(probeVoiceRecording && probeVoiceCaptureTarget == CognitiveMemoryProbeVoiceCaptureTarget.Question ? "Stop recording" : "Ask by voice")"
+                                                Icon="@(probeVoiceRecording && probeVoiceCaptureTarget == CognitiveMemoryProbeVoiceCaptureTarget.Question ? "stop" : "mic")"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Size="ButtonSize.Small"
+                                                Disabled="@(!probeVoiceModeEnabled || !CanUseProbeVoice)"
+                                                IsBusy="@probeVoiceTranscribing"
+                                                Click="ToggleProbeQuestionRecordingAsync"
+                                                data-testid="cognitive-memory-probe-voice-question" />
                                         <StatusBadge Tone="info" Text="@probeStatus" />
+                                        <StatusBadge Tone="@probeVoiceStatusTone"
+                                                     Text="@probeVoiceStatus"
+                                                     data-testid="cognitive-memory-probe-voice-status" />
                                     </Cluster>
                                 </Stack>
                             </SurfaceCard>
@@ -410,6 +428,28 @@
                                                 IsBusy="@isBusy"
                                                 Click="SubmitProbeFeedbackAsync"
                                                 data-testid="cognitive-memory-probe-submit-feedback" />
+                                        <Button Text="@(probeVoiceRecording && probeVoiceCaptureTarget == CognitiveMemoryProbeVoiceCaptureTarget.Correction ? "Stop recording" : "Record correction")"
+                                                Icon="@(probeVoiceRecording && probeVoiceCaptureTarget == CognitiveMemoryProbeVoiceCaptureTarget.Correction ? "stop" : "mic")"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Size="ButtonSize.Small"
+                                                Disabled="@(!probeVoiceModeEnabled || lastProbeAskResult is null || !CanUseProbeVoice)"
+                                                IsBusy="@probeVoiceTranscribing"
+                                                Click="ToggleProbeCorrectionRecordingAsync"
+                                                data-testid="cognitive-memory-probe-voice-correction" />
+                                        @if (probeVoiceAwaitingConfirmation)
+                                        {
+                                            <Button Text="@(probeVoiceRecording && probeVoiceCaptureTarget == CognitiveMemoryProbeVoiceCaptureTarget.Confirmation ? "Stop recording" : "Confirm by voice")"
+                                                    Icon="@(probeVoiceRecording && probeVoiceCaptureTarget == CognitiveMemoryProbeVoiceCaptureTarget.Confirmation ? "stop" : "task_alt")"
+                                                    ButtonStyle="ButtonStyle.Warning"
+                                                    Size="ButtonSize.Small"
+                                                    Disabled="@(!probeVoiceModeEnabled || !CanUseProbeVoice)"
+                                                    IsBusy="@probeVoiceTranscribing"
+                                                    Click="ToggleProbeConfirmationRecordingAsync"
+                                                    data-testid="cognitive-memory-probe-voice-confirm" />
+                                            <StatusBadge Tone="warning"
+                                                         Text="Awaiting confirmation"
+                                                         data-testid="cognitive-memory-probe-voice-awaiting-confirmation" />
+                                        }
                                         @if (lastProbeFeedback is not null)
                                         {
                                             <StatusBadge Tone="success"

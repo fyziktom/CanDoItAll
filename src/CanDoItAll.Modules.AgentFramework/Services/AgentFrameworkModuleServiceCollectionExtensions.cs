@@ -2,6 +2,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
+using CanDoItAll.AgentFramework.Voice;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework.Hosting;
@@ -28,6 +29,7 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             .Bind(configuration.GetSection(ProcessMockAgentOptions.SectionName));
         services.AddOptions<WorkflowExampleCatalogSeedOptions>()
             .Bind(configuration.GetSection(WorkflowExampleCatalogSeedOptions.SectionName));
+        services.AddAgentFrameworkVoice();
         services.AddSingleton<IProviderProfileService, ProviderProfileService>();
         services.AddSingleton<ICapabilityProofService, CapabilityProofService>();
         services.AddSingleton<IAgentProviderCredentialResolver, SecretStoreAgentProviderCredentialResolver>();

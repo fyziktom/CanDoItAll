@@ -31,6 +31,10 @@
                         {
                             <StatusBadge Tone="warning" Text="@($"{PendingApprovals.Count} approvals")" />
                         }
+                        @if (IsVoiceModeEnabled)
+                        {
+                            <StatusBadge Tone="primary" Text="Audio mode" />
+                        }
                     </Cluster>
 
                     <Stack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.Center">
@@ -272,6 +276,26 @@
                             IsBusy="@IsBusy"
                             Click="@(async () => await SendRequested.InvokeAsync())"
                             data-testid="chat-send-button" />
+                    <Button Icon="@(IsVoiceRecording ? "stop" : "mic")"
+                            ButtonStyle="@(IsVoiceModeEnabled ? ButtonStyle.Primary : ButtonStyle.Light)"
+                            Size="ButtonSize.Small"
+                            Disabled="@(!CanUseVoiceMode || IsBusy || IsVoiceTranscribing || HasPendingApprovals)"
+                            IsBusy="@IsVoiceTranscribing"
+                            Style="min-width:2.75rem;"
+                            Click="ToggleVoiceRecordingAsync"
+                            aria-label="@ResolveVoiceRecordingLabel()"
+                            title="@ResolveVoiceRecordingLabel()"
+                            data-testid="chat-voice-record-button" />
+                    <Button Icon="volume_up"
+                            ButtonStyle="ButtonStyle.Light"
+                            Size="ButtonSize.Small"
+                            Disabled="@(!CanUseVoiceMode || IsBusy || IsVoiceSpeaking)"
+                            IsBusy="@IsVoiceSpeaking"
+                            Style="min-width:2.75rem;"
+                            Click="@(async () => await SpeakLatestAssistantMessageRequested.InvokeAsync())"
+                            aria-label="Speak latest assistant message"
+                            title="Speak latest assistant message"
+                            data-testid="chat-voice-speak-button" />
                 </Stack>
             </Stack>
         </FormField>
@@ -305,6 +329,17 @@
                        Value="@ResolveComposerGuidance()" />
 
             <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                <Button Text="Audio mode"
+                        Icon="hearing"
+                        ButtonStyle="@(IsVoiceModeEnabled ? ButtonStyle.Primary : ButtonStyle.Light)"
+                        Size="ButtonSize.Small"
+                        Disabled="@(!CanUseVoiceMode || IsBusy)"
+                        Click="ToggleVoiceModeAsync"
+                        data-testid="chat-voice-mode-button" />
+                @if (!string.IsNullOrWhiteSpace(VoiceStatusText))
+                {
+                    <StatusBadge Tone="@VoiceStatusTone" Text="@VoiceStatusText" />
+                }
                 @if (HasPendingApprovals)
                 {
                     @if (!IsAutoApprovalActive())
@@ -373,6 +408,27 @@
     public RenderFragment? HeaderActions { get; set; }
 
     [Parameter]
+    public bool CanUseVoiceMode { get; set; }
+
+    [Parameter]
+    public bool IsVoiceModeEnabled { get; set; }
+
+    [Parameter]
+    public bool IsVoiceRecording { get; set; }
+
+    [Parameter]
+    public bool IsVoiceTranscribing { get; set; }
+
+    [Parameter]
+    public bool IsVoiceSpeaking { get; set; }
+
+    [Parameter]
+    public string VoiceStatusText { get; set; } = string.Empty;
+
+    [Parameter]
+    public string VoiceStatusTone { get; set; } = "neutral";
+
+    [Parameter]
     public EventCallback<string> DraftPromptChanged { get; set; }
 
     [Parameter]
@@ -389,6 +445,15 @@
 
     [Parameter]
     public EventCallback<string> SessionTitleChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> VoiceModeChanged { get; set; }
+
+    [Parameter]
+    public EventCallback VoiceRecordingToggled { get; set; }
+
+    [Parameter]
+    public EventCallback SpeakLatestAssistantMessageRequested { get; set; }
 
     private IReadOnlyList<PendingToolApprovalRecord> PendingApprovals
         => ActiveRun?.PendingApprovals ?? [];
@@ -421,6 +486,15 @@
 
     private Task HandleDraftChanged(string? value)
         => DraftPromptChanged.InvokeAsync(value ?? string.Empty);
+
+    private Task ToggleVoiceModeAsync()
+        => VoiceModeChanged.InvokeAsync(!IsVoiceModeEnabled);
+
+    private Task ToggleVoiceRecordingAsync()
+        => VoiceRecordingToggled.InvokeAsync();
+
+    private string ResolveVoiceRecordingLabel()
+        => IsVoiceRecording ? "Stop voice recording" : "Start voice recording";
 
     private async Task HandleSessionTitleChangedAsync(EditableThreadTitleModel editor)
     {

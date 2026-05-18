@@ -1,10 +1,12 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Voice;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.Common;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Rendering;
+using Microsoft.JSInterop;
 using System.Text;
 
 namespace CanDoItAll.Modules.CognitiveMemory.Pages;
@@ -30,6 +32,12 @@ public partial class CognitiveMemoryPage
 
     [Inject]
     public IAgentFrameworkWorkspaceService AgentWorkspaceService { get; set; } = default!;
+
+    [Inject]
+    public IAgentVoiceService VoiceService { get; set; } = default!;
+
+    [Inject]
+    public IJSRuntime JsRuntime { get; set; } = default!;
 
     [Inject]
     public NotificationService NotificationService { get; set; } = default!;
@@ -81,6 +89,15 @@ public partial class CognitiveMemoryPage
     private CognitiveMemoryRiskLevel probeFeedbackRiskLevel = CognitiveMemoryRiskLevel.Medium;
     private bool probeCreateRegressionTest;
     private bool probeRequestHumanReview;
+    private bool probeVoiceModeEnabled;
+    private bool probeVoiceRecording;
+    private bool probeVoiceTranscribing;
+    private bool probeVoiceSpeaking;
+    private bool probeVoiceAwaitingConfirmation;
+    private CognitiveMemoryProbeVoiceCaptureTarget probeVoiceCaptureTarget;
+    private string probeVoiceStatus = "Audio ready.";
+    private string probeVoiceStatusTone = "neutral";
+    private string pendingVoiceCorrectionText = string.Empty;
 
     private CognitiveMemoryReviewQueueItem? SelectedReviewItem
         => snapshot?.ReviewItems.FirstOrDefault(item => item.Id.Value == selectedReviewItemId);
@@ -110,6 +127,9 @@ public partial class CognitiveMemoryPage
 
     private bool CanSendProbeFeedback
         => !isBusy && lastProbeAskResult?.Turn is not null;
+
+    private bool CanUseProbeVoice
+        => !isBusy && !probeVoiceTranscribing && !probeVoiceSpeaking;
 
     private string ProjectScopePlaceholder
         => ProjectId?.ToString("D") ?? "Optional process scope id";
@@ -479,6 +499,201 @@ public partial class CognitiveMemoryPage
         {
             isBusy = false;
         }
+    }
+
+    private Task ToggleProbeVoiceModeAsync()
+    {
+        probeVoiceModeEnabled = !probeVoiceModeEnabled;
+        SetProbeVoiceStatus(probeVoiceModeEnabled ? "Audio on" : "Audio off", probeVoiceModeEnabled ? "primary" : "neutral");
+        return Task.CompletedTask;
+    }
+
+    private Task ToggleProbeQuestionRecordingAsync()
+        => ToggleProbeRecordingAsync(CognitiveMemoryProbeVoiceCaptureTarget.Question);
+
+    private Task ToggleProbeCorrectionRecordingAsync()
+        => ToggleProbeRecordingAsync(CognitiveMemoryProbeVoiceCaptureTarget.Correction);
+
+    private Task ToggleProbeConfirmationRecordingAsync()
+        => ToggleProbeRecordingAsync(CognitiveMemoryProbeVoiceCaptureTarget.Confirmation);
+
+    private async Task ToggleProbeRecordingAsync(CognitiveMemoryProbeVoiceCaptureTarget target)
+    {
+        if (!probeVoiceRecording)
+        {
+            try
+            {
+                await JsRuntime.InvokeVoidAsync("CanDoItAll.agentFramework.voice.startRecording");
+                probeVoiceModeEnabled = true;
+                probeVoiceRecording = true;
+                probeVoiceCaptureTarget = target;
+                SetProbeVoiceStatus("Recording", "danger");
+            }
+            catch (Exception exception)
+            {
+                SetProbeVoiceStatus("Record failed", "danger");
+                NotificationService.Error("Probe voice failed", exception.Message);
+            }
+
+            return;
+        }
+
+        await StopProbeRecordingAsync();
+    }
+
+    private async Task StopProbeRecordingAsync()
+    {
+        probeVoiceRecording = false;
+        probeVoiceTranscribing = true;
+        SetProbeVoiceStatus("Transcribing", "info");
+
+        try
+        {
+            var recording = await JsRuntime.InvokeAsync<BrowserVoiceRecording>(
+                "CanDoItAll.agentFramework.voice.stopRecording");
+            var transcription = await VoiceService.TranscribeAsync(new AgentVoiceTranscriptionRequest(
+                Convert.FromBase64String(recording.Base64),
+                recording.FileName,
+                recording.ContentType));
+
+            await HandleProbeVoiceTranscriptAsync(transcription.Text);
+        }
+        catch (Exception exception)
+        {
+            SetProbeVoiceStatus("Voice failed", "danger");
+            NotificationService.Error("Probe voice failed", exception.Message);
+        }
+        finally
+        {
+            probeVoiceTranscribing = false;
+        }
+    }
+
+    private async Task HandleProbeVoiceTranscriptAsync(string transcript)
+    {
+        switch (probeVoiceCaptureTarget)
+        {
+            case CognitiveMemoryProbeVoiceCaptureTarget.Question:
+                probeQuestion = transcript;
+                SetProbeVoiceStatus("Asking memory", "info");
+                await AskProbeAsync();
+                if (lastProbeAskResult is not null)
+                {
+                    await SpeakProbeTextAsync(BuildProbeAnswerSpeech(lastProbeAskResult));
+                }
+                break;
+            case CognitiveMemoryProbeVoiceCaptureTarget.Correction:
+                await PrepareVoiceCorrectionAsync(transcript);
+                break;
+            case CognitiveMemoryProbeVoiceCaptureTarget.Confirmation:
+                await HandleVoiceCorrectionConfirmationAsync(transcript);
+                break;
+        }
+    }
+
+    private async Task PrepareVoiceCorrectionAsync(string transcript)
+    {
+        if (lastProbeAskResult?.Turn is null)
+        {
+            SetProbeVoiceStatus("Ask first", "warning");
+            await SpeakProbeTextAsync("Ask memory a probe question first, then record the correction that should be reviewed for storage.");
+            return;
+        }
+
+        pendingVoiceCorrectionText = transcript.Trim();
+        probeCorrectionText = pendingVoiceCorrectionText;
+        probeFeedbackNotes = "Voice correction prepared from Cognitive Memory probe dialogue.";
+        probeFeedbackAction = CognitiveMemoryProbeFeedbackAction.AddCorrection;
+        probeFeedbackRiskLevel = CognitiveMemoryRiskLevel.Medium;
+        probeRequestHumanReview = true;
+        probeCreateRegressionTest = true;
+        probeVoiceAwaitingConfirmation = true;
+        SetProbeVoiceStatus("Confirm storage", "warning");
+
+        await SpeakProbeTextAsync(BuildVoiceCorrectionInterpretation(pendingVoiceCorrectionText));
+    }
+
+    private async Task HandleVoiceCorrectionConfirmationAsync(string transcript)
+    {
+        var intent = AgentVoiceConfirmationClassifier.Classify(transcript);
+        if (intent == AgentVoiceConfirmationIntent.Affirm)
+        {
+            if (!probeVoiceAwaitingConfirmation || string.IsNullOrWhiteSpace(pendingVoiceCorrectionText))
+            {
+                SetProbeVoiceStatus("Nothing pending", "warning");
+                await SpeakProbeTextAsync("There is no pending memory correction to store.");
+                return;
+            }
+
+            SetProbeVoiceStatus("Saving feedback", "info");
+            await SubmitProbeFeedbackAsync();
+            probeVoiceAwaitingConfirmation = false;
+            pendingVoiceCorrectionText = string.Empty;
+            await SpeakProbeTextAsync("The correction feedback was saved for review-gated memory processing.");
+            return;
+        }
+
+        if (intent == AgentVoiceConfirmationIntent.Reject)
+        {
+            probeVoiceAwaitingConfirmation = false;
+            pendingVoiceCorrectionText = string.Empty;
+            probeCorrectionText = string.Empty;
+            SetProbeVoiceStatus("Cancelled", "neutral");
+            await SpeakProbeTextAsync("I cancelled the pending correction. Nothing was stored.");
+            return;
+        }
+
+        SetProbeVoiceStatus("Clarify", "warning");
+        await SpeakProbeTextAsync("I could not tell whether you approved storing this. Say yes, okay, store it, or cancel.");
+    }
+
+    private async Task SpeakProbeTextAsync(string text)
+    {
+        probeVoiceSpeaking = true;
+        try
+        {
+            var synthesis = await VoiceService.SynthesizeAsync(new AgentVoiceSynthesisRequest(text));
+            await JsRuntime.InvokeVoidAsync(
+                "CanDoItAll.agentFramework.voice.playAudio",
+                Convert.ToBase64String(synthesis.AudioBytes),
+                synthesis.ContentType);
+            SetProbeVoiceStatus("Audio ready", "success");
+        }
+        catch (Exception exception)
+        {
+            SetProbeVoiceStatus("Speak failed", "danger");
+            NotificationService.Error("Probe voice failed", exception.Message);
+        }
+        finally
+        {
+            probeVoiceSpeaking = false;
+        }
+    }
+
+    private static string BuildProbeAnswerSpeech(CognitiveMemoryProbeAskResult result)
+    {
+        var includedSourceCount = result.RecallResult.ContextPack.SourceRefs.Count(item => item.IncludedInContext);
+        return $"Memory answered the probe. It used {includedSourceCount} included source references. Review the visible answer evidence before deciding whether correction is needed.";
+    }
+
+    private static string BuildVoiceCorrectionInterpretation(string correctionText)
+    {
+        var normalizedCorrection = string.Join(
+            ' ',
+            correctionText.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        const int maxSpeechCharacters = 900;
+        if (normalizedCorrection.Length > maxSpeechCharacters)
+        {
+            normalizedCorrection = normalizedCorrection[..maxSpeechCharacters].TrimEnd();
+        }
+
+        return $"Wait a little while I process this. I understood this as a correction to the last probe answer: {normalizedCorrection}. I will store it as review-gated probe feedback, create a regression test request, and ask for human review before canonical memory changes. Say yes, okay, or store it to confirm. Say cancel to discard it.";
+    }
+
+    private void SetProbeVoiceStatus(string text, string tone)
+    {
+        probeVoiceStatus = text;
+        probeVoiceStatusTone = tone;
     }
 
     private async Task<CognitiveMemoryProbeSessionRecord> CreateProbeSessionAsync(Guid projectId)
@@ -1588,5 +1803,21 @@ public partial class CognitiveMemoryPage
         public bool IsLocal { get; } = isLocal;
 
         public bool IsAllowed { get; set; } = isAllowed;
+    }
+
+    private enum CognitiveMemoryProbeVoiceCaptureTarget
+    {
+        Question,
+        Correction,
+        Confirmation
+    }
+
+    private sealed class BrowserVoiceRecording
+    {
+        public string Base64 { get; set; } = string.Empty;
+
+        public string ContentType { get; set; } = "audio/webm";
+
+        public string FileName { get; set; } = "voice-input.webm";
     }
 }

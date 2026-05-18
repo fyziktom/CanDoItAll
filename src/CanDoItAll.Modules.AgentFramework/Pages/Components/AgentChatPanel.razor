@@ -147,11 +147,21 @@
                             RunStateTone="@runStateTone"
                             PendingUserPrompt="@pendingUserPrompt"
                             DraftAttachmentPaths="@draftAttachmentPaths"
+                            CanUseVoiceMode="@CanUseSelectedAgentVoiceMode"
+                            IsVoiceModeEnabled="@isVoiceModeEnabled"
+                            IsVoiceRecording="@isVoiceRecording"
+                            IsVoiceTranscribing="@isVoiceTranscribing"
+                            IsVoiceSpeaking="@isVoiceSpeaking"
+                            VoiceStatusText="@voiceStatusText"
+                            VoiceStatusTone="@voiceStatusTone"
                             SendRequested="SendMessageAsync"
                             ApprovalDecisionRequested="HandleApprovalDecisionAsync"
                             ApprovalDecisionForConversationRequested="ApproveConversationAsync"
                             AttachmentRequested="StageAttachmentsAsync"
-                            SessionTitleChanged="HandleSessionTitleChangedAsync">
+                            SessionTitleChanged="HandleSessionTitleChangedAsync"
+                            VoiceModeChanged="HandleVoiceModeChangedAsync"
+                            VoiceRecordingToggled="ToggleVoiceRecordingAsync"
+                            SpeakLatestAssistantMessageRequested="SpeakLatestAssistantMessageAsync">
             <HeaderActions>
                 <Button Icon="runtime"
                         Text="Runtime details"

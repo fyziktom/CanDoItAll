@@ -106,6 +106,30 @@ public sealed class ChatWorkspacePanelTests
         Assert.Equal("Renamed runtime thread", updatedTitle);
     }
 
+    [Fact]
+    public void Voice_controls_render_enabled_audio_state()
+    {
+        using var context = CreateContext();
+        var agentId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+        var runId = Guid.NewGuid();
+        var createdAtUtc = new DateTimeOffset(2026, 4, 28, 10, 0, 0, TimeSpan.Zero);
+
+        var cut = context.RenderComponent<ChatWorkspacePanel>(parameters => parameters
+            .Add(item => item.Session, CreateSession(agentId, sessionId, runId, createdAtUtc))
+            .Add(item => item.DraftPrompt, string.Empty)
+            .Add(item => item.CanUseVoiceMode, true)
+            .Add(item => item.IsVoiceModeEnabled, true)
+            .Add(item => item.VoiceStatusText, "Audio on")
+            .Add(item => item.VoiceStatusTone, "primary"));
+
+        Assert.NotEmpty(cut.FindAll("[data-testid='chat-voice-mode-button']"));
+        Assert.NotEmpty(cut.FindAll("[data-testid='chat-voice-record-button']"));
+        Assert.NotEmpty(cut.FindAll("[data-testid='chat-voice-speak-button']"));
+        Assert.Contains("Audio mode", cut.Markup);
+        Assert.Contains("Audio on", cut.Markup);
+    }
+
     private static TestContext CreateContext()
     {
         var context = new TestContext();

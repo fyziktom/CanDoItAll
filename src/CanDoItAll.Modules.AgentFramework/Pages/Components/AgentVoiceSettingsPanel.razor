@@ -1,0 +1,241 @@
+@using Microsoft.JSInterop
+@inject IAgentVoiceService VoiceService
+@inject IAgentFrameworkWorkspaceService WorkspaceService
+@inject NotificationService NotificationService
+@inject IJSRuntime JsRuntime
+
+<Grid Gap="LayoutGap.Large"
+      ColumnsLg="2"
+      data-testid="agents-voice-settings">
+    <SurfaceCard>
+        <TextBlock TextStyle="TextStyle.Eyebrow" Value="General voice" />
+        <h2 class="mt-1 text-lg font-semibold text-slate-950">Speech to text</h2>
+        <Stack GapScale="LayoutGap.Medium" Class="mt-4">
+            <label class="cda-inline-option">
+                <InputCheckbox @bind-Value="settings.SpeechToText.IsEnabled" />
+                <span>Enable speech input</span>
+            </label>
+            <label class="cda-field">
+                <span class="cda-field-label">Driver</span>
+                <InputSelect @bind-Value="settings.SpeechToText.DriverKind" class="cda-input">
+                    <option value="@AgentVoiceDriverKind.OpenAi">OpenAI</option>
+                </InputSelect>
+            </label>
+            <label class="cda-field">
+                <span class="cda-field-label">Provider</span>
+                <InputSelect @bind-Value="speechProviderIdText" class="cda-input">
+                    <option value="">Select provider</option>
+                    @foreach (var provider in OpenAiProviders)
+                    {
+                        <option value="@provider.Id.ToString("D")">@provider.Name (@provider.DefaultModel)</option>
+                    }
+                </InputSelect>
+            </label>
+            <label class="cda-field">
+                <span class="cda-field-label">Model</span>
+                <InputText @bind-Value="settings.SpeechToText.Model" class="cda-input" data-testid="agents-voice-stt-model" />
+            </label>
+            <label class="cda-field">
+                <span class="cda-field-label">Language</span>
+                <InputText @bind-Value="settings.SpeechToText.Language" class="cda-input" data-testid="agents-voice-stt-language" />
+            </label>
+        </Stack>
+    </SurfaceCard>
+
+    <SurfaceCard>
+        <TextBlock TextStyle="TextStyle.Eyebrow" Value="General voice" />
+        <h2 class="mt-1 text-lg font-semibold text-slate-950">Text to speech</h2>
+        <Stack GapScale="LayoutGap.Medium" Class="mt-4">
+            <label class="cda-inline-option">
+                <InputCheckbox @bind-Value="settings.TextToSpeech.IsEnabled" />
+                <span>Enable spoken responses</span>
+            </label>
+            <label class="cda-field">
+                <span class="cda-field-label">Driver</span>
+                <InputSelect @bind-Value="settings.TextToSpeech.DriverKind" class="cda-input">
+                    <option value="@AgentVoiceDriverKind.OpenAi">OpenAI</option>
+                </InputSelect>
+            </label>
+            <label class="cda-field">
+                <span class="cda-field-label">Provider</span>
+                <InputSelect @bind-Value="ttsProviderIdText" class="cda-input">
+                    <option value="">Select provider</option>
+                    @foreach (var provider in OpenAiProviders)
+                    {
+                        <option value="@provider.Id.ToString("D")">@provider.Name (@provider.DefaultModel)</option>
+                    }
+                </InputSelect>
+            </label>
+            <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
+                <label class="cda-field">
+                    <span class="cda-field-label">Model</span>
+                    <InputText @bind-Value="settings.TextToSpeech.Model" class="cda-input" data-testid="agents-voice-tts-model" />
+                </label>
+                <label class="cda-field">
+                    <span class="cda-field-label">Voice</span>
+                    <InputSelect @bind-Value="settings.TextToSpeech.VoiceId" class="cda-input" data-testid="agents-voice-default-voice">
+                        @foreach (var voiceId in AgentVoiceDefaults.OpenAiVoiceIds)
+                        {
+                            <option value="@voiceId">@voiceId</option>
+                        }
+                    </InputSelect>
+                </label>
+            </Grid>
+            <label class="cda-field">
+                <span class="cda-field-label">Output format</span>
+                <InputSelect @bind-Value="settings.TextToSpeech.ResponseFormat" class="cda-input">
+                    @foreach (var format in AgentVoiceDefaults.ResponseFormats)
+                    {
+                        <option value="@format">@format</option>
+                    }
+                </InputSelect>
+            </label>
+            <label class="cda-field">
+                <span class="cda-field-label">Sample text</span>
+                <InputTextArea @bind-Value="settings.SampleText"
+                               class="cda-input cda-input--textarea"
+                               data-testid="agents-voice-sample-text" />
+            </label>
+            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                <Button Text="Save voice settings"
+                        Icon="save"
+                        Disabled="@isBusy"
+                        IsBusy="@isBusy"
+                        Click="SaveAsync"
+                        data-testid="agents-voice-save" />
+                <Button Text="Play sample"
+                        Icon="volume_up"
+                        ButtonStyle="ButtonStyle.Light"
+                        Disabled="@isBusy"
+                        IsBusy="@isPlayingSample"
+                        Click="PlaySampleAsync"
+                        data-testid="agents-voice-play-sample" />
+                <StatusBadge Tone="@statusTone" Text="@statusText" />
+            </Cluster>
+            <TextBlock TextStyle="TextStyle.Caption" Value="@settings.DisclosureText" />
+        </Stack>
+    </SurfaceCard>
+</Grid>
+
+@code {
+    private AgentVoiceSettings settings = AgentVoiceSettings.Default;
+    private IReadOnlyList<ProviderProfile> providers = [];
+    private string speechProviderIdText = string.Empty;
+    private string ttsProviderIdText = string.Empty;
+    private string statusText = "Ready";
+    private string statusTone = "neutral";
+    private bool isBusy;
+    private bool isPlayingSample;
+
+    private IReadOnlyList<ProviderProfile> OpenAiProviders => providers
+        .Where(provider => provider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi)
+        .OrderByDescending(provider => provider.IsEnabled)
+        .ThenBy(provider => provider.Name, StringComparer.OrdinalIgnoreCase)
+        .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        isBusy = true;
+        try
+        {
+            var settingsTask = VoiceService.GetSettingsAsync();
+            var providersTask = WorkspaceService.ListProvidersAsync();
+            await Task.WhenAll(settingsTask, providersTask);
+            settings = await settingsTask;
+            providers = await providersTask;
+            speechProviderIdText = settings.SpeechToText.ProviderProfileId?.ToString("D") ?? string.Empty;
+            ttsProviderIdText = settings.TextToSpeech.ProviderProfileId?.ToString("D") ?? string.Empty;
+            SetStatus("Ready", "success");
+        }
+        catch (Exception exception)
+        {
+            SetStatus("Load failed", "danger");
+            NotificationService.Error("Voice settings failed", exception.Message);
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        if (isBusy)
+        {
+            return;
+        }
+
+        isBusy = true;
+        try
+        {
+            settings.SpeechToText.ProviderProfileId = ParseProviderId(speechProviderIdText);
+            settings.TextToSpeech.ProviderProfileId = ParseProviderId(ttsProviderIdText);
+            settings = await VoiceService.SaveSettingsAsync(settings);
+            speechProviderIdText = settings.SpeechToText.ProviderProfileId?.ToString("D") ?? string.Empty;
+            ttsProviderIdText = settings.TextToSpeech.ProviderProfileId?.ToString("D") ?? string.Empty;
+            SetStatus("Saved", "success");
+            NotificationService.Success("Voice settings saved", "AgentFramework voice settings were saved.");
+        }
+        catch (Exception exception)
+        {
+            SetStatus("Save failed", "danger");
+            NotificationService.Error("Voice settings failed", exception.Message);
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private async Task PlaySampleAsync()
+    {
+        if (isPlayingSample)
+        {
+            return;
+        }
+
+        isPlayingSample = true;
+        try
+        {
+            await SaveAsync();
+            var synthesis = await VoiceService.SynthesizeSampleAsync(settings.SampleText);
+            await JsRuntime.InvokeVoidAsync(
+                "CanDoItAll.agentFramework.voice.playAudio",
+                Convert.ToBase64String(synthesis.AudioBytes),
+                synthesis.ContentType);
+            SetStatus("Sample played", "success");
+        }
+        catch (Exception exception)
+        {
+            SetStatus("Sample failed", "danger");
+            NotificationService.Error("Voice sample failed", exception.Message);
+        }
+        finally
+        {
+            isPlayingSample = false;
+        }
+    }
+
+    private static Guid? ParseProviderId(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        return Guid.TryParse(value, out var providerId) && providerId != Guid.Empty
+            ? providerId
+            : throw new InvalidOperationException("Provider id is invalid.");
+    }
+
+    private void SetStatus(string text, string tone)
+    {
+        statusText = text;
+        statusTone = tone;
+    }
+}

@@ -38,6 +38,13 @@ public sealed class CognitiveMemoryPageTests
             Assert.Contains("Procedure library", cut.Markup);
         });
 
+        cut.Find("[data-testid='cognitive-memory-tab-probe-workbench']").Click();
+        cut.WaitForElement("[data-testid='cognitive-memory-probe-workbench']");
+        Assert.NotNull(cut.Find("[data-testid='cognitive-memory-probe-voice-mode']"));
+        Assert.NotNull(cut.Find("[data-testid='cognitive-memory-probe-voice-question']"));
+        Assert.NotNull(cut.Find("[data-testid='cognitive-memory-probe-voice-correction']"));
+        Assert.Contains("Audio ready.", cut.Markup);
+
         cut.Find("[data-testid='cognitive-memory-tab-settings']").Click();
         cut.WaitForElement("[data-testid='cognitive-memory-settings']");
         Assert.Contains("Schedule and consolidation triggers", cut.Markup);

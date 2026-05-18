@@ -736,6 +736,16 @@ public partial class AgentDetailsDialog
         }
     }
 
+    private void ToggleVoiceModeAccess(object? rawValue)
+    {
+        var isEnabled = rawValue is bool value && value;
+        editorModel.VoiceAccess.CanUseVoiceMode = isEnabled;
+        if (!isEnabled)
+        {
+            editorModel.VoiceAccess.PreferredVoiceId = string.Empty;
+        }
+    }
+
     private bool HasProjectStructureProjectAccess(Guid projectId)
     {
         return editorModel.ProjectStructureAccess.AllowedProjectIds.Contains(projectId);
