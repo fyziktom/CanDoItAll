@@ -6,15 +6,21 @@
     <Split Breakpoint="LayoutBreakpoint.Xl"
            Gap="LayoutGap.Small"
            AlignItems="AlignItems.Center"
-           JustifyContent="JustifyContent.SpaceBetween">
-        <Cluster Gap="LayoutGap.XSmall" Class="min-w-0">
+           JustifyContent="JustifyContent.SpaceBetween"
+           Class="cda-tab-strip__main-row"
+           data-testid="app-tab-strip-main-row">
+        <Cluster Gap="LayoutGap.XSmall"
+                 Class="cda-tab-strip__tabs min-w-0">
             @foreach (var tab in InlineTabs)
             {
                 @RenderTab(tab)
             }
         </Cluster>
 
-        <Cluster Gap="LayoutGap.XSmall" Class="flex-shrink-0">
+        <Cluster Gap="LayoutGap.XSmall"
+                 Wrap="FlexWrap.NoWrap"
+                 Class="cda-tab-strip__controls flex-shrink-0"
+                 data-testid="app-tab-strip-controls">
             @if (Items.Count > InlineTabLimit || RecentTabs.Count > 0)
             {
                 <input @bind="searchText"

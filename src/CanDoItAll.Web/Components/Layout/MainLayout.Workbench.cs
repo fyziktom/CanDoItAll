@@ -245,7 +245,7 @@ public partial class MainLayout
                 TabGroup: "Prompt Sessions");
         }
 
-        var navigation = ShellNavigation.MatchRoute(path.TrimStart('/'));
+        var navigation = ShellNavigation.MatchRoute(path.TrimStart('/'), ShellNavigationContributors);
         return new WorkbenchTabDescriptor(
             string.Equals(path, "/settings", StringComparison.OrdinalIgnoreCase) ? "route:settings" : BuildPageTabId(path),
             navigation.Title,

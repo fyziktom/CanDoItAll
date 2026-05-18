@@ -37,6 +37,11 @@ public partial class MainLayout
     private string? databaseSwitchAlert;
     private int collaborationUnreadCount;
 
+    [Inject]
+    private IEnumerable<IShellNavigationContributor> ShellNavigationContributors { get; set; } = [];
+
+    private static readonly TimeSpan ShellMenuTooltipDelay = TimeSpan.FromSeconds(2);
+
     private string CurrentLocation => Navigation.ToBaseRelativePath(Navigation.Uri);
 
     private Uri CurrentUri => Navigation.ToAbsoluteUri(Navigation.Uri);
@@ -45,7 +50,7 @@ public partial class MainLayout
 
     private string CurrentRouteDisplay => string.IsNullOrWhiteSpace(CurrentLocation) ? "/" : $"/{CurrentLocation}";
 
-    private ShellNavigationItem ActiveNavigation => ShellNavigation.MatchRoute(CurrentRouteBase);
+    private ShellNavigationItem ActiveNavigation => ShellNavigation.MatchRoute(CurrentRouteBase, ShellNavigationContributors);
 
     private string ActiveWorkspaceTitle => workspaces.FirstOrDefault(item => item.Id == activeWorkspaceId)?.Title ?? "Workspace";
 
@@ -85,7 +90,7 @@ public partial class MainLayout
            selectedDatabaseProfileId.HasValue &&
            !SelectedDialogProfileIsActive;
 
-    private IReadOnlyList<ShellNavigationItem> NavigationItems => ShellNavigation.GetItems(collaborationUnreadCount);
+    private IReadOnlyList<ShellNavigationItem> NavigationItems => ShellNavigation.GetItems(collaborationUnreadCount, ShellNavigationContributors);
 
     protected override void OnInitialized()
     {

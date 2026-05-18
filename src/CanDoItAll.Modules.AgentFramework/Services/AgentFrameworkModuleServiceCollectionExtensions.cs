@@ -70,6 +70,7 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddScoped<AgentFrameworkExecutionRecoveryService>();
         services.AddScoped<ScenarioHarnessService>();
         services.AddScoped<IDatabaseTransferHandler, AiAgentsDatabaseTransferHandler>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IShellNavigationContributor, AgentFrameworkShellNavigationContributor>());
         services.AddScoped<IProviderRuntimeGateway, AgentFrameworkProviderRuntimeGateway>();
         services.AddScoped<IAiTechnicalAgentBridge, AgentFrameworkAiTechnicalAgentBridge>();
         services.TryAddScoped<IPluginStorageGateway, PluginStorageGateway>();

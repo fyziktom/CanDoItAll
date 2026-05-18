@@ -12,7 +12,7 @@
   }
 
   .cda-shell-sidebar {
-    @apply hidden shrink-0 overflow-hidden rounded-[1.35rem] border border-white/70 bg-slate-950 text-slate-100 shadow-2xl shadow-slate-900/10 transition-[width] duration-200 xl:block;
+    @apply hidden shrink-0 overflow-visible rounded-[1.35rem] border border-white/70 bg-slate-950 text-slate-100 shadow-2xl shadow-slate-900/10 transition-[width] duration-200 xl:block;
   }
 
   .cda-shell-sidebar--focus {
@@ -21,6 +21,10 @@
 
   .cda-shell-sidebar--standard {
     @apply p-2.5;
+    position: sticky;
+    top: 0.5rem;
+    height: calc(100vh - 1rem);
+    max-height: calc(100vh - 1rem);
   }
 
   .cda-shell-sidebar--collapsed {
@@ -88,7 +92,7 @@
   }
 
   .cda-shell-nav {
-    @apply min-h-0 flex-1 overflow-y-auto py-1;
+    @apply min-h-0 flex-1 overflow-visible py-1;
   }
 
   .cda-shell-nav--expanded {
@@ -96,11 +100,11 @@
   }
 
   .cda-shell-nav--collapsed {
-    @apply flex flex-col items-center gap-1.5 overflow-x-visible;
+    @apply flex flex-col items-center gap-1.5 overflow-visible;
   }
 
   .cda-shell-nav-button--expanded {
-    @apply items-start gap-3 rounded-xl px-3 py-2.5;
+    @apply items-center gap-2 rounded-xl px-2.5 py-1.5;
   }
 
   .cda-shell-nav-button--collapsed {
@@ -120,7 +124,7 @@
   }
 
   .cda-shell-nav-button--expanded .cda-shell-nav-icon {
-    @apply mt-0.5;
+    @apply h-8 w-8;
   }
 
   .cda-shell-nav-button--collapsed .cda-shell-nav-icon {
@@ -129,6 +133,177 @@
 
   .cda-shell-nav-badge-dot {
     @apply absolute right-0.5 top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-sky-300 px-1 text-[0.55rem] font-bold leading-none text-slate-950;
+  }
+
+  .cda-shell-nav-label-row {
+    @apply flex min-w-0 flex-1 items-center justify-between gap-2;
+  }
+
+  .cda-shell-nav-badge-inline {
+    @apply inline-flex min-w-6 shrink-0 items-center justify-center rounded-full bg-sky-400/15 px-2 py-0.5 text-[0.65rem] font-semibold leading-none text-sky-200;
+  }
+
+  .cda-shell-nav-overflow-anchor {
+    @apply relative w-full;
+  }
+
+  .cda-shell-nav-overflow-anchor::after,
+  .cda-shell-opened-work-anchor::after {
+    @apply absolute left-full top-[-10rem] bottom-[-10rem] z-[94] w-4 content-[''];
+    pointer-events: none;
+  }
+
+  .cda-shell-nav-overflow-anchor:hover::after,
+  .cda-shell-nav-overflow-anchor:focus-within::after,
+  .cda-shell-opened-work-anchor:hover::after,
+  .cda-shell-opened-work-anchor:focus-within::after {
+    pointer-events: auto;
+  }
+
+  .cda-shell-nav--collapsed .cda-shell-nav-overflow-anchor {
+    @apply flex justify-center;
+  }
+
+  .cda-shell-nav--collapsed .cda-shell-nav-overflow-anchor > .inline-flex {
+    @apply justify-center;
+  }
+
+  .cda-shell-nav--collapsed .cda-shell-opened-work-anchor {
+    @apply flex justify-center;
+  }
+
+  .cda-shell-nav--collapsed .cda-shell-opened-work-anchor > .inline-flex {
+    @apply justify-center;
+  }
+
+  .cda-shell-nav-overflow-panel {
+    @apply invisible pointer-events-none absolute z-[95] rounded-xl border border-white/10 bg-slate-950 p-2 text-slate-100 opacity-0 shadow-2xl shadow-slate-950/30 transition duration-150 ease-out;
+    left: calc(100% + 0.75rem);
+    top: 50%;
+    transform: translate3d(0.35rem, -50%, 0);
+    transition-property: opacity, transform, visibility;
+    transition-delay: 260ms;
+  }
+
+  .cda-shell-nav-overflow-anchor:hover .cda-shell-nav-overflow-panel,
+  .cda-shell-nav-overflow-anchor:focus-within .cda-shell-nav-overflow-panel {
+    @apply visible pointer-events-auto opacity-100;
+    transform: translate3d(0, -50%, 0);
+    transition-delay: 0ms;
+  }
+
+  .cda-shell-nav-overflow-panel::before {
+    @apply absolute bottom-0 left-[-1.25rem] top-0 w-5 content-[''];
+  }
+
+  .cda-shell-nav-overflow-panel__arrow {
+    @apply absolute left-[-0.45rem] top-1/2 h-3.5 w-3.5 border-b border-l border-white/10 bg-slate-950;
+    transform: translateY(-50%) rotate(45deg);
+  }
+
+  .cda-shell-nav-overflow-grid {
+    display: grid;
+    grid-template-rows: repeat(3, minmax(3.65rem, auto));
+    grid-auto-flow: column;
+    grid-auto-columns: 4.1rem;
+    gap: 0.45rem;
+    max-width: calc(100vw - 7rem);
+  }
+
+  .cda-shell-nav-overflow-card-trigger {
+    display: block !important;
+    width: 100%;
+    height: 100%;
+  }
+
+  .cda-shell-nav-overflow-card {
+    @apply relative grid h-16 w-16 place-items-center rounded-xl border p-1 text-center transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300;
+    grid-template-rows: 1.55rem minmax(0, 1fr);
+  }
+
+  .cda-shell-nav-overflow-card--active {
+    @apply border-sky-300/40 bg-sky-400/15 text-white;
+  }
+
+  .cda-shell-nav-overflow-card--inactive {
+    @apply border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white;
+  }
+
+  .cda-shell-nav-overflow-card__icon {
+    @apply inline-flex h-6 w-6 items-center justify-center text-base;
+  }
+
+  .cda-shell-nav-overflow-card__label {
+    @apply block max-w-full truncate text-center text-[0.62rem] font-semibold leading-4;
+  }
+
+  .cda-shell-nav-overflow-card__badge {
+    @apply absolute right-1 top-1 inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-sky-300 px-1 text-[0.5rem] font-bold leading-none text-slate-950;
+  }
+
+  .cda-shell-opened-work-anchor {
+    @apply relative w-full;
+  }
+
+  .cda-shell-opened-work-panel {
+    @apply invisible pointer-events-none absolute z-[95] rounded-xl border border-white/10 bg-slate-950 p-2 text-slate-100 opacity-0 shadow-2xl shadow-slate-950/30 transition duration-150 ease-out;
+    left: calc(100% + 0.75rem);
+    top: 50%;
+    transform: translate3d(0.35rem, -50%, 0);
+    transition-property: opacity, transform, visibility;
+    transition-delay: 260ms;
+  }
+
+  .cda-shell-opened-work-anchor:hover .cda-shell-opened-work-panel,
+  .cda-shell-opened-work-anchor:focus-within .cda-shell-opened-work-panel {
+    @apply visible pointer-events-auto opacity-100;
+    transform: translate3d(0, -50%, 0);
+    transition-delay: 0ms;
+  }
+
+  .cda-shell-opened-work-panel::before {
+    @apply absolute bottom-0 left-[-1.25rem] top-0 w-5 content-[''];
+  }
+
+  .cda-shell-opened-work-panel__arrow {
+    @apply absolute left-[-0.45rem] top-1/2 h-3.5 w-3.5 border-b border-l border-white/10 bg-slate-950;
+    transform: translateY(-50%) rotate(45deg);
+  }
+
+  .cda-shell-opened-work-grid {
+    display: grid;
+    grid-template-rows: repeat(3, minmax(4.15rem, auto));
+    grid-auto-flow: column;
+    grid-auto-columns: 12rem;
+    gap: 0.45rem;
+    max-width: calc(100vw - 22rem);
+  }
+
+  .cda-shell-opened-work-card-trigger {
+    display: block !important;
+    min-width: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .cda-shell-opened-work-card {
+    @apply grid h-16 w-full grid-cols-[1.75rem_minmax(0,1fr)] items-center gap-2 rounded-xl border px-2.5 py-2 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300;
+  }
+
+  .cda-shell-opened-work-card--active {
+    @apply border-sky-300/40 bg-sky-400/15 text-white;
+  }
+
+  .cda-shell-opened-work-card--inactive {
+    @apply border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white;
+  }
+
+  .cda-shell-opened-work-card__icon {
+    @apply inline-flex h-7 w-7 items-center justify-center rounded-lg bg-white/10 text-sm;
+  }
+
+  .cda-shell-opened-work-card__title {
+    @apply block min-w-0 truncate text-xs font-semibold leading-4;
   }
 
   .cda-shell-nav-tooltip {
@@ -149,10 +324,6 @@
 
   .cda-shell-tooltip-badge {
     @apply inline-flex rounded-full bg-sky-400/15 px-2 py-0.5 text-[0.62rem] font-semibold text-sky-100;
-  }
-
-  .cda-shell-opened-list {
-    @apply shrink-0;
   }
 
   .cda-shell-utility-area {
@@ -310,6 +481,40 @@
 
   .cda-shell-mobile-card--inactive {
     @apply border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-white;
+  }
+
+  .cda-shell-workbar {
+    @apply flex min-w-0 flex-col gap-2;
+  }
+
+  .cda-shell-tab-region {
+    @apply min-w-0;
+  }
+
+  .cda-shell-topbar-region {
+    @apply min-w-0;
+  }
+
+  .cda-shell-status-row {
+    @apply min-w-0;
+  }
+
+  @media (min-width: 1280px) {
+    .cda-shell-workbar {
+      @apply flex-row items-center justify-between;
+    }
+
+    .cda-shell-tab-region {
+      @apply min-w-0 flex-1;
+    }
+
+    .cda-shell-topbar-region {
+      @apply min-w-0 shrink-0;
+    }
+
+    .cda-shell-status-row {
+      @apply flex-nowrap;
+    }
   }
 
   .cda-shell-topbar {

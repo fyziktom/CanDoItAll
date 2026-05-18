@@ -7,6 +7,18 @@
     @apply pb-1;
   }
 
+  .cda-tab-strip__main-row {
+    @apply w-full;
+  }
+
+  .cda-tab-strip__tabs {
+    @apply flex-1;
+  }
+
+  .cda-tab-strip__controls {
+    @apply min-w-0;
+  }
+
   .cda-tab-search {
     @apply w-36 border px-2 py-1 text-xs outline-none transition;
     border-radius: var(--cad-radius-control);
@@ -102,6 +114,40 @@
 
   .cda-tab-summary-action:hover {
     background: var(--cad-color-surface-soft);
+  }
+
+  @media (min-width: 1280px) {
+    .cda-tab-strip__main-row {
+      flex-direction: row !important;
+      flex-wrap: nowrap !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+    }
+
+    .cda-tab-strip .cda-tab-strip__main-row {
+      flex-direction: row !important;
+      flex-wrap: nowrap !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+    }
+
+    .cda-tab-strip .cda-tab-strip__tabs {
+      flex-wrap: nowrap !important;
+      overflow: hidden;
+    }
+
+    .cda-tab-strip .cda-tab-strip__controls {
+      flex-wrap: nowrap !important;
+      justify-content: flex-end !important;
+    }
+
+    .cda-tab-search {
+      @apply w-36;
+    }
+
+    .cda-tab-strip .cda-tab-summary {
+      @apply hidden;
+    }
   }
 
   .cda-inline-tab {
