@@ -323,7 +323,7 @@ public abstract class FileBackedSecretVault : ISecretVault
             await File.WriteAllTextAsync(
                 ResolvePayloadPath(normalizedKey),
                 Convert.ToBase64String(protectedBytes),
-                ct);
+                ct).ConfigureAwait(false);
             CryptographicOperations.ZeroMemory(protectedBytes);
         }
         finally
@@ -342,7 +342,8 @@ public abstract class FileBackedSecretVault : ISecretVault
             return null;
         }
 
-        var protectedBytes = Convert.FromBase64String(await File.ReadAllTextAsync(payloadPath, ct));
+        var protectedBytes = Convert.FromBase64String(await File.ReadAllTextAsync(payloadPath, ct)
+            .ConfigureAwait(false));
         byte[]? plainBytes = null;
         try
         {

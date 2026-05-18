@@ -52,6 +52,8 @@ public partial class AgentChatPanel : IAsyncDisposable
     private bool isVoiceSpeaking;
     private string voiceStatusText = string.Empty;
     private string voiceStatusTone = "neutral";
+    private readonly HashSet<Guid> sessionsWithVoiceIdentifierOmissionNotice = [];
+    private bool hasVoiceIdentifierOmissionNoticeWithoutSession;
 
     private IReadOnlyList<ChatSessionSummaryRecord> FilteredSessions
         => workspace?.Sessions
@@ -620,7 +622,9 @@ Use these workspace artifacts as input:
         {
             var synthesis = await VoiceService.SynthesizeAsync(new AgentVoiceSynthesisRequest(
                 text,
-                SelectedAgentVoiceAccess));
+                SelectedAgentVoiceAccess,
+                SuppressIdentifierOmissionNotice: ShouldSuppressIdentifierOmissionNotice()));
+            TrackIdentifierOmissionNotice(synthesis);
             await JsRuntime.InvokeVoidAsync(
                 "CanDoItAll.agentFramework.voice.playAudio",
                 Convert.ToBase64String(synthesis.AudioBytes),
@@ -635,6 +639,29 @@ Use these workspace artifacts as input:
         {
             isVoiceSpeaking = false;
         }
+    }
+
+    private bool ShouldSuppressIdentifierOmissionNotice()
+    {
+        return selectedSessionId is { } sessionId
+            ? sessionsWithVoiceIdentifierOmissionNotice.Contains(sessionId)
+            : hasVoiceIdentifierOmissionNoticeWithoutSession;
+    }
+
+    private void TrackIdentifierOmissionNotice(AgentVoiceSynthesisResult synthesis)
+    {
+        if (!synthesis.IdentifierOmissionNoticeIncluded)
+        {
+            return;
+        }
+
+        if (selectedSessionId is { } sessionId)
+        {
+            sessionsWithVoiceIdentifierOmissionNotice.Add(sessionId);
+            return;
+        }
+
+        hasVoiceIdentifierOmissionNoticeWithoutSession = true;
     }
 
     private void SetVoiceStatus(string text, string tone, string? notification = null)

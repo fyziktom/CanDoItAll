@@ -21,9 +21,9 @@ internal sealed class SecretStoreAgentProviderCredentialResolver(
         {
             try
             {
-                var secretValue = secretResolver.ResolveValueAsync(
-                        new SecretRuntimeRequest(secretRecordId.Value, SecretRuntimePurposes.AgentProviderApiKey))
-                    .ConfigureAwait(false)
+                // IAgentProviderCredentialResolver is synchronous; run async secret I/O outside the Blazor renderer context before blocking.
+                var secretValue = Task.Run(() => secretResolver.ResolveValueAsync(
+                        new SecretRuntimeRequest(secretRecordId.Value, SecretRuntimePurposes.AgentProviderApiKey)))
                     .GetAwaiter()
                     .GetResult();
                 if (string.IsNullOrWhiteSpace(secretValue))

@@ -6,7 +6,8 @@ namespace CanDoItAll.AgentFramework.Voice;
 public sealed class AgentVoiceService(
     IWorkflowSettingsService workflowSettingsService,
     IProviderProfileRegistry providerRegistry,
-    IAgentVoiceDriverFactory driverFactory) : IAgentVoiceService
+    IAgentVoiceDriverFactory driverFactory,
+    IAgentVoiceSpeechTextPreprocessor speechTextPreprocessor) : IAgentVoiceService
 {
     public async Task<AgentVoiceSettings> GetSettingsAsync(CancellationToken cancellationToken = default)
     {
@@ -46,7 +47,11 @@ public sealed class AgentVoiceService(
             throw new InvalidOperationException("Speech-to-text is disabled in AgentFramework voice settings.");
         }
 
-        var provider = await ResolveProviderAsync(settings.ProviderProfileId, "speech-to-text", cancellationToken);
+        var provider = await ResolveProviderAsync(
+            settings.ProviderProfileId,
+            settings.DriverKind,
+            "speech-to-text",
+            cancellationToken);
         var driver = driverFactory.CreateSpeechToTextDriver(settings.DriverKind);
         return await driver.TranscribeAsync(
             new SpeechToTextDriverRequest(
@@ -80,19 +85,33 @@ public sealed class AgentVoiceService(
             throw new InvalidOperationException("This agent does not allow voice mode.");
         }
 
-        var provider = await ResolveProviderAsync(settings.ProviderProfileId, "text-to-speech", cancellationToken);
+        var provider = await ResolveProviderAsync(
+            settings.ProviderProfileId,
+            settings.DriverKind,
+            "text-to-speech",
+            cancellationToken);
         var driver = driverFactory.CreateTextToSpeechDriver(settings.DriverKind);
         var voiceId = string.IsNullOrWhiteSpace(request.VoiceIdOverride)
             ? AgentVoiceSettingsNormalizer.ResolveEffectiveVoiceId(settings, request.AgentVoiceAccess)
             : request.VoiceIdOverride.Trim();
+        var preparedText = speechTextPreprocessor.Prepare(
+            request.Text,
+            request.SuppressIdentifierOmissionNotice);
 
-        return await driver.SynthesizeAsync(
+        var result = await driver.SynthesizeAsync(
             new TextToSpeechDriverRequest(
                 provider,
                 settings,
-                request.Text.Trim(),
+                preparedText.SpokenText,
                 voiceId),
             cancellationToken);
+
+        return result with
+        {
+            SpokenText = preparedText.SpokenText,
+            IdentifiersOmitted = preparedText.IdentifiersOmitted,
+            IdentifierOmissionNoticeIncluded = preparedText.IdentifierOmissionNoticeIncluded
+        };
     }
 
     public async Task<AgentVoiceSynthesisResult> SynthesizeSampleAsync(
@@ -110,6 +129,7 @@ public sealed class AgentVoiceService(
 
     private async Task<ProviderProfile> ResolveProviderAsync(
         Guid? providerProfileId,
+        AgentVoiceDriverKind driverKind,
         string capabilityName,
         CancellationToken cancellationToken)
     {
@@ -125,7 +145,21 @@ public sealed class AgentVoiceService(
             throw new InvalidOperationException($"Provider profile '{provider.Name}' configured for {capabilityName} is disabled.");
         }
 
+        ValidateProviderForDriver(provider, driverKind, capabilityName);
         return provider;
+    }
+
+    private static void ValidateProviderForDriver(
+        ProviderProfile provider,
+        AgentVoiceDriverKind driverKind,
+        string capabilityName)
+    {
+        if (driverKind == AgentVoiceDriverKind.OpenAi &&
+            (provider.Kind != ProviderKind.OpenAi || provider.Purpose != ProviderProfilePurpose.Chat))
+        {
+            throw new InvalidOperationException(
+                $"OpenAI {capabilityName} requires an enabled OpenAI chat provider profile. Provider '{provider.Name}' is '{provider.Kind}' with purpose '{provider.Purpose}'.");
+        }
     }
 
     private static string NormalizeFileName(string fileName)

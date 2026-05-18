@@ -11,6 +11,7 @@ public static class AgentFrameworkVoiceServiceCollectionExtensions
             new OpenAiVoiceDriver(
                 new HttpClient(),
                 serviceProvider.GetRequiredService<CanDoItAll.AgentFramework.Core.IAgentProviderCredentialResolver>()));
+        services.TryAddScoped<IAgentVoiceSpeechTextPreprocessor, AgentVoiceSpeechTextPreprocessor>();
         services.TryAddScoped<IAgentVoiceDriverFactory, AgentVoiceDriverFactory>();
         services.TryAddScoped<IAgentVoiceService, AgentVoiceService>();
         return services;

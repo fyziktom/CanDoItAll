@@ -98,6 +98,8 @@ public partial class CognitiveMemoryPage
     private string probeVoiceStatus = "Audio ready.";
     private string probeVoiceStatusTone = "neutral";
     private string pendingVoiceCorrectionText = string.Empty;
+    private readonly HashSet<Guid> probeSessionsWithVoiceIdentifierOmissionNotice = [];
+    private bool hasProbeVoiceIdentifierOmissionNoticeWithoutSession;
 
     private CognitiveMemoryReviewQueueItem? SelectedReviewItem
         => snapshot?.ReviewItems.FirstOrDefault(item => item.Id.Value == selectedReviewItemId);
@@ -652,7 +654,10 @@ public partial class CognitiveMemoryPage
         probeVoiceSpeaking = true;
         try
         {
-            var synthesis = await VoiceService.SynthesizeAsync(new AgentVoiceSynthesisRequest(text));
+            var synthesis = await VoiceService.SynthesizeAsync(new AgentVoiceSynthesisRequest(
+                text,
+                SuppressIdentifierOmissionNotice: ShouldSuppressProbeIdentifierOmissionNotice()));
+            TrackProbeIdentifierOmissionNotice(synthesis);
             await JsRuntime.InvokeVoidAsync(
                 "CanDoItAll.agentFramework.voice.playAudio",
                 Convert.ToBase64String(synthesis.AudioBytes),
@@ -668,6 +673,29 @@ public partial class CognitiveMemoryPage
         {
             probeVoiceSpeaking = false;
         }
+    }
+
+    private bool ShouldSuppressProbeIdentifierOmissionNotice()
+    {
+        return activeProbeSessionId is { } sessionId
+            ? probeSessionsWithVoiceIdentifierOmissionNotice.Contains(sessionId)
+            : hasProbeVoiceIdentifierOmissionNoticeWithoutSession;
+    }
+
+    private void TrackProbeIdentifierOmissionNotice(AgentVoiceSynthesisResult synthesis)
+    {
+        if (!synthesis.IdentifierOmissionNoticeIncluded)
+        {
+            return;
+        }
+
+        if (activeProbeSessionId is { } sessionId)
+        {
+            probeSessionsWithVoiceIdentifierOmissionNotice.Add(sessionId);
+            return;
+        }
+
+        hasProbeVoiceIdentifierOmissionNoticeWithoutSession = true;
     }
 
     private static string BuildProbeAnswerSpeech(CognitiveMemoryProbeAskResult result)

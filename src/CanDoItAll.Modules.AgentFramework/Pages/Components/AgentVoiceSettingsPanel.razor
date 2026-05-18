@@ -1,8 +1,10 @@
 @using Microsoft.JSInterop
+@using Microsoft.Extensions.Logging
 @inject IAgentVoiceService VoiceService
 @inject IAgentFrameworkWorkspaceService WorkspaceService
 @inject NotificationService NotificationService
 @inject IJSRuntime JsRuntime
+@inject ILogger<AgentVoiceSettingsPanel> Logger
 
 <Grid Gap="LayoutGap.Large"
       ColumnsLg="2"
@@ -25,7 +27,7 @@
                 <span class="cda-field-label">Provider</span>
                 <InputSelect @bind-Value="speechProviderIdText" class="cda-input">
                     <option value="">Select provider</option>
-                    @foreach (var provider in OpenAiProviders)
+                    @foreach (var provider in OpenAiVoiceProviders)
                     {
                         <option value="@provider.Id.ToString("D")">@provider.Name (@provider.DefaultModel)</option>
                     }
@@ -66,7 +68,7 @@
                 <span class="cda-field-label">Provider</span>
                 <InputSelect @bind-Value="ttsProviderIdText" class="cda-input">
                     <option value="">Select provider</option>
-                    @foreach (var provider in OpenAiProviders)
+                    @foreach (var provider in OpenAiVoiceProviders)
                     {
                         <option value="@provider.Id.ToString("D")">@provider.Name (@provider.DefaultModel)</option>
                     }
@@ -133,9 +135,9 @@
     private bool isBusy;
     private bool isPlayingSample;
 
-    private IReadOnlyList<ProviderProfile> OpenAiProviders => providers
-        .Where(provider => provider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi)
-        .OrderByDescending(provider => provider.IsEnabled)
+    private IReadOnlyList<ProviderProfile> OpenAiVoiceProviders => providers
+        .Where(IsOpenAiVoiceProvider)
+        .OrderByDescending(IsPreferredOpenAiVoiceProvider)
         .ThenBy(provider => provider.Name, StringComparer.OrdinalIgnoreCase)
         .ToList();
 
@@ -154,8 +156,8 @@
             await Task.WhenAll(settingsTask, providersTask);
             settings = await settingsTask;
             providers = await providersTask;
-            speechProviderIdText = settings.SpeechToText.ProviderProfileId?.ToString("D") ?? string.Empty;
-            ttsProviderIdText = settings.TextToSpeech.ProviderProfileId?.ToString("D") ?? string.Empty;
+            speechProviderIdText = ResolveVoiceProviderIdText(settings.SpeechToText.ProviderProfileId);
+            ttsProviderIdText = ResolveVoiceProviderIdText(settings.TextToSpeech.ProviderProfileId);
             SetStatus("Ready", "success");
         }
         catch (Exception exception)
@@ -179,18 +181,7 @@
         isBusy = true;
         try
         {
-            settings.SpeechToText.ProviderProfileId = ParseProviderId(speechProviderIdText);
-            settings.TextToSpeech.ProviderProfileId = ParseProviderId(ttsProviderIdText);
-            settings = await VoiceService.SaveSettingsAsync(settings);
-            speechProviderIdText = settings.SpeechToText.ProviderProfileId?.ToString("D") ?? string.Empty;
-            ttsProviderIdText = settings.TextToSpeech.ProviderProfileId?.ToString("D") ?? string.Empty;
-            SetStatus("Saved", "success");
-            NotificationService.Success("Voice settings saved", "AgentFramework voice settings were saved.");
-        }
-        catch (Exception exception)
-        {
-            SetStatus("Save failed", "danger");
-            NotificationService.Error("Voice settings failed", exception.Message);
+            await SaveCurrentSettingsAsync(showSuccessNotification: true);
         }
         finally
         {
@@ -206,10 +197,35 @@
         }
 
         isPlayingSample = true;
+        isBusy = true;
         try
         {
-            await SaveAsync();
+            await SetStatusAndRenderAsync("Saving sample", "neutral");
+            Logger.LogInformation(
+                "Saving AgentFramework voice settings before sample playback. STTProvider={SpeechToTextProviderProfileId} TTSProvider={TextToSpeechProviderProfileId} TTSFormat={TextToSpeechResponseFormat} TTSVoice={TextToSpeechVoiceId}",
+                speechProviderIdText,
+                ttsProviderIdText,
+                settings.TextToSpeech.ResponseFormat,
+                settings.TextToSpeech.VoiceId);
+            if (!await SaveCurrentSettingsAsync(showSuccessNotification: false))
+            {
+                return;
+            }
+
+            await SetStatusAndRenderAsync("Generating sample", "neutral");
+            Logger.LogInformation(
+                "Generating AgentFramework voice sample. TTSProvider={TextToSpeechProviderProfileId} TTSFormat={TextToSpeechResponseFormat} TTSVoice={TextToSpeechVoiceId}",
+                settings.TextToSpeech.ProviderProfileId,
+                settings.TextToSpeech.ResponseFormat,
+                settings.TextToSpeech.VoiceId);
             var synthesis = await VoiceService.SynthesizeSampleAsync(settings.SampleText);
+            await SetStatusAndRenderAsync("Playing sample", "neutral");
+            Logger.LogInformation(
+                "Playing AgentFramework voice sample. ByteCount={ByteCount} ContentType={ContentType} Model={Model} Voice={VoiceId}",
+                synthesis.AudioBytes.Length,
+                synthesis.ContentType,
+                synthesis.Model,
+                synthesis.VoiceId);
             await JsRuntime.InvokeVoidAsync(
                 "CanDoItAll.agentFramework.voice.playAudio",
                 Convert.ToBase64String(synthesis.AudioBytes),
@@ -218,12 +234,53 @@
         }
         catch (Exception exception)
         {
+            Logger.LogWarning(exception, "AgentFramework voice sample playback failed.");
             SetStatus("Sample failed", "danger");
             NotificationService.Error("Voice sample failed", exception.Message);
         }
         finally
         {
             isPlayingSample = false;
+            isBusy = false;
+        }
+    }
+
+    private async Task SetStatusAndRenderAsync(string text, string tone)
+    {
+        SetStatus(text, tone);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task<bool> SaveCurrentSettingsAsync(bool showSuccessNotification)
+    {
+        try
+        {
+            settings.SpeechToText.ProviderProfileId = ParseProviderId(speechProviderIdText);
+            settings.TextToSpeech.ProviderProfileId = ParseProviderId(ttsProviderIdText);
+            Logger.LogInformation(
+                "Saving AgentFramework voice settings. STTProvider={SpeechToTextProviderProfileId} TTSProvider={TextToSpeechProviderProfileId}",
+                settings.SpeechToText.ProviderProfileId,
+                settings.TextToSpeech.ProviderProfileId);
+            settings = await VoiceService.SaveSettingsAsync(settings);
+            speechProviderIdText = settings.SpeechToText.ProviderProfileId?.ToString("D") ?? string.Empty;
+            ttsProviderIdText = settings.TextToSpeech.ProviderProfileId?.ToString("D") ?? string.Empty;
+            SetStatus("Saved", "success");
+            Logger.LogInformation(
+                "AgentFramework voice settings saved. STTProvider={SpeechToTextProviderProfileId} TTSProvider={TextToSpeechProviderProfileId}",
+                settings.SpeechToText.ProviderProfileId,
+                settings.TextToSpeech.ProviderProfileId);
+            if (showSuccessNotification)
+            {
+                NotificationService.Success("Voice settings saved", "AgentFramework voice settings were saved.");
+            }
+
+            return true;
+        }
+        catch (Exception exception)
+        {
+            SetStatus("Save failed", "danger");
+            NotificationService.Error("Voice settings failed", exception.Message);
+            return false;
         }
     }
 
@@ -237,6 +294,30 @@
         return Guid.TryParse(value, out var providerId) && providerId != Guid.Empty
             ? providerId
             : throw new InvalidOperationException("Provider id is invalid.");
+    }
+
+    private string ResolveVoiceProviderIdText(Guid? currentProviderId)
+    {
+        var candidates = OpenAiVoiceProviders;
+        if (currentProviderId is { } providerId &&
+            candidates.Any(provider => provider.Id == providerId))
+        {
+            return providerId.ToString("D");
+        }
+
+        return candidates.FirstOrDefault()?.Id.ToString("D") ?? string.Empty;
+    }
+
+    private static bool IsOpenAiVoiceProvider(ProviderProfile provider)
+    {
+        return provider.Kind == ProviderKind.OpenAi &&
+               provider.Purpose == ProviderProfilePurpose.Chat &&
+               provider.IsEnabled;
+    }
+
+    private static bool IsPreferredOpenAiVoiceProvider(ProviderProfile provider)
+    {
+        return string.Equals(provider.Name, "OpenAI default", StringComparison.OrdinalIgnoreCase);
     }
 
     private void SetStatus(string text, string tone)

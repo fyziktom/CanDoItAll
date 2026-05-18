@@ -94,18 +94,57 @@ window.CanDoItAll.agentFramework.voice = (function () {
         return "voice-input.webm";
     }
 
+    function normalizePlaybackContentType(contentType) {
+        const normalized = (contentType || "audio/mpeg").trim().toLowerCase();
+        if (normalized === "audio/opus") {
+            return "audio/ogg; codecs=opus";
+        }
+
+        if (normalized === "audio/pcm") {
+            return "audio/wav";
+        }
+
+        return normalized;
+    }
+
+    function base64ToBytes(base64) {
+        const binary = atob(base64.replace(/\s/g, ""));
+        const bytes = new Uint8Array(binary.length);
+        for (let index = 0; index < binary.length; index++) {
+            bytes[index] = binary.charCodeAt(index);
+        }
+
+        return bytes;
+    }
+
+    function timeoutAfter(milliseconds) {
+        return new Promise((_, reject) => {
+            window.setTimeout(() => reject(new Error("Audio playback did not start in time.")), milliseconds);
+        });
+    }
+
     async function playAudio(base64, contentType) {
         if (!base64) {
             throw new Error("Audio payload is empty.");
         }
 
-        const response = await fetch(`data:${contentType || "audio/mpeg"};base64,${base64}`);
-        const blob = await response.blob();
+        const playbackContentType = normalizePlaybackContentType(contentType);
+        const support = new Audio().canPlayType(playbackContentType);
+        if (!support) {
+            throw new Error(`Browser audio playback does not support ${playbackContentType}.`);
+        }
+
+        const blob = new Blob([base64ToBytes(base64)], { type: playbackContentType });
         const url = URL.createObjectURL(blob);
         const audio = new Audio(url);
         audio.onended = () => URL.revokeObjectURL(url);
         audio.onerror = () => URL.revokeObjectURL(url);
-        await audio.play();
+        try {
+            await Promise.race([audio.play(), timeoutAfter(5000)]);
+        } catch (error) {
+            URL.revokeObjectURL(url);
+            throw new Error(`Audio playback failed for ${playbackContentType}: ${error?.message || error}`);
+        }
     }
 
     return {

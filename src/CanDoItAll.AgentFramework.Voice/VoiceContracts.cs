@@ -14,14 +14,28 @@ public sealed record AgentVoiceTranscriptionResult(
 public sealed record AgentVoiceSynthesisRequest(
     string Text,
     AgentVoiceAccessSettings? AgentVoiceAccess = null,
-    string? VoiceIdOverride = null);
+    string? VoiceIdOverride = null,
+    bool SuppressIdentifierOmissionNotice = false);
 
 public sealed record AgentVoiceSynthesisResult(
     byte[] AudioBytes,
     string ContentType,
     string Model,
     string VoiceId,
-    string ResponseFormat);
+    string ResponseFormat)
+{
+    public string SpokenText { get; init; } = string.Empty;
+
+    public bool IdentifiersOmitted { get; init; }
+
+    public bool IdentifierOmissionNoticeIncluded { get; init; }
+}
+
+public sealed record AgentVoiceSpeechTextPreparationResult(
+    string SpokenText,
+    bool IdentifiersOmitted,
+    bool IdentifierOmissionNoticeIncluded,
+    int RemovedIdentifierCount);
 
 public sealed record SpeechToTextDriverRequest(
     ProviderProfile Provider,
@@ -59,6 +73,13 @@ public interface IAgentVoiceDriverFactory
     ISpeechToTextVoiceDriver CreateSpeechToTextDriver(AgentVoiceDriverKind driverKind);
 
     ITextToSpeechVoiceDriver CreateTextToSpeechDriver(AgentVoiceDriverKind driverKind);
+}
+
+public interface IAgentVoiceSpeechTextPreprocessor
+{
+    AgentVoiceSpeechTextPreparationResult Prepare(
+        string text,
+        bool suppressIdentifierOmissionNotice);
 }
 
 public interface IAgentVoiceService

@@ -54,6 +54,64 @@ public sealed class AgentVoiceTests
         Assert.Equal("cedar", voiceId);
     }
 
+    [Fact]
+    public void SpeechTextPreprocessor_RemovesFullGuidsAndAddsNotice()
+    {
+        var preprocessor = new AgentVoiceSpeechTextPreprocessor();
+        var result = preprocessor.Prepare(
+            "Project 5128a19c-2c76-4ea6-9458-349616e2c383 is active.",
+            suppressIdentifierOmissionNotice: false);
+
+        Assert.True(result.IdentifiersOmitted);
+        Assert.True(result.IdentifierOmissionNoticeIncluded);
+        Assert.Equal(1, result.RemovedIdentifierCount);
+        Assert.StartsWith(AgentVoiceSpeechTextPreprocessor.IdentifierOmissionNotice, result.SpokenText, StringComparison.Ordinal);
+        Assert.DoesNotContain("5128a19c-2c76-4ea6-9458-349616e2c383", result.SpokenText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Project", result.SpokenText, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("AI Tap id a845e5c9... is newest.", "a845e5c9")]
+    [InlineData("Review item bf8ba85a\u2026 should be compared.", "bf8ba85a")]
+    public void SpeechTextPreprocessor_RemovesTruncatedHexEllipsisIdsConservatively(
+        string text,
+        string identifierFragment)
+    {
+        var preprocessor = new AgentVoiceSpeechTextPreprocessor();
+        var result = preprocessor.Prepare(text, suppressIdentifierOmissionNotice: false);
+
+        Assert.True(result.IdentifiersOmitted);
+        Assert.DoesNotContain(identifierFragment, result.SpokenText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(AgentVoiceSpeechTextPreprocessor.IdentifierOmissionNotice, result.SpokenText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SpeechTextPreprocessor_DoesNotRemoveShortOrNonHexEllipsisText()
+    {
+        var preprocessor = new AgentVoiceSpeechTextPreprocessor();
+        var result = preprocessor.Prepare(
+            "Use docs... then inspect project-alpha...",
+            suppressIdentifierOmissionNotice: false);
+
+        Assert.False(result.IdentifiersOmitted);
+        Assert.False(result.IdentifierOmissionNoticeIncluded);
+        Assert.Equal("Use docs... then inspect project-alpha...", result.SpokenText);
+    }
+
+    [Fact]
+    public void SpeechTextPreprocessor_SuppressesNoticeWhenRequested()
+    {
+        var preprocessor = new AgentVoiceSpeechTextPreprocessor();
+        var result = preprocessor.Prepare(
+            "Project 5128a19c-2c76-4ea6-9458-349616e2c383 is active.",
+            suppressIdentifierOmissionNotice: true);
+
+        Assert.True(result.IdentifiersOmitted);
+        Assert.False(result.IdentifierOmissionNoticeIncluded);
+        Assert.DoesNotContain(AgentVoiceSpeechTextPreprocessor.IdentifierOmissionNotice, result.SpokenText, StringComparison.Ordinal);
+        Assert.Equal("Project is active.", result.SpokenText);
+    }
+
     [Theory]
     [InlineData("yes", AgentVoiceConfirmationIntent.Affirm)]
     [InlineData("ok this is good, store it", AgentVoiceConfirmationIntent.Affirm)]
@@ -125,6 +183,69 @@ public sealed class AgentVoiceTests
         Assert.Equal("cedar", json.RootElement.GetProperty("voice").GetString());
         Assert.Equal("hello", json.RootElement.GetProperty("input").GetString());
         Assert.Equal("mp3", json.RootElement.GetProperty("response_format").GetString());
+        Assert.False(json.RootElement.TryGetProperty("instructions", out _));
+    }
+
+    [Theory]
+    [InlineData("opus", "audio/ogg; codecs=opus")]
+    [InlineData("aac", "audio/aac")]
+    [InlineData("flac", "audio/flac")]
+    [InlineData("wav", "audio/wav")]
+    public async Task OpenAiVoiceDriver_Synthesis_ReturnsBrowserPlayableContentType(
+        string responseFormat,
+        string expectedContentType)
+    {
+        var handler = new CapturingHandler(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent([1, 2, 3, 4])
+        });
+        var driver = new OpenAiVoiceDriver(new HttpClient(handler), new FixedCredentialResolver("test-key"));
+
+        var result = await driver.SynthesizeAsync(new TextToSpeechDriverRequest(
+            CreateProvider(),
+            new AgentTextToSpeechSettings
+            {
+                Model = "gpt-4o-mini-tts",
+                ResponseFormat = responseFormat
+            },
+            "hello",
+            "cedar"));
+
+        using var json = JsonDocument.Parse(handler.RequestBody);
+
+        Assert.Equal(expectedContentType, result.ContentType);
+        Assert.Equal(responseFormat, result.ResponseFormat);
+        Assert.Equal(responseFormat, json.RootElement.GetProperty("response_format").GetString());
+        Assert.Equal(new byte[] { 1, 2, 3, 4 }, result.AudioBytes);
+    }
+
+    [Fact]
+    public async Task OpenAiVoiceDriver_Synthesis_WrapsPcmForBrowserPlayback()
+    {
+        var handler = new CapturingHandler(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent([1, 0, 2, 0])
+        });
+        var driver = new OpenAiVoiceDriver(new HttpClient(handler), new FixedCredentialResolver("test-key"));
+
+        var result = await driver.SynthesizeAsync(new TextToSpeechDriverRequest(
+            CreateProvider(),
+            new AgentTextToSpeechSettings
+            {
+                Model = "gpt-4o-mini-tts",
+                ResponseFormat = "pcm"
+            },
+            "hello",
+            "cedar"));
+
+        using var json = JsonDocument.Parse(handler.RequestBody);
+
+        Assert.Equal("audio/wav", result.ContentType);
+        Assert.Equal("pcm", result.ResponseFormat);
+        Assert.Equal("pcm", json.RootElement.GetProperty("response_format").GetString());
+        Assert.Equal("RIFF", System.Text.Encoding.ASCII.GetString(result.AudioBytes, 0, 4));
+        Assert.Equal("WAVE", System.Text.Encoding.ASCII.GetString(result.AudioBytes, 8, 4));
+        Assert.Equal(48, result.AudioBytes.Length);
     }
 
     [Fact]
@@ -140,7 +261,8 @@ public sealed class AgentVoiceTests
                 }
             }),
             new EmptyProviderRegistry(),
-            new AgentVoiceDriverFactory(new OpenAiVoiceDriver(new HttpClient(new CapturingHandler(new HttpResponseMessage(HttpStatusCode.OK))), new FixedCredentialResolver("test-key"))));
+            new AgentVoiceDriverFactory(new OpenAiVoiceDriver(new HttpClient(new CapturingHandler(new HttpResponseMessage(HttpStatusCode.OK))), new FixedCredentialResolver("test-key"))),
+            new AgentVoiceSpeechTextPreprocessor());
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             service.TranscribeAsync(new AgentVoiceTranscriptionRequest([1], "voice.webm", "audio/webm")));
@@ -148,7 +270,69 @@ public sealed class AgentVoiceTests
         Assert.Contains("provider profile must be selected", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static ProviderProfile CreateProvider()
+    [Fact]
+    public async Task AgentVoiceService_Synthesize_RejectsImageGenerationProvider()
+    {
+        var provider = CreateProvider(ProviderProfilePurpose.ImageGeneration);
+        var service = new AgentVoiceService(
+            new InMemoryWorkflowSettingsService(new AgentVoiceSettings
+            {
+                TextToSpeech = new AgentTextToSpeechSettings
+                {
+                    IsEnabled = true,
+                    ProviderProfileId = provider.Id
+                }
+            }),
+            new InMemoryProviderRegistry([provider]),
+            new AgentVoiceDriverFactory(new OpenAiVoiceDriver(new HttpClient(new CapturingHandler(new HttpResponseMessage(HttpStatusCode.OK))), new FixedCredentialResolver("test-key"))),
+            new AgentVoiceSpeechTextPreprocessor());
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.SynthesizeSampleAsync("hello"));
+
+        Assert.Contains("OpenAI text-to-speech requires an enabled OpenAI chat provider profile", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task AgentVoiceService_Synthesize_UsesPreparedSpeechText()
+    {
+        var provider = CreateProvider();
+        var handler = new CapturingHandler(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent([1, 2, 3, 4])
+        });
+        var service = new AgentVoiceService(
+            new InMemoryWorkflowSettingsService(new AgentVoiceSettings
+            {
+                TextToSpeech = new AgentTextToSpeechSettings
+                {
+                    IsEnabled = true,
+                    ProviderProfileId = provider.Id,
+                    Model = "gpt-4o-mini-tts",
+                    ResponseFormat = "opus",
+                    VoiceId = "cedar"
+                }
+            }),
+            new InMemoryProviderRegistry([provider]),
+            new AgentVoiceDriverFactory(new OpenAiVoiceDriver(new HttpClient(handler), new FixedCredentialResolver("test-key"))),
+            new AgentVoiceSpeechTextPreprocessor());
+
+        var result = await service.SynthesizeAsync(new AgentVoiceSynthesisRequest(
+            "Project 5128a19c-2c76-4ea6-9458-349616e2c383 and project bf8ba85a... are active.",
+            SuppressIdentifierOmissionNotice: false));
+        using var json = JsonDocument.Parse(handler.RequestBody);
+        var input = json.RootElement.GetProperty("input").GetString() ?? string.Empty;
+
+        Assert.True(result.IdentifiersOmitted);
+        Assert.True(result.IdentifierOmissionNoticeIncluded);
+        Assert.Equal(result.SpokenText, input);
+        Assert.Contains(AgentVoiceSpeechTextPreprocessor.IdentifierOmissionNotice, input, StringComparison.Ordinal);
+        Assert.DoesNotContain("5128a19c-2c76-4ea6-9458-349616e2c383", input, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("bf8ba85a", input, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static ProviderProfile CreateProvider(
+        ProviderProfilePurpose purpose = ProviderProfilePurpose.Chat)
     {
         return new ProviderProfile(
             Guid.NewGuid(),
@@ -167,7 +351,8 @@ public sealed class AgentVoiceTests
             Notes: string.Empty,
             HealthStatus: string.Empty,
             LastCheckedAtUtc: null,
-            SuggestedModels: []);
+            SuggestedModels: [],
+            Purpose: purpose);
     }
 
     private sealed class CapturingHandler(HttpResponseMessage response) : HttpMessageHandler
@@ -219,16 +404,24 @@ public sealed class AgentVoiceTests
         }
     }
 
-    private sealed class EmptyProviderRegistry : IProviderProfileRegistry
+    private sealed class EmptyProviderRegistry : InMemoryProviderRegistry
+    {
+        public EmptyProviderRegistry()
+            : base([])
+        {
+        }
+    }
+
+    private class InMemoryProviderRegistry(IReadOnlyList<ProviderProfile> providers) : IProviderProfileRegistry
     {
         public Task<IReadOnlyList<ProviderProfile>> ListProvidersAsync(CancellationToken cancellationToken = default)
         {
-            return Task.FromResult<IReadOnlyList<ProviderProfile>>([]);
+            return Task.FromResult(providers);
         }
 
         public Task<ProviderProfile?> GetProviderAsync(Guid providerId, CancellationToken cancellationToken = default)
         {
-            return Task.FromResult<ProviderProfile?>(null);
+            return Task.FromResult(providers.FirstOrDefault(provider => provider.Id == providerId));
         }
 
         public Task<ProviderProfileEditorModel> GetProviderEditorAsync(Guid? providerId = null, CancellationToken cancellationToken = default)
