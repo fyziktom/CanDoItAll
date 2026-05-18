@@ -632,6 +632,41 @@ else
                         </FormSection>
                     </TabsItem>
 
+                    <TabsItem Text="Voice">
+                        <FormSection Title="Voice" Description="Allow this agent to participate in audio mode and optionally override the general text-to-speech voice.">
+                            <Grid Gap="LayoutGap.Large" ColumnsMd="2" data-testid="agents-catalog-voice-access">
+                                <div class="cda-admin-subpanel">
+                                    <p class="cda-field-label mb-2">Voice access</p>
+                                    <Stack GapScale="LayoutGap.Small">
+                                        <label class="cda-inline-option">
+                                            <input type="checkbox"
+                                                   checked="@editorModel.VoiceAccess.CanUseVoiceMode"
+                                                   @onchange="args => ToggleVoiceModeAccess(args.Value)"
+                                                   data-testid="agents-catalog-voice-enabled" />
+                                            Can use audio mode
+                                        </label>
+                                    </Stack>
+                                </div>
+                                <div class="cda-admin-subpanel">
+                                    <label class="cda-field-label">Voice override</label>
+                                    <InputSelect @bind-Value="editorModel.VoiceAccess.PreferredVoiceId"
+                                                 class="cda-input"
+                                                 disabled="@(!editorModel.VoiceAccess.CanUseVoiceMode)"
+                                                 data-testid="agents-catalog-voice-override">
+                                        <option value="">Use general voice</option>
+                                        @foreach (var voiceId in AgentVoiceDefaults.OpenAiVoiceIds)
+                                        {
+                                            <option value="@voiceId">@voiceId</option>
+                                        }
+                                    </InputSelect>
+                                    <p class="mt-2 text-sm leading-6 text-slate-600">
+                                        When set, this voice takes priority over the general AgentFramework voice.
+                                    </p>
+                                </div>
+                            </Grid>
+                        </FormSection>
+                    </TabsItem>
+
                     <TabsItem Text="Tags">
                         <FormSection Title="Tags" Description="Tags keep ownership and routing visible without introducing a second registry.">
                             <TagEditor Value="@tagValues"

@@ -100,17 +100,20 @@ public sealed class SecretRuntimeResolver(
     {
         var authorization = ValidateRequest(request);
 
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken)
+            .ConfigureAwait(false);
         var secret = await dbContext.Set<SecretRecord>()
             .Where(item => item.Id == request.SecretId)
             .Select(item => new ResolvableSecretRecord(item.Id, item.Name, item.EncryptedPayload))
-            .SingleOrDefaultAsync(cancellationToken);
+            .SingleOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
         if (secret is null)
         {
             return null;
         }
 
-        await AuthorizeAsync(dbContext, request, authorization, cancellationToken);
+        await AuthorizeAsync(dbContext, request, authorization, cancellationToken)
+            .ConfigureAwait(false);
 
         if (string.IsNullOrWhiteSpace(secret.Payload))
         {
@@ -122,6 +125,7 @@ public sealed class SecretRuntimeResolver(
             if (SecretVaultRecordReference.TryParse(secret.Payload, out var vaultKey))
             {
                 return await vault.GetAsync(vaultKey, cancellationToken)
+                    .ConfigureAwait(false)
                     ?? throw new InvalidOperationException("The referenced vault payload was not found.");
             }
 
@@ -187,7 +191,8 @@ public sealed class SecretRuntimeResolver(
             reference.ContextType == authorization.ConsumerType &&
             reference.ContextId == authorization.ConsumerId &&
             reference.Purpose == authorization.Purpose,
-            cancellationToken);
+            cancellationToken)
+            .ConfigureAwait(false);
         if (hasPersistedBinding)
         {
             return;

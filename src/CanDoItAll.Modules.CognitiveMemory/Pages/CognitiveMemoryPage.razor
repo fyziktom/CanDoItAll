@@ -1,0 +1,1450 @@
+@page "/cognitive-memory"
+@page "/memory"
+@namespace CanDoItAll.Modules.CognitiveMemory.Pages
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Rendering
+
+<PageTitle>Cognitive Memory</PageTitle>
+
+<PageScaffold MaxWidthClass="max-w-full" data-testid="cognitive-memory-page">
+    <Header>
+        <PageHeader Eyebrow="Cognitive Memory"
+                    Title="Memory review"
+                    Description="Inspect recall evidence, review decisions, probing, self-regulation, answer gates, learning proposals, projection health, and worker safety.">
+            <Actions>
+                <Button Icon="refresh"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Class="cda-button--quick"
+                        title="Refresh memory review"
+                        aria-label="Refresh memory review"
+                        Click="RefreshAsync"
+                        Disabled="@isBusy"
+                        IsBusy="@isBusy"
+                        data-testid="cognitive-memory-refresh" />
+            </Actions>
+        </PageHeader>
+    </Header>
+
+    <Lead>
+        <Cluster Gap="LayoutGap.Small"
+                 Wrap="FlexWrap.Wrap"
+                 Class="cognitive-memory-summary"
+                 data-testid="cognitive-memory-summary">
+            <SummaryTile Label="Memory items"
+                         Value="@SummaryValue(snapshot?.Summary.MemoryRecordCount)"
+                         HelperText="Canonical memory records available to inspect."
+                         Tone="info"
+                         Badge="true"
+                         Compact="true"
+                         ShowHelperTextAsTooltip="true" />
+            <SummaryTile Label="Pending review"
+                         Value="@SummaryValue(snapshot?.Summary.PendingReviewCount)"
+                         HelperText="Review items waiting for an explicit operator decision."
+                         Tone="warning"
+                         Badge="true"
+                         Compact="true"
+                         ShowHelperTextAsTooltip="true" />
+            <SummaryTile Label="Recall traces"
+                         Value="@SummaryValue(snapshot?.Summary.RecallTraceCount)"
+                         HelperText="Trace records explaining staged retrieval and context-pack selection."
+                         Tone="secondary"
+                         Badge="true"
+                         Compact="true"
+                         ShowHelperTextAsTooltip="true" />
+            <SummaryTile Label="Projection issues"
+                         Value="@SummaryValue(snapshot?.Summary.ProjectionIssueCount)"
+                         HelperText="Projection records that failed or require rebuild."
+                         Tone="@(snapshot?.Summary.ProjectionIssueCount > 0 ? "danger" : "success")"
+                         Badge="true"
+                         Compact="true"
+                         ShowHelperTextAsTooltip="true" />
+            <SummaryTile Label="Procedure review"
+                         Value="@SummaryValue(snapshot?.Summary.ProcedureReviewCount)"
+                         HelperText="Procedure skills that are draft, observed, high-risk, or waiting for validation."
+                         Tone="@(snapshot?.Summary.ProcedureReviewCount > 0 ? "warning" : "success")"
+                         Badge="true"
+                         Compact="true"
+                         ShowHelperTextAsTooltip="true" />
+            <SummaryTile Label="Simulation review"
+                         Value="@SummaryValue(snapshot?.Summary.SimulationReviewCount)"
+                         HelperText="Speculative procedure simulations that require review."
+                         Tone="@(snapshot?.Summary.SimulationReviewCount > 0 ? "warning" : "success")"
+                         Badge="true"
+                         Compact="true"
+                         ShowHelperTextAsTooltip="true" />
+            <SummaryTile Label="Answer gates"
+                         Value="@SummaryValue(snapshot?.Summary.AnswerGateInterventionCount)"
+                         HelperText="Answer-gate decisions that warned, requested evidence, review, learning, or abstention."
+                         Tone="@(snapshot?.Summary.AnswerGateInterventionCount > 0 ? "warning" : "success")"
+                         Badge="true"
+                         Compact="true"
+                         ShowHelperTextAsTooltip="true" />
+            <SummaryTile Label="Learning proposals"
+                         Value="@SummaryValue(snapshot?.Summary.LearningProposalCount)"
+                         HelperText="Epistemic Drive learning proposals waiting for approval."
+                         Tone="@(snapshot?.Summary.LearningProposalCount > 0 ? "warning" : "success")"
+                         Badge="true"
+                         Compact="true"
+                         ShowHelperTextAsTooltip="true" />
+            <SummaryTile Label="Worker issues"
+                         Value="@SummaryValue(snapshot?.Summary.DistributedIssueCount)"
+                         HelperText="Distributed jobs or worker results rejected by lease, hash, schema, version, or policy checks."
+                         Tone="@(snapshot?.Summary.DistributedIssueCount > 0 ? "danger" : "success")"
+                         Badge="true"
+                         Compact="true"
+                         ShowHelperTextAsTooltip="true" />
+        </Cluster>
+    </Lead>
+
+    <ChildContent>
+        @if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <SurfaceCard Soft="true" data-testid="cognitive-memory-error">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Action required" />
+                <h2 class="cognitive-memory-card-title">Memory review refresh failed</h2>
+                <p class="cognitive-memory-muted">@errorMessage</p>
+            </SurfaceCard>
+        }
+
+        @if (isLoading)
+        {
+            <SurfaceCard data-testid="cognitive-memory-loading">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Loading" />
+                <h2 class="cognitive-memory-card-title">Refreshing memory evidence</h2>
+                <p class="cognitive-memory-muted">Loading review items, recall traces, consolidation runs, projection states, replay jobs, and procedure skills.</p>
+            </SurfaceCard>
+        }
+        else if (snapshot is null)
+        {
+            <EmptyState Eyebrow="No snapshot"
+                        Title="Memory review data is unavailable"
+                        Description="Refresh the page after the runtime database is ready." />
+        }
+        else
+        {
+            <div class="cognitive-memory-tab-scope">
+                <Tabs @bind-SelectedIndex="activeTabIndex"
+                      RenderMode="TabRenderMode.Server"
+                      Variant="TabsVariant.WorkspacePrimary"
+                      OverflowMode="TabsOverflowMode.Wrap"
+                      AriaLabel="Cognitive Memory review tabs"
+                      data-testid="cognitive-memory-tabs">
+                    <TabsItem Text="Dashboard"
+                              Icon="dashboard"
+                              data-testid="cognitive-memory-tab-dashboard">
+                        <Grid Gap="LayoutGap.Large"
+                              Class="cognitive-memory-layout"
+                              ColumnTemplateXl="minmax(22rem,0.85fr) minmax(0,1.15fr)">
+                            <SurfaceCard data-testid="cognitive-memory-dashboard-review">
+                                <Split Gap="LayoutGap.Small"
+                                       AlignItems="AlignItems.Start">
+                                    <div>
+                                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Review queue" />
+                                        <h2 class="cognitive-memory-card-title">Pending evidence decisions</h2>
+                                    </div>
+                                    <StatusBadge Tone="@ReviewQueueTone" Text="@($"{snapshot.Summary.PendingReviewCount} pending")" />
+                                </Split>
+                                @ReviewQueueList()
+                            </SurfaceCard>
+
+                            <SurfaceCard data-testid="cognitive-memory-dashboard-trace">
+                                <Split Gap="LayoutGap.Small"
+                                       AlignItems="AlignItems.Start">
+                                    <div>
+                                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Recall trace" />
+                                        <h2 class="cognitive-memory-card-title">Why memory entered context</h2>
+                                    </div>
+                                    <StatusBadge Tone="info" Text="@($"{snapshot.RecallTraces.Count} loaded")" />
+                                </Split>
+                                @RecallTraceDetail(Compact: true)
+                            </SurfaceCard>
+                        </Grid>
+
+                        <Grid Gap="LayoutGap.Large"
+                              Class="cognitive-memory-layout"
+                              ColumnTemplateXl="minmax(0,1fr) minmax(0,1fr)">
+                            @ProjectionHealthPanel()
+                            @ProcedurePanel()
+                        </Grid>
+                    </TabsItem>
+
+                    <TabsItem Text="Probe workbench"
+                              Icon="forum"
+                              BadgeText="@snapshot.Summary.ProbeSessionCount.ToString()"
+                              data-testid="cognitive-memory-tab-probe-workbench">
+                        <Grid Gap="LayoutGap.Large"
+                              Class="cognitive-memory-layout cognitive-memory-probe-workbench"
+                              ColumnTemplateXl="minmax(22rem,0.75fr) minmax(0,1.25fr)"
+                              data-testid="cognitive-memory-probe-workbench">
+                            <SurfaceCard data-testid="cognitive-memory-probe-session-card">
+                                <Split Gap="LayoutGap.Small"
+                                       AlignItems="AlignItems.Start">
+                                    <div>
+                                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Dialogue workbench" />
+                                        <h2 class="cognitive-memory-card-title">Project memory probe</h2>
+                                    </div>
+                                    <StatusBadge Tone="@(HasActiveProbeSession ? "info" : "secondary")"
+                                                 Text="@(HasActiveProbeSession ? "Active" : "No session")" />
+                                </Split>
+
+                                <Stack GapScale="LayoutGap.Medium" Class="mt-4">
+                                    <div class="cognitive-memory-facts">
+                                        @RenderFactFragment("Project", ProbeProjectScopeText)
+                                        @RenderFactFragment("Session", ActiveProbeSessionTitle)
+                                        @RenderFactFragment("State", ActiveProbeSessionMeta)
+                                    </div>
+
+                                    <label class="cognitive-memory-field">
+                                        <span>Session title</span>
+                                        <InputText class="cda-input"
+                                                   @bind-Value="probeSessionTitle"
+                                                   data-testid="cognitive-memory-probe-session-title" />
+                                    </label>
+
+                                    <Grid Gap="LayoutGap.Medium"
+                                          ColumnTemplateLg="minmax(0,1fr) minmax(0,1fr)">
+                                        <label class="cognitive-memory-field">
+                                            <span>Recall mode</span>
+                                            <InputSelect class="cda-input"
+                                                         @bind-Value="probeRecallMode"
+                                                         data-testid="cognitive-memory-probe-recall-mode">
+                                                @foreach (var mode in Enum.GetValues<CognitiveMemoryRecallMode>().Where(mode => mode != CognitiveMemoryRecallMode.Unknown))
+                                                {
+                                                    <option value="@mode">@FormatLabel(mode)</option>
+                                                }
+                                            </InputSelect>
+                                        </label>
+                                        <label class="cognitive-memory-field">
+                                            <span>Intent</span>
+                                            <InputSelect class="cda-input"
+                                                         @bind-Value="probeIntent"
+                                                         data-testid="cognitive-memory-probe-intent">
+                                                @foreach (var intent in Enum.GetValues<CognitiveMemoryRecallIntentKind>().Where(intent => intent != CognitiveMemoryRecallIntentKind.Unknown))
+                                                {
+                                                    <option value="@intent">@FormatLabel(intent)</option>
+                                                }
+                                            </InputSelect>
+                                        </label>
+                                    </Grid>
+
+                                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                        <Button Text="Start"
+                                                Icon="play_arrow"
+                                                ButtonStyle="ButtonStyle.Primary"
+                                                Size="ButtonSize.Small"
+                                                Disabled="@(!CanStartProbe)"
+                                                IsBusy="@isBusy"
+                                                Click="StartProbeSessionAsync"
+                                                data-testid="cognitive-memory-probe-start" />
+                                        <Button Text="Refresh"
+                                                Icon="refresh"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Size="ButtonSize.Small"
+                                                Disabled="@isBusy"
+                                                Click="RefreshAsync"
+                                                data-testid="cognitive-memory-probe-refresh" />
+                                    </Cluster>
+
+                                    @if (snapshot.ProbeSessions.Count > 0)
+                                    {
+                                        <section class="cognitive-memory-section">
+                                            <h3>Recent sessions</h3>
+                                            <div class="cognitive-memory-list">
+                                                @foreach (var session in snapshot.ProbeSessions.Take(4))
+                                                {
+                                                    <button type="button"
+                                                            class="cognitive-memory-row cognitive-memory-row-button"
+                                                            @onclick="() => ReuseProbeSession(session.Id)"
+                                                            data-testid="@($"cognitive-memory-probe-reuse-{session.Id:N}")">
+                                                        <strong>@session.Title</strong>
+                                                        <span>@($"{FormatLabel(session.Status)} / {FormatLabel(session.RecallMode)} / {session.TurnCount} turn(s)")</span>
+                                                        <small>@FormatDate(session.UpdatedAtUtc)</small>
+                                                    </button>
+                                                }
+                                            </div>
+                                        </section>
+                                    }
+                                </Stack>
+                            </SurfaceCard>
+
+                            <SurfaceCard data-testid="cognitive-memory-probe-dialogue-card">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Question" />
+                                <h2 class="cognitive-memory-card-title">Ask memory</h2>
+                                <Stack GapScale="LayoutGap.Medium" Class="mt-4">
+                                    <label class="cognitive-memory-field">
+                                        <span>Question</span>
+                                        <InputTextArea class="cda-input cda-input--textarea cognitive-memory-probe-question"
+                                                       @bind-Value="probeQuestion"
+                                                       data-testid="cognitive-memory-probe-question" />
+                                    </label>
+                                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                        <Button Text="Ask"
+                                                Icon="send"
+                                                ButtonStyle="ButtonStyle.Primary"
+                                                Size="ButtonSize.Small"
+                                                Disabled="@(!CanAskProbe)"
+                                                IsBusy="@isBusy"
+                                                Click="AskProbeAsync"
+                                                data-testid="cognitive-memory-probe-ask" />
+                                        <Button Text="Audio mode"
+                                                Icon="hearing"
+                                                ButtonStyle="@(probeVoiceModeEnabled ? ButtonStyle.Info : ButtonStyle.Light)"
+                                                Size="ButtonSize.Small"
+                                                Disabled="@isBusy"
+                                                Click="ToggleProbeVoiceModeAsync"
+                                                data-testid="cognitive-memory-probe-voice-mode" />
+                                        <Button Text="@(probeVoiceRecording && probeVoiceCaptureTarget == CognitiveMemoryProbeVoiceCaptureTarget.Question ? "Stop recording" : "Ask by voice")"
+                                                Icon="@(probeVoiceRecording && probeVoiceCaptureTarget == CognitiveMemoryProbeVoiceCaptureTarget.Question ? "stop" : "mic")"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Size="ButtonSize.Small"
+                                                Disabled="@(!probeVoiceModeEnabled || !CanUseProbeVoice)"
+                                                IsBusy="@probeVoiceTranscribing"
+                                                Click="ToggleProbeQuestionRecordingAsync"
+                                                data-testid="cognitive-memory-probe-voice-question" />
+                                        <StatusBadge Tone="info" Text="@probeStatus" />
+                                        <StatusBadge Tone="@probeVoiceStatusTone"
+                                                     Text="@probeVoiceStatus"
+                                                     data-testid="cognitive-memory-probe-voice-status" />
+                                    </Cluster>
+                                </Stack>
+                            </SurfaceCard>
+                        </Grid>
+
+                        <Grid Gap="LayoutGap.Large"
+                              Class="cognitive-memory-layout cognitive-memory-probe-result-grid"
+                              ColumnTemplateXl="minmax(0,1.2fr) minmax(22rem,0.8fr)">
+                            <SurfaceCard data-testid="cognitive-memory-probe-answer-card">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Answer evidence" />
+                                <h2 class="cognitive-memory-card-title">Context returned to probing</h2>
+                                @if (lastProbeAskResult is null)
+                                {
+                                    <EmptyState Eyebrow="No answer"
+                                                Title="No probe answer yet"
+                                                Description="Ask a project question to inspect the context pack, source refs, and trace stages." />
+                                }
+                                else
+                                {
+                                    var contextPack = lastProbeAskResult.RecallResult.ContextPack;
+                                    <div class="cognitive-memory-detail-stack" data-testid="cognitive-memory-probe-answer">
+                                        <div class="cognitive-memory-facts">
+                                            @RenderFactFragment("Turn", lastProbeAskResult.Turn.Sequence.ToString())
+                                            @RenderFactFragment("Trace", FormatShortId(lastProbeAskResult.RecallResult.TraceId))
+                                            @RenderFactFragment("Sections", contextPack.Sections.Count.ToString())
+                                            @RenderFactFragment("Sources", contextPack.SourceRefs.Count(sourceRef => sourceRef.IncludedInContext).ToString())
+                                        </div>
+                                        <p class="cognitive-memory-review-memory-text">@FirstNonEmpty(contextPack.Summary, lastProbeAskResult.Turn.AnswerSummary, "No answer summary was returned.")</p>
+                                        @if (lastProbeAskResult.RecallResult.Warnings.Count > 0)
+                                        {
+                                            <section class="cognitive-memory-section" data-testid="cognitive-memory-probe-warnings">
+                                                <h3>Warnings</h3>
+                                                <div class="cognitive-memory-list">
+                                                    @foreach (var warning in lastProbeAskResult.RecallResult.Warnings)
+                                                    {
+                                                        <div class="cognitive-memory-row">
+                                                            <strong>Warning</strong>
+                                                            <span>@warning</span>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </section>
+                                        }
+                                        <section class="cognitive-memory-section" data-testid="cognitive-memory-probe-sections">
+                                            <h3>Context sections</h3>
+                                            <div class="cognitive-memory-list">
+                                                @foreach (var section in contextPack.Sections)
+                                                {
+                                                    <article class="cognitive-memory-row cognitive-memory-probe-section">
+                                                        <strong>@FirstNonEmpty(section.Title, FormatLabel(section.SectionKind))</strong>
+                                                        <span>@FormatLabel(section.SectionKind)</span>
+                                                        <p class="cognitive-memory-review-memory-text">@FirstNonEmpty(section.Content, "No section content.")</p>
+                                                    </article>
+                                                }
+                                            </div>
+                                        </section>
+                                    </div>
+                                }
+                            </SurfaceCard>
+
+                            <SurfaceCard data-testid="cognitive-memory-probe-feedback-card">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Feedback" />
+                                <h2 class="cognitive-memory-card-title">Correction and review signal</h2>
+                                <Stack GapScale="LayoutGap.Medium" Class="mt-4">
+                                    <Grid Gap="LayoutGap.Medium"
+                                          ColumnTemplateLg="minmax(0,1fr) minmax(0,1fr)">
+                                        <label class="cognitive-memory-field">
+                                            <span>Action</span>
+                                            <InputSelect class="cda-input"
+                                                         @bind-Value="probeFeedbackAction"
+                                                         data-testid="cognitive-memory-probe-feedback-action">
+                                                @foreach (var action in Enum.GetValues<CognitiveMemoryProbeFeedbackAction>())
+                                                {
+                                                    <option value="@action">@FormatLabel(action)</option>
+                                                }
+                                            </InputSelect>
+                                        </label>
+                                        <label class="cognitive-memory-field">
+                                            <span>Risk</span>
+                                            <InputSelect class="cda-input"
+                                                         @bind-Value="probeFeedbackRiskLevel"
+                                                         data-testid="cognitive-memory-probe-feedback-risk">
+                                                @foreach (var risk in Enum.GetValues<CognitiveMemoryRiskLevel>())
+                                                {
+                                                    <option value="@risk">@FormatLabel(risk)</option>
+                                                }
+                                            </InputSelect>
+                                        </label>
+                                    </Grid>
+                                    <label class="cognitive-memory-field">
+                                        <span>Notes</span>
+                                        <InputTextArea class="cda-input cda-input--textarea cognitive-memory-notes"
+                                                       @bind-Value="probeFeedbackNotes"
+                                                       data-testid="cognitive-memory-probe-feedback-notes" />
+                                    </label>
+                                    <label class="cognitive-memory-field">
+                                        <span>Correction</span>
+                                        <InputTextArea class="cda-input cda-input--textarea cognitive-memory-notes"
+                                                       @bind-Value="probeCorrectionText"
+                                                       data-testid="cognitive-memory-probe-correction" />
+                                    </label>
+                                    <div class="cognitive-memory-checks">
+                                        <label>
+                                            <InputCheckbox @bind-Value="probeRequestHumanReview"
+                                                           data-testid="cognitive-memory-probe-request-review" />
+                                            <span>Human review</span>
+                                        </label>
+                                        <label>
+                                            <InputCheckbox @bind-Value="probeCreateRegressionTest"
+                                                           data-testid="cognitive-memory-probe-create-regression" />
+                                            <span>Regression test</span>
+                                        </label>
+                                    </div>
+                                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                        <Button Text="Save feedback"
+                                                Icon="fact_check"
+                                                ButtonStyle="ButtonStyle.Success"
+                                                Size="ButtonSize.Small"
+                                                Disabled="@(!CanSendProbeFeedback)"
+                                                IsBusy="@isBusy"
+                                                Click="SubmitProbeFeedbackAsync"
+                                                data-testid="cognitive-memory-probe-submit-feedback" />
+                                        <Button Text="@(probeVoiceRecording && probeVoiceCaptureTarget == CognitiveMemoryProbeVoiceCaptureTarget.Correction ? "Stop recording" : "Record correction")"
+                                                Icon="@(probeVoiceRecording && probeVoiceCaptureTarget == CognitiveMemoryProbeVoiceCaptureTarget.Correction ? "stop" : "mic")"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Size="ButtonSize.Small"
+                                                Disabled="@(!probeVoiceModeEnabled || lastProbeAskResult is null || !CanUseProbeVoice)"
+                                                IsBusy="@probeVoiceTranscribing"
+                                                Click="ToggleProbeCorrectionRecordingAsync"
+                                                data-testid="cognitive-memory-probe-voice-correction" />
+                                        @if (probeVoiceAwaitingConfirmation)
+                                        {
+                                            <Button Text="@(probeVoiceRecording && probeVoiceCaptureTarget == CognitiveMemoryProbeVoiceCaptureTarget.Confirmation ? "Stop recording" : "Confirm by voice")"
+                                                    Icon="@(probeVoiceRecording && probeVoiceCaptureTarget == CognitiveMemoryProbeVoiceCaptureTarget.Confirmation ? "stop" : "task_alt")"
+                                                    ButtonStyle="ButtonStyle.Warning"
+                                                    Size="ButtonSize.Small"
+                                                    Disabled="@(!probeVoiceModeEnabled || !CanUseProbeVoice)"
+                                                    IsBusy="@probeVoiceTranscribing"
+                                                    Click="ToggleProbeConfirmationRecordingAsync"
+                                                    data-testid="cognitive-memory-probe-voice-confirm" />
+                                            <StatusBadge Tone="warning"
+                                                         Text="Awaiting confirmation"
+                                                         data-testid="cognitive-memory-probe-voice-awaiting-confirmation" />
+                                        }
+                                        @if (lastProbeFeedback is not null)
+                                        {
+                                            <StatusBadge Tone="success"
+                                                         Text="@($"Saved {FormatShortId(lastProbeFeedback.Id)}")"
+                                                         data-testid="cognitive-memory-probe-feedback-saved" />
+                                        }
+                                    </Cluster>
+
+                                    @if (lastProbeAskResult is not null)
+                                    {
+                                        <section class="cognitive-memory-section" data-testid="cognitive-memory-probe-sources">
+                                            <h3>Source refs</h3>
+                                            @if (lastProbeAskResult.RecallResult.ContextPack.SourceRefs.Count == 0)
+                                            {
+                                                <p class="cognitive-memory-muted">No source references were returned.</p>
+                                            }
+                                            else
+                                            {
+                                                <div class="cognitive-memory-list">
+                                                    @foreach (var sourceRef in lastProbeAskResult.RecallResult.ContextPack.SourceRefs)
+                                                    {
+                                                        <div class="cognitive-memory-row">
+                                                            <strong>@(string.IsNullOrWhiteSpace(sourceRef.SourceSystem) ? "Source" : sourceRef.SourceSystem)</strong>
+                                                            <span>@FirstNonEmpty(sourceRef.Summary, sourceRef.Locator, "No source summary.")</span>
+                                                            <small>@($"{FormatLabel(sourceRef.AccessLevel)} / {FormatLabel(sourceRef.RedactionState)} / {(sourceRef.IncludedInContext ? "included" : FormatLabel(sourceRef.ExclusionReasonKind))}")</small>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            }
+                                        </section>
+                                        <section class="cognitive-memory-section" data-testid="cognitive-memory-probe-trace-stages">
+                                            <h3>Trace stages</h3>
+                                            <div class="cognitive-memory-list">
+                                                @foreach (var stage in lastProbeAskResult.RecallResult.Stages)
+                                                {
+                                                    <div class="cognitive-memory-row">
+                                                        <strong>@($"{FormatLabel(stage.StageKind)} / {FormatLabel(stage.ChannelKind)}")</strong>
+                                                        <span>@($"{FormatLabel(stage.Status)}: {stage.SelectedCount} selected from {stage.CandidateCount}")</span>
+                                                        @if (!string.IsNullOrWhiteSpace(stage.FailureMessage))
+                                                        {
+                                                            <small>@stage.FailureMessage</small>
+                                                        }
+                                                    </div>
+                                                }
+                                            </div>
+                                        </section>
+                                    }
+                                </Stack>
+                            </SurfaceCard>
+                        </Grid>
+                    </TabsItem>
+
+                    <TabsItem Text="Settings"
+                              Icon="tune"
+                              data-testid="cognitive-memory-tab-settings">
+                        <Grid Gap="LayoutGap.Large"
+                              Class="cognitive-memory-layout"
+                              ColumnTemplateXl="minmax(23rem,0.85fr) minmax(0,1.15fr)"
+                              data-testid="cognitive-memory-settings">
+                            <SurfaceCard data-testid="cognitive-memory-automation-settings">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Automatic sorting" />
+                                <h2 class="cognitive-memory-card-title">Schedule and consolidation triggers</h2>
+                                <Stack GapScale="LayoutGap.Medium" Class="mt-4">
+                                    <label class="cognitive-memory-field">
+                                        <span>Mode</span>
+                                        <InputSelect class="cda-input"
+                                                     @bind-Value="automationScheduleMode"
+                                                     data-testid="cognitive-memory-schedule-mode">
+                                            <option value="@CognitiveMemoryAutomationScheduleMode.ManualOnly">Manual only</option>
+                                            <option value="@CognitiveMemoryAutomationScheduleMode.Nightly">Nightly</option>
+                                            <option value="@CognitiveMemoryAutomationScheduleMode.IdleTimeout">When app is idle</option>
+                                            <option value="@CognitiveMemoryAutomationScheduleMode.ScheduledMoments">Scheduled moments</option>
+                                        </InputSelect>
+                                    </label>
+                                    <Grid Gap="LayoutGap.Medium"
+                                          ColumnTemplateLg="minmax(0,1fr) minmax(0,1fr)">
+                                        <label class="cognitive-memory-field">
+                                            <span>Night time</span>
+                                            <InputText class="cda-input"
+                                                       @bind-Value="nightlyLocalTime"
+                                                       data-testid="cognitive-memory-nightly-time" />
+                                        </label>
+                                        <label class="cognitive-memory-field">
+                                            <span>Idle minutes</span>
+                                            <InputNumber class="cda-input"
+                                                         @bind-Value="idleMinutes"
+                                                         data-testid="cognitive-memory-idle-minutes" />
+                                        </label>
+                                    </Grid>
+                                    <label class="cognitive-memory-field">
+                                        <span>Scheduled moments</span>
+                                        <textarea class="cda-input cda-input--textarea cognitive-memory-notes"
+                                                  @bind="scheduledLocalTimesText"
+                                                  data-testid="cognitive-memory-scheduled-times"></textarea>
+                                    </label>
+                                    <div class="cognitive-memory-checks">
+                                        <label>
+                                            <InputCheckbox @bind-Value="autoIngestProjectStructure" />
+                                            <span>Project structure</span>
+                                        </label>
+                                        <label>
+                                            <InputCheckbox @bind-Value="autoIngestProcessRuntime" />
+                                            <span>Processes</span>
+                                        </label>
+                                        <label>
+                                            <InputCheckbox @bind-Value="autoConsolidateAfterIngestion" />
+                                            <span>Consolidate after ingest</span>
+                                        </label>
+                                    </div>
+                                    <Button Text="Save settings"
+                                            Icon="save"
+                                            ButtonStyle="ButtonStyle.Primary"
+                                            Size="ButtonSize.Small"
+                                            Click="SaveAutomationSettingsAsync"
+                                            Disabled="@isBusy"
+                                            IsBusy="@isBusy"
+                                            data-testid="cognitive-memory-save-settings" />
+                                </Stack>
+                            </SurfaceCard>
+
+                            <SurfaceCard data-testid="cognitive-memory-model-access-settings">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Model access" />
+                                <h2 class="cognitive-memory-card-title">Provider and agent policy</h2>
+                                <p class="cognitive-memory-muted">@modelAccessStatus</p>
+                                <Stack GapScale="LayoutGap.Medium" Class="mt-4">
+                                    <label class="cognitive-memory-field">
+                                        <span>Mode</span>
+                                        <InputSelect class="cda-input"
+                                                     @bind-Value="modelAccessMode"
+                                                     data-testid="cognitive-memory-model-access-mode">
+                                            <option value="@CognitiveMemoryModelAccessMode.AnyEnabledProvider">Any enabled provider</option>
+                                            <option value="@CognitiveMemoryModelAccessMode.LocalProvidersOnly">Local providers only</option>
+                                            <option value="@CognitiveMemoryModelAccessMode.SelectedProvidersOnly">Selected providers only</option>
+                                            <option value="@CognitiveMemoryModelAccessMode.Disabled">Disabled</option>
+                                        </InputSelect>
+                                    </label>
+                                    <Grid Gap="LayoutGap.Medium"
+                                          ColumnTemplateLg="minmax(0,1fr) minmax(0,1fr)">
+                                        <label class="cognitive-memory-field">
+                                            <span>Default provider</span>
+                                            <InputSelect class="cda-input"
+                                                         @bind-Value="defaultProviderProfileIdText"
+                                                         data-testid="cognitive-memory-default-provider">
+                                                <option value="">No preference</option>
+                                                @foreach (var provider in modelProviderOptions)
+                                                {
+                                                    <option value="@provider.Id.ToString("D")">@provider.Name (@FormatLabel(provider.Kind))</option>
+                                                }
+                                            </InputSelect>
+                                        </label>
+                                        <label class="cognitive-memory-field">
+                                            <span>Default agent</span>
+                                            <InputSelect class="cda-input"
+                                                         @bind-Value="defaultAgentIdText"
+                                                         data-testid="cognitive-memory-default-agent">
+                                                <option value="">No preference</option>
+                                                @foreach (var agent in modelAgentOptions)
+                                                {
+                                                    <option value="@agent.Id.ToString("D")">@agent.Name (@FormatLabel(agent.Workload))</option>
+                                                }
+                                            </InputSelect>
+                                        </label>
+                                    </Grid>
+                                    <section class="cognitive-memory-section">
+                                        <h3>Allowed providers</h3>
+                                        @if (modelProviderOptions.Count == 0)
+                                        {
+                                            <p class="cognitive-memory-muted">No chat providers are configured.</p>
+                                        }
+                                        else
+                                        {
+                                            <div class="cognitive-memory-provider-list">
+                                                @foreach (var provider in modelProviderOptions)
+                                                {
+                                                    <label class="cognitive-memory-provider-option" @key="provider.Id">
+                                                        <InputCheckbox @bind-Value="provider.IsAllowed" />
+                                                        <span class="cognitive-memory-provider-main">
+                                                            <strong>@provider.Name</strong>
+                                                            <small>@FormatLabel(provider.Kind) / @FirstNonEmpty(provider.DefaultModel, "no default model") / @(provider.IsEnabled ? "enabled" : "disabled")</small>
+                                                            @if (!string.IsNullOrWhiteSpace(provider.BaseUrl))
+                                                            {
+                                                                <small>@provider.BaseUrl</small>
+                                                            }
+                                                        </span>
+                                                        <span class="cognitive-memory-provider-badge">@(provider.IsLocal ? "Local" : "Remote")</span>
+                                                    </label>
+                                                }
+                                            </div>
+                                        }
+                                    </section>
+                                    <Button Text="Save model policy"
+                                            Icon="shield"
+                                            ButtonStyle="ButtonStyle.Primary"
+                                            Size="ButtonSize.Small"
+                                            Click="SaveAutomationSettingsAsync"
+                                            Disabled="@isBusy"
+                                            IsBusy="@isBusy"
+                                            data-testid="cognitive-memory-save-model-access" />
+                                </Stack>
+                            </SurfaceCard>
+
+                            <SurfaceCard data-testid="cognitive-memory-manual-ingestion">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Manual ingestion" />
+                                <h2 class="cognitive-memory-card-title">Project and process sources</h2>
+                                <Stack GapScale="LayoutGap.Medium" Class="mt-4">
+                                    <Grid Gap="LayoutGap.Medium"
+                                          ColumnTemplateLg="minmax(0,1fr) minmax(9rem,0.35fr)">
+                                        <label class="cognitive-memory-field">
+                                            <span>Scope id</span>
+                                            <InputText class="cda-input"
+                                                       @bind-Value="manualSourceScopeText"
+                                                       placeholder="@ProjectScopePlaceholder"
+                                                       data-testid="cognitive-memory-manual-scope" />
+                                        </label>
+                                        <label class="cognitive-memory-field">
+                                            <span>Take</span>
+                                            <InputNumber class="cda-input"
+                                                         @bind-Value="manualSourceTake"
+                                                         data-testid="cognitive-memory-manual-take" />
+                                        </label>
+                                    </Grid>
+                                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                        <Button Text="Ingest projects"
+                                                Icon="account_tree"
+                                                ButtonStyle="ButtonStyle.Primary"
+                                                Size="ButtonSize.Small"
+                                                Click="IngestProjectStructureAsync"
+                                                Disabled="@isBusy"
+                                                IsBusy="@isBusy"
+                                                data-testid="cognitive-memory-ingest-projects" />
+                                        <Button Text="Ingest processes"
+                                                Icon="route"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Size="ButtonSize.Small"
+                                                Click="IngestProcessesAsync"
+                                                Disabled="@isBusy"
+                                                IsBusy="@isBusy"
+                                                data-testid="cognitive-memory-ingest-processes" />
+                                    </Cluster>
+                                    <div class="cognitive-memory-progress" data-testid="cognitive-memory-manual-progress">
+                                        <progress value="@manualIngestionProgress" max="100"></progress>
+                                        <span>@manualIngestionStatus</span>
+                                    </div>
+                                </Stack>
+                            </SurfaceCard>
+                        </Grid>
+                    </TabsItem>
+
+                    <TabsItem Text="Sources"
+                              Icon="upload_file"
+                              data-testid="cognitive-memory-tab-sources">
+                        <Grid Gap="LayoutGap.Large"
+                              Class="cognitive-memory-layout"
+                              ColumnTemplateXl="minmax(23rem,0.85fr) minmax(0,1.15fr)"
+                              data-testid="cognitive-memory-external-sources">
+                            <SurfaceCard data-testid="cognitive-memory-file-ingestion">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="File source" />
+                                <h2 class="cognitive-memory-card-title">Drop a source document</h2>
+                                <Stack GapScale="LayoutGap.Medium" Class="mt-4">
+                                    <label class="cognitive-memory-file-drop">
+                                        <span>Select file</span>
+                                        <InputFile OnChange="UploadExternalSourceAsync"
+                                                   data-testid="cognitive-memory-file-input" />
+                                    </label>
+                                </Stack>
+                            </SurfaceCard>
+
+                            <SurfaceCard data-testid="cognitive-memory-link-ingestion">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Website source" />
+                                <h2 class="cognitive-memory-card-title">Ingest a website link</h2>
+                                <Stack GapScale="LayoutGap.Medium" Class="mt-4">
+                                    <label class="cognitive-memory-field">
+                                        <span>URL</span>
+                                        <InputText class="cda-input"
+                                                   @bind-Value="externalSourceUrl"
+                                                   data-testid="cognitive-memory-url-input" />
+                                    </label>
+                                    <Button Text="Ingest link"
+                                            Icon="link"
+                                            ButtonStyle="ButtonStyle.Primary"
+                                            Size="ButtonSize.Small"
+                                            Click="IngestExternalLinkAsync"
+                                            Disabled="@isBusy"
+                                            IsBusy="@isBusy"
+                                            data-testid="cognitive-memory-ingest-link" />
+                                </Stack>
+                            </SurfaceCard>
+
+                            <SurfaceCard data-testid="cognitive-memory-external-progress">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Progress" />
+                                <h2 class="cognitive-memory-card-title">External source status</h2>
+                                <div class="cognitive-memory-progress">
+                                    <progress value="@externalSourceProgress" max="100"></progress>
+                                    <span>@externalSourceStatus</span>
+                                </div>
+                                @if (lastExternalSourceResult is not null)
+                                {
+                                    <div class="cognitive-memory-facts mt-4">
+                                        <div class="cognitive-memory-fact">
+                                            <span>Operation</span>
+                                            <strong>@FormatShortId(lastExternalSourceResult.OperationId)</strong>
+                                        </div>
+                                        <div class="cognitive-memory-fact">
+                                            <span>Item</span>
+                                            <strong>@(lastExternalSourceResult.SourceItemId.HasValue ? FormatShortId(lastExternalSourceResult.SourceItemId.Value) : "n/a")</strong>
+                                        </div>
+                                        <div class="cognitive-memory-fact">
+                                            <span>Evidence</span>
+                                            <strong>@(lastExternalSourceResult.EvidenceAnchorId.HasValue ? FormatShortId(lastExternalSourceResult.EvidenceAnchorId.Value) : "n/a")</strong>
+                                        </div>
+                                    </div>
+                                }
+                            </SurfaceCard>
+                        </Grid>
+                    </TabsItem>
+
+                    <TabsItem Text="Memory"
+                              Icon="storage"
+                              BadgeText="@snapshot.MemoryRecords.Count.ToString()"
+                              data-testid="cognitive-memory-tab-memory">
+                        <Grid Gap="LayoutGap.Large"
+                              Class="cognitive-memory-layout"
+                              ColumnTemplateXl="minmax(20rem,0.85fr) minmax(0,1.15fr)"
+                              data-testid="cognitive-memory-explorer">
+                            <SurfaceCard>
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Explorer" />
+                                <h2 class="cognitive-memory-card-title">Memory items</h2>
+                                @MemoryExplorerList()
+                            </SurfaceCard>
+
+                            <SurfaceCard data-testid="cognitive-memory-detail">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Detail" />
+                                <h2 class="cognitive-memory-card-title">Memory source evidence</h2>
+                                @MemoryDetailPanel()
+                            </SurfaceCard>
+                        </Grid>
+                    </TabsItem>
+
+                    <TabsItem Text="Review queue"
+                              Icon="fact_check"
+                              BadgeText="@snapshot.Summary.PendingReviewCount.ToString()"
+                              data-testid="cognitive-memory-tab-review">
+                        <Grid Gap="LayoutGap.Large"
+                              Class="cognitive-memory-layout"
+                              ColumnTemplateXl="minmax(20rem,0.85fr) minmax(0,1.15fr)"
+                              data-testid="cognitive-memory-review-queue">
+                            <SurfaceCard>
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Queue" />
+                                <h2 class="cognitive-memory-card-title">Review items</h2>
+                                @ReviewQueueList()
+                            </SurfaceCard>
+
+                            <SurfaceCard data-testid="cognitive-memory-review-detail">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Decision" />
+                                <h2 class="cognitive-memory-card-title">Selected review item</h2>
+                                @ReviewDecisionPanel()
+                            </SurfaceCard>
+                        </Grid>
+                    </TabsItem>
+
+                    <TabsItem Text="Recall traces"
+                              Icon="travel_explore"
+                              BadgeText="@snapshot.RecallTraces.Count.ToString()"
+                              data-testid="cognitive-memory-tab-traces">
+                        <Grid Gap="LayoutGap.Large"
+                              Class="cognitive-memory-layout"
+                              ColumnTemplateXl="minmax(20rem,0.8fr) minmax(0,1.2fr)"
+                              data-testid="cognitive-memory-trace-viewer">
+                            <SurfaceCard>
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Trace list" />
+                                <h2 class="cognitive-memory-card-title">Recent recall traces</h2>
+                                @if (snapshot.RecallTraces.Count == 0)
+                                {
+                                    <EmptyState Eyebrow="No traces"
+                                                Title="No recall traces yet"
+                                                Description="Run recall-backed workflows to populate staged trace evidence." />
+                                }
+                                else
+                                {
+                                    <Stack GapScale="LayoutGap.Small" Class="mt-4">
+                                        @foreach (var trace in snapshot.RecallTraces)
+                                        {
+                                            <SelectionListItem Title="@($"{FormatLabel(trace.RecallMode)} / {FormatLabel(trace.Outcome)}")"
+                                                               Meta="@FormatDate(trace.StartedAtUtc)"
+                                                               Summary="@($"{trace.IncludedRecordCount} included, {trace.ExcludedRecordCount} excluded, {trace.InhibitedCandidateCount} inhibited")"
+                                                               Dense="true"
+                                                               IsSelected="@(selectedRecallTraceId == trace.Id)"
+                                                               DataTestId="@($"cognitive-memory-trace-{trace.Id:N}")"
+                                                               OnSelect="@(() => SelectRecallTrace(trace.Id))">
+                                                <Status>
+                                                    <StatusBadge Tone="@RunTone(trace.Outcome)" Text="@FormatLabel(trace.Outcome)" />
+                                                </Status>
+                                            </SelectionListItem>
+                                        }
+                                    </Stack>
+                                }
+                            </SurfaceCard>
+
+                            <SurfaceCard>
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Trace detail" />
+                                <h2 class="cognitive-memory-card-title">Stage, candidate, and source evidence</h2>
+                                @RecallTraceDetail()
+                            </SurfaceCard>
+                        </Grid>
+                    </TabsItem>
+
+                    <TabsItem Text="Health"
+                              Icon="monitor_heart"
+                              BadgeText="@HealthBadgeText"
+                              data-testid="cognitive-memory-tab-health">
+                        <Grid Gap="LayoutGap.Large"
+                              Class="cognitive-memory-layout"
+                              ColumnTemplateXl="minmax(0,1fr) minmax(0,1fr)"
+                              data-testid="cognitive-memory-health">
+                            @ProjectionHealthPanel()
+                            @ConsolidationPanel()
+                            @ReplayPanel()
+                            @ProcedurePanel()
+                        </Grid>
+                    </TabsItem>
+
+                    <TabsItem Text="Self-regulation"
+                              Icon="psychology"
+                              BadgeText="@RegulationBadgeText"
+                              data-testid="cognitive-memory-tab-self-regulation">
+                        <Grid Gap="LayoutGap.Large"
+                              Class="cognitive-memory-layout"
+                              ColumnTemplateXl="minmax(0,1fr) minmax(0,1fr)"
+                              data-testid="cognitive-memory-self-regulation">
+                            @ProbePanel()
+                            @SelfRegulationPanel()
+                            @AnswerGatePanel()
+                            @ProfessorReviewPanel()
+                            @LearningProposalPanel()
+                        </Grid>
+                    </TabsItem>
+
+                    <TabsItem Text="Scale"
+                              Icon="hub"
+                              BadgeText="@ScaleBadgeText"
+                              data-testid="cognitive-memory-tab-scale">
+                        <Grid Gap="LayoutGap.Large"
+                              Class="cognitive-memory-layout"
+                              ColumnTemplateXl="minmax(0,1fr) minmax(0,1fr)"
+                              data-testid="cognitive-memory-scale">
+                            @CrossProjectPanel()
+                            @DistributedPanel()
+                        </Grid>
+                    </TabsItem>
+                </Tabs>
+            </div>
+        }
+    </ChildContent>
+</PageScaffold>
+
+@code {
+    private RenderFragment MemoryExplorerList() => builder =>
+    {
+        if (snapshot is null)
+        {
+            return;
+        }
+
+        if (snapshot.MemoryRecords.Count == 0)
+        {
+            builder.OpenComponent<EmptyState>(0);
+            builder.AddAttribute(1, nameof(EmptyState.Eyebrow), "No records");
+            builder.AddAttribute(2, nameof(EmptyState.Title), "No memory records yet");
+            builder.AddAttribute(3, nameof(EmptyState.Description), "Canonical memory items will appear here after source ingestion, consolidation, and review gates create durable records.");
+            builder.CloseComponent();
+            return;
+        }
+
+        builder.OpenComponent<Stack>(4);
+        builder.AddAttribute(5, nameof(Stack.GapScale), LayoutGap.Small);
+        builder.AddAttribute(6, nameof(Stack.Class), "mt-4");
+        builder.AddAttribute(7, nameof(Stack.ChildContent), (RenderFragment)(stackBuilder =>
+        {
+            var sequence = 0;
+            foreach (var record in snapshot.MemoryRecords)
+            {
+                stackBuilder.OpenComponent<SelectionListItem>(sequence++);
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.Title), record.Title);
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.Eyebrow), FormatLabel(record.Kind));
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.Meta), $"{FormatLabel(record.ValidationState)} / {FormatDate(record.UpdatedAtUtc)}");
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.Summary), FirstNonEmpty(record.SummaryText, record.TopicKey, "No summary available."));
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.Dense), true);
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.IsSelected), selectedMemoryRecordId == record.Id.Value);
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.DataTestId), $"cognitive-memory-record-{record.Id.Value:N}");
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.OnSelect), EventCallback.Factory.Create(this, () => SelectMemoryRecord(record.Id.Value)));
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.Status), (RenderFragment)(statusBuilder =>
+                {
+                    statusBuilder.OpenComponent<StatusBadge>(0);
+                    statusBuilder.AddAttribute(1, nameof(StatusBadge.Tone), RecordTone(record.ValidationState, record.RiskLevel));
+                    statusBuilder.AddAttribute(2, nameof(StatusBadge.Text), $"{FormatLabel(record.ValidationState)} / {FormatLabel(record.RiskLevel)}");
+                    statusBuilder.CloseComponent();
+                }));
+                stackBuilder.CloseComponent();
+            }
+        }));
+        builder.CloseComponent();
+    };
+
+    private RenderFragment MemoryDetailPanel() => builder =>
+    {
+        var record = SelectedMemoryRecord;
+        if (record is null)
+        {
+            builder.OpenComponent<EmptyState>(0);
+            builder.AddAttribute(1, nameof(EmptyState.Eyebrow), "No selection");
+            builder.AddAttribute(2, nameof(EmptyState.Title), "Select a memory record");
+            builder.AddAttribute(3, nameof(EmptyState.Description), "Choose a record to inspect validation state, source evidence counts, score buckets, and source links.");
+            builder.CloseComponent();
+            return;
+        }
+
+        builder.OpenElement(4, "div");
+        builder.AddAttribute(5, "class", "cognitive-memory-detail-stack");
+        builder.OpenElement(6, "div");
+        builder.AddAttribute(7, "class", "cognitive-memory-facts");
+        RenderFact(builder, 8, "Kind", FormatLabel(record.Kind));
+        RenderFact(builder, 20, "Validation", FormatLabel(record.ValidationState));
+        RenderFact(builder, 32, "Risk", FormatLabel(record.RiskLevel));
+        RenderFact(builder, 44, "Sources", $"{VisibleSourceEvidenceCount(record)} source / {record.EvidenceAnchorCount} anchors");
+        RenderFact(builder, 56, "Confidence", FormatLabel(record.ConfidenceBucket));
+        RenderFact(builder, 68, "Activation", FormatLabel(record.ActivationBucket));
+        builder.CloseElement();
+
+        builder.OpenElement(80, "p");
+        builder.AddAttribute(81, "class", "cognitive-memory-muted");
+        builder.AddContent(82, FirstNonEmpty(record.SummaryText, record.TopicKey, "No summary available."));
+        builder.CloseElement();
+
+        builder.OpenElement(83, "div");
+        builder.AddAttribute(84, "class", "cognitive-memory-section");
+        builder.OpenElement(85, "h3");
+        builder.AddContent(86, "Source links");
+        builder.CloseElement();
+        if (record.SourceLinks.Count == 0)
+        {
+            RenderEmptyLine(builder, 87, "No source links are attached to this memory record.");
+        }
+        else
+        {
+            RenderMemorySourceRows(builder, 88, record.SourceLinks);
+        }
+
+        builder.CloseElement();
+        builder.CloseElement();
+    };
+
+    private RenderFragment ReviewQueueList() => builder =>
+    {
+        if (snapshot is null)
+        {
+            return;
+        }
+
+        if (snapshot.ReviewItems.Count == 0)
+        {
+            builder.OpenComponent<EmptyState>(0);
+            builder.AddAttribute(1, nameof(EmptyState.Eyebrow), "Queue clear");
+            builder.AddAttribute(2, nameof(EmptyState.Title), "No review items");
+            builder.AddAttribute(3, nameof(EmptyState.Description), "Generated memory, procedures, replay output, and projection issues will appear here when review is required.");
+            builder.CloseComponent();
+            return;
+        }
+
+        builder.OpenComponent<Stack>(4);
+        builder.AddAttribute(5, nameof(Stack.GapScale), LayoutGap.Small);
+        builder.AddAttribute(6, nameof(Stack.Class), "mt-4");
+        builder.AddAttribute(7, nameof(Stack.ChildContent), (RenderFragment)(stackBuilder =>
+        {
+            var sequence = 0;
+            foreach (var item in snapshot.ReviewItems)
+            {
+                var preview = item.CandidatePreview;
+                stackBuilder.OpenComponent<SelectionListItem>(sequence++);
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.Title), FirstNonEmpty(preview?.ProposedTitle, item.SubjectTitle));
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.Eyebrow), preview is null ? FormatLabel(item.ReviewKind) : $"{FormatLabel(item.ReviewKind)} / {FormatLabel(preview.CandidateKind)}");
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.Meta), preview is null ? $"{FormatLabel(item.SubjectKind)} / {FormatDate(item.CreatedAtUtc)}" : $"{preview.SourceSystem} / {preview.SourceItemType} / {FormatDate(item.CreatedAtUtc)}");
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.Summary), TruncateListText(FirstNonEmpty(preview?.ProposedMemoryText, item.ReasonText), 420));
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.Dense), true);
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.IsSelected), selectedReviewItemId == item.Id.Value);
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.DataTestId), $"cognitive-memory-review-item-{item.Id.Value:N}");
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.OnSelect), EventCallback.Factory.Create(this, () => SelectReviewItem(item.Id.Value)));
+                stackBuilder.AddAttribute(sequence++, nameof(SelectionListItem.Status), (RenderFragment)(statusBuilder =>
+                {
+                    statusBuilder.OpenComponent<StatusBadge>(0);
+                    statusBuilder.AddAttribute(1, nameof(StatusBadge.Tone), ReviewTone(item.Status, item.RiskLevel));
+                    statusBuilder.AddAttribute(2, nameof(StatusBadge.Text), FormatLabel(item.Status));
+                    statusBuilder.CloseComponent();
+                }));
+                stackBuilder.CloseComponent();
+            }
+        }));
+        builder.CloseComponent();
+    };
+
+    private RenderFragment ReviewDecisionPanel() => builder =>
+    {
+        var item = SelectedReviewItem;
+        if (item is null)
+        {
+            builder.OpenComponent<EmptyState>(0);
+            builder.AddAttribute(1, nameof(EmptyState.Eyebrow), "No selection");
+            builder.AddAttribute(2, nameof(EmptyState.Title), "Select a review item");
+            builder.AddAttribute(3, nameof(EmptyState.Description), "Choose a review item to inspect its subject, source evidence count, risk, and decision state.");
+            builder.CloseComponent();
+            return;
+        }
+
+        builder.OpenElement(4, "div");
+        builder.AddAttribute(5, "class", "cognitive-memory-detail-stack");
+        builder.OpenElement(6, "div");
+        builder.AddAttribute(7, "class", "cognitive-memory-facts");
+        RenderFact(builder, 8, "Subject", FormatLabel(item.SubjectKind));
+        RenderFact(builder, 20, "Risk", FormatLabel(item.RiskLevel));
+        RenderFact(builder, 32, "Evidence", item.SourceEvidenceCount.ToString());
+        RenderFact(builder, 44, "Created", FormatDate(item.CreatedAtUtc));
+        builder.CloseElement();
+        builder.OpenElement(56, "p");
+        builder.AddAttribute(57, "class", "cognitive-memory-muted");
+        builder.AddContent(58, item.ReasonText);
+        builder.CloseElement();
+        if (item.CandidatePreview is { } preview)
+        {
+            builder.OpenElement(59, "section");
+            builder.AddAttribute(60, "class", "cognitive-memory-review-preview");
+            builder.OpenElement(61, "h3");
+            builder.AddContent(62, "Proposed memory");
+            builder.CloseElement();
+            builder.OpenElement(63, "div");
+            builder.AddAttribute(64, "class", "cognitive-memory-facts");
+            RenderFact(builder, 65, "Candidate", FormatLabel(preview.CandidateKind));
+            RenderFact(builder, 77, "State", FormatLabel(preview.CandidateStatus));
+            RenderFact(builder, 89, "Score", FormatLabel(preview.ScoreBucket));
+            RenderFact(builder, 101, "Source", FirstNonEmpty(preview.SourceSystem, "source"));
+            builder.CloseElement();
+            builder.OpenElement(113, "h4");
+            builder.AddContent(114, FirstNonEmpty(preview.ProposedTitle, item.SubjectTitle));
+            builder.CloseElement();
+            builder.OpenElement(115, "p");
+            builder.AddAttribute(116, "class", "cognitive-memory-review-memory-text");
+            builder.AddContent(117, FirstNonEmpty(preview.ProposedMemoryText, "No proposed memory text is available."));
+            builder.CloseElement();
+            builder.OpenElement(118, "p");
+            builder.AddAttribute(119, "class", "cognitive-memory-muted");
+            builder.AddContent(120, FirstNonEmpty(preview.ProposedReason, item.ReasonText));
+            builder.CloseElement();
+            builder.OpenElement(121, "h3");
+            builder.AddContent(122, "Source excerpt");
+            builder.CloseElement();
+            builder.OpenElement(123, "p");
+            builder.AddAttribute(124, "class", "cognitive-memory-muted");
+            builder.AddContent(125, FirstNonEmpty(preview.SourceTitle, preview.SourceLocator, FormatShortId(preview.SourceItemId ?? Guid.Empty)));
+            builder.CloseElement();
+            builder.OpenElement(126, "pre");
+            builder.AddAttribute(127, "class", "cognitive-memory-source-excerpt");
+            builder.AddContent(128, FirstNonEmpty(preview.SourceExcerpt, "No source excerpt is available."));
+            builder.CloseElement();
+            builder.CloseElement();
+        }
+
+        builder.OpenElement(130, "label");
+        builder.AddAttribute(131, "class", "cognitive-memory-field");
+        builder.OpenElement(132, "span");
+        builder.AddContent(133, "Decision notes");
+        builder.CloseElement();
+        builder.OpenElement(134, "textarea");
+        builder.AddAttribute(135, "class", "cda-input cda-input--textarea cognitive-memory-notes");
+        builder.AddAttribute(136, "value", reviewNotes);
+        builder.AddAttribute(137, "data-testid", "cognitive-memory-review-notes");
+        builder.AddAttribute(138, "onchange", EventCallback.Factory.CreateBinder<string>(this, value => reviewNotes = value, reviewNotes));
+        builder.CloseElement();
+        builder.CloseElement();
+        builder.OpenComponent<Cluster>(139);
+        builder.AddAttribute(140, nameof(Cluster.Gap), LayoutGap.Small);
+        builder.AddAttribute(141, nameof(Cluster.Wrap), FlexWrap.Wrap);
+        builder.AddAttribute(142, nameof(Cluster.ChildContent), (RenderFragment)(actionsBuilder =>
+        {
+            RenderDecisionButton(actionsBuilder, 0, "Approve", "check", ButtonStyle.Success, CognitiveMemoryReviewDecisionKind.Approve, "cognitive-memory-review-approve");
+            RenderDecisionButton(actionsBuilder, 10, "Reject", "close", ButtonStyle.Danger, CognitiveMemoryReviewDecisionKind.Reject, "cognitive-memory-review-reject");
+            RenderDecisionButton(actionsBuilder, 20, "Needs changes", "edit_note", ButtonStyle.Warning, CognitiveMemoryReviewDecisionKind.RequestChanges, "cognitive-memory-review-needs-changes");
+            RenderDecisionButton(actionsBuilder, 30, "Defer", "schedule", ButtonStyle.Light, CognitiveMemoryReviewDecisionKind.Defer, "cognitive-memory-review-defer");
+        }));
+        builder.CloseComponent();
+        builder.CloseElement();
+    };
+
+    private RenderFragment RecallTraceDetail(bool Compact = false) => builder =>
+    {
+        var trace = SelectedRecallTrace;
+        if (trace is null)
+        {
+            builder.OpenComponent<EmptyState>(0);
+            builder.AddAttribute(1, nameof(EmptyState.Eyebrow), "No trace");
+            builder.AddAttribute(2, nameof(EmptyState.Title), "No recall trace selected");
+            builder.AddAttribute(3, nameof(EmptyState.Description), "Recall stage, candidate, and source evidence appears once traces are recorded.");
+            builder.CloseComponent();
+            return;
+        }
+
+        builder.OpenElement(4, "div");
+        builder.AddAttribute(5, "class", Compact ? "cognitive-memory-detail-stack cognitive-memory-detail-stack--compact" : "cognitive-memory-detail-stack");
+        builder.OpenElement(6, "div");
+        builder.AddAttribute(7, "class", "cognitive-memory-facts");
+        RenderFact(builder, 8, "Mode", FormatLabel(trace.RecallMode));
+        RenderFact(builder, 20, "Outcome", FormatLabel(trace.Outcome));
+        RenderFact(builder, 32, "Claims", trace.SelectedClaimCount.ToString());
+        RenderFact(builder, 44, "Evidence", trace.SelectedEvidenceAnchorCount.ToString());
+        builder.CloseElement();
+
+        builder.OpenComponent<Stack>(56);
+        builder.AddAttribute(57, nameof(Stack.GapScale), LayoutGap.Small);
+        builder.AddAttribute(58, nameof(Stack.ChildContent), (RenderFragment)(stageBuilder =>
+        {
+            var sequence = 0;
+            foreach (var stage in trace.Stages)
+            {
+                stageBuilder.OpenElement(sequence++, "div");
+                stageBuilder.AddAttribute(sequence++, "class", "cognitive-memory-row");
+                stageBuilder.OpenElement(sequence++, "strong");
+                stageBuilder.AddContent(sequence++, $"{FormatLabel(stage.StageKind)} / {FormatLabel(stage.ChannelKind)}");
+                stageBuilder.CloseElement();
+                stageBuilder.OpenElement(sequence++, "span");
+                stageBuilder.AddContent(sequence++, $"{FormatLabel(stage.Status)}: {stage.SelectedCount} selected from {stage.CandidateCount}");
+                stageBuilder.CloseElement();
+                if (!string.IsNullOrWhiteSpace(stage.FailureMessage))
+                {
+                    stageBuilder.OpenElement(sequence++, "small");
+                    stageBuilder.AddContent(sequence++, stage.FailureMessage);
+                    stageBuilder.CloseElement();
+                }
+                stageBuilder.CloseElement();
+            }
+        }));
+        builder.CloseComponent();
+
+        if (!Compact)
+        {
+            RenderTraceCollections(builder, 100, trace);
+        }
+
+        builder.CloseElement();
+    };
+
+    private RenderFragment ProjectionHealthPanel() => builder =>
+    {
+        if (snapshot is null)
+        {
+            return;
+        }
+
+        builder.OpenComponent<SurfaceCard>(0);
+        builder.AddAttribute(1, "data-testid", "cognitive-memory-projection-health");
+        builder.AddAttribute(2, nameof(SurfaceCard.ChildContent), (RenderFragment)(contentBuilder =>
+        {
+            contentBuilder.OpenComponent<TextBlock>(0);
+            contentBuilder.AddAttribute(1, nameof(TextBlock.TextStyle), TextStyle.Eyebrow);
+            contentBuilder.AddAttribute(2, nameof(TextBlock.Value), "Projection health");
+            contentBuilder.CloseComponent();
+            contentBuilder.OpenElement(3, "h2");
+            contentBuilder.AddAttribute(4, "class", "cognitive-memory-card-title");
+            contentBuilder.AddContent(5, "Rebuild and failure state");
+            contentBuilder.CloseElement();
+            if (snapshot.ProjectionHealth.Count == 0)
+            {
+                contentBuilder.OpenComponent<EmptyState>(6);
+                contentBuilder.AddAttribute(7, nameof(EmptyState.Eyebrow), "No projections");
+                contentBuilder.AddAttribute(8, nameof(EmptyState.Title), "Projection lifecycle has no records");
+                contentBuilder.AddAttribute(9, nameof(EmptyState.Description), "Projection rows appear after canonical memory records are projected.");
+                contentBuilder.CloseComponent();
+                return;
+            }
+
+            RenderProjectionRows(contentBuilder, 10);
+        }));
+        builder.CloseComponent();
+    };
+
+    private RenderFragment ConsolidationPanel() => builder =>
+    {
+        if (snapshot is null)
+        {
+            return;
+        }
+
+        builder.OpenComponent<SurfaceCard>(0);
+        builder.AddAttribute(1, "data-testid", "cognitive-memory-consolidation-health");
+        builder.AddAttribute(2, nameof(SurfaceCard.ChildContent), (RenderFragment)(contentBuilder =>
+        {
+            contentBuilder.OpenComponent<TextBlock>(0);
+            contentBuilder.AddAttribute(1, nameof(TextBlock.TextStyle), TextStyle.Eyebrow);
+            contentBuilder.AddAttribute(2, nameof(TextBlock.Value), "Consolidation");
+            contentBuilder.CloseComponent();
+            contentBuilder.OpenElement(3, "h2");
+            contentBuilder.AddAttribute(4, "class", "cognitive-memory-card-title");
+            contentBuilder.AddContent(5, "Run output and review handoff");
+            contentBuilder.CloseElement();
+            if (snapshot.ConsolidationRuns.Count == 0)
+            {
+                contentBuilder.OpenComponent<EmptyState>(6);
+                contentBuilder.AddAttribute(7, nameof(EmptyState.Eyebrow), "No runs");
+                contentBuilder.AddAttribute(8, nameof(EmptyState.Title), "No consolidation runs yet");
+                contentBuilder.AddAttribute(9, nameof(EmptyState.Description), "Runs will show source scans, candidate creation, review handoff, and projection invalidations.");
+                contentBuilder.CloseComponent();
+                return;
+            }
+
+            RenderConsolidationRows(contentBuilder, 10);
+        }));
+        builder.CloseComponent();
+    };
+
+    private RenderFragment ReplayPanel() => builder =>
+    {
+        if (snapshot is null)
+        {
+            return;
+        }
+
+        builder.OpenComponent<SurfaceCard>(0);
+        builder.AddAttribute(1, "data-testid", "cognitive-memory-replay-health");
+        builder.AddAttribute(2, nameof(SurfaceCard.ChildContent), (RenderFragment)(contentBuilder =>
+        {
+            contentBuilder.OpenComponent<TextBlock>(0);
+            contentBuilder.AddAttribute(1, nameof(TextBlock.TextStyle), TextStyle.Eyebrow);
+            contentBuilder.AddAttribute(2, nameof(TextBlock.Value), "Replay queue");
+            contentBuilder.CloseComponent();
+            contentBuilder.OpenElement(3, "h2");
+            contentBuilder.AddAttribute(4, "class", "cognitive-memory-card-title");
+            contentBuilder.AddContent(5, "Priority and worker safety");
+            contentBuilder.CloseElement();
+            if (snapshot.ReplayJobs.Count == 0)
+            {
+                contentBuilder.OpenComponent<EmptyState>(6);
+                contentBuilder.AddAttribute(7, nameof(EmptyState.Eyebrow), "No jobs");
+                contentBuilder.AddAttribute(8, nameof(EmptyState.Title), "Replay queue is empty");
+                contentBuilder.AddAttribute(9, nameof(EmptyState.Description), "Prediction errors and salience signals will schedule replay jobs here.");
+                contentBuilder.CloseComponent();
+                return;
+            }
+
+            RenderReplayRows(contentBuilder, 10);
+        }));
+        builder.CloseComponent();
+    };
+
+    private RenderFragment ProcedurePanel() => builder =>
+    {
+        if (snapshot is null)
+        {
+            return;
+        }
+
+        builder.OpenComponent<SurfaceCard>(0);
+        builder.AddAttribute(1, "data-testid", "cognitive-memory-procedure-library");
+        builder.AddAttribute(2, nameof(SurfaceCard.ChildContent), (RenderFragment)(contentBuilder =>
+        {
+            contentBuilder.OpenComponent<TextBlock>(0);
+            contentBuilder.AddAttribute(1, nameof(TextBlock.TextStyle), TextStyle.Eyebrow);
+            contentBuilder.AddAttribute(2, nameof(TextBlock.Value), "Procedure library");
+            contentBuilder.CloseComponent();
+            contentBuilder.OpenElement(3, "h2");
+            contentBuilder.AddAttribute(4, "class", "cognitive-memory-card-title");
+            contentBuilder.AddContent(5, "Maturity, risk, and validation");
+            contentBuilder.CloseElement();
+            if (snapshot.ProcedureSkills.Count == 0)
+            {
+                contentBuilder.OpenComponent<EmptyState>(6);
+                contentBuilder.AddAttribute(7, nameof(EmptyState.Eyebrow), "No procedures");
+                contentBuilder.AddAttribute(8, nameof(EmptyState.Title), "No procedure skills yet");
+                contentBuilder.AddAttribute(9, nameof(EmptyState.Description), "Procedure skills will show maturity, risk, failure modes, and validation evidence.");
+                contentBuilder.CloseComponent();
+                return;
+            }
+
+            RenderProcedureRows(contentBuilder, 10);
+        }));
+        builder.CloseComponent();
+    };
+
+    private RenderFragment ProbePanel()
+        => AdvancedCollectionPanel(
+            "cognitive-memory-probe-sessions",
+            "Interactive probing",
+            "Probe sessions and turns",
+            "No probes",
+            "No probe sessions yet",
+            "Probe sessions appear after memory is interrogated through the developer API or workbench.",
+            snapshot?.ProbeSessions.Count ?? 0,
+            RenderProbeRows);
+
+    private RenderFragment SelfRegulationPanel()
+        => AdvancedCollectionPanel(
+            "cognitive-memory-self-regulation-assessments",
+            "Self-regulation",
+            "State, posture inputs, and required actions",
+            "No assessments",
+            "No self-regulation decisions yet",
+            "Assessments appear after answer preparation evaluates evidence, calibration, domain competence, and risk.",
+            snapshot?.SelfRegulationAssessments.Count ?? 0,
+            RenderSelfRegulationRows);
+
+    private RenderFragment AnswerGatePanel()
+        => AdvancedCollectionPanel(
+            "cognitive-memory-answer-gates",
+            "Answer gate",
+            "Warnings, review, learning, and abstention",
+            "No gates",
+            "No answer-gate decisions yet",
+            "Answer-gate rows appear after answer-time metamemory checks run.",
+            snapshot?.AnswerGateDecisions.Count ?? 0,
+            RenderAnswerGateRows);
+
+    private RenderFragment ProfessorReviewPanel()
+        => AdvancedCollectionPanel(
+            "cognitive-memory-professor-reviews",
+            "Professor review",
+            "Governed challenge input",
+            "No reviews",
+            "No professor review requests",
+            "Review records appear when self-regulation routes uncertainty to a governed challenge model.",
+            snapshot?.ProfessorReviews.Count ?? 0,
+            RenderProfessorReviewRows);
+
+    private RenderFragment LearningProposalPanel()
+        => AdvancedCollectionPanel(
+            "cognitive-memory-learning-proposals",
+            "Epistemic Drive",
+            "Learning proposals",
+            "No proposals",
+            "No learning proposals yet",
+            "Knowledge gaps become approval-gated learning proposals after scan.",
+            snapshot?.LearningProposals.Count ?? 0,
+            RenderLearningProposalRows);
+
+    private RenderFragment CrossProjectPanel()
+        => AdvancedCollectionPanel(
+            "cognitive-memory-cross-project-promotions",
+            "Cross-project memory",
+            "Promotion review candidates",
+            "No candidates",
+            "No cross-project promotions",
+            "Promotion candidates remain reviewable and do not merge project-private evidence directly.",
+            snapshot?.CrossProjectPromotions.Count ?? 0,
+            RenderCrossProjectRows);
+
+    private RenderFragment DistributedPanel()
+        => AdvancedCollectionPanel(
+            "cognitive-memory-distributed-jobs",
+            "Distributed compute",
+            "Leases, hashes, and schema validation",
+            "No jobs",
+            "No distributed jobs",
+            "Coordinator jobs appear after deterministic work packets are queued.",
+            snapshot?.DistributedJobs.Count ?? 0,
+            RenderDistributedRows);
+
+    private static RenderFragment AdvancedCollectionPanel(
+        string testId,
+        string eyebrow,
+        string title,
+        string emptyEyebrow,
+        string emptyTitle,
+        string emptyDescription,
+        int count,
+        Action<RenderTreeBuilder, int> renderRows)
+        => builder =>
+        {
+            builder.OpenComponent<SurfaceCard>(0);
+            builder.AddAttribute(1, "data-testid", testId);
+            builder.AddAttribute(2, nameof(SurfaceCard.ChildContent), (RenderFragment)(contentBuilder =>
+            {
+                contentBuilder.OpenComponent<TextBlock>(0);
+                contentBuilder.AddAttribute(1, nameof(TextBlock.TextStyle), TextStyle.Eyebrow);
+                contentBuilder.AddAttribute(2, nameof(TextBlock.Value), eyebrow);
+                contentBuilder.CloseComponent();
+                contentBuilder.OpenElement(3, "h2");
+                contentBuilder.AddAttribute(4, "class", "cognitive-memory-card-title");
+                contentBuilder.AddContent(5, title);
+                contentBuilder.CloseElement();
+                if (count == 0)
+                {
+                    contentBuilder.OpenComponent<EmptyState>(6);
+                    contentBuilder.AddAttribute(7, nameof(EmptyState.Eyebrow), emptyEyebrow);
+                    contentBuilder.AddAttribute(8, nameof(EmptyState.Title), emptyTitle);
+                    contentBuilder.AddAttribute(9, nameof(EmptyState.Description), emptyDescription);
+                    contentBuilder.CloseComponent();
+                    return;
+                }
+
+                renderRows(contentBuilder, 10);
+            }));
+            builder.CloseComponent();
+        };
+}

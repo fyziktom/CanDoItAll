@@ -1,0 +1,681 @@
+{
+  "kind": "xlsx",
+  "sheets": [
+    {
+      "name": "List1",
+      "maxRow": 22,
+      "maxColumn": 11,
+      "nonEmptyCount": 83,
+      "formulaCount": 19,
+      "mergedRanges": [],
+      "tables": [],
+      "cells": [
+        {
+          "address": "D4",
+          "row": 4,
+          "column": 4,
+          "value": "úspora při mytí nádobí",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "E4",
+          "row": 4,
+          "column": 5,
+          "value": 10,
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "F4",
+          "row": 4,
+          "column": 6,
+          "value": "l/os",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "H4",
+          "row": 4,
+          "column": 8,
+          "value": "odběr proudu ve sleepu",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "I4",
+          "row": 4,
+          "column": 9,
+          "value": 0.05,
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "J4",
+          "row": 4,
+          "column": 10,
+          "value": "A",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "D5",
+          "row": 5,
+          "column": 4,
+          "value": "počet dní mytí v roce",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "E5",
+          "row": 5,
+          "column": 5,
+          "value": 365,
+          "formula": "=365",
+          "numberFormat": "General"
+        },
+        {
+          "address": "F5",
+          "row": 5,
+          "column": 6,
+          "value": "dní",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "H5",
+          "row": 5,
+          "column": 8,
+          "value": "napětí",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "I5",
+          "row": 5,
+          "column": 9,
+          "value": 24,
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "J5",
+          "row": 5,
+          "column": 10,
+          "value": "V",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "D6",
+          "row": 6,
+          "column": 4,
+          "value": "počet litrů za rok",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "E6",
+          "row": 6,
+          "column": 5,
+          "value": 3650,
+          "formula": "=E5*E4",
+          "numberFormat": "General"
+        },
+        {
+          "address": "F6",
+          "row": 6,
+          "column": 6,
+          "value": "/os",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "H6",
+          "row": 6,
+          "column": 8,
+          "value": "příkon",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "I6",
+          "row": 6,
+          "column": 9,
+          "value": 1.2000000000000002,
+          "formula": "=I5*(I4)",
+          "numberFormat": "General"
+        },
+        {
+          "address": "J6",
+          "row": 6,
+          "column": 10,
+          "value": "W",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "D8",
+          "row": 8,
+          "column": 4,
+          "value": "3 členná rodina",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "E8",
+          "row": 8,
+          "column": 5,
+          "value": 10950,
+          "formula": "=E6*3",
+          "numberFormat": "#,##0"
+        },
+        {
+          "address": "F8",
+          "row": 8,
+          "column": 6,
+          "value": "l/rodina/rok",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "H8",
+          "row": 8,
+          "column": 8,
+          "value": "spotřeba za den",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "I8",
+          "row": 8,
+          "column": 9,
+          "value": 27.960000000000004,
+          "formula": "=I6*23.3",
+          "numberFormat": "General"
+        },
+        {
+          "address": "J8",
+          "row": 8,
+          "column": 10,
+          "value": "Wh/den",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "H9",
+          "row": 9,
+          "column": 8,
+          "value": "spotřeba za rok",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "I9",
+          "row": 9,
+          "column": 9,
+          "value": 10205.400000000001,
+          "formula": "=I8*365",
+          "numberFormat": "General"
+        },
+        {
+          "address": "J9",
+          "row": 9,
+          "column": 10,
+          "value": "Wh/rok",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "D10",
+          "row": 10,
+          "column": 4,
+          "value": "cena vody",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "E10",
+          "row": 10,
+          "column": 5,
+          "value": 120,
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "F10",
+          "row": 10,
+          "column": 6,
+          "value": "Kč/1000l",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "H10",
+          "row": 10,
+          "column": 8,
+          "value": "spotřeba za rok",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "I10",
+          "row": 10,
+          "column": 9,
+          "value": 10.205400000000001,
+          "formula": "=I9/1000",
+          "numberFormat": "General"
+        },
+        {
+          "address": "J10",
+          "row": 10,
+          "column": 10,
+          "value": "kWh/rok",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "D11",
+          "row": 11,
+          "column": 4,
+          "value": "úspora",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "E11",
+          "row": 11,
+          "column": 5,
+          "value": 1314,
+          "formula": "=E8/1000*E10",
+          "numberFormat": "General"
+        },
+        {
+          "address": "F11",
+          "row": 11,
+          "column": 6,
+          "value": "Kč/rok",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "H11",
+          "row": 11,
+          "column": 8,
+          "value": "cena za kWh",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "I11",
+          "row": 11,
+          "column": 9,
+          "value": 5,
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "J11",
+          "row": 11,
+          "column": 10,
+          "value": "kč/kWh",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "H12",
+          "row": 12,
+          "column": 8,
+          "value": "cena za elektriku ročně",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "I12",
+          "row": 12,
+          "column": 9,
+          "value": 51.027,
+          "formula": "=I10*I11",
+          "numberFormat": "General"
+        },
+        {
+          "address": "J12",
+          "row": 12,
+          "column": 10,
+          "value": "Kč/rok",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "D13",
+          "row": 13,
+          "column": 4,
+          "value": "cena baterie bez dotace",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "E13",
+          "row": 13,
+          "column": 5,
+          "value": 4600,
+          "formula": "=4600",
+          "numberFormat": "General"
+        },
+        {
+          "address": "F13",
+          "row": 13,
+          "column": 6,
+          "value": "Kč/ks",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "D14",
+          "row": 14,
+          "column": 4,
+          "value": "návratnost",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "E14",
+          "row": 14,
+          "column": 5,
+          "value": 3.8280601804347842,
+          "formula": "=E13/(E11-I12-I22)",
+          "numberFormat": "0.00"
+        },
+        {
+          "address": "F14",
+          "row": 14,
+          "column": 6,
+          "value": "let",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "H14",
+          "row": 14,
+          "column": 8,
+          "value": "odběr proudu při mytí",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "I14",
+          "row": 14,
+          "column": 9,
+          "value": 2,
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "J14",
+          "row": 14,
+          "column": 10,
+          "value": "A",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "H15",
+          "row": 15,
+          "column": 8,
+          "value": "napětí",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "I15",
+          "row": 15,
+          "column": 9,
+          "value": 24,
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "J15",
+          "row": 15,
+          "column": 10,
+          "value": "V",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "H16",
+          "row": 16,
+          "column": 8,
+          "value": "příkon",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "I16",
+          "row": 16,
+          "column": 9,
+          "value": 48,
+          "formula": "=I15*(I14)",
+          "numberFormat": "General"
+        },
+        {
+          "address": "J16",
+          "row": 16,
+          "column": 10,
+          "value": "W",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "H18",
+          "row": 18,
+          "column": 8,
+          "value": "spotřeba za mytí",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "I18",
+          "row": 18,
+          "column": 9,
+          "value": 33.599999999999994,
+          "formula": "=I16*0.7",
+          "numberFormat": "General"
+        },
+        {
+          "address": "J18",
+          "row": 18,
+          "column": 10,
+          "value": "Wh/den",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "D19",
+          "row": 19,
+          "column": 4,
+          "value": "počet domáctností",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "E19",
+          "row": 19,
+          "column": 5,
+          "value": 1000000,
+          "formula": null,
+          "numberFormat": "#,##0"
+        },
+        {
+          "address": "H19",
+          "row": 19,
+          "column": 8,
+          "value": "spotřeba za rok",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "I19",
+          "row": 19,
+          "column": 9,
+          "value": 12263.999999999998,
+          "formula": "=I18*365",
+          "numberFormat": "General"
+        },
+        {
+          "address": "J19",
+          "row": 19,
+          "column": 10,
+          "value": "Wh/rok",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "D20",
+          "row": 20,
+          "column": 4,
+          "value": "roční úspora vody",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "E20",
+          "row": 20,
+          "column": 5,
+          "value": 10950000000,
+          "formula": "=E8*E19",
+          "numberFormat": "#,##0"
+        },
+        {
+          "address": "F20",
+          "row": 20,
+          "column": 6,
+          "value": "l vody za rok",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "H20",
+          "row": 20,
+          "column": 8,
+          "value": "spotřeba za rok",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "I20",
+          "row": 20,
+          "column": 9,
+          "value": 12.263999999999998,
+          "formula": "=I19/1000",
+          "numberFormat": "General"
+        },
+        {
+          "address": "J20",
+          "row": 20,
+          "column": 10,
+          "value": "kWh/rok",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "D21",
+          "row": 21,
+          "column": 4,
+          "value": "roční úspora vody",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "E21",
+          "row": 21,
+          "column": 5,
+          "value": 10950000,
+          "formula": "=E20/1000",
+          "numberFormat": "#,##0"
+        },
+        {
+          "address": "F21",
+          "row": 21,
+          "column": 6,
+          "value": "m3 vody za rok",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "H21",
+          "row": 21,
+          "column": 8,
+          "value": "cena za kWh",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "I21",
+          "row": 21,
+          "column": 9,
+          "value": 5,
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "J21",
+          "row": 21,
+          "column": 10,
+          "value": "kč/kWh",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "D22",
+          "row": 22,
+          "column": 4,
+          "value": "roční úspora cena",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "E22",
+          "row": 22,
+          "column": 5,
+          "value": 1201653000,
+          "formula": "=E10*E21-(I12+I22)*E19",
+          "numberFormat": "_-* #,##0\\ \"Kč\"_-;\\-* #,##0\\ \"Kč\"_-;_-* \"-\"??\\ \"Kč\"_-;_-@_-"
+        },
+        {
+          "address": "F22",
+          "row": 22,
+          "column": 6,
+          "value": "Kč/rok/1mil.domácností",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "H22",
+          "row": 22,
+          "column": 8,
+          "value": "cena za elektriku ročně",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "I22",
+          "row": 22,
+          "column": 9,
+          "value": 61.319999999999986,
+          "formula": "=I20*I21",
+          "numberFormat": "General"
+        },
+        {
+          "address": "J22",
+          "row": 22,
+          "column": 10,
+          "value": "Kč/rok",
+          "formula": null,
+          "numberFormat": "General"
+        }
+      ],
+      "truncated": false
+    }
+  ]
+}

@@ -1,0 +1,2593 @@
+{
+  "kind": "docx",
+  "paragraphs": [
+    "Glass Recycling to Foam-Glass Products – Detailed Business Plan",
+    "Document version: v1.0",
+    "Date: 2026-04-08",
+    "Author: Tomas Svoboda",
+    "Scope: Concept / pre-FEED business and technical pack",
+    "Location: Curaçao",
+    "This document expands the initial concept note into a pre-FEED level business and technical plan. It is intentionally more conservative where real-world bottlenecks exist, especially around feedstock capture, usable waste heat, process water and island-specific execution risk.",
+    "Why?",
+    "Solving trouble with glass waste on the ABC islands",
+    "Creating locally necessary material for building construction",
+    "Creating new jobs and support economy during factory building (preferred local suppliers)",
+    "1. Executive framing",
+    "The project converts mixed waste glass from Curaçao (and ideal from Aruba and Bonaire too) into two core products: foam-glass aggregate and foam-glass blocks. The reference production concept is a 30 m electric tunnel kiln with annual output of about 19,162 m³/yr at 75% calendar utilization, equivalent to about 2,951 t/yr of finished product.",
+    "The central strategic logic is import substitution and waste reduction. The plant does not need enormous tonnage to operate. In the base case it needs only about 3,451 t/yr of mixed raw glass at the factory gate. That is small enough to be plausible on Curaçao, but large enough that it still requires deliberate collection contracts rather than passive assumptions.",
+    "Three corrections materially change the economics compared with an optimistic first-pass concept:",
+    "The kiln's recoverable low-grade heat should not be valued as if 150–250 kW can always be consumed. In the base case the realistic wash + dry thermal sink is only about 159 MWhth/yr on average, or roughly 73 kWth if the wash line runs one 8-hour shift.",
+    "Dedicated desalination is not justified for phase 1. Process make-up water is only about 248 m³/yr, so buying industrial water is cheaper and far simpler if a utility connection exists.",
+    "A battery should be justified primarily by resilience, power-quality support and operating flexibility, not by energy arbitrage. The current industrial high/low tariff spread is too small for a pure tariff-arbitrage case.",
+    "Finances",
+    "CAPEX is in basic version of plan 19,600,000 USD, but it can be optimized 17,600,000 USD by splitting some investments into next phases of project without affecting start of the project. CAPEX must be considered over time (project contains building constructions, large technologies => spread over 1-2y).",
+    "OPEX total revenue is modeled between 3,7-4,4mil.USD based on scenario. Main items on expenses side are:",
+    "Payroll: 1mil.USD (30 FTE)",
+    "Grid electricity: 0.48mil.USD",
+    "Maintenance: 0.25mil.USD",
+    "Collection and transport: 0.24mil.USD",
+    "Other: 0.6-0.8mil.USD",
+    "Realistic pure possible payback of investment is between 12-15 years. It does not consider other efects on local economy, that cretes huge additional value such as decrease need for concrete, free up areas for storing glass waste, back investment to local economy during building factory, creating new jobs and other non-financial aspects. Project is not suitable for pure financial investor, but great profitable step for government.",
+    "2. What the plant will make and why it should exist",
+    "The plant will manufacture two foam-glass product families from mixed bottle and flat-glass waste:",
+    "Foam-glass aggregate: 11,498 m³/yr in the base case. This is the lower-finishing, easier-to-place product. It is relevant for lightweight fill, drainage layers, sub-base, roof build-ups and insulating fill.",
+    "Foam-glass blocks / bricks: 7,665 m³/yr in the base case. This product commands a higher selling price but requires stricter process control, cutting, trimming and pallet handling.",
+    "Foam-glass blocks/slabs Foam-glass aggregate / gravel",
+    "A dual-product strategy is important on an island. Aggregate gives a broad local outlet and tolerates a slightly wider process window. Blocks create margin and visibility, but they should not be the only route to market. The recommended starting mix is 60% aggregate and 40% blocks by volume, with the option to flex after market testing.",
+    "The plant should not be treated as a generic recycling line. It is a specialty thermal-processing plant that happens to use waste glass as feedstock. That means the real value drivers are recipe stability, thermal control, capture logistics, and local market realization rather than the mere fact that a kiln exists.",
+    "Figure 1. Detailed process flow used for the base concept.",
+    "3. Demand and market logic",
+    "The local business case depends on replacing imported lightweight fill and insulation materials whose delivered island cost is elevated by freight, handling and inventory. That is why the plan deliberately uses local selling-price ranges rather than mainland commodity assumptions.",
+    "In the base scenario the model uses 165 USD/m³ for aggregate and 240 USD/m³ for blocks. These are not 'guaranteed' market prices, with actual geopolitical situation you can expect large inflation in next years. Same as price of the sand usable in concrete, that increase demand for fillings that can be used in concrete (for example glass foam). They are planning values that still need confirmation by contractor interviews, pilot samples and delivered-import benchmarking.",
+    "The right commercial posture is not 'cheap recycled material'. It is 'local engineered lightweight insulation / fill with lower logistics friction, shorter lead time and visible environmental value'. The nearer the project gets to construction and hospitality buyers, the more defensible the product premium becomes.",
+    "Anchor customers should include civil contractors, roofing and waterproofing contractors, resort and hotel owners, developers, and public infrastructure programs.",
+    "At least 70% of base output should be covered by anchor offtake before final investment approval. The plant should not rely on discovering the market after commissioning.",
+    "Export to nearby islands can be opportunistic, but the base project should stand on Curaçao demand plus only modest export flexibility.",
+    "Figure 2. EBITDA sensitivity across conservative, base and upside operating envelopes.",
+    "4. Feedstock strategy and can the island really support the plant?",
+    "The plant's base mixed-glass requirement is about 3,451 t/yr. This is the single most important physical constraint because the kiln prefers continuous operation and because feedstock shortfall is much harder to fix later than payroll or packaging cost.",
+    "There is no reliable single official number in the project pack that proves, by itself, that Curaçao already delivers this exact quantity of clean and capturable mixed glass. Therefore the project should be framed honestly: feedstock sufficiency must be demonstrated by a capture model plus signed contracts, not by wishful top-down waste percentages.",
+    "The most practical approach is a bottom-up capture model built from four streams:",
+    "Residents and retail drop-off.",
+    "Stayover tourism / HORECA (hotels, bars, restaurants, resorts).",
+    "Construction and demolition flat glass from windows and renovation.",
+    "Optional neighboring-island top-up only as a buffer, not the primary business case.",
+    "Table 1. Modeled capturable mixed-glass envelope (planning assumption, not official waste statistics).",
+    "The modeled base capture case reaches about 3,592 t/yr, which is only modestly above the base plant need of 3,451 t/yr. That is simultaneously encouraging and a warning. It means the plant is not absurdly oversized for the island, but it also means execution has to be disciplined. A weak collection program could easily underfeed the plant. Those numbers are just for Curaçao. It would be good to consider collection of glass from Aruba and Bonaire too. If all islands will participate, it would be possible to increase the capacity of the plant, that can lead to better EBIDTA.",
+    "A sensible pre-FID target is therefore at least 4.0–4.2 kt/yr of contracted mixed-glass supply, leaving some margin above modeled base need. That contract basket should combine municipal / partner collection, hotel and resort contracts, and construction-window recovery.",
+    "A separate sense-check also helps. Beer imports alone are large enough to indicate that beverage packaging flow is meaningful on the island, even though not all of that volume is in recoverable glass bottles. The purpose of that benchmark is not to prove the exact answer, but to confirm that the plant's 3.45 kt/yr requirement is not outlandish in scale.",
+    "Figure 3. Modeled base feedstock segments compared with raw-glass need.",
+    "5. Collection and transport logistics",
+    "Collection design matters more than people often expect. Because the plant's annual feedstock need is moderate rather than massive, it is usually smarter to optimize routing, consolidation and contamination control than to overinvest in a large owned fleet on day one.",
+    "Table 2. Base-case logistics quantities.",
+    "The practical implication is straightforward. If all hotel / bar material were delivered directly to the plant by small route trucks, the model implies roughly 986 loaded trips per year, or a little over three loaded routes per collection day. If glass is first consolidated into a central transfer point and then line-hauled to the plant in 7 t loads, that falls to roughly 493 loaded factory-inbound trips per year.",
+    "For that reason, the reference design assumes the core plant is built without a full islandwide self-owned collection fleet. Instead, collection is handled by partner routes, a municipal interface, outsourced transport, or a later optional fleet add-on. The factory's core economics should not be burdened with a fully in-house route network before the feedstock basin is proven.",
+    "Sea logistics should remain optional. The former refinery setting makes marine access attractive, but the base business case should not rely on inter-island shipping. Marine top-up is best used as contingency capacity after local collection is functioning.",
+    "Figure 4. Concept site masterplan on a former refinery parcel.",
+    "6. Process and technology basis",
+    "The chosen flow sheet is intentionally conventional rather than exotic. That improves serviceability and de-risks spare parts on an island:",
+    "Receiving, stockpiling and pre-sort.",
+    "Mechanical separation: trommel / screens, ferrous and non-ferrous metal removal, optical sorting.",
+    "Wash, rinse, dryer and recirculating water loop with filter-press sludge handling.",
+    "Coarse crushing and fine milling to glass flour.",
+    "Silos, gravimetric dosing and intensive mixing with a foaming package and process aids.",
+    "Forming and continuous passage through a 30 m electric tunnel kiln.",
+    "Controlled cooling and split into two finishing streams: block trimming / palletizing and aggregate crushing / bagging.",
+    "The recipe is still a pilot-trial matter, not a fixed procurement list. For concept modeling, it is enough to assume that purchased additives equal about 2.5% of clean-glass mass. That package can include the foaming agent itself plus one or more process aids. The plant should not commit to a final additive package until real Curaçao cullet blends are tested, especially because flat-glass fractions can shift viscosity and foaming behavior.",
+    "The base material balance indicates 2,968 t/yr of clean glass plus 74 t/yr of additives to produce 2,951 t/yr of finished foam-glass products.",
+    "Table 3. Base material balance.",
+    "The tunnel kiln is modeled as a 1 MW connected load with a lower average operating draw in steady production. This distinction matters. If the kiln truly averaged 1 MW continuously all year, the specific energy intensity would be too high relative to benchmark foam-glass processes. The planning model therefore treats 1 MW as installed/available capacity and about 550 kW as a realistic base running draw during stable production.",
+    "Figure 5. Internal hall arrangement showing the planned west-to-east material flow.",
+    "7. Energy model and why the 'waste heat' story must stay realistic",
+    "Total base-case plant electricity is modeled at about 4,052 MWh/yr or 211.4 kWh/m³. Of that, the kiln itself is about 3,614 MWh/yr and auxiliaries about 438 MWh/yr.",
+    "Table 4. Base-case electricity load breakdown.",
+    "Own renewable generation from 1 MWp PV and 200 kW wind is modeled at about 2,496 MWh/yr, of which roughly 2,296 MWh/yr is self-consumed on site. Grid import remains material at about 1,756 MWh/yr, which is why grid quality and backup strategy still matter.",
+    "The essential insight is that heat recovery must be matched to a real thermal sink. The initial concept note discussed much larger annual savings from 150–250 kW of recovered heat. That is not supported by the wash/dry duty actually required for this plant.",
+    "In the base case, wash and dry together need only about 159 MWhth/yr. If the wash line ran in a single 8-hour daily shift, that equates to roughly 72.7 kWth average thermal demand during the shift. That is useful, but it is far below a continuously usable 150–250 kW recovery case.",
+    "This changes design decisions immediately:",
+    "A modest heat-recovery loop is justified.",
+    "A small hot-water buffer is justified to decouple the kiln from wash scheduling.",
+    "A very large thermal store is not justified unless a second heat customer exists on site.",
+    "Projected savings must be capped by actual heat consumption, not by theoretical recoverable exhaust heat.",
+    "A 20 m³ hot-water buffer at a 35°C working temperature spread stores about 0.81 MWhth and is adequate to shift more than one operating day of wash/dry demand. A 70 m³ store would be materially oversized unless another process or neighboring plant bought the heat.",
+    "Figure 6. Energy, water and resilience schematic used for the base concept.",
+    "Figure 7. Base-case electricity balance between on-site renewables and grid import.",
+    "8. Water, desalination and seawater cooling",
+    "Gross wash-loop circulation is modeled at about 1,381 m³/yr, but with 82% recycle the fresh make-up requirement is only about 248 m³/yr. At current industrial-water tariffs this is a minor annual cost item rather than a capex driver.",
+    "Table 5. Base-case water balance.",
+    "This leads to a strong design conclusion: a dedicated SWRO desalination plant should not be part of phase 1 unless industrial water is unavailable or extremely unreliable. The process simply does not consume enough fresh water for a stand-alone desalination system to earn its keep.",
+    "The same logic applies to seawater cooling. It may become attractive later if the broader industrial parcel develops shared utility infrastructure, but it is not required by the base foam-glass process case. Including it too early only dilutes capital efficiency.",
+    "The correct phase-1 water strategy is utility water connection, recirculation, sludge handling, and right-sized buffer tankage. Only after actual plant operation is understood should optional SWRO or seawater loops be revisited as part of a broader site-wide utility strategy.",
+    "9. Electrical resilience, battery role and diesel backup",
+    "The electrical system should be designed as an industrial-quality micro-system embedded in the wider grid rather than as a standalone islanded plant. The main reasons are kiln continuity, harmonic management, and fast response to grid disturbances.",
+    "The 1 MW / 2 MWh battery gives roughly 3.6 h of autonomy against the kiln's modeled running average load, and about 6.7 h of autonomy against a 300 kW hot-hold essential-load case. That makes it valuable for ride-through, controlled load reduction and black-start support while the diesel generator starts or the grid recovers.",
+    "The battery should therefore be justified on four grounds:",
+    "ride-through during brief grid events;",
+    "fast load shaping and possible participation in system balancing;",
+    "smoother self-consumption of PV generation;",
+    "support for a controlled rather than chaotic response to outages.",
+    "What the battery should not be sold as is a classic time-of-use arbitrage machine. The tariff spread between industrial high and low periods is too small to justify that story on its own.",
+    "Table 6. Storage and resilience checks.",
+    "10. Site, buildings and brownfield reality",
+    "Using a former refinery parcel is strategically attractive. It offers industrial zoning logic, likely heavy-utility corridors, truck access and marine interface potential. But brownfields are never 'free'. They shift cost from greenfield civils into diligence, environmental management and uncertainty.",
+    "The reference site plan assumes a planning area of roughly four hectares. That allows a process hall, receiving yard, warehouse/dispatch zone, utility yard, PV area, truck circulation and a small future expansion strip without forcing an overly tight layout.",
+    "The real pre-FID gating item is not land size but site condition. Environmental baseline, geotechnical checks, drainage routing, stormwater handling, and existing buried services can all materially change civils cost. For that reason, the capex model carries dedicated brownfield survey / permitting cost and a meaningful contingency.",
+    "Do not commit to a specific plot before a desk environmental review and at least preliminary intrusive surveys.",
+    "Preserve one-way truck circulation and product dispatch space from the beginning; do not let energy assets consume the best logistics zones.",
+    "Treat corrosion and salt exposure as design-basis issues, not afterthoughts.",
+    "11. Staffing and operating model",
+    "The staffing plan is deliberately light but not 'indie'. It assumes basic industrial discipline, limited robotics and a process that still needs human supervision and maintenance. The core plant plan excludes a large self-owned route-collection organization, which can remain outsourced or partnered.",
+    "Table 7. Indicative core staffing plan.",
+    "The core staffing plan totals 30 FTE and roughly 1,025,892 USD/yr of loaded payroll. That is materially higher than a hand-wavy low-headcount concept, but it is much more defendable for a 24/7 thermal process on an island.",
+    "Shift structure should place the kiln and quality-critical functions on continuous coverage, while washing, some finishing activities and parts of dispatch can run with more limited shifts if inventory buffers are maintained.",
+    "12. CAPEX estimate and technology procurement",
+    "Core CAPEX is currently estimated at about 19,603,000 USD excluding optional SWRO and seawater systems. Optional resilience add-ons in the current line-item view are another 480,000 USD, but these are explicitly not recommended for phase 1.",
+    "The single biggest cost mistake at concept stage would be to look only at a kiln vendor's ex-works list price and mistake that for a real installed project cost. On an island brownfield, the final capital number is driven by buildings, civils, installation, electrical integration, controls, contingency and logistics almost as much as by the thermal core equipment itself.",
+    "Table 8. Concept CAPEX line items (abridged).",
+    "Figure 8. CAPEX by category.",
+    "Long-lead procurement should focus early on the kiln, optical sorting system, fine mill/classifier package and control architecture. These packages drive both lead time and process performance. Vendor RFQs should be issued before full civil commitment so that the basis of design remains aligned with real equipment footprints and services.",
+    "13. OPEX and base economics",
+    "In the integrated base operating case, including the ancillary-product branch, total modeled revenue is about 4,184,169 USD/yr and total OPEX about 2,795,588 USD/yr, producing EBITDA of about 1,388,582 USD/yr or 33.2%.",
+    "This is a workable but not invincible business case. The ancillary branch improves the headline numbers and should be included in the official model, but it does not remove the project’s dependence on local price realization and on keeping the factory fed. The conservative case remains much weaker, which means the project should only proceed after the commercial and feedstock gates are genuinely closed.",
+    "Table 9. Revenue and OPEX bridge by scenario.",
+    "Figure 9. Base-case integrated OPEX breakdown including ancillary direct cost.",
+    "The financial model should be interpreted as a concept-level decision aid, not as financing-grade certainty. Its job is to tell management where reality matters most. In this project, the most important sensitivities are product selling price, feedstock capture, and hidden brownfield cost. Water and desalination barely matter. Oversized heat-recovery hardware does not help. Tariff arbitrage does not save the battery case.",
+    "A simple 10-year unlevered model is included in the Excel workbook. Under the current base assumptions, a concept-level simple payback on core CAPEX remains relatively long, which is exactly why product-market validation and CAPEX tightening are mandatory before FID.",
+    "Figure 10. Scenario EBITDA comparison including ancillary branch.",
+    "14. Project risks and mitigation",
+    "The project is attractive precisely because it solves a real island problem. But it is not low-risk by default. The correct response is not pessimism; it is disciplined gating.",
+    "Table 10. Top concept-stage risks and mitigations.",
+    "Two risks deserve special emphasis. First, feedstock shortfall is existential. Second, hidden brownfield scope can quietly destroy returns without ever showing up in an optimistic concept note. Those two risks are why the development plan must start with contracts, pilot trials and due diligence rather than with procurement enthusiasm.",
+    "15. Recommended project phasing and gates",
+    "Table 11. Recommended project phases.",
+    "The project should not move to FEED or procurement until four pre-FID gates are satisfied:",
+    "Feedstock: signed LOIs / contracts above base raw-glass need.",
+    "Market: anchor customers covering the majority of base production.",
+    "Technology: pilot trials proving recipe and density window on actual local cullet.",
+    "Site / utility: brownfield and interconnection diligence confirming no hidden deal-breakers.",
+    "If those gates are closed properly, the plant can move into a rational 20–24 month implementation program. If not, more detailed engineering only creates a more expensive wrong answer.",
+    "16. Critical checklist",
+    "Table 12. Critical checklist before final investment decision.",
+    "This checklist should be used as an active project-management tool. Management should review it every month and refuse to let the project drift into procurement while core commercial or technical unknowns remain open.",
+    "17. Why the project is more compelling for government than for a pure financial investor",
+    "This project should be evaluated on two parallel scorecards: a commercial one and a public-value one. The commercial scorecard is fine. The public-value scorecard is strong. That difference needs to be explicit in both the detailed plan and the executive summary so that stakeholder expectations are set correctly.",
+    "Best institutional frame: government-backed PPP, utility-style SPV or development-oriented industrial platform with long-horizon capital.",
+    "Possible cooperation of friendly countries",
+    "Netherlands => Recycling topics are strong in whole EU",
+    "USA => Strong focus on building new hotels, boosting economy with local resources (ecology is aside, but still it covers their focus).",
+    "Another motivation for both can be that knowledge from this project can be used in other destinations too (possible partners France, UK for same reasons?)",
+    "Best private role: operator, EPC integrator, logistics partner, hospitality channel partner, local joinery partner or minority co-investor.",
+    "Worst framing: trying to sell the base case as a pure high-multiple venture-style return story. That is not what this asset is.",
+    "18. Final view",
+    "The Curaçao foam-glass project is technically credible and environmentally valuable, but only if it is built as a real industrial business and not as a romantic recycling concept. The project is small enough to fit the island, but not so small that discipline becomes optional.",
+    "The most encouraging result of the rework is that the plant's raw-glass demand is not inherently too large for Curaçao. The most important caution is that the margin between plausible island capture and plant need is not wide, so contracts matter.",
+    "The most useful engineering correction is that heat recovery and desalination must be right-sized rather than imagined. The project should explicitly avoid overbuilding utilities that have no true sink in phase 1.",
+    "My recommendation is to advance to the next step only through a short, focused pre-FEED work package: pilot trials on real cullet, feedstock LOIs, customer offtake interviews, brownfield/site diligence, and vendor RFQs for the kiln / optical sorter / mill / controls package. If those come back well, the project merits serious development.",
+    "Appendix A. Detailed source register",
+    "Table A1. Source register and evidence quality.",
+    "Appendix B. Optional collection-fleet add-ons",
+    "Table B1. Optional collection-fleet add-ons not included in the core CAPEX.",
+    "Appendix C. Notes on the initial client concept note",
+    "The original client concept note is included in this project pack as an input document. This detailed business plan supersedes its first-pass estimates where necessary, especially for waste-heat utilization, water strategy, staffing realism and capex completeness.",
+    "Appendix D. Full scenario summary",
+    "The following table shows the broader scenario envelope used to test robustness. These scenarios are not equally probable; they are intended to show how quickly economics can move when density, front-end yield, energy intensity and renewable performance change together.",
+    "Table D1. Full scenario summary.",
+    "The critical takeaway is that the plant remains viable only when the commercial and technical base case is approximately achieved. In the conservative envelope, electricity cost and raw-glass demand both worsen at the same time, which is exactly what a stressed island operation can experience if contamination is high and thermal operation is unstable.",
+    "Appendix E. Operations, quality and maintenance concept",
+    "Because foam-glass quality depends on a relatively narrow process window, operations discipline matters more than in a simple crushing or washing line. Management should therefore define a small set of hard daily KPIs rather than a long list of vague sustainability metrics.",
+    "Table E1. Recommended operating KPIs.",
+    "Quality control should be embedded at three points: incoming cullet inspection, recipe preparation and post-kiln product testing. The plant does not need a research laboratory, but it does need a reliable operating lab for density, moisture, particle-size checks and simple strength / thermal-verification routines.",
+    "Preventive maintenance should be biased toward the marine environment. Corrosion, dust ingress and electrical connection quality are likely to cause more trouble on Curaçao than abstract 'wear and tear' averages from inland factories.",
+    "Table E2. Suggested maintenance rhythm.",
+    "A planned annual kiln stop should be designed into the business model. The current operating-fraction assumption already allows for significant downtime, but management should still define a formal stop scope and critical-spares list before commissioning.",
+    "Appendix F. Product inventory and dispatch concept",
+    "Table F1. Finished-goods inventory logic.",
+    "Even though finished-product mass is relatively low, finished-product volume is substantial. Warehouse and dispatch design must therefore prioritize cubic space, forklift circulation, bagging/pallet staging and weather protection rather than assuming that a small mass footprint equals a small logistics footprint.",
+    "For blocks, pallet pattern and protective packaging must be standardized early because freight damage can quickly erase the value of higher-margin product. For aggregate, the plant should preserve flexibility between bulk local truck dispatch and big-bag handling.",
+    "Appendix G. Why phase-1 desalination and large thermal storage are not recommended",
+    "This appendix exists because optional utilities are where concept projects often lose discipline. The best way to avoid that is to compare utility capex ideas directly against the scale of the real plant duty.",
+    "Table G1. Heat-recovery mismatch test.",
+    "If a 70 m3 hot-water store were built only to serve wash and dry, it would hold almost five operating days of the base thermal sink. That is a strong indicator that the storage volume has been designed from a generic idea of 'lots of kiln heat' rather than from the actual load profile.",
+    "The desalination case is even weaker. With process make-up water measured in only hundreds of cubic meters per year, a dedicated SWRO package would run at a tiny fraction of its practical capacity. That is operationally awkward and economically poor. Utility water with recirculation is the correct phase-1 answer unless external site conditions prove otherwise.",
+    "The right development question is therefore not 'Can we add desalination and large thermal storage?' but 'What proven phase-1 duty do they actually serve?' Until that answer is strong, those utilities should remain optional placeholders only.",
+    "Appendix H. Detailed CAPEX notes by package",
+    "The table below keeps the full line-item notes because management review often focuses on total capex only and loses sight of where uncertainty truly sits.",
+    "Table H1. Full CAPEX line items with notes.",
+    "The confidence labels are not decorative. They indicate where the project still needs price discovery. Brownfield civils, installation and process-critical custom packages deserve RFQs before any firm commitment is made on total project budget.",
+    "Appendix I. Suggested commercial workplan",
+    "The commercial workstream should proceed in parallel with engineering and should be owned explicitly rather than treated as a side effect of building the plant.",
+    "Map the top 20 likely local users of lightweight fill, insulation blocks and specialty aggregate and score them by purchase frequency, project size and likely openness to local recycled material.",
+    "Prepare a small physical sample set from pilot trials and use it in interviews rather than asking buyers to react to a concept description only.",
+    "Build a simple import-parity comparison for at least three product applications: lightweight fill, roof insulation build-up and non-structural insulation block use.",
+    "Offer early anchor customers a supply-assurance and local-availability story rather than a pure price discount story.",
+    "Coordinate the environmental narrative carefully: the project cleans the island and substitutes imported product, but the primary sale must still be technical performance and supply reliability.",
+    "A similar discipline is needed on the feedstock side. Hotels, bars and resorts should be approached with a service offer that reduces their waste-handling friction and provides visible ESG value, not only with a request for free glass.",
+    "Appendix J. Review summary for finance leadership",
+    "From a finance perspective, the most important strengths of this revised package are transparency of assumptions and explicit rejection of unsupported utility savings. The most important remaining tasks are to tighten market proof, feedstock proof and brownfield certainty.",
+    "Good news: plant scale is plausible for the island.",
+    "Good news: utility overbuild can be avoided.",
+    "Good news: own renewables materially reduce grid exposure without requiring full off-grid design.",
+    "Watch item: price realization is a major margin lever.",
+    "Watch item: front-end feedstock capture must be contracted.",
+    "Watch item: installed project cost still needs RFQ tightening.",
+    "In other words, the project deserves to move forward as a gated development program, not as a blind EPC rush. That is exactly the right profile for CEO and board-level review.",
+    "Appendix K. Ancillary products, lean CAPEX review, ABC platform and corrected diagrams",
+    "This appendix extends the original detailed plan, and it is kind of optional. The intent is to preserve the original depth and add the missing ancillary-product, regional-platform and lean-phase-1 content requested in review.",
+    "1. Integrated additions to the base plan",
+    "This integrated addendum keeps the base foam-glass concept but incorporates the previously omitted small products, corrects the logic of the factory diagrams, re-screens CAPEX for a leaner phase-1 build and frames the project as a potential ABC-islands infrastructure platform rather than only a stand-alone private factory.",
+    "Ancillary products are now treated as a formal micro-fab branch: artist packs, resin keychains, recognition plaques and limited-edition epoxy tables.",
+    "The preferred manufacturing route for the small products is bought-in plastic or acrylic preforms combined with epoxy/resin; for tables, casting can be done in-house while final wood or metal finishing is outsourced to a local joinery partner.",
+    "The CAPEX review removes day-one wind, BESS and full robotics from the mandatory base case while adding a compact tumble/cast/polish/packaging cell.",
+    "The strategic recommendation is now explicit: structure the project so it works for Curaçao alone, but actively design permitting, contracts and marine logistics so the plant can serve all three ABC islands.",
+    "Figure 1. Integrated scenario screen – Curaçao-only economics remain positive, while the ABC platform gives more headroom and resilience.",
+    "2. Product architecture – foam glass first, wow-products second",
+    "The commercial logic should stay simple: the factory exists to convert mixed waste glass into high-volume local building material. The ancillary products are intentionally small. Their role is to monetize the best-looking decorative fraction, improve project visibility, create lighter-workstation jobs and support hospitality, donor and CSR channels without distracting the plant from its core mission.",
+    "Foam-glass blocks/slabs Foam-glass aggregate / gravel",
+    "Figure 2. Foam-glass images carried forward from the original client input plan. These remain the core hero products.",
+    "Figure 3. Ancillary wow-products to include in both the detailed plan and the C-level summary.",
+    "The micro-fab branch should not justify heavy bespoke moulding equipment in phase 1. Standard bought-in preforms, simple vacuum/pressure casting fixtures, cure racks, polishing benches and packaging stations are enough to get to market quickly. For tables and other high-value statement pieces, the recommended route is to cast the glass/resin top in-house and complete the final structural finishing with a partner carpenter or metal fabricator on Curaçao.",
+    "3. Feedstock logic and ABC-islands recommendation",
+    "Modeled secured glass on Curaçao is about 3,427 t/yr. That is just enough for the lean 70 m3/day line, which requires about 3,451 t/yr of raw glass. In other words, the Curaçao-only case is viable but it has very little cushion. Once the plant is designed to receive material from Aruba and Bonaire, the secured regional pool rises to about 6,568 t/yr, which comfortably supports the 70 and 90 cases and makes the 105 case credible.",
+    "Figure 4. Secured feedstock pool by island. Aruba is the main strategic buffer once regional collection is activated.",
+    "Recommendation: permit and contract the project from day one so that it can legally and logistically serve the ABC islands, even if the initial operation starts with Curaçao material only.",
+    "At the 90 m3/day scenario, regional top-up equals about 1.08 containers per week. At the 105 m3/day screen it is about 1.87 containers per week, still manageable via short-sea logistics.",
+    "This regional framing also improves the project narrative for governments, tourism boards and development-finance stakeholders: one shared recycling asset, one shared building-material platform, one shared reduction in landfill pressure.",
+    "4. Process concept and corrected layout logic",
+    "The core factory remains a conventional mixed-glass cleaning line feeding milling, dosing and a continuous electric tunnel kiln. The corrected process and utility diagrams now show arrows only where a real connection exists. In particular, the energy sources now connect properly to the main plant bus rather than pointing into empty space.",
+    "Figure 5. Corrected process flow. The ancillary branch is a tiny selected fraction, not a second mass-production plant.",
+    "Figure 6. Corrected internal layout. Dirty, wet, hot and clean areas are now logically separated and connected.",
+    "Figure 7. Site masterplan with receiving yard, process hall, utility yard, dispatch and a small craft/showroom annex.",
+    "This matters commercially as well as technically: the ancillary branch only works if it remains subordinate to the core line. Color-rich decorative cullet should be picked only after cleaning and quality screening, so the plant never loses control of its main foam-glass throughput.",
+    "5. Utilities and resilience – phase 1 should be lean",
+    "The project concept recognizes the strategic value of renewable power, but the base CAPEX goes too far for a first build. The plant needs power resilience because the kiln cannot tolerate uncontrolled outages; however, it does not need every resilience feature on day one. The recommended phase-1 configuration is therefore PV plus grid tie plus diesel/UPS, with wind and BESS reserved as pads and interfaces for a later upgrade.",
+    "Figure 8. Corrected utility schematic. All arrows terminate on real systems; wind and BESS are explicitly shown as phase-2 options.",
+    "Figure 9. Lean phase-1 electricity balance at the 70 m3/day case. PV offsets roughly 43% of annual electricity use even before adding wind or storage.",
+    "Useful low-grade heat recovery is still attractive, but only at the scale of a small hot-water buffer for wash and dry support. The thermal opportunity is real, yet too small to justify exotic phase-1 infrastructure.",
+    "SWRO is not required for the base case. The water loop relies mainly on recirculation plus utility make-up water.",
+    "The lean build preserves upgrade optionality without forcing the project to carry optional systems inside the initial investment hurdle.",
+    "6. CAPEX review – reduce what is mandatory, keep options alive",
+    "The CAPEX review is intentionally practical. It does not assume heroic vendor savings on the core process. Instead, it asks which items are genuinely required for first operations and which ones can be reserved, prepared or staged for phase 2. That logic cuts phase-1 CAPEX by about $1.97m while still adding the small ancillary work cell.",
+    "Figure 10. Bridge from the full-scope concept CAPEX to the lean phase-1 CAPEX.",
+    "Wind turbine deferred: reserve electrical and civil interfaces only.",
+    "Battery storage deferred: keep EMS readiness, but do not force day-one spend before the plant operating profile is proven.",
+    "Robotics deferred: use manual or semi-automatic handling where safe and economically reasonable, then automate the real bottlenecks after ramp-up.",
+    "Ancillary micro-fab added: this is a low-cost, high-visibility workstation cluster and should remain small by design.",
+    "7. Economics – ancillary products help, but foam glass still carries the business",
+    "The economics are now presented as an integrated picture. The small-product branch adds about $361,200 of revenue and about $192,200 of EBITDA at only about 1.42 t/yr of curated glass use. That contribution is meaningful and should be modeled formally, but the big swing factors remain throughput, reliable feedstock capture, realized selling prices for foam glass and disciplined phase-1 CAPEX.",
+    "Figure 11. Revenue mix in the lean Curaçao 70 scenario.",
+    "Figure 12. OPEX structure in the lean Curaçao 70 scenario.",
+    "Read plainly: for a private financial investor, the 70 m3/day Curaçao-only case is not a knockout return. It is workable and strategically sensible, but not sensational. The case becomes more attractive once the regional feedstock pool is activated and the plant is treated as shared island infrastructure with local industrial-policy value.",
+    "8. Why the project is more compelling for government than for a pure financial investor",
+    "This project should be evaluated on two parallel scorecards: a commercial one and a public-value one. The commercial scorecard is fine. The public-value scorecard is strong. That difference needs to be explicit in both the detailed plan and the executive summary so that stakeholder expectations are set correctly.",
+    "Best institutional frame: government-backed PPP, utility-style SPV or development-oriented industrial platform with long-horizon capital.",
+    "Best private role: operator, EPC integrator, logistics partner, hospitality channel partner, local joinery partner or minority co-investor.",
+    "Worst framing: trying to sell the base case as a pure high-multiple venture-style return story. That is not what this asset is.",
+    "9. Recommended delivery sequence",
+    "Lock the 70 m3/day lean phase-1 design as the decision baseline and freeze optional systems as future interfaces, not immediate purchases.",
+    "Negotiate local supply and sorting contracts on Curaçao immediately, while in parallel preparing the ABC legal and logistics framework.",
+    "Prototype the ancillary products using bought-in blanks and local finishing partners before buying any custom mould tooling.",
+    "Pre-sell flagship table pieces, donor plaques and hospitality merchandise so that the wow-products launch with real reference customers.",
+    "Keep the business narrative honest: economically viable for Curaçao alone, strategically better and politically stronger as an ABC-islands project.",
+    "This plan therefore recommends a lean, first-build industrial plant with a deliberately small and photogenic craft branch. The ancillary products do not replace the foam-glass economics, but they do improve margin mix, visibility and political support. The plant should be designed to stand on its own on Curaçao, while being institutionally structured from the beginning as a shared ABC asset."
+  ],
+  "tables": [
+    {
+      "index": 1,
+      "rows": [
+        [
+          "Segment",
+          "Driver",
+          "Low t/yr",
+          "Base t/yr",
+          "High t/yr"
+        ],
+        [
+          "Residents & retail",
+          "160,000 residents",
+          "960.00",
+          "1,600.00",
+          "2,240.00"
+        ],
+        [
+          "Stayover tourism / HORECA",
+          "788,427 stayover visitors x 8.4 nights",
+          "993.42",
+          "1,457.01",
+          "1,854.38"
+        ],
+        [
+          "Cruise day visitors",
+          "881,665 cruise visitors",
+          "17.63",
+          "35.27",
+          "52.90"
+        ],
+        [
+          "Construction & demolition flat glass",
+          "Window replacement / demolition",
+          "250.00",
+          "500.00",
+          "800.00"
+        ],
+        [
+          "Neighbor island top-up (optional)",
+          "Aruba/Bonaire if needed",
+          "0.00",
+          "0.00",
+          "1,000.00"
+        ],
+        [
+          "Total modeled capturable mixed glass",
+          "",
+          "2,221.05",
+          "3,592.28",
+          "5,947.28"
+        ]
+      ]
+    },
+    {
+      "index": 2,
+      "rows": [
+        [
+          "Metric",
+          "Value",
+          "Unit",
+          "Comment"
+        ],
+        [
+          "Plant raw glass need",
+          "3,451.27",
+          "t/yr",
+          "Mixed bottles, jars and flat glass into factory gate"
+        ],
+        [
+          "Direct collection routes",
+          "986.08",
+          "loaded trips/yr",
+          "If 3.5 t route trucks drive directly to plant"
+        ],
+        [
+          "Factory line-haul inbound",
+          "493.04",
+          "loaded trips/yr",
+          "If glass is consolidated into 7 t bulk deliveries to plant"
+        ],
+        [
+          "Outbound product deliveries",
+          "547.50",
+          "loaded trips/yr",
+          "At 35 m3 average shipment"
+        ],
+        [
+          "Block pallets",
+          "6,387.50",
+          "pallets/yr",
+          "Assuming 1.2 m3 palletized block shipment"
+        ],
+        [
+          "Aggregate big-bags",
+          "7,665.00",
+          "big-bags/yr",
+          "Assuming 1.5 m3 per big-bag"
+        ],
+        [
+          "Sea top-up equivalent",
+          "172.56",
+          "20 t containers/yr",
+          "Only if all feedstock came by sea from neighboring islands"
+        ]
+      ]
+    },
+    {
+      "index": 3,
+      "rows": [
+        [
+          "Metric",
+          "Base value",
+          "Unit"
+        ],
+        [
+          "Annual product output",
+          "19,162.50",
+          "m3/yr"
+        ],
+        [
+          "Aggregate output",
+          "11,497.50",
+          "m3/yr"
+        ],
+        [
+          "Block output",
+          "7,665.00",
+          "m3/yr"
+        ],
+        [
+          "Product mass",
+          "2,951.03",
+          "t/yr"
+        ],
+        [
+          "Clean glass required",
+          "2,968.09",
+          "t/yr"
+        ],
+        [
+          "Additives purchased",
+          "74.20",
+          "t/yr"
+        ],
+        [
+          "Raw mixed glass required",
+          "3,451.27",
+          "t/yr"
+        ],
+        [
+          "Rejects removed",
+          "483.18",
+          "t/yr"
+        ],
+        [
+          "Average density",
+          "154.00",
+          "kg/m3"
+        ]
+      ]
+    },
+    {
+      "index": 4,
+      "rows": [
+        [
+          "Load block",
+          "MWh/yr",
+          "Share %"
+        ],
+        [
+          "Electric tunnel kiln incl. soak/cooling fans",
+          "3,613.50",
+          "89.19"
+        ],
+        [
+          "Sorting, screens, magnets, optical sorter",
+          "70.00",
+          "1.73"
+        ],
+        [
+          "Wash pumps, recirculation and filter press",
+          "55.00",
+          "1.36"
+        ],
+        [
+          "Dryer fans / exhaust handling",
+          "45.00",
+          "1.11"
+        ],
+        [
+          "Coarse crushing",
+          "35.00",
+          "0.86"
+        ],
+        [
+          "Fine milling and classification",
+          "95.00",
+          "2.34"
+        ],
+        [
+          "Mixing, dosing, forming and product handling",
+          "48.00",
+          "1.18"
+        ],
+        [
+          "Dust collection, compressed air, lighting, controls, misc.",
+          "90.09",
+          "2.22"
+        ]
+      ]
+    },
+    {
+      "index": 5,
+      "rows": [
+        [
+          "Metric",
+          "Value",
+          "Unit",
+          "Comment"
+        ],
+        [
+          "Gross wash circulation",
+          "1,380.51",
+          "m3/yr",
+          "Total water put through wash loop before recycle"
+        ],
+        [
+          "Make-up water from utility network",
+          "248.49",
+          "m3/yr",
+          "Fresh water needed after 82% recycle"
+        ],
+        [
+          "Recycle within wash loop",
+          "1,132.02",
+          "m3/yr",
+          "Recovered via settling / filter press / recirculation tank"
+        ],
+        [
+          "Approx. blowdown / sludge bleed",
+          "248.49",
+          "m3/yr",
+          "Assumed equal to make-up at steady state"
+        ],
+        [
+          "Useful low-grade heat needed by wash + dry",
+          "159.11",
+          "MWhth/yr",
+          "Thermal sink that recovered kiln heat can realistically serve"
+        ]
+      ]
+    },
+    {
+      "index": 6,
+      "rows": [
+        [
+          "Metric",
+          "Value",
+          "Unit",
+          "Comment"
+        ],
+        [
+          "Battery energy",
+          "2.00",
+          "MWh",
+          "Installed BESS energy"
+        ],
+        [
+          "Battery power",
+          "1.00",
+          "MW",
+          "Installed BESS inverter power"
+        ],
+        [
+          "Battery autonomy at average annual plant load",
+          "4.32",
+          "hours",
+          "If the full plant kept running at annual average load"
+        ],
+        [
+          "Battery autonomy at kiln running average load",
+          "3.64",
+          "hours",
+          "If BESS carried only the running kiln average load"
+        ],
+        [
+          "Battery autonomy at 300 kW hot-hold essential load",
+          "6.67",
+          "hours",
+          "Useful ride-through before diesel or grid returns"
+        ],
+        [
+          "20 m3 hot-water storage at 35C delta",
+          "0.81",
+          "MWhth",
+          "Enough for ~1.4 operating days of wash/dry thermal demand"
+        ],
+        [
+          "70 m3 hot-water storage at 35C delta",
+          "2.85",
+          "MWhth",
+          "Likely oversized unless there is another heat off-taker"
+        ]
+      ]
+    },
+    {
+      "index": 7,
+      "rows": [
+        [
+          "Role",
+          "FTE",
+          "Monthly gross USD",
+          "Loaded annual USD"
+        ],
+        [
+          "Plant manager",
+          "1",
+          "6500",
+          "92,040.00"
+        ],
+        [
+          "Production/process engineer",
+          "1",
+          "4800",
+          "67,968.00"
+        ],
+        [
+          "Shift supervisors",
+          "3",
+          "3200",
+          "135,936.00"
+        ],
+        [
+          "Kiln operators",
+          "6",
+          "2100",
+          "178,416.00"
+        ],
+        [
+          "Sorting/wash/mill operators",
+          "5",
+          "1800",
+          "127,440.00"
+        ],
+        [
+          "Packing/finishing operators",
+          "4",
+          "1700",
+          "96,288.00"
+        ],
+        [
+          "Forklift/loader operators",
+          "3",
+          "1850",
+          "78,588.00"
+        ],
+        [
+          "Maintenance mechanics",
+          "2",
+          "2500",
+          "70,800.00"
+        ],
+        [
+          "Maintenance electrical/automation",
+          "1",
+          "3000",
+          "42,480.00"
+        ],
+        [
+          "QC/lab technician",
+          "1",
+          "2200",
+          "31,152.00"
+        ],
+        [
+          "Warehouse/logistics coordinator",
+          "1",
+          "2200",
+          "31,152.00"
+        ],
+        [
+          "Procurement/admin/finance",
+          "2",
+          "2600",
+          "73,632.00"
+        ]
+      ]
+    },
+    {
+      "index": 8,
+      "rows": [
+        [
+          "Category",
+          "Item",
+          "Capex type",
+          "Base USD",
+          "Lead time weeks",
+          "Confidence"
+        ],
+        [
+          "Civil/Engineering",
+          "Brownfield surveys and permitting",
+          "Core",
+          "600000",
+          "20",
+          "Low"
+        ],
+        [
+          "Civil/Engineering",
+          "Civil works, roads, slabs, drainage",
+          "Core",
+          "1200000",
+          "24",
+          "Low"
+        ],
+        [
+          "Civil/Engineering",
+          "Production hall retrofit / building works",
+          "Core",
+          "1900000",
+          "28",
+          "Low"
+        ],
+        [
+          "Civil/Engineering",
+          "Warehouse, office, lab, workshop",
+          "Core",
+          "900000",
+          "24",
+          "Medium-Low"
+        ],
+        [
+          "Receiving & logistics",
+          "Wheel loader",
+          "Core",
+          "75000",
+          "10",
+          "Medium"
+        ],
+        [
+          "Receiving & logistics",
+          "Forklifts x2 and pallet trucks",
+          "Core",
+          "98000",
+          "10",
+          "Medium"
+        ],
+        [
+          "Receiving & logistics",
+          "Truck scale / weighbridge",
+          "Core",
+          "85000",
+          "10",
+          "Medium"
+        ],
+        [
+          "Process line",
+          "Infeed hoppers, bins and conveyors",
+          "Core",
+          "350000",
+          "16",
+          "Medium-Low"
+        ],
+        [
+          "Process line",
+          "Trommel and vibratory screens",
+          "Core",
+          "120000",
+          "12",
+          "Medium"
+        ],
+        [
+          "Process line",
+          "Magnetic separation",
+          "Core",
+          "35000",
+          "8",
+          "Medium-Low"
+        ],
+        [
+          "Process line",
+          "Eddy current separator",
+          "Core",
+          "60000",
+          "10",
+          "Medium"
+        ],
+        [
+          "Process line",
+          "Optical sorter",
+          "Core",
+          "220000",
+          "16",
+          "Medium"
+        ],
+        [
+          "Process line",
+          "Washing, drying, water recirculation, filter press",
+          "Core",
+          "550000",
+          "20",
+          "Medium-Low"
+        ],
+        [
+          "Process line",
+          "Coarse crusher",
+          "Core",
+          "80000",
+          "10",
+          "Medium-Low"
+        ],
+        [
+          "Process line",
+          "Fine mill and classifier",
+          "Core",
+          "280000",
+          "26",
+          "Medium-Low"
+        ],
+        [
+          "Process line",
+          "Silos, gravimetric dosing, mixer",
+          "Core",
+          "180000",
+          "16",
+          "Medium-Low"
+        ],
+        [
+          "Process line",
+          "Forming, cutting, crushing, screening, packing",
+          "Core",
+          "380000",
+          "18",
+          "Medium-Low"
+        ],
+        [
+          "Process line",
+          "Dust collection and baghouse",
+          "Core",
+          "250000",
+          "14",
+          "Medium-Low"
+        ],
+        [
+          "Process line",
+          "Lab and QC equipment",
+          "Core",
+          "60000",
+          "8",
+          "Medium-Low"
+        ],
+        [
+          "Thermal process",
+          "Electric tunnel kiln 30m incl. cooling/recovery",
+          "Core",
+          "2200000",
+          "40",
+          "Medium-Low"
+        ],
+        [
+          "Automation",
+          "Robots x3 with end-of-arm tooling",
+          "Core",
+          "450000",
+          "20",
+          "Medium-Low"
+        ],
+        [
+          "Utilities",
+          "Electrical distribution, MCC, PF correction, harmonic filters",
+          "Core",
+          "650000",
+          "24",
+          "Medium-Low"
+        ],
+        [
+          "Utilities",
+          "Compressed air, fire water, general utilities",
+          "Core",
+          "180000",
+          "16",
+          "Medium-Low"
+        ],
+        [
+          "Utilities",
+          "Heat recovery and 20 m3 hot-water buffer",
+          "Core",
+          "200000",
+          "16",
+          "Medium-Low"
+        ],
+        [
+          "Utilities",
+          "Diesel generator 600 kW with ATS",
+          "Core",
+          "250000",
+          "20",
+          "Medium-Low"
+        ],
+        [
+          "Energy assets",
+          "Solar PV 1 MWp",
+          "Core",
+          "1950000",
+          "24",
+          "Medium-Low"
+        ],
+        [
+          "Energy assets",
+          "Wind turbine 200 kW",
+          "Core",
+          "950000",
+          "32",
+          "Medium-Low"
+        ],
+        [
+          "Energy assets",
+          "BESS 1 MW / 2 MWh",
+          "Core",
+          "700000",
+          "32",
+          "Medium-Low"
+        ],
+        [
+          "Installation",
+          "Mechanical and electrical installation",
+          "Core",
+          "1500000",
+          "24",
+          "Low"
+        ],
+        [
+          "Automation",
+          "PLC, SCADA, EMS and commissioning software",
+          "Core",
+          "550000",
+          "24",
+          "Medium-Low"
+        ],
+        [
+          "Installation",
+          "Startup spares, training, initial commissioning",
+          "Core",
+          "300000",
+          "12",
+          "Medium-Low"
+        ],
+        [
+          "Optional resilience",
+          "Containerized SWRO 10 m3/day",
+          "Optional / deferred",
+          "180000",
+          "20",
+          "Medium-Low"
+        ],
+        [
+          "Optional resilience",
+          "Seawater cooling / process water intake & HX",
+          "Optional / deferred",
+          "300000",
+          "28",
+          "Medium-Low"
+        ],
+        [
+          "Project reserve",
+          "Contingency and owners cost",
+          "Core",
+          "2300000",
+          "0",
+          "Low"
+        ]
+      ]
+    },
+    {
+      "index": 9,
+      "rows": [
+        [
+          "Metric",
+          "Base",
+          "Conservative",
+          "Upside"
+        ],
+        [
+          "Revenue aggregate USD",
+          "1,897,087.50",
+          "1,724,625.00",
+          "2,012,062.50"
+        ],
+        [
+          "Revenue blocks USD",
+          "1,839,600.00",
+          "1,647,975.00",
+          "1,954,575.00"
+        ],
+        [
+          "Revenue gate fee USD",
+          "86,281.73",
+          "59,037.23",
+          "91,567.94"
+        ],
+        [
+          "Revenue ancillary branch USD",
+          "361,200.00",
+          "361,200.00",
+          "361,200.00"
+        ],
+        [
+          "Total revenue USD",
+          "4,184,169.23",
+          "3,792,837.23",
+          "4,419,405.44"
+        ],
+        [
+          "OPEX Grid electricity USD",
+          "483,808.77",
+          "856,860.17",
+          "232,213.43"
+        ],
+        [
+          "OPEX Water USD",
+          "1,886.80",
+          "2,958.59",
+          "1,216.73"
+        ],
+        [
+          "OPEX Payroll USD",
+          "1,025,892.00",
+          "1,025,892.00",
+          "1,025,892.00"
+        ],
+        [
+          "OPEX Collection and transport USD",
+          "240,000.00",
+          "270,000.00",
+          "220,000.00"
+        ],
+        [
+          "OPEX Maintenance USD",
+          "290,000.00",
+          "320,000.00",
+          "280,000.00"
+        ],
+        [
+          "OPEX Admin and SG&A USD",
+          "200,000.00",
+          "200,000.00",
+          "200,000.00"
+        ],
+        [
+          "OPEX Packaging and consumables USD",
+          "195,000.00",
+          "195,000.00",
+          "195,000.00"
+        ],
+        [
+          "OPEX Additives USD",
+          "50,000.00",
+          "50,000.00",
+          "50,000.00"
+        ],
+        [
+          "OPEX Other variable USD",
+          "70,000.00",
+          "70,000.00",
+          "70,000.00"
+        ],
+        [
+          "OPEX Renewables O&M USD",
+          "70,000.00",
+          "70,000.00",
+          "70,000.00"
+        ],
+        [
+          "OPEX Ancillary direct cost USD",
+          "169,000.00",
+          "169,000.00",
+          "169,000.00"
+        ],
+        [
+          "Total OPEX USD",
+          "2,795,587.57",
+          "3,229,710.75",
+          "2,513,322.16"
+        ],
+        [
+          "EBITDA USD",
+          "1,388,581.66",
+          "563,126.47",
+          "1,906,083.28"
+        ],
+        [
+          "EBITDA margin",
+          "33.2%",
+          "14.8%",
+          "43.1%"
+        ]
+      ]
+    },
+    {
+      "index": 10,
+      "rows": [
+        [
+          "Risk",
+          "Probability",
+          "Impact",
+          "Mitigation"
+        ],
+        [
+          "Feedstock shortfall",
+          "High",
+          "High",
+          "Secure contracts > base need, start with phased ramp-up, allow Aruba/Bonaire top-up."
+        ],
+        [
+          "Local selling price below plan",
+          "High",
+          "High",
+          "Pre-sell import-substitution value; diversify into both aggregate and blocks."
+        ],
+        [
+          "Brownfield contamination / hidden civil scope",
+          "Medium",
+          "High",
+          "Stage due diligence before final site commitment and keep contingency."
+        ],
+        [
+          "Recipe instability on mixed local cullet",
+          "Medium",
+          "High",
+          "Pilot trials on real feedstock; keep process-aid budget and flexible QC."
+        ],
+        [
+          "Grid quality / harmonics / outages",
+          "Medium",
+          "High",
+          "PF correction, harmonic filters, BESS and diesel-backed essential bus."
+        ],
+        [
+          "Renewable underperformance",
+          "Medium",
+          "Medium",
+          "Use conservative yield assumptions and separate core plant case from renewables case."
+        ],
+        [
+          "Operator capability / turnover",
+          "Medium",
+          "Medium",
+          "Strong SOPs, training and shift supervision."
+        ],
+        [
+          "Corrosion in marine environment",
+          "High",
+          "Medium",
+          "Specify coatings, stainless where needed, wash-down and maintenance discipline."
+        ],
+        [
+          "Permitting delay",
+          "Medium",
+          "Medium",
+          "Start environmental and site permitting in parallel with pilot work."
+        ],
+        [
+          "Heat-recovery overbuild",
+          "High",
+          "Medium",
+          "Keep phase-1 system to right-sized 20 m3 buffer, not large thermal store."
+        ]
+      ]
+    },
+    {
+      "index": 11,
+      "rows": [
+        [
+          "Phase",
+          "Name",
+          "Main outputs",
+          "Typical duration"
+        ],
+        [
+          "0",
+          "Concept validation",
+          "Feedstock LOIs, market soundings, pilot sampling plan",
+          "3-4 months"
+        ],
+        [
+          "1",
+          "Pilot and basis of design",
+          "Recipe trials, product testing, preliminary layout",
+          "4 months"
+        ],
+        [
+          "2",
+          "Due diligence and permits",
+          "Brownfield, utilities, environmental and planning permits",
+          "4-6 months (overlap)"
+        ],
+        [
+          "3",
+          "FEED + tendering",
+          "RFQs, vendor comparison, CAPEX refinement, contract strategy",
+          "4 months"
+        ],
+        [
+          "4",
+          "Procurement",
+          "Kiln, sorter, mill, controls, renewables, BESS",
+          "8-10 months"
+        ],
+        [
+          "5",
+          "Civil and building works",
+          "Roads, slabs, drainage, hall retrofit, utility yard",
+          "6-7 months"
+        ],
+        [
+          "6",
+          "Installation",
+          "Mechanical, electrical, control system integration",
+          "5-6 months"
+        ],
+        [
+          "7",
+          "Commissioning",
+          "Cold, hot and performance ramp-up",
+          "4-5 months"
+        ]
+      ]
+    },
+    {
+      "index": 12,
+      "rows": [
+        [
+          "Area",
+          "Action",
+          "When",
+          "Status",
+          "Why it matters"
+        ],
+        [
+          "Feedstock",
+          "Secure LOIs / contracts for >=4.0 kt/yr mixed glass (hotels, resorts, bars, Selikor/municipality, window contractors)",
+          "Pre-FID",
+          "Open",
+          "Plant raw-glass need is ~3.45 kt/yr base; contract coverage must exceed modeled need."
+        ],
+        [
+          "Feedstock",
+          "Confirm collection model: partner-led, outsourced or owned fleet",
+          "Pre-FID",
+          "Open",
+          "Core CAPEX excludes a large owned route-collection fleet."
+        ],
+        [
+          "Market",
+          "Secure anchor offtake for aggregate and blocks covering >=70% of base output",
+          "Pre-FID",
+          "Open",
+          "Import-substitution pricing is the main EBITDA lever."
+        ],
+        [
+          "Technology",
+          "Run pilot foaming tests on Curaçao glass blend incl. flat-glass fraction",
+          "Pre-FID",
+          "Open",
+          "Recipe and density window must be proven on actual cullet."
+        ],
+        [
+          "Technology",
+          "Validate block and aggregate split and resulting quality / density",
+          "Pre-FID",
+          "Open",
+          "Base plan assumes 60% aggregate / 40% blocks."
+        ],
+        [
+          "Site",
+          "Complete brownfield environmental and geotechnical due diligence on selected refinery parcel",
+          "Pre-FID",
+          "Open",
+          "Potential hidden cost / permitting gate."
+        ],
+        [
+          "Utilities",
+          "Confirm transformer capacity, harmonic filter requirements and interconnection scope",
+          "Pre-FID",
+          "Open",
+          "1 MW kiln + PV + BESS need a clean power architecture."
+        ],
+        [
+          "Utilities",
+          "Confirm industrial water connection and quality",
+          "Pre-FID",
+          "Open",
+          "SWRO not justified in phase 1 if utility water is available."
+        ],
+        [
+          "Economics",
+          "Reconfirm product selling prices against imported alternatives and local contractors",
+          "Pre-FID",
+          "Open",
+          "Sensitivity to selling price is high."
+        ],
+        [
+          "Execution",
+          "Issue long-lead RFQs for kiln, optical sorter, mill and controls",
+          "Pre-FEED/FEED",
+          "Open",
+          "Vendor quotations needed to tighten CAPEX confidence."
+        ],
+        [
+          "Operations",
+          "Build operator training and quality-control plan",
+          "Before startup",
+          "Open",
+          "Foam-glass process is sensitive to recipe and thermal window."
+        ],
+        [
+          "ESG",
+          "Confirm reject disposal routes and sludge handling",
+          "Pre-FID",
+          "Open",
+          "Reject stream remains material (~483 t/yr base)."
+        ]
+      ]
+    },
+    {
+      "index": 13,
+      "rows": [
+        [
+          "Public / political benefit",
+          "Why it matters for the islands"
+        ],
+        [
+          "Local jobs across multiple skill levels",
+          "The core line creates industrial jobs, while the ancillary branch and partner joinery route add lighter assembly, finishing, retail and hospitality-linked work."
+        ],
+        [
+          "Import substitution for building materials",
+          "Foam glass can replace imported insulation or lightweight-fill material, improving regional supply resilience."
+        ],
+        [
+          "Waste-land release and cleanup",
+          "A functioning glass outlet reduces the stockpile footprint and gradually frees land currently occupied by low-value waste."
+        ],
+        [
+          "Tourism and civic narrative",
+          "The wow-products provide visible proof that the islands convert waste into attractive objects and local value."
+        ],
+        [
+          "Regional cooperation signal",
+          "A shared ABC solution gives governments a concrete example of practical inter-island cooperation rather than another stand-alone pilot."
+        ],
+        [
+          "Still has financial discipline",
+          "The project is not charity: it still has positive EBITDA and a route to payback, just with stronger public than purely private appeal."
+        ]
+      ]
+    },
+    {
+      "index": 14,
+      "rows": [
+        [
+          "Source",
+          "Title",
+          "URL",
+          "Accessed",
+          "Quality",
+          "Use in model"
+        ],
+        [
+          "Aqualectra",
+          "Industrial electricity and water tariffs",
+          "https://www.aqualectra.com/rates/",
+          "2026-03-02",
+          "A",
+          "Used for grid and water tariff assumptions."
+        ],
+        [
+          "Curaçao Tourist Board",
+          "Tourism Curaçao ends 2025 with record-breaking 1.7 million visitors",
+          "https://www.curacao.com",
+          "2026-03-02",
+          "A",
+          "Used for stayover and cruise visitor volumes and average stay."
+        ],
+        [
+          "Curaçao CBS / UNSD",
+          "Environmental Statistics Compendium 2020",
+          "https://www.cbs.cw",
+          "2026-03-02",
+          "A",
+          "Used for island population context and resource constraints."
+        ],
+        [
+          "Curoil",
+          "Maximum fuel prices February 2026",
+          "https://www.curoil.com",
+          "2026-03-02",
+          "A",
+          "Used for diesel price benchmark."
+        ],
+        [
+          "CBCS",
+          "Caribbean guilder / exchange-rate information",
+          "https://www.centralbank.cw",
+          "2026-03-02",
+          "A",
+          "Used for XCG/USD conversion."
+        ],
+        [
+          "IRENA",
+          "Curaçao country / resource profile",
+          "https://www.irena.org",
+          "2026-03-02",
+          "A",
+          "Used for renewable share and resource quality context."
+        ],
+        [
+          "RAC Curaçao",
+          "Feed-in tariff announcement",
+          "https://www.rac.cw",
+          "2026-03-02",
+          "A",
+          "Used to test export-value case for excess PV/wind."
+        ],
+        [
+          "WITS / World Bank",
+          "Beer imports by country",
+          "https://wits.worldbank.org",
+          "2026-03-02",
+          "B",
+          "Used only as a directional packaging-flow sense check, not primary feedstock proof."
+        ],
+        [
+          "Glasopor",
+          "Foam glass aggregate product data",
+          "https://www.glasopor.com",
+          "2026-03-02",
+          "B",
+          "Used for density benchmark."
+        ],
+        [
+          "GLAPOR",
+          "Foam glass aggregate / EPD product data",
+          "https://www.glapor.de",
+          "2026-03-02",
+          "B",
+          "Used for density benchmark."
+        ],
+        [
+          "Energocell",
+          "Foamed-glass process energy benchmark",
+          "https://www.energocell.hu",
+          "2026-03-02",
+          "B",
+          "Used for process-energy sense check."
+        ],
+        [
+          "Technical literature",
+          "Studies and patents on foam-glass foaming window and energy intensity",
+          "Multiple academic sources",
+          "2026-03-02",
+          "B",
+          "Used for process temperature/energy range triangulation."
+        ],
+        [
+          "Meyer Europe",
+          "Optical sorter lead-time FAQ",
+          "https://www.meyer-corp.com/europe",
+          "2026-03-02",
+          "B",
+          "Lead-time benchmark."
+        ],
+        [
+          "NREL",
+          "Spring 2025 Solar Industry Update",
+          "https://www.nrel.gov",
+          "2026-03-02",
+          "A",
+          "PV CAPEX benchmark."
+        ],
+        [
+          "Energy-Storage News / market reports",
+          "BESS cost benchmark 2025",
+          "https://www.energy-storage.news",
+          "2026-03-02",
+          "B",
+          "BESS cost benchmark adjusted upward for island delivery."
+        ],
+        [
+          "Bonaire SWRO case study",
+          "IDE desalination project",
+          "Case study PDF",
+          "2026-03-02",
+          "B",
+          "Used for desalination energy benchmark."
+        ],
+        [
+          "Port of Rotterdam / RdK news",
+          "Former refinery redevelopment context",
+          "https://www.portofrotterdam.com",
+          "2026-03-02",
+          "A",
+          "Site context only; not a cadastral confirmation."
+        ],
+        [
+          "Vendor / marketplace benchmarks",
+          "Screens, separators, used robots, kiln listings",
+          "Multiple vendor pages",
+          "2026-03-02",
+          "C",
+          "Used only to anchor concept-level equipment allowances; final quotes required."
+        ]
+      ]
+    },
+    {
+      "index": 15,
+      "rows": [
+        [
+          "Item",
+          "Base USD",
+          "Lead time weeks",
+          "Note",
+          "Optional"
+        ],
+        [
+          "Bottle-bank / HORECA bins and skip containers",
+          "180000",
+          "14",
+          "If plant owns island collection assets rather than contracting them out.",
+          "True"
+        ],
+        [
+          "Route collection trucks x2",
+          "320000",
+          "18",
+          "For hotel/bar/restaurant collection routes.",
+          "True"
+        ],
+        [
+          "Transfer-station compactor / baler / loader interface",
+          "140000",
+          "16",
+          "Optional if central city-side aggregation hub is built.",
+          "True"
+        ],
+        [
+          "Small dock-side handling package",
+          "120000",
+          "20",
+          "Only if regular inter-island feedstock shipments are self-handled.",
+          "True"
+        ]
+      ]
+    },
+    {
+      "index": 16,
+      "rows": [
+        [
+          "Metric",
+          "Conservative",
+          "Base",
+          "Upside"
+        ],
+        [
+          "Operating days",
+          "273.75",
+          "273.75",
+          "273.75"
+        ],
+        [
+          "Annual output m3",
+          "19,162.50",
+          "19,162.50",
+          "19,162.50"
+        ],
+        [
+          "Aggregate m3",
+          "11,497.50",
+          "11,497.50",
+          "11,497.50"
+        ],
+        [
+          "Blocks m3",
+          "7,665.00",
+          "7,665.00",
+          "7,665.00"
+        ],
+        [
+          "Aggregate mass t",
+          "2,069.55",
+          "1,954.58",
+          "1,839.60"
+        ],
+        [
+          "Blocks mass t",
+          "1,073.10",
+          "996.45",
+          "919.80"
+        ],
+        [
+          "Product mass t",
+          "3,142.65",
+          "2,951.02",
+          "2,759.40"
+        ],
+        [
+          "Avg density kg/m3",
+          "164.00",
+          "154.00",
+          "144.00"
+        ],
+        [
+          "Clean mix t",
+          "3,308.05",
+          "3,042.29",
+          "2,815.71"
+        ],
+        [
+          "Clean glass t",
+          "3,227.37",
+          "2,968.09",
+          "2,747.04"
+        ],
+        [
+          "Additives t",
+          "80.68",
+          "74.20",
+          "68.68"
+        ],
+        [
+          "Raw glass t",
+          "3,935.82",
+          "3,451.27",
+          "3,052.26"
+        ],
+        [
+          "Rejects t",
+          "708.45",
+          "483.18",
+          "305.23"
+        ],
+        [
+          "Kiln MWh",
+          "4,599.00",
+          "3,613.50",
+          "2,956.50"
+        ],
+        [
+          "Aux MWh",
+          "525.92",
+          "438.09",
+          "371.09"
+        ],
+        [
+          "Total MWh",
+          "5,124.92",
+          "4,051.59",
+          "3,327.59"
+        ],
+        [
+          "kWh/m3",
+          "267.45",
+          "211.43",
+          "173.65"
+        ],
+        [
+          "Gross wash water m3",
+          "1,771.12",
+          "1,380.51",
+          "1,068.29"
+        ],
+        [
+          "Makeup water m3",
+          "389.65",
+          "248.49",
+          "160.24"
+        ],
+        [
+          "Wash heat MWhth",
+          "96.11",
+          "74.91",
+          "57.97"
+        ],
+        [
+          "Dry heat MWhth",
+          "91.55",
+          "84.20",
+          "77.92"
+        ],
+        [
+          "Useful low-grade heat sink MWhth",
+          "187.66",
+          "159.11",
+          "135.89"
+        ],
+        [
+          "Average low-grade heat sink kWth",
+          "28.56",
+          "24.22",
+          "20.68"
+        ],
+        [
+          "Avg low-grade heat if wash runs 8h/day kWth",
+          "85.69",
+          "72.65",
+          "62.05"
+        ],
+        [
+          "Solar MWh",
+          "1,800.00",
+          "1,900.00",
+          "1,950.00"
+        ],
+        [
+          "Wind MWh",
+          "490.56",
+          "595.68",
+          "665.76"
+        ],
+        [
+          "Renewable generation MWh",
+          "2,290.56",
+          "2,495.68",
+          "2,615.76"
+        ],
+        [
+          "Renewable used MWh",
+          "2,015.69",
+          "2,296.03",
+          "2,484.97"
+        ],
+        [
+          "Grid import MWh",
+          "3,109.22",
+          "1,755.56",
+          "842.62"
+        ],
+        [
+          "Curtailed/exported renewable MWh",
+          "274.87",
+          "199.65",
+          "130.79"
+        ],
+        [
+          "Renewable fraction used",
+          "0.39",
+          "0.57",
+          "0.75"
+        ],
+        [
+          "Gross renewable fraction",
+          "0.45",
+          "0.62",
+          "0.79"
+        ],
+        [
+          "Grid electricity cost USD",
+          "856,860.17",
+          "483,808.77",
+          "232,213.43"
+        ],
+        [
+          "Water cost USD",
+          "2,958.59",
+          "1,886.80",
+          "1,216.73"
+        ],
+        [
+          "Inbound loaded truck trips/yr",
+          "562.26",
+          "493.04",
+          "436.04"
+        ],
+        [
+          "Direct hotel/bar route loaded trips/yr",
+          "1,124.52",
+          "986.08",
+          "872.08"
+        ],
+        [
+          "Outbound truck trips/yr",
+          "547.50",
+          "547.50",
+          "547.50"
+        ],
+        [
+          "Block pallets/yr",
+          "6,387.50",
+          "6,387.50",
+          "6,387.50"
+        ],
+        [
+          "Aggregate big-bags/yr",
+          "7,665.00",
+          "7,665.00",
+          "7,665.00"
+        ],
+        [
+          "Modeled resident glass capture t",
+          "1,600.00",
+          "1,600.00",
+          "1,600.00"
+        ],
+        [
+          "Modeled stayover glass capture t",
+          "1,457.01",
+          "1,457.01",
+          "1,457.01"
+        ],
+        [
+          "Modeled cruise glass capture t",
+          "35.27",
+          "35.27",
+          "35.27"
+        ],
+        [
+          "Modeled construction glass capture t",
+          "500.00",
+          "500.00",
+          "500.00"
+        ],
+        [
+          "Modeled island capture total t",
+          "3,592.28",
+          "3,592.28",
+          "3,592.28"
+        ]
+      ]
+    },
+    {
+      "index": 17,
+      "rows": [
+        [
+          "KPI",
+          "Unit",
+          "Target / control logic",
+          "Why it matters"
+        ],
+        [
+          "Raw mixed glass received",
+          "t/day",
+          ">= contracted weekly average",
+          "Feedstock security"
+        ],
+        [
+          "Front-end recovery to clean glass",
+          "%",
+          ">= 86% base",
+          "Contamination and sorting performance"
+        ],
+        [
+          "Glass flour PSD",
+          "lab spec",
+          "Within recipe window",
+          "Foaming consistency"
+        ],
+        [
+          "Kiln zone temperature deviation",
+          "°C",
+          "Within approved operating band",
+          "Prevents density drift and defects"
+        ],
+        [
+          "Finished density – aggregate",
+          "kg/m3",
+          "Product-specific",
+          "Core saleable quality"
+        ],
+        [
+          "Finished density – blocks",
+          "kg/m3",
+          "Product-specific",
+          "Core saleable quality"
+        ],
+        [
+          "Reject rate",
+          "% of raw input",
+          "<= model tolerance",
+          "Yield and housekeeping"
+        ],
+        [
+          "Unplanned kiln downtime",
+          "h/month",
+          "Minimize",
+          "Thermal continuity"
+        ]
+      ]
+    },
+    {
+      "index": 18,
+      "rows": [
+        [
+          "Interval",
+          "Typical scope"
+        ],
+        [
+          "Daily",
+          "Conveyors, transfer points, dust collection, wash loop strainers, kiln visual checks"
+        ],
+        [
+          "Weekly",
+          "Optical sorter cleaning, filter press inspection, robot EOAT checks, bagging calibration"
+        ],
+        [
+          "Monthly",
+          "SCR / MCC thermography, bearing greasing, compressed-air leak survey, wind/PV inspections"
+        ],
+        [
+          "Quarterly",
+          "Kiln refractory inspection, harmonic filter and PF correction checks, battery diagnostics"
+        ],
+        [
+          "Annual",
+          "Planned kiln stop, deeper mechanical overhaul, corrosion remediation, instrumentation calibration"
+        ]
+      ]
+    },
+    {
+      "index": 19,
+      "rows": [
+        [
+          "Metric",
+          "Value",
+          "Unit"
+        ],
+        [
+          "Blocks annual output",
+          "7,665.00",
+          "m3/yr"
+        ],
+        [
+          "Aggregate annual output",
+          "11,497.50",
+          "m3/yr"
+        ],
+        [
+          "Block pallets",
+          "6,387.50",
+          "pallets/yr"
+        ],
+        [
+          "Aggregate big-bags",
+          "7,665.00",
+          "bags/yr"
+        ],
+        [
+          "14-day finished goods inventory – blocks",
+          "392.00",
+          "m3"
+        ],
+        [
+          "14-day finished goods inventory – aggregate",
+          "588.00",
+          "m3"
+        ]
+      ]
+    },
+    {
+      "index": 20,
+      "rows": [
+        [
+          "Metric",
+          "Value",
+          "Unit"
+        ],
+        [
+          "Modeled useful wash+dry heat sink",
+          "159.11",
+          "MWhth/yr"
+        ],
+        [
+          "Equivalent if someone assumed 150 kW continuously useful",
+          "1,314.00",
+          "MWhth/yr"
+        ],
+        [
+          "Equivalent if someone assumed 250 kW continuously useful",
+          "2,190.00",
+          "MWhth/yr"
+        ],
+        [
+          "20 m3 hot-water storage @35C delta",
+          "0.81",
+          "MWhth"
+        ],
+        [
+          "70 m3 hot-water storage @35C delta",
+          "2.85",
+          "MWhth"
+        ]
+      ]
+    },
+    {
+      "index": 21,
+      "rows": [
+        [
+          "Category",
+          "Item",
+          "Capex type",
+          "Base USD",
+          "Lead time weeks",
+          "Lead time months",
+          "Confidence",
+          "Basis / note"
+        ],
+        [
+          "Civil/Engineering",
+          "Brownfield surveys and permitting",
+          "Core",
+          "600000",
+          "20",
+          "4.60",
+          "Low",
+          "Concept allowance for environmental, geotechnical, permitting and owner's engineer studies."
+        ],
+        [
+          "Civil/Engineering",
+          "Civil works, roads, slabs, drainage",
+          "Core",
+          "1200000",
+          "24",
+          "5.52",
+          "Low",
+          "Concept installed cost for internal roads, drainage, foundations and hardstand."
+        ],
+        [
+          "Civil/Engineering",
+          "Production hall retrofit / building works",
+          "Core",
+          "1900000",
+          "28",
+          "6.44",
+          "Low",
+          "Brownfield retrofit or light new build within former refinery plot."
+        ],
+        [
+          "Civil/Engineering",
+          "Warehouse, office, lab, workshop",
+          "Core",
+          "900000",
+          "24",
+          "5.52",
+          "Medium-Low",
+          "Ancillary buildings and fit-out."
+        ],
+        [
+          "Receiving & logistics",
+          "Wheel loader",
+          "Core",
+          "75000",
+          "10",
+          "2.30",
+          "Medium",
+          "Industrial loader suitable for cullet yard handling."
+        ],
+        [
+          "Receiving & logistics",
+          "Forklifts x2 and pallet trucks",
+          "Core",
+          "98000",
+          "10",
+          "2.30",
+          "Medium",
+          "Two forklifts plus warehouse handling equipment."
+        ],
+        [
+          "Receiving & logistics",
+          "Truck scale / weighbridge",
+          "Core",
+          "85000",
+          "10",
+          "2.30",
+          "Medium",
+          "18-20 m industrial weighbridge."
+        ],
+        [
+          "Process line",
+          "Infeed hoppers, bins and conveyors",
+          "Core",
+          "350000",
+          "16",
+          "3.68",
+          "Medium-Low",
+          "Conveyors, hoppers, steelwork and transfer points."
+        ],
+        [
+          "Process line",
+          "Trommel and vibratory screens",
+          "Core",
+          "120000",
+          "12",
+          "2.76",
+          "Medium",
+          "Pre-sizing and fines removal."
+        ],
+        [
+          "Process line",
+          "Magnetic separation",
+          "Core",
+          "35000",
+          "8",
+          "1.84",
+          "Medium-Low",
+          "Ferrous metal removal."
+        ],
+        [
+          "Process line",
+          "Eddy current separator",
+          "Core",
+          "60000",
+          "10",
+          "2.30",
+          "Medium",
+          "Non-ferrous metal removal."
+        ],
+        [
+          "Process line",
+          "Optical sorter",
+          "Core",
+          "220000",
+          "16",
+          "3.68",
+          "Medium",
+          "Glass/ceramics/stone/plastic separation."
+        ],
+        [
+          "Process line",
+          "Washing, drying, water recirculation, filter press",
+          "Core",
+          "550000",
+          "20",
+          "4.60",
+          "Medium-Low",
+          "Complete wash loop incl. tankage and sludge handling."
+        ],
+        [
+          "Process line",
+          "Coarse crusher",
+          "Core",
+          "80000",
+          "10",
+          "2.30",
+          "Medium-Low",
+          "Primary size reduction to cullet."
+        ],
+        [
+          "Process line",
+          "Fine mill and classifier",
+          "Core",
+          "280000",
+          "26",
+          "5.98",
+          "Medium-Low",
+          "Glass flour preparation."
+        ],
+        [
+          "Process line",
+          "Silos, gravimetric dosing, mixer",
+          "Core",
+          "180000",
+          "16",
+          "3.68",
+          "Medium-Low",
+          "Recipe preparation for foam-glass feed."
+        ],
+        [
+          "Process line",
+          "Forming, cutting, crushing, screening, packing",
+          "Core",
+          "380000",
+          "18",
+          "4.14",
+          "Medium-Low",
+          "Both blocks and aggregate finishing package."
+        ],
+        [
+          "Process line",
+          "Dust collection and baghouse",
+          "Core",
+          "250000",
+          "14",
+          "3.22",
+          "Medium-Low",
+          "Plant dust extraction system."
+        ],
+        [
+          "Process line",
+          "Lab and QC equipment",
+          "Core",
+          "60000",
+          "8",
+          "1.84",
+          "Medium-Low",
+          "Density, thermal conductivity, particle size, moisture, strength testing."
+        ],
+        [
+          "Thermal process",
+          "Electric tunnel kiln 30m incl. cooling/recovery",
+          "Core",
+          "2200000",
+          "40",
+          "9.21",
+          "Medium-Low",
+          ""
+        ],
+        [
+          "Automation",
+          "Robots x3 with end-of-arm tooling",
+          "Core",
+          "450000",
+          "20",
+          "4.60",
+          "Medium-Low",
+          "Basic palletizing and handling automation."
+        ],
+        [
+          "Utilities",
+          "Electrical distribution, MCC, PF correction, harmonic filters",
+          "Core",
+          "650000",
+          "24",
+          "5.52",
+          "Medium-Low",
+          "Important because of SCR/thyristor kiln loads and renewables/BESS interface."
+        ],
+        [
+          "Utilities",
+          "Compressed air, fire water, general utilities",
+          "Core",
+          "180000",
+          "16",
+          "3.68",
+          "Medium-Low",
+          "Plant utilities package."
+        ],
+        [
+          "Utilities",
+          "Heat recovery and 20 m3 hot-water buffer",
+          "Core",
+          "200000",
+          "16",
+          "3.68",
+          "Medium-Low",
+          "Right-sized phase-1 low-grade heat use."
+        ],
+        [
+          "Utilities",
+          "Diesel generator 600 kW with ATS",
+          "Core",
+          "250000",
+          "20",
+          "4.60",
+          "Medium-Low",
+          "Backup power for hot-hold and safe shutdown."
+        ],
+        [
+          "Energy assets",
+          "Solar PV 1 MWp",
+          "Core",
+          "1950000",
+          "24",
+          "5.52",
+          "Medium-Low",
+          "1 MWp own generation, rooftop + ground mount concept."
+        ],
+        [
+          "Energy assets",
+          "Wind turbine 200 kW",
+          "Core",
+          "950000",
+          "32",
+          "7.36",
+          "Medium-Low",
+          "Single small turbine subject to site/noise/wind study."
+        ],
+        [
+          "Energy assets",
+          "BESS 1 MW / 2 MWh",
+          "Core",
+          "700000",
+          "32",
+          "7.36",
+          "Medium-Low",
+          "Resilience and smoothing rather than tariff arbitrage."
+        ],
+        [
+          "Installation",
+          "Mechanical and electrical installation",
+          "Core",
+          "1500000",
+          "24",
+          "5.52",
+          "Low",
+          "Field assembly, cabling, piping and commissioning labor."
+        ],
+        [
+          "Automation",
+          "PLC, SCADA, EMS and commissioning software",
+          "Core",
+          "550000",
+          "24",
+          "5.52",
+          "Medium-Low",
+          "Line control, historian and energy management."
+        ],
+        [
+          "Installation",
+          "Startup spares, training, initial commissioning",
+          "Core",
+          "300000",
+          "12",
+          "2.76",
+          "Medium-Low",
+          "Startup support and critical spares."
+        ],
+        [
+          "Optional resilience",
+          "Containerized SWRO 10 m3/day",
+          "Optional / deferred",
+          "180000",
+          "20",
+          "4.60",
+          "Medium-Low",
+          "Not recommended for phase 1 at this process-water load."
+        ],
+        [
+          "Optional resilience",
+          "Seawater cooling / process water intake & HX",
+          "Optional / deferred",
+          "300000",
+          "28",
+          "6.44",
+          "Medium-Low",
+          "Not recommended for phase 1 unless broader site utility strategy exists."
+        ],
+        [
+          "Project reserve",
+          "Contingency and owners cost",
+          "Core",
+          "2300000",
+          "0",
+          "0.00",
+          "Low",
+          "Risk/uncertainty + owner's cost allowance for island delivery and brownfield unknowns."
+        ]
+      ]
+    },
+    {
+      "index": 22,
+      "rows": [
+        [
+          "Phase-1 CAPEX",
+          "Lean 70 EBITDA",
+          "Ancillary branch",
+          "ABC 105 screen"
+        ],
+        [
+          "$17.63m",
+          "$1.48m",
+          "$192k EBITDA",
+          "$2.55m"
+        ],
+        [
+          "Board-level conclusion",
+          "Board-level conclusion",
+          "Board-level conclusion",
+          "Board-level conclusion"
+        ],
+        [
+          "• The foam-glass line remains the economic anchor, but the small curated-glass branch adds a visible branding layer and about $190k of annual EBITDA with very little glass tonnage.",
+          "• The foam-glass line remains the economic anchor, but the small curated-glass branch adds a visible branding layer and about $190k of annual EBITDA with very little glass tonnage.",
+          "• The foam-glass line remains the economic anchor, but the small curated-glass branch adds a visible branding layer and about $190k of annual EBITDA with very little glass tonnage.",
+          "• The foam-glass line remains the economic anchor, but the small curated-glass branch adds a visible branding layer and about $190k of annual EBITDA with very little glass tonnage."
+        ],
+        [
+          "• A lean day-one build is preferable: keep PV, grid tie and diesel/UPS, but defer wind, battery storage and full robotics to phase 2. That lowers entry CAPEX from about $19.60m to about $17.63m.",
+          "• A lean day-one build is preferable: keep PV, grid tie and diesel/UPS, but defer wind, battery storage and full robotics to phase 2. That lowers entry CAPEX from about $19.60m to about $17.63m.",
+          "• A lean day-one build is preferable: keep PV, grid tie and diesel/UPS, but defer wind, battery storage and full robotics to phase 2. That lowers entry CAPEX from about $19.60m to about $17.63m.",
+          "• A lean day-one build is preferable: keep PV, grid tie and diesel/UPS, but defer wind, battery storage and full robotics to phase 2. That lowers entry CAPEX from about $19.60m to about $17.63m."
+        ],
+        [
+          "• Curaçao alone is still investable at the 70 m3/day line, but feedstock coverage is almost exactly 1.0x. A shared ABC-islands structure gives the project more resilience and a stronger public-policy case.",
+          "• Curaçao alone is still investable at the 70 m3/day line, but feedstock coverage is almost exactly 1.0x. A shared ABC-islands structure gives the project more resilience and a stronger public-policy case.",
+          "• Curaçao alone is still investable at the 70 m3/day line, but feedstock coverage is almost exactly 1.0x. A shared ABC-islands structure gives the project more resilience and a stronger public-policy case.",
+          "• Curaçao alone is still investable at the 70 m3/day line, but feedstock coverage is almost exactly 1.0x. A shared ABC-islands structure gives the project more resilience and a stronger public-policy case."
+        ],
+        [
+          "• For a purely financial investor the return is acceptable rather than spectacular; for government or a public-private vehicle the broader island benefits make the project materially more compelling.",
+          "• For a purely financial investor the return is acceptable rather than spectacular; for government or a public-private vehicle the broader island benefits make the project materially more compelling.",
+          "• For a purely financial investor the return is acceptable rather than spectacular; for government or a public-private vehicle the broader island benefits make the project materially more compelling.",
+          "• For a purely financial investor the return is acceptable rather than spectacular; for government or a public-private vehicle the broader island benefits make the project materially more compelling."
+        ]
+      ]
+    },
+    {
+      "index": 23,
+      "rows": [
+        [
+          "Product",
+          "Units / yr",
+          "Revenue",
+          "EBITDA",
+          "Glass use",
+          "Commercial logic"
+        ],
+        [
+          "Artist packs / decor packs",
+          "3,000",
+          "$75,000",
+          "$42,000",
+          "300 kg",
+          "Small ecommerce and hotel retail item"
+        ],
+        [
+          "Keychains with glass fragments",
+          "12,000",
+          "$144,000",
+          "$72,000",
+          "420 kg",
+          "Use simple standard blanks, not custom injection tooling in phase 1"
+        ],
+        [
+          "Recognition / donor plaques",
+          "140",
+          "$63,000",
+          "$37,000",
+          "280 kg",
+          "Strong CSR / donor and hospitality fit"
+        ],
+        [
+          "Epoxy tables and signature pieces",
+          "22",
+          "$79,200",
+          "$41,200",
+          "420 kg",
+          "Limited edition; local joinery partnership recommended"
+        ],
+        [
+          "Total ancillary branch",
+          "",
+          "$361,200",
+          "$192,200",
+          "1,420 kg",
+          "Negligible tonnage, visible marketing impact"
+        ]
+      ]
+    },
+    {
+      "index": 24,
+      "rows": [
+        [
+          "Scenario",
+          "Feedstock base",
+          "Output (m3/yr)",
+          "Raw glass need (t/yr)",
+          "Coverage",
+          "Revenue",
+          "EBITDA",
+          "CAPEX"
+        ],
+        [
+          "70-CW lean base",
+          "CURACAO",
+          "19,162",
+          "3,451",
+          "0.99x",
+          "$4.18m",
+          "$1.48m",
+          "$17.63m"
+        ],
+        [
+          "70-ABC secured",
+          "ABC",
+          "19,162",
+          "3,451",
+          "1.90x",
+          "$4.18m",
+          "$1.48m",
+          "$17.63m"
+        ],
+        [
+          "90-ABC scale-up",
+          "ABC",
+          "24,638",
+          "4,437",
+          "1.48x",
+          "$5.28m",
+          "$2.12m",
+          "$18.83m"
+        ],
+        [
+          "105-ABC recommended screen",
+          "ABC",
+          "28,744",
+          "5,177",
+          "1.27x",
+          "$6.10m",
+          "$2.55m",
+          "$19.88m"
+        ],
+        [
+          "120-ABC stretch",
+          "ABC",
+          "32,850",
+          "5,916",
+          "1.11x",
+          "$6.91m",
+          "$2.97m",
+          "$20.82m"
+        ]
+      ]
+    },
+    {
+      "index": 25,
+      "rows": [
+        [
+          "CAPEX bridge item",
+          "Amount"
+        ],
+        [
+          "Initial full-scope concept CAPEX",
+          "$19.60m"
+        ],
+        [
+          "Defer wind turbine to phase 2",
+          "$-950,000"
+        ],
+        [
+          "Defer BESS to phase 2",
+          "$-700,000"
+        ],
+        [
+          "Move full robotics to optional phase 2",
+          "$-450,000"
+        ],
+        [
+          "Add ancillary micro-fab cell",
+          "$200,000"
+        ],
+        [
+          "Trim owners contingency after phase split",
+          "$-73,000"
+        ],
+        [
+          "Lean phase-1 CAPEX",
+          "$17.63m"
+        ]
+      ]
+    },
+    {
+      "index": 26,
+      "rows": [
+        [
+          "Metric",
+          "Lean foam-glass only",
+          "Lean Curaçao 70",
+          "105-ABC screen"
+        ],
+        [
+          "Total revenue",
+          "$3.82m",
+          "$4.18m",
+          "$6.10m"
+        ],
+        [
+          "Total OPEX",
+          "$2.53m",
+          "$2.70m",
+          "$3.55m"
+        ],
+        [
+          "EBITDA",
+          "$1.29m",
+          "$1.48m",
+          "$2.55m"
+        ],
+        [
+          "Simple payback",
+          "13.7 yrs",
+          "11.9 yrs",
+          "7.8 yrs"
+        ]
+      ]
+    },
+    {
+      "index": 27,
+      "rows": [
+        [
+          "Public / political benefit",
+          "Why it matters for the islands"
+        ],
+        [
+          "Local jobs across multiple skill levels",
+          "The core line creates industrial jobs, while the ancillary branch and partner joinery route add lighter assembly, finishing, retail and hospitality-linked work."
+        ],
+        [
+          "Import substitution for building materials",
+          "Foam glass can replace imported insulation or lightweight-fill material, improving regional supply resilience."
+        ],
+        [
+          "Waste-land release and cleanup",
+          "A functioning glass outlet reduces the stockpile footprint and gradually frees land currently occupied by low-value waste."
+        ],
+        [
+          "Tourism and civic narrative",
+          "The wow-products provide visible proof that the islands convert waste into attractive objects and local value."
+        ],
+        [
+          "Regional cooperation signal",
+          "A shared ABC solution gives governments a concrete example of practical inter-island cooperation rather than another stand-alone pilot."
+        ],
+        [
+          "Still has financial discipline",
+          "The project is not charity: it still has positive EBITDA and a route to payback, just with stronger public than purely private appeal."
+        ]
+      ]
+    }
+  ]
+}

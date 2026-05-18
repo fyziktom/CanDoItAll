@@ -1,0 +1,21 @@
+flowchart TD
+    User["User or examiner"] --> Session["Probe session"]
+    Drive["Epistemic Drive"] --> QuestionQueue["Probe question queue"]
+    Coverage["Coverage maps / gaps / contradictions / stale records"] --> QuestionQueue
+    QuestionQueue --> Session
+    Session --> Recall["Recall orchestrator"]
+    Recall --> Trace["Recall trace"]
+    Recall --> ContextPack["Context pack"]
+    ContextPack --> Answer["Probe answer renderer"]
+    Trace --> Answer
+    Answer --> Assessment["Probe assessment"]
+    Assessment --> Feedback["User feedback / correction / challenge"]
+    Feedback --> Evidence["Probe evidence records"]
+    Feedback --> Review["Human review items"]
+    Feedback --> Regression["Regression test candidates"]
+    Evidence --> Consolidation["Consolidation"]
+    Evidence --> Drive
+    Regression --> TestHarness["Memory regression harness"]
+    Review --> DurableMemory["Durable memory update only after approval"]
+    Consolidation --> DurableMemory
+    DurableMemory --> Projection["Projection refresh"]

@@ -1,0 +1,21 @@
+# Patch Apply Checklist
+
+- [ ] Original bundle extracted and inspected.
+- [ ] New architecture files 17-24 added.
+- [ ] Existing architecture docs updated coherently.
+- [ ] Contract sketch added or split into focused files.
+- [ ] New requirements FR-039 through FR-052 added.
+- [ ] New NFR-025 through NFR-033 added.
+- [ ] Acceptance criteria updated.
+- [ ] Traceability updated.
+- [ ] Validation plan updated.
+- [ ] Diagrams 14-17 added and registered.
+- [ ] Subbundles 14-20 added.
+- [ ] README reading order updated.
+- [ ] Execution order updated.
+- [ ] Root `subbundles/` declared authoritative or mirrored into `plan/subbundles/`.
+- [ ] Self-review added.
+- [ ] No architecture path lets Qdrant become durable memory.
+- [ ] No architecture path lets probing feedback directly mutate approved truth.
+- [ ] No architecture path lets simulation output become active procedure without review.
+- [ ] All C# comments are English.

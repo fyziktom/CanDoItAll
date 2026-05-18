@@ -231,11 +231,20 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         CancellationToken cancellationToken)
     {
         var catalog = await store.LoadCatalogAsync(cancellationToken);
+        var workspaceProviderIds = providers
+            .Select(item => item.Id)
+            .ToHashSet();
+
         return catalog.Providers
             .Concat(providers)
             .Select(ApplyManagedSqliteFallbackIfNeeded)
             .GroupBy(item => item.Id)
             .Select(group => group.Last())
+            .GroupBy(CreateProviderListIdentity)
+            .Select(group => group
+                .OrderByDescending(item => workspaceProviderIds.Contains(item.Id))
+                .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+                .First())
             .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
@@ -328,6 +337,13 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         return string.Equals(provider.Name, OpenAiChatCompletionsProviderName, StringComparison.OrdinalIgnoreCase);
     }
 
+    private static ProviderListIdentity CreateProviderListIdentity(AgentFrameworkProviderProfile provider)
+    {
+        return new ProviderListIdentity(
+            provider.Kind,
+            provider.Name.Trim().ToUpperInvariant());
+    }
+
     private AgentFrameworkProviderProfile ApplyManagedSqliteFallbackIfNeeded(
         AgentFrameworkProviderProfile provider)
     {
@@ -346,4 +362,8 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
             _ => "llama3.1"
         };
     }
+
+    private readonly record struct ProviderListIdentity(
+        AgentFrameworkProviderKind Kind,
+        string NormalizedName);
 }

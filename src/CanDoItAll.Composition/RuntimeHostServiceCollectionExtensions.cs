@@ -6,6 +6,7 @@ using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.Modules.Activity;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Automation;
+using CanDoItAll.Modules.CognitiveMemory;
 using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Factory;
@@ -59,6 +60,7 @@ public static class RuntimeHostServiceCollectionExtensions
         services.AddActivityModule();
         services.AddAgentFrameworkModule(configuration);
         services.AddAutomationModule(configuration, contentRootPath);
+        services.AddCognitiveMemoryModule();
         services.AddSchedulerPlannerModule();
         services.AddCollaborationModule();
         services.AddCrmHrModule();
@@ -91,6 +93,7 @@ public sealed class AppDatabaseBootstrapper(
     IDatabaseProfileRuntimeAccessor profileAccessor,
     ISwitchableAppDbContextFactory dbContextFactory,
     IAgentProviderCredentialResolver providerCredentialResolver,
+    ISecretVault secretVault,
     ILogger<AppDatabaseBootstrapper> logger) : IAppDatabaseBootstrapper
 {
     private static readonly Guid ManagedDeliveryUnitPartyId = Guid.Parse("10BE49B1-EF4D-4A58-B9EA-B3F7D40F31A1");
@@ -126,6 +129,8 @@ public sealed class AppDatabaseBootstrapper(
     private const string ManagedSqliteOpenAiModel = ManagedSeedProviderFallbacks.OpenAiDefaultModel;
     private const string ManagedSqliteProviderSchemaVersion = "1.0";
     private const int ManagedSqliteOpenAiTimeoutSeconds = 600;
+    private static readonly Guid DefaultOpenAiApiKeySecretId = Guid.Parse("86F781F1-1E76-4B45-9F1A-42B8CF13D8C7");
+    private const string DefaultOpenAiApiKeySecretName = "OpenAI API key";
 
     public Task EnsureCurrentProfileReadyAsync(CancellationToken cancellationToken = default)
     {
@@ -187,9 +192,9 @@ public sealed class AppDatabaseBootstrapper(
             profile.Profile.Id);
         await EnsureManagedSqliteStaffingBootstrapAsync(profile, dbContext, cancellationToken);
         logger.LogInformation(
-            "Ensuring managed SQLite agent provider bootstrap for profile {ProfileId}.",
+            "Ensuring agent provider bootstrap for profile {ProfileId}.",
             profile.Profile.Id);
-        await EnsureManagedSqliteAgentProviderBootstrapAsync(profile, dbContext, cancellationToken);
+        await EnsureAgentProviderBootstrapAsync(profile, dbContext, cancellationToken);
         logger.LogInformation(
             "Runtime database profile {ProfileId} is ready.",
             profile.Profile.Id);
@@ -397,23 +402,24 @@ public sealed class AppDatabaseBootstrapper(
             profile.Profile.Id);
     }
 
-    private async Task EnsureManagedSqliteAgentProviderBootstrapAsync(
+    private async Task EnsureAgentProviderBootstrapAsync(
         ResolvedDatabaseProfile profile,
         AppDbContext dbContext,
         CancellationToken cancellationToken)
     {
-        if (profile.Profile.SourceKind != DatabaseProfileSourceKind.ManagedSqlite)
-        {
-            return;
-        }
-
         var timestamp = DateTimeOffset.UtcNow;
         var changed = false;
+        var isManagedSqliteProfile = profile.Profile.SourceKind == DatabaseProfileSourceKind.ManagedSqlite;
+        var openAiSecretId = await EnsureDefaultOpenAiSecretAsync(dbContext, cancellationToken);
         var openAiProvider = await dbContext.Set<CanDoItAll.Modules.Workspace.ProviderProfile>()
-            .SingleOrDefaultAsync(item => item.Id == ManagedSqliteOpenAiProviderId, cancellationToken);
+            .SingleOrDefaultAsync(item => item.Id == ManagedSqliteOpenAiProviderId, cancellationToken)
+            ?? await dbContext.Set<CanDoItAll.Modules.Workspace.ProviderProfile>()
+                .Where(item => item.Name == ManagedSqliteOpenAiProviderName)
+                .OrderBy(item => item.Id)
+                .FirstOrDefaultAsync(cancellationToken);
         if (openAiProvider is null)
         {
-            dbContext.Set<CanDoItAll.Modules.Workspace.ProviderProfile>().Add(new CanDoItAll.Modules.Workspace.ProviderProfile
+            openAiProvider = new CanDoItAll.Modules.Workspace.ProviderProfile
             {
                 Id = ManagedSqliteOpenAiProviderId,
                 Name = ManagedSqliteOpenAiProviderName,
@@ -421,6 +427,7 @@ public sealed class AppDatabaseBootstrapper(
                 ConnectorPluginKey = OpenAiProviderAdapter.PluginKey,
                 ConfigSchemaVersion = ManagedSqliteProviderSchemaVersion,
                 BaseUrl = ManagedSqliteOpenAiBaseUrl,
+                ApiKeySecretId = openAiSecretId,
                 DefaultModel = ManagedSqliteOpenAiModel,
                 TimeoutSeconds = ManagedSqliteOpenAiTimeoutSeconds,
                 IsEnabled = true,
@@ -441,16 +448,26 @@ public sealed class AppDatabaseBootstrapper(
                     apiKeyEnvironmentVariable = ManagedSqliteOpenAiApiKeyEnvironmentVariable,
                     connectorPluginKey = OpenAiProviderAdapter.PluginKey,
                     configSchemaVersion = ManagedSqliteProviderSchemaVersion,
+                    secretRecordId = openAiSecretId?.ToString("D"),
                     providerTransport = nameof(ProviderTransportKind.Responses),
                     timeoutSeconds = ManagedSqliteOpenAiTimeoutSeconds
                 })
-            });
+            };
+            dbContext.Set<CanDoItAll.Modules.Workspace.ProviderProfile>().Add(openAiProvider);
             changed = true;
         }
         else
         {
             changed |= UpdateManagedSqliteOpenAiProvider(openAiProvider);
         }
+
+        if (openAiSecretId.HasValue && openAiProvider.ApiKeySecretId != openAiSecretId.Value)
+        {
+            openAiProvider.ApiKeySecretId = openAiSecretId.Value;
+            changed = true;
+        }
+
+        changed |= UpdateManagedSqliteOpenAiProviderConfigurationJson(openAiProvider);
 
         var settings = await dbContext.Set<WorkspaceSettings>()
             .FirstOrDefaultAsync(cancellationToken);
@@ -466,9 +483,9 @@ public sealed class AppDatabaseBootstrapper(
             });
             changed = true;
         }
-        else if (settings.DefaultProviderProfileId != ManagedSqliteOpenAiProviderId)
+        else if (ShouldReplaceDefaultProvider(settings.DefaultProviderProfileId, openAiProvider.Id, isManagedSqliteProfile, dbContext))
         {
-            settings.DefaultProviderProfileId = ManagedSqliteOpenAiProviderId;
+            settings.DefaultProviderProfileId = openAiProvider.Id;
             settings.UpdatedAtUtc = timestamp;
             changed = true;
         }
@@ -477,8 +494,13 @@ public sealed class AppDatabaseBootstrapper(
         {
             await dbContext.SaveChangesAsync(cancellationToken);
             logger.LogInformation(
-                "Seeded managed SQLite OpenAI provider bootstrap for profile {ProfileId}.",
+                "Seeded OpenAI provider bootstrap for profile {ProfileId}.",
                 profile.Profile.Id);
+        }
+
+        if (!isManagedSqliteProfile)
+        {
+            return;
         }
 
         var workspaceRoot = profile.Profile.Storage.WorkspaceRoot;
@@ -534,6 +556,97 @@ public sealed class AppDatabaseBootstrapper(
                 "Remapped managed SQLite seeded agents to OpenAI for profile {ProfileId}.",
                 profile.Profile.Id);
         }
+    }
+
+    private async Task<Guid?> EnsureDefaultOpenAiSecretAsync(
+        AppDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        var configuredKey = Environment.GetEnvironmentVariable(ManagedSqliteOpenAiApiKeyEnvironmentVariable);
+        var existingSecret = await dbContext.Set<SecretRecord>()
+            .Where(item => item.Id == DefaultOpenAiApiKeySecretId || item.Name == DefaultOpenAiApiKeySecretName)
+            .OrderBy(item => item.Id == DefaultOpenAiApiKeySecretId ? 0 : 1)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(configuredKey))
+        {
+            return existingSecret?.Id;
+        }
+
+        var normalizedKey = configuredKey.Trim();
+        var timestamp = DateTimeOffset.UtcNow;
+        if (existingSecret is null)
+        {
+            existingSecret = new SecretRecord
+            {
+                Id = DefaultOpenAiApiKeySecretId,
+                CreatedAtUtc = timestamp
+            };
+            dbContext.Set<SecretRecord>().Add(existingSecret);
+        }
+
+        var oldVaultKey = SecretVaultRecordReference.TryParse(existingSecret.EncryptedPayload, out var parsedOldVaultKey)
+            ? parsedOldVaultKey
+            : null;
+        var existingValue = string.IsNullOrWhiteSpace(oldVaultKey)
+            ? null
+            : await secretVault.GetAsync(oldVaultKey, cancellationToken);
+        var metadataJson = JsonSerializer.Serialize(new
+        {
+            source = "environment",
+            environmentVariable = ManagedSqliteOpenAiApiKeyEnvironmentVariable,
+            managedBy = "runtime-bootstrap"
+        });
+        var metadataChanged =
+            !string.Equals(existingSecret.Name, DefaultOpenAiApiKeySecretName, StringComparison.Ordinal) ||
+            existingSecret.Kind != SecretKind.ApiKey ||
+            !string.Equals(existingSecret.Scope, "workspace", StringComparison.Ordinal) ||
+            !string.Equals(existingSecret.MetadataJson, metadataJson, StringComparison.Ordinal);
+
+        if (string.Equals(existingValue, normalizedKey, StringComparison.Ordinal) && !metadataChanged)
+        {
+            return existingSecret.Id;
+        }
+
+        var newVaultKey = SecretVaultRecordReference.BuildKey(existingSecret.Id, Guid.NewGuid());
+        await secretVault.SetAsync(newVaultKey, normalizedKey, cancellationToken);
+
+        existingSecret.Name = DefaultOpenAiApiKeySecretName;
+        existingSecret.Kind = SecretKind.ApiKey;
+        existingSecret.Scope = "workspace";
+        existingSecret.MetadataJson = metadataJson;
+        existingSecret.RotationNote = $"Synchronized from {ManagedSqliteOpenAiApiKeyEnvironmentVariable}.";
+        existingSecret.EncryptedPayload = SecretVaultRecordReference.Create(newVaultKey);
+        existingSecret.UpdatedAtUtc = timestamp;
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        if (!string.IsNullOrWhiteSpace(oldVaultKey) &&
+            !string.Equals(oldVaultKey, newVaultKey, StringComparison.Ordinal))
+        {
+            await secretVault.DeleteAsync(oldVaultKey, cancellationToken);
+        }
+
+        return existingSecret.Id;
+    }
+
+    private static bool ShouldReplaceDefaultProvider(
+        Guid? currentDefaultProviderId,
+        Guid openAiProviderId,
+        bool isManagedSqliteProfile,
+        AppDbContext dbContext)
+    {
+        if (currentDefaultProviderId == openAiProviderId)
+        {
+            return false;
+        }
+
+        if (isManagedSqliteProfile || !currentDefaultProviderId.HasValue)
+        {
+            return true;
+        }
+
+        return !dbContext.Set<CanDoItAll.Modules.Workspace.ProviderProfile>()
+            .Any(item => item.Id == currentDefaultProviderId.Value);
     }
 
     private static bool UpdateManagedSqliteOpenAiProvider(CanDoItAll.Modules.Workspace.ProviderProfile provider)
@@ -611,18 +724,17 @@ public sealed class AppDatabaseBootstrapper(
             changed = true;
         }
 
-        if (provider.ApiKeySecretId.HasValue)
-        {
-            provider.ApiKeySecretId = null;
-            changed = true;
-        }
-
         if (!string.Equals(provider.LastHealthStatus, "OpenAI active", StringComparison.Ordinal))
         {
             provider.LastHealthStatus = "OpenAI active";
             changed = true;
         }
 
+        return changed;
+    }
+
+    private static bool UpdateManagedSqliteOpenAiProviderConfigurationJson(CanDoItAll.Modules.Workspace.ProviderProfile provider)
+    {
         var expectedExtraSettingsJson = JsonSerializer.Serialize(new
         {
             history = "service-managed",
@@ -634,16 +746,17 @@ public sealed class AppDatabaseBootstrapper(
             apiKeyEnvironmentVariable = ManagedSqliteOpenAiApiKeyEnvironmentVariable,
             connectorPluginKey = OpenAiProviderAdapter.PluginKey,
             configSchemaVersion = ManagedSqliteProviderSchemaVersion,
+            secretRecordId = provider.ApiKeySecretId?.ToString("D"),
             providerTransport = nameof(ProviderTransportKind.Responses),
             timeoutSeconds = ManagedSqliteOpenAiTimeoutSeconds
         });
-        if (!string.Equals(provider.ExtraSettingsJson, expectedExtraSettingsJson, StringComparison.Ordinal))
+        if (string.Equals(provider.ExtraSettingsJson, expectedExtraSettingsJson, StringComparison.Ordinal))
         {
-            provider.ExtraSettingsJson = expectedExtraSettingsJson;
-            changed = true;
+            return false;
         }
 
-        return changed;
+        provider.ExtraSettingsJson = expectedExtraSettingsJson;
+        return true;
     }
 
     private static CanDoItAll.AgentFramework.Models.ProviderProfile CreateManagedSqliteOpenAiCatalogProvider()

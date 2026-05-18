@@ -57,7 +57,8 @@ public sealed record WorkflowHumanInLoopPolicy(
 public sealed record WorkflowSettings(
     WorkflowRuntimePolicy DefaultRuntimePolicy,
     WorkflowArtifactPolicy ArtifactPolicy,
-    WorkflowHumanInLoopPolicy HumanInLoopPolicy)
+    WorkflowHumanInLoopPolicy HumanInLoopPolicy,
+    AgentVoiceSettings? VoiceSettings = null)
 {
     public static WorkflowSettings Default { get; } = new(
         new WorkflowRuntimePolicy(
@@ -78,7 +79,10 @@ public sealed record WorkflowSettings(
         new WorkflowHumanInLoopPolicy(
             AllowHumanInputNodes: true,
             RequireApprovalForToolUse: true,
-            DefaultRequestTimeoutMinutes: 240));
+            DefaultRequestTimeoutMinutes: 240),
+        AgentVoiceSettings.Default);
+
+    public AgentVoiceSettings NormalizedVoiceSettings => AgentVoiceSettingsNormalizer.Normalize(VoiceSettings);
 }
 
 public sealed record LlmCallComponentSaveRequest(

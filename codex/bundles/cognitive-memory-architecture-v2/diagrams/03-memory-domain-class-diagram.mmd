@@ -1,0 +1,127 @@
+classDiagram
+    class MemorySourceManifestRecord {
+        Guid Id
+        Guid ProjectId
+        string SourceSystem
+        string SourceKind
+        string ExternalId
+        string Locator
+        string ContentHash
+        DateTimeOffset ObservedAtUtc
+        string AccessScope
+        string MetadataJson
+    }
+
+    class MemorySourceItemRecord {
+        Guid Id
+        Guid ManifestId
+        string SourceItemKey
+        string Title
+        string NormalizedText
+        string RawStoragePath
+        string ContentHash
+        string ItemType
+        DateTimeOffset SourceUpdatedAtUtc
+        string MetadataJson
+    }
+
+    class CanonicalMemoryRecord {
+        Guid Id
+        Guid SourceItemId
+        string CanonicalKind
+        string Title
+        string CanonicalText
+        string EntityJson
+        string ScopeJson
+        ScoreVector ConfidenceVector
+        ScalarProjection DisplayConfidence
+        string AlgorithmVersion
+        string ContentHash
+    }
+
+    class MemoryItemRecord {
+        Guid Id
+        Guid ProjectId
+        string MemoryType
+        string Title
+        string CanonicalText
+        string SummaryText
+        ScoreVector ConfidenceVector
+        ScoreVector ActivationVector
+        ScalarProjection DisplayConfidence
+        ScalarProjection DisplayActivation
+        string ValidationState
+        string StabilityState
+        string SourceRefsJson
+        string MetadataJson
+        string ContentHash
+    }
+
+    class MemoryRelationRecord {
+        Guid Id
+        Guid ProjectId
+        Guid SourceMemoryItemId
+        Guid TargetMemoryItemId
+        string RelationType
+        ScoreVector RelationVector
+        ScalarProjection DisplayStrength
+        ScalarProjection DisplayConfidence
+        string EvidenceJson
+        string AlgorithmVersion
+    }
+
+    class MemoryProjectionRecord {
+        Guid Id
+        Guid MemoryItemId
+        string ProjectionStore
+        string CollectionName
+        string PointId
+        string ProjectionType
+        string VectorProfile
+        string PayloadHash
+        string Status
+        DateTimeOffset UpdatedAtUtc
+    }
+
+    class MemoryRecallTraceRecord {
+        Guid Id
+        Guid ProjectId
+        string QueryText
+        string Intent
+        string StageJson
+        string SelectedItemIdsJson
+        string ContextPackStoragePath
+        DateTimeOffset CreatedAtUtc
+    }
+
+    class MemoryConsolidationRunRecord {
+        Guid Id
+        Guid ProjectId
+        string TriggerKind
+        string Status
+        string InputHash
+        string OutputHash
+        string ReportStoragePath
+        DateTimeOffset StartedAtUtc
+        DateTimeOffset CompletedAtUtc
+    }
+
+    class MemoryHumanReviewItemRecord {
+        Guid Id
+        Guid ProjectId
+        string ReviewType
+        string Title
+        string PayloadJson
+        string Status
+        string DecisionJson
+        DateTimeOffset CreatedAtUtc
+        DateTimeOffset? DecidedAtUtc
+    }
+
+    MemorySourceManifestRecord "1" --> "many" MemorySourceItemRecord
+    MemorySourceItemRecord "1" --> "many" CanonicalMemoryRecord
+    CanonicalMemoryRecord "many" --> "many" MemoryItemRecord
+    MemoryItemRecord "1" --> "many" MemoryProjectionRecord
+    MemoryItemRecord "1" --> "many" MemoryRelationRecord : source
+    MemoryItemRecord "1" --> "many" MemoryRelationRecord : target
+    MemoryConsolidationRunRecord "1" --> "many" MemoryHumanReviewItemRecord

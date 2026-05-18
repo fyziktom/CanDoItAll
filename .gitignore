@@ -18,6 +18,8 @@ output
 .codex-temp
 .playwright-mcp
 evidence
+codex/bundles/input/
+codex/bundles/realistic-project-memory-validation/validation/loader-stdout.log
 
 # Build results
 [Dd]ebug/

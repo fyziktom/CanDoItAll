@@ -92,6 +92,10 @@
         {
             <ProviderManagementPanel />
         }
+        else if (string.Equals(selectedTab, "voice", StringComparison.Ordinal))
+        {
+            <AgentVoiceSettingsPanel />
+        }
         else if (string.Equals(selectedTab, "agents", StringComparison.Ordinal))
         {
             <AgentCatalogPanel RequestedAgentId="@effectiveRequestedAgentId"

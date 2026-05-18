@@ -1,0 +1,227 @@
+# Extracted Source: Analýza\AI Tap Organizační struktura.xmind
+
+- Source path: `C:\repositories\CanDoItAll\codex\bundles\input\AI kohoutek\Analýza\AI Tap Organizační struktura.xmind`
+- Source kind: `xmind`
+- Project: `AI Tap Intelligent Water Faucet`
+
+## Sheet: 2020
+- AI Tap Organizační struktura 2020
+  - CEO
+    - Manažer výroby
+    - Technolog
+    - Obchodník
+  - Manažer výroby
+  - Technolog
+  - Obchodník
+
+## Sheet: 2021
+- AI Tap Organizační struktura 2021
+  - CEO
+    - Manažer výroby
+      - Výrobní pracovník 6x
+      - Skladník
+      - Nákupčí
+      - Kvalitář
+    - Výrobní pracovník 6x
+    - Skladník
+    - Nákupčí
+    - Kvalitář
+    - Technolog
+    - Obchodník
+    - Office manažerka
+  - Manažer výroby
+    - Výrobní pracovník 6x
+    - Skladník
+    - Nákupčí
+    - Kvalitář
+  - Výrobní pracovník 6x
+  - Skladník
+  - Nákupčí
+  - Kvalitář
+  - Technolog
+  - Obchodník
+  - Office manažerka
+
+## Sheet: 2022
+- AI Tap Organizační struktura 2022
+  - CEO
+    - Manažer výroby
+      - Výrobní pracovník 7x
+      - Skladník
+      - Nákupčí
+      - Kvalitář
+    - Výrobní pracovník 7x
+    - Skladník
+    - Nákupčí
+    - Kvalitář
+    - Technolog
+    - Obchodník
+    - Office manažerka
+  - Manažer výroby
+    - Výrobní pracovník 7x
+    - Skladník
+    - Nákupčí
+    - Kvalitář
+  - Výrobní pracovník 7x
+  - Skladník
+  - Nákupčí
+  - Kvalitář
+  - Technolog
+  - Obchodník
+  - Office manažerka
+
+## Sheet: 2023
+- AI Tap Organizační struktura 2023
+  - CEO
+    - CCO
+      - Manažer výroby
+      - Výrobní pracovník 9x
+      - Skladník 2x
+      - Nákupčí 2x
+      - Kvalitář
+      - Bezpečák
+    - Manažer výroby
+    - Výrobní pracovník 9x
+    - Skladník 2x
+    - Nákupčí 2x
+    - Kvalitář
+    - Bezpečák
+    - Technolog
+    - Obchodník
+      - Support
+    - Support
+    - Office manažerka
+  - CCO
+    - Manažer výroby
+    - Výrobní pracovník 9x
+    - Skladník 2x
+    - Nákupčí 2x
+    - Kvalitář
+    - Bezpečák
+  - Manažer výroby
+  - Výrobní pracovník 9x
+  - Skladník 2x
+  - Nákupčí 2x
+  - Kvalitář
+  - Bezpečák
+  - Technolog
+  - Obchodník
+    - Support
+  - Support
+  - Office manažerka
+
+## Sheet: 2024
+- AI Tap Organizační struktura 2024
+  - CEO
+    - CCO
+      - Manažer výroby
+      - Výrobní pracovník 16x
+      - Skladník 2x
+      - Nákupčí 2x
+      - Kvalitář
+      - Bezpečák
+    - Manažer výroby
+    - Výrobní pracovník 16x
+    - Skladník 2x
+    - Nákupčí 2x
+    - Kvalitář
+    - Bezpečák
+    - Obchodník 2x
+      - Technická podpora
+    - Technická podpora
+    - Manažer vývoje
+      - Strojní konstruktér 2x
+      - Technolog
+    - Strojní konstruktér 2x
+    - Technolog
+    - CFO
+      - Office manažerka
+      - HR manažerka
+    - Office manažerka
+    - HR manažerka
+  - CCO
+    - Manažer výroby
+    - Výrobní pracovník 16x
+    - Skladník 2x
+    - Nákupčí 2x
+    - Kvalitář
+    - Bezpečák
+  - Manažer výroby
+  - Výrobní pracovník 16x
+  - Skladník 2x
+  - Nákupčí 2x
+  - Kvalitář
+  - Bezpečák
+  - Obchodník 2x
+    - Technická podpora
+  - Technická podpora
+  - Manažer vývoje
+    - Strojní konstruktér 2x
+    - Technolog
+  - Strojní konstruktér 2x
+  - Technolog
+  - CFO
+    - Office manažerka
+    - HR manažerka
+  - Office manažerka
+  - HR manažerka
+
+## Sheet: 2025
+- AI Tap Organizační struktura 2025
+  - CEO
+    - CCO
+      - Manažer výroby
+      - Výrobní pracovník 17x
+      - Skladník 2x
+      - Nákupčí 2x
+      - Kvalitář
+      - Bezpečák
+    - Manažer výroby
+    - Výrobní pracovník 17x
+    - Skladník 2x
+    - Nákupčí 2x
+    - Kvalitář
+    - Bezpečák
+    - Manažer vývoje
+      - Strojní konstruktér 2x
+      - Technolog
+    - Strojní konstruktér 2x
+    - Technolog
+    - CFO
+      - Office manažerka
+      - HR manažerka
+    - Office manažerka
+    - HR manažerka
+    - CCO
+      - Obchodník 2x
+      - Technická podpora
+    - Obchodník 2x
+    - Technická podpora
+  - CCO
+    - Manažer výroby
+    - Výrobní pracovník 17x
+    - Skladník 2x
+    - Nákupčí 2x
+    - Kvalitář
+    - Bezpečák
+  - Manažer výroby
+  - Výrobní pracovník 17x
+  - Skladník 2x
+  - Nákupčí 2x
+  - Kvalitář
+  - Bezpečák
+  - Manažer vývoje
+    - Strojní konstruktér 2x
+    - Technolog
+  - Strojní konstruktér 2x
+  - Technolog
+  - CFO
+    - Office manažerka
+    - HR manažerka
+  - Office manažerka
+  - HR manažerka
+  - CCO
+    - Obchodník 2x
+    - Technická podpora
+  - Obchodník 2x
+  - Technická podpora

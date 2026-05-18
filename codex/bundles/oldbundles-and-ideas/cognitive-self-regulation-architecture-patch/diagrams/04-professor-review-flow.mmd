@@ -1,0 +1,18 @@
+flowchart LR
+    Assess[Self-Regulation Assessment]
+    Trigger{Escalation Trigger?}
+    Request[ProfessorReviewRequest]
+    BigLLM[Large LLM Professor]
+    Result[ProfessorReviewResult]
+    Actions[Suggested Probes / Source Audits / Regressions / Claim Ops]
+    Authority[Mutation Authority / Review Policy]
+    Gate[Metamemory Answer Gate]
+
+    Assess --> Trigger
+    Trigger -->|no| Gate
+    Trigger -->|yes| Request
+    Request --> BigLLM
+    BigLLM --> Result
+    Result --> Actions
+    Actions --> Authority
+    Result --> Gate

@@ -1,0 +1,23 @@
+.cda-selection-list-item {
+    box-sizing: border-box;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.cda-selection-list-item__button {
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.cda-selection-list-item__meta,
+.cda-selection-list-item__summary {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.cda-selection-list-item__summary {
+    white-space: normal;
+}

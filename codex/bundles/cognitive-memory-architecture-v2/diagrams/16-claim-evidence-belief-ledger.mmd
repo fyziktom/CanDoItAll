@@ -1,0 +1,48 @@
+classDiagram
+  class MemoryEvidenceAnchor {
+    Guid Id
+    EvidenceAnchorKind AnchorKind
+    Guid SourceManifestId
+    Guid SourceItemId
+    string Locator
+    string StructuredPath
+    int TextStart
+    int TextEnd
+    string QuoteHash
+    SourceTrustLevel TrustLevel
+    bool IsRedacted
+  }
+
+  class MemoryClaim {
+    Guid Id
+    string ClaimText
+    string ClaimKind
+    string SubjectKey
+    string PredicateKey
+    string ObjectKey
+    DateTime ValidFromUtc
+    DateTime ValidToUtc
+    ScoreVector ConfidenceVector
+    ScalarProjection DisplayConfidence
+    MemoryValidationState ValidationState
+  }
+
+  class MemoryBeliefState {
+    Guid Id
+    MemoryBeliefStateKind StateKind
+    ScoreVector BeliefVector
+    ScoreEvaluationTrace EvaluationTrace
+    ScalarProjection DisplayBelief
+    string Explanation
+  }
+
+  class MemoryItem {
+    Guid Id
+    string Title
+    MemoryType Type
+    string SummaryText
+  }
+
+  MemoryEvidenceAnchor "many" --> "many" MemoryClaim : supports / attacks / qualifies
+  MemoryClaim "1" --> "1" MemoryBeliefState : calculated state
+  MemoryItem "1" --> "many" MemoryClaim : composes

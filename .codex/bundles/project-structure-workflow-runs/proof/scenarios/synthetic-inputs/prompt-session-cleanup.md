@@ -1,1 +1,0 @@
-Two prompt drafts duplicate cleanup instructions. Session notes should keep only the project-specific workflow proof plan.

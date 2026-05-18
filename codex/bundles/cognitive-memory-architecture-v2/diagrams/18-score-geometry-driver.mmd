@@ -1,0 +1,8 @@
+flowchart TD
+    Evidence["Evidence refs<br/>source, claim, trace, probe, signal"] --> Vector["Score vector snapshot<br/>typed dimensions"]
+    Space["Score space definition<br/>schema + normalization"] --> Vector
+    Vector --> Shape["Shape/region comparison<br/>focus, boundary, abstention, urgency"]
+    Shape --> Trace["Score evaluation trace<br/>matched shapes + missing dimensions"]
+    Trace --> Projection["Optional scalar projection<br/>display / sorting / queue"]
+    Trace --> Consumer["Consumer policy<br/>recall, attention, belief, replay, answer gate"]
+    Projection -. "not authoritative" .-> Consumer

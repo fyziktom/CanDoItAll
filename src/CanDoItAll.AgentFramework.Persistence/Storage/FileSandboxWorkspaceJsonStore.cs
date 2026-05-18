@@ -329,6 +329,32 @@ internal sealed class FileSandboxWorkspaceJsonStore
             {
                 await Task.Delay(AtomicWriteRetryDelays[attempt], cancellationToken);
             }
+            catch (IOException)
+            {
+                await ReplaceByOverwriteWithRetryAsync(tempPath, fullPath, cancellationToken);
+                return;
+            }
+        }
+    }
+
+    private static async Task ReplaceByOverwriteWithRetryAsync(
+        string tempPath,
+        string fullPath,
+        CancellationToken cancellationToken)
+    {
+        for (var attempt = 0; ; attempt++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            try
+            {
+                File.Copy(tempPath, fullPath, overwrite: true);
+                return;
+            }
+            catch (IOException) when (attempt < AtomicWriteRetryDelays.Length)
+            {
+                await Task.Delay(AtomicWriteRetryDelays[attempt], cancellationToken);
+            }
         }
     }
 }

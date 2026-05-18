@@ -1,1 +1,0 @@
-Launch meeting: inventory check is blocked by supplier ETA. Shipment reservation needs owner confirmation. Payment validation passed.

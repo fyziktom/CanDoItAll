@@ -1,0 +1,166 @@
+{
+  "bundle": "realistic-project-memory-validation",
+  "projects": [
+    {
+      "key": "ai-tap",
+      "name": "AI Tap Intelligent Water Faucet",
+      "domain": "intelligent faucet product venture",
+      "owner": "Codex validation from AI kohoutek source pack",
+      "sourceDocument": "source-truth/ai-tap-time-sliced.md",
+      "description": "Time-sliced project structure and memory validation source for the AI Tap intelligent faucet venture.",
+      "objective": "Preserve source-grounded product, market, technical, operational, and financial context so Cognitive Memory can support realistic AI Tap project discussion.",
+      "currentPhase": "Historical plan normalization and memory validation",
+      "requiredMinimumStageCount": 4
+    },
+    {
+      "key": "curacao-glass",
+      "name": "Curacao Glass Recycling And Foam Glass Plant",
+      "domain": "industrial recycling and building-materials plant",
+      "owner": "Codex validation from Curacao government-submission source pack",
+      "sourceDocument": "source-truth/curacao-glass-time-sliced.md",
+      "description": "Time-sliced project structure and memory validation source for the Curacao glass recycling and foam-glass plant.",
+      "objective": "Preserve source-grounded strategic, feedstock, engineering, construction, operational, and financial context so Cognitive Memory can support realistic project discussion.",
+      "currentPhase": "Concept and pre-FID plan normalization and memory validation",
+      "requiredMinimumStageCount": 4
+    }
+  ],
+  "stageOrder": [
+    "S01",
+    "S02",
+    "S03",
+    "S04",
+    "S05"
+  ],
+  "recallProbes": [
+    {
+      "id": "AITAP-S01-PROBLEM-MARKET",
+      "projectKey": "ai-tap",
+      "stageId": "S01",
+      "question": "For AI Tap, what problem is the product solving, what water savings evidence supports it, and which customer/channel assumptions matter?",
+      "requiredTerms": [
+        "9.167",
+        "10,950",
+        "3.828",
+        "children",
+        "Bauhaus"
+      ]
+    },
+    {
+      "id": "AITAP-S02-TECH",
+      "projectKey": "ai-tap",
+      "stageId": "S02",
+      "question": "For AI Tap, summarize the technical architecture, required recognition categories, timing, and hardware risks.",
+      "requiredTerms": [
+        "MQTT",
+        "0.25",
+        "Raspberry",
+        "GPL",
+        "limescale"
+      ]
+    },
+    {
+      "id": "AITAP-S03-LAUNCH",
+      "projectKey": "ai-tap",
+      "stageId": "S03",
+      "question": "For AI Tap, what is the development and production-preparation sequence, including timing, tooling, and launch volumes?",
+      "requiredTerms": [
+        "18 months",
+        "3.2 million",
+        "950",
+        "17,500",
+        "2022"
+      ]
+    },
+    {
+      "id": "AITAP-S04-ORG",
+      "projectKey": "ai-tap",
+      "stageId": "S04",
+      "question": "For AI Tap, how does the team and facility plan evolve from 2020 through 2025?",
+      "requiredTerms": [
+        "production workers",
+        "2024",
+        "mechanical designers",
+        "14.3 million",
+        "27,140,000"
+      ]
+    },
+    {
+      "id": "AITAP-S05-FINANCE",
+      "projectKey": "ai-tap",
+      "stageId": "S05",
+      "question": "For AI Tap, what are the unit economics, funding need, sales ramp, and cash-flow milestones?",
+      "requiredTerms": [
+        "3,110",
+        "4,600",
+        "28.8",
+        "182,650",
+        "67,899,670"
+      ]
+    },
+    {
+      "id": "CURACAO-S01-FEEDSTOCK",
+      "projectKey": "curacao-glass",
+      "stageId": "S01",
+      "question": "For the Curacao glass project, what is the strategic case, base feedstock need, contracted-supply gate, market/offtake gate, and early corrections?",
+      "requiredTerms": [
+        "3,451",
+        "3,592",
+        "4.0",
+        "70 percent",
+        "desalination"
+      ]
+    },
+    {
+      "id": "CURACAO-S02-ENGINEERING",
+      "projectKey": "curacao-glass",
+      "stageId": "S02",
+      "question": "For the Curacao glass project, summarize the reference plant, process flow, material balance, energy, water, and battery role.",
+      "requiredTerms": [
+        "30 meter",
+        "19,162",
+        "4,052",
+        "248.5",
+        "1 MW / 2 MWh"
+      ]
+    },
+    {
+      "id": "CURACAO-S03-PREFID",
+      "projectKey": "curacao-glass",
+      "stageId": "S03",
+      "question": "For the Curacao glass project, what must be proven before FID, and what are the site, permit, FEED, and CAPEX boundaries?",
+      "requiredTerms": [
+        "4.0 kilotonnes",
+        "former refinery",
+        "17.63",
+        "19.603",
+        "collection fleet"
+      ]
+    },
+    {
+      "id": "CURACAO-S04-CONSTRUCTION",
+      "projectKey": "curacao-glass",
+      "stageId": "S04",
+      "question": "For the Curacao glass project, explain the procurement, civil works, installation, commissioning timeline, and key CAPEX lines.",
+      "requiredTerms": [
+        "20 to 24 months",
+        "1.9 million",
+        "2.2 million",
+        "PLC",
+        "483.2"
+      ]
+    },
+    {
+      "id": "CURACAO-S05-FINANCE-RISK",
+      "projectKey": "curacao-glass",
+      "stageId": "S05",
+      "question": "For the Curacao glass project, summarize staffing, OPEX, EBITDA, lean ten-year economics, strategic scenarios, ancillary products, and risks.",
+      "requiredTerms": [
+        "30 FTE",
+        "1,388,582",
+        "105-ABC",
+        "7.811",
+        "361,200"
+      ]
+    }
+  ]
+}

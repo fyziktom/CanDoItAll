@@ -161,6 +161,36 @@ public sealed class ApiIntegrationTests
         Assert.True(paths.TryGetProperty("/api/processes/runs/{runId}/manager-directives", out _));
         Assert.True(paths.TryGetProperty("/api/agents/{agentId}/execution-runs/{executionRunId}/artifacts", out _));
         Assert.True(paths.TryGetProperty("/api/agents/{agentId}/execution-runs/{executionRunId}/log", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/status", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/database/selection", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/database/profiles", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/database/profiles/postgresql", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/database/switch/{profileId}", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/settings", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/ingestion/project-structure", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/ingestion/processes", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/external-sources/files", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/external-sources/web-links", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/external-sources/ingestions/{operationId}", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/snapshot", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/sources/ingest", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/consolidation/runs", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/recall", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/review-items/{reviewItemId}/decisions", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/probes/sessions", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/probes/sessions/{sessionId}/turns", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/probes/turns/{turnId}/feedback", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/self-regulation/assessments", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/answer-gate/decisions", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/professor-reviews", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/professor-reviews/{reviewId}/complete", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/epistemic-drive/scans", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/epistemic-drive/proposals/{proposalId}/decisions", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/cross-project/promotions", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/distributed/workers", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/distributed/jobs", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/distributed/jobs/claim", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/distributed/jobs/{jobId}/results", out _));
     }
 
     private static ProcessDefinitionEditorModel BuildFilterTestDefinition()

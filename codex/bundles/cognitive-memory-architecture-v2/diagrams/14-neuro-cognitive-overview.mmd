@@ -1,0 +1,31 @@
+flowchart LR
+  Sources[Source adapters\nWorkbench / Process / Workflow / Files / Plugins] --> Ingest[Ingestion + canonicalization]
+  Ingest --> Bind[Schema + entity + context binding]
+  Bind --> Claims[Claim / evidence / belief ledger]
+  Claims --> Items[Canonical memory items\nchunks, relations, summaries]
+  Items --> Proj[Projection builders]
+  Proj --> Qdrant[Qdrant / vector projection]
+
+  Workspace[Cognitive workspace\nfocus slots + goal stack] <--> Attention[Attention router]
+  Attention --> Recall[Recall orchestrator]
+  Recall --> Qdrant
+  Recall --> Items
+  Recall --> Claims
+  Recall --> Gate[Metamemory answer gate]
+  Gate --> Answer[Answer / warning / ask / probe / abstain]
+
+  Probe[Interactive probing] --> Workspace
+  Probe --> PredErr[Prediction error engine]
+  Workflows[Workflows + process runs + QA] --> PredErr
+  PredErr --> Signals[Salience signal ledger]
+  Signals --> Attention
+  Signals --> Replay[Replay scheduler]
+  Signals --> Drive[Epistemic Drive]
+  Replay --> Consolidation[Consolidation engine]
+  Consolidation --> Claims
+  Consolidation --> Items
+  Drive --> Proposals[Learning proposals]
+
+  Procedures[Procedure skill memory] --> Recall
+  Procedures --> Gate
+  Consolidation --> Procedures

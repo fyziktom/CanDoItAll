@@ -6,7 +6,7 @@
              Wrap="FlexWrap.NoWrap"
              Gap="@(Dense ? LayoutGap.Small : LayoutGap.Medium)">
         <button type="button"
-                class="min-w-0 flex-1 text-left"
+                class="cda-selection-list-item__button min-w-0 flex-1 text-left"
                 data-testid="@DataTestId"
                 @onclick="HandleSelectAsync">
             <Split Breakpoint="LayoutBreakpoint.None"
@@ -17,7 +17,7 @@
                 <Stack GapScale="LayoutGap.Tiny"
                        Class="min-w-0">
                     <Cluster>
-                        <p class="truncate text-sm font-semibold text-slate-950">@Title</p>
+                        <p class="cda-selection-list-item__title truncate text-sm font-semibold text-slate-950">@Title</p>
                         @if (!string.IsNullOrWhiteSpace(Eyebrow))
                         {
                             <Pill Tone="PillTone.Label" Text="@Eyebrow" />
@@ -26,7 +26,7 @@
 
                     @if (!string.IsNullOrWhiteSpace(Meta))
                     {
-                        <p class="text-xs text-slate-500">@Meta</p>
+                        <p class="cda-selection-list-item__meta text-xs text-slate-500">@Meta</p>
                     }
                 </Stack>
 
@@ -40,7 +40,7 @@
 
             @if (!string.IsNullOrWhiteSpace(Summary))
             {
-                <p class="@(Dense ? "mt-2 text-sm leading-5 text-slate-600" : "mt-3 text-sm leading-6 text-slate-600")">@Summary</p>
+                <p class="@ResolveSummaryClass()">@Summary</p>
             }
 
             @if (ChildContent is not null)
@@ -99,11 +99,16 @@
     private string ResolveContainerClass()
         => IsSelected
             ? (Dense
-                ? "rounded-[1.25rem] border border-sky-300 bg-sky-50/80 p-3.5 shadow-sm shadow-sky-100"
-                : "rounded-[1.4rem] border border-sky-300 bg-sky-50/80 p-4 shadow-sm shadow-sky-100")
+                ? "cda-selection-list-item rounded-[1.25rem] border border-sky-300 bg-sky-50/80 p-3.5 shadow-sm shadow-sky-100"
+                : "cda-selection-list-item rounded-[1.4rem] border border-sky-300 bg-sky-50/80 p-4 shadow-sm shadow-sky-100")
             : (Dense
-                ? "rounded-[1.25rem] border border-slate-200 bg-slate-50/90 p-3.5 transition hover:border-slate-300 hover:bg-slate-50"
-                : "rounded-[1.4rem] border border-slate-200 bg-slate-50/90 p-4 transition hover:border-slate-300 hover:bg-slate-50");
+                ? "cda-selection-list-item rounded-[1.25rem] border border-slate-200 bg-slate-50/90 p-3.5 transition hover:border-slate-300 hover:bg-slate-50"
+                : "cda-selection-list-item rounded-[1.4rem] border border-slate-200 bg-slate-50/90 p-4 transition hover:border-slate-300 hover:bg-slate-50");
+
+    private string ResolveSummaryClass()
+        => Dense
+            ? "cda-selection-list-item__summary mt-2 text-sm leading-5 text-slate-600"
+            : "cda-selection-list-item__summary mt-3 text-sm leading-6 text-slate-600";
 }
 
 

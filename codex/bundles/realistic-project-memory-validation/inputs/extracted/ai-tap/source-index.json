@@ -1,0 +1,142 @@
+{
+  "key": "ai-tap",
+  "title": "AI Tap Intelligent Water Faucet",
+  "root": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\AI kohoutek",
+  "files": [
+    {
+      "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\AI kohoutek\\Analýza\\02-cena-vody-2019-full.png",
+      "relativePath": "Analýza\\02-cena-vody-2019-full.png",
+      "kind": "image",
+      "sizeBytes": 946132,
+      "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\anal-za-02-cena-vody-2019-full.png.md",
+      "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\anal-za-02-cena-vody-2019-full.png.json",
+      "error": null
+    },
+    {
+      "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\AI kohoutek\\Analýza\\AI Tap Organizační struktura.xmind",
+      "relativePath": "Analýza\\AI Tap Organizační struktura.xmind",
+      "kind": "xmind",
+      "sizeBytes": 62946,
+      "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\anal-za-ai-tap-organiza-n-struktura.xmind.md",
+      "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\anal-za-ai-tap-organiza-n-struktura.xmind.json",
+      "error": null
+    },
+    {
+      "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\AI kohoutek\\Analýza\\blokové schéma.graphml",
+      "relativePath": "Analýza\\blokové schéma.graphml",
+      "kind": "graphml",
+      "sizeBytes": 13240,
+      "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\anal-za-blokov-sch-ma.graphml.md",
+      "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\anal-za-blokov-sch-ma.graphml.json",
+      "error": null
+    },
+    {
+      "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\AI kohoutek\\Analýza\\blokové schéma.pptx",
+      "relativePath": "Analýza\\blokové schéma.pptx",
+      "kind": "pptx",
+      "sizeBytes": 59845,
+      "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\anal-za-blokov-sch-ma.pptx.md",
+      "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\anal-za-blokov-sch-ma.pptx.json",
+      "error": null
+    },
+    {
+      "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\AI kohoutek\\Analýza\\inteligentní vodovodní kohoutek.xmind",
+      "relativePath": "Analýza\\inteligentní vodovodní kohoutek.xmind",
+      "kind": "xmind",
+      "sizeBytes": 1494483,
+      "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\anal-za-inteligentn-vodovodn-kohoutek.xmind.md",
+      "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\anal-za-inteligentn-vodovodn-kohoutek.xmind.json",
+      "error": null
+    },
+    {
+      "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\AI kohoutek\\Analýza\\Měření vody při mytí nádobí.xlsx",
+      "relativePath": "Analýza\\Měření vody při mytí nádobí.xlsx",
+      "kind": "xlsx",
+      "sizeBytes": 13984,
+      "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\anal-za-m-en-vody-p-i-myt-n-dob-.xlsx.md",
+      "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\anal-za-m-en-vody-p-i-myt-n-dob-.xlsx.json",
+      "error": null
+    },
+    {
+      "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\AI kohoutek\\Analýza\\VID_20190311_100439.mp4",
+      "relativePath": "Analýza\\VID_20190311_100439.mp4",
+      "kind": "media",
+      "sizeBytes": 65157979,
+      "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\anal-za-vid_20190311_100439.mp4.md",
+      "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\anal-za-vid_20190311_100439.mp4.json",
+      "error": null
+    },
+    {
+      "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\AI kohoutek\\Analýza\\úspora vody a rentabilita.xlsx",
+      "relativePath": "Analýza\\úspora vody a rentabilita.xlsx",
+      "kind": "xlsx",
+      "sizeBytes": 10840,
+      "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\anal-za-spora-vody-a-rentabilita.xlsx.md",
+      "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\anal-za-spora-vody-a-rentabilita.xlsx.json",
+      "error": null
+    },
+    {
+      "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\AI kohoutek\\Byznys plán\\AI Tap - Byznys plán v1.docx",
+      "relativePath": "Byznys plán\\AI Tap - Byznys plán v1.docx",
+      "kind": "docx",
+      "sizeBytes": 388218,
+      "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\byznys-pl-n-ai-tap---byznys-pl-n-v1.docx.md",
+      "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\byznys-pl-n-ai-tap---byznys-pl-n-v1.docx.json",
+      "error": null
+    },
+    {
+      "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\AI kohoutek\\Byznys plán\\AI Tap - Byznys plán v1.pdf",
+      "relativePath": "Byznys plán\\AI Tap - Byznys plán v1.pdf",
+      "kind": "pdf",
+      "sizeBytes": 600049,
+      "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\byznys-pl-n-ai-tap---byznys-pl-n-v1.pdf.md",
+      "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\byznys-pl-n-ai-tap---byznys-pl-n-v1.pdf.json",
+      "error": null
+    },
+    {
+      "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\AI kohoutek\\Finance\\odhad ceny produktu - v2.xlsx",
+      "relativePath": "Finance\\odhad ceny produktu - v2.xlsx",
+      "kind": "xlsx",
+      "sizeBytes": 12541,
+      "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\finance-odhad-ceny-produktu---v2.xlsx.md",
+      "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\finance-odhad-ceny-produktu---v2.xlsx.json",
+      "error": null
+    },
+    {
+      "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\AI kohoutek\\Finance\\odhad ceny produktu.xlsx",
+      "relativePath": "Finance\\odhad ceny produktu.xlsx",
+      "kind": "xlsx",
+      "sizeBytes": 12835,
+      "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\finance-odhad-ceny-produktu.xlsx.md",
+      "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\finance-odhad-ceny-produktu.xlsx.json",
+      "error": null
+    },
+    {
+      "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\AI kohoutek\\Finance\\Rozpočet AITap-2020_2025-v02.xlsx",
+      "relativePath": "Finance\\Rozpočet AITap-2020_2025-v02.xlsx",
+      "kind": "xlsx",
+      "sizeBytes": 122893,
+      "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\finance-rozpo-et-aitap-2020_2025-v02.xlsx.md",
+      "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\finance-rozpo-et-aitap-2020_2025-v02.xlsx.json",
+      "error": null
+    },
+    {
+      "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\AI kohoutek\\Rozvaha AITap-2020_2023-v01.xlsx",
+      "relativePath": "Rozvaha AITap-2020_2023-v01.xlsx",
+      "kind": "xlsx",
+      "sizeBytes": 93785,
+      "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\rozvaha-aitap-2020_2023-v01.xlsx.md",
+      "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\rozvaha-aitap-2020_2023-v01.xlsx.json",
+      "error": null
+    },
+    {
+      "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\AI kohoutek\\VisionSoftware.pptx",
+      "relativePath": "VisionSoftware.pptx",
+      "kind": "pptx",
+      "sizeBytes": 1826166,
+      "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\visionsoftware.pptx.md",
+      "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\visionsoftware.pptx.json",
+      "error": null
+    }
+  ]
+}

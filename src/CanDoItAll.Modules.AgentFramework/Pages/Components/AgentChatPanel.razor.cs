@@ -1,8 +1,10 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Voice;
 using CanDoItAll.Components.BaseLib;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
@@ -16,6 +18,12 @@ public partial class AgentChatPanel : IAsyncDisposable
 
     [Inject]
     public IAgentFrameworkWorkspaceService WorkspaceService { get; set; } = default!;
+
+    [Inject]
+    public IAgentVoiceService VoiceService { get; set; } = default!;
+
+    [Inject]
+    public IJSRuntime JsRuntime { get; set; } = default!;
 
     [Inject]
     public DialogService DialogService { get; set; } = default!;
@@ -38,6 +46,14 @@ public partial class AgentChatPanel : IAsyncDisposable
     private string runStateText = string.Empty;
     private string runStateTone = "neutral";
     private string threadSearchText = string.Empty;
+    private bool isVoiceModeEnabled;
+    private bool isVoiceRecording;
+    private bool isVoiceTranscribing;
+    private bool isVoiceSpeaking;
+    private string voiceStatusText = string.Empty;
+    private string voiceStatusTone = "neutral";
+    private readonly HashSet<Guid> sessionsWithVoiceIdentifierOmissionNotice = [];
+    private bool hasVoiceIdentifierOmissionNoticeWithoutSession;
 
     private IReadOnlyList<ChatSessionSummaryRecord> FilteredSessions
         => workspace?.Sessions
@@ -49,6 +65,14 @@ public partial class AgentChatPanel : IAsyncDisposable
         => workspace?.SelectedRun is not null ||
            executionLog.Count > 0 ||
            metrics.Count > 0;
+
+    private AgentVoiceAccessSettings SelectedAgentVoiceAccess
+        => selectedAgent is null
+            ? new AgentVoiceAccessSettings()
+            : AgentVoiceAccessMetadata.Read(selectedAgent.ConfigurationJson);
+
+    private bool CanUseSelectedAgentVoiceMode
+        => SelectedAgentVoiceAccess.CanUseVoiceMode;
 
     protected override async Task OnInitializedAsync()
     {
@@ -177,6 +201,10 @@ public partial class AgentChatPanel : IAsyncDisposable
             draftAttachmentPaths = [];
             await LoadWorkspaceAsync(selectedAgentId.Value, result.ChatSessionId);
             SetMessage("Ready", "success", "Prompt sent through the integrated runtime.");
+            if (isVoiceModeEnabled && !string.IsNullOrWhiteSpace(result.AssistantMessage.Content))
+            {
+                await SpeakTextAsync(result.AssistantMessage.Content);
+            }
         }
         catch (Exception exception)
         {
@@ -294,6 +322,11 @@ public partial class AgentChatPanel : IAsyncDisposable
         selectedAgent = agents.FirstOrDefault(item => item.Id == agentId);
         workspace = await WorkspaceService.GetChatAgentWorkspaceAsync(agentId, preferredSessionId);
         selectedSessionId = workspace.SelectedSessionId;
+        if (!CanUseSelectedAgentVoiceMode)
+        {
+            isVoiceModeEnabled = false;
+            isVoiceRecording = false;
+        }
 
         var runtimeSnapshot = await WorkspaceService.GetChatRuntimeSnapshotAsync(agentId, workspace.SelectedSessionId);
         executionLog = runtimeSnapshot.ExecutionLog;
@@ -487,6 +520,167 @@ Use these workspace artifacts as input:
 
 {draftPrompt.Trim()}
 """;
+    }
+
+    private async Task HandleVoiceModeChangedAsync(bool enabled)
+    {
+        if (enabled && !CanUseSelectedAgentVoiceMode)
+        {
+            SetVoiceStatus("Voice denied", "warning", "This agent does not allow voice mode.");
+            return;
+        }
+
+        isVoiceModeEnabled = enabled;
+        SetVoiceStatus(enabled ? "Audio on" : "Audio off", enabled ? "primary" : "neutral");
+        await Task.CompletedTask;
+    }
+
+    private async Task ToggleVoiceRecordingAsync()
+    {
+        if (!CanUseSelectedAgentVoiceMode)
+        {
+            SetVoiceStatus("Voice denied", "warning", "This agent does not allow voice mode.");
+            return;
+        }
+
+        if (!isVoiceRecording)
+        {
+            try
+            {
+                await JsRuntime.InvokeVoidAsync("CanDoItAll.agentFramework.voice.startRecording");
+                isVoiceModeEnabled = true;
+                isVoiceRecording = true;
+                SetVoiceStatus("Recording", "danger");
+            }
+            catch (Exception exception)
+            {
+                SetVoiceStatus("Record failed", "danger", exception.Message);
+            }
+
+            return;
+        }
+
+        await StopRecordingAndSendAsync();
+    }
+
+    private async Task StopRecordingAndSendAsync()
+    {
+        isVoiceRecording = false;
+        isVoiceTranscribing = true;
+        SetVoiceStatus("Transcribing", "info");
+        try
+        {
+            var recording = await JsRuntime.InvokeAsync<BrowserVoiceRecording>(
+                "CanDoItAll.agentFramework.voice.stopRecording");
+            var audioBytes = Convert.FromBase64String(recording.Base64);
+            var result = await VoiceService.TranscribeAsync(new AgentVoiceTranscriptionRequest(
+                audioBytes,
+                recording.FileName,
+                recording.ContentType));
+
+            draftPrompt = result.Text;
+            composerKey++;
+            SetVoiceStatus("Sending", "info");
+            await SendMessageAsync();
+        }
+        catch (Exception exception)
+        {
+            SetVoiceStatus("Voice failed", "danger", exception.Message);
+        }
+        finally
+        {
+            isVoiceTranscribing = false;
+        }
+    }
+
+    private Task SpeakLatestAssistantMessageAsync()
+    {
+        var latestAssistantMessage = workspace?.SelectedSession?.Messages
+            .Where(message => message.Role == ChatMessageRole.Assistant)
+            .OrderByDescending(message => message.CreatedAtUtc)
+            .FirstOrDefault();
+        if (latestAssistantMessage is null || string.IsNullOrWhiteSpace(latestAssistantMessage.Content))
+        {
+            SetVoiceStatus("Nothing to speak", "warning", "No assistant message is available.");
+            return Task.CompletedTask;
+        }
+
+        return SpeakTextAsync(latestAssistantMessage.Content);
+    }
+
+    private async Task SpeakTextAsync(string text)
+    {
+        if (selectedAgent is null)
+        {
+            SetVoiceStatus("No agent", "warning", "Select an agent before using text-to-speech.");
+            return;
+        }
+
+        isVoiceSpeaking = true;
+        SetVoiceStatus("Speaking", "primary");
+        try
+        {
+            var synthesis = await VoiceService.SynthesizeAsync(new AgentVoiceSynthesisRequest(
+                text,
+                SelectedAgentVoiceAccess,
+                SuppressIdentifierOmissionNotice: ShouldSuppressIdentifierOmissionNotice()));
+            TrackIdentifierOmissionNotice(synthesis);
+            await JsRuntime.InvokeVoidAsync(
+                "CanDoItAll.agentFramework.voice.playAudio",
+                Convert.ToBase64String(synthesis.AudioBytes),
+                synthesis.ContentType);
+            SetVoiceStatus("Audio ready", "success");
+        }
+        catch (Exception exception)
+        {
+            SetVoiceStatus("Speak failed", "danger", exception.Message);
+        }
+        finally
+        {
+            isVoiceSpeaking = false;
+        }
+    }
+
+    private bool ShouldSuppressIdentifierOmissionNotice()
+    {
+        return selectedSessionId is { } sessionId
+            ? sessionsWithVoiceIdentifierOmissionNotice.Contains(sessionId)
+            : hasVoiceIdentifierOmissionNoticeWithoutSession;
+    }
+
+    private void TrackIdentifierOmissionNotice(AgentVoiceSynthesisResult synthesis)
+    {
+        if (!synthesis.IdentifierOmissionNoticeIncluded)
+        {
+            return;
+        }
+
+        if (selectedSessionId is { } sessionId)
+        {
+            sessionsWithVoiceIdentifierOmissionNotice.Add(sessionId);
+            return;
+        }
+
+        hasVoiceIdentifierOmissionNoticeWithoutSession = true;
+    }
+
+    private void SetVoiceStatus(string text, string tone, string? notification = null)
+    {
+        voiceStatusText = text;
+        voiceStatusTone = tone;
+        if (!string.IsNullOrWhiteSpace(notification))
+        {
+            NotificationService.Warning(text, notification);
+        }
+    }
+
+    private sealed class BrowserVoiceRecording
+    {
+        public string Base64 { get; set; } = string.Empty;
+
+        public string ContentType { get; set; } = "audio/webm";
+
+        public string FileName { get; set; } = "voice-input.webm";
     }
 
     private void ResolveRunState()
