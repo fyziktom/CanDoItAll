@@ -5,7 +5,59 @@ namespace CanDoItAll.AgentFramework.Voice;
 public sealed record AgentVoiceTranscriptionRequest(
     byte[] AudioBytes,
     string FileName,
+    string ContentType)
+{
+    public IReadOnlyList<AgentVoiceAudioChunk> AudioChunks { get; init; } = [];
+}
+
+public sealed record AgentVoiceAudioChunk(
+    byte[] AudioBytes,
+    string FileName,
     string ContentType);
+
+public sealed class BrowserVoiceRecording
+{
+    public string Base64 { get; set; } = string.Empty;
+
+    public string ContentType { get; set; } = "audio/webm";
+
+    public string FileName { get; set; } = "voice-input.webm";
+
+    public List<BrowserVoiceRecordingChunk> Chunks { get; set; } = [];
+
+    public AgentVoiceTranscriptionRequest ToTranscriptionRequest()
+    {
+        var audioBytes = Chunks.Count == 0
+            ? DecodeBase64(Base64)
+            : [];
+
+        return new AgentVoiceTranscriptionRequest(audioBytes, FileName, ContentType)
+        {
+            AudioChunks = Chunks
+                .Select(chunk => new AgentVoiceAudioChunk(
+                    DecodeBase64(chunk.Base64),
+                    chunk.FileName,
+                    chunk.ContentType))
+                .ToList()
+        };
+    }
+
+    private static byte[] DecodeBase64(string value)
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? []
+            : Convert.FromBase64String(value);
+    }
+}
+
+public sealed class BrowserVoiceRecordingChunk
+{
+    public string Base64 { get; set; } = string.Empty;
+
+    public string ContentType { get; set; } = "audio/webm";
+
+    public string FileName { get; set; } = "voice-input.webm";
+}
 
 public sealed record AgentVoiceTranscriptionResult(
     string Text,
@@ -29,6 +81,10 @@ public sealed record AgentVoiceSynthesisResult(
     public bool IdentifiersOmitted { get; init; }
 
     public bool IdentifierOmissionNoticeIncluded { get; init; }
+
+    public int ChunkIndex { get; init; }
+
+    public int ChunkCount { get; init; } = 1;
 }
 
 public sealed record AgentVoiceSpeechTextPreparationResult(
@@ -95,6 +151,10 @@ public interface IAgentVoiceService
         CancellationToken cancellationToken = default);
 
     Task<AgentVoiceSynthesisResult> SynthesizeAsync(
+        AgentVoiceSynthesisRequest request,
+        CancellationToken cancellationToken = default);
+
+    IAsyncEnumerable<AgentVoiceSynthesisResult> SynthesizeChunksAsync(
         AgentVoiceSynthesisRequest request,
         CancellationToken cancellationToken = default);
 

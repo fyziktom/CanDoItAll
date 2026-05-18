@@ -5,6 +5,14 @@ window.CanDoItAll.agentFramework.voice = (function () {
     let mediaRecorder = null;
     let stream = null;
     let chunks = [];
+    let playbackQueue = Promise.resolve();
+    let playbackGeneration = 0;
+    let currentAudio = null;
+    let currentAudioUrl = null;
+    let stopCurrentPlayback = null;
+    const queuedAudioPayloads = new Set();
+
+    const recordingChunkMilliseconds = 25000;
 
     function ensureSupported() {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
@@ -26,7 +34,7 @@ window.CanDoItAll.agentFramework.voice = (function () {
                 chunks.push(event.data);
             }
         };
-        mediaRecorder.start();
+        mediaRecorder.start(recordingChunkMilliseconds);
     }
 
     function stopRecording() {
@@ -39,13 +47,22 @@ window.CanDoItAll.agentFramework.voice = (function () {
             mediaRecorder.onstop = async () => {
                 try {
                     const contentType = mediaRecorder.mimeType || "audio/webm";
-                    const blob = new Blob(chunks, { type: contentType });
-                    const base64 = await blobToBase64(blob);
+                    const recordedChunks = chunks.slice();
+                    const recordingChunks = await Promise.all(recordedChunks.map(async (chunk, index) => {
+                        const chunkContentType = chunk.type || contentType;
+                        return {
+                            base64: await blobToBase64(chunk),
+                            contentType: chunkContentType,
+                            fileName: resolveChunkFileName(chunkContentType, index)
+                        };
+                    }));
+                    const base64 = recordingChunks.length === 1 ? recordingChunks[0].base64 : "";
                     stopTracks();
                     resolve({
                         base64,
                         contentType,
-                        fileName: resolveFileName(contentType)
+                        fileName: resolveFileName(contentType),
+                        chunks: recordingChunks
                     });
                 } catch (error) {
                     stopTracks();
@@ -94,6 +111,17 @@ window.CanDoItAll.agentFramework.voice = (function () {
         return "voice-input.webm";
     }
 
+    function resolveChunkFileName(contentType, index) {
+        const fileName = resolveFileName(contentType);
+        const extensionIndex = fileName.lastIndexOf(".");
+        const suffix = `-${index + 1}`;
+        if (extensionIndex < 0) {
+            return `${fileName}${suffix}`;
+        }
+
+        return `${fileName.substring(0, extensionIndex)}${suffix}${fileName.substring(extensionIndex)}`;
+    }
+
     function normalizePlaybackContentType(contentType) {
         const normalized = (contentType || "audio/mpeg").trim().toLowerCase();
         if (normalized === "audio/opus") {
@@ -123,7 +151,7 @@ window.CanDoItAll.agentFramework.voice = (function () {
         });
     }
 
-    async function playAudio(base64, contentType) {
+    function createAudioPayload(base64, contentType) {
         if (!base64) {
             throw new Error("Audio payload is empty.");
         }
@@ -135,19 +163,120 @@ window.CanDoItAll.agentFramework.voice = (function () {
         }
 
         const blob = new Blob([base64ToBytes(base64)], { type: playbackContentType });
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        audio.onended = () => URL.revokeObjectURL(url);
-        audio.onerror = () => URL.revokeObjectURL(url);
+        const payload = {
+            contentType: playbackContentType,
+            url: URL.createObjectURL(blob)
+        };
+        queuedAudioPayloads.add(payload);
+        return payload;
+    }
+
+    async function playAudioPayload(payload, generation) {
+        if (generation !== playbackGeneration) {
+            queuedAudioPayloads.delete(payload);
+            URL.revokeObjectURL(payload.url);
+            return;
+        }
+
+        const audio = new Audio(payload.url);
+        currentAudio = audio;
+        currentAudioUrl = payload.url;
+
+        return new Promise(async (resolve, reject) => {
+            let completed = false;
+            const cleanup = () => {
+                if (completed) {
+                    return;
+                }
+
+                completed = true;
+                audio.onended = null;
+                audio.onerror = null;
+                if (currentAudio === audio) {
+                    currentAudio = null;
+                }
+
+                if (currentAudioUrl === payload.url) {
+                    currentAudioUrl = null;
+                }
+
+                if (stopCurrentPlayback === stop) {
+                    stopCurrentPlayback = null;
+                }
+
+                URL.revokeObjectURL(payload.url);
+                queuedAudioPayloads.delete(payload);
+            };
+            const stop = () => {
+                audio.pause();
+                cleanup();
+                resolve();
+            };
+            stopCurrentPlayback = stop;
+            audio.onended = () => {
+                cleanup();
+                resolve();
+            };
+            audio.onerror = () => {
+                cleanup();
+                reject(new Error(`Audio playback failed for ${payload.contentType}.`));
+            };
+
+            try {
+                await Promise.race([audio.play(), timeoutAfter(5000)]);
+            } catch (error) {
+                cleanup();
+                reject(new Error(`Audio playback failed for ${payload.contentType}: ${error?.message || error}`));
+            }
+        });
+    }
+
+    function clearAudioQueue() {
+        playbackGeneration++;
+        playbackQueue = Promise.resolve();
+        if (stopCurrentPlayback) {
+            stopCurrentPlayback();
+        }
+
+        if (currentAudio) {
+            currentAudio.pause();
+            currentAudio = null;
+        }
+
+        if (currentAudioUrl) {
+            URL.revokeObjectURL(currentAudioUrl);
+            currentAudioUrl = null;
+        }
+
+        for (const payload of queuedAudioPayloads) {
+            URL.revokeObjectURL(payload.url);
+        }
+
+        queuedAudioPayloads.clear();
+    }
+
+    async function enqueueAudio(base64, contentType) {
+        const payload = createAudioPayload(base64, contentType);
+        const generation = playbackGeneration;
+        playbackQueue = playbackQueue.then(
+            () => playAudioPayload(payload, generation).catch(error => console.error(error)),
+            () => playAudioPayload(payload, generation).catch(error => console.error(error)));
+    }
+
+    async function playAudio(base64, contentType) {
+        clearAudioQueue();
+        const payload = createAudioPayload(base64, contentType);
+        const generation = playbackGeneration;
         try {
-            await Promise.race([audio.play(), timeoutAfter(5000)]);
+            await playAudioPayload(payload, generation);
         } catch (error) {
-            URL.revokeObjectURL(url);
-            throw new Error(`Audio playback failed for ${playbackContentType}: ${error?.message || error}`);
+            throw new Error(error?.message || error);
         }
     }
 
     return {
+        clearAudioQueue,
+        enqueueAudio,
         startRecording,
         stopRecording,
         playAudio
