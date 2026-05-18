@@ -35,6 +35,18 @@ public sealed class CognitiveMemoryAdvancedServicesTests
         Assert.NotNull(feedback.ReviewItemId);
         Assert.NotNull(feedback.RegressionTestCaseId);
         Assert.NotNull(feedback.CalibrationEventId);
+        var candidate = Assert.Single(await dbContext.Set<CognitiveMemoryConsolidationCandidateRecord>().ToListAsync());
+        var reviewItem = Assert.Single(await dbContext.Set<CognitiveMemoryReviewItemRecord>().ToListAsync());
+        var mutation = Assert.Single(await dbContext.Set<CognitiveMemoryMutationCommandRecord>().ToListAsync());
+        Assert.Equal(feedback.ReviewItemId, candidate.ReviewItemId);
+        Assert.Equal(CognitiveMemoryConsolidationCandidateStatus.ReviewRequired, candidate.Status);
+        Assert.Equal(CognitiveMemoryMutationCommandStatus.ReviewRequired, mutation.Status);
+        Assert.Equal(candidate.MutationCommandId, mutation.Id);
+        Assert.NotNull(candidate.SourceItemId);
+        Assert.NotNull(candidate.EvidenceAnchorId);
+        Assert.Equal(1, reviewItem.SourceEvidenceCount);
+        Assert.Single(await dbContext.Set<CognitiveMemorySourceItemRecord>().ToListAsync());
+        Assert.Single(await dbContext.Set<CognitiveMemoryEvidenceAnchorRecord>().ToListAsync());
         Assert.Equal(CognitiveMemoryProbeTurnStatus.FeedbackRecorded, await dbContext.Set<CognitiveMemoryProbeTurnRecord>()
             .Where(turn => turn.Id == turnId)
             .Select(turn => turn.Status)
@@ -42,7 +54,110 @@ public sealed class CognitiveMemoryAdvancedServicesTests
         Assert.Single(await dbContext.Set<CognitiveMemoryProbeFindingRecord>().ToListAsync());
         Assert.Single(await dbContext.Set<CognitiveMemoryCalibrationAggregateRecord>().ToListAsync());
         Assert.Equal(0, await dbContext.Set<CognitiveMemoryRecord>().CountAsync());
-        Assert.Equal(0, await dbContext.Set<CognitiveMemoryMutationCommandRecord>().CountAsync());
+    }
+
+    [Fact]
+    public async Task ProbeFeedbackActionSemantics_RequestReviewAndCreateRegressionAreHonored()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var reviewTurnId = await SeedProbeTurnAsync(fixture, projectId);
+        var regressionTurnId = await SeedProbeTurnAsync(fixture, projectId);
+        var calibration = new CognitiveMemoryCalibrationHealthService(fixture.Factory, fixture.ScoreDriver, fixture.Clock);
+        var service = new CognitiveMemoryProbeService(
+            fixture.Factory,
+            new FakeRecallOrchestrator(projectId),
+            fixture.ScoreDriver,
+            calibration,
+            fixture.Clock);
+
+        var reviewFeedback = await service.RecordFeedbackAsync(new CognitiveMemoryProbeFeedbackRequest(
+            reviewTurnId,
+            CognitiveMemoryProbeFeedbackAction.RequestReview,
+            "User wants this answer checked.",
+            string.Empty,
+            CognitiveMemoryRiskLevel.Low,
+            CreateRegressionTest: false,
+            RequestHumanReview: false,
+            CognitiveMemoryCalibrationOutcomeKind.Unknown));
+        var regressionFeedback = await service.RecordFeedbackAsync(new CognitiveMemoryProbeFeedbackRequest(
+            regressionTurnId,
+            CognitiveMemoryProbeFeedbackAction.CreateRegression,
+            "Keep this question as a regression.",
+            "Expected answer keeps the project scope.",
+            CognitiveMemoryRiskLevel.Low,
+            CreateRegressionTest: false,
+            RequestHumanReview: false,
+            CognitiveMemoryCalibrationOutcomeKind.Unknown));
+
+        await using var dbContext = fixture.Factory.CreateDbContext();
+        Assert.NotNull(reviewFeedback.ReviewItemId);
+        Assert.Null(reviewFeedback.RegressionTestCaseId);
+        Assert.Null(regressionFeedback.ReviewItemId);
+        Assert.NotNull(regressionFeedback.RegressionTestCaseId);
+        Assert.Single(await dbContext.Set<CognitiveMemoryReviewItemRecord>().ToListAsync());
+        Assert.Single(await dbContext.Set<CognitiveMemoryProbeRegressionTestCaseRecord>().ToListAsync());
+        Assert.Equal(0, await dbContext.Set<CognitiveMemoryConsolidationCandidateRecord>().CountAsync());
+    }
+
+    [Fact]
+    public async Task ProbeFeedbackCorrection_ApprovalAppliesRepairCandidateMemory()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var turnId = await SeedProbeTurnAsync(fixture, projectId);
+        var calibration = new CognitiveMemoryCalibrationHealthService(fixture.Factory, fixture.ScoreDriver, fixture.Clock);
+        var probeService = new CognitiveMemoryProbeService(
+            fixture.Factory,
+            new FakeRecallOrchestrator(projectId),
+            fixture.ScoreDriver,
+            calibration,
+            fixture.Clock);
+
+        var feedback = await probeService.RecordFeedbackAsync(new CognitiveMemoryProbeFeedbackRequest(
+            turnId,
+            CognitiveMemoryProbeFeedbackAction.AddCorrection,
+            "The answer mixed production and local Docker contexts.",
+            "Production deployment must cite the production runbook.",
+            CognitiveMemoryRiskLevel.Medium,
+            CreateRegressionTest: false,
+            RequestHumanReview: true,
+            CognitiveMemoryCalibrationOutcomeKind.IncorrectHighConfidence));
+
+        await using (var beforeApproval = fixture.Factory.CreateDbContext())
+        {
+            Assert.NotNull(feedback.ReviewItemId);
+            Assert.Equal(0, await beforeApproval.Set<CognitiveMemoryRecord>().CountAsync());
+            Assert.Equal(0, await beforeApproval.Set<CognitiveMemoryClaimRecord>().CountAsync());
+        }
+
+        await using var decisionContext = fixture.Factory.CreateDbContext();
+        var pendingReview = await decisionContext.Set<CognitiveMemoryReviewItemRecord>().SingleAsync();
+        var reviewService = new CognitiveMemoryReviewUiService(
+            fixture.Factory,
+            fixture.Clock,
+            new CognitiveMemoryConsolidationCandidateApplicator(new CognitiveMemoryRecordValidator()));
+
+        var decided = await reviewService.DecideReviewItemAsync(new CognitiveMemoryReviewDecisionRequest(
+            new CognitiveMemoryReviewItemId(pendingReview.Id),
+            CognitiveMemoryReviewDecisionKind.Approve,
+            "operator:test",
+            "Approved against source truth.",
+            pendingReview.ConcurrencyToken));
+
+        await using var dbContext = fixture.Factory.CreateDbContext();
+        var memory = Assert.Single(await dbContext.Set<CognitiveMemoryRecord>().ToListAsync());
+        var candidate = Assert.Single(await dbContext.Set<CognitiveMemoryConsolidationCandidateRecord>().ToListAsync());
+        var mutation = Assert.Single(await dbContext.Set<CognitiveMemoryMutationCommandRecord>().ToListAsync());
+        Assert.Equal(CognitiveMemoryReviewStatus.Approved, decided.Status);
+        Assert.Equal("Production deployment must cite the production runbook.", memory.CanonicalText);
+        Assert.Equal(CognitiveMemoryValidationState.Approved, memory.ValidationState);
+        Assert.Equal(CognitiveMemoryConsolidationCandidateStatus.MutationSubmitted, candidate.Status);
+        Assert.Equal(memory.Id, candidate.MemoryRecordId);
+        Assert.Equal(CognitiveMemoryMutationCommandStatus.Accepted, mutation.Status);
+        Assert.False(mutation.RequiresHumanReview);
+        Assert.Single(await dbContext.Set<CognitiveMemorySourceLinkRecord>().ToListAsync());
+        Assert.Single(await dbContext.Set<CognitiveMemoryClaimEvidenceLinkRecord>().ToListAsync());
     }
 
     [Fact]

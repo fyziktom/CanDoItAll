@@ -12,6 +12,20 @@ public sealed class CognitiveMemoryProbeService(
     ICognitiveMemoryCalibrationHealthService calibrationHealthService,
     IClock clock) : ICognitiveMemoryProbeService
 {
+    private const string ProbeFeedbackSourceSystem = "ProbeFeedback";
+    private const string ProbeFeedbackSourceItemType = "ProbeTurnFeedback";
+    private const string ProbeFeedbackAlgorithmVersion = "probe-feedback-repair-v1";
+    private const int MaximumReviewTitleLength = 300;
+    private const int MaximumReasonLength = 1200;
+    private const int MaximumStoredProbeQuestionLength = 2000;
+    private const int MaximumStoredProbeAnswerSummaryLength = 4000;
+    private const int MaximumStoredProbeWarningsJsonLength = 4000;
+    private const int MaximumStoredProbeMetadataJsonLength = 8000;
+    private const int MaximumStoredProbeFeedbackNotesLength = 2000;
+    private const int MaximumStoredProbeCorrectionLength = 8000;
+    private const int MaximumStoredProbeFindingSummaryLength = 2000;
+    private const int MaximumStoredProbeRegressionExpectedTextLength = 4000;
+
     public async ValueTask<CognitiveMemoryProbeSessionRecord> StartAsync(
         CognitiveMemoryProbeStartRequest request,
         CancellationToken cancellationToken = default)
@@ -105,8 +119,8 @@ public sealed class CognitiveMemoryProbeService(
             Sequence = sequence,
             Status = CognitiveMemoryProbeTurnStatus.Answered,
             Intent = request.Intent,
-            Question = request.Question.Trim(),
-            AnswerSummary = recallResult.ContextPack.Summary,
+            Question = TrimText(request.Question, MaximumStoredProbeQuestionLength),
+            AnswerSummary = TrimText(recallResult.ContextPack.Summary, MaximumStoredProbeAnswerSummaryLength),
             RecallTraceId = recallResult.TraceId,
             ContextPackId = recallResult.ContextPack.Id.Value,
             AnswerGateDecisionId = recallResult.ContextPack.Metadata.TryGetValue("answerGateDecisionId", out var answerGateId) &&
@@ -117,8 +131,10 @@ public sealed class CognitiveMemoryProbeService(
             ProbeScoreBucket = trace.ScalarProjection?.Bucket ?? CognitiveMemoryScoreProjectionBucket.Unknown,
             DisplayProbeScore = trace.ScalarProjection?.DisplayScore,
             WarningCount = recallResult.Warnings.Count,
-            WarningsJson = Serialize(recallResult.Warnings),
-            MetadataJson = Serialize(request.Metadata ?? new Dictionary<string, string>()),
+            WarningsJson = TrimText(Serialize(recallResult.Warnings), MaximumStoredProbeWarningsJsonLength),
+            MetadataJson = TrimText(
+                Serialize(request.Metadata ?? new Dictionary<string, string>()),
+                MaximumStoredProbeMetadataJsonLength),
             CreatedAtUtc = now,
             UpdatedAtUtc = now
         };
@@ -142,8 +158,10 @@ public sealed class CognitiveMemoryProbeService(
         var session = await dbContext.Set<CognitiveMemoryProbeSessionRecord>()
             .SingleAsync(item => item.Id == turn.ProbeSessionId, cancellationToken);
         var now = clock.GetUtcNow();
+        var repairCandidateRequired = RequiresRepairCandidate(request.Action);
         var reviewRequired = request.RequestHumanReview ||
-                             request.Action is CognitiveMemoryProbeFeedbackAction.AddCorrection or CognitiveMemoryProbeFeedbackAction.MarkIncorrect or CognitiveMemoryProbeFeedbackAction.WrongScope ||
+                             request.Action == CognitiveMemoryProbeFeedbackAction.RequestReview ||
+                             repairCandidateRequired ||
                              request.RiskLevel == CognitiveMemoryRiskLevel.High;
         CognitiveMemoryReviewItemRecord? reviewItem = null;
         if (reviewRequired)
@@ -157,9 +175,10 @@ public sealed class CognitiveMemoryProbeService(
                 Status = CognitiveMemoryReviewStatus.Pending,
                 RiskLevel = request.RiskLevel,
                 ReasonCode = "probe-feedback",
-                ReasonText = string.IsNullOrWhiteSpace(request.Notes) ? "Probe feedback requires review." : request.Notes.Trim(),
+                ReasonText = CreateReviewReasonText(request),
                 SourceEvidenceCount = 0,
-                CreatedAtUtc = now
+                CreatedAtUtc = now,
+                ConcurrencyToken = Guid.NewGuid()
             };
             dbContext.Add(reviewItem);
         }
@@ -175,7 +194,7 @@ public sealed class CognitiveMemoryProbeService(
                 Question = turn.Question,
                 ExpectedEvidenceText = string.IsNullOrWhiteSpace(request.CorrectionText)
                     ? turn.AnswerSummary
-                    : request.CorrectionText.Trim(),
+                    : TrimText(request.CorrectionText, MaximumStoredProbeRegressionExpectedTextLength),
                 ExpectedContextKey = "project-scope",
                 AccessPolicyProfileId = session.PolicyProfileId,
                 EvaluatorProfileVersion = "probe-regression-v1",
@@ -192,13 +211,18 @@ public sealed class CognitiveMemoryProbeService(
             Action = request.Action,
             CalibrationOutcome = request.CalibrationOutcome,
             RiskLevel = request.RiskLevel,
-            Notes = request.Notes.Trim(),
-            CorrectionText = request.CorrectionText.Trim(),
+            Notes = TrimText(request.Notes, MaximumStoredProbeFeedbackNotesLength),
+            CorrectionText = TrimText(request.CorrectionText, MaximumStoredProbeCorrectionLength),
             ReviewItemId = reviewItem?.Id,
             RegressionTestCaseId = regression?.Id,
             CreatedAtUtc = now
         };
         dbContext.Add(feedback);
+
+        if (repairCandidateRequired && reviewItem is not null)
+        {
+            AddProbeFeedbackRepairCandidate(dbContext, session, turn, feedback, request, reviewItem, now);
+        }
 
         var findingKind = request.Action switch
         {
@@ -216,7 +240,9 @@ public sealed class CognitiveMemoryProbeService(
                 ProjectId = turn.ProjectId,
                 FindingKind = findingKind,
                 RiskLevel = request.RiskLevel,
-                Summary = string.IsNullOrWhiteSpace(request.Notes) ? request.Action.ToString() : request.Notes.Trim(),
+                Summary = TrimText(
+                    string.IsNullOrWhiteSpace(request.Notes) ? request.Action.ToString() : request.Notes,
+                    MaximumStoredProbeFindingSummaryLength),
                 ReviewItemId = reviewItem?.Id,
                 CreatedAtUtc = now
             });
@@ -249,6 +275,287 @@ public sealed class CognitiveMemoryProbeService(
         persistedFeedback.CalibrationEventId = calibrationEvent.Id;
         await updateContext.SaveChangesAsync(cancellationToken);
         return persistedFeedback;
+    }
+
+    private static bool RequiresRepairCandidate(CognitiveMemoryProbeFeedbackAction action)
+        => action is CognitiveMemoryProbeFeedbackAction.AddCorrection
+            or CognitiveMemoryProbeFeedbackAction.MarkIncorrect
+            or CognitiveMemoryProbeFeedbackAction.WrongScope;
+
+    private static void AddProbeFeedbackRepairCandidate(
+        AppDbContext dbContext,
+        CognitiveMemoryProbeSessionRecord session,
+        CognitiveMemoryProbeTurnRecord turn,
+        CognitiveMemoryProbeFeedbackRecord feedback,
+        CognitiveMemoryProbeFeedbackRequest request,
+        CognitiveMemoryReviewItemRecord reviewItem,
+        DateTimeOffset now)
+    {
+        var locator = $"probe-session/{session.Id:D}/turn/{turn.Id:D}/feedback/{feedback.Id:D}";
+        var content = CreateProbeFeedbackSourceContent(turn, request);
+        var contentHash = CognitiveMemoryHash.FromUtf8(content).Value;
+        var correctionSummary = CreateCorrectionSummary(turn, request);
+        var correctionHash = CognitiveMemoryHash.FromUtf8(correctionSummary).Value;
+        var idempotencyKey = $"probe-feedback-repair:{feedback.Id:D}";
+        var title = TrimText($"Probe correction: {turn.Question}", MaximumReviewTitleLength);
+
+        var sourceManifest = new CognitiveMemorySourceManifestRecord
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = turn.ProjectId,
+            SourceSystem = ProbeFeedbackSourceSystem,
+            SourceScopeKey = $"project:{turn.ProjectId:D}",
+            SourceSnapshotId = $"probe-feedback:{feedback.Id:D}",
+            SnapshotHash = contentHash,
+            ProviderVersion = ProbeFeedbackAlgorithmVersion,
+            ScanStatus = CognitiveMemoryRunStatus.Succeeded,
+            ObservedAtUtc = now,
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now,
+            ConcurrencyToken = Guid.NewGuid()
+        };
+        var sourceItem = new CognitiveMemorySourceItemRecord
+        {
+            Id = Guid.NewGuid(),
+            SourceManifestId = sourceManifest.Id,
+            ProjectId = turn.ProjectId,
+            SourceSystem = ProbeFeedbackSourceSystem,
+            SourceItemKey = $"probe-turn-feedback:{feedback.Id:D}",
+            SourceItemType = ProbeFeedbackSourceItemType,
+            Title = title,
+            ContentText = content,
+            Locator = locator,
+            ContentHash = contentHash,
+            RedactionState = CognitiveMemoryRedactionState.Safe,
+            AccessLevel = CognitiveMemoryAccessLevel.Project,
+            AccessScope = turn.ProjectId.ToString("D"),
+            ProvenanceJson = CreateProbeFeedbackProvenanceJson(session, turn, feedback, request),
+            ObservedAtUtc = now,
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now,
+            ConcurrencyToken = Guid.NewGuid()
+        };
+        var evidenceAnchor = new CognitiveMemoryEvidenceAnchorRecord
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = turn.ProjectId,
+            AnchorKind = CognitiveMemoryEvidenceAnchorKind.ProbeTurn,
+            SourceManifestId = sourceManifest.Id,
+            SourceItemId = sourceItem.Id,
+            SourceSystem = ProbeFeedbackSourceSystem,
+            Locator = locator,
+            StructuredPath = "$.probeFeedback",
+            TextStart = 0,
+            TextEnd = content.Length,
+            QuoteHash = correctionHash,
+            TrustLevel = CognitiveMemorySourceTrustLevel.ExternalUnverified,
+            RedactionState = CognitiveMemoryRedactionState.Safe,
+            SourceHash = contentHash,
+            ObservedAtUtc = now,
+            CreatedAtUtc = now,
+            ConcurrencyToken = Guid.NewGuid()
+        };
+        var mutationCommand = new CognitiveMemoryMutationCommandRecord
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = turn.ProjectId,
+            CommandKind = ResolveRepairCommandKind(request.Action),
+            Status = CognitiveMemoryMutationCommandStatus.ReviewRequired,
+            ActorKind = CognitiveMemoryActorKind.User,
+            ActorId = session.ActorId,
+            IdempotencyKey = idempotencyKey,
+            EvidenceAnchorIdsJson = SerializeGuidList([evidenceAnchor.Id]),
+            PayloadJson = content,
+            RequiresHumanReview = true,
+            ReviewReason = CreateCandidateReason(request),
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now,
+            ConcurrencyToken = Guid.NewGuid()
+        };
+        var runId = Guid.NewGuid();
+        var run = new CognitiveMemoryRunRecord
+        {
+            Id = runId,
+            ProjectId = turn.ProjectId,
+            RunKind = CognitiveMemoryRunKind.Consolidation,
+            Status = CognitiveMemoryRunStatus.Succeeded,
+            OperationMode = CognitiveMemoryOperationMode.Consolidate,
+            IdempotencyKey = idempotencyKey,
+            InputHash = contentHash,
+            AlgorithmVersion = ProbeFeedbackAlgorithmVersion,
+            StartedAtUtc = now,
+            CompletedAtUtc = now,
+            ConcurrencyToken = Guid.NewGuid()
+        };
+        var consolidationRun = new CognitiveMemoryConsolidationRunRecord
+        {
+            Id = runId,
+            ProjectId = turn.ProjectId,
+            Mode = CognitiveMemoryConsolidationMode.ContradictionReview,
+            TriggerKind = CognitiveMemoryConsolidationTriggerKind.Manual,
+            Status = CognitiveMemoryRunStatus.Succeeded,
+            ProfileName = "probe-feedback-repair",
+            IdempotencyKey = idempotencyKey,
+            InputHash = contentHash,
+            OutputHash = correctionHash,
+            AlgorithmVersion = ProbeFeedbackAlgorithmVersion,
+            LeaseOwnerId = session.ActorId,
+            LeaseExpiresAtUtc = now,
+            SourceItemsScanned = 1,
+            CandidatesCreated = 1,
+            MutationCommandsSubmitted = 1,
+            ReviewItemsCreated = 1,
+            StartedAtUtc = now,
+            CompletedAtUtc = now,
+            ConcurrencyToken = Guid.NewGuid()
+        };
+        var payload = new CognitiveMemoryConsolidationCandidatePayload(
+            CognitiveMemoryConsolidationCandidateKind.Contradiction,
+            sourceItem.Id,
+            evidenceAnchor.Id,
+            mutationCommand.Id,
+            reviewItem.Id,
+            ProbeFeedbackSourceSystem,
+            ProbeFeedbackSourceItemType,
+            title,
+            correctionSummary,
+            contentHash,
+            CreateCandidateReason(request));
+        var candidate = new CognitiveMemoryConsolidationCandidateRecord
+        {
+            Id = Guid.NewGuid(),
+            RunId = consolidationRun.Id,
+            ProjectId = turn.ProjectId,
+            CandidateKind = payload.CandidateKind,
+            Status = CognitiveMemoryConsolidationCandidateStatus.ReviewRequired,
+            SourceItemId = sourceItem.Id,
+            EvidenceAnchorId = evidenceAnchor.Id,
+            MutationCommandId = mutationCommand.Id,
+            ReviewItemId = reviewItem.Id,
+            ScoreBucket = CognitiveMemoryScoreProjectionBucket.NeedsReview,
+            DisplayPriorityProjection = ResolveRepairPriority(request.RiskLevel),
+            SourceContentHash = contentHash,
+            OutputHash = correctionHash,
+            AlgorithmVersion = ProbeFeedbackAlgorithmVersion,
+            ReasonCode = "ProbeFeedbackRepair",
+            ReasonText = payload.Reason,
+            PayloadJson = JsonSerializer.Serialize(
+                payload,
+                CognitiveMemoryJsonSerializerContext.Default.CognitiveMemoryConsolidationCandidatePayload),
+            CreatedAtUtc = now,
+            ConcurrencyToken = Guid.NewGuid()
+        };
+
+        reviewItem.SourceEvidenceCount = 1;
+
+        dbContext.AddRange(sourceManifest, sourceItem, evidenceAnchor, mutationCommand, run, consolidationRun, candidate);
+        dbContext.Add(new CognitiveMemoryMutationAuditEventRecord
+        {
+            Id = Guid.NewGuid(),
+            MutationCommandId = mutationCommand.Id,
+            ProjectId = turn.ProjectId,
+            Sequence = 1,
+            EventKind = CognitiveMemoryMutationAuditEventKind.ReviewRequired,
+            Message = $"Probe feedback repair candidate '{candidate.Id:D}' requires review before memory mutation.",
+            CreatedAtUtc = now
+        });
+    }
+
+    private static CognitiveMemoryMutationCommandKind ResolveRepairCommandKind(CognitiveMemoryProbeFeedbackAction action)
+        => action switch
+        {
+            CognitiveMemoryProbeFeedbackAction.WrongScope => CognitiveMemoryMutationCommandKind.NarrowScope,
+            CognitiveMemoryProbeFeedbackAction.MarkIncorrect => CognitiveMemoryMutationCommandKind.AttackClaim,
+            _ => CognitiveMemoryMutationCommandKind.ProposeClaim
+        };
+
+    private static string CreateProbeFeedbackSourceContent(
+        CognitiveMemoryProbeTurnRecord turn,
+        CognitiveMemoryProbeFeedbackRequest request)
+        => string.Join(
+            Environment.NewLine,
+            [
+                $"Question: {turn.Question}",
+                $"Recalled answer summary: {FirstNonEmpty(turn.AnswerSummary, "No answer summary was recorded.")}",
+                $"Feedback action: {request.Action}",
+                $"Calibration outcome: {request.CalibrationOutcome}",
+                $"Risk level: {request.RiskLevel}",
+                $"User notes: {FirstNonEmpty(request.Notes, "No notes supplied.")}",
+                $"Correction or expected truth: {FirstNonEmpty(request.CorrectionText, request.Notes, $"The probe answer was flagged as {request.Action}.")}"
+            ]);
+
+    private static string CreateProbeFeedbackProvenanceJson(
+        CognitiveMemoryProbeSessionRecord session,
+        CognitiveMemoryProbeTurnRecord turn,
+        CognitiveMemoryProbeFeedbackRecord feedback,
+        CognitiveMemoryProbeFeedbackRequest request)
+    {
+        var payload = new Dictionary<string, string>
+        {
+            ["sourceSystem"] = ProbeFeedbackSourceSystem,
+            ["sessionId"] = session.Id.ToString("D"),
+            ["turnId"] = turn.Id.ToString("D"),
+            ["feedbackId"] = feedback.Id.ToString("D"),
+            ["recallTraceId"] = turn.RecallTraceId.ToString("D"),
+            ["action"] = request.Action.ToString(),
+            ["calibrationOutcome"] = request.CalibrationOutcome.ToString(),
+            ["riskLevel"] = request.RiskLevel.ToString()
+        };
+
+        return JsonSerializer.Serialize(
+            payload,
+            CognitiveMemoryJsonSerializerContext.Default.DictionaryStringString);
+    }
+
+    private static string CreateReviewReasonText(CognitiveMemoryProbeFeedbackRequest request)
+        => FirstNonEmpty(
+            request.Notes,
+            request.CorrectionText,
+            request.Action is CognitiveMemoryProbeFeedbackAction.AddCorrection
+                or CognitiveMemoryProbeFeedbackAction.MarkIncorrect
+                or CognitiveMemoryProbeFeedbackAction.WrongScope
+                ? "Probe feedback proposed a source-backed memory repair."
+                : "Probe feedback requires review.");
+
+    private static string CreateCorrectionSummary(
+        CognitiveMemoryProbeTurnRecord turn,
+        CognitiveMemoryProbeFeedbackRequest request)
+    {
+        var fallback = request.Action switch
+        {
+            CognitiveMemoryProbeFeedbackAction.WrongScope => $"The answer to '{turn.Question}' was marked wrong-scope and must be narrowed before reuse.",
+            CognitiveMemoryProbeFeedbackAction.MarkIncorrect => $"The answer to '{turn.Question}' was marked incorrect and must not be reused as trusted memory without repair.",
+            _ => $"The answer to '{turn.Question}' has a user-supplied correction."
+        };
+
+        return TrimText(FirstNonEmpty(request.CorrectionText, request.Notes, fallback), MaximumReasonLength);
+    }
+
+    private static string CreateCandidateReason(CognitiveMemoryProbeFeedbackRequest request)
+        => TrimText(
+            $"Probe feedback action {request.Action} requires review-gated repair before the correction can become trusted memory. {FirstNonEmpty(request.Notes, request.CorrectionText, string.Empty)}",
+            MaximumReasonLength);
+
+    private static double ResolveRepairPriority(CognitiveMemoryRiskLevel riskLevel)
+        => riskLevel switch
+        {
+            CognitiveMemoryRiskLevel.High => 0.95,
+            CognitiveMemoryRiskLevel.Medium => 0.75,
+            _ => 0.55
+        };
+
+    private static string SerializeGuidList(IReadOnlyList<Guid> values)
+        => JsonSerializer.Serialize(
+            values.ToArray(),
+            CognitiveMemoryJsonSerializerContext.Default.GuidArray);
+
+    private static string FirstNonEmpty(params string?[] values)
+        => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
+
+    private static string TrimText(string? value, int maxLength)
+    {
+        var trimmed = string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+        return trimmed.Length <= maxLength ? trimmed : trimmed[..maxLength];
     }
 
     public async ValueTask<CognitiveMemoryProbeRegressionRunRecord> ReplayRegressionAsync(

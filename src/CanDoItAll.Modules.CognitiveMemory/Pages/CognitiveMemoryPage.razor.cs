@@ -17,6 +17,9 @@ public partial class CognitiveMemoryPage
     public ICognitiveMemoryReviewUiService ReviewUiService { get; set; } = default!;
 
     [Inject]
+    public ICognitiveMemoryProbeService ProbeService { get; set; } = default!;
+
+    [Inject]
     public ICognitiveMemoryAutomationSettingsService AutomationSettingsService { get; set; } = default!;
 
     [Inject]
@@ -64,6 +67,20 @@ public partial class CognitiveMemoryPage
     private string externalSourceStatus = "Ready.";
     private int externalSourceProgress;
     private CognitiveMemoryExternalSourceIngestResult? lastExternalSourceResult;
+    private Guid? activeProbeSessionId;
+    private CognitiveMemoryProbeAskResult? lastProbeAskResult;
+    private CognitiveMemoryProbeFeedbackRecord? lastProbeFeedback;
+    private string probeSessionTitle = "Project memory dialogue";
+    private string probeQuestion = "What are the project phases, investments, team growth, and main risks?";
+    private string probeFeedbackNotes = string.Empty;
+    private string probeCorrectionText = string.Empty;
+    private string probeStatus = "Ready.";
+    private CognitiveMemoryRecallMode probeRecallMode = CognitiveMemoryRecallMode.DeepSourceGrounded;
+    private CognitiveMemoryRecallIntentKind probeIntent = CognitiveMemoryRecallIntentKind.SourceLookup;
+    private CognitiveMemoryProbeFeedbackAction probeFeedbackAction = CognitiveMemoryProbeFeedbackAction.MarkCorrect;
+    private CognitiveMemoryRiskLevel probeFeedbackRiskLevel = CognitiveMemoryRiskLevel.Medium;
+    private bool probeCreateRegressionTest;
+    private bool probeRequestHumanReview;
 
     private CognitiveMemoryReviewQueueItem? SelectedReviewItem
         => snapshot?.ReviewItems.FirstOrDefault(item => item.Id.Value == selectedReviewItemId);
@@ -74,8 +91,44 @@ public partial class CognitiveMemoryPage
     private CognitiveMemoryRecallTraceView? SelectedRecallTrace
         => snapshot?.RecallTraces.FirstOrDefault(trace => trace.Id == selectedRecallTraceId);
 
+    private CognitiveMemoryProbeSessionView? ActiveProbeSessionView
+        => activeProbeSessionId is { } sessionId
+            ? snapshot?.ProbeSessions.FirstOrDefault(session => session.Id == sessionId)
+            : null;
+
+    private bool HasActiveProbeSession
+        => activeProbeSessionId.HasValue;
+
+    private bool CanStartProbe
+        => !isBusy && ProjectId is { } projectId && projectId != Guid.Empty;
+
+    private bool CanAskProbe
+        => !isBusy &&
+           ProjectId is { } projectId &&
+           projectId != Guid.Empty &&
+           !string.IsNullOrWhiteSpace(probeQuestion);
+
+    private bool CanSendProbeFeedback
+        => !isBusy && lastProbeAskResult?.Turn is not null;
+
     private string ProjectScopePlaceholder
         => ProjectId?.ToString("D") ?? "Optional process scope id";
+
+    private string ProbeProjectScopeText
+        => ProjectId is { } projectId && projectId != Guid.Empty
+            ? projectId.ToString("D")
+            : "No project selected";
+
+    private string ActiveProbeSessionTitle
+        => ActiveProbeSessionView?.Title ??
+           (activeProbeSessionId is { } sessionId ? $"Session {FormatShortId(sessionId)}" : "No active session");
+
+    private string ActiveProbeSessionMeta
+        => ActiveProbeSessionView is { } session
+            ? $"{FormatLabel(session.Status)} / {FormatLabel(session.RecallMode)} / {session.TurnCount} turn(s)"
+            : activeProbeSessionId is null
+                ? "Start or reuse a session before asking."
+                : "Session was created in this workbench and will appear after refresh.";
 
     private string ReviewQueueTone
         => snapshot?.Summary.HighRiskReviewCount > 0
@@ -272,6 +325,222 @@ public partial class CognitiveMemoryPage
         selectedReviewItemId = ResolveSelectedReviewItemId(snapshot, selectedReviewItemId);
         selectedRecallTraceId = ResolveSelectedRecallTraceId(snapshot, selectedRecallTraceId);
     }
+
+    private async Task StartProbeSessionAsync()
+    {
+        if (isBusy)
+        {
+            return;
+        }
+
+        if (!TryResolveProbeProjectId(out var projectId))
+        {
+            return;
+        }
+
+        isBusy = true;
+        errorMessage = string.Empty;
+        probeStatus = "Starting probe session.";
+
+        try
+        {
+            var session = await CreateProbeSessionAsync(projectId);
+            activeProbeSessionId = session.Id;
+            lastProbeAskResult = null;
+            lastProbeFeedback = null;
+            selectedRecallTraceId = null;
+            probeStatus = $"Active: {session.Title}";
+            NotificationService.Success("Probe session started", session.Title);
+            await ReloadSnapshotAsync();
+        }
+        catch (Exception exception)
+        {
+            probeStatus = exception.Message;
+            errorMessage = exception.Message;
+            NotificationService.Error("Probe session failed", exception.Message);
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private void ReuseProbeSession(Guid sessionId)
+    {
+        activeProbeSessionId = sessionId;
+        lastProbeAskResult = null;
+        lastProbeFeedback = null;
+        var session = snapshot?.ProbeSessions.FirstOrDefault(item => item.Id == sessionId);
+        if (session is not null)
+        {
+            probeRecallMode = session.RecallMode;
+            probeStatus = $"Reusing: {session.Title}";
+        }
+    }
+
+    private async Task AskProbeAsync()
+    {
+        if (isBusy)
+        {
+            return;
+        }
+
+        if (!TryResolveProbeProjectId(out var projectId))
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(probeQuestion))
+        {
+            probeStatus = "Question is required.";
+            NotificationService.Warning("Probe question required", probeStatus);
+            return;
+        }
+
+        isBusy = true;
+        errorMessage = string.Empty;
+        probeStatus = "Asking memory.";
+
+        try
+        {
+            if (activeProbeSessionId is null)
+            {
+                var session = await CreateProbeSessionAsync(projectId);
+                activeProbeSessionId = session.Id;
+            }
+
+            var result = await ProbeService.AskAsync(new CognitiveMemoryProbeAskRequest(
+                activeProbeSessionId.Value,
+                probeQuestion,
+                probeIntent,
+                CreateProbeRecallBudget(),
+                CreateProbeMetadata()));
+            lastProbeAskResult = result;
+            lastProbeFeedback = null;
+            selectedRecallTraceId = result.RecallResult.TraceId;
+            activeProbeSessionId = result.Session.Id;
+            probeStatus = $"Answered turn {result.Turn.Sequence}: {result.RecallResult.ContextPack.SourceRefs.Count(item => item.IncludedInContext)} included source ref(s).";
+            NotificationService.Success("Probe answered", $"Trace {FormatShortId(result.RecallResult.TraceId)}");
+            await ReloadSnapshotAsync();
+        }
+        catch (Exception exception)
+        {
+            probeStatus = exception.Message;
+            errorMessage = exception.Message;
+            NotificationService.Error("Probe ask failed", exception.Message);
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private async Task SubmitProbeFeedbackAsync()
+    {
+        if (isBusy || lastProbeAskResult?.Turn is not { } turn)
+        {
+            return;
+        }
+
+        isBusy = true;
+        errorMessage = string.Empty;
+        probeStatus = "Recording feedback.";
+
+        try
+        {
+            var feedback = await ProbeService.RecordFeedbackAsync(new CognitiveMemoryProbeFeedbackRequest(
+                turn.Id,
+                probeFeedbackAction,
+                probeFeedbackNotes,
+                probeCorrectionText,
+                probeFeedbackRiskLevel,
+                probeCreateRegressionTest,
+                probeRequestHumanReview,
+                ResolveProbeCalibrationOutcome(probeFeedbackAction)));
+            lastProbeFeedback = feedback;
+            if (feedback.ReviewItemId is { } reviewItemId)
+            {
+                selectedReviewItemId = reviewItemId;
+            }
+
+            probeStatus = feedback.ReviewItemId is null
+                ? $"Feedback saved: {FormatShortId(feedback.Id)}"
+                : $"Feedback saved: {FormatShortId(feedback.Id)} / review {FormatShortId(feedback.ReviewItemId.Value)}";
+            NotificationService.Success("Probe feedback saved", probeStatus);
+            await ReloadSnapshotAsync();
+        }
+        catch (Exception exception)
+        {
+            probeStatus = exception.Message;
+            errorMessage = exception.Message;
+            NotificationService.Error("Probe feedback failed", exception.Message);
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private async Task<CognitiveMemoryProbeSessionRecord> CreateProbeSessionAsync(Guid projectId)
+        => await ProbeService.StartAsync(new CognitiveMemoryProbeStartRequest(
+            projectId,
+            string.IsNullOrWhiteSpace(probeSessionTitle) ? "Project memory dialogue" : probeSessionTitle.Trim(),
+            CreateProbePolicyContext(projectId, CognitiveMemoryRiskLevel.Low),
+            probeRecallMode));
+
+    private bool TryResolveProbeProjectId(out Guid projectId)
+    {
+        if (ProjectId is { } resolvedProjectId && resolvedProjectId != Guid.Empty)
+        {
+            projectId = resolvedProjectId;
+            return true;
+        }
+
+        projectId = Guid.Empty;
+        probeStatus = "Open the page with a projectId query parameter before probing.";
+        NotificationService.Warning("Project scope required", probeStatus);
+        return false;
+    }
+
+    private static CognitiveMemoryPolicyContext CreateProbePolicyContext(
+        Guid projectId,
+        CognitiveMemoryRiskLevel riskLevel)
+        => new(
+            projectId,
+            OperatorActorId,
+            CognitiveMemoryAccessLevel.Project,
+            new CognitiveMemoryPolicyProfileId("cognitive-memory-probe-ui"),
+            riskLevel,
+            AllowRestrictedContent: false);
+
+    private static CognitiveMemoryRecallBudget CreateProbeRecallBudget()
+        => new(
+            coarseCandidateLimit: 160,
+            graphExpansionDepth: 3,
+            vectorResultLimit: 48,
+            focusLimit: 48,
+            detailItemLimit: 48,
+            contextCharacterBudget: 96_000,
+            maxSourceBytes: 768_000);
+
+    private static IReadOnlyDictionary<string, string> CreateProbeMetadata()
+        => new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["surface"] = "dialogue-workbench",
+            ["actor"] = OperatorActorId
+        };
+
+    private static CognitiveMemoryCalibrationOutcomeKind ResolveProbeCalibrationOutcome(
+        CognitiveMemoryProbeFeedbackAction action)
+        => action switch
+        {
+            CognitiveMemoryProbeFeedbackAction.MarkCorrect => CognitiveMemoryCalibrationOutcomeKind.CorrectHighConfidence,
+            CognitiveMemoryProbeFeedbackAction.MarkIncorrect => CognitiveMemoryCalibrationOutcomeKind.IncorrectHighConfidence,
+            CognitiveMemoryProbeFeedbackAction.WrongScope => CognitiveMemoryCalibrationOutcomeKind.WrongScope,
+            CognitiveMemoryProbeFeedbackAction.NeedsSource => CognitiveMemoryCalibrationOutcomeKind.SourceInsufficient,
+            CognitiveMemoryProbeFeedbackAction.AddCorrection => CognitiveMemoryCalibrationOutcomeKind.IncorrectHighConfidence,
+            _ => CognitiveMemoryCalibrationOutcomeKind.Unknown
+        };
 
     private async Task SaveAutomationSettingsAsync()
     {
@@ -770,6 +1039,9 @@ public partial class CognitiveMemoryPage
         builder.CloseElement();
         builder.CloseElement();
     }
+
+    private static RenderFragment RenderFactFragment(string label, string value)
+        => builder => RenderFact(builder, 0, label, value);
 
     private void RenderDecisionButton(
         RenderTreeBuilder builder,

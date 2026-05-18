@@ -79,6 +79,17 @@
 ::deep .cognitive-memory-field {
     display: grid;
     gap: 0.35rem;
+    width: 100%;
+    min-width: 0;
+}
+
+::deep .cognitive-memory-field .cda-input,
+::deep .cognitive-memory-field select,
+::deep .cognitive-memory-field textarea {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
 }
 
 ::deep .cognitive-memory-checks {
@@ -183,6 +194,37 @@
 ::deep .cognitive-memory-notes {
     min-height: 5.5rem;
     resize: vertical;
+}
+
+::deep .cognitive-memory-probe-workbench,
+::deep .cognitive-memory-probe-result-grid {
+    align-items: start;
+}
+
+::deep .cognitive-memory-probe-question {
+    min-height: 8rem;
+    resize: vertical;
+}
+
+::deep .cognitive-memory-row-button {
+    width: 100%;
+    cursor: pointer;
+    text-align: left;
+}
+
+::deep .cognitive-memory-row-button:hover,
+::deep .cognitive-memory-row-button:focus-visible {
+    border-color: rgb(59 130 246);
+    background: rgb(239 246 255);
+    outline: none;
+}
+
+::deep .cognitive-memory-probe-section {
+    gap: 0.55rem;
+}
+
+::deep .cognitive-memory-probe-section .cognitive-memory-review-memory-text {
+    margin-top: 0.1rem;
 }
 
 ::deep .cognitive-memory-review-preview {
