@@ -27,17 +27,23 @@ public static class ShellNavigation
     ];
 
     public static IReadOnlyList<ShellNavigationItem> GetItems(int collaborationUnreadCount)
+        => GetItems(collaborationUnreadCount, []);
+
+    public static IReadOnlyList<ShellNavigationItem> GetItems(
+        int collaborationUnreadCount,
+        IEnumerable<IShellNavigationContributor> contributors)
     {
+        var items = BuildItems(contributors);
         if (collaborationUnreadCount <= 0)
         {
-            return Items;
+            return items;
         }
 
         var badgeText = collaborationUnreadCount > 99
             ? "99+"
             : collaborationUnreadCount.ToString(CultureInfo.InvariantCulture);
 
-        return Items
+        return items
             .Select(item => string.Equals(item.Route, "/collaboration", StringComparison.OrdinalIgnoreCase)
                 ? item with { BadgeText = badgeText }
                 : item)
@@ -45,9 +51,16 @@ public static class ShellNavigation
     }
 
     public static ShellNavigationItem MatchRoute(string relativeRoute)
+        => MatchRoute(relativeRoute, []);
+
+    public static ShellNavigationItem MatchRoute(
+        string relativeRoute,
+        IEnumerable<IShellNavigationContributor> contributors)
     {
         var normalized = string.IsNullOrWhiteSpace(relativeRoute) ? "/" : $"/{relativeRoute.TrimStart('/')}";
-        return Items
+        var items = BuildItems(contributors);
+
+        return items
             .Where(item => IsRouteMatch(normalized, item.Route))
             .OrderByDescending(item => item.Route.Length)
             .FirstOrDefault()
@@ -63,6 +76,64 @@ public static class ShellNavigation
 
         return string.Equals(currentRoute, navigationRoute, StringComparison.OrdinalIgnoreCase) ||
                currentRoute.StartsWith($"{navigationRoute}/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static IReadOnlyList<ShellNavigationItem> BuildItems(IEnumerable<IShellNavigationContributor> contributors)
+    {
+        var contributions = contributors
+            .SelectMany(contributor => contributor.GetShellNavigationContributions())
+            .Where(contribution => !string.IsNullOrWhiteSpace(contribution.ParentRoute))
+            .Where(contribution => !string.IsNullOrWhiteSpace(contribution.Item.Route))
+            .OrderBy(contribution => contribution.Order)
+            .ThenBy(contribution => contribution.Item.Title, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (contributions.Length == 0)
+        {
+            return Items;
+        }
+
+        var contributionsByParent = contributions
+            .GroupBy(contribution => NormalizeRouteKey(contribution.ParentRoute), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.ToArray(), StringComparer.OrdinalIgnoreCase);
+
+        var parentRoutes = Items
+            .Select(item => NormalizeRouteKey(item.Route))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var merged = new List<ShellNavigationItem>(Items.Count + contributions.Length);
+
+        foreach (var item in Items)
+        {
+            merged.Add(item);
+
+            if (contributionsByParent.TryGetValue(NormalizeRouteKey(item.Route), out var children))
+            {
+                merged.AddRange(children.Select(contribution => contribution.Item));
+            }
+        }
+
+        var orphanedContributions = contributions
+            .Where(contribution => !parentRoutes.Contains(NormalizeRouteKey(contribution.ParentRoute)))
+            .Select(contribution => contribution.Item);
+        merged.AddRange(orphanedContributions);
+
+        return merged;
+    }
+
+    private static string NormalizeRouteKey(string route)
+    {
+        if (string.IsNullOrWhiteSpace(route))
+        {
+            return "/";
+        }
+
+        var normalized = route.Trim();
+        if (string.Equals(normalized, "/", StringComparison.Ordinal))
+        {
+            return "/";
+        }
+
+        return $"/{normalized.Trim('/')}";
     }
 }
 

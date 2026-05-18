@@ -61,6 +61,7 @@
                         var normalizedCurrentRoute = string.IsNullOrWhiteSpace(CurrentRoute) ? "/" : $"/{CurrentRoute.TrimStart('/')}";
                         var isActive = IsRouteMatch(normalizedCurrentRoute, item.Route);
                         <TooltipTarget Position="TooltipPosition.Right"
+                                       Delay="@MenuTooltipDelay"
                                        TriggerClass="w-full"
                                        TooltipClass="cda-shell-nav-tooltip"
                                        TestId="@BuildNavigationTooltipTestId(item.Route)">
@@ -401,7 +402,8 @@
     private const int ExpandedNavigationFallbackRowCapacity = 12;
     private const int CollapsedNavigationFallbackRowCapacity = 13;
     private const int MinimumNavigationRowCapacity = 4;
-    private static readonly TimeSpan FlyoutCardTooltipDelay = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan MenuTooltipDelay = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan FlyoutCardTooltipDelay = MenuTooltipDelay;
     private static readonly IReadOnlyDictionary<string, string> NavigationOverflowLabels =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {

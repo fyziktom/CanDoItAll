@@ -64,4 +64,18 @@ public sealed class AppShellTests : TestContext
         Assert.Contains("shell-opened-work-panel", desktopSidebarMarkup);
         Assert.Contains("shell-opened-work-project-1", desktopSidebarMarkup);
     }
+
+    [Fact]
+    public void Standard_navigation_tooltips_use_delayed_menu_timing()
+    {
+        var cut = RenderComponent<AppShell>(parameters => parameters
+            .Add(component => component.NavigationItems, ShellNavigation.Items)
+            .Add(component => component.CurrentRoute, "agents"));
+
+        var dashboardTooltip = Assert.Single(
+            cut.FindComponents<TooltipTarget>(),
+            component => string.Equals(component.Instance.TestId, "shell-nav-tooltip-dashboard", StringComparison.Ordinal));
+
+        Assert.Equal(TimeSpan.FromSeconds(2), dashboardTooltip.Instance.Delay);
+    }
 }

@@ -8,6 +8,19 @@ public sealed record ShellNavigationItem(
     bool PinnedByDefault = true,
     string? BadgeText = null);
 
+public sealed record ShellNavigationContribution(
+    string ModuleId,
+    string ParentRoute,
+    ShellNavigationItem Item,
+    bool IsSubItem = true,
+    int Order = 0,
+    string? DesignNote = null);
+
+public interface IShellNavigationContributor
+{
+    IEnumerable<ShellNavigationContribution> GetShellNavigationContributions();
+}
+
 public sealed record ShellWorkspaceItem(
     string Id,
     string Title,
