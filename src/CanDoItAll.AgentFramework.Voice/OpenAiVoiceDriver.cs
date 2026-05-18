@@ -56,6 +56,11 @@ public sealed class OpenAiVoiceDriver : ISpeechToTextVoiceDriver, ITextToSpeechV
             form.Add(new StringContent(settings.Language), "language");
         }
 
+        if (!string.IsNullOrWhiteSpace(settings.Prompt))
+        {
+            form.Add(new StringContent(settings.Prompt), "prompt");
+        }
+
         var fileContent = new ByteArrayContent(request.AudioBytes);
         fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse(request.ContentType);
         form.Add(fileContent, "file", request.FileName);

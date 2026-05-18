@@ -80,7 +80,8 @@ public sealed class AgentVoiceTests
             new AgentSpeechToTextSettings
             {
                 Model = "gpt-4o-mini-transcribe",
-                Language = "en"
+                Language = "en",
+                Prompt = "The phrase may contain the words testing record."
             },
             [1, 2, 3],
             "voice.webm",
@@ -92,6 +93,9 @@ public sealed class AgentVoiceTests
         Assert.Equal("Bearer", handler.Request.Headers.Authorization!.Scheme);
         Assert.Equal("test-key", handler.Request.Headers.Authorization.Parameter);
         Assert.IsType<MultipartFormDataContent>(handler.Request.Content);
+        Assert.Contains("gpt-4o-mini-transcribe", handler.RequestBody, StringComparison.Ordinal);
+        Assert.Contains("en", handler.RequestBody, StringComparison.Ordinal);
+        Assert.Contains("The phrase may contain the words testing record.", handler.RequestBody, StringComparison.Ordinal);
     }
 
     [Fact]

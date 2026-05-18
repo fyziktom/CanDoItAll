@@ -39,6 +39,12 @@
                 <span class="cda-field-label">Language</span>
                 <InputText @bind-Value="settings.SpeechToText.Language" class="cda-input" data-testid="agents-voice-stt-language" />
             </label>
+            <label class="cda-field">
+                <span class="cda-field-label">Prompt</span>
+                <InputTextArea @bind-Value="settings.SpeechToText.Prompt"
+                               class="cda-input cda-input--textarea"
+                               data-testid="agents-voice-stt-prompt" />
+            </label>
         </Stack>
     </SurfaceCard>
 

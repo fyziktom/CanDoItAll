@@ -23,6 +23,8 @@ public sealed class AgentSpeechToTextSettings
     public string Model { get; set; } = AgentVoiceDefaults.OpenAiTranscriptionModel;
 
     public string Language { get; set; } = string.Empty;
+
+    public string Prompt { get; set; } = string.Empty;
 }
 
 public sealed class AgentTextToSpeechSettings
@@ -105,7 +107,8 @@ public static class AgentVoiceDefaults
             DriverKind = AgentVoiceDriverKind.OpenAi,
             ProviderProfileId = null,
             Model = OpenAiTranscriptionModel,
-            Language = string.Empty
+            Language = string.Empty,
+            Prompt = string.Empty
         };
     }
 
@@ -149,7 +152,8 @@ public static class AgentVoiceSettingsNormalizer
             DriverKind = settings.DriverKind,
             ProviderProfileId = NormalizeProviderId(settings.ProviderProfileId),
             Model = NormalizeText(settings.Model, AgentVoiceDefaults.OpenAiTranscriptionModel),
-            Language = NormalizeOptionalText(settings.Language)
+            Language = NormalizeOptionalText(settings.Language),
+            Prompt = NormalizeOptionalText(settings.Prompt)
         };
     }
 
