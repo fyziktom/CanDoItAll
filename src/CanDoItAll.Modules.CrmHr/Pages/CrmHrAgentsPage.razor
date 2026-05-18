@@ -8,14 +8,36 @@
     <Header>
         <PageHeader Eyebrow="CRM / HR"
                     Title="Agent directory projection"
-                    Description="CRM-HR displays the business-facing projection of AgentFramework-owned AI agents. Create and edit the technical runtime, instructions, skills, and provider setup in AgentFramework; CRM-HR consumes that catalog instead of creating a second source of truth.">
+                    Description="CRM-HR displays the business-facing projection of AgentFramework-owned AI agents. Create and edit the technical runtime, instructions, skills, and provider setup in AgentFramework; CRM-HR consumes that catalog instead of creating a second source of truth."
+                    Compact="true">
+            <Stats>
+                <CompactStat Label="projected agents"
+                             Value="@(ShouldShowListLoadingState ? "..." : agentItems.Count.ToString())"
+                             TooltipText="CRM-HR AI resources currently projected from AgentFramework." />
+                <CompactStat Label="bound providers"
+                             Value="@(ShouldShowListLoadingState ? "..." : agentItems.Count(item => item.HasProfile && !string.IsNullOrWhiteSpace(item.ProviderName)).ToString())"
+                             TooltipText="Projected agents already linked to a technical provider profile."
+                             Tone="info" />
+                <CompactStat Label="review"
+                             Value="@(ShouldShowListLoadingState ? "..." : agentItems.Count(item => item.ValidationStatus == AiValidationStatus.ReviewRequired).ToString())"
+                             TooltipText="Projected agents whose governance review is still pending."
+                             Tone="warning" />
+                <CompactStat Label="capability-backed"
+                             Value="@(ShouldShowListLoadingState ? "..." : agentItems.Count(item => item.CapabilityCount > 0).ToString())"
+                             TooltipText="Projected agents that already expose runtime capabilities."
+                             Tone="success" />
+            </Stats>
             <Actions>
-                <Button Text="Open technical catalog"
-                        data-testid="crmhr-agent-open-catalog"
-                        Click="OpenTechnicalCatalog" />
-                <Button Text="Open directory"
-                        ButtonStyle="ButtonStyle.Light"
-                        Click="OpenDirectoryRecord" />
+                <PageHeaderActionButton Icon="smart_toy"
+                                        Label="Open technical catalog"
+                                        TooltipText="Open the AgentFramework technical catalog."
+                                        ButtonStyle="ButtonStyle.Primary"
+                                        Click="OpenTechnicalCatalog"
+                                        data-testid="crmhr-agent-open-catalog" />
+                <PageHeaderActionButton Icon="asset"
+                                        Label="Open directory"
+                                        TooltipText="Open the linked directory record."
+                                        Click="OpenDirectoryRecord" />
             </Actions>
         </PageHeader>
     </Header>
@@ -23,24 +45,6 @@
     <ChildContent>
         <Stack GapScale="LayoutGap.Large">
             <CrmHrSecondaryTabs SelectedKey="agents" />
-
-            <SummaryTiles>
-                <SummaryTile Label="Projected agents"
-                             Value="@(ShouldShowListLoadingState ? "..." : agentItems.Count.ToString())"
-                             HelperText="CRM-HR AI resources currently projected from AgentFramework." />
-                <SummaryTile Label="Bound providers"
-                             Value="@(ShouldShowListLoadingState ? "..." : agentItems.Count(item => item.HasProfile && !string.IsNullOrWhiteSpace(item.ProviderName)).ToString())"
-                             HelperText="Projected agents already linked to a technical provider profile."
-                             Tone="info" />
-                <SummaryTile Label="Review required"
-                             Value="@(ShouldShowListLoadingState ? "..." : agentItems.Count(item => item.ValidationStatus == AiValidationStatus.ReviewRequired).ToString())"
-                             HelperText="Projected agents whose governance review is still pending."
-                             Tone="warning" />
-                <SummaryTile Label="Capability-backed"
-                             Value="@(ShouldShowListLoadingState ? "..." : agentItems.Count(item => item.CapabilityCount > 0).ToString())"
-                             HelperText="Projected agents that already expose runtime capabilities."
-                             Tone="success" />
-            </SummaryTiles>
 
             <ListDetailShell ListPaneWidth="30rem">
                 <ListHeader>

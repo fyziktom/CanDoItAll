@@ -1,13 +1,13 @@
 <SectionCard Title="Metrics"
              Description="Recent run outcomes, token estimates, and provider usage for the selected agent.">
-    <Grid Gap="LayoutGap.Medium" ColumnTemplate="repeat(auto-fit,minmax(12rem,1fr))">
-        <MetricCard Label="Runs" Value="@Metrics.Count.ToString()" />
-        <MetricCard Label="Succeeded" Value="@Metrics.Count(item => item.Outcome == RunOutcome.Succeeded).ToString()" />
-        <MetricCard Label="Failed" Value="@Metrics.Count(item => item.Outcome == RunOutcome.Failed).ToString()" />
-        <MetricCard Label="Input tokens" Value="@Metrics.Sum(item => item.InputTokens).ToString()" />
-        <MetricCard Label="Output tokens" Value="@Metrics.Sum(item => item.OutputTokens).ToString()" />
-        <MetricCard Label="Tool calls" Value="@Metrics.Sum(item => item.ToolCalls).ToString()" />
-    </Grid>
+    <CompactStatStrip>
+        <CompactStat Label="runs" Value="@Metrics.Count.ToString()" TooltipText="Run metrics recorded for the selected agent." />
+        <CompactStat Label="succeeded" Value="@Metrics.Count(item => item.Outcome == RunOutcome.Succeeded).ToString()" TooltipText="Runs that completed successfully." Tone="success" />
+        <CompactStat Label="failed" Value="@Metrics.Count(item => item.Outcome == RunOutcome.Failed).ToString()" TooltipText="Runs that ended in failure." Tone="danger" />
+        <CompactStat Label="input tokens" Value="@Metrics.Sum(item => item.InputTokens).ToString()" TooltipText="Estimated input tokens across recorded metrics." Tone="info" />
+        <CompactStat Label="output tokens" Value="@Metrics.Sum(item => item.OutputTokens).ToString()" TooltipText="Estimated output tokens across recorded metrics." Tone="info" />
+        <CompactStat Label="tool calls" Value="@Metrics.Sum(item => item.ToolCalls).ToString()" TooltipText="Tool invocations across recorded metrics." Tone="warning" />
+    </CompactStatStrip>
 
     @if (Metrics.Count == 0)
     {

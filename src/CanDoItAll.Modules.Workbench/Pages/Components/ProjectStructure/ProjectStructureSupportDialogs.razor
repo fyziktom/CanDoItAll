@@ -26,14 +26,13 @@
         </Actions>
         <Body>
             <Stack GapScale="LayoutGap.Large">
-                <Grid Columns="3"
-                      Gap="LayoutGap.Small">
-                    <MetricCard Label="Done" Value="@SummaryDialog.Summary.CompletedCount.ToString()" />
-                    <MetricCard Label="Active" Value="@SummaryDialog.Summary.ActiveCount.ToString()" />
-                    <MetricCard Label="Blocked" Value="@SummaryDialog.Summary.BlockedCount.ToString()" />
-                    <MetricCard Label="Review" Value="@SummaryDialog.Summary.ReviewCount.ToString()" />
-                    <MetricCard Label="Undated" Value="@SummaryDialog.Summary.UndatedCount.ToString()" />
-                </Grid>
+                <CompactStatStrip>
+                    <CompactStat Label="done" Value="@SummaryDialog.Summary.CompletedCount.ToString()" TooltipText="Completed project structure rows." Tone="success" />
+                    <CompactStat Label="active" Value="@SummaryDialog.Summary.ActiveCount.ToString()" TooltipText="Active project structure rows." Tone="info" />
+                    <CompactStat Label="blocked" Value="@SummaryDialog.Summary.BlockedCount.ToString()" TooltipText="Blocked project structure rows." Tone="danger" />
+                    <CompactStat Label="review" Value="@SummaryDialog.Summary.ReviewCount.ToString()" TooltipText="Project structure rows needing review." Tone="warning" />
+                    <CompactStat Label="undated" Value="@SummaryDialog.Summary.UndatedCount.ToString()" TooltipText="Project structure rows without a date." />
+                </CompactStatStrip>
 
                 <Stack GapScale="LayoutGap.Small"
                        Class="project-structure-summary-table">

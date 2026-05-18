@@ -31,6 +31,22 @@
     @apply border-slate-200 bg-white text-slate-600;
   }
 
+  .cda-compact-stat-strip {
+    @apply flex min-w-0 flex-wrap items-center gap-2;
+  }
+
+  .cda-compact-stat-host {
+    @apply inline-flex min-w-0;
+  }
+
+  .cda-compact-stat-trigger {
+    @apply inline-flex min-w-0;
+  }
+
+  .cda-status-badge.cda-compact-stat {
+    @apply max-w-[16rem] px-2.5 py-1 text-xs leading-none;
+  }
+
   .cda-metric-card {
     @apply rounded-xl border border-slate-100 bg-white/90 px-3 py-2.5;
   }

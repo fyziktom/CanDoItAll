@@ -169,24 +169,19 @@ else if (State.SelectedNode is not null)
                 <h3 class="cw-panel-title">@workflowStatus.WorkflowName</h3>
                 <p class="cw-panel-copy">@workflowStatus.Message</p>
 
-                <div class="cw-summary-grid project-structure-advanced-summary-grid">
-                    <div class="cw-summary-tile">
-                        <span>State</span>
-                        <strong>@workflowStatus.State</strong>
-                    </div>
-                    <div class="cw-summary-tile">
-                        <span>Step</span>
-                        <strong>@workflowStatus.StepLabel</strong>
-                    </div>
-                    <div class="cw-summary-tile">
-                        <span>Progress</span>
-                        <strong>@workflowStatus.ProgressLabel</strong>
-                    </div>
-                    <div class="cw-summary-tile">
-                        <span>Updated</span>
-                        <strong>@workflowStatus.LastUpdatedLabel</strong>
-                    </div>
-                </div>
+                <CompactStatStrip Class="project-structure-advanced-summary-grid">
+                    <CompactStat Text="@($"State {workflowStatus.State}")"
+                                 Tone="info"
+                                 TooltipText="@($"Workflow state: {workflowStatus.State}")" />
+                    <CompactStat Text="@($"Step {workflowStatus.StepLabel}")"
+                                 Tone="success"
+                                 TooltipText="@($"Current workflow step: {workflowStatus.StepLabel}")" />
+                    <CompactStat Text="@($"Progress {workflowStatus.ProgressLabel}")"
+                                 TooltipText="@($"Workflow progress: {workflowStatus.ProgressLabel}")" />
+                    <CompactStat Text="@($"Updated {workflowStatus.LastUpdatedLabel}")"
+                                 Tone="warning"
+                                 TooltipText="@($"Last workflow update: {workflowStatus.LastUpdatedLabel}")" />
+                </CompactStatStrip>
 
                 @if (!string.IsNullOrWhiteSpace(workflowStatus.RunId))
                 {
@@ -426,16 +421,13 @@ else if (State.SelectedNode is not null)
                     </span>
                 </summary>
                 <div class="project-structure-advanced-details__body">
-                    <div class="cw-summary-grid project-structure-advanced-summary-grid">
-                        <div class="cw-summary-tile">
-                            <span>Artifact</span>
-                            <strong>@selectedNode.ArtifactKind</strong>
-                        </div>
-                        <div class="cw-summary-tile">
-                            <span>Location</span>
-                            <strong>@selectedNode.LocationLabel</strong>
-                        </div>
-                    </div>
+                    <CompactStatStrip Class="project-structure-advanced-summary-grid">
+                        <CompactStat Text="@($"Artifact {selectedNode.ArtifactKind}")"
+                                     Tone="info"
+                                     TooltipText="@($"Artifact kind: {selectedNode.ArtifactKind}")" />
+                        <CompactStat Text="@($"Location {selectedNode.LocationLabel}")"
+                                     TooltipText="@($"Location: {selectedNode.LocationLabel}")" />
+                    </CompactStatStrip>
 
                     @if (selectedNode.DetailSections.Count > 0)
                     {

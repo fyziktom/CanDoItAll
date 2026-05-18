@@ -1,0 +1,100 @@
+@namespace CanDoItAll.Components.BaseLib
+@inherits StyledComponentBase
+
+<TooltipTarget Text="@ResolveTooltipText()"
+               Position="@Position"
+               Delay="@TooltipDelay"
+               Duration="@TooltipDuration"
+               TriggerClass="shrink-0"
+               TooltipClass="@TooltipClass"
+               TestId="@TooltipTestId"
+               TabIndex="-1">
+    <Button Icon="@Icon"
+            ButtonStyle="@ButtonStyle"
+            Size="@Size"
+            Variant="@Variant"
+            Disabled="@Disabled"
+            IsBusy="@IsBusy"
+            Click="@Click"
+            Href="@Href"
+            Target="@Target"
+            Rel="@Rel"
+            Class="@ResolveButtonClass()"
+            Style="@Style"
+            title="@ResolveTooltipText()"
+            aria-label="@ResolveLabel()"
+            data-testid="@TestId"
+            @attributes="AdditionalAttributes" />
+</TooltipTarget>
+
+@code {
+    private static readonly TimeSpan DefaultTooltipDelay = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan DefaultTooltipDuration = TimeSpan.FromSeconds(6);
+
+    [Parameter, EditorRequired]
+    public string Icon { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Label { get; set; }
+
+    [Parameter]
+    public string? TooltipText { get; set; }
+
+    [Parameter]
+    public ButtonStyle ButtonStyle { get; set; } = ButtonStyle.Light;
+
+    [Parameter]
+    public ButtonSize Size { get; set; } = ButtonSize.Small;
+
+    [Parameter]
+    public Variant Variant { get; set; } = Variant.Filled;
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    [Parameter]
+    public bool IsBusy { get; set; }
+
+    [Parameter]
+    public EventCallback Click { get; set; }
+
+    [Parameter]
+    public string? Href { get; set; }
+
+    [Parameter]
+    public string? Target { get; set; }
+
+    [Parameter]
+    public string? Rel { get; set; }
+
+    [Parameter]
+    public TooltipPosition Position { get; set; } = TooltipPosition.Bottom;
+
+    [Parameter]
+    public TimeSpan? TooltipDelay { get; set; } = DefaultTooltipDelay;
+
+    [Parameter]
+    public TimeSpan? TooltipDuration { get; set; } = DefaultTooltipDuration;
+
+    [Parameter]
+    public string? TooltipClass { get; set; } = "cda-page-header-action-tooltip";
+
+    [Parameter]
+    public string? TooltipTestId { get; set; }
+
+    [Parameter]
+    public string? TestId { get; set; }
+
+    private string ResolveLabel()
+        => string.IsNullOrWhiteSpace(Label)
+            ? Icon.Replace('_', ' ').Replace('-', ' ')
+            : Label;
+
+    private string ResolveTooltipText()
+        => string.IsNullOrWhiteSpace(TooltipText)
+            ? ResolveLabel()
+            : TooltipText;
+
+    private string ResolveButtonClass()
+        => CssClassBuilder.Join("cda-button--quick", Class);
+}

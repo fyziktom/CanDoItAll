@@ -56,17 +56,18 @@ else
         <Header>
             <PageHeader Eyebrow="Workbench"
                         Title="@($"{surface.ProjectName} calendar")"
-                        Description="Review phase windows, validation activity, tests, and custom milestones in one linked schedule surface." />
+                        Description="Review phase windows, validation activity, tests, and custom milestones in one linked schedule surface."
+                        Compact="true">
+                <Stats>
+                    <CompactStat Label="events" Value="@surface.Events.Count.ToString()" TooltipText="Scheduled project items on the current calendar surface." />
+                    <CompactStat Label="linked artifacts" Value="@surface.Events.Count(item => !string.IsNullOrWhiteSpace(item.Route)).ToString()" TooltipText="Events that can open a related artifact directly." Tone="info" />
+                    <CompactStat Label="selected" Value="@SelectedEventLabel" TooltipText="Current event focus for the detail pane." />
+                    <CompactStat Label="statuses" Value="@surface.Events.Select(item => item.Status).Distinct(StringComparer.OrdinalIgnoreCase).Count().ToString()" TooltipText="Distinct status labels in the current schedule." />
+                </Stats>
+            </PageHeader>
         </Header>
 
         <ChildContent>
-            <SummaryTiles>
-                <SummaryTile Label="Events" Value="@surface.Events.Count.ToString()" HelperText="Scheduled project items on the current calendar surface." />
-                <SummaryTile Label="Linked artifacts" Value="@surface.Events.Count(item => !string.IsNullOrWhiteSpace(item.Route)).ToString()" HelperText="Events that can open a related artifact directly." Tone="info" />
-                <SummaryTile Label="Selected item" Value="@SelectedEventLabel" HelperText="Current event focus for the detail pane." />
-                <SummaryTile Label="Statuses" Value="@surface.Events.Select(item => item.Status).Distinct(StringComparer.OrdinalIgnoreCase).Count().ToString()" HelperText="Distinct status labels in the current schedule." />
-            </SummaryTiles>
-
             <div class="space-y-5">
                 <SectionCard Title="Project calendar" Description="The JavaScript calendar wrapper owns rendering while selection, view persistence, and artifact opening stay typed in .NET.">
                     <CanvasCalendar Surface="canvasSurface"

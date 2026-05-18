@@ -30,47 +30,39 @@ tests: component:HomePageTests, e2e:smoke-dashboard
     <Header>
         <PageHeader Eyebrow="Dashboard"
                     Title="Delivery control surface"
-                    Description="Resume active work, reopen recent sessions, and move directly into the next project, validation, or prompt task.">
+                    Description="Resume active work, reopen recent sessions, and move directly into the next project, validation, or prompt task."
+                    Compact="true">
+            <Stats>
+                <CompactStat Label="projects"
+                             Value="@projectCount.ToString()"
+                             TooltipText="Saved project workspaces available to reopen." />
+                <CompactStat Label="open work items"
+                             Value="@openWorkItems.Count.ToString()"
+                             TooltipText="Tabs currently active in the recoverable workbench."
+                             Tone="info" />
+                <CompactStat Label="validation runs"
+                             Value="@validationRunCount.ToString()"
+                             TooltipText="Persisted review runs available for follow-up." />
+                <CompactStat Label="failed jobs"
+                             Value="@failedJobs.Count.ToString()"
+                             TooltipText="Operational issues that likely need attention."
+                             Tone="@(failedJobs.Count > 0 ? "warning" : "success")" />
+            </Stats>
             <Actions>
-                <Button Text="New project"
-                        Click="@(() => Navigation.NavigateTo("/projects"))" />
-                <Button ButtonStyle="ButtonStyle.Light"
-                        Text="Open projects"
-                        Click="@(() => Navigation.NavigateTo("/projects"))" />
+                <PageHeaderActionButton Icon="add"
+                                        Label="New project"
+                                        TooltipText="Start a new project workspace."
+                                        ButtonStyle="ButtonStyle.Primary"
+                                        Click="@(() => Navigation.NavigateTo("/projects"))" />
+                <PageHeaderActionButton Icon="asset"
+                                        Label="Open projects"
+                                        TooltipText="Open the projects workspace."
+                                        Click="@(() => Navigation.NavigateTo("/projects"))" />
             </Actions>
         </PageHeader>
     </Header>
 
     <ChildContent>
-        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-            <SummaryTile Label="Projects"
-                         Value="@projectCount.ToString()"
-                         HelperText="Saved project workspaces available to reopen."
-                         Badge="true"
-                         Compact="true"
-                         ShowHelperTextAsTooltip="true" />
-            <SummaryTile Label="Open work items"
-                         Value="@openWorkItems.Count.ToString()"
-                         HelperText="Tabs currently active in the recoverable workbench."
-                         Tone="info"
-                         Badge="true"
-                         Compact="true"
-                         ShowHelperTextAsTooltip="true" />
-            <SummaryTile Label="Validation runs"
-                         Value="@validationRunCount.ToString()"
-                         HelperText="Persisted review runs available for follow-up."
-                         Badge="true"
-                         Compact="true"
-                         ShowHelperTextAsTooltip="true" />
-            <SummaryTile Label="Failed jobs"
-                         Value="@failedJobs.Count.ToString()"
-                         HelperText="Operational issues that likely need attention."
-                         Tone="@(failedJobs.Count > 0 ? "warning" : "success")"
-                         Badge="true"
-                         Compact="true"
-                         ShowHelperTextAsTooltip="true" />
-        </Cluster>
-
         <Grid Gap="LayoutGap.XXLarge"
               ColumnTemplateXl="minmax(0,1.05fr) minmax(0,0.95fr)">
             <SectionCard Title="Quick actions" Description="Go directly to the next likely task instead of starting from a documentation-style overview.">

@@ -83,33 +83,23 @@
         else
         {
             <Stack GapScale="LayoutGap.Large">
-                <SummaryTiles GapScale="LayoutGap.Small"
-                              ColumnsMd="4">
-                    <SummaryTile Label="Approvals"
+                <CompactStatStrip>
+                    <CompactStat Label="approvals"
                                  Value="@selectedDetail.Approvals.Count.ToString()"
-                                 HelperText="Pending and resolved tool approvals."
-                                 Tone="warning"
-                                 Badge="true"
-                                 Compact="true" />
-                    <SummaryTile Label="Artifacts"
+                                 TooltipText="Pending and resolved tool approvals."
+                                 Tone="warning" />
+                    <CompactStat Label="artifacts"
                                  Value="@selectedDetail.Artifacts.Count.ToString()"
-                                 HelperText="Durable artifacts attached to this run."
-                                 Tone="success"
-                                 Badge="true"
-                                 Compact="true" />
-                    <SummaryTile Label="Checkpoints"
+                                 TooltipText="Durable artifacts attached to this run."
+                                 Tone="success" />
+                    <CompactStat Label="checkpoints"
                                  Value="@selectedDetail.Checkpoints.Count.ToString()"
-                                 HelperText="Resumable workflow checkpoints."
-                                 Tone="info"
-                                 Badge="true"
-                                 Compact="true" />
-                    <SummaryTile Label="Receipts"
+                                 TooltipText="Resumable workflow checkpoints."
+                                 Tone="info" />
+                    <CompactStat Label="receipts"
                                  Value="@selectedDetail.ToolReceipts.Count.ToString()"
-                                 HelperText="Controlled tool execution receipts."
-                                 Tone="neutral"
-                                 Badge="true"
-                                 Compact="true" />
-                </SummaryTiles>
+                                 TooltipText="Controlled tool execution receipts." />
+                </CompactStatStrip>
 
                 <SurfaceCard Soft="true">
                     <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">

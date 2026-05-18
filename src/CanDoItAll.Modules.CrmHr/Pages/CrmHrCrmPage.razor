@@ -12,11 +12,30 @@
     <Header>
         <PageHeader Eyebrow="CRM / HR"
                     Title="CRM workspace"
-                    Description="Review shared customer, partner, and vendor accounts, keep stakeholder ownership explicit, and log follow-ups before they disappear into side channels.">
+                    Description="Review shared customer, partner, and vendor accounts, keep stakeholder ownership explicit, and log follow-ups before they disappear into side channels."
+                    Compact="true">
+            <Stats>
+                <CompactStat Label="accounts"
+                             Value="@accounts.Count.ToString()"
+                             TooltipText="Organization records currently visible to the CRM workspace." />
+                <CompactStat Label="visible"
+                             Value="@FilteredAccounts.Count.ToString()"
+                             TooltipText="Accounts matching the current CRM filters."
+                             Tone="info" />
+                <CompactStat Label="overdue"
+                             Value="@accounts.Sum(item => item.OverdueNextActionCount).ToString()"
+                             TooltipText="Follow-ups already past due."
+                             Tone="warning" />
+                <CompactStat Label="recent"
+                             Value="@accounts.Count(item => item.LastInteractionAtUtc >= DateTimeOffset.UtcNow.AddDays(-30)).ToString()"
+                             TooltipText="Accounts with interactions in the last 30 days."
+                             Tone="success" />
+            </Stats>
             <Actions>
-                <Button Text="Open directory"
-                        ButtonStyle="ButtonStyle.Light"
-                        Click="OpenDirectory" />
+                <PageHeaderActionButton Icon="asset"
+                                        Label="Open directory"
+                                        TooltipText="Open the shared party directory."
+                                        Click="OpenDirectory" />
             </Actions>
         </PageHeader>
     </Header>
@@ -24,21 +43,6 @@
     <ChildContent>
         <Stack GapScale="LayoutGap.Large">
             <CrmHrSecondaryTabs SelectedKey="crm" />
-
-            <SummaryTiles>
-                <SummaryTile Label="Accounts"
-                             Value="@accounts.Count.ToString()"
-                             HelperText="Organization records currently visible to the CRM workspace." />
-                <SummaryTile Label="Visible"
-                             Value="@FilteredAccounts.Count.ToString()"
-                             HelperText="Accounts matching the current CRM filters." Tone="info" />
-                <SummaryTile Label="Overdue next actions"
-                             Value="@accounts.Sum(item => item.OverdueNextActionCount).ToString()"
-                             HelperText="Follow-ups already past due." Tone="warning" />
-                <SummaryTile Label="Recently active"
-                             Value="@accounts.Count(item => item.LastInteractionAtUtc >= DateTimeOffset.UtcNow.AddDays(-30)).ToString()"
-                             HelperText="Accounts with interactions in the last 30 days." Tone="success" />
-            </SummaryTiles>
 
             <ListDetailShell ListPaneWidth="28rem">
                 <ListHeader>

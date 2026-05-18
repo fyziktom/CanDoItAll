@@ -8,39 +8,43 @@
     <Header>
         <PageHeader Eyebrow="Collaboration"
                     Title="Inbox, threads, and escalation workspace"
-                    Description="Durable notifications and human conversations now live in one canonical module instead of being scattered across automation transport and activity timelines.">
+                    Description="Durable notifications and human conversations now live in one canonical module instead of being scattered across automation transport and activity timelines."
+                    Compact="true">
+            <Stats>
+                <CompactStat Label="unread"
+                             Value="@workspace.ShellState.UnreadCount.ToString()"
+                             TooltipText="Unread collaboration items waiting for review."
+                             Tone="info" />
+                <CompactStat Label="escalations"
+                             Value="@workspace.Escalations.Count.ToString()"
+                             TooltipText="Threads flagged for explicit human attention."
+                             Tone="warning" />
+                <CompactStat Label="threads"
+                             Value="@workspace.Threads.Count.ToString()"
+                             TooltipText="Durable collaboration threads stored in the app database." />
+                <CompactStat Label="transport"
+                             Value="canonical"
+                             TooltipText="Automation can project signals in, but Collaboration owns the read model."
+                             Tone="success" />
+            </Stats>
             <Actions>
-                <Button Text="Open activity"
-                        ButtonStyle="ButtonStyle.Light"
-                        Click="OpenActivity" />
-                <Button Text="Mark selected read"
-                        Disabled="@(workspace.SelectedThread is null || !workspace.SelectedThread.IsUnread)"
-                        Click="MarkSelectedThreadAsReadAsync"
-                        data-testid="collaboration-mark-read" />
+                <PageHeaderActionButton Icon="rev"
+                                        Label="Open activity"
+                                        TooltipText="Open the activity timeline."
+                                        Click="OpenActivity" />
+                <PageHeaderActionButton Icon="done_all"
+                                        Label="Mark selected read"
+                                        TooltipText="Mark the selected collaboration thread as read."
+                                        ButtonStyle="ButtonStyle.Primary"
+                                        Disabled="@(workspace.SelectedThread is null || !workspace.SelectedThread.IsUnread)"
+                                        Click="MarkSelectedThreadAsReadAsync"
+                                        data-testid="collaboration-mark-read" />
             </Actions>
         </PageHeader>
     </Header>
 
     <ChildContent>
         <Stack GapScale="LayoutGap.Large">
-            <SummaryTiles>
-                <SummaryTile Label="Unread"
-                             Value="@workspace.ShellState.UnreadCount.ToString()"
-                             HelperText="Unread collaboration items waiting for review."
-                             Tone="info" />
-                <SummaryTile Label="Escalations"
-                             Value="@workspace.Escalations.Count.ToString()"
-                             HelperText="Threads flagged for explicit human attention."
-                             Tone="warning" />
-                <SummaryTile Label="Threads"
-                             Value="@workspace.Threads.Count.ToString()"
-                             HelperText="Durable collaboration threads stored in the app database." />
-                <SummaryTile Label="Transport boundary"
-                             Value="Canonical"
-                             HelperText="Automation can project signals in, but Collaboration owns the read model."
-                             Tone="success" />
-            </SummaryTiles>
-
             <Tabs SelectedIndex="@selectedViewIndex"
                   SelectedIndexChanged="HandleSelectedViewChangedAsync"
                   Variant="TabsVariant.WorkspaceSecondary"

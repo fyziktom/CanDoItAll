@@ -29,14 +29,12 @@
                        Class="cw-panel-copy" />
         </Stack>
 
-        <Grid Columns="2"
-              Gap="LayoutGap.Small"
-              Class="project-structure-validation-overlay__metrics">
-            <MetricCard Label="Blocked" Value="@SummaryState.BlockedCount.ToString()" Class="project-structure-validation-overlay__metric" />
-            <MetricCard Label="Review" Value="@SummaryState.ReviewCount.ToString()" Class="project-structure-validation-overlay__metric" />
-            <MetricCard Label="Priority" Value="@SummaryState.PriorityCount.ToString()" Class="project-structure-validation-overlay__metric" />
-            <MetricCard Label="Selected issues" Value="@SummaryState.SelectedIssueCount.ToString()" Class="project-structure-validation-overlay__metric" />
-        </Grid>
+        <CompactStatStrip Class="project-structure-validation-overlay__metrics">
+            <CompactStat Label="blocked" Value="@SummaryState.BlockedCount.ToString()" TooltipText="Blocked project structure issues." Tone="danger" />
+            <CompactStat Label="review" Value="@SummaryState.ReviewCount.ToString()" TooltipText="Project structure issues needing review." Tone="warning" />
+            <CompactStat Label="priority" Value="@SummaryState.PriorityCount.ToString()" TooltipText="Priority project structure issues." Tone="info" />
+            <CompactStat Label="selected issues" Value="@SummaryState.SelectedIssueCount.ToString()" TooltipText="Issues linked to the current selection." />
+        </CompactStatStrip>
 
         @if (SummaryState.SpotlightNodes.Count > 0)
         {

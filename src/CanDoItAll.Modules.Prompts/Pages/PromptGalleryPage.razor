@@ -12,22 +12,29 @@
     <Header>
         <PageHeader Eyebrow="Prompt Library"
                     Title="Prompt gallery and versions"
-                    Description="Manage prompt drafts, immutable versions, collections, tags, and clone flows without burying the working surface under reference content.">
+                    Description="Manage prompt drafts, immutable versions, collections, tags, and clone flows without burying the working surface under reference content."
+                    Compact="true">
+            <Stats>
+                <CompactStat Label="prompts" Value="@prompts.Count.ToString()" TooltipText="Saved prompt artifacts." />
+                <CompactStat Label="final" Value="@prompts.Count(item => item.Status == PromptArtifactStatus.Final).ToString()" TooltipText="Prompts with at least one finalized version." Tone="success" />
+                <CompactStat Label="collections" Value="@collections.Count.ToString()" TooltipText="Available prompt groupings." />
+                <CompactStat Label="versions" Value="@prompts.Sum(item => item.VersionCount).ToString()" TooltipText="Immutable prompt versions stored in the library." Tone="info" />
+            </Stats>
             <Actions>
-                <Button Text="New prompt" Click="CreateNewAsync" />
-                <Button Text="Add collection" ButtonStyle="ButtonStyle.Light" Click="CreateCollectionAsync" />
+                <PageHeaderActionButton Icon="add"
+                                        Label="New prompt"
+                                        TooltipText="Create a new prompt artifact."
+                                        ButtonStyle="ButtonStyle.Primary"
+                                        Click="CreateNewAsync" />
+                <PageHeaderActionButton Icon="category"
+                                        Label="Add collection"
+                                        TooltipText="Create a new prompt collection."
+                                        Click="CreateCollectionAsync" />
             </Actions>
         </PageHeader>
     </Header>
 
     <ChildContent>
-        <SummaryTiles>
-            <SummaryTile Label="Prompts" Value="@prompts.Count.ToString()" HelperText="Saved prompt artifacts." />
-            <SummaryTile Label="Final" Value="@prompts.Count(item => item.Status == PromptArtifactStatus.Final).ToString()" HelperText="Prompts with at least one finalized version." Tone="success" />
-            <SummaryTile Label="Collections" Value="@collections.Count.ToString()" HelperText="Available prompt groupings." />
-            <SummaryTile Label="Versions" Value="@prompts.Sum(item => item.VersionCount).ToString()" HelperText="Immutable prompt versions stored in the library." Tone="info" />
-        </SummaryTiles>
-
         <ListDetailShell ListPaneWidth="25rem">
             <ListHeader>
                 <ListPanelHeader Title="Saved prompts" Description="Select a prompt to edit it, review versions, or inspect recent usage." Count="@($"{FilteredPrompts.Count} prompt(s)")">

@@ -10,36 +10,23 @@
 
 <Stack GapScale="LayoutGap.Medium"
        Class="w-full">
-    <SummaryTiles GapScale="LayoutGap.Small"
-                  ColumnsMd="4">
-        <SummaryTile Label="Runs"
+    <CompactStatStrip>
+        <CompactStat Label="runs"
                      Value="@analytics.TotalRuns.ToString()"
-                     HelperText="@($"{analytics.ActiveRuns} active / {analytics.CompletedRuns} completed")"
-                     Badge="true"
-                     Compact="true"
-                     ShowHelperTextAsTooltip="true" />
-        <SummaryTile Label="Capability gaps"
+                     TooltipText="@($"{analytics.ActiveRuns} active / {analytics.CompletedRuns} completed")" />
+        <CompactStat Label="capability gaps"
                      Value="@analytics.CapabilityGapCount.ToString()"
-                     HelperText="Assignments or execution capacity gaps detected."
-                     Badge="true"
-                     Compact="true"
-                     Tone="danger"
-                     ShowHelperTextAsTooltip="true" />
-        <SummaryTile Label="Conformance"
+                     TooltipText="Assignments or execution capacity gaps detected."
+                     Tone="danger" />
+        <CompactStat Label="conformance"
                      Value="@analytics.ConformanceObservationCount.ToString()"
-                     HelperText="@($"{analytics.SafeNonActionCount} safe non-actions recorded")"
-                     Badge="true"
-                     Compact="true"
-                     Tone="warning"
-                     ShowHelperTextAsTooltip="true" />
-        <SummaryTile Label="Actual cost"
+                     TooltipText="@($"{analytics.SafeNonActionCount} safe non-actions recorded")"
+                     Tone="warning" />
+        <CompactStat Label="actual cost"
                      Value="@analytics.ActualCost.ToString("C")"
-                     HelperText="@($"{analytics.EstimatedCost:C} estimated in scope")"
-                     Badge="true"
-                     Compact="true"
-                     Tone="info"
-                     ShowHelperTextAsTooltip="true" />
-    </SummaryTiles>
+                     TooltipText="@($"{analytics.EstimatedCost:C} estimated in scope")"
+                     Tone="info" />
+    </CompactStatStrip>
 
     <SectionCard Title="Run analytics ledger"
                  Description=""

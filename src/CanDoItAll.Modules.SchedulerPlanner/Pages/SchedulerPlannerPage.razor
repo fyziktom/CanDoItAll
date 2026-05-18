@@ -13,26 +13,23 @@
                     Title="Scheduler and planner"
                     Description="Plan automatic workflow and process runs with Quartz CRON triggers, durable recovery, and calendar-backed visibility."
                     Compact="true">
+            <Stats>
+                <CompactStat Label="schedules" Value="@Plans.Count.ToString()" TooltipText="Saved run plans." Tone="info" />
+                <CompactStat Label="enabled" Value="@Plans.Count(item => item.IsEnabled).ToString()" TooltipText="Plans currently projected into Quartz." Tone="success" />
+                <CompactStat Label="next 30 days" Value="@CalendarEventCount.ToString()" TooltipText="Projected calendar events." Tone="accent" />
+                <CompactStat Label="failures" Value="@History.Count(item => item.Status == SchedulerPlanRunDispatchStatus.Failed).ToString()" TooltipText="Failed dispatch attempts in the current history view." Tone="warning" />
+            </Stats>
             <Actions>
-                <Button Text="Refresh"
-                        Icon="refresh"
-                        ButtonStyle="ButtonStyle.Light"
-                        Disabled="@isBusy"
-                        IsBusy="@isBusy"
-                        Click="RefreshAsync"
-                        data-testid="scheduler-refresh" />
+                <PageHeaderActionButton Icon="refresh"
+                                        Label="Refresh"
+                                        TooltipText="Refresh scheduler plans, history, and projected events."
+                                        Disabled="@isBusy"
+                                        IsBusy="@isBusy"
+                                        Click="RefreshAsync"
+                                        data-testid="scheduler-refresh" />
             </Actions>
         </PageHeader>
     </Header>
-
-    <Lead>
-        <SummaryTiles>
-            <SummaryTile Label="Schedules" Value="@Plans.Count.ToString()" HelperText="Saved run plans." Tone="info" Compact="true" />
-            <SummaryTile Label="Enabled" Value="@Plans.Count(item => item.IsEnabled).ToString()" HelperText="Plans currently projected into Quartz." Tone="success" Compact="true" />
-            <SummaryTile Label="Next 30 days" Value="@CalendarEventCount.ToString()" HelperText="Projected calendar events." Tone="secondary" Compact="true" />
-            <SummaryTile Label="Failures" Value="@History.Count(item => item.Status == SchedulerPlanRunDispatchStatus.Failed).ToString()" HelperText="Failed dispatch attempts in the current history view." Tone="warning" Compact="true" />
-        </SummaryTiles>
-    </Lead>
 
     <ChildContent>
         @if (!string.IsNullOrWhiteSpace(errorMessage))

@@ -153,13 +153,11 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
                             This Mermaid source follows the current structure graph, keeps dependency ordering, and falls back to the generated anchor date when tasks are unscheduled.
                         </p>
 
-                        <Grid Gap="LayoutGap.Small"
-                              ColumnsSm="3"
-                              Class="mt-4">
-                            <MetricCard Label="Rows" Value="@ganttPreviewDialog.RowCount.ToString()" />
-                            <MetricCard Label="Dependencies" Value="@ganttPreviewDialog.DependencyCount.ToString()" />
-                            <MetricCard Label="Anchor" Value="@ganttPreviewDialog.AnchorDate.ToString("yyyy-MM-dd")" />
-                        </Grid>
+                        <CompactStatStrip Class="mt-4">
+                            <CompactStat Label="rows" Value="@ganttPreviewDialog.RowCount.ToString()" TooltipText="Rows generated in the Mermaid Gantt preview." Tone="info" />
+                            <CompactStat Label="dependencies" Value="@ganttPreviewDialog.DependencyCount.ToString()" TooltipText="Dependencies generated in the Mermaid Gantt preview." Tone="success" />
+                            <CompactStat Label="anchor" Value="@ganttPreviewDialog.AnchorDate.ToString("yyyy-MM-dd")" TooltipText="Anchor date used when tasks are unscheduled." />
+                        </CompactStatStrip>
                     </SurfaceCard>
 
                     <Stack GapScale="LayoutGap.Medium"

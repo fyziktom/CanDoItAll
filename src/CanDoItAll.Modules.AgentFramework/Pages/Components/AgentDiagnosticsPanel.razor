@@ -12,33 +12,24 @@
                 Click="RefreshAsync" />
     </Split>
 
-    <SummaryTiles GapScale="LayoutGap.Small"
-                  ColumnsMd="4">
-        <SummaryTile Label="Agents"
+    <CompactStatStrip>
+        <CompactStat Label="agents"
                      Value="@dashboard.AgentCount.ToString()"
-                     HelperText="@($"{dashboard.TemplateCount} template(s)")"
-                     Tone="info"
-                     Badge="true"
-                     Compact="true" />
-        <SummaryTile Label="Providers"
+                     TooltipText="@($"{dashboard.TemplateCount} template(s)")"
+                     Tone="info" />
+        <CompactStat Label="providers"
                      Value="@dashboard.ProviderCount.ToString()"
-                     HelperText="Integrated provider runtime views."
-                     Tone="success"
-                     Badge="true"
-                     Compact="true" />
-        <SummaryTile Label="Capabilities"
+                     TooltipText="Integrated provider runtime views."
+                     Tone="success" />
+        <CompactStat Label="capabilities"
                      Value="@dashboard.CapabilityCount.ToString()"
-                     HelperText="Skills, MCP servers, and other attached runtime surfaces."
-                     Tone="warning"
-                     Badge="true"
-                     Compact="true" />
-        <SummaryTile Label="Runs"
+                     TooltipText="Skills, MCP servers, and other attached runtime surfaces."
+                     Tone="warning" />
+        <CompactStat Label="runs"
                      Value="@($"{dashboard.ActiveRuns} / {dashboard.FailedRuns}")"
-                     HelperText="Active / failed execution runs."
-                     Tone="danger"
-                     Badge="true"
-                     Compact="true" />
-    </SummaryTiles>
+                     TooltipText="Active / failed execution runs."
+                     Tone="danger" />
+    </CompactStatStrip>
 
     <Grid Gap="LayoutGap.Large"
           ColumnTemplateXl="minmax(0,1fr) minmax(0,1fr)">

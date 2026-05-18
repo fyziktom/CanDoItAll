@@ -11,11 +11,35 @@
     <Header>
         <PageHeader Eyebrow="CRM / HR"
                     Title="Unified relationship and workforce workspace"
-                    Description="Track people, organizations, delivery units, recruiting, and AI agents in one module shell without leaving the core application.">
+                    Description="Track people, organizations, delivery units, recruiting, and AI agents in one module shell without leaving the core application."
+                    Compact="true">
+            <Stats>
+                <CompactStat Label="parties"
+                             Value="@directoryItems.Count.ToString()"
+                             TooltipText="Unified directory records across CRM and HR." />
+                <CompactStat Label="organizations"
+                             Value="@directoryItems.Count(item => item.PartyType == PartyType.Organization || item.PartyType == PartyType.OrganizationUnit).ToString()"
+                             TooltipText="Accounts, legal entities, and delivery units."
+                             Tone="info" />
+                <CompactStat Label="pipeline"
+                             Value="@opportunities.Count.ToString()"
+                             TooltipText="Tracked opportunities in the shared CRM workspace." />
+                <CompactStat Label="workforce"
+                             Value="@workforceProfiles.Count.ToString()"
+                             TooltipText="People and delivery supply profiles."
+                             Tone="success" />
+                <CompactStat Label="agents"
+                             Value="@agentProfiles.Count.ToString()"
+                             TooltipText="AI agents represented in the same staffing surface."
+                             Tone="warning" />
+            </Stats>
             <Actions>
-                <Button Text="Open directory"
-                        Click="OpenDirectory"
-                        data-testid="crmhr-home-open-directory" />
+                <PageHeaderActionButton Icon="asset"
+                                        Label="Open directory"
+                                        TooltipText="Open the CRM-HR party directory."
+                                        ButtonStyle="ButtonStyle.Primary"
+                                        Click="OpenDirectory"
+                                        data-testid="crmhr-home-open-directory" />
             </Actions>
         </PageHeader>
     </Header>
@@ -23,24 +47,6 @@
     <ChildContent>
         <Stack GapScale="LayoutGap.Large">
             <CrmHrSecondaryTabs SelectedKey="home" />
-
-            <SummaryTiles>
-                <SummaryTile Label="Parties"
-                             Value="@directoryItems.Count.ToString()"
-                             HelperText="Unified directory records across CRM and HR." />
-                <SummaryTile Label="Organizations"
-                             Value="@directoryItems.Count(item => item.PartyType == PartyType.Organization || item.PartyType == PartyType.OrganizationUnit).ToString()"
-                             HelperText="Accounts, legal entities, and delivery units." Tone="info" />
-                <SummaryTile Label="Pipeline"
-                             Value="@opportunities.Count.ToString()"
-                             HelperText="Tracked opportunities in the shared CRM workspace." />
-                <SummaryTile Label="Workforce"
-                             Value="@workforceProfiles.Count.ToString()"
-                             HelperText="People and delivery supply profiles." Tone="success" />
-                <SummaryTile Label="Agents"
-                             Value="@agentProfiles.Count.ToString()"
-                             HelperText="AI agents represented in the same staffing surface." Tone="warning" />
-            </SummaryTiles>
 
             <Grid Gap="LayoutGap.Large" ColumnsLg="2">
                 <SurfaceCard>

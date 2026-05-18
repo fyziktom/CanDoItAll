@@ -14,16 +14,17 @@
     <Header>
         <PageHeader Eyebrow="Settings"
                     Title="Workspace defaults, data sources, and providers"
-                    Description="Manage workspace defaults, runtime data sources, encrypted secrets, and provider profiles as separate jobs instead of one long settings page." />
+                    Description="Manage workspace defaults, runtime data sources, encrypted secrets, and provider profiles as separate jobs instead of one long settings page."
+                    Compact="true">
+            <Stats>
+                <CompactStat Label="providers" Value="@providers.Count.ToString()" TooltipText="Configured provider profiles." />
+                <CompactStat Label="enabled" Value="@providers.Count(item => item.IsEnabled).ToString()" TooltipText="Profiles currently enabled." Tone="success" />
+                <CompactStat Label="secrets" Value="@secrets.Count.ToString()" TooltipText="Stored encrypted secrets." />
+            </Stats>
+        </PageHeader>
     </Header>
 
     <Lead>
-        <SummaryTiles>
-            <SummaryTile Label="Providers" Value="@providers.Count.ToString()" HelperText="Configured provider profiles." />
-            <SummaryTile Label="Enabled" Value="@providers.Count(item => item.IsEnabled).ToString()" HelperText="Profiles currently enabled." Tone="success" />
-            <SummaryTile Label="Secrets" Value="@secrets.Count.ToString()" HelperText="Stored encrypted secrets." />
-        </SummaryTiles>
-
         <SecondaryTabs Items="SettingsTabs" SelectedKey="@settingsTab" SelectedKeyChanged="HandleSettingsTabChanged" />
     </Lead>
 

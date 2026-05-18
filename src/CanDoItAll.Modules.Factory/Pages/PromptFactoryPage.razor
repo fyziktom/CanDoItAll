@@ -598,24 +598,22 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
 
                         <div class="cw-panel-card">
                             <p class="cw-panel-kicker">Quick actions</p>
-                            <div class="cw-summary-grid">
-                                <div class="cw-summary-tile">
-                                    <span>Setup</span>
-                                    <strong>@ResolveSetupStatusLabel()</strong>
-                                </div>
-                                <div class="cw-summary-tile">
-                                    <span>Components</span>
-                                    <strong>@editor.SelectedBlockIds.Count</strong>
-                                </div>
-                                <div class="cw-summary-tile">
-                                    <span>Inputs</span>
-                                    <strong>@VisibleSessionAttachments.Count</strong>
-                                </div>
-                                <div class="cw-summary-tile">
-                                    <span>Warnings</span>
-                                    <strong>@editor.Warnings.Count</strong>
-                                </div>
-                            </div>
+                            <CompactStatStrip>
+                                <CompactStat Text="@($"Setup {ResolveSetupStatusLabel()}")"
+                                             Tone="info"
+                                             TooltipText="@($"Setup status: {ResolveSetupStatusLabel()}")" />
+                                <CompactStat Label="components"
+                                             Value="@editor.SelectedBlockIds.Count.ToString()"
+                                             Tone="success"
+                                             TooltipText="@($"{editor.SelectedBlockIds.Count} selected prompt components.")" />
+                                <CompactStat Label="inputs"
+                                             Value="@VisibleSessionAttachments.Count.ToString()"
+                                             TooltipText="@($"{VisibleSessionAttachments.Count} visible session inputs.")" />
+                                <CompactStat Label="warnings"
+                                             Value="@editor.Warnings.Count.ToString()"
+                                             Tone="warning"
+                                             TooltipText="@($"{editor.Warnings.Count} warnings need review.")" />
+                            </CompactStatStrip>
                             <div class="cw-button-row">
                                 <PromptFactoryActionButton Tone="accent"
                                                            Text="Open Setup tab"
@@ -717,24 +715,19 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                         <p class="cw-panel-kicker">Setup</p>
                         <h3 class="cw-panel-title">Frame the session before the prompt flow gets busy</h3>
                         <p class="cw-panel-copy">Use this setup lane to define intent, stack, and repositories before the canvas grows into a larger mindmap.</p>
-                        <div class="cw-summary-grid">
-                            <div class="cw-summary-tile">
-                                <span>Session</span>
-                                <strong>@(string.IsNullOrWhiteSpace(editor.SessionName) ? "Untitled session" : editor.SessionName)</strong>
-                            </div>
-                            <div class="cw-summary-tile">
-                                <span>Project</span>
-                                <strong>@ResolveSelectedProjectName()</strong>
-                            </div>
-                            <div class="cw-summary-tile">
-                                <span>Blueprint</span>
-                                <strong>@ResolveSelectedBlueprintName()</strong>
-                            </div>
-                            <div class="cw-summary-tile">
-                                <span>Setup</span>
-                                <strong>@ResolveSetupStatusLabel()</strong>
-                            </div>
-                        </div>
+                        <CompactStatStrip>
+                            <CompactStat Text="@($"Session {(string.IsNullOrWhiteSpace(editor.SessionName) ? "Untitled" : editor.SessionName)}")"
+                                         Tone="info"
+                                         TooltipText="@($"Session: {(string.IsNullOrWhiteSpace(editor.SessionName) ? "Untitled session" : editor.SessionName)}")" />
+                            <CompactStat Text="@($"Project {ResolveSelectedProjectName()}")"
+                                         Tone="success"
+                                         TooltipText="@($"Selected project: {ResolveSelectedProjectName()}")" />
+                            <CompactStat Text="@($"Blueprint {ResolveSelectedBlueprintName()}")"
+                                         TooltipText="@($"Selected blueprint: {ResolveSelectedBlueprintName()}")" />
+                            <CompactStat Text="@($"Setup {ResolveSetupStatusLabel()}")"
+                                         Tone="warning"
+                                         TooltipText="@($"Setup status: {ResolveSetupStatusLabel()}")" />
+                        </CompactStatStrip>
                         <div class="cw-button-row">
                             <PromptFactoryActionButton Tone="primary"
                                                        Text="Save setup"
@@ -885,24 +878,21 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                                 <div class="pf-section-stack">
                                     <article class="pf-group-card">
                                         <strong>Current working frame</strong>
-                                        <div class="cw-summary-grid">
-                                            <div class="cw-summary-tile">
-                                                <span>Provider</span>
-                                                <strong>@ResolveSelectedProviderName()</strong>
-                                            </div>
-                                            <div class="cw-summary-tile">
-                                                <span>Phase</span>
-                                                <strong>@(string.IsNullOrWhiteSpace(editor.Phase) ? "Not set" : editor.Phase)</strong>
-                                            </div>
-                                            <div class="cw-summary-tile">
-                                                <span>Inputs</span>
-                                                <strong>@VisibleSessionAttachments.Count</strong>
-                                            </div>
-                                            <div class="cw-summary-tile">
-                                                <span>Warnings</span>
-                                                <strong>@editor.Warnings.Count</strong>
-                                            </div>
-                                        </div>
+                                        <CompactStatStrip>
+                                            <CompactStat Text="@($"Provider {ResolveSelectedProviderName()}")"
+                                                         Tone="info"
+                                                         TooltipText="@($"Selected provider: {ResolveSelectedProviderName()}")" />
+                                            <CompactStat Text="@($"Phase {(string.IsNullOrWhiteSpace(editor.Phase) ? "Not set" : editor.Phase)}")"
+                                                         TooltipText="@($"Phase: {(string.IsNullOrWhiteSpace(editor.Phase) ? "Not set" : editor.Phase)}")" />
+                                            <CompactStat Label="inputs"
+                                                         Value="@VisibleSessionAttachments.Count.ToString()"
+                                                         Tone="success"
+                                                         TooltipText="@($"{VisibleSessionAttachments.Count} visible session inputs.")" />
+                                            <CompactStat Label="warnings"
+                                                         Value="@editor.Warnings.Count.ToString()"
+                                                         Tone="warning"
+                                                         TooltipText="@($"{editor.Warnings.Count} warnings need review.")" />
+                                        </CompactStatStrip>
                                         <small>Pick blueprint and flow from the canvas or inspector first. Resource assembly and detailed governance move to later steps so the page stays short while the user is still orienting.</small>
                                     </article>
 
@@ -1113,24 +1103,22 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                         <p class="cw-panel-kicker">Governance</p>
                         <h3 class="cw-panel-title">Curate reusable blocks without drowning in a single list</h3>
                         <p class="cw-panel-copy">The old screen forced every component, editor form, and template checklist onto one page. This version keeps selection fast, shows the current working set, and moves block authoring behind explicit admin toggles.</p>
-                        <div class="cw-summary-grid">
-                            <div class="cw-summary-tile">
-                                <span>Selected blocks</span>
-                                <strong>@editor.SelectedBlockIds.Count</strong>
-                            </div>
-                            <div class="cw-summary-tile">
-                                <span>Available blocks</span>
-                                <strong>@blocks.Count</strong>
-                            </div>
-                            <div class="cw-summary-tile">
-                                <span>Groups</span>
-                                <strong>@OrderedLibraryGroups.Count</strong>
-                            </div>
-                            <div class="cw-summary-tile">
-                                <span>Mode</span>
-                                <strong>@(editor.HasCustomizedBlocks ? "Customized session" : "Library defaults")</strong>
-                            </div>
-                        </div>
+                        <CompactStatStrip>
+                            <CompactStat Label="selected blocks"
+                                         Value="@editor.SelectedBlockIds.Count.ToString()"
+                                         Tone="success"
+                                         TooltipText="@($"{editor.SelectedBlockIds.Count} selected reusable blocks.")" />
+                            <CompactStat Label="available blocks"
+                                         Value="@blocks.Count.ToString()"
+                                         Tone="info"
+                                         TooltipText="@($"{blocks.Count} library blocks are available.")" />
+                            <CompactStat Label="groups"
+                                         Value="@OrderedLibraryGroups.Count.ToString()"
+                                         TooltipText="@($"{OrderedLibraryGroups.Count} library groups are available.")" />
+                            <CompactStat Text="@(editor.HasCustomizedBlocks ? "Mode Customized session" : "Mode Library defaults")"
+                                         Tone="warning"
+                                         TooltipText="@(editor.HasCustomizedBlocks ? "This session has customized block choices." : "This session currently uses library defaults.")" />
+                        </CompactStatStrip>
                         <div class="cw-button-row">
                             <PromptFactoryActionButton Tone="accent"
                                                        Text="Apply recommendations"
@@ -1476,24 +1464,23 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                         <p class="cw-panel-kicker">Assembly</p>
                         <h3 class="cw-panel-title">Build from a compact context pack instead of another long page</h3>
                         <p class="cw-panel-copy">Assembly focuses on two things: the prompt-session inputs attached from the canvas and the project resources selected for context. Everything else is summarized so the user can build quickly.</p>
-                        <div class="cw-summary-grid">
-                            <div class="cw-summary-tile">
-                                <span>Prompt inputs</span>
-                                <strong>@VisibleSessionAttachments.Count</strong>
-                            </div>
-                            <div class="cw-summary-tile">
-                                <span>Selected resources</span>
-                                <strong>@editor.SelectedResourceIds.Count</strong>
-                            </div>
-                            <div class="cw-summary-tile">
-                                <span>Selected blocks</span>
-                                <strong>@editor.SelectedBlockIds.Count</strong>
-                            </div>
-                            <div class="cw-summary-tile">
-                                <span>Warnings</span>
-                                <strong>@editor.Warnings.Count</strong>
-                            </div>
-                        </div>
+                        <CompactStatStrip>
+                            <CompactStat Label="prompt inputs"
+                                         Value="@VisibleSessionAttachments.Count.ToString()"
+                                         Tone="info"
+                                         TooltipText="@($"{VisibleSessionAttachments.Count} prompt inputs are attached.")" />
+                            <CompactStat Label="selected resources"
+                                         Value="@editor.SelectedResourceIds.Count.ToString()"
+                                         Tone="success"
+                                         TooltipText="@($"{editor.SelectedResourceIds.Count} resources are selected.")" />
+                            <CompactStat Label="selected blocks"
+                                         Value="@editor.SelectedBlockIds.Count.ToString()"
+                                         TooltipText="@($"{editor.SelectedBlockIds.Count} blocks are selected.")" />
+                            <CompactStat Label="warnings"
+                                         Value="@editor.Warnings.Count.ToString()"
+                                         Tone="warning"
+                                         TooltipText="@($"{editor.Warnings.Count} warnings need review.")" />
+                        </CompactStatStrip>
                         <div class="cw-button-row">
                             <button type="button" class="cw-button" data-tone="mint" data-testid="prompt-factory-build" @onclick="BuildAsync">Build prompt</button>
                             <button type="button" class="cw-button" data-tone="primary" @onclick="SaveSessionStateAsync">Save session state</button>
@@ -1638,24 +1625,21 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                         <p class="cw-panel-kicker">Review</p>
                         <h3 class="cw-panel-title">Keep warnings, preview, and delivery actions in one lane</h3>
                         <p class="cw-panel-copy">Review is now a short finish screen. Users see readiness, preview length, and all delivery actions together instead of scrolling back through selection tools they no longer need.</p>
-                        <div class="cw-summary-grid">
-                            <div class="cw-summary-tile">
-                                <span>Warnings</span>
-                                <strong>@editor.Warnings.Count</strong>
-                            </div>
-                            <div class="cw-summary-tile">
-                                <span>Prompt size</span>
-                                <strong>@(string.IsNullOrWhiteSpace(editor.GeneratedPrompt) ? "Not built" : $"{editor.GeneratedPrompt.Length:N0} chars")</strong>
-                            </div>
-                            <div class="cw-summary-tile">
-                                <span>Draft</span>
-                                <strong>@(string.IsNullOrWhiteSpace(editor.DraftTitle) ? "Draft not named" : editor.DraftTitle)</strong>
-                            </div>
-                            <div class="cw-summary-tile">
-                                <span>Steps</span>
-                                <strong>@editor.Nodes.Count</strong>
-                            </div>
-                        </div>
+                        <CompactStatStrip>
+                            <CompactStat Label="warnings"
+                                         Value="@editor.Warnings.Count.ToString()"
+                                         Tone="warning"
+                                         TooltipText="@($"{editor.Warnings.Count} warnings need review.")" />
+                            <CompactStat Text="@($"Prompt {(string.IsNullOrWhiteSpace(editor.GeneratedPrompt) ? "Not built" : $"{editor.GeneratedPrompt.Length:N0} chars")}")"
+                                         Tone="info"
+                                         TooltipText="@($"Prompt size: {(string.IsNullOrWhiteSpace(editor.GeneratedPrompt) ? "Not built" : $"{editor.GeneratedPrompt.Length:N0} characters")}")" />
+                            <CompactStat Text="@($"Draft {(string.IsNullOrWhiteSpace(editor.DraftTitle) ? "Not named" : editor.DraftTitle)}")"
+                                         TooltipText="@($"Draft title: {(string.IsNullOrWhiteSpace(editor.DraftTitle) ? "Draft not named" : editor.DraftTitle)}")" />
+                            <CompactStat Label="steps"
+                                         Value="@editor.Nodes.Count.ToString()"
+                                         Tone="success"
+                                         TooltipText="@($"{editor.Nodes.Count} prompt flow steps.")" />
+                        </CompactStatStrip>
                         <div class="cw-button-row">
                             <PromptFactoryActionButton Tone="accent"
                                                        Text="Build prompt"
@@ -1742,24 +1726,22 @@ tests: component:PromptFactoryPageTests, e2e:prompt-factory-smoke
                     <section class="cw-panel-card">
                         <p class="cw-panel-kicker">Delivery context</p>
                         <h3 class="cw-panel-title">What will ship</h3>
-                        <div class="cw-summary-grid">
-                            <div class="cw-summary-tile">
-                                <span>Blocks</span>
-                                <strong>@editor.SelectedBlockIds.Count</strong>
-                            </div>
-                            <div class="cw-summary-tile">
-                                <span>Resources</span>
-                                <strong>@editor.SelectedResourceIds.Count</strong>
-                            </div>
-                            <div class="cw-summary-tile">
-                                <span>Inputs</span>
-                                <strong>@VisibleSessionAttachments.Count</strong>
-                            </div>
-                            <div class="cw-summary-tile">
-                                <span>Provider</span>
-                                <strong>@ResolveSelectedProviderName()</strong>
-                            </div>
-                        </div>
+                        <CompactStatStrip>
+                            <CompactStat Label="blocks"
+                                         Value="@editor.SelectedBlockIds.Count.ToString()"
+                                         Tone="success"
+                                         TooltipText="@($"{editor.SelectedBlockIds.Count} selected blocks will ship.")" />
+                            <CompactStat Label="resources"
+                                         Value="@editor.SelectedResourceIds.Count.ToString()"
+                                         Tone="info"
+                                         TooltipText="@($"{editor.SelectedResourceIds.Count} selected resources will ship.")" />
+                            <CompactStat Label="inputs"
+                                         Value="@VisibleSessionAttachments.Count.ToString()"
+                                         TooltipText="@($"{VisibleSessionAttachments.Count} prompt inputs will ship.")" />
+                            <CompactStat Text="@($"Provider {ResolveSelectedProviderName()}")"
+                                         Tone="warning"
+                                         TooltipText="@($"Selected provider: {ResolveSelectedProviderName()}")" />
+                        </CompactStatStrip>
                     </section>
                     }
 
