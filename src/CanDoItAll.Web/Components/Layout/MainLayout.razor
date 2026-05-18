@@ -71,22 +71,15 @@
             }
             <div class="cda-shell-db-flyout-anchor"
                  data-testid="database-shell-flyout-anchor">
-                <TooltipTarget Position="TooltipPosition.Top"
-                               TriggerClass="w-full"
-                               Text="Switch database"
-                               TestId="database-shell-tooltip">
-                    <ChildContent>
-                        <button type="button"
-                                class="cda-shell-utility-button cda-shell-utility-button--database"
-                                disabled="@databaseDialogBusy"
-                                aria-haspopup="dialog"
-                                data-testid="database-shell-action"
-                                @onclick="OpenDatabaseDialogAsync">
-                            <span class="cda-shell-utility-icon" aria-hidden="true"><Icon Name="database" /></span>
-                            <span class="cda-shell-utility-label">Switch Database</span>
-                        </button>
-                    </ChildContent>
-                </TooltipTarget>
+                <button type="button"
+                        class="cda-shell-utility-button cda-shell-utility-button--database"
+                        disabled="@databaseDialogBusy"
+                        aria-haspopup="dialog"
+                        data-testid="database-shell-action"
+                        @onclick="OpenDatabaseDialogAsync">
+                    <span class="cda-shell-utility-icon" aria-hidden="true"><Icon Name="database" /></span>
+                    <span class="cda-shell-utility-label">Switch Database</span>
+                </button>
 
                 <section class="cda-shell-db-flyout"
                          aria-label="Switch database"

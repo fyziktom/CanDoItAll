@@ -210,6 +210,12 @@
     max-width: calc(100vw - 7rem);
   }
 
+  .cda-shell-nav-overflow-card-trigger {
+    display: block !important;
+    width: 100%;
+    height: 100%;
+  }
+
   .cda-shell-nav-overflow-card {
     @apply relative grid h-16 w-16 place-items-center rounded-xl border p-1 text-center transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300;
     grid-template-rows: 1.55rem minmax(0, 1fr);

@@ -541,6 +541,9 @@
   .cursor-pointer {
     cursor: pointer;
   }
+  .resize {
+    resize: both;
+  }
   .list-disc {
     list-style-type: disc;
   }
@@ -5239,6 +5242,11 @@
     grid-auto-columns: 4.1rem;
     gap: 0.45rem;
     max-width: calc(100vw - 7rem);
+  }
+  .cda-shell-nav-overflow-card-trigger {
+    display: block !important;
+    width: 100%;
+    height: 100%;
   }
   .cda-shell-nav-overflow-card {
     position: relative;
