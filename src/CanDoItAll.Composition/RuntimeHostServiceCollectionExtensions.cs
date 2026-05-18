@@ -3,6 +3,8 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
+using CanDoItAll.AgentFramework.Rag.Driver.Models;
+using CanDoItAll.AgentFramework.Rag.Qdrant.DependencyInjection;
 using CanDoItAll.Modules.Activity;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Automation;
@@ -34,6 +36,7 @@ namespace CanDoItAll.Composition;
 public static class RuntimeHostServiceCollectionExtensions
 {
     private const string OpenAiApiKeyConfigurationKey = "OPENAI_API_KEY";
+    private const string QdrantRagConfigurationSection = "Rag:Qdrant";
 
     public static IServiceCollection AddCanDoItAllRuntimeModules(
         this IServiceCollection services,
@@ -60,11 +63,77 @@ public static class RuntimeHostServiceCollectionExtensions
         services.AddActivityModule();
         services.AddAgentFrameworkModule(configuration);
         services.AddAutomationModule(configuration, contentRootPath);
+        services.AddConfiguredQdrantRagDriver(configuration);
         services.AddCognitiveMemoryModule();
         services.AddSchedulerPlannerModule();
         services.AddCollaborationModule();
         services.AddCrmHrModule();
         return services;
+    }
+
+    private static IServiceCollection AddConfiguredQdrantRagDriver(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        var section = configuration.GetSection(QdrantRagConfigurationSection);
+        if (!section.Exists() || !(section.GetValue<bool?>("Enabled") ?? false))
+        {
+            return services;
+        }
+
+        var collectionName = section["CollectionName"];
+        var vectorSize = section.GetValue<int?>("VectorSize") ?? 384;
+        var grpcPort = section.GetValue<int?>("GrpcPort") ??
+                       section.GetValue<int?>("Port") ??
+                       6334;
+        var distance = ReadQdrantDistance(section["Distance"]);
+
+        services.AddQdrantRagDriver(
+            configureQdrant: options =>
+            {
+                options.Host = string.IsNullOrWhiteSpace(section["Host"]) ? "localhost" : section["Host"]!.Trim();
+                options.Port = grpcPort;
+                options.Https = section.GetValue<bool?>("Https") ?? false;
+                options.ApiKey = string.IsNullOrWhiteSpace(section["ApiKey"]) ? null : section["ApiKey"]!.Trim();
+                options.CreateCollectionIfMissing = section.GetValue<bool?>("CreateCollectionIfMissing") ?? true;
+                options.WaitForWrites = section.GetValue<bool?>("WaitForWrites") ?? true;
+
+                var grpcTimeout = section.GetValue<TimeSpan?>("GrpcTimeout");
+                if (grpcTimeout.HasValue)
+                {
+                    options.GrpcTimeout = grpcTimeout.Value;
+                }
+            },
+            configureFactory: options =>
+            {
+                options.DefaultCollection = new RagCollectionOptions
+                {
+                    CollectionName = string.IsNullOrWhiteSpace(collectionName)
+                        ? "candoitall-knowledge"
+                        : collectionName.Trim(),
+                    VectorSize = vectorSize,
+                    Distance = distance
+                };
+            },
+            configureEmbedding: options => options.Dimension = vectorSize);
+
+        return services;
+    }
+
+    private static RagDistanceMetric ReadQdrantDistance(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return RagDistanceMetric.Cosine;
+        }
+
+        if (Enum.TryParse<RagDistanceMetric>(value.Trim(), ignoreCase: true, out var distance))
+        {
+            return distance;
+        }
+
+        throw new InvalidOperationException(
+            $"Unsupported {QdrantRagConfigurationSection}:Distance value '{value}'.");
     }
 
     private static void PromoteConfiguredOpenAiCredential(

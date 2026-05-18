@@ -2,7 +2,7 @@ namespace CanDoItAll.Modules.Plugins;
 
 public sealed record DockerWorkflowExecutorSettings
 {
-    public string Image { get; init; } = "qdrant/qdrant:latest";
+    public string Image { get; init; } = "qdrant/qdrant:v1.15.3";
 
     public string ContainerName { get; init; } = "candoitall-qdrant-proof";
 

@@ -1,0 +1,4 @@
+interface:
+  display_name: "CanDoItAll Cognitive Memory API"
+  short_description: "Operate CanDoItAll Cognitive Memory through its HTTP API."
+  default_prompt: "Use the CanDoItAll Cognitive Memory API skill to inspect status, configure PostgreSQL, ingest sources, run consolidation, recall memory, and validate Qdrant-backed projections."
