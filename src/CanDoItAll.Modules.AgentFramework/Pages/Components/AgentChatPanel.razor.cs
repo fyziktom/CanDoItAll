@@ -572,11 +572,7 @@ Use these workspace artifacts as input:
         {
             var recording = await JsRuntime.InvokeAsync<BrowserVoiceRecording>(
                 "CanDoItAll.agentFramework.voice.stopRecording");
-            var audioBytes = Convert.FromBase64String(recording.Base64);
-            var result = await VoiceService.TranscribeAsync(new AgentVoiceTranscriptionRequest(
-                audioBytes,
-                recording.FileName,
-                recording.ContentType));
+            var result = await VoiceService.TranscribeAsync(recording.ToTranscriptionRequest());
 
             draftPrompt = result.Text;
             composerKey++;
@@ -620,16 +616,26 @@ Use these workspace artifacts as input:
         SetVoiceStatus("Speaking", "primary");
         try
         {
-            var synthesis = await VoiceService.SynthesizeAsync(new AgentVoiceSynthesisRequest(
-                text,
-                SelectedAgentVoiceAccess,
-                SuppressIdentifierOmissionNotice: ShouldSuppressIdentifierOmissionNotice()));
-            TrackIdentifierOmissionNotice(synthesis);
-            await JsRuntime.InvokeVoidAsync(
-                "CanDoItAll.agentFramework.voice.playAudio",
-                Convert.ToBase64String(synthesis.AudioBytes),
-                synthesis.ContentType);
-            SetVoiceStatus("Audio ready", "success");
+            await JsRuntime.InvokeVoidAsync("CanDoItAll.agentFramework.voice.clearAudioQueue");
+            var queuedChunks = 0;
+            await foreach (var synthesis in VoiceService.SynthesizeChunksAsync(new AgentVoiceSynthesisRequest(
+                               text,
+                               SelectedAgentVoiceAccess,
+                               SuppressIdentifierOmissionNotice: ShouldSuppressIdentifierOmissionNotice())))
+            {
+                TrackIdentifierOmissionNotice(synthesis);
+                queuedChunks++;
+                await JsRuntime.InvokeVoidAsync(
+                    "CanDoItAll.agentFramework.voice.enqueueAudio",
+                    Convert.ToBase64String(synthesis.AudioBytes),
+                    synthesis.ContentType);
+                if (queuedChunks == 1)
+                {
+                    SetVoiceStatus("Playing", "primary");
+                }
+            }
+
+            SetVoiceStatus(queuedChunks == 1 ? "Audio ready" : $"Audio ready ({queuedChunks} chunks)", "success");
         }
         catch (Exception exception)
         {
@@ -672,15 +678,6 @@ Use these workspace artifacts as input:
         {
             NotificationService.Warning(text, notification);
         }
-    }
-
-    private sealed class BrowserVoiceRecording
-    {
-        public string Base64 { get; set; } = string.Empty;
-
-        public string ContentType { get; set; } = "audio/webm";
-
-        public string FileName { get; set; } = "voice-input.webm";
     }
 
     private void ResolveRunState()
