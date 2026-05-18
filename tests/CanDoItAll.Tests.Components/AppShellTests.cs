@@ -59,6 +59,9 @@ public sealed class AppShellTests : TestContext
         Assert.DoesNotContain("Operational summary, provider health, and recent work.", desktopSidebarMarkup);
         Assert.DoesNotContain("project-structure / /projects/one/structure", desktopSidebarMarkup);
         Assert.Contains("cda-shell-nav-label-row", desktopSidebarMarkup);
-        Assert.Contains("cda-shell-opened-button", desktopSidebarMarkup);
+        Assert.DoesNotContain("cda-shell-opened-button", desktopSidebarMarkup);
+        Assert.Contains("shell-nav-opened-work", desktopSidebarMarkup);
+        Assert.Contains("shell-opened-work-panel", desktopSidebarMarkup);
+        Assert.Contains("shell-opened-work-project-1", desktopSidebarMarkup);
     }
 }

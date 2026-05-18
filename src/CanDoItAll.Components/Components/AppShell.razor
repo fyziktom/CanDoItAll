@@ -108,7 +108,7 @@
                         var isOverflowActive = OverflowNavigationItems.Any(item => IsRouteMatch(normalizedCurrentRoute, item.Route));
                         <div class="cda-shell-nav-overflow-anchor"
                              data-testid="shell-nav-overflow-anchor">
-                            <TooltipTarget Position="TooltipPosition.Right"
+                            <TooltipTarget Position="TooltipPosition.Bottom"
                                            TriggerClass="w-full"
                                            TooltipClass="cda-shell-nav-tooltip"
                                            TestId="shell-nav-tooltip-more">
@@ -164,63 +164,84 @@
                             </section>
                         </div>
                     }
+
+                    @if (OpenedWorkItems.Count > 0)
+                    {
+                        var isOpenedActive = OpenedWorkItems.Any(item => string.Equals(item.TabId, ActiveTabId, StringComparison.Ordinal));
+                        <div class="cda-shell-opened-work-anchor"
+                             data-testid="shell-opened-work-anchor">
+                            <TooltipTarget Position="TooltipPosition.Bottom"
+                                           TriggerClass="w-full"
+                                           TooltipClass="cda-shell-nav-tooltip"
+                                           TestId="shell-nav-tooltip-opened">
+                                <TooltipContent Context="_">
+                                    <div class="cda-shell-tooltip-card">
+                                        <p class="cda-shell-tooltip-title">Opened</p>
+                                        <p class="cda-shell-tooltip-body">Live project and prompt workbench tabs.</p>
+                                    </div>
+                                </TooltipContent>
+                                <ChildContent>
+                                    <button type="button"
+                                            class="@ResolveNavigationButtonClass(isOpenedActive)"
+                                            aria-haspopup="menu"
+                                            aria-label="Opened work"
+                                            data-testid="shell-nav-opened-work">
+                                        <span class="cda-shell-nav-icon" aria-hidden="true"><Icon Name="web_asset" /></span>
+                                        @if (IsNavigationExpanded)
+                                        {
+                                            <span class="cda-shell-nav-label-row">
+                                                <span class="block truncate text-sm font-semibold">Opened</span>
+                                                <span class="cda-shell-nav-badge-inline"
+                                                      data-testid="shell-opened-work-count">
+                                                    @OpenedWorkItems.Count
+                                                </span>
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="cda-shell-nav-badge-dot"
+                                                  data-testid="shell-opened-work-count">
+                                                @OpenedWorkItems.Count
+                                            </span>
+                                        }
+                                    </button>
+                                </ChildContent>
+                            </TooltipTarget>
+
+                            <section class="cda-shell-opened-work-panel"
+                                     aria-label="Opened work"
+                                     data-testid="shell-opened-work-panel">
+                                <span class="cda-shell-opened-work-panel__arrow" aria-hidden="true"></span>
+                                <div class="cda-shell-opened-work-grid" role="menu">
+                                    @foreach (var item in OpenedWorkItems)
+                                    {
+                                        var isActive = string.Equals(item.TabId, ActiveTabId, StringComparison.Ordinal);
+                                        <TooltipTarget Position="TooltipPosition.Right"
+                                                       TriggerClass="cda-shell-opened-work-card-trigger"
+                                                       TooltipClass="cda-shell-nav-tooltip">
+                                            <TooltipContent Context="_">
+                                                <div class="cda-shell-tooltip-card">
+                                                    <p class="cda-shell-tooltip-title">@item.Title</p>
+                                                    <p class="cda-shell-tooltip-body">@ResolveOpenedWorkTooltip(item)</p>
+                                                </div>
+                                            </TooltipContent>
+                                            <ChildContent>
+                                                <button type="button"
+                                                        class="@ResolveOpenedWorkCardClass(isActive)"
+                                                        role="menuitem"
+                                                        data-testid="@BuildOpenedWorkCardTestId(item.TabId)"
+                                                        @onclick="() => OpenWorkbenchItem.InvokeAsync(item.TabId)">
+                                                    <span class="cda-shell-opened-work-card__icon" aria-hidden="true"><Icon Name="@ResolveOpenedWorkIcon(item)" /></span>
+                                                    <span class="cda-shell-opened-work-card__title">@item.Title</span>
+                                                </button>
+                                            </ChildContent>
+                                        </TooltipTarget>
+                                    }
+                                </div>
+                            </section>
+                        </div>
+                    }
                 </nav>
-
-                @if (IsNavigationExpanded && OpenedProjects.Count > 0)
-                {
-                    <Stack GapScale="LayoutGap.Small"
-                           Class="cda-shell-opened-list">
-                        <p class="cda-eyebrow cda-eyebrow--tight text-slate-400 tracking-[0.3em]">Opened Projects</p>
-                        @foreach (var item in OpenedProjects)
-                        {
-                            <TooltipTarget Position="TooltipPosition.Right"
-                                           TriggerClass="w-full"
-                                           TooltipClass="cda-shell-nav-tooltip">
-                                <TooltipContent Context="_">
-                                    <div class="cda-shell-tooltip-card">
-                                        <p class="cda-shell-tooltip-title">@item.Title</p>
-                                        <p class="cda-shell-tooltip-body">@item.TabKind / @item.Route</p>
-                                    </div>
-                                </TooltipContent>
-                                <ChildContent>
-                                    <button type="button"
-                                            class="cda-shell-opened-button"
-                                            @onclick="() => OpenWorkbenchItem.InvokeAsync(item.TabId)">
-                                        <span class="block truncate text-sm font-semibold">@item.Title</span>
-                                    </button>
-                                </ChildContent>
-                            </TooltipTarget>
-                        }
-                    </Stack>
-                }
-
-                @if (IsNavigationExpanded && OpenedSessions.Count > 0)
-                {
-                    <Stack GapScale="LayoutGap.Small"
-                           Class="cda-shell-opened-list">
-                        <p class="cda-eyebrow cda-eyebrow--tight text-slate-400 tracking-[0.3em]">Prompt Sessions</p>
-                        @foreach (var item in OpenedSessions)
-                        {
-                            <TooltipTarget Position="TooltipPosition.Right"
-                                           TriggerClass="w-full"
-                                           TooltipClass="cda-shell-nav-tooltip">
-                                <TooltipContent Context="_">
-                                    <div class="cda-shell-tooltip-card">
-                                        <p class="cda-shell-tooltip-title">@item.Title</p>
-                                        <p class="cda-shell-tooltip-body">@item.Route</p>
-                                    </div>
-                                </TooltipContent>
-                                <ChildContent>
-                                    <button type="button"
-                                            class="cda-shell-opened-button"
-                                            @onclick="() => OpenWorkbenchItem.InvokeAsync(item.TabId)">
-                                        <span class="block truncate text-sm font-semibold">@item.Title</span>
-                                    </button>
-                                </ChildContent>
-                            </TooltipTarget>
-                        }
-                    </Stack>
-                }
 
                 @if (BottomUtilities is not null)
                 {
@@ -529,6 +550,11 @@
         }
     }
 
+    private IReadOnlyList<WorkbenchTabState> OpenedWorkItems
+        => OpenedProjects
+            .Concat(OpenedSessions)
+            .ToList();
+
     protected override void OnParametersSet()
     {
         if (hasInitializedNavigationMode)
@@ -622,6 +648,13 @@
             isActive ? "cda-shell-nav-overflow-card--active" : "cda-shell-nav-overflow-card--inactive");
     }
 
+    private string ResolveOpenedWorkCardClass(bool isActive)
+    {
+        return CssClassBuilder.Join(
+            "cda-shell-opened-work-card",
+            isActive ? "cda-shell-opened-work-card--active" : "cda-shell-opened-work-card--inactive");
+    }
+
     private string? ResolveRootStyle()
     {
         return Mode == AppShellMode.FocusWorkbench
@@ -658,12 +691,32 @@
         return $"shell-nav-overflow-{NormalizeRouteForTestId(route)}";
     }
 
+    private static string BuildOpenedWorkCardTestId(string tabId)
+    {
+        return $"shell-opened-work-{NormalizeForTestId(tabId)}";
+    }
+
     private static string NormalizeRouteForTestId(string route)
     {
         var normalized = route.Trim('/');
         return string.IsNullOrWhiteSpace(normalized)
             ? "dashboard"
             : normalized.Replace('/', '-');
+    }
+
+    private static string NormalizeForTestId(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "item";
+        }
+
+        return value
+            .Trim()
+            .Replace('/', '-')
+            .Replace('\\', '-')
+            .Replace(' ', '-')
+            .ToLowerInvariant();
     }
 
     private IReadOnlyList<ShellNavigationItem> BuildStandardNavigationItems()
@@ -701,6 +754,31 @@
             .FirstOrDefault();
 
         return string.IsNullOrWhiteSpace(firstWord) ? title : firstWord;
+    }
+
+    private static string ResolveOpenedWorkIcon(WorkbenchTabState item)
+    {
+        if (item.TabKind.Contains("prompt", StringComparison.OrdinalIgnoreCase))
+        {
+            return "auto_awesome";
+        }
+
+        if (item.TabKind.Contains("project", StringComparison.OrdinalIgnoreCase))
+        {
+            return "account_tree";
+        }
+
+        return "web_asset";
+    }
+
+    private static string ResolveOpenedWorkTooltip(WorkbenchTabState item)
+    {
+        if (string.IsNullOrWhiteSpace(item.Route))
+        {
+            return item.TabKind;
+        }
+
+        return $"{item.TabKind} / {item.Route}";
     }
 
     private static bool IsRouteMatch(string currentRoute, string navigationRoute)

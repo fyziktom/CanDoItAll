@@ -12,7 +12,7 @@
   }
 
   .cda-shell-sidebar {
-    @apply hidden shrink-0 overflow-hidden rounded-[1.35rem] border border-white/70 bg-slate-950 text-slate-100 shadow-2xl shadow-slate-900/10 transition-[width] duration-200 xl:block;
+    @apply hidden shrink-0 overflow-visible rounded-[1.35rem] border border-white/70 bg-slate-950 text-slate-100 shadow-2xl shadow-slate-900/10 transition-[width] duration-200 xl:block;
   }
 
   .cda-shell-sidebar--focus {
@@ -147,6 +147,19 @@
     @apply relative w-full;
   }
 
+  .cda-shell-nav-overflow-anchor::after,
+  .cda-shell-opened-work-anchor::after {
+    @apply absolute left-full top-[-10rem] bottom-[-10rem] z-[94] w-4 content-[''];
+    pointer-events: none;
+  }
+
+  .cda-shell-nav-overflow-anchor:hover::after,
+  .cda-shell-nav-overflow-anchor:focus-within::after,
+  .cda-shell-opened-work-anchor:hover::after,
+  .cda-shell-opened-work-anchor:focus-within::after {
+    pointer-events: auto;
+  }
+
   .cda-shell-nav--collapsed .cda-shell-nav-overflow-anchor {
     @apply flex justify-center;
   }
@@ -155,23 +168,27 @@
     @apply justify-center;
   }
 
-  .cda-shell-nav-overflow-panel {
-    @apply invisible pointer-events-none fixed z-[95] rounded-xl border border-white/10 bg-slate-950 p-2 text-slate-100 opacity-0 shadow-2xl shadow-slate-950/30 transition duration-150 ease-out;
-    bottom: 6.25rem;
-    left: calc(1rem + 4.75rem + 0.75rem);
-    transform: translate3d(-0.35rem, 0.5rem, 0);
-    transition-property: opacity, transform, visibility;
-    transition-delay: 180ms;
+  .cda-shell-nav--collapsed .cda-shell-opened-work-anchor {
+    @apply flex justify-center;
   }
 
-  .cda-shell-sidebar--expanded .cda-shell-nav-overflow-panel {
-    left: calc(1rem + 18rem + 0.75rem);
+  .cda-shell-nav--collapsed .cda-shell-opened-work-anchor > .inline-flex {
+    @apply justify-center;
+  }
+
+  .cda-shell-nav-overflow-panel {
+    @apply invisible pointer-events-none absolute z-[95] rounded-xl border border-white/10 bg-slate-950 p-2 text-slate-100 opacity-0 shadow-2xl shadow-slate-950/30 transition duration-150 ease-out;
+    left: calc(100% + 0.75rem);
+    top: 50%;
+    transform: translate3d(0.35rem, -50%, 0);
+    transition-property: opacity, transform, visibility;
+    transition-delay: 260ms;
   }
 
   .cda-shell-nav-overflow-anchor:hover .cda-shell-nav-overflow-panel,
   .cda-shell-nav-overflow-anchor:focus-within .cda-shell-nav-overflow-panel {
     @apply visible pointer-events-auto opacity-100;
-    transform: translate3d(0, 0, 0);
+    transform: translate3d(0, -50%, 0);
     transition-delay: 0ms;
   }
 
@@ -180,7 +197,8 @@
   }
 
   .cda-shell-nav-overflow-panel__arrow {
-    @apply absolute left-[-0.45rem] bottom-4 h-3.5 w-3.5 rotate-45 border-b border-l border-white/10 bg-slate-950;
+    @apply absolute left-[-0.45rem] top-1/2 h-3.5 w-3.5 border-b border-l border-white/10 bg-slate-950;
+    transform: translateY(-50%) rotate(45deg);
   }
 
   .cda-shell-nav-overflow-grid {
@@ -217,6 +235,71 @@
     @apply absolute right-1 top-1 inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-sky-300 px-1 text-[0.5rem] font-bold leading-none text-slate-950;
   }
 
+  .cda-shell-opened-work-anchor {
+    @apply relative w-full;
+  }
+
+  .cda-shell-opened-work-panel {
+    @apply invisible pointer-events-none absolute z-[95] rounded-xl border border-white/10 bg-slate-950 p-2 text-slate-100 opacity-0 shadow-2xl shadow-slate-950/30 transition duration-150 ease-out;
+    left: calc(100% + 0.75rem);
+    top: 50%;
+    transform: translate3d(0.35rem, -50%, 0);
+    transition-property: opacity, transform, visibility;
+    transition-delay: 260ms;
+  }
+
+  .cda-shell-opened-work-anchor:hover .cda-shell-opened-work-panel,
+  .cda-shell-opened-work-anchor:focus-within .cda-shell-opened-work-panel {
+    @apply visible pointer-events-auto opacity-100;
+    transform: translate3d(0, -50%, 0);
+    transition-delay: 0ms;
+  }
+
+  .cda-shell-opened-work-panel::before {
+    @apply absolute bottom-0 left-[-1.25rem] top-0 w-5 content-[''];
+  }
+
+  .cda-shell-opened-work-panel__arrow {
+    @apply absolute left-[-0.45rem] top-1/2 h-3.5 w-3.5 border-b border-l border-white/10 bg-slate-950;
+    transform: translateY(-50%) rotate(45deg);
+  }
+
+  .cda-shell-opened-work-grid {
+    display: grid;
+    grid-template-rows: repeat(3, minmax(4.15rem, auto));
+    grid-auto-flow: column;
+    grid-auto-columns: 12rem;
+    gap: 0.45rem;
+    max-width: calc(100vw - 22rem);
+  }
+
+  .cda-shell-opened-work-card-trigger {
+    display: block !important;
+    min-width: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .cda-shell-opened-work-card {
+    @apply grid h-16 w-full grid-cols-[1.75rem_minmax(0,1fr)] items-center gap-2 rounded-xl border px-2.5 py-2 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300;
+  }
+
+  .cda-shell-opened-work-card--active {
+    @apply border-sky-300/40 bg-sky-400/15 text-white;
+  }
+
+  .cda-shell-opened-work-card--inactive {
+    @apply border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white;
+  }
+
+  .cda-shell-opened-work-card__icon {
+    @apply inline-flex h-7 w-7 items-center justify-center rounded-lg bg-white/10 text-sm;
+  }
+
+  .cda-shell-opened-work-card__title {
+    @apply block min-w-0 truncate text-xs font-semibold leading-4;
+  }
+
   .cda-shell-nav-tooltip {
     @apply max-w-[18rem] rounded-xl border border-slate-700 bg-slate-950 p-0 text-slate-100 shadow-2xl shadow-slate-950/20;
   }
@@ -235,14 +318,6 @@
 
   .cda-shell-tooltip-badge {
     @apply inline-flex rounded-full bg-sky-400/15 px-2 py-0.5 text-[0.62rem] font-semibold text-sky-100;
-  }
-
-  .cda-shell-opened-list {
-    @apply shrink-0;
-  }
-
-  .cda-shell-opened-button {
-    @apply w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-left text-white transition hover:bg-white/10;
   }
 
   .cda-shell-utility-area {
