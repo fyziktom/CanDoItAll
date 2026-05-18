@@ -46,6 +46,7 @@ public static class MaterialIconCatalog
         ["mermaid"] = "account_tree",
         ["migration"] = "shuffle",
         ["money"] = "payments",
+        ["more_up"] = "expand_less",
         ["note"] = "note",
         ["open"] = "open_in_new",
         ["ops"] = "settings",

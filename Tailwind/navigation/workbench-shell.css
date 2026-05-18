@@ -104,7 +104,7 @@
   }
 
   .cda-shell-nav-button--expanded {
-    @apply items-start gap-3 rounded-xl px-3 py-2.5;
+    @apply items-center gap-2 rounded-xl px-2.5 py-1.5;
   }
 
   .cda-shell-nav-button--collapsed {
@@ -124,7 +124,7 @@
   }
 
   .cda-shell-nav-button--expanded .cda-shell-nav-icon {
-    @apply mt-0.5;
+    @apply h-8 w-8;
   }
 
   .cda-shell-nav-button--collapsed .cda-shell-nav-icon {
@@ -135,12 +135,24 @@
     @apply absolute right-0.5 top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-sky-300 px-1 text-[0.55rem] font-bold leading-none text-slate-950;
   }
 
+  .cda-shell-nav-label-row {
+    @apply flex min-w-0 flex-1 items-center justify-between gap-2;
+  }
+
+  .cda-shell-nav-badge-inline {
+    @apply inline-flex min-w-6 shrink-0 items-center justify-center rounded-full bg-sky-400/15 px-2 py-0.5 text-[0.65rem] font-semibold leading-none text-sky-200;
+  }
+
   .cda-shell-nav-overflow-anchor {
     @apply relative w-full;
   }
 
   .cda-shell-nav--collapsed .cda-shell-nav-overflow-anchor {
     @apply flex justify-center;
+  }
+
+  .cda-shell-nav--collapsed .cda-shell-nav-overflow-anchor > .inline-flex {
+    @apply justify-center;
   }
 
   .cda-shell-nav-overflow-panel {
@@ -227,6 +239,10 @@
 
   .cda-shell-opened-list {
     @apply shrink-0;
+  }
+
+  .cda-shell-opened-button {
+    @apply w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-left text-white transition hover:bg-white/10;
   }
 
   .cda-shell-utility-area {
