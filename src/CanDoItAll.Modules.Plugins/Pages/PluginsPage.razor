@@ -23,17 +23,24 @@
     <Header>
         <PageHeader Eyebrow="Plugins"
                     Title="Plugin catalog"
-                    Description="Review plugin manifests, runtime packages, grants, connection settings, OAuth status, and logs.">
+                    Description="Review plugin manifests, runtime packages, grants, connection settings, OAuth status, and logs."
+                    Compact="true">
+            <Stats>
+                <CompactStat Label="packages"
+                             Value="@packageCatalog.Count.ToString()"
+                             TooltipText="Runtime plugin packages available in the package catalog."
+                             Tone="info" />
+            </Stats>
             <Actions>
-                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" JustifyContent="JustifyContent.End">
-                    <StatusBadge Tone="info" Text="@($"{packageCatalog.Count} packages")" />
-                    <Button Text="Install packages"
-                            Icon="inventory_2"
-                            ButtonStyle="ButtonStyle.Light"
-                            data-testid="plugin-packages-open"
-                            Click="OpenPackageDialog" />
-                    <Button Text="Refresh" ButtonStyle="ButtonStyle.Light" Click="LoadAsync" />
-                </Cluster>
+                <PageHeaderActionButton Icon="inventory_2"
+                                        Label="Install packages"
+                                        TooltipText="Open plugin package installation."
+                                        data-testid="plugin-packages-open"
+                                        Click="OpenPackageDialog" />
+                <PageHeaderActionButton Icon="refresh"
+                                        Label="Refresh"
+                                        TooltipText="Refresh plugin manifests, grants, connections, OAuth status, and logs."
+                                        Click="LoadAsync" />
             </Actions>
         </PageHeader>
     </Header>

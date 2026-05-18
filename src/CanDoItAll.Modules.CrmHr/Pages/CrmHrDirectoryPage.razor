@@ -10,11 +10,32 @@
     <Header>
         <PageHeader Eyebrow="CRM / HR"
                     Title="Party directory"
-                    Description="Create and maintain shared party records for people, organizations, delivery units, and AI agents before downstream CRM or HR workflows branch into specialized screens.">
+                    Description="Create and maintain shared party records for people, organizations, delivery units, and AI agents before downstream CRM or HR workflows branch into specialized screens."
+                    Compact="true">
+            <Stats>
+                <CompactStat Label="directory"
+                             Value="@directoryItems.Count.ToString()"
+                             TooltipText="All saved party records in the shared directory." />
+                <CompactStat Label="visible"
+                             Value="@FilteredParties.Count.ToString()"
+                             TooltipText="Records matching the current filters."
+                             Tone="info" />
+                <CompactStat Label="organizations"
+                             Value="@directoryItems.Count(item => item.PartyType == PartyType.Organization || item.PartyType == PartyType.OrganizationUnit).ToString()"
+                             TooltipText="Organization and unit records available to CRM and HR."
+                             Tone="success" />
+                <CompactStat Label="sensitive"
+                             Value="@directoryItems.Count(item => item.IsSensitive).ToString()"
+                             TooltipText="Records that require careful downstream handling."
+                             Tone="warning" />
+            </Stats>
             <Actions>
-                <Button Text="New party"
-                        Click="CreateNewAsync"
-                        data-testid="crmhr-directory-new-button" />
+                <PageHeaderActionButton Icon="person_add"
+                                        Label="New party"
+                                        TooltipText="Create a new shared party record."
+                                        ButtonStyle="ButtonStyle.Primary"
+                                        Click="CreateNewAsync"
+                                        data-testid="crmhr-directory-new-button" />
             </Actions>
         </PageHeader>
     </Header>
@@ -22,21 +43,6 @@
     <ChildContent>
         <Stack GapScale="LayoutGap.Large">
             <CrmHrSecondaryTabs SelectedKey="directory" />
-
-            <SummaryTiles>
-                <SummaryTile Label="Directory"
-                             Value="@directoryItems.Count.ToString()"
-                             HelperText="All saved party records in the shared directory." />
-                <SummaryTile Label="Visible"
-                             Value="@FilteredParties.Count.ToString()"
-                             HelperText="Records matching the current filters." Tone="info" />
-                <SummaryTile Label="Organizations"
-                             Value="@directoryItems.Count(item => item.PartyType == PartyType.Organization || item.PartyType == PartyType.OrganizationUnit).ToString()"
-                             HelperText="Organization and unit records available to CRM and HR." Tone="success" />
-                <SummaryTile Label="Sensitive"
-                             Value="@directoryItems.Count(item => item.IsSensitive).ToString()"
-                             HelperText="Records that require careful downstream handling." Tone="warning" />
-            </SummaryTiles>
 
             <PartyImportExportActions ExportPartyIds="@FilteredParties.Select(item => item.Id).ToList()"
                                       ImportApplied="HandleImportAppliedAsync" />

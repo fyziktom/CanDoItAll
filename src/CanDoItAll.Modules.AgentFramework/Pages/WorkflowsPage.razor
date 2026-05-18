@@ -8,76 +8,51 @@
                     Title="Workflows"
                     Description="Build, validate, test, and observe workflow executions as a peer option beside technical agents."
                     Compact="true">
+            <Stats>
+                <CompactStat Label="definitions"
+                             Value="@definitions.Count.ToString()"
+                             TooltipText="Saved workflow definitions in the workflow catalog."
+                             Tone="info" />
+                <CompactStat Label="LLM components"
+                             Value="@components.Count.ToString()"
+                             TooltipText="Prepared LLM Call Components available to workflow nodes."
+                             Tone="success" />
+                <CompactStat Label="runs"
+                             Value="@historyRunTotalCount.ToString()"
+                             TooltipText="Paged workflow runs for the selected workflow history."
+                             Tone="accent" />
+                <CompactStat Label="pending input"
+                             Value="@pendingRequests.Count.ToString()"
+                             TooltipText="Human-in-loop or approval requests waiting for a response."
+                             Tone="warning" />
+                <CompactStat Label="backend"
+                             Value="@settings.DefaultRuntimePolicy.PreferredBackend.ToString()"
+                             TooltipText="Workflow setting used when a run does not request a backend explicitly."
+                             Tone="info" />
+            </Stats>
             <Actions>
-                <Button Icon="refresh"
-                        ButtonStyle="ButtonStyle.Light"
-                        Size="ButtonSize.Small"
-                        Class="cda-button--quick"
-                        title="Refresh"
-                        aria-label="Refresh"
-                        Click="RefreshAsync"
-                        Disabled="@isBusy"
-                        IsBusy="@isBusy"
-                        data-testid="workflows-refresh" />
-                <Button Text="Create starter"
-                        Icon="add"
-                        Click="CreateStarterWorkflowAsync"
-                        Disabled="@isBusy"
-                        data-testid="workflows-create-starter" />
-                <Button Icon="support_agent"
-                        ButtonStyle="ButtonStyle.Light"
-                        Size="ButtonSize.Small"
-                        Class="cda-button--quick"
-                        title="Open agents"
-                        aria-label="Open agents"
-                        Click="OpenAgents"
-                        data-testid="workflows-open-agents" />
+                <PageHeaderActionButton Icon="refresh"
+                                        Label="Refresh"
+                                        TooltipText="Refresh workflow definitions, runs, and settings."
+                                        Click="RefreshAsync"
+                                        Disabled="@isBusy"
+                                        IsBusy="@isBusy"
+                                        data-testid="workflows-refresh" />
+                <PageHeaderActionButton Icon="add"
+                                        Label="Create starter"
+                                        TooltipText="Create the starter workflow definition."
+                                        ButtonStyle="ButtonStyle.Primary"
+                                        Click="CreateStarterWorkflowAsync"
+                                        Disabled="@isBusy"
+                                        data-testid="workflows-create-starter" />
+                <PageHeaderActionButton Icon="support_agent"
+                                        Label="Open agents"
+                                        TooltipText="Open the technical agents workspace."
+                                        Click="OpenAgents"
+                                        data-testid="workflows-open-agents" />
             </Actions>
         </PageHeader>
     </Header>
-
-    <Lead>
-        <Cluster Gap="LayoutGap.Small"
-                 Wrap="FlexWrap.Wrap"
-                 Class="workflows-summary"
-                 data-testid="workflows-summary">
-            <SummaryTile Label="Definitions"
-                         Value="@definitions.Count.ToString()"
-                         HelperText="Saved workflow definitions in the workflow catalog."
-                         Tone="info"
-                         Badge="true"
-                         Compact="true"
-                         ShowHelperTextAsTooltip="true" />
-            <SummaryTile Label="LLM components"
-                         Value="@components.Count.ToString()"
-                         HelperText="Prepared LLM Call Components available to workflow nodes."
-                         Tone="success"
-                         Badge="true"
-                         Compact="true"
-                         ShowHelperTextAsTooltip="true" />
-            <SummaryTile Label="Runs"
-                         Value="@historyRunTotalCount.ToString()"
-                         HelperText="Paged workflow runs for the selected workflow history."
-                         Tone="secondary"
-                         Badge="true"
-                         Compact="true"
-                         ShowHelperTextAsTooltip="true" />
-            <SummaryTile Label="Pending input"
-                         Value="@pendingRequests.Count.ToString()"
-                         HelperText="Human-in-loop or approval requests waiting for a response."
-                         Tone="warning"
-                         Badge="true"
-                         Compact="true"
-                         ShowHelperTextAsTooltip="true" />
-            <SummaryTile Label="Default backend"
-                         Value="@settings.DefaultRuntimePolicy.PreferredBackend.ToString()"
-                         HelperText="Workflow setting used when a run does not request a backend explicitly."
-                         Tone="info"
-                         Badge="true"
-                         Compact="true"
-                         ShowHelperTextAsTooltip="true" />
-        </Cluster>
-    </Lead>
 
     <ChildContent>
         @if (!string.IsNullOrWhiteSpace(errorMessage))

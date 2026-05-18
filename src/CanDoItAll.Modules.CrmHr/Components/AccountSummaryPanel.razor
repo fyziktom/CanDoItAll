@@ -28,12 +28,22 @@ else
                 </Cluster>
             </Split>
 
-            <Grid Gap="LayoutGap.Medium" ColumnsSm="2" Class="mt-5">
-                <MetricCard Label="Stakeholders" Value="@Account.Stakeholders.Count.ToString()" />
-                <MetricCard Label="Opportunities" Value="@Account.Opportunities.Count.ToString()" />
-                <MetricCard Label="Overdue actions" Value="@Account.OverdueNextActions.Count.ToString()" />
-                <MetricCard Label="Tags" Value="@(Account.Tags.Count == 0 ? "0" : Account.Tags.Count.ToString())" />
-            </Grid>
+            <CompactStatStrip Class="mt-5">
+                <CompactStat Label="stakeholders"
+                             Value="@Account.Stakeholders.Count.ToString()"
+                             TooltipText="Stakeholders linked to this account." />
+                <CompactStat Label="opportunities"
+                             Value="@Account.Opportunities.Count.ToString()"
+                             TooltipText="Opportunities currently attached to this account."
+                             Tone="info" />
+                <CompactStat Label="overdue actions"
+                             Value="@Account.OverdueNextActions.Count.ToString()"
+                             TooltipText="Overdue next actions for this account."
+                             Tone="warning" />
+                <CompactStat Label="tags"
+                             Value="@(Account.Tags.Count == 0 ? "0" : Account.Tags.Count.ToString())"
+                             TooltipText="Tags currently attached to this account." />
+            </CompactStatStrip>
         </SurfaceCard>
 
         <SurfaceCard Soft="true">

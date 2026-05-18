@@ -13,6 +13,9 @@
     [Parameter]
     public BadgeTone? TypedTone { get; set; }
 
+    [Parameter]
+    public bool NoWrap { get; set; }
+
     private string ResolveCssClass()
     {
         var resolvedTone = TypedTone switch
@@ -39,8 +42,10 @@
         return $"cda-status-badge {toneCss}";
     }
 
-    private static string ResolveBadgeStyle()
-        => "max-width:100%;white-space:normal;overflow-wrap:anywhere;text-align:center;";
+    private string ResolveBadgeStyle()
+        => NoWrap
+            ? "max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;"
+            : "max-width:100%;white-space:normal;overflow-wrap:anywhere;text-align:center;";
 }
 
 

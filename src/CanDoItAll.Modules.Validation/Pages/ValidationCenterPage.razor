@@ -13,21 +13,25 @@
     <Header>
         <PageHeader Eyebrow="Validation"
                     Title="Validation center"
-                    Description="Run deterministic reviews, store findings, and keep final review decisions attached to each run.">
+                    Description="Run deterministic reviews, store findings, and keep final review decisions attached to each run."
+                    Compact="true">
+            <Stats>
+                <CompactStat Label="runs" Value="@runs.Count.ToString()" TooltipText="Persisted validation runs." />
+                <CompactStat Label="visible" Value="@FilteredRuns.Count.ToString()" TooltipText="Runs matching the current filters." Tone="info" />
+                <CompactStat Label="findings" Value="@runs.Sum(item => item.FindingCount).ToString()" TooltipText="Stored findings across all runs." />
+                <CompactStat Label="needs review" Value="@runs.Count(item => item.Decision != ValidationDecision.Approved).ToString()" TooltipText="Runs not yet approved." Tone="warning" />
+            </Stats>
             <Actions>
-                <Button Text="New validation" Click="CreateNewAsync" />
+                <PageHeaderActionButton Icon="add"
+                                        Label="New validation"
+                                        TooltipText="Create a new validation run."
+                                        ButtonStyle="ButtonStyle.Primary"
+                                        Click="CreateNewAsync" />
             </Actions>
         </PageHeader>
     </Header>
 
     <ChildContent>
-        <SummaryTiles>
-            <SummaryTile Label="Runs" Value="@runs.Count.ToString()" HelperText="Persisted validation runs." />
-            <SummaryTile Label="Visible" Value="@FilteredRuns.Count.ToString()" HelperText="Runs matching the current filters." Tone="info" />
-            <SummaryTile Label="Findings" Value="@runs.Sum(item => item.FindingCount).ToString()" HelperText="Stored findings across all runs." />
-            <SummaryTile Label="Needs review" Value="@runs.Count(item => item.Decision != ValidationDecision.Approved).ToString()" HelperText="Runs not yet approved." Tone="warning" />
-        </SummaryTiles>
-
         <ListDetailShell ListPaneWidth="25rem">
             <ListHeader>
                 <ListPanelHeader Title="Validation runs"

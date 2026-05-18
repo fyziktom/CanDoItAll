@@ -11,14 +11,33 @@
     <Header>
         <PageHeader Eyebrow="CRM / HR"
                     Title="Recruiting workspace"
-                    Description="Create candidate records in the shared registry, move them through stage with history, capture interviews and feedback, and hand off to workforce without duplicating the person.">
+                    Description="Create candidate records in the shared registry, move them through stage with history, capture interviews and feedback, and hand off to workforce without duplicating the person."
+                    Compact="true">
+            <Stats>
+                <CompactStat Label="applications"
+                             Value="@(currentWorkspace?.Applications.Count.ToString() ?? "0")"
+                             TooltipText="Candidate pipelines tracked on the shared registry." />
+                <CompactStat Label="interviewing"
+                             Value="@(currentWorkspace?.Applications.Count(item => item.Stage == RecruitmentStage.Interviewing).ToString() ?? "0")"
+                             TooltipText="Candidates currently in interview loops."
+                             Tone="info" />
+                <CompactStat Label="offer or hired"
+                             Value="@(currentWorkspace?.Applications.Count(item => item.Stage is RecruitmentStage.Offer or RecruitmentStage.Hired).ToString() ?? "0")"
+                             TooltipText="Applications close enough to require controlled handoff."
+                             Tone="success" />
+                <CompactStat Label="open tasks"
+                             Value="@(currentWorkspace?.LifecycleTasks.Count(item => item.Status is not LifecycleTaskStatus.Completed and not LifecycleTaskStatus.Cancelled).ToString() ?? "0")"
+                             TooltipText="Selected candidate onboarding or offboarding actions."
+                             Tone="warning" />
+            </Stats>
             <Actions>
                 @if (SelectedPartyId.HasValue)
                 {
-                    <Button Text="Open workforce"
-                            ButtonStyle="ButtonStyle.Light"
-                            Click="OpenWorkforceAsync"
-                            data-testid="crmhr-recruiting-open-workforce" />
+                    <PageHeaderActionButton Icon="groups"
+                                            Label="Open workforce"
+                                            TooltipText="Open the linked workforce profile."
+                                            Click="OpenWorkforceAsync"
+                                            data-testid="crmhr-recruiting-open-workforce" />
                 }
             </Actions>
         </PageHeader>
@@ -27,13 +46,6 @@
     <ChildContent>
         <Stack GapScale="LayoutGap.Large">
             <CrmHrSecondaryTabs SelectedKey="recruiting" />
-
-            <SummaryTiles>
-                <SummaryTile Label="Applications" Value="@(currentWorkspace?.Applications.Count.ToString() ?? "0")" HelperText="Candidate pipelines tracked on the shared registry." />
-                <SummaryTile Label="Interviewing" Value="@(currentWorkspace?.Applications.Count(item => item.Stage == RecruitmentStage.Interviewing).ToString() ?? "0")" HelperText="Candidates currently in interview loops." Tone="info" />
-                <SummaryTile Label="Offer or hired" Value="@(currentWorkspace?.Applications.Count(item => item.Stage is RecruitmentStage.Offer or RecruitmentStage.Hired).ToString() ?? "0")" HelperText="Applications close enough to require controlled handoff." Tone="success" />
-                <SummaryTile Label="Open tasks" Value="@(currentWorkspace?.LifecycleTasks.Count(item => item.Status is not LifecycleTaskStatus.Completed and not LifecycleTaskStatus.Cancelled).ToString() ?? "0")" HelperText="Selected candidate onboarding or offboarding actions." Tone="warning" />
-            </SummaryTiles>
 
             <ListDetailShell ListPaneWidth="30rem">
                 <ListHeader>

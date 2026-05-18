@@ -11,11 +11,34 @@
     <Header>
         <PageHeader Eyebrow="CRM / HR"
                     Title="Workforce workspace"
-                    Description="Keep worker identity, delivery-unit structure, manager lines, and commercial staffing metadata on the shared party model instead of splitting people ops and delivery records.">
+                    Description="Keep worker identity, delivery-unit structure, manager lines, and commercial staffing metadata on the shared party model instead of splitting people ops and delivery records."
+                    Compact="true">
+            <Stats>
+                <CompactStat Label="profiles"
+                             Value="@workforceItems.Count(item => item.HasProfile).ToString()"
+                             TooltipText="Parties with an attached workforce profile." />
+                <CompactStat Label="bench"
+                             Value="@workforceItems.Count(item => item.AvailabilityState == WorkforceAvailabilityState.Bench).ToString()"
+                             TooltipText="Profiles currently light enough to staff quickly."
+                             Tone="success" />
+                <CompactStat Label="near available"
+                             Value="@workforceItems.Count(item => item.AvailabilityState == WorkforceAvailabilityState.NearAvailable).ToString()"
+                             TooltipText="Profiles becoming available within the next month."
+                             Tone="warning" />
+                <CompactStat Label="overallocated"
+                             Value="@workforceItems.Count(item => item.AvailabilityState == WorkforceAvailabilityState.Overallocated).ToString()"
+                             TooltipText="Profiles whose project demand exceeds available capacity."
+                             Tone="danger" />
+                <CompactStat Label="without profile"
+                             Value="@workforceItems.Count(item => !item.HasProfile && item.PartyType == PartyType.Person).ToString()"
+                             TooltipText="People already in the directory who still need workforce metadata."
+                             Tone="info" />
+            </Stats>
             <Actions>
-                <Button Text="Open directory"
-                        ButtonStyle="ButtonStyle.Light"
-                        Click="OpenDirectory" />
+                <PageHeaderActionButton Icon="asset"
+                                        Label="Open directory"
+                                        TooltipText="Open the shared party directory."
+                                        Click="OpenDirectory" />
             </Actions>
         </PageHeader>
     </Header>
@@ -23,24 +46,6 @@
     <ChildContent>
         <Stack GapScale="LayoutGap.Large">
             <CrmHrSecondaryTabs SelectedKey="workforce" />
-
-            <SummaryTiles>
-                <SummaryTile Label="Profiles"
-                             Value="@workforceItems.Count(item => item.HasProfile).ToString()"
-                             HelperText="Parties with an attached workforce profile." />
-                <SummaryTile Label="Bench"
-                             Value="@workforceItems.Count(item => item.AvailabilityState == WorkforceAvailabilityState.Bench).ToString()"
-                             HelperText="Profiles currently light enough to staff quickly." Tone="success" />
-                <SummaryTile Label="Near available"
-                             Value="@workforceItems.Count(item => item.AvailabilityState == WorkforceAvailabilityState.NearAvailable).ToString()"
-                             HelperText="Profiles becoming available within the next month." Tone="warning" />
-                <SummaryTile Label="Overallocated"
-                             Value="@workforceItems.Count(item => item.AvailabilityState == WorkforceAvailabilityState.Overallocated).ToString()"
-                             HelperText="Profiles whose project demand exceeds available capacity." Tone="danger" />
-                <SummaryTile Label="Without profile"
-                             Value="@workforceItems.Count(item => !item.HasProfile && item.PartyType == PartyType.Person).ToString()"
-                             HelperText="People already in the directory who still need workforce metadata." Tone="info" />
-            </SummaryTiles>
 
             <ListDetailShell ListPaneWidth="30rem">
                 <ListHeader>

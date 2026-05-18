@@ -12,21 +12,25 @@
     <Header>
         <PageHeader Eyebrow="Test Lab"
                     Title="Tests, evidence, and execution results"
-                    Description="Track planned coverage, linked cases, evidence artifacts, and the latest execution results for each phase.">
+                    Description="Track planned coverage, linked cases, evidence artifacts, and the latest execution results for each phase."
+                    Compact="true">
+            <Stats>
+                <CompactStat Label="plans" Value="@plans.Count.ToString()" TooltipText="Persisted test plans." />
+                <CompactStat Label="visible" Value="@FilteredPlans.Count.ToString()" TooltipText="Plans matching the current filters." Tone="info" />
+                <CompactStat Label="cases" Value="@plans.Sum(item => item.CaseCount).ToString()" TooltipText="Tracked test cases across all plans." />
+                <CompactStat Label="evidence" Value="@plans.Sum(item => item.EvidenceCount).ToString()" TooltipText="Linked evidence records across all plans." />
+            </Stats>
             <Actions>
-                <Button Text="New test plan" Click="CreateNewAsync" />
+                <PageHeaderActionButton Icon="add"
+                                        Label="New test plan"
+                                        TooltipText="Create a new test plan."
+                                        ButtonStyle="ButtonStyle.Primary"
+                                        Click="CreateNewAsync" />
             </Actions>
         </PageHeader>
     </Header>
 
     <ChildContent>
-        <SummaryTiles>
-            <SummaryTile Label="Plans" Value="@plans.Count.ToString()" HelperText="Persisted test plans." />
-            <SummaryTile Label="Visible" Value="@FilteredPlans.Count.ToString()" HelperText="Plans matching the current filters." Tone="info" />
-            <SummaryTile Label="Cases" Value="@plans.Sum(item => item.CaseCount).ToString()" HelperText="Tracked test cases across all plans." />
-            <SummaryTile Label="Evidence" Value="@plans.Sum(item => item.EvidenceCount).ToString()" HelperText="Linked evidence records across all plans." />
-        </SummaryTiles>
-
         <ListDetailShell ListPaneWidth="25rem">
             <ListHeader>
                 <ListPanelHeader Title="Test plans"

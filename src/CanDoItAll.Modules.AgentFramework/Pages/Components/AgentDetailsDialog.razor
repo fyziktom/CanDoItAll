@@ -527,33 +527,24 @@ else
                     <TabsItem Text="Skills and MCP">
                         <FormSection Title="Skills and MCP" Description="Attach cataloged skills and MCP servers to this agent, or create a compact capability entry and assign it immediately.">
                             <div data-testid="agents-details-capability-summary">
-                                <SummaryTiles GapScale="LayoutGap.Small"
-                                              ColumnsMd="4">
-                                    <SummaryTile Label="Attached"
+                                <CompactStatStrip>
+                                    <CompactStat Label="attached"
                                                  Value="@editorModel.SelectedCapabilityIds.Count.ToString()"
-                                                 HelperText="Capabilities currently assigned to this agent."
-                                                 Tone="info"
-                                                 Badge="true"
-                                                 Compact="true" />
-                                    <SummaryTile Label="Skills"
+                                                 TooltipText="Capabilities currently assigned to this agent."
+                                                 Tone="info" />
+                                    <CompactStat Label="skills"
                                                  Value="@capabilities.Count(item => item.Kind == CapabilityKind.Skill).ToString()"
-                                                 HelperText="Prompt and workflow skills in the catalog."
-                                                 Tone="success"
-                                                 Badge="true"
-                                                 Compact="true" />
-                                    <SummaryTile Label="MCP servers"
+                                                 TooltipText="Prompt and workflow skills in the catalog."
+                                                 Tone="success" />
+                                    <CompactStat Label="MCP servers"
                                                  Value="@capabilities.Count(item => item.Kind == CapabilityKind.McpServer).ToString()"
-                                                 HelperText="MCP tool surfaces in the catalog."
-                                                 Tone="warning"
-                                                 Badge="true"
-                                                 Compact="true" />
-                                    <SummaryTile Label="Verified"
+                                                 TooltipText="MCP tool surfaces in the catalog."
+                                                 Tone="warning" />
+                                    <CompactStat Label="verified"
                                                  Value="@capabilities.Count(item => item.ProofStatus == CapabilityProofStatus.Verified).ToString()"
-                                                 HelperText="Capabilities with successful proof status."
-                                                 Tone="mint"
-                                                 Badge="true"
-                                                 Compact="true" />
-                                </SummaryTiles>
+                                                 TooltipText="Capabilities with successful proof status."
+                                                 Tone="success" />
+                                </CompactStatStrip>
                             </div>
 
                             <div class="agent-details-dialog__new-capability"

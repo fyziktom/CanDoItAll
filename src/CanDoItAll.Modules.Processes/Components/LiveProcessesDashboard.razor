@@ -19,20 +19,22 @@
         <Toolbar Class="live-processes-command-strip"
                  data-testid="live-processes-command-strip">
             <ToolbarRow Class="live-processes-command-strip__row">
-                <Cluster Gap="LayoutGap.Small"
-                         Wrap="FlexWrap.Wrap"
-                         Class="min-w-0">
+                <CompactStatStrip Class="min-w-0">
                     <p class="cda-eyebrow whitespace-nowrap">Processes</p>
                     <h1 class="live-processes-title">@PageTitleText</h1>
-                    <StatusBadge Tone="info"
-                                 Text="@FormatCount(CurrentStats.RunningRunCount, "running", "running")" />
-                    <StatusBadge Tone="warning"
-                                 Text="@FormatCount(CurrentStats.BlockedRunCount, "blocked", "blocked")" />
-                    <StatusBadge Tone="danger"
-                                 Text="@FormatCount(CurrentStats.FailedRunCount, "failed", "failed")" />
-                    <StatusBadge Tone="neutral"
-                                 Text="@LastRefreshText" />
-                </Cluster>
+                    <CompactStat Tone="info"
+                                 Text="@FormatCount(CurrentStats.RunningRunCount, "running", "running")"
+                                 TooltipText="Process runs currently running in the live projection." />
+                    <CompactStat Tone="warning"
+                                 Text="@FormatCount(CurrentStats.BlockedRunCount, "blocked", "blocked")"
+                                 TooltipText="Process runs currently blocked in the live projection." />
+                    <CompactStat Tone="danger"
+                                 Text="@FormatCount(CurrentStats.FailedRunCount, "failed", "failed")"
+                                 TooltipText="Process runs currently failed in the live projection." />
+                    <CompactStat Tone="neutral"
+                                 Text="@LastRefreshText"
+                                 TooltipText="Most recent live process refresh time." />
+                </CompactStatStrip>
 
                 <ToolbarActions Class="live-processes-command-strip__actions">
                     <select class="cda-input live-processes-select"
@@ -58,14 +60,13 @@
                         }
                     </select>
 
-                    <Button Text="Refresh"
-                            Icon="refresh"
-                            ButtonStyle="ButtonStyle.Light"
-                            Size="ButtonSize.Small"
-                            Disabled="@isRefreshing"
-                            IsBusy="@isRefreshing"
-                            Click="ForceRefreshAsync"
-                            data-testid="live-processes-refresh-button" />
+                    <PageHeaderActionButton Icon="refresh"
+                                            Label="Refresh"
+                                            TooltipText="Refresh the live process projection."
+                                            Disabled="@isRefreshing"
+                                            IsBusy="@isRefreshing"
+                                            Click="ForceRefreshAsync"
+                                            data-testid="live-processes-refresh-button" />
                 </ToolbarActions>
             </ToolbarRow>
         </Toolbar>
@@ -94,36 +95,31 @@
             else
             {
                 <div class="live-processes-summary">
-                    <SummaryTiles ColumnsSm="2"
-                                  ColumnsMd="3"
-                                  ColumnsLg="6"
-                                  ColumnsXl="6"
-                                  GapScale="LayoutGap.Small">
-                        <SummaryTile Label="Observed"
+                    <CompactStatStrip>
+                        <CompactStat Label="observed"
                                      Value="@CurrentStats.ObservedRunCount.ToString("N0", CultureInfo.CurrentCulture)"
-                                     Tone="info"
-                                     Compact="true" />
-                        <SummaryTile Label="Agents"
+                                     TooltipText="Observed runs in the current live process projection."
+                                     Tone="info" />
+                        <CompactStat Label="agents"
                                      Value="@CurrentStats.ActiveAgentCount.ToString("N0", CultureInfo.CurrentCulture)"
-                                     Tone="success"
-                                     Compact="true" />
-                        <SummaryTile Label="Context"
+                                     TooltipText="Active agents observed in the current live process projection."
+                                     Tone="success" />
+                        <CompactStat Label="context"
                                      Value="@FormatTokens(CurrentStats.TotalTokens)"
-                                     Tone="secondary"
-                                     Compact="true" />
-                        <SummaryTile Label="Tool calls"
+                                     TooltipText="Total context tokens observed in the current live process projection."
+                                     Tone="accent" />
+                        <CompactStat Label="tool calls"
                                      Value="@CurrentStats.ToolCalls.ToString("N0", CultureInfo.CurrentCulture)"
-                                     Tone="warning"
-                                     Compact="true" />
-                        <SummaryTile Label="Time"
+                                     TooltipText="Tool calls observed in the current live process projection."
+                                     Tone="warning" />
+                        <CompactStat Label="time"
                                      Value="@FormatDuration(TimeSpan.FromMilliseconds(CurrentStats.DurationMs))"
-                                     Tone="neutral"
-                                     Compact="true" />
-                        <SummaryTile Label="Cost"
+                                     TooltipText="Total observed runtime duration." />
+                        <CompactStat Label="cost"
                                      Value="@FormatMoney(CurrentStats.ActualCost)"
-                                     Tone="danger"
-                                     Compact="true" />
-                    </SummaryTiles>
+                                     TooltipText="Actual cost observed in the current live process projection."
+                                     Tone="danger" />
+                    </CompactStatStrip>
                 </div>
 
                 <Tabs SelectedIndex="@selectedTabIndex"
@@ -1087,36 +1083,31 @@
     private RenderFragment RenderProcessOverview(ProcessWorkspaceRunDetails details)
     {
         return @<div class="live-processes-detail-panel">
-            <SummaryTiles ColumnsSm="2"
-                          ColumnsMd="3"
-                          ColumnsLg="6"
-                          ColumnsXl="6"
-                          GapScale="LayoutGap.Small">
-                <SummaryTile Label="Steps"
+            <CompactStatStrip>
+                <CompactStat Label="steps"
                              Value="@($"{details.StepRuns.Count(item => item.Status == ProcessStepRunStatus.Completed)}/{details.StepRuns.Count}")"
-                             Tone="info"
-                             Compact="true" />
-                <SummaryTile Label="Active"
+                             TooltipText="Completed steps compared with total steps."
+                             Tone="info" />
+                <CompactStat Label="active"
                              Value="@details.Health.ActiveExecutionCount.ToString("N0", CultureInfo.CurrentCulture)"
-                             Tone="success"
-                             Compact="true" />
-                <SummaryTile Label="Approvals"
+                             TooltipText="Active executions in this run."
+                             Tone="success" />
+                <CompactStat Label="approvals"
                              Value="@details.Health.PendingApprovalCount.ToString("N0", CultureInfo.CurrentCulture)"
-                             Tone="warning"
-                             Compact="true" />
-                <SummaryTile Label="Blocked"
+                             TooltipText="Pending approvals in this run."
+                             Tone="warning" />
+                <CompactStat Label="blocked"
                              Value="@details.Health.BlockedStepCount.ToString("N0", CultureInfo.CurrentCulture)"
-                             Tone="danger"
-                             Compact="true" />
-                <SummaryTile Label="Artifacts"
+                             TooltipText="Blocked steps in this run."
+                             Tone="danger" />
+                <CompactStat Label="artifacts"
                              Value="@details.Artifacts.Count.ToString("N0", CultureInfo.CurrentCulture)"
-                             Tone="secondary"
-                             Compact="true" />
-                <SummaryTile Label="Outbox"
+                             TooltipText="Artifacts attached to this run."
+                             Tone="accent" />
+                <CompactStat Label="outbox"
                              Value="@details.OutboxRecords.Count.ToString("N0", CultureInfo.CurrentCulture)"
-                             Tone="neutral"
-                             Compact="true" />
-            </SummaryTiles>
+                             TooltipText="Automation outbox records for this run." />
+            </CompactStatStrip>
 
             <div class="live-processes-detail-grid">
                 <SectionCard Title="Run health"

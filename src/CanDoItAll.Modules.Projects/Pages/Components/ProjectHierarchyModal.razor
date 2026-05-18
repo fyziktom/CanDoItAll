@@ -110,13 +110,11 @@
                                         <StatusBadge Tone="@ProjectsPresentation.GetStatusTone(subproject.Status)" Text="@subproject.Status.ToString()" />
                                     </Split>
 
-                                    <Grid Gap="LayoutGap.Small"
-                                          ColumnsSm="3"
-                                          Class="mt-4">
-                                        <MetricCard Label="Parents" Value="@subproject.ParentCount.ToString()" />
-                                        <MetricCard Label="Subprojects" Value="@subproject.ChildCount.ToString()" />
-                                        <MetricCard Label="Updated" Value="@subproject.UpdatedAtUtc.LocalDateTime.ToString("g")" />
-                                    </Grid>
+                                    <CompactStatStrip Class="mt-4">
+                                        <CompactStat Label="parents" Value="@subproject.ParentCount.ToString()" TooltipText="Parent projects linked to this subproject." />
+                                        <CompactStat Label="subprojects" Value="@subproject.ChildCount.ToString()" TooltipText="Child projects linked under this subproject." Tone="info" />
+                                        <CompactStat Label="updated" Value="@subproject.UpdatedAtUtc.LocalDateTime.ToString("g")" TooltipText="Most recent update time for this subproject." />
+                                    </CompactStatStrip>
 
                                     <Cluster Class="mt-4">
                                         <Button ButtonStyle="ButtonStyle.Light"

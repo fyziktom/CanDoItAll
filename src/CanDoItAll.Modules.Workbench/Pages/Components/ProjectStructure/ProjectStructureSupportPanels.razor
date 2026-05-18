@@ -25,12 +25,11 @@
                Class="w-full">
             <TextBlock TextStyle="TextStyle.Eyebrow" Value="Canvas coverage" />
             <TextBlock TextStyle="TextStyle.H5" Value="Graph health" Class="cw-panel-title" />
-            <Grid Columns="3"
-                  Gap="LayoutGap.Small">
-                <MetricCard Label="Total nodes" Value="@TotalNodes.ToString()" />
-                <MetricCard Label="Total links" Value="@TotalLinks.ToString()" />
-                <MetricCard Label="Selected" Value="@SelectedCount.ToString()" />
-            </Grid>
+            <CompactStatStrip>
+                <CompactStat Label="nodes" Value="@TotalNodes.ToString()" TooltipText="Total nodes on the project structure canvas." Tone="info" />
+                <CompactStat Label="links" Value="@TotalLinks.ToString()" TooltipText="Total links on the project structure canvas." Tone="success" />
+                <CompactStat Label="selected" Value="@SelectedCount.ToString()" TooltipText="Currently selected canvas nodes." />
+            </CompactStatStrip>
             <TextBlock TextStyle="TextStyle.Note"
                        Value="Cross-links, grouped create menus, media uploads, and typed child creation remain intact on the shared canvas substrate."
                        Class="cw-panel-copy" />

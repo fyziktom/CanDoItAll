@@ -57,18 +57,24 @@
                 </Split>
             </SurfaceCard>
 
-            <Grid Gap="LayoutGap.Small"
-                  ColumnsSm="2"
-                  Columns2Xl="4">
-                <MetricCard Label="Completed steps"
-                            Value="@selectedRun.CompletedStepCount.ToString()" />
-                <MetricCard Label="Blocked steps"
-                            Value="@selectedRun.BlockedStepCount.ToString()" />
-                <MetricCard Label="Capability gaps"
-                            Value="@selectedRun.CapabilityGapCount.ToString()" />
-                <MetricCard Label="Actual cost"
-                            Value="@selectedRun.ActualCost.ToString("C")" />
-            </Grid>
+            <CompactStatStrip>
+                <CompactStat Label="completed steps"
+                             Value="@selectedRun.CompletedStepCount.ToString()"
+                             TooltipText="Completed steps in the selected run."
+                             Tone="info" />
+                <CompactStat Label="blocked steps"
+                             Value="@selectedRun.BlockedStepCount.ToString()"
+                             TooltipText="Blocked steps in the selected run."
+                             Tone="warning" />
+                <CompactStat Label="capability gaps"
+                             Value="@selectedRun.CapabilityGapCount.ToString()"
+                             TooltipText="Capability gaps in the selected run."
+                             Tone="danger" />
+                <CompactStat Label="actual cost"
+                             Value="@selectedRun.ActualCost.ToString("C")"
+                             TooltipText="Actual cost recorded for the selected run."
+                             Tone="info" />
+            </CompactStatStrip>
         </Grid>
 
         @if (Presenter.StepRuns.Count == 0)
@@ -140,18 +146,23 @@
                             </p>
                         }
 
-                        <Grid Gap="LayoutGap.Medium"
-                              ColumnsMd="4"
-                              Class="mt-5">
-                            <MetricCard Label="Wait"
-                                        Value="@($"{stepRun.WaitMinutes}m")" />
-                            <MetricCard Label="Touch"
-                                        Value="@($"{stepRun.TouchMinutes}m")" />
-                            <MetricCard Label="Blocked"
-                                        Value="@($"{stepRun.BlockedMinutes}m")" />
-                            <MetricCard Label="Rework"
-                                        Value="@stepRun.ReworkCount.ToString()" />
-                        </Grid>
+                        <CompactStatStrip Class="mt-5">
+                            <CompactStat Label="wait"
+                                         Value="@($"{stepRun.WaitMinutes}m")"
+                                         TooltipText="Runtime wait minutes recorded for this step." />
+                            <CompactStat Label="touch"
+                                         Value="@($"{stepRun.TouchMinutes}m")"
+                                         TooltipText="Runtime touch minutes recorded for this step."
+                                         Tone="info" />
+                            <CompactStat Label="blocked"
+                                         Value="@($"{stepRun.BlockedMinutes}m")"
+                                         TooltipText="Runtime blocked minutes recorded for this step."
+                                         Tone="warning" />
+                            <CompactStat Label="rework"
+                                         Value="@stepRun.ReworkCount.ToString()"
+                                         TooltipText="Rework count recorded for this step."
+                                         Tone="danger" />
+                        </CompactStatStrip>
 
                         @if (stepRun.AvailableBranchOutcomes.Count > 0)
                         {

@@ -2124,6 +2124,30 @@
     background-color: var(--color-white);
     color: var(--color-slate-600);
   }
+  .cda-compact-stat-strip {
+    display: flex;
+    min-width: calc(var(--spacing) * 0);
+    flex-wrap: wrap;
+    align-items: center;
+    gap: calc(var(--spacing) * 2);
+  }
+  .cda-compact-stat-host {
+    display: inline-flex;
+    min-width: calc(var(--spacing) * 0);
+  }
+  .cda-compact-stat-trigger {
+    display: inline-flex;
+    min-width: calc(var(--spacing) * 0);
+  }
+  .cda-status-badge.cda-compact-stat {
+    max-width: 16rem;
+    padding-inline: calc(var(--spacing) * 2.5);
+    padding-block: calc(var(--spacing) * 1);
+    font-size: var(--text-xs);
+    line-height: var(--tw-leading, var(--text-xs--line-height));
+    --tw-leading: 1;
+    line-height: 1;
+  }
   .cda-metric-card {
     border-radius: var(--radius-xl);
     border-style: var(--tw-border-style);
@@ -3791,7 +3815,7 @@
       flex-direction: row;
     }
     @media (width >= 64rem) {
-      align-items: flex-end;
+      align-items: center;
     }
     @media (width >= 64rem) {
       justify-content: space-between;
@@ -3806,14 +3830,31 @@
     --tw-border-style: none;
     border-style: none;
     padding-bottom: calc(var(--spacing) * 0);
-    @media (width >= 40rem) {
+    @media (width >= 64rem) {
       flex-direction: row;
     }
-    @media (width >= 40rem) {
+    @media (width >= 64rem) {
       align-items: center;
     }
-    @media (width >= 40rem) {
+    @media (width >= 64rem) {
       justify-content: space-between;
+    }
+  }
+  .cda-page-header__main {
+    display: flex;
+    min-width: calc(var(--spacing) * 0);
+    flex-direction: column;
+    gap: calc(var(--spacing) * 2);
+  }
+  .cda-page-header--compact .cda-page-header__main {
+    @media (width >= 64rem) {
+      flex-direction: row;
+    }
+    @media (width >= 64rem) {
+      align-items: center;
+    }
+    @media (width >= 64rem) {
+      gap: calc(var(--spacing) * 3);
     }
   }
   .cda-page-header__copy {
@@ -3875,6 +3916,13 @@
     --tw-leading: calc(var(--spacing) * 5);
     line-height: calc(var(--spacing) * 5);
     color: var(--cad-color-text-muted);
+  }
+  .cda-page-header__stats {
+    display: flex;
+    min-width: calc(var(--spacing) * 0);
+    flex-wrap: wrap;
+    align-items: center;
+    gap: calc(var(--spacing) * 2);
   }
   .cda-page-header__actions {
     display: flex;

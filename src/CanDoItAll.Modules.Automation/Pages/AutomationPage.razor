@@ -21,18 +21,19 @@ tests: component:AutomationPageTests, e2e:automation-smoke
     <Header>
         <PageHeader Eyebrow="Automation"
                     Title="Background jobs and operational work"
-                    Description="Inspect queued, running, and completed jobs so long-running work stays visible instead of disappearing behind buttons." />
+                    Description="Inspect queued, running, and completed jobs so long-running work stays visible instead of disappearing behind buttons."
+                    Compact="true">
+            <Stats>
+                <CompactStat Label="jobs" Value="@jobs.Count.ToString()" TooltipText="Tracked asynchronous tasks in the workspace." />
+                <CompactStat Label="CRM-HR signals" Value="@signals.Count.ToString()" TooltipText="Reminder-style operational states surfaced from CRM-HR data." Tone="info" />
+                <CompactStat Label="running" Value="@jobs.Count(job => job.State == BackgroundJobState.Running).ToString()" TooltipText="Work currently in progress." Tone="info" />
+                <CompactStat Label="failed" Value="@jobs.Count(job => job.State == BackgroundJobState.Failed).ToString()" TooltipText="Operational issues that need attention." Tone="warning" />
+                <CompactStat Label="succeeded" Value="@jobs.Count(job => job.State == BackgroundJobState.Succeeded).ToString()" TooltipText="Completed jobs with no action required." Tone="success" />
+            </Stats>
+        </PageHeader>
     </Header>
 
     <ChildContent>
-        <SummaryTiles>
-            <SummaryTile Label="Jobs" Value="@jobs.Count.ToString()" HelperText="Tracked asynchronous tasks in the workspace." />
-            <SummaryTile Label="CRM-HR signals" Value="@signals.Count.ToString()" HelperText="Reminder-style operational states surfaced from CRM-HR data." Tone="info" />
-            <SummaryTile Label="Running" Value="@jobs.Count(job => job.State == BackgroundJobState.Running).ToString()" HelperText="Work currently in progress." Tone="info" />
-            <SummaryTile Label="Failed" Value="@jobs.Count(job => job.State == BackgroundJobState.Failed).ToString()" HelperText="Operational issues that need attention." Tone="warning" />
-            <SummaryTile Label="Succeeded" Value="@jobs.Count(job => job.State == BackgroundJobState.Succeeded).ToString()" HelperText="Completed jobs with no action required." Tone="success" />
-        </SummaryTiles>
-
         <SectionCard Title="CRM-HR operational signals"
                      Description="These are reminder-style states derived from CRM-HR data when no explicit background job exists yet.">
             @if (signals.Count == 0)

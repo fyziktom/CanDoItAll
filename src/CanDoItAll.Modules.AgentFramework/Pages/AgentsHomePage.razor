@@ -8,6 +8,32 @@
                     Title="Integrated technical agent runtime"
                     Description="@AgentFrameworkShellHelpText"
                     Compact="true">
+            <Stats>
+                <CompactStat Label="technical agents"
+                             Value="@ResolveSummaryValue(technicalAgentCount)"
+                             TooltipText="Organization-scoped technical runtime records."
+                             Tone="info" />
+                <CompactStat Label="providers"
+                             Value="@ResolveSummaryValue(providerCount)"
+                             TooltipText="Workspace-owned providers executed through AgentFramework."
+                             Tone="success" />
+                <CompactStat Label="bound resources"
+                             Value="@ResolveSummaryValue(boundResourceCount)"
+                             TooltipText="CRM-HR AI resources already bound to a technical agent."
+                             Tone="warning" />
+                <CompactStat Label="capabilities"
+                             Value="@ResolveSummaryValue(capabilityCount)"
+                             TooltipText="Reusable skills, MCP servers, and other runtime capabilities."
+                             Tone="accent" />
+                <CompactStat Label="active runs"
+                             Value="@ResolveSummaryValue(activeRunCount)"
+                             TooltipText="Durable technical executions still in progress."
+                             Tone="info" />
+                <CompactStat Label="failed runs"
+                             Value="@ResolveSummaryValue(failedRunCount)"
+                             TooltipText="Recent execution failures that still need governance attention."
+                             Tone="danger" />
+            </Stats>
             <Actions>
                 <HelpPopover RootClass="pf-help-popover inline-flex items-center"
                              ToggleClass="pf-help-popover__toggle pf-help-popover__toggle--compact"
@@ -16,78 +42,34 @@
                              Title="Show AgentFramework shell help"
                              Heading="AgentFramework shell"
                              Body="@AgentFrameworkShellHelpText" />
-                <Button Text="Feed defaults"
-                        ButtonStyle="ButtonStyle.Light"
-                        Click="FeedDefaultsAsync"
-                        Disabled="@isFeedingDefaults"
-                        IsBusy="@isFeedingDefaults"
-                        data-testid="agents-shell-feed-defaults" />
-                <Button Text="Open CRM / HR agents"
-                        Click="OpenCrmHrAgents"
-                        data-testid="agents-shell-open-crmhr" />
-                <Button Text="Open workflows"
-                        ButtonStyle="ButtonStyle.Light"
-                        Click="OpenWorkflows"
-                        data-testid="agents-shell-open-workflows" />
-                <Button Text="Open processes"
-                        ButtonStyle="ButtonStyle.Light"
-                        Click="OpenProcesses"
-                        data-testid="agents-shell-open-processes" />
+                <PageHeaderActionButton Icon="cloud_sync"
+                                        Label="Feed defaults"
+                                        TooltipText="Feed default technical agents and providers."
+                                        Click="FeedDefaultsAsync"
+                                        Disabled="@isFeedingDefaults"
+                                        IsBusy="@isFeedingDefaults"
+                                        data-testid="agents-shell-feed-defaults" />
+                <PageHeaderActionButton Icon="groups"
+                                        Label="Open CRM / HR agents"
+                                        TooltipText="Open CRM-HR agent projections."
+                                        ButtonStyle="ButtonStyle.Primary"
+                                        Click="OpenCrmHrAgents"
+                                        data-testid="agents-shell-open-crmhr" />
+                <PageHeaderActionButton Icon="flow"
+                                        Label="Open workflows"
+                                        TooltipText="Open AgentFramework workflows."
+                                        Click="OpenWorkflows"
+                                        data-testid="agents-shell-open-workflows" />
+                <PageHeaderActionButton Icon="flow"
+                                        Label="Open processes"
+                                        TooltipText="Open the processes workspace."
+                                        Click="OpenProcesses"
+                                        data-testid="agents-shell-open-processes" />
             </Actions>
         </PageHeader>
     </Header>
 
     <Lead>
-        <div class="agents-runtime-badges-shell">
-            <Cluster Gap="LayoutGap.Small"
-                     Wrap="FlexWrap.Wrap"
-                     Class="agents-runtime-badges"
-                     data-testid="agents-shell-summary-badges">
-                <SummaryTile Label="Technical agents"
-                             Value="@ResolveSummaryValue(technicalAgentCount)"
-                             HelperText="Organization-scoped technical runtime records."
-                             Tone="info"
-                             Badge="true"
-                             Compact="true"
-                             ShowHelperTextAsTooltip="true" />
-                <SummaryTile Label="Providers"
-                             Value="@ResolveSummaryValue(providerCount)"
-                             HelperText="Workspace-owned providers executed through AgentFramework."
-                             Tone="success"
-                             Badge="true"
-                             Compact="true"
-                             ShowHelperTextAsTooltip="true" />
-                <SummaryTile Label="Bound resources"
-                             Value="@ResolveSummaryValue(boundResourceCount)"
-                             HelperText="CRM-HR AI resources already bound to a technical agent."
-                             Tone="warning"
-                             Badge="true"
-                             Compact="true"
-                             ShowHelperTextAsTooltip="true" />
-                <SummaryTile Label="Capabilities"
-                             Value="@ResolveSummaryValue(capabilityCount)"
-                             HelperText="Reusable skills, MCP servers, and other runtime capabilities."
-                             Tone="secondary"
-                             Badge="true"
-                             Compact="true"
-                             ShowHelperTextAsTooltip="true" />
-                <SummaryTile Label="Active runs"
-                             Value="@ResolveSummaryValue(activeRunCount)"
-                             HelperText="Durable technical executions still in progress."
-                             Tone="info"
-                             Badge="true"
-                             Compact="true"
-                             ShowHelperTextAsTooltip="true" />
-                <SummaryTile Label="Failed runs"
-                             Value="@ResolveSummaryValue(failedRunCount)"
-                             HelperText="Recent execution failures that still need governance attention."
-                             Tone="danger"
-                             Badge="true"
-                             Compact="true"
-                             ShowHelperTextAsTooltip="true" />
-            </Cluster>
-        </div>
-
         <div data-testid="agents-shell-tabs">
             <SecondaryTabs Items="Tabs"
                            SelectedKey="@selectedTab"

@@ -211,13 +211,12 @@ else if (RuntimeStep is not null)
                         }
                     </Stack>
                 }
-                <Grid Gap="LayoutGap.Small"
-                      ColumnsMd="4">
-                    <MetricCard Label="Wait" Value="@($"{RuntimeStep.WaitMinutes}m")" />
-                    <MetricCard Label="Touch" Value="@($"{RuntimeStep.TouchMinutes}m")" />
-                    <MetricCard Label="Blocked" Value="@($"{RuntimeStep.BlockedMinutes}m")" />
-                    <MetricCard Label="Rework" Value="@RuntimeStep.ReworkCount.ToString()" />
-                </Grid>
+                <CompactStatStrip>
+                    <CompactStat Label="wait" Value="@($"{RuntimeStep.WaitMinutes}m")" TooltipText="Runtime wait minutes recorded for this step." />
+                    <CompactStat Label="touch" Value="@($"{RuntimeStep.TouchMinutes}m")" TooltipText="Runtime touch minutes recorded for this step." Tone="info" />
+                    <CompactStat Label="blocked" Value="@($"{RuntimeStep.BlockedMinutes}m")" TooltipText="Runtime blocked minutes recorded for this step." Tone="warning" />
+                    <CompactStat Label="rework" Value="@RuntimeStep.ReworkCount.ToString()" TooltipText="Rework count recorded for this step." Tone="danger" />
+                </CompactStatStrip>
             </Stack>
         </SurfaceCard>
 

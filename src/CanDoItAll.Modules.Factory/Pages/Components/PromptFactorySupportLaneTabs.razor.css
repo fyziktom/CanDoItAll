@@ -1,0 +1,103 @@
+.pf-page-tabs {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.72rem 1rem;
+    border-radius: 1.15rem;
+}
+
+.pf-page-tabs__header {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    min-width: 0;
+}
+
+.pf-page-tabs__copy {
+    display: flex;
+    align-items: baseline;
+    gap: 0.55rem;
+    min-width: 0;
+}
+
+.pf-page-tabs__copy .cw-panel-kicker,
+.pf-page-tabs__copy .cw-panel-title,
+.pf-page-tabs__header .cw-panel-copy {
+    margin: 0;
+}
+
+.pf-page-tabs__copy .cw-panel-title {
+    font-size: 1rem;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.pf-page-tabs__header .cw-panel-copy {
+    max-width: 38rem;
+    overflow: hidden;
+    color: rgba(51, 65, 85, 0.86);
+    font-size: 0.86rem;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pf-page-tablist {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 0.32rem;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+
+.pf-page-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-height: 2rem;
+    padding: 0.38rem 0.72rem;
+    border: 1px solid rgba(203, 213, 225, 0.84);
+    border-radius: 999px;
+    background: rgba(248, 250, 252, 0.88);
+    color: rgba(15, 23, 42, 0.72);
+    font-size: 0.84rem;
+    font-weight: 750;
+    line-height: 1;
+    transition: background 120ms ease, border-color 120ms ease, color 120ms ease, box-shadow 120ms ease;
+    white-space: nowrap;
+}
+
+.pf-page-tab:hover,
+.pf-page-tab.is-active {
+    border-color: rgba(14, 116, 144, 0.28);
+    background: #ffffff;
+    color: #0f172a;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.pf-page-tab.is-active {
+    background: #020617;
+    border-color: #020617;
+    color: #ffffff;
+}
+
+.pf-page-tab__count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.25rem;
+    padding: 0.08rem 0.38rem;
+    border-radius: 999px;
+    background: rgba(226, 232, 240, 0.88);
+    color: rgba(15, 23, 42, 0.7);
+    font-size: 0.62rem;
+    font-weight: 850;
+}
+
+.pf-page-tab.is-active .pf-page-tab__count {
+    background: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+}

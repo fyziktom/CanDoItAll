@@ -257,12 +257,11 @@
                                             </div>
                                         </Grid>
 
-                                        <Grid Gap="LayoutGap.Large"
-                                              ColumnsMd="3">
-                                            <MetricCard Label="Status" Value="@Editor.Status.ToString()" />
-                                            <MetricCard Label="Phases" Value="@Editor.Phases.Count.ToString()" />
-                                            <MetricCard Label="Starter objects" Value="@StarterObjects.Count.ToString()" />
-                                        </Grid>
+                                        <CompactStatStrip>
+                                            <CompactStat Label="status" Value="@Editor.Status.ToString()" TooltipText="Current project status." Tone="@ProjectsPresentation.GetStatusTone(Editor.Status)" />
+                                            <CompactStat Label="phases" Value="@Editor.Phases.Count.ToString()" TooltipText="Phases currently defined for this project." Tone="info" />
+                                            <CompactStat Label="starter objects" Value="@StarterObjects.Count.ToString()" TooltipText="Starter objects that will be created with the project." Tone="success" />
+                                        </CompactStatStrip>
                                     </ChildContent>
                                 </FormSection>
                                 break;

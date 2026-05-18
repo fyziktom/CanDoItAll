@@ -14,21 +14,25 @@
     <Header>
         <PageHeader Eyebrow="Resources"
                     Title="Typed project resources"
-                    Description="Register repositories, folders, scripts, links, and secret-backed connectors through one shared registry.">
+                    Description="Register repositories, folders, scripts, links, and secret-backed connectors through one shared registry."
+                    Compact="true">
+            <Stats>
+                <CompactStat Label="resources" Value="@resources.Count.ToString()" TooltipText="Registered resources across all projects." />
+                <CompactStat Label="visible" Value="@FilteredResources.Count.ToString()" TooltipText="Resources matching the current filters." Tone="info" />
+                <CompactStat Label="projects" Value="@resources.Select(item => item.ProjectId).Distinct().Count().ToString()" TooltipText="Projects currently represented in the registry." />
+                <CompactStat Label="validated" Value="@resources.Count(item => item.ValidationStatus == ResourceValidationStatus.Valid).ToString()" TooltipText="Entries already marked valid." Tone="success" />
+            </Stats>
             <Actions>
-                <Button Text="New resource" Click="CreateNewAsync" />
+                <PageHeaderActionButton Icon="add"
+                                        Label="New resource"
+                                        TooltipText="Create a new typed resource."
+                                        ButtonStyle="ButtonStyle.Primary"
+                                        Click="CreateNewAsync" />
             </Actions>
         </PageHeader>
     </Header>
 
     <ChildContent>
-        <SummaryTiles>
-            <SummaryTile Label="Resources" Value="@resources.Count.ToString()" HelperText="Registered resources across all projects." />
-            <SummaryTile Label="Visible" Value="@FilteredResources.Count.ToString()" HelperText="Resources matching the current filters." Tone="info" />
-            <SummaryTile Label="Projects" Value="@resources.Select(item => item.ProjectId).Distinct().Count().ToString()" HelperText="Projects currently represented in the registry." />
-            <SummaryTile Label="Validated" Value="@resources.Count(item => item.ValidationStatus == ResourceValidationStatus.Valid).ToString()" HelperText="Entries already marked valid." Tone="success" />
-        </SummaryTiles>
-
         <ListDetailShell ListPaneWidth="25rem">
             <ListHeader>
                 <ListPanelHeader Title="Resource registry"

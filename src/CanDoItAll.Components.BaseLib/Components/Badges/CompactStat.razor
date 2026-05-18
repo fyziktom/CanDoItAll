@@ -1,0 +1,90 @@
+@namespace CanDoItAll.Components.BaseLib
+@inherits StyledComponentBase
+
+<span @attributes='BuildAttributes("cda-compact-stat-host")'>
+    <TooltipTarget Text="@ResolveTooltipText()"
+                   Position="@Position"
+                   Delay="@TooltipDelay"
+                   Duration="@TooltipDuration"
+                   TriggerClass="cda-compact-stat-trigger"
+                   TooltipClass="@TooltipClass"
+                   TestId="@TestId">
+        <StatusBadge Tone="@Tone"
+                     Text="@ResolveBadgeText()"
+                     NoWrap="true"
+                     Class="cda-compact-stat" />
+    </TooltipTarget>
+</span>
+
+@code {
+    private static readonly TimeSpan DefaultTooltipDelay = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan DefaultTooltipDuration = TimeSpan.FromSeconds(6);
+
+    [Parameter]
+    public string Label { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Value { get; set; }
+
+    [Parameter]
+    public string? Text { get; set; }
+
+    [Parameter]
+    public string Tone { get; set; } = "neutral";
+
+    [Parameter]
+    public string? HelperText { get; set; }
+
+    [Parameter]
+    public string? TooltipText { get; set; }
+
+    [Parameter]
+    public TooltipPosition Position { get; set; } = TooltipPosition.Bottom;
+
+    [Parameter]
+    public TimeSpan? TooltipDelay { get; set; } = DefaultTooltipDelay;
+
+    [Parameter]
+    public TimeSpan? TooltipDuration { get; set; } = DefaultTooltipDuration;
+
+    [Parameter]
+    public string? TooltipClass { get; set; } = "cda-compact-stat-tooltip";
+
+    [Parameter]
+    public string? TestId { get; set; }
+
+    private string ResolveBadgeText()
+    {
+        if (!string.IsNullOrWhiteSpace(Text))
+        {
+            return Text;
+        }
+
+        if (string.IsNullOrWhiteSpace(Value))
+        {
+            return Label;
+        }
+
+        return $"{Value} {Label}".Trim();
+    }
+
+    private string ResolveTooltipText()
+    {
+        if (!string.IsNullOrWhiteSpace(TooltipText))
+        {
+            return TooltipText;
+        }
+
+        if (!string.IsNullOrWhiteSpace(HelperText))
+        {
+            return HelperText;
+        }
+
+        if (!string.IsNullOrWhiteSpace(Value) && !string.IsNullOrWhiteSpace(Label))
+        {
+            return $"{Label}: {Value}";
+        }
+
+        return ResolveBadgeText();
+    }
+}

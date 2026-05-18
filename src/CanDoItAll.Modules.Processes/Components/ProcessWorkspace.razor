@@ -13,49 +13,47 @@
         <Toolbar Class="processes-command-strip"
                  data-testid="processes-command-strip">
             <ToolbarRow Class="processes-command-strip__row">
-                <Cluster Gap="LayoutGap.Small"
-                         Class="min-w-0">
+                <CompactStatStrip Class="min-w-0">
                     <p class="cda-eyebrow whitespace-nowrap">@PageEyebrow</p>
-                    <StatusBadge Tone="neutral"
-                                 Text="@DefinitionCountText" />
-                    <StatusBadge Tone="info"
-                                 Text="@VisibleDefinitionCountText" />
-                    <StatusBadge Tone="info"
-                                 Text="@ActiveRunCountText" />
-                    <StatusBadge Tone="warning"
-                                 Text="@BlockedRunCountText" />
-                    <StatusBadge Tone="danger"
-                                 Text="@FailedRunCountText" />
-                    <StatusBadge Tone="warning"
-                                 Text="@ImprovementCountText" />
-                </Cluster>
+                    <CompactStat Tone="neutral"
+                                 Text="@DefinitionCountText"
+                                 TooltipText="Total process definitions available in the current library." />
+                    <CompactStat Tone="info"
+                                 Text="@VisibleDefinitionCountText"
+                                 TooltipText="Definitions matching the current search and tree filters." />
+                    <CompactStat Tone="info"
+                                 Text="@ActiveRunCountText"
+                                 TooltipText="Process runs currently active across the workspace." />
+                    <CompactStat Tone="warning"
+                                 Text="@BlockedRunCountText"
+                                 TooltipText="Runs that are blocked and need operator attention." />
+                    <CompactStat Tone="danger"
+                                 Text="@FailedRunCountText"
+                                 TooltipText="Runs that have failed in the current process workspace." />
+                    <CompactStat Tone="warning"
+                                 Text="@ImprovementCountText"
+                                 TooltipText="Improvement opportunities surfaced by process analytics." />
+                </CompactStatStrip>
 
                 <ToolbarActions Class="processes-command-strip__actions">
-                    <Button Icon="cloud_sync"
-                            Class="cda-button--quick"
-                            ButtonStyle="ButtonStyle.Light"
-                            Size="ButtonSize.Small"
-                            title="Feed defaults"
-                            aria-label="Feed defaults"
-                            Click="FeedDefaultsAsync"
-                            Disabled="@isFeedingDefaults"
-                            IsBusy="@isFeedingDefaults"
-                            data-testid="processes-feed-defaults-button" />
-                    <Button Icon="add"
-                            Class="cda-button--quick"
-                            Size="ButtonSize.Small"
-                            title="New definition"
-                            aria-label="New definition"
-                            Click="CreateNewAsync"
-                            data-testid="processes-new-definition-button" />
-                    <Button Icon="category"
-                            Class="cda-button--quick"
-                            ButtonStyle="ButtonStyle.Light"
-                            Size="ButtonSize.Small"
-                            title="Templates"
-                            aria-label="Templates"
-                            Click="OpenTemplateLibraryAsync"
-                            data-testid="processes-templates-button" />
+                    <PageHeaderActionButton Icon="cloud_sync"
+                                            Label="Feed defaults"
+                                            TooltipText="Feed the default process library definitions."
+                                            Click="FeedDefaultsAsync"
+                                            Disabled="@isFeedingDefaults"
+                                            IsBusy="@isFeedingDefaults"
+                                            data-testid="processes-feed-defaults-button" />
+                    <PageHeaderActionButton Icon="add"
+                                            Label="New definition"
+                                            TooltipText="Create a new process definition."
+                                            ButtonStyle="ButtonStyle.Primary"
+                                            Click="CreateNewAsync"
+                                            data-testid="processes-new-definition-button" />
+                    <PageHeaderActionButton Icon="category"
+                                            Label="Templates"
+                                            TooltipText="Open the process template library."
+                                            Click="OpenTemplateLibraryAsync"
+                                            data-testid="processes-templates-button" />
                 </ToolbarActions>
             </ToolbarRow>
         </Toolbar>
@@ -154,17 +152,23 @@
                                                  ? "Change the durable process contract, then validate the same definition through runtime runs, deviations, and captured evidence."
                                                  : "Start with the definition contract first. Roles, steps, runtime runs, and governance artifacts attach to the saved process identity.")" />
                             </Cluster>
-                            <Cluster Gap="LayoutGap.Small"
-                                     Wrap="FlexWrap.Wrap"
-                                     Class="processes-workspace-identity__badges">
-                                <StatusBadge Tone="@SelectedDefinitionTone" Text="@editor.Status.ToString()" />
-                                <StatusBadge Tone="neutral" Text="@($"{editor.Roles.Count} role(s)")" />
-                                <StatusBadge Tone="info" Text="@($"{editor.Steps.Count} step(s)")" />
+                            <CompactStatStrip Class="processes-workspace-identity__badges">
+                                <CompactStat Tone="@SelectedDefinitionTone"
+                                             Text="@editor.Status.ToString()"
+                                             TooltipText="@($"Definition status: {editor.Status}.")" />
+                                <CompactStat Tone="neutral"
+                                             Text="@($"{editor.Roles.Count} role(s)")"
+                                             TooltipText="@($"This process currently defines {editor.Roles.Count} role requirement(s).")" />
+                                <CompactStat Tone="info"
+                                             Text="@($"{editor.Steps.Count} step(s)")"
+                                             TooltipText="@($"This process currently defines {editor.Steps.Count} step(s).")" />
                                 @if (SelectedDefinitionSummary is not null)
                                 {
-                                    <StatusBadge Tone="warning" Text="@($"{SelectedDefinitionSummary.UnfilledRoleCount} open assignment(s)")" />
+                                    <CompactStat Tone="warning"
+                                                 Text="@($"{SelectedDefinitionSummary.UnfilledRoleCount} open assignment(s)")"
+                                                 TooltipText="@($"Open role assignments for the selected process: {SelectedDefinitionSummary.UnfilledRoleCount}.")" />
                                 }
-                            </Cluster>
+                            </CompactStatStrip>
                         </Split>
                     </SurfaceCard>
                 </Stack>
