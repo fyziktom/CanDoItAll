@@ -104,7 +104,7 @@ public sealed class CognitiveMemoryRecallOrchestratorTests
     }
 
     [Fact]
-    public async Task RecallAsync_FallsBackToScoredProjectLexicalScanWhenFirstTermMisses()
+    public async Task RecallAsync_UsesScoredProjectLexicalScanWhenFirstTermMisses()
     {
         var fixture = CreateFixture();
         var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
@@ -127,7 +127,291 @@ public sealed class CognitiveMemoryRecallOrchestratorTests
             candidate.DecisionKind == CognitiveMemoryRecallCandidateDecisionKind.Selected);
         Assert.Contains(result.Stages, stage =>
             stage.ChannelKind == CognitiveMemoryRecallChannelKind.Lexical &&
-            stage.ProviderTrace.Contains("fallback", StringComparison.OrdinalIgnoreCase));
+            stage.ProviderTrace.Contains("lexical:terms", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task RecallAsync_UsesSpecificTermsWhenBroadFirstTermFillsBudget()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        for (var index = 0; index < 6; index++)
+        {
+            await SeedMemoryAsync(
+                fixture,
+                projectId,
+                Guid.Parse($"20000000-0000-0000-0000-{index + 1:000000000000}"),
+                $"AI Tap market assumption {index}",
+                "AI Tap market channel household safety distributor planning.",
+                "AI Tap market source evidence.");
+        }
+
+        var target = await SeedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("20000000-0000-0000-0000-000000000100"),
+            "Technical architecture latency messaging",
+            "VisionSoftware targets a 0.25 second interval, publishes MQTT JSON, runs on Raspberry Pi-class hardware, and must avoid GPL dependencies.",
+            "Technical source evidence.");
+        var orchestrator = CreateOrchestrator(fixture, new RecordingProjectionAdapter([]));
+
+        var result = await orchestrator.RecallAsync(CreateRequest(
+            projectId,
+            "For AI Tap, summarize the technical architecture timing hardware and license risks.",
+            new CognitiveMemoryRecallBudget(4, 0, 4, 3, 3, 4096, 4096)));
+
+        Assert.Contains(result.Candidates, candidate =>
+            candidate.MemoryRecordId.Value == target.RecordId &&
+            candidate.DecisionKind == CognitiveMemoryRecallCandidateDecisionKind.Selected);
+    }
+
+    [Fact]
+    public async Task RecallAsync_UsesSourceTextForLexicalRecallWhenMemorySummaryMissesExactFact()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var memory = await SeedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("20000000-0000-0000-0000-000000000101"),
+            "Runtime constraints",
+            "Technical runtime constraints were approved for the prototype.",
+            "GNU/GPL dependencies are disallowed; MIT, BSD, or otherwise free licenses are acceptable.");
+        var orchestrator = CreateOrchestrator(fixture, new RecordingProjectionAdapter([]));
+
+        var result = await orchestrator.RecallAsync(CreateRequest(
+            projectId,
+            "GPL license",
+            new CognitiveMemoryRecallBudget(4, 0, 4, 2, 2, 4096, 4096)));
+
+        Assert.Contains(result.Candidates, candidate =>
+            candidate.MemoryRecordId.Value == memory.RecordId &&
+            candidate.DecisionKind == CognitiveMemoryRecallCandidateDecisionKind.Selected);
+        Assert.Contains(
+            "GNU/GPL dependencies are disallowed",
+            string.Join("\n", result.ContextPack.Sections.Select(section => section.Content)),
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RecallAsync_ExpandsProjectStructureChildrenFromSelectedParent()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var manifest = CreateManifest(
+            fixture,
+            projectId,
+            Guid.Parse("20000000-0000-0000-0000-000000000201"),
+            "WorkbenchProjectStructure");
+        await SeedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("20000000-0000-0000-0000-000000000202"),
+            "S02 Technical Architecture",
+            "The S02 technical architecture parent groups hardware and runtime constraints.",
+            "Title: S02 Technical Architecture",
+            existingManifest: manifest,
+            sourceSystem: "WorkbenchProjectStructure",
+            sourceItemType: "ProjectNode",
+            sourceItemKey: "project-node-parent",
+            provenanceJson: ProjectNodeProvenance("parent", "root"));
+        var license = await SeedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("20000000-0000-0000-0000-000000000203"),
+            "Runtime And License Constraints",
+            "GNU/GPL dependencies are disallowed; MIT and BSD licenses are acceptable.",
+            "GNU/GPL dependencies are disallowed; MIT and BSD licenses are acceptable.",
+            existingManifest: manifest,
+            sourceSystem: "WorkbenchProjectStructure",
+            sourceItemType: "ProjectNode",
+            sourceItemKey: "project-node-license",
+            provenanceJson: ProjectNodeProvenance("license", "parent"));
+        var compute = await SeedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("20000000-0000-0000-0000-000000000204"),
+            "Compute Unit",
+            "Raspberry Pi-class hardware is enough for the first prototype.",
+            "Raspberry Pi-class hardware is enough for the first prototype.",
+            existingManifest: manifest,
+            sourceSystem: "WorkbenchProjectStructure",
+            sourceItemType: "ProjectNode",
+            sourceItemKey: "project-node-compute",
+            provenanceJson: ProjectNodeProvenance("compute", "parent"));
+        var orchestrator = CreateOrchestrator(fixture, new RecordingProjectionAdapter([]));
+
+        var result = await orchestrator.RecallAsync(CreateRequest(
+            projectId,
+            "technical architecture",
+            new CognitiveMemoryRecallBudget(4, 2, 4, 4, 4, 4096, 4096)));
+
+        Assert.Contains(result.Candidates, candidate =>
+            candidate.MemoryRecordId.Value == license.RecordId &&
+            candidate.DecisionKind == CognitiveMemoryRecallCandidateDecisionKind.Selected);
+        Assert.Contains(result.Candidates, candidate =>
+            candidate.MemoryRecordId.Value == compute.RecordId &&
+            candidate.DecisionKind == CognitiveMemoryRecallCandidateDecisionKind.Selected);
+    }
+
+    [Fact]
+    public async Task RecallAsync_DeduplicatesProjectStructureNeighborsBeforeApplyingExpansionLimit()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var firstManifest = CreateManifest(
+            fixture,
+            projectId,
+            Guid.Parse("20000000-0000-0000-0000-000000000211"),
+            "WorkbenchProjectStructure");
+        var secondManifest = CreateManifest(
+            fixture,
+            projectId,
+            Guid.Parse("20000000-0000-0000-0000-000000000212"),
+            "WorkbenchProjectStructure");
+        await SeedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("20000000-0000-0000-0000-000000000213"),
+            "Technical Architecture",
+            "Technical architecture parent groups detailed child facts.",
+            "Title: Technical Architecture",
+            existingManifest: firstManifest,
+            sourceSystem: "WorkbenchProjectStructure",
+            sourceItemType: "ProjectNode",
+            sourceItemKey: "project-node-parent",
+            provenanceJson: ProjectNodeProvenance("parent", "root"));
+        await SeedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("20000000-0000-0000-0000-000000000214"),
+            "Duplicate Child",
+            "First duplicated child.",
+            "First duplicated child.",
+            existingManifest: firstManifest,
+            sourceSystem: "WorkbenchProjectStructure",
+            sourceItemType: "ProjectNode",
+            sourceItemKey: "project-node-duplicate-child",
+            provenanceJson: ProjectNodeProvenance("duplicate", "parent"));
+        await SeedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("20000000-0000-0000-0000-000000000215"),
+            "Duplicate Child",
+            "Second duplicated child from another source manifest.",
+            "Second duplicated child from another source manifest.",
+            existingManifest: secondManifest,
+            sourceSystem: "WorkbenchProjectStructure",
+            sourceItemType: "ProjectNode",
+            sourceItemKey: "project-node-duplicate-child",
+            provenanceJson: ProjectNodeProvenance("duplicate", "parent"));
+        var target = await SeedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("20000000-0000-0000-0000-000000000216"),
+            "Runtime And License Constraints",
+            "GNU/GPL dependencies are disallowed; MIT and BSD licenses are acceptable.",
+            "GNU/GPL dependencies are disallowed; MIT and BSD licenses are acceptable.",
+            existingManifest: firstManifest,
+            sourceSystem: "WorkbenchProjectStructure",
+            sourceItemType: "ProjectNode",
+            sourceItemKey: "project-node-runtime",
+            provenanceJson: ProjectNodeProvenance("runtime", "parent"));
+        var orchestrator = CreateOrchestrator(fixture, new RecordingProjectionAdapter([]));
+
+        var result = await orchestrator.RecallAsync(CreateRequest(
+            projectId,
+            "technical architecture",
+            new CognitiveMemoryRecallBudget(2, 1, 4, 4, 4, 4096, 4096)));
+
+        Assert.Contains(result.Candidates, candidate =>
+            candidate.MemoryRecordId.Value == target.RecordId &&
+            candidate.DecisionKind == CognitiveMemoryRecallCandidateDecisionKind.Selected);
+    }
+
+    [Fact]
+    public async Task RecallAsync_UsesStageMetadataToPreferMatchingSourceSlice()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var earlierStage = await SeedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("20000000-0000-0000-0000-000000000401"),
+            "S01 Shared Plan",
+            "Subtitle: Source truth S01 level 4\nShared plan covers early market assumptions.",
+            "Shared plan covers early market assumptions.");
+        var requestedStage = await SeedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("20000000-0000-0000-0000-000000000402"),
+            "S02 Shared Plan",
+            "Subtitle: Source truth S02 level 4\nShared plan covers the technical architecture.",
+            "Shared plan covers the technical architecture.");
+        var orchestrator = CreateOrchestrator(fixture, new RecordingProjectionAdapter([]));
+
+        var result = await orchestrator.RecallAsync(CreateRequest(
+            projectId,
+            "shared plan",
+            new CognitiveMemoryRecallBudget(8, 0, 8, 1, 1, 4096, 4096),
+            metadata: new Dictionary<string, string>
+            {
+                ["stageId"] = "S02"
+            }));
+
+        Assert.Contains(result.Candidates, candidate =>
+            candidate.MemoryRecordId.Value == requestedStage.RecordId &&
+            candidate.DecisionKind == CognitiveMemoryRecallCandidateDecisionKind.Selected);
+        Assert.Contains(result.Candidates, candidate =>
+            candidate.MemoryRecordId.Value == earlierStage.RecordId &&
+            candidate.DecisionKind == CognitiveMemoryRecallCandidateDecisionKind.Excluded &&
+            candidate.ExclusionReasonKind == CognitiveMemoryRecallExclusionReasonKind.BudgetLimit);
+    }
+
+    [Fact]
+    public async Task RecallAsync_DeduplicatesEquivalentFocusCandidatesBeforeApplyingBudget()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var duplicateText = "Deployment parent context describes the shared rollout plan.";
+        await SeedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("20000000-0000-0000-0000-000000000301"),
+            "A Deployment Parent",
+            duplicateText,
+            duplicateText);
+        var duplicate = await SeedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("20000000-0000-0000-0000-000000000302"),
+            "A Deployment Parent",
+            duplicateText,
+            duplicateText);
+        var target = await SeedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("20000000-0000-0000-0000-000000000303"),
+            "Z Deployment Leaf",
+            "Deployment leaf context has the concrete rollout gate.",
+            "Deployment leaf source evidence.");
+        var orchestrator = CreateOrchestrator(fixture, new RecordingProjectionAdapter([]));
+
+        var result = await orchestrator.RecallAsync(CreateRequest(
+            projectId,
+            "deployment",
+            new CognitiveMemoryRecallBudget(8, 0, 8, 2, 2, 4096, 4096)));
+
+        Assert.Equal(1, result.Candidates.Count(candidate =>
+            candidate.Title == "A Deployment Parent" &&
+            candidate.DecisionKind == CognitiveMemoryRecallCandidateDecisionKind.Selected));
+        Assert.Contains(result.Candidates, candidate =>
+            candidate.MemoryRecordId.Value == duplicate.RecordId &&
+            candidate.DecisionKind == CognitiveMemoryRecallCandidateDecisionKind.Excluded &&
+            candidate.ExclusionReasonKind == CognitiveMemoryRecallExclusionReasonKind.NotInFocus);
+        Assert.Contains(result.Candidates, candidate =>
+            candidate.MemoryRecordId.Value == target.RecordId &&
+            candidate.DecisionKind == CognitiveMemoryRecallCandidateDecisionKind.Selected);
     }
 
     [Fact]
@@ -193,6 +477,38 @@ public sealed class CognitiveMemoryRecallOrchestratorTests
     }
 
     [Fact]
+    public async Task RecallAsync_IncludesRestrictedSourceContentWhenPolicyAllowsIt()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var memory = await SeedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-000000000106"),
+            "Restricted deployment rotation plan",
+            "Deployment memory requires the restricted credential rotation plan.",
+            "ROTATION_PLAN=rotate-on-release",
+            sourceAccessLevel: CognitiveMemoryAccessLevel.Restricted,
+            sourceRedactionState: CognitiveMemoryRedactionState.Restricted,
+            recordAccessLevel: CognitiveMemoryAccessLevel.Restricted);
+        var orchestrator = CreateOrchestrator(fixture, new RecordingProjectionAdapter([]));
+
+        var result = await orchestrator.RecallAsync(CreateRequest(
+            projectId,
+            "deployment restricted rotation plan",
+            allowRestrictedContent: true,
+            accessLevel: CognitiveMemoryAccessLevel.Restricted));
+
+        var context = string.Join("\n", result.ContextPack.Sections.Select(section => section.Content));
+        Assert.Contains("ROTATION_PLAN=rotate-on-release", context, StringComparison.Ordinal);
+        Assert.Contains(result.ContextPack.SourceRefs, sourceRef =>
+            sourceRef.MemoryRecordId.Value == memory.RecordId &&
+            sourceRef.IncludedInContext &&
+            sourceRef.ExclusionReasonKind == CognitiveMemoryRecallExclusionReasonKind.None);
+        Assert.Equal(0, await fixture.DbContext.Set<CognitiveMemoryMutationCommandRecord>().CountAsync());
+    }
+
+    [Fact]
     public async Task RecallAsync_DeduplicatesRepeatedMemoryAndSourceTextInContextPack()
     {
         var fixture = CreateFixture();
@@ -240,26 +556,33 @@ public sealed class CognitiveMemoryRecallOrchestratorTests
     private static CognitiveMemoryRecallRequest CreateRequest(
         Guid projectId,
         string query,
-        CognitiveMemoryRecallBudget? budget = null)
+        CognitiveMemoryRecallBudget? budget = null,
+        bool allowRestrictedContent = false,
+        CognitiveMemoryAccessLevel accessLevel = CognitiveMemoryAccessLevel.Project,
+        IReadOnlyDictionary<string, string>? metadata = null)
         => new(
             projectId,
             query,
             CognitiveMemoryRecallIntentKind.Deployment,
             CognitiveMemoryRecallMode.FocusedTaskContext,
-            Policy(projectId),
+            Policy(projectId, allowRestrictedContent, accessLevel),
             budget ?? new CognitiveMemoryRecallBudget(8, 1, 8, 4, 4, 4096, 4096),
             ProjectionCollectionName: new CognitiveMemoryProjectionCollectionName("cm-test"),
             ProjectionProfileId: new CognitiveMemoryProjectionProfileId("projection-v1"),
-            EmbeddingProfileId: new CognitiveMemoryEmbeddingProfileId("embedding-v1"));
+            EmbeddingProfileId: new CognitiveMemoryEmbeddingProfileId("embedding-v1"),
+            Metadata: metadata);
 
-    private static CognitiveMemoryPolicyContext Policy(Guid projectId)
+    private static CognitiveMemoryPolicyContext Policy(
+        Guid projectId,
+        bool allowRestrictedContent = false,
+        CognitiveMemoryAccessLevel accessLevel = CognitiveMemoryAccessLevel.Project)
         => new(
             projectId,
             "agent:test",
-            CognitiveMemoryAccessLevel.Project,
+            accessLevel,
             new CognitiveMemoryPolicyProfileId("policy:test"),
             CognitiveMemoryRiskLevel.Low,
-            AllowRestrictedContent: false);
+            allowRestrictedContent);
 
     private static int CountOccurrences(string text, string value)
     {
@@ -278,6 +601,34 @@ public sealed class CognitiveMemoryRecallOrchestratorTests
         }
     }
 
+    private static CognitiveMemorySourceManifestRecord CreateManifest(
+        TestFixture fixture,
+        Guid projectId,
+        Guid seedId,
+        string sourceSystem)
+    {
+        var manifest = new CognitiveMemorySourceManifestRecord
+        {
+            ProjectId = projectId,
+            SourceSystem = sourceSystem,
+            SourceScopeKey = projectId.ToString("D"),
+            SourceSnapshotId = $"snapshot-{seedId:D}",
+            SnapshotHash = CognitiveMemoryHash.FromUtf8($"snapshot-{seedId:D}").Value,
+            ProviderVersion = "unit-test-v1",
+            ScanStatus = CognitiveMemoryRunStatus.Succeeded,
+            ObservedAtUtc = fixture.Clock.GetUtcNow(),
+            CreatedAtUtc = fixture.Clock.GetUtcNow(),
+            UpdatedAtUtc = fixture.Clock.GetUtcNow(),
+            ConcurrencyToken = Guid.NewGuid()
+        };
+        fixture.DbContext.Add(manifest);
+        fixture.DbContext.SaveChanges();
+        return manifest;
+    }
+
+    private static string ProjectNodeProvenance(string sourceEntityId, string parentId)
+        => $"{{\"sourceEntityId\":\"{sourceEntityId}\",\"metadata\":{{\"parentId\":\"{parentId}\"}}}}";
+
     private static async Task<SeededMemory> SeedMemoryAsync(
         TestFixture fixture,
         Guid projectId,
@@ -286,12 +637,18 @@ public sealed class CognitiveMemoryRecallOrchestratorTests
         string canonicalText,
         string sourceText,
         CognitiveMemoryAccessLevel sourceAccessLevel = CognitiveMemoryAccessLevel.Project,
-        CognitiveMemoryRedactionState sourceRedactionState = CognitiveMemoryRedactionState.Safe)
+        CognitiveMemoryRedactionState sourceRedactionState = CognitiveMemoryRedactionState.Safe,
+        CognitiveMemoryAccessLevel recordAccessLevel = CognitiveMemoryAccessLevel.Project,
+        CognitiveMemorySourceManifestRecord? existingManifest = null,
+        string sourceSystem = "unit-test",
+        string sourceItemType = "test-node",
+        string? sourceItemKey = null,
+        string provenanceJson = "{}")
     {
-        var manifest = new CognitiveMemorySourceManifestRecord
+        var manifest = existingManifest ?? new CognitiveMemorySourceManifestRecord
         {
             ProjectId = projectId,
-            SourceSystem = "unit-test",
+            SourceSystem = sourceSystem,
             SourceScopeKey = projectId.ToString("D"),
             SourceSnapshotId = $"snapshot-{recordId:D}",
             SnapshotHash = CognitiveMemoryHash.FromUtf8($"snapshot-{recordId:D}").Value,
@@ -306,9 +663,9 @@ public sealed class CognitiveMemoryRecallOrchestratorTests
         {
             ProjectId = projectId,
             SourceManifestId = manifest.Id,
-            SourceSystem = "unit-test",
-            SourceItemKey = $"source-{recordId:D}",
-            SourceItemType = "test-node",
+            SourceSystem = sourceSystem,
+            SourceItemKey = sourceItemKey ?? $"source-{recordId:D}",
+            SourceItemType = sourceItemType,
             Title = title,
             ContentText = sourceText,
             Locator = $"/unit/{recordId:D}",
@@ -316,6 +673,7 @@ public sealed class CognitiveMemoryRecallOrchestratorTests
             RedactionState = sourceRedactionState,
             AccessLevel = sourceAccessLevel,
             AccessScope = "unit",
+            ProvenanceJson = provenanceJson,
             ObservedAtUtc = fixture.Clock.GetUtcNow(),
             CreatedAtUtc = fixture.Clock.GetUtcNow(),
             UpdatedAtUtc = fixture.Clock.GetUtcNow(),
@@ -357,14 +715,18 @@ public sealed class CognitiveMemoryRecallOrchestratorTests
             ContentHash = CognitiveMemoryHash.FromUtf8(canonicalText).Value,
             SourceEvidenceCount = 1,
             EvidenceAnchorCount = 1,
-            AccessLevel = CognitiveMemoryAccessLevel.Project,
+            AccessLevel = recordAccessLevel,
             RiskLevel = CognitiveMemoryRiskLevel.Low,
             CreatedAtUtc = fixture.Clock.GetUtcNow(),
             UpdatedAtUtc = fixture.Clock.GetUtcNow(),
             ConcurrencyToken = Guid.NewGuid()
         };
+        if (existingManifest is null)
+        {
+            fixture.DbContext.Add(manifest);
+        }
+
         fixture.DbContext.AddRange(
-            manifest,
             sourceItem,
             anchor,
             record,

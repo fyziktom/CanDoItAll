@@ -1,0 +1,761 @@
+{
+  "kind": "xlsx",
+  "sheets": [
+    {
+      "name": "List1",
+      "maxRow": 34,
+      "maxColumn": 12,
+      "nonEmptyCount": 90,
+      "formulaCount": 29,
+      "mergedRanges": [
+        "D25:F25"
+      ],
+      "tables": [],
+      "cells": [
+        {
+          "address": "D3",
+          "row": 3,
+          "column": 4,
+          "value": "Položka",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "E3",
+          "row": 3,
+          "column": 5,
+          "value": "počet ks",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "F3",
+          "row": 3,
+          "column": 6,
+          "value": "cena ks",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "G3",
+          "row": 3,
+          "column": 7,
+          "value": "cena celkem",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "D4",
+          "row": 4,
+          "column": 4,
+          "value": "kamera",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "E4",
+          "row": 4,
+          "column": 5,
+          "value": 1,
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "F4",
+          "row": 4,
+          "column": 6,
+          "value": 75,
+          "formula": "=3*25",
+          "numberFormat": "_-* #,##0\\ \"Kč\"_-;\\-* #,##0\\ \"Kč\"_-;_-* \"-\"??\\ \"Kč\"_-;_-@_-"
+        },
+        {
+          "address": "G4",
+          "row": 4,
+          "column": 7,
+          "value": 75,
+          "formula": "=F4*E4",
+          "numberFormat": "#,##0\\ \"Kč\""
+        },
+        {
+          "address": "D5",
+          "row": 5,
+          "column": 4,
+          "value": "bat42",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "E5",
+          "row": 5,
+          "column": 5,
+          "value": 4,
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "F5",
+          "row": 5,
+          "column": 6,
+          "value": 0.2,
+          "formula": null,
+          "numberFormat": "_-* #,##0.0\\ \"Kč\"_-;\\-* #,##0.0\\ \"Kč\"_-;_-* \"-\"??\\ \"Kč\"_-;_-@_-"
+        },
+        {
+          "address": "G5",
+          "row": 5,
+          "column": 7,
+          "value": 0.8,
+          "formula": "=F5*E5",
+          "numberFormat": "#,##0\\ \"Kč\""
+        },
+        {
+          "address": "J5",
+          "row": 5,
+          "column": 10,
+          "value": "počet kusů k prodeji",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "K5",
+          "row": 5,
+          "column": 11,
+          "value": 3000,
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "L5",
+          "row": 5,
+          "column": 12,
+          "value": "ks/rok",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "D6",
+          "row": 6,
+          "column": 4,
+          "value": "integrační kondík",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "E6",
+          "row": 6,
+          "column": 5,
+          "value": 1,
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "F6",
+          "row": 6,
+          "column": 6,
+          "value": 1,
+          "formula": null,
+          "numberFormat": "_-* #,##0\\ \"Kč\"_-;\\-* #,##0\\ \"Kč\"_-;_-* \"-\"??\\ \"Kč\"_-;_-@_-"
+        },
+        {
+          "address": "G6",
+          "row": 6,
+          "column": 7,
+          "value": 1,
+          "formula": "=F6*E6",
+          "numberFormat": "#,##0\\ \"Kč\""
+        },
+        {
+          "address": "J6",
+          "row": 6,
+          "column": 10,
+          "value": "celkem zisk",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "K6",
+          "row": 6,
+          "column": 11,
+          "value": 4733700,
+          "formula": "=K5*G29",
+          "numberFormat": "#,##0\\ \"Kč\""
+        },
+        {
+          "address": "D7",
+          "row": 7,
+          "column": 4,
+          "value": "rezistor",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "E7",
+          "row": 7,
+          "column": 5,
+          "value": 3,
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "F7",
+          "row": 7,
+          "column": 6,
+          "value": 0.1,
+          "formula": null,
+          "numberFormat": "_-* #,##0.0\\ \"Kč\"_-;\\-* #,##0.0\\ \"Kč\"_-;_-* \"-\"??\\ \"Kč\"_-;_-@_-"
+        },
+        {
+          "address": "G7",
+          "row": 7,
+          "column": 7,
+          "value": 0.30000000000000004,
+          "formula": "=F7*E7",
+          "numberFormat": "#,##0\\ \"Kč\""
+        },
+        {
+          "address": "D8",
+          "row": 8,
+          "column": 4,
+          "value": "mcu",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "E8",
+          "row": 8,
+          "column": 5,
+          "value": 1,
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "F8",
+          "row": 8,
+          "column": 6,
+          "value": 9,
+          "formula": null,
+          "numberFormat": "_-* #,##0\\ \"Kč\"_-;\\-* #,##0\\ \"Kč\"_-;_-* \"-\"??\\ \"Kč\"_-;_-@_-"
+        },
+        {
+          "address": "G8",
+          "row": 8,
+          "column": 7,
+          "value": 9,
+          "formula": "=F8*E8",
+          "numberFormat": "#,##0\\ \"Kč\""
+        },
+        {
+          "address": "D9",
+          "row": 9,
+          "column": 4,
+          "value": "100nF",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "E9",
+          "row": 9,
+          "column": 5,
+          "value": 3,
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "F9",
+          "row": 9,
+          "column": 6,
+          "value": 2,
+          "formula": null,
+          "numberFormat": "_-* #,##0\\ \"Kč\"_-;\\-* #,##0\\ \"Kč\"_-;_-* \"-\"??\\ \"Kč\"_-;_-@_-"
+        },
+        {
+          "address": "G9",
+          "row": 9,
+          "column": 7,
+          "value": 6,
+          "formula": "=F9*E9",
+          "numberFormat": "#,##0\\ \"Kč\""
+        },
+        {
+          "address": "D10",
+          "row": 10,
+          "column": 4,
+          "value": "tranzistor",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "E10",
+          "row": 10,
+          "column": 5,
+          "value": 1,
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "F10",
+          "row": 10,
+          "column": 6,
+          "value": 5,
+          "formula": null,
+          "numberFormat": "_-* #,##0\\ \"Kč\"_-;\\-* #,##0\\ \"Kč\"_-;_-* \"-\"??\\ \"Kč\"_-;_-@_-"
+        },
+        {
+          "address": "G10",
+          "row": 10,
+          "column": 7,
+          "value": 5,
+          "formula": "=F10*E10",
+          "numberFormat": "#,##0\\ \"Kč\""
+        },
+        {
+          "address": "D11",
+          "row": 11,
+          "column": 4,
+          "value": "konektory",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "E11",
+          "row": 11,
+          "column": 5,
+          "value": 1,
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "F11",
+          "row": 11,
+          "column": 6,
+          "value": 10,
+          "formula": null,
+          "numberFormat": "_-* #,##0\\ \"Kč\"_-;\\-* #,##0\\ \"Kč\"_-;_-* \"-\"??\\ \"Kč\"_-;_-@_-"
+        },
+        {
+          "address": "G11",
+          "row": 11,
+          "column": 7,
+          "value": 10,
+          "formula": "=F11*E11",
+          "numberFormat": "#,##0\\ \"Kč\""
+        },
+        {
+          "address": "D12",
+          "row": 12,
+          "column": 4,
+          "value": "adaptér",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "E12",
+          "row": 12,
+          "column": 5,
+          "value": 1,
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "F12",
+          "row": 12,
+          "column": 6,
+          "value": 90,
+          "formula": null,
+          "numberFormat": "_-* #,##0\\ \"Kč\"_-;\\-* #,##0\\ \"Kč\"_-;_-* \"-\"??\\ \"Kč\"_-;_-@_-"
+        },
+        {
+          "address": "G12",
+          "row": 12,
+          "column": 7,
+          "value": 90,
+          "formula": "=F12*E12",
+          "numberFormat": "#,##0\\ \"Kč\""
+        },
+        {
+          "address": "D13",
+          "row": 13,
+          "column": 4,
+          "value": "dps",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "E13",
+          "row": 13,
+          "column": 5,
+          "value": 1,
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "F13",
+          "row": 13,
+          "column": 6,
+          "value": 15,
+          "formula": null,
+          "numberFormat": "_-* #,##0\\ \"Kč\"_-;\\-* #,##0\\ \"Kč\"_-;_-* \"-\"??\\ \"Kč\"_-;_-@_-"
+        },
+        {
+          "address": "G13",
+          "row": 13,
+          "column": 7,
+          "value": 15,
+          "formula": "=F13*E13",
+          "numberFormat": "#,##0\\ \"Kč\""
+        },
+        {
+          "address": "D14",
+          "row": 14,
+          "column": 4,
+          "value": "osazení",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "E14",
+          "row": 14,
+          "column": 5,
+          "value": 1,
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "F14",
+          "row": 14,
+          "column": 6,
+          "value": 40,
+          "formula": null,
+          "numberFormat": "_-* #,##0\\ \"Kč\"_-;\\-* #,##0\\ \"Kč\"_-;_-* \"-\"??\\ \"Kč\"_-;_-@_-"
+        },
+        {
+          "address": "G14",
+          "row": 14,
+          "column": 7,
+          "value": 40,
+          "formula": "=F14*E14",
+          "numberFormat": "#,##0\\ \"Kč\""
+        },
+        {
+          "address": "D15",
+          "row": 15,
+          "column": 4,
+          "value": "krabička s epoxidem",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "E15",
+          "row": 15,
+          "column": 5,
+          "value": 1,
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "F15",
+          "row": 15,
+          "column": 6,
+          "value": 30,
+          "formula": null,
+          "numberFormat": "_-* #,##0\\ \"Kč\"_-;\\-* #,##0\\ \"Kč\"_-;_-* \"-\"??\\ \"Kč\"_-;_-@_-"
+        },
+        {
+          "address": "G15",
+          "row": 15,
+          "column": 7,
+          "value": 30,
+          "formula": "=F15*E15",
+          "numberFormat": "#,##0\\ \"Kč\""
+        },
+        {
+          "address": "D16",
+          "row": 16,
+          "column": 4,
+          "value": "kompletace",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "E16",
+          "row": 16,
+          "column": 5,
+          "value": 1,
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "F16",
+          "row": 16,
+          "column": 6,
+          "value": 80,
+          "formula": null,
+          "numberFormat": "_-* #,##0\\ \"Kč\"_-;\\-* #,##0\\ \"Kč\"_-;_-* \"-\"??\\ \"Kč\"_-;_-@_-"
+        },
+        {
+          "address": "G16",
+          "row": 16,
+          "column": 7,
+          "value": 80,
+          "formula": "=F16*E16",
+          "numberFormat": "#,##0\\ \"Kč\""
+        },
+        {
+          "address": "G17",
+          "row": 17,
+          "column": 7,
+          "value": 0,
+          "formula": "=F17*E17",
+          "numberFormat": "#,##0\\ \"Kč\""
+        },
+        {
+          "address": "G18",
+          "row": 18,
+          "column": 7,
+          "value": 0,
+          "formula": "=F18*E18",
+          "numberFormat": "#,##0\\ \"Kč\""
+        },
+        {
+          "address": "D19",
+          "row": 19,
+          "column": 4,
+          "value": "vodovodní baterie",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "E19",
+          "row": 19,
+          "column": 5,
+          "value": 1,
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "F19",
+          "row": 19,
+          "column": 6,
+          "value": 1500,
+          "formula": "=60*25",
+          "numberFormat": "_-* #,##0\\ \"Kč\"_-;\\-* #,##0\\ \"Kč\"_-;_-* \"-\"??\\ \"Kč\"_-;_-@_-"
+        },
+        {
+          "address": "G19",
+          "row": 19,
+          "column": 7,
+          "value": 1500,
+          "formula": "=F19*E19",
+          "numberFormat": "#,##0\\ \"Kč\""
+        },
+        {
+          "address": "G20",
+          "row": 20,
+          "column": 7,
+          "value": 0,
+          "formula": "=F20*E20",
+          "numberFormat": "#,##0\\ \"Kč\""
+        },
+        {
+          "address": "D21",
+          "row": 21,
+          "column": 4,
+          "value": "balení",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "E21",
+          "row": 21,
+          "column": 5,
+          "value": 1,
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "F21",
+          "row": 21,
+          "column": 6,
+          "value": 50,
+          "formula": null,
+          "numberFormat": "_-* #,##0\\ \"Kč\"_-;\\-* #,##0\\ \"Kč\"_-;_-* \"-\"??\\ \"Kč\"_-;_-@_-"
+        },
+        {
+          "address": "G21",
+          "row": 21,
+          "column": 7,
+          "value": 50,
+          "formula": "=F21*E21",
+          "numberFormat": "#,##0\\ \"Kč\""
+        },
+        {
+          "address": "D22",
+          "row": 22,
+          "column": 4,
+          "value": "návod",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "E22",
+          "row": 22,
+          "column": 5,
+          "value": 1,
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "F22",
+          "row": 22,
+          "column": 6,
+          "value": 10,
+          "formula": null,
+          "numberFormat": "_-* #,##0\\ \"Kč\"_-;\\-* #,##0\\ \"Kč\"_-;_-* \"-\"??\\ \"Kč\"_-;_-@_-"
+        },
+        {
+          "address": "G22",
+          "row": 22,
+          "column": 7,
+          "value": 10,
+          "formula": "=F22*E22",
+          "numberFormat": "#,##0\\ \"Kč\""
+        },
+        {
+          "address": "G23",
+          "row": 23,
+          "column": 7,
+          "value": 0,
+          "formula": "=F23*E23",
+          "numberFormat": "#,##0\\ \"Kč\""
+        },
+        {
+          "address": "G24",
+          "row": 24,
+          "column": 7,
+          "value": 0,
+          "formula": "=F24*E24",
+          "numberFormat": "#,##0\\ \"Kč\""
+        },
+        {
+          "address": "D25",
+          "row": 25,
+          "column": 4,
+          "value": "Celkem",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "G25",
+          "row": 25,
+          "column": 7,
+          "value": 1922.1,
+          "formula": "=SUM(G4:G24)",
+          "numberFormat": "#,##0\\ \"Kč\""
+        },
+        {
+          "address": "D27",
+          "row": 27,
+          "column": 4,
+          "value": "cena pro distributora",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "G27",
+          "row": 27,
+          "column": 7,
+          "value": 3500,
+          "formula": "=3500",
+          "numberFormat": "#,##0\\ \"Kč\""
+        },
+        {
+          "address": "D29",
+          "row": 29,
+          "column": 4,
+          "value": "zisk výrobce",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "G29",
+          "row": 29,
+          "column": 7,
+          "value": 1577.9,
+          "formula": "=G27-G25",
+          "numberFormat": "#,##0\\ \"Kč\""
+        },
+        {
+          "address": "D31",
+          "row": 31,
+          "column": 4,
+          "value": "cena pro zákazníka",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "G31",
+          "row": 31,
+          "column": 7,
+          "value": 5000,
+          "formula": null,
+          "numberFormat": "_-* #,##0\\ \"Kč\"_-;\\-* #,##0\\ \"Kč\"_-;_-* \"-\"??\\ \"Kč\"_-;_-@_-"
+        },
+        {
+          "address": "D33",
+          "row": 33,
+          "column": 4,
+          "value": "zisk distributora",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "G33",
+          "row": 33,
+          "column": 7,
+          "value": 1500,
+          "formula": "=G31-G27",
+          "numberFormat": "_-* #,##0\\ \"Kč\"_-;\\-* #,##0\\ \"Kč\"_-;_-* \"-\"??\\ \"Kč\"_-;_-@_-"
+        },
+        {
+          "address": "D34",
+          "row": 34,
+          "column": 4,
+          "value": "marže distributora",
+          "formula": null,
+          "numberFormat": "General"
+        },
+        {
+          "address": "G34",
+          "row": 34,
+          "column": 7,
+          "value": 0.3,
+          "formula": "=G33/G31",
+          "numberFormat": "0%"
+        }
+      ],
+      "truncated": false
+    },
+    {
+      "name": "List2",
+      "maxRow": 1,
+      "maxColumn": 1,
+      "nonEmptyCount": 0,
+      "formulaCount": 0,
+      "mergedRanges": [],
+      "tables": [],
+      "cells": [],
+      "truncated": false
+    },
+    {
+      "name": "List3",
+      "maxRow": 1,
+      "maxColumn": 1,
+      "nonEmptyCount": 0,
+      "formulaCount": 0,
+      "mergedRanges": [],
+      "tables": [],
+      "cells": [],
+      "truncated": false
+    }
+  ]
+}

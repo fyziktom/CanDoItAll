@@ -1,0 +1,297 @@
+{
+  "projects": [
+    {
+      "key": "ai-tap",
+      "title": "AI Tap Intelligent Water Faucet",
+      "root": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\AI kohoutek",
+      "files": [
+        {
+          "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\AI kohoutek\\Analýza\\02-cena-vody-2019-full.png",
+          "relativePath": "Analýza\\02-cena-vody-2019-full.png",
+          "kind": "image",
+          "sizeBytes": 946132,
+          "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\anal-za-02-cena-vody-2019-full.png.md",
+          "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\anal-za-02-cena-vody-2019-full.png.json",
+          "error": null
+        },
+        {
+          "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\AI kohoutek\\Analýza\\AI Tap Organizační struktura.xmind",
+          "relativePath": "Analýza\\AI Tap Organizační struktura.xmind",
+          "kind": "xmind",
+          "sizeBytes": 62946,
+          "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\anal-za-ai-tap-organiza-n-struktura.xmind.md",
+          "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\anal-za-ai-tap-organiza-n-struktura.xmind.json",
+          "error": null
+        },
+        {
+          "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\AI kohoutek\\Analýza\\blokové schéma.graphml",
+          "relativePath": "Analýza\\blokové schéma.graphml",
+          "kind": "graphml",
+          "sizeBytes": 13240,
+          "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\anal-za-blokov-sch-ma.graphml.md",
+          "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\anal-za-blokov-sch-ma.graphml.json",
+          "error": null
+        },
+        {
+          "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\AI kohoutek\\Analýza\\blokové schéma.pptx",
+          "relativePath": "Analýza\\blokové schéma.pptx",
+          "kind": "pptx",
+          "sizeBytes": 59845,
+          "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\anal-za-blokov-sch-ma.pptx.md",
+          "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\anal-za-blokov-sch-ma.pptx.json",
+          "error": null
+        },
+        {
+          "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\AI kohoutek\\Analýza\\inteligentní vodovodní kohoutek.xmind",
+          "relativePath": "Analýza\\inteligentní vodovodní kohoutek.xmind",
+          "kind": "xmind",
+          "sizeBytes": 1494483,
+          "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\anal-za-inteligentn-vodovodn-kohoutek.xmind.md",
+          "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\anal-za-inteligentn-vodovodn-kohoutek.xmind.json",
+          "error": null
+        },
+        {
+          "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\AI kohoutek\\Analýza\\Měření vody při mytí nádobí.xlsx",
+          "relativePath": "Analýza\\Měření vody při mytí nádobí.xlsx",
+          "kind": "xlsx",
+          "sizeBytes": 13984,
+          "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\anal-za-m-en-vody-p-i-myt-n-dob-.xlsx.md",
+          "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\anal-za-m-en-vody-p-i-myt-n-dob-.xlsx.json",
+          "error": null
+        },
+        {
+          "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\AI kohoutek\\Analýza\\VID_20190311_100439.mp4",
+          "relativePath": "Analýza\\VID_20190311_100439.mp4",
+          "kind": "media",
+          "sizeBytes": 65157979,
+          "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\anal-za-vid_20190311_100439.mp4.md",
+          "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\anal-za-vid_20190311_100439.mp4.json",
+          "error": null
+        },
+        {
+          "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\AI kohoutek\\Analýza\\úspora vody a rentabilita.xlsx",
+          "relativePath": "Analýza\\úspora vody a rentabilita.xlsx",
+          "kind": "xlsx",
+          "sizeBytes": 10840,
+          "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\anal-za-spora-vody-a-rentabilita.xlsx.md",
+          "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\anal-za-spora-vody-a-rentabilita.xlsx.json",
+          "error": null
+        },
+        {
+          "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\AI kohoutek\\Byznys plán\\AI Tap - Byznys plán v1.docx",
+          "relativePath": "Byznys plán\\AI Tap - Byznys plán v1.docx",
+          "kind": "docx",
+          "sizeBytes": 388218,
+          "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\byznys-pl-n-ai-tap---byznys-pl-n-v1.docx.md",
+          "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\byznys-pl-n-ai-tap---byznys-pl-n-v1.docx.json",
+          "error": null
+        },
+        {
+          "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\AI kohoutek\\Byznys plán\\AI Tap - Byznys plán v1.pdf",
+          "relativePath": "Byznys plán\\AI Tap - Byznys plán v1.pdf",
+          "kind": "pdf",
+          "sizeBytes": 600049,
+          "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\byznys-pl-n-ai-tap---byznys-pl-n-v1.pdf.md",
+          "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\byznys-pl-n-ai-tap---byznys-pl-n-v1.pdf.json",
+          "error": null
+        },
+        {
+          "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\AI kohoutek\\Finance\\odhad ceny produktu - v2.xlsx",
+          "relativePath": "Finance\\odhad ceny produktu - v2.xlsx",
+          "kind": "xlsx",
+          "sizeBytes": 12541,
+          "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\finance-odhad-ceny-produktu---v2.xlsx.md",
+          "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\finance-odhad-ceny-produktu---v2.xlsx.json",
+          "error": null
+        },
+        {
+          "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\AI kohoutek\\Finance\\odhad ceny produktu.xlsx",
+          "relativePath": "Finance\\odhad ceny produktu.xlsx",
+          "kind": "xlsx",
+          "sizeBytes": 12835,
+          "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\finance-odhad-ceny-produktu.xlsx.md",
+          "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\finance-odhad-ceny-produktu.xlsx.json",
+          "error": null
+        },
+        {
+          "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\AI kohoutek\\Finance\\Rozpočet AITap-2020_2025-v02.xlsx",
+          "relativePath": "Finance\\Rozpočet AITap-2020_2025-v02.xlsx",
+          "kind": "xlsx",
+          "sizeBytes": 122893,
+          "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\finance-rozpo-et-aitap-2020_2025-v02.xlsx.md",
+          "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\finance-rozpo-et-aitap-2020_2025-v02.xlsx.json",
+          "error": null
+        },
+        {
+          "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\AI kohoutek\\Rozvaha AITap-2020_2023-v01.xlsx",
+          "relativePath": "Rozvaha AITap-2020_2023-v01.xlsx",
+          "kind": "xlsx",
+          "sizeBytes": 93785,
+          "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\rozvaha-aitap-2020_2023-v01.xlsx.md",
+          "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\rozvaha-aitap-2020_2023-v01.xlsx.json",
+          "error": null
+        },
+        {
+          "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\AI kohoutek\\VisionSoftware.pptx",
+          "relativePath": "VisionSoftware.pptx",
+          "kind": "pptx",
+          "sizeBytes": 1826166,
+          "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\visionsoftware.pptx.md",
+          "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\ai-tap\\raw\\visionsoftware.pptx.json",
+          "error": null
+        }
+      ]
+    },
+    {
+      "key": "curacao-glass-recycle",
+      "title": "Curacao Glass Recycling and Foam Glass Plant",
+      "root": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\Glass_Recycle_Curacao_Master_Pack_Government_Submission_Checked_2026-04-06",
+      "files": [
+        {
+          "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\Glass_Recycle_Curacao_Master_Pack_Government_Submission_Checked_2026-04-06\\01_Master_Pack\\diagrams\\charts\\ancillary_products_collage_clean.png",
+          "relativePath": "01_Master_Pack\\diagrams\\charts\\ancillary_products_collage_clean.png",
+          "kind": "image",
+          "sizeBytes": 3228384,
+          "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\curacao-glass-recycle\\raw\\01_master_pack-diagrams-charts-ancillary_products_collage_clean.png.md",
+          "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\curacao-glass-recycle\\raw\\01_master_pack-diagrams-charts-ancillary_products_collage_clean.png.json",
+          "error": null
+        },
+        {
+          "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\Glass_Recycle_Curacao_Master_Pack_Government_Submission_Checked_2026-04-06\\01_Master_Pack\\diagrams\\charts\\figure10_scenario_ebitda_integrated.png",
+          "relativePath": "01_Master_Pack\\diagrams\\charts\\figure10_scenario_ebitda_integrated.png",
+          "kind": "image",
+          "sizeBytes": 63196,
+          "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\curacao-glass-recycle\\raw\\01_master_pack-diagrams-charts-figure10_scenario_ebitda_integrated.png.md",
+          "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\curacao-glass-recycle\\raw\\01_master_pack-diagrams-charts-figure10_scenario_ebitda_integrated.png.json",
+          "error": null
+        },
+        {
+          "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\Glass_Recycle_Curacao_Master_Pack_Government_Submission_Checked_2026-04-06\\01_Master_Pack\\diagrams\\charts\\figure11_revenue_mix_lean70.png",
+          "relativePath": "01_Master_Pack\\diagrams\\charts\\figure11_revenue_mix_lean70.png",
+          "kind": "image",
+          "sizeBytes": 57901,
+          "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\curacao-glass-recycle\\raw\\01_master_pack-diagrams-charts-figure11_revenue_mix_lean70.png.md",
+          "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\curacao-glass-recycle\\raw\\01_master_pack-diagrams-charts-figure11_revenue_mix_lean70.png.json",
+          "error": null
+        },
+        {
+          "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\Glass_Recycle_Curacao_Master_Pack_Government_Submission_Checked_2026-04-06\\01_Master_Pack\\diagrams\\charts\\figure12_opex_mix_lean70.png",
+          "relativePath": "01_Master_Pack\\diagrams\\charts\\figure12_opex_mix_lean70.png",
+          "kind": "image",
+          "sizeBytes": 81931,
+          "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\curacao-glass-recycle\\raw\\01_master_pack-diagrams-charts-figure12_opex_mix_lean70.png.md",
+          "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\curacao-glass-recycle\\raw\\01_master_pack-diagrams-charts-figure12_opex_mix_lean70.png.json",
+          "error": null
+        },
+        {
+          "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\Glass_Recycle_Curacao_Master_Pack_Government_Submission_Checked_2026-04-06\\01_Master_Pack\\diagrams\\charts\\figure1_integrated_scenario_screen.png",
+          "relativePath": "01_Master_Pack\\diagrams\\charts\\figure1_integrated_scenario_screen.png",
+          "kind": "image",
+          "sizeBytes": 68859,
+          "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\curacao-glass-recycle\\raw\\01_master_pack-diagrams-charts-figure1_integrated_scenario_screen.png.md",
+          "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\curacao-glass-recycle\\raw\\01_master_pack-diagrams-charts-figure1_integrated_scenario_screen.png.json",
+          "error": null
+        },
+        {
+          "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\Glass_Recycle_Curacao_Master_Pack_Government_Submission_Checked_2026-04-06\\01_Master_Pack\\diagrams\\charts\\figure9_base_opex_integrated.png",
+          "relativePath": "01_Master_Pack\\diagrams\\charts\\figure9_base_opex_integrated.png",
+          "kind": "image",
+          "sizeBytes": 111874,
+          "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\curacao-glass-recycle\\raw\\01_master_pack-diagrams-charts-figure9_base_opex_integrated.png.md",
+          "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\curacao-glass-recycle\\raw\\01_master_pack-diagrams-charts-figure9_base_opex_integrated.png.json",
+          "error": null
+        },
+        {
+          "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\Glass_Recycle_Curacao_Master_Pack_Government_Submission_Checked_2026-04-06\\01_Master_Pack\\docs\\01_Detailed_Business_Plan_Curacao_Foam_Glass.docx",
+          "relativePath": "01_Master_Pack\\docs\\01_Detailed_Business_Plan_Curacao_Foam_Glass.docx",
+          "kind": "docx",
+          "sizeBytes": 8177317,
+          "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\curacao-glass-recycle\\raw\\01_master_pack-docs-01_detailed_business_plan_curacao_foam_glass.docx.md",
+          "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\curacao-glass-recycle\\raw\\01_master_pack-docs-01_detailed_business_plan_curacao_foam_glass.docx.json",
+          "error": null
+        },
+        {
+          "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\Glass_Recycle_Curacao_Master_Pack_Government_Submission_Checked_2026-04-06\\01_Master_Pack\\docs\\01_Detailed_Business_Plan_Curacao_Foam_Glass.pdf",
+          "relativePath": "01_Master_Pack\\docs\\01_Detailed_Business_Plan_Curacao_Foam_Glass.pdf",
+          "kind": "pdf",
+          "sizeBytes": 2861615,
+          "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\curacao-glass-recycle\\raw\\01_master_pack-docs-01_detailed_business_plan_curacao_foam_glass.pdf.md",
+          "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\curacao-glass-recycle\\raw\\01_master_pack-docs-01_detailed_business_plan_curacao_foam_glass.pdf.json",
+          "error": null
+        },
+        {
+          "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\Glass_Recycle_Curacao_Master_Pack_Government_Submission_Checked_2026-04-06\\01_Master_Pack\\docs\\02_C_Level_Executive_Summary.docx",
+          "relativePath": "01_Master_Pack\\docs\\02_C_Level_Executive_Summary.docx",
+          "kind": "docx",
+          "sizeBytes": 7347469,
+          "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\curacao-glass-recycle\\raw\\01_master_pack-docs-02_c_level_executive_summary.docx.md",
+          "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\curacao-glass-recycle\\raw\\01_master_pack-docs-02_c_level_executive_summary.docx.json",
+          "error": null
+        },
+        {
+          "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\Glass_Recycle_Curacao_Master_Pack_Government_Submission_Checked_2026-04-06\\01_Master_Pack\\docs\\02_C_Level_Executive_Summary.pdf",
+          "relativePath": "01_Master_Pack\\docs\\02_C_Level_Executive_Summary.pdf",
+          "kind": "pdf",
+          "sizeBytes": 1131545,
+          "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\curacao-glass-recycle\\raw\\01_master_pack-docs-02_c_level_executive_summary.pdf.md",
+          "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\curacao-glass-recycle\\raw\\01_master_pack-docs-02_c_level_executive_summary.pdf.json",
+          "error": null
+        },
+        {
+          "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\Glass_Recycle_Curacao_Master_Pack_Government_Submission_Checked_2026-04-06\\01_Master_Pack\\docs\\06_Master_Compendium_All_in_One.docx",
+          "relativePath": "01_Master_Pack\\docs\\06_Master_Compendium_All_in_One.docx",
+          "kind": "docx",
+          "sizeBytes": 9788467,
+          "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\curacao-glass-recycle\\raw\\01_master_pack-docs-06_master_compendium_all_in_one.docx.md",
+          "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\curacao-glass-recycle\\raw\\01_master_pack-docs-06_master_compendium_all_in_one.docx.json",
+          "error": null
+        },
+        {
+          "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\Glass_Recycle_Curacao_Master_Pack_Government_Submission_Checked_2026-04-06\\01_Master_Pack\\docs\\06_Master_Compendium_All_in_One.pdf",
+          "relativePath": "01_Master_Pack\\docs\\06_Master_Compendium_All_in_One.pdf",
+          "kind": "pdf",
+          "sizeBytes": 5845146,
+          "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\curacao-glass-recycle\\raw\\01_master_pack-docs-06_master_compendium_all_in_one.pdf.md",
+          "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\curacao-glass-recycle\\raw\\01_master_pack-docs-06_master_compendium_all_in_one.pdf.json",
+          "error": null
+        },
+        {
+          "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\Glass_Recycle_Curacao_Master_Pack_Government_Submission_Checked_2026-04-06\\01_Master_Pack\\docs\\07_QA_Completeness_Review.docx",
+          "relativePath": "01_Master_Pack\\docs\\07_QA_Completeness_Review.docx",
+          "kind": "docx",
+          "sizeBytes": 38953,
+          "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\curacao-glass-recycle\\raw\\01_master_pack-docs-07_qa_completeness_review.docx.md",
+          "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\curacao-glass-recycle\\raw\\01_master_pack-docs-07_qa_completeness_review.docx.json",
+          "error": null
+        },
+        {
+          "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\Glass_Recycle_Curacao_Master_Pack_Government_Submission_Checked_2026-04-06\\01_Master_Pack\\docs\\07_QA_Completeness_Review.pdf",
+          "relativePath": "01_Master_Pack\\docs\\07_QA_Completeness_Review.pdf",
+          "kind": "pdf",
+          "sizeBytes": 74997,
+          "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\curacao-glass-recycle\\raw\\01_master_pack-docs-07_qa_completeness_review.pdf.md",
+          "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\curacao-glass-recycle\\raw\\01_master_pack-docs-07_qa_completeness_review.pdf.json",
+          "error": null
+        },
+        {
+          "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\Glass_Recycle_Curacao_Master_Pack_Government_Submission_Checked_2026-04-06\\01_Master_Pack\\models\\08_Financial_QA_Checklist.xlsx",
+          "relativePath": "01_Master_Pack\\models\\08_Financial_QA_Checklist.xlsx",
+          "kind": "xlsx",
+          "sizeBytes": 7331,
+          "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\curacao-glass-recycle\\raw\\01_master_pack-models-08_financial_qa_checklist.xlsx.md",
+          "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\curacao-glass-recycle\\raw\\01_master_pack-models-08_financial_qa_checklist.xlsx.json",
+          "error": null
+        },
+        {
+          "path": "C:\\repositories\\CanDoItAll\\codex\\bundles\\input\\Glass_Recycle_Curacao_Master_Pack_Government_Submission_Checked_2026-04-06\\01_Master_Pack\\models\\Glass_Recycle_Curacao_Detailed_Model.xlsx",
+          "relativePath": "01_Master_Pack\\models\\Glass_Recycle_Curacao_Detailed_Model.xlsx",
+          "kind": "xlsx",
+          "sizeBytes": 50948,
+          "markdown": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\curacao-glass-recycle\\raw\\01_master_pack-models-glass_recycle_curacao_detailed_model.xlsx.md",
+          "json": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\inputs\\extracted\\curacao-glass-recycle\\raw\\01_master_pack-models-glass_recycle_curacao_detailed_model.xlsx.json",
+          "error": null
+        }
+      ]
+    }
+  ]
+}

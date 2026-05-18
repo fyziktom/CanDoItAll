@@ -155,6 +155,17 @@ public sealed class CognitiveMemoryConsolidationEngine(
         var reviewItemsCreated = 0;
         var mutationCommandsSubmitted = 0;
 
+        if (request.Profile.CreateHumanReviewItems)
+        {
+            reviewItemsCreated += await BackfillMissingReviewItemsAsync(
+                dbContext,
+                request,
+                budget,
+                consolidationRun.Id,
+                startedAtUtc,
+                cancellationToken);
+        }
+
         foreach (var sourceItem in sourceItems)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -347,6 +358,74 @@ public sealed class CognitiveMemoryConsolidationEngine(
             warnings);
     }
 
+    private static async Task<int> BackfillMissingReviewItemsAsync(
+        AppDbContext dbContext,
+        CognitiveMemoryConsolidationRunRequest request,
+        CognitiveMemoryConsolidationBudget budget,
+        Guid consolidationRunId,
+        DateTimeOffset createdAtUtc,
+        CancellationToken cancellationToken)
+    {
+        if (budget.ReviewItemLimit == 0)
+        {
+            return 0;
+        }
+
+        var candidates = (await dbContext.Set<CognitiveMemoryConsolidationCandidateRecord>()
+            .Where(candidate =>
+                candidate.ProjectId == request.ProjectId &&
+                candidate.Status == CognitiveMemoryConsolidationCandidateStatus.ReviewRequired &&
+                candidate.ReviewItemId == null)
+            .ToListAsync(cancellationToken))
+            .OrderBy(candidate => candidate.CreatedAtUtc)
+            .Take(budget.ReviewItemLimit)
+            .ToList();
+        if (candidates.Count == 0)
+        {
+            return 0;
+        }
+
+        var sourceItemIds = candidates
+            .Where(candidate => candidate.SourceItemId is not null)
+            .Select(candidate => candidate.SourceItemId!.Value)
+            .Distinct()
+            .ToArray();
+        var sourceItemsById = sourceItemIds.Length == 0
+            ? new Dictionary<Guid, CognitiveMemorySourceItemRecord>()
+            : await dbContext.Set<CognitiveMemorySourceItemRecord>()
+                .AsNoTracking()
+                .Where(sourceItem => sourceItemIds.Contains(sourceItem.Id))
+                .ToDictionaryAsync(sourceItem => sourceItem.Id, cancellationToken);
+
+        foreach (var candidate in candidates)
+        {
+            var reviewItemId = Guid.NewGuid();
+            var sourceItem = candidate.SourceItemId is { } sourceItemId &&
+                             sourceItemsById.TryGetValue(sourceItemId, out var resolvedSourceItem)
+                ? resolvedSourceItem
+                : null;
+            dbContext.Add(new CognitiveMemoryReviewItemRecord
+            {
+                Id = reviewItemId,
+                ProjectId = request.ProjectId,
+                ReviewKind = ResolveReviewKind(candidate.CandidateKind),
+                Status = CognitiveMemoryReviewStatus.Pending,
+                SubjectKind = CognitiveMemoryReviewSubjectKind.Run,
+                SubjectId = consolidationRunId,
+                RiskLevel = sourceItem is null ? CognitiveMemoryRiskLevel.Low : ResolveRiskLevel(sourceItem.AccessLevel, sourceItem.RedactionState),
+                ReasonCode = "ConsolidationCandidateReviewBackfill",
+                ReasonText = "Previously generated consolidation candidate requires review before authoritative memory changes.",
+                SourceEvidenceCount = candidate.EvidenceAnchorId is null ? 0 : 1,
+                CreatedAtUtc = createdAtUtc,
+                ConcurrencyToken = Guid.NewGuid()
+            });
+            candidate.ReviewItemId = reviewItemId;
+            candidate.ConcurrencyToken = Guid.NewGuid();
+        }
+
+        return candidates.Count;
+    }
+
     private static void ValidateRequest(CognitiveMemoryConsolidationRunRequest request)
     {
         ArgumentNullException.ThrowIfNull(request.Profile);
@@ -487,6 +566,13 @@ public sealed class CognitiveMemoryConsolidationEngine(
             !(item.SourceSystem == WorkbenchProjectStructureSourceSystem &&
               item.SourceItemType == ProjectNodeSourceItemType &&
               item.ContentText.Contains(ProjectFileNodeMarker)));
+        var processedCandidates = dbContext.Set<CognitiveMemoryConsolidationCandidateRecord>()
+            .AsNoTracking();
+        query = query.Where(item => !processedCandidates.Any(candidate =>
+            candidate.ProjectId == item.ProjectId &&
+            candidate.SourceItemId == item.Id &&
+            candidate.SourceContentHash == item.ContentHash &&
+            candidate.AlgorithmVersion == AlgorithmVersion));
 
         return await query
             .OrderBy(item => item.SourceSystem == WorkbenchProjectStructureSourceSystem ? 0 : 1)
@@ -827,8 +913,13 @@ public sealed class CognitiveMemoryConsolidationEngine(
     }
 
     private static CognitiveMemoryRiskLevel ResolveRiskLevel(SourceItemSnapshot sourceItem)
-        => sourceItem.AccessLevel == CognitiveMemoryAccessLevel.Restricted ||
-           sourceItem.RedactionState is CognitiveMemoryRedactionState.Redacted or CognitiveMemoryRedactionState.Restricted
+        => ResolveRiskLevel(sourceItem.AccessLevel, sourceItem.RedactionState);
+
+    private static CognitiveMemoryRiskLevel ResolveRiskLevel(
+        CognitiveMemoryAccessLevel accessLevel,
+        CognitiveMemoryRedactionState redactionState)
+        => accessLevel == CognitiveMemoryAccessLevel.Restricted ||
+           redactionState is CognitiveMemoryRedactionState.Redacted or CognitiveMemoryRedactionState.Restricted
             ? CognitiveMemoryRiskLevel.High
             : CognitiveMemoryRiskLevel.Medium;
 

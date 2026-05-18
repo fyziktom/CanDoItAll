@@ -127,6 +127,60 @@ public sealed class CognitiveMemoryConsolidationEngineTests
     }
 
     [Fact]
+    public async Task RunAsync_SubsequentRunsProcessUnprocessedSourceItemsAfterFirstPage()
+    {
+        await using var fixture = await CreateFixtureAsync();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        await SeedSourceAsync(fixture, projectId, "WorkbenchProjectStructure", "ProjectNode", "Title: Alpha\nNotes: First project node source.", withEvidence: true);
+        await SeedSourceAsync(fixture, projectId, "WorkbenchProjectStructure", "ProjectNode", "Title: Beta\nNotes: Second project node source has more text.", withEvidence: true);
+        var profile = CognitiveMemoryConsolidationProfile.IncrementalRecent with
+        {
+            MaxItems = 1
+        };
+        var engine = CreateEngine(fixture);
+
+        var first = await engine.RunAsync(Request(projectId, "consolidation-page-1", profile));
+        var second = await engine.RunAsync(Request(projectId, "consolidation-page-2", profile));
+
+        await using var dbContext = fixture.Factory.CreateDbContext();
+        var candidates = await dbContext.Set<CognitiveMemoryConsolidationCandidateRecord>()
+            .ToListAsync();
+
+        Assert.Equal(CognitiveMemoryRunStatus.Succeeded, first.Status);
+        Assert.Equal(CognitiveMemoryRunStatus.Succeeded, second.Status);
+        Assert.Equal(1, first.SourceItemsScanned);
+        Assert.Equal(1, second.SourceItemsScanned);
+        Assert.Equal(2, candidates.Count);
+        Assert.Equal(2, candidates.Select(candidate => candidate.SourceItemId).Distinct().Count());
+    }
+
+    [Fact]
+    public async Task RunAsync_BackfillsReviewItemsForReviewRequiredCandidatesWithoutReviewItem()
+    {
+        await using var fixture = await CreateFixtureAsync();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        await SeedSourceAsync(fixture, projectId, "WorkbenchProjectStructure", "ProjectNode", "Title: Staffing\nNotes: Core factory staffing model is 30 FTE.", withEvidence: true);
+        var engine = CreateEngine(fixture);
+        var noReviewBudget = new CognitiveMemoryConsolidationBudget(10, 10, 0, 4096, TimeSpan.FromMinutes(5));
+
+        var first = await engine.RunAsync(Request(projectId, "consolidation-review-budget-exhausted", CognitiveMemoryConsolidationProfile.IncrementalRecent, noReviewBudget));
+        var second = await engine.RunAsync(Request(projectId, "consolidation-review-backfill", CognitiveMemoryConsolidationProfile.IncrementalRecent));
+
+        await using var dbContext = fixture.Factory.CreateDbContext();
+        var candidate = Assert.Single(await dbContext.Set<CognitiveMemoryConsolidationCandidateRecord>().ToListAsync());
+        var review = Assert.Single(await dbContext.Set<CognitiveMemoryReviewItemRecord>().ToListAsync());
+
+        Assert.Equal(CognitiveMemoryRunStatus.Succeeded, first.Status);
+        Assert.Equal(0, first.ReviewItemsCreated);
+        Assert.Equal(CognitiveMemoryRunStatus.Succeeded, second.Status);
+        Assert.Equal(1, second.ReviewItemsCreated);
+        Assert.Equal(CognitiveMemoryConsolidationCandidateStatus.ReviewRequired, candidate.Status);
+        Assert.Equal(review.Id, candidate.ReviewItemId);
+        Assert.Equal(CognitiveMemoryReviewStatus.Pending, review.Status);
+        Assert.Equal(0, second.SourceItemsScanned);
+    }
+
+    [Fact]
     public async Task DecideReviewItemAsync_ApproveConsolidationCandidateAppliesCanonicalMemory()
     {
         await using var fixture = await CreateFixtureAsync();
@@ -224,6 +278,13 @@ public sealed class CognitiveMemoryConsolidationEngineTests
         Guid projectId,
         string idempotencyKey,
         CognitiveMemoryConsolidationProfile profile)
+        => Request(projectId, idempotencyKey, profile, new CognitiveMemoryConsolidationBudget(10, 10, 10, 4096, TimeSpan.FromMinutes(5)));
+
+    private static CognitiveMemoryConsolidationRunRequest Request(
+        Guid projectId,
+        string idempotencyKey,
+        CognitiveMemoryConsolidationProfile profile,
+        CognitiveMemoryConsolidationBudget budget)
         => new(
             projectId,
             CognitiveMemoryConsolidationMode.IncrementalRecent,
@@ -231,7 +292,7 @@ public sealed class CognitiveMemoryConsolidationEngineTests
             profile,
             Policy(projectId),
             new CognitiveMemoryIdempotencyKey(idempotencyKey),
-            new CognitiveMemoryConsolidationBudget(10, 10, 10, 4096, TimeSpan.FromMinutes(5)));
+            budget);
 
     private static CognitiveMemoryPolicyContext Policy(Guid projectId)
         => new(

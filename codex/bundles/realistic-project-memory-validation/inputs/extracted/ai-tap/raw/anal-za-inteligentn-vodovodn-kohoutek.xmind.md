@@ -1,0 +1,1382 @@
+# Extracted Source: Analýza\inteligentní vodovodní kohoutek.xmind
+
+- Source path: `C:\repositories\CanDoItAll\codex\bundles\input\AI kohoutek\Analýza\inteligentní vodovodní kohoutek.xmind`
+- Source kind: `xmind`
+- Project: `AI Tap Intelligent Water Faucet`
+
+## Sheet: Základní analýza
+- Základní analýza
+  - Bude spouštět vodu na základě změny obrazu z kamery
+    - levná řada jen pomocí integrátoru
+    - pokročilé řady můžou regulovat vodu podle velikosti předmětu
+    - rozpoznávání předmětů pomocí neuronových sítí
+  - levná řada jen pomocí integrátoru
+  - pokročilé řady můžou regulovat vodu podle velikosti předmětu
+  - rozpoznávání předmětů pomocí neuronových sítí
+  - senzorové baterie stojí průměrně přes 5t.Kč
+    - spíše startují na 8t.Kč
+    - maloobchodní cena s DPH
+  - spíše startují na 8t.Kč
+  - maloobchodní cena s DPH
+  - důvod vzniku
+    - problémy s vodou
+      - http://zpravy.idnes.cz/seth-siegel-voda-izrael-budiz-voda-sucho-aligier-fth-/zahranicni.aspx?c=A161210_102046_zahranicni_fer
+      - inteligentní kohoutky šetří vodu
+    - http://zpravy.idnes.cz/seth-siegel-voda-izrael-budiz-voda-sucho-aligier-fth-/zahranicni.aspx?c=A161210_102046_zahranicni_fer
+    - inteligentní kohoutky šetří vodu
+    - problémy s IR senzory
+      - předmět musí být kolmo, aby to fungovalo
+    - předmět musí být kolmo, aby to fungovalo
+    - 
+  - problémy s vodou
+    - http://zpravy.idnes.cz/seth-siegel-voda-izrael-budiz-voda-sucho-aligier-fth-/zahranicni.aspx?c=A161210_102046_zahranicni_fer
+    - inteligentní kohoutky šetří vodu
+  - http://zpravy.idnes.cz/seth-siegel-voda-izrael-budiz-voda-sucho-aligier-fth-/zahranicni.aspx?c=A161210_102046_zahranicni_fer
+  - inteligentní kohoutky šetří vodu
+  - problémy s IR senzory
+    - předmět musí být kolmo, aby to fungovalo
+  - předmět musí být kolmo, aby to fungovalo
+  - 
+  - nastavení teploty
+    - mohlo by tam být i automatické nastavování teploty
+    - ochrana proti opaření
+  - mohlo by tam být i automatické nastavování teploty
+  - ochrana proti opaření
+  - provedení kohoutku
+    - 
+    - regulace vody bude stejná
+    - jen nad regulačním kohoutem by přibyla další páčka, které by aktivovala/deaktivovala automat
+    - nahoře u výpusti by přibyla kamera
+    - u této baterie byla cena při 1ks 100USD
+      - takže třeba při 1000ks a s požadovanou úpravou by se dalo dostat na cca 60USD
+    - takže třeba při 1000ks a s požadovanou úpravou by se dalo dostat na cca 60USD
+  - 
+  - regulace vody bude stejná
+  - jen nad regulačním kohoutem by přibyla další páčka, které by aktivovala/deaktivovala automat
+  - nahoře u výpusti by přibyla kamera
+  - u této baterie byla cena při 1ks 100USD
+    - takže třeba při 1000ks a s požadovanou úpravou by se dalo dostat na cca 60USD
+  - takže třeba při 1000ks a s požadovanou úpravou by se dalo dostat na cca 60USD
+  - další verze by mohly mít i automatické dávkování jaru
+  - další verze může mít i průtokový ohřev
+  - jak se dělá kohoutek
+    - https://www.youtube.com/watch?v=8Y4MeaigsHs
+  - https://www.youtube.com/watch?v=8Y4MeaigsHs
+
+## Sheet: První verze
+- První verze
+  - základní princip této verze
+    - použije se kamera s PAL/NTSC výstupem
+      - sranda za 3USD
+      - https://www.alibaba.com/product-detail/Factory-Price-2-8mm-Wide-Angle_60242665374.html?spm=a2700.7724838.0.0.gIWUpo
+      - https://www.alibaba.com/product-detail/2-5mm-wide-angle-lens-Miniature_656169816.html
+      - http://www.ebay.com/itm/NTSC-1-4-HD-CMOS-3-7mm-Lens-600TVL-Mini-Flattop-Pinhole-CCTV-Security-Camera-/331590460856
+    - sranda za 3USD
+    - https://www.alibaba.com/product-detail/Factory-Price-2-8mm-Wide-Angle_60242665374.html?spm=a2700.7724838.0.0.gIWUpo
+    - https://www.alibaba.com/product-detail/2-5mm-wide-angle-lens-Miniature_656169816.html
+    - http://www.ebay.com/itm/NTSC-1-4-HD-CMOS-3-7mm-Lens-600TVL-Mini-Flattop-Pinhole-CCTV-Security-Camera-/331590460856
+    - po usměrnění signálu a filtraci je možné získat průměrný signál
+      - při registraci změny se spustí timer, který se bude prodlužovat v případě dalších změn
+    - při registraci změny se spustí timer, který se bude prodlužovat v případě dalších změn
+  - použije se kamera s PAL/NTSC výstupem
+    - sranda za 3USD
+    - https://www.alibaba.com/product-detail/Factory-Price-2-8mm-Wide-Angle_60242665374.html?spm=a2700.7724838.0.0.gIWUpo
+    - https://www.alibaba.com/product-detail/2-5mm-wide-angle-lens-Miniature_656169816.html
+    - http://www.ebay.com/itm/NTSC-1-4-HD-CMOS-3-7mm-Lens-600TVL-Mini-Flattop-Pinhole-CCTV-Security-Camera-/331590460856
+  - sranda za 3USD
+  - https://www.alibaba.com/product-detail/Factory-Price-2-8mm-Wide-Angle_60242665374.html?spm=a2700.7724838.0.0.gIWUpo
+  - https://www.alibaba.com/product-detail/2-5mm-wide-angle-lens-Miniature_656169816.html
+  - http://www.ebay.com/itm/NTSC-1-4-HD-CMOS-3-7mm-Lens-600TVL-Mini-Flattop-Pinhole-CCTV-Security-Camera-/331590460856
+  - po usměrnění signálu a filtraci je možné získat průměrný signál
+    - při registraci změny se spustí timer, který se bude prodlužovat v případě dalších změn
+  - při registraci změny se spustí timer, který se bude prodlužovat v případě dalších změn
+  - Obvodové řešení
+    - na video výstup kamery se připojí usměrňovací můstek z BAT42 (schottky diody)
+    - za ně se dá kondík a rezistor k němu paralelně
+      - odhad 470n
+      - odhad 1k
+      - rezistor bude průběžně vybíjet kondík, aby se v případě, že se nic neděje kondík vybil
+    - odhad 470n
+    - odhad 1k
+    - rezistor bude průběžně vybíjet kondík, aby se v případě, že se nic neděje kondík vybil
+    - a za to komparátor
+      - LM358
+    - LM358
+    - výstup LM358 bude resetovat běh timeru
+      - třeba 555
+    - třeba 555
+    - komparátor a timer se pak dá nahradit nějakým superlevným 8bit mcu s ADC
+      - např. lowcost pic
+    - např. lowcost pic
+    - výstup sepne přes tranzistor solenoid pro pouštění vody
+      - na to se dá použít už hotová baterie s IR čidlem
+    - na to se dá použít už hotová baterie s IR čidlem
+  - na video výstup kamery se připojí usměrňovací můstek z BAT42 (schottky diody)
+  - za ně se dá kondík a rezistor k němu paralelně
+    - odhad 470n
+    - odhad 1k
+    - rezistor bude průběžně vybíjet kondík, aby se v případě, že se nic neděje kondík vybil
+  - odhad 470n
+  - odhad 1k
+  - rezistor bude průběžně vybíjet kondík, aby se v případě, že se nic neděje kondík vybil
+  - a za to komparátor
+    - LM358
+  - LM358
+  - výstup LM358 bude resetovat běh timeru
+    - třeba 555
+  - třeba 555
+  - komparátor a timer se pak dá nahradit nějakým superlevným 8bit mcu s ADC
+    - např. lowcost pic
+  - např. lowcost pic
+  - výstup sepne přes tranzistor solenoid pro pouštění vody
+    - na to se dá použít už hotová baterie s IR čidlem
+  - na to se dá použít už hotová baterie s IR čidlem
+  - potenciální problémy
+    - kamera žere cca 50mA@12V
+    - spínací ventil může žrát cca 10-20mA@12V
+    - ostatní elektronika tak 2mA
+    - celková spotřeba do 70mA
+  - kamera žere cca 50mA@12V
+  - spínací ventil může žrát cca 10-20mA@12V
+  - ostatní elektronika tak 2mA
+  - celková spotřeba do 70mA
+  - mechanický spínač
+    - jak u klasické pákové baterie
+    - pokud by se dala do určité polohy, pustil by se tento automat
+    - jinak normální funkce baterie s kulovým ventilem
+  - jak u klasické pákové baterie
+  - pokud by se dala do určité polohy, pustil by se tento automat
+  - jinak normální funkce baterie s kulovým ventilem
+
+## Sheet: Druhá verze
+- Druhá verze
+  - kamera
+    - asi USB
+    - bude muset být vodotěsná
+      - nevo v krytu
+    - nevo v krytu
+  - asi USB
+  - bude muset být vodotěsná
+    - nevo v krytu
+  - nevo v krytu
+  - výpočetní jednotka
+    - asi RPI
+    - je nejlevnější
+      - cca 750Kč/ks při 1ks
+    - cca 750Kč/ks při 1ks
+  - asi RPI
+  - je nejlevnější
+    - cca 750Kč/ks při 1ks
+  - cca 750Kč/ks při 1ks
+  - modul spínání
+    - externí modul pro RPI pro ovládání ventilů
+    - dále vstup na měření teploty
+  - externí modul pro RPI pro ovládání ventilů
+  - dále vstup na měření teploty
+  - ventily
+    - musí být regulovatelný
+      - pokud by byl moc drahý, tak udělat dvě verze
+    - pokud by byl moc drahý, tak udělat dvě verze
+    - měl by být co nejblíže konci kohoutku
+    - pro regulaci by šel použít systém přepážek
+      - ventil bude mít tři přepážky
+        - jedna zavře celý kanál
+        - jedna na 2/3
+        - jedna na 1/3
+      - jedna zavře celý kanál
+      - jedna na 2/3
+      - jedna na 1/3
+      - tím je možné ve třech stupních regulovat tok vody
+        - v kombinaci teplé a studené je to více stupňů
+      - v kombinaci teplé a studené je to více stupňů
+      - bude to konstrukčně jednoduché, levné a méně poruchové
+      - ale bude to spotřebovávat moc energie
+        - asi to ale i tak bude levnější
+      - asi to ale i tak bude levnější
+    - ventil bude mít tři přepážky
+      - jedna zavře celý kanál
+      - jedna na 2/3
+      - jedna na 1/3
+    - jedna zavře celý kanál
+    - jedna na 2/3
+    - jedna na 1/3
+    - tím je možné ve třech stupních regulovat tok vody
+      - v kombinaci teplé a studené je to více stupňů
+    - v kombinaci teplé a studené je to více stupňů
+    - bude to konstrukčně jednoduché, levné a méně poruchové
+    - ale bude to spotřebovávat moc energie
+      - asi to ale i tak bude levnější
+    - asi to ale i tak bude levnější
+    - servo
+      - také konstrukčně jednoduché
+      - kvůli další elektronice může být více poruchové
+        - navíc je v tom motor a bude tam vlhko
+      - navíc je v tom motor a bude tam vlhko
+    - také konstrukčně jednoduché
+    - kvůli další elektronice může být více poruchové
+      - navíc je v tom motor a bude tam vlhko
+    - navíc je v tom motor a bude tam vlhko
+  - musí být regulovatelný
+    - pokud by byl moc drahý, tak udělat dvě verze
+  - pokud by byl moc drahý, tak udělat dvě verze
+  - měl by být co nejblíže konci kohoutku
+  - pro regulaci by šel použít systém přepážek
+    - ventil bude mít tři přepážky
+      - jedna zavře celý kanál
+      - jedna na 2/3
+      - jedna na 1/3
+    - jedna zavře celý kanál
+    - jedna na 2/3
+    - jedna na 1/3
+    - tím je možné ve třech stupních regulovat tok vody
+      - v kombinaci teplé a studené je to více stupňů
+    - v kombinaci teplé a studené je to více stupňů
+    - bude to konstrukčně jednoduché, levné a méně poruchové
+    - ale bude to spotřebovávat moc energie
+      - asi to ale i tak bude levnější
+    - asi to ale i tak bude levnější
+  - ventil bude mít tři přepážky
+    - jedna zavře celý kanál
+    - jedna na 2/3
+    - jedna na 1/3
+  - jedna zavře celý kanál
+  - jedna na 2/3
+  - jedna na 1/3
+  - tím je možné ve třech stupních regulovat tok vody
+    - v kombinaci teplé a studené je to více stupňů
+  - v kombinaci teplé a studené je to více stupňů
+  - bude to konstrukčně jednoduché, levné a méně poruchové
+  - ale bude to spotřebovávat moc energie
+    - asi to ale i tak bude levnější
+  - asi to ale i tak bude levnější
+  - servo
+    - také konstrukčně jednoduché
+    - kvůli další elektronice může být více poruchové
+      - navíc je v tom motor a bude tam vlhko
+    - navíc je v tom motor a bude tam vlhko
+  - také konstrukčně jednoduché
+  - kvůli další elektronice může být více poruchové
+    - navíc je v tom motor a bude tam vlhko
+  - navíc je v tom motor a bude tam vlhko
+  - napájení
+    - adaptér
+    - možnost připojení vlastního napájení
+      - pro baráky, které mají solární panely a NN rozvody
+      - 24V
+    - pro baráky, které mají solární panely a NN rozvody
+    - 24V
+  - adaptér
+  - možnost připojení vlastního napájení
+    - pro baráky, které mají solární panely a NN rozvody
+    - 24V
+  - pro baráky, které mají solární panely a NN rozvody
+  - 24V
+  - hlasové povely
+    - integrovat mikrofon a reprák?
+    - napojení na alexu?
+  - integrovat mikrofon a reprák?
+  - napojení na alexu?
+  - tělo baterie
+    - jde udělat z recyklovaného plastu?
+      - https://www.indiamart.com/proddetail/plastic-water-tap-12809629862.html
+      - https://www.walmart.com/ip/Yosoo-ABS-Plastic-Single-Cold-Faucet-Water-Tap-Kitchen-Sink-Bathroom-Basin-Accessories-G1-2-Water-Faucet-Single-Cold-Faucet/361261835
+    - https://www.indiamart.com/proddetail/plastic-water-tap-12809629862.html
+    - https://www.walmart.com/ip/Yosoo-ABS-Plastic-Single-Cold-Faucet-Water-Tap-Kitchen-Sink-Bathroom-Basin-Accessories-G1-2-Water-Faucet-Single-Cold-Faucet/361261835
+  - jde udělat z recyklovaného plastu?
+    - https://www.indiamart.com/proddetail/plastic-water-tap-12809629862.html
+    - https://www.walmart.com/ip/Yosoo-ABS-Plastic-Single-Cold-Faucet-Water-Tap-Kitchen-Sink-Bathroom-Basin-Accessories-G1-2-Water-Faucet-Single-Cold-Faucet/361261835
+  - https://www.indiamart.com/proddetail/plastic-water-tap-12809629862.html
+  - https://www.walmart.com/ip/Yosoo-ABS-Plastic-Single-Cold-Faucet-Water-Tap-Kitchen-Sink-Bathroom-Basin-Accessories-G1-2-Water-Faucet-Single-Cold-Faucet/361261835
+  - sleep mód
+    - probouzení pomocí otřesového spínače
+  - probouzení pomocí otřesového spínače
+
+## Sheet: Byznys plán
+- Byznys plán
+  - popis problému
+    - Hlavní problém je zbytečné plýtvání vody při umývání nádobí
+    - nicméně současné senzorické baterie nejsou vhodné kvůli špatnému odrazu signálu od nádobí
+    - Také se stává, že se většinou děti nebo senioři omylem opaří, protože si špatně pustí vodu
+  - Hlavní problém je zbytečné plýtvání vody při umývání nádobí
+  - nicméně současné senzorické baterie nejsou vhodné kvůli špatnému odrazu signálu od nádobí
+  - Také se stává, že se většinou děti nebo senioři omylem opaří, protože si špatně pustí vodu
+  - summary řešení
+    - řešením je inteligentní kohoutek, který bude regulovat intenzitu toku a teplotu vody pomocí vyhodnocování obrazu snímaného kamerou
+  - řešením je inteligentní kohoutek, který bude regulovat intenzitu toku a teplotu vody pomocí vyhodnocování obrazu snímaného kamerou
+  - summary obchod/trh
+    - Trh je enormně velký
+    - pokud bude technologie fungovat správně, tak se jedná o stovky milionů možných zákazníků
+    - hlavním segmentem jsou rodiny a firemní kuchyňky
+  - Trh je enormně velký
+  - pokud bude technologie fungovat správně, tak se jedná o stovky milionů možných zákazníků
+  - hlavním segmentem jsou rodiny a firemní kuchyňky
+  - popis navrhovaného řešení
+    - princip rozhodování člověka
+    - navrhované funkce
+    - technický koncept zařízení
+    - vyhodnocení obrazu
+    - regulace vody
+    - konstrukce baterie
+      - ideální by bylo navrhnout formu na plastový výlisek, který by tvořil podstatnou část
+    - ideální by bylo navrhnout formu na plastový výlisek, který by tvořil podstatnou část
+    - napájení
+      - adaptérem
+    - adaptérem
+    - čištění kamery
+      - jedna z největších výzev
+      - pokud se ukáže jako nutná
+      - lze to propojit s vývojem číštění čoček kamer na autech
+    - jedna z největších výzev
+    - pokud se ukáže jako nutná
+    - lze to propojit s vývojem číštění čoček kamer na autech
+    - update a vzdálený monitoring vody
+    - možná rozšíření
+    - blokové schéma
+  - princip rozhodování člověka
+  - navrhované funkce
+  - technický koncept zařízení
+  - vyhodnocení obrazu
+  - regulace vody
+  - konstrukce baterie
+    - ideální by bylo navrhnout formu na plastový výlisek, který by tvořil podstatnou část
+  - ideální by bylo navrhnout formu na plastový výlisek, který by tvořil podstatnou část
+  - napájení
+    - adaptérem
+  - adaptérem
+  - čištění kamery
+    - jedna z největších výzev
+    - pokud se ukáže jako nutná
+    - lze to propojit s vývojem číštění čoček kamer na autech
+  - jedna z největších výzev
+  - pokud se ukáže jako nutná
+  - lze to propojit s vývojem číštění čoček kamer na autech
+  - update a vzdálený monitoring vody
+  - možná rozšíření
+  - blokové schéma
+  - Vývoj produktu
+    - technický tým
+      - subdodavatelé
+    - subdodavatelé
+    - fáze vývoje
+    - certifikace
+  - technický tým
+    - subdodavatelé
+  - subdodavatelé
+  - fáze vývoje
+  - certifikace
+  - tým
+  - Výroba produktu
+    - odhad procesu výroby
+  - odhad procesu výroby
+  - ochrana duševního vlastictví
+    - pokud by nešel patent, tak užitný vzor
+  - pokud by nešel patent, tak užitný vzor
+  - Konkurence a substituty
+  - Tržní analýza
+    - Popis zákazníka
+  - Popis zákazníka
+  - Obchodní strategie
+  - Marketing
+  - Finanční analýza
+  - SWOT
+
+## Sheet: Tržní a analýza
+- Tržní analýza
+  - současná řešení
+    - klasické vodovodní baterie
+      - manuální regulace
+      - 
+    - manuální regulace
+    - 
+    - senzorické vodovodní baterie
+      - na bázi infra
+      - 
+    - na bázi infra
+    - 
+    - zatím se mě nepodařilo najít baterii která používá pro detekci kameru a strojové vidění
+      - ale bylo by dobré ještě udělat znovu rešerši. Bylo by divné, kdyby to už někoho nenapadlo
+    - ale bylo by dobré ještě udělat znovu rešerši. Bylo by divné, kdyby to už někoho nenapadlo
+  - klasické vodovodní baterie
+    - manuální regulace
+    - 
+  - manuální regulace
+  - 
+  - senzorické vodovodní baterie
+    - na bázi infra
+    - 
+  - na bázi infra
+  - 
+  - zatím se mě nepodařilo najít baterii která používá pro detekci kameru a strojové vidění
+    - ale bylo by dobré ještě udělat znovu rešerši. Bylo by divné, kdyby to už někoho nenapadlo
+  - ale bylo by dobré ještě udělat znovu rešerši. Bylo by divné, kdyby to už někoho nenapadlo
+  - popis zákazníka
+    - každý kdo umývá nádobí v ruce
+      - primárně rodiny
+      - kuchyňky ve firmách
+    - primárně rodiny
+    - kuchyňky ve firmách
+    - další oblasti
+      - hotely
+      - školy
+      - úřady
+      - nemocnice
+    - hotely
+    - školy
+    - úřady
+    - nemocnice
+    - teoreticky se to dá dát i do koupelny
+    - i lidé, kteří mají myčku spoustu věcí umývají v ruce
+    - teoreticky je TAM roven populaci střední třídy a vyšších tříd
+      - minimálně stovky milionů lidí
+        - a to se ještě násobí, rodiné domy můžou mít dvě kuchyně, a pak instalace v dalších místech, jako jsou kuchyňky v kancelářích, apod.
+        - teoreticky se může jednat i o miliardu možných instalací
+      - a to se ještě násobí, rodiné domy můžou mít dvě kuchyně, a pak instalace v dalších místech, jako jsou kuchyňky v kancelářích, apod.
+      - teoreticky se může jednat i o miliardu možných instalací
+      - kdybychom dokázali ukousnout byť jen 1% trhu, jsme happy
+    - minimálně stovky milionů lidí
+      - a to se ještě násobí, rodiné domy můžou mít dvě kuchyně, a pak instalace v dalších místech, jako jsou kuchyňky v kancelářích, apod.
+      - teoreticky se může jednat i o miliardu možných instalací
+    - a to se ještě násobí, rodiné domy můžou mít dvě kuchyně, a pak instalace v dalších místech, jako jsou kuchyňky v kancelářích, apod.
+    - teoreticky se může jednat i o miliardu možných instalací
+    - kdybychom dokázali ukousnout byť jen 1% trhu, jsme happy
+  - každý kdo umývá nádobí v ruce
+    - primárně rodiny
+    - kuchyňky ve firmách
+  - primárně rodiny
+  - kuchyňky ve firmách
+  - další oblasti
+    - hotely
+    - školy
+    - úřady
+    - nemocnice
+  - hotely
+  - školy
+  - úřady
+  - nemocnice
+  - teoreticky se to dá dát i do koupelny
+  - i lidé, kteří mají myčku spoustu věcí umývají v ruce
+  - teoreticky je TAM roven populaci střední třídy a vyšších tříd
+    - minimálně stovky milionů lidí
+      - a to se ještě násobí, rodiné domy můžou mít dvě kuchyně, a pak instalace v dalších místech, jako jsou kuchyňky v kancelářích, apod.
+      - teoreticky se může jednat i o miliardu možných instalací
+    - a to se ještě násobí, rodiné domy můžou mít dvě kuchyně, a pak instalace v dalších místech, jako jsou kuchyňky v kancelářích, apod.
+    - teoreticky se může jednat i o miliardu možných instalací
+    - kdybychom dokázali ukousnout byť jen 1% trhu, jsme happy
+  - minimálně stovky milionů lidí
+    - a to se ještě násobí, rodiné domy můžou mít dvě kuchyně, a pak instalace v dalších místech, jako jsou kuchyňky v kancelářích, apod.
+    - teoreticky se může jednat i o miliardu možných instalací
+  - a to se ještě násobí, rodiné domy můžou mít dvě kuchyně, a pak instalace v dalších místech, jako jsou kuchyňky v kancelářích, apod.
+  - teoreticky se může jednat i o miliardu možných instalací
+  - kdybychom dokázali ukousnout byť jen 1% trhu, jsme happy
+  - obchodní model
+    - výroba a prodej produktu
+    - výroba a prodej náhradních komponent
+    - instalace
+      - raději bych je přenechala na uživatele nebo drobné živnostníky
+    - raději bych je přenechala na uživatele nebo drobné živnostníky
+    - sběr anonymních dat o odběru vody a prodej této databáze pro výzkumy
+  - výroba a prodej produktu
+  - výroba a prodej náhradních komponent
+  - instalace
+    - raději bych je přenechala na uživatele nebo drobné živnostníky
+  - raději bych je přenechala na uživatele nebo drobné živnostníky
+  - sběr anonymních dat o odběru vody a prodej této databáze pro výzkumy
+  - proč by si měl zákazník koupit produkt?
+    - ušetřní vodu
+      - nejde jen o finanční úsporu ale i o ekologii
+    - nejde jen o finanční úsporu ale i o ekologii
+    - ochrana před opařením
+      - primárně kvůli dětem a seniorům
+    - primárně kvůli dětem a seniorům
+    - konfortnější umývání nádobí a rukou
+      - co chci od kohoutku? Aby mě pustil vodu, tak jak bych si ji pustila já
+    - co chci od kohoutku? Aby mě pustil vodu, tak jak bych si ji pustila já
+    - cena se nějak zásadně neliší od standardních kohoutků
+    - můžu měřit kolik jsem spotřebovala vody
+      - to je vhodné i pro pronajímatele, kteří nemají podružné měření pronajímaných bytových jednotek
+        - to taky není špatnej nápad
+          - na to jde udělat modul
+        - na to jde udělat modul
+      - to taky není špatnej nápad
+        - na to jde udělat modul
+      - na to jde udělat modul
+    - to je vhodné i pro pronajímatele, kteří nemají podružné měření pronajímaných bytových jednotek
+      - to taky není špatnej nápad
+        - na to jde udělat modul
+      - na to jde udělat modul
+    - to taky není špatnej nápad
+      - na to jde udělat modul
+    - na to jde udělat modul
+  - ušetřní vodu
+    - nejde jen o finanční úsporu ale i o ekologii
+  - nejde jen o finanční úsporu ale i o ekologii
+  - ochrana před opařením
+    - primárně kvůli dětem a seniorům
+  - primárně kvůli dětem a seniorům
+  - konfortnější umývání nádobí a rukou
+    - co chci od kohoutku? Aby mě pustil vodu, tak jak bych si ji pustila já
+  - co chci od kohoutku? Aby mě pustil vodu, tak jak bych si ji pustila já
+  - cena se nějak zásadně neliší od standardních kohoutků
+  - můžu měřit kolik jsem spotřebovala vody
+    - to je vhodné i pro pronajímatele, kteří nemají podružné měření pronajímaných bytových jednotek
+      - to taky není špatnej nápad
+        - na to jde udělat modul
+      - na to jde udělat modul
+    - to taky není špatnej nápad
+      - na to jde udělat modul
+    - na to jde udělat modul
+  - to je vhodné i pro pronajímatele, kteří nemají podružné měření pronajímaných bytových jednotek
+    - to taky není špatnej nápad
+      - na to jde udělat modul
+    - na to jde udělat modul
+  - to taky není špatnej nápad
+    - na to jde udělat modul
+  - na to jde udělat modul
+  - Trendy a faktory ovlivňující trh
+    - Je megatrendem ochrana přírody a rozumné nakládání s přírodními zdroji
+      - ze strany vlád je toto i dotováno
+    - ze strany vlád je toto i dotováno
+    - Je hlad po Smart řešeních pro domácnost
+    - odsolování vody zatím není efektivní
+      - a i kdyby bylo, tak přeprava vody ji velmi prodraží nebo znehodnotí
+    - a i kdyby bylo, tak přeprava vody ji velmi prodraží nebo znehodnotí
+    - z pohledu udržitelnosti planety je lepší "plýtvat" elektřinou než vodou
+  - Je megatrendem ochrana přírody a rozumné nakládání s přírodními zdroji
+    - ze strany vlád je toto i dotováno
+  - ze strany vlád je toto i dotováno
+  - Je hlad po Smart řešeních pro domácnost
+  - odsolování vody zatím není efektivní
+    - a i kdyby bylo, tak přeprava vody ji velmi prodraží nebo znehodnotí
+  - a i kdyby bylo, tak přeprava vody ji velmi prodraží nebo znehodnotí
+  - z pohledu udržitelnosti planety je lepší "plýtvat" elektřinou než vodou
+  - trh z geografického hlediska
+    - V první fázi EU
+      - primárně západní evropa
+    - primárně západní evropa
+    - Dále je obrovský potenciál v
+      - USA
+        - hlavně kalifornie
+          - nejlidnatější stát
+          - hodně si zákládají na ekologii
+        - nejlidnatější stát
+        - hodně si zákládají na ekologii
+      - hlavně kalifornie
+        - nejlidnatější stát
+        - hodně si zákládají na ekologii
+      - nejlidnatější stát
+      - hodně si zákládají na ekologii
+      - Spojených Arabských Emirátech
+        - chtějí investovat do všeho SMART
+          - mají na to vyhrazené miliardy dolarů
+        - mají na to vyhrazené miliardy dolarů
+      - chtějí investovat do všeho SMART
+        - mají na to vyhrazené miliardy dolarů
+      - mají na to vyhrazené miliardy dolarů
+      - Saudské Arábii
+      - Izraeli
+      - Číně
+        - zde jsou obrovská města, kde voda je velkým problémem
+          - i kvůli znečištění
+        - i kvůli znečištění
+      - zde jsou obrovská města, kde voda je velkým problémem
+        - i kvůli znečištění
+      - i kvůli znečištění
+      - austrálie
+        - také je trápí velká sucha
+      - také je trápí velká sucha
+      - Koreji
+      - Japonsku
+    - USA
+      - hlavně kalifornie
+        - nejlidnatější stát
+        - hodně si zákládají na ekologii
+      - nejlidnatější stát
+      - hodně si zákládají na ekologii
+    - hlavně kalifornie
+      - nejlidnatější stát
+      - hodně si zákládají na ekologii
+    - nejlidnatější stát
+    - hodně si zákládají na ekologii
+    - Spojených Arabských Emirátech
+      - chtějí investovat do všeho SMART
+        - mají na to vyhrazené miliardy dolarů
+      - mají na to vyhrazené miliardy dolarů
+    - chtějí investovat do všeho SMART
+      - mají na to vyhrazené miliardy dolarů
+    - mají na to vyhrazené miliardy dolarů
+    - Saudské Arábii
+    - Izraeli
+    - Číně
+      - zde jsou obrovská města, kde voda je velkým problémem
+        - i kvůli znečištění
+      - i kvůli znečištění
+    - zde jsou obrovská města, kde voda je velkým problémem
+      - i kvůli znečištění
+    - i kvůli znečištění
+    - austrálie
+      - také je trápí velká sucha
+    - také je trápí velká sucha
+    - Koreji
+    - Japonsku
+    - otázkou je afrika
+      - ale minimálně ve velkých městech typu Kapské město nebo Casablanca by to určitě potenciál mělo
+    - ale minimálně ve velkých městech typu Kapské město nebo Casablanca by to určitě potenciál mělo
+    - nevidím ani extra velký potenciál v jižní americe, rusku, kanadě, jihovýchodní asii
+      - tedy zatím
+    - tedy zatím
+  - V první fázi EU
+    - primárně západní evropa
+  - primárně západní evropa
+  - Dále je obrovský potenciál v
+    - USA
+      - hlavně kalifornie
+        - nejlidnatější stát
+        - hodně si zákládají na ekologii
+      - nejlidnatější stát
+      - hodně si zákládají na ekologii
+    - hlavně kalifornie
+      - nejlidnatější stát
+      - hodně si zákládají na ekologii
+    - nejlidnatější stát
+    - hodně si zákládají na ekologii
+    - Spojených Arabských Emirátech
+      - chtějí investovat do všeho SMART
+        - mají na to vyhrazené miliardy dolarů
+      - mají na to vyhrazené miliardy dolarů
+    - chtějí investovat do všeho SMART
+      - mají na to vyhrazené miliardy dolarů
+    - mají na to vyhrazené miliardy dolarů
+    - Saudské Arábii
+    - Izraeli
+    - Číně
+      - zde jsou obrovská města, kde voda je velkým problémem
+        - i kvůli znečištění
+      - i kvůli znečištění
+    - zde jsou obrovská města, kde voda je velkým problémem
+      - i kvůli znečištění
+    - i kvůli znečištění
+    - austrálie
+      - také je trápí velká sucha
+    - také je trápí velká sucha
+    - Koreji
+    - Japonsku
+  - USA
+    - hlavně kalifornie
+      - nejlidnatější stát
+      - hodně si zákládají na ekologii
+    - nejlidnatější stát
+    - hodně si zákládají na ekologii
+  - hlavně kalifornie
+    - nejlidnatější stát
+    - hodně si zákládají na ekologii
+  - nejlidnatější stát
+  - hodně si zákládají na ekologii
+  - Spojených Arabských Emirátech
+    - chtějí investovat do všeho SMART
+      - mají na to vyhrazené miliardy dolarů
+    - mají na to vyhrazené miliardy dolarů
+  - chtějí investovat do všeho SMART
+    - mají na to vyhrazené miliardy dolarů
+  - mají na to vyhrazené miliardy dolarů
+  - Saudské Arábii
+  - Izraeli
+  - Číně
+    - zde jsou obrovská města, kde voda je velkým problémem
+      - i kvůli znečištění
+    - i kvůli znečištění
+  - zde jsou obrovská města, kde voda je velkým problémem
+    - i kvůli znečištění
+  - i kvůli znečištění
+  - austrálie
+    - také je trápí velká sucha
+  - také je trápí velká sucha
+  - Koreji
+  - Japonsku
+  - otázkou je afrika
+    - ale minimálně ve velkých městech typu Kapské město nebo Casablanca by to určitě potenciál mělo
+  - ale minimálně ve velkých městech typu Kapské město nebo Casablanca by to určitě potenciál mělo
+  - nevidím ani extra velký potenciál v jižní americe, rusku, kanadě, jihovýchodní asii
+    - tedy zatím
+  - tedy zatím
+
+## Sheet: Finanční analýza
+- Finanční analýza
+  - Přijmy
+    - nejsou tam zahrnuté příjmy z prodeje náhradních dílů
+      - nyní nevím, jak to odhadnout
+    - nyní nevím, jak to odhadnout
+  - nejsou tam zahrnuté příjmy z prodeje náhradních dílů
+    - nyní nevím, jak to odhadnout
+  - nyní nevím, jak to odhadnout
+  - výdaje
+    - Vývoj
+    - Výrobní technologie
+    - Pronájem
+    - Marketing
+    - vozový park
+    - Mzdy
+  - Vývoj
+  - Výrobní technologie
+  - Pronájem
+  - Marketing
+  - vozový park
+  - Mzdy
+
+## Sheet: Obchodní strategie
+- Obchodní strategie
+  - Klasifikace zákazníka
+    - jedná se o B2C i B2B
+    - B2C
+      - koncovým zákazníkem jsou například rodiny či jednotlivci, kteří obývají nemovitost a myjí tam nádobí
+      - impulzivní charakter nakupování
+      - primárně do toho půjdou mladší generace
+        - je tedy možné použít sociální sítě
+        - nicméně mladší generace to mohou pořídit svým rodičům jako dárek
+          - ochrana před opařením ;)
+        - ochrana před opařením ;)
+      - je tedy možné použít sociální sítě
+      - nicméně mladší generace to mohou pořídit svým rodičům jako dárek
+        - ochrana před opařením ;)
+      - ochrana před opařením ;)
+    - koncovým zákazníkem jsou například rodiny či jednotlivci, kteří obývají nemovitost a myjí tam nádobí
+    - impulzivní charakter nakupování
+    - primárně do toho půjdou mladší generace
+      - je tedy možné použít sociální sítě
+      - nicméně mladší generace to mohou pořídit svým rodičům jako dárek
+        - ochrana před opařením ;)
+      - ochrana před opařením ;)
+    - je tedy možné použít sociální sítě
+    - nicméně mladší generace to mohou pořídit svým rodičům jako dárek
+      - ochrana před opařením ;)
+    - ochrana před opařením ;)
+    - B2B
+      - firmy
+        - logické nákupy
+        - je potřeba ukázat rentabilitu
+        - nicméně i firmy chtějí být IN
+          - hlavně inkubátory a sharované kanceláře, kterých neskutečně přibývá
+            - " Podle Expobanky by mělo přibýt v Česku dalších 22 tisíc metrů sdílených kanceláří. Pokud bude výstavba pokračovat podle plánů, celý sektor by se měl letos rozrůst až o 56 procent." Zdroj: https://www.lidovky.cz/byznys/firmy-a-trhy/coworking-v-cesku-tahne-sdilene-kancelare-se-plni-jejich-prostor-by-mel-mezirocne-vzrust-az-o-polo.A190227_151613_firmy-trhy_pkk
+          - " Podle Expobanky by mělo přibýt v Česku dalších 22 tisíc metrů sdílených kanceláří. Pokud bude výstavba pokračovat podle plánů, celý sektor by se měl letos rozrůst až o 56 procent." Zdroj: https://www.lidovky.cz/byznys/firmy-a-trhy/coworking-v-cesku-tahne-sdilene-kancelare-se-plni-jejich-prostor-by-mel-mezirocne-vzrust-az-o-polo.A190227_151613_firmy-trhy_pkk
+        - hlavně inkubátory a sharované kanceláře, kterých neskutečně přibývá
+          - " Podle Expobanky by mělo přibýt v Česku dalších 22 tisíc metrů sdílených kanceláří. Pokud bude výstavba pokračovat podle plánů, celý sektor by se měl letos rozrůst až o 56 procent." Zdroj: https://www.lidovky.cz/byznys/firmy-a-trhy/coworking-v-cesku-tahne-sdilene-kancelare-se-plni-jejich-prostor-by-mel-mezirocne-vzrust-az-o-polo.A190227_151613_firmy-trhy_pkk
+        - " Podle Expobanky by mělo přibýt v Česku dalších 22 tisíc metrů sdílených kanceláří. Pokud bude výstavba pokračovat podle plánů, celý sektor by se měl letos rozrůst až o 56 procent." Zdroj: https://www.lidovky.cz/byznys/firmy-a-trhy/coworking-v-cesku-tahne-sdilene-kancelare-se-plni-jejich-prostor-by-mel-mezirocne-vzrust-az-o-polo.A190227_151613_firmy-trhy_pkk
+      - logické nákupy
+      - je potřeba ukázat rentabilitu
+      - nicméně i firmy chtějí být IN
+        - hlavně inkubátory a sharované kanceláře, kterých neskutečně přibývá
+          - " Podle Expobanky by mělo přibýt v Česku dalších 22 tisíc metrů sdílených kanceláří. Pokud bude výstavba pokračovat podle plánů, celý sektor by se měl letos rozrůst až o 56 procent." Zdroj: https://www.lidovky.cz/byznys/firmy-a-trhy/coworking-v-cesku-tahne-sdilene-kancelare-se-plni-jejich-prostor-by-mel-mezirocne-vzrust-az-o-polo.A190227_151613_firmy-trhy_pkk
+        - " Podle Expobanky by mělo přibýt v Česku dalších 22 tisíc metrů sdílených kanceláří. Pokud bude výstavba pokračovat podle plánů, celý sektor by se měl letos rozrůst až o 56 procent." Zdroj: https://www.lidovky.cz/byznys/firmy-a-trhy/coworking-v-cesku-tahne-sdilene-kancelare-se-plni-jejich-prostor-by-mel-mezirocne-vzrust-az-o-polo.A190227_151613_firmy-trhy_pkk
+      - hlavně inkubátory a sharované kanceláře, kterých neskutečně přibývá
+        - " Podle Expobanky by mělo přibýt v Česku dalších 22 tisíc metrů sdílených kanceláří. Pokud bude výstavba pokračovat podle plánů, celý sektor by se měl letos rozrůst až o 56 procent." Zdroj: https://www.lidovky.cz/byznys/firmy-a-trhy/coworking-v-cesku-tahne-sdilene-kancelare-se-plni-jejich-prostor-by-mel-mezirocne-vzrust-az-o-polo.A190227_151613_firmy-trhy_pkk
+      - " Podle Expobanky by mělo přibýt v Česku dalších 22 tisíc metrů sdílených kanceláří. Pokud bude výstavba pokračovat podle plánů, celý sektor by se měl letos rozrůst až o 56 procent." Zdroj: https://www.lidovky.cz/byznys/firmy-a-trhy/coworking-v-cesku-tahne-sdilene-kancelare-se-plni-jejich-prostor-by-mel-mezirocne-vzrust-az-o-polo.A190227_151613_firmy-trhy_pkk
+      - státní sektor
+        - nemocnice
+        - školy
+        - domovy důchodců
+        - úřady
+        - státní byty
+        - složitý a zdlouhavý prodej
+          - nicméně spíše se bude dodávat firmám, které pro stát staví
+        - nicméně spíše se bude dodávat firmám, které pro stát staví
+      - nemocnice
+      - školy
+      - domovy důchodců
+      - úřady
+      - státní byty
+      - složitý a zdlouhavý prodej
+        - nicméně spíše se bude dodávat firmám, které pro stát staví
+      - nicméně spíše se bude dodávat firmám, které pro stát staví
+    - firmy
+      - logické nákupy
+      - je potřeba ukázat rentabilitu
+      - nicméně i firmy chtějí být IN
+        - hlavně inkubátory a sharované kanceláře, kterých neskutečně přibývá
+          - " Podle Expobanky by mělo přibýt v Česku dalších 22 tisíc metrů sdílených kanceláří. Pokud bude výstavba pokračovat podle plánů, celý sektor by se měl letos rozrůst až o 56 procent." Zdroj: https://www.lidovky.cz/byznys/firmy-a-trhy/coworking-v-cesku-tahne-sdilene-kancelare-se-plni-jejich-prostor-by-mel-mezirocne-vzrust-az-o-polo.A190227_151613_firmy-trhy_pkk
+        - " Podle Expobanky by mělo přibýt v Česku dalších 22 tisíc metrů sdílených kanceláří. Pokud bude výstavba pokračovat podle plánů, celý sektor by se měl letos rozrůst až o 56 procent." Zdroj: https://www.lidovky.cz/byznys/firmy-a-trhy/coworking-v-cesku-tahne-sdilene-kancelare-se-plni-jejich-prostor-by-mel-mezirocne-vzrust-az-o-polo.A190227_151613_firmy-trhy_pkk
+      - hlavně inkubátory a sharované kanceláře, kterých neskutečně přibývá
+        - " Podle Expobanky by mělo přibýt v Česku dalších 22 tisíc metrů sdílených kanceláří. Pokud bude výstavba pokračovat podle plánů, celý sektor by se měl letos rozrůst až o 56 procent." Zdroj: https://www.lidovky.cz/byznys/firmy-a-trhy/coworking-v-cesku-tahne-sdilene-kancelare-se-plni-jejich-prostor-by-mel-mezirocne-vzrust-az-o-polo.A190227_151613_firmy-trhy_pkk
+      - " Podle Expobanky by mělo přibýt v Česku dalších 22 tisíc metrů sdílených kanceláří. Pokud bude výstavba pokračovat podle plánů, celý sektor by se měl letos rozrůst až o 56 procent." Zdroj: https://www.lidovky.cz/byznys/firmy-a-trhy/coworking-v-cesku-tahne-sdilene-kancelare-se-plni-jejich-prostor-by-mel-mezirocne-vzrust-az-o-polo.A190227_151613_firmy-trhy_pkk
+    - logické nákupy
+    - je potřeba ukázat rentabilitu
+    - nicméně i firmy chtějí být IN
+      - hlavně inkubátory a sharované kanceláře, kterých neskutečně přibývá
+        - " Podle Expobanky by mělo přibýt v Česku dalších 22 tisíc metrů sdílených kanceláří. Pokud bude výstavba pokračovat podle plánů, celý sektor by se měl letos rozrůst až o 56 procent." Zdroj: https://www.lidovky.cz/byznys/firmy-a-trhy/coworking-v-cesku-tahne-sdilene-kancelare-se-plni-jejich-prostor-by-mel-mezirocne-vzrust-az-o-polo.A190227_151613_firmy-trhy_pkk
+      - " Podle Expobanky by mělo přibýt v Česku dalších 22 tisíc metrů sdílených kanceláří. Pokud bude výstavba pokračovat podle plánů, celý sektor by se měl letos rozrůst až o 56 procent." Zdroj: https://www.lidovky.cz/byznys/firmy-a-trhy/coworking-v-cesku-tahne-sdilene-kancelare-se-plni-jejich-prostor-by-mel-mezirocne-vzrust-az-o-polo.A190227_151613_firmy-trhy_pkk
+    - hlavně inkubátory a sharované kanceláře, kterých neskutečně přibývá
+      - " Podle Expobanky by mělo přibýt v Česku dalších 22 tisíc metrů sdílených kanceláří. Pokud bude výstavba pokračovat podle plánů, celý sektor by se měl letos rozrůst až o 56 procent." Zdroj: https://www.lidovky.cz/byznys/firmy-a-trhy/coworking-v-cesku-tahne-sdilene-kancelare-se-plni-jejich-prostor-by-mel-mezirocne-vzrust-az-o-polo.A190227_151613_firmy-trhy_pkk
+    - " Podle Expobanky by mělo přibýt v Česku dalších 22 tisíc metrů sdílených kanceláří. Pokud bude výstavba pokračovat podle plánů, celý sektor by se měl letos rozrůst až o 56 procent." Zdroj: https://www.lidovky.cz/byznys/firmy-a-trhy/coworking-v-cesku-tahne-sdilene-kancelare-se-plni-jejich-prostor-by-mel-mezirocne-vzrust-az-o-polo.A190227_151613_firmy-trhy_pkk
+    - státní sektor
+      - nemocnice
+      - školy
+      - domovy důchodců
+      - úřady
+      - státní byty
+      - složitý a zdlouhavý prodej
+        - nicméně spíše se bude dodávat firmám, které pro stát staví
+      - nicméně spíše se bude dodávat firmám, které pro stát staví
+    - nemocnice
+    - školy
+    - domovy důchodců
+    - úřady
+    - státní byty
+    - složitý a zdlouhavý prodej
+      - nicméně spíše se bude dodávat firmám, které pro stát staví
+    - nicméně spíše se bude dodávat firmám, které pro stát staví
+  - jedná se o B2C i B2B
+  - B2C
+    - koncovým zákazníkem jsou například rodiny či jednotlivci, kteří obývají nemovitost a myjí tam nádobí
+    - impulzivní charakter nakupování
+    - primárně do toho půjdou mladší generace
+      - je tedy možné použít sociální sítě
+      - nicméně mladší generace to mohou pořídit svým rodičům jako dárek
+        - ochrana před opařením ;)
+      - ochrana před opařením ;)
+    - je tedy možné použít sociální sítě
+    - nicméně mladší generace to mohou pořídit svým rodičům jako dárek
+      - ochrana před opařením ;)
+    - ochrana před opařením ;)
+  - koncovým zákazníkem jsou například rodiny či jednotlivci, kteří obývají nemovitost a myjí tam nádobí
+  - impulzivní charakter nakupování
+  - primárně do toho půjdou mladší generace
+    - je tedy možné použít sociální sítě
+    - nicméně mladší generace to mohou pořídit svým rodičům jako dárek
+      - ochrana před opařením ;)
+    - ochrana před opařením ;)
+  - je tedy možné použít sociální sítě
+  - nicméně mladší generace to mohou pořídit svým rodičům jako dárek
+    - ochrana před opařením ;)
+  - ochrana před opařením ;)
+  - B2B
+    - firmy
+      - logické nákupy
+      - je potřeba ukázat rentabilitu
+      - nicméně i firmy chtějí být IN
+        - hlavně inkubátory a sharované kanceláře, kterých neskutečně přibývá
+          - " Podle Expobanky by mělo přibýt v Česku dalších 22 tisíc metrů sdílených kanceláří. Pokud bude výstavba pokračovat podle plánů, celý sektor by se měl letos rozrůst až o 56 procent." Zdroj: https://www.lidovky.cz/byznys/firmy-a-trhy/coworking-v-cesku-tahne-sdilene-kancelare-se-plni-jejich-prostor-by-mel-mezirocne-vzrust-az-o-polo.A190227_151613_firmy-trhy_pkk
+        - " Podle Expobanky by mělo přibýt v Česku dalších 22 tisíc metrů sdílených kanceláří. Pokud bude výstavba pokračovat podle plánů, celý sektor by se měl letos rozrůst až o 56 procent." Zdroj: https://www.lidovky.cz/byznys/firmy-a-trhy/coworking-v-cesku-tahne-sdilene-kancelare-se-plni-jejich-prostor-by-mel-mezirocne-vzrust-az-o-polo.A190227_151613_firmy-trhy_pkk
+      - hlavně inkubátory a sharované kanceláře, kterých neskutečně přibývá
+        - " Podle Expobanky by mělo přibýt v Česku dalších 22 tisíc metrů sdílených kanceláří. Pokud bude výstavba pokračovat podle plánů, celý sektor by se měl letos rozrůst až o 56 procent." Zdroj: https://www.lidovky.cz/byznys/firmy-a-trhy/coworking-v-cesku-tahne-sdilene-kancelare-se-plni-jejich-prostor-by-mel-mezirocne-vzrust-az-o-polo.A190227_151613_firmy-trhy_pkk
+      - " Podle Expobanky by mělo přibýt v Česku dalších 22 tisíc metrů sdílených kanceláří. Pokud bude výstavba pokračovat podle plánů, celý sektor by se měl letos rozrůst až o 56 procent." Zdroj: https://www.lidovky.cz/byznys/firmy-a-trhy/coworking-v-cesku-tahne-sdilene-kancelare-se-plni-jejich-prostor-by-mel-mezirocne-vzrust-az-o-polo.A190227_151613_firmy-trhy_pkk
+    - logické nákupy
+    - je potřeba ukázat rentabilitu
+    - nicméně i firmy chtějí být IN
+      - hlavně inkubátory a sharované kanceláře, kterých neskutečně přibývá
+        - " Podle Expobanky by mělo přibýt v Česku dalších 22 tisíc metrů sdílených kanceláří. Pokud bude výstavba pokračovat podle plánů, celý sektor by se měl letos rozrůst až o 56 procent." Zdroj: https://www.lidovky.cz/byznys/firmy-a-trhy/coworking-v-cesku-tahne-sdilene-kancelare-se-plni-jejich-prostor-by-mel-mezirocne-vzrust-az-o-polo.A190227_151613_firmy-trhy_pkk
+      - " Podle Expobanky by mělo přibýt v Česku dalších 22 tisíc metrů sdílených kanceláří. Pokud bude výstavba pokračovat podle plánů, celý sektor by se měl letos rozrůst až o 56 procent." Zdroj: https://www.lidovky.cz/byznys/firmy-a-trhy/coworking-v-cesku-tahne-sdilene-kancelare-se-plni-jejich-prostor-by-mel-mezirocne-vzrust-az-o-polo.A190227_151613_firmy-trhy_pkk
+    - hlavně inkubátory a sharované kanceláře, kterých neskutečně přibývá
+      - " Podle Expobanky by mělo přibýt v Česku dalších 22 tisíc metrů sdílených kanceláří. Pokud bude výstavba pokračovat podle plánů, celý sektor by se měl letos rozrůst až o 56 procent." Zdroj: https://www.lidovky.cz/byznys/firmy-a-trhy/coworking-v-cesku-tahne-sdilene-kancelare-se-plni-jejich-prostor-by-mel-mezirocne-vzrust-az-o-polo.A190227_151613_firmy-trhy_pkk
+    - " Podle Expobanky by mělo přibýt v Česku dalších 22 tisíc metrů sdílených kanceláří. Pokud bude výstavba pokračovat podle plánů, celý sektor by se měl letos rozrůst až o 56 procent." Zdroj: https://www.lidovky.cz/byznys/firmy-a-trhy/coworking-v-cesku-tahne-sdilene-kancelare-se-plni-jejich-prostor-by-mel-mezirocne-vzrust-az-o-polo.A190227_151613_firmy-trhy_pkk
+    - státní sektor
+      - nemocnice
+      - školy
+      - domovy důchodců
+      - úřady
+      - státní byty
+      - složitý a zdlouhavý prodej
+        - nicméně spíše se bude dodávat firmám, které pro stát staví
+      - nicméně spíše se bude dodávat firmám, které pro stát staví
+    - nemocnice
+    - školy
+    - domovy důchodců
+    - úřady
+    - státní byty
+    - složitý a zdlouhavý prodej
+      - nicméně spíše se bude dodávat firmám, které pro stát staví
+    - nicméně spíše se bude dodávat firmám, které pro stát staví
+  - firmy
+    - logické nákupy
+    - je potřeba ukázat rentabilitu
+    - nicméně i firmy chtějí být IN
+      - hlavně inkubátory a sharované kanceláře, kterých neskutečně přibývá
+        - " Podle Expobanky by mělo přibýt v Česku dalších 22 tisíc metrů sdílených kanceláří. Pokud bude výstavba pokračovat podle plánů, celý sektor by se měl letos rozrůst až o 56 procent." Zdroj: https://www.lidovky.cz/byznys/firmy-a-trhy/coworking-v-cesku-tahne-sdilene-kancelare-se-plni-jejich-prostor-by-mel-mezirocne-vzrust-az-o-polo.A190227_151613_firmy-trhy_pkk
+      - " Podle Expobanky by mělo přibýt v Česku dalších 22 tisíc metrů sdílených kanceláří. Pokud bude výstavba pokračovat podle plánů, celý sektor by se měl letos rozrůst až o 56 procent." Zdroj: https://www.lidovky.cz/byznys/firmy-a-trhy/coworking-v-cesku-tahne-sdilene-kancelare-se-plni-jejich-prostor-by-mel-mezirocne-vzrust-az-o-polo.A190227_151613_firmy-trhy_pkk
+    - hlavně inkubátory a sharované kanceláře, kterých neskutečně přibývá
+      - " Podle Expobanky by mělo přibýt v Česku dalších 22 tisíc metrů sdílených kanceláří. Pokud bude výstavba pokračovat podle plánů, celý sektor by se měl letos rozrůst až o 56 procent." Zdroj: https://www.lidovky.cz/byznys/firmy-a-trhy/coworking-v-cesku-tahne-sdilene-kancelare-se-plni-jejich-prostor-by-mel-mezirocne-vzrust-az-o-polo.A190227_151613_firmy-trhy_pkk
+    - " Podle Expobanky by mělo přibýt v Česku dalších 22 tisíc metrů sdílených kanceláří. Pokud bude výstavba pokračovat podle plánů, celý sektor by se měl letos rozrůst až o 56 procent." Zdroj: https://www.lidovky.cz/byznys/firmy-a-trhy/coworking-v-cesku-tahne-sdilene-kancelare-se-plni-jejich-prostor-by-mel-mezirocne-vzrust-az-o-polo.A190227_151613_firmy-trhy_pkk
+  - logické nákupy
+  - je potřeba ukázat rentabilitu
+  - nicméně i firmy chtějí být IN
+    - hlavně inkubátory a sharované kanceláře, kterých neskutečně přibývá
+      - " Podle Expobanky by mělo přibýt v Česku dalších 22 tisíc metrů sdílených kanceláří. Pokud bude výstavba pokračovat podle plánů, celý sektor by se měl letos rozrůst až o 56 procent." Zdroj: https://www.lidovky.cz/byznys/firmy-a-trhy/coworking-v-cesku-tahne-sdilene-kancelare-se-plni-jejich-prostor-by-mel-mezirocne-vzrust-az-o-polo.A190227_151613_firmy-trhy_pkk
+    - " Podle Expobanky by mělo přibýt v Česku dalších 22 tisíc metrů sdílených kanceláří. Pokud bude výstavba pokračovat podle plánů, celý sektor by se měl letos rozrůst až o 56 procent." Zdroj: https://www.lidovky.cz/byznys/firmy-a-trhy/coworking-v-cesku-tahne-sdilene-kancelare-se-plni-jejich-prostor-by-mel-mezirocne-vzrust-az-o-polo.A190227_151613_firmy-trhy_pkk
+  - hlavně inkubátory a sharované kanceláře, kterých neskutečně přibývá
+    - " Podle Expobanky by mělo přibýt v Česku dalších 22 tisíc metrů sdílených kanceláří. Pokud bude výstavba pokračovat podle plánů, celý sektor by se měl letos rozrůst až o 56 procent." Zdroj: https://www.lidovky.cz/byznys/firmy-a-trhy/coworking-v-cesku-tahne-sdilene-kancelare-se-plni-jejich-prostor-by-mel-mezirocne-vzrust-az-o-polo.A190227_151613_firmy-trhy_pkk
+  - " Podle Expobanky by mělo přibýt v Česku dalších 22 tisíc metrů sdílených kanceláří. Pokud bude výstavba pokračovat podle plánů, celý sektor by se měl letos rozrůst až o 56 procent." Zdroj: https://www.lidovky.cz/byznys/firmy-a-trhy/coworking-v-cesku-tahne-sdilene-kancelare-se-plni-jejich-prostor-by-mel-mezirocne-vzrust-az-o-polo.A190227_151613_firmy-trhy_pkk
+  - státní sektor
+    - nemocnice
+    - školy
+    - domovy důchodců
+    - úřady
+    - státní byty
+    - složitý a zdlouhavý prodej
+      - nicméně spíše se bude dodávat firmám, které pro stát staví
+    - nicméně spíše se bude dodávat firmám, které pro stát staví
+  - nemocnice
+  - školy
+  - domovy důchodců
+  - úřady
+  - státní byty
+  - složitý a zdlouhavý prodej
+    - nicméně spíše se bude dodávat firmám, které pro stát staví
+  - nicméně spíše se bude dodávat firmám, které pro stát staví
+  - Ochrana duševního vlastnictví
+    - Ideální by bylo patentovat technologii
+      - je poté možné zvážit prodej licencí na výrobu
+      - celosvětový patent
+    - je poté možné zvážit prodej licencí na výrobu
+    - celosvětový patent
+    - je možné, že to nebude patentovatelné (je to kombinace známých technologií)
+      - pak užitné vzory
+        - ten nejde jeden celosvětový
+          - takže je potřeba minimálně EU a USA
+        - takže je potřeba minimálně EU a USA
+      - ten nejde jeden celosvětový
+        - takže je potřeba minimálně EU a USA
+      - takže je potřeba minimálně EU a USA
+    - pak užitné vzory
+      - ten nejde jeden celosvětový
+        - takže je potřeba minimálně EU a USA
+      - takže je potřeba minimálně EU a USA
+    - ten nejde jeden celosvětový
+      - takže je potřeba minimálně EU a USA
+    - takže je potřeba minimálně EU a USA
+  - Ideální by bylo patentovat technologii
+    - je poté možné zvážit prodej licencí na výrobu
+    - celosvětový patent
+  - je poté možné zvážit prodej licencí na výrobu
+  - celosvětový patent
+  - je možné, že to nebude patentovatelné (je to kombinace známých technologií)
+    - pak užitné vzory
+      - ten nejde jeden celosvětový
+        - takže je potřeba minimálně EU a USA
+      - takže je potřeba minimálně EU a USA
+    - ten nejde jeden celosvětový
+      - takže je potřeba minimálně EU a USA
+    - takže je potřeba minimálně EU a USA
+  - pak užitné vzory
+    - ten nejde jeden celosvětový
+      - takže je potřeba minimálně EU a USA
+    - takže je potřeba minimálně EU a USA
+  - ten nejde jeden celosvětový
+    - takže je potřeba minimálně EU a USA
+  - takže je potřeba minimálně EU a USA
+  - Podpůrné kanály pro prodej
+    - dotace
+      - bylo by vhodné přesvědčit státy, aby plošně zadotovali pořízení těchto kohoutků
+      - podobně jako to bylo u "Dešťovky", kdy proplatili 50% nákladů
+    - bylo by vhodné přesvědčit státy, aby plošně zadotovali pořízení těchto kohoutků
+    - podobně jako to bylo u "Dešťovky", kdy proplatili 50% nákladů
+    - dotace na evropské úrovni
+      - vůbec nevím jak to tam prosadit, ale bylo by to skvělé
+    - vůbec nevím jak to tam prosadit, ale bylo by to skvělé
+  - dotace
+    - bylo by vhodné přesvědčit státy, aby plošně zadotovali pořízení těchto kohoutků
+    - podobně jako to bylo u "Dešťovky", kdy proplatili 50% nákladů
+  - bylo by vhodné přesvědčit státy, aby plošně zadotovali pořízení těchto kohoutků
+  - podobně jako to bylo u "Dešťovky", kdy proplatili 50% nákladů
+  - dotace na evropské úrovni
+    - vůbec nevím jak to tam prosadit, ale bylo by to skvělé
+  - vůbec nevím jak to tam prosadit, ale bylo by to skvělé
+  - Distribuční kanály
+    - přímý distribuční kanál
+      - jen formou webu
+        - tím by se také určovala cena pro všechny
+      - tím by se také určovala cena pro všechny
+    - jen formou webu
+      - tím by se také určovala cena pro všechny
+    - tím by se také určovala cena pro všechny
+    - cenová politika
+      - distributoři by drželi stejnou cenu, ale měli by od nás slevy
+        - v procentech podle odběrů
+      - v procentech podle odběrů
+    - distributoři by drželi stejnou cenu, ale měli by od nás slevy
+      - v procentech podle odběrů
+    - v procentech podle odběrů
+    - je potřeba vymyslet jak řešit reklamace
+    - velcí distributoři
+      - Bauhaus
+        - nebo Hornbach, ale nejde prý být v obou zároveň
+      - nebo Hornbach, ale nejde prý být v obou zároveň
+      - Sika
+      - Ptáček
+      - Gorenje
+    - Bauhaus
+      - nebo Hornbach, ale nejde prý být v obou zároveň
+    - nebo Hornbach, ale nejde prý být v obou zároveň
+    - Sika
+    - Ptáček
+    - Gorenje
+    - internetové kanály
+      - Amazoon.com
+      - mall.cz
+      - Alza.cz
+      - czc.cz
+    - Amazoon.com
+    - mall.cz
+    - Alza.cz
+    - czc.cz
+    - Firmy které navrhují a staví hotely
+      - nyní jsem žádné nehledala, ale můžou dělat jednorázové obrovské odběry
+    - nyní jsem žádné nehledala, ale můžou dělat jednorázové obrovské odběry
+    - Spuštění crowfoundingu
+      - tento projekt by tam mohl celkem uspět
+      - s tím, že bychom už museli mít funkční prototyp a vše nachystatné jinak je to sebevražda
+    - tento projekt by tam mohl celkem uspět
+    - s tím, že bychom už museli mít funkční prototyp a vše nachystatné jinak je to sebevražda
+  - přímý distribuční kanál
+    - jen formou webu
+      - tím by se také určovala cena pro všechny
+    - tím by se také určovala cena pro všechny
+  - jen formou webu
+    - tím by se také určovala cena pro všechny
+  - tím by se také určovala cena pro všechny
+  - cenová politika
+    - distributoři by drželi stejnou cenu, ale měli by od nás slevy
+      - v procentech podle odběrů
+    - v procentech podle odběrů
+  - distributoři by drželi stejnou cenu, ale měli by od nás slevy
+    - v procentech podle odběrů
+  - v procentech podle odběrů
+  - je potřeba vymyslet jak řešit reklamace
+  - velcí distributoři
+    - Bauhaus
+      - nebo Hornbach, ale nejde prý být v obou zároveň
+    - nebo Hornbach, ale nejde prý být v obou zároveň
+    - Sika
+    - Ptáček
+    - Gorenje
+  - Bauhaus
+    - nebo Hornbach, ale nejde prý být v obou zároveň
+  - nebo Hornbach, ale nejde prý být v obou zároveň
+  - Sika
+  - Ptáček
+  - Gorenje
+  - internetové kanály
+    - Amazoon.com
+    - mall.cz
+    - Alza.cz
+    - czc.cz
+  - Amazoon.com
+  - mall.cz
+  - Alza.cz
+  - czc.cz
+  - Firmy které navrhují a staví hotely
+    - nyní jsem žádné nehledala, ale můžou dělat jednorázové obrovské odběry
+  - nyní jsem žádné nehledala, ale můžou dělat jednorázové obrovské odběry
+  - Spuštění crowfoundingu
+    - tento projekt by tam mohl celkem uspět
+    - s tím, že bychom už museli mít funkční prototyp a vše nachystatné jinak je to sebevražda
+  - tento projekt by tam mohl celkem uspět
+  - s tím, že bychom už museli mít funkční prototyp a vše nachystatné jinak je to sebevražda
+  - Obchodní tým
+    - Jsou potřeba obchodníci, kteří umí jednat s distributory
+      - nyní nelze odhadnout kolik jich bude potřeba, to se uvidí po prvních reakcích trhu
+    - nyní nelze odhadnout kolik jich bude potřeba, to se uvidí po prvních reakcích trhu
+    - je potřeba řešit obchod na strategické úrovni
+      - to by měl řešit obchodní ředitel
+    - to by měl řešit obchodní ředitel
+    - Marketing
+      - je možné outsourcovat
+      - Ale možná bude vhodné mít interního člověka
+        - udržování sociálních sítí je důležité a zabere hrozně moc času
+      - udržování sociálních sítí je důležité a zabere hrozně moc času
+    - je možné outsourcovat
+    - Ale možná bude vhodné mít interního člověka
+      - udržování sociálních sítí je důležité a zabere hrozně moc času
+    - udržování sociálních sítí je důležité a zabere hrozně moc času
+    - Support tým
+      - pro distributory
+      - pro koncové zákazníky
+        - kvůli prodeji přes net to budeme muset mít
+      - kvůli prodeji přes net to budeme muset mít
+      - pokud bychom se rozrůstali globálně, tak bude potřeba řešit směny kvůli časovým pásmům
+        - nebo mít lokální offices
+      - nebo mít lokální offices
+    - pro distributory
+    - pro koncové zákazníky
+      - kvůli prodeji přes net to budeme muset mít
+    - kvůli prodeji přes net to budeme muset mít
+    - pokud bychom se rozrůstali globálně, tak bude potřeba řešit směny kvůli časovým pásmům
+      - nebo mít lokální offices
+    - nebo mít lokální offices
+  - Jsou potřeba obchodníci, kteří umí jednat s distributory
+    - nyní nelze odhadnout kolik jich bude potřeba, to se uvidí po prvních reakcích trhu
+  - nyní nelze odhadnout kolik jich bude potřeba, to se uvidí po prvních reakcích trhu
+  - je potřeba řešit obchod na strategické úrovni
+    - to by měl řešit obchodní ředitel
+  - to by měl řešit obchodní ředitel
+  - Marketing
+    - je možné outsourcovat
+    - Ale možná bude vhodné mít interního člověka
+      - udržování sociálních sítí je důležité a zabere hrozně moc času
+    - udržování sociálních sítí je důležité a zabere hrozně moc času
+  - je možné outsourcovat
+  - Ale možná bude vhodné mít interního člověka
+    - udržování sociálních sítí je důležité a zabere hrozně moc času
+  - udržování sociálních sítí je důležité a zabere hrozně moc času
+  - Support tým
+    - pro distributory
+    - pro koncové zákazníky
+      - kvůli prodeji přes net to budeme muset mít
+    - kvůli prodeji přes net to budeme muset mít
+    - pokud bychom se rozrůstali globálně, tak bude potřeba řešit směny kvůli časovým pásmům
+      - nebo mít lokální offices
+    - nebo mít lokální offices
+  - pro distributory
+  - pro koncové zákazníky
+    - kvůli prodeji přes net to budeme muset mít
+  - kvůli prodeji přes net to budeme muset mít
+  - pokud bychom se rozrůstali globálně, tak bude potřeba řešit směny kvůli časovým pásmům
+    - nebo mít lokální offices
+  - nebo mít lokální offices
+  - Marketing
+    - Určitě je potřeba ukázat video
+      - hodně cílit na ochranu přírody a také ochranu seniorů a dětí před opařením
+    - hodně cílit na ochranu přírody a také ochranu seniorů a dětí před opařením
+    - video o montáži
+      - bude potřeba mít kvalitní instruktážní video
+        - díky tomu se produkt zpřístupní mnoho lidem, kteří zvládnou montáž sami
+      - díky tomu se produkt zpřístupní mnoho lidem, kteří zvládnou montáž sami
+    - bude potřeba mít kvalitní instruktážní video
+      - díky tomu se produkt zpřístupní mnoho lidem, kteří zvládnou montáž sami
+    - díky tomu se produkt zpřístupní mnoho lidem, kteří zvládnou montáž sami
+    - je potřeba vytvořit dobrou korporátní identitu
+      - firma musí působit jako zachránce světa
+        - což částečně fak bude :)
+      - což částečně fak bude :)
+    - firma musí působit jako zachránce světa
+      - což částečně fak bude :)
+    - což částečně fak bude :)
+    - instagram a facebook
+      - pro B2C nutnost
+    - pro B2C nutnost
+    - konference a školení pro designéry kuchyní
+      - toto je asi nejpodstatnější, protože to jsou ti co rozhodnou co použít
+    - toto je asi nejpodstatnější, protože to jsou ti co rozhodnou co použít
+    - veletrhy
+      - budou klíčové hlavně pro blízký východ a USA
+      - obory
+        - Bydlení
+        - Smart Cities
+      - Bydlení
+      - Smart Cities
+    - budou klíčové hlavně pro blízký východ a USA
+    - obory
+      - Bydlení
+      - Smart Cities
+    - Bydlení
+    - Smart Cities
+    - Startupové konference
+      - pokud na to založíme firmu, tak budeme hodně cool startup
+    - pokud na to založíme firmu, tak budeme hodně cool startup
+    - Navrhnout ekologické balení produktu
+    - Konference o vodohospodářství
+    - členství v asociacích pro ochranu přírody
+  - Určitě je potřeba ukázat video
+    - hodně cílit na ochranu přírody a také ochranu seniorů a dětí před opařením
+  - hodně cílit na ochranu přírody a také ochranu seniorů a dětí před opařením
+  - video o montáži
+    - bude potřeba mít kvalitní instruktážní video
+      - díky tomu se produkt zpřístupní mnoho lidem, kteří zvládnou montáž sami
+    - díky tomu se produkt zpřístupní mnoho lidem, kteří zvládnou montáž sami
+  - bude potřeba mít kvalitní instruktážní video
+    - díky tomu se produkt zpřístupní mnoho lidem, kteří zvládnou montáž sami
+  - díky tomu se produkt zpřístupní mnoho lidem, kteří zvládnou montáž sami
+  - je potřeba vytvořit dobrou korporátní identitu
+    - firma musí působit jako zachránce světa
+      - což částečně fak bude :)
+    - což částečně fak bude :)
+  - firma musí působit jako zachránce světa
+    - což částečně fak bude :)
+  - což částečně fak bude :)
+  - instagram a facebook
+    - pro B2C nutnost
+  - pro B2C nutnost
+  - konference a školení pro designéry kuchyní
+    - toto je asi nejpodstatnější, protože to jsou ti co rozhodnou co použít
+  - toto je asi nejpodstatnější, protože to jsou ti co rozhodnou co použít
+  - veletrhy
+    - budou klíčové hlavně pro blízký východ a USA
+    - obory
+      - Bydlení
+      - Smart Cities
+    - Bydlení
+    - Smart Cities
+  - budou klíčové hlavně pro blízký východ a USA
+  - obory
+    - Bydlení
+    - Smart Cities
+  - Bydlení
+  - Smart Cities
+  - Startupové konference
+    - pokud na to založíme firmu, tak budeme hodně cool startup
+  - pokud na to založíme firmu, tak budeme hodně cool startup
+  - Navrhnout ekologické balení produktu
+  - Konference o vodohospodářství
+  - členství v asociacích pro ochranu přírody
+
+## Sheet: Sheet 8
+- 1. Sprint
+  - cíl
+    - sestavit první demo sestavu na které ověříme že kamera dlouhodobě dokáže detekovat a vyhodnocovat správně
+    - next steps při úspěchu
+      - začneme testovat složitější případy
+      - budeme připravovat detailnější návrh HW
+      - budeme připravovat detailnější návrh mechaniky
+    - začneme testovat složitější případy
+    - budeme připravovat detailnější návrh HW
+    - budeme připravovat detailnější návrh mechaniky
+  - sestavit první demo sestavu na které ověříme že kamera dlouhodobě dokáže detekovat a vyhodnocovat správně
+  - next steps při úspěchu
+    - začneme testovat složitější případy
+    - budeme připravovat detailnější návrh HW
+    - budeme připravovat detailnější návrh mechaniky
+  - začneme testovat složitější případy
+  - budeme připravovat detailnější návrh HW
+  - budeme připravovat detailnější návrh mechaniky
+  - Vision
+    - jen rozeznávání obecně nádobí a rukou
+    - je potřeba ověřit detekci toho, že je jen plný dřez nehybného nádobí
+    - základní logika
+      - při výskytu rukou v proudu nikdy nepustí jen horkou vodu, vždy pustí maximálně mix 50:50
+      - při výskytu nádobí v proudu zvýší automaticky teplotu pokud by tekla jen studená
+      - pokud není nic v "proudu", tak s hysterezí cca 0,5s vypne vodu???
+      - pokud bude předmět malý tak pustí jen 1 a 1 ventil
+        - jeden teplá jeden studená
+      - jeden teplá jeden studená
+      - pokud bude předmět velký tak pustí 2 a 2 ventily
+        - dva teplé a dva studené
+      - dva teplé a dva studené
+    - při výskytu rukou v proudu nikdy nepustí jen horkou vodu, vždy pustí maximálně mix 50:50
+    - při výskytu nádobí v proudu zvýší automaticky teplotu pokud by tekla jen studená
+    - pokud není nic v "proudu", tak s hysterezí cca 0,5s vypne vodu???
+    - pokud bude předmět malý tak pustí jen 1 a 1 ventil
+      - jeden teplá jeden studená
+    - jeden teplá jeden studená
+    - pokud bude předmět velký tak pustí 2 a 2 ventily
+      - dva teplé a dva studené
+    - dva teplé a dva studené
+    - konfigurace
+      - kalibrace pozice proudu vody
+        - může se to systém naučit sám, když uživatel pustí vodu manuálně a řekne systému teď se uč pozadí a najdi si pozici pramenu vody?
+        - možná bude složité, takže v tom případě bychom toto definovali zatím navrdo a automatika by se řešila až v dalších sprintech
+          - myslím, že nyní to není kritické, ale do budoucna bude
+        - myslím, že nyní to není kritické, ale do budoucna bude
+      - může se to systém naučit sám, když uživatel pustí vodu manuálně a řekne systému teď se uč pozadí a najdi si pozici pramenu vody?
+      - možná bude složité, takže v tom případě bychom toto definovali zatím navrdo a automatika by se řešila až v dalších sprintech
+        - myslím, že nyní to není kritické, ale do budoucna bude
+      - myslím, že nyní to není kritické, ale do budoucna bude
+    - kalibrace pozice proudu vody
+      - může se to systém naučit sám, když uživatel pustí vodu manuálně a řekne systému teď se uč pozadí a najdi si pozici pramenu vody?
+      - možná bude složité, takže v tom případě bychom toto definovali zatím navrdo a automatika by se řešila až v dalších sprintech
+        - myslím, že nyní to není kritické, ale do budoucna bude
+      - myslím, že nyní to není kritické, ale do budoucna bude
+    - může se to systém naučit sám, když uživatel pustí vodu manuálně a řekne systému teď se uč pozadí a najdi si pozici pramenu vody?
+    - možná bude složité, takže v tom případě bychom toto definovali zatím navrdo a automatika by se řešila až v dalších sprintech
+      - myslím, že nyní to není kritické, ale do budoucna bude
+    - myslím, že nyní to není kritické, ale do budoucna bude
+    - komunikace
+      - jednoduché HTTP api a web UI?
+        - můžu vytvořit pokud se domluvíme co tam chceme
+        - není kritické pro demo, takže případně to doděláme v dalších sprintech
+      - můžu vytvořit pokud se domluvíme co tam chceme
+      - není kritické pro demo, takže případně to doděláme v dalších sprintech
+    - jednoduché HTTP api a web UI?
+      - můžu vytvořit pokud se domluvíme co tam chceme
+      - není kritické pro demo, takže případně to doděláme v dalších sprintech
+    - můžu vytvořit pokud se domluvíme co tam chceme
+    - není kritické pro demo, takže případně to doděláme v dalších sprintech
+    - detekce náhlých plošných změn osvětlení
+      - někdo projde před oknem
+      - přejde přes sluníčko mráček, apod.
+      - rožne/zhasne se světlo v místnosti
+    - někdo projde před oknem
+    - přejde přes sluníčko mráček, apod.
+    - rožne/zhasne se světlo v místnosti
+  - jen rozeznávání obecně nádobí a rukou
+  - je potřeba ověřit detekci toho, že je jen plný dřez nehybného nádobí
+  - základní logika
+    - při výskytu rukou v proudu nikdy nepustí jen horkou vodu, vždy pustí maximálně mix 50:50
+    - při výskytu nádobí v proudu zvýší automaticky teplotu pokud by tekla jen studená
+    - pokud není nic v "proudu", tak s hysterezí cca 0,5s vypne vodu???
+    - pokud bude předmět malý tak pustí jen 1 a 1 ventil
+      - jeden teplá jeden studená
+    - jeden teplá jeden studená
+    - pokud bude předmět velký tak pustí 2 a 2 ventily
+      - dva teplé a dva studené
+    - dva teplé a dva studené
+  - při výskytu rukou v proudu nikdy nepustí jen horkou vodu, vždy pustí maximálně mix 50:50
+  - při výskytu nádobí v proudu zvýší automaticky teplotu pokud by tekla jen studená
+  - pokud není nic v "proudu", tak s hysterezí cca 0,5s vypne vodu???
+  - pokud bude předmět malý tak pustí jen 1 a 1 ventil
+    - jeden teplá jeden studená
+  - jeden teplá jeden studená
+  - pokud bude předmět velký tak pustí 2 a 2 ventily
+    - dva teplé a dva studené
+  - dva teplé a dva studené
+  - konfigurace
+    - kalibrace pozice proudu vody
+      - může se to systém naučit sám, když uživatel pustí vodu manuálně a řekne systému teď se uč pozadí a najdi si pozici pramenu vody?
+      - možná bude složité, takže v tom případě bychom toto definovali zatím navrdo a automatika by se řešila až v dalších sprintech
+        - myslím, že nyní to není kritické, ale do budoucna bude
+      - myslím, že nyní to není kritické, ale do budoucna bude
+    - může se to systém naučit sám, když uživatel pustí vodu manuálně a řekne systému teď se uč pozadí a najdi si pozici pramenu vody?
+    - možná bude složité, takže v tom případě bychom toto definovali zatím navrdo a automatika by se řešila až v dalších sprintech
+      - myslím, že nyní to není kritické, ale do budoucna bude
+    - myslím, že nyní to není kritické, ale do budoucna bude
+  - kalibrace pozice proudu vody
+    - může se to systém naučit sám, když uživatel pustí vodu manuálně a řekne systému teď se uč pozadí a najdi si pozici pramenu vody?
+    - možná bude složité, takže v tom případě bychom toto definovali zatím navrdo a automatika by se řešila až v dalších sprintech
+      - myslím, že nyní to není kritické, ale do budoucna bude
+    - myslím, že nyní to není kritické, ale do budoucna bude
+  - může se to systém naučit sám, když uživatel pustí vodu manuálně a řekne systému teď se uč pozadí a najdi si pozici pramenu vody?
+  - možná bude složité, takže v tom případě bychom toto definovali zatím navrdo a automatika by se řešila až v dalších sprintech
+    - myslím, že nyní to není kritické, ale do budoucna bude
+  - myslím, že nyní to není kritické, ale do budoucna bude
+  - komunikace
+    - jednoduché HTTP api a web UI?
+      - můžu vytvořit pokud se domluvíme co tam chceme
+      - není kritické pro demo, takže případně to doděláme v dalších sprintech
+    - můžu vytvořit pokud se domluvíme co tam chceme
+    - není kritické pro demo, takže případně to doděláme v dalších sprintech
+  - jednoduché HTTP api a web UI?
+    - můžu vytvořit pokud se domluvíme co tam chceme
+    - není kritické pro demo, takže případně to doděláme v dalších sprintech
+  - můžu vytvořit pokud se domluvíme co tam chceme
+  - není kritické pro demo, takže případně to doděláme v dalších sprintech
+  - detekce náhlých plošných změn osvětlení
+    - někdo projde před oknem
+    - přejde přes sluníčko mráček, apod.
+    - rožne/zhasne se světlo v místnosti
+  - někdo projde před oknem
+  - přejde přes sluníčko mráček, apod.
+  - rožne/zhasne se světlo v místnosti
+  - Testovací sestava
+    - dát vědět týden předem vývoji a oni to poskládají
+    - dodat ventily
+  - dát vědět týden předem vývoji a oni to poskládají
+  - dodat ventily
+  - Ovládací HW
+    - Jetson + IR kamera
+      - je možné objednat a sestavit druhou sestavu?
+    - je možné objednat a sestavit druhou sestavu?
+    - ventily jsou na 12V logice
+      - cokoliv co je dokáže spínat?
+      - je možné k Jetson připnout nějaké shieldy s relé? ideálně SSR relé?
+    - cokoliv co je dokáže spínat?
+    - je možné k Jetson připnout nějaké shieldy s relé? ideálně SSR relé?
+    - Bylo by vhodné udělat nové blokové schéma celé sestavy
+  - Jetson + IR kamera
+    - je možné objednat a sestavit druhou sestavu?
+  - je možné objednat a sestavit druhou sestavu?
+  - ventily jsou na 12V logice
+    - cokoliv co je dokáže spínat?
+    - je možné k Jetson připnout nějaké shieldy s relé? ideálně SSR relé?
+  - cokoliv co je dokáže spínat?
+  - je možné k Jetson připnout nějaké shieldy s relé? ideálně SSR relé?
+  - Bylo by vhodné udělat nové blokové schéma celé sestavy
+  - RUN
+    - KT2
+    - KT10
+  - KT2
+  - KT10

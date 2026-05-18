@@ -19,6 +19,9 @@ public sealed class CognitiveMemoryRecallOrchestrator(
 {
     private const int OverlapDeduplicationMinimumCharacters = 80;
     private const int LexicalFallbackScanLimit = 500;
+    private const string WorkbenchProjectStructureSourceSystem = "WorkbenchProjectStructure";
+    private const string ExternalFileSourceSystem = "ExternalFile";
+    private const string ProjectNodeSourceItemType = "ProjectNode";
     private static readonly HashSet<string> LexicalStopWords = new(StringComparer.Ordinal)
     {
         "a",
@@ -30,21 +33,37 @@ public sealed class CognitiveMemoryRecallOrchestrator(
         "be",
         "but",
         "by",
+        "detail",
+        "details",
         "do",
         "does",
+        "explain",
         "for",
         "from",
         "how",
+        "include",
+        "included",
+        "includes",
+        "including",
         "in",
         "is",
         "it",
         "not",
         "of",
         "or",
+        "project",
+        "projects",
+        "require",
+        "required",
+        "requires",
         "should",
+        "source",
+        "summarize",
+        "summary",
         "that",
         "the",
         "to",
+        "truth",
         "was",
         "what",
         "when",
@@ -247,39 +266,63 @@ public sealed class CognitiveMemoryRecallOrchestrator(
             return;
         }
 
-        var pattern = $"%{queryTerms[0]}%";
-        var records = await BuildRecordQuery(dbContext, request)
-            .Where(record =>
-                EF.Functions.Like(record.Title, pattern) ||
-                EF.Functions.Like(record.SummaryText, pattern) ||
-                EF.Functions.Like(record.CanonicalText, pattern) ||
-                EF.Functions.Like(record.TopicKey, pattern))
-            .OrderBy(record => record.Title)
-            .Take(request.Budget.CoarseCandidateLimit)
-            .Select(record => new MemoryRecordSnapshot(
-                record.Id,
-                record.ProjectId,
-                record.Kind,
-                record.Title,
-                record.SummaryText,
-                record.CanonicalText,
-                record.TopicKey,
-                record.ValidationState,
-                record.StabilityState,
-                record.SourceEvidenceCount,
-                record.EvidenceAnchorCount,
-                record.PrimaryClaimId,
-                record.PrimaryContextFrameId,
-                record.AccessLevel,
-                record.RiskLevel,
-                record.UpdatedAtUtc))
-            .ToListAsync(cancellationToken);
-        var fallbackCount = 0;
-        if (records.Count < request.Budget.CoarseCandidateLimit)
+        var candidateRecords = new Dictionary<Guid, MemoryRecordSnapshot>();
+        var sourceLexicalScores = new Dictionary<Guid, double>();
+        var termScanLimit = Math.Max(request.Budget.CoarseCandidateLimit, 32);
+        foreach (var term in queryTerms)
         {
-            var existingRecordIds = records
-                .Select(record => record.Id)
-                .ToHashSet();
+            var pattern = $"%{term}%";
+            var termRecords = await BuildRecordQuery(dbContext, request)
+                .Where(record =>
+                    EF.Functions.Like(record.Title.ToLower(), pattern) ||
+                    EF.Functions.Like(record.SummaryText.ToLower(), pattern) ||
+                    EF.Functions.Like(record.CanonicalText.ToLower(), pattern) ||
+                    EF.Functions.Like(record.TopicKey.ToLower(), pattern))
+                .OrderByDescending(record => record.UpdatedAtUtc)
+                .Take(termScanLimit)
+                .Select(record => new MemoryRecordSnapshot(
+                    record.Id,
+                    record.ProjectId,
+                    record.Kind,
+                    record.Title,
+                    record.SummaryText,
+                    record.CanonicalText,
+                    record.TopicKey,
+                    record.ValidationState,
+                    record.StabilityState,
+                    record.SourceEvidenceCount,
+                    record.EvidenceAnchorCount,
+                    record.PrimaryClaimId,
+                    record.PrimaryContextFrameId,
+                    record.AccessLevel,
+                    record.RiskLevel,
+                    record.UpdatedAtUtc))
+                .ToListAsync(cancellationToken);
+
+            foreach (var record in termRecords)
+            {
+                candidateRecords.TryAdd(record.Id, record);
+            }
+        }
+
+        var sourceTextMatches = await LoadSourceTextLexicalMatchesAsync(
+            dbContext,
+            request,
+            queryTerms,
+            termScanLimit,
+            cancellationToken);
+        foreach (var match in sourceTextMatches)
+        {
+            candidateRecords.TryAdd(match.Record.Id, match.Record);
+            sourceLexicalScores[match.Record.Id] = Math.Max(
+                sourceLexicalScores.GetValueOrDefault(match.Record.Id),
+                match.Score);
+        }
+
+        var fallbackCount = 0;
+        if (candidateRecords.Count < request.Budget.CoarseCandidateLimit)
+        {
+            var existingRecordIds = candidateRecords.Keys.ToHashSet();
             var fallbackRecords = await BuildRecordQuery(dbContext, request)
                 .Where(record => !existingRecordIds.Contains(record.Id))
                 .OrderByDescending(record => record.UpdatedAtUtc)
@@ -306,23 +349,38 @@ public sealed class CognitiveMemoryRecallOrchestrator(
                 .Select(record => new
                 {
                     Record = record,
-                    Score = ComputeLexicalMatch(record, queryTerms)
+                    Score = ResolveLexicalMatch(record, queryTerms, sourceLexicalScores)
                 })
                 .Where(match => match.Score > 0)
                 .OrderByDescending(match => match.Score)
                 .ThenByDescending(match => match.Record.UpdatedAtUtc)
-                .Take(request.Budget.CoarseCandidateLimit - records.Count)
+                .Take(request.Budget.CoarseCandidateLimit - candidateRecords.Count)
                 .Select(match => match.Record)
                 .ToList();
             fallbackCount = fallbackMatches.Count;
-            records.AddRange(fallbackMatches);
+            foreach (var record in fallbackMatches)
+            {
+                candidateRecords.TryAdd(record.Id, record);
+            }
         }
+
+        var records = candidateRecords.Values
+            .Select(record => new
+            {
+                Record = record,
+                Score = ResolveLexicalMatch(record, queryTerms, sourceLexicalScores)
+            })
+            .Where(match => match.Score > 0)
+            .OrderByDescending(match => match.Score)
+            .ThenByDescending(match => match.Record.UpdatedAtUtc)
+            .Take(request.Budget.CoarseCandidateLimit)
+            .ToList();
 
         foreach (var record in records)
         {
-            var candidate = GetCandidate(candidates, record);
+            var candidate = GetCandidate(candidates, record.Record);
             candidate.Channels.Add(CognitiveMemoryRecallChannelKind.Lexical);
-            candidate.LexicalMatch = Math.Max(candidate.LexicalMatch ?? 0, ComputeLexicalMatch(record, queryTerms));
+            candidate.LexicalMatch = Math.Max(candidate.LexicalMatch ?? 0, record.Score);
             candidate.Reasons.Add("Lexical channel matched durable memory text.");
         }
 
@@ -334,10 +392,94 @@ public sealed class CognitiveMemoryRecallOrchestrator(
             records.Count,
             0,
             fallbackCount == 0
-                ? $"lexical:records:{records.Count}"
-                : $"lexical:records:{records.Count}:fallback:{fallbackCount}",
-            limitingBudget: records.Count >= request.Budget.CoarseCandidateLimit ? CognitiveMemoryBudgetLimit.ItemCount : null,
+                ? $"lexical:terms:{queryTerms.Count}:records:{records.Count}"
+                : $"lexical:terms:{queryTerms.Count}:records:{records.Count}:fallback:{fallbackCount}",
+            limitingBudget: candidateRecords.Count >= request.Budget.CoarseCandidateLimit ? CognitiveMemoryBudgetLimit.ItemCount : null,
             completedAtUtc: nowUtc));
+    }
+
+    private async Task<IReadOnlyList<SourceTextLexicalMatch>> LoadSourceTextLexicalMatchesAsync(
+        AppDbContext dbContext,
+        CognitiveMemoryRecallRequest request,
+        IReadOnlyList<string> queryTerms,
+        int termScanLimit,
+        CancellationToken cancellationToken)
+    {
+        var sourceItemsById = new Dictionary<Guid, SourceTextItemSnapshot>();
+        foreach (var term in queryTerms)
+        {
+            var pattern = $"%{term}%";
+            var matches = await dbContext.Set<CognitiveMemorySourceItemRecord>()
+                .AsNoTracking()
+                .Where(item =>
+                    item.ProjectId == request.ProjectId &&
+                    item.RedactionState != CognitiveMemoryRedactionState.Redacted &&
+                    (request.PolicyContext.AllowRestrictedContent || item.AccessLevel <= request.PolicyContext.AccessLevel) &&
+                    (EF.Functions.Like(item.Title.ToLower(), pattern) ||
+                     EF.Functions.Like(item.ContentText.ToLower(), pattern) ||
+                     EF.Functions.Like(item.SourceItemKey.ToLower(), pattern) ||
+                     item.Locator != null && EF.Functions.Like(item.Locator.ToLower(), pattern)))
+                .OrderByDescending(item => item.UpdatedAtUtc)
+                .Take(termScanLimit)
+                .Select(item => new SourceTextItemSnapshot(
+                    item.Id,
+                    item.Title,
+                    item.ContentText,
+                    item.SourceItemKey,
+                    item.Locator))
+                .ToListAsync(cancellationToken);
+
+            foreach (var match in matches)
+            {
+                sourceItemsById.TryAdd(match.Id, match);
+            }
+        }
+
+        if (sourceItemsById.Count == 0)
+        {
+            return [];
+        }
+
+        var sourceItemIds = sourceItemsById.Keys.ToArray();
+        var sourceLinks = await dbContext.Set<CognitiveMemorySourceLinkRecord>()
+            .AsNoTracking()
+            .Where(link => sourceItemIds.Contains(link.SourceItemId))
+            .Select(link => new
+            {
+                link.MemoryRecordId,
+                link.SourceItemId,
+                link.Summary
+            })
+            .ToListAsync(cancellationToken);
+        var recordIds = sourceLinks.Select(link => link.MemoryRecordId).Distinct().ToArray();
+        var records = await LoadRecordsByIdAsync(dbContext, request, recordIds, cancellationToken);
+        var recordsById = records.ToDictionary(record => record.Id);
+        var scoresByRecordId = new Dictionary<Guid, double>();
+
+        foreach (var link in sourceLinks)
+        {
+            if (!recordsById.ContainsKey(link.MemoryRecordId) ||
+                !sourceItemsById.TryGetValue(link.SourceItemId, out var sourceItem))
+            {
+                continue;
+            }
+
+            var score = ComputeLexicalMatch(
+                $"{sourceItem.Title} {sourceItem.ContentText} {sourceItem.SourceItemKey} {sourceItem.Locator} {link.Summary}",
+                queryTerms);
+            if (score <= 0)
+            {
+                continue;
+            }
+
+            scoresByRecordId[link.MemoryRecordId] = Math.Max(
+                scoresByRecordId.GetValueOrDefault(link.MemoryRecordId),
+                score);
+        }
+
+        return scoresByRecordId
+            .Select(pair => new SourceTextLexicalMatch(recordsById[pair.Key], pair.Value))
+            .ToList();
     }
 
     private async Task AddVectorCandidatesAsync(
@@ -669,16 +811,347 @@ public sealed class CognitiveMemoryRecallOrchestrator(
             candidate.Reasons.Add($"Graph expansion followed relation {relation.RelationKind}.");
         }
 
+        var sourceGraphExpansion = await AddSourceGraphExpansionCandidatesAsync(
+            dbContext,
+            request,
+            candidates,
+            cancellationToken);
+
         stages.Add(Stage(
             CognitiveMemoryRecallTraceStageKind.AssociationExpansion,
             CognitiveMemoryRecallChannelKind.Graph,
             CognitiveMemoryRecallStageStatus.Completed,
-            relations.Count,
-            records.Count,
+            relations.Count + sourceGraphExpansion.EdgeCount,
+            records.Count + sourceGraphExpansion.RecordCount,
             0,
-            $"graph:relations:{relations.Count}",
-            limitingBudget: relations.Count >= relationLimit ? CognitiveMemoryBudgetLimit.ItemCount : null,
+            $"graph:relations:{relations.Count}:source-edges:{sourceGraphExpansion.EdgeCount}:source-records:{sourceGraphExpansion.RecordCount}",
+            limitingBudget: relations.Count >= relationLimit || sourceGraphExpansion.Limited ? CognitiveMemoryBudgetLimit.ItemCount : null,
             completedAtUtc: nowUtc));
+    }
+
+    private async Task<SourceGraphExpansionResult> AddSourceGraphExpansionCandidatesAsync(
+        AppDbContext dbContext,
+        CognitiveMemoryRecallRequest request,
+        Dictionary<Guid, RecallCandidateAccumulator> candidates,
+        CancellationToken cancellationToken)
+    {
+        var sourceExpansionSeedRecordIds = candidates.Values
+            .Where(IsSourceGraphExpansionSeed)
+            .Select(candidate => candidate.Record.Id)
+            .Distinct()
+            .ToArray();
+        var frontierItems = (await LoadSourceGraphItemsForRecordsAsync(
+                dbContext,
+                sourceExpansionSeedRecordIds,
+                cancellationToken))
+            .Where(CanUseAsSourceGraphFrontier)
+            .GroupBy(item => item.SourceItemKey, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .ToList();
+        if (frontierItems.Count == 0)
+        {
+            return new SourceGraphExpansionResult(0, 0, Limited: false);
+        }
+
+        var visitedSourceItemKeys = frontierItems
+            .Select(item => item.SourceItemKey)
+            .ToHashSet(StringComparer.Ordinal);
+        var edgeCount = 0;
+        var recordCount = 0;
+        var limited = false;
+        var expansionLimit = Math.Max(request.Budget.CoarseCandidateLimit * Math.Max(1, request.Budget.GraphExpansionDepth), 1);
+
+        for (var depth = 1; depth <= request.Budget.GraphExpansionDepth; depth++)
+        {
+            var nextItems = await LoadNeighborSourceGraphItemsAsync(
+                dbContext,
+                request,
+                frontierItems,
+                expansionLimit,
+                cancellationToken);
+            var unseenItems = nextItems
+                .Where(item => visitedSourceItemKeys.Add(item.SourceItemKey))
+                .Take(expansionLimit)
+                .ToList();
+            if (unseenItems.Count == 0)
+            {
+                break;
+            }
+
+            edgeCount += unseenItems.Count;
+            limited |= nextItems.Count >= expansionLimit;
+            var linkedRecordIds = await dbContext.Set<CognitiveMemorySourceLinkRecord>()
+                .AsNoTracking()
+                .Where(link => unseenItems.Select(item => item.Id).Contains(link.SourceItemId))
+                .Select(link => link.MemoryRecordId)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+            var records = await LoadRecordsByIdAsync(dbContext, request, linkedRecordIds, cancellationToken);
+            foreach (var record in records)
+            {
+                var candidate = GetCandidate(candidates, record);
+                candidate.Channels.Add(CognitiveMemoryRecallChannelKind.Graph);
+                candidate.GraphProximity = Math.Max(candidate.GraphProximity ?? 0, ResolveSourceGraphProximity(depth));
+                candidate.Reasons.Add("Graph expansion followed source item structure.");
+            }
+
+            recordCount += records.Count;
+            frontierItems = unseenItems;
+        }
+
+        return new SourceGraphExpansionResult(edgeCount, recordCount, limited);
+    }
+
+    private static async Task<IReadOnlyList<SourceGraphItemSnapshot>> LoadSourceGraphItemsForRecordsAsync(
+        AppDbContext dbContext,
+        IReadOnlyList<Guid> recordIds,
+        CancellationToken cancellationToken)
+    {
+        if (recordIds.Count == 0)
+        {
+            return [];
+        }
+
+        var sourceItemIds = await dbContext.Set<CognitiveMemorySourceLinkRecord>()
+            .AsNoTracking()
+            .Where(link => recordIds.Contains(link.MemoryRecordId))
+            .Select(link => link.SourceItemId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+        return await LoadSourceGraphItemsByIdAsync(dbContext, sourceItemIds, cancellationToken);
+    }
+
+    private static async Task<IReadOnlyList<SourceGraphItemSnapshot>> LoadSourceGraphItemsByIdAsync(
+        AppDbContext dbContext,
+        IReadOnlyList<Guid> sourceItemIds,
+        CancellationToken cancellationToken)
+    {
+        if (sourceItemIds.Count == 0)
+        {
+            return [];
+        }
+
+        return await dbContext.Set<CognitiveMemorySourceItemRecord>()
+            .AsNoTracking()
+            .Where(item => sourceItemIds.Contains(item.Id))
+            .Select(item => new SourceGraphItemSnapshot(
+                item.Id,
+                item.SourceManifestId,
+                item.ProjectId,
+                item.SourceSystem,
+                item.SourceItemType,
+                item.SourceItemKey,
+                item.Title,
+                item.Locator,
+                item.ProvenanceJson))
+            .ToListAsync(cancellationToken);
+    }
+
+    private static async Task<IReadOnlyList<SourceGraphItemSnapshot>> LoadNeighborSourceGraphItemsAsync(
+        AppDbContext dbContext,
+        CognitiveMemoryRecallRequest request,
+        IReadOnlyList<SourceGraphItemSnapshot> frontierItems,
+        int expansionLimit,
+        CancellationToken cancellationToken)
+    {
+        var structuralItems = await LoadProjectStructureNeighborItemsAsync(
+            dbContext,
+            request,
+            frontierItems,
+            expansionLimit,
+            cancellationToken);
+        var externalFileItems = await LoadExternalFileNeighborItemsAsync(
+            dbContext,
+            request,
+            frontierItems,
+            expansionLimit,
+            cancellationToken);
+        return structuralItems
+            .Concat(externalFileItems)
+            .GroupBy(item => item.SourceItemKey, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .Take(expansionLimit)
+            .ToList();
+    }
+
+    private static async Task<IReadOnlyList<SourceGraphItemSnapshot>> LoadExplicitSourceGraphNeighborItemsAsync(
+        AppDbContext dbContext,
+        CognitiveMemoryRecallRequest request,
+        IReadOnlyList<SourceGraphItemSnapshot> frontierItems,
+        int expansionLimit,
+        CancellationToken cancellationToken)
+    {
+        var sourceItemKeys = frontierItems.Select(item => item.SourceItemKey).Distinct(StringComparer.Ordinal).ToArray();
+        var sourceManifestIds = frontierItems.Select(item => item.SourceManifestId).Distinct().ToArray();
+        if (sourceItemKeys.Length == 0 || sourceManifestIds.Length == 0)
+        {
+            return [];
+        }
+
+        var links = await dbContext.Set<CognitiveMemorySourceItemGraphLinkRecord>()
+            .AsNoTracking()
+            .Where(link =>
+                link.ProjectId == request.ProjectId &&
+                sourceManifestIds.Contains(link.SourceManifestId) &&
+                (sourceItemKeys.Contains(link.SourceItemKey) || sourceItemKeys.Contains(link.TargetSourceItemKey)))
+            .Take(expansionLimit)
+            .Select(link => new
+            {
+                link.SourceManifestId,
+                link.SourceItemKey,
+                link.TargetSourceItemKey
+            })
+            .ToListAsync(cancellationToken);
+        var neighborKeys = links
+            .Select(link => sourceItemKeys.Contains(link.SourceItemKey) ? link.TargetSourceItemKey : link.SourceItemKey)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        if (neighborKeys.Length == 0)
+        {
+            return [];
+        }
+
+        return await dbContext.Set<CognitiveMemorySourceItemRecord>()
+            .AsNoTracking()
+            .Where(item =>
+                item.ProjectId == request.ProjectId &&
+                sourceManifestIds.Contains(item.SourceManifestId) &&
+                neighborKeys.Contains(item.SourceItemKey))
+            .Take(expansionLimit)
+            .Select(item => new SourceGraphItemSnapshot(
+                item.Id,
+                item.SourceManifestId,
+                item.ProjectId,
+                item.SourceSystem,
+                item.SourceItemType,
+                item.SourceItemKey,
+                item.Title,
+                item.Locator,
+                item.ProvenanceJson))
+            .ToListAsync(cancellationToken);
+    }
+
+    private static async Task<IReadOnlyList<SourceGraphItemSnapshot>> LoadProjectStructureNeighborItemsAsync(
+        AppDbContext dbContext,
+        CognitiveMemoryRecallRequest request,
+        IReadOnlyList<SourceGraphItemSnapshot> frontierItems,
+        int expansionLimit,
+        CancellationToken cancellationToken)
+    {
+        var projectStructureFrontier = frontierItems
+            .Where(item => item.SourceSystem == WorkbenchProjectStructureSourceSystem &&
+                           item.SourceItemType == ProjectNodeSourceItemType)
+            .Select(item => new
+            {
+                Item = item,
+                Node = TryReadProjectStructureNode(item.ProvenanceJson)
+            })
+            .Where(item => item.Node is not null)
+            .ToList();
+        if (projectStructureFrontier.Count == 0)
+        {
+            return [];
+        }
+
+        var manifestIds = projectStructureFrontier
+            .Select(item => item.Item.SourceManifestId)
+            .Distinct()
+            .ToArray();
+        var frontierEntityIds = projectStructureFrontier
+            .Select(item => item.Node!.SourceEntityId)
+            .ToHashSet(StringComparer.Ordinal);
+        var frontierParentIds = projectStructureFrontier
+            .Select(item => item.Node!.ParentId)
+            .Where(parentId => !string.IsNullOrWhiteSpace(parentId))
+            .ToHashSet(StringComparer.Ordinal);
+        var sourceItems = await dbContext.Set<CognitiveMemorySourceItemRecord>()
+            .AsNoTracking()
+            .Where(item =>
+                item.ProjectId == request.ProjectId &&
+                manifestIds.Contains(item.SourceManifestId) &&
+                item.SourceSystem == WorkbenchProjectStructureSourceSystem &&
+                item.SourceItemType == ProjectNodeSourceItemType)
+            .Select(item => new SourceGraphItemSnapshot(
+                item.Id,
+                item.SourceManifestId,
+                item.ProjectId,
+                item.SourceSystem,
+                item.SourceItemType,
+                item.SourceItemKey,
+                item.Title,
+                item.Locator,
+                item.ProvenanceJson))
+            .ToListAsync(cancellationToken);
+
+        return sourceItems
+            .Select(item => new
+            {
+                Item = item,
+                Node = TryReadProjectStructureNode(item.ProvenanceJson)
+            })
+            .Where(item => item.Node is not null &&
+                           (frontierEntityIds.Contains(item.Node.ParentId) ||
+                            frontierParentIds.Contains(item.Node.SourceEntityId) &&
+                            !string.IsNullOrWhiteSpace(item.Node.ParentId)))
+            .Select(item => item.Item)
+            .GroupBy(item => item.SourceItemKey, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .Take(expansionLimit)
+            .ToList();
+    }
+
+    private static async Task<IReadOnlyList<SourceGraphItemSnapshot>> LoadExternalFileNeighborItemsAsync(
+        AppDbContext dbContext,
+        CognitiveMemoryRecallRequest request,
+        IReadOnlyList<SourceGraphItemSnapshot> frontierItems,
+        int expansionLimit,
+        CancellationToken cancellationToken)
+    {
+        var externalFrontier = frontierItems
+            .Where(item => item.SourceSystem == ExternalFileSourceSystem &&
+                           !string.IsNullOrWhiteSpace(item.Locator))
+            .Select(item => new
+            {
+                item.SourceManifestId,
+                DocumentLocator = ResolveDocumentLocator(item.Locator)
+            })
+            .Where(item => !string.IsNullOrWhiteSpace(item.DocumentLocator))
+            .Distinct()
+            .ToList();
+        if (externalFrontier.Count == 0)
+        {
+            return [];
+        }
+
+        var manifestIds = externalFrontier.Select(item => item.SourceManifestId).Distinct().ToArray();
+        var documentLocators = externalFrontier
+            .Select(item => item.DocumentLocator)
+            .ToHashSet(StringComparer.Ordinal);
+        var sourceItems = await dbContext.Set<CognitiveMemorySourceItemRecord>()
+            .AsNoTracking()
+            .Where(item =>
+                item.ProjectId == request.ProjectId &&
+                manifestIds.Contains(item.SourceManifestId) &&
+                item.SourceSystem == ExternalFileSourceSystem &&
+                item.Locator != null)
+            .Select(item => new SourceGraphItemSnapshot(
+                item.Id,
+                item.SourceManifestId,
+                item.ProjectId,
+                item.SourceSystem,
+                item.SourceItemType,
+                item.SourceItemKey,
+                item.Title,
+                item.Locator,
+                item.ProvenanceJson))
+            .ToListAsync(cancellationToken);
+
+        return sourceItems
+            .Where(item => documentLocators.Contains(ResolveDocumentLocator(item.Locator)))
+            .GroupBy(item => item.SourceItemKey, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .Take(expansionLimit)
+            .ToList();
     }
 
     private async Task<List<EvaluatedRecallCandidate>> EvaluateCandidatesAsync(
@@ -694,6 +1167,8 @@ public sealed class CognitiveMemoryRecallOrchestrator(
         var candidateIds = candidates.Select(candidate => candidate.Record.Id).Distinct().ToArray();
         var claimsByRecordId = await LoadClaimsAsync(dbContext, candidateIds, cancellationToken);
         var evidenceByRecordId = await LoadEvidenceAnchorIdsAsync(dbContext, candidateIds, claimsByRecordId, cancellationToken);
+        var sourceScopeKeysByRecordId = await LoadSourceScopeKeysAsync(dbContext, candidateIds, cancellationToken);
+        var preferredScopeKey = ResolvePreferredSourceScopeKey(request);
         var evaluated = new List<EvaluatedRecallCandidate>(candidates.Count);
 
         foreach (var candidate in candidates)
@@ -701,6 +1176,7 @@ public sealed class CognitiveMemoryRecallOrchestrator(
             var candidateId = CognitiveMemoryRecallCandidateId.New();
             var claims = claimsByRecordId.GetValueOrDefault(candidate.Record.Id) ?? [];
             var evidenceAnchorIds = evidenceByRecordId.GetValueOrDefault(candidate.Record.Id) ?? [];
+            var sourceScopeKeys = ResolveSourceScopeKeys(candidate.Record, sourceScopeKeysByRecordId);
             var vector = BuildCandidateVector(candidateId, traceId, request, candidate, claims, evidenceAnchorIds, queryTerms, nowUtc);
             var trace = await scoreGeometryDriver.EvaluateAsync(
                 new CognitiveMemoryScoreEvaluationRequest(
@@ -728,11 +1204,13 @@ public sealed class CognitiveMemoryRecallOrchestrator(
                 evidenceAnchorIds.Select(id => new CognitiveMemoryEvidenceAnchorId(id)).ToArray(),
                 decision.Reason,
                 candidate.Channels.ToArray(),
-                candidate.ContextBoundaryReason));
+                candidate.ContextBoundaryReason,
+                sourceScopeKeys));
         }
 
         return evaluated
-            .OrderByDescending(candidate => candidate.ScoreTrace.ScalarProjection?.DisplayScore ?? 0)
+            .OrderByDescending(candidate => ResolveFocusOrderingPriority(candidate, preferredScopeKey))
+            .ThenByDescending(candidate => candidate.ScoreTrace.ScalarProjection?.DisplayScore ?? 0)
             .ThenBy(candidate => candidate.Record.Title, StringComparer.Ordinal)
             .ToList();
     }
@@ -743,12 +1221,26 @@ public sealed class CognitiveMemoryRecallOrchestrator(
         List<string> warnings)
     {
         var selectedCount = 0;
+        var selectedFocusKeys = new HashSet<string>(StringComparer.Ordinal);
         var result = new List<EvaluatedRecallCandidate>(evaluatedCandidates.Count);
         foreach (var candidate in evaluatedCandidates)
         {
             if (candidate.DecisionKind == CognitiveMemoryRecallCandidateDecisionKind.Inhibited)
             {
                 result.Add(candidate);
+                continue;
+            }
+
+            var focusKey = CreateFocusDedupeKey(candidate);
+            if (!selectedFocusKeys.Add(focusKey))
+            {
+                warnings.Add($"Recall focus skipped duplicate '{candidate.Record.Title}'.");
+                result.Add(candidate with
+                {
+                    DecisionKind = CognitiveMemoryRecallCandidateDecisionKind.Excluded,
+                    ExclusionReasonKind = CognitiveMemoryRecallExclusionReasonKind.NotInFocus,
+                    Reason = "Candidate excluded because an equivalent memory record was already selected."
+                });
                 continue;
             }
 
@@ -772,6 +1264,82 @@ public sealed class CognitiveMemoryRecallOrchestrator(
         }
 
         return result;
+    }
+
+    private static string CreateFocusDedupeKey(EvaluatedRecallCandidate candidate)
+    {
+        var record = candidate.Record;
+        var durableText = FirstNonEmpty(record.CanonicalText, record.SummaryText, record.TopicKey);
+        return $"{NormalizeContextBlock(record.Title).ToLowerInvariant()}|{NormalizeContextBlock(durableText).ToLowerInvariant()}";
+    }
+
+    private static async Task<IReadOnlyDictionary<Guid, IReadOnlyList<string>>> LoadSourceScopeKeysAsync(
+        AppDbContext dbContext,
+        IReadOnlyList<Guid> recordIds,
+        CancellationToken cancellationToken)
+    {
+        if (recordIds.Count == 0)
+        {
+            return new Dictionary<Guid, IReadOnlyList<string>>(0);
+        }
+
+        var rows = await dbContext.Set<CognitiveMemorySourceLinkRecord>()
+            .AsNoTracking()
+            .Where(link => recordIds.Contains(link.MemoryRecordId))
+            .Join(
+                dbContext.Set<CognitiveMemorySourceItemRecord>().AsNoTracking(),
+                link => link.SourceItemId,
+                item => item.Id,
+                (link, item) => new
+                {
+                    link.MemoryRecordId,
+                    item.Title,
+                    item.Locator,
+                    item.ProvenanceJson
+                })
+            .ToListAsync(cancellationToken);
+        var scopeKeysByRecordId = new Dictionary<Guid, HashSet<string>>();
+        foreach (var row in rows)
+        {
+            var scopeKeys = ExtractSourceScopeKeys(row.Title, row.Locator, row.ProvenanceJson);
+            if (scopeKeys.Count == 0)
+            {
+                continue;
+            }
+
+            if (!scopeKeysByRecordId.TryGetValue(row.MemoryRecordId, out var existingScopeKeys))
+            {
+                existingScopeKeys = new HashSet<string>(StringComparer.Ordinal);
+                scopeKeysByRecordId[row.MemoryRecordId] = existingScopeKeys;
+            }
+
+            foreach (var scopeKey in scopeKeys)
+            {
+                existingScopeKeys.Add(scopeKey);
+            }
+        }
+
+        return scopeKeysByRecordId.ToDictionary(
+            pair => pair.Key,
+            pair => (IReadOnlyList<string>)pair.Value.ToArray());
+    }
+
+    private static IReadOnlyList<string> ResolveSourceScopeKeys(
+        MemoryRecordSnapshot record,
+        IReadOnlyDictionary<Guid, IReadOnlyList<string>> sourceScopeKeysByRecordId)
+    {
+        var scopeKeys = new HashSet<string>(
+            ExtractSourceScopeKeys(record.Title, record.SummaryText, record.CanonicalText, record.TopicKey),
+            StringComparer.Ordinal);
+        if (sourceScopeKeysByRecordId.TryGetValue(record.Id, out var sourceScopeKeys))
+        {
+            foreach (var sourceScopeKey in sourceScopeKeys)
+            {
+                scopeKeys.Add(sourceScopeKey);
+            }
+        }
+
+        return scopeKeys.ToArray();
     }
 
     private async Task<CognitiveMemoryRecallContextPack> BuildContextPackAsync(
@@ -1086,8 +1654,7 @@ public sealed class CognitiveMemoryRecallOrchestrator(
             sourceItemsById.TryGetValue(link.SourceItemId, out var item);
             var accessLevel = item?.AccessLevel ?? CognitiveMemoryAccessLevel.Project;
             var redactionState = item?.RedactionState ?? CognitiveMemoryRedactionState.Unclassified;
-            var included = PolicyCanRead(accessLevel, request.PolicyContext) &&
-                redactionState is CognitiveMemoryRedactionState.Safe or CognitiveMemoryRedactionState.Unclassified;
+            var included = CanIncludeSourceRef(accessLevel, redactionState, request.PolicyContext);
             sourceRefs.Add(new CognitiveMemoryRecallSourceRef(
                 new CognitiveMemoryRecordId(link.MemoryRecordId),
                 new CognitiveMemorySourceItemId(link.SourceItemId),
@@ -1108,7 +1675,7 @@ public sealed class CognitiveMemoryRecallOrchestrator(
                 continue;
             }
 
-            var included = anchor.RedactionState is CognitiveMemoryRedactionState.Safe or CognitiveMemoryRedactionState.Unclassified;
+            var included = CanIncludeSourceRef(CognitiveMemoryAccessLevel.Project, anchor.RedactionState, request.PolicyContext);
             sourceRefs.Add(new CognitiveMemoryRecallSourceRef(
                 new CognitiveMemoryRecordId(evidenceLink.MemoryRecordId),
                 anchor.SourceItemId is null ? null : new CognitiveMemorySourceItemId(anchor.SourceItemId.Value),
@@ -1119,7 +1686,7 @@ public sealed class CognitiveMemoryRecallOrchestrator(
                 CognitiveMemoryAccessLevel.Project,
                 anchor.RedactionState,
                 included,
-                included ? CognitiveMemoryRecallExclusionReasonKind.None : CognitiveMemoryRecallExclusionReasonKind.RedactedSource));
+                included ? CognitiveMemoryRecallExclusionReasonKind.None : ResolveSourceRefExclusion(CognitiveMemoryAccessLevel.Project, anchor.RedactionState, request.PolicyContext)));
         }
 
         return sourceRefs;
@@ -1361,7 +1928,7 @@ public sealed class CognitiveMemoryRecallOrchestrator(
         AddOptional(components, CognitiveMemoryScoreDimensionKind.ContradictionPressure, candidate.ContradictionPressure ?? ResolveContradictionPressure(claims), 1, evidenceRefs);
         AddOptional(components, CognitiveMemoryScoreDimensionKind.StalenessPressure, ResolveStalenessPressure(record), 1, evidenceRefs);
         AddOptional(components, CognitiveMemoryScoreDimensionKind.AccessPolicyRisk, PolicyCanRead(record.AccessLevel, request.PolicyContext) ? 0 : 1, 1, evidenceRefs);
-        AddOptional(components, CognitiveMemoryScoreDimensionKind.RedactionPressure, record.AccessLevel == CognitiveMemoryAccessLevel.Restricted ? 0.7 : 0, 1, evidenceRefs);
+        AddOptional(components, CognitiveMemoryScoreDimensionKind.RedactionPressure, ResolveRedactionPressure(record, request.PolicyContext), 1, evidenceRefs);
         AddOptional(components, CognitiveMemoryScoreDimensionKind.MetadataFit, ResolveMetadataFit(record, request), 1, evidenceRefs);
         AddOptional(components, CognitiveMemoryScoreDimensionKind.TemporalRecency, ResolveTemporalRecency(record, nowUtc), 0.5, evidenceRefs);
         AddOptional(components, CognitiveMemoryScoreDimensionKind.EvidenceSupport, ResolveEvidenceSupport(claims, record), 1, evidenceRefs);
@@ -1762,10 +2329,34 @@ public sealed class CognitiveMemoryRecallOrchestrator(
             return CognitiveMemoryRecallExclusionReasonKind.AccessPolicy;
         }
 
-        return redactionState is CognitiveMemoryRedactionState.Redacted or CognitiveMemoryRedactionState.Restricted
+        return redactionState is CognitiveMemoryRedactionState.Redacted ||
+            redactionState == CognitiveMemoryRedactionState.Restricted && !policyContext.AllowRestrictedContent
             ? CognitiveMemoryRecallExclusionReasonKind.RedactedSource
             : CognitiveMemoryRecallExclusionReasonKind.None;
     }
+
+    private static bool CanIncludeSourceRef(
+        CognitiveMemoryAccessLevel accessLevel,
+        CognitiveMemoryRedactionState redactionState,
+        CognitiveMemoryPolicyContext policyContext)
+    {
+        if (!PolicyCanRead(accessLevel, policyContext))
+        {
+            return false;
+        }
+
+        return redactionState switch
+        {
+            CognitiveMemoryRedactionState.Safe or CognitiveMemoryRedactionState.Unclassified => true,
+            CognitiveMemoryRedactionState.Restricted => policyContext.AllowRestrictedContent,
+            _ => false
+        };
+    }
+
+    private static double ResolveRedactionPressure(
+        MemoryRecordSnapshot record,
+        CognitiveMemoryPolicyContext policyContext)
+        => record.AccessLevel == CognitiveMemoryAccessLevel.Restricted && !policyContext.AllowRestrictedContent ? 0.7 : 0;
 
     private static string BuildSourceRefSummary(
         string sourceLinkSummary,
@@ -1793,13 +2384,32 @@ public sealed class CognitiveMemoryRecallOrchestrator(
             .Select(term => term.ToLowerInvariant())
             .Distinct(StringComparer.Ordinal)
             .ToArray();
-        var meaningfulTerms = terms
+        var expandedTerms = terms
+            .SelectMany(ExpandTermVariants)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        var meaningfulTerms = expandedTerms
             .Where(term => !LexicalStopWords.Contains(term))
             .Take(12)
             .ToArray();
         return meaningfulTerms.Length == 0
-            ? terms.Take(12).ToArray()
+            ? expandedTerms.Take(12).ToArray()
             : meaningfulTerms;
+    }
+
+    private static IEnumerable<string> ExpandTermVariants(string term)
+    {
+        yield return term;
+        if (term.Length > 4 && term.EndsWith("ies", StringComparison.Ordinal))
+        {
+            yield return $"{term[..^3]}y";
+            yield break;
+        }
+
+        if (term.Length > 3 && term.EndsWith("s", StringComparison.Ordinal) && !term.EndsWith("ss", StringComparison.Ordinal))
+        {
+            yield return term[..^1];
+        }
     }
 
     private static IReadOnlyList<CognitiveMemoryRecordKind> NormalizePreferredKinds(IReadOnlyList<CognitiveMemoryRecordKind>? preferredKinds)
@@ -1810,16 +2420,279 @@ public sealed class CognitiveMemoryRecallOrchestrator(
     private static double ComputeLexicalMatch(
         MemoryRecordSnapshot record,
         IReadOnlyList<string> queryTerms)
+        => ComputeLexicalMatch($"{record.Title} {record.SummaryText} {record.CanonicalText} {record.TopicKey}", queryTerms);
+
+    private static double ComputeLexicalMatch(
+        string haystack,
+        IReadOnlyList<string> queryTerms)
     {
         if (queryTerms.Count == 0)
         {
             return 0;
         }
 
-        var haystack = $"{record.Title} {record.SummaryText} {record.CanonicalText} {record.TopicKey}".ToLowerInvariant();
-        var hits = queryTerms.Count(term => haystack.Contains(term, StringComparison.Ordinal));
-        return Math.Clamp((double)hits / queryTerms.Count, 0, 1);
+        var normalizedHaystack = haystack.ToLowerInvariant();
+        var totalWeight = 0d;
+        var hitWeight = 0d;
+        foreach (var term in queryTerms)
+        {
+            var weight = ResolveLexicalTermWeight(term);
+            totalWeight += weight;
+            if (normalizedHaystack.Contains(term, StringComparison.Ordinal))
+            {
+                hitWeight += weight;
+            }
+        }
+
+        return totalWeight == 0
+            ? 0
+            : Math.Clamp(hitWeight / totalWeight, 0, 1);
     }
+
+    private static double ResolveLexicalTermWeight(string term)
+        => term.Length switch
+        {
+            <= 2 => 0.25,
+            3 => 0.5,
+            >= 10 => 1.5,
+            >= 7 => 1.25,
+            _ => 1
+        };
+
+    private static double ResolveLexicalMatch(
+        MemoryRecordSnapshot record,
+        IReadOnlyList<string> queryTerms,
+        IReadOnlyDictionary<Guid, double> sourceLexicalScores)
+        => Math.Max(
+            ComputeLexicalMatch(record, queryTerms),
+            sourceLexicalScores.GetValueOrDefault(record.Id));
+
+    private static double ResolveSourceGraphProximity(int depth)
+        => depth switch
+        {
+            <= 1 => 0.78,
+            2 => 0.72,
+            _ => 0.65
+        };
+
+    private static string ResolveDocumentLocator(string? locator)
+    {
+        if (string.IsNullOrWhiteSpace(locator))
+        {
+            return string.Empty;
+        }
+
+        var hashIndex = locator.IndexOf('#', StringComparison.Ordinal);
+        return hashIndex < 0 ? locator.Trim() : locator[..hashIndex].Trim();
+    }
+
+    private static double ResolveFocusOrderingPriority(EvaluatedRecallCandidate candidate, string preferredScopeKey)
+    {
+        var lexical = GetScoreComponent(candidate, CognitiveMemoryScoreDimensionKind.LexicalMatch) ?? 0;
+        var semantic = GetScoreComponent(candidate, CognitiveMemoryScoreDimensionKind.SemanticSimilarity) ?? 0;
+        var graph = GetScoreComponent(candidate, CognitiveMemoryScoreDimensionKind.GraphProximity) ?? 0;
+        var workspace = GetScoreComponent(candidate, CognitiveMemoryScoreDimensionKind.WorkspaceFocusFit) ?? 0;
+        var memoryActivation = GetScoreComponent(candidate, CognitiveMemoryScoreDimensionKind.MemoryActivation) ?? 0;
+        var directChannelBonus = ResolveDirectChannelOrderingBonus(candidate.ChannelKinds);
+        var specificity = ResolveFocusSpecificity(candidate.Record);
+        var sourceScopeFit = ResolveSourceScopeFit(candidate.SourceScopeKeys, preferredScopeKey);
+        return directChannelBonus +
+               lexical * 3 +
+               semantic * 0.25 +
+               graph * 1.1 +
+               workspace * 0.6 +
+               memoryActivation * 0.35 +
+               specificity +
+               sourceScopeFit;
+    }
+
+    private static double ResolveSourceScopeFit(IReadOnlyList<string> candidateScopeKeys, string preferredScopeKey)
+    {
+        if (string.IsNullOrWhiteSpace(preferredScopeKey) || candidateScopeKeys.Count == 0)
+        {
+            return 0;
+        }
+
+        return candidateScopeKeys.Contains(preferredScopeKey, StringComparer.Ordinal)
+            ? 1.35
+            : -0.75;
+    }
+
+    private static double ResolveFocusSpecificity(MemoryRecordSnapshot record)
+    {
+        var text = $"{record.Title} {record.SummaryText} {record.CanonicalText}";
+        var score = 0d;
+        if (text.Contains("Structural parent node derived from", StringComparison.OrdinalIgnoreCase))
+        {
+            score -= 0.55;
+        }
+
+        if (text.Contains("Object type: ProjectRoot", StringComparison.OrdinalIgnoreCase))
+        {
+            score -= 0.7;
+        }
+
+        if (text.Contains("Source truth S", StringComparison.OrdinalIgnoreCase) &&
+            text.Contains("level 2", StringComparison.OrdinalIgnoreCase))
+        {
+            score -= 0.25;
+        }
+
+        if (record.Title.Contains(".md - ", StringComparison.OrdinalIgnoreCase) &&
+            !IsStageHeaderTitle(record.Title))
+        {
+            score += 0.35;
+        }
+
+        if (text.Contains("\n-", StringComparison.Ordinal) ||
+            text.Contains("\r\n-", StringComparison.Ordinal))
+        {
+            score += 0.2;
+        }
+
+        if (text.Any(char.IsDigit))
+        {
+            score += 0.12;
+        }
+
+        return score;
+    }
+
+    private static bool IsStageHeaderTitle(string title)
+        => title.Contains(".md - S0", StringComparison.OrdinalIgnoreCase) ||
+           title.StartsWith("S0", StringComparison.OrdinalIgnoreCase);
+
+    private static string ResolvePreferredSourceScopeKey(CognitiveMemoryRecallRequest request)
+    {
+        if (request.Metadata is null ||
+            !request.Metadata.TryGetValue("stageId", out var stageId))
+        {
+            return string.Empty;
+        }
+
+        return ExtractSourceScopeKeys(stageId).FirstOrDefault() ?? string.Empty;
+    }
+
+    private static IReadOnlyList<string> ExtractSourceScopeKeys(params string?[] values)
+    {
+        var scopeKeys = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var value in values)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                continue;
+            }
+
+            var normalized = value.ToLowerInvariant();
+            for (var index = 0; index <= normalized.Length - 3; index++)
+            {
+                if (normalized[index] != 's' ||
+                    !char.IsAsciiDigit(normalized[index + 1]) ||
+                    !char.IsAsciiDigit(normalized[index + 2]) ||
+                    !IsSourceScopeBoundary(normalized, index - 1) ||
+                    !IsSourceScopeBoundary(normalized, index + 3))
+                {
+                    continue;
+                }
+
+                scopeKeys.Add(normalized.Substring(index, 3));
+            }
+        }
+
+        return scopeKeys.ToArray();
+    }
+
+    private static bool IsSourceScopeBoundary(string value, int index)
+        => index < 0 ||
+           index >= value.Length ||
+           !char.IsLetterOrDigit(value[index]);
+
+    private static double ResolveDirectChannelOrderingBonus(IReadOnlyList<CognitiveMemoryRecallChannelKind> channelKinds)
+    {
+        var bonus = 0d;
+        foreach (var channelKind in channelKinds)
+        {
+            bonus = Math.Max(
+                bonus,
+                channelKind switch
+                {
+                    CognitiveMemoryRecallChannelKind.VectorProjection => 0.45,
+                    CognitiveMemoryRecallChannelKind.Workspace => 0.4,
+                    CognitiveMemoryRecallChannelKind.SignalActivation => 0.35,
+                    CognitiveMemoryRecallChannelKind.Lexical => 0.25,
+                    _ => 0
+                });
+        }
+
+        return bonus;
+    }
+
+    private static double? GetScoreComponent(
+        EvaluatedRecallCandidate candidate,
+        CognitiveMemoryScoreDimensionKind dimensionKind)
+        => candidate.ScoreTrace.InputVectors
+            .SelectMany(vector => vector.Components)
+            .Where(component => component.DimensionKind == dimensionKind)
+            .Select(component => (double?)component.NormalizedValue)
+            .FirstOrDefault();
+
+    private static bool IsSourceGraphExpansionSeed(RecallCandidateAccumulator candidate)
+        => candidate.SemanticSimilarity is >= 0.55 ||
+           candidate.LexicalMatch is >= 0.35 ||
+           candidate.WorkspaceFocusFit is >= 0.55 ||
+           candidate.MemoryActivation is >= 0.55;
+
+    private static bool CanUseAsSourceGraphFrontier(SourceGraphItemSnapshot item)
+    {
+        if (item.SourceSystem == ExternalFileSourceSystem)
+        {
+            return !string.IsNullOrWhiteSpace(item.Locator);
+        }
+
+        if (item.SourceSystem != WorkbenchProjectStructureSourceSystem ||
+            item.SourceItemType != ProjectNodeSourceItemType)
+        {
+            return true;
+        }
+
+        var node = TryReadProjectStructureNode(item.ProvenanceJson);
+        return node is not null && !string.IsNullOrWhiteSpace(node.ParentId);
+    }
+
+    private static ProjectStructureNodeSourceSnapshot? TryReadProjectStructureNode(string provenanceJson)
+    {
+        if (string.IsNullOrWhiteSpace(provenanceJson))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(provenanceJson);
+            var root = document.RootElement;
+            var sourceEntityId = root.TryGetProperty("sourceEntityId", out var entityProperty)
+                ? entityProperty.GetString() ?? string.Empty
+                : string.Empty;
+            if (string.IsNullOrWhiteSpace(sourceEntityId))
+            {
+                return null;
+            }
+
+            var parentId = root.TryGetProperty("metadata", out var metadataProperty) &&
+                           metadataProperty.ValueKind == JsonValueKind.Object &&
+                           metadataProperty.TryGetProperty("parentId", out var parentProperty)
+                ? parentProperty.GetString() ?? string.Empty
+                : string.Empty;
+            return new ProjectStructureNodeSourceSnapshot(sourceEntityId, parentId);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static string FirstNonEmpty(params string?[] values)
+        => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? string.Empty;
 
     private static double ResolveContextFit(RecallCandidateAccumulator candidate)
         => candidate.ContextSeparation is >= 0.75 ? 0.2 : 0.85;
@@ -2047,12 +2920,43 @@ public sealed class CognitiveMemoryRecallOrchestrator(
         CognitiveMemoryRiskLevel RiskLevel,
         DateTimeOffset UpdatedAtUtc);
 
+    private sealed record SourceTextItemSnapshot(
+        Guid Id,
+        string Title,
+        string ContentText,
+        string SourceItemKey,
+        string? Locator);
+
+    private sealed record SourceTextLexicalMatch(
+        MemoryRecordSnapshot Record,
+        double Score);
+
     private sealed record RelationSnapshot(
         Guid SourceMemoryRecordId,
         Guid TargetMemoryRecordId,
         CognitiveMemoryRelationKind RelationKind,
         double? DisplayStrengthProjection,
         string Reason);
+
+    private sealed record SourceGraphExpansionResult(
+        int EdgeCount,
+        int RecordCount,
+        bool Limited);
+
+    private sealed record SourceGraphItemSnapshot(
+        Guid Id,
+        Guid SourceManifestId,
+        Guid? ProjectId,
+        string SourceSystem,
+        string SourceItemType,
+        string SourceItemKey,
+        string Title,
+        string? Locator,
+        string ProvenanceJson);
+
+    private sealed record ProjectStructureNodeSourceSnapshot(
+        string SourceEntityId,
+        string ParentId);
 
     private sealed record ClaimSnapshot(
         Guid Id,
@@ -2080,7 +2984,8 @@ public sealed class CognitiveMemoryRecallOrchestrator(
         IReadOnlyList<CognitiveMemoryEvidenceAnchorId> EvidenceAnchorIds,
         string Reason,
         IReadOnlyList<CognitiveMemoryRecallChannelKind> ChannelKinds,
-        string ContextBoundaryReason);
+        string ContextBoundaryReason,
+        IReadOnlyList<string> SourceScopeKeys);
 
     private sealed record SourceLinkSnapshot(
         Guid MemoryRecordId,

@@ -1,0 +1,81 @@
+{
+  "kind": "graphml",
+  "nodes": [
+    {
+      "id": "n0",
+      "label": "Řídící jednotka"
+    },
+    {
+      "id": "n1",
+      "label": "Výkonová část pro ovládání ventilů"
+    },
+    {
+      "id": "n2",
+      "label": "Ventil Teplé vody"
+    },
+    {
+      "id": "n3",
+      "label": "Ventil Studené vody"
+    },
+    {
+      "id": "n4",
+      "label": "Kamera"
+    },
+    {
+      "id": "n5",
+      "label": "Manuální regulace"
+    },
+    {
+      "id": "n6",
+      "label": "Výstupní kanál"
+    },
+    {
+      "id": "n7",
+      "label": "Napájecí zdroj"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e0",
+      "source": "n1",
+      "target": "n2",
+      "label": ""
+    },
+    {
+      "id": "e1",
+      "source": "n1",
+      "target": "n3",
+      "label": ""
+    },
+    {
+      "id": "e2",
+      "source": "n7",
+      "target": "n0",
+      "label": ""
+    },
+    {
+      "id": "e3",
+      "source": "n7",
+      "target": "n1",
+      "label": ""
+    },
+    {
+      "id": "e4",
+      "source": "n7",
+      "target": "n4",
+      "label": ""
+    },
+    {
+      "id": "e5",
+      "source": "n2",
+      "target": "n6",
+      "label": ""
+    },
+    {
+      "id": "e6",
+      "source": "n5",
+      "target": "n6",
+      "label": ""
+    }
+  ]
+}
