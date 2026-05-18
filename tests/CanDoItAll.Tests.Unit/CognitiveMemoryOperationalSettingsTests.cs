@@ -22,6 +22,10 @@ public sealed class CognitiveMemoryOperationalSettingsTests
             AutoIngestProjectStructure: true,
             AutoIngestProcessRuntime: false,
             AutoConsolidateAfterIngestion: true,
+            CognitiveMemoryModelAccessMode.SelectedProvidersOnly,
+            DefaultProviderProfileId: Guid.Parse("11111111-1111-1111-1111-111111111111"),
+            DefaultAgentId: Guid.Parse("22222222-2222-2222-2222-222222222222"),
+            AllowedProviderProfileIds: [Guid.Parse("33333333-3333-3333-3333-333333333333")],
             UpdatedByActorId: "test:operator"));
 
         var loaded = await service.GetAsync();
@@ -33,6 +37,10 @@ public sealed class CognitiveMemoryOperationalSettingsTests
         Assert.True(loaded.AutoIngestProjectStructure);
         Assert.False(loaded.AutoIngestProcessRuntime);
         Assert.True(loaded.AutoConsolidateAfterIngestion);
+        Assert.Equal(CognitiveMemoryModelAccessMode.SelectedProvidersOnly, loaded.ModelAccessMode);
+        Assert.Equal(Guid.Parse("11111111-1111-1111-1111-111111111111"), loaded.DefaultProviderProfileId);
+        Assert.Equal(Guid.Parse("22222222-2222-2222-2222-222222222222"), loaded.DefaultAgentId);
+        Assert.Equal([Guid.Parse("33333333-3333-3333-3333-333333333333")], loaded.AllowedProviderProfileIds);
         Assert.Equal("test:operator", loaded.UpdatedByActorId);
     }
 

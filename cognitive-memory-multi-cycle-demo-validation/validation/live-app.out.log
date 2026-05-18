@@ -45,7 +45,7 @@ info: Quartz.Impl.StdSchedulerFactory[0]
 info: Quartz.Impl.StdSchedulerFactory[0]
       Using job store 'Quartz.Impl.AdoJobStore.JobStoreTX', supports persistence: True, clustered: False
 info: CanDoItAll.Modules.Processes.ProcessCatalogWarmupService[0]
-      Completed process catalog warmup in 560 ms. Imported 0 definitions, synchronized 0 definitions, and published 0 definitions.
+      Completed process catalog warmup in 707 ms. Imported 0 definitions, synchronized 0 definitions, and published 0 definitions.
 info: Microsoft.Hosting.Lifetime[14]
       Now listening on: http://localhost:5032
 info: Microsoft.Hosting.Lifetime[0]
@@ -69,14 +69,4 @@ info: Quartz.Core.QuartzScheduler[0]
 warn: Microsoft.AspNetCore.HttpsPolicy.HttpsRedirectionMiddleware[3]
       Failed to determine the https port for redirect.
 info: CanDoItAll.Modules.AgentFramework.AgentFrameworkCatalogWarmupService[0]
-      Completed AgentFramework catalog repair and projection warmup in 5698 ms.
-fail: Microsoft.AspNetCore.Antiforgery.DefaultAntiforgery[7]
-      An exception was thrown while deserializing the token.
-      Microsoft.AspNetCore.Antiforgery.AntiforgeryValidationException: The antiforgery token could not be decrypted.
-       ---> System.Security.Cryptography.CryptographicException: The key {5e2e7042-8244-4319-ac16-ede336f83170} was not found in the key ring. For more information go to https://aka.ms/aspnet/dataprotectionwarning
-         at Microsoft.AspNetCore.DataProtection.KeyManagement.KeyRingBasedDataProtector.UnprotectCore(Byte[] protectedData, Boolean allowOperationsOnRevokedKeys, UnprotectStatus& status)
-         at Microsoft.AspNetCore.DataProtection.KeyManagement.KeyRingBasedDataProtector.Unprotect(Byte[] protectedData)
-         at Microsoft.AspNetCore.Antiforgery.DefaultAntiforgeryTokenSerializer.Deserialize(String serializedToken)
-         --- End of inner exception stack trace ---
-         at Microsoft.AspNetCore.Antiforgery.DefaultAntiforgeryTokenSerializer.Deserialize(String serializedToken)
-         at Microsoft.AspNetCore.Antiforgery.DefaultAntiforgery.GetCookieTokenDoesNotThrow(HttpContext httpContext)
+      Completed AgentFramework catalog repair and projection warmup in 6695 ms.

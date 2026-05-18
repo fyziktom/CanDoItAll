@@ -237,6 +237,87 @@
                                 </Stack>
                             </SurfaceCard>
 
+                            <SurfaceCard data-testid="cognitive-memory-model-access-settings">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Model access" />
+                                <h2 class="cognitive-memory-card-title">Provider and agent policy</h2>
+                                <p class="cognitive-memory-muted">@modelAccessStatus</p>
+                                <Stack GapScale="LayoutGap.Medium" Class="mt-4">
+                                    <label class="cognitive-memory-field">
+                                        <span>Mode</span>
+                                        <InputSelect class="cda-input"
+                                                     @bind-Value="modelAccessMode"
+                                                     data-testid="cognitive-memory-model-access-mode">
+                                            <option value="@CognitiveMemoryModelAccessMode.AnyEnabledProvider">Any enabled provider</option>
+                                            <option value="@CognitiveMemoryModelAccessMode.LocalProvidersOnly">Local providers only</option>
+                                            <option value="@CognitiveMemoryModelAccessMode.SelectedProvidersOnly">Selected providers only</option>
+                                            <option value="@CognitiveMemoryModelAccessMode.Disabled">Disabled</option>
+                                        </InputSelect>
+                                    </label>
+                                    <Grid Gap="LayoutGap.Medium"
+                                          ColumnTemplateLg="minmax(0,1fr) minmax(0,1fr)">
+                                        <label class="cognitive-memory-field">
+                                            <span>Default provider</span>
+                                            <InputSelect class="cda-input"
+                                                         @bind-Value="defaultProviderProfileIdText"
+                                                         data-testid="cognitive-memory-default-provider">
+                                                <option value="">No preference</option>
+                                                @foreach (var provider in modelProviderOptions)
+                                                {
+                                                    <option value="@provider.Id.ToString("D")">@provider.Name (@FormatLabel(provider.Kind))</option>
+                                                }
+                                            </InputSelect>
+                                        </label>
+                                        <label class="cognitive-memory-field">
+                                            <span>Default agent</span>
+                                            <InputSelect class="cda-input"
+                                                         @bind-Value="defaultAgentIdText"
+                                                         data-testid="cognitive-memory-default-agent">
+                                                <option value="">No preference</option>
+                                                @foreach (var agent in modelAgentOptions)
+                                                {
+                                                    <option value="@agent.Id.ToString("D")">@agent.Name (@FormatLabel(agent.Workload))</option>
+                                                }
+                                            </InputSelect>
+                                        </label>
+                                    </Grid>
+                                    <section class="cognitive-memory-section">
+                                        <h3>Allowed providers</h3>
+                                        @if (modelProviderOptions.Count == 0)
+                                        {
+                                            <p class="cognitive-memory-muted">No chat providers are configured.</p>
+                                        }
+                                        else
+                                        {
+                                            <div class="cognitive-memory-provider-list">
+                                                @foreach (var provider in modelProviderOptions)
+                                                {
+                                                    <label class="cognitive-memory-provider-option" @key="provider.Id">
+                                                        <InputCheckbox @bind-Value="provider.IsAllowed" />
+                                                        <span class="cognitive-memory-provider-main">
+                                                            <strong>@provider.Name</strong>
+                                                            <small>@FormatLabel(provider.Kind) / @FirstNonEmpty(provider.DefaultModel, "no default model") / @(provider.IsEnabled ? "enabled" : "disabled")</small>
+                                                            @if (!string.IsNullOrWhiteSpace(provider.BaseUrl))
+                                                            {
+                                                                <small>@provider.BaseUrl</small>
+                                                            }
+                                                        </span>
+                                                        <span class="cognitive-memory-provider-badge">@(provider.IsLocal ? "Local" : "Remote")</span>
+                                                    </label>
+                                                }
+                                            </div>
+                                        }
+                                    </section>
+                                    <Button Text="Save model policy"
+                                            Icon="shield"
+                                            ButtonStyle="ButtonStyle.Primary"
+                                            Size="ButtonSize.Small"
+                                            Click="SaveAutomationSettingsAsync"
+                                            Disabled="@isBusy"
+                                            IsBusy="@isBusy"
+                                            data-testid="cognitive-memory-save-model-access" />
+                                </Stack>
+                            </SurfaceCard>
+
                             <SurfaceCard data-testid="cognitive-memory-manual-ingestion">
                                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="Manual ingestion" />
                                 <h2 class="cognitive-memory-card-title">Project and process sources</h2>

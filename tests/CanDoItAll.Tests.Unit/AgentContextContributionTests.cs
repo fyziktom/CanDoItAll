@@ -181,7 +181,7 @@ public sealed class AgentContextContributionTests
     {
         var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         var orchestrator = new RecordingRecallOrchestrator(projectId);
-        var contributor = new CognitiveMemoryAgentContextContributor(orchestrator);
+        var contributor = new CognitiveMemoryAgentContextContributor(orchestrator, CreateSettingsService());
 
         var result = await contributor.ContributeAsync(new AgentContextContributionRequest(
             CreateAgent(),
@@ -207,7 +207,7 @@ public sealed class AgentContextContributionTests
     {
         var projectId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
         var orchestrator = new RecordingRecallOrchestrator(projectId);
-        var contributor = new CognitiveMemoryAgentContextContributor(orchestrator);
+        var contributor = new CognitiveMemoryAgentContextContributor(orchestrator, CreateSettingsService());
 
         var result = await contributor.ContributeAsync(new AgentContextContributionRequest(
             CreateAgent(),
@@ -237,6 +237,89 @@ public sealed class AgentContextContributionTests
             "Which ClinicFlow instruction should be remembered for future product positioning, and what phrase must not be overgeneralized?",
             orchestrator.LastRequest?.Query);
         Assert.Contains("clinicflow-saas-s04.md#section-02-email-2-instruction", context, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Cognitive_memory_contributor_skips_remote_provider_when_local_only()
+    {
+        var projectId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        var orchestrator = new RecordingRecallOrchestrator(projectId);
+        var contributor = new CognitiveMemoryAgentContextContributor(
+            orchestrator,
+            CreateSettingsService(CognitiveMemoryModelAccessMode.LocalProvidersOnly));
+
+        var result = await contributor.ContributeAsync(new AgentContextContributionRequest(
+            CreateAgent(),
+            CreateProviderProfile(ProviderKind.OpenAi, "https://api.openai.com/v1"),
+            [
+                new AgentContextRequestMessage(
+                    AgentContextMessageRole.User,
+                    $"CognitiveMemoryProjectId: {projectId:D}\nWhat does the project remember?")
+            ],
+            new AgentContextContributionPolicy(
+                AgentContextExecutionMode.InteractiveChat,
+                SuppressApprovalRequirements: false,
+                WorkspaceScopeDescriptor.Organization("unit"))));
+
+        Assert.Equal(AgentContextContributionStatus.Skipped, result.Status);
+        Assert.Equal("provider-is-not-local", result.TraceMetadata["reason"]);
+        Assert.Equal(CognitiveMemoryModelAccessMode.LocalProvidersOnly.ToString(), result.TraceMetadata["modelAccessMode"]);
+        Assert.Null(orchestrator.LastRequest);
+    }
+
+    [Fact]
+    public async Task Cognitive_memory_contributor_does_not_treat_remote_ollama_as_local()
+    {
+        var projectId = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
+        var orchestrator = new RecordingRecallOrchestrator(projectId);
+        var contributor = new CognitiveMemoryAgentContextContributor(
+            orchestrator,
+            CreateSettingsService(CognitiveMemoryModelAccessMode.LocalProvidersOnly));
+
+        var result = await contributor.ContributeAsync(new AgentContextContributionRequest(
+            CreateAgent(),
+            CreateProviderProfile(ProviderKind.Ollama, "http://192.168.10.132:11434"),
+            [
+                new AgentContextRequestMessage(
+                    AgentContextMessageRole.User,
+                    $"CognitiveMemoryProjectId: {projectId:D}\nWhat does the project remember?")
+            ],
+            new AgentContextContributionPolicy(
+                AgentContextExecutionMode.InteractiveChat,
+                SuppressApprovalRequirements: false,
+                WorkspaceScopeDescriptor.Organization("unit"))));
+
+        Assert.Equal(AgentContextContributionStatus.Skipped, result.Status);
+        Assert.Equal("provider-is-not-local", result.TraceMetadata["reason"]);
+        Assert.Equal("False", result.TraceMetadata["providerIsLocal"]);
+        Assert.Null(orchestrator.LastRequest);
+    }
+
+    [Fact]
+    public async Task Cognitive_memory_contributor_allows_loopback_provider_when_local_only()
+    {
+        var projectId = Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee");
+        var orchestrator = new RecordingRecallOrchestrator(projectId);
+        var contributor = new CognitiveMemoryAgentContextContributor(
+            orchestrator,
+            CreateSettingsService(CognitiveMemoryModelAccessMode.LocalProvidersOnly));
+
+        var result = await contributor.ContributeAsync(new AgentContextContributionRequest(
+            CreateAgent(),
+            CreateProviderProfile(ProviderKind.OpenAi, "localhost:11434"),
+            [
+                new AgentContextRequestMessage(
+                    AgentContextMessageRole.User,
+                    $"CognitiveMemoryProjectId: {projectId:D}\nWhat does the project remember?")
+            ],
+            new AgentContextContributionPolicy(
+                AgentContextExecutionMode.InteractiveChat,
+                SuppressApprovalRequirements: false,
+                WorkspaceScopeDescriptor.Organization("unit"))));
+
+        Assert.Equal(AgentContextContributionStatus.Provided, result.Status);
+        Assert.Equal(projectId, orchestrator.LastRequest?.ProjectId);
+        Assert.Equal("True", result.TraceMetadata["providerIsLocal"]);
     }
 
     private static MafAgentContextContributionProvider CreateProvider(
@@ -281,12 +364,15 @@ public sealed class AgentContextContributionTests
             CreatedAtUtc: DateTimeOffset.UtcNow,
             UpdatedAtUtc: DateTimeOffset.UtcNow);
 
-    private static ProviderProfile CreateProviderProfile()
+    private static ProviderProfile CreateProviderProfile(
+        ProviderKind kind = ProviderKind.OpenAi,
+        string baseUrl = "https://api.openai.com/v1",
+        Guid? providerId = null)
         => new(
-            Guid.NewGuid(),
+            providerId ?? Guid.NewGuid(),
             "Unit Provider",
-            ProviderKind.OpenAi,
-            "https://api.openai.com/v1",
+            kind,
+            baseUrl,
             "OPENAI_API_KEY",
             "gpt-4.1",
             ProviderTransportKind.ChatCompletions,
@@ -300,6 +386,25 @@ public sealed class AgentContextContributionTests
             "Not checked",
             null,
             []);
+
+    private static ICognitiveMemoryAutomationSettingsService CreateSettingsService(
+        CognitiveMemoryModelAccessMode modelAccessMode = CognitiveMemoryModelAccessMode.AnyEnabledProvider,
+        Guid? defaultProviderProfileId = null,
+        IReadOnlyList<Guid>? allowedProviderProfileIds = null)
+        => new TestAutomationSettingsService(new CognitiveMemoryAutomationSettings(
+            CognitiveMemoryAutomationScheduleMode.ManualOnly,
+            "02:00",
+            30,
+            [],
+            AutoIngestProjectStructure: true,
+            AutoIngestProcessRuntime: true,
+            AutoConsolidateAfterIngestion: true,
+            modelAccessMode,
+            defaultProviderProfileId,
+            DefaultAgentId: null,
+            allowedProviderProfileIds ?? [],
+            UpdatedByActorId: "unit-test",
+            UpdatedAtUtc: DateTimeOffset.UnixEpoch));
 
     private static async Task<object> InvokeCreateCapabilityStateAsync(
         MafAgentRuntime runtime,
@@ -407,5 +512,16 @@ public sealed class AgentContextContributionTests
                 [],
                 []));
         }
+    }
+
+    private sealed class TestAutomationSettingsService(CognitiveMemoryAutomationSettings settings) : ICognitiveMemoryAutomationSettingsService
+    {
+        public ValueTask<CognitiveMemoryAutomationSettings> GetAsync(CancellationToken cancellationToken = default)
+            => ValueTask.FromResult(settings);
+
+        public ValueTask<CognitiveMemoryAutomationSettings> SaveAsync(
+            CognitiveMemoryAutomationSettingsUpdate update,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("Unit tests only read cognitive memory automation settings.");
     }
 }

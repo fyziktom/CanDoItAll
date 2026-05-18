@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.Common;
 using Microsoft.AspNetCore.Components;
@@ -25,6 +26,9 @@ public partial class CognitiveMemoryPage
     public ICognitiveMemoryExternalSourceIngestionService ExternalSourceIngestionService { get; set; } = default!;
 
     [Inject]
+    public IAgentFrameworkWorkspaceService AgentWorkspaceService { get; set; } = default!;
+
+    [Inject]
     public NotificationService NotificationService { get; set; } = default!;
 
     [SupplyParameterFromQuery]
@@ -46,6 +50,12 @@ public partial class CognitiveMemoryPage
     private bool autoIngestProjectStructure = true;
     private bool autoIngestProcessRuntime = true;
     private bool autoConsolidateAfterIngestion = true;
+    private CognitiveMemoryModelAccessMode modelAccessMode = CognitiveMemoryModelAccessMode.AnyEnabledProvider;
+    private string defaultProviderProfileIdText = string.Empty;
+    private string defaultAgentIdText = string.Empty;
+    private List<CognitiveMemoryProviderSelection> modelProviderOptions = [];
+    private IReadOnlyList<AgentDefinition> modelAgentOptions = [];
+    private string modelAccessStatus = "Provider policy not loaded.";
     private string manualSourceScopeText = string.Empty;
     private int manualSourceTake = 250;
     private string manualIngestionStatus = "Ready.";
@@ -134,6 +144,31 @@ public partial class CognitiveMemoryPage
             autoIngestProjectStructure = settings.AutoIngestProjectStructure;
             autoIngestProcessRuntime = settings.AutoIngestProcessRuntime;
             autoConsolidateAfterIngestion = settings.AutoConsolidateAfterIngestion;
+            modelAccessMode = settings.ModelAccessMode;
+            defaultProviderProfileIdText = settings.DefaultProviderProfileId?.ToString("D") ?? string.Empty;
+            defaultAgentIdText = settings.DefaultAgentId?.ToString("D") ?? string.Empty;
+
+            var providers = await AgentWorkspaceService.ListProvidersAsync(CancellationToken.None);
+            var allowedProviderIds = settings.AllowedProviderProfileIds.ToHashSet();
+            modelProviderOptions = providers
+                .Where(provider => provider.Purpose == ProviderProfilePurpose.Chat)
+                .OrderByDescending(provider => provider.IsEnabled)
+                .ThenBy(provider => provider.Kind)
+                .ThenBy(provider => provider.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(provider => new CognitiveMemoryProviderSelection(
+                    provider.Id,
+                    provider.Name,
+                    provider.Kind,
+                    provider.DefaultModel,
+                    provider.BaseUrl,
+                    provider.IsEnabled,
+                    CognitiveMemoryModelAccessPolicy.IsLocalProvider(provider),
+                    allowedProviderIds.Contains(provider.Id)))
+                .ToList();
+            modelAgentOptions = (await AgentWorkspaceService.ListAgentsAsync(includeTemplates: false, CancellationToken.None))
+                .OrderBy(agent => agent.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            modelAccessStatus = BuildModelAccessStatus(settings);
         }
         catch (Exception exception)
         {
@@ -258,9 +293,16 @@ public partial class CognitiveMemoryPage
                 autoIngestProjectStructure,
                 autoIngestProcessRuntime,
                 autoConsolidateAfterIngestion,
+                modelAccessMode,
+                ParseOptionalGuid(defaultProviderProfileIdText, "Default provider"),
+                ParseOptionalGuid(defaultAgentIdText, "Default agent"),
+                SelectedAllowedProviderProfileIds(),
                 OperatorActorId));
             scheduledLocalTimesText = string.Join(Environment.NewLine, settings.ScheduledLocalTimes);
-            NotificationService.Success("Memory settings saved", FormatLabel(settings.ScheduleMode));
+            defaultProviderProfileIdText = settings.DefaultProviderProfileId?.ToString("D") ?? string.Empty;
+            defaultAgentIdText = settings.DefaultAgentId?.ToString("D") ?? string.Empty;
+            modelAccessStatus = BuildModelAccessStatus(settings);
+            NotificationService.Success("Memory settings saved", $"{FormatLabel(settings.ScheduleMode)} / {FormatLabel(settings.ModelAccessMode)}");
         }
         catch (Exception exception)
         {
@@ -424,6 +466,35 @@ public partial class CognitiveMemoryPage
             .Split(['\r', '\n', ',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .ToList();
     }
+
+    private IReadOnlyList<Guid> SelectedAllowedProviderProfileIds()
+        => modelProviderOptions
+            .Where(provider => provider.IsAllowed)
+            .Select(provider => provider.Id)
+            .ToList();
+
+    private static Guid? ParseOptionalGuid(
+        string value,
+        string fieldName)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        return Guid.TryParse(value.Trim(), out var id) && id != Guid.Empty
+            ? id
+            : throw new InvalidOperationException($"{fieldName} must be a valid provider or agent id.");
+    }
+
+    private static string BuildModelAccessStatus(CognitiveMemoryAutomationSettings settings)
+        => settings.ModelAccessMode switch
+        {
+            CognitiveMemoryModelAccessMode.Disabled => "Cognitive Memory will not be injected into agent model calls.",
+            CognitiveMemoryModelAccessMode.LocalProvidersOnly => "Cognitive Memory context is limited to local providers.",
+            CognitiveMemoryModelAccessMode.SelectedProvidersOnly => "Cognitive Memory context is limited to the selected provider allow-list.",
+            _ => "Cognitive Memory context can be injected for any enabled provider."
+        };
 
     private Guid ResolveManualScopeId(MemorySourceKind sourceKind)
     {
@@ -1218,5 +1289,32 @@ public partial class CognitiveMemoryPage
         return normalized.Length <= maxLength
             ? normalized
             : $"{normalized[..Math.Max(0, maxLength - 1)]}...";
+    }
+
+    private sealed class CognitiveMemoryProviderSelection(
+        Guid id,
+        string name,
+        ProviderKind kind,
+        string defaultModel,
+        string baseUrl,
+        bool isEnabled,
+        bool isLocal,
+        bool isAllowed)
+    {
+        public Guid Id { get; } = id;
+
+        public string Name { get; } = name;
+
+        public ProviderKind Kind { get; } = kind;
+
+        public string DefaultModel { get; } = defaultModel;
+
+        public string BaseUrl { get; } = baseUrl;
+
+        public bool IsEnabled { get; } = isEnabled;
+
+        public bool IsLocal { get; } = isLocal;
+
+        public bool IsAllowed { get; set; } = isAllowed;
     }
 }

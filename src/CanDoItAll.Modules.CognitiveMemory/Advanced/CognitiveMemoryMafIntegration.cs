@@ -6,7 +6,8 @@ using CanDoItAll.AgentFramework.Models;
 namespace CanDoItAll.Modules.CognitiveMemory;
 
 public sealed class CognitiveMemoryAgentContextContributor(
-    ICognitiveMemoryRecallOrchestrator recallOrchestrator) : IAgentContextContributor
+    ICognitiveMemoryRecallOrchestrator recallOrchestrator,
+    ICognitiveMemoryAutomationSettingsService settingsService) : IAgentContextContributor
 {
     private static readonly Regex ProjectIdMarkerRegex = new(
         @"\b(?:CognitiveMemoryProjectId|ProjectId)\s*[:=]\s*(?<projectId>[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\b",
@@ -22,11 +23,23 @@ public sealed class CognitiveMemoryAgentContextContributor(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        var settings = await settingsService.GetAsync(cancellationToken);
+        var accessDecision = CognitiveMemoryModelAccessPolicy.Evaluate(settings, request.Provider);
+        if (!accessDecision.IsAllowed)
+        {
+            return AgentContextContributionResult.Skipped(BuildModelAccessTraceMetadata(
+                request.Provider,
+                settings,
+                accessDecision));
+        }
+
         if (!TryResolveProjectId(request, out var projectId))
         {
             return AgentContextContributionResult.Skipped(new Dictionary<string, string>
             {
-                ["reason"] = "project-scope-not-provided"
+                ["reason"] = "project-scope-not-provided",
+                ["modelAccessMode"] = settings.ModelAccessMode.ToString(),
+                ["providerProfileId"] = request.Provider.Id.ToString("D")
             });
         }
 
@@ -35,7 +48,9 @@ public sealed class CognitiveMemoryAgentContextContributor(
         {
             return AgentContextContributionResult.Skipped(new Dictionary<string, string>
             {
-                ["reason"] = "empty-query"
+                ["reason"] = "empty-query",
+                ["modelAccessMode"] = settings.ModelAccessMode.ToString(),
+                ["providerProfileId"] = request.Provider.Id.ToString("D")
             });
         }
 
@@ -80,7 +95,11 @@ public sealed class CognitiveMemoryAgentContextContributor(
                     ["traceId"] = result.TraceId.ToString("D"),
                     ["contextPackId"] = result.ContextPack.Id.Value.ToString("D"),
                     ["includedSections"] = result.ContextPack.Sections.Count.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                    ["queryLength"] = query.Length.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                    ["queryLength"] = query.Length.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    ["modelAccessMode"] = settings.ModelAccessMode.ToString(),
+                    ["providerProfileId"] = request.Provider.Id.ToString("D"),
+                    ["providerKind"] = request.Provider.Kind.ToString(),
+                    ["providerIsLocal"] = accessDecision.IsLocalProvider.ToString()
                 });
         }
         catch (InvalidOperationException exception)
@@ -92,6 +111,19 @@ public sealed class CognitiveMemoryAgentContextContributor(
             });
         }
     }
+
+    private static IReadOnlyDictionary<string, string> BuildModelAccessTraceMetadata(
+        ProviderProfile provider,
+        CognitiveMemoryAutomationSettings settings,
+        CognitiveMemoryModelAccessDecision decision)
+        => new Dictionary<string, string>
+        {
+            ["reason"] = decision.Reason,
+            ["modelAccessMode"] = settings.ModelAccessMode.ToString(),
+            ["providerProfileId"] = provider.Id.ToString("D"),
+            ["providerKind"] = provider.Kind.ToString(),
+            ["providerIsLocal"] = decision.IsLocalProvider.ToString()
+        };
 
     private static bool TryResolveProjectId(
         AgentContextContributionRequest request,

@@ -22,6 +22,14 @@ public enum CognitiveMemoryExternalSourceIngestionStatus
     Failed = 3
 }
 
+public enum CognitiveMemoryModelAccessMode
+{
+    AnyEnabledProvider = 0,
+    LocalProvidersOnly = 1,
+    SelectedProvidersOnly = 2,
+    Disabled = 3
+}
+
 public sealed record CognitiveMemoryAutomationSettings(
     CognitiveMemoryAutomationScheduleMode ScheduleMode,
     string NightlyLocalTime,
@@ -30,6 +38,10 @@ public sealed record CognitiveMemoryAutomationSettings(
     bool AutoIngestProjectStructure,
     bool AutoIngestProcessRuntime,
     bool AutoConsolidateAfterIngestion,
+    CognitiveMemoryModelAccessMode ModelAccessMode,
+    Guid? DefaultProviderProfileId,
+    Guid? DefaultAgentId,
+    IReadOnlyList<Guid> AllowedProviderProfileIds,
     string UpdatedByActorId,
     DateTimeOffset UpdatedAtUtc)
 {
@@ -41,6 +53,10 @@ public sealed record CognitiveMemoryAutomationSettings(
         AutoIngestProjectStructure: true,
         AutoIngestProcessRuntime: true,
         AutoConsolidateAfterIngestion: true,
+        CognitiveMemoryModelAccessMode.AnyEnabledProvider,
+        DefaultProviderProfileId: null,
+        DefaultAgentId: null,
+        AllowedProviderProfileIds: [],
         UpdatedByActorId: "system",
         UpdatedAtUtc: nowUtc);
 }
@@ -53,6 +69,10 @@ public sealed record CognitiveMemoryAutomationSettingsUpdate(
     bool AutoIngestProjectStructure,
     bool AutoIngestProcessRuntime,
     bool AutoConsolidateAfterIngestion,
+    CognitiveMemoryModelAccessMode ModelAccessMode,
+    Guid? DefaultProviderProfileId,
+    Guid? DefaultAgentId,
+    IReadOnlyList<Guid> AllowedProviderProfileIds,
     string UpdatedByActorId);
 
 public sealed record CognitiveMemoryExternalSourceIngestRequest(

@@ -496,6 +496,13 @@ internal static class CognitiveMemoryApi
             request.AutoIngestProjectStructure,
             request.AutoIngestProcessRuntime,
             request.AutoConsolidateAfterIngestion,
+            ParseEnum(
+                request.ModelAccessMode,
+                CognitiveMemoryModelAccessMode.AnyEnabledProvider,
+                nameof(request.ModelAccessMode)),
+            request.DefaultProviderProfileId,
+            request.DefaultAgentId,
+            request.AllowedProviderProfileIds ?? [],
             NormalizeActorId(request.ActorId));
     }
 
@@ -1049,6 +1056,14 @@ internal sealed class CognitiveMemoryAutomationSettingsApiRequest
     public bool AutoIngestProcessRuntime { get; set; } = true;
 
     public bool AutoConsolidateAfterIngestion { get; set; } = true;
+
+    public string? ModelAccessMode { get; set; }
+
+    public Guid? DefaultProviderProfileId { get; set; }
+
+    public Guid? DefaultAgentId { get; set; }
+
+    public IReadOnlyList<Guid>? AllowedProviderProfileIds { get; set; }
 
     public string? ActorId { get; set; }
 }

@@ -132,6 +132,54 @@
     overflow-wrap: anywhere;
 }
 
+::deep .cognitive-memory-provider-list {
+    display: grid;
+    gap: 0.55rem;
+}
+
+::deep .cognitive-memory-provider-option {
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.7rem;
+    min-width: 0;
+    padding: 0.7rem 0.8rem;
+    border: 1px solid rgb(226 232 240);
+    border-radius: 0.5rem;
+    background: rgb(248 250 252);
+}
+
+::deep .cognitive-memory-provider-main {
+    display: grid;
+    gap: 0.2rem;
+    min-width: 0;
+}
+
+::deep .cognitive-memory-provider-main strong,
+::deep .cognitive-memory-provider-main small {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+::deep .cognitive-memory-provider-main strong {
+    color: rgb(15 23 42);
+    font-size: 0.875rem;
+}
+
+::deep .cognitive-memory-provider-main small {
+    color: rgb(100 116 139);
+    font-size: 0.75rem;
+    line-height: 1.4;
+}
+
+::deep .cognitive-memory-provider-badge {
+    white-space: nowrap;
+    color: rgb(51 65 85);
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
 ::deep .cognitive-memory-notes {
     min-height: 5.5rem;
     resize: vertical;
@@ -256,5 +304,13 @@
 
     ::deep .cognitive-memory-file-drop input[type="file"] {
         width: 100%;
+    }
+
+    ::deep .cognitive-memory-provider-option {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    ::deep .cognitive-memory-provider-badge {
+        grid-column: 2;
     }
 }

@@ -12,6 +12,7 @@ internal sealed class CognitiveMemoryAutomationSettingsRecordConfiguration : IEn
         builder.Property(settings => settings.SettingsKey).HasMaxLength(80).IsRequired();
         builder.Property(settings => settings.NightlyLocalTime).HasMaxLength(16).IsRequired();
         builder.Property(settings => settings.ScheduledLocalTimes).HasColumnType("TEXT");
+        builder.Property(settings => settings.AllowedProviderProfileIds).HasColumnType("TEXT");
         builder.Property(settings => settings.UpdatedByActorId).HasMaxLength(160).IsRequired();
         builder.Property(settings => settings.ConcurrencyToken).IsConcurrencyToken();
         builder.HasIndex(settings => settings.SettingsKey).IsUnique();

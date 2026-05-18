@@ -22,6 +22,14 @@ public sealed class CognitiveMemoryAutomationSettingsRecord : IHasConcurrencyTok
 
     public bool AutoConsolidateAfterIngestion { get; set; } = true;
 
+    public CognitiveMemoryModelAccessMode ModelAccessMode { get; set; } = CognitiveMemoryModelAccessMode.AnyEnabledProvider;
+
+    public Guid? DefaultProviderProfileId { get; set; }
+
+    public Guid? DefaultAgentId { get; set; }
+
+    public string AllowedProviderProfileIds { get; set; } = string.Empty;
+
     public string UpdatedByActorId { get; set; } = "system";
 
     public DateTimeOffset CreatedAtUtc { get; set; }

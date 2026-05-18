@@ -1252,6 +1252,10 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("AllowedProviderProfileIds")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<bool>("AutoConsolidateAfterIngestion")
                         .HasColumnType("INTEGER");
 
@@ -1268,7 +1272,16 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("DefaultAgentId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("DefaultProviderProfileId")
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("IdleMinutes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ModelAccessMode")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("NightlyLocalTime")

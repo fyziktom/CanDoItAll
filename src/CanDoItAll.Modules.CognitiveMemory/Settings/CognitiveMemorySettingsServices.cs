@@ -58,6 +58,10 @@ public sealed class CognitiveMemoryAutomationSettingsService(
         record.AutoIngestProjectStructure = update.AutoIngestProjectStructure;
         record.AutoIngestProcessRuntime = update.AutoIngestProcessRuntime;
         record.AutoConsolidateAfterIngestion = update.AutoConsolidateAfterIngestion;
+        record.ModelAccessMode = update.ModelAccessMode;
+        record.DefaultProviderProfileId = update.DefaultProviderProfileId;
+        record.DefaultAgentId = update.DefaultAgentId;
+        record.AllowedProviderProfileIds = SerializeProviderProfileIds(update.AllowedProviderProfileIds);
         record.UpdatedByActorId = CognitiveMemoryGuard.EnsureText(update.UpdatedByActorId, nameof(update.UpdatedByActorId));
         record.UpdatedAtUtc = nowUtc;
         record.ConcurrencyToken = Guid.NewGuid();
@@ -76,6 +80,10 @@ public sealed class CognitiveMemoryAutomationSettingsService(
             record.AutoIngestProjectStructure,
             record.AutoIngestProcessRuntime,
             record.AutoConsolidateAfterIngestion,
+            record.ModelAccessMode,
+            record.DefaultProviderProfileId,
+            record.DefaultAgentId,
+            DeserializeProviderProfileIds(record.AllowedProviderProfileIds),
             record.UpdatedByActorId,
             record.UpdatedAtUtc);
     }
@@ -91,6 +99,15 @@ public sealed class CognitiveMemoryAutomationSettingsService(
         foreach (var scheduledTime in update.ScheduledLocalTimes)
         {
             _ = NormalizeLocalTime(scheduledTime, nameof(update.ScheduledLocalTimes));
+        }
+
+        if (update.ModelAccessMode == CognitiveMemoryModelAccessMode.SelectedProvidersOnly &&
+            update.DefaultProviderProfileId is null &&
+            NormalizeProviderProfileIds(update.AllowedProviderProfileIds).Count == 0)
+        {
+            throw new ArgumentException(
+                "Selected provider access requires a default provider or at least one allowed provider.",
+                nameof(update.AllowedProviderProfileIds));
         }
     }
 
@@ -124,6 +141,35 @@ public sealed class CognitiveMemoryAutomationSettingsService(
             .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .ToList();
     }
+
+    private static string SerializeProviderProfileIds(IReadOnlyList<Guid> values)
+    {
+        return string.Join(
+            "\n",
+            NormalizeProviderProfileIds(values).Select(value => value.ToString("D")));
+    }
+
+    private static IReadOnlyList<Guid> DeserializeProviderProfileIds(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return [];
+        }
+
+        return value
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(value => Guid.TryParse(value, out var providerId) ? providerId : Guid.Empty)
+            .Where(providerId => providerId != Guid.Empty)
+            .Distinct()
+            .ToList();
+    }
+
+    private static IReadOnlyList<Guid> NormalizeProviderProfileIds(IReadOnlyList<Guid> values)
+        => values
+            .Where(providerId => providerId != Guid.Empty)
+            .Distinct()
+            .OrderBy(providerId => providerId)
+            .ToList();
 }
 
 public sealed class CognitiveMemoryExternalSourceIngestionService(
