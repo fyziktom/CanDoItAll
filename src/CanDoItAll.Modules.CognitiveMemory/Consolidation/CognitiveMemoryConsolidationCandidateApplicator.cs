@@ -69,8 +69,10 @@ public sealed class CognitiveMemoryConsolidationCandidateApplicator(
             throw new InvalidOperationException($"Consolidation candidate '{candidate.Id:D}' cannot be applied without evidence anchors.");
         }
 
-        var memoryRecord = CreateMemoryRecord(candidate, payload, sourceItem, evidenceAnchors.Count, validationState, stabilityState, nowUtc);
-        var claim = CreateClaim(memoryRecord, candidate, payload, validationState, stabilityState, nowUtc);
+        var contextFrame = CreateContextFrame(candidate, payload, sourceItem, nowUtc);
+        var entity = CreateEntity(candidate, payload, sourceItem, contextFrame, nowUtc);
+        var memoryRecord = CreateMemoryRecord(candidate, payload, sourceItem, evidenceAnchors.Count, contextFrame, validationState, stabilityState, nowUtc);
+        var claim = CreateClaim(memoryRecord, candidate, payload, contextFrame, validationState, stabilityState, nowUtc);
         var sourceLink = CreateSourceLink(memoryRecord, sourceItem, evidenceAnchors[0], nowUtc);
         var recordEvidenceLinks = evidenceAnchors
             .Select(anchor => CreateRecordEvidenceLink(memoryRecord, anchor, payload, nowUtc))
@@ -85,6 +87,8 @@ public sealed class CognitiveMemoryConsolidationCandidateApplicator(
             throw new InvalidOperationException($"Generated cognitive memory record is invalid: {string.Join(", ", validation.Errors.Select(error => error.Code))}.");
         }
 
+        dbContext.Add(contextFrame);
+        dbContext.Add(entity);
         dbContext.Add(memoryRecord);
         dbContext.Add(claim);
         dbContext.Add(sourceLink);
@@ -128,6 +132,7 @@ public sealed class CognitiveMemoryConsolidationCandidateApplicator(
         CognitiveMemoryConsolidationCandidatePayload payload,
         CognitiveMemorySourceItemRecord sourceItem,
         int evidenceAnchorCount,
+        CognitiveMemoryContextFrameRecord contextFrame,
         CognitiveMemoryValidationState validationState,
         CognitiveMemoryStabilityState stabilityState,
         DateTimeOffset nowUtc)
@@ -155,6 +160,7 @@ public sealed class CognitiveMemoryConsolidationCandidateApplicator(
             SourceEvidenceCount = 1,
             EvidenceAnchorCount = evidenceAnchorCount,
             GeneratedReason = TrimText(payload.Reason, MaximumGeneratedReasonLength),
+            PrimaryContextFrameId = contextFrame.Id,
             ConfidenceBucket = candidate.ScoreBucket,
             ActivationBucket = candidate.ScoreBucket,
             AccessLevel = sourceItem.AccessLevel,
@@ -169,6 +175,7 @@ public sealed class CognitiveMemoryConsolidationCandidateApplicator(
         CognitiveMemoryRecord memoryRecord,
         CognitiveMemoryConsolidationCandidateRecord candidate,
         CognitiveMemoryConsolidationCandidatePayload payload,
+        CognitiveMemoryContextFrameRecord contextFrame,
         CognitiveMemoryValidationState validationState,
         CognitiveMemoryStabilityState stabilityState,
         DateTimeOffset nowUtc)
@@ -182,6 +189,7 @@ public sealed class CognitiveMemoryConsolidationCandidateApplicator(
             SubjectKey = TrimText(memoryRecord.TopicKey, MaximumTopicKeyLength),
             PredicateKey = TrimText(EvidencePredicateKey, MaximumPredicateKeyLength),
             ObjectKey = TrimText(candidate.SourceContentHash, MaximumTopicKeyLength),
+            PrimaryContextFrameId = contextFrame.Id,
             CurrentBeliefState = validationState == CognitiveMemoryValidationState.Approved
                 ? CognitiveMemoryBeliefStateKind.Supported
                 : CognitiveMemoryBeliefStateKind.Unexamined,
@@ -194,6 +202,48 @@ public sealed class CognitiveMemoryConsolidationCandidateApplicator(
             UpdatedAtUtc = nowUtc,
             ConcurrencyToken = Guid.NewGuid()
         };
+
+    private static CognitiveMemoryContextFrameRecord CreateContextFrame(
+        CognitiveMemoryConsolidationCandidateRecord candidate,
+        CognitiveMemoryConsolidationCandidatePayload payload,
+        CognitiveMemorySourceItemRecord sourceItem,
+        DateTimeOffset nowUtc)
+        => new()
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = candidate.ProjectId ?? sourceItem.ProjectId,
+            FrameKind = ResolveContextFrameKind(sourceItem),
+            DisplayName = TrimText(string.IsNullOrWhiteSpace(payload.Title) ? sourceItem.Title : payload.Title, MaximumTitleLength),
+            ConfidenceBucket = candidate.ScoreBucket,
+            DisplayConfidenceScore = candidate.DisplayPriorityProjection,
+            CreatedAtUtc = nowUtc,
+            UpdatedAtUtc = nowUtc,
+            ConcurrencyToken = Guid.NewGuid()
+        };
+
+    private static CognitiveMemoryEntityRecord CreateEntity(
+        CognitiveMemoryConsolidationCandidateRecord candidate,
+        CognitiveMemoryConsolidationCandidatePayload payload,
+        CognitiveMemorySourceItemRecord sourceItem,
+        CognitiveMemoryContextFrameRecord contextFrame,
+        DateTimeOffset nowUtc)
+    {
+        var name = TrimText(string.IsNullOrWhiteSpace(payload.Title) ? sourceItem.Title : payload.Title, MaximumTitleLength);
+        return new CognitiveMemoryEntityRecord
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = candidate.ProjectId ?? sourceItem.ProjectId,
+            EntityKind = ResolveEntityKind(sourceItem, payload.CandidateKind),
+            CanonicalName = string.IsNullOrWhiteSpace(name) ? "Consolidated memory" : name,
+            CanonicalNameKey = CreateTopicKey(sourceItem, payload.CandidateKind),
+            PrimaryContextFrameId = contextFrame.Id,
+            ConfidenceBucket = candidate.ScoreBucket,
+            DisplayConfidenceScore = candidate.DisplayPriorityProjection,
+            CreatedAtUtc = nowUtc,
+            UpdatedAtUtc = nowUtc,
+            ConcurrencyToken = Guid.NewGuid()
+        };
+    }
 
     private static CognitiveMemorySourceLinkRecord CreateSourceLink(
         CognitiveMemoryRecord memoryRecord,
@@ -326,6 +376,33 @@ public sealed class CognitiveMemoryConsolidationCandidateApplicator(
             ? CognitiveMemoryRiskLevel.Medium
             : CognitiveMemoryRiskLevel.Low;
     }
+
+    private static CognitiveMemoryContextFrameKind ResolveContextFrameKind(CognitiveMemorySourceItemRecord sourceItem)
+        => sourceItem.SourceSystem switch
+        {
+            "ProcessRuntime" => CognitiveMemoryContextFrameKind.Process,
+            "WorkbenchProjectStructure" or "ProjectStructure" => CognitiveMemoryContextFrameKind.Project,
+            "ExternalFile" or "ExternalWebsite" => CognitiveMemoryContextFrameKind.SourceTrust,
+            _ => CognitiveMemoryContextFrameKind.Composite
+        };
+
+    private static CognitiveMemoryEntityKind ResolveEntityKind(
+        CognitiveMemorySourceItemRecord sourceItem,
+        CognitiveMemoryConsolidationCandidateKind candidateKind)
+        => candidateKind switch
+        {
+            CognitiveMemoryConsolidationCandidateKind.Procedure => CognitiveMemoryEntityKind.ProcedureTarget,
+            CognitiveMemoryConsolidationCandidateKind.Decision => CognitiveMemoryEntityKind.BusinessObject,
+            CognitiveMemoryConsolidationCandidateKind.Episode => sourceItem.SourceSystem == "ProcessRuntime"
+                ? CognitiveMemoryEntityKind.Process
+                : CognitiveMemoryEntityKind.Project,
+            _ => sourceItem.SourceSystem switch
+            {
+                "ExternalFile" or "ExternalWebsite" => CognitiveMemoryEntityKind.Artifact,
+                "WorkbenchProjectStructure" or "ProjectStructure" => CognitiveMemoryEntityKind.Project,
+                _ => CognitiveMemoryEntityKind.TechnologyTopic
+            }
+        };
 
     private static string CreateTopicKey(
         CognitiveMemorySourceItemRecord sourceItem,

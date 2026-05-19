@@ -33,6 +33,8 @@ flowchart LR
     Infrastructure --> ModelRegistry["AppDbContextModelRegistry.ConfigureAssemblies"]
     Program --> Composition["AddCanDoItAllRuntimeModules"]
     Composition --> Qdrant["AddConfiguredQdrantRagDriver when enabled"]
+    Composition --> LocalEmbedding["Local hashing embedding generator when Qdrant enabled"]
+    Composition --> ProjectionDefaults["CognitiveMemoryProjectionOptions defaults"]
     Composition --> Module["AddCognitiveMemoryModule"]
     Module --> Services["Cognitive Memory services"]
     Module --> Operations["Projection rebuild, automation runner, and retention cleanup"]
@@ -49,7 +51,7 @@ flowchart LR
 | `CognitiveMemorySourceIngestionService` | `ICognitiveMemorySourceIngestionService` | Reads source snapshots and persists source records, evidence, layout, graph, context, tombstone, and failure state. |
 | `CognitiveMemoryExternalSourceIngestionService` | `ICognitiveMemoryExternalSourceIngestionService` | Ingests uploaded files and web links into source manifests/items/evidence. |
 | `CognitiveMemoryConsolidationEngine` | `ICognitiveMemoryConsolidationEngine` | Processes source items into candidates, mutation commands, review rows, canonical memory records, and projection invalidations. |
-| `CognitiveMemoryConsolidationCandidateApplicator` | `ICognitiveMemoryConsolidationCandidateApplicator` | Materializes approved or machine-generated candidates into memory records, claims, source links, and evidence links. |
+| `CognitiveMemoryConsolidationCandidateApplicator` | `ICognitiveMemoryConsolidationCandidateApplicator` | Materializes approved or machine-generated candidates into context frames, entities, memory records, claims, source links, and evidence links. |
 | `CognitiveMemoryRecallOrchestrator` | `ICognitiveMemoryRecallOrchestrator` | Builds recall candidates from lexical, optional vector, workspace, signal, graph, and source-detail channels. The orchestration is split across partial files by channel, loading, scoring, context-pack building, persistence, internal types, and mapping. |
 | `CognitiveMemoryReviewUiService` | `ICognitiveMemoryReviewUiService` | Builds operator snapshots and applies review decisions through split summary, preview, advanced, trace, and health query files. |
 | `CognitiveMemoryAgentContextContributor` | `IAgentContextContributor` | Adds agent-facing Cognitive Memory context packages to AgentFramework requests when provider policy and project scope allow it, and fails process-critical modes when required memory is unavailable. |
@@ -57,7 +59,7 @@ flowchart LR
 | `CognitiveMemoryTemporalReplayService` | `ICognitiveMemoryTemporalEpisodeService`, `ICognitiveMemoryReplayScheduler` | Records temporal episodes and replay jobs. |
 | `CognitiveMemoryProcedureSkillService` | `ICognitiveMemoryProcedureSkillMemoryService`, `ICognitiveMemorySimulationSandboxService` | Stores procedure skills and simulations. |
 | `CognitiveMemoryAdvancedServices` classes | Several advanced interfaces | Own probing, self-model, calibration, self-regulation, answer gate, professor review, learning proposals, cross-project, and distributed coordination. |
-| `CognitiveMemoryProjectionRebuildService` | `ICognitiveMemoryProjectionRebuildService` | Rebuilds stale/failed projection records from durable memory, source links, evidence anchors, claims, context frames, entity ids, and context-boundary policies through projection lifecycle. |
+| `CognitiveMemoryProjectionRebuildService` | `ICognitiveMemoryProjectionRebuildService` | Rebuilds stale/failed projection records and projects missing durable records from memory, source links, evidence anchors, claims, context frames, entity ids, and context-boundary policies through projection lifecycle. |
 | `CognitiveMemoryScheduledAutomationRunner` | `ICognitiveMemoryScheduledAutomationRunner` | Honors automation schedule mode for explicit UI/API runs, triggers configured ingestion, and runs consolidation after successful ingestion when enabled. |
 | `CognitiveMemoryRetentionCleanupService` | `ICognitiveMemoryRetentionCleanupService` | Deletes old operational rows through an explicit dry-run-first request while preserving canonical memory, source, evidence, and projection truth. |
 
@@ -111,7 +113,7 @@ The module currently has 109 entity record classes. Provider-specific migrations
 - SQLite migrations: 15 Cognitive Memory migrations.
 - PostgreSQL migrations: 15 Cognitive Memory migrations.
 
-This confirms the implementation is durable and provider-aware, but the schema should still be treated as alpha until the beta stabilization review closes.
+This confirms the implementation is durable and provider-aware. The schema is beta-covered for the core source/consolidation/projection/recall path, while advanced control surfaces still need P2/P3 stabilization before being treated as a public external contract.
 
 ## Test Surface
 

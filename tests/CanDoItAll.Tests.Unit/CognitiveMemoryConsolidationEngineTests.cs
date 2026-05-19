@@ -75,6 +75,8 @@ public sealed class CognitiveMemoryConsolidationEngineTests
         var mutation = Assert.Single(await dbContext.Set<CognitiveMemoryMutationCommandRecord>().ToListAsync());
         var memoryRecord = Assert.Single(await dbContext.Set<CognitiveMemoryRecord>().ToListAsync());
         var claim = Assert.Single(await dbContext.Set<CognitiveMemoryClaimRecord>().ToListAsync());
+        var contextFrame = Assert.Single(await dbContext.Set<CognitiveMemoryContextFrameRecord>().ToListAsync());
+        var entity = Assert.Single(await dbContext.Set<CognitiveMemoryEntityRecord>().ToListAsync());
         var sourceLink = Assert.Single(await dbContext.Set<CognitiveMemorySourceLinkRecord>().ToListAsync());
         var recordEvidence = Assert.Single(await dbContext.Set<CognitiveMemoryRecordEvidenceAnchorRecord>().ToListAsync());
         var claimEvidence = Assert.Single(await dbContext.Set<CognitiveMemoryClaimEvidenceLinkRecord>().ToListAsync());
@@ -90,6 +92,9 @@ public sealed class CognitiveMemoryConsolidationEngineTests
         Assert.False(mutation.RequiresHumanReview);
         Assert.Equal(CognitiveMemoryValidationState.MachineGenerated, memoryRecord.ValidationState);
         Assert.Equal(CognitiveMemoryStabilityState.Experimental, memoryRecord.StabilityState);
+        Assert.Equal(contextFrame.Id, memoryRecord.PrimaryContextFrameId);
+        Assert.Equal(contextFrame.Id, claim.PrimaryContextFrameId);
+        Assert.Equal(contextFrame.Id, entity.PrimaryContextFrameId);
         Assert.Equal(memoryRecord.Id, claim.MemoryRecordId);
         Assert.Equal(memoryRecord.Id, sourceLink.MemoryRecordId);
         Assert.Equal(memoryRecord.Id, recordEvidence.MemoryRecordId);

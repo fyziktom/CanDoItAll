@@ -69,14 +69,18 @@ internal static partial class CognitiveMemoryApi
                   "query": "Which deployment context applies to this task?",
                   "intent": "SourceLookup",
                   "mode": "FocusedTaskContext",
+                  "projectionCollectionName": "candoitall-knowledge",
+                  "projectionProfileId": "qdrant-default-v1",
+                  "embeddingProfileId": "local-hashing-v1:dimension=384",
                   "budget": {
                     "coarseCandidateLimit": 24,
+                    "vectorResultLimit": 12,
                     "focusLimit": 8,
                     "contextCharacterBudget": 12000
                   }
                 }
                 """,
-                "Returns a typed recall result with trace, selected records, source references, and budget decisions."),
+                "Returns a typed recall result with trace, selected records, source references, vector stage state, and budget decisions."),
             new(
                 "Ingest external web link",
                 "POST",
@@ -97,10 +101,17 @@ internal static partial class CognitiveMemoryApi
                 {
                   "projectId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
                   "take": 50,
-                  "actorId": "operator:projection-rebuild"
+                  "actorId": "operator:projection-rebuild",
+                  "collectionName": "candoitall-knowledge",
+                  "projectMissingRecords": true,
+                  "projectionProfileId": "qdrant-default-v1",
+                  "embeddingProfileId": "local-hashing-v1:dimension=384",
+                  "targetProviderName": "qdrant",
+                  "projectionStoreKind": "Qdrant",
+                  "vectorDimensions": 384
                 }
                 """,
-                "Rebuilds projection records from durable memory inputs and returns projected, failed, skipped, and warning counts."),
+                "Rebuilds stale projection records and can project missing durable memory records when provider options are supplied."),
             new(
                 "Run explicit automation pass",
                 "POST",
@@ -159,9 +170,9 @@ internal static partial class CognitiveMemoryApi
         new("GET", "/snapshot", "GetCognitiveMemorySnapshot", "Review", "Returns the operator review UI snapshot."),
         new("POST", "/sources/ingest", "IngestCognitiveMemorySource", "Source", "Ingests typed internal source snapshots."),
         new("POST", "/consolidation/runs", "RunCognitiveMemoryConsolidation", "Consolidation", "Runs consolidation over ingested sources."),
-        new("POST", "/recall", "RecallCognitiveMemoryContext", "Recall", "Builds a recall context pack for a query."),
+        new("POST", "/recall", "RecallCognitiveMemoryContext", "Recall", "Builds a recall context pack for a query with optional vector projection settings."),
         new("POST", "/review-items/{reviewItemId}/decisions", "DecideCognitiveMemoryReviewItem", "Review", "Applies a concurrency-checked review decision."),
-        new("POST", "/projections/rebuild", "RebuildCognitiveMemoryProjections", "Operations", "Rebuilds stale or failed projections."),
+        new("POST", "/projections/rebuild", "RebuildCognitiveMemoryProjections", "Operations", "Rebuilds stale/failed projections and can project missing durable memory records."),
         new("POST", "/automation/run", "RunCognitiveMemoryScheduledAutomation", "Operations", "Runs configured automation explicitly."),
         new("POST", "/retention/cleanup", "RunCognitiveMemoryRetentionCleanup", "Operations", "Runs explicit retention cleanup with dry-run support."),
         new("POST", "/probes/sessions", "StartCognitiveMemoryProbeSession", "Probe", "Starts a probing session."),

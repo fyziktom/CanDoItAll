@@ -5,6 +5,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.AgentFramework.Rag.Driver.Models;
 using CanDoItAll.AgentFramework.Rag.Qdrant.DependencyInjection;
+using CanDoItAll.AgentFramework.SemanticCompletion.Driver.Embeddings;
 using CanDoItAll.Modules.Activity;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Automation;
@@ -27,6 +28,7 @@ using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -83,10 +85,36 @@ public static class RuntimeHostServiceCollectionExtensions
 
         var collectionName = section["CollectionName"];
         var vectorSize = section.GetValue<int?>("VectorSize") ?? 384;
+        var effectiveCollectionName = string.IsNullOrWhiteSpace(collectionName)
+            ? "candoitall-knowledge"
+            : collectionName.Trim();
+        var embeddingProfileId = string.IsNullOrWhiteSpace(section["EmbeddingProfileId"])
+            ? $"local-hashing-v1:dimension={vectorSize}"
+            : section["EmbeddingProfileId"]!.Trim();
+        var projectionProfileId = string.IsNullOrWhiteSpace(section["ProjectionProfileId"])
+            ? "qdrant-default-v1"
+            : section["ProjectionProfileId"]!.Trim();
         var grpcPort = section.GetValue<int?>("GrpcPort") ??
                        section.GetValue<int?>("Port") ??
                        6334;
         var distance = ReadQdrantDistance(section["Distance"]);
+
+        services.TryAddSingleton<IAgentTextEmbeddingGenerator>(_ =>
+            new LocalHashingAgentTextEmbeddingGenerator(new LocalHashingAgentTextEmbeddingOptions
+            {
+                Dimension = vectorSize,
+                ProfileId = embeddingProfileId
+            }));
+        services.Configure<CognitiveMemoryProjectionOptions>(options =>
+        {
+            options.Enabled = true;
+            options.CollectionName = effectiveCollectionName;
+            options.ProjectionProfileId = projectionProfileId;
+            options.EmbeddingProfileId = embeddingProfileId;
+            options.TargetProviderName = RagDriverProviderNames.Qdrant;
+            options.ProjectionStoreKind = CognitiveMemoryProjectionStoreKind.Qdrant;
+            options.VectorDimensions = vectorSize;
+        });
 
         services.AddQdrantRagDriver(
             configureQdrant: options =>
@@ -108,9 +136,7 @@ public static class RuntimeHostServiceCollectionExtensions
             {
                 options.DefaultCollection = new RagCollectionOptions
                 {
-                    CollectionName = string.IsNullOrWhiteSpace(collectionName)
-                        ? "candoitall-knowledge"
-                        : collectionName.Trim(),
+                    CollectionName = effectiveCollectionName,
                     VectorSize = vectorSize,
                     Distance = distance
                 };

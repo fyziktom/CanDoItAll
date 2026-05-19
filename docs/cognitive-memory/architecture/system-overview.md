@@ -21,7 +21,7 @@ architecture-beta
     service files(disk)[External Files and Links] in sources
     service appdb(database)[AppDbContext Profile] in stores
     service rag(database)[Qdrant or RAG Projection] in projections
-    service semantic(server)[SemanticCompletion] in projections
+    service semantic(server)[SemanticCompletion or local hashing embeddings] in projections
     service maf(server)[AgentFramework MAF] in host
 
     browser:R -- L:page
@@ -80,6 +80,7 @@ flowchart TB
     Recall --> Workspace["Workspace service and attention router"]
     Recall --> ProjectionAdapter["Optional RAG projection adapter"]
     ProjectionRebuild --> ProjectionLifecycle["Projection lifecycle service"]
+    ProjectionRebuild --> MissingRecords["Projection-ready durable records without projection rows"]
     ProjectionRebuild --> AppDb
     ProjectionLifecycle --> ProjectionAdapter
     AutomationRunner --> Settings
@@ -104,11 +105,11 @@ flowchart TB
 
 - The durable memory system is the relational model in `AppDbContext`.
 - Qdrant/RAG is a rebuildable projection, not authoritative storage.
-- SemanticCompletion is an adapter-backed embedding/ranking/classification utility, not the memory model.
+- SemanticCompletion or the configured deterministic local hashing provider supplies embeddings for projection/recall. Neither is the memory model.
 - Generated summaries are not raw source truth. They must remain linked to source items and evidence anchors.
 - MAF receives rendered agent-facing context packages through `IAgentContextContributor`; it does not own Cognitive Memory state.
 - The HTTP API has a legacy compatibility surface and an additive `/api/cognitive-memory/v1` surface with contract metadata.
-- Projection rebuild is explicit service/API work over durable memory. It should not be mistaken for canonical truth mutation.
+- Projection rebuild is explicit service/API work over durable memory. It can rebuild stale/failed rows or project missing durable records when projection settings are explicit. It should not be mistaken for canonical truth mutation.
 - Scheduled automation execution is explicit service/API work today. No hosted cognitive-memory scheduler owns background mutation.
 - Retention cleanup is explicit dry-run-first service/API work over operational rows. It must not delete canonical memory/source/evidence truth.
 - Operator audit is a read model over mutation commands, audit events, claim state, evidence anchors, projection failures, and retention cleanup runs. It must not expose raw mutation payload JSON.
@@ -121,7 +122,7 @@ flowchart TB
 | Blazor UI | `/cognitive-memory`, `/memory` | Operator dashboard, probes, settings, sources, review queue, traces, health, self-regulation, scale. |
 | HTTP API | `/api/cognitive-memory/*`, `/api/cognitive-memory/v1/*` | Agent/API control surface for ingestion, review, recall, probes, learning, distributed jobs, retention, and contract metadata. |
 | MAF context | `cognitive-memory.context` | Optional AgentFramework context contributor for project-scoped recall context. |
-| Projection rebuild API | `/api/cognitive-memory/projections/rebuild` | Explicit rebuild path for stale or failed projection rows. |
+| Projection rebuild API | `/api/cognitive-memory/projections/rebuild` | Explicit rebuild path for stale/failed projection rows and missing durable records. |
 | Automation run API | `/api/cognitive-memory/automation/run` | Explicit run path for configured schedule-mode ingestion and consolidation. |
 | Retention cleanup API | `/api/cognitive-memory/retention/cleanup` | Explicit dry-run-first cleanup path for old operational traces and jobs. |
 | Source snapshots | `IProjectStructureSourceSnapshotProvider`, `IProcessRuntimeEvidenceSourceProvider`, `IWorkflowRuntimeEvidenceSourceProvider` | Read-only source boundaries for ingestion. |
