@@ -5,7 +5,7 @@
 - Existing public contracts should stay source-compatible unless tests prove a safe evolution.
 - Focused partial/service splits are acceptable for P0 when they reduce active file risk without changing behavior.
 - New projection and automation operations can use existing durable records and return explicit summaries without adding migrations.
-- Browser proof is only mandatory if rendered Blazor behavior changes.
+- Browser proof is mandatory when rendered Blazor behavior changes; the continuation tab split triggered that proof.
 
 ## Critical Path Risks
 
@@ -17,9 +17,9 @@
 ## Validation Risks
 
 - Full solution tests may be expensive; targeted Cognitive Memory tests are required at minimum.
-- Projection rebuild behavior depends on optional projection adapter/provider state, so tests must cover success and failure through fakes.
-- Browser validation may need a running app if UI markup changes.
-- Mechanical file splits can pass tests but still leave some maintainability debt; docs must be honest about remaining file sizes.
+- Projection rebuild behavior depends on optional projection adapter/provider state, so tests must cover success and failure through fakes and adapter-backed writes.
+- Browser validation needs a running app when UI markup changes.
+- Mechanical file splits can pass tests but still leave some maintainability debt; docs must distinguish closed P0 scope from beta hardening file-size work.
 
 ## Reopen Triggers
 

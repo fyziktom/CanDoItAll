@@ -44,12 +44,20 @@ dotnet build src\CanDoItAll.Web\CanDoItAll.Web.csproj --no-restore -m:1 --verbos
 
 Results:
 
-- Unit Cognitive Memory and agent-context tests: 135/135 passed.
+- Unit Cognitive Memory and agent-context tests: 136/136 passed.
 - Integration Cognitive Memory tests: 25/25 passed.
 - Component Cognitive Memory tests: 1/1 passed.
 - Web project build: passed with 0 warnings and 0 errors.
 
-Playwright was not rerun for this pass because the shipped UI change was a code-behind/render-helper split without markup or browser behavior changes. The next real child-component split should include browser proof.
+Browser proof was run because this pass changed rendered Blazor structure:
+
+- Route: `http://127.0.0.1:5289/cognitive-memory`.
+- Startup action: accepted the active database profile dialog.
+- Desktop viewport: 1440x1000, settings tab rendered operational controls.
+- Narrow viewport: 390x900, settings tab rendered operational controls with no horizontal overflow.
+- Assertions: `cognitive-memory-settings`, `cognitive-memory-operational-actions`, `cognitive-memory-run-automation`, `cognitive-memory-rebuild-projections`, `cognitive-memory-automation-run-progress`, and `cognitive-memory-projection-rebuild-progress` were present.
+- Console: only normal Blazor connection messages.
+- Screenshots: `codex/bundles/cognitive-memory-p0-maintainability/reviews/browser-proof/cognitive-memory-settings-desktop-p0.png` and `codex/bundles/cognitive-memory-p0-maintainability/reviews/browser-proof/cognitive-memory-settings-mobile-p0.png`.
 
 ## Evidence From Previous Closure
 
@@ -63,10 +71,9 @@ The latest completed Cognitive Memory repair bundles record:
 
 ## Gaps To Add Before Beta
 
-- Projection rebuild worker/API tests proving stale projection records become fresh provider points.
-- Scheduled automation tests proving persisted schedule settings actually trigger ingestion/consolidation.
-- MAF context fail/skip policy tests for process-critical runs.
+- Live Qdrant/provider failure integration tests for projection rebuild.
+- Hosted scheduler tests only if an autonomous scoped worker is introduced.
 - API DTO versioning/contract tests for agent-safe context output versus diagnostic traces.
-- Browser coverage after splitting the large Cognitive Memory page.
+- Broader browser coverage for review, probe, ingestion, and projection operation flows.
 - Load/performance tests for large source manifests, recall trace retention, and review queues.
 

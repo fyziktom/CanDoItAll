@@ -10,8 +10,8 @@
 
 ## Success Criteria
 
-- Roadmap moves completed P0 items into done/current state and leaves only truthful residual work.
-- Stage assessment and validation docs reflect projection rebuild, automation, and agent context policy changes.
+- Roadmap moves completed P0 items into done/current state and leaves beta hardening work separate from P0 closure.
+- Stage assessment and validation docs reflect projection rebuild, automation, UI split, browser proof, and agent context policy changes.
 - Targeted tests/build/diff/bundle validators pass.
 
 ## Covered Inputs
@@ -55,7 +55,7 @@
 
 ## Scope Exceptions
 
-- If full UI component decomposition is deferred, docs must say what remains and why.
+- Live Qdrant/provider validation is beta hardening, not P0 closure proof.
 
 ## Do Not Do
 
@@ -79,17 +79,18 @@
 ## Proof Captured
 
 - Updated `docs/cognitive-memory` current-state, architecture, operations, validation, and roadmap pages.
-- Roadmap now records P0 completed work and residuals separately.
-- `dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~CognitiveMemory|FullyQualifiedName~AgentContextContributionTests" --logger "console;verbosity=minimal" -m:1` passed 135/135.
+- Roadmap now records P0 completed work, explicit closure decisions, and beta hardening work separately.
+- `dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~CognitiveMemory|FullyQualifiedName~AgentContextContributionTests" --logger "console;verbosity=minimal" -m:1` passed 136/136.
 - `dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-restore --filter "FullyQualifiedName~CognitiveMemory" --logger "console;verbosity=minimal" -m:1` passed 25/25.
 - `dotnet test tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --no-restore --filter "FullyQualifiedName~CognitiveMemory" --logger "console;verbosity=minimal" -m:1` passed 1/1.
 - `dotnet build src\CanDoItAll.Web\CanDoItAll.Web.csproj --no-restore -m:1 --verbosity:minimal` passed with 0 warnings and 0 errors.
+- Browser proof passed on `/cognitive-memory` settings tab at 1440x1000 and 390x900; screenshots saved under `reviews/browser-proof`.
 - `git diff --check` passed with no whitespace errors.
 - Completed-stage bundle validator passed after final status sync.
 
 ## Browser Validation Logging
 
-- Conditional on subbundle 01 UI changes; otherwise N/A.
+- Required and captured because rendered Blazor structure changed.
 
 ## Progression Gate
 

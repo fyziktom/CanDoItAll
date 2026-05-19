@@ -238,15 +238,40 @@ public sealed class CognitiveMemoryProjectionRebuildService(
             return ProjectionRebuildPreparation.Skip($"Memory record {record.Id:D} has no context frame for projection rebuild.");
         }
 
+        var projectId = record.ProjectId;
+        var entityIds = await dbContext.Set<CognitiveMemoryEntityRecord>()
+            .AsNoTracking()
+            .Where(entity =>
+                entity.PrimaryContextFrameId.HasValue &&
+                contextFrameIds.Contains(entity.PrimaryContextFrameId.Value) &&
+                (entity.ProjectId == projectId || entity.ProjectId == null))
+            .Select(entity => entity.Id)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        var contextBoundaryPolicies = await dbContext.Set<CognitiveMemoryContextBoundaryRecord>()
+            .AsNoTracking()
+            .Where(boundary =>
+                (boundary.ProjectId == projectId || boundary.ProjectId == null) &&
+                (contextFrameIds.Contains(boundary.SourceContextFrameId) ||
+                 contextFrameIds.Contains(boundary.TargetContextFrameId)))
+            .Select(boundary => boundary.BoundaryPolicy)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+        if (entityIds.Count == 0 && contextBoundaryPolicies.Count == 0)
+        {
+            return ProjectionRebuildPreparation.Skip($"Memory record {record.Id:D} has no entity or context-boundary metadata for projection rebuild.");
+        }
+
         var payload = new CognitiveMemoryClaimProjectionPayload(
             new CognitiveMemoryPayloadSchemaVersion(projection.ProjectionSchemaVersion),
             CognitiveMemoryProjectionPayloadSchemaKind.ClaimContainer,
             new CognitiveMemoryRecordId(record.Id),
             claims.Select(claim => new CognitiveMemoryClaimId(claim.Id)).ToArray(),
             contextFrameIds.Select(id => new CognitiveMemoryContextFrameId(id)).ToArray(),
-            [],
+            entityIds.Select(id => new CognitiveMemoryEntityId(id)).ToArray(),
             claims.Select(claim => claim.CurrentBeliefState).Distinct().ToArray(),
-            [],
+            contextBoundaryPolicies.ToArray(),
             record.ConfidenceBucket);
 
         var request = new CognitiveMemoryProjectionLifecycleRequest(

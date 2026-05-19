@@ -4,9 +4,9 @@ This section is the current source-grounded documentation for the CanDoItAll Cog
 
 ## Current Stage
 
-Cognitive Memory is at **P0-hardened validation-grade alpha** as of 2026-05-19.
+Cognitive Memory is at **P0-complete validation-grade alpha** as of 2026-05-19.
 
-That is deliberately not beta. The durable schema, module registration, endpoint-grouped API surface, operator UI, source ingestion, consolidation, review approval, recall traces, explicit projection rebuild, explicit automation execution, MAF context contribution policy, probing, self-regulation, and validation coverage exist. The remaining gaps are hardening and maintainability work: Blazor child-component decomposition, hosted scheduler decision, API versioning/examples, provider-backed projection proof, production observability, and clearer behavior across every optional semantic/vector consumer.
+That is deliberately not beta. The durable schema, module registration, endpoint-grouped API surface, operator UI, source ingestion, consolidation, review approval, recall traces, explicit projection rebuild, explicit automation execution, MAF context contribution policy, probing, self-regulation, and validation coverage exist. P0 also closed the Blazor child-tab split, explicit scheduler decision, and adapter-backed projection proof. The remaining gaps are beta hardening: API versioning/examples, live provider and failure integration, production observability/runbooks, retention policy, and continued decomposition of older broad service files.
 
 ## Start Here
 

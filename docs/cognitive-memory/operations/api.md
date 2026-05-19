@@ -50,9 +50,9 @@ Supported external extraction paths include text-like files, `.docx`, `.pptx`, `
 | `POST` | `/api/cognitive-memory/projections/rebuild` | Rebuilds stale or failed projection records from durable memory records and source/evidence links. |
 | `POST` | `/api/cognitive-memory/automation/run` | Executes configured automation ingestion/consolidation when the supplied trigger is allowed by schedule settings. |
 
-`/automation/run` is an explicit operational command. It honors persisted schedule settings, but it is not a hosted background scheduler by itself. Manual trigger is always allowed; nightly, idle-timeout, and scheduled-moment triggers run only when the persisted schedule mode matches.
+`/automation/run` is an explicit operational command and is also exposed from the Cognitive Memory settings tab. It honors persisted schedule settings, but it is not a hosted background scheduler by itself. Manual trigger is always allowed; nightly, idle-timeout, and scheduled-moment triggers run only when the persisted schedule mode matches.
 
-`/projections/rebuild` rebuilds projection state from relational memory. Qdrant/RAG remains a projection target, not authoritative memory.
+`/projections/rebuild` rebuilds projection state from relational memory and is also exposed from the Cognitive Memory settings tab. The rebuild path reconstructs projection payloads from memory records, claims, evidence anchors, source links, context frames, entity ids, and context-boundary policies. Qdrant/RAG remains a projection target, not authoritative memory.
 
 ## Probing And Self-Regulation
 

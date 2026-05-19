@@ -12,6 +12,7 @@
 
 - Rebuild-required projections can be processed through a service/API path with projected/failed/skipped counts.
 - Automation schedule settings can be evaluated explicitly and run ingestion/consolidation with a summary.
+- Operator UI exposes explicit run and rebuild controls.
 - Tests cover core success and no-op/failure cases.
 
 ## Covered Inputs
@@ -37,6 +38,7 @@
 - Projection rebuild contract and service.
 - Automation runner contract and service.
 - API endpoint(s) for explicit execution.
+- Operator settings controls for explicit execution.
 - Tests proving behavior.
 
 ## Dependency Impact
@@ -56,7 +58,7 @@
 
 ## Scope Exceptions
 
-- Hosted background worker was deferred. P0 implemented explicit service/API execution that honors schedule settings without hidden background mutation; the roadmap now calls out the hosted-scheduler decision as a residual.
+- Hosted background worker is intentionally out of P0. P0 implements explicit service/API/UI execution that honors schedule settings without hidden background mutation; future hosted scheduling requires scoped project ownership, retries, idempotency, and audit design.
 
 ## Do Not Do
 
@@ -80,13 +82,16 @@
 - Added `ICognitiveMemoryProjectionRebuildService` and `CognitiveMemoryProjectionRebuildService`.
 - Added `ICognitiveMemoryScheduledAutomationRunner` and `CognitiveMemoryScheduledAutomationRunner`.
 - Added `/api/cognitive-memory/projections/rebuild` and `/api/cognitive-memory/automation/run`.
+- Added settings-tab buttons for `Run automation` and `Rebuild projections`.
+- Rebuild now reconstructs entity ids and context-boundary policies before writing provider payloads.
+- Adapter-backed projection test proves `CognitiveMemoryProjectionRebuildService` calls the real lifecycle service and `RagCognitiveMemoryProjectionAdapter`.
 - Added `CognitiveMemoryOperationalServicesTests`.
-- `dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~CognitiveMemory|FullyQualifiedName~AgentContextContributionTests" --logger "console;verbosity=minimal" -m:1` passed 135/135.
+- `dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~CognitiveMemory|FullyQualifiedName~AgentContextContributionTests" --logger "console;verbosity=minimal" -m:1` passed 136/136.
 - `dotnet build src\CanDoItAll.Web\CanDoItAll.Web.csproj --no-restore -m:1 --verbosity:minimal` passed with 0 warnings and 0 errors.
 
 ## Browser Validation Logging
 
-- N/A - service/API behavior only.
+- Settings-tab operation controls validated at desktop and narrow viewports.
 
 ## Progression Gate
 

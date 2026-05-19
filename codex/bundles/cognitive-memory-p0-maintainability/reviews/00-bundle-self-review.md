@@ -8,7 +8,7 @@ Status: `Completed`
 - Normalized requirements explicit.
 - Raw input mapped to subbundles.
 - Acceptance, proof, and progression gates populated.
-- Browser validation logging is conditional on actual UI markup behavior changes.
+- Browser validation logging is captured because the continuation split rendered Blazor tab components.
 - Outcome and evidence contracts are explicit and final proof is recorded in `reviews/01-execution-report.md`.
 
 ## Senior C# Blazor Architect Review
@@ -18,8 +18,8 @@ Status: `Completed`
 - Architecture boundaries are clear.
 - Subbundle split follows maintainability, operations, agent policy, and closure.
 - Critical path and dependency impact are explicit.
-- Validation strategy uses targeted .NET tests/build plus browser proof only if needed.
-- Browser exception is justified: the UI change was a code-behind/render-helper split without markup behavior changes, and component/build proof passed.
+- Validation strategy uses targeted .NET tests/build plus browser proof for the rendered settings-tab operation controls.
+- Component proof caught the parent/child render invalidation risk from the tab split; the fixed implementation was then browser-validated.
 
 ## Senior Manager Review
 
@@ -34,9 +34,9 @@ Status: `Completed`
 
 ## Remaining Assumptions
 
-- Full UI component decomposition remains a documented residual because this pass intentionally avoided rendered behavior changes.
-- Hosted automation scheduling remains a documented product decision; current execution is explicit/API-triggered.
+- Live Qdrant/provider validation remains beta hardening; P0 adapter-backed projection proof is complete.
+- Hosted automation scheduling is a closed P0 decision; current execution is explicit UI/API-triggered.
 
 ## Final Decision
 
-`Completed with documented residuals`
+`Completed for P0 scope`

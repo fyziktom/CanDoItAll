@@ -82,7 +82,7 @@ sequenceDiagram
     Caller->>Rebuild: RebuildAsync(project, take, collection)
     Rebuild->>Db: Select stale, rebuild-required, or failed projection records
     loop each selected projection
-        Rebuild->>Db: Load memory record, source links, evidence anchors, claims, context frames
+        Rebuild->>Db: Load memory record, source links, evidence anchors, claims, context frames, entities, boundaries
         alt durable inputs are complete
             Rebuild->>Lifecycle: ProjectAsync(lifecycle request)
             Lifecycle->>Provider: Upsert/delete projection point as needed
@@ -101,7 +101,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    Caller["API/operator calls /automation/run"] --> Settings["Load CognitiveMemoryAutomationSettings"]
+    Caller["API/operator settings tab calls /automation/run"] --> Settings["Load CognitiveMemoryAutomationSettings"]
     Settings --> Trigger{"Trigger allowed by schedule mode?"}
     Trigger -- "No" --> Skipped["Return Executed=false with warning"]
     Trigger -- "Yes" --> ProjectIngest{"AutoIngestProjectStructure?"}
@@ -177,6 +177,6 @@ sequenceDiagram
 ## Current Flow Limits
 
 - Recall always records stages and warnings when vector projection is skipped or unavailable.
-- Projection invalidation and explicit rebuild are now first-class service/API flows, but provider-backed operational proof is still required for beta.
-- Scheduled automation settings are persisted and can be executed explicitly through the API runner. There is still no dedicated hosted cognitive-memory worker.
+- Projection invalidation and explicit rebuild are now first-class service/API/UI flows. Adapter-backed RAG proof exists; live Qdrant/provider failure proof is still required for beta.
+- Scheduled automation settings are persisted and can be executed explicitly through the API runner or operator settings tab. There is intentionally no dedicated hosted cognitive-memory worker in P0.
 

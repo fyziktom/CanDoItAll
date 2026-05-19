@@ -13,11 +13,11 @@ The implementation lives primarily in `src/CanDoItAll.Modules.CognitiveMemory`. 
 | `Ingestion` | 4 | Source snapshot ingestion, layouts, graph links, context hints, tombstones, scan failures. |
 | `Neuro` | 4 | Evidence anchors, claims, belief state, entity/context binding, mutation authority. |
 | `Operations` | 3 | Explicit projection rebuild and scheduled automation runner contracts/services. |
-| `Pages` | 4 | Blazor operator UI, page-specific CSS/code-behind, and extracted rendering helpers. |
+| `Pages` | 17 | Blazor operator UI, page-specific CSS/code-behind, extracted rendering helpers, and ten tab child components. |
 | `Procedural` | 4 | Procedure skills, steps, failure modes, simulation, validation evidence, automation bindings. |
 | `Projection` | 2 | SemanticCompletion and RAG/Qdrant adapter contracts and implementations. |
-| `Recall` | 11 | Recall orchestration, channels, candidate loading, scoring, evaluation, context packs, trace persistence, source references, and mapping helpers. |
-| `ReviewUi` | 2 | Snapshot DTOs and review decision workflow. |
+| `Recall` | 15 | Recall orchestration, vector/workspace/signal/graph channels, candidate loading, scoring, evaluation, context packs, trace persistence, source references, internal types, and mapping helpers. |
+| `ReviewUi` | 6 | Snapshot DTOs, summary queries, candidate previews, advanced query projections, trace/health queries, and review decision workflow. |
 | `Scoring` | 6 | Typed score spaces, dimensions, geometry driver, evaluation traces, persisted score components. |
 | `Settings` | 7 | Automation settings, model access policy, model execution profiles, external file/web ingestion, staged manifests. |
 | `Signals` | 4 | Prediction expectations, prediction errors, salience/signals, consumer policies. |
@@ -50,15 +50,32 @@ flowchart LR
 | `CognitiveMemoryExternalSourceIngestionService` | `ICognitiveMemoryExternalSourceIngestionService` | Ingests uploaded files and web links into source manifests/items/evidence. |
 | `CognitiveMemoryConsolidationEngine` | `ICognitiveMemoryConsolidationEngine` | Processes source items into candidates, mutation commands, review rows, canonical memory records, and projection invalidations. |
 | `CognitiveMemoryConsolidationCandidateApplicator` | `ICognitiveMemoryConsolidationCandidateApplicator` | Materializes approved or machine-generated candidates into memory records, claims, source links, and evidence links. |
-| `CognitiveMemoryRecallOrchestrator` | `ICognitiveMemoryRecallOrchestrator` | Builds recall candidates from lexical, optional vector, workspace, signal, graph, and source-detail channels. The orchestration is now split across partial files by channel, loading, scoring, context-pack building, persistence, and mapping. |
-| `CognitiveMemoryReviewUiService` | `ICognitiveMemoryReviewUiService` | Builds operator snapshots and applies review decisions. |
+| `CognitiveMemoryRecallOrchestrator` | `ICognitiveMemoryRecallOrchestrator` | Builds recall candidates from lexical, optional vector, workspace, signal, graph, and source-detail channels. The orchestration is split across partial files by channel, loading, scoring, context-pack building, persistence, internal types, and mapping. |
+| `CognitiveMemoryReviewUiService` | `ICognitiveMemoryReviewUiService` | Builds operator snapshots and applies review decisions through split summary, preview, advanced, trace, and health query files. |
 | `CognitiveMemoryAgentContextContributor` | `IAgentContextContributor` | Adds agent-facing Cognitive Memory context packages to AgentFramework requests when provider policy and project scope allow it, and fails process-critical modes when required memory is unavailable. |
 | `CognitiveMemorySignalLedger` | `ICognitiveMemorySignalLedger`, `ICognitiveMemoryPredictionErrorEngine` | Records prediction expectations, prediction errors, salience signals, scores, and consumer policies. |
 | `CognitiveMemoryTemporalReplayService` | `ICognitiveMemoryTemporalEpisodeService`, `ICognitiveMemoryReplayScheduler` | Records temporal episodes and replay jobs. |
 | `CognitiveMemoryProcedureSkillService` | `ICognitiveMemoryProcedureSkillMemoryService`, `ICognitiveMemorySimulationSandboxService` | Stores procedure skills and simulations. |
 | `CognitiveMemoryAdvancedServices` classes | Several advanced interfaces | Own probing, self-model, calibration, self-regulation, answer gate, professor review, learning proposals, cross-project, and distributed coordination. |
-| `CognitiveMemoryProjectionRebuildService` | `ICognitiveMemoryProjectionRebuildService` | Rebuilds stale/failed projection records from durable memory, source links, evidence anchors, claims, and context frames through projection lifecycle. |
-| `CognitiveMemoryScheduledAutomationRunner` | `ICognitiveMemoryScheduledAutomationRunner` | Honors automation schedule mode for explicit runs, triggers configured ingestion, and runs consolidation after successful ingestion when enabled. |
+| `CognitiveMemoryProjectionRebuildService` | `ICognitiveMemoryProjectionRebuildService` | Rebuilds stale/failed projection records from durable memory, source links, evidence anchors, claims, context frames, entity ids, and context-boundary policies through projection lifecycle. |
+| `CognitiveMemoryScheduledAutomationRunner` | `ICognitiveMemoryScheduledAutomationRunner` | Honors automation schedule mode for explicit UI/API runs, triggers configured ingestion, and runs consolidation after successful ingestion when enabled. |
+
+## Operator UI Components
+
+The `/cognitive-memory` route still uses `CognitiveMemoryPage` as the orchestration owner, but the tab bodies are separated under `src/CanDoItAll.Modules.CognitiveMemory/Pages/Components`:
+
+| Component | Role |
+| --- | --- |
+| `CognitiveMemoryDashboardTab.razor` | Summary dashboard and review/health overview. |
+| `CognitiveMemoryProbeWorkbenchTab.razor` | Probe session, voice-assisted question/correction flow, feedback, and source-backed answer context. |
+| `CognitiveMemorySettingsTab.razor` | Automation settings, model policy, manual ingestion, explicit automation run, and projection rebuild controls. |
+| `CognitiveMemorySourcesTab.razor` | External file and web-link ingestion. |
+| `CognitiveMemoryMemoryTab.razor` | Memory explorer and source evidence detail. |
+| `CognitiveMemoryReviewQueueTab.razor` | Review queue and decision panel. |
+| `CognitiveMemoryRecallTracesTab.razor` | Recall trace, candidate, source, and context-pack detail. |
+| `CognitiveMemoryHealthTab.razor` | Projection, consolidation, replay, and procedure health. |
+| `CognitiveMemorySelfRegulationTab.razor` | Self-regulation, answer-gate, professor-review, and learning surfaces. |
+| `CognitiveMemoryScaleTab.razor` | Cross-project promotion and distributed worker/job surfaces. |
 
 ## Source Providers
 

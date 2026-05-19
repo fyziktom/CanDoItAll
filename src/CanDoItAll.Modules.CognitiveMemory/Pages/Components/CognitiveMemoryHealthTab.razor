@@ -1,0 +1,20 @@
+@namespace CanDoItAll.Modules.CognitiveMemory.Pages
+
+@if (Page.snapshot is { } snapshot)
+{
+                        <Grid Gap="LayoutGap.Large"
+                              Class="cognitive-memory-layout"
+                              ColumnTemplateXl="minmax(0,1fr) minmax(0,1fr)"
+                              data-testid="cognitive-memory-health">
+                            @Page.ProjectionHealthPanel()
+                            @Page.ConsolidationPanel()
+                            @Page.ReplayPanel()
+                            @Page.ProcedurePanel()
+                        </Grid>
+}
+
+@code {
+    [CascadingParameter]
+    internal CognitiveMemoryPage Page { get; set; } = default!;
+}
+

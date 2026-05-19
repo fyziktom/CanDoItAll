@@ -13,7 +13,7 @@
 - Advanced services are separated by use case.
 - API DTOs and endpoint mapping are separated from the core API entry point where practical.
 - Recall orchestration is split into focused partial files where safe.
-- Blazor page extraction is performed only where component/build/browser proof can support it.
+- Blazor page extraction is performed with component/build/browser proof.
 
 ## Covered Inputs
 
@@ -55,7 +55,7 @@
 ## Scope Exceptions
 
 - Full visual redesign is out of scope.
-- Full UI child-component split was deferred. This pass extracted rendering helpers from the code-behind without changing Razor markup or browser behavior; the roadmap now carries child-component decomposition as a P0 residual/beta-hardening item.
+- Broader decomposition of older non-P0 large services is beta hardening.
 
 ## Do Not Do
 
@@ -78,14 +78,21 @@
 
 - Advanced services split into focused service/support files.
 - Recall orchestration split into focused partial files.
+- Recall channels split into vector, workspace/signal, and graph expansion files.
+- Recall internal types moved to `CognitiveMemoryRecallInternalTypes.cs`.
 - API split into endpoint groups and DTO file.
 - Page rendering helpers extracted into `CognitiveMemoryPage.Rendering.cs`.
+- Page code-behind split into probe, settings/source operations, and formatting files.
+- Ten tab bodies extracted under `Pages/Components`.
 - `dotnet build src\CanDoItAll.Web\CanDoItAll.Web.csproj --no-restore -m:1 --verbosity:minimal` passed with 0 warnings and 0 errors.
 - `dotnet test tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --no-restore --filter "FullyQualifiedName~CognitiveMemory" --logger "console;verbosity=minimal" -m:1` passed 1/1.
 
 ## Browser Validation Logging
 
-- Conditional: if Blazor markup behavior changes, validate `/cognitive-memory` at large and narrow viewports and record screenshots. Otherwise record N/A because structural C# splits do not affect rendered UI.
+- `/cognitive-memory` validated at 1440x1000 and 390x900.
+- Settings tab operational controls rendered in both viewports.
+- Narrow viewport had no horizontal overflow.
+- Screenshots captured in `reviews/browser-proof`.
 
 ## Progression Gate
 

@@ -49,6 +49,11 @@ public sealed class CognitiveMemoryPageTests
         cut.WaitForElement("[data-testid='cognitive-memory-settings']");
         Assert.Contains("Schedule and consolidation triggers", cut.Markup);
         Assert.Contains("Project and process sources", cut.Markup);
+        Assert.Contains("Run configured memory work", cut.Markup);
+        Assert.NotNull(cut.Find("[data-testid='cognitive-memory-run-automation']"));
+        Assert.NotNull(cut.Find("[data-testid='cognitive-memory-rebuild-projections']"));
+        Assert.NotNull(cut.Find("[data-testid='cognitive-memory-automation-run-progress']"));
+        Assert.NotNull(cut.Find("[data-testid='cognitive-memory-projection-rebuild-progress']"));
         Assert.Contains("Ready.", cut.Markup);
 
         cut.Find("[data-testid='cognitive-memory-tab-sources']").Click();

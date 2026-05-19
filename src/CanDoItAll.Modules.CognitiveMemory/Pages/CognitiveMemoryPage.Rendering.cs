@@ -14,7 +14,7 @@ namespace CanDoItAll.Modules.CognitiveMemory.Pages;
 
 public partial class CognitiveMemoryPage
 {
-    private static void RenderFact(
+    internal static void RenderFact(
         RenderTreeBuilder builder,
         int sequence,
         string label,
@@ -31,10 +31,10 @@ public partial class CognitiveMemoryPage
         builder.CloseElement();
     }
 
-    private static RenderFragment RenderFactFragment(string label, string value)
+    internal static RenderFragment RenderFactFragment(string label, string value)
         => builder => RenderFact(builder, 0, label, value);
 
-    private void RenderDecisionButton(
+    internal void RenderDecisionButton(
         RenderTreeBuilder builder,
         int sequence,
         string text,
@@ -54,7 +54,7 @@ public partial class CognitiveMemoryPage
         builder.CloseComponent();
     }
 
-    private static void RenderTraceCollections(
+    internal static void RenderTraceCollections(
         RenderTreeBuilder builder,
         int sequence,
         CognitiveMemoryRecallTraceView trace)
@@ -91,7 +91,7 @@ public partial class CognitiveMemoryPage
         builder.CloseElement();
     }
 
-    private static void RenderCandidateRows(
+    internal static void RenderCandidateRows(
         RenderTreeBuilder builder,
         int sequence,
         IReadOnlyList<CognitiveMemoryRecallCandidateView> candidates)
@@ -122,7 +122,7 @@ public partial class CognitiveMemoryPage
         builder.CloseElement();
     }
 
-    private static void RenderSourceRows(
+    internal static void RenderSourceRows(
         RenderTreeBuilder builder,
         int sequence,
         IReadOnlyList<CognitiveMemoryRecallSourceReferenceView> sourceReferences)
@@ -149,7 +149,7 @@ public partial class CognitiveMemoryPage
         builder.CloseElement();
     }
 
-    private static void RenderMemorySourceRows(
+    internal static void RenderMemorySourceRows(
         RenderTreeBuilder builder,
         int sequence,
         IReadOnlyList<CognitiveMemorySourceLinkView> sourceLinks)
@@ -180,7 +180,7 @@ public partial class CognitiveMemoryPage
         builder.CloseElement();
     }
 
-    private void RenderProjectionRows(RenderTreeBuilder builder, int sequence)
+    internal void RenderProjectionRows(RenderTreeBuilder builder, int sequence)
     {
         if (snapshot is null)
         {
@@ -217,7 +217,7 @@ public partial class CognitiveMemoryPage
         builder.CloseComponent();
     }
 
-    private void RenderConsolidationRows(RenderTreeBuilder builder, int sequence)
+    internal void RenderConsolidationRows(RenderTreeBuilder builder, int sequence)
     {
         if (snapshot is null)
         {
@@ -257,7 +257,7 @@ public partial class CognitiveMemoryPage
         builder.CloseComponent();
     }
 
-    private void RenderReplayRows(RenderTreeBuilder builder, int sequence)
+    internal void RenderReplayRows(RenderTreeBuilder builder, int sequence)
     {
         if (snapshot is null)
         {
@@ -290,7 +290,7 @@ public partial class CognitiveMemoryPage
         builder.CloseComponent();
     }
 
-    private void RenderProcedureRows(RenderTreeBuilder builder, int sequence)
+    internal void RenderProcedureRows(RenderTreeBuilder builder, int sequence)
     {
         if (snapshot is null)
         {
@@ -323,7 +323,7 @@ public partial class CognitiveMemoryPage
         builder.CloseComponent();
     }
 
-    private void RenderProbeRows(RenderTreeBuilder builder, int sequence)
+    internal void RenderProbeRows(RenderTreeBuilder builder, int sequence)
     {
         if (snapshot is null)
         {
@@ -343,7 +343,7 @@ public partial class CognitiveMemoryPage
             });
     }
 
-    private void RenderSelfRegulationRows(RenderTreeBuilder builder, int sequence)
+    internal void RenderSelfRegulationRows(RenderTreeBuilder builder, int sequence)
     {
         if (snapshot is null)
         {
@@ -363,7 +363,7 @@ public partial class CognitiveMemoryPage
             });
     }
 
-    private void RenderAnswerGateRows(RenderTreeBuilder builder, int sequence)
+    internal void RenderAnswerGateRows(RenderTreeBuilder builder, int sequence)
     {
         if (snapshot is null)
         {
@@ -383,7 +383,7 @@ public partial class CognitiveMemoryPage
             });
     }
 
-    private void RenderProfessorReviewRows(RenderTreeBuilder builder, int sequence)
+    internal void RenderProfessorReviewRows(RenderTreeBuilder builder, int sequence)
     {
         if (snapshot is null)
         {
@@ -408,7 +408,7 @@ public partial class CognitiveMemoryPage
             });
     }
 
-    private void RenderLearningProposalRows(RenderTreeBuilder builder, int sequence)
+    internal void RenderLearningProposalRows(RenderTreeBuilder builder, int sequence)
     {
         if (snapshot is null)
         {
@@ -428,7 +428,7 @@ public partial class CognitiveMemoryPage
             });
     }
 
-    private void RenderCrossProjectRows(RenderTreeBuilder builder, int sequence)
+    internal void RenderCrossProjectRows(RenderTreeBuilder builder, int sequence)
     {
         if (snapshot is null)
         {
@@ -448,7 +448,7 @@ public partial class CognitiveMemoryPage
             });
     }
 
-    private void RenderDistributedRows(RenderTreeBuilder builder, int sequence)
+    internal void RenderDistributedRows(RenderTreeBuilder builder, int sequence)
     {
         if (snapshot is null)
         {
@@ -470,7 +470,7 @@ public partial class CognitiveMemoryPage
             });
     }
 
-    private static void RenderRows<TItem>(
+    internal static void RenderRows<TItem>(
         RenderTreeBuilder builder,
         int sequence,
         IReadOnlyList<TItem> items,
@@ -491,7 +491,7 @@ public partial class CognitiveMemoryPage
         builder.CloseComponent();
     }
 
-    private static void RenderRowStart(
+    internal static void RenderRowStart(
         RenderTreeBuilder builder,
         ref int sequence,
         string title)
@@ -503,7 +503,7 @@ public partial class CognitiveMemoryPage
         builder.CloseElement();
     }
 
-    private static void RenderStatus(
+    internal static void RenderStatus(
         RenderTreeBuilder builder,
         ref int sequence,
         string tone,
@@ -515,7 +515,7 @@ public partial class CognitiveMemoryPage
         builder.CloseComponent();
     }
 
-    private static void RenderRowText(
+    internal static void RenderRowText(
         RenderTreeBuilder builder,
         ref int sequence,
         string text)
@@ -525,7 +525,7 @@ public partial class CognitiveMemoryPage
         builder.CloseElement();
     }
 
-    private static void RenderRowSmall(
+    internal static void RenderRowSmall(
         RenderTreeBuilder builder,
         ref int sequence,
         string text)
@@ -535,7 +535,7 @@ public partial class CognitiveMemoryPage
         builder.CloseElement();
     }
 
-    private static void RenderEmptyLine(RenderTreeBuilder builder, int sequence, string text)
+    internal static void RenderEmptyLine(RenderTreeBuilder builder, int sequence, string text)
     {
         builder.OpenElement(sequence, "p");
         builder.AddAttribute(sequence + 1, "class", "cognitive-memory-muted");
@@ -543,10 +543,10 @@ public partial class CognitiveMemoryPage
         builder.CloseElement();
     }
 
-    private static string FirstNonEmpty(params string?[] values)
+    internal static string FirstNonEmpty(params string?[] values)
         => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
 
-    private static string TruncateListText(string value, int maxLength)
+    internal static string TruncateListText(string value, int maxLength)
     {
         var normalized = string.Join(" ", value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
         return normalized.Length <= maxLength
@@ -554,7 +554,7 @@ public partial class CognitiveMemoryPage
             : $"{normalized[..Math.Max(0, maxLength - 1)]}...";
     }
 
-    private sealed class CognitiveMemoryProviderSelection(
+    internal sealed class CognitiveMemoryProviderSelection(
         Guid id,
         string name,
         ProviderKind kind,
@@ -581,7 +581,7 @@ public partial class CognitiveMemoryPage
         public bool IsAllowed { get; set; } = isAllowed;
     }
 
-    private enum CognitiveMemoryProbeVoiceCaptureTarget
+    internal enum CognitiveMemoryProbeVoiceCaptureTarget
     {
         Question,
         Correction,

@@ -77,7 +77,7 @@
 - Updated `CognitiveMemoryAgentContextContributor` to render from that package instead of raw diagnostic recall payloads.
 - Added explicit required-memory policy for governed process automation, auto-approved non-interactive runs, and A2A endpoint mode.
 - Added tests for process-critical missing-scope and unavailable-memory failure.
-- `dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~CognitiveMemory|FullyQualifiedName~AgentContextContributionTests" --logger "console;verbosity=minimal" -m:1` passed 135/135.
+- `dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~CognitiveMemory|FullyQualifiedName~AgentContextContributionTests" --logger "console;verbosity=minimal" -m:1` passed 136/136.
 
 ## Browser Validation Logging
 

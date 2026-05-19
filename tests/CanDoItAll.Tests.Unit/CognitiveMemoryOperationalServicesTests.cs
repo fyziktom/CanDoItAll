@@ -1,4 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Rag.Driver.Abstractions;
+using CanDoItAll.AgentFramework.Rag.Driver.Models;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.CognitiveMemory;
 using CanDoItAll.SharedKernel;
@@ -67,6 +69,44 @@ public sealed class CognitiveMemoryOperationalServicesTests
         Assert.Equal(1, result.SkippedCount);
         Assert.Empty(lifecycle.Requests);
         Assert.Contains(result.Warnings, warning => warning.Contains("no claims", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task ProjectionRebuildService_RebuildsThroughRagProjectionAdapter()
+    {
+        var fixture = CreateFixture();
+        var graph = await SeedProjectionGraphAsync(fixture.Factory, includeClaim: true);
+        var rag = new RecordingRagDriver();
+        var lifecycle = new CognitiveMemoryProjectionLifecycleService(
+            new FixedEmbeddingProvider(new CognitiveMemoryEmbeddingProfileId("embedding-v1")),
+            new RagCognitiveMemoryProjectionAdapter(rag),
+            new CognitiveMemoryTaxonomyValidator(new CognitiveMemoryRecordValidator()),
+            fixture.Clock,
+            NullLogger<CognitiveMemoryProjectionLifecycleService>.Instance);
+        var service = new CognitiveMemoryProjectionRebuildService(
+            fixture.Factory,
+            lifecycle,
+            fixture.Clock,
+            NullLogger<CognitiveMemoryProjectionRebuildService>.Instance);
+
+        var result = await service.RebuildAsync(new CognitiveMemoryProjectionRebuildRequest(
+            graph.ProjectId,
+            Take: 10,
+            ActorId: "test:operator"));
+
+        Assert.Equal(CognitiveMemoryRunStatus.Succeeded, result.Status);
+        Assert.Equal(1, result.ProjectedCount);
+        var upsert = Assert.Single(rag.UpsertRequests);
+        var knowledge = Assert.Single(upsert.Entries);
+        Assert.Equal(graph.RecordId.ToString("D"), knowledge.Metadata["memoryRecordId"]);
+        Assert.Equal("workbench", knowledge.Metadata["sourceSystem"]);
+        Assert.NotNull(knowledge.Vector);
+
+        await using var dbContext = fixture.Factory.CreateDbContext();
+        var projection = await dbContext.Set<CognitiveMemoryProjectionRecord>().SingleAsync();
+        Assert.Equal(CognitiveMemoryProjectionStatus.Projected, projection.Status);
+        Assert.False(projection.RebuildRequired);
+        Assert.Contains("fake-rag", Assert.Single(result.Items).ProviderTrace, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -149,6 +189,7 @@ public sealed class CognitiveMemoryOperationalServicesTests
         var recordId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
         var claimId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
         var contextFrameId = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
+        var entityId = Guid.Parse("dddddddd-dddd-dddd-dddd-eeeeeeeeeeee");
         var sourceManifestId = Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee");
         var sourceItemId = Guid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff");
         var evidenceAnchorId = Guid.Parse("11111111-2222-3333-4444-555555555555");
@@ -198,6 +239,28 @@ public sealed class CognitiveMemoryOperationalServicesTests
             SourceHash = CognitiveMemoryHash.FromUtf8("source-item").Value,
             ObservedAtUtc = now,
             CreatedAtUtc = now
+        });
+        dbContext.Add(new CognitiveMemoryContextFrameRecord
+        {
+            Id = contextFrameId,
+            ProjectId = projectId,
+            FrameKind = CognitiveMemoryContextFrameKind.Composite,
+            DisplayName = "Docker deployment contexts",
+            ConfidenceBucket = CognitiveMemoryScoreProjectionBucket.StrongAccept,
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now
+        });
+        dbContext.Add(new CognitiveMemoryEntityRecord
+        {
+            Id = entityId,
+            ProjectId = projectId,
+            EntityKind = CognitiveMemoryEntityKind.TechnologyTopic,
+            CanonicalName = "Docker deployment contexts",
+            CanonicalNameKey = "docker.deployment.contexts",
+            PrimaryContextFrameId = contextFrameId,
+            ConfidenceBucket = CognitiveMemoryScoreProjectionBucket.StrongAccept,
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now
         });
         dbContext.Add(new CognitiveMemoryRecord
         {
@@ -419,4 +482,92 @@ public sealed class CognitiveMemoryOperationalServicesTests
         Guid ProjectId,
         Guid RecordId,
         Guid ClaimId);
+
+    private sealed class FixedEmbeddingProvider(CognitiveMemoryEmbeddingProfileId profileId) : ICognitiveMemoryEmbeddingProvider
+    {
+        public ValueTask<CognitiveMemoryEmbeddingResult> EmbedAsync(
+            CognitiveMemoryEmbeddingRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Assert.Equal(profileId, request.EmbeddingProfileId);
+            return ValueTask.FromResult(new CognitiveMemoryEmbeddingResult(
+                request.EmbeddingProfileId,
+                CognitiveMemoryHash.FromUtf8(request.Input),
+                new CognitiveMemoryVector(new[] { 0.1f, 0.2f, 0.3f }),
+                "fixed-embedding"));
+        }
+    }
+
+    private sealed class RecordingRagDriver : IRagDriver
+    {
+        public string ProviderName => "fake-rag";
+
+        public RagDriverCapabilities Capabilities => RagDriverCapabilities.WithTagsAndProjectionControls;
+
+        public RagCollectionOptions DefaultCollection { get; } = new();
+
+        public List<RagUpsertRequest> UpsertRequests { get; } = [];
+
+        public ValueTask EnsureCollectionAsync(
+            RagCollectionOptions? collection = null,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            collection?.Validate();
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask UpsertAsync(
+            RagUpsertRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            request.Validate();
+            UpsertRequests.Add(request);
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask DeleteAsync(
+            RagDeleteRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            request.Validate();
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask DeleteByFilterAsync(
+            RagDeleteByFilterRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            request.Validate();
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask<RagPayloadIndexResult> EnsurePayloadIndexAsync(
+            RagPayloadIndexRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            request.Validate();
+            return ValueTask.FromResult(new RagPayloadIndexResult
+            {
+                CollectionName = request.CollectionName,
+                FieldName = request.FieldName,
+                IndexKind = request.IndexKind,
+                Status = RagPayloadIndexStatus.Ensured
+            });
+        }
+
+        public ValueTask<IReadOnlyList<RagSearchResult>> SearchAsync(
+            RagSearchRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            request.Validate();
+            return ValueTask.FromResult<IReadOnlyList<RagSearchResult>>([]);
+        }
+    }
 }
