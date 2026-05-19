@@ -5,6 +5,7 @@ Use this folder for architecture decisions, architecture reviews, and links to t
 ## Current Architecture
 
 - [Architecture beta](../docs/architecture-beta.md): current runtime architecture, C4 diagrams, sequence diagrams, and AI-agent process execution flow.
+- [Cognitive Memory](../docs/cognitive-memory/README.md): current Cognitive Memory implementation stage, architecture, API, validation, and roadmap.
 - [Root README](../README.md): concise product and repository overview.
 
 ## Decisions

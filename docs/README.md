@@ -16,6 +16,7 @@ These docs are for readers who need to understand what CanDoItAll does before th
 ## Runtime, API, And MCP
 
 - [API control plane](api-control-plane.md): current HTTP API surface for projects, project structure, processes, agents, and API access.
+- [Cognitive Memory](cognitive-memory/README.md): current implementation stage, architecture, API, validation, and roadmap for the Cognitive Memory module.
 - [Processes MCP transition note](processes-mcp-setup.md): retired/suppressed MCP guidance and current replacement path.
 - [Project Structure MCP transition note](project-structure-mcp-setup.md): retired/suppressed MCP guidance and current replacement path.
 - [DotNetWatch persistent backend benefits](mcp-dotnetwatch-persistent-backend-benefits.md): development-sidecar runtime notes.

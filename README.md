@@ -39,6 +39,7 @@ flowchart LR
 
 - [Architecture beta](docs/architecture-beta.md): detailed current architecture with GitHub-safe Mermaid flowcharts, C4, class, and sequence diagrams, including process execution with AI agents.
 - [Docs index](docs/README.md): repository documentation map.
+- [Cognitive Memory](docs/cognitive-memory/README.md): current implementation stage, architecture, API, validation, and roadmap for Cognitive Memory.
 - [Enterprise operating system](docs/enterprise-operating-system.md): customer-facing explanation of CanDoItAll as an operating system for projects.
 - [API control plane](docs/api-control-plane.md): current process, project-structure, project, and agent HTTP APIs.
 - [Architecture index](architecture/README.md): current architecture docs, ADRs, and historical architecture reviews.
