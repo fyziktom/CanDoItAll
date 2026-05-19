@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: `Ready`
+- Status: `Completed`
 
 ## Objective
 
@@ -85,6 +85,13 @@ Create and validate the LB4U staged ingestion manifest, translated source summar
 - Test output for manifest and exclusion behavior.
 - Workbook update.
 - Execution report evidence.
+
+## Execution Proof
+
+- Added `inputs/lb4u-stage-manifest.json` and `inputs/lb4u-reconstructed-ingestion-notes.md`.
+- Implemented typed staged-source manifest validation with path containment and exclusion checks.
+- Added unit coverage proving excluded `routery hesla`-style paths are validated by path and not read/ingested.
+- Live LB4U validation used the source root read-only and rejected contact-heavy/noisy review items during the human-style review pass.
 
 ## Browser Validation Logging
 

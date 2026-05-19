@@ -278,8 +278,6 @@ public sealed class CognitiveMemoryRecallOrchestrator(
                     EF.Functions.Like(record.SummaryText.ToLower(), pattern) ||
                     EF.Functions.Like(record.CanonicalText.ToLower(), pattern) ||
                     EF.Functions.Like(record.TopicKey.ToLower(), pattern))
-                .OrderByDescending(record => record.UpdatedAtUtc)
-                .Take(termScanLimit)
                 .Select(record => new MemoryRecordSnapshot(
                     record.Id,
                     record.ProjectId,
@@ -298,6 +296,10 @@ public sealed class CognitiveMemoryRecallOrchestrator(
                     record.RiskLevel,
                     record.UpdatedAtUtc))
                 .ToListAsync(cancellationToken);
+            termRecords = termRecords
+                .OrderByDescending(record => record.UpdatedAtUtc)
+                .Take(termScanLimit)
+                .ToList();
 
             foreach (var record in termRecords)
             {
@@ -325,8 +327,6 @@ public sealed class CognitiveMemoryRecallOrchestrator(
             var existingRecordIds = candidateRecords.Keys.ToHashSet();
             var fallbackRecords = await BuildRecordQuery(dbContext, request)
                 .Where(record => !existingRecordIds.Contains(record.Id))
-                .OrderByDescending(record => record.UpdatedAtUtc)
-                .Take(LexicalFallbackScanLimit)
                 .Select(record => new MemoryRecordSnapshot(
                     record.Id,
                     record.ProjectId,
@@ -345,6 +345,10 @@ public sealed class CognitiveMemoryRecallOrchestrator(
                     record.RiskLevel,
                     record.UpdatedAtUtc))
                 .ToListAsync(cancellationToken);
+            fallbackRecords = fallbackRecords
+                .OrderByDescending(record => record.UpdatedAtUtc)
+                .Take(LexicalFallbackScanLimit)
+                .ToList();
             var fallbackMatches = fallbackRecords
                 .Select(record => new
                 {
@@ -419,15 +423,18 @@ public sealed class CognitiveMemoryRecallOrchestrator(
                      EF.Functions.Like(item.ContentText.ToLower(), pattern) ||
                      EF.Functions.Like(item.SourceItemKey.ToLower(), pattern) ||
                      item.Locator != null && EF.Functions.Like(item.Locator.ToLower(), pattern)))
-                .OrderByDescending(item => item.UpdatedAtUtc)
-                .Take(termScanLimit)
                 .Select(item => new SourceTextItemSnapshot(
                     item.Id,
                     item.Title,
                     item.ContentText,
                     item.SourceItemKey,
-                    item.Locator))
+                    item.Locator,
+                    item.UpdatedAtUtc))
                 .ToListAsync(cancellationToken);
+            matches = matches
+                .OrderByDescending(item => item.UpdatedAtUtc)
+                .Take(termScanLimit)
+                .ToList();
 
             foreach (var match in matches)
             {
@@ -2925,7 +2932,8 @@ public sealed class CognitiveMemoryRecallOrchestrator(
         string Title,
         string ContentText,
         string SourceItemKey,
-        string? Locator);
+        string? Locator,
+        DateTimeOffset UpdatedAtUtc);
 
     private sealed record SourceTextLexicalMatch(
         MemoryRecordSnapshot Record,

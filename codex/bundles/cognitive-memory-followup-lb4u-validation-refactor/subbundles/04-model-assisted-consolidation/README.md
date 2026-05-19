@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: `Ready`
+- Status: `Completed`
 
 ## Objective
 
@@ -78,6 +78,13 @@ Improve source chunking and consolidation so candidates are meaningful, source-b
 - Sample generated candidate records with source references.
 - Consolidation run evidence.
 - Workbook update.
+
+## Execution Proof
+
+- Added Office/PDF external-source text extraction for `.docx`, `.pptx`, `.xlsx`, `.pdf`, and text-like files.
+- Added `CognitiveMemoryConsolidationFactExtractor` for source-backed planning dimensions and localized Czech/Slovak business terms.
+- Added contact-heavy/PII-heavy consolidation skip behavior and bumped consolidation algorithm version to `consolidation-v3`.
+- Live LB4U refresh processed 43 source items, created 39 useful candidates after the contact filter, and removed noisy pending review items by rejection.
 
 ## Browser Validation Logging
 

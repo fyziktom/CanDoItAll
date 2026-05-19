@@ -99,6 +99,100 @@ public sealed class CognitiveMemoryConsolidationEngineTests
     }
 
     [Fact]
+    public async Task RunAsync_ExtractsBusinessPlanPlanningFactsIntoCandidatePayload()
+    {
+        await using var fixture = await CreateFixtureAsync();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var content = """
+            # LB4U business plan
+            The product section defines the LB4U service and the pilot validation assumptions.
+            Marketing activities include customer interviews, launch campaign, and sales channel testing.
+            Expense planning covers salary costs, payroll reserve, licenses, supplier procurement, and equipment.
+            Staffing plan describes phased recruitment of the core team and employee onboarding.
+            Risk analysis tracks market adoption, compliance, and cash flow assumptions.
+            """;
+        await SeedSourceAsync(fixture, projectId, "ExternalFile", "UploadedFileChunk", content, withEvidence: true);
+        var engine = CreateEngine(fixture);
+
+        var result = await engine.RunAsync(Request(projectId, "consolidation-lb4u-business-plan"));
+
+        await using var dbContext = fixture.Factory.CreateDbContext();
+        var candidate = Assert.Single(await dbContext.Set<CognitiveMemoryConsolidationCandidateRecord>().ToListAsync());
+        var payload = JsonSerializer.Deserialize(
+            candidate.PayloadJson,
+            CognitiveMemoryJsonSerializerContext.Default.CognitiveMemoryConsolidationCandidatePayload);
+
+        Assert.Equal(CognitiveMemoryRunStatus.Succeeded, result.Status);
+        Assert.NotNull(payload);
+        Assert.Contains("business-plan", payload.Summary, StringComparison.Ordinal);
+        Assert.Contains("market-and-marketing", payload.Summary, StringComparison.Ordinal);
+        Assert.Contains("finance-and-expenses", payload.Summary, StringComparison.Ordinal);
+        Assert.Contains("staffing", payload.Summary, StringComparison.Ordinal);
+        Assert.Contains("salary costs", payload.Summary, StringComparison.Ordinal);
+        Assert.Contains("detected dimensions", payload.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RunAsync_ExtractsLocalizedPlanningFactsWithDiacritics()
+    {
+        await using var fixture = await CreateFixtureAsync();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var content = """
+            Podnikatelský plán popisuje produktové tlačítko pro nemocnice a domovy seniorů.
+            Marketing řeší vstup na trh, zákazníky, konkurenci a prodejní kampaň.
+            Finanční rozpočet obsahuje náklady, mzdy, faktury, obrat a cenu certifikace.
+            Personál a tým budou růst po fázích podle kapacit a náboru pracovníků.
+            Nákup, dodavatel, objednávka, montáž a instalace patří do provozního plánu.
+            Rizika pokrývají testování, ověření pilotu a schválení certifikace.
+            """;
+        await SeedSourceAsync(fixture, projectId, "ExternalFile", "UploadedFileChunk", content, withEvidence: true);
+        var engine = CreateEngine(fixture);
+
+        var result = await engine.RunAsync(Request(projectId, "consolidation-localized-lb4u-business-plan"));
+
+        await using var dbContext = fixture.Factory.CreateDbContext();
+        var candidate = Assert.Single(await dbContext.Set<CognitiveMemoryConsolidationCandidateRecord>().ToListAsync());
+        var payload = JsonSerializer.Deserialize(
+            candidate.PayloadJson,
+            CognitiveMemoryJsonSerializerContext.Default.CognitiveMemoryConsolidationCandidatePayload);
+
+        Assert.Equal(CognitiveMemoryRunStatus.Succeeded, result.Status);
+        Assert.NotNull(payload);
+        Assert.Contains("business-plan", payload.Summary, StringComparison.Ordinal);
+        Assert.Contains("finance-and-expenses", payload.Summary, StringComparison.Ordinal);
+        Assert.Contains("staffing", payload.Summary, StringComparison.Ordinal);
+        Assert.Contains("operations-and-procurement", payload.Summary, StringComparison.Ordinal);
+        Assert.Contains("risk-and-validation", payload.Summary, StringComparison.Ordinal);
+        Assert.Contains("mzdy", payload.Summary, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task RunAsync_SkipsContactOnlySourceItems()
+    {
+        await using var fixture = await CreateFixtureAsync();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var content = """
+            Kontakt
+            Lucie Example
+            Tel: +420 732 936 929
+            lucie.example@example.com
+            Zuzana Example
+            Tel: +420 603 426 004
+            zuzana.example@example.com
+            """;
+        await SeedSourceAsync(fixture, projectId, "ExternalFile", "UploadedFileChunk", content, withEvidence: true);
+        var engine = CreateEngine(fixture);
+
+        var result = await engine.RunAsync(Request(projectId, "consolidation-contact-only-skip"));
+
+        await using var dbContext = fixture.Factory.CreateDbContext();
+        Assert.Equal(CognitiveMemoryRunStatus.Succeeded, result.Status);
+        Assert.Equal(1, result.SourceItemsScanned);
+        Assert.Equal(0, result.CandidatesCreated);
+        Assert.Empty(await dbContext.Set<CognitiveMemoryConsolidationCandidateRecord>().ToListAsync());
+    }
+
+    [Fact]
     public async Task RunAsync_PrefersProjectNodesAndSkipsNonMemoryProjectStructureRows()
     {
         await using var fixture = await CreateFixtureAsync();

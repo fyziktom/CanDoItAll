@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: `Ready`
+- Status: `Completed`
 
 ## Objective
 
@@ -77,6 +77,13 @@ Improve epistemic drive and cross-project promotion so reusable planning knowled
 - Example scan/proposal results.
 - Review decision evidence.
 - Workbook update.
+
+## Execution Proof
+
+- Epistemic drive now creates approval-gated source-backed planning proposals from source-item coverage gaps.
+- Duplicate proposal suppression now recognizes already reviewed or pending proposals per planning region.
+- Live scan first produced business-plan, marketing, operations/procurement, product, and risk/validation proposals; after localized extraction it produced finance/expenses, staffing, and milestones proposals.
+- All useful proposals were approved through the proposal decision endpoint, and repeat scans returned zero duplicate proposals.
 
 ## Browser Validation Logging
 

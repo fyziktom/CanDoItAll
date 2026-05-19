@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: `Ready`
+- Status: `Completed`
 
 ## Objective
 
@@ -76,6 +76,13 @@ Make probing behave like a human study loop: ask memory questions, inspect sourc
 - Probe session ids or fixture proof.
 - Before/after answer summaries.
 - Workbook update.
+
+## Execution Proof
+
+- Probe answers now persist the question, selected context, source references, and warnings instead of only the recall summary.
+- Persisted probe summaries redact email and phone values.
+- Live probe sessions showed improvement after localized extraction: finance, staffing, procurement, milestones, and risk dimensions became visible in source-backed context.
+- Unit coverage verifies source-aware probe summaries and sensitive-contact redaction.
 
 ## Browser Validation Logging
 

@@ -1,4 +1,6 @@
+using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +14,14 @@ public sealed class CognitiveMemoryProbeService(
     ICognitiveMemoryCalibrationHealthService calibrationHealthService,
     IClock clock) : ICognitiveMemoryProbeService
 {
+    private static readonly Regex ProbeEmailRegex = new(
+        @"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+
+    private static readonly Regex ProbePhoneRegex = new(
+        @"(?:\+\d{1,3}\s*)?(?:\d[\s.-]?){7,}\d",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     private const string ProbeFeedbackSourceSystem = "ProbeFeedback";
     private const string ProbeFeedbackSourceItemType = "ProbeTurnFeedback";
     private const string ProbeFeedbackAlgorithmVersion = "probe-feedback-repair-v1";
@@ -112,6 +122,7 @@ public sealed class CognitiveMemoryProbeService(
             now,
             cancellationToken);
         var sequence = session.TurnCount + 1;
+        var answerSummary = CreateProbeAnswerSummary(request.Question, recallResult.ContextPack);
         var turn = new CognitiveMemoryProbeTurnRecord
         {
             ProbeSessionId = session.Id,
@@ -120,7 +131,7 @@ public sealed class CognitiveMemoryProbeService(
             Status = CognitiveMemoryProbeTurnStatus.Answered,
             Intent = request.Intent,
             Question = TrimText(request.Question, MaximumStoredProbeQuestionLength),
-            AnswerSummary = TrimText(recallResult.ContextPack.Summary, MaximumStoredProbeAnswerSummaryLength),
+            AnswerSummary = TrimText(answerSummary, MaximumStoredProbeAnswerSummaryLength),
             RecallTraceId = recallResult.TraceId,
             ContextPackId = recallResult.ContextPack.Id.Value,
             AnswerGateDecisionId = recallResult.ContextPack.Metadata.TryGetValue("answerGateDecisionId", out var answerGateId) &&
@@ -144,6 +155,71 @@ public sealed class CognitiveMemoryProbeService(
         dbContext.Add(turn);
         await dbContext.SaveChangesAsync(cancellationToken);
         return new CognitiveMemoryProbeAskResult(session, turn, recallResult);
+    }
+
+    private static string CreateProbeAnswerSummary(string question, CognitiveMemoryRecallContextPack contextPack)
+    {
+        var builder = new StringBuilder();
+        builder.Append("Question: ");
+        builder.AppendLine(TrimInline(question, 500));
+        builder.Append("Context summary: ");
+        builder.AppendLine(TrimInline(contextPack.Summary, 800));
+
+        var includedSections = contextPack.Sections
+            .Where(section => !string.IsNullOrWhiteSpace(section.Content))
+            .Take(5)
+            .ToArray();
+        if (includedSections.Length == 0)
+        {
+            builder.AppendLine("Supported context: no selected context sections were available.");
+        }
+        else
+        {
+            builder.AppendLine("Supported context:");
+            foreach (var section in includedSections)
+            {
+                builder.Append("- ");
+                builder.Append(TrimInline(section.Title, 120));
+                builder.Append(": ");
+                builder.AppendLine(TrimInline(section.Content, 500));
+            }
+        }
+
+        var sourceRefs = contextPack.SourceRefs
+            .Concat(includedSections.SelectMany(section => section.SourceRefs))
+            .Where(source => source.IncludedInContext)
+            .DistinctBy(source => new { source.SourceSystem, source.Locator, source.Summary })
+            .Take(8)
+            .ToArray();
+        if (sourceRefs.Length == 0)
+        {
+            builder.AppendLine("Source refs: none included in context.");
+        }
+        else
+        {
+            builder.AppendLine("Source refs:");
+            foreach (var source in sourceRefs)
+            {
+                builder.Append("- ");
+                builder.Append(TrimInline(source.SourceSystem, 80));
+                builder.Append(" ");
+                builder.Append(TrimInline(source.Locator, 220));
+                builder.Append(": ");
+                builder.AppendLine(TrimInline(source.Summary, 300));
+            }
+        }
+
+        if (contextPack.Warnings.Count > 0)
+        {
+            builder.AppendLine("Warnings:");
+            foreach (var warning in contextPack.Warnings.Take(5))
+            {
+                builder.Append("- ");
+                builder.AppendLine(TrimInline(warning, 300));
+            }
+        }
+
+        return builder.ToString().Trim();
     }
 
     public async ValueTask<CognitiveMemoryProbeFeedbackRecord> RecordFeedbackAsync(
@@ -556,6 +632,17 @@ public sealed class CognitiveMemoryProbeService(
     {
         var trimmed = string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
         return trimmed.Length <= maxLength ? trimmed : trimmed[..maxLength];
+    }
+
+    private static string TrimInline(string? value, int maxLength)
+        => RedactSensitiveText(TrimText(value, maxLength))
+            .Replace("\r\n", " ", StringComparison.Ordinal)
+            .Replace('\n', ' ');
+
+    private static string RedactSensitiveText(string value)
+    {
+        var redacted = ProbeEmailRegex.Replace(value, "[redacted-email]");
+        return ProbePhoneRegex.Replace(redacted, "[redacted-phone]");
     }
 
     public async ValueTask<CognitiveMemoryProbeRegressionRunRecord> ReplayRegressionAsync(
@@ -1819,6 +1906,12 @@ public sealed class CognitiveMemoryEpistemicDriveService(
                 cancellationToken));
         }
 
+        proposals.AddRange(await CreateSourceCoverageProposalsAsync(
+            dbContext,
+            request.ProjectId,
+            now,
+            cancellationToken));
+
         await dbContext.SaveChangesAsync(cancellationToken);
         return proposals;
     }
@@ -1877,7 +1970,10 @@ public sealed class CognitiveMemoryEpistemicDriveService(
         double missingKnowledgePressure,
         double sourceWeakness,
         DateTimeOffset now,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string evidenceRefsJson = "[]",
+        CognitiveMemoryCoverageState? coverageStateOverride = null,
+        int sourceEvidenceCount = 0)
     {
         var region = await dbContext.Set<CognitiveMemoryKnowledgeRegionRecord>()
             .SingleOrDefaultAsync(
@@ -1907,9 +2003,16 @@ public sealed class CognitiveMemoryEpistemicDriveService(
             {
                 ProjectId = projectId,
                 KnowledgeRegionId = region.Id,
-                CoverageState = sourceWeakness >= 0.7 ? CognitiveMemoryCoverageState.Thin : CognitiveMemoryCoverageState.Unknown,
+                CoverageState = coverageStateOverride ?? (sourceWeakness >= 0.7 ? CognitiveMemoryCoverageState.Thin : CognitiveMemoryCoverageState.Unknown),
+                SourceEvidenceCount = sourceEvidenceCount,
                 RefreshedAtUtc = now
             });
+        }
+        else
+        {
+            coverage.CoverageState = coverageStateOverride ?? coverage.CoverageState;
+            coverage.SourceEvidenceCount = Math.Max(coverage.SourceEvidenceCount, sourceEvidenceCount);
+            coverage.RefreshedAtUtc = now;
         }
 
         var gap = new CognitiveMemoryKnowledgeGapRecord
@@ -1918,7 +2021,7 @@ public sealed class CognitiveMemoryEpistemicDriveService(
             KnowledgeRegionId = region.Id,
             GapKind = gapKind,
             Summary = explanation,
-            EvidenceRefsJson = "[]",
+            EvidenceRefsJson = evidenceRefsJson,
             CreatedAtUtc = now
         };
         dbContext.Add(gap);
@@ -1945,7 +2048,7 @@ public sealed class CognitiveMemoryEpistemicDriveService(
             Status = CognitiveMemoryLearningProposalStatus.PendingApproval,
             Title = title,
             Explanation = explanation,
-            EvidenceRefsJson = "[]",
+            EvidenceRefsJson = evidenceRefsJson,
             Risks = new CognitiveMemoryRiskNotes("Learning proposals do not create canonical truth until source-backed review accepts outputs."),
             AcceptanceCriteria = "Approved learning must cite source refs and route durable changes through mutation authority or review.",
             NeedScoreEvaluationTraceId = trace.Id.Value,
@@ -1956,6 +2059,106 @@ public sealed class CognitiveMemoryEpistemicDriveService(
         dbContext.Add(proposal);
         return proposal;
     }
+
+    private async Task<IReadOnlyList<CognitiveMemoryLearningProposalRecord>> CreateSourceCoverageProposalsAsync(
+        AppDbContext dbContext,
+        Guid projectId,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        var sourceItems = await dbContext.Set<CognitiveMemorySourceItemRecord>()
+            .AsNoTracking()
+            .Where(item => item.ProjectId == projectId)
+            .OrderBy(item => item.Id)
+            .Take(200)
+            .Select(item => new EpistemicSourceCoverageSnapshot(
+                item.Id,
+                item.SourceSystem,
+                item.SourceItemType,
+                item.Title,
+                item.ContentText,
+                item.ContentHash))
+            .ToListAsync(cancellationToken);
+        var proposals = new List<CognitiveMemoryLearningProposalRecord>();
+        foreach (var group in sourceItems
+            .SelectMany(source => CognitiveMemoryConsolidationFactExtractor
+                .ResolvePlanningDimensions(source.ContentText)
+                .Select(dimension => new { Source = source, Dimension = dimension }))
+            .GroupBy(item => item.Dimension, StringComparer.Ordinal)
+            .OrderBy(group => group.Key, StringComparer.Ordinal))
+        {
+            var regionKey = $"planning:{group.Key}";
+            if (await HasCanonicalCoverageAsync(dbContext, projectId, regionKey, cancellationToken) ||
+                await HasExistingLearningProposalAsync(dbContext, projectId, regionKey, cancellationToken))
+            {
+                continue;
+            }
+
+            var evidenceSources = group
+                .Select(item => item.Source)
+                .DistinctBy(source => source.Id)
+                .Take(5)
+                .ToArray();
+            var evidenceRefsJson = JsonSerializer.Serialize(
+                evidenceSources.Select(source => $"source-item:{source.Id:D}").ToArray(),
+                CognitiveMemoryAdvancedJson.Options);
+            var explanation =
+                $"Source-backed coverage gap: {evidenceSources.Length} source item(s) discuss planning dimension '{group.Key}', but no canonical reusable memory covers it yet.";
+            proposals.Add(await CreateProposalAsync(
+                dbContext,
+                projectId,
+                regionKey,
+                CognitiveMemoryKnowledgeGapKind.ProfessorSuggestedExpansion,
+                $"Study reusable planning knowledge for {group.Key}",
+                explanation,
+                missingKnowledgePressure: Math.Clamp(0.45 + evidenceSources.Length * 0.1, 0, 1),
+                sourceWeakness: 0.25,
+                now,
+                cancellationToken,
+                evidenceRefsJson,
+                CognitiveMemoryCoverageState.Thin,
+                evidenceSources.Length));
+        }
+
+        return proposals;
+    }
+
+    private static async Task<bool> HasCanonicalCoverageAsync(
+        AppDbContext dbContext,
+        Guid projectId,
+        string regionKey,
+        CancellationToken cancellationToken)
+        => await dbContext.Set<CognitiveMemoryRecord>()
+            .AsNoTracking()
+            .AnyAsync(record =>
+                record.ProjectId == projectId &&
+                record.TopicKey == regionKey,
+                cancellationToken);
+
+    private static async Task<bool> HasExistingLearningProposalAsync(
+        AppDbContext dbContext,
+        Guid projectId,
+        string regionKey,
+        CancellationToken cancellationToken)
+        => await (
+            from proposal in dbContext.Set<CognitiveMemoryLearningProposalRecord>().AsNoTracking()
+            join gap in dbContext.Set<CognitiveMemoryKnowledgeGapRecord>().AsNoTracking()
+                on proposal.KnowledgeGapId equals gap.Id
+            join region in dbContext.Set<CognitiveMemoryKnowledgeRegionRecord>().AsNoTracking()
+                on gap.KnowledgeRegionId equals region.Id
+            where proposal.ProjectId == projectId &&
+                  region.RegionKey == regionKey &&
+                  proposal.Status != CognitiveMemoryLearningProposalStatus.Draft
+            select proposal.Id)
+            .AnyAsync(cancellationToken);
+
+    private sealed record EpistemicSourceCoverageSnapshot(
+        Guid Id,
+        string SourceSystem,
+        string SourceItemType,
+        string Title,
+        string ContentText,
+        string ContentHash);
 }
 
 public sealed class CognitiveMemoryCrossProjectMemoryService(

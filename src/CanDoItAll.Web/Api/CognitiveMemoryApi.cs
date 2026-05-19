@@ -503,7 +503,10 @@ internal static class CognitiveMemoryApi
             request.DefaultProviderProfileId,
             request.DefaultAgentId,
             request.AllowedProviderProfileIds ?? [],
-            NormalizeActorId(request.ActorId));
+            NormalizeActorId(request.ActorId))
+        {
+            ModelExecutionProfiles = request.ModelExecutionProfiles ?? CognitiveMemoryModelExecutionProfileDefaults.OpenAiProfiles
+        };
     }
 
     private static CognitiveMemorySourceIngestionRequest BuildManualSourceIngestionRequest(
@@ -1064,6 +1067,8 @@ internal sealed class CognitiveMemoryAutomationSettingsApiRequest
     public Guid? DefaultAgentId { get; set; }
 
     public IReadOnlyList<Guid>? AllowedProviderProfileIds { get; set; }
+
+    public IReadOnlyList<CognitiveMemoryModelExecutionProfile>? ModelExecutionProfiles { get; set; }
 
     public string? ActorId { get; set; }
 }

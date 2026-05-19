@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: `Ready`
+- Status: `Completed`
 
 ## Objective
 
@@ -77,6 +77,13 @@ Make cognitive-memory model execution explicit for OpenAI and Ollama, including 
 - Settings API smoke output if changed.
 - Example model execution metadata.
 - Workbook and execution report updates.
+
+## Execution Proof
+
+- Added strongly typed `CognitiveMemoryModelExecutionProfile`, role enum, and `CognitiveMemoryExecutionModelId`.
+- Persisted model execution profiles through SQLite/PostgreSQL migrations using `ModelExecutionProfilesJson`.
+- API settings now read/write profile role, model id, provider profile, max output tokens, timeout, and local-only state.
+- Live settings validation read back OpenAI `gpt-5-mini` profiles with 4096 max output tokens and Ollama `gptoss20b64k` profiles with 8192 max output tokens.
 
 ## Browser Validation Logging
 

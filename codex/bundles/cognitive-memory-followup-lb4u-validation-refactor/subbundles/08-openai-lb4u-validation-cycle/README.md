@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: `Ready`
+- Status: `Completed`
 
 ## Objective
 
@@ -82,6 +82,13 @@ Run the main staged LB4U cognitive-memory validation using OpenAI `gpt-5-mini`, 
 - Review decision ids.
 - Snapshot deltas.
 - Workbook evidence.
+
+## Execution Proof
+
+- Live API status confirmed PostgreSQL profile `candoitall_cognitive_memory_multicycle_20260517_03` and auth disabled.
+- OpenAI settings readback confirmed `gpt-5-mini` model execution profiles with 4096 max output tokens.
+- LB4U staged ingestion uploaded business plan, presentations, PDFs, spreadsheets, order, and invoice sources with source-backed chunks.
+- Consolidation/review/probe cycles approved useful memories, rejected noisy contact/procurement candidates, and produced traceable probe summaries.
 
 ## Browser Validation Logging
 

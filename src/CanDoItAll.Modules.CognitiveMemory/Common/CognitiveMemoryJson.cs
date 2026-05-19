@@ -33,6 +33,8 @@ namespace CanDoItAll.Modules.CognitiveMemory;
 [JsonSerializable(typeof(CognitiveMemorySourceItemProvenancePayload))]
 [JsonSerializable(typeof(CognitiveMemorySourceReferencePayload))]
 [JsonSerializable(typeof(CognitiveMemorySourceLinkPayload))]
+[JsonSerializable(typeof(CognitiveMemoryExecutionModelId))]
+[JsonSerializable(typeof(CognitiveMemoryModelExecutionProfile[]))]
 [JsonSerializable(typeof(Dictionary<string, string>))]
 [JsonSerializable(typeof(Guid[]))]
 [JsonSerializable(typeof(string[]))]

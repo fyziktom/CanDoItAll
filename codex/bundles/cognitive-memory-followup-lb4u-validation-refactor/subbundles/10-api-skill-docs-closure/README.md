@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: `Ready`
+- Status: `Completed`
 
 ## Objective
 
@@ -81,6 +81,13 @@ Close the follow-up by updating API docs, `candoitall-api-cognitive-memory`, wor
 - Bundle validator output.
 - Workbook path.
 - Final execution report.
+
+## Execution Proof
+
+- Added `docs/cognitive-memory-api.md`.
+- Updated `C:\Users\lucys\.codex\skills\candoitall-api-cognitive-memory\SKILL.md` for model profiles, external extraction, staged-source safety, consolidation review quality, epistemic-drive proposals, and OpenAI/Ollama validation.
+- Workbook and execution report were updated for completed subbundle gates and final evidence.
+- Final bundle validator is run from the root workflow closure step.
 
 ## Browser Validation Logging
 

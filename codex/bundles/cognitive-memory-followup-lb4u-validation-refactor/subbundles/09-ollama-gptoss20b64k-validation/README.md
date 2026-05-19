@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: `Ready`
+- Status: `Completed`
 
 ## Objective
 
@@ -80,6 +80,13 @@ Validate local cognitive-memory behavior with Ollama `gptoss20b64k`, including e
 - Token/truncation metadata.
 - Workbook evidence.
 - Execution report update.
+
+## Execution Proof
+
+- Ollama `/api/tags` confirmed `gptoss20b64k:latest` installed.
+- Ollama `/api/generate` succeeded with `options.num_predict = 8192`.
+- Cognitive Memory settings were switched to `LocalProvidersOnly` with all roles using `modelId.value = gptoss20b64k`, `maxOutputTokens = 8192`, `timeoutSeconds = 180`, and `localOnly = true`.
+- Recall smoke under local-profile settings returned source-backed LB4U context.
 
 ## Browser Validation Logging
 

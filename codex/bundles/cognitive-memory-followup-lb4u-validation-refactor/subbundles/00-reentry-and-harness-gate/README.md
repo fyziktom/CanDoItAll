@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: `Ready`
+- Status: `Completed`
 
 ## Objective
 
@@ -80,6 +80,16 @@ Establish the safe execution baseline before any implementation: read the origin
 - API endpoint/status plan.
 - Workbook evidence row.
 
+## Captured Proof
+
+- `git status --short`: only the follow-up bundle is untracked and is owned by this workflow.
+- Prepared bundle validator: passed for `--profile initiative --stage prepared`.
+- Initial parallel test attempt: exposed shared `obj` file locks, so subsequent build/test execution is serial with `-m:1`.
+- `dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~CognitiveMemory" -m:1`: passed, 104 tests.
+- `dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~CognitiveMemory" -m:1`: failed, 1 of 25 tests, SQLite cannot translate `DateTimeOffset` `ORDER BY` in recall lexical candidate query.
+- `dotnet test tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --filter "FullyQualifiedName~CognitiveMemory" -m:1`: passed, 1 test.
+- Default app ports `5032` and `7271` were not listening during the baseline check; live API validation must start the web app later.
+
 ## Browser Validation Logging
 
 - Browser validation is not required unless the cognitive-memory UI is opened for baseline proof.
@@ -87,7 +97,7 @@ Establish the safe execution baseline before any implementation: read the origin
 
 ## Progression Gate
 
-- Proceed to subbundles 01 and 02 only after baseline state and test plan are recorded.
+- Passed. Proceed to subbundles 01 and 02 with the integration failure carried as an implementation fix candidate.
 
 ## Suggested Agent Prompt
 
