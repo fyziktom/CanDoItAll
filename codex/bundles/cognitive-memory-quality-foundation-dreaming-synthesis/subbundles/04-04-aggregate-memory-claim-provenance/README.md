@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: `Ready`
+- Status: `Completed`
 
 ## Objective
 
@@ -22,13 +22,13 @@ Persist aggregate memories and aggregate candidates with claim-level provenance 
 
 ## Exact Source References
 
-- /mnt/data/cogmem_repo/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Consolidation/CognitiveMemoryConsolidationCandidateApplicator.cs
-- /mnt/data/cogmem_repo/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Foundation/CognitiveMemoryEntities.cs
-- /mnt/data/cogmem_repo/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Neuro/CognitiveMemoryNeuroFoundationEntities.cs
-- /mnt/data/cogmem_repo/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Neuro/CognitiveMemoryMutationAuthority.cs
-- /mnt/data/cogmem_repo/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/ReviewUi/CognitiveMemoryReviewUiService.cs
-- /mnt/data/cogmem_repo/CanDoItAll-cognitive-memory/tests/CanDoItAll.Tests.Unit/CognitiveMemoryConsolidationEngineTests.cs
-- /mnt/data/cogmem_repo/CanDoItAll-cognitive-memory/tests/CanDoItAll.Tests.Integration/CognitiveMemoryPersistenceModelTests.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CognitiveMemory\Consolidation\CognitiveMemoryConsolidationCandidateApplicator.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CognitiveMemory\Foundation\CognitiveMemoryEntities.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CognitiveMemory\Neuro\CognitiveMemoryNeuroFoundationEntities.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CognitiveMemory\Neuro\CognitiveMemoryMutationAuthority.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CognitiveMemory\ReviewUi\CognitiveMemoryReviewUiService.cs
+- C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CognitiveMemoryConsolidationEngineTests.cs
+- C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\CognitiveMemoryPersistenceModelTests.cs
 
 ## Deliverables
 
@@ -72,11 +72,11 @@ Persist aggregate memories and aggregate candidates with claim-level provenance 
 
 ## Acceptance Checklist
 
-- [ ] Aggregate payload has statement IDs and source maps.
-- [ ] Activated aggregate memories create claim/evidence/source links.
-- [ ] Generated synthesis origin/version is recorded.
-- [ ] Provenance survives review approval.
-- [ ] Tests cover missing-source-map rejection.
+- [x] Aggregate payload has statement IDs and source maps.
+- [x] Activated aggregate memories create claim/evidence/source links.
+- [x] Generated synthesis origin/version is recorded.
+- [x] Provenance survives review approval.
+- [x] Tests cover missing-source-map rejection.
 
 ## Proof Required
 

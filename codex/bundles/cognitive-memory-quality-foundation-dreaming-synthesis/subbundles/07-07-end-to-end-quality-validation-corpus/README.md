@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: `Ready`
+- Status: `Completed`
 
 ## Objective
 
@@ -22,15 +22,15 @@ Build a representative validation corpus and prove the full loop: ingestion/sour
 
 ## Exact Source References
 
-- /mnt/data/cogmem_repo/CanDoItAll-cognitive-memory/cognitive-memory-multi-cycle-demo-validation/reviews/01-execution-report.md
-- /mnt/data/cogmem_repo/CanDoItAll-cognitive-memory/cognitive-memory-testing-ingestion-settings/reviews/01-execution-report.md
-- /mnt/data/cogmem_repo/CanDoItAll-cognitive-memory/codex/bundles/cognitive-memory-beta-qdrant-validation/reviews/01-execution-report.md
-- /mnt/data/cogmem_repo/CanDoItAll-cognitive-memory/tests/CanDoItAll.Tests.Unit/CognitiveMemoryConsolidationEngineTests.cs
-- /mnt/data/cogmem_repo/CanDoItAll-cognitive-memory/tests/CanDoItAll.Tests.Unit/CognitiveMemoryRecallOrchestratorTests.cs
-- /mnt/data/cogmem_repo/CanDoItAll-cognitive-memory/tests/CanDoItAll.Tests.Integration/CognitiveMemoryPersistenceModelTests.cs
-- /mnt/data/cogmem_repo/CanDoItAll-cognitive-memory/tests/CanDoItAll.Tests.Playwright/CognitiveMemoryReviewUiPlaywrightTests.cs
-- /mnt/data/cogmem_repo/CanDoItAll-cognitive-memory/docs/cognitive-memory/current-state/implementation-map.md
-- /mnt/data/cogmem_repo/CanDoItAll-cognitive-memory/docs/cognitive-memory/architecture/runtime-flows.md
+- C:\repositories\CanDoItAll\cognitive-memory-multi-cycle-demo-validation\validation\evidence\20260517-181521\99-run-summary.json
+- C:\repositories\CanDoItAll\cognitive-memory-testing-ingestion-settings\validation\evidence\20260517-115640\99-summary.json
+- C:\repositories\CanDoItAll\docs\cognitive-memory\operations\validation-and-testing.md
+- C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CognitiveMemoryConsolidationEngineTests.cs
+- C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CognitiveMemoryRecallOrchestratorTests.cs
+- C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\CognitiveMemoryPersistenceModelTests.cs
+- C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Playwright\CognitiveMemoryReviewUiPlaywrightTests.cs
+- C:\repositories\CanDoItAll\docs\cognitive-memory\current-state\implementation-map.md
+- C:\repositories\CanDoItAll\docs\cognitive-memory\architecture\runtime-flows.md
 
 ## Deliverables
 
@@ -77,11 +77,11 @@ Build a representative validation corpus and prove the full loop: ingestion/sour
 
 ## Acceptance Checklist
 
-- [ ] Regression corpus covers duplicates, contradictions, temporal updates, project boundaries, restricted content, and distractors.
-- [ ] End-to-end tests prove clustering, dreaming, validation, activation, synthesis, and references.
-- [ ] Dream run metrics prove non-shallow behavior.
-- [ ] Docs reflect the new architecture.
-- [ ] Execution report contains commands, evidence, and any remaining risks.
+- [x] Regression corpus covers duplicates, contradictions, temporal updates, project boundaries, restricted content, and distractors.
+- [x] End-to-end tests prove clustering, dreaming, validation, activation, synthesis, and references.
+- [x] Dream run metrics prove non-shallow behavior.
+- [x] Docs reflect the new architecture.
+- [x] Execution report contains commands, evidence, and any remaining risks.
 
 ## Proof Required
 

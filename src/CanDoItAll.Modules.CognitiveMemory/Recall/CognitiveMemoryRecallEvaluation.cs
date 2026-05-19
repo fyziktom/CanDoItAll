@@ -82,7 +82,9 @@ public sealed partial class CognitiveMemoryRecallOrchestrator
         var result = new List<EvaluatedRecallCandidate>(evaluatedCandidates.Count);
         foreach (var candidate in evaluatedCandidates)
         {
-            if (candidate.DecisionKind == CognitiveMemoryRecallCandidateDecisionKind.Inhibited)
+            if (candidate.DecisionKind is CognitiveMemoryRecallCandidateDecisionKind.Inhibited
+                or CognitiveMemoryRecallCandidateDecisionKind.SideContext
+                or CognitiveMemoryRecallCandidateDecisionKind.Excluded)
             {
                 result.Add(candidate);
                 continue;

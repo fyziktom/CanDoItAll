@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: `Ready`
+- Status: `Completed`
 
 ## Objective
 
@@ -22,12 +22,12 @@ Implement explicit dreaming runs that operate on clusters, not only individual s
 
 ## Exact Source References
 
-- /mnt/data/cogmem_repo/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Consolidation/CognitiveMemoryConsolidationServices.cs
-- /mnt/data/cogmem_repo/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Consolidation/CognitiveMemoryConsolidationContracts.cs
-- /mnt/data/cogmem_repo/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Consolidation/CognitiveMemoryConsolidationFactExtractor.cs
-- /mnt/data/cogmem_repo/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Consolidation/CognitiveMemoryConsolidationCandidateApplicator.cs
-- /mnt/data/cogmem_repo/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Neuro/CognitiveMemoryMutationAuthority.cs
-- /mnt/data/cogmem_repo/CanDoItAll-cognitive-memory/tests/CanDoItAll.Tests.Unit/CognitiveMemoryConsolidationEngineTests.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CognitiveMemory\Consolidation\CognitiveMemoryConsolidationServices.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CognitiveMemory\Consolidation\CognitiveMemoryConsolidationContracts.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CognitiveMemory\Consolidation\CognitiveMemoryConsolidationFactExtractor.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CognitiveMemory\Consolidation\CognitiveMemoryConsolidationCandidateApplicator.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CognitiveMemory\Neuro\CognitiveMemoryMutationAuthority.cs
+- C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CognitiveMemoryConsolidationEngineTests.cs
 
 ## Deliverables
 
@@ -73,11 +73,11 @@ Implement explicit dreaming runs that operate on clusters, not only individual s
 
 ## Acceptance Checklist
 
-- [ ] Dream run is distinguishable from incremental consolidation.
-- [ ] At least four modes have distinct behavior or distinct agenda filters.
-- [ ] Dream run quality metrics are persisted or returned.
-- [ ] Aggregate candidates are cluster-derived.
-- [ ] Tests prove multi-member dream behavior.
+- [x] Dream run is distinguishable from incremental consolidation.
+- [x] At least four modes have distinct behavior or distinct agenda filters.
+- [x] Dream run quality metrics are persisted or returned.
+- [x] Aggregate candidates are cluster-derived.
+- [x] Tests prove multi-member dream behavior.
 
 ## Proof Required
 

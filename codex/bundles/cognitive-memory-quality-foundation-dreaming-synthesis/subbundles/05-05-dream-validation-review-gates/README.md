@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: `Ready`
+- Status: `Completed`
 
 ## Objective
 
@@ -22,12 +22,12 @@ Add multi-step validation and review gates that prevent weak, contradictory, sta
 
 ## Exact Source References
 
-- /mnt/data/cogmem_repo/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Neuro/CognitiveMemoryMutationAuthority.cs
-- /mnt/data/cogmem_repo/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/ReviewUi/CognitiveMemoryReviewUiService.cs
-- /mnt/data/cogmem_repo/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryAnswerGateService.cs
-- /mnt/data/cogmem_repo/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Recall/CognitiveMemoryRecallScoring.cs
-- /mnt/data/cogmem_repo/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Consolidation/CognitiveMemoryConsolidationServices.cs
-- /mnt/data/cogmem_repo/CanDoItAll-cognitive-memory/tests/CanDoItAll.Tests.Playwright/CognitiveMemoryReviewUiPlaywrightTests.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CognitiveMemory\Neuro\CognitiveMemoryMutationAuthority.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CognitiveMemory\ReviewUi\CognitiveMemoryReviewUiService.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryAnswerGateService.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CognitiveMemory\Recall\CognitiveMemoryRecallScoring.cs
+- C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CognitiveMemory\Consolidation\CognitiveMemoryConsolidationServices.cs
+- C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Playwright\CognitiveMemoryReviewUiPlaywrightTests.cs
 
 ## Deliverables
 
@@ -71,11 +71,11 @@ Add multi-step validation and review gates that prevent weak, contradictory, sta
 
 ## Acceptance Checklist
 
-- [ ] Dream validation service exists and is tested.
-- [ ] Mutation authority blocks weak/unsafe aggregates.
-- [ ] Review items show enough provenance for reviewers.
-- [ ] Non-happy paths are covered by tests.
-- [ ] UI proof exists if UI changed.
+- [x] Dream validation service exists and is tested.
+- [x] Mutation authority blocks weak/unsafe aggregates.
+- [x] Review items show enough provenance for reviewers.
+- [x] Non-happy paths are covered by tests.
+- [x] UI proof exists if UI changed.
 
 ## Proof Required
 
