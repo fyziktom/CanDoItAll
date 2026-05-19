@@ -232,14 +232,11 @@ public partial class CognitiveMemoryPage
 
         try
         {
-            snapshot = await ReviewUiService.GetSnapshotAsync(
-                new CognitiveMemoryReviewUiQuery(
-                    ProjectId,
-                    IncludeResolvedReviewItems: true),
-                CancellationToken.None);
+            snapshot = await LoadSnapshotAsync();
             selectedMemoryRecordId = ResolveSelectedMemoryRecordId(snapshot, selectedMemoryRecordId);
             selectedReviewItemId = ResolveSelectedReviewItemId(snapshot, selectedReviewItemId);
             selectedRecallTraceId = ResolveSelectedRecallTraceId(snapshot, selectedRecallTraceId);
+            selectedAggregateCandidateId = ResolveSelectedAggregateCandidateId(snapshot, selectedAggregateCandidateId);
             BumpUiRevision();
         }
         catch (Exception exception)
@@ -313,14 +310,11 @@ public partial class CognitiveMemoryPage
 
     internal async Task ReloadSnapshotAsync()
     {
-        snapshot = await ReviewUiService.GetSnapshotAsync(
-            new CognitiveMemoryReviewUiQuery(
-                ProjectId,
-                IncludeResolvedReviewItems: true),
-            CancellationToken.None);
+        snapshot = await LoadSnapshotAsync();
         selectedMemoryRecordId = ResolveSelectedMemoryRecordId(snapshot, selectedMemoryRecordId);
         selectedReviewItemId = ResolveSelectedReviewItemId(snapshot, selectedReviewItemId);
         selectedRecallTraceId = ResolveSelectedRecallTraceId(snapshot, selectedRecallTraceId);
+        selectedAggregateCandidateId = ResolveSelectedAggregateCandidateId(snapshot, selectedAggregateCandidateId);
         BumpUiRevision();
     }
 

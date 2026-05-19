@@ -512,6 +512,30 @@ public sealed class CognitiveMemoryRecallOrchestratorTests
     }
 
     [Fact]
+    public async Task RecallAsync_RetainsSourceInsufficientCandidateAsSideContext()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var recordId = Guid.Parse("10000000-0000-0000-0000-000000000306");
+        await SeedUnsupportedMemoryAsync(
+            fixture,
+            projectId,
+            recordId,
+            "Deployment rollback note",
+            "Deployment rollback note has lexical relevance but no source evidence.");
+        var orchestrator = CreateOrchestrator(fixture, new RecordingProjectionAdapter([]));
+
+        var result = await orchestrator.RecallAsync(CreateRequest(projectId, "deployment rollback"));
+
+        var candidate = Assert.Single(result.Candidates, candidate => candidate.MemoryRecordId.Value == recordId);
+        Assert.Equal(CognitiveMemoryRecallCandidateDecisionKind.SideContext, candidate.DecisionKind);
+        Assert.Equal(CognitiveMemoryRecallExclusionReasonKind.SourceInsufficient, candidate.ExclusionReasonKind);
+        Assert.DoesNotContain(result.ContextPack.Sections, section =>
+            section.SectionKind == CognitiveMemoryRecallContextSectionKind.SelectedMemory &&
+            section.MemoryRecordIds.Any(memoryRecordId => memoryRecordId.Value == recordId));
+    }
+
+    [Fact]
     public async Task RecallAsync_DoesNotInjectRestrictedSourceContentIntoContextPack()
     {
         var fixture = CreateFixture();
@@ -813,6 +837,39 @@ public sealed class CognitiveMemoryRecallOrchestratorTests
             });
         await fixture.DbContext.SaveChangesAsync();
         return new SeededMemory(record.Id, sourceItem.Id, anchor.Id);
+    }
+
+    private static async Task SeedUnsupportedMemoryAsync(
+        TestFixture fixture,
+        Guid projectId,
+        Guid recordId,
+        string title,
+        string canonicalText)
+    {
+        fixture.DbContext.Add(new CognitiveMemoryRecord
+        {
+            Id = recordId,
+            ProjectId = projectId,
+            Kind = CognitiveMemoryRecordKind.Semantic,
+            Origin = CognitiveMemoryRecordOrigin.HumanEntered,
+            Title = title,
+            CanonicalText = canonicalText,
+            SummaryText = canonicalText,
+            TopicKey = title.ToLowerInvariant().Replace(' ', '.'),
+            ValidationState = CognitiveMemoryValidationState.Approved,
+            StabilityState = CognitiveMemoryStabilityState.Active,
+            CreatedInMode = CognitiveMemoryOperationMode.Observe,
+            AlgorithmVersion = "taxonomy-v1",
+            ContentHash = CognitiveMemoryHash.FromUtf8(canonicalText).Value,
+            SourceEvidenceCount = 0,
+            EvidenceAnchorCount = 0,
+            AccessLevel = CognitiveMemoryAccessLevel.Project,
+            RiskLevel = CognitiveMemoryRiskLevel.Low,
+            CreatedAtUtc = fixture.Clock.GetUtcNow(),
+            UpdatedAtUtc = fixture.Clock.GetUtcNow(),
+            ConcurrencyToken = Guid.NewGuid()
+        });
+        await fixture.DbContext.SaveChangesAsync();
     }
 
     private static TestFixture CreateFixture()

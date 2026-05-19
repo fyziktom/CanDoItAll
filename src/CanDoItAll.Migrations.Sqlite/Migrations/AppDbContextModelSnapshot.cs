@@ -2526,6 +2526,407 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.ToTable("CognitiveMemory_DomainCompetenceProfiles", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryDreamAggregateCandidateRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("AccessLevel")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AlgorithmVersion")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CanonicalText")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ClaimCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("ClusterId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ConcurrencyToken")
+                        .IsConcurrencyToken()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("DreamRunId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("MemoryRecordId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Mode")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PayloadHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PayloadHashAlgorithm")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ReviewItemId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("RiskLevel")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SourceMapCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SummaryText")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ValidationRecordId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClusterId");
+
+                    b.HasIndex("MemoryRecordId");
+
+                    b.HasIndex("PayloadHash");
+
+                    b.HasIndex("ReviewItemId");
+
+                    b.HasIndex("ValidationRecordId");
+
+                    b.HasIndex("DreamRunId", "ClusterId")
+                        .IsUnique();
+
+                    b.HasIndex("ProjectId", "Mode", "Status");
+
+                    b.ToTable("CognitiveMemory_DreamAggregateCandidates", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryDreamAggregateClaimRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("AggregateCandidateId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ClaimKind")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ClaimText")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ObjectKey")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PredicateKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Sequence")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SubjectKey")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AggregateCandidateId", "Sequence")
+                        .IsUnique();
+
+                    b.HasIndex("ProjectId", "SubjectKey", "PredicateKey", "ObjectKey");
+
+                    b.ToTable("CognitiveMemory_DreamAggregateClaims", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryDreamAggregateClaimSourceMapRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("AccessLevel")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("AggregateCandidateId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("AggregateClaimId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Direction")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("EvidenceAnchorId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("RedactionState")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("SourceItemId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("SourceMemoryRecordId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AggregateCandidateId");
+
+                    b.HasIndex("EvidenceAnchorId");
+
+                    b.HasIndex("SourceItemId");
+
+                    b.HasIndex("SourceMemoryRecordId");
+
+                    b.HasIndex("ProjectId", "Direction");
+
+                    b.HasIndex("AggregateClaimId", "SourceMemoryRecordId", "EvidenceAnchorId", "Direction")
+                        .IsUnique();
+
+                    b.ToTable("CognitiveMemory_DreamAggregateClaimSourceMaps", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryDreamRunClusterRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ClaimCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("ClusterId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("DreamRunId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("MemberCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Readiness")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SelectionReasonCode")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClusterId");
+
+                    b.HasIndex("DreamRunId", "ClusterId")
+                        .IsUnique();
+
+                    b.HasIndex("ProjectId", "Readiness");
+
+                    b.ToTable("CognitiveMemory_DreamRunClusters", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryDreamRunRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("AggregateCandidatesCreated")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("AggregateClaimSourceMapsCreated")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("AggregateClaimsCreated")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AlgorithmVersion")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ApprovedCandidates")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ClaimsExtracted")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ClusterMembersRead")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ClustersConsidered")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ConcurrencyToken")
+                        .IsConcurrencyToken()
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("EvidenceCoverageRatio")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("FailureCode")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FailureMessage")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Mode")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("NeedsReviewCandidates")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PolicyProfileId")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("RejectedCandidates")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ReviewItemsCreated")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("StartedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TriggerKind")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ValidationRecordsCreated")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("WarningsJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectId", "IdempotencyKey")
+                        .IsUnique();
+
+                    b.HasIndex("ProjectId", "Mode", "Status", "StartedAtUtc");
+
+                    b.ToTable("CognitiveMemory_DreamRuns", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryDreamValidationRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("AggregateCandidateId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ClaimsChecked")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("ConcurrencyToken")
+                        .IsConcurrencyToken()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Decision")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("IssueCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("IssuesJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PolicyProfileId")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SourceMapsChecked")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AggregateCandidateId", "Decision");
+
+                    b.HasIndex("ProjectId", "Decision", "CreatedAtUtc");
+
+                    b.ToTable("CognitiveMemory_DreamValidations", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryEntityAliasRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -5106,6 +5507,169 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.ToTable("CognitiveMemory_ProjectionStates", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryQualityClusterKeyRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ClusterId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DisplayText")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("KeyFamily")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClusterId", "KeyFamily", "Key")
+                        .IsUnique();
+
+                    b.HasIndex("ProjectId", "KeyFamily", "Key");
+
+                    b.ToTable("CognitiveMemory_QualityClusterKeys", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryQualityClusterMemberRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("AccessLevel")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("ClusterId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("EvidenceAnchorId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("MemberKind")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("MemoryRecordId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("RiskLevel")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("SourceItemId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("StabilityState")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ValidationState")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EvidenceAnchorId");
+
+                    b.HasIndex("MemoryRecordId");
+
+                    b.HasIndex("SourceItemId");
+
+                    b.HasIndex("ProjectId", "MemberKind");
+
+                    b.HasIndex("ClusterId", "MemberKind", "MemoryRecordId", "SourceItemId")
+                        .IsUnique();
+
+                    b.ToTable("CognitiveMemory_QualityClusterMembers", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryQualityClusterRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("AccessLevel")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AlgorithmVersion")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ClusterHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ConcurrencyToken")
+                        .IsConcurrencyToken()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ContradictionCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("KeyCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MemberCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PolicyProfileId")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PrimaryKeyFamily")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Readiness")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("RiskLevel")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SourceEvidenceCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectId", "ClusterHash")
+                        .IsUnique();
+
+                    b.HasIndex("ProjectId", "AccessLevel", "RiskLevel");
+
+                    b.HasIndex("ProjectId", "PrimaryKeyFamily", "Readiness");
+
+                    b.ToTable("CognitiveMemory_QualityClusters", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryRecallCandidateRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -7415,6 +7979,146 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .IsUnique();
 
                     b.ToTable("CognitiveMemory_SourceTombstones", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemorySynthesizedRecallRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Brief")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ConcurrencyToken")
+                        .IsConcurrencyToken()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("RecallTraceId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("ReferencesShownByDefault")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SourceMapCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("StatementCount")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAtUtc");
+
+                    b.HasIndex("RecallTraceId");
+
+                    b.HasIndex("ProjectId", "RecallTraceId");
+
+                    b.ToTable("CognitiveMemory_SynthesizedRecalls", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemorySynthesizedStatementRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Sequence")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("SynthesisId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectId", "CreatedAtUtc");
+
+                    b.HasIndex("SynthesisId", "Sequence")
+                        .IsUnique();
+
+                    b.ToTable("CognitiveMemory_SynthesizedStatements", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemorySynthesizedStatementSourceMapRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("AccessLevel")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("EvidenceAnchorId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Locator")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("MemoryRecordId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("RedactionState")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("SourceItemId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceSystem")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("StatementId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("SynthesisId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EvidenceAnchorId");
+
+                    b.HasIndex("MemoryRecordId");
+
+                    b.HasIndex("SourceItemId");
+
+                    b.HasIndex("SynthesisId");
+
+                    b.HasIndex("ProjectId", "AccessLevel", "RedactionState");
+
+                    b.HasIndex("StatementId", "MemoryRecordId", "SourceItemId", "EvidenceAnchorId")
+                        .IsUnique();
+
+                    b.ToTable("CognitiveMemory_SynthesizedStatementSourceMaps", (string)null);
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryTemporalEpisodeLinkRecord", b =>
@@ -13786,6 +14490,100 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryDreamAggregateCandidateRecord", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryQualityClusterRecord", null)
+                        .WithMany()
+                        .HasForeignKey("ClusterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryDreamRunRecord", null)
+                        .WithMany()
+                        .HasForeignKey("DreamRunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryRecord", null)
+                        .WithMany()
+                        .HasForeignKey("MemoryRecordId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryReviewItemRecord", null)
+                        .WithMany()
+                        .HasForeignKey("ReviewItemId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryDreamValidationRecord", null)
+                        .WithMany()
+                        .HasForeignKey("ValidationRecordId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryDreamAggregateClaimRecord", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryDreamAggregateCandidateRecord", null)
+                        .WithMany()
+                        .HasForeignKey("AggregateCandidateId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryDreamAggregateClaimSourceMapRecord", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryDreamAggregateCandidateRecord", null)
+                        .WithMany()
+                        .HasForeignKey("AggregateCandidateId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryDreamAggregateClaimRecord", null)
+                        .WithMany()
+                        .HasForeignKey("AggregateClaimId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryEvidenceAnchorRecord", null)
+                        .WithMany()
+                        .HasForeignKey("EvidenceAnchorId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemorySourceItemRecord", null)
+                        .WithMany()
+                        .HasForeignKey("SourceItemId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryRecord", null)
+                        .WithMany()
+                        .HasForeignKey("SourceMemoryRecordId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryDreamRunClusterRecord", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryQualityClusterRecord", null)
+                        .WithMany()
+                        .HasForeignKey("ClusterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryDreamRunRecord", null)
+                        .WithMany()
+                        .HasForeignKey("DreamRunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryDreamValidationRecord", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryDreamAggregateCandidateRecord", null)
+                        .WithMany()
+                        .HasForeignKey("AggregateCandidateId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryEntityAliasRecord", b =>
                 {
                     b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryEntityRecord", null)
@@ -14214,6 +15012,39 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .HasForeignKey("MemoryRecordId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryQualityClusterKeyRecord", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryQualityClusterRecord", null)
+                        .WithMany()
+                        .HasForeignKey("ClusterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryQualityClusterMemberRecord", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryQualityClusterRecord", null)
+                        .WithMany()
+                        .HasForeignKey("ClusterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryEvidenceAnchorRecord", null)
+                        .WithMany()
+                        .HasForeignKey("EvidenceAnchorId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryRecord", null)
+                        .WithMany()
+                        .HasForeignKey("MemoryRecordId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemorySourceItemRecord", null)
+                        .WithMany()
+                        .HasForeignKey("SourceItemId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryRecallCandidateRecord", b =>
@@ -14665,6 +15496,55 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .WithMany()
                         .HasForeignKey("PreviousSourceItemId")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemorySynthesizedRecallRecord", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryRecallTraceRecord", null)
+                        .WithMany()
+                        .HasForeignKey("RecallTraceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemorySynthesizedStatementRecord", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemorySynthesizedRecallRecord", null)
+                        .WithMany()
+                        .HasForeignKey("SynthesisId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemorySynthesizedStatementSourceMapRecord", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryEvidenceAnchorRecord", null)
+                        .WithMany()
+                        .HasForeignKey("EvidenceAnchorId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryRecord", null)
+                        .WithMany()
+                        .HasForeignKey("MemoryRecordId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemorySourceItemRecord", null)
+                        .WithMany()
+                        .HasForeignKey("SourceItemId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemorySynthesizedStatementRecord", null)
+                        .WithMany()
+                        .HasForeignKey("StatementId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemorySynthesizedRecallRecord", null)
+                        .WithMany()
+                        .HasForeignKey("SynthesisId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryTemporalEpisodeLinkRecord", b =>

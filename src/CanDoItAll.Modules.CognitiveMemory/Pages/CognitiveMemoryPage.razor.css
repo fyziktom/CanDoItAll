@@ -219,6 +219,12 @@
     outline: none;
 }
 
+::deep .cognitive-memory-row-button[data-selected="true"] {
+    border-color: rgb(37 99 235);
+    background: rgb(239 246 255);
+    box-shadow: inset 3px 0 0 rgb(37 99 235);
+}
+
 ::deep .cognitive-memory-probe-section {
     gap: 0.55rem;
 }
@@ -332,27 +338,22 @@
     line-height: 1.45;
 }
 
-@media (max-width: 900px) {
-    .cognitive-memory-summary ::deep .cda-summary-tile--badge {
-        flex-basis: 10.5rem;
-    }
+::deep .cognitive-memory-pager {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: 0.85rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid rgb(226 232 240);
+    color: rgb(71 85 105);
+    font-size: 0.82rem;
+    font-weight: 700;
 }
 
-@media (max-width: 600px) {
-    ::deep .cognitive-memory-file-drop {
-        display: grid;
-        justify-content: stretch;
-    }
-
-    ::deep .cognitive-memory-file-drop input[type="file"] {
-        width: 100%;
-    }
-
-    ::deep .cognitive-memory-provider-option {
-        grid-template-columns: auto minmax(0, 1fr);
-    }
-
-    ::deep .cognitive-memory-provider-badge {
-        grid-column: 2;
-    }
+::deep .cognitive-memory-pager-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex: 0 0 auto;
 }

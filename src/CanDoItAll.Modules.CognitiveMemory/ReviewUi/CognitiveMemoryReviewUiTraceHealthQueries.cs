@@ -20,11 +20,13 @@ public sealed partial class CognitiveMemoryReviewUiService
             tracesQuery = tracesQuery.Where(trace => trace.ProjectId == projectId);
         }
 
-        var traces = (await tracesQuery
-            .ToListAsync(cancellationToken))
-            .OrderByDescending(trace => trace.StartedAtUtc)
-            .Take(query.Take)
-            .ToArray();
+        var page = ResolvePage(query, CognitiveMemoryReviewUiCollectionKind.RecallTraces);
+        var traces = await (UsesSqlite(dbContext)
+                ? tracesQuery.OrderBy(trace => trace.Id)
+                : tracesQuery.OrderByDescending(trace => trace.StartedAtUtc))
+            .Skip(page.Skip)
+            .Take(page.PageSize)
+            .ToArrayAsync(cancellationToken);
         var traceIds = traces.Select(trace => trace.Id).ToArray();
         var stages = (await dbContext.Set<CognitiveMemoryRecallTraceStageRecord>()
             .AsNoTracking()
@@ -52,6 +54,7 @@ public sealed partial class CognitiveMemoryReviewUiService
             .Where(candidate => traceIds.Contains(candidate.RecallTraceId))
             .OrderByDescending(candidate => candidate.DecisionKind == CognitiveMemoryRecallCandidateDecisionKind.Selected)
             .ThenByDescending(candidate => candidate.DisplayRankProjection)
+            .Take(Math.Max(1, traceIds.Length) * 6)
             .ToListAsync(cancellationToken);
         var candidatesByTrace = candidates
             .GroupBy(candidate => candidate.RecallTraceId)
@@ -75,6 +78,7 @@ public sealed partial class CognitiveMemoryReviewUiService
             .Where(sourceRef => traceIds.Contains(sourceRef.RecallTraceId))
             .OrderByDescending(sourceRef => sourceRef.IncludedInContext)
             .ThenBy(sourceRef => sourceRef.SourceSystem)
+            .Take(Math.Max(1, traceIds.Length) * 6)
             .ToListAsync(cancellationToken);
         var sourceRefsByTrace = sourceRefs
             .GroupBy(sourceRef => sourceRef.RecallTraceId)
@@ -125,10 +129,12 @@ public sealed partial class CognitiveMemoryReviewUiService
             runsQuery = runsQuery.Where(run => run.ProjectId == projectId);
         }
 
-        return (await runsQuery
-            .ToListAsync(cancellationToken))
-            .OrderByDescending(run => run.StartedAtUtc)
-            .Take(query.Take)
+        var page = ResolvePage(query, CognitiveMemoryReviewUiCollectionKind.ConsolidationRuns);
+        return await (UsesSqlite(dbContext)
+                ? runsQuery.OrderBy(run => run.Id)
+                : runsQuery.OrderByDescending(run => run.StartedAtUtc))
+            .Skip(page.Skip)
+            .Take(page.PageSize)
             .Select(run => new CognitiveMemoryConsolidationRunView(
                 run.Id,
                 run.ProjectId,
@@ -144,7 +150,7 @@ public sealed partial class CognitiveMemoryReviewUiService
                 run.FailureMessage,
                 run.StartedAtUtc,
                 run.CompletedAtUtc))
-            .ToArray();
+            .ToArrayAsync(cancellationToken);
     }
 
     private static async Task<IReadOnlyList<CognitiveMemoryProjectionHealthView>> LoadProjectionHealthAsync(
@@ -160,12 +166,15 @@ public sealed partial class CognitiveMemoryReviewUiService
             projectionsQuery = projectionsQuery.Where(projection => projection.ProjectId == projectId);
         }
 
-        return (await projectionsQuery
-            .ToListAsync(cancellationToken))
+        var page = ResolvePage(query, CognitiveMemoryReviewUiCollectionKind.ProjectionHealth);
+        var orderedProjections = projectionsQuery
             .OrderByDescending(projection => projection.RebuildRequired)
-            .ThenByDescending(projection => projection.Status == CognitiveMemoryProjectionStatus.Failed)
-            .ThenByDescending(projection => projection.UpdatedAtUtc)
-            .Take(query.Take)
+            .ThenByDescending(projection => projection.Status == CognitiveMemoryProjectionStatus.Failed);
+        return await (UsesSqlite(dbContext)
+                ? orderedProjections.ThenBy(projection => projection.Id)
+                : orderedProjections.ThenByDescending(projection => projection.UpdatedAtUtc))
+            .Skip(page.Skip)
+            .Take(page.PageSize)
             .Select(projection => new CognitiveMemoryProjectionHealthView(
                 new CognitiveMemoryProjectionId(projection.Id),
                 projection.ProjectId,
@@ -176,7 +185,7 @@ public sealed partial class CognitiveMemoryReviewUiService
                 projection.FailureCode,
                 projection.FailureMessage,
                 projection.UpdatedAtUtc))
-            .ToArray();
+            .ToArrayAsync(cancellationToken);
     }
 
     private static async Task<IReadOnlyList<CognitiveMemoryProcedureSkillView>> LoadProcedureSkillsAsync(
@@ -192,12 +201,15 @@ public sealed partial class CognitiveMemoryReviewUiService
             skillsQuery = skillsQuery.Where(skill => skill.ProjectId == projectId);
         }
 
-        return (await skillsQuery
-            .ToListAsync(cancellationToken))
+        var page = ResolvePage(query, CognitiveMemoryReviewUiCollectionKind.ProcedureSkills);
+        var orderedSkills = skillsQuery
             .OrderByDescending(skill => skill.RiskLevel)
-            .ThenBy(skill => skill.Maturity)
-            .ThenByDescending(skill => skill.UpdatedAtUtc)
-            .Take(query.Take)
+            .ThenBy(skill => skill.Maturity);
+        return await (UsesSqlite(dbContext)
+                ? orderedSkills.ThenBy(skill => skill.Id)
+                : orderedSkills.ThenByDescending(skill => skill.UpdatedAtUtc))
+            .Skip(page.Skip)
+            .Take(page.PageSize)
             .Select(skill => new CognitiveMemoryProcedureSkillView(
                 new CognitiveMemoryProcedureSkillId(skill.Id),
                 skill.ProjectId,
@@ -213,7 +225,7 @@ public sealed partial class CognitiveMemoryReviewUiService
                 skill.ValidationEvidenceCount,
                 skill.AutomationBindingCount,
                 skill.UpdatedAtUtc))
-            .ToArray();
+            .ToArrayAsync(cancellationToken);
     }
 
     private static async Task<IReadOnlyList<CognitiveMemoryReplayJobView>> LoadReplayJobsAsync(
@@ -229,12 +241,22 @@ public sealed partial class CognitiveMemoryReviewUiService
             jobsQuery = jobsQuery.Where(job => job.ProjectId == projectId);
         }
 
-        return (await jobsQuery
-            .ToListAsync(cancellationToken))
+        var page = ResolvePage(query, CognitiveMemoryReviewUiCollectionKind.ReplayJobs);
+        var orderedJobs = jobsQuery
             .OrderByDescending(job => job.State == CognitiveMemoryReplayJobState.NeedsReview)
             .ThenByDescending(job => job.QueuePriority)
-            .ThenByDescending(job => job.UpdatedAtUtc)
-            .Take(query.Take)
+            .ThenBy(job => job.Id);
+        if (!UsesSqlite(dbContext))
+        {
+            orderedJobs = jobsQuery
+                .OrderByDescending(job => job.State == CognitiveMemoryReplayJobState.NeedsReview)
+                .ThenByDescending(job => job.QueuePriority)
+                .ThenByDescending(job => job.UpdatedAtUtc);
+        }
+
+        return await orderedJobs
+            .Skip(page.Skip)
+            .Take(page.PageSize)
             .Select(job => new CognitiveMemoryReplayJobView(
                 job.Id,
                 job.ProjectId,
@@ -247,6 +269,6 @@ public sealed partial class CognitiveMemoryReviewUiService
                 job.FailureCode,
                 job.FailureMessage,
                 job.UpdatedAtUtc))
-            .ToArray();
+            .ToArrayAsync(cancellationToken);
     }
 }

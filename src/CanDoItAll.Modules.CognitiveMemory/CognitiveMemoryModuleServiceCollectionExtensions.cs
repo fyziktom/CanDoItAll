@@ -66,6 +66,13 @@ public static class CognitiveMemoryModuleServiceCollectionExtensions
         services.TryAddScoped<ICognitiveMemoryProcedureSkillMemoryService>(provider => provider.GetRequiredService<CognitiveMemoryProcedureSkillService>());
         services.TryAddScoped<ICognitiveMemorySimulationSandboxService>(provider => provider.GetRequiredService<CognitiveMemoryProcedureSkillService>());
         services.TryAddScoped<ICognitiveMemoryReviewUiService, CognitiveMemoryReviewUiService>();
+        services.TryAddScoped<ICognitiveMemoryQualityDiagnosticsService, CognitiveMemoryQualityDiagnosticsService>();
+        services.TryAddScoped<ICognitiveMemoryClusterPlanner, CognitiveMemoryClusterPlanner>();
+        services.TryAddScoped<ICognitiveMemoryDreamValidator, CognitiveMemoryDreamValidator>();
+        services.TryAddScoped<ICognitiveMemoryDreamConsolidationService, CognitiveMemoryDreamConsolidationService>();
+        services.TryAddScoped<ICognitiveMemoryAggregateMemoryApplicator, CognitiveMemoryAggregateMemoryApplicator>();
+        services.TryAddScoped<ICognitiveMemoryRecallSynthesisService, CognitiveMemoryRecallSynthesisService>();
+        services.TryAddScoped<ICognitiveMemoryReferenceResolver, CognitiveMemoryReferenceResolver>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentContextContributor, CognitiveMemoryAgentContextContributor>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, CognitiveMemoryRecallWorkflowExecutor>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, CognitiveMemoryProbeWorkflowExecutor>());

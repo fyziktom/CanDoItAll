@@ -10,24 +10,28 @@ public sealed partial class CognitiveMemoryReviewUiService
         CognitiveMemoryReviewUiQuery query,
         CancellationToken cancellationToken)
     {
-        var items = new List<CognitiveMemoryOperatorAuditItem>(query.Take * 4);
-        items.AddRange(await LoadMutationCommandAuditAsync(dbContext, query, cancellationToken));
-        items.AddRange(await LoadMutationEventAuditAsync(dbContext, query, cancellationToken));
-        items.AddRange(await LoadClaimAuditAsync(dbContext, query, cancellationToken));
-        items.AddRange(await LoadEvidenceAuditAsync(dbContext, query, cancellationToken));
-        items.AddRange(await LoadProjectionFailureAuditAsync(dbContext, query, cancellationToken));
-        items.AddRange(await LoadRetentionCleanupAuditAsync(dbContext, query, cancellationToken));
+        var page = ResolvePage(query, CognitiveMemoryReviewUiCollectionKind.OperatorAudit);
+        var branchLimit = page.Skip + page.PageSize;
+        var items = new List<CognitiveMemoryOperatorAuditItem>(branchLimit * 4);
+        items.AddRange(await LoadMutationCommandAuditAsync(dbContext, query, branchLimit, cancellationToken));
+        items.AddRange(await LoadMutationEventAuditAsync(dbContext, query, branchLimit, cancellationToken));
+        items.AddRange(await LoadClaimAuditAsync(dbContext, query, branchLimit, cancellationToken));
+        items.AddRange(await LoadEvidenceAuditAsync(dbContext, query, branchLimit, cancellationToken));
+        items.AddRange(await LoadProjectionFailureAuditAsync(dbContext, query, branchLimit, cancellationToken));
+        items.AddRange(await LoadRetentionCleanupAuditAsync(dbContext, query, branchLimit, cancellationToken));
 
         return items
             .OrderByDescending(item => item.CreatedAtUtc)
             .ThenBy(item => item.AuditKind)
-            .Take(query.Take)
+            .Skip(page.Skip)
+            .Take(page.PageSize)
             .ToArray();
     }
 
     private static async Task<IReadOnlyList<CognitiveMemoryOperatorAuditItem>> LoadMutationCommandAuditAsync(
         AppDbContext dbContext,
         CognitiveMemoryReviewUiQuery query,
+        int limit,
         CancellationToken cancellationToken)
     {
         var commandsQuery = dbContext.Set<CognitiveMemoryMutationCommandRecord>()
@@ -37,11 +41,20 @@ public sealed partial class CognitiveMemoryReviewUiService
             commandsQuery = commandsQuery.Where(command => command.ProjectId == projectId);
         }
 
-        return (await commandsQuery
-            .ToListAsync(cancellationToken))
+        var orderedCommands = commandsQuery
             .OrderByDescending(command => command.RequiresHumanReview)
-            .ThenByDescending(command => command.UpdatedAtUtc)
-            .Take(query.Take)
+            .ThenBy(command => command.Id);
+        if (!UsesSqlite(dbContext))
+        {
+            orderedCommands = commandsQuery
+                .OrderByDescending(command => command.RequiresHumanReview)
+                .ThenByDescending(command => command.UpdatedAtUtc);
+        }
+
+        var commands = await orderedCommands
+            .Take(limit)
+            .ToArrayAsync(cancellationToken);
+        return commands
             .Select(command => new CognitiveMemoryOperatorAuditItem(
                 command.Id,
                 command.ProjectId,
@@ -60,6 +73,7 @@ public sealed partial class CognitiveMemoryReviewUiService
     private static async Task<IReadOnlyList<CognitiveMemoryOperatorAuditItem>> LoadMutationEventAuditAsync(
         AppDbContext dbContext,
         CognitiveMemoryReviewUiQuery query,
+        int limit,
         CancellationToken cancellationToken)
     {
         var eventsQuery = dbContext.Set<CognitiveMemoryMutationAuditEventRecord>()
@@ -69,11 +83,17 @@ public sealed partial class CognitiveMemoryReviewUiService
             eventsQuery = eventsQuery.Where(item => item.ProjectId == projectId);
         }
 
-        return (await eventsQuery
-            .ToListAsync(cancellationToken))
-            .OrderByDescending(item => item.CreatedAtUtc)
-            .ThenByDescending(item => item.Sequence)
-            .Take(query.Take)
+        var orderedEvents = UsesSqlite(dbContext)
+            ? eventsQuery
+                .OrderByDescending(item => item.Sequence)
+                .ThenBy(item => item.Id)
+            : eventsQuery
+                .OrderByDescending(item => item.CreatedAtUtc)
+                .ThenByDescending(item => item.Sequence);
+        var events = await orderedEvents
+            .Take(limit)
+            .ToArrayAsync(cancellationToken);
+        return events
             .Select(item => new CognitiveMemoryOperatorAuditItem(
                 item.Id,
                 item.ProjectId,
@@ -90,6 +110,7 @@ public sealed partial class CognitiveMemoryReviewUiService
     private static async Task<IReadOnlyList<CognitiveMemoryOperatorAuditItem>> LoadClaimAuditAsync(
         AppDbContext dbContext,
         CognitiveMemoryReviewUiQuery query,
+        int limit,
         CancellationToken cancellationToken)
     {
         var claimsQuery = dbContext.Set<CognitiveMemoryClaimRecord>()
@@ -99,11 +120,20 @@ public sealed partial class CognitiveMemoryReviewUiService
             claimsQuery = claimsQuery.Where(claim => claim.ProjectId == projectId);
         }
 
-        return (await claimsQuery
-            .ToListAsync(cancellationToken))
+        var orderedClaims = claimsQuery
             .OrderByDescending(claim => claim.ValidationState != CognitiveMemoryValidationState.Approved)
-            .ThenByDescending(claim => claim.UpdatedAtUtc)
-            .Take(query.Take)
+            .ThenBy(claim => claim.Id);
+        if (!UsesSqlite(dbContext))
+        {
+            orderedClaims = claimsQuery
+                .OrderByDescending(claim => claim.ValidationState != CognitiveMemoryValidationState.Approved)
+                .ThenByDescending(claim => claim.UpdatedAtUtc);
+        }
+
+        var claims = await orderedClaims
+            .Take(limit)
+            .ToArrayAsync(cancellationToken);
+        return claims
             .Select(claim => new CognitiveMemoryOperatorAuditItem(
                 claim.Id,
                 claim.ProjectId,
@@ -120,6 +150,7 @@ public sealed partial class CognitiveMemoryReviewUiService
     private static async Task<IReadOnlyList<CognitiveMemoryOperatorAuditItem>> LoadEvidenceAuditAsync(
         AppDbContext dbContext,
         CognitiveMemoryReviewUiQuery query,
+        int limit,
         CancellationToken cancellationToken)
     {
         var anchorsQuery = dbContext.Set<CognitiveMemoryEvidenceAnchorRecord>()
@@ -129,11 +160,20 @@ public sealed partial class CognitiveMemoryReviewUiService
             anchorsQuery = anchorsQuery.Where(anchor => anchor.ProjectId == projectId);
         }
 
-        return (await anchorsQuery
-            .ToListAsync(cancellationToken))
+        var orderedAnchors = anchorsQuery
             .OrderByDescending(anchor => anchor.RedactionState != CognitiveMemoryRedactionState.Safe)
-            .ThenByDescending(anchor => anchor.CreatedAtUtc)
-            .Take(query.Take)
+            .ThenBy(anchor => anchor.Id);
+        if (!UsesSqlite(dbContext))
+        {
+            orderedAnchors = anchorsQuery
+                .OrderByDescending(anchor => anchor.RedactionState != CognitiveMemoryRedactionState.Safe)
+                .ThenByDescending(anchor => anchor.CreatedAtUtc);
+        }
+
+        var anchors = await orderedAnchors
+            .Take(limit)
+            .ToArrayAsync(cancellationToken);
+        return anchors
             .Select(anchor => new CognitiveMemoryOperatorAuditItem(
                 anchor.Id,
                 anchor.ProjectId,
@@ -150,6 +190,7 @@ public sealed partial class CognitiveMemoryReviewUiService
     private static async Task<IReadOnlyList<CognitiveMemoryOperatorAuditItem>> LoadProjectionFailureAuditAsync(
         AppDbContext dbContext,
         CognitiveMemoryReviewUiQuery query,
+        int limit,
         CancellationToken cancellationToken)
     {
         var projectionsQuery = dbContext.Set<CognitiveMemoryProjectionStateRecord>()
@@ -162,11 +203,20 @@ public sealed partial class CognitiveMemoryReviewUiService
             projectionsQuery = projectionsQuery.Where(projection => projection.ProjectId == projectId);
         }
 
-        return (await projectionsQuery
-            .ToListAsync(cancellationToken))
+        var orderedProjections = projectionsQuery
             .OrderByDescending(projection => projection.Status == CognitiveMemoryProjectionStatus.Failed)
-            .ThenByDescending(projection => projection.UpdatedAtUtc)
-            .Take(query.Take)
+            .ThenBy(projection => projection.Id);
+        if (!UsesSqlite(dbContext))
+        {
+            orderedProjections = projectionsQuery
+                .OrderByDescending(projection => projection.Status == CognitiveMemoryProjectionStatus.Failed)
+                .ThenByDescending(projection => projection.UpdatedAtUtc);
+        }
+
+        var projections = await orderedProjections
+            .Take(limit)
+            .ToArrayAsync(cancellationToken);
+        return projections
             .Select(projection => new CognitiveMemoryOperatorAuditItem(
                 projection.Id,
                 projection.ProjectId,
@@ -183,6 +233,7 @@ public sealed partial class CognitiveMemoryReviewUiService
     private static async Task<IReadOnlyList<CognitiveMemoryOperatorAuditItem>> LoadRetentionCleanupAuditAsync(
         AppDbContext dbContext,
         CognitiveMemoryReviewUiQuery query,
+        int limit,
         CancellationToken cancellationToken)
     {
         var runsQuery = dbContext.Set<CognitiveMemoryRunRecord>()
@@ -193,10 +244,13 @@ public sealed partial class CognitiveMemoryReviewUiService
             runsQuery = runsQuery.Where(run => run.ProjectId == projectId);
         }
 
-        return (await runsQuery
-            .ToListAsync(cancellationToken))
-            .OrderByDescending(run => run.CompletedAtUtc ?? run.StartedAtUtc)
-            .Take(query.Take)
+        var orderedRuns = UsesSqlite(dbContext)
+            ? runsQuery.OrderBy(run => run.Id)
+            : runsQuery.OrderByDescending(run => run.CompletedAtUtc ?? run.StartedAtUtc);
+        var runs = await orderedRuns
+            .Take(limit)
+            .ToArrayAsync(cancellationToken);
+        return runs
             .Select(run => new CognitiveMemoryOperatorAuditItem(
                 run.Id,
                 run.ProjectId,

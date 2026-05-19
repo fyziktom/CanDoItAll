@@ -20,11 +20,14 @@ public sealed partial class CognitiveMemoryReviewUiService
             sessionsQuery = sessionsQuery.Where(session => session.ProjectId == projectId);
         }
 
-        return (await sessionsQuery
-            .ToListAsync(cancellationToken))
-            .OrderByDescending(session => session.Status == CognitiveMemoryProbeSessionStatus.Active)
-            .ThenByDescending(session => session.UpdatedAtUtc)
-            .Take(query.Take)
+        var page = ResolvePage(query, CognitiveMemoryReviewUiCollectionKind.ProbeSessions);
+        var orderedSessions = sessionsQuery
+            .OrderByDescending(session => session.Status == CognitiveMemoryProbeSessionStatus.Active);
+        return await (UsesSqlite(dbContext)
+                ? orderedSessions.ThenBy(session => session.Id)
+                : orderedSessions.ThenByDescending(session => session.UpdatedAtUtc))
+            .Skip(page.Skip)
+            .Take(page.PageSize)
             .Select(session => new CognitiveMemoryProbeSessionView(
                 session.Id,
                 session.ProjectId,
@@ -33,7 +36,7 @@ public sealed partial class CognitiveMemoryReviewUiService
                 session.Title,
                 session.TurnCount,
                 session.UpdatedAtUtc))
-            .ToArray();
+            .ToArrayAsync(cancellationToken);
     }
 
     private static async Task<IReadOnlyList<CognitiveMemorySelfRegulationView>> LoadSelfRegulationAssessmentsAsync(
@@ -49,11 +52,14 @@ public sealed partial class CognitiveMemoryReviewUiService
             assessmentsQuery = assessmentsQuery.Where(assessment => assessment.ProjectId == projectId);
         }
 
-        return (await assessmentsQuery
-            .ToListAsync(cancellationToken))
-            .OrderByDescending(assessment => assessment.State != CognitiveMemorySelfRegulationStateKind.Calibrated)
-            .ThenByDescending(assessment => assessment.CreatedAtUtc)
-            .Take(query.Take)
+        var page = ResolvePage(query, CognitiveMemoryReviewUiCollectionKind.SelfRegulationAssessments);
+        var orderedAssessments = assessmentsQuery
+            .OrderByDescending(assessment => assessment.State != CognitiveMemorySelfRegulationStateKind.Calibrated);
+        return await (UsesSqlite(dbContext)
+                ? orderedAssessments.ThenBy(assessment => assessment.Id)
+                : orderedAssessments.ThenByDescending(assessment => assessment.CreatedAtUtc))
+            .Skip(page.Skip)
+            .Take(page.PageSize)
             .Select(assessment => new CognitiveMemorySelfRegulationView(
                 assessment.Id,
                 assessment.ProjectId,
@@ -65,7 +71,7 @@ public sealed partial class CognitiveMemoryReviewUiService
                 assessment.WarningsJson,
                 assessment.RequiredOperationsJson,
                 assessment.CreatedAtUtc))
-            .ToArray();
+            .ToArrayAsync(cancellationToken);
     }
 
     private static async Task<IReadOnlyList<CognitiveMemoryAnswerGateView>> LoadAnswerGateDecisionsAsync(
@@ -81,11 +87,14 @@ public sealed partial class CognitiveMemoryReviewUiService
             decisionsQuery = decisionsQuery.Where(decision => decision.ProjectId == projectId);
         }
 
-        return (await decisionsQuery
-            .ToListAsync(cancellationToken))
-            .OrderByDescending(decision => decision.DecisionKind != CognitiveMemoryAnswerGateDecisionKind.Answer)
-            .ThenByDescending(decision => decision.CreatedAtUtc)
-            .Take(query.Take)
+        var page = ResolvePage(query, CognitiveMemoryReviewUiCollectionKind.AnswerGateDecisions);
+        var orderedDecisions = decisionsQuery
+            .OrderByDescending(decision => decision.DecisionKind != CognitiveMemoryAnswerGateDecisionKind.Answer);
+        return await (UsesSqlite(dbContext)
+                ? orderedDecisions.ThenBy(decision => decision.Id)
+                : orderedDecisions.ThenByDescending(decision => decision.CreatedAtUtc))
+            .Skip(page.Skip)
+            .Take(page.PageSize)
             .Select(decision => new CognitiveMemoryAnswerGateView(
                 decision.Id,
                 decision.ProjectId,
@@ -96,7 +105,7 @@ public sealed partial class CognitiveMemoryReviewUiService
                 decision.WarningsJson,
                 decision.RequiredOperationsJson,
                 decision.CreatedAtUtc))
-            .ToArray();
+            .ToArrayAsync(cancellationToken);
     }
 
     private static async Task<IReadOnlyList<CognitiveMemoryProfessorReviewView>> LoadProfessorReviewsAsync(
@@ -112,11 +121,14 @@ public sealed partial class CognitiveMemoryReviewUiService
             reviewsQuery = reviewsQuery.Where(review => review.ProjectId == projectId);
         }
 
-        return (await reviewsQuery
-            .ToListAsync(cancellationToken))
-            .OrderByDescending(review => review.Status == CognitiveMemoryProfessorReviewStatus.Requested)
-            .ThenByDescending(review => review.CreatedAtUtc)
-            .Take(query.Take)
+        var page = ResolvePage(query, CognitiveMemoryReviewUiCollectionKind.ProfessorReviews);
+        var orderedReviews = reviewsQuery
+            .OrderByDescending(review => review.Status == CognitiveMemoryProfessorReviewStatus.Requested);
+        return await (UsesSqlite(dbContext)
+                ? orderedReviews.ThenBy(review => review.Id)
+                : orderedReviews.ThenByDescending(review => review.CreatedAtUtc))
+            .Skip(page.Skip)
+            .Take(page.PageSize)
             .Select(review => new CognitiveMemoryProfessorReviewView(
                 review.Id,
                 review.ProjectId,
@@ -128,7 +140,7 @@ public sealed partial class CognitiveMemoryReviewUiService
                 review.RequiresHumanReview,
                 review.CreatedAtUtc,
                 review.CompletedAtUtc))
-            .ToArray();
+            .ToArrayAsync(cancellationToken);
     }
 
     private static async Task<IReadOnlyList<CognitiveMemoryLearningProposalView>> LoadLearningProposalsAsync(
@@ -144,12 +156,15 @@ public sealed partial class CognitiveMemoryReviewUiService
             proposalsQuery = proposalsQuery.Where(proposal => proposal.ProjectId == projectId);
         }
 
-        return (await proposalsQuery
-            .ToListAsync(cancellationToken))
+        var page = ResolvePage(query, CognitiveMemoryReviewUiCollectionKind.LearningProposals);
+        var orderedProposals = proposalsQuery
             .OrderBy(proposal => proposal.Status == CognitiveMemoryLearningProposalStatus.PendingApproval ? 0 : 1)
-            .ThenByDescending(proposal => proposal.DisplayPriorityProjection)
-            .ThenByDescending(proposal => proposal.CreatedAtUtc)
-            .Take(query.Take)
+            .ThenByDescending(proposal => proposal.DisplayPriorityProjection);
+        return await (UsesSqlite(dbContext)
+                ? orderedProposals.ThenBy(proposal => proposal.Id)
+                : orderedProposals.ThenByDescending(proposal => proposal.CreatedAtUtc))
+            .Skip(page.Skip)
+            .Take(page.PageSize)
             .Select(proposal => new CognitiveMemoryLearningProposalView(
                 proposal.Id,
                 proposal.ProjectId,
@@ -159,7 +174,7 @@ public sealed partial class CognitiveMemoryReviewUiService
                 proposal.NeedBucket,
                 proposal.DisplayPriorityProjection,
                 proposal.CreatedAtUtc))
-            .ToArray();
+            .ToArrayAsync(cancellationToken);
     }
 
     private static async Task<IReadOnlyList<CognitiveMemoryCrossProjectPromotionView>> LoadCrossProjectPromotionsAsync(
@@ -175,11 +190,14 @@ public sealed partial class CognitiveMemoryReviewUiService
             candidatesQuery = candidatesQuery.Where(candidate => candidate.SourceProjectId == projectId);
         }
 
-        return (await candidatesQuery
-            .ToListAsync(cancellationToken))
-            .OrderBy(candidate => candidate.Status == CognitiveMemoryCrossProjectPromotionStatus.PendingReview ? 0 : 1)
-            .ThenByDescending(candidate => candidate.CreatedAtUtc)
-            .Take(query.Take)
+        var page = ResolvePage(query, CognitiveMemoryReviewUiCollectionKind.CrossProjectPromotions);
+        var orderedCandidates = candidatesQuery
+            .OrderBy(candidate => candidate.Status == CognitiveMemoryCrossProjectPromotionStatus.PendingReview ? 0 : 1);
+        return await (UsesSqlite(dbContext)
+                ? orderedCandidates.ThenBy(candidate => candidate.Id)
+                : orderedCandidates.ThenByDescending(candidate => candidate.CreatedAtUtc))
+            .Skip(page.Skip)
+            .Take(page.PageSize)
             .Select(candidate => new CognitiveMemoryCrossProjectPromotionView(
                 candidate.Id,
                 candidate.SourceProjectId,
@@ -189,7 +207,7 @@ public sealed partial class CognitiveMemoryReviewUiService
                 candidate.Reason,
                 candidate.ReviewItemId,
                 candidate.CreatedAtUtc))
-            .ToArray();
+            .ToArrayAsync(cancellationToken);
     }
 
     private static async Task<IReadOnlyList<CognitiveMemoryDistributedJobView>> LoadDistributedJobsAsync(
@@ -205,12 +223,15 @@ public sealed partial class CognitiveMemoryReviewUiService
             jobsQuery = jobsQuery.Where(job => job.ProjectId == projectId);
         }
 
-        return (await jobsQuery
-            .ToListAsync(cancellationToken))
+        var page = ResolvePage(query, CognitiveMemoryReviewUiCollectionKind.DistributedJobs);
+        var orderedJobs = jobsQuery
             .OrderByDescending(job => job.State == CognitiveMemoryDistributedJobState.Rejected ||
-                                      job.State == CognitiveMemoryDistributedJobState.Expired)
-            .ThenByDescending(job => job.UpdatedAtUtc)
-            .Take(query.Take)
+                                      job.State == CognitiveMemoryDistributedJobState.Expired);
+        return await (UsesSqlite(dbContext)
+                ? orderedJobs.ThenBy(job => job.Id)
+                : orderedJobs.ThenByDescending(job => job.UpdatedAtUtc))
+            .Skip(page.Skip)
+            .Take(page.PageSize)
             .Select(job => new CognitiveMemoryDistributedJobView(
                 job.Id,
                 job.ProjectId,
@@ -220,6 +241,6 @@ public sealed partial class CognitiveMemoryReviewUiService
                 job.LeasedWorkerId,
                 job.CreatedAtUtc,
                 job.UpdatedAtUtc))
-            .ToArray();
+            .ToArrayAsync(cancellationToken);
     }
 }
