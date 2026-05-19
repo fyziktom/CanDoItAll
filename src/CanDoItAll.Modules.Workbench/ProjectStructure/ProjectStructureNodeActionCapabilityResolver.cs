@@ -30,7 +30,7 @@ internal static class ProjectStructureNodeActionCapabilityResolver
                 "Double-click quick-action dialog and node context menu",
                 "Launches the same resolved workspace command in an elevated PowerShell window."));
             guidance.Add("Runtime nodes always expose both normal and administrator run actions when the launch plan resolves on this host.");
-            guidance.Add("Runtime launch is limited to trusted workspace paths resolved by the workbench runtime launcher.");
+            guidance.Add("Runtime launch uses PowerShell in the resolved working directory and accepts workspace paths or explicit existing local drive paths.");
 
             return new ProjectStructureNodeActionCapabilities(
                 CanRunNormally: true,
@@ -82,8 +82,8 @@ internal static class ProjectStructureNodeActionCapabilityResolver
                 "open-local",
                 "Open in File Explorer",
                 "Double-click quick-action dialog and node context menu",
-                "Opens the trusted managed file or folder in the system File Explorer."));
-            guidance.Add("File Explorer launch is available only for managed filesystem files or folders on the local drive.");
+                "Opens the trusted managed file, local file location, or folder in the system File Explorer."));
+            guidance.Add("File Explorer launch is available for managed filesystem files plus explicit existing local file, repository folder, and infrastructure folder paths.");
             guidance.Add("The workbench opener blocks executable and script-like file extensions before launching File Explorer.");
         }
 

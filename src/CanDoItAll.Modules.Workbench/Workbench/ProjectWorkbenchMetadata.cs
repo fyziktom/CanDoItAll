@@ -461,6 +461,15 @@ public sealed class ProjectInfrastructureMetadata
 
     [ProjectStructurePreviewField("AI reference URL", 250)]
     public string AiReferenceUrl { get; set; } = string.Empty;
+
+    [ProjectStructurePreviewField("Runtime command", 260)]
+    public string RuntimeCommand { get; set; } = string.Empty;
+
+    [ProjectStructurePreviewField("Runtime arguments", 270)]
+    public string RuntimeArguments { get; set; } = string.Empty;
+
+    [ProjectStructurePreviewField("Working directory", 280)]
+    public string WorkingDirectory { get; set; } = string.Empty;
 }
 
 public sealed class ProjectSecretReferenceMetadata

@@ -260,7 +260,13 @@ internal static partial class ProjectStructureCanvasCatalog
             [
                 "Use objectType WorkItem with objectSubtype task for work task nodes. Do not invent node enum names such as WorkTask or TaskNode.",
                 "Use ProjectBlock plus a lowercase objectSubtype such as feature, implementation, testing, delivery, backlog, task-flow, risk, server, or wifi for typed blocks.",
-                "Use File plus a file subtype such as pdf, excel, docx, markdown, mermaid, screenshot, log, archive, or audio for generated or uploaded files.",
+                "Use Repository with objectSubtype folder and metadata.repository.localPath for local folder nodes; set metadata.repository.relativePath only when the node should point inside that folder.",
+                "Use File plus a file subtype such as pdf, excel, docx, markdown, mermaid, screenshot, log, archive, or audio for generated or uploaded files; set metadata.file.externalPath when the file already exists on a local drive.",
+                "Use Link for web links and Repository remote for source-control repositories. GitHub and GitLab URLs are recognized from link.url or repository.repositoryUrl, including SSH-style git@host:owner/repo.git addresses.",
+                "Use Script with subtypes powershell, console, ef-migration, or tailwind-watch for runtime scripts; set metadata.script.command, arguments, scriptPath, and workingDirectory as needed.",
+                "Use Environment with subtype python, dotnet-runtime, dotnet-watch, or dotnet-release for language runtimes; Python nodes need metadata.environment.projectPath, pythonProvider, and environmentName.",
+                "Use Infrastructure with objectSubtype docker-mode for Docker runtime nodes; set metadata.infrastructure.runtimeCommand, runtimeArguments, workingDirectory, and folderPath so double-click can offer Run normally and Run as administrator.",
+                "Use Infrastructure with objectSubtype deployment-folder and metadata.infrastructure.folderPath for deployment folders that should open in File Explorer.",
                 "When creating several task nodes, decide whether any task depends on another and create DependsOn links from dependent task to prerequisite task.",
                 "Every user-created node must have a parentNodeKey. Use project:{projectId} for top-level nodes or an existing node id for child nodes."
             ]);
@@ -479,12 +485,101 @@ internal static partial class ProjectStructureCanvasCatalog
             aliases.Add("mermaid diagram");
         }
 
+        AddCatalogAliases(definition, aliases);
+
         return aliases
             .Where(alias => !string.IsNullOrWhiteSpace(alias))
             .Select(alias => alias.Trim())
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(alias => alias, StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    private static void AddCatalogAliases(ProjectStructureCreateLeafDefinition definition, HashSet<string> aliases)
+    {
+        switch (definition.ObjectType)
+        {
+            case ProjectObjectType.Repository:
+                aliases.Add("repository node");
+                aliases.Add("repo node");
+                if (string.Equals(definition.ObjectSubtype, "remote", StringComparison.OrdinalIgnoreCase))
+                {
+                    aliases.Add("remote repository");
+                    aliases.Add("repository link");
+                    aliases.Add("github repository");
+                    aliases.Add("gitlab repository");
+                    aliases.Add("github repo");
+                    aliases.Add("gitlab repo");
+                }
+                else if (string.Equals(definition.ObjectSubtype, "folder", StringComparison.OrdinalIgnoreCase))
+                {
+                    aliases.Add("folder");
+                    aliases.Add("folder node");
+                    aliases.Add("local folder");
+                    aliases.Add("directory");
+                    aliases.Add("open folder");
+                }
+
+                break;
+            case ProjectObjectType.File:
+                aliases.Add("file node");
+                aliases.Add("local file");
+                aliases.Add("external file");
+                if (!string.IsNullOrWhiteSpace(definition.ObjectSubtype))
+                {
+                    aliases.Add($"{definition.ObjectSubtype} file");
+                }
+
+                break;
+            case ProjectObjectType.Link:
+                aliases.Add("web link");
+                aliases.Add("github link");
+                aliases.Add("gitlab link");
+                aliases.Add("url");
+                break;
+            case ProjectObjectType.Script:
+                aliases.Add("runtime script");
+                aliases.Add("script node");
+                aliases.Add("command node");
+                if (string.Equals(definition.ObjectSubtype, "powershell", StringComparison.OrdinalIgnoreCase))
+                {
+                    aliases.Add("powershell runtime");
+                    aliases.Add("powershell script");
+                    aliases.Add("ps1 runtime");
+                }
+
+                break;
+            case ProjectObjectType.Environment:
+                aliases.Add("runtime node");
+                if (string.Equals(definition.ObjectSubtype, "python", StringComparison.OrdinalIgnoreCase))
+                {
+                    aliases.Add("python runtime");
+                    aliases.Add("python environment");
+                }
+                else if (definition.ObjectSubtype.StartsWith("dotnet", StringComparison.OrdinalIgnoreCase))
+                {
+                    aliases.Add(".net runtime");
+                    aliases.Add("dotnet runtime");
+                }
+
+                break;
+            case ProjectObjectType.Infrastructure:
+                if (string.Equals(definition.ObjectSubtype, "docker-mode", StringComparison.OrdinalIgnoreCase))
+                {
+                    aliases.Add("docker runtime");
+                    aliases.Add("docker compose");
+                    aliases.Add("container runtime");
+                    aliases.Add("docker node");
+                }
+                else if (string.Equals(definition.ObjectSubtype, "deployment-folder", StringComparison.OrdinalIgnoreCase))
+                {
+                    aliases.Add("deployment folder");
+                    aliases.Add("folder node");
+                    aliases.Add("local folder");
+                }
+
+                break;
+        }
     }
 
     private static string ResolveLinkKindGuidance(ProjectObjectLinkKind linkKind)

@@ -183,6 +183,53 @@ public sealed class ProjectStructureRuntimeLauncherTests
     }
 
     [Fact]
+    public void Resolve_returns_docker_runtime_plan_from_command_and_working_directory()
+    {
+        var sut = CreateSut();
+        var node = CreateInfrastructureNode(
+            "docker-mode",
+            new ProjectInfrastructureMetadata
+            {
+                InfrastructureKind = ProjectInfrastructureKind.DockerMode,
+                RuntimeCommand = "docker compose up",
+                RuntimeArguments = "--build",
+                WorkingDirectory = @"repos\compose-app"
+            });
+
+        var result = sut.Resolve(node);
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Plan);
+        Assert.Equal(@"C:\workspace\repos\compose-app", result.Plan!.WorkingDirectory);
+        Assert.Equal("Docker runtime", result.Plan.DisplayName);
+        Assert.Equal("docker compose up --build", result.Plan.DisplayCommand);
+        Assert.Equal(@"C:\workspace\repos\compose-app", result.Plan.Target!.Path);
+        Assert.True(result.Plan.Target.IsDirectory);
+    }
+
+    [Fact]
+    public void Resolve_uses_docker_folder_path_when_working_directory_is_missing()
+    {
+        var sut = CreateSut();
+        var node = CreateInfrastructureNode(
+            "docker-mode",
+            new ProjectInfrastructureMetadata
+            {
+                InfrastructureKind = ProjectInfrastructureKind.DockerMode,
+                RuntimeCommand = "docker compose",
+                RuntimeArguments = "up",
+                FolderPath = @"repos\compose-app"
+            });
+
+        var result = sut.Resolve(node);
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Plan);
+        Assert.Equal(@"C:\workspace\repos\compose-app", result.Plan!.WorkingDirectory);
+        Assert.Equal("docker compose up", result.Plan.DisplayCommand);
+    }
+
+    [Fact]
     public void Resolve_fails_when_script_command_and_script_path_are_missing()
     {
         var sut = CreateSut();
@@ -231,6 +278,12 @@ public sealed class ProjectStructureRuntimeLauncherTests
         => CreateNode(ProjectObjectType.Script, objectSubtype, new ProjectObjectMetadataEnvelope
         {
             Script = metadata
+        });
+
+    private static ProjectStructureNode CreateInfrastructureNode(string objectSubtype, ProjectInfrastructureMetadata metadata)
+        => CreateNode(ProjectObjectType.Infrastructure, objectSubtype, new ProjectObjectMetadataEnvelope
+        {
+            Infrastructure = metadata
         });
 
     private static ProjectStructureNode CreateNode(ProjectObjectType objectType, string objectSubtype, ProjectObjectMetadataEnvelope metadata)

@@ -162,7 +162,10 @@ internal static class ProjectStructureCreateRequestComposer
                     StoragePurpose = GetValue(inputValues, "storagePurpose"),
                     StoragePathPrefix = GetValue(inputValues, "storagePathPrefix"),
                     AiReferenceKind = TryParseNullableEnum<ProjectAiReferenceKind>(inputValues, "aiReferenceKind"),
-                    AiReferenceUrl = GetValue(inputValues, "aiReferenceUrl")
+                    AiReferenceUrl = GetValue(inputValues, "aiReferenceUrl"),
+                    RuntimeCommand = GetValue(inputValues, "runtimeCommand"),
+                    RuntimeArguments = GetValue(inputValues, "runtimeArguments"),
+                    WorkingDirectory = GetValue(inputValues, "workingDirectory")
                 };
                 nodeReferences.InfrastructureStorageCatalogId = ParseGuid(inputValues, "storageCatalogId");
                 nodeReferences.InfrastructureSecretReferenceId = ParseNodeGuid(inputValues, "secretRef");

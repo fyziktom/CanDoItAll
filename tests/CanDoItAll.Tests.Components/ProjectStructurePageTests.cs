@@ -1619,6 +1619,54 @@ public sealed class ProjectStructurePageTests
     }
 
     [Fact]
+    public async Task Repository_folder_nodes_render_open_in_file_explorer_as_a_node_action()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Local Folder Action");
+        var folderPath = Path.Combine(harness.ActiveProfile.WorkspaceRootPath, "project-structure-folder-node");
+        Directory.CreateDirectory(folderPath);
+
+        var folderNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Repository,
+                "Local app folder",
+                "Workspace folder",
+                "Folder nodes should expose the local open action from the inspector.",
+                $"project:{projectId}",
+                540,
+                260,
+                null,
+                null,
+                "folder",
+                null,
+                ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+                {
+                    Repository = new ProjectRepositoryMetadata
+                    {
+                        RepositoryMode = ProjectRepositoryMode.LocalFolder,
+                        LocalPath = folderPath
+                    }
+                })));
+
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, folderNode.Id);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+
+        cut.WaitForAssertion(() =>
+        {
+            var actionGrid = cut.Find("[data-testid='project-structure-node-actions']");
+            Assert.Contains("Local app folder", cut.Markup);
+            Assert.Contains("Open in File Explorer", actionGrid.TextContent);
+        });
+    }
+
+    [Fact]
     public async Task Canvas_state_changes_ignore_manual_position_only_updates()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -2103,6 +2151,65 @@ public sealed class ProjectStructurePageTests
     }
 
     [Fact]
+    public async Task Docker_runtime_nodes_render_powershell_actions_and_surface_launch_feedback()
+    {
+        var runtimeLauncher = new TestRuntimeLauncher();
+        await using var harness = await ComponentTestHarness.CreateAsync(
+            services => services.AddSingleton<IProjectStructureRuntimeLauncher>(runtimeLauncher));
+
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var projectId = await CreateProjectAsync(projectsService, "Docker Runtime Launch");
+
+        var runtimeNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Infrastructure,
+                "Docker compose runtime",
+                "Compose stack",
+                "Launch Docker from the project structure inspector.",
+                $"project:{projectId}",
+                620,
+                280,
+                null,
+                null,
+                "docker-mode",
+                null,
+                ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+                {
+                    Infrastructure = new ProjectInfrastructureMetadata
+                    {
+                        InfrastructureKind = ProjectInfrastructureKind.DockerMode,
+                        RuntimeCommand = "docker compose up",
+                        RuntimeArguments = "--build",
+                        WorkingDirectory = @"C:\repos\api"
+                    }
+                })));
+
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, runtimeNode.Id);
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Open PowerShell", cut.Markup);
+            Assert.Contains("Open PowerShell (Admin)", cut.Markup);
+        });
+
+        FindButtonByLabel(cut, "Open PowerShell").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Opened PowerShell and started Docker runtime.", cut.Markup);
+        });
+
+        Assert.Single(runtimeLauncher.Requests);
+        Assert.Equal(runtimeNode.Id, runtimeLauncher.Requests[0].NodeId);
+        Assert.False(runtimeLauncher.Requests[0].RunAsAdministrator);
+    }
+
+    [Fact]
     public async Task Non_launchable_nodes_do_not_render_runtime_launch_actions()
     {
         await using var harness = await ComponentTestHarness.CreateAsync(
@@ -2516,23 +2623,36 @@ public sealed class ProjectStructurePageTests
         public List<(string NodeId, bool RunAsAdministrator)> Requests { get; } = [];
 
         public ProjectStructureRuntimeLaunchResolution Resolve(ProjectStructureNode? node)
-            => node?.ObjectType is ProjectObjectType.Environment or ProjectObjectType.Script
-                ? new(
+            => node?.ObjectType switch
+            {
+                ProjectObjectType.Environment or ProjectObjectType.Script => new(
                     new ProjectStructureRuntimeLaunchPlan(
                         @"C:\repos\api",
                         "Set-Location -LiteralPath 'C:\\repos\\api'",
                         "dotnet watch --project 'C:\\repos\\api\\Api.csproj' run --launch-profile 'https'",
                         "dotnet watch",
                         new ProjectStructureRuntimeLaunchTarget("project path", @"C:\repos\api\Api.csproj", false)),
-                    "Launch plan resolved.")
-                : new(null, "PowerShell launch is only available for runtime-capable nodes.");
+                    "Launch plan resolved."),
+                ProjectObjectType.Infrastructure => new(
+                    new ProjectStructureRuntimeLaunchPlan(
+                        @"C:\repos\api",
+                        "Set-Location -LiteralPath 'C:\\repos\\api'",
+                        "docker compose up --build",
+                        "Docker runtime",
+                        new ProjectStructureRuntimeLaunchTarget("Docker working directory", @"C:\repos\api", true)),
+                    "Launch plan resolved."),
+                _ => new(null, "PowerShell launch is only available for runtime-capable nodes.")
+            };
 
         public Task<ProjectStructureRuntimeLaunchResult> LaunchAsync(ProjectStructureNode node, bool runAsAdministrator, CancellationToken cancellationToken = default)
         {
             Requests.Add((node.Id, runAsAdministrator));
+            var displayName = node.ObjectType == ProjectObjectType.Infrastructure
+                ? "Docker runtime"
+                : "dotnet watch";
             var message = runAsAdministrator
-                ? "Opened elevated PowerShell and started dotnet watch."
-                : "Opened PowerShell and started dotnet watch.";
+                ? $"Opened elevated PowerShell and started {displayName}."
+                : $"Opened PowerShell and started {displayName}.";
             return Task.FromResult(new ProjectStructureRuntimeLaunchResult(true, message));
         }
     }

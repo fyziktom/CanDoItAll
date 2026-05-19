@@ -51,6 +51,7 @@ public sealed class ProjectStructureRuntimeLauncher(
         {
             ProjectObjectType.Script => ResolveScriptPlan(node.ObjectSubtype, metadata.Script),
             ProjectObjectType.Environment => ResolveEnvironmentPlan(node.ObjectSubtype, metadata.Environment),
+            ProjectObjectType.Infrastructure => ResolveInfrastructurePlan(node.ObjectSubtype, metadata.Infrastructure),
             _ => Fail("PowerShell launch is only available for runtime-capable nodes.")
         };
     }
@@ -170,6 +171,40 @@ public sealed class ProjectStructureRuntimeLauncher(
             ProjectEnvironmentKind.PythonEnvironment => ResolvePythonPlan(metadata),
             _ => Fail("PowerShell launch is not supported for this environment type.")
         };
+    }
+
+    private ProjectStructureRuntimeLaunchResolution ResolveInfrastructurePlan(string objectSubtype, ProjectInfrastructureMetadata? metadata)
+    {
+        metadata ??= new ProjectInfrastructureMetadata();
+        var infrastructureKind = ResolveInfrastructureKind(objectSubtype, metadata);
+
+        return infrastructureKind switch
+        {
+            ProjectInfrastructureKind.DockerMode => ResolveDockerPlan(metadata),
+            _ => Fail("PowerShell launch is not supported for this infrastructure type.")
+        };
+    }
+
+    private ProjectStructureRuntimeLaunchResolution ResolveDockerPlan(ProjectInfrastructureMetadata metadata)
+    {
+        if (string.IsNullOrWhiteSpace(metadata.RuntimeCommand))
+        {
+            return Fail("Docker runtime launch requires a runtime command.");
+        }
+
+        var workingDirectoryValue = FirstNonEmpty(metadata.WorkingDirectory, metadata.FolderPath, ".");
+        if (TryResolveWorkspacePath(workingDirectoryValue, "Docker working directory", out var workingDirectory) is { } workingDirectoryFailure)
+        {
+            return workingDirectoryFailure;
+        }
+
+        var displayCommand = JoinCommand(metadata.RuntimeCommand, metadata.RuntimeArguments);
+        return Success(
+            CreatePlan(
+                workingDirectory,
+                displayCommand,
+                "Docker runtime",
+                new ProjectStructureRuntimeLaunchTarget("Docker working directory", workingDirectory, true)));
     }
 
     private ProjectStructureRuntimeLaunchResolution? TryResolveScriptWorkingDirectory(
@@ -336,6 +371,11 @@ public sealed class ProjectStructureRuntimeLauncher(
             ? ProjectNodeKindRegistry.ResolveEnvironmentKind(objectSubtype)
             : metadata.EnvironmentKind;
 
+    private static ProjectInfrastructureKind ResolveInfrastructureKind(string objectSubtype, ProjectInfrastructureMetadata metadata)
+        => metadata.InfrastructureKind == default && !string.IsNullOrWhiteSpace(objectSubtype)
+            ? ProjectNodeKindRegistry.ResolveInfrastructureKind(objectSubtype)
+            : metadata.InfrastructureKind;
+
     [SupportedOSPlatform("windows")]
     private static ProcessStartInfo BuildStartInfo(ProjectStructureRuntimeLaunchPlan plan, bool runAsAdministrator)
         => new()
@@ -386,8 +426,69 @@ public sealed class ProjectStructureRuntimeLauncher(
             return null;
         }
 
+        if (TryResolveExistingLocalDrivePath(value, basePath, out var localPath))
+        {
+            resolvedPath = localPath;
+            return null;
+        }
+
         resolvedPath = string.Empty;
         return Fail($"{description} must stay inside the active workspace root.");
+    }
+
+    private static bool TryResolveExistingLocalDrivePath(string value, string? basePath, out string resolvedPath)
+    {
+        resolvedPath = string.Empty;
+        if (string.IsNullOrWhiteSpace(value) || LooksLikeUrl(value))
+        {
+            return false;
+        }
+
+        try
+        {
+            var trimmedValue = value.Trim();
+            string candidatePath;
+            if (Path.IsPathRooted(trimmedValue))
+            {
+                candidatePath = Path.GetFullPath(trimmedValue);
+            }
+            else if (!string.IsNullOrWhiteSpace(basePath))
+            {
+                var baseDirectory = Directory.Exists(basePath)
+                    ? basePath
+                    : Path.GetDirectoryName(basePath);
+                if (string.IsNullOrWhiteSpace(baseDirectory))
+                {
+                    return false;
+                }
+
+                candidatePath = Path.GetFullPath(Path.Combine(baseDirectory, trimmedValue));
+            }
+            else
+            {
+                return false;
+            }
+
+            if (!Directory.Exists(candidatePath) && !File.Exists(candidatePath))
+            {
+                return false;
+            }
+
+            resolvedPath = candidatePath;
+            return true;
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
+        catch (NotSupportedException)
+        {
+            return false;
+        }
+        catch (PathTooLongException)
+        {
+            return false;
+        }
     }
 
     private static string ResolveWorkingDirectoryFromProjectPath(string projectPath)
@@ -417,6 +518,32 @@ public sealed class ProjectStructureRuntimeLauncher(
         => string.IsNullOrWhiteSpace(arguments)
             ? command.Trim()
             : $"{command.Trim()} {arguments.Trim()}";
+
+    private static string FirstNonEmpty(params string?[] values)
+    {
+        foreach (var value in values)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value.Trim();
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static bool LooksLikeUrl(string value)
+    {
+        var trimmedValue = value.Trim();
+        if (Path.IsPathRooted(trimmedValue))
+        {
+            return false;
+        }
+
+        return Uri.TryCreate(trimmedValue, UriKind.Absolute, out var uri) &&
+               !string.IsNullOrWhiteSpace(uri.Scheme) &&
+               !string.Equals(uri.Scheme, Uri.UriSchemeFile, StringComparison.OrdinalIgnoreCase);
+    }
 
     private static string QuotePowerShell(string value)
         => $"'{value.Replace("'", "''", StringComparison.Ordinal)}'";
