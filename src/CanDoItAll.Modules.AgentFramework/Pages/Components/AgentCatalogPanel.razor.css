@@ -4,9 +4,45 @@
 
 .agent-catalog-panel__hero {
     border-bottom: 1px solid rgb(226 232 240);
-    display: grid;
-    gap: 1rem;
-    padding-bottom: 1rem;
+    padding-bottom: 0.85rem;
+}
+
+.agent-catalog-panel__toolbar {
+    align-items: center;
+    display: flex;
+    gap: 0.75rem 1rem;
+    justify-content: space-between;
+    min-width: 0;
+}
+
+.agent-catalog-panel__heading {
+    flex: 0 0 auto;
+    min-width: 0;
+}
+
+.agent-catalog-panel__toolbar-controls {
+    align-items: center;
+    display: flex;
+    flex: 1 1 0;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    min-width: 0;
+}
+
+.agent-catalog-panel__search {
+    align-items: center;
+    display: flex;
+    flex: 1 1 14rem;
+    gap: 0.5rem;
+    max-width: 36rem;
+    min-width: min(100%, 12rem);
+}
+
+.agent-catalog-panel__search-input {
+    flex: 1 1 14rem;
+    min-width: 0;
+    width: 100%;
 }
 
 .agent-catalog-panel__grid {
@@ -19,6 +55,8 @@
 }
 
 .agent-catalog-panel__team-panel {
+    align-content: start;
+    align-self: start;
     background: rgb(248 250 252);
     border: 1px solid rgb(226 232 240);
     border-radius: 0.75rem;
@@ -54,5 +92,22 @@
         overflow: auto;
         position: sticky;
         top: 1rem;
+    }
+}
+
+@media (max-width: 767px) {
+    .agent-catalog-panel__toolbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .agent-catalog-panel__toolbar-controls {
+        justify-content: flex-start;
+    }
+
+    .agent-catalog-panel__search {
+        max-width: none;
+        min-width: 0;
+        width: 100%;
     }
 }
