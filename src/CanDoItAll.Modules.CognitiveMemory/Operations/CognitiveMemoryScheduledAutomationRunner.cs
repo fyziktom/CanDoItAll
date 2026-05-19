@@ -10,6 +10,7 @@ public sealed class CognitiveMemoryScheduledAutomationRunner(
     IClock clock) : ICognitiveMemoryScheduledAutomationRunner
 {
     private const int MaximumTake = 500;
+    private const int MaximumCycles = 25;
 
     public async ValueTask<CognitiveMemoryScheduledAutomationRunResult> RunAsync(
         CognitiveMemoryScheduledAutomationRunRequest request,
@@ -20,6 +21,10 @@ public sealed class CognitiveMemoryScheduledAutomationRunner(
         var take = request.Take is > 0 and <= MaximumTake
             ? request.Take
             : throw new ArgumentOutOfRangeException(nameof(request.Take), $"Take must be between 1 and {MaximumTake}.");
+        var maxCycles = request.MaxCycles is > 0 and <= MaximumCycles
+            ? request.MaxCycles
+            : throw new ArgumentOutOfRangeException(nameof(request.MaxCycles), $"MaxCycles must be between 1 and {MaximumCycles}.");
+        var cycleId = NormalizeCycleId(request.CycleId);
         var settings = await settingsService.GetAsync(cancellationToken);
         if (!ScheduleAllowsRun(settings.ScheduleMode, request.TriggerKind))
         {
@@ -32,7 +37,11 @@ public sealed class CognitiveMemoryScheduledAutomationRunner(
                 SourceItemsCreated: 0,
                 ConsolidationRuns: 0,
                 ConsolidationStatus: null,
-                [$"Automation trigger {request.TriggerKind} is disabled by schedule mode {settings.ScheduleMode}."]);
+                [$"Automation trigger {request.TriggerKind} is disabled by schedule mode {settings.ScheduleMode}."],
+                cycleId,
+                CyclesExecuted: 0,
+                FinalCursor: null,
+                Cycles: []);
         }
 
         var warnings = new List<string>();
@@ -45,7 +54,7 @@ public sealed class CognitiveMemoryScheduledAutomationRunner(
                     new CognitiveMemorySourceIngestionRequest(
                         MemorySourceKind.WorkbenchProjectStructure,
                         request.ProjectId.Value,
-                        BuildIdempotencyKey("project-structure", request, actorId),
+                        BuildIdempotencyKey("project-structure", request, actorId, cycleId, 0),
                         Take: take,
                         ProjectId: request.ProjectId),
                     cancellationToken));
@@ -62,33 +71,51 @@ public sealed class CognitiveMemoryScheduledAutomationRunner(
                 new CognitiveMemorySourceIngestionRequest(
                     MemorySourceKind.ProcessRuntime,
                     request.ProjectId ?? Guid.Empty,
-                    BuildIdempotencyKey("process-runtime", request, actorId),
+                    BuildIdempotencyKey("process-runtime", request, actorId, cycleId, 0),
                     Take: take,
                     ProjectId: request.ProjectId),
                 cancellationToken));
         }
 
+        var cycles = new List<CognitiveMemoryScheduledAutomationCycleResult>();
         CognitiveMemoryConsolidationRunResult? consolidation = null;
+        string? cursor = null;
         if (settings.AutoConsolidateAfterIngestion && sourceRuns.Any(run => run.Status == CognitiveMemorySourceIngestionStatus.Ingested))
         {
-            consolidation = await consolidationEngine.RunAsync(
-                new CognitiveMemoryConsolidationRunRequest(
-                    request.ProjectId,
-                    request.TriggerKind == CognitiveMemoryAutomationTriggerKind.Nightly
-                        ? CognitiveMemoryConsolidationMode.ProjectNightly
-                        : CognitiveMemoryConsolidationMode.IncrementalRecent,
-                    MapTriggerKind(request.TriggerKind),
-                    CognitiveMemoryConsolidationProfile.IncrementalRecent,
-                    new CognitiveMemoryPolicyContext(
+            for (var cycleSequence = 1; cycleSequence <= maxCycles; cycleSequence++)
+            {
+                consolidation = await consolidationEngine.RunAsync(
+                    new CognitiveMemoryConsolidationRunRequest(
                         request.ProjectId,
-                        actorId,
-                        CognitiveMemoryAccessLevel.Project,
-                        new CognitiveMemoryPolicyProfileId("scheduled-automation"),
-                        CognitiveMemoryRiskLevel.Low,
-                        AllowRestrictedContent: false),
-                    BuildIdempotencyKey("consolidation", request, actorId),
-                    CognitiveMemoryConsolidationBudget.Default),
-                cancellationToken);
+                        request.TriggerKind == CognitiveMemoryAutomationTriggerKind.Nightly
+                            ? CognitiveMemoryConsolidationMode.ProjectNightly
+                            : CognitiveMemoryConsolidationMode.IncrementalRecent,
+                        MapTriggerKind(request.TriggerKind),
+                        CognitiveMemoryConsolidationProfile.IncrementalRecent,
+                        request.PolicyContext ?? CreateDefaultPolicyContext(request.ProjectId, actorId),
+                        BuildIdempotencyKey("consolidation", request, actorId, cycleId, cycleSequence),
+                        CognitiveMemoryConsolidationBudget.Default,
+                        cursor),
+                    cancellationToken);
+                cycles.Add(new CognitiveMemoryScheduledAutomationCycleResult(
+                    cycleSequence,
+                    cycleId,
+                    consolidation.RunId,
+                    consolidation.Status,
+                    consolidation.SourceItemsScanned,
+                    consolidation.CandidatesCreated,
+                    cursor,
+                    consolidation.NextCursor,
+                    consolidation.Warnings));
+
+                cursor = consolidation.NextCursor;
+                if (consolidation.Status != CognitiveMemoryRunStatus.Succeeded ||
+                    string.IsNullOrWhiteSpace(cursor) ||
+                    (!request.ContinueUntilIdle && cycleSequence >= maxCycles))
+                {
+                    break;
+                }
+            }
         }
 
         return new CognitiveMemoryScheduledAutomationRunResult(
@@ -98,9 +125,13 @@ public sealed class CognitiveMemoryScheduledAutomationRunner(
             sourceRuns.Count,
             sourceRuns.Sum(run => run.SourceItemCount),
             sourceRuns.Sum(run => run.CreatedSourceItemCount),
-            consolidation is null ? 0 : 1,
+            cycles.Count,
             consolidation?.Status,
-            warnings);
+            warnings,
+            cycleId,
+            cycles.Count,
+            cursor,
+            cycles);
     }
 
     private static bool ScheduleAllowsRun(
@@ -124,9 +155,27 @@ public sealed class CognitiveMemoryScheduledAutomationRunner(
             _ => CognitiveMemoryConsolidationTriggerKind.Manual
         };
 
-    private CognitiveMemoryIdempotencyKey BuildIdempotencyKey(
+    private static CognitiveMemoryPolicyContext CreateDefaultPolicyContext(
+        Guid? projectId,
+        string actorId)
+        => new(
+            projectId,
+            actorId,
+            CognitiveMemoryAccessLevel.Project,
+            new CognitiveMemoryPolicyProfileId("scheduled-automation"),
+            CognitiveMemoryRiskLevel.Low,
+            AllowRestrictedContent: false);
+
+    private string NormalizeCycleId(string? cycleId)
+        => string.IsNullOrWhiteSpace(cycleId)
+            ? $"automation-{clock.GetUtcNow():yyyyMMddHHmmssfffffff}"
+            : CognitiveMemoryGuard.EnsureText(cycleId, nameof(cycleId));
+
+    private static CognitiveMemoryIdempotencyKey BuildIdempotencyKey(
         string operation,
         CognitiveMemoryScheduledAutomationRunRequest request,
-        string actorId)
-        => new($"automation:{operation}:{request.TriggerKind}:{request.ProjectId?.ToString("D") ?? "global"}:{actorId}:{clock.GetUtcNow():yyyyMMddHHmmssfffffff}");
+        string actorId,
+        string cycleId,
+        int cycleSequence)
+        => new($"automation:{operation}:{request.TriggerKind}:{request.ProjectId?.ToString("D") ?? "global"}:{actorId}:{cycleId}:{cycleSequence}");
 }

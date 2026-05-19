@@ -76,7 +76,22 @@ public sealed record CognitiveMemoryScheduledAutomationRunRequest(
     Guid? ProjectId,
     CognitiveMemoryAutomationTriggerKind TriggerKind,
     string ActorId,
-    int Take = 50);
+    int Take = 50,
+    string? CycleId = null,
+    int MaxCycles = 1,
+    bool ContinueUntilIdle = false,
+    CognitiveMemoryPolicyContext? PolicyContext = null);
+
+public sealed record CognitiveMemoryScheduledAutomationCycleResult(
+    int Sequence,
+    string CycleId,
+    CognitiveMemoryConsolidationRunId? ConsolidationRunId,
+    CognitiveMemoryRunStatus? Status,
+    int SourceItemsScanned,
+    int CandidatesCreated,
+    string? Cursor,
+    string? NextCursor,
+    IReadOnlyList<string> Warnings);
 
 public sealed record CognitiveMemoryScheduledAutomationRunResult(
     CognitiveMemoryAutomationScheduleMode ScheduleMode,
@@ -87,7 +102,11 @@ public sealed record CognitiveMemoryScheduledAutomationRunResult(
     int SourceItemsCreated,
     int ConsolidationRuns,
     CognitiveMemoryRunStatus? ConsolidationStatus,
-    IReadOnlyList<string> Warnings);
+    IReadOnlyList<string> Warnings,
+    string CycleId,
+    int CyclesExecuted,
+    string? FinalCursor,
+    IReadOnlyList<CognitiveMemoryScheduledAutomationCycleResult> Cycles);
 
 public sealed record CognitiveMemoryRetentionCleanupRequest(
     Guid? ProjectId,

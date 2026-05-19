@@ -2,6 +2,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.CognitiveMemory;
 using CanDoItAll.SharedKernel;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -20,11 +21,16 @@ internal sealed record CognitiveMemoryStatusApiResponse(
     string Descriptor,
     string ContractVersion,
     string ContractPath,
-    IReadOnlyList<string> Routes)
+    IReadOnlyList<string> Routes,
+    CognitiveMemoryDatabaseRuntimeDiagnosticsApiResponse Database,
+    CognitiveMemoryProjectionDefaultsApiResponse ProjectionDefaults,
+    CognitiveMemoryHostDiagnosticsApiResponse HostDiagnostics)
 {
     public static CognitiveMemoryStatusApiResponse From(
         ResolvedDatabaseProfile resolvedProfile,
-        CognitiveMemoryApiContractResponse contract)
+        CognitiveMemoryApiContractResponse contract,
+        CognitiveMemoryProjectionOptions projectionOptions,
+        IWebHostEnvironment environment)
     {
         var profile = resolvedProfile.Profile;
         return new CognitiveMemoryStatusApiResponse(
@@ -40,7 +46,10 @@ internal sealed record CognitiveMemoryStatusApiResponse(
             BuildDescriptor(profile),
             contract.Version,
             $"{contract.BasePath}/contract",
-            contract.Routes.Select(route => $"{route.Method} {route.Path}").ToArray());
+            contract.Routes.Select(route => $"{route.Method} {route.Path}").ToArray(),
+            CognitiveMemoryDatabaseRuntimeDiagnosticsApiResponse.From(resolvedProfile),
+            CognitiveMemoryProjectionDefaultsApiResponse.From(projectionOptions),
+            CognitiveMemoryHostDiagnosticsApiResponse.From(environment));
     }
 
     public static string BuildDescriptor(DatabaseProfileRecord profile)
@@ -55,6 +64,89 @@ internal sealed record CognitiveMemoryStatusApiResponse(
                 profile.InMemory.DatabaseName,
             _ => profile.ProviderKind.ToString()
         };
+    }
+}
+
+internal sealed record CognitiveMemoryDatabaseRuntimeDiagnosticsApiResponse(
+    DatabaseProfileResolutionSource ResolutionSource,
+    string ResolutionSourceName,
+    bool IsRuntimeLocked,
+    string? Host,
+    int? Port,
+    string? DatabaseName)
+{
+    public static CognitiveMemoryDatabaseRuntimeDiagnosticsApiResponse From(ResolvedDatabaseProfile resolvedProfile)
+    {
+        var profile = resolvedProfile.Profile;
+        return new CognitiveMemoryDatabaseRuntimeDiagnosticsApiResponse(
+            resolvedProfile.ResolutionSource,
+            resolvedProfile.ResolutionSource.ToString(),
+            profile.Runtime.LockedByRuntimeOverride,
+            profile.PostgreSql?.Host,
+            profile.PostgreSql?.Port,
+            profile.ProviderKind switch
+            {
+                DatabaseProviderKind.PostgreSql => profile.PostgreSql?.DatabaseName,
+                DatabaseProviderKind.Sqlite => string.IsNullOrWhiteSpace(profile.Sqlite?.DatabasePath)
+                    ? null
+                    : Path.GetFileNameWithoutExtension(profile.Sqlite.DatabasePath),
+                DatabaseProviderKind.InMemory => profile.InMemory?.DatabaseName,
+                _ => null
+            });
+    }
+}
+
+internal sealed record CognitiveMemoryProjectionDefaultsApiResponse(
+    bool Enabled,
+    bool CanProjectMissingRecords,
+    string CollectionName,
+    string ProjectionProfileId,
+    string EmbeddingProfileId,
+    string TargetProviderName,
+    CognitiveMemoryProjectionStoreKind ProjectionStoreKind,
+    string ProjectionStoreKindName,
+    int? VectorDimensions)
+{
+    public static CognitiveMemoryProjectionDefaultsApiResponse From(CognitiveMemoryProjectionOptions options)
+        => new(
+            options.Enabled,
+            options.CanProjectMissingRecords,
+            options.CollectionName,
+            options.ProjectionProfileId,
+            options.EmbeddingProfileId,
+            options.TargetProviderName,
+            options.ProjectionStoreKind,
+            options.ProjectionStoreKind.ToString(),
+            options.VectorDimensions);
+}
+
+internal sealed record CognitiveMemoryHostDiagnosticsApiResponse(
+    string EnvironmentName,
+    string ContentRootPath,
+    string WebRootPath,
+    string BlazorWebJsPath,
+    bool BlazorWebJsExists,
+    string StaticWebAssetsManifestPath,
+    bool StaticWebAssetsManifestExists)
+{
+    public static CognitiveMemoryHostDiagnosticsApiResponse From(IWebHostEnvironment environment)
+    {
+        var webRoot = environment.WebRootPath ?? string.Empty;
+        var blazorWebJsPath = string.IsNullOrWhiteSpace(webRoot)
+            ? string.Empty
+            : Path.Combine(webRoot, "_framework", "blazor.web.js");
+        var staticWebAssetsManifestPath = Path.Combine(
+            environment.ContentRootPath,
+            $"{environment.ApplicationName}.staticwebassets.runtime.json");
+
+        return new CognitiveMemoryHostDiagnosticsApiResponse(
+            environment.EnvironmentName,
+            environment.ContentRootPath,
+            webRoot,
+            blazorWebJsPath,
+            !string.IsNullOrWhiteSpace(blazorWebJsPath) && File.Exists(blazorWebJsPath),
+            staticWebAssetsManifestPath,
+            File.Exists(staticWebAssetsManifestPath));
     }
 }
 
@@ -209,6 +301,14 @@ internal sealed class CognitiveMemoryAutomationRunApiRequest
     public string? ActorId { get; set; }
 
     public int? Take { get; set; }
+
+    public string? CycleId { get; set; }
+
+    public int? MaxCycles { get; set; }
+
+    public bool ContinueUntilIdle { get; set; }
+
+    public CognitiveMemoryPolicyApiRequest? Policy { get; set; }
 }
 
 internal sealed class CognitiveMemoryRetentionCleanupApiRequest
@@ -400,6 +500,12 @@ internal sealed class CognitiveMemoryProbeStartApiRequest
     public string? RecallMode { get; set; }
 
     public CognitiveMemoryPolicyApiRequest? Policy { get; set; }
+
+    public string? ProjectionCollectionName { get; set; }
+
+    public string? ProjectionProfileId { get; set; }
+
+    public string? EmbeddingProfileId { get; set; }
 }
 
 internal sealed class CognitiveMemoryProbeAskApiRequest
@@ -411,6 +517,12 @@ internal sealed class CognitiveMemoryProbeAskApiRequest
     public CognitiveMemoryRecallBudgetApiRequest? Budget { get; set; }
 
     public IReadOnlyDictionary<string, string>? Metadata { get; set; }
+
+    public string? ProjectionCollectionName { get; set; }
+
+    public string? ProjectionProfileId { get; set; }
+
+    public string? EmbeddingProfileId { get; set; }
 }
 
 internal sealed class CognitiveMemoryProbeFeedbackApiRequest

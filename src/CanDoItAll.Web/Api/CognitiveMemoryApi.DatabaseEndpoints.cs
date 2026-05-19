@@ -2,8 +2,10 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.CognitiveMemory;
 using CanDoItAll.SharedKernel;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Web.Api;
 
@@ -15,10 +17,16 @@ internal static partial class CognitiveMemoryApi
         CognitiveMemoryApiSurface surface)
     {
         memory.MapGet("/status", (
-                IDatabaseProfileRuntimeAccessor profileAccessor) =>
+                IDatabaseProfileRuntimeAccessor profileAccessor,
+                IOptions<CognitiveMemoryProjectionOptions> projectionOptions,
+                IWebHostEnvironment environment) =>
             {
                 var profile = profileAccessor.ResolveCurrentProfile();
-                return Results.Ok(CognitiveMemoryStatusApiResponse.From(profile, BuildApiContract(surface)));
+                return Results.Ok(CognitiveMemoryStatusApiResponse.From(
+                    profile,
+                    BuildApiContract(surface),
+                    projectionOptions.Value,
+                    environment));
             })
             .WithName(EndpointName("GetCognitiveMemoryStatus", surface));
 

@@ -48,3 +48,12 @@ Make Cognitive Memory validation repeatable, policy-correct, source-truth comple
 - API proof for clean PostgreSQL profile creation, transfer, ingestion, consolidation, dreaming, probe, recall, and Qdrant projection.
 - Browser proof for large-screen Cognitive Memory quality/cluster/probe operations.
 - A completed long-run validation workbook with operation IDs, counts, approval decisions, recall traces, probe feedback, and rejected-output reasons.
+
+## Validation Summary
+
+- Bundle preparation status: `Completed`
+- Bundle readiness gate: `Passed after cognitive-memory branch repair`
+- Execution status: `Partially completed`
+- Subbundle gate review: `Implemented branch-safe hardening for source-truth transfer, policy/projection persistence, dream aggregate specificity, diagnostics, and bounded validation cycles`
+- Final closure gate: `Deferred until real PostgreSQL/Qdrant long-run soak and browser proof are executed`
+- Browser validation analytics: `Deferred; this branch correction moved backend hardening and bundle workflow metadata only`

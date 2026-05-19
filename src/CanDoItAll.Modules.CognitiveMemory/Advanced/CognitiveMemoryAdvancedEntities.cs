@@ -20,6 +20,18 @@ public sealed class CognitiveMemoryProbeSessionRecord : IHasConcurrencyToken
 
     public string PolicyProfileId { get; set; } = string.Empty;
 
+    public CognitiveMemoryAccessLevel AccessLevel { get; set; } = CognitiveMemoryAccessLevel.Project;
+
+    public CognitiveMemoryRiskLevel RiskLevel { get; set; } = CognitiveMemoryRiskLevel.Low;
+
+    public bool AllowRestrictedContent { get; set; }
+
+    public string ProjectionCollectionName { get; set; } = string.Empty;
+
+    public string ProjectionProfileId { get; set; } = string.Empty;
+
+    public string EmbeddingProfileId { get; set; } = string.Empty;
+
     public string AlgorithmVersion { get; set; } = string.Empty;
 
     public int TurnCount { get; set; }

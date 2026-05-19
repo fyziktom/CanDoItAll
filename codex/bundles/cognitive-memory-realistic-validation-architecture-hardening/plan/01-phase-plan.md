@@ -1,5 +1,45 @@
 # Phase Plan
 
+## Execution Order
+
+1. `subbundles/01-validation-host-and-static-assets`
+2. `subbundles/02-clean-environment-orchestration`
+3. `subbundles/03-source-truth-transfer-completeness`
+4. `subbundles/04-policy-preserving-operations`
+5. `subbundles/05-dream-aggregate-quality`
+6. `subbundles/06-probe-and-recall-loop`
+7. `subbundles/07-qdrant-projection-operability`
+8. `subbundles/08-long-run-validation-orchestration`
+
+## Subbundle Dependency Map
+
+```mermaid
+flowchart TD
+    S01["01 Validation host and static assets"] --> S02["02 Clean environment orchestration"]
+    S02 --> S03["03 Source-truth transfer completeness"]
+    S03 --> S04["04 Policy-preserving operations"]
+    S04 --> S05["05 Dream aggregate quality"]
+    S04 --> S06["06 Probe and recall loop"]
+    S06 --> S07["07 Qdrant projection operability"]
+    S05 --> S08["08 Long-run validation orchestration"]
+    S07 --> S08
+```
+
+## Critical Subbundles
+
+- `02-clean-environment-orchestration` is critical because every realistic validation result depends on knowing the active database profile and projection provider.
+- `03-source-truth-transfer-completeness` is critical because source-truth loss invalidates later clustering, dreaming, recall, and probe conclusions.
+- `04-policy-preserving-operations` is critical because restricted validation must preserve explicit operator access policy end to end.
+- `07-qdrant-projection-operability` is critical because vector recall must fail visibly when projection options or provider readiness are missing.
+
+## Phase Gates
+
+- Phase 1 can close only after startup/static asset behavior is either proven or reported as a precise configuration error.
+- Phase 2 can close only after API status exposes active database profile and projection readiness.
+- Phase 3 can close only after transfer preview and execution preserve source locators, hashes, redaction state, and skipped-item reasons.
+- Phases 4 through 7 can close only after focused tests prove policy and projection options do not get dropped across probe, recall, dreaming, and consolidation paths.
+- Phase 8 can close only after repeated cycles produce operation IDs, resumable cursors, metrics, approval checkpoints, and trouble records.
+
 ## Phase 1: Validation Host And Static Assets
 
 - Reproduce the no-build/static asset failure.

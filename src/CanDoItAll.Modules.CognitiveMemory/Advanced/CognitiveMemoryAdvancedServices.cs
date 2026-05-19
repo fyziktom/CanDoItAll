@@ -57,6 +57,12 @@ public sealed class CognitiveMemoryProbeService(
             Title = CognitiveMemoryGuard.EnsureText(request.Title, nameof(request.Title)),
             ActorId = CognitiveMemoryGuard.EnsureText(request.PolicyContext.ActorId, nameof(request.PolicyContext.ActorId)),
             PolicyProfileId = request.PolicyContext.PolicyProfileId.Value,
+            AccessLevel = request.PolicyContext.AccessLevel,
+            RiskLevel = request.PolicyContext.RiskLevel,
+            AllowRestrictedContent = request.PolicyContext.AllowRestrictedContent,
+            ProjectionCollectionName = request.ProjectionCollectionName?.Value ?? string.Empty,
+            ProjectionProfileId = request.ProjectionProfileId?.Value ?? string.Empty,
+            EmbeddingProfileId = request.EmbeddingProfileId?.Value ?? string.Empty,
             AlgorithmVersion = "probe-core-v1",
             CreatedAtUtc = now,
             UpdatedAtUtc = now
@@ -86,13 +92,7 @@ public sealed class CognitiveMemoryProbeService(
             throw new InvalidOperationException($"Probe session '{session.Id:D}' is not active.");
         }
 
-        var policyContext = new CognitiveMemoryPolicyContext(
-            session.ProjectId,
-            session.ActorId,
-            CognitiveMemoryAccessLevel.Project,
-            new CognitiveMemoryPolicyProfileId(session.PolicyProfileId),
-            CognitiveMemoryRiskLevel.Low,
-            AllowRestrictedContent: false);
+        var policyContext = CreateStoredPolicyContext(session);
         var recallResult = await recallOrchestrator.RecallAsync(
             new CognitiveMemoryRecallRequest(
                 session.ProjectId,
@@ -102,6 +102,9 @@ public sealed class CognitiveMemoryProbeService(
                 policyContext,
                 request.Budget,
                 WorkspaceFrameId: session.WorkspaceFrameId is { } frameId ? new CognitiveMemoryWorkspaceFrameId(frameId) : null,
+                ProjectionCollectionName: request.ProjectionCollectionName ?? CreateProjectionCollectionName(session.ProjectionCollectionName),
+                ProjectionProfileId: request.ProjectionProfileId ?? CreateProjectionProfileId(session.ProjectionProfileId),
+                EmbeddingProfileId: request.EmbeddingProfileId ?? CreateEmbeddingProfileId(session.EmbeddingProfileId),
                 Metadata: request.Metadata),
             cancellationToken);
         var now = clock.GetUtcNow();
@@ -156,6 +159,30 @@ public sealed class CognitiveMemoryProbeService(
         await dbContext.SaveChangesAsync(cancellationToken);
         return new CognitiveMemoryProbeAskResult(session, turn, recallResult);
     }
+
+    private static CognitiveMemoryPolicyContext CreateStoredPolicyContext(CognitiveMemoryProbeSessionRecord session)
+        => new(
+            session.ProjectId,
+            session.ActorId,
+            session.AccessLevel,
+            new CognitiveMemoryPolicyProfileId(session.PolicyProfileId),
+            session.RiskLevel,
+            session.AllowRestrictedContent);
+
+    private static CognitiveMemoryProjectionCollectionName? CreateProjectionCollectionName(string value)
+        => string.IsNullOrWhiteSpace(value)
+            ? null
+            : new CognitiveMemoryProjectionCollectionName(value.Trim());
+
+    private static CognitiveMemoryProjectionProfileId? CreateProjectionProfileId(string value)
+        => string.IsNullOrWhiteSpace(value)
+            ? null
+            : new CognitiveMemoryProjectionProfileId(value.Trim());
+
+    private static CognitiveMemoryEmbeddingProfileId? CreateEmbeddingProfileId(string value)
+        => string.IsNullOrWhiteSpace(value)
+            ? null
+            : new CognitiveMemoryEmbeddingProfileId(value.Trim());
 
     private static string CreateProbeAnswerSummary(string question, CognitiveMemoryRecallContextPack contextPack)
     {

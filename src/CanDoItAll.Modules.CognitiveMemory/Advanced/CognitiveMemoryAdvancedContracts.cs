@@ -367,14 +367,20 @@ public sealed record CognitiveMemoryProbeStartRequest(
     string Title,
     CognitiveMemoryPolicyContext PolicyContext,
     CognitiveMemoryRecallMode RecallMode = CognitiveMemoryRecallMode.FocusedTaskContext,
-    CognitiveMemoryWorkspaceFrameId? WorkspaceFrameId = null);
+    CognitiveMemoryWorkspaceFrameId? WorkspaceFrameId = null,
+    CognitiveMemoryProjectionCollectionName? ProjectionCollectionName = null,
+    CognitiveMemoryProjectionProfileId? ProjectionProfileId = null,
+    CognitiveMemoryEmbeddingProfileId? EmbeddingProfileId = null);
 
 public sealed record CognitiveMemoryProbeAskRequest(
     Guid SessionId,
     string Question,
     CognitiveMemoryRecallIntentKind Intent,
     CognitiveMemoryRecallBudget Budget,
-    IReadOnlyDictionary<string, string>? Metadata = null);
+    IReadOnlyDictionary<string, string>? Metadata = null,
+    CognitiveMemoryProjectionCollectionName? ProjectionCollectionName = null,
+    CognitiveMemoryProjectionProfileId? ProjectionProfileId = null,
+    CognitiveMemoryEmbeddingProfileId? EmbeddingProfileId = null);
 
 public sealed record CognitiveMemoryProbeFeedbackRequest(
     Guid TurnId,

@@ -23,7 +23,10 @@ internal static partial class CognitiveMemoryApi
                     EnsureNonEmpty(request.ProjectId, nameof(request.ProjectId)),
                     EnsureText(request.Title, nameof(request.Title)),
                     BuildPolicyContext(request.ProjectId, request.Policy),
-                    ParseEnum(request.RecallMode, CognitiveMemoryRecallMode.FocusedTaskContext, nameof(request.RecallMode))),
+                    ParseEnum(request.RecallMode, CognitiveMemoryRecallMode.FocusedTaskContext, nameof(request.RecallMode)),
+                    ProjectionCollectionName: CreateProjectionCollectionName(request.ProjectionCollectionName),
+                    ProjectionProfileId: CreateProjectionProfileId(request.ProjectionProfileId),
+                    EmbeddingProfileId: CreateEmbeddingProfileId(request.EmbeddingProfileId)),
                 cancellationToken)))
             .WithName(EndpointName("StartCognitiveMemoryProbeSession", surface));
 
@@ -38,7 +41,10 @@ internal static partial class CognitiveMemoryApi
                     EnsureText(request.Question, nameof(request.Question)),
                     ParseEnum(request.Intent, CognitiveMemoryRecallIntentKind.Testing, nameof(request.Intent)),
                     BuildRecallBudget(request.Budget),
-                    request.Metadata),
+                    request.Metadata,
+                    CreateProjectionCollectionName(request.ProjectionCollectionName),
+                    CreateProjectionProfileId(request.ProjectionProfileId),
+                    CreateEmbeddingProfileId(request.EmbeddingProfileId)),
                 cancellationToken)))
             .WithName(EndpointName("AskCognitiveMemoryProbeQuestion", surface));
 
