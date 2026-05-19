@@ -18,6 +18,23 @@ $stageRoot = Join-Path $RepoRoot ".codex\plugin-packages\docker"
 $manifestPath = Join-Path $stageRoot "plugin.package.json"
 $iconPath = Join-Path $stageRoot "icon.svg"
 
+function Get-PackageRelativePath {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $RootPath,
+
+        [Parameter(Mandatory = $true)]
+        [string] $ChildPath
+    )
+
+    $rootFullPath = [System.IO.Path]::GetFullPath($RootPath).TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
+    $childFullPath = [System.IO.Path]::GetFullPath($ChildPath)
+    $rootUri = [System.Uri]::new($rootFullPath + [System.IO.Path]::DirectorySeparatorChar)
+    $childUri = [System.Uri]::new($childFullPath)
+
+    return [System.Uri]::UnescapeDataString($rootUri.MakeRelativeUri($childUri).ToString()).Replace("/", "\")
+}
+
 if (-not $NoBuild) {
     dotnet build $projectPath -c $Configuration
     if ($LASTEXITCODE -ne 0) {
@@ -152,7 +169,7 @@ try {
         Get-ChildItem -LiteralPath $stageRoot -File -Recurse |
             Sort-Object FullName |
             ForEach-Object {
-                $relativePath = [System.IO.Path]::GetRelativePath($stageRoot, $_.FullName).Replace("\", "/")
+                $relativePath = (Get-PackageRelativePath -RootPath $stageRoot -ChildPath $_.FullName).Replace("\", "/")
                 $entry = $zip.CreateEntry($relativePath, [System.IO.Compression.CompressionLevel]::Optimal)
                 $entry.LastWriteTime = $fixedTimestamp
                 $entryStream = $entry.Open()

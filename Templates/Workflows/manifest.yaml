@@ -1,8 +1,8 @@
 packKey: candoitall-workflow-template-pack
 name: CanDoItAll default workflow template pack
-version: 2026-05-email-workflow-processing-v2
+version: 2026-05-workflow-template-examples-v1
 seedMarker: Managed workflow example seed
-seedVersion: 2026-05-email-workflow-processing-v2
+seedVersion: 2026-05-workflow-template-examples-v1
 definitionNamePrefix: "Example: "
 componentNamePrefix: "Example LLM: "
 component:
@@ -111,3 +111,5 @@ nodeInstructionDefaults:
   End: Return the final workflow payload.
 workflowFiles:
   - relativePath: workflows/default-workflows.yaml
+  - relativePath: workflows/email-plugin-task-workflows.yaml
+  - relativePath: workflows/file-analysis-workflows.yaml
