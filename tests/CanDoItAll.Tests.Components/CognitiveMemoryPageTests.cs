@@ -97,6 +97,8 @@ public sealed class CognitiveMemoryPageTests
         Assert.Contains("Fixture consolidation failure.", cut.Markup);
         Assert.Contains("Projection is stale.", cut.Markup);
         Assert.Contains("Procedure validation replay required.", cut.Markup);
+        Assert.Contains("Operator audit", cut.Markup);
+        Assert.Contains("Claim validation routed to operator audit.", cut.Markup);
     }
 
     private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)
@@ -202,6 +204,53 @@ public sealed class CognitiveMemoryPageTests
             ObservedAtUtc = now,
             CreatedAtUtc = now,
             ConcurrencyToken = Guid.NewGuid()
+        };
+        var claim = new CognitiveMemoryClaimRecord
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = projectId,
+            MemoryRecordId = memoryRecord.Id,
+            ClaimKind = CognitiveMemoryClaimKind.ProcedureConstraint,
+            ClaimText = "Docker rollback requires source-backed validation.",
+            SubjectKey = "docker.rollback",
+            PredicateKey = "requires",
+            ObjectKey = "source.validation",
+            CurrentBeliefState = CognitiveMemoryBeliefStateKind.Supported,
+            CurrentBeliefBucket = CognitiveMemoryScoreProjectionBucket.NeedsReview,
+            ValidationState = CognitiveMemoryValidationState.NeedsHumanReview,
+            StabilityState = CognitiveMemoryStabilityState.Experimental,
+            AlgorithmVersion = "component-test",
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now,
+            ConcurrencyToken = Guid.NewGuid()
+        };
+        var mutationCommand = new CognitiveMemoryMutationCommandRecord
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = projectId,
+            CommandKind = CognitiveMemoryMutationCommandKind.ValidateClaim,
+            Status = CognitiveMemoryMutationCommandStatus.ReviewRequired,
+            ActorKind = CognitiveMemoryActorKind.Agent,
+            ActorId = "agent:component",
+            IdempotencyKey = "component-mutation-command",
+            AffectedMemoryRecordIdsJson = $"[\"{memoryRecord.Id:D}\"]",
+            AffectedClaimIdsJson = $"[\"{claim.Id:D}\"]",
+            EvidenceAnchorIdsJson = $"[\"{evidenceAnchor.Id:D}\"]",
+            RequiresHumanReview = true,
+            ReviewReason = "Claim validation requires operator review.",
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now,
+            ConcurrencyToken = Guid.NewGuid()
+        };
+        var mutationAuditEvent = new CognitiveMemoryMutationAuditEventRecord
+        {
+            Id = Guid.NewGuid(),
+            MutationCommandId = mutationCommand.Id,
+            ProjectId = projectId,
+            Sequence = 1,
+            EventKind = CognitiveMemoryMutationAuditEventKind.ReviewRequired,
+            Message = "Claim validation routed to operator audit.",
+            CreatedAtUtc = now
         };
         var procedureSkill = new CognitiveMemoryProcedureSkillRecord
         {
@@ -473,6 +522,9 @@ public sealed class CognitiveMemoryPageTests
             memoryRecord,
             sourceLink,
             evidenceAnchor,
+            claim,
+            mutationCommand,
+            mutationAuditEvent,
             procedureSkill,
             reviewItem,
             recallTrace,

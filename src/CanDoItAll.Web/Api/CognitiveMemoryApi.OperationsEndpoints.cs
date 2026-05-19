@@ -9,7 +9,9 @@ namespace CanDoItAll.Web.Api;
 
 internal static partial class CognitiveMemoryApi
 {
-    private static void MapOperationsEndpoints(RouteGroupBuilder memory)
+    private static void MapOperationsEndpoints(
+        RouteGroupBuilder memory,
+        CognitiveMemoryApiSurface surface)
     {
         memory.MapPost("/projections/rebuild", async (
                 CognitiveMemoryProjectionRebuildApiRequest request,
@@ -24,7 +26,7 @@ internal static partial class CognitiveMemoryApi
                         ? null
                         : new CognitiveMemoryProjectionCollectionName(request.CollectionName.Trim())),
                 cancellationToken)))
-            .WithName("RebuildCognitiveMemoryProjections");
+            .WithName(EndpointName("RebuildCognitiveMemoryProjections", surface));
 
         memory.MapPost("/automation/run", async (
                 CognitiveMemoryAutomationRunApiRequest request,
@@ -37,6 +39,15 @@ internal static partial class CognitiveMemoryApi
                     NormalizeActorId(request.ActorId),
                     NormalizeTake(request.Take, 50, 500)),
                 cancellationToken)))
-            .WithName("RunCognitiveMemoryScheduledAutomation");
+            .WithName(EndpointName("RunCognitiveMemoryScheduledAutomation", surface));
+
+        memory.MapPost("/retention/cleanup", async (
+                CognitiveMemoryRetentionCleanupApiRequest request,
+                ICognitiveMemoryRetentionCleanupService retentionCleanupService,
+                CancellationToken cancellationToken) =>
+            await ExecuteAsync(() => retentionCleanupService.CleanupAsync(
+                BuildRetentionCleanupRequest(request),
+                cancellationToken)))
+            .WithName(EndpointName("RunCognitiveMemoryRetentionCleanup", surface));
     }
 }

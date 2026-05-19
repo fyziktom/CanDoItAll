@@ -1,0 +1,187 @@
+- generic [ref=e448] [box=0,0,1425,4050]:
+  - complementary [ref=e449] [box=16,8,76,984]:
+    - generic [ref=e450] [box=27,19,54,962]:
+      - generic [ref=e451] [box=27,19,54,40]:
+        - generic [ref=e452] [box=27,19,10,40]:
+          - generic [ref=e453] [box=12,19,40,40]: CD
+          - generic [ref=e454] [box=32,39,1,1]: CanDoItAll local delivery workbench
+        - button "Expand navigation" [ref=e455] [box=45,21,36,36]:
+          - generic [ref=e456] [box=53,29,20,20]: chevron_right
+      - navigation "Primary navigation" [ref=e457] [box=27,67,54,803]:
+        - button "Dashboard" [ref=e459] [box=27,71,44,44]:
+          - generic [ref=e461] [box=39,83,20,20]: dashboard
+        - button "Projects" [ref=e463] [box=27,121,44,44]:
+          - generic [ref=e465] [box=39,133,20,20]: folder_open
+        - button "Processes" [ref=e467] [box=27,171,44,44]:
+          - generic [ref=e469] [box=39,183,20,20]: account_tree
+        - button "Live Processes" [ref=e471] [box=27,221,44,44]:
+          - generic [ref=e473] [box=39,233,20,20]: monitor_heart
+        - button "Collaboration" [ref=e475] [box=27,271,44,44]:
+          - generic [ref=e477] [box=39,283,20,20]: forum
+        - button "CRM / HR" [ref=e479] [box=27,321,44,44]:
+          - generic [ref=e481] [box=39,333,20,20]: groups
+        - button "Agents" [ref=e483] [box=27,371,44,44]:
+          - generic [ref=e485] [box=39,383,20,20]: smart_toy
+        - button "Workflows" [ref=e487] [box=27,421,44,44]:
+          - generic [ref=e489] [box=39,433,20,20]: account_tree
+        - button "Cognitive Memory" [ref=e491] [box=27,471,44,44]:
+          - generic [ref=e493] [box=39,483,20,20]: psychology
+        - button "Resources" [ref=e495] [box=27,521,44,44]:
+          - generic [ref=e497] [box=39,533,20,20]: inventory_2
+        - button "Plugins" [ref=e499] [box=27,571,44,44]:
+          - generic [ref=e501] [box=39,583,20,20]: extension
+        - button "Prompt Gallery" [ref=e503] [box=27,621,44,44]:
+          - generic [ref=e505] [box=39,633,20,20]: library_books
+        - button "Prompt Factory" [ref=e507] [box=27,671,44,44]:
+          - generic [ref=e509] [box=39,683,20,20]: construction
+        - button "Validation Center" [ref=e511] [box=27,721,44,44]:
+          - generic [ref=e513] [box=39,733,20,20]: fact_check
+        - button "More pages" [ref=e515] [box=32,771,44,44]:
+          - generic [ref=e517] [box=44,783,20,20]: expand_less
+      - generic [ref=e519] [box=27,887,54,94]:
+        - button "Settings" [ref=e521] [box=27,887,54,44]:
+          - generic [ref=e523] [box=44,899,20,20]: settings
+          - generic [ref=e524] [box=54,909,1,1]: Settings
+        - button "Switch Database" [ref=e526] [box=27,937,54,44]:
+          - generic [ref=e528] [box=44,949,20,20]: storage
+          - generic [ref=e529] [box=54,959,1,1]: Switch Database
+  - main [ref=e530] [box=100,8,1309,4034]:
+    - generic [ref=e531] [box=100,8,1309,34]:
+      - generic [ref=e535] [box=104,8,756,30]:
+        - button "Dashboard" [ref=e537] [box=113,13,85,20]:
+          - generic [ref=e538] [box=113,15,59,16]: Dashboard
+          - generic [ref=e540] [box=178,13,20,20]: push_pin
+        - button "Cognitive Memory" [ref=e542] [box=222,15,101,16]:
+          - generic [ref=e543] [box=222,15,101,16]: Cognitive Memory
+      - generic [ref=e545] [box=880,12,529,26]:
+        - generic [ref=e546] [box=880,12,246,26]:
+          - generic [ref=e547] [box=881,18,137,13]: Delivery Workspace
+          - generic [ref=e548] [box=1024,17,101,16]: Cognitive Memory
+        - generic [ref=e549] [box=1134,12,117,26]: Interactive Server
+        - generic [ref=e550] [box=1259,12,86,26]: Live items 0
+        - generic [ref=e551] [box=1353,12,56,26]: Tabs 2
+    - generic [ref=e554] [box=121,71,1267,3950]:
+      - generic [ref=e556] [box=121,71,1252,100]:
+        - generic [ref=e558] [box=121,71,839,87]:
+          - paragraph [ref=e559] [box=121,71,839,16]: Cognitive Memory
+          - heading "Memory review" [level=1] [ref=e560] [box=121,91,839,43]
+          - paragraph [ref=e561] [box=121,138,839,20]: Inspect recall evidence, review decisions, probing, self-regulation, answer gates, learning proposals, projection health, and worker safety.
+        - button "Refresh memory review" [ref=e563] [box=1337,96,36,36]:
+          - generic [ref=e564] [box=1345,104,20,20]: refresh
+          - generic [ref=e565] [box=1355,114,1,1]: refresh
+      - generic [ref=e567] [box=121,187,1252,70]:
+        - generic [ref=e569] [box=134,194,150,17]:
+          - generic [ref=e570] [box=134,194,118,17]:
+            - paragraph [ref=e571] [box=134,195,93,13]: Memory items
+            - button "Show help for Memory items" [ref=e573] [cursor=pointer] [box=235,194,17,17]:
+              - generic [ref=e574] [box=242,197,4,10]: "?"
+          - paragraph [ref=e575] [box=260,195,24,14]: "902"
+        - generic [ref=e577] [box=318,194,145,17]:
+          - generic [ref=e578] [box=318,194,129,17]:
+            - paragraph [ref=e579] [box=318,195,104,13]: Pending review
+            - button "Show help for Pending review" [ref=e581] [cursor=pointer] [box=430,194,17,17]:
+              - generic [ref=e582] [box=437,197,4,10]: "?"
+          - paragraph [ref=e583] [box=455,195,8,14]: "3"
+        - generic [ref=e585] [box=497,194,150,17]:
+          - generic [ref=e586] [box=497,194,118,17]:
+            - paragraph [ref=e587] [box=497,195,93,13]: Recall traces
+            - button "Show help for Recall traces" [ref=e589] [cursor=pointer] [box=598,194,17,17]:
+              - generic [ref=e590] [box=604,197,4,10]: "?"
+          - paragraph [ref=e591] [box=623,195,24,14]: "270"
+        - generic [ref=e593] [box=681,194,161,17]:
+          - generic [ref=e594] [box=681,194,145,17]:
+            - paragraph [ref=e595] [box=681,195,120,13]: Projection issues
+            - button "Show help for Projection issues" [ref=e597] [cursor=pointer] [box=809,194,17,17]:
+              - generic [ref=e598] [box=815,197,4,10]: "?"
+          - paragraph [ref=e599] [box=834,195,8,14]: "0"
+        - generic [ref=e601] [box=876,194,162,17]:
+          - generic [ref=e602] [box=876,194,145,17]:
+            - paragraph [ref=e603] [box=876,195,121,13]: Procedure review
+            - button "Show help for Procedure review" [ref=e605] [cursor=pointer] [box=1005,194,17,17]:
+              - generic [ref=e606] [box=1011,197,4,10]: "?"
+          - paragraph [ref=e607] [box=1029,195,8,14]: "0"
+        - generic [ref=e609] [box=1071,194,166,17]:
+          - generic [ref=e610] [box=1071,194,150,17]:
+            - paragraph [ref=e611] [box=1071,195,125,13]: Simulation review
+            - button "Show help for Simulation review" [ref=e613] [cursor=pointer] [box=1205,194,17,17]:
+              - generic [ref=e614] [box=1211,197,4,10]: "?"
+          - paragraph [ref=e615] [box=1229,195,8,14]: "0"
+        - generic [ref=e617] [box=134,232,133,17]:
+          - generic [ref=e618] [box=134,232,117,17]:
+            - paragraph [ref=e619] [box=134,234,92,13]: Answer gates
+            - button "Show help for Answer gates" [ref=e621] [cursor=pointer] [box=234,232,17,17]:
+              - generic [ref=e622] [box=240,236,4,10]: "?"
+          - paragraph [ref=e623] [box=259,234,8,14]: "0"
+        - generic [ref=e625] [box=301,232,176,17]:
+          - generic [ref=e626] [box=301,232,160,17]:
+            - paragraph [ref=e627] [box=301,234,135,13]: Learning proposals
+            - button "Show help for Learning proposals" [ref=e629] [cursor=pointer] [box=444,232,17,17]:
+              - generic [ref=e630] [box=450,236,4,10]: "?"
+          - paragraph [ref=e631] [box=469,234,8,14]: "5"
+        - generic [ref=e633] [box=511,232,137,17]:
+          - generic [ref=e634] [box=511,232,121,17]:
+            - paragraph [ref=e635] [box=511,234,96,13]: Worker issues
+            - button "Show help for Worker issues" [ref=e637] [cursor=pointer] [box=615,232,17,17]:
+              - generic [ref=e638] [box=621,236,4,10]: "?"
+          - paragraph [ref=e639] [box=640,234,8,14]: "0"
+      - generic [ref=e642] [box=121,272,1252,3749]:
+        - tablist "Cognitive Memory review tabs" [ref=e643] [box=121,272,1252,101]:
+          - tab "Dashboard" [ref=e644] [box=125,272,139,46]:
+            - generic [ref=e645] [box=142,286,20,20]: dashboard
+            - generic [ref=e646] [box=170,284,77,24]: Dashboard
+          - tab "Probe workbench 16" [ref=e647] [box=272,272,223,46]:
+            - generic [ref=e648] [box=289,286,20,20]: forum
+            - generic [ref=e649] [box=317,284,124,24]: Probe workbench
+            - generic [ref=e650] [box=449,286,29,19]: "16"
+          - tab "Settings" [ref=e651] [box=503,272,119,46]:
+            - generic [ref=e652] [box=520,286,20,20]: tune
+            - generic [ref=e653] [box=548,284,57,24]: Settings
+          - tab "Sources" [ref=e654] [box=630,272,117,46]:
+            - generic [ref=e655] [box=647,286,20,20]: upload_file
+            - generic [ref=e656] [box=675,284,55,24]: Sources
+          - tab "Memory 12" [ref=e657] [box=755,272,158,46]:
+            - generic [ref=e658] [box=772,286,20,20]: storage
+            - generic [ref=e659] [box=800,284,59,24]: Memory
+            - generic [ref=e660] [box=867,286,29,19]: "12"
+          - tab "Review queue 3" [ref=e661] [box=921,272,192,46]:
+            - generic [ref=e662] [box=938,286,20,20]: fact_check
+            - generic [ref=e663] [box=966,284,98,24]: Review queue
+            - generic [ref=e664] [box=1072,286,24,19]: "3"
+          - tab "Recall traces 12" [ref=e665] [box=1121,272,186,46]:
+            - generic [ref=e666] [box=1138,286,20,20]: travel_explore
+            - generic [ref=e667] [box=1166,284,87,24]: Recall traces
+            - generic [ref=e668] [box=1261,286,29,19]: "12"
+          - tab "Health 0" [active] [selected] [ref=e669] [box=125,328,140,46]:
+            - generic [ref=e670] [box=142,341,20,20]: monitor_heart
+            - generic [ref=e671] [box=170,339,46,24]: Health
+            - generic [ref=e672] [box=224,342,24,19]: "0"
+          - tab "Self-regulation 5" [ref=e673] [box=273,327,198,46]:
+            - generic [ref=e674] [box=290,340,20,20]: psychology
+            - generic [ref=e675] [box=318,338,104,24]: Self-regulation
+            - generic [ref=e676] [box=431,341,24,19]: "5"
+          - tab "Scale 0" [ref=e677] [box=480,327,130,46]:
+            - generic [ref=e678] [box=497,340,20,20]: hub
+            - generic [ref=e679] [box=525,338,36,24]: Scale
+            - generic [ref=e680] [box=569,341,24,19]: "0"
+        - tabpanel "Health 0" [ref=e682] [box=121,373,1252,3649]:
+          - generic [ref=e683] [box=138,390,1218,3615]:
+            - generic [ref=e684] [box=138,390,601,1412]:
+              - paragraph [ref=e685] [box=159,411,559,15]: Projection health
+              - heading "Rebuild and failure state" [level=2] [ref=e686] [box=159,426,559,24]
+              - generic [ref=e687] [box=159,450,559,150]
+            - generic [ref=e691] [box=755,390,601,1412]:
+              - paragraph [ref=e692] [box=776,411,559,15]: Consolidation
+              - heading "Run output and review handoff" [level=2] [ref=e693] [box=776,426,559,24]
+              - generic [ref=e694] [box=776,450,559,1331]
+            - generic [ref=e743] [box=138,1818,601,231]:
+              - paragraph [ref=e744] [box=159,1839,559,15]: Replay queue
+              - heading "Priority and worker safety" [level=2] [ref=e745] [box=159,1854,559,24]
+              - generic [ref=e746] [box=159,1878,559,150]
+            - generic [ref=e750] [box=755,1818,601,231]:
+              - paragraph [ref=e751] [box=776,1839,559,15]: Procedure library
+              - heading "Maturity, risk, and validation" [level=2] [ref=e752] [box=776,1854,559,24]
+              - generic [ref=e753] [box=776,1878,559,150]
+            - generic [ref=e757] [box=138,2065,601,1940]:
+              - paragraph [ref=e758] [box=159,2086,559,15]: Operator audit
+              - heading "Mutation, evidence, and projection signals" [level=2] [ref=e759] [box=159,2101,559,24]
+              - generic [ref=e760] [box=159,2125,559,1859]

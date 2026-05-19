@@ -34,6 +34,7 @@ public sealed partial class CognitiveMemoryReviewUiService(
         var learningProposals = await LoadLearningProposalsAsync(dbContext, query, cancellationToken);
         var crossProjectPromotions = await LoadCrossProjectPromotionsAsync(dbContext, query, cancellationToken);
         var distributedJobs = await LoadDistributedJobsAsync(dbContext, query, cancellationToken);
+        var operatorAudit = await LoadOperatorAuditAsync(dbContext, query, cancellationToken);
 
         return new CognitiveMemoryReviewUiSnapshot(
             summary,
@@ -50,7 +51,8 @@ public sealed partial class CognitiveMemoryReviewUiService(
             professorReviews,
             learningProposals,
             crossProjectPromotions,
-            distributedJobs);
+            distributedJobs,
+            operatorAudit);
     }
 
     public async ValueTask<CognitiveMemoryReviewQueueItem> DecideReviewItemAsync(

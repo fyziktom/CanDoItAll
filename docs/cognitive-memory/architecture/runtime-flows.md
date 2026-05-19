@@ -68,6 +68,22 @@ sequenceDiagram
     Recall-->>Caller: Context pack, candidates, stages, warnings
 ```
 
+## External Source Ingestion Policy
+
+```mermaid
+flowchart TD
+    Caller["UI/API caller submits file or web link"] --> Operation["Create ingestion operation"]
+    Operation --> Size{"File/link and extracted text within limits?"}
+    Size -- "No" --> FailedSize["Mark operation failed with explicit limit error"]
+    Size -- "Yes" --> Extract["Extract file or website text"]
+    Extract --> ExtractOk{"Extraction succeeded?"}
+    ExtractOk -- "No" --> FailedExtract["Mark operation failed with file/host context"]
+    ExtractOk -- "Yes" --> Sensitive{"Credential-like content or sensitive query parameter?"}
+    Sensitive -- "Yes" --> FailedSensitive["Mark operation failed without source/evidence persistence"]
+    Sensitive -- "No" --> Persist["Persist source manifest, source items, chunks, evidence anchors"]
+    Persist --> Complete["Complete operation with item/chunk counts"]
+```
+
 ## Projection Rebuild
 
 ```mermaid
@@ -89,6 +105,8 @@ sequenceDiagram
             Provider-->>Lifecycle: Provider trace and projection state
             Lifecycle-->>Rebuild: Projection record result
             Rebuild->>Db: Preserve row identity and update projection status/hash/provider trace
+        else provider fails
+            Rebuild->>Db: Mark projection failed, keep RebuildRequired=true, store failure code/message
         else durable inputs missing
             Rebuild->>Db: Leave projection unchanged and record explicit skip warning
         end
@@ -116,6 +134,20 @@ flowchart TD
     ConsolidateCheck -- "Yes" --> Consolidation["Run incremental or nightly consolidation"]
     ConsolidateCheck -- "No" --> Result["Return run summary"]
     Consolidation --> Result
+```
+
+## Retention Cleanup
+
+```mermaid
+flowchart TD
+    Caller["API/operator calls /retention/cleanup"] --> Validate["Validate cutoff is before current UTC time"]
+    Validate --> Scope["Resolve cleanup scopes"]
+    Scope --> DryRun{"Dry run?"}
+    DryRun -- "Yes" --> Count["Count eligible operational rows only"]
+    DryRun -- "No" --> Delete["Delete eligible operational rows only"]
+    Count --> Report["Return per-scope matched/deleted counts"]
+    Delete --> Report
+    Report --> Guard["Canonical memory, source items, claims, evidence, and projection state remain untouched"]
 ```
 
 ## Lifecycle Flow
@@ -177,6 +209,7 @@ sequenceDiagram
 ## Current Flow Limits
 
 - Recall always records stages and warnings when vector projection is skipped or unavailable.
-- Projection invalidation and explicit rebuild are now first-class service/API/UI flows. Adapter-backed RAG proof exists; live Qdrant/provider failure proof is still required for beta.
-- Scheduled automation settings are persisted and can be executed explicitly through the API runner or operator settings tab. There is intentionally no dedicated hosted cognitive-memory worker in P0.
+- Projection invalidation and explicit rebuild are first-class service/API/UI flows. Adapter-backed RAG proof and deterministic provider-failure proof exist; live Qdrant/provider validation is still required for beta.
+- Scheduled automation settings are persisted and can be executed explicitly through the API runner or operator settings tab. There is intentionally no dedicated hosted cognitive-memory worker in P0/P1.
+- Retention cleanup is explicit and dry-run-first. It removes old operational rows only, not canonical memory truth.
 

@@ -51,6 +51,7 @@ public static class CognitiveMemoryModuleServiceCollectionExtensions
         services.TryAddScoped<ICognitiveMemoryProjectionLifecycleService, CognitiveMemoryProjectionLifecycleService>();
         services.TryAddScoped<ICognitiveMemoryProjectionRebuildService, CognitiveMemoryProjectionRebuildService>();
         services.TryAddScoped<ICognitiveMemoryScheduledAutomationRunner, CognitiveMemoryScheduledAutomationRunner>();
+        services.TryAddScoped<ICognitiveMemoryRetentionCleanupService, CognitiveMemoryRetentionCleanupService>();
         services.TryAddScoped<ICognitiveMemoryWorkspaceService, CognitiveMemoryWorkspaceService>();
         services.TryAddScoped<ICognitiveMemoryAttentionRouter, CognitiveMemoryAttentionRouter>();
         services.TryAddScoped<CognitiveMemorySignalLedger>();

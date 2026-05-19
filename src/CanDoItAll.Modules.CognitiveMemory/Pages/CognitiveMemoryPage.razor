@@ -632,6 +632,40 @@
         builder.CloseComponent();
     };
 
+    internal RenderFragment AuditPanel() => builder =>
+    {
+        if (snapshot is null)
+        {
+            return;
+        }
+
+        builder.OpenComponent<SurfaceCard>(0);
+        builder.AddAttribute(1, "data-testid", "cognitive-memory-operator-audit");
+        builder.AddAttribute(2, nameof(SurfaceCard.ChildContent), (RenderFragment)(contentBuilder =>
+        {
+            contentBuilder.OpenComponent<TextBlock>(0);
+            contentBuilder.AddAttribute(1, nameof(TextBlock.TextStyle), TextStyle.Eyebrow);
+            contentBuilder.AddAttribute(2, nameof(TextBlock.Value), "Operator audit");
+            contentBuilder.CloseComponent();
+            contentBuilder.OpenElement(3, "h2");
+            contentBuilder.AddAttribute(4, "class", "cognitive-memory-card-title");
+            contentBuilder.AddContent(5, "Mutation, evidence, and projection signals");
+            contentBuilder.CloseElement();
+            if (snapshot.OperatorAudit.Count == 0)
+            {
+                contentBuilder.OpenComponent<EmptyState>(6);
+                contentBuilder.AddAttribute(7, nameof(EmptyState.Eyebrow), "No audit rows");
+                contentBuilder.AddAttribute(8, nameof(EmptyState.Title), "No operator audit signals yet");
+                contentBuilder.AddAttribute(9, nameof(EmptyState.Description), "Mutation commands, claim and evidence changes, and projection failures will appear here.");
+                contentBuilder.CloseComponent();
+                return;
+            }
+
+            RenderOperatorAuditRows(contentBuilder, 10);
+        }));
+        builder.CloseComponent();
+    };
+
     internal RenderFragment ProbePanel()
         => AdvancedCollectionPanel(
             "cognitive-memory-probe-sessions",

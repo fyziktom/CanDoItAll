@@ -10,7 +10,9 @@ namespace CanDoItAll.Web.Api;
 
 internal static partial class CognitiveMemoryApi
 {
-    private static void MapDistributedEndpoints(RouteGroupBuilder memory)
+    private static void MapDistributedEndpoints(
+        RouteGroupBuilder memory,
+        CognitiveMemoryApiSurface surface)
     {
         memory.MapPost("/distributed/workers", async (
                 CognitiveMemoryDistributedWorkerApiRequest request,
@@ -23,7 +25,7 @@ internal static partial class CognitiveMemoryApi
                     .Select(item => ParseEnum(item, CognitiveMemoryDistributedJobKind.ProjectionRebuild, nameof(request.Capabilities)))
                     .ToArray(),
                 cancellationToken)))
-            .WithName("RegisterCognitiveMemoryDistributedWorker");
+            .WithName(EndpointName("RegisterCognitiveMemoryDistributedWorker", surface));
 
         memory.MapPost("/distributed/jobs", async (
                 CognitiveMemoryDistributedJobApiRequest request,
@@ -39,7 +41,7 @@ internal static partial class CognitiveMemoryApi
                     EnsureText(request.AlgorithmVersion, nameof(request.AlgorithmVersion)),
                     EnsureText(request.PolicyProfileId, nameof(request.PolicyProfileId))),
                 cancellationToken)))
-            .WithName("EnqueueCognitiveMemoryDistributedJob");
+            .WithName(EndpointName("EnqueueCognitiveMemoryDistributedJob", surface));
 
         memory.MapPost("/distributed/jobs/claim", async (
                 CognitiveMemoryDistributedClaimApiRequest request,
@@ -52,7 +54,7 @@ internal static partial class CognitiveMemoryApi
                     .ToArray(),
                 TimeSpan.FromMinutes(NormalizePositive(request.LeaseMinutes, nameof(request.LeaseMinutes))),
                 cancellationToken)))
-            .WithName("ClaimCognitiveMemoryDistributedJob");
+            .WithName(EndpointName("ClaimCognitiveMemoryDistributedJob", surface));
 
         memory.MapPost("/distributed/jobs/{jobId:guid}/results", async (
                 Guid jobId,
@@ -68,6 +70,6 @@ internal static partial class CognitiveMemoryApi
                 EnsureText(request.AlgorithmVersion, nameof(request.AlgorithmVersion)),
                 EnsureText(request.OutputSchema, nameof(request.OutputSchema)),
                 cancellationToken)))
-            .WithName("SubmitCognitiveMemoryDistributedResult");
+            .WithName(EndpointName("SubmitCognitiveMemoryDistributedResult", surface));
     }
 }

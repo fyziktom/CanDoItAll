@@ -10,7 +10,9 @@ namespace CanDoItAll.Web.Api;
 
 internal static partial class CognitiveMemoryApi
 {
-    private static void MapAdvancedEndpoints(RouteGroupBuilder memory)
+    private static void MapAdvancedEndpoints(
+        RouteGroupBuilder memory,
+        CognitiveMemoryApiSurface surface)
     {
         memory.MapPost("/probes/sessions", async (
                 CognitiveMemoryProbeStartApiRequest request,
@@ -23,7 +25,7 @@ internal static partial class CognitiveMemoryApi
                     BuildPolicyContext(request.ProjectId, request.Policy),
                     ParseEnum(request.RecallMode, CognitiveMemoryRecallMode.FocusedTaskContext, nameof(request.RecallMode))),
                 cancellationToken)))
-            .WithName("StartCognitiveMemoryProbeSession");
+            .WithName(EndpointName("StartCognitiveMemoryProbeSession", surface));
 
         memory.MapPost("/probes/sessions/{sessionId:guid}/turns", async (
                 Guid sessionId,
@@ -38,7 +40,7 @@ internal static partial class CognitiveMemoryApi
                     BuildRecallBudget(request.Budget),
                     request.Metadata),
                 cancellationToken)))
-            .WithName("AskCognitiveMemoryProbeQuestion");
+            .WithName(EndpointName("AskCognitiveMemoryProbeQuestion", surface));
 
         memory.MapPost("/probes/turns/{turnId:guid}/feedback", async (
                 Guid turnId,
@@ -56,7 +58,7 @@ internal static partial class CognitiveMemoryApi
                     request.RequestHumanReview,
                     ParseEnum(request.CalibrationOutcome, CognitiveMemoryCalibrationOutcomeKind.Unknown, nameof(request.CalibrationOutcome))),
                 cancellationToken)))
-            .WithName("RecordCognitiveMemoryProbeFeedback");
+            .WithName(EndpointName("RecordCognitiveMemoryProbeFeedback", surface));
 
         memory.MapPost("/self-regulation/assessments", async (
                 CognitiveMemorySelfRegulationAssessmentApiRequest request,
@@ -65,7 +67,7 @@ internal static partial class CognitiveMemoryApi
             await ExecuteAsync(() => orchestrator.AssessAsync(
                 BuildSelfRegulationAssessmentRequest(request),
                 cancellationToken)))
-            .WithName("AssessCognitiveMemorySelfRegulation");
+            .WithName(EndpointName("AssessCognitiveMemorySelfRegulation", surface));
 
         memory.MapPost("/answer-gate/decisions", async (
                 CognitiveMemoryAnswerGateApiRequest request,
@@ -74,7 +76,7 @@ internal static partial class CognitiveMemoryApi
             await ExecuteAsync(() => answerGateService.DecideAsync(
                 BuildAnswerGateRequest(request),
                 cancellationToken)))
-            .WithName("DecideCognitiveMemoryAnswerGate");
+            .WithName(EndpointName("DecideCognitiveMemoryAnswerGate", surface));
 
         memory.MapPost("/professor-reviews", async (
                 CognitiveMemoryProfessorReviewApiRequest request,
@@ -83,7 +85,7 @@ internal static partial class CognitiveMemoryApi
             await ExecuteAsync(() => professorReviewService.RequestReviewAsync(
                 BuildProfessorReviewRequest(request),
                 cancellationToken)))
-            .WithName("RequestCognitiveMemoryProfessorReview");
+            .WithName(EndpointName("RequestCognitiveMemoryProfessorReview", surface));
 
         memory.MapPost("/professor-reviews/{reviewId:guid}/complete", async (
                 Guid reviewId,
@@ -99,7 +101,7 @@ internal static partial class CognitiveMemoryApi
                     .Select(item => ParseEnum(item, CognitiveMemoryProfessorSuggestionKind.NoAction, nameof(request.SuggestionKinds)))
                     .ToArray(),
                 cancellationToken)))
-            .WithName("CompleteCognitiveMemoryProfessorReview");
+            .WithName(EndpointName("CompleteCognitiveMemoryProfessorReview", surface));
 
         memory.MapPost("/epistemic-drive/scans", async (
                 CognitiveMemoryEpistemicScanApiRequest request,
@@ -111,7 +113,7 @@ internal static partial class CognitiveMemoryApi
                     BuildPolicyContext(request.ProjectId, request.Policy),
                     NormalizeActorId(request.ActorId)),
                 cancellationToken)))
-            .WithName("ScanCognitiveMemoryEpistemicDrive");
+            .WithName(EndpointName("ScanCognitiveMemoryEpistemicDrive", surface));
 
         memory.MapPost("/epistemic-drive/proposals/{proposalId:guid}/decisions", async (
                 Guid proposalId,
@@ -124,7 +126,7 @@ internal static partial class CognitiveMemoryApi
                 NormalizeActorId(request.ActorId),
                 request.Notes?.Trim() ?? string.Empty,
                 cancellationToken)))
-            .WithName("DecideCognitiveMemoryLearningProposal");
+            .WithName(EndpointName("DecideCognitiveMemoryLearningProposal", surface));
 
         memory.MapPost("/cross-project/promotions", async (
                 CognitiveMemoryCrossProjectPromotionApiRequest request,
@@ -143,6 +145,6 @@ internal static partial class CognitiveMemoryApi
                     request.PolicyCompatibility,
                     EnsureText(request.Reason, nameof(request.Reason))),
                 cancellationToken)))
-            .WithName("CreateCognitiveMemoryCrossProjectPromotion");
+            .WithName(EndpointName("CreateCognitiveMemoryCrossProjectPromotion", surface));
     }
 }

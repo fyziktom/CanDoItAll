@@ -18,15 +18,29 @@ internal static partial class CognitiveMemoryApi
             .WithTags("Cognitive Memory")
             .DisableAntiforgery();
 
-        MapDatabaseEndpoints(memory);
-        MapSettingsEndpoints(memory);
-        MapOperationsEndpoints(memory);
-        MapIngestionEndpoints(memory);
-        MapRecallReviewEndpoints(memory);
-        MapAdvancedEndpoints(memory);
-        MapDistributedEndpoints(memory);
+        MapCognitiveMemoryApiEndpoints(memory, CognitiveMemoryApiSurface.Legacy);
+
+        var memoryV1 = group.MapGroup("/cognitive-memory/v1")
+            .WithTags("Cognitive Memory v1")
+            .DisableAntiforgery();
+
+        MapCognitiveMemoryApiEndpoints(memoryV1, CognitiveMemoryApiSurface.V1);
 
         return group;
+    }
+
+    private static void MapCognitiveMemoryApiEndpoints(
+        RouteGroupBuilder memory,
+        CognitiveMemoryApiSurface surface)
+    {
+        MapContractEndpoints(memory, surface);
+        MapDatabaseEndpoints(memory, surface);
+        MapSettingsEndpoints(memory, surface);
+        MapOperationsEndpoints(memory, surface);
+        MapIngestionEndpoints(memory, surface);
+        MapRecallReviewEndpoints(memory, surface);
+        MapAdvancedEndpoints(memory, surface);
+        MapDistributedEndpoints(memory, surface);
     }
 
     private static async ValueTask<CognitiveMemoryPostgreSqlDatabaseProfileApiResponse> CreatePostgreSqlDatabaseProfileAsync(
@@ -113,6 +127,29 @@ internal static partial class CognitiveMemoryApi
         {
             ModelExecutionProfiles = request.ModelExecutionProfiles ?? CognitiveMemoryModelExecutionProfileDefaults.OpenAiProfiles
         };
+    }
+
+    private static CognitiveMemoryRetentionCleanupRequest BuildRetentionCleanupRequest(
+        CognitiveMemoryRetentionCleanupApiRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var scopes = request.Scopes is null || request.Scopes.Count == 0
+            ? CognitiveMemoryRetentionCleanupRequest.DefaultScopes
+            : request.Scopes
+                .Select(scope => ParseEnum(
+                    scope,
+                    CognitiveMemoryRetentionCleanupScope.RecallTraces,
+                    nameof(request.Scopes)))
+                .Distinct()
+                .OrderBy(scope => scope)
+                .ToArray();
+
+        return new CognitiveMemoryRetentionCleanupRequest(
+            request.ProjectId,
+            request.DeleteBeforeUtc.ToUniversalTime(),
+            request.DryRun ?? true,
+            scopes,
+            NormalizeActorId(request.ActorId));
     }
 
     private static CognitiveMemorySourceIngestionRequest BuildManualSourceIngestionRequest(

@@ -10,7 +10,9 @@ namespace CanDoItAll.Web.Api;
 
 internal static partial class CognitiveMemoryApi
 {
-    private static void MapIngestionEndpoints(RouteGroupBuilder memory)
+    private static void MapIngestionEndpoints(
+        RouteGroupBuilder memory,
+        CognitiveMemoryApiSurface surface)
     {
         memory.MapPost("/ingestion/project-structure", async (
                 CognitiveMemoryManualSourceIngestApiRequest request,
@@ -23,7 +25,7 @@ internal static partial class CognitiveMemoryApi
                     requireScope: true,
                     "project-structure"),
                 cancellationToken)))
-            .WithName("IngestCognitiveMemoryProjectStructure");
+            .WithName(EndpointName("IngestCognitiveMemoryProjectStructure", surface));
 
         memory.MapPost("/ingestion/processes", async (
                 CognitiveMemoryManualSourceIngestApiRequest request,
@@ -36,7 +38,7 @@ internal static partial class CognitiveMemoryApi
                     requireScope: false,
                     "process-runtime"),
                 cancellationToken)))
-            .WithName("IngestCognitiveMemoryProcesses");
+            .WithName(EndpointName("IngestCognitiveMemoryProcesses", surface));
 
         memory.MapPost("/external-sources/files", async (
                 [FromForm] CognitiveMemoryExternalFileUploadApiRequest request,
@@ -49,9 +51,9 @@ internal static partial class CognitiveMemoryApi
                     throw new ArgumentException("A file is required.", nameof(request.File));
                 }
 
-                if (request.File.Length > 10 * 1024 * 1024)
+                if (request.File.Length > CognitiveMemoryExternalSourceIngestionLimits.MaxFileBytes)
                 {
-                    throw new InvalidOperationException("File uploads for cognitive memory ingestion are limited to 10 MB.");
+                    throw new InvalidOperationException($"File uploads for cognitive memory ingestion are limited to {CognitiveMemoryExternalSourceIngestionLimits.MaxFileBytes / 1024 / 1024} MB.");
                 }
 
                 await using var stream = request.File.OpenReadStream();
@@ -65,7 +67,7 @@ internal static partial class CognitiveMemoryApi
                     request.IdempotencyKey,
                     cancellationToken);
             }))
-            .WithName("IngestCognitiveMemoryExternalFile")
+            .WithName(EndpointName("IngestCognitiveMemoryExternalFile", surface))
             .Accepts<CognitiveMemoryExternalFileUploadApiRequest>("multipart/form-data");
 
         memory.MapPost("/external-sources/web-links", async (
@@ -78,7 +80,7 @@ internal static partial class CognitiveMemoryApi
                 NormalizeActorId(request.ActorId),
                 request.IdempotencyKey,
                 cancellationToken)))
-            .WithName("IngestCognitiveMemoryExternalWebLink");
+            .WithName(EndpointName("IngestCognitiveMemoryExternalWebLink", surface));
 
         memory.MapGet("/external-sources/ingestions/{operationId:guid}", async (
                 Guid operationId,
@@ -89,6 +91,6 @@ internal static partial class CognitiveMemoryApi
                     EnsureNonEmpty(operationId, nameof(operationId)),
                     cancellationToken)
                 ?? throw new InvalidOperationException("External source ingestion operation was not found.")))
-            .WithName("GetCognitiveMemoryExternalSourceIngestion");
+            .WithName(EndpointName("GetCognitiveMemoryExternalSourceIngestion", surface));
     }
 }

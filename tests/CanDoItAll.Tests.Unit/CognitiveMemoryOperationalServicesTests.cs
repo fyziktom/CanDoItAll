@@ -110,6 +110,47 @@ public sealed class CognitiveMemoryOperationalServicesTests
     }
 
     [Fact]
+    public async Task ProjectionRebuildService_RecordsProviderFailureAndKeepsProjectionRebuildable()
+    {
+        var fixture = CreateFixture();
+        var graph = await SeedProjectionGraphAsync(fixture.Factory, includeClaim: true);
+        var service = new CognitiveMemoryProjectionRebuildService(
+            fixture.Factory,
+            new FailingProjectionLifecycleService("provider unavailable"),
+            fixture.Clock,
+            NullLogger<CognitiveMemoryProjectionRebuildService>.Instance);
+
+        var result = await service.RebuildAsync(new CognitiveMemoryProjectionRebuildRequest(
+            graph.ProjectId,
+            Take: 10,
+            ActorId: "test:operator"));
+
+        Assert.Equal(CognitiveMemoryRunStatus.Blocked, result.Status);
+        Assert.Equal(1, result.SelectedCount);
+        Assert.Equal(0, result.ProjectedCount);
+        Assert.Equal(1, result.FailedCount);
+        Assert.Equal(0, result.SkippedCount);
+        Assert.Contains(result.Warnings, warning => warning.Contains("provider unavailable", StringComparison.Ordinal));
+        var item = Assert.Single(result.Items);
+        Assert.Equal(CognitiveMemoryProjectionLifecycleDecisionKind.Failed, item.DecisionKind);
+        Assert.Equal(CognitiveMemoryProjectionStatus.Failed, item.Status);
+        Assert.Equal("provider unavailable", item.FailureMessage);
+
+        await using var dbContext = fixture.Factory.CreateDbContext();
+        var projection = await dbContext.Set<CognitiveMemoryProjectionRecord>().SingleAsync();
+        Assert.Equal(CognitiveMemoryProjectionStatus.Failed, projection.Status);
+        Assert.True(projection.RebuildRequired);
+        Assert.Equal(CognitiveMemoryProjectionStaleReason.PreviousFailure, projection.StaleReason);
+        Assert.Equal(nameof(InvalidOperationException), projection.FailureCode);
+        Assert.Equal("provider unavailable", projection.FailureMessage);
+
+        var run = await dbContext.Set<CognitiveMemoryRunRecord>().SingleAsync();
+        Assert.Equal(CognitiveMemoryRunStatus.Blocked, run.Status);
+        Assert.Equal("ProjectionRebuildFailures", run.FailureCode);
+        Assert.Contains("1 projection rebuild item", run.FailureMessage, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ScheduledAutomationRunner_SkipsDisabledScheduleTrigger()
     {
         var settings = CognitiveMemoryAutomationSettings.Defaults(DateTimeOffset.UnixEpoch) with
@@ -170,6 +211,83 @@ public sealed class CognitiveMemoryOperationalServicesTests
             [MemorySourceKind.WorkbenchProjectStructure, MemorySourceKind.ProcessRuntime],
             ingestion.Requests.Select(request => request.SourceKind).ToArray());
         Assert.Equal(CognitiveMemoryConsolidationTriggerKind.Nightly, Assert.Single(consolidation.Requests).TriggerKind);
+    }
+
+    [Fact]
+    public async Task RetentionCleanupService_DryRunReportsCountsWithoutDeleting()
+    {
+        var fixture = CreateFixture();
+        var graph = await SeedRetentionGraphAsync(fixture.Factory);
+        var service = new CognitiveMemoryRetentionCleanupService(
+            fixture.Factory,
+            fixture.Clock,
+            NullLogger<CognitiveMemoryRetentionCleanupService>.Instance);
+
+        var result = await service.CleanupAsync(new CognitiveMemoryRetentionCleanupRequest(
+            graph.ProjectId,
+            graph.CutoffUtc,
+            DryRun: true,
+            CognitiveMemoryRetentionCleanupRequest.DefaultScopes,
+            ActorId: "test:operator"));
+
+        Assert.True(result.DryRun);
+        Assert.Equal(4, result.TotalMatchedRootRecords);
+        Assert.Equal(0, result.TotalDeletedRecords);
+        Assert.All(result.Scopes, scope => Assert.Equal(0, scope.DeletedRecords));
+
+        await using var dbContext = fixture.Factory.CreateDbContext();
+        var run = await dbContext.Set<CognitiveMemoryRunRecord>()
+            .SingleAsync(item => item.RunKind == CognitiveMemoryRunKind.RetentionCleanup);
+        Assert.Equal(CognitiveMemoryRunStatus.Succeeded, run.Status);
+        Assert.Equal(CognitiveMemoryOperationMode.Observe, run.OperationMode);
+        Assert.NotNull(await dbContext.Set<CognitiveMemoryRecallTraceRecord>().FindAsync(graph.OldRecallTraceId));
+        Assert.NotNull(await dbContext.Set<CognitiveMemoryConsolidationCandidateRecord>().FindAsync(graph.OldRejectedCandidateId));
+        Assert.NotNull(await dbContext.Set<CognitiveMemoryProbeSessionRecord>().FindAsync(graph.OldClosedProbeSessionId));
+        Assert.NotNull(await dbContext.Set<CognitiveMemoryDistributedJobRecord>().FindAsync(graph.OldCompletedDistributedJobId));
+    }
+
+    [Fact]
+    public async Task RetentionCleanupService_DeletesOnlyEligibleOperationalRecords()
+    {
+        var fixture = CreateFixture();
+        var graph = await SeedRetentionGraphAsync(fixture.Factory);
+        var service = new CognitiveMemoryRetentionCleanupService(
+            fixture.Factory,
+            fixture.Clock,
+            NullLogger<CognitiveMemoryRetentionCleanupService>.Instance);
+
+        var result = await service.CleanupAsync(new CognitiveMemoryRetentionCleanupRequest(
+            graph.ProjectId,
+            graph.CutoffUtc,
+            DryRun: false,
+            CognitiveMemoryRetentionCleanupRequest.DefaultScopes,
+            ActorId: "test:operator"));
+
+        Assert.False(result.DryRun);
+        Assert.Equal(4, result.TotalMatchedRootRecords);
+        Assert.Equal(15, result.TotalDeletedRecords);
+
+        await using var dbContext = fixture.Factory.CreateDbContext();
+        var run = await dbContext.Set<CognitiveMemoryRunRecord>()
+            .SingleAsync(item => item.RunKind == CognitiveMemoryRunKind.RetentionCleanup);
+        Assert.Equal(CognitiveMemoryRunStatus.Succeeded, run.Status);
+        Assert.Equal(CognitiveMemoryOperationMode.Maintenance, run.OperationMode);
+        Assert.Null(await dbContext.Set<CognitiveMemoryRecallTraceRecord>().FindAsync(graph.OldRecallTraceId));
+        Assert.Empty(await dbContext.Set<CognitiveMemoryRecallTraceStageRecord>().Where(stage => stage.RecallTraceId == graph.OldRecallTraceId).ToListAsync());
+        Assert.Empty(await dbContext.Set<CognitiveMemoryRecallCandidateRecord>().Where(candidate => candidate.RecallTraceId == graph.OldRecallTraceId).ToListAsync());
+        Assert.Empty(await dbContext.Set<CognitiveMemoryRecallContextPackRecord>().Where(pack => pack.RecallTraceId == graph.OldRecallTraceId).ToListAsync());
+        Assert.Empty(await dbContext.Set<CognitiveMemoryRecallContextSectionRecord>().Where(section => section.RecallTraceId == graph.OldRecallTraceId).ToListAsync());
+        Assert.Empty(await dbContext.Set<CognitiveMemoryRecallSourceRefRecord>().Where(sourceRef => sourceRef.RecallTraceId == graph.OldRecallTraceId).ToListAsync());
+        Assert.Null(await dbContext.Set<CognitiveMemoryConsolidationCandidateRecord>().FindAsync(graph.OldRejectedCandidateId));
+        Assert.Null(await dbContext.Set<CognitiveMemoryProbeSessionRecord>().FindAsync(graph.OldClosedProbeSessionId));
+        Assert.Empty(await dbContext.Set<CognitiveMemoryProbeTurnRecord>().Where(turn => turn.ProbeSessionId == graph.OldClosedProbeSessionId).ToListAsync());
+        Assert.Null(await dbContext.Set<CognitiveMemoryDistributedJobRecord>().FindAsync(graph.OldCompletedDistributedJobId));
+        Assert.Empty(await dbContext.Set<CognitiveMemoryDistributedWorkerResultRecord>().Where(result => result.DistributedJobId == graph.OldCompletedDistributedJobId).ToListAsync());
+
+        Assert.NotNull(await dbContext.Set<CognitiveMemoryRecallTraceRecord>().FindAsync(graph.FreshRecallTraceId));
+        Assert.NotNull(await dbContext.Set<CognitiveMemoryConsolidationCandidateRecord>().FindAsync(graph.OldReviewRequiredCandidateId));
+        Assert.NotNull(await dbContext.Set<CognitiveMemoryProbeSessionRecord>().FindAsync(graph.OldActiveProbeSessionId));
+        Assert.NotNull(await dbContext.Set<CognitiveMemoryDistributedJobRecord>().FindAsync(graph.OldQueuedDistributedJobId));
     }
 
     private static TestFixture CreateFixture()
@@ -354,6 +472,263 @@ public sealed class CognitiveMemoryOperationalServicesTests
         return new ProjectionGraph(projectId, recordId, claimId);
     }
 
+    private static async Task<RetentionGraph> SeedRetentionGraphAsync(TestDbContextFactory factory)
+    {
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-bbbbbbbbbbbb");
+        var oldUtc = DateTimeOffset.UnixEpoch.AddDays(-60);
+        var cutoffUtc = DateTimeOffset.UnixEpoch.AddDays(-30);
+        var freshUtc = DateTimeOffset.UnixEpoch.AddDays(-10);
+        var oldRecallTraceId = Guid.Parse("10000000-0000-0000-0000-000000000001");
+        var freshRecallTraceId = Guid.Parse("10000000-0000-0000-0000-000000000002");
+        var oldRejectedCandidateId = Guid.Parse("20000000-0000-0000-0000-000000000001");
+        var oldReviewRequiredCandidateId = Guid.Parse("20000000-0000-0000-0000-000000000002");
+        var oldClosedProbeSessionId = Guid.Parse("30000000-0000-0000-0000-000000000001");
+        var oldActiveProbeSessionId = Guid.Parse("30000000-0000-0000-0000-000000000002");
+        var oldCompletedDistributedJobId = Guid.Parse("40000000-0000-0000-0000-000000000001");
+        var oldQueuedDistributedJobId = Guid.Parse("40000000-0000-0000-0000-000000000002");
+        var oldProbeTurnId = Guid.Parse("50000000-0000-0000-0000-000000000001");
+        var oldRegressionCaseId = Guid.Parse("60000000-0000-0000-0000-000000000001");
+        var oldContextPackId = Guid.Parse("70000000-0000-0000-0000-000000000001");
+
+        await using var dbContext = factory.CreateDbContext();
+        dbContext.AddRange(
+            new CognitiveMemoryRecallTraceRecord
+            {
+                Id = oldRecallTraceId,
+                ProjectId = projectId,
+                RequestedByActorId = "test",
+                PolicyProfileId = "test",
+                RequestHash = CognitiveMemoryHash.FromUtf8("old-trace").Value,
+                AlgorithmVersion = "test",
+                Outcome = CognitiveMemoryRunStatus.Succeeded,
+                StartedAtUtc = oldUtc,
+                CompletedAtUtc = oldUtc
+            },
+            new CognitiveMemoryRecallTraceRecord
+            {
+                Id = freshRecallTraceId,
+                ProjectId = projectId,
+                RequestedByActorId = "test",
+                PolicyProfileId = "test",
+                RequestHash = CognitiveMemoryHash.FromUtf8("fresh-trace").Value,
+                AlgorithmVersion = "test",
+                Outcome = CognitiveMemoryRunStatus.Succeeded,
+                StartedAtUtc = freshUtc,
+                CompletedAtUtc = freshUtc
+            },
+            new CognitiveMemoryRecallTraceStageRecord
+            {
+                RecallTraceId = oldRecallTraceId,
+                ProjectId = projectId,
+                Status = CognitiveMemoryRecallStageStatus.Completed,
+                StartedAtUtc = oldUtc,
+                CompletedAtUtc = oldUtc
+            },
+            new CognitiveMemoryRecallCandidateRecord
+            {
+                RecallTraceId = oldRecallTraceId,
+                ProjectId = projectId,
+                MemoryRecordId = Guid.NewGuid(),
+                ScoreEvaluationTraceId = Guid.NewGuid(),
+                Title = "Old candidate",
+                CreatedAtUtc = oldUtc
+            },
+            new CognitiveMemoryRecallContextPackRecord
+            {
+                Id = oldContextPackId,
+                RecallTraceId = oldRecallTraceId,
+                ProjectId = projectId,
+                Title = "Old pack",
+                CreatedAtUtc = oldUtc
+            },
+            new CognitiveMemoryRecallContextSectionRecord
+            {
+                ContextPackId = oldContextPackId,
+                RecallTraceId = oldRecallTraceId,
+                ProjectId = projectId,
+                SectionKey = "old",
+                Title = "Old section",
+                CreatedAtUtc = oldUtc
+            },
+            new CognitiveMemoryRecallSourceRefRecord
+            {
+                RecallTraceId = oldRecallTraceId,
+                ContextPackId = oldContextPackId,
+                ProjectId = projectId,
+                MemoryRecordId = Guid.NewGuid(),
+                SourceSystem = "test",
+                Locator = "old",
+                QuoteHash = CognitiveMemoryHash.FromUtf8("old-source-ref").Value,
+                CreatedAtUtc = oldUtc
+            },
+            new CognitiveMemoryConsolidationCandidateRecord
+            {
+                Id = oldRejectedCandidateId,
+                RunId = Guid.NewGuid(),
+                ProjectId = projectId,
+                Status = CognitiveMemoryConsolidationCandidateStatus.Rejected,
+                SourceContentHash = CognitiveMemoryHash.FromUtf8("old-rejected").Value,
+                OutputHash = CognitiveMemoryHash.FromUtf8("old-rejected-output").Value,
+                AlgorithmVersion = "test",
+                CreatedAtUtc = oldUtc
+            },
+            new CognitiveMemoryConsolidationCandidateRecord
+            {
+                Id = oldReviewRequiredCandidateId,
+                RunId = Guid.NewGuid(),
+                ProjectId = projectId,
+                Status = CognitiveMemoryConsolidationCandidateStatus.ReviewRequired,
+                SourceContentHash = CognitiveMemoryHash.FromUtf8("old-review-required").Value,
+                OutputHash = CognitiveMemoryHash.FromUtf8("old-review-required-output").Value,
+                AlgorithmVersion = "test",
+                CreatedAtUtc = oldUtc
+            },
+            new CognitiveMemoryConsolidationCandidateRecord
+            {
+                RunId = Guid.NewGuid(),
+                ProjectId = projectId,
+                Status = CognitiveMemoryConsolidationCandidateStatus.Rejected,
+                SourceContentHash = CognitiveMemoryHash.FromUtf8("fresh-rejected").Value,
+                OutputHash = CognitiveMemoryHash.FromUtf8("fresh-rejected-output").Value,
+                AlgorithmVersion = "test",
+                CreatedAtUtc = freshUtc
+            },
+            new CognitiveMemoryProbeSessionRecord
+            {
+                Id = oldClosedProbeSessionId,
+                ProjectId = projectId,
+                Status = CognitiveMemoryProbeSessionStatus.Closed,
+                Title = "Old closed probe",
+                CreatedAtUtc = oldUtc,
+                UpdatedAtUtc = oldUtc,
+                ClosedAtUtc = oldUtc,
+                ConcurrencyToken = Guid.NewGuid()
+            },
+            new CognitiveMemoryProbeSessionRecord
+            {
+                Id = oldActiveProbeSessionId,
+                ProjectId = projectId,
+                Status = CognitiveMemoryProbeSessionStatus.Active,
+                Title = "Old active probe",
+                CreatedAtUtc = oldUtc,
+                UpdatedAtUtc = oldUtc,
+                ConcurrencyToken = Guid.NewGuid()
+            },
+            new CognitiveMemoryProbeTurnRecord
+            {
+                Id = oldProbeTurnId,
+                ProbeSessionId = oldClosedProbeSessionId,
+                ProjectId = projectId,
+                Sequence = 1,
+                Question = "Old question",
+                RecallTraceId = oldRecallTraceId,
+                ProbeScoreEvaluationTraceId = Guid.NewGuid(),
+                CreatedAtUtc = oldUtc,
+                UpdatedAtUtc = oldUtc,
+                ConcurrencyToken = Guid.NewGuid()
+            },
+            new CognitiveMemoryProbeFeedbackRecord
+            {
+                ProbeTurnId = oldProbeTurnId,
+                ProbeSessionId = oldClosedProbeSessionId,
+                ProjectId = projectId,
+                CreatedAtUtc = oldUtc,
+                ConcurrencyToken = Guid.NewGuid()
+            },
+            new CognitiveMemoryProbeFindingRecord
+            {
+                ProbeTurnId = oldProbeTurnId,
+                ProjectId = projectId,
+                Summary = "Old finding",
+                CreatedAtUtc = oldUtc
+            },
+            new CognitiveMemoryProbeRegressionTestCaseRecord
+            {
+                Id = oldRegressionCaseId,
+                ProjectId = projectId,
+                ProbeTurnId = oldProbeTurnId,
+                Question = "Old regression",
+                CreatedAtUtc = oldUtc,
+                ConcurrencyToken = Guid.NewGuid()
+            },
+            new CognitiveMemoryProbeRegressionRunRecord
+            {
+                ProjectId = projectId,
+                RegressionTestCaseId = oldRegressionCaseId,
+                StartedAtUtc = oldUtc,
+                CompletedAtUtc = oldUtc,
+                ConcurrencyToken = Guid.NewGuid()
+            },
+            new CognitiveMemoryDistributedJobRecord
+            {
+                Id = oldCompletedDistributedJobId,
+                ProjectId = projectId,
+                State = CognitiveMemoryDistributedJobState.Completed,
+                SourceScopeKey = "old",
+                InputHash = CognitiveMemoryHash.FromUtf8("old-job").Value,
+                ExpectedOutputSchema = "test",
+                AlgorithmVersion = "test",
+                PolicyProfileId = "test",
+                CreatedAtUtc = oldUtc,
+                UpdatedAtUtc = oldUtc,
+                ConcurrencyToken = Guid.NewGuid()
+            },
+            new CognitiveMemoryDistributedWorkerResultRecord
+            {
+                DistributedJobId = oldCompletedDistributedJobId,
+                ProjectId = projectId,
+                Status = CognitiveMemoryDistributedResultStatus.Accepted,
+                WorkerId = "worker-1",
+                InputHash = CognitiveMemoryHash.FromUtf8("old-job").Value,
+                OutputHash = CognitiveMemoryHash.FromUtf8("old-output").Value,
+                AlgorithmVersion = "test",
+                OutputSchema = "test",
+                SubmittedAtUtc = oldUtc,
+                AcceptedAtUtc = oldUtc,
+                ConcurrencyToken = Guid.NewGuid()
+            },
+            new CognitiveMemoryDistributedJobRecord
+            {
+                Id = oldQueuedDistributedJobId,
+                ProjectId = projectId,
+                State = CognitiveMemoryDistributedJobState.Queued,
+                SourceScopeKey = "old-queued",
+                InputHash = CognitiveMemoryHash.FromUtf8("old-queued-job").Value,
+                ExpectedOutputSchema = "test",
+                AlgorithmVersion = "test",
+                PolicyProfileId = "test",
+                CreatedAtUtc = oldUtc,
+                UpdatedAtUtc = oldUtc,
+                ConcurrencyToken = Guid.NewGuid()
+            },
+            new CognitiveMemoryDistributedJobRecord
+            {
+                ProjectId = projectId,
+                State = CognitiveMemoryDistributedJobState.Completed,
+                SourceScopeKey = "fresh-completed",
+                InputHash = CognitiveMemoryHash.FromUtf8("fresh-completed-job").Value,
+                ExpectedOutputSchema = "test",
+                AlgorithmVersion = "test",
+                PolicyProfileId = "test",
+                CreatedAtUtc = freshUtc,
+                UpdatedAtUtc = freshUtc,
+                ConcurrencyToken = Guid.NewGuid()
+            });
+        await dbContext.SaveChangesAsync();
+
+        return new RetentionGraph(
+            projectId,
+            cutoffUtc,
+            oldRecallTraceId,
+            freshRecallTraceId,
+            oldRejectedCandidateId,
+            oldReviewRequiredCandidateId,
+            oldClosedProbeSessionId,
+            oldActiveProbeSessionId,
+            oldCompletedDistributedJobId,
+            oldQueuedDistributedJobId);
+    }
+
     private sealed class RecordingProjectionLifecycleService : ICognitiveMemoryProjectionLifecycleService
     {
         public List<CognitiveMemoryProjectionLifecycleRequest> Requests { get; } = [];
@@ -396,6 +771,20 @@ public sealed class CognitiveMemoryOperationalServicesTests
                 projection,
                 ProjectionWriteRequest: null,
                 ProviderTrace: "fake-rag:projected"));
+        }
+    }
+
+    private sealed class FailingProjectionLifecycleService(string failureMessage) : ICognitiveMemoryProjectionLifecycleService
+    {
+        public CognitiveMemoryProjectionLifecycleDecision EvaluateLifecycle(CognitiveMemoryProjectionLifecycleEvaluationRequest request)
+            => new(CognitiveMemoryProjectionLifecycleDecisionKind.Rebuild, CognitiveMemoryProjectionStaleReason.PreviousFailure, "test");
+
+        public ValueTask<CognitiveMemoryProjectionLifecycleResult> ProjectAsync(
+            CognitiveMemoryProjectionLifecycleRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            throw new InvalidOperationException(failureMessage);
         }
     }
 
@@ -482,6 +871,18 @@ public sealed class CognitiveMemoryOperationalServicesTests
         Guid ProjectId,
         Guid RecordId,
         Guid ClaimId);
+
+    private sealed record RetentionGraph(
+        Guid ProjectId,
+        DateTimeOffset CutoffUtc,
+        Guid OldRecallTraceId,
+        Guid FreshRecallTraceId,
+        Guid OldRejectedCandidateId,
+        Guid OldReviewRequiredCandidateId,
+        Guid OldClosedProbeSessionId,
+        Guid OldActiveProbeSessionId,
+        Guid OldCompletedDistributedJobId,
+        Guid OldQueuedDistributedJobId);
 
     private sealed class FixedEmbeddingProvider(CognitiveMemoryEmbeddingProfileId profileId) : ICognitiveMemoryEmbeddingProvider
     {

@@ -18,9 +18,13 @@ internal sealed record CognitiveMemoryStatusApiResponse(
     string WorkspaceRoot,
     bool IsPostgreSql,
     string Descriptor,
+    string ContractVersion,
+    string ContractPath,
     IReadOnlyList<string> Routes)
 {
-    public static CognitiveMemoryStatusApiResponse From(ResolvedDatabaseProfile resolvedProfile)
+    public static CognitiveMemoryStatusApiResponse From(
+        ResolvedDatabaseProfile resolvedProfile,
+        CognitiveMemoryApiContractResponse contract)
     {
         var profile = resolvedProfile.Profile;
         return new CognitiveMemoryStatusApiResponse(
@@ -34,39 +38,9 @@ internal sealed record CognitiveMemoryStatusApiResponse(
             profile.Storage.WorkspaceRoot,
             profile.ProviderKind == DatabaseProviderKind.PostgreSql,
             BuildDescriptor(profile),
-            [
-                "GET /api/cognitive-memory/status",
-                "GET /api/cognitive-memory/database/selection",
-                "GET /api/cognitive-memory/database/profiles",
-                "POST /api/cognitive-memory/database/profiles/postgresql",
-                "POST /api/cognitive-memory/database/switch/{profileId}",
-                "GET /api/cognitive-memory/settings",
-                "PUT /api/cognitive-memory/settings",
-                "POST /api/cognitive-memory/ingestion/project-structure",
-                "POST /api/cognitive-memory/ingestion/processes",
-                "POST /api/cognitive-memory/external-sources/files",
-                "POST /api/cognitive-memory/external-sources/web-links",
-                "GET /api/cognitive-memory/external-sources/ingestions/{operationId}",
-                "GET /api/cognitive-memory/snapshot",
-                "POST /api/cognitive-memory/sources/ingest",
-                "POST /api/cognitive-memory/consolidation/runs",
-                "POST /api/cognitive-memory/recall",
-                "POST /api/cognitive-memory/review-items/{reviewItemId}/decisions",
-                "POST /api/cognitive-memory/probes/sessions",
-                "POST /api/cognitive-memory/probes/sessions/{sessionId}/turns",
-                "POST /api/cognitive-memory/probes/turns/{turnId}/feedback",
-                "POST /api/cognitive-memory/self-regulation/assessments",
-                "POST /api/cognitive-memory/answer-gate/decisions",
-                "POST /api/cognitive-memory/professor-reviews",
-                "POST /api/cognitive-memory/professor-reviews/{reviewId}/complete",
-                "POST /api/cognitive-memory/epistemic-drive/scans",
-                "POST /api/cognitive-memory/epistemic-drive/proposals/{proposalId}/decisions",
-                "POST /api/cognitive-memory/cross-project/promotions",
-                "POST /api/cognitive-memory/distributed/workers",
-                "POST /api/cognitive-memory/distributed/jobs",
-                "POST /api/cognitive-memory/distributed/jobs/claim",
-                "POST /api/cognitive-memory/distributed/jobs/{jobId}/results"
-            ]);
+            contract.Version,
+            $"{contract.BasePath}/contract",
+            contract.Routes.Select(route => $"{route.Method} {route.Path}").ToArray());
     }
 
     public static string BuildDescriptor(DatabaseProfileRecord profile)
@@ -223,6 +197,19 @@ internal sealed class CognitiveMemoryAutomationRunApiRequest
     public string? ActorId { get; set; }
 
     public int? Take { get; set; }
+}
+
+internal sealed class CognitiveMemoryRetentionCleanupApiRequest
+{
+    public Guid? ProjectId { get; set; }
+
+    public DateTimeOffset DeleteBeforeUtc { get; set; }
+
+    public bool? DryRun { get; set; } = true;
+
+    public IReadOnlyList<string>? Scopes { get; set; }
+
+    public string? ActorId { get; set; }
 }
 
 internal sealed class CognitiveMemoryManualSourceIngestApiRequest

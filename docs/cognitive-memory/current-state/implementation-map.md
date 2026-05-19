@@ -12,14 +12,14 @@ The implementation lives primarily in `src/CanDoItAll.Modules.CognitiveMemory`. 
 | `Foundation` | 4 | Core records, source manifests/items/links, memory records, relations, runs, review items, projection states. |
 | `Ingestion` | 4 | Source snapshot ingestion, layouts, graph links, context hints, tombstones, scan failures. |
 | `Neuro` | 4 | Evidence anchors, claims, belief state, entity/context binding, mutation authority. |
-| `Operations` | 3 | Explicit projection rebuild and scheduled automation runner contracts/services. |
+| `Operations` | 4 | Explicit projection rebuild, scheduled automation runner, and retention cleanup contracts/services. |
 | `Pages` | 17 | Blazor operator UI, page-specific CSS/code-behind, extracted rendering helpers, and ten tab child components. |
 | `Procedural` | 4 | Procedure skills, steps, failure modes, simulation, validation evidence, automation bindings. |
 | `Projection` | 2 | SemanticCompletion and RAG/Qdrant adapter contracts and implementations. |
 | `Recall` | 15 | Recall orchestration, vector/workspace/signal/graph channels, candidate loading, scoring, evaluation, context packs, trace persistence, source references, internal types, and mapping helpers. |
-| `ReviewUi` | 6 | Snapshot DTOs, summary queries, candidate previews, advanced query projections, trace/health queries, and review decision workflow. |
+| `ReviewUi` | 7 | Snapshot DTOs, summary queries, candidate previews, advanced query projections, trace/health queries, operator audit queries, and review decision workflow. |
 | `Scoring` | 6 | Typed score spaces, dimensions, geometry driver, evaluation traces, persisted score components. |
-| `Settings` | 7 | Automation settings, model access policy, model execution profiles, external file/web ingestion, staged manifests. |
+| `Settings` | 8 | Automation settings, model access policy, model execution profiles, external file/web ingestion, staged manifests, external-source limits, and sensitive-content policy. |
 | `Signals` | 4 | Prediction expectations, prediction errors, salience/signals, consumer policies. |
 | `Taxonomy` | 4 | Record/relation validation, projection lifecycle, projection records. |
 | `TemporalReplay` | 4 | Temporal episodes, replay jobs, causal links, worker results. |
@@ -35,7 +35,7 @@ flowchart LR
     Composition --> Qdrant["AddConfiguredQdrantRagDriver when enabled"]
     Composition --> Module["AddCognitiveMemoryModule"]
     Module --> Services["Cognitive Memory services"]
-    Module --> Operations["Projection rebuild and automation runner"]
+    Module --> Operations["Projection rebuild, automation runner, and retention cleanup"]
     Program --> Api["MapCanDoItAllApi"]
     Api --> CognitiveApi["MapCognitiveMemoryApi"]
     Program --> Razor["MapRazorComponents + module assemblies"]
@@ -59,6 +59,7 @@ flowchart LR
 | `CognitiveMemoryAdvancedServices` classes | Several advanced interfaces | Own probing, self-model, calibration, self-regulation, answer gate, professor review, learning proposals, cross-project, and distributed coordination. |
 | `CognitiveMemoryProjectionRebuildService` | `ICognitiveMemoryProjectionRebuildService` | Rebuilds stale/failed projection records from durable memory, source links, evidence anchors, claims, context frames, entity ids, and context-boundary policies through projection lifecycle. |
 | `CognitiveMemoryScheduledAutomationRunner` | `ICognitiveMemoryScheduledAutomationRunner` | Honors automation schedule mode for explicit UI/API runs, triggers configured ingestion, and runs consolidation after successful ingestion when enabled. |
+| `CognitiveMemoryRetentionCleanupService` | `ICognitiveMemoryRetentionCleanupService` | Deletes old operational rows through an explicit dry-run-first request while preserving canonical memory, source, evidence, and projection truth. |
 
 ## Operator UI Components
 
@@ -73,7 +74,7 @@ The `/cognitive-memory` route still uses `CognitiveMemoryPage` as the orchestrat
 | `CognitiveMemoryMemoryTab.razor` | Memory explorer and source evidence detail. |
 | `CognitiveMemoryReviewQueueTab.razor` | Review queue and decision panel. |
 | `CognitiveMemoryRecallTracesTab.razor` | Recall trace, candidate, source, and context-pack detail. |
-| `CognitiveMemoryHealthTab.razor` | Projection, consolidation, replay, and procedure health. |
+| `CognitiveMemoryHealthTab.razor` | Projection, consolidation, replay, procedure health, and operator audit. |
 | `CognitiveMemorySelfRegulationTab.razor` | Self-regulation, answer-gate, professor-review, and learning surfaces. |
 | `CognitiveMemoryScaleTab.razor` | Cross-project promotion and distributed worker/job surfaces. |
 
@@ -88,16 +89,17 @@ The `/cognitive-memory` route still uses `CognitiveMemoryPage` as the orchestrat
 
 ## HTTP Surface
 
-The API currently maps 33 endpoints under `/api/cognitive-memory` across these files:
+The API currently maps 35 routes per surface under legacy `/api/cognitive-memory` and additive `/api/cognitive-memory/v1` route groups across these files:
 
 | File | Responsibility |
 | --- | --- |
-| `CognitiveMemoryApi.cs` | Root group, shared helpers, result/error normalization. |
+| `CognitiveMemoryApi.cs` | Legacy/v1 route-group mapping, shared helpers, result/error normalization. |
+| `CognitiveMemoryApi.ContractEndpoints.cs` | Contract version, route metadata, compatibility notes, and common-flow examples. |
 | `CognitiveMemoryApi.DatabaseEndpoints.cs` | Status and database profile operations. |
 | `CognitiveMemoryApi.SettingsEndpoints.cs` | Settings and model access policy. |
 | `CognitiveMemoryApi.IngestionEndpoints.cs` | Project/process/external-source ingestion. |
 | `CognitiveMemoryApi.RecallReviewEndpoints.cs` | Snapshot, generic source ingest, consolidation, recall, review decisions. |
-| `CognitiveMemoryApi.OperationsEndpoints.cs` | Projection rebuild and explicit automation run operations. |
+| `CognitiveMemoryApi.OperationsEndpoints.cs` | Projection rebuild, explicit automation run, and retention cleanup operations. |
 | `CognitiveMemoryApi.AdvancedEndpoints.cs` | Probe, self-regulation, answer gate, professor review, Epistemic Drive, cross-project operations. |
 | `CognitiveMemoryApi.DistributedEndpoints.cs` | Distributed workers and jobs. |
 | `CognitiveMemoryApiDtos.cs` | Request DTOs used by the endpoint groups. |

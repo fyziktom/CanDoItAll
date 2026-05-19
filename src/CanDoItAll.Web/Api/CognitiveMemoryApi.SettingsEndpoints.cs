@@ -10,13 +10,15 @@ namespace CanDoItAll.Web.Api;
 
 internal static partial class CognitiveMemoryApi
 {
-    private static void MapSettingsEndpoints(RouteGroupBuilder memory)
+    private static void MapSettingsEndpoints(
+        RouteGroupBuilder memory,
+        CognitiveMemoryApiSurface surface)
     {
         memory.MapGet("/settings", async (
                 ICognitiveMemoryAutomationSettingsService settingsService,
                 CancellationToken cancellationToken) =>
             await ExecuteAsync(() => settingsService.GetAsync(cancellationToken)))
-            .WithName("GetCognitiveMemorySettings");
+            .WithName(EndpointName("GetCognitiveMemorySettings", surface));
 
         memory.MapPut("/settings", async (
                 CognitiveMemoryAutomationSettingsApiRequest request,
@@ -25,6 +27,6 @@ internal static partial class CognitiveMemoryApi
             await ExecuteAsync(() => settingsService.SaveAsync(
                 BuildAutomationSettingsUpdate(request),
                 cancellationToken)))
-            .WithName("UpdateCognitiveMemorySettings");
+            .WithName(EndpointName("UpdateCognitiveMemorySettings", surface));
     }
 }

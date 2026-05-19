@@ -10,15 +10,17 @@ namespace CanDoItAll.Web.Api;
 
 internal static partial class CognitiveMemoryApi
 {
-    private static void MapDatabaseEndpoints(RouteGroupBuilder memory)
+    private static void MapDatabaseEndpoints(
+        RouteGroupBuilder memory,
+        CognitiveMemoryApiSurface surface)
     {
         memory.MapGet("/status", (
                 IDatabaseProfileRuntimeAccessor profileAccessor) =>
             {
                 var profile = profileAccessor.ResolveCurrentProfile();
-                return Results.Ok(CognitiveMemoryStatusApiResponse.From(profile));
+                return Results.Ok(CognitiveMemoryStatusApiResponse.From(profile, BuildApiContract(surface)));
             })
-            .WithName("GetCognitiveMemoryStatus");
+            .WithName(EndpointName("GetCognitiveMemoryStatus", surface));
 
         memory.MapGet("/database/selection", (
                 IDatabaseProfileRuntimeAccessor profileAccessor) =>
@@ -26,13 +28,13 @@ internal static partial class CognitiveMemoryApi
                 var profile = profileAccessor.ResolveCurrentProfile();
                 return Results.Ok(CognitiveMemoryDatabaseProfileApiResponse.From(profile));
             })
-            .WithName("GetCognitiveMemoryDatabaseSelection");
+            .WithName(EndpointName("GetCognitiveMemoryDatabaseSelection", surface));
 
         memory.MapGet("/database/profiles", async (
                 IDatabaseProfileService profileService,
                 CancellationToken cancellationToken) =>
             Results.Ok(await profileService.ListAsync(cancellationToken)))
-            .WithName("ListCognitiveMemoryDatabaseProfiles");
+            .WithName(EndpointName("ListCognitiveMemoryDatabaseProfiles", surface));
 
         memory.MapPost("/database/profiles/postgresql", async (
                 CognitiveMemoryPostgreSqlDatabaseProfileApiRequest request,
@@ -50,7 +52,7 @@ internal static partial class CognitiveMemoryApi
                 bootstrapper,
                 switchCoordinator,
                 cancellationToken)))
-            .WithName("CreateCognitiveMemoryPostgreSqlDatabaseProfile");
+            .WithName(EndpointName("CreateCognitiveMemoryPostgreSqlDatabaseProfile", surface));
 
         memory.MapPost("/database/switch/{profileId:guid}", async (
                 Guid profileId,
@@ -75,6 +77,6 @@ internal static partial class CognitiveMemoryApi
                     switchResult.Value.ProcessId,
                     CognitiveMemoryDatabaseProfileApiResponse.From(profile));
             }))
-            .WithName("SwitchCognitiveMemoryDatabaseProfile");
+            .WithName(EndpointName("SwitchCognitiveMemoryDatabaseProfile", surface));
     }
 }

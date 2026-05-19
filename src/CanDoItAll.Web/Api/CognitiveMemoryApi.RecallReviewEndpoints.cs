@@ -10,7 +10,9 @@ namespace CanDoItAll.Web.Api;
 
 internal static partial class CognitiveMemoryApi
 {
-    private static void MapRecallReviewEndpoints(RouteGroupBuilder memory)
+    private static void MapRecallReviewEndpoints(
+        RouteGroupBuilder memory,
+        CognitiveMemoryApiSurface surface)
     {
         memory.MapGet("/snapshot", async (
                 [AsParameters] CognitiveMemorySnapshotApiQuery query,
@@ -22,7 +24,7 @@ internal static partial class CognitiveMemoryApi
                     NormalizeTake(query.Take, 12, 200),
                     query.IncludeResolvedReviewItems.GetValueOrDefault()),
                 cancellationToken)))
-            .WithName("GetCognitiveMemorySnapshot");
+            .WithName(EndpointName("GetCognitiveMemorySnapshot", surface));
 
         memory.MapPost("/sources/ingest", async (
                 CognitiveMemorySourceIngestApiRequest request,
@@ -31,7 +33,7 @@ internal static partial class CognitiveMemoryApi
             await ExecuteAsync(() => ingestionService.IngestAsync(
                 BuildSourceIngestionRequest(request),
                 cancellationToken)))
-            .WithName("IngestCognitiveMemorySource");
+            .WithName(EndpointName("IngestCognitiveMemorySource", surface));
 
         memory.MapPost("/consolidation/runs", async (
                 CognitiveMemoryConsolidationRunApiRequest request,
@@ -40,7 +42,7 @@ internal static partial class CognitiveMemoryApi
             await ExecuteAsync(() => consolidationEngine.RunAsync(
                 BuildConsolidationRunRequest(request),
                 cancellationToken)))
-            .WithName("RunCognitiveMemoryConsolidation");
+            .WithName(EndpointName("RunCognitiveMemoryConsolidation", surface));
 
         memory.MapPost("/recall", async (
                 CognitiveMemoryRecallApiRequest request,
@@ -53,7 +55,7 @@ internal static partial class CognitiveMemoryApi
                     BuildRecallRequest(request),
                     cancellationToken);
             }))
-            .WithName("RecallCognitiveMemoryContext");
+            .WithName(EndpointName("RecallCognitiveMemoryContext", surface));
 
         memory.MapPost("/review-items/{reviewItemId:guid}/decisions", async (
                 Guid reviewItemId,
@@ -63,6 +65,6 @@ internal static partial class CognitiveMemoryApi
             await ExecuteAsync(() => reviewUiService.DecideReviewItemAsync(
                 BuildReviewDecisionRequest(reviewItemId, request),
                 cancellationToken)))
-            .WithName("DecideCognitiveMemoryReviewItem");
+            .WithName(EndpointName("DecideCognitiveMemoryReviewItem", surface));
     }
 }

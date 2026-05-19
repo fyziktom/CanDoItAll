@@ -240,4 +240,26 @@ public partial class CognitiveMemoryPage
             CognitiveMemoryDistributedJobState.Queued => "warning",
             _ => "secondary"
         };
+
+    internal static string OperatorAuditTone(
+        CognitiveMemoryOperatorAuditKind auditKind,
+        CognitiveMemoryOperatorAuditStatus status)
+        => status switch
+        {
+            CognitiveMemoryOperatorAuditStatus.Failed or CognitiveMemoryOperatorAuditStatus.Rejected => "danger",
+            CognitiveMemoryOperatorAuditStatus.ReviewRequired or CognitiveMemoryOperatorAuditStatus.NeedsReview or CognitiveMemoryOperatorAuditStatus.RebuildRequired or CognitiveMemoryOperatorAuditStatus.Blocked => "warning",
+            CognitiveMemoryOperatorAuditStatus.Accepted or CognitiveMemoryOperatorAuditStatus.Supported or CognitiveMemoryOperatorAuditStatus.Safe or CognitiveMemoryOperatorAuditStatus.Succeeded => "success",
+            CognitiveMemoryOperatorAuditStatus.Running => "info",
+            CognitiveMemoryOperatorAuditStatus.Restricted => "danger",
+            _ => auditKind switch
+            {
+                CognitiveMemoryOperatorAuditKind.ProjectionFailure => "warning",
+                CognitiveMemoryOperatorAuditKind.MutationCommand => "info",
+                CognitiveMemoryOperatorAuditKind.MutationAuditEvent => "secondary",
+                CognitiveMemoryOperatorAuditKind.ClaimState => "info",
+                CognitiveMemoryOperatorAuditKind.EvidenceAnchor => "secondary",
+                CognitiveMemoryOperatorAuditKind.RetentionCleanup => "info",
+                _ => "secondary"
+            }
+        };
 }

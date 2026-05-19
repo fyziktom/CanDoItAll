@@ -244,9 +244,6 @@ public sealed class CognitiveMemoryExternalSourceIngestionService(
     IClock clock,
     ILogger<CognitiveMemoryExternalSourceIngestionService> logger) : ICognitiveMemoryExternalSourceIngestionService
 {
-    private const int MaxTextCharacters = 1_000_000;
-    private const int MaxChunkCharacters = 4_000;
-    private const int MinChunkCharacters = 80;
     private const string UploadedFileSourceSystem = "ExternalFile";
     private const string WebsiteSourceSystem = "ExternalWebsite";
     private const string UploadedFileChunkType = "UploadedFileChunk";
@@ -271,11 +268,11 @@ public sealed class CognitiveMemoryExternalSourceIngestionService(
     {
         ArgumentNullException.ThrowIfNull(content);
         var normalizedFileName = CognitiveMemoryGuard.EnsureText(fileName, nameof(fileName));
-        var contentText = await CognitiveMemoryExternalSourceTextExtractor.ExtractAsync(
+        EnsureFileSizeWithinLimit(contentLength);
+        var contentText = await ExtractFileTextAsync(
             normalizedFileName,
             contentType,
             content,
-            MaxTextCharacters,
             cancellationToken);
 
         return await IngestAsync(new CognitiveMemoryExternalSourceIngestRequest(
@@ -303,6 +300,7 @@ public sealed class CognitiveMemoryExternalSourceIngestionService(
             throw new ArgumentException("Only HTTP and HTTPS URLs can be ingested.", nameof(uri));
         }
 
+        CognitiveMemoryExternalSourceIngestionPolicy.EnsureUriAllowed(uri);
         using var response = await HttpClient.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Gone)
         {
@@ -311,11 +309,10 @@ public sealed class CognitiveMemoryExternalSourceIngestionService(
 
         response.EnsureSuccessStatusCode();
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        var contentText = await CognitiveMemoryExternalSourceTextExtractor.ExtractAsync(
-            uri.AbsolutePath,
+        var contentText = await ExtractWebsiteTextAsync(
+            uri,
             response.Content.Headers.ContentType?.MediaType ?? "text/plain",
             stream,
-            MaxTextCharacters,
             cancellationToken);
         var title = ResolveWebsiteTitle(uri, contentText);
         var contentType = response.Content.Headers.ContentType?.MediaType ?? "text/plain";
@@ -360,6 +357,7 @@ public sealed class CognitiveMemoryExternalSourceIngestionService(
 
         try
         {
+            CognitiveMemoryExternalSourceIngestionPolicy.EnsureContentAllowed(request.ContentText);
             var persisted = await PersistSourceAsync(dbContext, operation, request, nowUtc, cancellationToken);
             operation.Status = CognitiveMemoryExternalSourceIngestionStatus.Succeeded;
             operation.ProgressPercent = 100;
@@ -388,7 +386,7 @@ public sealed class CognitiveMemoryExternalSourceIngestionService(
                 "Cognitive memory external source ingestion failed. OperationId={OperationId} SourceKind={SourceKind} Locator={Locator}",
                 operation.Id,
                 operation.SourceKind,
-                operation.Locator);
+                CognitiveMemoryExternalSourceIngestionPolicy.SafeLocatorForLog(operation.Locator));
 
             return Map(operation);
         }
@@ -603,7 +601,7 @@ public sealed class CognitiveMemoryExternalSourceIngestionService(
         }
 
         var chunks = new List<ExternalSourceChunk>(matches.Count + 1);
-        if (matches[0].Index >= MinChunkCharacters)
+        if (matches[0].Index >= CognitiveMemoryExternalSourceIngestionLimits.MinChunkCharacters)
         {
             var overview = text[..matches[0].Index].Trim();
             chunks.Add(CreateChunk(
@@ -622,7 +620,7 @@ public sealed class CognitiveMemoryExternalSourceIngestionService(
             var start = match.Index;
             var end = index + 1 < matches.Count ? matches[index + 1].Index : text.Length;
             var content = text[start..end].Trim();
-            if (content.Length < MinChunkCharacters)
+            if (content.Length < CognitiveMemoryExternalSourceIngestionLimits.MinChunkCharacters)
             {
                 continue;
             }
@@ -697,7 +695,7 @@ public sealed class CognitiveMemoryExternalSourceIngestionService(
             }
 
             var content = contentBuilder.ToString().Trim();
-            if (content.Length < MinChunkCharacters)
+            if (content.Length < CognitiveMemoryExternalSourceIngestionLimits.MinChunkCharacters)
             {
                 continue;
             }
@@ -728,7 +726,7 @@ public sealed class CognitiveMemoryExternalSourceIngestionService(
 
     private static IReadOnlyList<ExternalSourceChunk> SplitLargeChunk(ExternalSourceChunk chunk)
     {
-        if (chunk.ContentText.Length <= MaxChunkCharacters)
+        if (chunk.ContentText.Length <= CognitiveMemoryExternalSourceIngestionLimits.MaxChunkCharacters)
         {
             return [chunk];
         }
@@ -739,11 +737,11 @@ public sealed class CognitiveMemoryExternalSourceIngestionService(
         while (offset < chunk.ContentText.Length)
         {
             var remaining = chunk.ContentText.Length - offset;
-            var take = Math.Min(MaxChunkCharacters, remaining);
-            if (remaining > MaxChunkCharacters)
+            var take = Math.Min(CognitiveMemoryExternalSourceIngestionLimits.MaxChunkCharacters, remaining);
+            if (remaining > CognitiveMemoryExternalSourceIngestionLimits.MaxChunkCharacters)
             {
                 var boundary = chunk.ContentText.LastIndexOf("\n\n", offset + take - 1, take, StringComparison.Ordinal);
-                if (boundary > offset + MinChunkCharacters)
+                if (boundary > offset + CognitiveMemoryExternalSourceIngestionLimits.MinChunkCharacters)
                 {
                     take = boundary - offset;
                 }
@@ -899,6 +897,15 @@ public sealed class CognitiveMemoryExternalSourceIngestionService(
         _ = CognitiveMemoryGuard.EnsureText(request.Locator, nameof(request.Locator));
         _ = CognitiveMemoryGuard.EnsureText(request.ContentText, nameof(request.ContentText));
         _ = CognitiveMemoryGuard.EnsureText(request.ActorId, nameof(request.ActorId));
+        if (request.ContentLength > CognitiveMemoryExternalSourceIngestionLimits.MaxFileBytes)
+        {
+            throw new InvalidOperationException($"External source content is limited to {FormatBytes(CognitiveMemoryExternalSourceIngestionLimits.MaxFileBytes)}.");
+        }
+
+        if (request.ContentText.Length > CognitiveMemoryExternalSourceIngestionLimits.MaxTextCharacters)
+        {
+            throw new InvalidOperationException($"External source text exceeds the {CognitiveMemoryExternalSourceIngestionLimits.MaxTextCharacters} character ingestion limit.");
+        }
     }
 
     private static string ResolveWebsiteTitle(Uri uri, string contentText)
@@ -957,6 +964,63 @@ public sealed class CognitiveMemoryExternalSourceIngestionService(
         var trimmed = value.Trim();
         return trimmed.Length <= maxLength ? trimmed : trimmed[..maxLength];
     }
+
+    private static async Task<string> ExtractFileTextAsync(
+        string fileName,
+        string contentType,
+        Stream content,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await CognitiveMemoryExternalSourceTextExtractor.ExtractAsync(
+                fileName,
+                contentType,
+                content,
+                CognitiveMemoryExternalSourceIngestionLimits.MaxTextCharacters,
+                cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            throw new InvalidOperationException(
+                $"External source file '{Path.GetFileName(fileName)}' could not be extracted as text. {exception.Message}",
+                exception);
+        }
+    }
+
+    private static async Task<string> ExtractWebsiteTextAsync(
+        Uri uri,
+        string contentType,
+        Stream content,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await CognitiveMemoryExternalSourceTextExtractor.ExtractAsync(
+                uri.AbsolutePath,
+                contentType,
+                content,
+                CognitiveMemoryExternalSourceIngestionLimits.MaxTextCharacters,
+                cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            throw new InvalidOperationException(
+                $"External source website '{uri.Host}' could not be extracted as text. {exception.Message}",
+                exception);
+        }
+    }
+
+    private static void EnsureFileSizeWithinLimit(long contentLength)
+    {
+        if (contentLength > CognitiveMemoryExternalSourceIngestionLimits.MaxFileBytes)
+        {
+            throw new InvalidOperationException($"File uploads for cognitive memory ingestion are limited to {FormatBytes(CognitiveMemoryExternalSourceIngestionLimits.MaxFileBytes)}.");
+        }
+    }
+
+    private static string FormatBytes(long bytes)
+        => $"{bytes / 1024 / 1024} MB";
 
     private sealed record CognitiveMemoryExternalSourcePersistenceResult(
         Guid ManifestId,

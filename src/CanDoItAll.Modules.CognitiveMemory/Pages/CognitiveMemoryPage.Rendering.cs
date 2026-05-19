@@ -470,6 +470,27 @@ public partial class CognitiveMemoryPage
             });
     }
 
+    internal void RenderOperatorAuditRows(RenderTreeBuilder builder, int sequence)
+    {
+        if (snapshot is null)
+        {
+            return;
+        }
+
+        RenderRows(
+            builder,
+            sequence,
+            snapshot.OperatorAudit,
+            (contentBuilder, audit, itemSequence) =>
+            {
+                RenderRowStart(contentBuilder, ref itemSequence, audit.Summary);
+                RenderStatus(contentBuilder, ref itemSequence, OperatorAuditTone(audit.AuditKind, audit.Status), $"{FormatLabel(audit.AuditKind)} / {FormatLabel(audit.Status)}");
+                RenderRowText(contentBuilder, ref itemSequence, FirstNonEmpty(audit.Detail, FormatLabel(audit.SubjectKind)));
+                RenderRowSmall(contentBuilder, ref itemSequence, $"{FormatLabel(audit.SubjectKind)} / {FormatShortId(audit.SubjectId)} / {FormatDate(audit.CreatedAtUtc)}");
+                contentBuilder.CloseElement();
+            });
+    }
+
     internal static void RenderRows<TItem>(
         RenderTreeBuilder builder,
         int sequence,
