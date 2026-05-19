@@ -243,6 +243,9 @@ public sealed class ApiIntegrationTests
         Assert.True(paths.TryGetProperty("/api/cognitive-memory/status", out _));
         Assert.True(paths.TryGetProperty("/api/cognitive-memory/database/selection", out _));
         Assert.True(paths.TryGetProperty("/api/cognitive-memory/database/profiles", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/database/transfer/sources/{targetProfileId}", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/database/transfer/preview", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/database/transfer", out _));
         Assert.True(paths.TryGetProperty("/api/cognitive-memory/database/profiles/postgresql", out _));
         Assert.True(paths.TryGetProperty("/api/cognitive-memory/database/switch/{profileId}", out _));
         Assert.True(paths.TryGetProperty("/api/cognitive-memory/settings", out _));
@@ -270,6 +273,28 @@ public sealed class ApiIntegrationTests
         Assert.True(paths.TryGetProperty("/api/cognitive-memory/distributed/jobs", out _));
         Assert.True(paths.TryGetProperty("/api/cognitive-memory/distributed/jobs/claim", out _));
         Assert.True(paths.TryGetProperty("/api/cognitive-memory/distributed/jobs/{jobId}/results", out _));
+    }
+
+    [Fact]
+    public async Task CognitiveMemoryStatus_reports_database_projection_and_host_diagnostics()
+    {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
+
+        using var payload = JsonDocument.Parse(await host.Client.GetStringAsync("/api/cognitive-memory/status"));
+        var root = payload.RootElement;
+
+        Assert.True(root.GetProperty("isPostgreSql").ValueKind is JsonValueKind.True or JsonValueKind.False);
+        Assert.True(root.TryGetProperty("database", out var database));
+        Assert.False(string.IsNullOrWhiteSpace(database.GetProperty("resolutionSourceName").GetString()));
+        Assert.True(database.GetProperty("isRuntimeLocked").ValueKind is JsonValueKind.True or JsonValueKind.False);
+
+        Assert.True(root.TryGetProperty("projectionDefaults", out var projectionDefaults));
+        Assert.True(projectionDefaults.GetProperty("canProjectMissingRecords").ValueKind is JsonValueKind.True or JsonValueKind.False);
+        Assert.False(string.IsNullOrWhiteSpace(projectionDefaults.GetProperty("projectionStoreKindName").GetString()));
+
+        Assert.True(root.TryGetProperty("hostDiagnostics", out var hostDiagnostics));
+        Assert.False(string.IsNullOrWhiteSpace(hostDiagnostics.GetProperty("contentRootPath").GetString()));
+        Assert.True(hostDiagnostics.GetProperty("blazorWebJsExists").ValueKind is JsonValueKind.True or JsonValueKind.False);
     }
 
     private static async Task<Guid> CreateApiAgentAsync(

@@ -127,6 +127,7 @@ public sealed partial class CognitiveMemoryReviewUiService
                                      projection.Status == CognitiveMemoryProjectionStatus.Failed, cancellationToken) +
                                  await retentionRuns.CountAsync(cancellationToken);
         var qualityClusterCount = await qualityClusters.CountAsync(cancellationToken);
+        var clusterSearchResultCount = await CountClusterSearchResultsAsync(dbContext, query, cancellationToken);
         var dreamRunCount = await dreamRuns.CountAsync(cancellationToken);
         var aggregateCandidateCount = await aggregateCandidates.CountAsync(cancellationToken);
         var synthesizedRecallCount = await synthesizedRecalls.CountAsync(cancellationToken);
@@ -160,6 +161,7 @@ public sealed partial class CognitiveMemoryReviewUiService
             distributedIssueCount,
             operatorAuditCount,
             qualityClusterCount,
+            clusterSearchResultCount,
             dreamRunCount,
             aggregateCandidateCount,
             synthesizedRecallCount);

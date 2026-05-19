@@ -2,6 +2,7 @@ using System.IO.Compression;
 using CanDoItAll.Infrastructure.BackgroundJobs;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.CognitiveMemory;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
@@ -324,6 +325,162 @@ public sealed class DatabaseTransferIntegrationTests
             Assert.True(await targetContext.Set<ProjectNodeBindingRecord>().AnyAsync(item => item.ProjectObjectId == transferredNode.Id));
             Assert.True(await targetContext.Set<ProjectStructureProjectionLayoutRecord>().AnyAsync(item => item.ProjectId == sourceProjectId && item.NodeKey == sourceNodeKey));
             Assert.True(await targetContext.Set<ProjectWorkbenchViewStateRecord>().AnyAsync(item => item.ProjectId == sourceProjectId && item.SurfaceKind == "structure" && item.StateJson == "{\"zoom\":1.25}"));
+        }
+    }
+
+    [Fact]
+    public async Task DatabaseTransferService_CopiesCognitiveMemorySourceTruthIntoCleanTarget()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-cognitive-memory-source-truth-transfer");
+        await using var provider = DatabaseProfileControlPlaneIntegrationHost.BuildServiceProvider(testEnvironment);
+
+        var profileService = provider.GetRequiredService<IDatabaseProfileService>();
+        var runtimeAccessor = provider.GetRequiredService<IDatabaseProfileRuntimeAccessor>();
+        var bootstrapper = provider.GetRequiredService<IAppDatabaseBootstrapper>();
+        var switchableFactory = provider.GetRequiredService<ISwitchableAppDbContextFactory>();
+        var now = DateTimeOffset.UtcNow;
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var manifestId = Guid.Parse("10000000-0000-0000-0000-000000000001");
+        var sourceItemId = Guid.Parse("10000000-0000-0000-0000-000000000002");
+        var evidenceAnchorId = Guid.Parse("10000000-0000-0000-0000-000000000003");
+        var operationId = Guid.Parse("10000000-0000-0000-0000-000000000004");
+
+        var sourceSaveResult = await profileService.SaveAsync(new DatabaseProfileEditorModel
+        {
+            DisplayName = "Cognitive memory source truth transfer source",
+            ProviderKind = DatabaseProviderKind.Sqlite,
+            SourceKind = DatabaseProfileSourceKind.ManagedSqlite
+        });
+        Assert.True(sourceSaveResult.IsSuccess, DescribeErrors(sourceSaveResult.Errors));
+
+        var sourceProfile = runtimeAccessor.ResolveProfile(sourceSaveResult.Value);
+        await bootstrapper.EnsureProfileReadyAsync(sourceProfile);
+        await using (var sourceContext = await switchableFactory.CreateDbContextForProfileAsync(sourceProfile))
+        {
+            sourceContext.Add(new CognitiveMemorySourceManifestRecord
+            {
+                Id = manifestId,
+                ProjectId = projectId,
+                SourceSystem = "ExternalFile",
+                SourceScopeKey = "project:aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                SourceSnapshotId = "snapshot:file-transfer-test",
+                SnapshotHash = CognitiveMemoryHash.FromUtf8("source truth manifest").Value,
+                ProviderVersion = "unit-test",
+                ScanStatus = CognitiveMemoryRunStatus.Succeeded,
+                ObservedAtUtc = now,
+                CreatedAtUtc = now,
+                UpdatedAtUtc = now,
+                ConcurrencyToken = Guid.NewGuid()
+            });
+            sourceContext.Add(new CognitiveMemorySourceItemRecord
+            {
+                Id = sourceItemId,
+                SourceManifestId = manifestId,
+                ProjectId = projectId,
+                SourceSystem = "ExternalFile",
+                SourceItemKey = "docs/validation-source.md",
+                SourceItemType = "Markdown",
+                Title = "Validation source",
+                ContentText = "This source truth states that the deployment validation requires project structure transfer.",
+                Locator = "docs/validation-source.md",
+                ContentHash = CognitiveMemoryHash.FromUtf8("validation source item").Value,
+                RedactionState = CognitiveMemoryRedactionState.Safe,
+                AccessLevel = CognitiveMemoryAccessLevel.Project,
+                AccessScope = projectId.ToString("D"),
+                ProvenanceJson = "{\"origin\":\"integration-test\"}",
+                ObservedAtUtc = now,
+                CreatedAtUtc = now,
+                UpdatedAtUtc = now,
+                ConcurrencyToken = Guid.NewGuid()
+            });
+            sourceContext.Add(new CognitiveMemoryEvidenceAnchorRecord
+            {
+                Id = evidenceAnchorId,
+                ProjectId = projectId,
+                AnchorKind = CognitiveMemoryEvidenceAnchorKind.TextSpan,
+                SourceManifestId = manifestId,
+                SourceItemId = sourceItemId,
+                SourceSystem = "ExternalFile",
+                Locator = "docs/validation-source.md#L1",
+                StructuredPath = "$.lines[0]",
+                TextStart = 0,
+                TextEnd = 80,
+                QuoteHash = CognitiveMemoryHash.FromUtf8("deployment validation requires project structure transfer").Value,
+                TrustLevel = CognitiveMemorySourceTrustLevel.OfficialSource,
+                RedactionState = CognitiveMemoryRedactionState.Safe,
+                SourceHash = CognitiveMemoryHash.FromUtf8("validation source item").Value,
+                ObservedAtUtc = now,
+                CreatedAtUtc = now,
+                ConcurrencyToken = Guid.NewGuid()
+            });
+            sourceContext.Add(new CognitiveMemoryExternalSourceIngestionRecord
+            {
+                Id = operationId,
+                ProjectId = projectId,
+                SourceKind = CognitiveMemoryExternalSourceKind.UploadedFile,
+                Status = CognitiveMemoryExternalSourceIngestionStatus.Succeeded,
+                Title = "Validation source",
+                Locator = "docs/validation-source.md",
+                ContentType = "text/markdown",
+                ContentLength = 91,
+                ProgressPercent = 100,
+                StatusMessage = "Completed",
+                SourceManifestId = manifestId,
+                SourceItemId = sourceItemId,
+                EvidenceAnchorId = evidenceAnchorId,
+                CreatedAtUtc = now,
+                UpdatedAtUtc = now,
+                CompletedAtUtc = now,
+                ConcurrencyToken = Guid.NewGuid()
+            });
+            await sourceContext.SaveChangesAsync();
+        }
+
+        var targetSaveResult = await profileService.SaveAsync(new DatabaseProfileEditorModel
+        {
+            DisplayName = "Cognitive memory source truth transfer target",
+            ProviderKind = DatabaseProviderKind.Sqlite,
+            SourceKind = DatabaseProfileSourceKind.ManagedSqlite
+        });
+        Assert.True(targetSaveResult.IsSuccess, DescribeErrors(targetSaveResult.Errors));
+
+        var targetProfile = runtimeAccessor.ResolveProfile(targetSaveResult.Value);
+        await bootstrapper.EnsureProfileReadyAsync(targetProfile);
+
+        DatabaseTransferResult transferResult;
+        await using (var transferScope = provider.CreateAsyncScope())
+        {
+            var transferService = transferScope.ServiceProvider.GetRequiredService<IDatabaseTransferService>();
+            var previews = await transferService.PreviewAsync(sourceProfile.Profile.Id, targetProfile.Profile.Id);
+            var preview = Assert.Single(previews, item => item.Descriptor.Key == "cognitive-memory-source-truth");
+            Assert.True(preview.IsAvailable);
+            Assert.Equal(4, preview.SourceRecordCount);
+
+            transferResult = await transferService.TransferAsync(new DatabaseTransferRequest
+            {
+                SourceProfileId = sourceProfile.Profile.Id,
+                TargetProfileId = targetProfile.Profile.Id,
+                ItemKeys = ["cognitive-memory-source-truth"]
+            });
+        }
+
+        Assert.True(transferResult.IsSuccess, DescribeTransferResults(transferResult));
+        var itemResult = Assert.Single(transferResult.Items);
+        Assert.Equal("cognitive-memory-source-truth", itemResult.Key);
+        Assert.Equal(4, itemResult.RecordsCopied);
+
+        await using (var targetContext = await switchableFactory.CreateDbContextForProfileAsync(targetProfile))
+        {
+            var item = await targetContext.Set<CognitiveMemorySourceItemRecord>().SingleAsync(row => row.Id == sourceItemId);
+            Assert.Equal("This source truth states that the deployment validation requires project structure transfer.", item.ContentText);
+            Assert.Equal(manifestId, item.SourceManifestId);
+
+            var anchor = await targetContext.Set<CognitiveMemoryEvidenceAnchorRecord>().SingleAsync(row => row.Id == evidenceAnchorId);
+            Assert.Equal(sourceItemId, anchor.SourceItemId);
+
+            var operation = await targetContext.Set<CognitiveMemoryExternalSourceIngestionRecord>().SingleAsync(row => row.Id == operationId);
+            Assert.Equal(evidenceAnchorId, operation.EvidenceAnchorId);
+            Assert.Equal(CognitiveMemoryExternalSourceIngestionStatus.Succeeded, operation.Status);
         }
     }
 

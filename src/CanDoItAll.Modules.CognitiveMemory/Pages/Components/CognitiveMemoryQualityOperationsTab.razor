@@ -73,6 +73,11 @@
                                                            data-testid="cognitive-memory-quality-persist-dream" />
                                             <span>Persist dream output</span>
                                         </label>
+                                        <label>
+                                            <InputCheckbox @bind-Value="Page.qualityAllowRestrictedContent"
+                                                           data-testid="cognitive-memory-quality-allow-restricted" />
+                                            <span>Include restricted source truth</span>
+                                        </label>
                                     </div>
 
                                     <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">

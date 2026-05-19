@@ -2,8 +2,10 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.CognitiveMemory;
 using CanDoItAll.SharedKernel;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Web.Api;
 
@@ -15,10 +17,16 @@ internal static partial class CognitiveMemoryApi
         CognitiveMemoryApiSurface surface)
     {
         memory.MapGet("/status", (
-                IDatabaseProfileRuntimeAccessor profileAccessor) =>
+                IDatabaseProfileRuntimeAccessor profileAccessor,
+                IOptions<CognitiveMemoryProjectionOptions> projectionOptions,
+                IWebHostEnvironment environment) =>
             {
                 var profile = profileAccessor.ResolveCurrentProfile();
-                return Results.Ok(CognitiveMemoryStatusApiResponse.From(profile, BuildApiContract(surface)));
+                return Results.Ok(CognitiveMemoryStatusApiResponse.From(
+                    profile,
+                    BuildApiContract(surface),
+                    projectionOptions.Value,
+                    environment));
             })
             .WithName(EndpointName("GetCognitiveMemoryStatus", surface));
 
@@ -78,5 +86,35 @@ internal static partial class CognitiveMemoryApi
                     CognitiveMemoryDatabaseProfileApiResponse.From(profile));
             }))
             .WithName(EndpointName("SwitchCognitiveMemoryDatabaseProfile", surface));
+
+        memory.MapGet("/database/transfer/sources/{targetProfileId:guid}", async (
+                Guid targetProfileId,
+                IDatabaseTransferService transferService,
+                CancellationToken cancellationToken) =>
+            await ExecuteAsync(async () =>
+                await transferService.ListSourcesAsync(
+                    EnsureNonEmpty(targetProfileId, nameof(targetProfileId)),
+                    cancellationToken)))
+            .WithName(EndpointName("ListCognitiveMemoryDatabaseTransferSources", surface));
+
+        memory.MapGet("/database/transfer/preview", async (
+                [FromQuery] Guid sourceProfileId,
+                [FromQuery] Guid targetProfileId,
+                IDatabaseTransferService transferService,
+                CancellationToken cancellationToken) =>
+            await ExecuteAsync(async () =>
+                await transferService.PreviewAsync(
+                    EnsureNonEmpty(sourceProfileId, nameof(sourceProfileId)),
+                    EnsureNonEmpty(targetProfileId, nameof(targetProfileId)),
+                    cancellationToken)))
+            .WithName(EndpointName("PreviewCognitiveMemoryDatabaseTransfer", surface));
+
+        memory.MapPost("/database/transfer", async (
+                DatabaseTransferRequest request,
+                IDatabaseTransferService transferService,
+                CancellationToken cancellationToken) =>
+            await ExecuteAsync(async () =>
+                await transferService.TransferAsync(request, cancellationToken)))
+            .WithName(EndpointName("RunCognitiveMemoryDatabaseTransfer", surface));
     }
 }

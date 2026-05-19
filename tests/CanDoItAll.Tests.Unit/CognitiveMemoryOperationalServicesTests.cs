@@ -249,10 +249,68 @@ public sealed class CognitiveMemoryOperationalServicesTests
         Assert.Equal(5, result.SourceItemsCreated);
         Assert.Equal(1, result.ConsolidationRuns);
         Assert.Equal(CognitiveMemoryRunStatus.Succeeded, result.ConsolidationStatus);
+        Assert.Equal(1, result.CyclesExecuted);
+        Assert.Single(result.Cycles);
         Assert.Equal(
             [MemorySourceKind.WorkbenchProjectStructure, MemorySourceKind.ProcessRuntime],
             ingestion.Requests.Select(request => request.SourceKind).ToArray());
         Assert.Equal(CognitiveMemoryConsolidationTriggerKind.Nightly, Assert.Single(consolidation.Requests).TriggerKind);
+    }
+
+    [Fact]
+    public async Task ScheduledAutomationRunner_ContinuesConsolidationCyclesWithCursorUntilIdle()
+    {
+        var settings = CognitiveMemoryAutomationSettings.Defaults(DateTimeOffset.UnixEpoch) with
+        {
+            ScheduleMode = CognitiveMemoryAutomationScheduleMode.Nightly,
+            AutoIngestProjectStructure = true,
+            AutoIngestProcessRuntime = false,
+            AutoConsolidateAfterIngestion = true
+        };
+        var ingestion = new RecordingSourceIngestionService();
+        var consolidation = new RecordingConsolidationEngine();
+        consolidation.NextCursors.Enqueue("cursor:second");
+        consolidation.NextCursors.Enqueue(null);
+        var projectId = Guid.NewGuid();
+        var runner = new CognitiveMemoryScheduledAutomationRunner(
+            new FixedAutomationSettingsService(settings),
+            ingestion,
+            consolidation,
+            new FixedClock());
+
+        var result = await runner.RunAsync(new CognitiveMemoryScheduledAutomationRunRequest(
+            projectId,
+            CognitiveMemoryAutomationTriggerKind.Nightly,
+            ActorId: "test:operator",
+            Take: 25,
+            CycleId: "validation-cycle-001",
+            MaxCycles: 5,
+            ContinueUntilIdle: true,
+            PolicyContext: new CognitiveMemoryPolicyContext(
+                projectId,
+                "test:operator",
+                CognitiveMemoryAccessLevel.Restricted,
+                new CognitiveMemoryPolicyProfileId("policy:validation"),
+                CognitiveMemoryRiskLevel.High,
+                AllowRestrictedContent: true)));
+
+        Assert.True(result.Executed);
+        Assert.Equal("validation-cycle-001", result.CycleId);
+        Assert.Equal(2, result.ConsolidationRuns);
+        Assert.Equal(2, result.CyclesExecuted);
+        Assert.Null(result.FinalCursor);
+        var requestCursors = consolidation.Requests.Select(request => request.Cursor).ToArray();
+        Assert.Null(requestCursors[0]);
+        Assert.Equal("cursor:second", requestCursors[1]);
+        Assert.All(consolidation.Requests, request =>
+        {
+            Assert.Contains("validation-cycle-001", request.IdempotencyKey.Value, StringComparison.Ordinal);
+            Assert.Equal(CognitiveMemoryAccessLevel.Restricted, request.PolicyContext.AccessLevel);
+            Assert.Equal(CognitiveMemoryRiskLevel.High, request.PolicyContext.RiskLevel);
+            Assert.True(request.PolicyContext.AllowRestrictedContent);
+        });
+        Assert.Equal("cursor:second", result.Cycles[0].NextCursor);
+        Assert.Null(result.Cycles[1].NextCursor);
     }
 
     [Fact]
@@ -877,11 +935,14 @@ public sealed class CognitiveMemoryOperationalServicesTests
     {
         public List<CognitiveMemoryConsolidationRunRequest> Requests { get; } = [];
 
+        public Queue<string?> NextCursors { get; } = [];
+
         public ValueTask<CognitiveMemoryConsolidationRunResult> RunAsync(
             CognitiveMemoryConsolidationRunRequest request,
             CancellationToken cancellationToken = default)
         {
             Requests.Add(request);
+            var nextCursor = NextCursors.Count == 0 ? null : NextCursors.Dequeue();
             return ValueTask.FromResult(new CognitiveMemoryConsolidationRunResult(
                 CognitiveMemoryConsolidationRunId.New(),
                 CognitiveMemoryRunStatus.Succeeded,
@@ -890,7 +951,7 @@ public sealed class CognitiveMemoryOperationalServicesTests
                 MutationCommandsSubmitted: 2,
                 ReviewItemsCreated: 1,
                 ProjectionInvalidations: 0,
-                NextCursor: null,
+                NextCursor: nextCursor,
                 ReportHash: null,
                 Warnings: []));
         }

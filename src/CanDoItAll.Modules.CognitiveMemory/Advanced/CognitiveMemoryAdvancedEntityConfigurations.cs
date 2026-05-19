@@ -14,6 +14,9 @@ internal sealed class CognitiveMemoryProbeSessionRecordConfiguration : IEntityTy
         builder.Property(item => item.Title).HasMaxLength(300);
         builder.Property(item => item.ActorId).HasMaxLength(160);
         builder.Property(item => item.PolicyProfileId).HasMaxLength(160);
+        builder.Property(item => item.ProjectionCollectionName).HasMaxLength(160);
+        builder.Property(item => item.ProjectionProfileId).HasMaxLength(160);
+        builder.Property(item => item.EmbeddingProfileId).HasMaxLength(160);
         builder.Property(item => item.AlgorithmVersion).HasMaxLength(80);
         builder.Property(item => item.ConcurrencyToken).IsConcurrencyToken();
     }

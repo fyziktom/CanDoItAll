@@ -1,0 +1,15 @@
+{
+  "sourceProfileId": "541fbd90-f0e1-4ed7-b3bd-220dc4dd1473",
+  "targetProfileId": "b594d52c-300e-4c1d-9b17-f2e8dc22918b",
+  "items": [
+    {
+      "key": "projects",
+      "label": "Projects",
+      "success": true,
+      "message": "Copied 13 project(s) with their structure workbench data.",
+      "recordsCopied": 752
+    }
+  ],
+  "isSuccess": true,
+  "recordsCopied": 752
+}

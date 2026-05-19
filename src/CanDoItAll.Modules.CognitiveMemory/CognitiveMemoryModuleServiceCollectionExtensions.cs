@@ -2,6 +2,7 @@ using CanDoItAll.AgentFramework.Rag.Driver.Abstractions;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.SemanticCompletion.Driver.Embeddings;
 using CanDoItAll.AgentFramework.SemanticCompletion.Driver.Semantics;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -74,6 +75,7 @@ public static class CognitiveMemoryModuleServiceCollectionExtensions
         services.TryAddScoped<ICognitiveMemoryRecallSynthesisService, CognitiveMemoryRecallSynthesisService>();
         services.TryAddScoped<ICognitiveMemoryReferenceResolver, CognitiveMemoryReferenceResolver>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentContextContributor, CognitiveMemoryAgentContextContributor>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IDatabaseTransferHandler, CognitiveMemorySourceTruthDatabaseTransferHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, CognitiveMemoryRecallWorkflowExecutor>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, CognitiveMemoryProbeWorkflowExecutor>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, CognitiveMemoryLearningProposalWorkflowExecutor>());

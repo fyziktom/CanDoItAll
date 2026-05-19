@@ -1,0 +1,169 @@
+@namespace CanDoItAll.Modules.CognitiveMemory.Pages
+
+@if (Page.snapshot is { } snapshot)
+{
+    <Grid Gap="LayoutGap.Large"
+          Class="cognitive-memory-layout cognitive-memory-quality-layout"
+          ColumnTemplateXl="minmax(24rem,0.65fr) minmax(0,1.35fr)"
+          data-testid="cognitive-memory-cluster-search">
+        <SurfaceCard data-testid="cognitive-memory-cluster-search-controls">
+            <Split Gap="LayoutGap.Small"
+                   AlignItems="AlignItems.Start">
+                <div>
+                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Cluster search" />
+                    <h2 class="cognitive-memory-card-title">Find quality clusters</h2>
+                </div>
+                <StatusBadge Tone="info" Text="@($"{Page.ClusterSearchBadgeText} result(s)")" />
+            </Split>
+
+            <Stack GapScale="LayoutGap.Medium" Class="mt-4">
+                <label class="cognitive-memory-field">
+                    <span>Search clusters</span>
+                    <InputText class="cda-input"
+                               @bind-Value="Page.clusterSearchText"
+                               data-testid="cognitive-memory-cluster-search-text" />
+                </label>
+
+                <label class="cognitive-memory-field">
+                    <span>Key family</span>
+                    <InputSelect class="cda-input"
+                                 @bind-Value="Page.clusterSearchKeyFamilyText"
+                                 data-testid="cognitive-memory-cluster-search-family">
+                        <option value="">Any family</option>
+                        @foreach (var family in Enum.GetValues<CognitiveMemoryQualityClusterKeyFamily>())
+                        {
+                            <option value="@family.ToString()">@CognitiveMemoryPage.FormatLabel(family)</option>
+                        }
+                    </InputSelect>
+                </label>
+
+                <Grid Gap="LayoutGap.Medium"
+                      ColumnTemplateXl="minmax(0,1fr) minmax(0,1fr)">
+                    <label class="cognitive-memory-field">
+                        <span>Readiness</span>
+                        <InputSelect class="cda-input"
+                                     @bind-Value="Page.clusterSearchReadinessText"
+                                     data-testid="cognitive-memory-cluster-search-readiness">
+                            <option value="">Any readiness</option>
+                            @foreach (var readiness in Enum.GetValues<CognitiveMemoryQualityClusterReadiness>())
+                            {
+                                <option value="@readiness.ToString()">@CognitiveMemoryPage.FormatLabel(readiness)</option>
+                            }
+                        </InputSelect>
+                    </label>
+
+                    <label class="cognitive-memory-field">
+                        <span>Risk</span>
+                        <InputSelect class="cda-input"
+                                     @bind-Value="Page.clusterSearchRiskText"
+                                     data-testid="cognitive-memory-cluster-search-risk">
+                            <option value="">Any risk</option>
+                            @foreach (var risk in Enum.GetValues<CognitiveMemoryRiskLevel>())
+                            {
+                                <option value="@risk.ToString()">@CognitiveMemoryPage.FormatLabel(risk)</option>
+                            }
+                        </InputSelect>
+                    </label>
+                </Grid>
+
+                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                    <Button Text="Search"
+                            Icon="search"
+                            ButtonStyle="ButtonStyle.Primary"
+                            Size="ButtonSize.Small"
+                            Disabled="@Page.isBusy"
+                            IsBusy="@Page.isBusy"
+                            Click="Page.ApplyClusterSearchAsync"
+                            data-testid="cognitive-memory-cluster-search-submit" />
+                    <Button Text="Clear"
+                            Icon="backspace"
+                            ButtonStyle="ButtonStyle.Light"
+                            Size="ButtonSize.Small"
+                            Disabled="@Page.isBusy"
+                            Click="Page.ClearClusterSearchAsync"
+                            data-testid="cognitive-memory-cluster-search-clear" />
+                </Cluster>
+
+                <div class="cognitive-memory-facts">
+                    @CognitiveMemoryPage.RenderFactFragment("Results", Page.ClusterSearchBadgeText)
+                    @CognitiveMemoryPage.RenderFactFragment("All clusters", snapshot.Summary.QualityClusterCount.ToString())
+                    @CognitiveMemoryPage.RenderFactFragment("Page", Page.PageRangeText(CognitiveMemoryReviewUiCollectionKind.ClusterSearchResults))
+                    @CognitiveMemoryPage.RenderFactFragment("Dream candidates", snapshot.Summary.AggregateCandidateCount.ToString())
+                </div>
+            </Stack>
+        </SurfaceCard>
+
+        <SurfaceCard data-testid="cognitive-memory-cluster-search-results">
+            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Results" />
+            <h2 class="cognitive-memory-card-title">Paged clusters and evidence previews</h2>
+            @if (snapshot.ClusterSearchResults.Count == 0)
+            {
+                <EmptyState Eyebrow="No matches"
+                            Title="No clusters match the current search"
+                            Description="Change the search text or filters after cluster planning has produced quality clusters." />
+            }
+            else
+            {
+                <div class="cognitive-memory-list mt-4">
+                    @foreach (var cluster in snapshot.ClusterSearchResults)
+                    {
+                        <div class="cognitive-memory-row"
+                             data-testid="@($"cognitive-memory-cluster-search-result-{cluster.Id.Value:N}")">
+                            <strong>@ClusterTitle(cluster)</strong>
+                            <StatusBadge Tone="@CognitiveMemoryPage.QualityClusterTone(cluster.Readiness)"
+                                         Text="@CognitiveMemoryPage.FormatLabel(cluster.Readiness)" />
+                            <StatusBadge Tone="@CognitiveMemoryPage.RiskTone(cluster.RiskLevel)"
+                                         Text="@($"{CognitiveMemoryPage.FormatLabel(cluster.RiskLevel)} risk")" />
+                            <span>@($"{cluster.MemberCount} member(s), {cluster.KeyCount} key(s), {cluster.SourceEvidenceCount} evidence link(s), {cluster.ContradictionCount} contradiction(s)")</span>
+                            <small>@($"{CognitiveMemoryPage.FormatLabel(cluster.PrimaryKeyFamily)} / {CognitiveMemoryPage.FormatLabel(cluster.AccessLevel)} / hash {ShortHash(cluster.ClusterHash)} / updated {CognitiveMemoryPage.FormatDate(cluster.UpdatedAtUtc)}")</small>
+
+                            @if (cluster.Keys.Count > 0)
+                            {
+                                <small>@($"Keys: {string.Join("; ", cluster.Keys.Select(FormatKeyPreview))}")</small>
+                            }
+
+                            @if (cluster.Members.Count > 0)
+                            {
+                                <small>@($"Members: {string.Join("; ", cluster.Members.Select(FormatMemberPreview))}")</small>
+                            }
+                        </div>
+                    }
+                </div>
+
+                @Page.CollectionPager(CognitiveMemoryReviewUiCollectionKind.ClusterSearchResults)
+            }
+        </SurfaceCard>
+    </Grid>
+}
+
+@code {
+    [CascadingParameter]
+    internal CognitiveMemoryPage Page { get; set; } = default!;
+
+    private static string ClusterTitle(CognitiveMemoryClusterSearchResultView cluster)
+    {
+        var keyTitle = cluster.Keys
+            .Where(key => key.KeyFamily == cluster.PrimaryKeyFamily)
+            .Concat(cluster.Keys)
+            .Select(key => CognitiveMemoryPage.FirstNonEmpty(key.DisplayText, key.Key))
+            .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
+        return string.IsNullOrWhiteSpace(keyTitle)
+            ? $"{CognitiveMemoryPage.FormatLabel(cluster.PrimaryKeyFamily)} / {CognitiveMemoryPage.FormatShortId(cluster.Id.Value)}"
+            : keyTitle;
+    }
+
+    private static string FormatKeyPreview(CognitiveMemoryClusterSearchKeyView key)
+        => $"{CognitiveMemoryPage.FormatLabel(key.KeyFamily)}={CognitiveMemoryPage.FirstNonEmpty(key.DisplayText, key.Key)}";
+
+    private static string FormatMemberPreview(CognitiveMemoryClusterSearchMemberPreviewView member)
+    {
+        var subjectId = member.MemoryRecordId ?? member.SourceItemId ?? member.EvidenceAnchorId;
+        var subject = subjectId is { } id
+            ? CognitiveMemoryPage.FormatShortId(id)
+            : "unlinked";
+        return $"{CognitiveMemoryPage.FormatLabel(member.MemberKind)} {subject} {CognitiveMemoryPage.FormatLabel(member.ValidationState)}";
+    }
+
+    private static string ShortHash(string clusterHash)
+        => clusterHash.Length <= 12 ? clusterHash : clusterHash[..12];
+}

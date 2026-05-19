@@ -1,0 +1,4 @@
+{
+  "error": "Response status code does not indicate success: 400 (Bad Request).",
+  "response": "\r\n{\r\n  \"errors\": [\r\n    {\r\n      \"code\": \"cognitive-memory.request-invalid\",\r\n      \"message\": \"Vector result limit must be positive. (Parameter \\u0027vectorResultLimit\\u0027)\",\r\n      \"severity\": 1\r\n    }\r\n  ]\r\n}"
+}

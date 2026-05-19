@@ -4430,6 +4430,9 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("AccessLevel")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("ActorId")
                         .IsRequired()
                         .HasMaxLength(160)
@@ -4439,6 +4442,9 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .IsRequired()
                         .HasMaxLength(80)
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("AllowRestrictedContent")
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTimeOffset?>("ClosedAtUtc")
                         .HasColumnType("TEXT");
@@ -4450,6 +4456,11 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("EmbeddingProfileId")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("PolicyProfileId")
                         .IsRequired()
                         .HasMaxLength(160)
@@ -4458,7 +4469,20 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.Property<Guid>("ProjectId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ProjectionCollectionName")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProjectionProfileId")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("RecallMode")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("RiskLevel")
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("Status")

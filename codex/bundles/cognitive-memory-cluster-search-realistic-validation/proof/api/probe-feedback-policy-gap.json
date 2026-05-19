@@ -1,0 +1,16 @@
+{
+  "id": "ae6cd24b-b3cc-468a-8608-53bf183bc82a",
+  "probeTurnId": "5ba5fc3d-2720-4771-866c-44896454edd6",
+  "probeSessionId": "284d7074-4e28-4bbf-a5aa-2e902756f7f5",
+  "projectId": "a845e5c9-43b5-4885-b970-7a63474029c3",
+  "action": 2,
+  "calibrationOutcome": 2,
+  "riskLevel": 2,
+  "notes": "Probe was started with a restricted policy, but probe asking currently uses Project access and cannot include restricted source-truth context. This must become policy-preserving before probe validation can be trusted.",
+  "correctionText": "Expected probe behavior: preserve the session policy for Restricted access and allow restricted content when the session was explicitly started that way by an authorized validation actor.",
+  "reviewItemId": "16c45fe2-7afd-4e32-ab43-588a5ace1c1a",
+  "regressionTestCaseId": "22d5557f-1384-4176-ba22-6d11fd041fb3",
+  "calibrationEventId": "5ac0fed4-22e2-4bc4-b786-56cbf0247a39",
+  "createdAtUtc": "2026-05-19T17:49:52.242749-04:00",
+  "concurrencyToken": "de7905d1-002d-4925-850d-18c4be394047"
+}

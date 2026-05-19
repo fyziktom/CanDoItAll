@@ -4435,6 +4435,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<int>("AccessLevel")
+                        .HasColumnType("integer");
+
                     b.Property<string>("ActorId")
                         .IsRequired()
                         .HasMaxLength(160)
@@ -4444,6 +4447,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .IsRequired()
                         .HasMaxLength(80)
                         .HasColumnType("character varying(80)");
+
+                    b.Property<bool>("AllowRestrictedContent")
+                        .HasColumnType("boolean");
 
                     b.Property<DateTimeOffset?>("ClosedAtUtc")
                         .HasColumnType("timestamp with time zone");
@@ -4455,6 +4461,11 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("EmbeddingProfileId")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
                     b.Property<string>("PolicyProfileId")
                         .IsRequired()
                         .HasMaxLength(160)
@@ -4463,7 +4474,20 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<Guid>("ProjectId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ProjectionCollectionName")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<string>("ProjectionProfileId")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
                     b.Property<int>("RecallMode")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RiskLevel")
                         .HasColumnType("integer");
 
                     b.Property<int>("Status")

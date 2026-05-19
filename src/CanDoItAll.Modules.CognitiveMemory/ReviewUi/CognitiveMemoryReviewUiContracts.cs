@@ -12,7 +12,14 @@ public sealed record CognitiveMemoryReviewUiQuery(
     Guid? ProjectId = null,
     int Take = 12,
     bool IncludeResolvedReviewItems = false,
-    IReadOnlyList<CognitiveMemoryReviewUiPageRequest>? PageRequests = null);
+    IReadOnlyList<CognitiveMemoryReviewUiPageRequest>? PageRequests = null,
+    CognitiveMemoryClusterSearchFilter? ClusterSearch = null);
+
+public sealed record CognitiveMemoryClusterSearchFilter(
+    string Text = "",
+    CognitiveMemoryQualityClusterKeyFamily? KeyFamily = null,
+    CognitiveMemoryQualityClusterReadiness? Readiness = null,
+    CognitiveMemoryRiskLevel? RiskLevel = null);
 
 public enum CognitiveMemoryReviewUiCollectionKind
 {
@@ -34,7 +41,8 @@ public enum CognitiveMemoryReviewUiCollectionKind
     QualityClusters = 15,
     DreamRuns = 16,
     AggregateCandidates = 17,
-    SynthesizedRecalls = 18
+    SynthesizedRecalls = 18,
+    ClusterSearchResults = 19
 }
 
 public sealed record CognitiveMemoryReviewUiPageRequest(
@@ -130,6 +138,7 @@ public sealed record CognitiveMemoryReviewUiSnapshot(
     IReadOnlyList<CognitiveMemoryDistributedJobView> DistributedJobs,
     IReadOnlyList<CognitiveMemoryOperatorAuditItem> OperatorAudit,
     IReadOnlyList<CognitiveMemoryQualityClusterView> QualityClusters,
+    IReadOnlyList<CognitiveMemoryClusterSearchResultView> ClusterSearchResults,
     IReadOnlyList<CognitiveMemoryDreamRunView> DreamRuns,
     IReadOnlyList<CognitiveMemoryAggregateCandidateView> AggregateCandidates,
     IReadOnlyList<CognitiveMemorySynthesizedRecallView> SynthesizedRecalls);
@@ -163,6 +172,7 @@ public sealed record CognitiveMemoryReviewUiSummary(
     int DistributedIssueCount,
     int OperatorAuditCount,
     int QualityClusterCount,
+    int ClusterSearchResultCount,
     int DreamRunCount,
     int AggregateCandidateCount,
     int SynthesizedRecallCount);
@@ -431,6 +441,37 @@ public sealed record CognitiveMemoryQualityClusterView(
     int SourceEvidenceCount,
     int ContradictionCount,
     DateTimeOffset UpdatedAtUtc);
+
+public sealed record CognitiveMemoryClusterSearchResultView(
+    CognitiveMemoryQualityClusterId Id,
+    Guid? ProjectId,
+    string ClusterHash,
+    CognitiveMemoryQualityClusterKeyFamily PrimaryKeyFamily,
+    CognitiveMemoryQualityClusterReadiness Readiness,
+    CognitiveMemoryAccessLevel AccessLevel,
+    CognitiveMemoryRiskLevel RiskLevel,
+    int KeyCount,
+    int MemberCount,
+    int SourceEvidenceCount,
+    int ContradictionCount,
+    DateTimeOffset UpdatedAtUtc,
+    IReadOnlyList<CognitiveMemoryClusterSearchKeyView> Keys,
+    IReadOnlyList<CognitiveMemoryClusterSearchMemberPreviewView> Members);
+
+public sealed record CognitiveMemoryClusterSearchKeyView(
+    CognitiveMemoryQualityClusterKeyFamily KeyFamily,
+    string Key,
+    string DisplayText);
+
+public sealed record CognitiveMemoryClusterSearchMemberPreviewView(
+    CognitiveMemoryQualityClusterMemberKind MemberKind,
+    Guid? MemoryRecordId,
+    Guid? SourceItemId,
+    Guid? EvidenceAnchorId,
+    CognitiveMemoryAccessLevel AccessLevel,
+    CognitiveMemoryRiskLevel RiskLevel,
+    CognitiveMemoryValidationState ValidationState,
+    CognitiveMemoryStabilityState StabilityState);
 
 public sealed record CognitiveMemoryDreamRunView(
     CognitiveMemoryDreamRunId Id,

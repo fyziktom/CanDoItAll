@@ -48,6 +48,7 @@ public partial class CognitiveMemoryPage
     internal int qualityMaxClusters = 25;
     internal int qualityMinMembers = 2;
     internal bool qualityPersistDream = true;
+    internal bool qualityAllowRestrictedContent;
     internal string qualityIdempotencyKey = string.Empty;
     internal string qualityOperationStatus = "Ready.";
     internal int qualityOperationProgress;
@@ -85,7 +86,8 @@ public partial class CognitiveMemoryPage
         => new(
             ProjectId,
             IncludeResolvedReviewItems: true,
-            PageRequests: BuildPageRequests());
+            PageRequests: BuildPageRequests(),
+            ClusterSearch: CreateClusterSearchFilter());
 
     internal static Guid? ResolveSelectedAggregateCandidateId(
         CognitiveMemoryReviewUiSnapshot snapshot,
@@ -369,10 +371,12 @@ public partial class CognitiveMemoryPage
         => new(
             ProjectId,
             OperatorActorId,
-            CognitiveMemoryAccessLevel.Project,
+            qualityAllowRestrictedContent
+                ? CognitiveMemoryAccessLevel.Restricted
+                : CognitiveMemoryAccessLevel.Project,
             new CognitiveMemoryPolicyProfileId("cognitive-memory-ui"),
             riskLevel,
-            AllowRestrictedContent: false);
+            AllowRestrictedContent: qualityAllowRestrictedContent);
 
     internal void ValidateQualityBudgets()
     {

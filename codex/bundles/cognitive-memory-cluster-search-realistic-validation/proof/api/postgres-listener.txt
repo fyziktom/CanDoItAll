@@ -1,0 +1,6 @@
+
+LocalAddress LocalPort OwningProcess ProcessName
+------------ --------- ------------- -----------
+::                5432         24624 postgres
+0.0.0.0           5432         24624 postgres
+

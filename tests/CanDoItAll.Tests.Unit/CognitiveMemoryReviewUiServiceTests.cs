@@ -88,6 +88,107 @@ public sealed class CognitiveMemoryReviewUiServiceTests
     }
 
     [Fact]
+    public async Task DecideReviewItemAsync_ApprovesDreamAggregateCandidate()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var now = fixture.Clock.GetUtcNow();
+        var reviewItemId = Guid.NewGuid();
+        var reviewToken = Guid.NewGuid();
+        var dreamRunId = Guid.NewGuid();
+        var clusterId = Guid.NewGuid();
+        var candidateId = Guid.NewGuid();
+        await using (var dbContext = fixture.Factory.CreateDbContext())
+        {
+            dbContext.Add(new CognitiveMemoryQualityClusterRecord
+            {
+                Id = clusterId,
+                ProjectId = projectId,
+                ClusterHash = CognitiveMemoryHash.FromUtf8("dream aggregate review cluster").Value,
+                PrimaryKeyFamily = CognitiveMemoryQualityClusterKeyFamily.SemanticTopic,
+                Readiness = CognitiveMemoryQualityClusterReadiness.Restricted,
+                AccessLevel = CognitiveMemoryAccessLevel.Restricted,
+                RiskLevel = CognitiveMemoryRiskLevel.High,
+                PolicyProfileId = "unit-test",
+                AlgorithmVersion = "unit-test",
+                KeyCount = 1,
+                MemberCount = 2,
+                SourceEvidenceCount = 2,
+                CreatedAtUtc = now,
+                UpdatedAtUtc = now,
+                ConcurrencyToken = Guid.NewGuid()
+            });
+            dbContext.Add(new CognitiveMemoryDreamRunRecord
+            {
+                Id = dreamRunId,
+                ProjectId = projectId,
+                Mode = CognitiveMemoryConsolidationMode.ProjectNightly,
+                TriggerKind = CognitiveMemoryConsolidationTriggerKind.Manual,
+                Status = CognitiveMemoryRunStatus.Succeeded,
+                IdempotencyKey = "dream-review-decision",
+                PolicyProfileId = "unit-test",
+                AlgorithmVersion = "unit-test",
+                StartedAtUtc = now,
+                CompletedAtUtc = now,
+                ConcurrencyToken = Guid.NewGuid()
+            });
+            dbContext.Add(new CognitiveMemoryReviewItemRecord
+            {
+                Id = reviewItemId,
+                ProjectId = projectId,
+                ReviewKind = CognitiveMemoryReviewKind.GeneratedMemory,
+                Status = CognitiveMemoryReviewStatus.Pending,
+                SubjectKind = CognitiveMemoryReviewSubjectKind.Run,
+                SubjectId = dreamRunId,
+                RiskLevel = CognitiveMemoryRiskLevel.High,
+                ReasonCode = "dream.aggregate.validation",
+                ReasonText = "Restricted aggregate requires approval.",
+                SourceEvidenceCount = 2,
+                CreatedAtUtc = now,
+                DecidedByActorId = string.Empty,
+                DecisionNotes = string.Empty,
+                ConcurrencyToken = reviewToken
+            });
+            dbContext.Add(new CognitiveMemoryDreamAggregateCandidateRecord
+            {
+                Id = candidateId,
+                DreamRunId = dreamRunId,
+                ClusterId = clusterId,
+                ProjectId = projectId,
+                Mode = CognitiveMemoryConsolidationMode.ProjectNightly,
+                Status = CognitiveMemoryDreamAggregateCandidateStatus.NeedsHumanReview,
+                Title = "ProjectNightly synthesis: Restricted source truth",
+                SummaryText = "Restricted source-backed aggregate.",
+                CanonicalText = "Restricted source-backed aggregate.",
+                AccessLevel = CognitiveMemoryAccessLevel.Restricted,
+                RiskLevel = CognitiveMemoryRiskLevel.High,
+                AlgorithmVersion = "unit-test",
+                PayloadHash = CognitiveMemoryHash.FromUtf8("dream aggregate payload").Value,
+                ReviewItemId = reviewItemId,
+                ClaimCount = 2,
+                SourceMapCount = 2,
+                CreatedAtUtc = now,
+                UpdatedAtUtc = now,
+                ConcurrencyToken = Guid.NewGuid()
+            });
+            await dbContext.SaveChangesAsync();
+        }
+
+        var service = CreateService(fixture);
+        var updated = await service.DecideReviewItemAsync(new CognitiveMemoryReviewDecisionRequest(
+            new CognitiveMemoryReviewItemId(reviewItemId),
+            CognitiveMemoryReviewDecisionKind.Approve,
+            "operator:test",
+            string.Empty,
+            reviewToken));
+
+        await using var assertionContext = fixture.Factory.CreateDbContext();
+        var candidate = await assertionContext.Set<CognitiveMemoryDreamAggregateCandidateRecord>().SingleAsync(item => item.Id == candidateId);
+        Assert.Equal(CognitiveMemoryReviewStatus.Approved, updated.Status);
+        Assert.Equal(CognitiveMemoryDreamAggregateCandidateStatus.Approved, candidate.Status);
+    }
+
+    [Fact]
     public async Task GetSnapshotAsync_ExcludesResolvedReviewItemsByDefault()
     {
         var fixture = CreateFixture();
@@ -136,6 +237,7 @@ public sealed class CognitiveMemoryReviewUiServiceTests
             ]));
 
         Assert.Equal(3, snapshot.Summary.QualityClusterCount);
+        Assert.Equal(3, snapshot.Summary.ClusterSearchResultCount);
         Assert.Equal(3, snapshot.Summary.DreamRunCount);
         Assert.Equal(3, snapshot.Summary.AggregateCandidateCount);
         Assert.Equal(3, snapshot.Summary.SynthesizedRecallCount);
@@ -160,6 +262,37 @@ public sealed class CognitiveMemoryReviewUiServiceTests
         var clampedClusterPage = clampedSnapshot.Paging.PageFor(CognitiveMemoryReviewUiCollectionKind.QualityClusters);
         Assert.Equal(1, clampedClusterPage.PageIndex);
         Assert.Single(clampedSnapshot.QualityClusters);
+    }
+
+    [Fact]
+    public async Task GetSnapshotAsync_FiltersClusterSearchWithServerPaging()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        await SeedOperatorEvidenceAsync(fixture, projectId);
+        await SeedQualityEvidenceAsync(fixture, projectId);
+        var service = CreateService(fixture);
+
+        var snapshot = await service.GetSnapshotAsync(new CognitiveMemoryReviewUiQuery(
+            projectId,
+            IncludeResolvedReviewItems: true,
+            PageRequests:
+            [
+                new(CognitiveMemoryReviewUiCollectionKind.ClusterSearchResults, 0, 1)
+            ],
+            ClusterSearch: new CognitiveMemoryClusterSearchFilter(
+                "validation",
+                CognitiveMemoryQualityClusterKeyFamily.SemanticTopic,
+                CognitiveMemoryQualityClusterReadiness.AggregateReady,
+                CognitiveMemoryRiskLevel.Low)));
+
+        Assert.Equal(1, snapshot.Summary.ClusterSearchResultCount);
+        var page = snapshot.Paging.PageFor(CognitiveMemoryReviewUiCollectionKind.ClusterSearchResults);
+        Assert.Equal(1, page.TotalCount);
+        Assert.Equal(1, page.PageSize);
+        var result = Assert.Single(snapshot.ClusterSearchResults);
+        Assert.Contains(result.Keys, key => key.DisplayText == "Validation dreaming cluster");
+        Assert.Contains(result.Members, member => member.MemberKind == CognitiveMemoryQualityClusterMemberKind.MemoryRecord);
     }
 
     private static async Task<Guid> SeedOperatorEvidenceAsync(TestFixture fixture, Guid projectId)
@@ -640,17 +773,32 @@ public sealed class CognitiveMemoryReviewUiServiceTests
             .Where(trace => trace.ProjectId == projectId)
             .Select(trace => trace.Id)
             .FirstAsync();
+        var memoryRecordId = await dbContext.Set<CognitiveMemoryRecord>()
+            .Where(record => record.ProjectId == projectId)
+            .Select(record => record.Id)
+            .FirstAsync();
+        var sourceItemId = await dbContext.Set<CognitiveMemorySourceItemRecord>()
+            .Where(item => item.ProjectId == projectId)
+            .Select(item => item.Id)
+            .FirstAsync();
+        var evidenceAnchorId = await dbContext.Set<CognitiveMemoryEvidenceAnchorRecord>()
+            .Where(anchor => anchor.ProjectId == projectId)
+            .Select(anchor => anchor.Id)
+            .FirstAsync();
 
         for (var index = 0; index < 3; index++)
         {
             var clusterId = Guid.NewGuid();
             var dreamRunId = Guid.NewGuid();
+            var primaryKeyFamily = index == 2
+                ? CognitiveMemoryQualityClusterKeyFamily.ProjectScope
+                : CognitiveMemoryQualityClusterKeyFamily.SemanticTopic;
             dbContext.Add(new CognitiveMemoryQualityClusterRecord
             {
                 Id = clusterId,
                 ProjectId = projectId,
                 ClusterHash = CognitiveMemoryHash.FromUtf8($"cluster-{index}").Value,
-                PrimaryKeyFamily = CognitiveMemoryQualityClusterKeyFamily.SemanticTopic,
+                PrimaryKeyFamily = primaryKeyFamily,
                 Readiness = index == 0
                     ? CognitiveMemoryQualityClusterReadiness.NeedsHumanReview
                     : CognitiveMemoryQualityClusterReadiness.AggregateReady,
@@ -665,6 +813,66 @@ public sealed class CognitiveMemoryReviewUiServiceTests
                 CreatedAtUtc = now.AddMinutes(index),
                 UpdatedAtUtc = now.AddMinutes(index),
                 ConcurrencyToken = Guid.NewGuid()
+            });
+            dbContext.Add(new CognitiveMemoryQualityClusterKeyRecord
+            {
+                Id = Guid.NewGuid(),
+                ClusterId = clusterId,
+                ProjectId = projectId,
+                KeyFamily = primaryKeyFamily,
+                Key = index switch
+                {
+                    0 => "topic:rollback",
+                    1 => "topic:validation-dreaming",
+                    _ => "project:source-truth-transfer"
+                },
+                DisplayText = index switch
+                {
+                    0 => "Rollback high risk cluster",
+                    1 => "Validation dreaming cluster",
+                    _ => "Project transfer source truth"
+                },
+                CreatedAtUtc = now.AddMinutes(index)
+            });
+            dbContext.Add(new CognitiveMemoryQualityClusterKeyRecord
+            {
+                Id = Guid.NewGuid(),
+                ClusterId = clusterId,
+                ProjectId = projectId,
+                KeyFamily = CognitiveMemoryQualityClusterKeyFamily.TaskIntent,
+                Key = $"task:intent-{index}",
+                DisplayText = $"Approval probe intent {index}",
+                CreatedAtUtc = now.AddMinutes(index)
+            });
+            dbContext.Add(new CognitiveMemoryQualityClusterMemberRecord
+            {
+                Id = Guid.NewGuid(),
+                ClusterId = clusterId,
+                ProjectId = projectId,
+                MemberKind = CognitiveMemoryQualityClusterMemberKind.MemoryRecord,
+                MemoryRecordId = memoryRecordId,
+                EvidenceAnchorId = evidenceAnchorId,
+                AccessLevel = CognitiveMemoryAccessLevel.Project,
+                RiskLevel = index == 0 ? CognitiveMemoryRiskLevel.High : CognitiveMemoryRiskLevel.Low,
+                ValidationState = index == 0
+                    ? CognitiveMemoryValidationState.NeedsHumanReview
+                    : CognitiveMemoryValidationState.Approved,
+                StabilityState = CognitiveMemoryStabilityState.Active,
+                CreatedAtUtc = now.AddMinutes(index)
+            });
+            dbContext.Add(new CognitiveMemoryQualityClusterMemberRecord
+            {
+                Id = Guid.NewGuid(),
+                ClusterId = clusterId,
+                ProjectId = projectId,
+                MemberKind = CognitiveMemoryQualityClusterMemberKind.SourceItem,
+                SourceItemId = sourceItemId,
+                EvidenceAnchorId = evidenceAnchorId,
+                AccessLevel = CognitiveMemoryAccessLevel.Project,
+                RiskLevel = index == 0 ? CognitiveMemoryRiskLevel.High : CognitiveMemoryRiskLevel.Low,
+                ValidationState = CognitiveMemoryValidationState.Approved,
+                StabilityState = CognitiveMemoryStabilityState.Active,
+                CreatedAtUtc = now.AddMinutes(index)
             });
             dbContext.Add(new CognitiveMemoryDreamRunRecord
             {

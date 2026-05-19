@@ -46,7 +46,11 @@ internal static partial class CognitiveMemoryApi
                     request.ProjectId,
                     ParseEnum(request.TriggerKind, CognitiveMemoryAutomationTriggerKind.Manual, nameof(request.TriggerKind)),
                     NormalizeActorId(request.ActorId),
-                    NormalizeTake(request.Take, 50, 500)),
+                    NormalizeTake(request.Take, 50, 500),
+                    NormalizeOptionalText(request.CycleId),
+                    NormalizeTake(request.MaxCycles, 1, 25),
+                    request.ContinueUntilIdle,
+                    BuildPolicyContext(request.ProjectId, request.Policy)),
                 cancellationToken)))
             .WithName(EndpointName("RunCognitiveMemoryScheduledAutomation", surface));
 

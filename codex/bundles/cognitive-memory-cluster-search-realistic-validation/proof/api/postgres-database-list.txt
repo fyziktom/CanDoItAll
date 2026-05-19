@@ -1,0 +1,6 @@
+ candoitall | candoitall | UTF8     | libc            | en_US.utf8 | en_US.utf8 |            |           | 
+ postgres   | candoitall | UTF8     | libc            | en_US.utf8 | en_US.utf8 |            |           | 
+ template0  | candoitall | UTF8     | libc            | en_US.utf8 | en_US.utf8 |            |           | =c/candoitall            +
+            |            |          |                 |            |            |            |           | candoitall=CTc/candoitall
+ template1  | candoitall | UTF8     | libc            | en_US.utf8 | en_US.utf8 |            |           | =c/candoitall            +
+            |            |          |                 |            |            |            |           | candoitall=CTc/candoitall

@@ -1,0 +1,16 @@
+{
+  "runId": {
+    "value": "6dc29fa2-7b38-4a34-9cf7-b374d4467ccb"
+  },
+  "status": 2,
+  "sourceItemsScanned": 240,
+  "candidatesCreated": 80,
+  "mutationCommandsSubmitted": 80,
+  "reviewItemsCreated": 80,
+  "projectionInvalidations": 0,
+  "nextCursor": "812336f0-1d78-47c5-9df1-5b6865494395",
+  "reportHash": "6ddc3e5c3bf1ba5b43e32062599d85b9378741ba8b77c98ff65b90e6b625102d",
+  "warnings": [
+    "Consolidation candidate budget stopped source processing before all source items were evaluated."
+  ]
+}

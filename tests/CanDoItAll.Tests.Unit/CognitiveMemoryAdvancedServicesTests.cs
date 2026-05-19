@@ -41,6 +41,69 @@ public sealed class CognitiveMemoryAdvancedServicesTests
     }
 
     [Fact]
+    public async Task ProbeAsk_UsesStoredPolicyAndProjectionDefaultsWithAskOverrides()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var recall = new FakeRecallOrchestrator(projectId);
+        var calibration = new CognitiveMemoryCalibrationHealthService(fixture.Factory, fixture.ScoreDriver, fixture.Clock);
+        var service = new CognitiveMemoryProbeService(
+            fixture.Factory,
+            recall,
+            fixture.ScoreDriver,
+            calibration,
+            fixture.Clock);
+        var session = await service.StartAsync(new CognitiveMemoryProbeStartRequest(
+            projectId,
+            "Restricted vector probe",
+            Policy(
+                projectId,
+                CognitiveMemoryRiskLevel.High,
+                allowRestrictedContent: true,
+                accessLevel: CognitiveMemoryAccessLevel.Restricted),
+            ProjectionCollectionName: new CognitiveMemoryProjectionCollectionName("session-collection"),
+            ProjectionProfileId: new CognitiveMemoryProjectionProfileId("session-projection"),
+            EmbeddingProfileId: new CognitiveMemoryEmbeddingProfileId("session-embedding")));
+
+        await service.AskAsync(new CognitiveMemoryProbeAskRequest(
+            session.Id,
+            "Which restricted source supports the deployment decision?",
+            CognitiveMemoryRecallIntentKind.SourceLookup,
+            new CognitiveMemoryRecallBudget(10, 1, 5, 5, 5, 4000, 64000),
+            Metadata: new Dictionary<string, string> { ["probe"] = "session-defaults" }));
+        await service.AskAsync(new CognitiveMemoryProbeAskRequest(
+            session.Id,
+            "Which override source supports the deployment decision?",
+            CognitiveMemoryRecallIntentKind.SourceLookup,
+            new CognitiveMemoryRecallBudget(10, 1, 5, 5, 5, 4000, 64000),
+            ProjectionCollectionName: new CognitiveMemoryProjectionCollectionName("ask-collection"),
+            ProjectionProfileId: new CognitiveMemoryProjectionProfileId("ask-projection"),
+            EmbeddingProfileId: new CognitiveMemoryEmbeddingProfileId("ask-embedding")));
+
+        Assert.Equal(2, recall.Requests.Count);
+        var first = recall.Requests[0];
+        Assert.Equal(CognitiveMemoryAccessLevel.Restricted, first.PolicyContext.AccessLevel);
+        Assert.Equal(CognitiveMemoryRiskLevel.High, first.PolicyContext.RiskLevel);
+        Assert.True(first.PolicyContext.AllowRestrictedContent);
+        Assert.Equal("session-collection", first.ProjectionCollectionName?.Value);
+        Assert.Equal("session-projection", first.ProjectionProfileId?.Value);
+        Assert.Equal("session-embedding", first.EmbeddingProfileId?.Value);
+
+        var second = recall.Requests[1];
+        Assert.Equal(CognitiveMemoryAccessLevel.Restricted, second.PolicyContext.AccessLevel);
+        Assert.Equal("ask-collection", second.ProjectionCollectionName?.Value);
+        Assert.Equal("ask-projection", second.ProjectionProfileId?.Value);
+        Assert.Equal("ask-embedding", second.EmbeddingProfileId?.Value);
+
+        await using var dbContext = fixture.Factory.CreateDbContext();
+        var persisted = await dbContext.Set<CognitiveMemoryProbeSessionRecord>().SingleAsync(item => item.Id == session.Id);
+        Assert.Equal(CognitiveMemoryAccessLevel.Restricted, persisted.AccessLevel);
+        Assert.Equal(CognitiveMemoryRiskLevel.High, persisted.RiskLevel);
+        Assert.True(persisted.AllowRestrictedContent);
+        Assert.Equal("session-collection", persisted.ProjectionCollectionName);
+    }
+
+    [Fact]
     public async Task ProbeFeedback_CreatesReviewRegressionAndCalibrationWithoutMutatingTruth()
     {
         var fixture = CreateFixture();
@@ -690,11 +753,12 @@ public sealed class CognitiveMemoryAdvancedServicesTests
     private static CognitiveMemoryPolicyContext Policy(
         Guid? projectId,
         CognitiveMemoryRiskLevel riskLevel = CognitiveMemoryRiskLevel.Low,
-        bool allowRestrictedContent = false)
+        bool allowRestrictedContent = false,
+        CognitiveMemoryAccessLevel accessLevel = CognitiveMemoryAccessLevel.Project)
         => new(
             projectId,
             "agent:test",
-            CognitiveMemoryAccessLevel.Project,
+            accessLevel,
             new CognitiveMemoryPolicyProfileId("policy:test"),
             riskLevel,
             allowRestrictedContent);
@@ -730,10 +794,13 @@ public sealed class CognitiveMemoryAdvancedServicesTests
 
     private sealed class FakeRecallOrchestrator(Guid projectId) : ICognitiveMemoryRecallOrchestrator
     {
+        public List<CognitiveMemoryRecallRequest> Requests { get; } = [];
+
         public ValueTask<CognitiveMemoryRecallResult> RecallAsync(
             CognitiveMemoryRecallRequest request,
             CancellationToken cancellationToken = default)
         {
+            Requests.Add(request);
             var sourceRef = new CognitiveMemoryRecallSourceRef(
                 new CognitiveMemoryRecordId(Guid.NewGuid()),
                 new CognitiveMemorySourceItemId(Guid.NewGuid()),
