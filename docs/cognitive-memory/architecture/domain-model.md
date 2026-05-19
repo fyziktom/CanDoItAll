@@ -126,6 +126,18 @@ classDiagram
         DeleteBySourceAsync(request)
     }
 
+    class ICognitiveMemoryProjectionRebuildService {
+        RebuildAsync(request)
+    }
+
+    class ICognitiveMemoryScheduledAutomationRunner {
+        RunAsync(request)
+    }
+
+    class CognitiveMemoryAgentContextPackage {
+        FromRecallResult(result)
+    }
+
     class CognitiveMemoryAgentContextContributor {
         ContributeAsync(request)
     }
@@ -140,7 +152,13 @@ classDiagram
     ICognitiveMemoryRecallOrchestrator --> ICognitiveMemoryScoreGeometryDriver
     ICognitiveMemoryRecallOrchestrator --> ICognitiveMemorySignalLedger
     ICognitiveMemoryRecallOrchestrator --> ICognitiveMemoryProjectionAdapter
+    ICognitiveMemoryProjectionRebuildService --> ICognitiveMemoryProjectionAdapter
+    ICognitiveMemoryProjectionRebuildService --> CognitiveMemoryRecord
+    ICognitiveMemoryProjectionRebuildService --> CognitiveMemoryClaimRecord
+    ICognitiveMemoryScheduledAutomationRunner --> ICognitiveMemorySourceIngestionService
+    ICognitiveMemoryScheduledAutomationRunner --> ICognitiveMemoryConsolidationEngine
     CognitiveMemoryAgentContextContributor --> ICognitiveMemoryRecallOrchestrator
+    CognitiveMemoryAgentContextContributor --> CognitiveMemoryAgentContextPackage
 ```
 
 ## Important Model Boundaries

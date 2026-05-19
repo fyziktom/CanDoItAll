@@ -1,6 +1,6 @@
 # Cognitive Memory API
 
-The Cognitive Memory HTTP API is hosted by `CanDoItAll.Web` under `/api/cognitive-memory`. The current implementation maps 31 endpoints in `src/CanDoItAll.Web/Api/CognitiveMemoryApi.cs`.
+The Cognitive Memory HTTP API is hosted by `CanDoItAll.Web` under `/api/cognitive-memory`. The current implementation maps 33 endpoints across grouped files named `src/CanDoItAll.Web/Api/CognitiveMemoryApi*.cs`.
 
 ## Status And Database Profile
 
@@ -43,6 +43,17 @@ Supported external extraction paths include text-like files, `.docx`, `.pptx`, `
 | `POST` | `/api/cognitive-memory/recall` | Builds and persists a recall context pack and trace. |
 | `POST` | `/api/cognitive-memory/review-items/{reviewItemId}/decisions` | Applies an operator review decision. |
 
+## Operations
+
+| Method | Route | Purpose |
+| --- | --- | --- |
+| `POST` | `/api/cognitive-memory/projections/rebuild` | Rebuilds stale or failed projection records from durable memory records and source/evidence links. |
+| `POST` | `/api/cognitive-memory/automation/run` | Executes configured automation ingestion/consolidation when the supplied trigger is allowed by schedule settings. |
+
+`/automation/run` is an explicit operational command. It honors persisted schedule settings, but it is not a hosted background scheduler by itself. Manual trigger is always allowed; nightly, idle-timeout, and scheduled-moment triggers run only when the persisted schedule mode matches.
+
+`/projections/rebuild` rebuilds projection state from relational memory. Qdrant/RAG remains a projection target, not authoritative memory.
+
 ## Probing And Self-Regulation
 
 | Method | Route | Purpose |
@@ -72,5 +83,5 @@ Supported external extraction paths include text-like files, `.docx`, `.pptx`, `
 - Use `GET /api/access/status` before API automation to confirm whether bearer tokens are required.
 - Prefer PostgreSQL profiles for realistic multi-cycle memory validation.
 - Do not treat `/snapshot` as the only proof. For memory quality, inspect recall traces, source refs, review decisions, and source truth.
-- Keep agent-facing context separate from diagnostic candidate payloads when adding new API DTOs.
+- Keep agent-facing context separate from diagnostic candidate payloads when adding new API DTOs. MAF now uses an agent-facing `CognitiveMemoryAgentContextPackage`.
 

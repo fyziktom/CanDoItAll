@@ -4,9 +4,9 @@ This section is the current source-grounded documentation for the CanDoItAll Cog
 
 ## Current Stage
 
-Cognitive Memory is at **validation-grade alpha** as of 2026-05-19.
+Cognitive Memory is at **P0-hardened validation-grade alpha** as of 2026-05-19.
 
-That is deliberately not beta. The durable schema, module registration, API surface, operator UI, source ingestion, consolidation, review approval, recall traces, MAF context contribution, probing, self-regulation, and validation coverage exist. The remaining gaps are hardening and maintainability work: oversized services, projection rebuild orchestration, scheduled automation execution, sharper API DTO boundaries, production observability, and clearer behavior when optional semantic/vector providers are unavailable.
+That is deliberately not beta. The durable schema, module registration, endpoint-grouped API surface, operator UI, source ingestion, consolidation, review approval, recall traces, explicit projection rebuild, explicit automation execution, MAF context contribution policy, probing, self-regulation, and validation coverage exist. The remaining gaps are hardening and maintainability work: Blazor child-component decomposition, hosted scheduler decision, API versioning/examples, provider-backed projection proof, production observability, and clearer behavior across every optional semantic/vector consumer.
 
 ## Start Here
 
@@ -23,7 +23,7 @@ That is deliberately not beta. The durable schema, module registration, API surf
 ## Primary Source References
 
 - `src/CanDoItAll.Modules.CognitiveMemory`
-- `src/CanDoItAll.Web/Api/CognitiveMemoryApi.cs`
+- `src/CanDoItAll.Web/Api/CognitiveMemoryApi*.cs`
 - `src/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs`
 - `src/CanDoItAll.Composition/ModuleAssemblies.cs`
 - `src/CanDoItAll.Infrastructure/Persistence/AppDbContext.cs`
@@ -41,5 +41,7 @@ The safe mental model is:
 3. Consolidation creates source-backed candidates and governed mutation commands.
 4. Approved or machine-generated candidates materialize canonical memory records, claims, source links, and evidence links.
 5. Recall combines lexical, optional vector projection, workspace, signal, graph, and source-detail channels into a persisted context pack and trace.
-6. UI, API, MAF, probes, answer gates, and self-regulation read the durable model and create reviewable signals, not uncontrolled truth mutations.
+6. Projection rebuild updates rebuildable provider projection rows from durable memory; it does not create canonical truth.
+7. Explicit automation runs configured ingestion/consolidation through existing services; it is not a hidden daemon.
+8. UI, API, MAF, probes, answer gates, and self-regulation read the durable model and create reviewable signals, not uncontrolled truth mutations.
 

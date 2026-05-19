@@ -11,37 +11,48 @@
 | Consolidation | Alpha | Candidates, review rows, mutation commands, and candidate application exist. Extraction is still mostly deterministic/rule-based. |
 | Recall | Alpha complete | Lexical, optional vector, workspace, signal, graph, and source-detail channels feed persisted traces/context packs. |
 | Review UI | Alpha complete | Operator snapshot and decision path exist; approvals can materialize canonical memory. |
-| API | Alpha | Broad Minimal API exists and was validated, but contract shape still needs stabilization. |
-| MAF context | Alpha | Project-scoped context contribution exists with provider access policy. |
+| API | P0 alpha | Broad Minimal API exists, is split into endpoint groups/DTOs, and was validated. Contract versioning still needs stabilization. |
+| MAF context | P0 alpha | Project-scoped context contribution exists with provider access policy, agent-facing context packaging, and explicit fail/skip behavior for process-critical modes. |
 | Probes/self-regulation | Alpha | Probe sessions, feedback, calibration, answer gate, professor review, learning proposals, cross-project, and distributed records exist. |
 | LB4U/live validation | Done for alpha | Previous bundle evidence validates realistic staged data with PostgreSQL and provider settings. |
+| Projection rebuild | P0 alpha | Stale/failed projection records can be rebuilt explicitly through `ICognitiveMemoryProjectionRebuildService` and `/api/cognitive-memory/projections/rebuild`. |
+| Scheduled automation execution | P0 alpha | `ICognitiveMemoryScheduledAutomationRunner` honors schedule mode and runs configured ingestion/consolidation through `/api/cognitive-memory/automation/run`. |
+| Maintainability split | P0 partial | Advanced services, recall orchestration, API endpoint groups, DTOs, and page rendering helpers were split. Razor markup and several large helper files remain. |
 
 ## Next Steps To Beta
 
-### P0 - Make The Alpha Maintainable
+### P0 - Completed In This Pass
 
-1. Split oversized services by use case:
-   - `CognitiveMemoryRecallServices.cs` into candidate loading, vector channel, graph expansion, scoring, context rendering, and persistence.
-   - `CognitiveMemoryAdvancedServices.cs` into probe, self-model, calibration, self-regulation, professor review, answer gate, learning, cross-project, and distributed services/files.
-   - `CognitiveMemoryPage.razor` and `.razor.cs` into focused child components backed by services.
-   - `CognitiveMemoryApi.cs` into endpoint groups and DTO files.
-2. Add a projection rebuild worker or explicit API command:
-   - consume `CognitiveMemoryProjectionRecord.RebuildRequired`;
-   - call projection lifecycle service;
-   - persist success/failure and provider traces;
-   - prove Qdrant/RAG points are rebuildable from durable memory.
-3. Implement real scheduled automation:
-   - respect `CognitiveMemoryAutomationScheduleMode`;
-   - trigger source ingestion and consolidation;
-   - log run records and failures;
-   - prove no hidden background mutation of canonical truth.
-4. Separate agent context DTOs from diagnostic recall DTOs.
-5. Make MAF memory contribution fail/skip policy explicit for process-critical agent runs.
+1. Split oversized backend/API surfaces:
+   - `CognitiveMemoryAdvancedServices.cs` was split into focused advanced service files.
+   - `CognitiveMemoryRecallServices.cs` was split into partial files for channels, loading, scoring, evaluation, context-pack building, persistence, and mapping.
+   - `CognitiveMemoryApi.cs` was split into endpoint groups and `CognitiveMemoryApiDtos.cs`.
+   - `CognitiveMemoryPage.razor.cs` had rendering helpers extracted into `CognitiveMemoryPage.Rendering.cs`.
+2. Added explicit projection rebuild:
+   - consumes `CognitiveMemoryProjectionRecord.RebuildRequired`, `RebuildRequired` status, and failed projection rows;
+   - rebuilds from durable memory records, source links, evidence anchors, claims, and context frames;
+   - calls the projection lifecycle service and persists item success/failure state;
+   - exposes `/api/cognitive-memory/projections/rebuild`.
+3. Added explicit scheduled automation execution:
+   - respects `CognitiveMemoryAutomationScheduleMode`;
+   - triggers configured source ingestion and consolidation;
+   - returns run summary and warnings;
+   - exposes `/api/cognitive-memory/automation/run`;
+   - does not introduce hidden background mutation.
+4. Separated MAF agent context from diagnostic recall payloads with `CognitiveMemoryAgentContextPackage`.
+5. Made MAF process-critical memory contribution fail predictably for governed process automation, auto-approved non-interactive runs, and A2A endpoint mode.
+
+### P0 Residuals
+
+1. Split `CognitiveMemoryPage.razor` into focused child components. This was not done in P0 because only render-helper extraction was needed to keep the implementation safe and non-behavioral.
+2. Decide whether Cognitive Memory needs a hosted scheduler. The current state is explicit/API-triggered automation; that is safer than silent background mutation, but it is not an autonomous worker.
+3. Continue reducing large residual files such as `CognitiveMemoryPage.razor.cs`, `CognitiveMemoryRecallChannels.cs`, `CognitiveMemoryRecallMappingAndTypes.cs`, and `CognitiveMemoryReviewUiService`.
+4. Add provider-backed projection integration proof against the real RAG/Qdrant path.
 
 ### P1 - Stabilize Product Behavior
 
 1. Version the HTTP API contract and add examples for common flows.
-2. Add projection, scheduler, and provider-failure integration tests.
+2. Add projection provider, scheduler/hosted-worker if introduced, and provider-failure integration tests.
 3. Add retention/cleanup policy for traces, candidates, probe turns, and distributed jobs.
 4. Add operator audit views for mutation commands, claim/evidence changes, and projection rebuild failures.
 5. Harden external source ingestion with clearer size limits, extraction error details, and secret/sensitive content policy.
@@ -59,9 +70,9 @@
 
 Cognitive Memory should not be called beta until all of these are true:
 
-- P0 refactors are complete and targeted tests still pass.
+- Remaining P0 residuals are closed or consciously moved to a beta hardening issue with owner and proof.
 - Projection rebuild is an ordinary product path, not only a lifecycle service.
-- Automation schedule settings cause observable, test-covered work.
+- Automation schedule settings cause observable, test-covered work, and the product decision about explicit runner versus hosted background worker is closed.
 - Agent-facing context output is separate from diagnostic trace payloads.
 - PostgreSQL validation has a repeatable script/runbook.
 - UI pages have browser proof after component splits.

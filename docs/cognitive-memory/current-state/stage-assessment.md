@@ -2,9 +2,9 @@
 
 ## Decision
 
-The honest stage is **validation-grade alpha**.
+The honest stage after the P0 pass is **P0-hardened validation-grade alpha**.
 
-It is past a prototype: the module has durable EF models, migrations for SQLite and PostgreSQL, production-shaped services, a large HTTP API, a Blazor operator route, source ingestion, consolidation, recall, review approval, probes, self-regulation, and targeted tests. It is not beta because several important surfaces still behave like an implementation checkpoint rather than a stable product contract.
+It is past a prototype: the module has durable EF models, migrations for SQLite and PostgreSQL, production-shaped services, an endpoint-grouped HTTP API, a Blazor operator route, source ingestion, consolidation, recall, review approval, projection rebuild, explicit automation execution, probes, self-regulation, MAF context contribution policy, and targeted tests. It is still not beta because the API is not versioned, background scheduling is explicit/API-triggered rather than hosted, and the Blazor surface still needs a real component split plus browser proof.
 
 ## Stage Matrix
 
@@ -16,14 +16,14 @@ It is past a prototype: the module has durable EF models, migrations for SQLite 
 | Consolidation | Alpha | `CognitiveMemoryConsolidationEngine` creates candidates, mutation commands, review rows, and can materialize memory records through the candidate applicator. | Current fact extraction is deterministic/rule-based; model execution profiles are settings, not a fully wired model-assisted consolidation pipeline. |
 | Human review | Alpha complete | Review decisions apply or reject consolidation candidates with concurrency checking. | Need audit UX and bulk review ergonomics before production use. |
 | Recall | Alpha complete | `CognitiveMemoryRecallOrchestrator` persists traces, candidates, context packs, source refs, and warnings. | Vector channel is optional and skipped/unavailable unless projection collection/profile/embedding profile and provider support are present. |
-| Projection/RAG | Alpha boundary | RAG adapter and projection lifecycle exist; consolidation marks stale projections. | No complete rebuild worker/API loop is wired as the normal product path. Qdrant remains rebuildable projection only. |
-| MAF context integration | Alpha | `CognitiveMemoryAgentContextContributor` contributes recall context when provider policy and project scope allow it. | It skips on unavailable memory; process-critical modes may need explicit fail/skip policy instead of generic optional context behavior. |
-| Operator UI | Alpha | `/cognitive-memory` and `/memory` render dashboard, probe workbench, settings, sources, memory, review queue, traces, health, self-regulation, and scale tabs. | Large page/code-behind should be split; more browser proof is needed after UI refactors. |
-| API surface | Alpha | `CognitiveMemoryApi` exposes 31 endpoints under `/api/cognitive-memory`. | DTOs are large and co-located; public contract needs versioning, stricter OpenAPI examples, and agent-output DTO separation. |
+| Projection/RAG | P0 alpha | RAG adapter, projection lifecycle, and `ICognitiveMemoryProjectionRebuildService` exist. `/api/cognitive-memory/projections/rebuild` consumes stale/failed projection records and rebuilds from durable memory inputs. | Qdrant remains a rebuildable projection only. Provider-backed integration proof and operational failure UI are still needed before beta. |
+| MAF context integration | P0 alpha | `CognitiveMemoryAgentContextContributor` now renders an agent-facing context package and explicitly fails process-critical modes when required memory context is unavailable. | Need broader workflow/A2A integration tests and API contract documentation for agent-safe context. |
+| Operator UI | Alpha | `/cognitive-memory` and `/memory` render dashboard, probe workbench, settings, sources, memory, review queue, traces, health, self-regulation, and scale tabs. Rendering helpers were split from the code-behind. | Razor markup remains a large file. Focused child components and browser proof are still required after UI behavior changes. |
+| API surface | P0 alpha | The API is split into endpoint groups and DTO files and exposes 33 endpoints under `/api/cognitive-memory`. | Public contract needs versioning, stricter OpenAPI examples, and explicit agent-output DTO contract documentation. |
 | Probing and self-regulation | Alpha | Probe sessions, feedback, self-model, calibration, answer gate, professor review, learning proposals, cross-project promotions, and distributed jobs are represented. | Some behaviors are policy/control ledgers rather than mature workflow automation. |
-| Automation scheduling | Settings only | `CognitiveMemoryAutomationSettings` persists schedule and ingest/consolidate flags. | No dedicated cognitive-memory background scheduler was found. Manual/API execution is the actual path today. |
-| Validation | Strong alpha | 33 Cognitive Memory related test files exist across unit, integration, component, Playwright, and support projects. Prior bundles record 117 unit, 25 integration, 1 component, and build passing after repairs. | Add end-to-end scheduled automation, projection rebuild, and provider-failure tests. |
-| Maintainability | Needs refactor | Largest files: recall service 2861 lines, advanced services 2370, page code-behind 1642, Razor page 1378, review UI service 1035. | Split by responsibility before adding new behavior. |
+| Automation scheduling | P0 explicit runner | `ICognitiveMemoryScheduledAutomationRunner` reads schedule settings and runs enabled ingestion/consolidation through `/api/cognitive-memory/automation/run`. | No dedicated hosted background scheduler was added. Scheduled moments are observable when explicitly triggered, not autonomous daemon work. |
+| Validation | Strong alpha | Current P0 proof: 135 Cognitive Memory/agent-context unit tests, 25 Cognitive Memory integration tests, 1 Cognitive Memory component test, and web build passed. | Add provider-backed projection integration, hosted scheduler tests if a worker is introduced, API contract tests, and browser proof after component splits. |
+| Maintainability | Improved P0 alpha | Advanced services, recall orchestration, Minimal API mapping, DTOs, and page rendering helpers were split by responsibility. | `CognitiveMemoryPage.razor`, `CognitiveMemoryPage.razor.cs`, recall channel/mapping files, and review UI still need further focused decomposition. |
 
 ## What Is Actually Done
 
@@ -36,24 +36,28 @@ It is past a prototype: the module has durable EF models, migrations for SQLite 
 - The Blazor page uses the project component library wrappers such as `PageScaffold`, `PageHeader`, `Tabs`, `SurfaceCard`, `Button`, and `StatusBadge`.
 - API access is hosted by the web app under `/api/cognitive-memory`.
 - Agent model access policy exists and can limit Cognitive Memory context contribution by provider profile or local/remote policy.
+- Stale and failed projection records can be rebuilt explicitly through a service/API path from durable memory records, claims, evidence anchors, and source links.
+- Automation settings now have an explicit runner/API path that honors schedule mode and produces ingestion/consolidation summary output.
+- Process-critical MAF execution modes now fail predictably when memory context is required but unavailable.
 
 ## What Is Not Yet True
 
-- Cognitive Memory is not an autonomous memory daemon. Scheduled settings exist, but a dedicated scheduler/worker was not found.
+- Cognitive Memory is not an autonomous memory daemon. Scheduled settings and an explicit runner exist, but a dedicated hosted scheduler/worker is still absent.
 - Qdrant is not authoritative memory. It is an optional projection target behind `IRagDriver`.
 - Model execution profiles do not by themselves mean every cognitive-memory task calls a chat model. Current consolidation fact extraction is rule-based and source-backed.
 - Vector recall is not guaranteed. It requires projection collection/profile/embedding profile inputs and a configured provider with typed filters.
 - Cross-project and distributed compute are represented, but they should be treated as alpha control surfaces until exercised by product workflows.
 - The API is useful for local agents, but it is not yet a versioned stable external contract.
+- The P0 split improved service shape, but it did not complete the full Blazor child-component decomposition.
 
 ## Senior Risks
 
-- **Service size risk:** recall, advanced services, review UI, settings, ingestion, and consolidation are too large. New features will keep raising regression cost until they are split around stable use cases.
-- **Projection gap risk:** projection lifecycle and RAG adapters exist, but invalidation without an obvious rebuild operation creates stale-vector risk.
-- **Automation truth risk:** UI/settings labels imply scheduled automation, while the actual execution path is still manual/API driven.
-- **Provider semantics risk:** unavailable semantic/vector providers degrade to skipped or unavailable channels. That is acceptable for local alpha smoke, but process-critical agent memory should make skip/fail policy explicit.
-- **API shape risk:** endpoint DTOs live in one large `CognitiveMemoryApi.cs` file. This is workable for alpha but brittle for long-term API evolution.
-- **Diagnostic payload risk:** recall returns rich trace/candidate data. Agent-facing context should stay separated from diagnostic payloads so callers cannot accidentally treat diagnostics as answer context.
+- **UI size risk:** the page markup and code-behind remain large. Browser-facing refactors still need focused component extraction and proof.
+- **Projection provider risk:** rebuild orchestration exists, but provider-backed Qdrant/RAG integration and failure UX still need beta-grade validation.
+- **Automation truth risk:** schedule settings are now executable through an explicit API runner, but there is still no autonomous background scheduler.
+- **Provider semantics risk:** recall can still degrade when vector/semantic providers are unavailable. Process-critical MAF context is stricter now, but broader workflow callers need the same clarity.
+- **API contract risk:** endpoint grouping improved maintainability, but the contract is still unversioned.
+- **Diagnostic payload risk:** recall returns rich trace/candidate data. Agent-facing context now has a separate package, but future endpoints must preserve that separation.
 
 ## Validation Evidence
 
@@ -65,12 +69,12 @@ The current source tree contains:
 - 1 Playwright file for Cognitive Memory review UI.
 - 2 support/fake files for Cognitive Memory tests.
 
-Historical bundle evidence records the latest full Cognitive Memory validation as:
+Current P0 validation evidence records:
 
-- Unit Cognitive Memory tests: 117/117 passed.
+- Unit Cognitive Memory and agent-context tests: 135/135 passed.
 - Integration Cognitive Memory tests: 25/25 passed.
 - Component Cognitive Memory tests: 1/1 passed.
-- Serial solution build passed with unrelated existing `Google.Protobuf` warnings.
+- Web project build: passed with 0 warnings and 0 errors.
 
 Use [validation and testing](../operations/validation-and-testing.md) for the current commands.
 

@@ -27,7 +27,10 @@ public sealed class CognitiveMemoryAgentContextContributor(
         var accessDecision = CognitiveMemoryModelAccessPolicy.Evaluate(settings, request.Provider);
         if (!accessDecision.IsAllowed)
         {
-            return AgentContextContributionResult.Skipped(BuildModelAccessTraceMetadata(
+            return SkipOrFail(
+                request,
+                "Cognitive Memory model access policy denied the active provider.",
+                BuildModelAccessTraceMetadata(
                 request.Provider,
                 settings,
                 accessDecision));
@@ -35,7 +38,7 @@ public sealed class CognitiveMemoryAgentContextContributor(
 
         if (!TryResolveProjectId(request, out var projectId))
         {
-            return AgentContextContributionResult.Skipped(new Dictionary<string, string>
+            return SkipOrFail(request, "Cognitive Memory context requires a project scope.", new Dictionary<string, string>
             {
                 ["reason"] = "project-scope-not-provided",
                 ["modelAccessMode"] = settings.ModelAccessMode.ToString(),
@@ -46,7 +49,7 @@ public sealed class CognitiveMemoryAgentContextContributor(
         var query = BuildRecallQuery(request);
         if (string.IsNullOrWhiteSpace(query))
         {
-            return AgentContextContributionResult.Skipped(new Dictionary<string, string>
+            return SkipOrFail(request, "Cognitive Memory context requires a non-empty user query.", new Dictionary<string, string>
             {
                 ["reason"] = "empty-query",
                 ["modelAccessMode"] = settings.ModelAccessMode.ToString(),
@@ -78,10 +81,11 @@ public sealed class CognitiveMemoryAgentContextContributor(
                         contextCharacterBudget: 8000,
                         maxSourceBytes: 20000)),
                 cancellationToken);
-            var contextText = RenderContextPack(result.ContextPack);
+            var package = CognitiveMemoryAgentContextPackage.FromRecallResult(result);
+            var contextText = RenderContextPackage(package);
             if (string.IsNullOrWhiteSpace(contextText))
             {
-                return AgentContextContributionResult.Skipped(new Dictionary<string, string>
+                return SkipOrFail(request, "Cognitive Memory recall returned an empty context pack.", new Dictionary<string, string>
                 {
                     ["reason"] = "empty-context-pack",
                     ["traceId"] = result.TraceId.ToString("D")
@@ -92,9 +96,9 @@ public sealed class CognitiveMemoryAgentContextContributor(
                 [new AgentContextMessage(AgentContextMessageRole.System, contextText)],
                 new Dictionary<string, string>
                 {
-                    ["traceId"] = result.TraceId.ToString("D"),
-                    ["contextPackId"] = result.ContextPack.Id.Value.ToString("D"),
-                    ["includedSections"] = result.ContextPack.Sections.Count.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    ["traceId"] = package.TraceId.ToString("D"),
+                    ["contextPackId"] = package.ContextPackId.Value.ToString("D"),
+                    ["includedSections"] = package.IncludedSectionCount.ToString(System.Globalization.CultureInfo.InvariantCulture),
                     ["queryLength"] = query.Length.ToString(System.Globalization.CultureInfo.InvariantCulture),
                     ["modelAccessMode"] = settings.ModelAccessMode.ToString(),
                     ["providerProfileId"] = request.Provider.Id.ToString("D"),
@@ -104,13 +108,26 @@ public sealed class CognitiveMemoryAgentContextContributor(
         }
         catch (InvalidOperationException exception)
         {
-            return AgentContextContributionResult.Skipped(new Dictionary<string, string>
+            return SkipOrFail(request, $"Cognitive Memory context is unavailable: {exception.Message}", new Dictionary<string, string>
             {
                 ["reason"] = "cognitive-memory-unavailable",
                 ["message"] = exception.Message
             });
         }
     }
+
+    private static AgentContextContributionResult SkipOrFail(
+        AgentContextContributionRequest request,
+        string failureMessage,
+        IReadOnlyDictionary<string, string> traceMetadata)
+        => RequiresMemoryContext(request.Policy.ExecutionMode)
+            ? AgentContextContributionResult.Failed(failureMessage, traceMetadata)
+            : AgentContextContributionResult.Skipped(traceMetadata);
+
+    private static bool RequiresMemoryContext(AgentContextExecutionMode executionMode)
+        => executionMode is AgentContextExecutionMode.GovernedProcessAutomation
+            or AgentContextExecutionMode.AutoApprovedNonInteractive
+            or AgentContextExecutionMode.A2AEndpoint;
 
     private static IReadOnlyDictionary<string, string> BuildModelAccessTraceMetadata(
         ProviderProfile provider,
@@ -219,11 +236,9 @@ public sealed class CognitiveMemoryAgentContextContributor(
            || line.StartsWith("Project key:", StringComparison.OrdinalIgnoreCase)
            || line.StartsWith("Use only ", StringComparison.OrdinalIgnoreCase);
 
-    private static string RenderContextPack(CognitiveMemoryRecallContextPack contextPack)
+    private static string RenderContextPackage(CognitiveMemoryAgentContextPackage package)
     {
-        var sections = contextPack.Sections
-            .Where(section => !string.IsNullOrWhiteSpace(section.Content))
-            .Take(8)
+        var sections = package.Sections
             .Select(RenderContextSection);
         var body = string.Join(Environment.NewLine + Environment.NewLine, sections);
         if (string.IsNullOrWhiteSpace(body))
@@ -231,21 +246,14 @@ public sealed class CognitiveMemoryAgentContextContributor(
             return string.Empty;
         }
 
-        return $"Cognitive Memory context pack: {contextPack.Title}\n{contextPack.Summary}\n\n{body}".Trim();
+        return $"Cognitive Memory context pack: {package.Title}\n{package.Summary}\n\n{body}".Trim();
     }
 
-    private static string RenderContextSection(CognitiveMemoryRecallContextSection section)
+    private static string RenderContextSection(CognitiveMemoryAgentContextSection section)
     {
-        var locators = section.SourceRefs
-            .Where(sourceRef => sourceRef.IncludedInContext)
-            .Select(sourceRef => sourceRef.Locator)
-            .Where(locator => !string.IsNullOrWhiteSpace(locator))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Take(6)
-            .ToList();
-        var sourceLine = locators.Count == 0
+        var sourceLine = section.SourceLocators.Count == 0
             ? string.Empty
-            : $"{Environment.NewLine}Source locators: {string.Join("; ", locators)}{Environment.NewLine}";
+            : $"{Environment.NewLine}Source locators: {string.Join("; ", section.SourceLocators)}{Environment.NewLine}";
         return $"## {section.Title}{sourceLine}{section.Content.Trim()}";
     }
 }

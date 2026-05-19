@@ -322,6 +322,50 @@ public sealed class AgentContextContributionTests
         Assert.Equal("True", result.TraceMetadata["providerIsLocal"]);
     }
 
+    [Fact]
+    public async Task Cognitive_memory_contributor_fails_process_automation_when_project_scope_is_missing()
+    {
+        var projectId = Guid.Parse("abababab-abab-abab-abab-abababababab");
+        var orchestrator = new RecordingRecallOrchestrator(projectId);
+        var contributor = new CognitiveMemoryAgentContextContributor(orchestrator, CreateSettingsService());
+
+        var result = await contributor.ContributeAsync(new AgentContextContributionRequest(
+            CreateAgent(),
+            CreateProviderProfile(),
+            [new AgentContextRequestMessage(AgentContextMessageRole.User, "What should the process remember?")],
+            new AgentContextContributionPolicy(
+                AgentContextExecutionMode.GovernedProcessAutomation,
+                SuppressApprovalRequirements: false,
+                WorkspaceScopeDescriptor.Organization("unit"))));
+
+        Assert.Equal(AgentContextContributionStatus.Failed, result.Status);
+        Assert.Equal("project-scope-not-provided", result.TraceMetadata["reason"]);
+        Assert.Contains("project scope", result.FailureMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Null(orchestrator.LastRequest);
+    }
+
+    [Fact]
+    public async Task Cognitive_memory_contributor_fails_process_automation_when_required_memory_is_unavailable()
+    {
+        var projectId = Guid.Parse("cdcdcdcd-cdcd-cdcd-cdcd-cdcdcdcdcdcd");
+        var contributor = new CognitiveMemoryAgentContextContributor(
+            new ThrowingRecallOrchestrator(projectId),
+            CreateSettingsService());
+
+        var result = await contributor.ContributeAsync(new AgentContextContributionRequest(
+            CreateAgent(),
+            CreateProviderProfile(),
+            [new AgentContextRequestMessage(AgentContextMessageRole.User, "What should the process remember?")],
+            new AgentContextContributionPolicy(
+                AgentContextExecutionMode.AutoApprovedNonInteractive,
+                SuppressApprovalRequirements: false,
+                WorkspaceScopeDescriptor.Project(projectId.ToString("D")))));
+
+        Assert.Equal(AgentContextContributionStatus.Failed, result.Status);
+        Assert.Equal("cognitive-memory-unavailable", result.TraceMetadata["reason"]);
+        Assert.Contains("required memory outage", result.FailureMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static MafAgentContextContributionProvider CreateProvider(
         IAgentContextContributor contributor,
         IAgentContextContributionTraceSink? traceSink = null)
@@ -511,6 +555,17 @@ public sealed class AgentContextContributionTests
                 [],
                 [],
                 []));
+        }
+    }
+
+    private sealed class ThrowingRecallOrchestrator(Guid expectedProjectId) : ICognitiveMemoryRecallOrchestrator
+    {
+        public ValueTask<CognitiveMemoryRecallResult> RecallAsync(
+            CognitiveMemoryRecallRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            Assert.Equal(expectedProjectId, request.ProjectId);
+            throw new InvalidOperationException("required memory outage");
         }
     }
 

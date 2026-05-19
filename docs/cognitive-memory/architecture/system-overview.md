@@ -14,6 +14,7 @@ architecture-beta
     service api(server)[Minimal API] in host
     service page(server)[Cognitive Memory Page] in module
     service services(server)[Memory Services] in module
+    service operations(server)[Operational Runners] in module
     service workbench(server)[Workbench Source] in sources
     service processes(server)[Process Source] in sources
     service workflows(server)[Workflow Source] in sources
@@ -26,12 +27,16 @@ architecture-beta
     browser:R -- L:page
     page:R -- L:services
     api:R -- L:services
+    api:B -- T:operations
     maf:B -- T:services
     services:L -- R:workbench
     services:L -- R:processes
     services:L -- R:workflows
     services:L -- R:files
     services:B -- T:appdb
+    operations:B -- T:appdb
+    operations:R -- L:rag
+    operations:R -- L:services
     services:R -- L:rag
     services:R -- L:semantic
 ```
@@ -55,6 +60,8 @@ flowchart TB
     Api --> Consolidation["ICognitiveMemoryConsolidationEngine"]
     Api --> Recall["ICognitiveMemoryRecallOrchestrator"]
     Api --> ReviewUi
+    Api --> ProjectionRebuild["ICognitiveMemoryProjectionRebuildService"]
+    Api --> AutomationRunner["ICognitiveMemoryScheduledAutomationRunner"]
     Api --> Advanced["Self-regulation, answer gate, professor review, learning, cross-project, distributed services"]
 
     Contributor --> Settings
@@ -69,6 +76,12 @@ flowchart TB
     Recall --> Signals["Signal ledger"]
     Recall --> Workspace["Workspace service and attention router"]
     Recall --> ProjectionAdapter["Optional RAG projection adapter"]
+    ProjectionRebuild --> ProjectionLifecycle["Projection lifecycle service"]
+    ProjectionRebuild --> AppDb
+    ProjectionLifecycle --> ProjectionAdapter
+    AutomationRunner --> Settings
+    AutomationRunner --> SourceIngestion
+    AutomationRunner --> Consolidation
     ProjectionAdapter --> Qdrant["Qdrant or other RAG backend"]
 
     SourceIngestion --> AppDb[("AppDbContext")]
@@ -88,7 +101,9 @@ flowchart TB
 - Qdrant/RAG is a rebuildable projection, not authoritative storage.
 - SemanticCompletion is an adapter-backed embedding/ranking/classification utility, not the memory model.
 - Generated summaries are not raw source truth. They must remain linked to source items and evidence anchors.
-- MAF receives rendered context packs through `IAgentContextContributor`; it does not own Cognitive Memory state.
+- MAF receives rendered agent-facing context packages through `IAgentContextContributor`; it does not own Cognitive Memory state.
+- Projection rebuild is explicit service/API work over durable memory. It should not be mistaken for canonical truth mutation.
+- Scheduled automation execution is explicit service/API work today. No hosted cognitive-memory scheduler owns background mutation.
 - Probe feedback and self-regulation output produce reviewable evidence, calibration signals, proposals, and control records. They must not mutate canonical truth directly.
 
 ## Current Entry Points
@@ -98,5 +113,7 @@ flowchart TB
 | Blazor UI | `/cognitive-memory`, `/memory` | Operator dashboard, probes, settings, sources, review queue, traces, health, self-regulation, scale. |
 | HTTP API | `/api/cognitive-memory/*` | Agent/API control surface for ingestion, review, recall, probes, learning, distributed jobs. |
 | MAF context | `cognitive-memory.context` | Optional AgentFramework context contributor for project-scoped recall context. |
+| Projection rebuild API | `/api/cognitive-memory/projections/rebuild` | Explicit rebuild path for stale or failed projection rows. |
+| Automation run API | `/api/cognitive-memory/automation/run` | Explicit run path for configured schedule-mode ingestion and consolidation. |
 | Source snapshots | `IProjectStructureSourceSnapshotProvider`, `IProcessRuntimeEvidenceSourceProvider`, `IWorkflowRuntimeEvidenceSourceProvider` | Read-only source boundaries for ingestion. |
 

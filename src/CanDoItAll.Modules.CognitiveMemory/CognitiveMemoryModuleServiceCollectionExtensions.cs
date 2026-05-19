@@ -49,6 +49,8 @@ public static class CognitiveMemoryModuleServiceCollectionExtensions
                 : new RagCognitiveMemoryProjectionAdapter(ragDriver);
         });
         services.TryAddScoped<ICognitiveMemoryProjectionLifecycleService, CognitiveMemoryProjectionLifecycleService>();
+        services.TryAddScoped<ICognitiveMemoryProjectionRebuildService, CognitiveMemoryProjectionRebuildService>();
+        services.TryAddScoped<ICognitiveMemoryScheduledAutomationRunner, CognitiveMemoryScheduledAutomationRunner>();
         services.TryAddScoped<ICognitiveMemoryWorkspaceService, CognitiveMemoryWorkspaceService>();
         services.TryAddScoped<ICognitiveMemoryAttentionRouter, CognitiveMemoryAttentionRouter>();
         services.TryAddScoped<CognitiveMemorySignalLedger>();
