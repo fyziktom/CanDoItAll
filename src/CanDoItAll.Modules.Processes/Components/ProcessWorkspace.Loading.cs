@@ -133,6 +133,7 @@ public partial class ProcessWorkspace
 
         if (ShouldLoadLaunchPlanData())
         {
+            await LoadLaunchAgentTeamsAsync(cancellationToken);
             launchPlans = await ProcessesService.ListLaunchPlansAsync(selectedProcessId, ProjectId, cancellationToken);
             selectedLaunchPlanId = ResolveSelectedLaunchPlanId();
             await LoadLaunchPlanDetailsAsync(cancellationToken);
@@ -140,6 +141,7 @@ public partial class ProcessWorkspace
         else
         {
             launchPlans = [];
+            agentTeams = [];
             selectedLaunchPlanId = null;
             selectedLaunchPlan = null;
         }
@@ -198,6 +200,7 @@ public partial class ProcessWorkspace
     private void ClearRuntimePaneData()
     {
         launchPlans = [];
+        agentTeams = [];
         selectedLaunchPlanId = null;
         selectedLaunchPlan = null;
         runs = [];

@@ -19,6 +19,7 @@ public sealed partial class ProcessesService(
     IProcessExecutorRegistryBridge executorRegistryBridge,
     IProcessProjectStructureBridge projectStructureBridge,
     IWorkflowCatalogService workflowCatalogService,
+    IAgentFrameworkWorkspaceService agentWorkspaceService,
     HrService hrService,
     AiAgentService aiAgentService,
     CollaborationService collaborationService,

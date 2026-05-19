@@ -55,8 +55,19 @@ public sealed partial class ProcessesService
         "implementation"
     };
 
+    public Task<Result> MatchLaunchPlanWithHrManagerAsync(
+        Guid launchPlanId,
+        string requestedBy,
+        CancellationToken cancellationToken = default)
+        => MatchLaunchPlanWithHrManagerAsync(
+            launchPlanId,
+            agentTeamId: null,
+            requestedBy,
+            cancellationToken);
+
     public async Task<Result> MatchLaunchPlanWithHrManagerAsync(
         Guid launchPlanId,
+        Guid? agentTeamId = null,
         string requestedBy = "process-workspace",
         CancellationToken cancellationToken = default)
     {
@@ -66,10 +77,18 @@ public sealed partial class ProcessesService
         }
 
         logger.LogInformation(
-            "Starting HR staffing match for launch plan {LaunchPlanId}. RequestedBy={RequestedBy}.",
+            "Starting HR staffing match for launch plan {LaunchPlanId}. AgentTeamId={AgentTeamId}. RequestedBy={RequestedBy}.",
             launchPlanId,
+            agentTeamId,
             requestedBy);
         await SynchronizeAiDirectoryProjectionForProcessAsync("launch-plan HR matching", cancellationToken);
+        var teamScopeResult = await LoadLaunchAgentTeamScopeAsync(agentTeamId, cancellationToken);
+        if (teamScopeResult.IsFailure)
+        {
+            return Result.Failure(teamScopeResult.Errors);
+        }
+
+        var teamScope = teamScopeResult.Value;
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await using var transaction = await BeginCoordinatedTransactionAsync(dbContext, cancellationToken);
@@ -167,9 +186,25 @@ public sealed partial class ProcessesService
                     role.RecommendationSummary = BuildLaunchRecommendationSummary(roleCandidates);
                 }
 
+                foreach (var candidate in roleCandidates)
+                {
+                    candidate.MetadataJson = ApplyLaunchAgentTeamMatchMetadata(
+                        candidate.MetadataJson,
+                        teamScope,
+                        candidate);
+                }
+
                 var selectedCandidate = roleCandidates
                     .Where(item => item.CandidateKind != ProcessLaunchCandidateKind.Gap)
-                    .OrderByDescending(item => ScoreCandidateForHrManager(role, roleRequirement, item, requiredSkillIds, skillNames, aiFactsByPartyId, launchContext))
+                    .OrderByDescending(item => ScoreCandidateForHrManager(
+                        role,
+                        roleRequirement,
+                        item,
+                        requiredSkillIds,
+                        skillNames,
+                        aiFactsByPartyId,
+                        launchContext,
+                        teamScope))
                     .ThenByDescending(item => item.IsRecommended)
                     .ThenBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
                     .FirstOrDefault();
@@ -219,8 +254,9 @@ public sealed partial class ProcessesService
             await dbContext.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
             logger.LogInformation(
-                "Completed HR staffing match for launch plan {LaunchPlanId}. ChangedRoleCount={ChangedRoleCount} ResolvedRoleCount={ResolvedRoleCount} RequestedBy={RequestedBy}.",
+                "Completed HR staffing match for launch plan {LaunchPlanId}. AgentTeamId={AgentTeamId}. ChangedRoleCount={ChangedRoleCount} ResolvedRoleCount={ResolvedRoleCount} RequestedBy={RequestedBy}.",
                 launchPlanId,
+                teamScope?.Id,
                 changedRoleIds.Count,
                 roles.Count(item => item.IsResolved),
                 requestedBy);
@@ -233,6 +269,32 @@ public sealed partial class ProcessesService
                 "HR staffing matching conflicted with another update. Reload the launch plan and try again.",
                 "processes.launch.staffing-conflict"));
         }
+    }
+
+    private async Task<Result<LaunchAgentTeamScope?>> LoadLaunchAgentTeamScopeAsync(
+        Guid? agentTeamId,
+        CancellationToken cancellationToken)
+    {
+        if (!agentTeamId.HasValue)
+        {
+            return Result<LaunchAgentTeamScope?>.Success(null);
+        }
+
+        var teams = await agentWorkspaceService.ListAgentTeamsAsync(cancellationToken);
+        var team = teams.SingleOrDefault(item => item.Id == agentTeamId.Value);
+        if (team is null)
+        {
+            return Result<LaunchAgentTeamScope?>.Failure(Error.Validation(
+                "Agent team was not found.",
+                "processes.launch.agent-team-not-found"));
+        }
+
+        return Result<LaunchAgentTeamScope?>.Success(new LaunchAgentTeamScope(
+            team.Id,
+            team.Name,
+            team.AgentIds
+                .Where(item => item != Guid.Empty)
+                .ToHashSet()));
     }
 
     private async Task<List<ProcessLaunchCandidate>> BuildHrManagerSupplementalCandidatesAsync(
@@ -380,7 +442,8 @@ public sealed partial class ProcessesService
         IReadOnlyList<Guid> requiredSkillIds,
         IReadOnlyDictionary<Guid, string> skillNames,
         IReadOnlyDictionary<Guid, AiAgentStaffingFactListItemModel> aiFactsByPartyId,
-        IReadOnlyList<string?> launchContext)
+        IReadOnlyList<string?> launchContext,
+        LaunchAgentTeamScope? teamScope = null)
     {
         var roleContext = roleRequirement is null
             ? launchContext
@@ -401,7 +464,7 @@ public sealed partial class ProcessesService
             candidate,
             requiredSkillIds,
             skillNames,
-            aiFactsByPartyId);
+            aiFactsByPartyId) + ScoreLaunchAgentTeamFit(candidate, teamScope);
     }
 
     private static decimal ScoreCandidateForHrManager(
@@ -410,7 +473,8 @@ public sealed partial class ProcessesService
         IReadOnlyList<Guid> requiredSkillIds,
         IReadOnlyDictionary<Guid, string> skillNames,
         IReadOnlyDictionary<Guid, AiAgentStaffingFactListItemModel> aiFactsByPartyId,
-        IReadOnlyList<string?> launchContext)
+        IReadOnlyList<string?> launchContext,
+        LaunchAgentTeamScope? teamScope = null)
     {
         return ScoreCandidateForRole(
             role.DisplayName,
@@ -421,7 +485,27 @@ public sealed partial class ProcessesService
             candidate,
             requiredSkillIds,
             skillNames,
-            aiFactsByPartyId);
+            aiFactsByPartyId) + ScoreLaunchAgentTeamFit(candidate, teamScope);
+    }
+
+    private static decimal ScoreLaunchAgentTeamFit(
+        ProcessLaunchCandidate candidate,
+        LaunchAgentTeamScope? teamScope)
+    {
+        if (teamScope is null || !IsLaunchAgentCandidate(candidate))
+        {
+            return 0m;
+        }
+
+        if (candidate.TechnicalAgentId.HasValue &&
+            teamScope.AgentIds.Contains(candidate.TechnicalAgentId.Value))
+        {
+            return 16m;
+        }
+
+        return candidate.CandidateKind == ProcessLaunchCandidateKind.NewAiAgentProposal
+            ? -12m
+            : -4m;
     }
 
     private static decimal ScoreCandidateForRole(

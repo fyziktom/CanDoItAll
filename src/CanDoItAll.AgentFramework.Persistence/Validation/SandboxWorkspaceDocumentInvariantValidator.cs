@@ -196,6 +196,49 @@ internal static class SandboxWorkspaceDocumentInvariantValidator
                 $"Memory record '{memoryRecord.Id:N}' references missing agent '{memoryRecord.AgentId:N}'.");
         }
 
+        var teamIds = new HashSet<Guid>();
+        var teamNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var team in document.AgentTeams ?? [])
+        {
+            if (team.Id == Guid.Empty)
+            {
+                throw new InvalidOperationException("Agent team id is required.");
+            }
+
+            if (!teamIds.Add(team.Id))
+            {
+                throw new InvalidOperationException($"Agent team '{team.Id:N}' is duplicated.");
+            }
+
+            if (string.IsNullOrWhiteSpace(team.Name))
+            {
+                throw new InvalidOperationException($"Agent team '{team.Id:N}' must have a name.");
+            }
+
+            if (!teamNames.Add(team.Name.Trim()))
+            {
+                throw new InvalidOperationException($"Agent team name '{team.Name}' is duplicated.");
+            }
+
+            var memberIds = new HashSet<Guid>();
+            foreach (var agentId in team.AgentIds ?? [])
+            {
+                if (!memberIds.Add(agentId))
+                {
+                    throw new InvalidOperationException(
+                        $"Agent team '{team.Id:N}' contains duplicate agent '{agentId:N}'.");
+                }
+
+                if (agentIds.Contains(agentId))
+                {
+                    continue;
+                }
+
+                throw new InvalidOperationException(
+                    $"Agent team '{team.Id:N}' references missing agent '{agentId:N}'.");
+            }
+        }
+
         EnsureAllRunsExist(document.ExecutionApprovals.Select(item => (item.ExecutionRunId, $"Execution approval '{item.ApprovalId}'")), runIds);
         EnsureAllRunsExist(document.ExecutionArtifacts.Select(item => (item.ExecutionRunId, $"Execution artifact '{item.Id:N}'")), runIds);
         EnsureAllRunsExist(document.ExecutionWorkflowCheckpoints.Select(item => (item.ExecutionRunId, $"Execution checkpoint '{item.Id:N}'")), runIds);

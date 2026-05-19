@@ -12,3 +12,47 @@
 .agent-catalog-panel__grid {
     align-items: stretch;
 }
+
+.agent-catalog-panel__workspace {
+    align-items: flex-start;
+    min-width: 0;
+}
+
+.agent-catalog-panel__team-panel {
+    background: rgb(248 250 252);
+    border: 1px solid rgb(226 232 240);
+    border-radius: 0.75rem;
+    display: grid;
+    gap: 0.9rem;
+    min-width: 0;
+    padding: 1rem;
+    width: 100%;
+}
+
+.agent-catalog-panel__team-actions {
+    border-bottom: 1px solid rgb(226 232 240);
+    padding-bottom: 0.9rem;
+}
+
+.agent-catalog-panel__section-title {
+    color: rgb(15 23 42);
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.35;
+    margin: 0.15rem 0 0;
+    overflow-wrap: anywhere;
+}
+
+.agent-catalog-panel__agent-results {
+    min-width: 0;
+    width: 100%;
+}
+
+@media (min-width: 1024px) {
+    .agent-catalog-panel__team-panel {
+        max-height: 46rem;
+        overflow: auto;
+        position: sticky;
+        top: 1rem;
+    }
+}

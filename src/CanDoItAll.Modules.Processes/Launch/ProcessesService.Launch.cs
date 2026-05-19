@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
@@ -11,6 +12,7 @@ namespace CanDoItAll.Modules.Processes;
 public sealed partial class ProcessesService
 {
     private static readonly JsonSerializerOptions LaunchJsonOptions = new(JsonSerializerDefaults.Web);
+    private const string LaunchAgentTeamMatchMetadataPropertyName = "agentTeamMatch";
     private static readonly TimeSpan ProcessAiDirectoryProjectionSyncTimeout = TimeSpan.FromSeconds(3);
 
     public Task<Result<Guid>> ExecuteLaunchPlanAsync(
@@ -286,6 +288,74 @@ public sealed partial class ProcessesService
         }
     }
 
+    private static string ApplyLaunchAgentTeamMatchMetadata(
+        string? metadataJson,
+        LaunchAgentTeamScope? teamScope,
+        ProcessLaunchCandidate candidate)
+    {
+        var metadata = ParseLaunchCandidateMetadataObject(metadataJson);
+        if (teamScope is null)
+        {
+            metadata.Remove(LaunchAgentTeamMatchMetadataPropertyName);
+            return metadata.Count == 0 ? "{}" : metadata.ToJsonString(LaunchJsonOptions);
+        }
+
+        var isOutsideSelectedTeam = IsLaunchAgentCandidate(candidate) &&
+            (!candidate.TechnicalAgentId.HasValue ||
+             !teamScope.AgentIds.Contains(candidate.TechnicalAgentId.Value));
+        metadata[LaunchAgentTeamMatchMetadataPropertyName] = new JsonObject
+        {
+            ["agentTeamId"] = teamScope.Id,
+            ["agentTeamName"] = teamScope.Name,
+            ["isOutsideSelectedTeam"] = isOutsideSelectedTeam
+        };
+
+        return metadata.ToJsonString(LaunchJsonOptions);
+    }
+
+    private static LaunchAgentTeamMatchMetadata ParseLaunchAgentTeamMatchMetadata(string? metadataJson)
+    {
+        var metadata = ParseLaunchCandidateMetadataObject(metadataJson);
+        if (!metadata.TryGetPropertyValue(LaunchAgentTeamMatchMetadataPropertyName, out var teamNode) ||
+            teamNode is null)
+        {
+            return LaunchAgentTeamMatchMetadata.Empty;
+        }
+
+        try
+        {
+            return teamNode.Deserialize<LaunchAgentTeamMatchMetadata>(LaunchJsonOptions)
+                ?? LaunchAgentTeamMatchMetadata.Empty;
+        }
+        catch (JsonException)
+        {
+            return LaunchAgentTeamMatchMetadata.Empty;
+        }
+    }
+
+    private static JsonObject ParseLaunchCandidateMetadataObject(string? metadataJson)
+    {
+        if (string.IsNullOrWhiteSpace(metadataJson))
+        {
+            return [];
+        }
+
+        try
+        {
+            return JsonNode.Parse(metadataJson) as JsonObject ?? [];
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
+
+    private static bool IsLaunchAgentCandidate(ProcessLaunchCandidate candidate)
+        => candidate.CandidateKind is ProcessLaunchCandidateKind.ProjectAssignment
+            or ProcessLaunchCandidateKind.Workforce
+            or ProcessLaunchCandidateKind.AiResource
+            or ProcessLaunchCandidateKind.NewAiAgentProposal;
+
     private static IReadOnlyList<Guid> DeserializeGuidList(string json)
     {
         if (string.IsNullOrWhiteSpace(json))
@@ -343,6 +413,19 @@ public sealed partial class ProcessesService
     private sealed record LaunchAiDirectorySnapshot(
         IReadOnlyList<AiAgentListItemModel> Directory,
         IReadOnlyDictionary<Guid, AiAgentStaffingFactListItemModel> StaffingFactsByPartyId);
+
+    private sealed record LaunchAgentTeamScope(
+        Guid Id,
+        string Name,
+        IReadOnlySet<Guid> AgentIds);
+
+    private sealed record LaunchAgentTeamMatchMetadata(
+        Guid? AgentTeamId,
+        string AgentTeamName,
+        bool IsOutsideSelectedTeam)
+    {
+        public static LaunchAgentTeamMatchMetadata Empty { get; } = new(null, string.Empty, false);
+    }
 
     private sealed record LaunchApprovalAuthority(
         Guid? ApproverPartyId,

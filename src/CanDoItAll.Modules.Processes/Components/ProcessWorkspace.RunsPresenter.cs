@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Projects;
 using Microsoft.AspNetCore.Components;
@@ -75,9 +76,17 @@ public partial class ProcessWorkspace
 
         public IReadOnlyList<ProcessLaunchPlanListItem> LaunchPlans => workspace.launchPlans;
 
+        public IReadOnlyList<AgentTeamDefinition> AgentTeams => workspace.agentTeams;
+
         public ProcessLaunchPlanDetails? SelectedLaunchPlan => workspace.selectedLaunchPlan;
 
         public ProcessLaunchPlanListItem? SelectedLaunchPlanSummary => workspace.SelectedLaunchPlanSummary;
+
+        public Guid? SelectedLaunchAgentTeamId
+        {
+            get => workspace.selectedLaunchAgentTeamId;
+            set => workspace.selectedLaunchAgentTeamId = value;
+        }
 
         public IReadOnlyList<ProcessStepRunViewModel> StepRuns => workspace.stepRuns;
 
@@ -354,6 +363,11 @@ public partial class ProcessWorkspace
         public Task SelectLaunchCandidateAsync(Guid launchPlanRoleId, Guid candidateId)
         {
             return workspace.SelectLaunchCandidateAsync(launchPlanRoleId, candidateId);
+        }
+
+        public Task MatchLaunchPlanWithHrManagerAsync()
+        {
+            return workspace.MatchLaunchPlanWithHrManagerAsync();
         }
 
         public Task SubmitLaunchPlanForApprovalAsync()

@@ -79,6 +79,7 @@ internal static class AgentsApi
             Results.Ok(await workspaceService.ImportAgentAsync(request.PackagePath, cancellationToken)))
             .WithName("ImportAgent");
 
+        MapTeamEndpoints(agents);
         MapProviderEndpoints(agents);
         MapCapabilityEndpoints(agents);
         MapMemoryEndpoints(agents);
@@ -86,6 +87,47 @@ internal static class AgentsApi
         MapExecutionEndpoints(agents);
 
         return group;
+    }
+
+    private static void MapTeamEndpoints(RouteGroupBuilder agents)
+    {
+        agents.MapGet("/teams", async (
+                IAgentFrameworkWorkspaceService workspaceService,
+                CancellationToken cancellationToken) =>
+            Results.Ok(await workspaceService.ListAgentTeamsAsync(cancellationToken)))
+            .WithName("ListAgentTeams");
+
+        agents.MapGet("/teams/{teamId:guid}/editor", async (
+                Guid teamId,
+                IAgentFrameworkWorkspaceService workspaceService,
+                CancellationToken cancellationToken) =>
+            Results.Ok(await workspaceService.GetAgentTeamEditorAsync(teamId, cancellationToken)))
+            .WithName("GetAgentTeamEditor");
+
+        agents.MapPost("/teams", async (
+                AgentTeamEditorModel request,
+                IAgentFrameworkWorkspaceService workspaceService,
+                CancellationToken cancellationToken) =>
+            Results.Ok(await workspaceService.SaveAgentTeamAsync(request, cancellationToken)))
+            .WithName("SaveAgentTeam");
+
+        agents.MapPost("/teams/{teamId:guid}/members", async (
+                Guid teamId,
+                AgentTeamMembersApiRequest request,
+                IAgentFrameworkWorkspaceService workspaceService,
+                CancellationToken cancellationToken) =>
+            Results.Ok(await workspaceService.UpdateAgentTeamMembersAsync(teamId, request.AgentIds, cancellationToken)))
+            .WithName("UpdateAgentTeamMembers");
+
+        agents.MapDelete("/teams/{teamId:guid}", async (
+                Guid teamId,
+                IAgentFrameworkWorkspaceService workspaceService,
+                CancellationToken cancellationToken) =>
+        {
+            await workspaceService.DeleteAgentTeamAsync(teamId, cancellationToken);
+            return Results.Ok(new ApiAck(true));
+        })
+        .WithName("DeleteAgentTeam");
     }
 
     private static void MapProviderEndpoints(RouteGroupBuilder agents)
@@ -472,6 +514,8 @@ internal sealed record AgentCloneApiRequest(string CloneName);
 internal sealed record AgentTemplateConversionApiRequest(string TemplateKey);
 
 internal sealed record AgentImportApiRequest(string PackagePath);
+
+internal sealed record AgentTeamMembersApiRequest(IReadOnlyList<Guid> AgentIds);
 
 internal sealed record ChatSessionRenameApiRequest(string Title);
 

@@ -10,6 +10,7 @@ public sealed record SandboxWorkspaceDocument(
     IReadOnlyList<AgentRunMetric> Metrics,
     IReadOnlyList<AgentMemoryRecord> Memory)
 {
+    public IReadOnlyList<AgentTeamDefinition> AgentTeams { get; init; } = [];
     public IReadOnlyList<ExecutionRunRecord> ExecutionRuns { get; init; } = [];
     public IReadOnlyList<ExecutionApprovalRecord> ExecutionApprovals { get; init; } = [];
     public IReadOnlyList<ExecutionArtifactRecord> ExecutionArtifacts { get; init; } = [];
@@ -33,7 +34,10 @@ public sealed record SandboxWorkspaceDocument(
             Agents,
             Providers,
             Capabilities,
-            Memory);
+            Memory)
+        {
+            AgentTeams = AgentTeams
+        };
     }
 
     public SandboxWorkspaceExecutionState ToExecutionState()
@@ -70,6 +74,7 @@ public sealed record SandboxWorkspaceDocument(
             Metrics: executionState.Metrics,
             Memory: catalog.Memory)
         {
+            AgentTeams = catalog.AgentTeams,
             ExecutionRuns = executionState.ExecutionRuns,
             ExecutionApprovals = executionState.ExecutionApprovals,
             ExecutionArtifacts = executionState.ExecutionArtifacts,
@@ -86,6 +91,8 @@ public sealed record SandboxWorkspaceCatalog(
     IReadOnlyList<CapabilityCatalogItem> Capabilities,
     IReadOnlyList<AgentMemoryRecord> Memory)
 {
+    public IReadOnlyList<AgentTeamDefinition> AgentTeams { get; init; } = [];
+
     public static SandboxWorkspaceCatalog Empty { get; } = new(
         Version: "1.0",
         Agents: [],

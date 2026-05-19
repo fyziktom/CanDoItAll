@@ -1,0 +1,11 @@
+.agent-team-members-dialog {
+    min-width: 0;
+}
+
+.agent-team-members-dialog__grid {
+    align-items: stretch;
+    max-height: min(58vh, 42rem);
+    overflow: auto;
+    padding-right: 0.25rem;
+    scrollbar-gutter: stable;
+}

@@ -23,10 +23,10 @@ public sealed class AiAgentsDatabaseTransferHandler(IWorkspacePathResolver works
         return new DatabaseTransferItemPreview(
             Descriptor,
             sourceCatalog.Agents.Count > 0,
-            $"{sourceCatalog.Agents.Count} agent catalog item(s) and {sourceCatalog.Capabilities.Count} capability item(s) are available.",
+            $"{sourceCatalog.Agents.Count} agent catalog item(s), {sourceCatalog.AgentTeams.Count} team(s), and {sourceCatalog.Capabilities.Count} capability item(s) are available.",
             sourceCatalog.Agents.Count == 0 ? "The source database profile has no agent catalog entries." : null,
-            sourceCatalog.Agents.Count + sourceCatalog.Capabilities.Count,
-            targetCatalog.Agents.Count + targetCatalog.Capabilities.Count);
+            sourceCatalog.Agents.Count + sourceCatalog.AgentTeams.Count + sourceCatalog.Capabilities.Count,
+            targetCatalog.Agents.Count + targetCatalog.AgentTeams.Count + targetCatalog.Capabilities.Count);
     }
 
     public async Task<DatabaseTransferItemResult> TransferAsync(
@@ -46,15 +46,18 @@ public sealed class AiAgentsDatabaseTransferHandler(IWorkspacePathResolver works
                 sourceCatalog.Agents,
                 targetCatalog.Providers,
                 sourceCatalog.Capabilities,
-                targetCatalog.Memory),
+                targetCatalog.Memory)
+            {
+                AgentTeams = sourceCatalog.AgentTeams
+            },
             cancellationToken);
 
         return new DatabaseTransferItemResult(
             Descriptor.Key,
             Descriptor.Label,
             true,
-            $"Copied {sourceCatalog.Agents.Count} AI agent catalog item(s).",
-            sourceCatalog.Agents.Count + sourceCatalog.Capabilities.Count);
+            $"Copied {sourceCatalog.Agents.Count} AI agent catalog item(s) and {sourceCatalog.AgentTeams.Count} team(s).",
+            sourceCatalog.Agents.Count + sourceCatalog.AgentTeams.Count + sourceCatalog.Capabilities.Count);
     }
 
     private FileSandboxWorkspaceStore CreateStore(ResolvedDatabaseProfile databaseProfile)

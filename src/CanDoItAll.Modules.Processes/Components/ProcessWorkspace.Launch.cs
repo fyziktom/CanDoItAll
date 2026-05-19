@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.Processes;
@@ -8,8 +9,10 @@ public partial class ProcessWorkspace
     private Guid? LaunchPlanIdQuery { get; set; }
 
     private IReadOnlyList<ProcessLaunchPlanListItem> launchPlans = [];
+    private IReadOnlyList<AgentTeamDefinition> agentTeams = [];
     private ProcessLaunchPlanDetails? selectedLaunchPlan;
     private Guid? selectedLaunchPlanId;
+    private Guid? selectedLaunchAgentTeamId;
     private string launchNameDraft = string.Empty;
     private string launchDecisionSummary = string.Empty;
     private Guid? loadedLaunchPlanQueryId;
@@ -43,6 +46,16 @@ public partial class ProcessWorkspace
         }
 
         selectedLaunchPlan = await ProcessesService.GetLaunchPlanAsync(selectedLaunchPlanId.Value, cancellationToken);
+    }
+
+    private async Task LoadLaunchAgentTeamsAsync(CancellationToken cancellationToken = default)
+    {
+        agentTeams = await AgentWorkspaceService.ListAgentTeamsAsync(cancellationToken);
+        if (selectedLaunchAgentTeamId.HasValue &&
+            agentTeams.All(item => item.Id != selectedLaunchAgentTeamId.Value))
+        {
+            selectedLaunchAgentTeamId = null;
+        }
     }
 
     private async Task SelectLaunchPlanAsync(Guid launchPlanId)
@@ -106,6 +119,31 @@ public partial class ProcessWorkspace
         detailTab = DetailTabRuns;
         await LoadWorkspaceAsync();
         SetMessage("Launch candidate selected.");
+    }
+
+    private async Task MatchLaunchPlanWithHrManagerAsync()
+    {
+        if (!selectedLaunchPlanId.HasValue)
+        {
+            SetError("Select a launch plan before running HR matching.");
+            return;
+        }
+
+        var result = await ProcessesService.MatchLaunchPlanWithHrManagerAsync(
+            selectedLaunchPlanId.Value,
+            selectedLaunchAgentTeamId,
+            "process-workspace");
+        if (result.IsFailure)
+        {
+            SetError(result.Errors);
+            return;
+        }
+
+        detailTab = DetailTabRuns;
+        await LoadWorkspaceAsync();
+        SetMessage(selectedLaunchAgentTeamId.HasValue
+            ? "HR matching updated with the selected delivery team."
+            : "HR matching updated.");
     }
 
     private async Task SubmitLaunchPlanForApprovalAsync()

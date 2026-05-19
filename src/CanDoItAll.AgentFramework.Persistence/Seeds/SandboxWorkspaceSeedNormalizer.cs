@@ -59,6 +59,7 @@ internal static class SandboxWorkspaceSeedNormalizer
         var memory = MergeMemory(catalog.Memory, seeded.Memory, agents.IdMap);
         var activeCapabilities = RemoveRetiredCapabilities(capabilities.Items, seeded.Capabilities);
         var activeAgents = RemoveUnavailableAgentCapabilities(agents.Items, activeCapabilities);
+        var agentTeams = NormalizeAgentTeams(catalog.AgentTeams, activeAgents);
 
         return catalog with
         {
@@ -66,6 +67,7 @@ internal static class SandboxWorkspaceSeedNormalizer
             Providers = providers.Items,
             Capabilities = activeCapabilities,
             Agents = activeAgents,
+            AgentTeams = agentTeams,
             Memory = memory
         };
     }
@@ -699,6 +701,33 @@ internal static class SandboxWorkspaceSeedNormalizer
         }
 
         return merged.OrderBy(item => item.AgentId).ThenByDescending(item => item.Importance).ThenBy(item => item.Title, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    private static IReadOnlyList<AgentTeamDefinition> NormalizeAgentTeams(
+        IReadOnlyList<AgentTeamDefinition>? existingTeams,
+        IReadOnlyList<AgentDefinition> activeAgents)
+    {
+        var agentNamesById = activeAgents
+            .ToDictionary(item => item.Id, item => item.Name);
+        var activeAgentIds = agentNamesById.Keys.ToHashSet();
+        return (existingTeams ?? [])
+            .Where(item => item is not null && item.Id != Guid.Empty && !string.IsNullOrWhiteSpace(item.Name))
+            .GroupBy(item => item.Id)
+            .Select(group => group.Last())
+            .Select(team => team with
+            {
+                Name = team.Name.Trim(),
+                Description = (team.Description ?? string.Empty).Trim(),
+                AgentIds = (team.AgentIds ?? [])
+                    .Where(item => item != Guid.Empty && activeAgentIds.Contains(item))
+                    .Distinct()
+                    .OrderBy(item => agentNamesById.TryGetValue(item, out var name) ? name : string.Empty, StringComparer.OrdinalIgnoreCase)
+                    .ThenBy(item => item)
+                    .ToList()
+            })
+            .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(item => item.Id)
+            .ToList();
     }
 
     private static IReadOnlyList<ChatSessionRecord> NormalizeChatSessions(

@@ -20,6 +20,28 @@ public sealed partial class AgentFrameworkWorkspaceService
     public Task DeleteAgentAsync(Guid agentId, CancellationToken cancellationToken = default)
         => catalogService.DeleteAgentAsync(agentId, cancellationToken);
 
+    public Task<IReadOnlyList<AgentTeamDefinition>> ListAgentTeamsAsync(CancellationToken cancellationToken = default)
+        => catalogService.ListAgentTeamsAsync(cancellationToken);
+
+    public Task<AgentTeamEditorModel> GetAgentTeamEditorAsync(
+        Guid? teamId = null,
+        CancellationToken cancellationToken = default)
+        => catalogService.GetAgentTeamEditorAsync(teamId, cancellationToken);
+
+    public Task<Guid> SaveAgentTeamAsync(
+        AgentTeamEditorModel model,
+        CancellationToken cancellationToken = default)
+        => catalogService.SaveAgentTeamAsync(model, cancellationToken);
+
+    public Task<AgentTeamDefinition> UpdateAgentTeamMembersAsync(
+        Guid teamId,
+        IReadOnlyList<Guid> agentIds,
+        CancellationToken cancellationToken = default)
+        => catalogService.UpdateAgentTeamMembersAsync(teamId, agentIds, cancellationToken);
+
+    public Task DeleteAgentTeamAsync(Guid teamId, CancellationToken cancellationToken = default)
+        => catalogService.DeleteAgentTeamAsync(teamId, cancellationToken);
+
     public Task<Guid> CloneAgentAsync(Guid agentId, string cloneName, CancellationToken cancellationToken = default)
         => catalogService.CloneAgentAsync(agentId, cloneName, cancellationToken);
 

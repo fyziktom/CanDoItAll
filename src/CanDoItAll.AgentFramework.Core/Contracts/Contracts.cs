@@ -293,6 +293,11 @@ public interface IAgentFrameworkWorkspaceService : IAgentExecutionHistoryReader
     Task<AgentEditorModel> GetAgentEditorAsync(Guid? agentId = null, CancellationToken cancellationToken = default);
     Task<Guid> SaveAgentAsync(AgentEditorModel model, CancellationToken cancellationToken = default);
     Task DeleteAgentAsync(Guid agentId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<AgentTeamDefinition>> ListAgentTeamsAsync(CancellationToken cancellationToken = default);
+    Task<AgentTeamEditorModel> GetAgentTeamEditorAsync(Guid? teamId = null, CancellationToken cancellationToken = default);
+    Task<Guid> SaveAgentTeamAsync(AgentTeamEditorModel model, CancellationToken cancellationToken = default);
+    Task<AgentTeamDefinition> UpdateAgentTeamMembersAsync(Guid teamId, IReadOnlyList<Guid> agentIds, CancellationToken cancellationToken = default);
+    Task DeleteAgentTeamAsync(Guid teamId, CancellationToken cancellationToken = default);
     Task<Guid> CloneAgentAsync(Guid agentId, string cloneName, CancellationToken cancellationToken = default);
     Task<Guid> ConvertToTemplateAsync(Guid agentId, string templateKey, CancellationToken cancellationToken = default);
     Task<AgentExportResult> ExportAgentAsync(Guid agentId, CancellationToken cancellationToken = default);

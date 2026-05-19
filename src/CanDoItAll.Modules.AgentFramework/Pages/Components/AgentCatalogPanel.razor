@@ -14,7 +14,13 @@
             </Stack>
             <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                 <StatusBadge Tone="info" Text="@(isLoading ? "Loading..." : $"{FilteredAgents.Count} of {agents.Count} agent(s)")" />
+                <Button Text="New team"
+                        Icon="groups"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="OpenNewTeamDialogAsync"
+                        data-testid="agents-team-new" />
                 <Button Text="New agent"
+                        Icon="add"
                         ButtonStyle="ButtonStyle.Light"
                         Click="OpenNewAgentDialogAsync"
                         data-testid="agents-catalog-new" />
@@ -27,6 +33,10 @@
                    class="cda-input min-w-[14rem] flex-1"
                    placeholder="Search agents"
                    data-testid="agents-catalog-search" />
+            @if (SelectedTeam is not null)
+            {
+                <StatusBadge Tone="info" Text="@SelectedTeam.Name" />
+            }
             <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetAgentSearch" />
         </FilterBar>
     </div>
@@ -41,7 +51,7 @@
             </p>
         </SurfaceCard>
     }
-    else if (FilteredAgents.Count == 0)
+    else if (agents.Count == 0)
     {
         <EmptyState Eyebrow="No technical agents"
                     Title="Create the first technical agent"
@@ -49,22 +59,86 @@
     }
     else
     {
-        <Grid Gap="LayoutGap.Medium"
-              ColumnTemplate="repeat(auto-fit,minmax(17rem,1fr))"
-              Class="agent-catalog-panel__grid"
-              data-testid="agents-catalog-card-grid">
-            @foreach (var agent in FilteredAgents)
-            {
-                <AgentSelectionCard Agent="@agent"
-                                    IsSelected="@(selectedAgentId == agent.Id)"
-                                    SelectedLabel="Selected"
-                                    ShowChatHistory="true"
-                                    ShowDetailsTooltip="true"
-                                    ShellTestId="agents-catalog-card-shell"
-                                    SelectTestId="agents-catalog-card"
-                                    OnSelect="@(() => SelectAgent(agent.Id))"
-                                    OnDoubleClick="@(() => QueueAgentDetailsDialogAsync(agent.Id))" />
-            }
+        <Grid Gap="LayoutGap.Large"
+              ColumnTemplateLg="minmax(17rem,0.65fr) minmax(0,1.75fr)"
+              Class="agent-catalog-panel__workspace"
+              data-testid="agents-catalog-workspace">
+            <section class="agent-catalog-panel__team-panel" data-testid="agents-team-panel">
+                <Split Gap="LayoutGap.Small" AlignItems="AlignItems.Start">
+                    <div>
+                        <p class="cda-eyebrow">Teams</p>
+                        <h3 class="agent-catalog-panel__section-title">@TeamPanelTitle</h3>
+                    </div>
+                    <StatusBadge Tone="info" Text="@teams.Count.ToString()" />
+                </Split>
+
+                <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap" Class="agent-catalog-panel__team-actions">
+                    <Button Text="New"
+                            Icon="add"
+                            Size="ButtonSize.Small"
+                            ButtonStyle="ButtonStyle.Light"
+                            Click="OpenNewTeamDialogAsync"
+                            data-testid="agents-team-new-compact" />
+                    <Button Text="Edit"
+                            Icon="edit"
+                            Size="ButtonSize.Small"
+                            ButtonStyle="ButtonStyle.Light"
+                            Disabled="@(SelectedTeam is null)"
+                            Click="OpenSelectedTeamDialogAsync"
+                            data-testid="agents-team-edit" />
+                    <Button Text="Members"
+                            Icon="group_add"
+                            Size="ButtonSize.Small"
+                            ButtonStyle="ButtonStyle.Light"
+                            Disabled="@(SelectedTeam is null)"
+                            Click="OpenSelectedTeamMembersDialogAsync"
+                            data-testid="agents-team-members" />
+                    <Button Text="Delete"
+                            Icon="delete"
+                            Size="ButtonSize.Small"
+                            ButtonStyle="ButtonStyle.Danger"
+                            Disabled="@(SelectedTeam is null)"
+                            Click="DeleteSelectedTeamAsync"
+                            data-testid="agents-team-delete" />
+                </Cluster>
+
+                <TreeView Items="@AgentTeamTreeNodes"
+                          Style="TreeViewStyle.Workbench"
+                          AriaLabel="Agent teams and members"
+                          EmptyText="No agent teams are available."
+                          OnSelect="HandleAgentTeamTreeSelectAsync"
+                          OnToggle="HandleAgentTeamTreeToggleAsync"
+                          data-testid="agents-team-tree" />
+            </section>
+
+            <section class="agent-catalog-panel__agent-results" data-testid="agents-catalog-results">
+                @if (FilteredAgents.Count == 0)
+                {
+                    <EmptyState Eyebrow="No matching agents"
+                                Title="No agents match the current team"
+                                Description="Choose another team or clear the search filter to see more technical agents." />
+                }
+                else
+                {
+                    <Grid Gap="LayoutGap.Medium"
+                          ColumnTemplate="repeat(auto-fit,minmax(17rem,1fr))"
+                          Class="agent-catalog-panel__grid"
+                          data-testid="agents-catalog-card-grid">
+                        @foreach (var agent in FilteredAgents)
+                        {
+                            <AgentSelectionCard Agent="@agent"
+                                                IsSelected="@(selectedAgentId == agent.Id)"
+                                                SelectedLabel="Selected"
+                                                ShowChatHistory="true"
+                                                ShowDetailsTooltip="true"
+                                                ShellTestId="agents-catalog-card-shell"
+                                                SelectTestId="agents-catalog-card"
+                                                OnSelect="@(() => SelectAgent(agent.Id))"
+                                                OnDoubleClick="@(() => QueueAgentDetailsDialogAsync(agent.Id))" />
+                        }
+                    </Grid>
+                }
+            </section>
         </Grid>
     }
 </Stack>

@@ -510,7 +510,14 @@ public sealed record ProcessLaunchCandidateViewModel(
     bool RequiresProvisioning,
     string RecommendationSummary,
     string AvailabilitySummary,
-    string SourceRegistryKey);
+    string SourceRegistryKey)
+{
+    public Guid? AgentTeamId { get; init; }
+
+    public string AgentTeamName { get; init; } = string.Empty;
+
+    public bool IsOutsideSelectedTeam { get; init; }
+}
 
 public sealed record ProcessLaunchRoleViewModel(
     Guid Id,
