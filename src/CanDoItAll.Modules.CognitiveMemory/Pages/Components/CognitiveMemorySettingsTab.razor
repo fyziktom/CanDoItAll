@@ -1,0 +1,235 @@
+@namespace CanDoItAll.Modules.CognitiveMemory.Pages
+
+@if (Page.snapshot is { } snapshot)
+{
+                        <Grid Gap="LayoutGap.Large"
+                              Class="cognitive-memory-layout"
+                              ColumnTemplateXl="minmax(23rem,0.85fr) minmax(0,1.15fr)"
+                              data-testid="cognitive-memory-settings">
+                            <SurfaceCard data-testid="cognitive-memory-automation-settings">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Automatic sorting" />
+                                <h2 class="cognitive-memory-card-title">Schedule and consolidation triggers</h2>
+                                <Stack GapScale="LayoutGap.Medium" Class="mt-4">
+                                    <label class="cognitive-memory-field">
+                                        <span>Mode</span>
+                                        <InputSelect class="cda-input"
+                                                     @bind-Value="Page.automationScheduleMode"
+                                                     data-testid="cognitive-memory-schedule-mode">
+                                            <option value="@CognitiveMemoryAutomationScheduleMode.ManualOnly">Manual only</option>
+                                            <option value="@CognitiveMemoryAutomationScheduleMode.Nightly">Nightly</option>
+                                            <option value="@CognitiveMemoryAutomationScheduleMode.IdleTimeout">When app is idle</option>
+                                            <option value="@CognitiveMemoryAutomationScheduleMode.ScheduledMoments">Scheduled moments</option>
+                                        </InputSelect>
+                                    </label>
+                                    <Grid Gap="LayoutGap.Medium"
+                                          ColumnTemplateLg="minmax(0,1fr) minmax(0,1fr)">
+                                        <label class="cognitive-memory-field">
+                                            <span>Night time</span>
+                                            <InputText class="cda-input"
+                                                       @bind-Value="Page.nightlyLocalTime"
+                                                       data-testid="cognitive-memory-nightly-time" />
+                                        </label>
+                                        <label class="cognitive-memory-field">
+                                            <span>Idle minutes</span>
+                                            <InputNumber class="cda-input"
+                                                         @bind-Value="Page.idleMinutes"
+                                                         data-testid="cognitive-memory-idle-minutes" />
+                                        </label>
+                                    </Grid>
+                                    <label class="cognitive-memory-field">
+                                        <span>Scheduled moments</span>
+                                        <textarea class="cda-input cda-input--textarea cognitive-memory-notes"
+                                                  @bind="Page.scheduledLocalTimesText"
+                                                  data-testid="cognitive-memory-scheduled-times"></textarea>
+                                    </label>
+                                    <div class="cognitive-memory-checks">
+                                        <label>
+                                            <InputCheckbox @bind-Value="Page.autoIngestProjectStructure" />
+                                            <span>Project structure</span>
+                                        </label>
+                                        <label>
+                                            <InputCheckbox @bind-Value="Page.autoIngestProcessRuntime" />
+                                            <span>Processes</span>
+                                        </label>
+                                        <label>
+                                            <InputCheckbox @bind-Value="Page.autoConsolidateAfterIngestion" />
+                                            <span>Consolidate after ingest</span>
+                                        </label>
+                                    </div>
+                                    <Button Text="Save settings"
+                                            Icon="save"
+                                            ButtonStyle="ButtonStyle.Primary"
+                                            Size="ButtonSize.Small"
+                                            Click="Page.SaveAutomationSettingsAsync"
+                                            Disabled="@Page.isBusy"
+                                            IsBusy="@Page.isBusy"
+                                            data-testid="cognitive-memory-save-settings" />
+                                </Stack>
+                            </SurfaceCard>
+
+                            <SurfaceCard data-testid="cognitive-memory-model-access-settings">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Model access" />
+                                <h2 class="cognitive-memory-card-title">Provider and agent policy</h2>
+                                <p class="cognitive-memory-muted">@Page.modelAccessStatus</p>
+                                <Stack GapScale="LayoutGap.Medium" Class="mt-4">
+                                    <label class="cognitive-memory-field">
+                                        <span>Mode</span>
+                                        <InputSelect class="cda-input"
+                                                     @bind-Value="Page.modelAccessMode"
+                                                     data-testid="cognitive-memory-model-access-mode">
+                                            <option value="@CognitiveMemoryModelAccessMode.AnyEnabledProvider">Any enabled provider</option>
+                                            <option value="@CognitiveMemoryModelAccessMode.LocalProvidersOnly">Local providers only</option>
+                                            <option value="@CognitiveMemoryModelAccessMode.SelectedProvidersOnly">Selected providers only</option>
+                                            <option value="@CognitiveMemoryModelAccessMode.Disabled">Disabled</option>
+                                        </InputSelect>
+                                    </label>
+                                    <Grid Gap="LayoutGap.Medium"
+                                          ColumnTemplateLg="minmax(0,1fr) minmax(0,1fr)">
+                                        <label class="cognitive-memory-field">
+                                            <span>Default provider</span>
+                                            <InputSelect class="cda-input"
+                                                         @bind-Value="Page.defaultProviderProfileIdText"
+                                                         data-testid="cognitive-memory-default-provider">
+                                                <option value="">No preference</option>
+                                                @foreach (var provider in Page.modelProviderOptions)
+                                                {
+                                                    <option value="@provider.Id.ToString("D")">@provider.Name (@CognitiveMemoryPage.FormatLabel(provider.Kind))</option>
+                                                }
+                                            </InputSelect>
+                                        </label>
+                                        <label class="cognitive-memory-field">
+                                            <span>Default agent</span>
+                                            <InputSelect class="cda-input"
+                                                         @bind-Value="Page.defaultAgentIdText"
+                                                         data-testid="cognitive-memory-default-agent">
+                                                <option value="">No preference</option>
+                                                @foreach (var agent in Page.modelAgentOptions)
+                                                {
+                                                    <option value="@agent.Id.ToString("D")">@agent.Name (@CognitiveMemoryPage.FormatLabel(agent.Workload))</option>
+                                                }
+                                            </InputSelect>
+                                        </label>
+                                    </Grid>
+                                    <section class="cognitive-memory-section">
+                                        <h3>Allowed providers</h3>
+                                        @if (Page.modelProviderOptions.Count == 0)
+                                        {
+                                            <p class="cognitive-memory-muted">No chat providers are configured.</p>
+                                        }
+                                        else
+                                        {
+                                            <div class="cognitive-memory-provider-list">
+                                                @foreach (var provider in Page.modelProviderOptions)
+                                                {
+                                                    <label class="cognitive-memory-provider-option" @key="provider.Id">
+                                                        <InputCheckbox @bind-Value="provider.IsAllowed" />
+                                                        <span class="cognitive-memory-provider-main">
+                                                            <strong>@provider.Name</strong>
+                                                            <small>@CognitiveMemoryPage.FormatLabel(provider.Kind) / @CognitiveMemoryPage.FirstNonEmpty(provider.DefaultModel, "no default model") / @(provider.IsEnabled ? "enabled" : "disabled")</small>
+                                                            @if (!string.IsNullOrWhiteSpace(provider.BaseUrl))
+                                                            {
+                                                                <small>@provider.BaseUrl</small>
+                                                            }
+                                                        </span>
+                                                        <span class="cognitive-memory-provider-badge">@(provider.IsLocal ? "Local" : "Remote")</span>
+                                                    </label>
+                                                }
+                                            </div>
+                                        }
+                                    </section>
+                                    <Button Text="Save model policy"
+                                            Icon="shield"
+                                            ButtonStyle="ButtonStyle.Primary"
+                                            Size="ButtonSize.Small"
+                                            Click="Page.SaveAutomationSettingsAsync"
+                                            Disabled="@Page.isBusy"
+                                            IsBusy="@Page.isBusy"
+                                            data-testid="cognitive-memory-save-model-access" />
+                                </Stack>
+                            </SurfaceCard>
+
+                            <SurfaceCard data-testid="cognitive-memory-manual-ingestion">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Manual ingestion" />
+                                <h2 class="cognitive-memory-card-title">Project and process sources</h2>
+                                <Stack GapScale="LayoutGap.Medium" Class="mt-4">
+                                    <Grid Gap="LayoutGap.Medium"
+                                          ColumnTemplateLg="minmax(0,1fr) minmax(9rem,0.35fr)">
+                                        <label class="cognitive-memory-field">
+                                            <span>Scope id</span>
+                                            <InputText class="cda-input"
+                                                       @bind-Value="Page.manualSourceScopeText"
+                                                       placeholder="@Page.ProjectScopePlaceholder"
+                                                       data-testid="cognitive-memory-manual-scope" />
+                                        </label>
+                                        <label class="cognitive-memory-field">
+                                            <span>Take</span>
+                                            <InputNumber class="cda-input"
+                                                         @bind-Value="Page.manualSourceTake"
+                                                         data-testid="cognitive-memory-manual-take" />
+                                        </label>
+                                    </Grid>
+                                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                        <Button Text="Ingest projects"
+                                                Icon="account_tree"
+                                                ButtonStyle="ButtonStyle.Primary"
+                                                Size="ButtonSize.Small"
+                                                Click="Page.IngestProjectStructureAsync"
+                                                Disabled="@Page.isBusy"
+                                                IsBusy="@Page.isBusy"
+                                                data-testid="cognitive-memory-ingest-projects" />
+                                        <Button Text="Ingest processes"
+                                                Icon="route"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Size="ButtonSize.Small"
+                                                Click="Page.IngestProcessesAsync"
+                                                Disabled="@Page.isBusy"
+                                                IsBusy="@Page.isBusy"
+                                                data-testid="cognitive-memory-ingest-processes" />
+                                    </Cluster>
+                                    <div class="cognitive-memory-progress" data-testid="cognitive-memory-manual-progress">
+                                        <progress value="@Page.manualIngestionProgress" max="100"></progress>
+                                        <span>@Page.manualIngestionStatus</span>
+                                    </div>
+                                </Stack>
+                            </SurfaceCard>
+
+                            <SurfaceCard data-testid="cognitive-memory-operational-actions">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Operations" />
+                                <h2 class="cognitive-memory-card-title">Run configured memory work</h2>
+                                <Stack GapScale="LayoutGap.Medium" Class="mt-4">
+                                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                        <Button Text="Run automation"
+                                                Icon="play_arrow"
+                                                ButtonStyle="ButtonStyle.Primary"
+                                                Size="ButtonSize.Small"
+                                                Click="Page.RunConfiguredAutomationAsync"
+                                                Disabled="@Page.isBusy"
+                                                IsBusy="@Page.isBusy"
+                                                data-testid="cognitive-memory-run-automation" />
+                                        <Button Text="Rebuild projections"
+                                                Icon="sync"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Size="ButtonSize.Small"
+                                                Click="Page.RebuildProjectionRecordsAsync"
+                                                Disabled="@Page.isBusy"
+                                                IsBusy="@Page.isBusy"
+                                                data-testid="cognitive-memory-rebuild-projections" />
+                                    </Cluster>
+                                    <div class="cognitive-memory-progress" data-testid="cognitive-memory-automation-run-progress">
+                                        <progress value="@Page.automationRunProgress" max="100"></progress>
+                                        <span>@Page.automationRunStatus</span>
+                                    </div>
+                                    <div class="cognitive-memory-progress" data-testid="cognitive-memory-projection-rebuild-progress">
+                                        <progress value="@Page.projectionRebuildProgress" max="100"></progress>
+                                        <span>@Page.projectionRebuildStatus</span>
+                                    </div>
+                                </Stack>
+                            </SurfaceCard>
+                        </Grid>
+}
+
+@code {
+    [CascadingParameter]
+    internal CognitiveMemoryPage Page { get; set; } = default!;
+}
+

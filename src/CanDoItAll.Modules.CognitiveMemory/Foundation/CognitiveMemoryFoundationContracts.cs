@@ -11,7 +11,8 @@ public enum CognitiveMemoryOperationMode
     Review = 3,
     Probe = 4,
     Learn = 5,
-    Project = 6
+    Project = 6,
+    Maintenance = 7
 }
 
 public enum CognitiveMemoryRecordKind
@@ -97,7 +98,8 @@ public enum CognitiveMemoryRunKind
     Projection = 2,
     Recall = 3,
     Consolidation = 4,
-    Review = 5
+    Review = 5,
+    RetentionCleanup = 6
 }
 
 public enum CognitiveMemoryRunStatus

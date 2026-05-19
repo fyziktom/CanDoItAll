@@ -20,6 +20,43 @@ public sealed record CognitiveMemoryReviewDecisionRequest(
     string Notes,
     Guid ExpectedConcurrencyToken);
 
+public enum CognitiveMemoryOperatorAuditKind
+{
+    MutationCommand = 0,
+    MutationAuditEvent = 1,
+    ClaimState = 2,
+    EvidenceAnchor = 3,
+    ProjectionFailure = 4,
+    RetentionCleanup = 5
+}
+
+public enum CognitiveMemoryOperatorAuditSubjectKind
+{
+    MutationCommand = 0,
+    MutationAuditEvent = 1,
+    Claim = 2,
+    EvidenceAnchor = 3,
+    ProjectionState = 4,
+    Run = 5
+}
+
+public enum CognitiveMemoryOperatorAuditStatus
+{
+    Informational = 0,
+    Accepted = 1,
+    Rejected = 2,
+    ReviewRequired = 3,
+    Supported = 4,
+    NeedsReview = 5,
+    Safe = 6,
+    Restricted = 7,
+    RebuildRequired = 8,
+    Failed = 9,
+    Succeeded = 10,
+    Running = 11,
+    Blocked = 12
+}
+
 public sealed record CognitiveMemoryReviewUiSnapshot(
     CognitiveMemoryReviewUiSummary Summary,
     IReadOnlyList<CognitiveMemoryExplorerItem> MemoryRecords,
@@ -35,7 +72,8 @@ public sealed record CognitiveMemoryReviewUiSnapshot(
     IReadOnlyList<CognitiveMemoryProfessorReviewView> ProfessorReviews,
     IReadOnlyList<CognitiveMemoryLearningProposalView> LearningProposals,
     IReadOnlyList<CognitiveMemoryCrossProjectPromotionView> CrossProjectPromotions,
-    IReadOnlyList<CognitiveMemoryDistributedJobView> DistributedJobs);
+    IReadOnlyList<CognitiveMemoryDistributedJobView> DistributedJobs,
+    IReadOnlyList<CognitiveMemoryOperatorAuditItem> OperatorAudit);
 
 public sealed record CognitiveMemoryReviewUiSummary(
     int MemoryRecordCount,
@@ -294,6 +332,17 @@ public sealed record CognitiveMemoryDistributedJobView(
     string LeasedWorkerId,
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset UpdatedAtUtc);
+
+public sealed record CognitiveMemoryOperatorAuditItem(
+    Guid Id,
+    Guid? ProjectId,
+    CognitiveMemoryOperatorAuditKind AuditKind,
+    Guid SubjectId,
+    CognitiveMemoryOperatorAuditSubjectKind SubjectKind,
+    CognitiveMemoryOperatorAuditStatus Status,
+    string Summary,
+    string Detail,
+    DateTimeOffset CreatedAtUtc);
 
 public interface ICognitiveMemoryReviewUiService
 {

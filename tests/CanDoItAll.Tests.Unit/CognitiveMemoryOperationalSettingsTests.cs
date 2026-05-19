@@ -98,6 +98,85 @@ public sealed class CognitiveMemoryOperationalSettingsTests
     }
 
     [Fact]
+    public async Task ExternalSourceIngestionService_FailsOperationForSensitiveCredentialContent()
+    {
+        var fixture = CreateFixture();
+        var service = new CognitiveMemoryExternalSourceIngestionService(
+            fixture.Factory,
+            fixture.Clock,
+            NullLogger<CognitiveMemoryExternalSourceIngestionService>.Instance);
+        var projectId = Guid.NewGuid();
+        var content = """
+            # Deployment notes
+
+            password = do-not-store-this
+            """;
+
+        var result = await service.IngestAsync(new CognitiveMemoryExternalSourceIngestRequest(
+            CognitiveMemoryExternalSourceKind.UploadedFile,
+            projectId,
+            "unsafe-source.md",
+            "unsafe-source.md",
+            content,
+            "text/markdown",
+            content.Length,
+            "test:operator"));
+
+        Assert.Equal(CognitiveMemoryExternalSourceIngestionStatus.Failed, result.Status);
+        Assert.Contains("sensitive credentials", result.FailureMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Null(result.SourceItemId);
+        Assert.Null(result.EvidenceAnchorId);
+
+        await using var dbContext = fixture.Factory.CreateDbContext();
+        Assert.Single(await dbContext.Set<CognitiveMemoryExternalSourceIngestionRecord>().ToListAsync());
+        Assert.Empty(await dbContext.Set<CognitiveMemorySourceItemRecord>().ToListAsync());
+        Assert.Empty(await dbContext.Set<CognitiveMemoryEvidenceAnchorRecord>().ToListAsync());
+    }
+
+    [Fact]
+    public async Task ExternalSourceIngestionService_RejectsOversizedUploadsBeforeExtraction()
+    {
+        var fixture = CreateFixture();
+        var service = new CognitiveMemoryExternalSourceIngestionService(
+            fixture.Factory,
+            fixture.Clock,
+            NullLogger<CognitiveMemoryExternalSourceIngestionService>.Instance);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await service.IngestFileAsync(
+                Guid.NewGuid(),
+                "large-source.txt",
+                "text/plain",
+                new MemoryStream(Encoding.UTF8.GetBytes("small body")),
+                CognitiveMemoryExternalSourceIngestionLimits.MaxFileBytes + 1,
+                "test:operator"));
+
+        Assert.Contains("10 MB", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExternalSourceIngestionService_WrapsExtractionErrorsWithFileContext()
+    {
+        var fixture = CreateFixture();
+        var service = new CognitiveMemoryExternalSourceIngestionService(
+            fixture.Factory,
+            fixture.Clock,
+            NullLogger<CognitiveMemoryExternalSourceIngestionService>.Instance);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await service.IngestFileAsync(
+                Guid.NewGuid(),
+                "broken.docx",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                new MemoryStream(Encoding.UTF8.GetBytes("not a zip")),
+                9,
+                "test:operator"));
+
+        Assert.Contains("broken.docx", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("could not be extracted", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task ExternalSourceIngestionService_AllowsSameCallerIdempotencyKeyAcrossDistinctUploads()
     {
         var fixture = CreateFixture();

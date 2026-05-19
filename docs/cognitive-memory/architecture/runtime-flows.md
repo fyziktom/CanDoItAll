@@ -68,6 +68,88 @@ sequenceDiagram
     Recall-->>Caller: Context pack, candidates, stages, warnings
 ```
 
+## External Source Ingestion Policy
+
+```mermaid
+flowchart TD
+    Caller["UI/API caller submits file or web link"] --> Operation["Create ingestion operation"]
+    Operation --> Size{"File/link and extracted text within limits?"}
+    Size -- "No" --> FailedSize["Mark operation failed with explicit limit error"]
+    Size -- "Yes" --> Extract["Extract file or website text"]
+    Extract --> ExtractOk{"Extraction succeeded?"}
+    ExtractOk -- "No" --> FailedExtract["Mark operation failed with file/host context"]
+    ExtractOk -- "Yes" --> Sensitive{"Credential-like content or sensitive query parameter?"}
+    Sensitive -- "Yes" --> FailedSensitive["Mark operation failed without source/evidence persistence"]
+    Sensitive -- "No" --> Persist["Persist source manifest, source items, chunks, evidence anchors"]
+    Persist --> Complete["Complete operation with item/chunk counts"]
+```
+
+## Projection Rebuild
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Caller as UI/API/operator
+    participant Rebuild as ProjectionRebuildService
+    participant Db as AppDbContext
+    participant Lifecycle as ProjectionLifecycleService
+    participant Provider as RAG/Qdrant projection provider
+
+    Caller->>Rebuild: RebuildAsync(project, take, collection)
+    Rebuild->>Db: Select stale, rebuild-required, or failed projection records
+    loop each selected projection
+        Rebuild->>Db: Load memory record, source links, evidence anchors, claims, context frames, entities, boundaries
+        alt durable inputs are complete
+            Rebuild->>Lifecycle: ProjectAsync(lifecycle request)
+            Lifecycle->>Provider: Upsert/delete projection point as needed
+            Provider-->>Lifecycle: Provider trace and projection state
+            Lifecycle-->>Rebuild: Projection record result
+            Rebuild->>Db: Preserve row identity and update projection status/hash/provider trace
+        else provider fails
+            Rebuild->>Db: Mark projection failed, keep RebuildRequired=true, store failure code/message
+        else durable inputs missing
+            Rebuild->>Db: Leave projection unchanged and record explicit skip warning
+        end
+    end
+    Rebuild->>Db: Complete projection run record
+    Rebuild-->>Caller: Item results, skipped/failed/projected counts, warnings
+```
+
+## Explicit Automation Run
+
+```mermaid
+flowchart TD
+    Caller["API/operator settings tab calls /automation/run"] --> Settings["Load CognitiveMemoryAutomationSettings"]
+    Settings --> Trigger{"Trigger allowed by schedule mode?"}
+    Trigger -- "No" --> Skipped["Return Executed=false with warning"]
+    Trigger -- "Yes" --> ProjectIngest{"AutoIngestProjectStructure?"}
+    ProjectIngest -- "Yes + project id" --> Workbench["Ingest Workbench project structure"]
+    ProjectIngest -- "Yes + no project id" --> Warning["Add explicit warning"]
+    ProjectIngest -- "No" --> ProcessCheck{"AutoIngestProcessRuntime?"}
+    Workbench --> ProcessCheck
+    Warning --> ProcessCheck
+    ProcessCheck -- "Yes" --> Process["Ingest process runtime evidence"]
+    ProcessCheck -- "No" --> ConsolidateCheck{"AutoConsolidateAfterIngestion and successful ingestion?"}
+    Process --> ConsolidateCheck
+    ConsolidateCheck -- "Yes" --> Consolidation["Run incremental or nightly consolidation"]
+    ConsolidateCheck -- "No" --> Result["Return run summary"]
+    Consolidation --> Result
+```
+
+## Retention Cleanup
+
+```mermaid
+flowchart TD
+    Caller["API/operator calls /retention/cleanup"] --> Validate["Validate cutoff is before current UTC time"]
+    Validate --> Scope["Resolve cleanup scopes"]
+    Scope --> DryRun{"Dry run?"}
+    DryRun -- "Yes" --> Count["Count eligible operational rows only"]
+    DryRun -- "No" --> Delete["Delete eligible operational rows only"]
+    Count --> Report["Return per-scope matched/deleted counts"]
+    Delete --> Report
+    Report --> Guard["Canonical memory, source items, claims, evidence, and projection state remain untouched"]
+```
+
 ## Lifecycle Flow
 
 ```mermaid
@@ -91,7 +173,7 @@ flowchart LR
     Claim --> Recall
     Evidence --> Recall
     Recall --> ContextPack["Context pack and trace"]
-    ContextPack --> Maf["Agent context contribution"]
+    ContextPack --> Maf["Agent-facing context package"]
     ContextPack --> Probe["Probe answer and feedback"]
     Probe --> Signals["Signals, calibration, proposals, review work"]
 ```
@@ -109,7 +191,9 @@ sequenceDiagram
     Maf->>Contributor: ContributeAsync(agent, provider, workspace scope, messages)
     Contributor->>Settings: GetAsync()
     Settings-->>Contributor: Model access policy settings
-    alt provider not allowed or project scope missing
+    alt provider not allowed, project scope missing, or memory unavailable in process-critical mode
+        Contributor-->>Maf: Failed contribution with trace metadata
+    else provider not allowed, project scope missing, or memory unavailable in interactive mode
         Contributor-->>Maf: Skipped with trace metadata
     else provider allowed and query available
         Contributor->>Recall: RecallAsync(FocusedTaskContext)
@@ -125,6 +209,7 @@ sequenceDiagram
 ## Current Flow Limits
 
 - Recall always records stages and warnings when vector projection is skipped or unavailable.
-- Projection invalidation happens during consolidation, but normal projection rebuild orchestration is not yet a first-class product flow.
-- Scheduled automation settings are persisted, but current docs should treat manual/API execution as the real supported flow until a cognitive-memory worker exists.
+- Projection invalidation and explicit rebuild are first-class service/API/UI flows. Adapter-backed RAG proof and deterministic provider-failure proof exist; live Qdrant/provider validation is still required for beta.
+- Scheduled automation settings are persisted and can be executed explicitly through the API runner or operator settings tab. There is intentionally no dedicated hosted cognitive-memory worker in P0/P1.
+- Retention cleanup is explicit and dry-run-first. It removes old operational rows only, not canonical memory truth.
 

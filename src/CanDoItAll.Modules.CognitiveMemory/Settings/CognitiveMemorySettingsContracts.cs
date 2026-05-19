@@ -24,6 +24,14 @@ public enum CognitiveMemoryExternalSourceIngestionStatus
     Failed = 3
 }
 
+public static class CognitiveMemoryExternalSourceIngestionLimits
+{
+    public const long MaxFileBytes = 10L * 1024 * 1024;
+    public const int MaxTextCharacters = 1_000_000;
+    public const int MaxChunkCharacters = 4_000;
+    public const int MinChunkCharacters = 80;
+}
+
 public enum CognitiveMemoryModelAccessMode
 {
     AnyEnabledProvider = 0,

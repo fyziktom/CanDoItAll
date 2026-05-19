@@ -4,9 +4,9 @@ This section is the current source-grounded documentation for the CanDoItAll Cog
 
 ## Current Stage
 
-Cognitive Memory is at **validation-grade alpha** as of 2026-05-19.
+Cognitive Memory is at **P1-complete beta-candidate alpha** as of 2026-05-19.
 
-That is deliberately not beta. The durable schema, module registration, API surface, operator UI, source ingestion, consolidation, review approval, recall traces, MAF context contribution, probing, self-regulation, and validation coverage exist. The remaining gaps are hardening and maintainability work: oversized services, projection rebuild orchestration, scheduled automation execution, sharper API DTO boundaries, production observability, and clearer behavior when optional semantic/vector providers are unavailable.
+That is still not a full beta label. The durable schema, module registration, versioned API aliases, contract/examples endpoint, operator UI, source ingestion, consolidation, review approval, recall traces, explicit projection rebuild, explicit automation execution, retention cleanup with durable run audit, operator audit signals, external-source safety policy, MAF context contribution policy, probing, self-regulation, and validation coverage exist. P1 closed the local beta-hardening gaps for API versioning, deterministic provider failure proof, retention cleanup, audit visibility, external-source limits/sensitive-content rejection, and performance/runbook docs. The remaining blocker is live provider validation in a configured Qdrant/provider environment plus broader production workflow proof.
 
 ## Start Here
 
@@ -17,13 +17,17 @@ That is deliberately not beta. The durable schema, module registration, API surf
 - [Runtime flows](architecture/runtime-flows.md): sequence and flow diagrams for ingestion, consolidation, review, recall, and MAF context.
 - [Integration boundaries](architecture/integration-boundaries.md): what owns truth, what is a projection, and what must not mutate canonical memory.
 - [API](operations/api.md): current HTTP endpoints and operational notes.
+- [Provider failure runbook](operations/provider-failure-runbook.md): deterministic and live-provider validation for projection rebuild.
+- [Retention cleanup](operations/retention-cleanup.md): explicit cleanup policy and API usage.
+- [External source policy](operations/external-source-policy.md): limits, extraction errors, and sensitive-content behavior.
+- [Performance baselines](operations/performance-baselines.md): baseline commands and thresholds for large source/recall work.
 - [Validation and testing](operations/validation-and-testing.md): targeted test commands and remaining coverage gaps.
 - [Roadmap](roadmap/roadmap.md): completed work and next steps toward beta.
 
 ## Primary Source References
 
 - `src/CanDoItAll.Modules.CognitiveMemory`
-- `src/CanDoItAll.Web/Api/CognitiveMemoryApi.cs`
+- `src/CanDoItAll.Web/Api/CognitiveMemoryApi*.cs`
 - `src/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs`
 - `src/CanDoItAll.Composition/ModuleAssemblies.cs`
 - `src/CanDoItAll.Infrastructure/Persistence/AppDbContext.cs`
@@ -41,5 +45,8 @@ The safe mental model is:
 3. Consolidation creates source-backed candidates and governed mutation commands.
 4. Approved or machine-generated candidates materialize canonical memory records, claims, source links, and evidence links.
 5. Recall combines lexical, optional vector projection, workspace, signal, graph, and source-detail channels into a persisted context pack and trace.
-6. UI, API, MAF, probes, answer gates, and self-regulation read the durable model and create reviewable signals, not uncontrolled truth mutations.
+6. Projection rebuild updates rebuildable provider projection rows from durable memory; it does not create canonical truth.
+7. Explicit automation and retention cleanup run only through operator/API commands; they are not hidden daemons.
+8. Operator audit surfaces mutation commands, audit events, claim state, evidence anchors, projection failures, and retention cleanup runs without exposing raw mutation payloads.
+9. UI, API, MAF, probes, answer gates, and self-regulation read the durable model and create reviewable signals, not uncontrolled truth mutations.
 

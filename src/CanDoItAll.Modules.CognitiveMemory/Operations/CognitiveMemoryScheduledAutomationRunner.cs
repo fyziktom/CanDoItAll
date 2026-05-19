@@ -1,0 +1,132 @@
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.SharedKernel;
+
+namespace CanDoItAll.Modules.CognitiveMemory;
+
+public sealed class CognitiveMemoryScheduledAutomationRunner(
+    ICognitiveMemoryAutomationSettingsService settingsService,
+    ICognitiveMemorySourceIngestionService sourceIngestionService,
+    ICognitiveMemoryConsolidationEngine consolidationEngine,
+    IClock clock) : ICognitiveMemoryScheduledAutomationRunner
+{
+    private const int MaximumTake = 500;
+
+    public async ValueTask<CognitiveMemoryScheduledAutomationRunResult> RunAsync(
+        CognitiveMemoryScheduledAutomationRunRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var actorId = CognitiveMemoryGuard.EnsureText(request.ActorId, nameof(request.ActorId));
+        var take = request.Take is > 0 and <= MaximumTake
+            ? request.Take
+            : throw new ArgumentOutOfRangeException(nameof(request.Take), $"Take must be between 1 and {MaximumTake}.");
+        var settings = await settingsService.GetAsync(cancellationToken);
+        if (!ScheduleAllowsRun(settings.ScheduleMode, request.TriggerKind))
+        {
+            return new CognitiveMemoryScheduledAutomationRunResult(
+                settings.ScheduleMode,
+                request.TriggerKind,
+                Executed: false,
+                SourceIngestionRuns: 0,
+                SourceItemsSeen: 0,
+                SourceItemsCreated: 0,
+                ConsolidationRuns: 0,
+                ConsolidationStatus: null,
+                [$"Automation trigger {request.TriggerKind} is disabled by schedule mode {settings.ScheduleMode}."]);
+        }
+
+        var warnings = new List<string>();
+        var sourceRuns = new List<CognitiveMemorySourceIngestionResult>();
+        if (settings.AutoIngestProjectStructure)
+        {
+            if (request.ProjectId.HasValue)
+            {
+                sourceRuns.Add(await sourceIngestionService.IngestAsync(
+                    new CognitiveMemorySourceIngestionRequest(
+                        MemorySourceKind.WorkbenchProjectStructure,
+                        request.ProjectId.Value,
+                        BuildIdempotencyKey("project-structure", request, actorId),
+                        Take: take,
+                        ProjectId: request.ProjectId),
+                    cancellationToken));
+            }
+            else
+            {
+                warnings.Add("Project structure ingestion was enabled but no project id was supplied.");
+            }
+        }
+
+        if (settings.AutoIngestProcessRuntime)
+        {
+            sourceRuns.Add(await sourceIngestionService.IngestAsync(
+                new CognitiveMemorySourceIngestionRequest(
+                    MemorySourceKind.ProcessRuntime,
+                    request.ProjectId ?? Guid.Empty,
+                    BuildIdempotencyKey("process-runtime", request, actorId),
+                    Take: take,
+                    ProjectId: request.ProjectId),
+                cancellationToken));
+        }
+
+        CognitiveMemoryConsolidationRunResult? consolidation = null;
+        if (settings.AutoConsolidateAfterIngestion && sourceRuns.Any(run => run.Status == CognitiveMemorySourceIngestionStatus.Ingested))
+        {
+            consolidation = await consolidationEngine.RunAsync(
+                new CognitiveMemoryConsolidationRunRequest(
+                    request.ProjectId,
+                    request.TriggerKind == CognitiveMemoryAutomationTriggerKind.Nightly
+                        ? CognitiveMemoryConsolidationMode.ProjectNightly
+                        : CognitiveMemoryConsolidationMode.IncrementalRecent,
+                    MapTriggerKind(request.TriggerKind),
+                    CognitiveMemoryConsolidationProfile.IncrementalRecent,
+                    new CognitiveMemoryPolicyContext(
+                        request.ProjectId,
+                        actorId,
+                        CognitiveMemoryAccessLevel.Project,
+                        new CognitiveMemoryPolicyProfileId("scheduled-automation"),
+                        CognitiveMemoryRiskLevel.Low,
+                        AllowRestrictedContent: false),
+                    BuildIdempotencyKey("consolidation", request, actorId),
+                    CognitiveMemoryConsolidationBudget.Default),
+                cancellationToken);
+        }
+
+        return new CognitiveMemoryScheduledAutomationRunResult(
+            settings.ScheduleMode,
+            request.TriggerKind,
+            Executed: true,
+            sourceRuns.Count,
+            sourceRuns.Sum(run => run.SourceItemCount),
+            sourceRuns.Sum(run => run.CreatedSourceItemCount),
+            consolidation is null ? 0 : 1,
+            consolidation?.Status,
+            warnings);
+    }
+
+    private static bool ScheduleAllowsRun(
+        CognitiveMemoryAutomationScheduleMode scheduleMode,
+        CognitiveMemoryAutomationTriggerKind triggerKind)
+        => triggerKind == CognitiveMemoryAutomationTriggerKind.Manual ||
+           (scheduleMode, triggerKind) switch
+           {
+               (CognitiveMemoryAutomationScheduleMode.Nightly, CognitiveMemoryAutomationTriggerKind.Nightly) => true,
+               (CognitiveMemoryAutomationScheduleMode.IdleTimeout, CognitiveMemoryAutomationTriggerKind.IdleTimeout) => true,
+               (CognitiveMemoryAutomationScheduleMode.ScheduledMoments, CognitiveMemoryAutomationTriggerKind.ScheduledMoment) => true,
+               _ => false
+           };
+
+    private static CognitiveMemoryConsolidationTriggerKind MapTriggerKind(CognitiveMemoryAutomationTriggerKind triggerKind)
+        => triggerKind switch
+        {
+            CognitiveMemoryAutomationTriggerKind.Nightly => CognitiveMemoryConsolidationTriggerKind.Nightly,
+            CognitiveMemoryAutomationTriggerKind.IdleTimeout => CognitiveMemoryConsolidationTriggerKind.Idle,
+            CognitiveMemoryAutomationTriggerKind.ScheduledMoment => CognitiveMemoryConsolidationTriggerKind.Nightly,
+            _ => CognitiveMemoryConsolidationTriggerKind.Manual
+        };
+
+    private CognitiveMemoryIdempotencyKey BuildIdempotencyKey(
+        string operation,
+        CognitiveMemoryScheduledAutomationRunRequest request,
+        string actorId)
+        => new($"automation:{operation}:{request.TriggerKind}:{request.ProjectId?.ToString("D") ?? "global"}:{actorId}:{clock.GetUtcNow():yyyyMMddHHmmssfffffff}");
+}

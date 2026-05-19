@@ -1,0 +1,45 @@
+@namespace CanDoItAll.Modules.CognitiveMemory.Pages
+
+@if (Page.snapshot is { } snapshot)
+{
+                        <Grid Gap="LayoutGap.Large"
+                              Class="cognitive-memory-layout"
+                              ColumnTemplateXl="minmax(22rem,0.85fr) minmax(0,1.15fr)">
+                            <SurfaceCard data-testid="cognitive-memory-dashboard-review">
+                                <Split Gap="LayoutGap.Small"
+                                       AlignItems="AlignItems.Start">
+                                    <div>
+                                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Review queue" />
+                                        <h2 class="cognitive-memory-card-title">Pending evidence decisions</h2>
+                                    </div>
+                                    <StatusBadge Tone="@Page.ReviewQueueTone" Text="@($"{snapshot.Summary.PendingReviewCount} pending")" />
+                                </Split>
+                                @Page.ReviewQueueList()
+                            </SurfaceCard>
+
+                            <SurfaceCard data-testid="cognitive-memory-dashboard-trace">
+                                <Split Gap="LayoutGap.Small"
+                                       AlignItems="AlignItems.Start">
+                                    <div>
+                                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Recall trace" />
+                                        <h2 class="cognitive-memory-card-title">Why memory entered context</h2>
+                                    </div>
+                                    <StatusBadge Tone="info" Text="@($"{snapshot.RecallTraces.Count} loaded")" />
+                                </Split>
+                                @Page.RecallTraceDetail(Compact: true)
+                            </SurfaceCard>
+                        </Grid>
+
+                        <Grid Gap="LayoutGap.Large"
+                              Class="cognitive-memory-layout"
+                              ColumnTemplateXl="minmax(0,1fr) minmax(0,1fr)">
+                            @Page.ProjectionHealthPanel()
+                            @Page.ProcedurePanel()
+                        </Grid>
+}
+
+@code {
+    [CascadingParameter]
+    internal CognitiveMemoryPage Page { get; set; } = default!;
+}
+

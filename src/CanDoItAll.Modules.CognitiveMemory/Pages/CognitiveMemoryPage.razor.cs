@@ -13,7 +13,7 @@ namespace CanDoItAll.Modules.CognitiveMemory.Pages;
 
 public partial class CognitiveMemoryPage
 {
-    private const string OperatorActorId = "cognitive-memory-operator-ui";
+    internal const string OperatorActorId = "cognitive-memory-operator-ui";
 
     [Inject]
     public ICognitiveMemoryReviewUiService ReviewUiService { get; set; } = default!;
@@ -26,6 +26,12 @@ public partial class CognitiveMemoryPage
 
     [Inject]
     public ICognitiveMemorySourceIngestionService SourceIngestionService { get; set; } = default!;
+
+    [Inject]
+    public ICognitiveMemoryScheduledAutomationRunner ScheduledAutomationRunner { get; set; } = default!;
+
+    [Inject]
+    public ICognitiveMemoryProjectionRebuildService ProjectionRebuildService { get; set; } = default!;
 
     [Inject]
     public ICognitiveMemoryExternalSourceIngestionService ExternalSourceIngestionService { get; set; } = default!;
@@ -45,121 +51,126 @@ public partial class CognitiveMemoryPage
     [SupplyParameterFromQuery]
     public Guid? ProjectId { get; set; }
 
-    private CognitiveMemoryReviewUiSnapshot? snapshot;
-    private Guid? selectedMemoryRecordId;
-    private Guid? selectedReviewItemId;
-    private Guid? selectedRecallTraceId;
-    private string reviewNotes = "Decision recorded from Cognitive Memory operator UI.";
-    private string errorMessage = string.Empty;
-    private int activeTabIndex;
-    private bool isLoading = true;
-    private bool isBusy;
-    private CognitiveMemoryAutomationScheduleMode automationScheduleMode = CognitiveMemoryAutomationScheduleMode.ManualOnly;
-    private string nightlyLocalTime = "02:00";
-    private int idleMinutes = 30;
-    private string scheduledLocalTimesText = string.Empty;
-    private bool autoIngestProjectStructure = true;
-    private bool autoIngestProcessRuntime = true;
-    private bool autoConsolidateAfterIngestion = true;
-    private CognitiveMemoryModelAccessMode modelAccessMode = CognitiveMemoryModelAccessMode.AnyEnabledProvider;
-    private string defaultProviderProfileIdText = string.Empty;
-    private string defaultAgentIdText = string.Empty;
-    private List<CognitiveMemoryProviderSelection> modelProviderOptions = [];
-    private IReadOnlyList<AgentDefinition> modelAgentOptions = [];
-    private string modelAccessStatus = "Provider policy not loaded.";
-    private string manualSourceScopeText = string.Empty;
-    private int manualSourceTake = 250;
-    private string manualIngestionStatus = "Ready.";
-    private int manualIngestionProgress;
-    private string externalSourceUrl = string.Empty;
-    private string externalSourceStatus = "Ready.";
-    private int externalSourceProgress;
-    private CognitiveMemoryExternalSourceIngestResult? lastExternalSourceResult;
-    private Guid? activeProbeSessionId;
-    private CognitiveMemoryProbeAskResult? lastProbeAskResult;
-    private CognitiveMemoryProbeFeedbackRecord? lastProbeFeedback;
-    private string probeSessionTitle = "Project memory dialogue";
-    private string probeQuestion = "What are the project phases, investments, team growth, and main risks?";
-    private string probeFeedbackNotes = string.Empty;
-    private string probeCorrectionText = string.Empty;
-    private string probeStatus = "Ready.";
-    private CognitiveMemoryRecallMode probeRecallMode = CognitiveMemoryRecallMode.DeepSourceGrounded;
-    private CognitiveMemoryRecallIntentKind probeIntent = CognitiveMemoryRecallIntentKind.SourceLookup;
-    private CognitiveMemoryProbeFeedbackAction probeFeedbackAction = CognitiveMemoryProbeFeedbackAction.MarkCorrect;
-    private CognitiveMemoryRiskLevel probeFeedbackRiskLevel = CognitiveMemoryRiskLevel.Medium;
-    private bool probeCreateRegressionTest;
-    private bool probeRequestHumanReview;
-    private bool probeVoiceModeEnabled;
-    private bool probeVoiceRecording;
-    private bool probeVoiceTranscribing;
-    private bool probeVoiceSpeaking;
-    private bool probeVoiceAwaitingConfirmation;
-    private CognitiveMemoryProbeVoiceCaptureTarget probeVoiceCaptureTarget;
-    private string probeVoiceStatus = "Audio ready.";
-    private string probeVoiceStatusTone = "neutral";
-    private string pendingVoiceCorrectionText = string.Empty;
-    private readonly HashSet<Guid> probeSessionsWithVoiceIdentifierOmissionNotice = [];
-    private bool hasProbeVoiceIdentifierOmissionNoticeWithoutSession;
+    internal CognitiveMemoryReviewUiSnapshot? snapshot;
+    internal Guid? selectedMemoryRecordId;
+    internal Guid? selectedReviewItemId;
+    internal Guid? selectedRecallTraceId;
+    internal string reviewNotes = "Decision recorded from Cognitive Memory operator UI.";
+    internal string errorMessage = string.Empty;
+    internal int activeTabIndex;
+    internal bool isLoading = true;
+    internal bool isBusy;
+    internal int uiRevision;
+    internal CognitiveMemoryAutomationScheduleMode automationScheduleMode = CognitiveMemoryAutomationScheduleMode.ManualOnly;
+    internal string nightlyLocalTime = "02:00";
+    internal int idleMinutes = 30;
+    internal string scheduledLocalTimesText = string.Empty;
+    internal bool autoIngestProjectStructure = true;
+    internal bool autoIngestProcessRuntime = true;
+    internal bool autoConsolidateAfterIngestion = true;
+    internal CognitiveMemoryModelAccessMode modelAccessMode = CognitiveMemoryModelAccessMode.AnyEnabledProvider;
+    internal string defaultProviderProfileIdText = string.Empty;
+    internal string defaultAgentIdText = string.Empty;
+    internal List<CognitiveMemoryProviderSelection> modelProviderOptions = [];
+    internal IReadOnlyList<AgentDefinition> modelAgentOptions = [];
+    internal string modelAccessStatus = "Provider policy not loaded.";
+    internal string manualSourceScopeText = string.Empty;
+    internal int manualSourceTake = 250;
+    internal string manualIngestionStatus = "Ready.";
+    internal int manualIngestionProgress;
+    internal string automationRunStatus = "Ready.";
+    internal int automationRunProgress;
+    internal string projectionRebuildStatus = "Ready.";
+    internal int projectionRebuildProgress;
+    internal string externalSourceUrl = string.Empty;
+    internal string externalSourceStatus = "Ready.";
+    internal int externalSourceProgress;
+    internal CognitiveMemoryExternalSourceIngestResult? lastExternalSourceResult;
+    internal Guid? activeProbeSessionId;
+    internal CognitiveMemoryProbeAskResult? lastProbeAskResult;
+    internal CognitiveMemoryProbeFeedbackRecord? lastProbeFeedback;
+    internal string probeSessionTitle = "Project memory dialogue";
+    internal string probeQuestion = "What are the project phases, investments, team growth, and main risks?";
+    internal string probeFeedbackNotes = string.Empty;
+    internal string probeCorrectionText = string.Empty;
+    internal string probeStatus = "Ready.";
+    internal CognitiveMemoryRecallMode probeRecallMode = CognitiveMemoryRecallMode.DeepSourceGrounded;
+    internal CognitiveMemoryRecallIntentKind probeIntent = CognitiveMemoryRecallIntentKind.SourceLookup;
+    internal CognitiveMemoryProbeFeedbackAction probeFeedbackAction = CognitiveMemoryProbeFeedbackAction.MarkCorrect;
+    internal CognitiveMemoryRiskLevel probeFeedbackRiskLevel = CognitiveMemoryRiskLevel.Medium;
+    internal bool probeCreateRegressionTest;
+    internal bool probeRequestHumanReview;
+    internal bool probeVoiceModeEnabled;
+    internal bool probeVoiceRecording;
+    internal bool probeVoiceTranscribing;
+    internal bool probeVoiceSpeaking;
+    internal bool probeVoiceAwaitingConfirmation;
+    internal CognitiveMemoryProbeVoiceCaptureTarget probeVoiceCaptureTarget;
+    internal string probeVoiceStatus = "Audio ready.";
+    internal string probeVoiceStatusTone = "neutral";
+    internal string pendingVoiceCorrectionText = string.Empty;
+    internal readonly HashSet<Guid> probeSessionsWithVoiceIdentifierOmissionNotice = [];
+    internal bool hasProbeVoiceIdentifierOmissionNoticeWithoutSession;
 
-    private CognitiveMemoryReviewQueueItem? SelectedReviewItem
+    internal CognitiveMemoryReviewQueueItem? SelectedReviewItem
         => snapshot?.ReviewItems.FirstOrDefault(item => item.Id.Value == selectedReviewItemId);
 
-    private CognitiveMemoryExplorerItem? SelectedMemoryRecord
+    internal CognitiveMemoryExplorerItem? SelectedMemoryRecord
         => snapshot?.MemoryRecords.FirstOrDefault(record => record.Id.Value == selectedMemoryRecordId);
 
-    private CognitiveMemoryRecallTraceView? SelectedRecallTrace
+    internal CognitiveMemoryRecallTraceView? SelectedRecallTrace
         => snapshot?.RecallTraces.FirstOrDefault(trace => trace.Id == selectedRecallTraceId);
 
-    private CognitiveMemoryProbeSessionView? ActiveProbeSessionView
+    internal CognitiveMemoryProbeSessionView? ActiveProbeSessionView
         => activeProbeSessionId is { } sessionId
             ? snapshot?.ProbeSessions.FirstOrDefault(session => session.Id == sessionId)
             : null;
 
-    private bool HasActiveProbeSession
+    internal bool HasActiveProbeSession
         => activeProbeSessionId.HasValue;
 
-    private bool CanStartProbe
+    internal bool CanStartProbe
         => !isBusy && ProjectId is { } projectId && projectId != Guid.Empty;
 
-    private bool CanAskProbe
+    internal bool CanAskProbe
         => !isBusy &&
            ProjectId is { } projectId &&
            projectId != Guid.Empty &&
            !string.IsNullOrWhiteSpace(probeQuestion);
 
-    private bool CanSendProbeFeedback
+    internal bool CanSendProbeFeedback
         => !isBusy && lastProbeAskResult?.Turn is not null;
 
-    private bool CanUseProbeVoice
+    internal bool CanUseProbeVoice
         => !isBusy && !probeVoiceTranscribing && !probeVoiceSpeaking;
 
-    private string ProjectScopePlaceholder
+    internal string ProjectScopePlaceholder
         => ProjectId?.ToString("D") ?? "Optional process scope id";
 
-    private string ProbeProjectScopeText
+    internal string ProbeProjectScopeText
         => ProjectId is { } projectId && projectId != Guid.Empty
             ? projectId.ToString("D")
             : "No project selected";
 
-    private string ActiveProbeSessionTitle
+    internal string ActiveProbeSessionTitle
         => ActiveProbeSessionView?.Title ??
            (activeProbeSessionId is { } sessionId ? $"Session {FormatShortId(sessionId)}" : "No active session");
 
-    private string ActiveProbeSessionMeta
+    internal string ActiveProbeSessionMeta
         => ActiveProbeSessionView is { } session
             ? $"{FormatLabel(session.Status)} / {FormatLabel(session.RecallMode)} / {session.TurnCount} turn(s)"
             : activeProbeSessionId is null
                 ? "Start or reuse a session before asking."
                 : "Session was created in this workbench and will appear after refresh.";
 
-    private string ReviewQueueTone
+    internal string ReviewQueueTone
         => snapshot?.Summary.HighRiskReviewCount > 0
             ? "danger"
             : snapshot?.Summary.PendingReviewCount > 0
                 ? "warning"
                 : "success";
 
-    private string HealthBadgeText
+    internal string HealthBadgeText
     {
         get
         {
@@ -172,7 +183,7 @@ public partial class CognitiveMemoryPage
         }
     }
 
-    private string RegulationBadgeText
+    internal string RegulationBadgeText
     {
         get
         {
@@ -188,7 +199,7 @@ public partial class CognitiveMemoryPage
         }
     }
 
-    private string ScaleBadgeText
+    internal string ScaleBadgeText
     {
         get
         {
@@ -207,52 +218,8 @@ public partial class CognitiveMemoryPage
         await RefreshAsync();
     }
 
-    private async Task LoadAutomationSettingsAsync()
-    {
-        try
-        {
-            var settings = await AutomationSettingsService.GetAsync(CancellationToken.None);
-            automationScheduleMode = settings.ScheduleMode;
-            nightlyLocalTime = settings.NightlyLocalTime;
-            idleMinutes = settings.IdleMinutes;
-            scheduledLocalTimesText = string.Join(Environment.NewLine, settings.ScheduledLocalTimes);
-            autoIngestProjectStructure = settings.AutoIngestProjectStructure;
-            autoIngestProcessRuntime = settings.AutoIngestProcessRuntime;
-            autoConsolidateAfterIngestion = settings.AutoConsolidateAfterIngestion;
-            modelAccessMode = settings.ModelAccessMode;
-            defaultProviderProfileIdText = settings.DefaultProviderProfileId?.ToString("D") ?? string.Empty;
-            defaultAgentIdText = settings.DefaultAgentId?.ToString("D") ?? string.Empty;
 
-            var providers = await AgentWorkspaceService.ListProvidersAsync(CancellationToken.None);
-            var allowedProviderIds = settings.AllowedProviderProfileIds.ToHashSet();
-            modelProviderOptions = providers
-                .Where(provider => provider.Purpose == ProviderProfilePurpose.Chat)
-                .OrderByDescending(provider => provider.IsEnabled)
-                .ThenBy(provider => provider.Kind)
-                .ThenBy(provider => provider.Name, StringComparer.OrdinalIgnoreCase)
-                .Select(provider => new CognitiveMemoryProviderSelection(
-                    provider.Id,
-                    provider.Name,
-                    provider.Kind,
-                    provider.DefaultModel,
-                    provider.BaseUrl,
-                    provider.IsEnabled,
-                    CognitiveMemoryModelAccessPolicy.IsLocalProvider(provider),
-                    allowedProviderIds.Contains(provider.Id)))
-                .ToList();
-            modelAgentOptions = (await AgentWorkspaceService.ListAgentsAsync(includeTemplates: false, CancellationToken.None))
-                .OrderBy(agent => agent.Name, StringComparer.OrdinalIgnoreCase)
-                .ToList();
-            modelAccessStatus = BuildModelAccessStatus(settings);
-        }
-        catch (Exception exception)
-        {
-            errorMessage = exception.Message;
-            NotificationService.Error("Memory settings failed", exception.Message);
-        }
-    }
-
-    private async Task RefreshAsync()
+    internal async Task RefreshAsync()
     {
         if (isBusy)
         {
@@ -273,6 +240,7 @@ public partial class CognitiveMemoryPage
             selectedMemoryRecordId = ResolveSelectedMemoryRecordId(snapshot, selectedMemoryRecordId);
             selectedReviewItemId = ResolveSelectedReviewItemId(snapshot, selectedReviewItemId);
             selectedRecallTraceId = ResolveSelectedRecallTraceId(snapshot, selectedRecallTraceId);
+            BumpUiRevision();
         }
         catch (Exception exception)
         {
@@ -286,22 +254,25 @@ public partial class CognitiveMemoryPage
         }
     }
 
-    private void SelectReviewItem(Guid reviewItemId)
+    internal void SelectReviewItem(Guid reviewItemId)
     {
         selectedReviewItemId = reviewItemId;
+        BumpUiRevision();
     }
 
-    private void SelectMemoryRecord(Guid memoryRecordId)
+    internal void SelectMemoryRecord(Guid memoryRecordId)
     {
         selectedMemoryRecordId = memoryRecordId;
+        BumpUiRevision();
     }
 
-    private void SelectRecallTrace(Guid recallTraceId)
+    internal void SelectRecallTrace(Guid recallTraceId)
     {
         selectedRecallTraceId = recallTraceId;
+        BumpUiRevision();
     }
 
-    private async Task DecideReviewAsync(CognitiveMemoryReviewDecisionKind decisionKind)
+    internal async Task DecideReviewAsync(CognitiveMemoryReviewDecisionKind decisionKind)
     {
         var item = SelectedReviewItem;
         if (item is null || isBusy)
@@ -335,12 +306,12 @@ public partial class CognitiveMemoryPage
         }
     }
 
-    private async Task LoadAfterDecisionAsync()
+    internal async Task LoadAfterDecisionAsync()
     {
         await ReloadSnapshotAsync();
     }
 
-    private async Task ReloadSnapshotAsync()
+    internal async Task ReloadSnapshotAsync()
     {
         snapshot = await ReviewUiService.GetSnapshotAsync(
             new CognitiveMemoryReviewUiQuery(
@@ -350,1505 +321,14 @@ public partial class CognitiveMemoryPage
         selectedMemoryRecordId = ResolveSelectedMemoryRecordId(snapshot, selectedMemoryRecordId);
         selectedReviewItemId = ResolveSelectedReviewItemId(snapshot, selectedReviewItemId);
         selectedRecallTraceId = ResolveSelectedRecallTraceId(snapshot, selectedRecallTraceId);
+        BumpUiRevision();
     }
 
-    private async Task StartProbeSessionAsync()
+    internal void BumpUiRevision()
     {
-        if (isBusy)
+        unchecked
         {
-            return;
-        }
-
-        if (!TryResolveProbeProjectId(out var projectId))
-        {
-            return;
-        }
-
-        isBusy = true;
-        errorMessage = string.Empty;
-        probeStatus = "Starting probe session.";
-
-        try
-        {
-            var session = await CreateProbeSessionAsync(projectId);
-            activeProbeSessionId = session.Id;
-            lastProbeAskResult = null;
-            lastProbeFeedback = null;
-            selectedRecallTraceId = null;
-            probeStatus = $"Active: {session.Title}";
-            NotificationService.Success("Probe session started", session.Title);
-            await ReloadSnapshotAsync();
-        }
-        catch (Exception exception)
-        {
-            probeStatus = exception.Message;
-            errorMessage = exception.Message;
-            NotificationService.Error("Probe session failed", exception.Message);
-        }
-        finally
-        {
-            isBusy = false;
+            uiRevision++;
         }
     }
-
-    private void ReuseProbeSession(Guid sessionId)
-    {
-        activeProbeSessionId = sessionId;
-        lastProbeAskResult = null;
-        lastProbeFeedback = null;
-        var session = snapshot?.ProbeSessions.FirstOrDefault(item => item.Id == sessionId);
-        if (session is not null)
-        {
-            probeRecallMode = session.RecallMode;
-            probeStatus = $"Reusing: {session.Title}";
-        }
-    }
-
-    private async Task AskProbeAsync()
-    {
-        if (isBusy)
-        {
-            return;
-        }
-
-        if (!TryResolveProbeProjectId(out var projectId))
-        {
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(probeQuestion))
-        {
-            probeStatus = "Question is required.";
-            NotificationService.Warning("Probe question required", probeStatus);
-            return;
-        }
-
-        isBusy = true;
-        errorMessage = string.Empty;
-        probeStatus = "Asking memory.";
-
-        try
-        {
-            if (activeProbeSessionId is null)
-            {
-                var session = await CreateProbeSessionAsync(projectId);
-                activeProbeSessionId = session.Id;
-            }
-
-            var result = await ProbeService.AskAsync(new CognitiveMemoryProbeAskRequest(
-                activeProbeSessionId.Value,
-                probeQuestion,
-                probeIntent,
-                CreateProbeRecallBudget(),
-                CreateProbeMetadata()));
-            lastProbeAskResult = result;
-            lastProbeFeedback = null;
-            selectedRecallTraceId = result.RecallResult.TraceId;
-            activeProbeSessionId = result.Session.Id;
-            probeStatus = $"Answered turn {result.Turn.Sequence}: {result.RecallResult.ContextPack.SourceRefs.Count(item => item.IncludedInContext)} included source ref(s).";
-            NotificationService.Success("Probe answered", $"Trace {FormatShortId(result.RecallResult.TraceId)}");
-            await ReloadSnapshotAsync();
-        }
-        catch (Exception exception)
-        {
-            probeStatus = exception.Message;
-            errorMessage = exception.Message;
-            NotificationService.Error("Probe ask failed", exception.Message);
-        }
-        finally
-        {
-            isBusy = false;
-        }
-    }
-
-    private async Task SubmitProbeFeedbackAsync()
-    {
-        if (isBusy || lastProbeAskResult?.Turn is not { } turn)
-        {
-            return;
-        }
-
-        isBusy = true;
-        errorMessage = string.Empty;
-        probeStatus = "Recording feedback.";
-
-        try
-        {
-            var feedback = await ProbeService.RecordFeedbackAsync(new CognitiveMemoryProbeFeedbackRequest(
-                turn.Id,
-                probeFeedbackAction,
-                probeFeedbackNotes,
-                probeCorrectionText,
-                probeFeedbackRiskLevel,
-                probeCreateRegressionTest,
-                probeRequestHumanReview,
-                ResolveProbeCalibrationOutcome(probeFeedbackAction)));
-            lastProbeFeedback = feedback;
-            if (feedback.ReviewItemId is { } reviewItemId)
-            {
-                selectedReviewItemId = reviewItemId;
-            }
-
-            probeStatus = feedback.ReviewItemId is null
-                ? $"Feedback saved: {FormatShortId(feedback.Id)}"
-                : $"Feedback saved: {FormatShortId(feedback.Id)} / review {FormatShortId(feedback.ReviewItemId.Value)}";
-            NotificationService.Success("Probe feedback saved", probeStatus);
-            await ReloadSnapshotAsync();
-        }
-        catch (Exception exception)
-        {
-            probeStatus = exception.Message;
-            errorMessage = exception.Message;
-            NotificationService.Error("Probe feedback failed", exception.Message);
-        }
-        finally
-        {
-            isBusy = false;
-        }
-    }
-
-    private Task ToggleProbeVoiceModeAsync()
-    {
-        probeVoiceModeEnabled = !probeVoiceModeEnabled;
-        SetProbeVoiceStatus(probeVoiceModeEnabled ? "Audio on" : "Audio off", probeVoiceModeEnabled ? "primary" : "neutral");
-        return Task.CompletedTask;
-    }
-
-    private Task ToggleProbeQuestionRecordingAsync()
-        => ToggleProbeRecordingAsync(CognitiveMemoryProbeVoiceCaptureTarget.Question);
-
-    private Task ToggleProbeCorrectionRecordingAsync()
-        => ToggleProbeRecordingAsync(CognitiveMemoryProbeVoiceCaptureTarget.Correction);
-
-    private Task ToggleProbeConfirmationRecordingAsync()
-        => ToggleProbeRecordingAsync(CognitiveMemoryProbeVoiceCaptureTarget.Confirmation);
-
-    private async Task ToggleProbeRecordingAsync(CognitiveMemoryProbeVoiceCaptureTarget target)
-    {
-        if (!probeVoiceRecording)
-        {
-            try
-            {
-                await JsRuntime.InvokeVoidAsync("CanDoItAll.agentFramework.voice.startRecording");
-                probeVoiceModeEnabled = true;
-                probeVoiceRecording = true;
-                probeVoiceCaptureTarget = target;
-                SetProbeVoiceStatus("Recording", "danger");
-            }
-            catch (Exception exception)
-            {
-                SetProbeVoiceStatus("Record failed", "danger");
-                NotificationService.Error("Probe voice failed", exception.Message);
-            }
-
-            return;
-        }
-
-        await StopProbeRecordingAsync();
-    }
-
-    private async Task StopProbeRecordingAsync()
-    {
-        probeVoiceRecording = false;
-        probeVoiceTranscribing = true;
-        SetProbeVoiceStatus("Transcribing", "info");
-
-        try
-        {
-            var recording = await JsRuntime.InvokeAsync<BrowserVoiceRecording>(
-                "CanDoItAll.agentFramework.voice.stopRecording");
-            var transcription = await VoiceService.TranscribeAsync(recording.ToTranscriptionRequest());
-
-            await HandleProbeVoiceTranscriptAsync(transcription.Text);
-        }
-        catch (Exception exception)
-        {
-            SetProbeVoiceStatus("Voice failed", "danger");
-            NotificationService.Error("Probe voice failed", exception.Message);
-        }
-        finally
-        {
-            probeVoiceTranscribing = false;
-        }
-    }
-
-    private async Task HandleProbeVoiceTranscriptAsync(string transcript)
-    {
-        switch (probeVoiceCaptureTarget)
-        {
-            case CognitiveMemoryProbeVoiceCaptureTarget.Question:
-                probeQuestion = transcript;
-                SetProbeVoiceStatus("Asking memory", "info");
-                await AskProbeAsync();
-                if (lastProbeAskResult is not null)
-                {
-                    await SpeakProbeTextAsync(BuildProbeAnswerSpeech(lastProbeAskResult));
-                }
-                break;
-            case CognitiveMemoryProbeVoiceCaptureTarget.Correction:
-                await PrepareVoiceCorrectionAsync(transcript);
-                break;
-            case CognitiveMemoryProbeVoiceCaptureTarget.Confirmation:
-                await HandleVoiceCorrectionConfirmationAsync(transcript);
-                break;
-        }
-    }
-
-    private async Task PrepareVoiceCorrectionAsync(string transcript)
-    {
-        if (lastProbeAskResult?.Turn is null)
-        {
-            SetProbeVoiceStatus("Ask first", "warning");
-            await SpeakProbeTextAsync("Ask memory a probe question first, then record the correction that should be reviewed for storage.");
-            return;
-        }
-
-        pendingVoiceCorrectionText = transcript.Trim();
-        probeCorrectionText = pendingVoiceCorrectionText;
-        probeFeedbackNotes = "Voice correction prepared from Cognitive Memory probe dialogue.";
-        probeFeedbackAction = CognitiveMemoryProbeFeedbackAction.AddCorrection;
-        probeFeedbackRiskLevel = CognitiveMemoryRiskLevel.Medium;
-        probeRequestHumanReview = true;
-        probeCreateRegressionTest = true;
-        probeVoiceAwaitingConfirmation = true;
-        SetProbeVoiceStatus("Confirm storage", "warning");
-
-        await SpeakProbeTextAsync(BuildVoiceCorrectionInterpretation(pendingVoiceCorrectionText));
-    }
-
-    private async Task HandleVoiceCorrectionConfirmationAsync(string transcript)
-    {
-        var intent = AgentVoiceConfirmationClassifier.Classify(transcript);
-        if (intent == AgentVoiceConfirmationIntent.Affirm)
-        {
-            if (!probeVoiceAwaitingConfirmation || string.IsNullOrWhiteSpace(pendingVoiceCorrectionText))
-            {
-                SetProbeVoiceStatus("Nothing pending", "warning");
-                await SpeakProbeTextAsync("There is no pending memory correction to store.");
-                return;
-            }
-
-            SetProbeVoiceStatus("Saving feedback", "info");
-            await SubmitProbeFeedbackAsync();
-            probeVoiceAwaitingConfirmation = false;
-            pendingVoiceCorrectionText = string.Empty;
-            await SpeakProbeTextAsync("The correction feedback was saved for review-gated memory processing.");
-            return;
-        }
-
-        if (intent == AgentVoiceConfirmationIntent.Reject)
-        {
-            probeVoiceAwaitingConfirmation = false;
-            pendingVoiceCorrectionText = string.Empty;
-            probeCorrectionText = string.Empty;
-            SetProbeVoiceStatus("Cancelled", "neutral");
-            await SpeakProbeTextAsync("I cancelled the pending correction. Nothing was stored.");
-            return;
-        }
-
-        SetProbeVoiceStatus("Clarify", "warning");
-        await SpeakProbeTextAsync("I could not tell whether you approved storing this. Say yes, okay, store it, or cancel.");
-    }
-
-    private async Task SpeakProbeTextAsync(string text)
-    {
-        probeVoiceSpeaking = true;
-        try
-        {
-            await JsRuntime.InvokeVoidAsync("CanDoItAll.agentFramework.voice.clearAudioQueue");
-            var queuedChunks = 0;
-            await foreach (var synthesis in VoiceService.SynthesizeChunksAsync(new AgentVoiceSynthesisRequest(
-                               text,
-                               SuppressIdentifierOmissionNotice: ShouldSuppressProbeIdentifierOmissionNotice())))
-            {
-                TrackProbeIdentifierOmissionNotice(synthesis);
-                queuedChunks++;
-                await JsRuntime.InvokeVoidAsync(
-                    "CanDoItAll.agentFramework.voice.enqueueAudio",
-                    Convert.ToBase64String(synthesis.AudioBytes),
-                    synthesis.ContentType);
-                if (queuedChunks == 1)
-                {
-                    SetProbeVoiceStatus("Playing", "primary");
-                }
-            }
-
-            SetProbeVoiceStatus(queuedChunks == 1 ? "Audio ready" : $"Audio ready ({queuedChunks} chunks)", "success");
-        }
-        catch (Exception exception)
-        {
-            SetProbeVoiceStatus("Speak failed", "danger");
-            NotificationService.Error("Probe voice failed", exception.Message);
-        }
-        finally
-        {
-            probeVoiceSpeaking = false;
-        }
-    }
-
-    private bool ShouldSuppressProbeIdentifierOmissionNotice()
-    {
-        return activeProbeSessionId is { } sessionId
-            ? probeSessionsWithVoiceIdentifierOmissionNotice.Contains(sessionId)
-            : hasProbeVoiceIdentifierOmissionNoticeWithoutSession;
-    }
-
-    private void TrackProbeIdentifierOmissionNotice(AgentVoiceSynthesisResult synthesis)
-    {
-        if (!synthesis.IdentifierOmissionNoticeIncluded)
-        {
-            return;
-        }
-
-        if (activeProbeSessionId is { } sessionId)
-        {
-            probeSessionsWithVoiceIdentifierOmissionNotice.Add(sessionId);
-            return;
-        }
-
-        hasProbeVoiceIdentifierOmissionNoticeWithoutSession = true;
-    }
-
-    private static string BuildProbeAnswerSpeech(CognitiveMemoryProbeAskResult result)
-    {
-        var includedSourceCount = result.RecallResult.ContextPack.SourceRefs.Count(item => item.IncludedInContext);
-        return $"Memory answered the probe. It used {includedSourceCount} included source references. Review the visible answer evidence before deciding whether correction is needed.";
-    }
-
-    private static string BuildVoiceCorrectionInterpretation(string correctionText)
-    {
-        var normalizedCorrection = string.Join(
-            ' ',
-            correctionText.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
-        const int maxSpeechCharacters = 900;
-        if (normalizedCorrection.Length > maxSpeechCharacters)
-        {
-            normalizedCorrection = normalizedCorrection[..maxSpeechCharacters].TrimEnd();
-        }
-
-        return $"Wait a little while I process this. I understood this as a correction to the last probe answer: {normalizedCorrection}. I will store it as review-gated probe feedback, create a regression test request, and ask for human review before canonical memory changes. Say yes, okay, or store it to confirm. Say cancel to discard it.";
-    }
-
-    private void SetProbeVoiceStatus(string text, string tone)
-    {
-        probeVoiceStatus = text;
-        probeVoiceStatusTone = tone;
-    }
-
-    private async Task<CognitiveMemoryProbeSessionRecord> CreateProbeSessionAsync(Guid projectId)
-        => await ProbeService.StartAsync(new CognitiveMemoryProbeStartRequest(
-            projectId,
-            string.IsNullOrWhiteSpace(probeSessionTitle) ? "Project memory dialogue" : probeSessionTitle.Trim(),
-            CreateProbePolicyContext(projectId, CognitiveMemoryRiskLevel.Low),
-            probeRecallMode));
-
-    private bool TryResolveProbeProjectId(out Guid projectId)
-    {
-        if (ProjectId is { } resolvedProjectId && resolvedProjectId != Guid.Empty)
-        {
-            projectId = resolvedProjectId;
-            return true;
-        }
-
-        projectId = Guid.Empty;
-        probeStatus = "Open the page with a projectId query parameter before probing.";
-        NotificationService.Warning("Project scope required", probeStatus);
-        return false;
-    }
-
-    private static CognitiveMemoryPolicyContext CreateProbePolicyContext(
-        Guid projectId,
-        CognitiveMemoryRiskLevel riskLevel)
-        => new(
-            projectId,
-            OperatorActorId,
-            CognitiveMemoryAccessLevel.Project,
-            new CognitiveMemoryPolicyProfileId("cognitive-memory-probe-ui"),
-            riskLevel,
-            AllowRestrictedContent: false);
-
-    private static CognitiveMemoryRecallBudget CreateProbeRecallBudget()
-        => new(
-            coarseCandidateLimit: 160,
-            graphExpansionDepth: 3,
-            vectorResultLimit: 48,
-            focusLimit: 48,
-            detailItemLimit: 48,
-            contextCharacterBudget: 96_000,
-            maxSourceBytes: 768_000);
-
-    private static IReadOnlyDictionary<string, string> CreateProbeMetadata()
-        => new Dictionary<string, string>(StringComparer.Ordinal)
-        {
-            ["surface"] = "dialogue-workbench",
-            ["actor"] = OperatorActorId
-        };
-
-    private static CognitiveMemoryCalibrationOutcomeKind ResolveProbeCalibrationOutcome(
-        CognitiveMemoryProbeFeedbackAction action)
-        => action switch
-        {
-            CognitiveMemoryProbeFeedbackAction.MarkCorrect => CognitiveMemoryCalibrationOutcomeKind.CorrectHighConfidence,
-            CognitiveMemoryProbeFeedbackAction.MarkIncorrect => CognitiveMemoryCalibrationOutcomeKind.IncorrectHighConfidence,
-            CognitiveMemoryProbeFeedbackAction.WrongScope => CognitiveMemoryCalibrationOutcomeKind.WrongScope,
-            CognitiveMemoryProbeFeedbackAction.NeedsSource => CognitiveMemoryCalibrationOutcomeKind.SourceInsufficient,
-            CognitiveMemoryProbeFeedbackAction.AddCorrection => CognitiveMemoryCalibrationOutcomeKind.IncorrectHighConfidence,
-            _ => CognitiveMemoryCalibrationOutcomeKind.Unknown
-        };
-
-    private async Task SaveAutomationSettingsAsync()
-    {
-        if (isBusy)
-        {
-            return;
-        }
-
-        isBusy = true;
-        errorMessage = string.Empty;
-
-        try
-        {
-            var settings = await AutomationSettingsService.SaveAsync(new CognitiveMemoryAutomationSettingsUpdate(
-                automationScheduleMode,
-                nightlyLocalTime,
-                idleMinutes,
-                ParseScheduledLocalTimes(),
-                autoIngestProjectStructure,
-                autoIngestProcessRuntime,
-                autoConsolidateAfterIngestion,
-                modelAccessMode,
-                ParseOptionalGuid(defaultProviderProfileIdText, "Default provider"),
-                ParseOptionalGuid(defaultAgentIdText, "Default agent"),
-                SelectedAllowedProviderProfileIds(),
-                OperatorActorId));
-            scheduledLocalTimesText = string.Join(Environment.NewLine, settings.ScheduledLocalTimes);
-            defaultProviderProfileIdText = settings.DefaultProviderProfileId?.ToString("D") ?? string.Empty;
-            defaultAgentIdText = settings.DefaultAgentId?.ToString("D") ?? string.Empty;
-            modelAccessStatus = BuildModelAccessStatus(settings);
-            NotificationService.Success("Memory settings saved", $"{FormatLabel(settings.ScheduleMode)} / {FormatLabel(settings.ModelAccessMode)}");
-        }
-        catch (Exception exception)
-        {
-            errorMessage = exception.Message;
-            NotificationService.Error("Memory settings failed", exception.Message);
-        }
-        finally
-        {
-            isBusy = false;
-        }
-    }
-
-    private async Task IngestProjectStructureAsync()
-    {
-        await RunManualSourceIngestionAsync(MemorySourceKind.WorkbenchProjectStructure);
-    }
-
-    private async Task IngestProcessesAsync()
-    {
-        await RunManualSourceIngestionAsync(MemorySourceKind.ProcessRuntime);
-    }
-
-    private async Task RunManualSourceIngestionAsync(MemorySourceKind sourceKind)
-    {
-        if (isBusy)
-        {
-            return;
-        }
-
-        isBusy = true;
-        errorMessage = string.Empty;
-        manualIngestionProgress = 15;
-        manualIngestionStatus = $"Starting {FormatLabel(sourceKind).ToLowerInvariant()} ingestion.";
-        await InvokeAsync(StateHasChanged);
-        await Task.Yield();
-
-        try
-        {
-            var scopeId = ResolveManualScopeId(sourceKind);
-            var result = await SourceIngestionService.IngestAsync(new CognitiveMemorySourceIngestionRequest(
-                sourceKind,
-                scopeId,
-                new CognitiveMemoryIdempotencyKey($"ui:{sourceKind}:{Guid.NewGuid():N}"),
-                Take: manualSourceTake,
-                ProjectId: ProjectId ?? (sourceKind == MemorySourceKind.WorkbenchProjectStructure ? scopeId : null)));
-
-            manualIngestionProgress = 100;
-            manualIngestionStatus = $"{FormatLabel(result.Status)}: {result.CreatedSourceItemCount} created, {result.UpdatedSourceItemCount} updated, {result.CreatedEvidenceAnchorCount} anchors.";
-            NotificationService.Success("Memory ingestion finished", manualIngestionStatus);
-            await ReloadSnapshotAsync();
-        }
-        catch (Exception exception)
-        {
-            manualIngestionProgress = 100;
-            manualIngestionStatus = exception.Message;
-            errorMessage = exception.Message;
-            NotificationService.Error("Memory ingestion failed", exception.Message);
-        }
-        finally
-        {
-            isBusy = false;
-        }
-    }
-
-    private async Task UploadExternalSourceAsync(InputFileChangeEventArgs args)
-    {
-        if (isBusy)
-        {
-            return;
-        }
-
-        var file = args.File;
-        isBusy = true;
-        errorMessage = string.Empty;
-        externalSourceProgress = 15;
-        externalSourceStatus = $"Uploading {file.Name}.";
-        await InvokeAsync(StateHasChanged);
-        await Task.Yield();
-
-        try
-        {
-            await using var stream = file.OpenReadStream(10 * 1024 * 1024);
-            lastExternalSourceResult = await ExternalSourceIngestionService.IngestFileAsync(
-                ProjectId,
-                file.Name,
-                file.ContentType,
-                stream,
-                file.Size,
-                OperatorActorId);
-
-            ApplyExternalSourceResult(lastExternalSourceResult);
-            NotificationService.Success("External source ingested", externalSourceStatus);
-            await ReloadSnapshotAsync();
-        }
-        catch (Exception exception)
-        {
-            externalSourceProgress = 100;
-            externalSourceStatus = exception.Message;
-            errorMessage = exception.Message;
-            NotificationService.Error("External source failed", exception.Message);
-        }
-        finally
-        {
-            isBusy = false;
-        }
-    }
-
-    private async Task IngestExternalLinkAsync()
-    {
-        if (isBusy)
-        {
-            return;
-        }
-
-        if (!Uri.TryCreate(externalSourceUrl, UriKind.Absolute, out var uri) ||
-            uri.Scheme is not ("http" or "https"))
-        {
-            externalSourceStatus = "Enter an absolute HTTP or HTTPS URL.";
-            return;
-        }
-
-        isBusy = true;
-        errorMessage = string.Empty;
-        externalSourceProgress = 15;
-        externalSourceStatus = $"Fetching {uri.Host}.";
-        await InvokeAsync(StateHasChanged);
-        await Task.Yield();
-
-        try
-        {
-            lastExternalSourceResult = await ExternalSourceIngestionService.IngestWebsiteAsync(
-                ProjectId,
-                uri,
-                OperatorActorId);
-
-            ApplyExternalSourceResult(lastExternalSourceResult);
-            NotificationService.Success("Website ingested", externalSourceStatus);
-            await ReloadSnapshotAsync();
-        }
-        catch (Exception exception)
-        {
-            externalSourceProgress = 100;
-            externalSourceStatus = exception.Message;
-            errorMessage = exception.Message;
-            NotificationService.Error("Website ingestion failed", exception.Message);
-        }
-        finally
-        {
-            isBusy = false;
-        }
-    }
-
-    private IReadOnlyList<string> ParseScheduledLocalTimes()
-    {
-        if (string.IsNullOrWhiteSpace(scheduledLocalTimesText))
-        {
-            return [];
-        }
-
-        return scheduledLocalTimesText
-            .Split(['\r', '\n', ',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .ToList();
-    }
-
-    private IReadOnlyList<Guid> SelectedAllowedProviderProfileIds()
-        => modelProviderOptions
-            .Where(provider => provider.IsAllowed)
-            .Select(provider => provider.Id)
-            .ToList();
-
-    private static Guid? ParseOptionalGuid(
-        string value,
-        string fieldName)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return null;
-        }
-
-        return Guid.TryParse(value.Trim(), out var id) && id != Guid.Empty
-            ? id
-            : throw new InvalidOperationException($"{fieldName} must be a valid provider or agent id.");
-    }
-
-    private static string BuildModelAccessStatus(CognitiveMemoryAutomationSettings settings)
-        => settings.ModelAccessMode switch
-        {
-            CognitiveMemoryModelAccessMode.Disabled => "Cognitive Memory will not be injected into agent model calls.",
-            CognitiveMemoryModelAccessMode.LocalProvidersOnly => "Cognitive Memory context is limited to local providers.",
-            CognitiveMemoryModelAccessMode.SelectedProvidersOnly => "Cognitive Memory context is limited to the selected provider allow-list.",
-            _ => "Cognitive Memory context can be injected for any enabled provider."
-        };
-
-    private Guid ResolveManualScopeId(MemorySourceKind sourceKind)
-    {
-        if (string.IsNullOrWhiteSpace(manualSourceScopeText))
-        {
-            if (ProjectId.HasValue)
-            {
-                return ProjectId.Value;
-            }
-
-            if (sourceKind == MemorySourceKind.ProcessRuntime)
-            {
-                return Guid.Empty;
-            }
-
-            throw new InvalidOperationException("Project structure ingestion requires a project id or scope id.");
-        }
-
-        return Guid.TryParse(manualSourceScopeText, out var scopeId)
-            ? scopeId
-            : throw new InvalidOperationException("Scope id must be a GUID.");
-    }
-
-    private void ApplyExternalSourceResult(CognitiveMemoryExternalSourceIngestResult result)
-    {
-        externalSourceProgress = result.ProgressPercent;
-        externalSourceStatus = result.FailureMessage is null
-            ? $"{FormatLabel(result.Status)}: {result.StatusMessage}"
-            : result.FailureMessage;
-    }
-
-    private static Guid? ResolveSelectedMemoryRecordId(
-        CognitiveMemoryReviewUiSnapshot snapshot,
-        Guid? preferredId)
-    {
-        if (preferredId.HasValue &&
-            snapshot.MemoryRecords.Any(record => record.Id.Value == preferredId.Value))
-        {
-            return preferredId.Value;
-        }
-
-        return snapshot.MemoryRecords.FirstOrDefault()?.Id.Value;
-    }
-
-    private static Guid? ResolveSelectedReviewItemId(
-        CognitiveMemoryReviewUiSnapshot snapshot,
-        Guid? preferredId)
-    {
-        if (preferredId.HasValue &&
-            snapshot.ReviewItems.Any(item => item.Id.Value == preferredId.Value))
-        {
-            return preferredId.Value;
-        }
-
-        return snapshot.ReviewItems.FirstOrDefault()?.Id.Value;
-    }
-
-    private static Guid? ResolveSelectedRecallTraceId(
-        CognitiveMemoryReviewUiSnapshot snapshot,
-        Guid? preferredId)
-    {
-        if (preferredId.HasValue &&
-            snapshot.RecallTraces.Any(trace => trace.Id == preferredId.Value))
-        {
-            return preferredId.Value;
-        }
-
-        return snapshot.RecallTraces.FirstOrDefault()?.Id;
-    }
-
-    private static string SummaryValue(int? value)
-        => value?.ToString() ?? "-";
-
-    private static string FormatDate(DateTimeOffset value)
-        => value.ToLocalTime().ToString("MMM d, HH:mm");
-
-    private static string FormatShortId(Guid value)
-        => value.ToString("N")[..8];
-
-    private static string ScoreText(double? value)
-        => value.HasValue ? value.Value.ToString("0.00") : "n/a";
-
-    private static string FormatLabel<TValue>(TValue value)
-        where TValue : struct, Enum
-    {
-        var text = value.ToString();
-        var builder = new StringBuilder(text.Length + 8);
-
-        for (var index = 0; index < text.Length; index++)
-        {
-            var character = text[index];
-            if (index > 0 &&
-                char.IsUpper(character) &&
-                (char.IsLower(text[index - 1]) ||
-                 char.IsDigit(text[index - 1]) ||
-                 index + 1 < text.Length && char.IsLower(text[index + 1])))
-            {
-                builder.Append(' ');
-            }
-
-            builder.Append(character);
-        }
-
-        return builder.ToString();
-    }
-
-    private static int VisibleSourceEvidenceCount(CognitiveMemoryExplorerItem record)
-        => Math.Max(record.SourceEvidenceCount, record.SourceLinks.Count);
-
-    private static string ReviewTone(
-        CognitiveMemoryReviewStatus status,
-        CognitiveMemoryRiskLevel riskLevel)
-        => status switch
-        {
-            CognitiveMemoryReviewStatus.Approved => "success",
-            CognitiveMemoryReviewStatus.Rejected => "danger",
-            CognitiveMemoryReviewStatus.NeedsChanges => "warning",
-            CognitiveMemoryReviewStatus.Deferred => "secondary",
-            _ when riskLevel == CognitiveMemoryRiskLevel.High => "danger",
-            _ => "warning"
-        };
-
-    private static string RecordTone(
-        CognitiveMemoryValidationState validationState,
-        CognitiveMemoryRiskLevel riskLevel)
-        => validationState switch
-        {
-            CognitiveMemoryValidationState.Approved or CognitiveMemoryValidationState.HumanReviewed => "success",
-            CognitiveMemoryValidationState.Rejected => "danger",
-            CognitiveMemoryValidationState.NeedsHumanReview => "warning",
-            _ when riskLevel == CognitiveMemoryRiskLevel.High => "danger",
-            _ => "secondary"
-        };
-
-    private static string RiskTone(CognitiveMemoryRiskLevel riskLevel)
-        => riskLevel switch
-        {
-            CognitiveMemoryRiskLevel.High => "danger",
-            CognitiveMemoryRiskLevel.Medium => "warning",
-            _ => "success"
-        };
-
-    private static string RunTone(CognitiveMemoryRunStatus status)
-        => status switch
-        {
-            CognitiveMemoryRunStatus.Succeeded => "success",
-            CognitiveMemoryRunStatus.Failed => "danger",
-            CognitiveMemoryRunStatus.Blocked => "warning",
-            CognitiveMemoryRunStatus.Running => "info",
-            CognitiveMemoryRunStatus.Cancelled => "neutral",
-            _ => "secondary"
-        };
-
-    private static string ProjectionTone(CognitiveMemoryProjectionStatus status, bool rebuildRequired)
-        => status == CognitiveMemoryProjectionStatus.Failed
-            ? "danger"
-            : rebuildRequired || status == CognitiveMemoryProjectionStatus.RebuildRequired
-                ? "warning"
-                : status == CognitiveMemoryProjectionStatus.Projected
-                    ? "success"
-                    : "secondary";
-
-    private static string ReplayTone(CognitiveMemoryReplayJobState state)
-        => state switch
-        {
-            CognitiveMemoryReplayJobState.Completed => "success",
-            CognitiveMemoryReplayJobState.Failed => "danger",
-            CognitiveMemoryReplayJobState.NeedsReview => "warning",
-            CognitiveMemoryReplayJobState.Running => "info",
-            _ => "secondary"
-        };
-
-    private static string ProcedureTone(CognitiveMemoryProcedureSkillMaturity maturity, CognitiveMemoryRiskLevel riskLevel)
-        => riskLevel == CognitiveMemoryRiskLevel.High
-            ? "danger"
-            : maturity switch
-            {
-                CognitiveMemoryProcedureSkillMaturity.Automatable or CognitiveMemoryProcedureSkillMaturity.Validated => "success",
-                CognitiveMemoryProcedureSkillMaturity.Reviewed => "info",
-                CognitiveMemoryProcedureSkillMaturity.Draft or CognitiveMemoryProcedureSkillMaturity.Observed => "warning",
-                _ => "secondary"
-            };
-
-    private static string ProbeTone(CognitiveMemoryProbeSessionStatus status)
-        => status switch
-        {
-            CognitiveMemoryProbeSessionStatus.Active => "info",
-            CognitiveMemoryProbeSessionStatus.Closed => "success",
-            CognitiveMemoryProbeSessionStatus.Abandoned => "warning",
-            _ => "secondary"
-        };
-
-    private static string SelfRegulationTone(CognitiveMemorySelfRegulationStateKind state)
-        => state switch
-        {
-            CognitiveMemorySelfRegulationStateKind.Calibrated => "success",
-            CognitiveMemorySelfRegulationStateKind.ProfessorReviewNeeded or
-            CognitiveMemorySelfRegulationStateKind.HighRiskUnverified or
-            CognitiveMemorySelfRegulationStateKind.AccessLimited => "danger",
-            CognitiveMemorySelfRegulationStateKind.Overconfident or
-            CognitiveMemorySelfRegulationStateKind.SourcePoor or
-            CognitiveMemorySelfRegulationStateKind.Fragmented => "warning",
-            CognitiveMemorySelfRegulationStateKind.Underconfident or
-            CognitiveMemorySelfRegulationStateKind.Exploratory => "info",
-            _ => "secondary"
-        };
-
-    private static string AnswerGateTone(CognitiveMemoryAnswerGateDecisionKind decisionKind)
-        => decisionKind switch
-        {
-            CognitiveMemoryAnswerGateDecisionKind.Answer => "success",
-            CognitiveMemoryAnswerGateDecisionKind.Warn => "warning",
-            CognitiveMemoryAnswerGateDecisionKind.Abstain or
-            CognitiveMemoryAnswerGateDecisionKind.Review or
-            CognitiveMemoryAnswerGateDecisionKind.ProfessorReview => "danger",
-            CognitiveMemoryAnswerGateDecisionKind.Clarify or
-            CognitiveMemoryAnswerGateDecisionKind.SourceAudit or
-            CognitiveMemoryAnswerGateDecisionKind.Probe or
-            CognitiveMemoryAnswerGateDecisionKind.LearningRequest => "info",
-            _ => "secondary"
-        };
-
-    private static string ProfessorReviewTone(CognitiveMemoryProfessorReviewStatus status)
-        => status switch
-        {
-            CognitiveMemoryProfessorReviewStatus.Completed or CognitiveMemoryProfessorReviewStatus.Routed => "success",
-            CognitiveMemoryProfessorReviewStatus.RejectedByPolicy => "danger",
-            CognitiveMemoryProfessorReviewStatus.Requested => "warning",
-            _ => "secondary"
-        };
-
-    private static string LearningProposalTone(CognitiveMemoryLearningProposalStatus status)
-        => status switch
-        {
-            CognitiveMemoryLearningProposalStatus.Approved or CognitiveMemoryLearningProposalStatus.Completed => "success",
-            CognitiveMemoryLearningProposalStatus.Rejected or CognitiveMemoryLearningProposalStatus.Snoozed => "secondary",
-            CognitiveMemoryLearningProposalStatus.PendingApproval => "warning",
-            _ => "info"
-        };
-
-    private static string CrossProjectTone(CognitiveMemoryCrossProjectPromotionStatus status)
-        => status switch
-        {
-            CognitiveMemoryCrossProjectPromotionStatus.Approved => "success",
-            CognitiveMemoryCrossProjectPromotionStatus.Rejected or CognitiveMemoryCrossProjectPromotionStatus.Demoted => "danger",
-            CognitiveMemoryCrossProjectPromotionStatus.PendingReview => "warning",
-            _ => "secondary"
-        };
-
-    private static string DistributedJobTone(CognitiveMemoryDistributedJobState state)
-        => state switch
-        {
-            CognitiveMemoryDistributedJobState.Completed => "success",
-            CognitiveMemoryDistributedJobState.Rejected or CognitiveMemoryDistributedJobState.Expired => "danger",
-            CognitiveMemoryDistributedJobState.Leased => "info",
-            CognitiveMemoryDistributedJobState.Queued => "warning",
-            _ => "secondary"
-        };
-
-    private static void RenderFact(
-        RenderTreeBuilder builder,
-        int sequence,
-        string label,
-        string value)
-    {
-        builder.OpenElement(sequence, "div");
-        builder.AddAttribute(sequence + 1, "class", "cognitive-memory-fact");
-        builder.OpenElement(sequence + 2, "span");
-        builder.AddContent(sequence + 3, label);
-        builder.CloseElement();
-        builder.OpenElement(sequence + 4, "strong");
-        builder.AddContent(sequence + 5, value);
-        builder.CloseElement();
-        builder.CloseElement();
-    }
-
-    private static RenderFragment RenderFactFragment(string label, string value)
-        => builder => RenderFact(builder, 0, label, value);
-
-    private void RenderDecisionButton(
-        RenderTreeBuilder builder,
-        int sequence,
-        string text,
-        string icon,
-        ButtonStyle style,
-        CognitiveMemoryReviewDecisionKind decisionKind,
-        string testId)
-    {
-        builder.OpenComponent<Button>(sequence);
-        builder.AddAttribute(sequence + 1, nameof(Button.Text), text);
-        builder.AddAttribute(sequence + 2, nameof(Button.Icon), icon);
-        builder.AddAttribute(sequence + 3, nameof(Button.ButtonStyle), style);
-        builder.AddAttribute(sequence + 4, nameof(Button.Size), ButtonSize.Small);
-        builder.AddAttribute(sequence + 5, nameof(Button.Disabled), isBusy || SelectedReviewItem is null);
-        builder.AddAttribute(sequence + 6, nameof(Button.Click), EventCallback.Factory.Create(this, () => DecideReviewAsync(decisionKind)));
-        builder.AddAttribute(sequence + 7, "data-testid", testId);
-        builder.CloseComponent();
-    }
-
-    private static void RenderTraceCollections(
-        RenderTreeBuilder builder,
-        int sequence,
-        CognitiveMemoryRecallTraceView trace)
-    {
-        builder.OpenElement(sequence, "div");
-        builder.AddAttribute(sequence + 1, "class", "cognitive-memory-section");
-        builder.OpenElement(sequence + 2, "h3");
-        builder.AddContent(sequence + 3, "Selected candidates");
-        builder.CloseElement();
-        if (trace.Candidates.Count == 0)
-        {
-            RenderEmptyLine(builder, sequence + 4, "No candidate rows were persisted for this trace.");
-        }
-        else
-        {
-            RenderCandidateRows(builder, sequence + 5, trace.Candidates);
-        }
-
-        builder.CloseElement();
-        builder.OpenElement(sequence + 100, "div");
-        builder.AddAttribute(sequence + 101, "class", "cognitive-memory-section");
-        builder.OpenElement(sequence + 102, "h3");
-        builder.AddContent(sequence + 103, "Source references");
-        builder.CloseElement();
-        if (trace.SourceReferences.Count == 0)
-        {
-            RenderEmptyLine(builder, sequence + 104, "No source references were selected for this trace.");
-        }
-        else
-        {
-            RenderSourceRows(builder, sequence + 105, trace.SourceReferences);
-        }
-
-        builder.CloseElement();
-    }
-
-    private static void RenderCandidateRows(
-        RenderTreeBuilder builder,
-        int sequence,
-        IReadOnlyList<CognitiveMemoryRecallCandidateView> candidates)
-    {
-        builder.OpenElement(sequence, "div");
-        builder.AddAttribute(sequence + 1, "class", "cognitive-memory-list");
-        var itemSequence = sequence + 2;
-        foreach (var candidate in candidates)
-        {
-            builder.OpenElement(itemSequence++, "div");
-            builder.AddAttribute(itemSequence++, "class", "cognitive-memory-row");
-            builder.OpenElement(itemSequence++, "strong");
-            builder.AddContent(itemSequence++, candidate.Title);
-            builder.CloseElement();
-            builder.OpenElement(itemSequence++, "span");
-            builder.AddContent(itemSequence++, $"{FormatLabel(candidate.DecisionKind)} / {FormatLabel(candidate.PrimaryChannelKind)} / score {ScoreText(candidate.DisplayRankProjection)}");
-            builder.CloseElement();
-            if (!string.IsNullOrWhiteSpace(candidate.Reason))
-            {
-                builder.OpenElement(itemSequence++, "small");
-                builder.AddContent(itemSequence++, candidate.Reason);
-                builder.CloseElement();
-            }
-
-            builder.CloseElement();
-        }
-
-        builder.CloseElement();
-    }
-
-    private static void RenderSourceRows(
-        RenderTreeBuilder builder,
-        int sequence,
-        IReadOnlyList<CognitiveMemoryRecallSourceReferenceView> sourceReferences)
-    {
-        builder.OpenElement(sequence, "div");
-        builder.AddAttribute(sequence + 1, "class", "cognitive-memory-list");
-        var itemSequence = sequence + 2;
-        foreach (var sourceRef in sourceReferences)
-        {
-            builder.OpenElement(itemSequence++, "div");
-            builder.AddAttribute(itemSequence++, "class", "cognitive-memory-row");
-            builder.OpenElement(itemSequence++, "strong");
-            builder.AddContent(itemSequence++, string.IsNullOrWhiteSpace(sourceRef.SourceSystem) ? "Source" : sourceRef.SourceSystem);
-            builder.CloseElement();
-            builder.OpenElement(itemSequence++, "span");
-            builder.AddContent(itemSequence++, FirstNonEmpty(sourceRef.Summary, sourceRef.Locator, "No source summary."));
-            builder.CloseElement();
-            builder.OpenElement(itemSequence++, "small");
-            builder.AddContent(itemSequence++, $"{FormatLabel(sourceRef.AccessLevel)} / {FormatLabel(sourceRef.RedactionState)} / {(sourceRef.IncludedInContext ? "included" : FormatLabel(sourceRef.ExclusionReasonKind))}");
-            builder.CloseElement();
-            builder.CloseElement();
-        }
-
-        builder.CloseElement();
-    }
-
-    private static void RenderMemorySourceRows(
-        RenderTreeBuilder builder,
-        int sequence,
-        IReadOnlyList<CognitiveMemorySourceLinkView> sourceLinks)
-    {
-        builder.OpenElement(sequence, "div");
-        builder.AddAttribute(sequence + 1, "class", "cognitive-memory-list");
-        var itemSequence = sequence + 2;
-        foreach (var sourceLink in sourceLinks)
-        {
-            builder.OpenElement(itemSequence++, "div");
-            builder.AddAttribute(itemSequence++, "class", "cognitive-memory-row");
-            builder.OpenElement(itemSequence++, "strong");
-            builder.AddContent(itemSequence++, FormatLabel(sourceLink.EvidenceRole));
-            builder.CloseElement();
-            builder.OpenElement(itemSequence++, "span");
-            builder.AddContent(itemSequence++, FirstNonEmpty(sourceLink.Summary, sourceLink.Locator, FormatShortId(sourceLink.SourceItemId)));
-            builder.CloseElement();
-            if (!string.IsNullOrWhiteSpace(sourceLink.Locator))
-            {
-                builder.OpenElement(itemSequence++, "small");
-                builder.AddContent(itemSequence++, sourceLink.Locator);
-                builder.CloseElement();
-            }
-
-            builder.CloseElement();
-        }
-
-        builder.CloseElement();
-    }
-
-    private void RenderProjectionRows(RenderTreeBuilder builder, int sequence)
-    {
-        if (snapshot is null)
-        {
-            return;
-        }
-
-        builder.OpenComponent<Stack>(sequence);
-        builder.AddAttribute(sequence + 1, nameof(Stack.GapScale), LayoutGap.Small);
-        builder.AddAttribute(sequence + 2, nameof(Stack.Class), "mt-4");
-        builder.AddAttribute(sequence + 3, nameof(Stack.ChildContent), (RenderFragment)(contentBuilder =>
-        {
-            var itemSequence = 0;
-            foreach (var projection in snapshot.ProjectionHealth)
-            {
-                contentBuilder.OpenElement(itemSequence++, "div");
-                contentBuilder.AddAttribute(itemSequence++, "class", "cognitive-memory-row");
-                contentBuilder.OpenElement(itemSequence++, "strong");
-                contentBuilder.AddContent(itemSequence++, $"{FormatLabel(projection.ProjectionKind)} / {projection.TargetProvider}");
-                contentBuilder.CloseElement();
-                contentBuilder.OpenComponent<StatusBadge>(itemSequence++);
-                contentBuilder.AddAttribute(itemSequence++, nameof(StatusBadge.Tone), ProjectionTone(projection.Status, projection.RebuildRequired));
-                contentBuilder.AddAttribute(itemSequence++, nameof(StatusBadge.Text), projection.RebuildRequired ? "Rebuild required" : FormatLabel(projection.Status));
-                contentBuilder.CloseComponent();
-                if (!string.IsNullOrWhiteSpace(projection.FailureMessage))
-                {
-                    contentBuilder.OpenElement(itemSequence++, "small");
-                    contentBuilder.AddContent(itemSequence++, projection.FailureMessage);
-                    contentBuilder.CloseElement();
-                }
-
-                contentBuilder.CloseElement();
-            }
-        }));
-        builder.CloseComponent();
-    }
-
-    private void RenderConsolidationRows(RenderTreeBuilder builder, int sequence)
-    {
-        if (snapshot is null)
-        {
-            return;
-        }
-
-        builder.OpenComponent<Stack>(sequence);
-        builder.AddAttribute(sequence + 1, nameof(Stack.GapScale), LayoutGap.Small);
-        builder.AddAttribute(sequence + 2, nameof(Stack.Class), "mt-4");
-        builder.AddAttribute(sequence + 3, nameof(Stack.ChildContent), (RenderFragment)(contentBuilder =>
-        {
-            var itemSequence = 0;
-            foreach (var run in snapshot.ConsolidationRuns)
-            {
-                contentBuilder.OpenElement(itemSequence++, "div");
-                contentBuilder.AddAttribute(itemSequence++, "class", "cognitive-memory-row");
-                contentBuilder.OpenElement(itemSequence++, "strong");
-                contentBuilder.AddContent(itemSequence++, $"{FormatLabel(run.Mode)} / {FormatShortId(run.Id)}");
-                contentBuilder.CloseElement();
-                contentBuilder.OpenComponent<StatusBadge>(itemSequence++);
-                contentBuilder.AddAttribute(itemSequence++, nameof(StatusBadge.Tone), RunTone(run.Status));
-                contentBuilder.AddAttribute(itemSequence++, nameof(StatusBadge.Text), FormatLabel(run.Status));
-                contentBuilder.CloseComponent();
-                contentBuilder.OpenElement(itemSequence++, "span");
-                contentBuilder.AddContent(itemSequence++, $"{run.SourceItemsScanned} source item(s), {run.CandidatesCreated} candidate(s), {run.ReviewItemsCreated} review item(s), {run.ProjectionInvalidations} projection invalidation(s)");
-                contentBuilder.CloseElement();
-                if (!string.IsNullOrWhiteSpace(run.FailureMessage))
-                {
-                    contentBuilder.OpenElement(itemSequence++, "small");
-                    contentBuilder.AddContent(itemSequence++, run.FailureMessage);
-                    contentBuilder.CloseElement();
-                }
-
-                contentBuilder.CloseElement();
-            }
-        }));
-        builder.CloseComponent();
-    }
-
-    private void RenderReplayRows(RenderTreeBuilder builder, int sequence)
-    {
-        if (snapshot is null)
-        {
-            return;
-        }
-
-        builder.OpenComponent<Stack>(sequence);
-        builder.AddAttribute(sequence + 1, nameof(Stack.GapScale), LayoutGap.Small);
-        builder.AddAttribute(sequence + 2, nameof(Stack.Class), "mt-4");
-        builder.AddAttribute(sequence + 3, nameof(Stack.ChildContent), (RenderFragment)(contentBuilder =>
-        {
-            var itemSequence = 0;
-            foreach (var job in snapshot.ReplayJobs)
-            {
-                contentBuilder.OpenElement(itemSequence++, "div");
-                contentBuilder.AddAttribute(itemSequence++, "class", "cognitive-memory-row");
-                contentBuilder.OpenElement(itemSequence++, "strong");
-                contentBuilder.AddContent(itemSequence++, $"{FormatLabel(job.JobKind)} / priority {job.QueuePriority}");
-                contentBuilder.CloseElement();
-                contentBuilder.OpenComponent<StatusBadge>(itemSequence++);
-                contentBuilder.AddAttribute(itemSequence++, nameof(StatusBadge.Tone), ReplayTone(job.State));
-                contentBuilder.AddAttribute(itemSequence++, nameof(StatusBadge.Text), FormatLabel(job.State));
-                contentBuilder.CloseComponent();
-                contentBuilder.OpenElement(itemSequence++, "span");
-                contentBuilder.AddContent(itemSequence++, FirstNonEmpty(job.Reason, job.FailureMessage, "Replay job has no reason text."));
-                contentBuilder.CloseElement();
-                contentBuilder.CloseElement();
-            }
-        }));
-        builder.CloseComponent();
-    }
-
-    private void RenderProcedureRows(RenderTreeBuilder builder, int sequence)
-    {
-        if (snapshot is null)
-        {
-            return;
-        }
-
-        builder.OpenComponent<Stack>(sequence);
-        builder.AddAttribute(sequence + 1, nameof(Stack.GapScale), LayoutGap.Small);
-        builder.AddAttribute(sequence + 2, nameof(Stack.Class), "mt-4");
-        builder.AddAttribute(sequence + 3, nameof(Stack.ChildContent), (RenderFragment)(contentBuilder =>
-        {
-            var itemSequence = 0;
-            foreach (var skill in snapshot.ProcedureSkills)
-            {
-                contentBuilder.OpenElement(itemSequence++, "div");
-                contentBuilder.AddAttribute(itemSequence++, "class", "cognitive-memory-row");
-                contentBuilder.OpenElement(itemSequence++, "strong");
-                contentBuilder.AddContent(itemSequence++, skill.Title);
-                contentBuilder.CloseElement();
-                contentBuilder.OpenComponent<StatusBadge>(itemSequence++);
-                contentBuilder.AddAttribute(itemSequence++, nameof(StatusBadge.Tone), ProcedureTone(skill.Maturity, skill.RiskLevel));
-                contentBuilder.AddAttribute(itemSequence++, nameof(StatusBadge.Text), $"{FormatLabel(skill.Maturity)} / {FormatLabel(skill.RiskLevel)}");
-                contentBuilder.CloseComponent();
-                contentBuilder.OpenElement(itemSequence++, "span");
-                contentBuilder.AddContent(itemSequence++, $"{skill.StepCount} step(s), {skill.FailureModeCount} failure mode(s), {skill.ValidationEvidenceCount} evidence link(s), maturity {ScoreText(skill.DisplayMaturityScore)}");
-                contentBuilder.CloseElement();
-                contentBuilder.CloseElement();
-            }
-        }));
-        builder.CloseComponent();
-    }
-
-    private void RenderProbeRows(RenderTreeBuilder builder, int sequence)
-    {
-        if (snapshot is null)
-        {
-            return;
-        }
-
-        RenderRows(
-            builder,
-            sequence,
-            snapshot.ProbeSessions,
-            (contentBuilder, session, itemSequence) =>
-            {
-                RenderRowStart(contentBuilder, ref itemSequence, session.Title);
-                RenderStatus(contentBuilder, ref itemSequence, ProbeTone(session.Status), FormatLabel(session.Status));
-                RenderRowText(contentBuilder, ref itemSequence, $"{FormatLabel(session.RecallMode)} / {session.TurnCount} turn(s) / updated {FormatDate(session.UpdatedAtUtc)}");
-                contentBuilder.CloseElement();
-            });
-    }
-
-    private void RenderSelfRegulationRows(RenderTreeBuilder builder, int sequence)
-    {
-        if (snapshot is null)
-        {
-            return;
-        }
-
-        RenderRows(
-            builder,
-            sequence,
-            snapshot.SelfRegulationAssessments,
-            (contentBuilder, assessment, itemSequence) =>
-            {
-                RenderRowStart(contentBuilder, ref itemSequence, $"{FirstNonEmpty(assessment.DomainKey, "domain")} / {FirstNonEmpty(assessment.TaskTypeKey, "task")}");
-                RenderStatus(contentBuilder, ref itemSequence, SelfRegulationTone(assessment.State), FormatLabel(assessment.State));
-                RenderRowText(contentBuilder, ref itemSequence, $"{FormatLabel(assessment.AssessmentBucket)} / score {ScoreText(assessment.DisplayAssessmentScore)}");
-                contentBuilder.CloseElement();
-            });
-    }
-
-    private void RenderAnswerGateRows(RenderTreeBuilder builder, int sequence)
-    {
-        if (snapshot is null)
-        {
-            return;
-        }
-
-        RenderRows(
-            builder,
-            sequence,
-            snapshot.AnswerGateDecisions,
-            (contentBuilder, decision, itemSequence) =>
-            {
-                RenderRowStart(contentBuilder, ref itemSequence, $"{FormatLabel(decision.DecisionKind)} / {FormatShortId(decision.Id)}");
-                RenderStatus(contentBuilder, ref itemSequence, AnswerGateTone(decision.DecisionKind), FormatLabel(decision.DecisionBucket));
-                RenderRowText(contentBuilder, ref itemSequence, FirstNonEmpty(decision.Reason, $"Confidence {ScoreText(decision.DisplayConfidenceProjection)}"));
-                contentBuilder.CloseElement();
-            });
-    }
-
-    private void RenderProfessorReviewRows(RenderTreeBuilder builder, int sequence)
-    {
-        if (snapshot is null)
-        {
-            return;
-        }
-
-        RenderRows(
-            builder,
-            sequence,
-            snapshot.ProfessorReviews,
-            (contentBuilder, review, itemSequence) =>
-            {
-                RenderRowStart(contentBuilder, ref itemSequence, FirstNonEmpty(review.InputSummary, FormatLabel(review.ReviewMode)));
-                RenderStatus(contentBuilder, ref itemSequence, ProfessorReviewTone(review.Status), FormatLabel(review.Status));
-                RenderRowText(contentBuilder, ref itemSequence, $"{FormatLabel(review.ReviewMode)} / requested by {review.RequestedByActorId}");
-                if (!string.IsNullOrWhiteSpace(review.MissingEvidence))
-                {
-                    RenderRowSmall(contentBuilder, ref itemSequence, review.MissingEvidence);
-                }
-
-                contentBuilder.CloseElement();
-            });
-    }
-
-    private void RenderLearningProposalRows(RenderTreeBuilder builder, int sequence)
-    {
-        if (snapshot is null)
-        {
-            return;
-        }
-
-        RenderRows(
-            builder,
-            sequence,
-            snapshot.LearningProposals,
-            (contentBuilder, proposal, itemSequence) =>
-            {
-                RenderRowStart(contentBuilder, ref itemSequence, proposal.Title);
-                RenderStatus(contentBuilder, ref itemSequence, LearningProposalTone(proposal.Status), FormatLabel(proposal.Status));
-                RenderRowText(contentBuilder, ref itemSequence, $"{FormatLabel(proposal.NeedBucket)} / priority {ScoreText(proposal.DisplayPriorityProjection)}");
-                contentBuilder.CloseElement();
-            });
-    }
-
-    private void RenderCrossProjectRows(RenderTreeBuilder builder, int sequence)
-    {
-        if (snapshot is null)
-        {
-            return;
-        }
-
-        RenderRows(
-            builder,
-            sequence,
-            snapshot.CrossProjectPromotions,
-            (contentBuilder, candidate, itemSequence) =>
-            {
-                RenderRowStart(contentBuilder, ref itemSequence, $"Memory {FormatShortId(candidate.SourceMemoryRecordId)}");
-                RenderStatus(contentBuilder, ref itemSequence, CrossProjectTone(candidate.Status), $"{FormatLabel(candidate.Status)} / {FormatLabel(candidate.PromotionBucket)}");
-                RenderRowText(contentBuilder, ref itemSequence, FirstNonEmpty(candidate.Reason, "Cross-project promotion requires review."));
-                contentBuilder.CloseElement();
-            });
-    }
-
-    private void RenderDistributedRows(RenderTreeBuilder builder, int sequence)
-    {
-        if (snapshot is null)
-        {
-            return;
-        }
-
-        RenderRows(
-            builder,
-            sequence,
-            snapshot.DistributedJobs,
-            (contentBuilder, job, itemSequence) =>
-            {
-                RenderRowStart(contentBuilder, ref itemSequence, $"{FormatLabel(job.JobKind)} / {FirstNonEmpty(job.SourceScopeKey, FormatShortId(job.Id))}");
-                RenderStatus(contentBuilder, ref itemSequence, DistributedJobTone(job.State), FormatLabel(job.State));
-                RenderRowText(contentBuilder, ref itemSequence, string.IsNullOrWhiteSpace(job.LeasedWorkerId)
-                    ? $"Created {FormatDate(job.CreatedAtUtc)}"
-                    : $"Worker {job.LeasedWorkerId} / updated {FormatDate(job.UpdatedAtUtc)}");
-                contentBuilder.CloseElement();
-            });
-    }
-
-    private static void RenderRows<TItem>(
-        RenderTreeBuilder builder,
-        int sequence,
-        IReadOnlyList<TItem> items,
-        Action<RenderTreeBuilder, TItem, int> renderItem)
-    {
-        builder.OpenComponent<Stack>(sequence);
-        builder.AddAttribute(sequence + 1, nameof(Stack.GapScale), LayoutGap.Small);
-        builder.AddAttribute(sequence + 2, nameof(Stack.Class), "mt-4");
-        builder.AddAttribute(sequence + 3, nameof(Stack.ChildContent), (RenderFragment)(contentBuilder =>
-        {
-            var itemSequence = 0;
-            foreach (var item in items)
-            {
-                renderItem(contentBuilder, item, itemSequence);
-                itemSequence += 20;
-            }
-        }));
-        builder.CloseComponent();
-    }
-
-    private static void RenderRowStart(
-        RenderTreeBuilder builder,
-        ref int sequence,
-        string title)
-    {
-        builder.OpenElement(sequence++, "div");
-        builder.AddAttribute(sequence++, "class", "cognitive-memory-row");
-        builder.OpenElement(sequence++, "strong");
-        builder.AddContent(sequence++, title);
-        builder.CloseElement();
-    }
-
-    private static void RenderStatus(
-        RenderTreeBuilder builder,
-        ref int sequence,
-        string tone,
-        string text)
-    {
-        builder.OpenComponent<StatusBadge>(sequence++);
-        builder.AddAttribute(sequence++, nameof(StatusBadge.Tone), tone);
-        builder.AddAttribute(sequence++, nameof(StatusBadge.Text), text);
-        builder.CloseComponent();
-    }
-
-    private static void RenderRowText(
-        RenderTreeBuilder builder,
-        ref int sequence,
-        string text)
-    {
-        builder.OpenElement(sequence++, "span");
-        builder.AddContent(sequence++, text);
-        builder.CloseElement();
-    }
-
-    private static void RenderRowSmall(
-        RenderTreeBuilder builder,
-        ref int sequence,
-        string text)
-    {
-        builder.OpenElement(sequence++, "small");
-        builder.AddContent(sequence++, text);
-        builder.CloseElement();
-    }
-
-    private static void RenderEmptyLine(RenderTreeBuilder builder, int sequence, string text)
-    {
-        builder.OpenElement(sequence, "p");
-        builder.AddAttribute(sequence + 1, "class", "cognitive-memory-muted");
-        builder.AddContent(sequence + 2, text);
-        builder.CloseElement();
-    }
-
-    private static string FirstNonEmpty(params string?[] values)
-        => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
-
-    private static string TruncateListText(string value, int maxLength)
-    {
-        var normalized = string.Join(" ", value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
-        return normalized.Length <= maxLength
-            ? normalized
-            : $"{normalized[..Math.Max(0, maxLength - 1)]}...";
-    }
-
-    private sealed class CognitiveMemoryProviderSelection(
-        Guid id,
-        string name,
-        ProviderKind kind,
-        string defaultModel,
-        string baseUrl,
-        bool isEnabled,
-        bool isLocal,
-        bool isAllowed)
-    {
-        public Guid Id { get; } = id;
-
-        public string Name { get; } = name;
-
-        public ProviderKind Kind { get; } = kind;
-
-        public string DefaultModel { get; } = defaultModel;
-
-        public string BaseUrl { get; } = baseUrl;
-
-        public bool IsEnabled { get; } = isEnabled;
-
-        public bool IsLocal { get; } = isLocal;
-
-        public bool IsAllowed { get; set; } = isAllowed;
-    }
-
-    private enum CognitiveMemoryProbeVoiceCaptureTarget
-    {
-        Question,
-        Correction,
-        Confirmation
-    }
-
 }

@@ -50,6 +50,12 @@ public sealed class CognitiveMemoryReviewUiServiceTests
         Assert.Single(snapshot.LearningProposals);
         Assert.Single(snapshot.CrossProjectPromotions);
         Assert.Single(snapshot.DistributedJobs);
+        Assert.Contains(snapshot.OperatorAudit, item => item.AuditKind == CognitiveMemoryOperatorAuditKind.MutationCommand);
+        Assert.Contains(snapshot.OperatorAudit, item => item.AuditKind == CognitiveMemoryOperatorAuditKind.MutationAuditEvent);
+        Assert.Contains(snapshot.OperatorAudit, item => item.AuditKind == CognitiveMemoryOperatorAuditKind.ClaimState);
+        Assert.Contains(snapshot.OperatorAudit, item => item.AuditKind == CognitiveMemoryOperatorAuditKind.EvidenceAnchor);
+        Assert.Contains(snapshot.OperatorAudit, item => item.AuditKind == CognitiveMemoryOperatorAuditKind.ProjectionFailure);
+        Assert.Contains(snapshot.OperatorAudit, item => item.AuditKind == CognitiveMemoryOperatorAuditKind.RetentionCleanup);
         Assert.Contains("Deployment rollback", snapshot.ReviewItems[0].SubjectTitle, StringComparison.Ordinal);
     }
 
@@ -191,6 +197,53 @@ public sealed class CognitiveMemoryReviewUiServiceTests
             ObservedAtUtc = now,
             CreatedAtUtc = now,
             ConcurrencyToken = Guid.NewGuid()
+        };
+        var claim = new CognitiveMemoryClaimRecord
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = projectId,
+            MemoryRecordId = memoryRecord.Id,
+            ClaimKind = CognitiveMemoryClaimKind.ProcedureConstraint,
+            ClaimText = "Docker rollback requires source-backed validation.",
+            SubjectKey = "docker.rollback",
+            PredicateKey = "requires",
+            ObjectKey = "source.validation",
+            CurrentBeliefState = CognitiveMemoryBeliefStateKind.Supported,
+            CurrentBeliefBucket = CognitiveMemoryScoreProjectionBucket.NeedsReview,
+            ValidationState = CognitiveMemoryValidationState.NeedsHumanReview,
+            StabilityState = CognitiveMemoryStabilityState.Experimental,
+            AlgorithmVersion = "unit-test",
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now,
+            ConcurrencyToken = Guid.NewGuid()
+        };
+        var mutationCommand = new CognitiveMemoryMutationCommandRecord
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = projectId,
+            CommandKind = CognitiveMemoryMutationCommandKind.ValidateClaim,
+            Status = CognitiveMemoryMutationCommandStatus.ReviewRequired,
+            ActorKind = CognitiveMemoryActorKind.Agent,
+            ActorId = "agent:test",
+            IdempotencyKey = "unit-test-mutation-command",
+            AffectedMemoryRecordIdsJson = $"[\"{memoryRecord.Id:D}\"]",
+            AffectedClaimIdsJson = $"[\"{claim.Id:D}\"]",
+            EvidenceAnchorIdsJson = $"[\"{evidenceAnchor.Id:D}\"]",
+            RequiresHumanReview = true,
+            ReviewReason = "Claim validation requires operator review.",
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now,
+            ConcurrencyToken = Guid.NewGuid()
+        };
+        var mutationAuditEvent = new CognitiveMemoryMutationAuditEventRecord
+        {
+            Id = Guid.NewGuid(),
+            MutationCommandId = mutationCommand.Id,
+            ProjectId = projectId,
+            Sequence = 1,
+            EventKind = CognitiveMemoryMutationAuditEventKind.ReviewRequired,
+            Message = "Claim validation routed to operator audit.",
+            CreatedAtUtc = now
         };
         var procedureSkill = new CognitiveMemoryProcedureSkillRecord
         {
@@ -484,6 +537,21 @@ public sealed class CognitiveMemoryReviewUiServiceTests
             UpdatedAtUtc = now,
             ConcurrencyToken = Guid.NewGuid()
         };
+        var retentionCleanupRun = new CognitiveMemoryRunRecord
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = projectId,
+            RunKind = CognitiveMemoryRunKind.RetentionCleanup,
+            Status = CognitiveMemoryRunStatus.Succeeded,
+            OperationMode = CognitiveMemoryOperationMode.Maintenance,
+            IdempotencyKey = "unit-test-retention-cleanup",
+            InputHash = CognitiveMemoryHash.FromUtf8("retention-cleanup").Value,
+            AlgorithmVersion = "unit-test",
+            Cursor = "RecallTraces,ProbeSessions",
+            StartedAtUtc = now,
+            CompletedAtUtc = now.AddMinutes(3),
+            ConcurrencyToken = Guid.NewGuid()
+        };
 
         dbContext.AddRange(
             sourceManifest,
@@ -491,6 +559,9 @@ public sealed class CognitiveMemoryReviewUiServiceTests
             memoryRecord,
             sourceLink,
             evidenceAnchor,
+            claim,
+            mutationCommand,
+            mutationAuditEvent,
             procedureSkill,
             reviewItem,
             recallTrace,
@@ -507,7 +578,8 @@ public sealed class CognitiveMemoryReviewUiServiceTests
             professorReview,
             learningProposal,
             crossProjectPromotion,
-            distributedJob);
+            distributedJob,
+            retentionCleanupRun);
         await dbContext.SaveChangesAsync();
         return reviewItem.Id;
     }

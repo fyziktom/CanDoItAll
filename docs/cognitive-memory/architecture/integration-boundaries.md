@@ -15,8 +15,9 @@ RAG, Qdrant, SemanticCompletion, UI cards, context packs, and MAF prompt message
 | Workflow runtime | `IWorkflowRuntimeEvidenceSourceProvider` from AgentFramework module | Read workflow evidence. Do not make workflow state a private memory schema. |
 | External files/web links | `ICognitiveMemoryExternalSourceIngestionService` | Store extracted text as source material with provenance and evidence. Do not treat upload text as approved memory. |
 | SemanticCompletion | `ICognitiveMemoryEmbeddingProvider`, `ICognitiveMemorySemanticRanker`, `ICognitiveMemorySemanticClassifier<T>` | Use as semantic utilities only. They do not own canonicalization or truth. |
-| RAG/Qdrant | `ICognitiveMemoryProjectionAdapter` | Rebuildable projection. Deleting or rebuilding projection points must not delete durable memory. |
-| AgentFramework MAF | `IAgentContextContributor` | Read rendered context packs into agent requests. MAF does not own durable memory. |
+| RAG/Qdrant | `ICognitiveMemoryProjectionAdapter`, `ICognitiveMemoryProjectionRebuildService` | Rebuildable projection. Deleting or rebuilding projection points must not delete durable memory. Projection rebuild must load durable source/evidence/claim inputs rather than invent payloads. |
+| AgentFramework MAF | `IAgentContextContributor`, `CognitiveMemoryAgentContextPackage` | Read rendered agent-facing context into agent requests. MAF does not own durable memory or diagnostic recall payloads. |
+| Operational automation | `ICognitiveMemoryScheduledAutomationRunner` | Explicitly runs configured ingestion/consolidation when schedule mode permits. It is not a hidden background mutation path. |
 | Review UI | `ICognitiveMemoryReviewUiService` | Applies explicit operator decisions. It should remain orchestration over services, not a second memory implementation. |
 
 ## Mutability Policy
@@ -28,10 +29,14 @@ Canonical memory should change only through governed paths:
 3. The candidate applicator materializes memory records and claims when the candidate is accepted or approved.
 4. Review decisions can approve/reject/defer/request changes.
 5. Probe feedback, answer gates, professor reviews, prediction errors, learning proposals, and distributed worker results create reviewable signals/control records. They should not directly rewrite canonical truth.
+6. Projection rebuild updates projection rows and provider points only; it must not create canonical memory.
+7. Scheduled automation runs source ingestion and consolidation through existing governed services; it must not bypass source truth, mutation authority, or review policy.
 
 ## Provider Behavior
 
-The module registers unavailable adapter implementations when embedding, semantic ranking, or RAG services are not present. Current recall behavior records skipped/unavailable vector stages and continues through lexical/source/workspace/signal/graph channels. That is acceptable for alpha development and local smoke work, but beta should make fail/skip policy explicit for process-critical agent runs.
+The module registers unavailable adapter implementations when embedding, semantic ranking, or RAG services are not present. Current recall behavior records skipped/unavailable vector stages and continues through lexical/source/workspace/signal/graph channels.
+
+MAF contribution now has an explicit policy boundary: governed process automation, auto-approved non-interactive runs, and A2A endpoint mode fail when required memory context is unavailable. Interactive chat still skips unavailable optional memory context with trace metadata.
 
 ## Database Profiles
 
