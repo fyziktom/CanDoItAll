@@ -550,12 +550,24 @@
         });
     }
 
-    function buildChildNotePlacement(position, childCount, sourceSize) {
+    function resolveChildNoteHorizontalDirection(state, node) {
+        const parent = node?.parentId ? state.lookups.byId.get(node.parentId) : null;
+        if (!node || !parent) {
+            return 1;
+        }
+
+        const nodePosition = getNodePosition(state, node);
+        const parentPosition = getNodePosition(state, parent);
+        return nodePosition.x < parentPosition.x ? -1 : 1;
+    }
+
+    function buildChildNotePlacement(position, childCount, sourceSize, horizontalDirection) {
         const column = childCount % 3;
         const row = Math.floor(childCount / 3);
         const horizontalGap = ((sourceSize?.width || 148) / 2) + 98;
+        const direction = horizontalDirection < 0 ? -1 : 1;
         return {
-            x: round(position.x + horizontalGap + (column * 36)),
+            x: round(position.x + (direction * (horizontalGap + (column * 36)))),
             y: round(position.y + (row * 104))
         };
     }
@@ -589,7 +601,7 @@
         const sourceSize = getNodeSize(state, node);
         const anchorWorld = isSibling
             ? buildSiblingNotePlacement(position, state.surface.nodes.filter(candidate => candidate.parentId === node.parentId && candidate.id !== node.id).length, sourceSize)
-            : buildChildNotePlacement(position, state.surface.nodes.filter(candidate => candidate.parentId === node.id).length, sourceSize);
+            : buildChildNotePlacement(position, state.surface.nodes.filter(candidate => candidate.parentId === node.id).length, sourceSize, resolveChildNoteHorizontalDirection(state, node));
 
         openInlineNoteComposer(state, {
             kind: "note-create",

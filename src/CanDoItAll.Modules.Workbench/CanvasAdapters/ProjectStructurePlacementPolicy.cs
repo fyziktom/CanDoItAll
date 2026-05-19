@@ -41,7 +41,7 @@ public sealed class ProjectStructurePlacementPolicy
         var newNodeSize = EstimateNewNodeSize(resolvedObjectType, request);
         if (IsSimpleNoteQuickCreate(resolvedObjectType, request) && sourceNode is not null)
         {
-            return ResolveSimpleNotePlacement(nodes, sourceNode, request, newNodeSize);
+            return ResolveSimpleNotePlacement(nodes, sourceNode, parentNode ?? sourceNode, request, newNodeSize);
         }
 
         var anchorNode = parentNode ?? sourceNode;
@@ -61,12 +61,7 @@ public sealed class ProjectStructurePlacementPolicy
                 []);
         }
 
-        var anchorParent = string.IsNullOrWhiteSpace(anchorNode.ParentId)
-            ? null
-            : nodes.FirstOrDefault(node => string.Equals(node.Id, anchorNode.ParentId, StringComparison.Ordinal));
-        var horizontalDirection = anchorParent is not null && anchorNode.X < anchorParent.X
-            ? -1
-            : 1;
+        var horizontalDirection = ResolveChildHorizontalDirection(nodes, anchorNode);
         var anchorPosition = ResolveAnchorPosition(anchorNode, request);
         var anchorSize = EstimateNodeSize(anchorNode);
         var preferredChild = (
@@ -93,6 +88,7 @@ public sealed class ProjectStructurePlacementPolicy
     private static ProjectStructureCreatePlacementPlan ResolveSimpleNotePlacement(
         IReadOnlyList<ProjectStructureNode> nodes,
         ProjectStructureNode sourceNode,
+        ProjectStructureNode anchorNode,
         CanvasWorkbenchCreateActionRequest request,
         NodeSize newNodeSize)
     {
@@ -107,12 +103,27 @@ public sealed class ProjectStructurePlacementPolicy
             return new ProjectStructureCreatePlacementPlan(placement, moves);
         }
 
+        var anchorPosition = ResolveAnchorPosition(anchorNode, request, useRequestPoint: false);
+        var anchorSize = EstimateNodeSize(anchorNode);
+        var horizontalDirection = ResolveChildHorizontalDirection(nodes, anchorNode);
         var preferredChild = (
-            sourcePosition.X + ((sourceSize.Width + newNodeSize.Width) / 2d) + SimpleNoteChildGap,
-            sourcePosition.Y);
+            anchorPosition.X + (horizontalDirection * (((anchorSize.Width + newNodeSize.Width) / 2d) + SimpleNoteChildGap)),
+            anchorPosition.Y);
         return new ProjectStructureCreatePlacementPlan(
-            FindAvailablePlacement(nodes, newNodeSize, preferredChild, 1, CandidateStep(newNodeSize, minimum: 94d)),
+            FindAvailablePlacement(nodes, newNodeSize, preferredChild, horizontalDirection, CandidateStep(newNodeSize, minimum: 94d)),
             []);
+    }
+
+    private static int ResolveChildHorizontalDirection(
+        IReadOnlyList<ProjectStructureNode> nodes,
+        ProjectStructureNode anchorNode)
+    {
+        var anchorParent = string.IsNullOrWhiteSpace(anchorNode.ParentId)
+            ? null
+            : nodes.FirstOrDefault(node => string.Equals(node.Id, anchorNode.ParentId, StringComparison.Ordinal));
+        return anchorParent is not null && anchorNode.X < anchorParent.X
+            ? -1
+            : 1;
     }
 
     private static IReadOnlyList<ProjectNodeMoveRequest> PlanDownwardSimpleNoteMoves(
