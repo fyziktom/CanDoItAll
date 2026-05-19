@@ -108,6 +108,7 @@ internal static class ProjectStructureNodeDescriptor
                 AddIfValue(facts, "Mode", HumanizeToken(node.ObjectSubtype));
                 AddIfValue(facts, "Path", metadata.Repository?.LocalPath);
                 AddIfValue(facts, "URL", metadata.Repository?.RepositoryUrl);
+                AddIfValue(facts, "Host", ProjectStructureExternalLinkClassifier.DescribeGitHost(metadata.Repository?.RepositoryUrl));
                 AddIfValue(facts, "Branch", metadata.Repository?.DefaultBranch);
                 break;
             case ProjectObjectType.File:
@@ -118,6 +119,7 @@ internal static class ProjectStructureNodeDescriptor
                 }
 
                 AddIfValue(facts, "Source", metadata.File?.SourceHint);
+                AddIfValue(facts, "Path", metadata.File?.ExternalPath);
                 if (StorageJson.TryParseReference(node.StorageObjectReferenceJson, out var storageReference) &&
                     storageReference is not null)
                 {
@@ -148,6 +150,10 @@ internal static class ProjectStructureNodeDescriptor
                 AddIfValue(facts, "DB", metadata.Infrastructure?.DatabaseType);
                 AddIfValue(facts, "Purpose", ResolveStoragePurposeLabel(metadata.Infrastructure?.StoragePurpose));
                 AddIfValue(facts, "Path", metadata.Infrastructure?.StoragePathPrefix);
+                AddIfValue(facts, "Folder", metadata.Infrastructure?.FolderPath);
+                AddIfValue(facts, "Command", metadata.Infrastructure?.RuntimeCommand);
+                AddIfValue(facts, "Args", metadata.Infrastructure?.RuntimeArguments);
+                AddIfValue(facts, "Work dir", metadata.Infrastructure?.WorkingDirectory);
                 AddIfValue(facts, "AI", HumanizeEnum(metadata.Infrastructure?.AiReferenceKind));
                 break;
             case ProjectObjectType.SecretReference:
@@ -156,6 +162,7 @@ internal static class ProjectStructureNodeDescriptor
                 AddIfValue(facts, "Reference", metadata.SecretReference?.ExternalReference);
                 break;
             case ProjectObjectType.Link:
+                AddIfValue(facts, "Host", ProjectStructureExternalLinkClassifier.DescribeGitHost(metadata.Link?.Url));
                 AddIfValue(facts, "URL", metadata.Link?.Url);
                 AddIfValue(facts, "Channel", HumanizeEnum(metadata.Link?.Channel));
                 break;
@@ -369,7 +376,7 @@ internal static class ProjectStructureNodeDescriptor
             return false;
         }
 
-        return fact.Label is "Path" or "Project" or "Work dir" or "Source" &&
+        return fact.Label is "Path" or "Project" or "Work dir" or "Source" or "Folder" &&
             LooksLikePathValue(fact.Value);
     }
 

@@ -109,6 +109,8 @@ internal static class ProjectStructureNodeEditor
                 break;
             case ProjectObjectType.File:
                 metadata.File ??= new ProjectFileMetadata();
+                metadata.File.SourceHint = ResolveString(inputValues, submittedKeys, "sourceHint", metadata.File.SourceHint);
+                metadata.File.ExternalPath = ResolveString(inputValues, submittedKeys, "externalPath", metadata.File.ExternalPath);
                 if (submittedKeys.Contains("mermaidText"))
                 {
                     metadata.File.MermaidDiagramKind = ProjectObjectMetadataSerializer.DetectMermaidDiagramKind(notes);
@@ -175,6 +177,9 @@ internal static class ProjectStructureNodeEditor
                 metadata.Infrastructure.StoragePathPrefix = ResolveString(inputValues, submittedKeys, "storagePathPrefix", metadata.Infrastructure.StoragePathPrefix);
                 metadata.Infrastructure.AiReferenceKind = ResolveNullableEnum(inputValues, submittedKeys, "aiReferenceKind", metadata.Infrastructure.AiReferenceKind);
                 metadata.Infrastructure.AiReferenceUrl = ResolveString(inputValues, submittedKeys, "aiReferenceUrl", metadata.Infrastructure.AiReferenceUrl);
+                metadata.Infrastructure.RuntimeCommand = ResolveString(inputValues, submittedKeys, "runtimeCommand", metadata.Infrastructure.RuntimeCommand);
+                metadata.Infrastructure.RuntimeArguments = ResolveString(inputValues, submittedKeys, "runtimeArguments", metadata.Infrastructure.RuntimeArguments);
+                metadata.Infrastructure.WorkingDirectory = ResolveString(inputValues, submittedKeys, "workingDirectory", metadata.Infrastructure.WorkingDirectory);
                 break;
             case ProjectObjectType.Link:
                 metadata.Link ??= new ProjectLinkMetadata();
@@ -195,7 +200,15 @@ internal static class ProjectStructureNodeEditor
     }
 
     private static string ResolveFieldValue(string key, ProjectStructureNode node, ProjectObjectMetadataEnvelope metadata)
-        => key switch
+    {
+        if (string.Equals(key, "workingDirectory", StringComparison.OrdinalIgnoreCase))
+        {
+            return node.ObjectType == ProjectObjectType.Infrastructure
+                ? metadata.Infrastructure?.WorkingDirectory ?? string.Empty
+                : metadata.Script?.WorkingDirectory ?? string.Empty;
+        }
+
+        return key switch
         {
             "startUtc" => FormatDateTimeLocal(node.StartUtc),
             "endUtc" => FormatDateTimeLocal(node.EndUtc),
@@ -224,12 +237,13 @@ internal static class ProjectStructureNodeEditor
             "localPath" => metadata.Repository?.LocalPath ?? string.Empty,
             "defaultBranch" => metadata.Repository?.DefaultBranch ?? string.Empty,
             "relativePath" => metadata.Repository?.RelativePath ?? string.Empty,
+            "sourceHint" => metadata.File?.SourceHint ?? string.Empty,
+            "externalPath" => metadata.File?.ExternalPath ?? string.Empty,
             "mermaidText" => node.Notes,
             "scriptKind" => ToCamelCaseToken(metadata.Script?.ScriptKind == default ? ProjectNodeKindRegistry.ResolveScriptKind(node.ObjectSubtype) : metadata.Script?.ScriptKind),
             "scriptPath" => metadata.Script?.ScriptPath ?? string.Empty,
             "command" => metadata.Script?.Command ?? string.Empty,
             "arguments" => metadata.Script?.Arguments ?? string.Empty,
-            "workingDirectory" => metadata.Script?.WorkingDirectory ?? string.Empty,
             "environmentKind" => ToCamelCaseToken(metadata.Environment?.EnvironmentKind == default ? ProjectNodeKindRegistry.ResolveEnvironmentKind(node.ObjectSubtype) : metadata.Environment?.EnvironmentKind),
             "pythonProvider" => ToCamelCaseToken(metadata.Environment?.PythonProvider),
             "environmentName" => metadata.Environment?.EnvironmentName ?? string.Empty,
@@ -262,8 +276,11 @@ internal static class ProjectStructureNodeEditor
             "storagePathPrefix" => metadata.Infrastructure?.StoragePathPrefix ?? string.Empty,
             "aiReferenceKind" => ToCamelCaseToken(metadata.Infrastructure?.AiReferenceKind),
             "aiReferenceUrl" => metadata.Infrastructure?.AiReferenceUrl ?? string.Empty,
+            "runtimeCommand" => metadata.Infrastructure?.RuntimeCommand ?? string.Empty,
+            "runtimeArguments" => metadata.Infrastructure?.RuntimeArguments ?? string.Empty,
             _ => string.Empty
         };
+    }
 
     private static string ResolveNotes(
         ProjectStructureCreateLeafDefinition definition,

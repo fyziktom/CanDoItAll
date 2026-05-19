@@ -29,4 +29,39 @@ public sealed class ProjectStructureNodeCatalogTests
             item => item.Kind == ProjectObjectLinkKind.DependsOn &&
                     item.Guidance.Contains("source node depends on the target node", StringComparison.OrdinalIgnoreCase));
     }
+
+    [Fact]
+    public void BuildAgentNodeCatalog_documents_runtime_folder_file_and_git_link_nodes_for_agents()
+    {
+        var catalog = ProjectStructureCanvasCatalog.BuildAgentNodeCatalog();
+
+        Assert.Contains(catalog.Guidance, item => item.Contains("metadata.repository.localPath", StringComparison.Ordinal));
+        Assert.Contains(catalog.Guidance, item => item.Contains("metadata.file.externalPath", StringComparison.Ordinal));
+        Assert.Contains(catalog.Guidance, item => item.Contains("GitHub and GitLab URLs", StringComparison.Ordinal));
+        Assert.Contains(catalog.Guidance, item => item.Contains("metadata.script.command", StringComparison.Ordinal));
+        Assert.Contains(catalog.Guidance, item => item.Contains("metadata.environment.projectPath", StringComparison.Ordinal));
+        Assert.Contains(catalog.Guidance, item => item.Contains("metadata.infrastructure.runtimeCommand", StringComparison.Ordinal));
+
+        AssertCatalogAlias(catalog, ProjectObjectType.Repository, "folder", "folder node");
+        AssertCatalogAlias(catalog, ProjectObjectType.Repository, "remote", "github repository");
+        AssertCatalogAlias(catalog, ProjectObjectType.Link, string.Empty, "gitlab link");
+        AssertCatalogAlias(catalog, ProjectObjectType.Script, "powershell", "powershell runtime");
+        AssertCatalogAlias(catalog, ProjectObjectType.Environment, "python", "python runtime");
+        AssertCatalogAlias(catalog, ProjectObjectType.Infrastructure, "docker-mode", "docker runtime");
+        AssertCatalogAlias(catalog, ProjectObjectType.File, "markdown", "local file");
+    }
+
+    private static void AssertCatalogAlias(
+        ProjectStructureNodeCatalogResponse catalog,
+        ProjectObjectType objectType,
+        string objectSubtype,
+        string alias)
+    {
+        var item = Assert.Single(
+            catalog.Items,
+            item => item.ObjectType == objectType &&
+                    item.ObjectSubtype == objectSubtype);
+
+        Assert.Contains(alias, item.Aliases, StringComparer.OrdinalIgnoreCase);
+    }
 }

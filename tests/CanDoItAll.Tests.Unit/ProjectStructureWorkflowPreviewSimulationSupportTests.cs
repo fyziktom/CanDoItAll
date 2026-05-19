@@ -55,6 +55,35 @@ public sealed class ProjectStructureWorkflowPreviewSimulationSupportTests
     }
 
     [Fact]
+    public void Default_template_pack_loads_file_backed_workflow_examples()
+    {
+        var pack = new WorkflowTemplatePackLoader().Load();
+
+        AssertTemplateGraph(pack, "gmail-label-email-summary-to-project");
+        AssertTemplateGraph(pack, "office365-category-email-summary-to-project");
+        var gmailTasks = AssertTemplateGraph(pack, "gmail-label-email-tasks-to-project");
+        var officeTasks = AssertTemplateGraph(pack, "office365-category-email-tasks-to-project");
+        var mermaid = AssertTemplateGraph(pack, "file-to-mermaid-graph-asset");
+        var sourceCode = AssertTemplateGraph(pack, "source-code-file-summary-to-project");
+
+        Assert.Contains(gmailTasks.Nodes, node => node.Settings.ExecutorId == new WorkflowExecutorId("gmail.messages-by-label"));
+        Assert.Contains(gmailTasks.Nodes, node => node.Settings.ExecutorId == new WorkflowExecutorId("gmail.mark-message-processed"));
+        AssertProjectStructureOperation(gmailTasks, "create-gmail-task-nodes", WorkflowProjectStructureOperation.CreateTaskNodes, includeInputPayload: true);
+        AssertProjectStructureOperation(gmailTasks, "store-gmail-no-task-summary", WorkflowProjectStructureOperation.CreateAsset, includeInputPayload: true);
+
+        Assert.Contains(officeTasks.Nodes, node => node.Settings.ExecutorId == new WorkflowExecutorId("office365.messages-by-category"));
+        Assert.Contains(officeTasks.Nodes, node => node.Settings.ExecutorId == new WorkflowExecutorId("office365.mark-message-processed"));
+        AssertProjectStructureOperation(officeTasks, "create-office365-task-nodes", WorkflowProjectStructureOperation.CreateTaskNodes, includeInputPayload: true);
+        AssertProjectStructureOperation(officeTasks, "store-office365-no-task-summary", WorkflowProjectStructureOperation.CreateAsset, includeInputPayload: true);
+
+        AssertSourceIngestionAllows(mermaid, "ingest-graph-sources", ".cs", ".razor", ".ts", ".md");
+        AssertProjectStructureOperation(mermaid, "store-mermaid-asset", WorkflowProjectStructureOperation.CreateAsset, includeInputPayload: true);
+
+        AssertSourceIngestionAllows(sourceCode, "ingest-code-sources", ".cs", ".razor", ".tsx", ".py");
+        AssertProjectStructureOperation(sourceCode, "store-code-summary", WorkflowProjectStructureOperation.CreateAsset, includeInputPayload: true);
+    }
+
+    [Fact]
     public void BuildPlan_rejects_non_write_project_structure_node_ids()
     {
         var definition = CreateDefinition([
@@ -113,6 +142,55 @@ public sealed class ProjectStructureWorkflowPreviewSimulationSupportTests
                 ExposeAzureFunctionsMcpTool: false),
             DateTimeOffset.UtcNow,
             DateTimeOffset.UtcNow);
+
+    private static WorkflowGraph AssertTemplateGraph(
+        WorkflowTemplatePack pack,
+        string key)
+    {
+        var template = Assert.Single(pack.Workflows, item => item.Key == key);
+        var graph = pack.CreateGraph(template, WorkflowComponentId.New());
+
+        Assert.NotEmpty(graph.Nodes);
+        Assert.NotEmpty(graph.Edges);
+        return graph;
+    }
+
+    private static void AssertProjectStructureOperation(
+        WorkflowGraph graph,
+        string nodeId,
+        WorkflowProjectStructureOperation operation,
+        bool includeInputPayload)
+    {
+        var node = Assert.Single(graph.Nodes, item => item.Id.Value == nodeId);
+        Assert.Equal(WorkflowExecutorIds.ProjectStructure, node.Settings.ExecutorId);
+
+        var settings = JsonSerializer.Deserialize<WorkflowProjectStructureExecutorSettings>(
+            node.Settings.ExecutorSettingsJson,
+            JsonOptions);
+
+        Assert.NotNull(settings);
+        Assert.Equal(operation, settings.Operation);
+        Assert.Equal(includeInputPayload, settings.IncludeInputPayload);
+    }
+
+    private static void AssertSourceIngestionAllows(
+        WorkflowGraph graph,
+        string nodeId,
+        params string[] extensions)
+    {
+        var node = Assert.Single(graph.Nodes, item => item.Id.Value == nodeId);
+        Assert.Equal(WorkflowExecutorIds.SourceIngestion, node.Settings.ExecutorId);
+
+        var settings = JsonSerializer.Deserialize<WorkflowSourceIngestionExecutorSettings>(
+            node.Settings.ExecutorSettingsJson,
+            JsonOptions);
+
+        Assert.NotNull(settings);
+        foreach (var extension in extensions)
+        {
+            Assert.Contains(extension, settings.AllowedExtensions, StringComparer.OrdinalIgnoreCase);
+        }
+    }
 
     private static WorkflowNode CreateProjectStructureNode(
         string id,

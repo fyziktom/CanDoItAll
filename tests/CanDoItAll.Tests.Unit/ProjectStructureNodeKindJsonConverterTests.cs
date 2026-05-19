@@ -65,4 +65,50 @@ public sealed class ProjectStructureNodeKindJsonConverterTests
 
         Assert.Contains("Unsupported objectType numeric value", exception.Message, StringComparison.Ordinal);
     }
+
+    [Theory]
+    [InlineData("FolderNode", ProjectObjectType.Repository, "folder")]
+    [InlineData("GitHubRepository", ProjectObjectType.Repository, "remote")]
+    [InlineData("GitLabLink", ProjectObjectType.Link, null)]
+    [InlineData("PowerShellRuntime", ProjectObjectType.Script, "powershell")]
+    [InlineData("PythonRuntime", ProjectObjectType.Environment, "python")]
+    [InlineData("DockerRuntime", ProjectObjectType.Infrastructure, "docker-mode")]
+    [InlineData("MarkdownFile", ProjectObjectType.File, "markdown")]
+    public void CreateInput_accepts_project_structure_node_aliases(string objectTypeAlias, ProjectObjectType expectedType, string? expectedSubtype)
+    {
+        var json = $$"""
+            {
+              "objectType": "{{objectTypeAlias}}",
+              "title": "Aliased node"
+            }
+            """;
+
+        var input = JsonSerializer.Deserialize<ProjectStructureNodeCreateInput>(json, SerializerOptions);
+
+        Assert.NotNull(input);
+        Assert.Equal(expectedType, input.ObjectType);
+        Assert.Equal(expectedSubtype, input.ObjectSubtype);
+    }
+
+    [Theory]
+    [InlineData("Repository", "local folder", "folder")]
+    [InlineData("Script", "ef migration", "ef-migration")]
+    [InlineData("Environment", "dotnet watch", "dotnet-watch")]
+    [InlineData("Infrastructure", "docker compose", "docker-mode")]
+    [InlineData("File", "word document", "docx")]
+    public void CreateInput_normalizes_subtype_aliases_for_canonical_object_types(string objectType, string objectSubtype, string expectedSubtype)
+    {
+        var json = $$"""
+            {
+              "objectType": "{{objectType}}",
+              "objectSubtype": "{{objectSubtype}}",
+              "title": "Typed node"
+            }
+            """;
+
+        var input = JsonSerializer.Deserialize<ProjectStructureNodeCreateInput>(json, SerializerOptions);
+
+        Assert.NotNull(input);
+        Assert.Equal(expectedSubtype, input.ObjectSubtype);
+    }
 }
