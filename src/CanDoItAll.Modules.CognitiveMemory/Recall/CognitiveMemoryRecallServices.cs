@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -19,6 +20,7 @@ public sealed class CognitiveMemoryRecallOrchestrator(
 {
     private const int OverlapDeduplicationMinimumCharacters = 80;
     private const int LexicalFallbackScanLimit = 500;
+    private const int LexicalTermLimit = 32;
     private const string WorkbenchProjectStructureSourceSystem = "WorkbenchProjectStructure";
     private const string ExternalFileSourceSystem = "ExternalFile";
     private const string ProjectNodeSourceItemType = "ProjectNode";
@@ -72,6 +74,35 @@ public sealed class CognitiveMemoryRecallOrchestrator(
         "why",
         "with"
     };
+    private static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> LexicalTermAliases = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal)
+    {
+        ["certification"] = ["certifikace", "certifikační", "medical"],
+        ["certifications"] = ["certifikace", "certifikační", "medical"],
+        ["cost"] = ["náklad", "náklady", "nákladech", "pořizovací", "pořizovacích"],
+        ["costs"] = ["náklad", "náklady", "nákladech", "pořizovací", "pořizovacích"],
+        ["customer"] = ["zákazník", "zákazníka", "odběratel", "odběratelé"],
+        ["customers"] = ["zákazník", "zákazníka", "odběratel", "odběratelé"],
+        ["deployment"] = ["instalace", "spuštění", "provoz"],
+        ["hospital"] = ["nemocnice", "nemocnici"],
+        ["hospitals"] = ["nemocnice", "nemocnici"],
+        ["price"] = ["cena", "ceny", "prodej", "prodejní"],
+        ["pricing"] = ["cena", "ceny", "prodej", "prodejní"],
+        ["purchase"] = ["pořizovací", "pořizovacích", "nákup", "náklad"],
+        ["risk"] = ["riziko", "rizika", "threats", "weaknesses"],
+        ["risks"] = ["riziko", "rizika", "threats", "weaknesses"],
+        ["sale"] = ["prodej", "prodejní"],
+        ["sales"] = ["prodej", "prodejní"],
+        ["segment"] = ["trh", "trhy", "segment", "odběratel"],
+        ["segments"] = ["trh", "trhy", "segment", "odběratel"],
+        ["senior"] = ["senior", "seniory", "domovy"],
+        ["seniors"] = ["senior", "seniory", "domovy"]
+    };
+    private static readonly Regex RecallEmailRegex = new(
+        @"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+    private static readonly Regex RecallInternationalPhoneRegex = new(
+        @"\+\d{1,3}(?:[\s.-]?\d){6,}\d",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     public async ValueTask<CognitiveMemoryRecallResult> RecallAsync(
         CognitiveMemoryRecallRequest request,
@@ -272,15 +303,36 @@ public sealed class CognitiveMemoryRecallOrchestrator(
         foreach (var term in queryTerms)
         {
             var pattern = $"%{term}%";
-            var termRecords = await BuildRecordQuery(dbContext, request)
+            var termQuery = BuildRecordQuery(dbContext, request)
                 .Where(record =>
                     EF.Functions.Like(record.Title.ToLower(), pattern) ||
                     EF.Functions.Like(record.SummaryText.ToLower(), pattern) ||
                     EF.Functions.Like(record.CanonicalText.ToLower(), pattern) ||
-                    EF.Functions.Like(record.TopicKey.ToLower(), pattern))
-                .OrderByDescending(record => record.UpdatedAtUtc)
-                .Take(termScanLimit)
-                .Select(record => new MemoryRecordSnapshot(
+                    EF.Functions.Like(record.TopicKey.ToLower(), pattern));
+            var termRecords = dbContext.Database.IsSqlite()
+                ? await termQuery
+                    .Select(record => new MemoryRecordSnapshot(
+                        record.Id,
+                        record.ProjectId,
+                        record.Kind,
+                        record.Title,
+                        record.SummaryText,
+                        record.CanonicalText,
+                        record.TopicKey,
+                        record.ValidationState,
+                        record.StabilityState,
+                        record.SourceEvidenceCount,
+                        record.EvidenceAnchorCount,
+                        record.PrimaryClaimId,
+                        record.PrimaryContextFrameId,
+                        record.AccessLevel,
+                        record.RiskLevel,
+                        record.UpdatedAtUtc))
+                    .ToListAsync(cancellationToken)
+                : await termQuery
+                    .OrderByDescending(record => record.UpdatedAtUtc)
+                    .Take(termScanLimit)
+                    .Select(record => new MemoryRecordSnapshot(
                     record.Id,
                     record.ProjectId,
                     record.Kind,
@@ -297,7 +349,11 @@ public sealed class CognitiveMemoryRecallOrchestrator(
                     record.AccessLevel,
                     record.RiskLevel,
                     record.UpdatedAtUtc))
-                .ToListAsync(cancellationToken);
+                    .ToListAsync(cancellationToken);
+            termRecords = termRecords
+                .OrderByDescending(record => record.UpdatedAtUtc)
+                .Take(termScanLimit)
+                .ToList();
 
             foreach (var record in termRecords)
             {
@@ -323,11 +379,32 @@ public sealed class CognitiveMemoryRecallOrchestrator(
         if (candidateRecords.Count < request.Budget.CoarseCandidateLimit)
         {
             var existingRecordIds = candidateRecords.Keys.ToHashSet();
-            var fallbackRecords = await BuildRecordQuery(dbContext, request)
-                .Where(record => !existingRecordIds.Contains(record.Id))
-                .OrderByDescending(record => record.UpdatedAtUtc)
-                .Take(LexicalFallbackScanLimit)
-                .Select(record => new MemoryRecordSnapshot(
+            var fallbackQuery = BuildRecordQuery(dbContext, request)
+                .Where(record => !existingRecordIds.Contains(record.Id));
+            var fallbackRecords = dbContext.Database.IsSqlite()
+                ? await fallbackQuery
+                    .Select(record => new MemoryRecordSnapshot(
+                        record.Id,
+                        record.ProjectId,
+                        record.Kind,
+                        record.Title,
+                        record.SummaryText,
+                        record.CanonicalText,
+                        record.TopicKey,
+                        record.ValidationState,
+                        record.StabilityState,
+                        record.SourceEvidenceCount,
+                        record.EvidenceAnchorCount,
+                        record.PrimaryClaimId,
+                        record.PrimaryContextFrameId,
+                        record.AccessLevel,
+                        record.RiskLevel,
+                        record.UpdatedAtUtc))
+                    .ToListAsync(cancellationToken)
+                : await fallbackQuery
+                    .OrderByDescending(record => record.UpdatedAtUtc)
+                    .Take(LexicalFallbackScanLimit)
+                    .Select(record => new MemoryRecordSnapshot(
                     record.Id,
                     record.ProjectId,
                     record.Kind,
@@ -344,7 +421,11 @@ public sealed class CognitiveMemoryRecallOrchestrator(
                     record.AccessLevel,
                     record.RiskLevel,
                     record.UpdatedAtUtc))
-                .ToListAsync(cancellationToken);
+                    .ToListAsync(cancellationToken);
+            fallbackRecords = fallbackRecords
+                .OrderByDescending(record => record.UpdatedAtUtc)
+                .Take(LexicalFallbackScanLimit)
+                .ToList();
             var fallbackMatches = fallbackRecords
                 .Select(record => new
                 {
@@ -409,7 +490,7 @@ public sealed class CognitiveMemoryRecallOrchestrator(
         foreach (var term in queryTerms)
         {
             var pattern = $"%{term}%";
-            var matches = await dbContext.Set<CognitiveMemorySourceItemRecord>()
+            var sourceQuery = dbContext.Set<CognitiveMemorySourceItemRecord>()
                 .AsNoTracking()
                 .Where(item =>
                     item.ProjectId == request.ProjectId &&
@@ -418,16 +499,32 @@ public sealed class CognitiveMemoryRecallOrchestrator(
                     (EF.Functions.Like(item.Title.ToLower(), pattern) ||
                      EF.Functions.Like(item.ContentText.ToLower(), pattern) ||
                      EF.Functions.Like(item.SourceItemKey.ToLower(), pattern) ||
-                     item.Locator != null && EF.Functions.Like(item.Locator.ToLower(), pattern)))
-                .OrderByDescending(item => item.UpdatedAtUtc)
-                .Take(termScanLimit)
-                .Select(item => new SourceTextItemSnapshot(
+                     item.Locator != null && EF.Functions.Like(item.Locator.ToLower(), pattern)));
+            var matches = dbContext.Database.IsSqlite()
+                ? await sourceQuery
+                    .Select(item => new SourceTextItemSnapshot(
+                        item.Id,
+                        item.Title,
+                        item.ContentText,
+                        item.SourceItemKey,
+                        item.Locator,
+                        item.UpdatedAtUtc))
+                    .ToListAsync(cancellationToken)
+                : await sourceQuery
+                    .OrderByDescending(item => item.UpdatedAtUtc)
+                    .Take(termScanLimit)
+                    .Select(item => new SourceTextItemSnapshot(
                     item.Id,
                     item.Title,
                     item.ContentText,
                     item.SourceItemKey,
-                    item.Locator))
-                .ToListAsync(cancellationToken);
+                    item.Locator,
+                    item.UpdatedAtUtc))
+                    .ToListAsync(cancellationToken);
+            matches = matches
+                .OrderByDescending(item => item.UpdatedAtUtc)
+                .Take(termScanLimit)
+                .ToList();
 
             foreach (var match in matches)
             {
@@ -1550,15 +1647,40 @@ public sealed class CognitiveMemoryRecallOrchestrator(
             return false;
         }
 
-        var normalized = NormalizeContextBlock(text);
+        var redacted = RedactRecallContextText(text);
+        var normalized = NormalizeContextBlock(redacted);
         if (normalized.Length == 0 || IsRepeatedContextBlock(normalized, appendedBlocks))
         {
             return false;
         }
 
         appendedBlocks.Add(normalized);
-        builder.AppendLine(string.IsNullOrEmpty(prefix) ? text.Trim() : $"{prefix}{text.Trim()}");
+        builder.AppendLine(string.IsNullOrEmpty(prefix) ? redacted : $"{prefix}{redacted}");
         return true;
+    }
+
+    private static string RedactRecallContextText(string text)
+    {
+        var lines = text.Trim().Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+        var builder = new StringBuilder(text.Length);
+        foreach (var line in lines)
+        {
+            var trimmed = line.Trim();
+            if (trimmed.Length == 0)
+            {
+                continue;
+            }
+
+            if (RecallEmailRegex.IsMatch(trimmed) || RecallInternationalPhoneRegex.IsMatch(trimmed))
+            {
+                builder.AppendLine("[redacted-contact]");
+                continue;
+            }
+
+            builder.AppendLine(trimmed);
+        }
+
+        return builder.ToString().Trim();
     }
 
     private static bool IsRepeatedContextBlock(
@@ -1682,7 +1804,7 @@ public sealed class CognitiveMemoryRecallOrchestrator(
                 new CognitiveMemoryEvidenceAnchorId(anchor.Id),
                 anchor.SourceSystem,
                 anchor.Locator,
-                evidenceLink.Summary,
+                RedactRecallContextText(evidenceLink.Summary),
                 CognitiveMemoryAccessLevel.Project,
                 anchor.RedactionState,
                 included,
@@ -2365,15 +2487,15 @@ public sealed class CognitiveMemoryRecallOrchestrator(
         if (sourceItem is not null && !string.IsNullOrWhiteSpace(sourceItem.ContentText))
         {
             var content = sourceItem.ContentText.Trim();
-            return content.Length <= 2000 ? content : content[..2000];
+            return RedactRecallContextText(content.Length <= 2000 ? content : content[..2000]);
         }
 
         if (!string.IsNullOrWhiteSpace(sourceLinkSummary))
         {
-            return sourceLinkSummary.Trim();
+            return RedactRecallContextText(sourceLinkSummary);
         }
 
-        return sourceItem?.Title.Trim() ?? string.Empty;
+        return RedactRecallContextText(sourceItem?.Title ?? string.Empty);
     }
 
     private static IReadOnlyList<string> NormalizeTerms(string query)
@@ -2390,16 +2512,24 @@ public sealed class CognitiveMemoryRecallOrchestrator(
             .ToArray();
         var meaningfulTerms = expandedTerms
             .Where(term => !LexicalStopWords.Contains(term))
-            .Take(12)
+            .Take(LexicalTermLimit)
             .ToArray();
         return meaningfulTerms.Length == 0
-            ? expandedTerms.Take(12).ToArray()
+            ? expandedTerms.Take(LexicalTermLimit).ToArray()
             : meaningfulTerms;
     }
 
     private static IEnumerable<string> ExpandTermVariants(string term)
     {
         yield return term;
+        if (LexicalTermAliases.TryGetValue(term, out var aliases))
+        {
+            foreach (var alias in aliases)
+            {
+                yield return alias;
+            }
+        }
+
         if (term.Length > 4 && term.EndsWith("ies", StringComparison.Ordinal))
         {
             yield return $"{term[..^3]}y";
@@ -2499,7 +2629,7 @@ public sealed class CognitiveMemoryRecallOrchestrator(
         return directChannelBonus +
                lexical * 3 +
                semantic * 0.25 +
-               graph * 1.1 +
+               graph * 0.35 +
                workspace * 0.6 +
                memoryActivation * 0.35 +
                specificity +
@@ -2925,7 +3055,8 @@ public sealed class CognitiveMemoryRecallOrchestrator(
         string Title,
         string ContentText,
         string SourceItemKey,
-        string? Locator);
+        string? Locator,
+        DateTimeOffset UpdatedAtUtc);
 
     private sealed record SourceTextLexicalMatch(
         MemoryRecordSnapshot Record,

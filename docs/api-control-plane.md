@@ -80,6 +80,12 @@ Use `/api/agents` for AgentFramework catalog, provider, capability, chat, and ex
 
 Validate execution by reading run detail, artifacts, tool receipts, checkpoints, and metrics. A single status field is not enough for process-critical work.
 
+### Cognitive Memory
+
+Use `/api/cognitive-memory` for project-scoped source ingestion, consolidation, review, recall, probing, self-regulation, learning proposals, cross-project promotion, and distributed memory jobs. Start with [Cognitive Memory API](cognitive-memory/operations/api.md) for the current route list and [Cognitive Memory stage assessment](cognitive-memory/current-state/stage-assessment.md) before treating a behavior as beta-ready.
+
+Important operating rule: Qdrant/RAG is a rebuildable projection. Durable memory facts, source evidence, claims, review decisions, traces, and proposals live in the active `AppDbContext` profile.
+
 ## Development Workflow
 
 1. Start the web app and confirm `/_dev/runtime`.

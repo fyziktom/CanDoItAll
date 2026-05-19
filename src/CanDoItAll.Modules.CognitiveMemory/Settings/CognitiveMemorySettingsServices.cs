@@ -62,6 +62,7 @@ public sealed class CognitiveMemoryAutomationSettingsService(
         record.DefaultProviderProfileId = update.DefaultProviderProfileId;
         record.DefaultAgentId = update.DefaultAgentId;
         record.AllowedProviderProfileIds = SerializeProviderProfileIds(update.AllowedProviderProfileIds);
+        record.ExecutionProfilesJson = SerializeModelExecutionProfiles(update.ModelExecutionProfiles);
         record.UpdatedByActorId = CognitiveMemoryGuard.EnsureText(update.UpdatedByActorId, nameof(update.UpdatedByActorId));
         record.UpdatedAtUtc = nowUtc;
         record.ConcurrencyToken = Guid.NewGuid();
@@ -85,7 +86,10 @@ public sealed class CognitiveMemoryAutomationSettingsService(
             record.DefaultAgentId,
             DeserializeProviderProfileIds(record.AllowedProviderProfileIds),
             record.UpdatedByActorId,
-            record.UpdatedAtUtc);
+            record.UpdatedAtUtc)
+        {
+            ModelExecutionProfiles = DeserializeModelExecutionProfiles(record.ExecutionProfilesJson)
+        };
     }
 
     private static void Validate(CognitiveMemoryAutomationSettingsUpdate update)
@@ -109,6 +113,8 @@ public sealed class CognitiveMemoryAutomationSettingsService(
                 "Selected provider access requires a default provider or at least one allowed provider.",
                 nameof(update.AllowedProviderProfileIds));
         }
+
+        _ = NormalizeModelExecutionProfiles(update.ModelExecutionProfiles);
     }
 
     private static string NormalizeLocalTime(string value, string parameterName)
@@ -170,6 +176,67 @@ public sealed class CognitiveMemoryAutomationSettingsService(
             .Distinct()
             .OrderBy(providerId => providerId)
             .ToList();
+
+    private static string SerializeModelExecutionProfiles(IReadOnlyList<CognitiveMemoryModelExecutionProfile> values)
+        => JsonSerializer.Serialize(
+            NormalizeModelExecutionProfiles(values).ToArray(),
+            CognitiveMemoryJsonSerializerContext.Default.CognitiveMemoryModelExecutionProfileArray);
+
+    private static IReadOnlyList<CognitiveMemoryModelExecutionProfile> DeserializeModelExecutionProfiles(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return CognitiveMemoryModelExecutionProfileDefaults.OpenAiProfiles;
+        }
+
+        var profiles = JsonSerializer.Deserialize(
+            value,
+            CognitiveMemoryJsonSerializerContext.Default.CognitiveMemoryModelExecutionProfileArray);
+        return NormalizeModelExecutionProfiles(profiles ?? []);
+    }
+
+    private static IReadOnlyList<CognitiveMemoryModelExecutionProfile> NormalizeModelExecutionProfiles(
+        IReadOnlyList<CognitiveMemoryModelExecutionProfile> values)
+    {
+        if (values.Count == 0)
+        {
+            return CognitiveMemoryModelExecutionProfileDefaults.OpenAiProfiles;
+        }
+
+        var profiles = values
+            .Select(NormalizeModelExecutionProfile)
+            .GroupBy(profile => profile.Role)
+            .Select(group => group.Last())
+            .OrderBy(profile => profile.Role)
+            .ToList();
+
+        var missingRoles = Enum.GetValues<CognitiveMemoryModelExecutionRole>()
+            .Where(role => profiles.All(profile => profile.Role != role))
+            .Select(CognitiveMemoryModelExecutionProfileDefaults.CreateOpenAi);
+        profiles.AddRange(missingRoles);
+
+        return profiles.OrderBy(profile => profile.Role).ToList();
+    }
+
+    private static CognitiveMemoryModelExecutionProfile NormalizeModelExecutionProfile(CognitiveMemoryModelExecutionProfile profile)
+    {
+        var modelId = new CognitiveMemoryExecutionModelId(profile.ModelId.Value);
+        if (profile.MaxOutputTokens is < 256 or > 65536)
+        {
+            throw new ArgumentOutOfRangeException(nameof(profile.MaxOutputTokens), "Max output tokens must be between 256 and 65536.");
+        }
+
+        if (profile.TimeoutSeconds is < 5 or > 600)
+        {
+            throw new ArgumentOutOfRangeException(nameof(profile.TimeoutSeconds), "Timeout seconds must be between 5 and 600.");
+        }
+
+        return profile with
+        {
+            ModelId = modelId,
+            Notes = profile.Notes?.Trim() ?? string.Empty
+        };
+    }
 }
 
 public sealed class CognitiveMemoryExternalSourceIngestionService(
@@ -204,7 +271,12 @@ public sealed class CognitiveMemoryExternalSourceIngestionService(
     {
         ArgumentNullException.ThrowIfNull(content);
         var normalizedFileName = CognitiveMemoryGuard.EnsureText(fileName, nameof(fileName));
-        var contentText = await ReadLimitedTextAsync(content, cancellationToken);
+        var contentText = await CognitiveMemoryExternalSourceTextExtractor.ExtractAsync(
+            normalizedFileName,
+            contentType,
+            content,
+            MaxTextCharacters,
+            cancellationToken);
 
         return await IngestAsync(new CognitiveMemoryExternalSourceIngestRequest(
             CognitiveMemoryExternalSourceKind.UploadedFile,
@@ -239,7 +311,12 @@ public sealed class CognitiveMemoryExternalSourceIngestionService(
 
         response.EnsureSuccessStatusCode();
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        var contentText = await ReadLimitedTextAsync(stream, cancellationToken);
+        var contentText = await CognitiveMemoryExternalSourceTextExtractor.ExtractAsync(
+            uri.AbsolutePath,
+            response.Content.Headers.ContentType?.MediaType ?? "text/plain",
+            stream,
+            MaxTextCharacters,
+            cancellationToken);
         var title = ResolveWebsiteTitle(uri, contentText);
         var contentType = response.Content.Headers.ContentType?.MediaType ?? "text/plain";
 
@@ -350,9 +427,7 @@ public sealed class CognitiveMemoryExternalSourceIngestionService(
             RunKind = CognitiveMemoryRunKind.SourceScan,
             Status = CognitiveMemoryRunStatus.Succeeded,
             OperationMode = CognitiveMemoryOperationMode.Observe,
-            IdempotencyKey = string.IsNullOrWhiteSpace(request.IdempotencyKey)
-                ? $"external-source:{operation.Id:N}"
-                : request.IdempotencyKey.Trim(),
+            IdempotencyKey = CreateExternalSourceRunIdempotencyKey(request.IdempotencyKey, operation.Id),
             InputHash = snapshotId,
             AlgorithmVersion = "external-source-ingestion-v1",
             Cursor = string.Empty,
@@ -826,33 +901,6 @@ public sealed class CognitiveMemoryExternalSourceIngestionService(
         _ = CognitiveMemoryGuard.EnsureText(request.ActorId, nameof(request.ActorId));
     }
 
-    private static async Task<string> ReadLimitedTextAsync(Stream stream, CancellationToken cancellationToken)
-    {
-        using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: true);
-        var buffer = new char[8192];
-        var builder = new StringBuilder();
-        while (true)
-        {
-            var read = await reader.ReadAsync(buffer, cancellationToken);
-            if (read == 0)
-            {
-                break;
-            }
-
-            if (builder.Length + read > MaxTextCharacters)
-            {
-                throw new InvalidOperationException($"External source text exceeds the {MaxTextCharacters} character ingestion limit.");
-            }
-
-            builder.Append(buffer, 0, read);
-        }
-
-        var text = builder.ToString();
-        return string.IsNullOrWhiteSpace(text)
-            ? throw new InvalidOperationException("External source text is empty.")
-            : text;
-    }
-
     private static string ResolveWebsiteTitle(Uri uri, string contentText)
     {
         const string startMarker = "<title>";
@@ -872,6 +920,14 @@ public sealed class CognitiveMemoryExternalSourceIngestionService(
 
         var title = WebUtility.HtmlDecode(contentText[start..end]).Trim();
         return string.IsNullOrWhiteSpace(title) ? uri.Host : title;
+    }
+
+    private static string CreateExternalSourceRunIdempotencyKey(string? requestedKey, Guid operationId)
+    {
+        var operationKey = operationId.ToString("N");
+        return string.IsNullOrWhiteSpace(requestedKey)
+            ? $"external-source:{operationKey}"
+            : $"external-source:{CognitiveMemoryHash.FromUtf8(requestedKey.Trim()).Value[..16]}:{operationKey}";
     }
 
     private static string SerializeProvenance(

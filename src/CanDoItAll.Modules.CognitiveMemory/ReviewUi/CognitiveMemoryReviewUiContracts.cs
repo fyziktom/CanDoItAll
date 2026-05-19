@@ -10,7 +10,8 @@ public enum CognitiveMemoryReviewDecisionKind
 
 public sealed record CognitiveMemoryReviewUiQuery(
     Guid? ProjectId = null,
-    int Take = 12);
+    int Take = 12,
+    bool IncludeResolvedReviewItems = false);
 
 public sealed record CognitiveMemoryReviewDecisionRequest(
     CognitiveMemoryReviewItemId ReviewItemId,

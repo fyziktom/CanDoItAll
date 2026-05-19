@@ -8,6 +8,39 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class CognitiveMemoryAdvancedServicesTests
 {
     [Fact]
+    public async Task ProbeAsk_PersistsSourceAwareAnswerSummary()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var calibration = new CognitiveMemoryCalibrationHealthService(fixture.Factory, fixture.ScoreDriver, fixture.Clock);
+        var service = new CognitiveMemoryProbeService(
+            fixture.Factory,
+            new FakeRecallOrchestrator(projectId),
+            fixture.ScoreDriver,
+            calibration,
+            fixture.Clock);
+        var session = await service.StartAsync(new CognitiveMemoryProbeStartRequest(
+            projectId,
+            "Docker source probe",
+            Policy(projectId)));
+
+        var result = await service.AskAsync(new CognitiveMemoryProbeAskRequest(
+            session.Id,
+            "What source supports production deployment?",
+            CognitiveMemoryRecallIntentKind.Deployment,
+            new CognitiveMemoryRecallBudget(10, 1, 5, 5, 5, 4000, 64000)));
+
+        Assert.Contains("Question: What source supports production deployment?", result.Turn.AnswerSummary, StringComparison.Ordinal);
+        Assert.Contains("Supported context:", result.Turn.AnswerSummary, StringComparison.Ordinal);
+        Assert.Contains("production-runbook.md", result.Turn.AnswerSummary, StringComparison.Ordinal);
+        Assert.Contains("Source refs:", result.Turn.AnswerSummary, StringComparison.Ordinal);
+        Assert.Contains("[redacted-email]", result.Turn.AnswerSummary, StringComparison.Ordinal);
+        Assert.Contains("[redacted-phone]", result.Turn.AnswerSummary, StringComparison.Ordinal);
+        Assert.DoesNotContain("lucie@example.test", result.Turn.AnswerSummary, StringComparison.Ordinal);
+        Assert.DoesNotContain("+420 732 936 929", result.Turn.AnswerSummary, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ProbeFeedback_CreatesReviewRegressionAndCalibrationWithoutMutatingTruth()
     {
         var fixture = CreateFixture();
@@ -336,6 +369,66 @@ public sealed class CognitiveMemoryAdvancedServicesTests
     }
 
     [Fact]
+    public async Task EpistemicDrive_CreatesSourceBackedPlanningCoverageProposals()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        await SeedSourceItemAsync(
+            fixture,
+            projectId,
+            "LB4U business plan",
+            """
+            The business plan explains the LB4U product, market launch, marketing campaign, sales channels,
+            salary costs, payroll reserve, supplier procurement, equipment expenses, and phased staffing plan.
+            """);
+        var service = new CognitiveMemoryEpistemicDriveService(fixture.Factory, fixture.ScoreDriver, fixture.Clock);
+
+        var proposals = await service.ScanAsync(new CognitiveMemoryEpistemicScanRequest(
+            projectId,
+            Policy(projectId),
+            "agent:test"));
+
+        await using var dbContext = fixture.Factory.CreateDbContext();
+        Assert.Contains(proposals, proposal => proposal.Title.Contains("finance-and-expenses", StringComparison.Ordinal));
+        Assert.Contains(proposals, proposal => proposal.Title.Contains("market-and-marketing", StringComparison.Ordinal));
+        Assert.All(proposals, proposal => Assert.Equal(CognitiveMemoryLearningProposalStatus.PendingApproval, proposal.Status));
+        Assert.Contains(proposals, proposal => proposal.EvidenceRefsJson.Contains("source-item:", StringComparison.Ordinal));
+        Assert.True(await dbContext.Set<CognitiveMemoryCoverageMapRecord>().AnyAsync(map => map.SourceEvidenceCount > 0));
+        Assert.Equal(0, await dbContext.Set<CognitiveMemoryMutationCommandRecord>().CountAsync());
+    }
+
+    [Fact]
+    public async Task EpistemicDrive_DoesNotRecreateApprovedSourceCoverageProposal()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        await SeedSourceItemAsync(
+            fixture,
+            projectId,
+            "Finance planning note",
+            "Salary costs, payroll reserve, equipment expense budget, and revenue assumptions need planning.");
+        var service = new CognitiveMemoryEpistemicDriveService(fixture.Factory, fixture.ScoreDriver, fixture.Clock);
+
+        var proposals = await service.ScanAsync(new CognitiveMemoryEpistemicScanRequest(
+            projectId,
+            Policy(projectId),
+            "agent:test"));
+        var financeProposal = Assert.Single(proposals, proposal => proposal.Title.Contains("finance-and-expenses", StringComparison.Ordinal));
+        await service.DecideProposalAsync(
+            financeProposal.Id,
+            CognitiveMemoryLearningProposalStatus.Approved,
+            "operator:test",
+            "Useful source-backed finance planning expansion.");
+
+        var secondScan = await service.ScanAsync(new CognitiveMemoryEpistemicScanRequest(
+            projectId,
+            Policy(projectId),
+            "agent:test"));
+
+        Assert.DoesNotContain(secondScan, proposal => proposal.Title.Contains("finance-and-expenses", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task CrossProjectPromotion_IsReviewGatedAndRejectsRestrictedSourceWithoutPolicy()
     {
         var fixture = CreateFixture();
@@ -549,6 +642,51 @@ public sealed class CognitiveMemoryAdvancedServicesTests
         return record.Id;
     }
 
+    private static async Task SeedSourceItemAsync(
+        TestFixture fixture,
+        Guid projectId,
+        string title,
+        string content)
+    {
+        await using var dbContext = fixture.Factory.CreateDbContext();
+        var contentHash = CognitiveMemoryHash.FromUtf8(content).Value;
+        var manifest = new CognitiveMemorySourceManifestRecord
+        {
+            ProjectId = projectId,
+            SourceSystem = "ExternalFile",
+            SourceScopeKey = projectId.ToString("D"),
+            SourceSnapshotId = $"snapshot-{contentHash[..12]}",
+            SnapshotHash = contentHash,
+            ProviderVersion = "unit-test",
+            ScanStatus = CognitiveMemoryRunStatus.Succeeded,
+            ObservedAtUtc = fixture.Clock.GetUtcNow(),
+            CreatedAtUtc = fixture.Clock.GetUtcNow(),
+            UpdatedAtUtc = fixture.Clock.GetUtcNow(),
+            ConcurrencyToken = Guid.NewGuid()
+        };
+        var sourceItem = new CognitiveMemorySourceItemRecord
+        {
+            ProjectId = projectId,
+            SourceManifestId = manifest.Id,
+            SourceSystem = "ExternalFile",
+            SourceItemKey = $"external:{contentHash[..12]}",
+            SourceItemType = "UploadedFileChunk",
+            Title = title,
+            ContentText = content,
+            Locator = title,
+            ContentHash = contentHash,
+            RedactionState = CognitiveMemoryRedactionState.Safe,
+            AccessLevel = CognitiveMemoryAccessLevel.Project,
+            AccessScope = projectId.ToString("D"),
+            ObservedAtUtc = fixture.Clock.GetUtcNow(),
+            CreatedAtUtc = fixture.Clock.GetUtcNow(),
+            UpdatedAtUtc = fixture.Clock.GetUtcNow(),
+            ConcurrencyToken = Guid.NewGuid()
+        };
+        dbContext.AddRange(manifest, sourceItem);
+        await dbContext.SaveChangesAsync();
+    }
+
     private static CognitiveMemoryPolicyContext Policy(
         Guid? projectId,
         CognitiveMemoryRiskLevel riskLevel = CognitiveMemoryRiskLevel.Low,
@@ -595,7 +733,19 @@ public sealed class CognitiveMemoryAdvancedServicesTests
         public ValueTask<CognitiveMemoryRecallResult> RecallAsync(
             CognitiveMemoryRecallRequest request,
             CancellationToken cancellationToken = default)
-            => ValueTask.FromResult(new CognitiveMemoryRecallResult(
+        {
+            var sourceRef = new CognitiveMemoryRecallSourceRef(
+                new CognitiveMemoryRecordId(Guid.NewGuid()),
+                new CognitiveMemorySourceItemId(Guid.NewGuid()),
+                new CognitiveMemoryEvidenceAnchorId(Guid.NewGuid()),
+                "ExternalFile",
+                "production-runbook.md",
+                "Production deployment runbook source.",
+                CognitiveMemoryAccessLevel.Project,
+                CognitiveMemoryRedactionState.Safe,
+                IncludedInContext: true,
+                CognitiveMemoryRecallExclusionReasonKind.None);
+            return ValueTask.FromResult(new CognitiveMemoryRecallResult(
                 Guid.NewGuid(),
                 new CognitiveMemoryRecallContextPack(
                     CognitiveMemoryRecallContextPackId.New(),
@@ -608,16 +758,17 @@ public sealed class CognitiveMemoryAdvancedServicesTests
                             new CognitiveMemorySectionId("selected"),
                             CognitiveMemoryRecallContextSectionKind.SelectedMemory,
                             "Selected memory",
-                            "Production deployment must cite the production runbook.",
+                            "Production deployment must cite the production runbook. Contact lucie@example.test or +420 732 936 929.",
                             [],
                             [],
-                            [])
+                            [sourceRef])
                     ],
-                    [],
+                    [sourceRef],
                     [],
                     new Dictionary<string, string>()),
                 [],
                 [],
                 []));
+        }
     }
 }

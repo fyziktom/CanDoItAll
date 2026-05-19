@@ -1283,6 +1283,11 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<Guid?>("DefaultProviderProfileId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ExecutionProfilesJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("ModelExecutionProfilesJson");
+
                     b.Property<int>("IdleMinutes")
                         .HasColumnType("integer");
 

@@ -15,7 +15,7 @@ public sealed class CognitiveMemoryConsolidationEngine(
     IClock clock,
     ILogger<CognitiveMemoryConsolidationEngine> logger) : ICognitiveMemoryConsolidationEngine
 {
-    private const string AlgorithmVersion = "consolidation-v1";
+    private const string AlgorithmVersion = "consolidation-v3";
     private const string ConsolidationCursorSource = "CognitiveMemorySourceItems";
     private const string WorkbenchProjectStructureSourceSystem = "WorkbenchProjectStructure";
     private const string ProjectNodeSourceItemType = "ProjectNode";
@@ -183,6 +183,12 @@ public sealed class CognitiveMemoryConsolidationEngine(
 
             var evidenceAnchorIds = await LoadEvidenceAnchorIdsAsync(dbContext, sourceItem.Id, cancellationToken);
             var primaryEvidenceAnchorId = evidenceAnchorIds.Count > 0 ? evidenceAnchorIds[0] : (Guid?)null;
+            var payload = TryCreatePayload(sourceItem, primaryEvidenceAnchorId, null, null, candidateKind, budget);
+            if (payload is null)
+            {
+                continue;
+            }
+
             var scoreTrace = await EvaluateCandidateAsync(
                 dbContext,
                 consolidationRun.Id,
@@ -191,7 +197,6 @@ public sealed class CognitiveMemoryConsolidationEngine(
                 candidateKind,
                 startedAtUtc,
                 cancellationToken);
-            var payload = CreatePayload(sourceItem, primaryEvidenceAnchorId, null, null, candidateKind, budget);
             var outputHash = CognitiveMemoryHash.FromUtf8(payload.Summary);
             var mutationResult = await mutationAuthority.SubmitAsync(
                 CreateMutationCommand(request, sourceItem, evidenceAnchorIds, candidateKind, payload),
@@ -759,14 +764,24 @@ public sealed class CognitiveMemoryConsolidationEngine(
             });
     }
 
-    private static CognitiveMemoryConsolidationCandidatePayload CreatePayload(
+    private static CognitiveMemoryConsolidationCandidatePayload? TryCreatePayload(
         SourceItemSnapshot sourceItem,
         Guid? evidenceAnchorId,
         Guid? mutationCommandId,
         Guid? reviewItemId,
         CognitiveMemoryConsolidationCandidateKind candidateKind,
         CognitiveMemoryConsolidationBudget budget)
-        => new(
+    {
+        var summary = CognitiveMemoryConsolidationFactExtractor.CreateSummary(
+            sourceItem.Title,
+            sourceItem.ContentText,
+            budget.MaxSourceCharacters);
+        if (string.IsNullOrWhiteSpace(summary))
+        {
+            return null;
+        }
+
+        return new CognitiveMemoryConsolidationCandidatePayload(
             candidateKind,
             sourceItem.Id,
             evidenceAnchorId,
@@ -775,9 +790,13 @@ public sealed class CognitiveMemoryConsolidationEngine(
             sourceItem.SourceSystem,
             sourceItem.SourceItemType,
             sourceItem.Title,
-            TrimForPayload(sourceItem.ContentText, budget.MaxSourceCharacters),
+            summary,
             sourceItem.ContentHash,
-            $"Consolidation classified source item '{sourceItem.SourceItemKey}' as {candidateKind}.");
+            CognitiveMemoryConsolidationFactExtractor.CreateReason(
+                sourceItem.SourceItemKey,
+                candidateKind,
+                sourceItem.ContentText));
+    }
 
     private static async Task<int> MarkProjectionInvalidationsAsync(
         AppDbContext dbContext,
@@ -869,15 +888,13 @@ public sealed class CognitiveMemoryConsolidationEngine(
 
         if (request.Profile.ExtractProcedures &&
             (ContainsOrdinal(sourceItem.SourceItemType, "step") ||
-             ContainsOrdinal(sourceItem.ContentText, "procedure") ||
-             ContainsOrdinal(sourceItem.ContentText, "runbook")))
+             CognitiveMemoryConsolidationFactExtractor.LooksLikeProcedure(sourceItem.ContentText)))
         {
             return CognitiveMemoryConsolidationCandidateKind.Procedure;
         }
 
         if (ContainsOrdinal(sourceItem.SourceItemType, "decision") ||
-            ContainsOrdinal(sourceItem.ContentText, "decision") ||
-            ContainsOrdinal(sourceItem.ContentText, "approved"))
+            CognitiveMemoryConsolidationFactExtractor.LooksLikeDecision(sourceItem.ContentText))
         {
             return CognitiveMemoryConsolidationCandidateKind.Decision;
         }

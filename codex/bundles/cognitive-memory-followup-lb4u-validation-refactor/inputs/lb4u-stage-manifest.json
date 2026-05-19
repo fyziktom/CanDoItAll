@@ -1,0 +1,113 @@
+{
+  "projectKey": "lb4u",
+  "projectTitle": "LB4U",
+  "readOnlyRoot": "C:\\Users\\lucys\\OneDrive - TechnicInsider\\Brano\\LB4U",
+  "excludedPaths": [
+    "C:\\Users\\lucys\\OneDrive - TechnicInsider\\Brano\\LB4U\\routery hesla"
+  ],
+  "stages": [
+    {
+      "stageId": "stage-01-business-plan",
+      "title": "Business plan and project rationale",
+      "intent": "Load the final LB4U business plan as the primary semantic source, then let consolidation extract product, market, finance, staffing, risk, and milestone knowledge.",
+      "sources": [
+        {
+          "kind": "SemanticSource",
+          "path": "C:\\Users\\lucys\\OneDrive - TechnicInsider\\Brano\\LB4U\\LB4U-BP.docx",
+          "displayName": "LB4U business plan"
+        }
+      ]
+    },
+    {
+      "stageId": "stage-02-pitch-and-product",
+      "title": "Presentation and product concept",
+      "intent": "Load the presentation and its PDF version as independent views of the product pitch and field deployment story.",
+      "sources": [
+        {
+          "kind": "SemanticSource",
+          "path": "C:\\Users\\lucys\\OneDrive - TechnicInsider\\Brano\\LB4U\\2020-06-09-prezentace LB4U.pptx",
+          "displayName": "LB4U presentation deck"
+        },
+        {
+          "kind": "SemanticSource",
+          "path": "C:\\Users\\lucys\\OneDrive - TechnicInsider\\Brano\\LB4U\\2020-06-09-prezentace LB4U.pdf",
+          "displayName": "LB4U presentation PDF"
+        }
+      ]
+    },
+    {
+      "stageId": "stage-03-hardware-and-procurement",
+      "title": "Hardware design and procurement",
+      "intent": "Load hardware button design, order, invoice, and offer sheets as source-backed asset nodes for cost/procurement planning.",
+      "sources": [
+        {
+          "kind": "SemanticSource",
+          "path": "C:\\Users\\lucys\\OneDrive - TechnicInsider\\Brano\\LB4U\\LB4U Vývoj vlastního tlačítka.pptx",
+          "displayName": "Custom button development deck"
+        },
+        {
+          "kind": "SemanticSource",
+          "path": "C:\\Users\\lucys\\OneDrive - TechnicInsider\\Brano\\LB4U\\LB4U Vývoj vlastního tlačítka.pdf",
+          "displayName": "Custom button development PDF"
+        },
+        {
+          "kind": "SemanticSource",
+          "path": "C:\\Users\\lucys\\OneDrive - TechnicInsider\\Brano\\LB4U\\Alza nabídka Brano 21.4.xlsx",
+          "displayName": "Alza offer 2020-04-21"
+        },
+        {
+          "kind": "SemanticSource",
+          "path": "C:\\Users\\lucys\\OneDrive - TechnicInsider\\Brano\\LB4U\\Alza nabídka Brano 27.4.xlsx",
+          "displayName": "Alza offer 2020-04-27"
+        },
+        {
+          "kind": "SemanticSource",
+          "path": "C:\\Users\\lucys\\OneDrive - TechnicInsider\\Brano\\LB4U\\Alza objednávka.pdf",
+          "displayName": "Alza order PDF"
+        },
+        {
+          "kind": "SemanticSource",
+          "path": "C:\\Users\\lucys\\OneDrive - TechnicInsider\\Brano\\LB4U\\faktura-alza-2203185015.pdf",
+          "displayName": "Alza invoice PDF"
+        }
+      ]
+    },
+    {
+      "stageId": "stage-04-implementation-assets",
+      "title": "Application, release, board design, and screenshots",
+      "intent": "Register implementation artifacts as asset nodes and ingest only lightweight text metadata where binary content is not semantically useful.",
+      "sources": [
+        {
+          "kind": "AssetNode",
+          "path": "C:\\Users\\lucys\\OneDrive - TechnicInsider\\Brano\\LB4U\\com.brano.lb4u-Signed.apk",
+          "displayName": "Signed Android APK"
+        },
+        {
+          "kind": "AssetNode",
+          "path": "C:\\Users\\lucys\\OneDrive - TechnicInsider\\Brano\\LB4U\\release\\LB4U-win64.zip",
+          "displayName": "Windows release package"
+        },
+        {
+          "kind": "AssetNode",
+          "path": "C:\\Users\\lucys\\OneDrive - TechnicInsider\\Brano\\LB4U\\eagle5-11_lb4u_v03\\main.sch",
+          "displayName": "Eagle schematic v03"
+        },
+        {
+          "kind": "AssetNode",
+          "path": "C:\\Users\\lucys\\OneDrive - TechnicInsider\\Brano\\LB4U\\eagle5-11_lb4u_v03\\main.brd",
+          "displayName": "Eagle board v03"
+        },
+        {
+          "kind": "AssetNode",
+          "path": "C:\\Users\\lucys\\OneDrive - TechnicInsider\\Brano\\LB4U\\obrázky\\screenshoty Mobile - first",
+          "displayName": "Mobile screenshot set"
+        },
+        {
+          "kind": "AssetNode",
+          "path": "C:\\Users\\lucys\\OneDrive - TechnicInsider\\Brano\\LB4U\\obrázky\\screenshoty PC",
+          "displayName": "PC screenshot set"
+        }
+      ]
+    }
+  ]
+}

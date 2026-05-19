@@ -194,6 +194,68 @@ public sealed class CognitiveMemoryRecallOrchestratorTests
     }
 
     [Fact]
+    public async Task RecallAsync_BridgesEnglishQueryTermsToCzechSourceTerms()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        await SeedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("20000000-0000-0000-0000-000000000104"),
+            "General planning note",
+            "General project planning note without financial or compliance facts.",
+            "General source text.");
+        var memory = await SeedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("20000000-0000-0000-0000-000000000105"),
+            "LB4U source finance note",
+            "Czech business-plan source evidence is available.",
+            "Základní sada stojí v pořizovacích nákladech 10 309 Kč. Navrhovaná prodejní cena je 40 980 Kč. Zařízení zatím nemá medical certifikace.");
+        var orchestrator = CreateOrchestrator(fixture, new RecordingProjectionAdapter([]));
+
+        var result = await orchestrator.RecallAsync(CreateRequest(
+            projectId,
+            "price cost certification",
+            new CognitiveMemoryRecallBudget(1, 0, 1, 1, 1, 4096, 4096)));
+
+        Assert.Contains(result.Candidates, candidate =>
+            candidate.MemoryRecordId.Value == memory.RecordId &&
+            candidate.DecisionKind == CognitiveMemoryRecallCandidateDecisionKind.Selected);
+        Assert.Contains(
+            "40 980 Kč",
+            string.Join("\n", result.ContextPack.Sections.Select(section => section.Content)),
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RecallAsync_RedactsContactLinesFromContextPack()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        await SeedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("20000000-0000-0000-0000-000000000106"),
+            "Deployment contact note",
+            "Deployment runbook source evidence is available.",
+            "Deployment rollback source.\nContact: lucy@example.com, +420 123 456 789.\nUse the deployment rollback runbook when production health checks fail.");
+        var orchestrator = CreateOrchestrator(fixture, new RecordingProjectionAdapter([]));
+
+        var result = await orchestrator.RecallAsync(CreateRequest(projectId, "deployment rollback"));
+        var content = string.Join("\n", result.ContextPack.Sections.Select(section => section.Content));
+        var sourceRefSummaries = string.Join("\n", result.ContextPack.SourceRefs.Select(sourceRef => sourceRef.Summary));
+
+        Assert.DoesNotContain("lucy@example.com", content, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("+420 123 456 789", content, StringComparison.Ordinal);
+        Assert.DoesNotContain("lucy@example.com", sourceRefSummaries, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("+420 123 456 789", sourceRefSummaries, StringComparison.Ordinal);
+        Assert.Contains("[redacted-contact]", content, StringComparison.Ordinal);
+        Assert.Contains("[redacted-contact]", sourceRefSummaries, StringComparison.Ordinal);
+        Assert.Contains("Use the deployment rollback runbook", content, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task RecallAsync_ExpandsProjectStructureChildrenFromSelectedParent()
     {
         var fixture = CreateFixture();

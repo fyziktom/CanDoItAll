@@ -81,6 +81,33 @@ public sealed class CognitiveMemoryReviewUiServiceTests
             reviewItem.ConcurrencyToken)));
     }
 
+    [Fact]
+    public async Task GetSnapshotAsync_ExcludesResolvedReviewItemsByDefault()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var reviewItemId = await SeedOperatorEvidenceAsync(fixture, projectId);
+        var service = CreateService(fixture);
+        var snapshot = await service.GetSnapshotAsync(new CognitiveMemoryReviewUiQuery(projectId));
+        var reviewItem = Assert.Single(snapshot.ReviewItems);
+
+        await service.DecideReviewItemAsync(new CognitiveMemoryReviewDecisionRequest(
+            new CognitiveMemoryReviewItemId(reviewItemId),
+            CognitiveMemoryReviewDecisionKind.Reject,
+            "operator:test",
+            "Rejected noisy evidence.",
+            reviewItem.ConcurrencyToken));
+
+        var defaultSnapshot = await service.GetSnapshotAsync(new CognitiveMemoryReviewUiQuery(projectId));
+        var historySnapshot = await service.GetSnapshotAsync(new CognitiveMemoryReviewUiQuery(
+            projectId,
+            IncludeResolvedReviewItems: true));
+
+        Assert.Empty(defaultSnapshot.ReviewItems);
+        var resolvedItem = Assert.Single(historySnapshot.ReviewItems);
+        Assert.Equal(CognitiveMemoryReviewStatus.Rejected, resolvedItem.Status);
+    }
+
     private static async Task<Guid> SeedOperatorEvidenceAsync(TestFixture fixture, Guid projectId)
     {
         await using var dbContext = fixture.Factory.CreateDbContext();

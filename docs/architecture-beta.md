@@ -8,6 +8,8 @@ CanDoItAll is a local-first .NET 10 Blazor Web App. The web host composes produc
 
 The important architecture rule is simple: product semantics live in modules and shared services. HTTP APIs and MCP tools expose those semantics to agents and external automation; they must not become competing implementations. Process, project-structure, and agent automation now uses the web-hosted API control plane. The old Processes and ProjectStructure MCP servers are suppressed in the current repo state.
 
+Current Cognitive Memory details now live in [docs/cognitive-memory](cognitive-memory/README.md). Treat that section as the source of truth for Cognitive Memory stage, diagrams, API, validation, and roadmap; this architecture beta page remains the broader system overview.
+
 Primary source references:
 
 - [`src/CanDoItAll.Web/Program.cs`](../src/CanDoItAll.Web/Program.cs)

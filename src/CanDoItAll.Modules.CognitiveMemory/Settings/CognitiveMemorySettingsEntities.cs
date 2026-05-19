@@ -30,6 +30,8 @@ public sealed class CognitiveMemoryAutomationSettingsRecord : IHasConcurrencyTok
 
     public string AllowedProviderProfileIds { get; set; } = string.Empty;
 
+    public string ExecutionProfilesJson { get; set; } = string.Empty;
+
     public string UpdatedByActorId { get; set; } = "system";
 
     public DateTimeOffset CreatedAtUtc { get; set; }

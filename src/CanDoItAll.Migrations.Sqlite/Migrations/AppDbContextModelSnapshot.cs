@@ -1278,6 +1278,11 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.Property<Guid?>("DefaultProviderProfileId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ExecutionProfilesJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("ModelExecutionProfilesJson");
+
                     b.Property<int>("IdleMinutes")
                         .HasColumnType("INTEGER");
 
