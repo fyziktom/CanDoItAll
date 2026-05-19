@@ -143,6 +143,38 @@ public sealed class ProjectStructurePlacementPolicyTests
     }
 
     [Fact]
+    public void Simple_note_child_placement_follows_left_facing_parent_branch()
+    {
+        var parentNode = CreateNode("parent", null, 620, 260);
+        var leftBranch = CreateNode("left-branch", "parent", 320, 260);
+        var request = new CanvasWorkbenchCreateActionRequest(
+            "add-note",
+            "left-branch",
+            leftBranch.X,
+            leftBranch.Y,
+            leftBranch.Id,
+            "Child note",
+            string.Empty,
+            "Child note",
+            "child",
+            "quick-note",
+            string.Empty,
+            null);
+
+        var plan = new ProjectStructurePlacementPolicy().ResolveCreatePlacementPlan(
+            [parentNode, leftBranch],
+            leftBranch,
+            leftBranch,
+            request,
+            ProjectObjectType.Note);
+
+        Assert.NotNull(plan.Placement.X);
+        Assert.True(plan.Placement.X < leftBranch.X);
+        Assert.Equal(leftBranch.Y, plan.Placement.Y);
+        Assert.Empty(plan.FollowUpMoves);
+    }
+
+    [Fact]
     public void Simple_note_sibling_placement_moves_lower_stack_nodes_down()
     {
         var sourceNode = CreateNode("source", "parent", 300, 200, notes: "Source note");
