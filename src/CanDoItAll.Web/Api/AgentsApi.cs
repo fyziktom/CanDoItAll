@@ -97,12 +97,46 @@ internal static class AgentsApi
             Results.Ok(await workspaceService.ListAgentTeamsAsync(cancellationToken)))
             .WithName("ListAgentTeams");
 
+        agents.MapGet("/teams/{teamId:guid}", async (
+                Guid teamId,
+                IAgentFrameworkWorkspaceService workspaceService,
+                CancellationToken cancellationToken) =>
+        {
+            var team = (await workspaceService.ListAgentTeamsAsync(cancellationToken))
+                .FirstOrDefault(item => item.Id == teamId);
+            return team is null
+                ? ApiEndpointResults.NotFound("Agent team was not found.", "agents.team-not-found")
+                : Results.Ok(team);
+        })
+        .WithName("GetAgentTeam");
+
         agents.MapGet("/teams/{teamId:guid}/editor", async (
                 Guid teamId,
                 IAgentFrameworkWorkspaceService workspaceService,
                 CancellationToken cancellationToken) =>
             Results.Ok(await workspaceService.GetAgentTeamEditorAsync(teamId, cancellationToken)))
             .WithName("GetAgentTeamEditor");
+
+        agents.MapGet("/teams/{teamId:guid}/agents", async (
+                Guid teamId,
+                bool includeTemplates,
+                IAgentFrameworkWorkspaceService workspaceService,
+                CancellationToken cancellationToken) =>
+        {
+            var team = (await workspaceService.ListAgentTeamsAsync(cancellationToken))
+                .FirstOrDefault(item => item.Id == teamId);
+            if (team is null)
+            {
+                return ApiEndpointResults.NotFound("Agent team was not found.", "agents.team-not-found");
+            }
+
+            var teamAgentIds = team.AgentIds.ToHashSet();
+            var teamAgents = (await workspaceService.ListAgentsAsync(includeTemplates, cancellationToken))
+                .Where(agent => teamAgentIds.Contains(agent.Id))
+                .ToList();
+            return Results.Ok(teamAgents);
+        })
+        .WithName("ListAgentTeamAgents");
 
         agents.MapPost("/teams", async (
                 AgentTeamEditorModel request,
@@ -111,6 +145,17 @@ internal static class AgentsApi
             Results.Ok(await workspaceService.SaveAgentTeamAsync(request, cancellationToken)))
             .WithName("SaveAgentTeam");
 
+        agents.MapPut("/teams/{teamId:guid}", async (
+                Guid teamId,
+                AgentTeamEditorModel request,
+                IAgentFrameworkWorkspaceService workspaceService,
+                CancellationToken cancellationToken) =>
+        {
+            request.Id = teamId;
+            return Results.Ok(await workspaceService.SaveAgentTeamAsync(request, cancellationToken));
+        })
+        .WithName("UpdateAgentTeam");
+
         agents.MapPost("/teams/{teamId:guid}/members", async (
                 Guid teamId,
                 AgentTeamMembersApiRequest request,
@@ -118,6 +163,14 @@ internal static class AgentsApi
                 CancellationToken cancellationToken) =>
             Results.Ok(await workspaceService.UpdateAgentTeamMembersAsync(teamId, request.AgentIds, cancellationToken)))
             .WithName("UpdateAgentTeamMembers");
+
+        agents.MapPut("/teams/{teamId:guid}/members", async (
+                Guid teamId,
+                AgentTeamMembersApiRequest request,
+                IAgentFrameworkWorkspaceService workspaceService,
+                CancellationToken cancellationToken) =>
+            Results.Ok(await workspaceService.UpdateAgentTeamMembersAsync(teamId, request.AgentIds, cancellationToken)))
+            .WithName("ReplaceAgentTeamMembers");
 
         agents.MapDelete("/teams/{teamId:guid}", async (
                 Guid teamId,

@@ -1,7 +1,11 @@
 using System.Net;
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workspace.ApiAccess;
@@ -141,6 +145,78 @@ public sealed class ApiIntegrationTests
     }
 
     [Fact]
+    public async Task Api_manages_agent_team_details_and_membership_routes()
+    {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
+
+        Guid builderId;
+        Guid reviewerId;
+        await using (var scope = host.App.Services.CreateAsyncScope())
+        {
+            var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+            var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+            builderId = await CreateApiAgentAsync(workspaceService, "API Team Builder");
+            reviewerId = await CreateApiAgentAsync(workspaceService, "API Team Reviewer");
+        }
+
+        var createResponse = await host.Client.PostAsJsonAsync(
+            "/api/agents/teams",
+            new AgentTeamEditorModel
+            {
+                Name = "API Delivery Team",
+                Description = "Created through the HTTP API.",
+                AgentIds = [builderId]
+            });
+        var createBody = await createResponse.Content.ReadAsStringAsync();
+        Assert.True(createResponse.IsSuccessStatusCode, createBody);
+        var teamId = JsonSerializer.Deserialize<Guid>(createBody);
+        Assert.NotEqual(Guid.Empty, teamId);
+
+        var getResponse = await host.Client.GetAsync($"/api/agents/teams/{teamId:D}");
+        var getBody = await getResponse.Content.ReadAsStringAsync();
+        Assert.True(getResponse.IsSuccessStatusCode, getBody);
+        using (var teamPayload = JsonDocument.Parse(getBody))
+        {
+            Assert.Equal("API Delivery Team", teamPayload.RootElement.GetProperty("name").GetString());
+            Assert.Equal(builderId, Assert.Single(teamPayload.RootElement.GetProperty("agentIds").EnumerateArray()).GetGuid());
+        }
+
+        var updateResponse = await host.Client.PutAsJsonAsync(
+            $"/api/agents/teams/{teamId:D}",
+            new AgentTeamEditorModel
+            {
+                Name = "API Delivery Team Updated",
+                Description = "Updated through the explicit route.",
+                AgentIds = [builderId, reviewerId]
+            });
+        var updateBody = await updateResponse.Content.ReadAsStringAsync();
+        Assert.True(updateResponse.IsSuccessStatusCode, updateBody);
+        Assert.Equal(teamId, JsonSerializer.Deserialize<Guid>(updateBody));
+
+        var membersResponse = await host.Client.PutAsJsonAsync(
+            $"/api/agents/teams/{teamId:D}/members",
+            new { AgentIds = new[] { reviewerId } });
+        var membersBody = await membersResponse.Content.ReadAsStringAsync();
+        Assert.True(membersResponse.IsSuccessStatusCode, membersBody);
+
+        var teamAgentsResponse = await host.Client.GetAsync($"/api/agents/teams/{teamId:D}/agents?includeTemplates=false");
+        var teamAgentsBody = await teamAgentsResponse.Content.ReadAsStringAsync();
+        Assert.True(teamAgentsResponse.IsSuccessStatusCode, teamAgentsBody);
+        using (var teamAgentsPayload = JsonDocument.Parse(teamAgentsBody))
+        {
+            var names = teamAgentsPayload.RootElement
+                .EnumerateArray()
+                .Select(item => item.GetProperty("name").GetString())
+                .ToList();
+            Assert.DoesNotContain("API Team Builder", names);
+            Assert.Contains("API Team Reviewer", names);
+        }
+
+        var missingTeamResponse = await host.Client.GetAsync($"/api/agents/teams/{Guid.NewGuid():D}");
+        Assert.Equal(HttpStatusCode.NotFound, missingTeamResponse.StatusCode);
+    }
+
+    [Fact]
     public async Task Api_openapi_exposes_focused_control_plane_routes()
     {
         await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
@@ -159,6 +235,9 @@ public sealed class ApiIntegrationTests
         Assert.True(paths.TryGetProperty("/api/processes/templates/baseline-scenarios", out _));
         Assert.True(paths.TryGetProperty("/api/processes/runs/{runId}/steps/{stepRunId}/artifacts", out _));
         Assert.True(paths.TryGetProperty("/api/processes/runs/{runId}/manager-directives", out _));
+        Assert.True(paths.TryGetProperty("/api/agents/teams/{teamId}", out _));
+        Assert.True(paths.TryGetProperty("/api/agents/teams/{teamId}/agents", out _));
+        Assert.True(paths.TryGetProperty("/api/agents/teams/{teamId}/members", out _));
         Assert.True(paths.TryGetProperty("/api/agents/{agentId}/execution-runs/{executionRunId}/artifacts", out _));
         Assert.True(paths.TryGetProperty("/api/agents/{agentId}/execution-runs/{executionRunId}/log", out _));
         Assert.True(paths.TryGetProperty("/api/cognitive-memory/status", out _));
@@ -191,6 +270,21 @@ public sealed class ApiIntegrationTests
         Assert.True(paths.TryGetProperty("/api/cognitive-memory/distributed/jobs", out _));
         Assert.True(paths.TryGetProperty("/api/cognitive-memory/distributed/jobs/claim", out _));
         Assert.True(paths.TryGetProperty("/api/cognitive-memory/distributed/jobs/{jobId}/results", out _));
+    }
+
+    private static async Task<Guid> CreateApiAgentAsync(
+        IAgentFrameworkWorkspaceService workspaceService,
+        string name)
+    {
+        var editor = await workspaceService.GetAgentEditorAsync();
+        editor.Name = name;
+        editor.RoleTitle = "API team specialist";
+        editor.Summary = "Participates in HTTP API team route tests.";
+        editor.Instructions = "Keep the test catalog deterministic.";
+        editor.Status = AgentLifecycleStatus.Active;
+        editor.IsTemplate = false;
+        editor.TemplateKey = string.Empty;
+        return await workspaceService.SaveAgentAsync(editor);
     }
 
     private static ProcessDefinitionEditorModel BuildFilterTestDefinition()

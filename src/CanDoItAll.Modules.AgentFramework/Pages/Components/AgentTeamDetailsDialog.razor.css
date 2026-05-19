@@ -16,6 +16,14 @@
     font-weight: 700;
     gap: 0.35rem;
     line-height: 1.35;
+    width: 100%;
+}
+
+.agent-team-details-dialog__input,
+.agent-team-details-dialog__textarea {
+    box-sizing: border-box;
+    max-width: 100%;
+    width: 100%;
 }
 
 .agent-team-details-dialog__textarea {

@@ -1,44 +1,38 @@
 <Stack Class="agent-catalog-panel" GapScale="LayoutGap.Large">
     <div class="agent-catalog-panel__hero">
-        <Split Breakpoint="LayoutBreakpoint.Md"
-               Gap="LayoutGap.Large"
-               AlignItems="AlignItems.Start"
-               JustifyContent="JustifyContent.SpaceBetween"
-               Wrap="FlexWrap.Wrap">
-            <Stack GapScale="LayoutGap.Tiny" Class="min-w-0">
+        <div class="agent-catalog-panel__toolbar">
+            <div class="agent-catalog-panel__heading">
                 <p class="cda-eyebrow">Technical agents</p>
                 <h2 class="cda-title-xl">Agent cards</h2>
-                <p class="cda-body-muted">
-                    This catalog is the canonical technical AI runtime registry. Double-click an agent card to edit runtime settings, access, skills, and MCP servers.
-                </p>
-            </Stack>
-            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+            </div>
+            <div class="agent-catalog-panel__toolbar-controls">
                 <StatusBadge Tone="info" Text="@(isLoading ? "Loading..." : $"{FilteredAgents.Count} of {agents.Count} agent(s)")" />
                 <Button Text="New team"
                         Icon="groups"
+                        Size="ButtonSize.Small"
                         ButtonStyle="ButtonStyle.Light"
                         Click="OpenNewTeamDialogAsync"
                         data-testid="agents-team-new" />
                 <Button Text="New agent"
                         Icon="add"
+                        Size="ButtonSize.Small"
                         ButtonStyle="ButtonStyle.Light"
                         Click="OpenNewAgentDialogAsync"
                         data-testid="agents-catalog-new" />
-            </Cluster>
-        </Split>
-
-        <FilterBar ResultText="@(isLoading ? "Loading technical catalog..." : $"{FilteredAgents.Count} matching agent(s)")">
-            <input @bind="agentSearch"
-                   @bind:event="oninput"
-                   class="cda-input min-w-[14rem] flex-1"
-                   placeholder="Search agents"
-                   data-testid="agents-catalog-search" />
-            @if (SelectedTeam is not null)
-            {
-                <StatusBadge Tone="info" Text="@SelectedTeam.Name" />
-            }
-            <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetAgentSearch" />
-        </FilterBar>
+                <div class="agent-catalog-panel__search" role="search">
+                    <input @bind="agentSearch"
+                           @bind:event="oninput"
+                           class="cda-input agent-catalog-panel__search-input"
+                           placeholder="Search agents"
+                           data-testid="agents-catalog-search" />
+                    <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetAgentSearch" />
+                </div>
+                @if (SelectedTeam is not null)
+                {
+                    <StatusBadge Tone="info" Text="@SelectedTeam.Name" />
+                }
+            </div>
+        </div>
     </div>
 
     @if (isLoading)
