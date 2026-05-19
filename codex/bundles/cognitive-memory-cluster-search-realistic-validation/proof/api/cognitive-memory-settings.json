@@ -1,0 +1,75 @@
+{
+  "scheduleMode": 0,
+  "nightlyLocalTime": "02:00",
+  "idleMinutes": 30,
+  "scheduledLocalTimes": [
+    "03:00",
+    "16:30"
+  ],
+  "autoIngestProjectStructure": true,
+  "autoIngestProcessRuntime": true,
+  "autoConsolidateAfterIngestion": true,
+  "modelAccessMode": 1,
+  "defaultProviderProfileId": null,
+  "defaultAgentId": null,
+  "allowedProviderProfileIds": [],
+  "updatedByActorId": "codex:ollama-gptoss20b64k-validation",
+  "updatedAtUtc": "2026-05-18T20:33:16.618853-04:00",
+  "modelExecutionProfiles": [
+    {
+      "role": 0,
+      "providerProfileId": null,
+      "modelId": {
+        "value": "gptoss20b64k"
+      },
+      "maxOutputTokens": 8192,
+      "timeoutSeconds": 180,
+      "localOnly": true,
+      "notes": "Local Ollama validation profile for cognitive-memory follow-up bundle."
+    },
+    {
+      "role": 1,
+      "providerProfileId": null,
+      "modelId": {
+        "value": "gptoss20b64k"
+      },
+      "maxOutputTokens": 8192,
+      "timeoutSeconds": 180,
+      "localOnly": true,
+      "notes": "Local Ollama validation profile for cognitive-memory follow-up bundle."
+    },
+    {
+      "role": 2,
+      "providerProfileId": null,
+      "modelId": {
+        "value": "gptoss20b64k"
+      },
+      "maxOutputTokens": 8192,
+      "timeoutSeconds": 180,
+      "localOnly": true,
+      "notes": "Local Ollama validation profile for cognitive-memory follow-up bundle."
+    },
+    {
+      "role": 3,
+      "providerProfileId": null,
+      "modelId": {
+        "value": "gptoss20b64k"
+      },
+      "maxOutputTokens": 8192,
+      "timeoutSeconds": 180,
+      "localOnly": true,
+      "notes": "Local Ollama validation profile for cognitive-memory follow-up bundle."
+    },
+    {
+      "role": 4,
+      "providerProfileId": null,
+      "modelId": {
+        "value": "gptoss20b64k"
+      },
+      "maxOutputTokens": 8192,
+      "timeoutSeconds": 180,
+      "localOnly": true,
+      "notes": "Local Ollama validation profile for cognitive-memory follow-up bundle."
+    }
+  ]
+}

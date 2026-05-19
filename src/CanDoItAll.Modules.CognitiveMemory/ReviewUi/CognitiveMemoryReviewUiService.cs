@@ -39,6 +39,7 @@ public sealed partial class CognitiveMemoryReviewUiService(
         var distributedJobs = await LoadDistributedJobsAsync(dbContext, pageQuery, cancellationToken);
         var operatorAudit = await LoadOperatorAuditAsync(dbContext, pageQuery, cancellationToken);
         var qualityClusters = await LoadQualityClustersAsync(dbContext, pageQuery, cancellationToken);
+        var clusterSearchResults = await LoadClusterSearchResultsAsync(dbContext, pageQuery, cancellationToken);
         var dreamRuns = await LoadDreamRunsAsync(dbContext, pageQuery, cancellationToken);
         var aggregateCandidates = await LoadAggregateCandidatesAsync(dbContext, pageQuery, cancellationToken);
         var synthesizedRecalls = await LoadSynthesizedRecallsAsync(dbContext, pageQuery, cancellationToken);
@@ -62,6 +63,7 @@ public sealed partial class CognitiveMemoryReviewUiService(
             distributedJobs,
             operatorAudit,
             qualityClusters,
+            clusterSearchResults,
             dreamRuns,
             aggregateCandidates,
             synthesizedRecalls);
@@ -90,6 +92,7 @@ public sealed partial class CognitiveMemoryReviewUiService(
         reviewItem.ConcurrencyToken = Guid.NewGuid();
 
         await ApplyConsolidationReviewDecisionAsync(dbContext, reviewItem, request, cancellationToken);
+        await ApplyDreamAggregateReviewDecisionAsync(dbContext, reviewItem, request, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
         var subjectTitles = await ResolveSubjectTitlesAsync(dbContext, [reviewItem], cancellationToken);
         var candidatePreviews = await LoadCandidatePreviewsAsync(dbContext, [reviewItem], cancellationToken);
@@ -199,6 +202,7 @@ public sealed partial class CognitiveMemoryReviewUiService(
             CognitiveMemoryReviewUiCollectionKind.DistributedJobs => summary.DistributedJobCount,
             CognitiveMemoryReviewUiCollectionKind.OperatorAudit => summary.OperatorAuditCount,
             CognitiveMemoryReviewUiCollectionKind.QualityClusters => summary.QualityClusterCount,
+            CognitiveMemoryReviewUiCollectionKind.ClusterSearchResults => summary.ClusterSearchResultCount,
             CognitiveMemoryReviewUiCollectionKind.DreamRuns => summary.DreamRunCount,
             CognitiveMemoryReviewUiCollectionKind.AggregateCandidates => summary.AggregateCandidateCount,
             CognitiveMemoryReviewUiCollectionKind.SynthesizedRecalls => summary.SynthesizedRecallCount,
@@ -285,6 +289,29 @@ public sealed partial class CognitiveMemoryReviewUiService(
             request.ActorId,
             clock.GetUtcNow(),
             cancellationToken);
+    }
+
+    private async Task ApplyDreamAggregateReviewDecisionAsync(
+        AppDbContext dbContext,
+        CognitiveMemoryReviewItemRecord reviewItem,
+        CognitiveMemoryReviewDecisionRequest request,
+        CancellationToken cancellationToken)
+    {
+        var candidate = await dbContext.Set<CognitiveMemoryDreamAggregateCandidateRecord>()
+            .SingleOrDefaultAsync(item => item.ReviewItemId == reviewItem.Id, cancellationToken);
+        if (candidate is null)
+        {
+            return;
+        }
+
+        candidate.Status = request.DecisionKind switch
+        {
+            CognitiveMemoryReviewDecisionKind.Approve => CognitiveMemoryDreamAggregateCandidateStatus.Approved,
+            CognitiveMemoryReviewDecisionKind.Reject => CognitiveMemoryDreamAggregateCandidateStatus.Rejected,
+            _ => CognitiveMemoryDreamAggregateCandidateStatus.NeedsHumanReview
+        };
+        candidate.UpdatedAtUtc = clock.GetUtcNow();
+        candidate.ConcurrencyToken = Guid.NewGuid();
     }
 
 }

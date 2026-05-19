@@ -1,0 +1,115 @@
+- generic [ref=e981] [box=142,394,1690,1210]:
+  - generic [ref=e982] [box=142,394,544,1210]:
+    - generic [ref=e983] [box=163,415,502,73]:
+      - generic [ref=e984] [box=163,415,502,39]:
+        - paragraph [ref=e985] [box=163,415,502,15]: Cluster search
+        - heading "Find quality clusters" [level=2] [ref=e986] [box=163,430,502,24]
+      - generic [ref=e987] [box=163,462,502,26]: 5 result(s)
+    - generic [ref=e988] [box=163,488,502,427]:
+      - generic [ref=e989] [box=163,488,502,66]:
+        - generic [ref=e990] [box=163,488,502,18]: Search clusters
+        - textbox "Search clusters" [ref=e991] [box=163,511,502,42]
+      - generic [ref=e992] [box=163,565,502,65]:
+        - generic [ref=e993] [box=163,565,502,18]: Key family
+        - combobox "Key family" [ref=e994] [box=163,589,502,42]:
+          - option "Any family" [selected] [box=0,0,0,0]
+          - option "Project Scope" [box=0,0,0,0]
+          - option "Source Topology" [box=0,0,0,0]
+          - option "Semantic Topic" [box=0,0,0,0]
+          - option "Entity" [box=0,0,0,0]
+          - option "Task Intent" [box=0,0,0,0]
+          - option "Temporal" [box=0,0,0,0]
+          - option "Evidence Overlap" [box=0,0,0,0]
+          - option "Relation" [box=0,0,0,0]
+          - option "Access Risk" [box=0,0,0,0]
+      - generic [ref=e995] [box=163,642,502,65]:
+        - generic [ref=e996] [box=163,642,245,65]:
+          - generic [ref=e997] [box=163,642,245,18]: Readiness
+          - combobox "Readiness" [ref=e998] [box=163,666,245,42]:
+            - option "Any readiness" [selected] [box=0,0,0,0]
+            - option "Unknown" [box=0,0,0,0]
+            - option "Aggregate Ready" [box=0,0,0,0]
+            - option "Needs More Evidence" [box=0,0,0,0]
+            - option "Needs Human Review" [box=0,0,0,0]
+            - option "Contradictory" [box=0,0,0,0]
+            - option "Restricted" [box=0,0,0,0]
+        - generic [ref=e999] [box=420,642,245,65]:
+          - generic [ref=e1000] [box=420,642,245,18]: Risk
+          - combobox "Risk" [ref=e1001] [box=420,666,245,42]:
+            - option "Any risk" [selected] [box=0,0,0,0]
+            - option "Low" [box=0,0,0,0]
+            - option "Medium" [box=0,0,0,0]
+            - option "High" [box=0,0,0,0]
+      - generic [ref=e1002] [box=163,719,199,42]:
+        - button "Search" [ref=e1003] [box=163,719,101,42]:
+          - generic [ref=e1004] [box=176,730,20,20]: search
+          - generic [ref=e1005] [box=204,728,47,24]: Search
+        - button "Clear" [ref=e1006] [box=272,719,90,42]:
+          - generic [ref=e1007] [box=285,730,20,20]: backspace
+          - generic [ref=e1008] [box=313,728,36,24]: Clear
+      - generic [ref=e1009] [box=163,773,502,142]:
+        - generic [ref=e1010] [box=163,773,160,66]:
+          - generic [ref=e1011] [box=176,785,134,18]: Results
+          - strong [ref=e1012] [box=176,806,134,22]: "5"
+        - generic [ref=e1013] [box=334,773,160,66]:
+          - generic [ref=e1014] [box=347,785,134,18]: All clusters
+          - strong [ref=e1015] [box=347,806,134,22]: "5"
+        - generic [ref=e1016] [box=505,773,160,66]:
+          - generic [ref=e1017] [box=518,785,134,18]: Page
+          - strong [ref=e1018] [box=518,806,134,22]: 1-5 of 5
+        - generic [ref=e1019] [box=163,849,160,66]:
+          - generic [ref=e1020] [box=176,861,134,18]: Dream candidates
+          - strong [ref=e1021] [box=176,882,134,22]: "10"
+  - generic [ref=e1022] [box=702,394,1130,1210]:
+    - paragraph [ref=e1023] [box=723,415,1088,15]: Results
+    - heading "Paged clusters and evidence previews" [level=2] [ref=e1024] [box=723,430,1088,24]
+    - generic [ref=e1025] [box=723,454,1088,1062]:
+      - generic [ref=e1026] [box=723,454,1088,204]:
+        - strong [ref=e1027] [box=737,466,1060,21]: Updated 2026-05
+        - generic [ref=e1028] [box=737,492,1060,26]: Restricted
+        - generic [ref=e1029] [box=737,524,1060,26]: High risk
+        - generic [ref=e1030] [box=737,556,1060,21]: 4 member(s), 5 key(s), 4 evidence link(s), 0 contradiction(s)
+        - generic [ref=e1031] [box=737,582,1060,17]: Temporal / Restricted / hash 23072a6a266f / updated kvě 19, 17:43
+        - generic [ref=e1032] [box=737,605,1060,17]: "Keys: Project Scope=Project scope; Source Topology=WorkbenchProjectStructure/ProjectNode; Entity=workbenchprojectstructure; Temporal=Updated 2026-05; Access Risk=Restricted/High/Redacted"
+        - generic [ref=e1033] [box=737,628,1060,17]: "Members: Memory Record d460639e Approved; Memory Record 90bdffcc Approved; Source Item 0ae75372 Approved; Source Item e0dbd3a6 Approved"
+      - generic [ref=e1034] [box=723,668,1088,204]:
+        - strong [ref=e1035] [box=737,680,1060,21]: Project scope
+        - generic [ref=e1036] [box=737,707,1060,26]: Restricted
+        - generic [ref=e1037] [box=737,739,1060,26]: High risk
+        - generic [ref=e1038] [box=737,770,1060,21]: 4 member(s), 5 key(s), 4 evidence link(s), 0 contradiction(s)
+        - generic [ref=e1039] [box=737,797,1060,17]: Project Scope / Restricted / hash a31a1905585e / updated kvě 19, 17:43
+        - generic [ref=e1040] [box=737,820,1060,17]: "Keys: Project Scope=Project scope; Source Topology=WorkbenchProjectStructure/ProjectNode; Entity=workbenchprojectstructure; Temporal=Updated 2026-05; Access Risk=Restricted/High/Redacted"
+        - generic [ref=e1041] [box=737,843,1060,17]: "Members: Memory Record 90bdffcc Approved; Memory Record d460639e Approved; Source Item 0ae75372 Approved; Source Item e0dbd3a6 Approved"
+      - generic [ref=e1042] [box=723,883,1088,204]:
+        - strong [ref=e1043] [box=737,895,1060,21]: workbenchprojectstructure
+        - generic [ref=e1044] [box=737,922,1060,26]: Restricted
+        - generic [ref=e1045] [box=737,953,1060,26]: High risk
+        - generic [ref=e1046] [box=737,985,1060,21]: 4 member(s), 5 key(s), 4 evidence link(s), 0 contradiction(s)
+        - generic [ref=e1047] [box=737,1011,1060,17]: Entity / Restricted / hash 94d3e0e938f2 / updated kvě 19, 17:43
+        - generic [ref=e1048] [box=737,1034,1060,17]: "Keys: Project Scope=Project scope; Source Topology=WorkbenchProjectStructure/ProjectNode; Entity=workbenchprojectstructure; Temporal=Updated 2026-05; Access Risk=Restricted/High/Redacted"
+        - generic [ref=e1049] [box=737,1057,1060,17]: "Members: Memory Record 90bdffcc Approved; Memory Record d460639e Approved; Source Item 0ae75372 Approved; Source Item e0dbd3a6 Approved"
+      - generic [ref=e1050] [box=723,1097,1088,204]:
+        - strong [ref=e1051] [box=737,1109,1060,21]: WorkbenchProjectStructure/ProjectNode
+        - generic [ref=e1052] [box=737,1136,1060,26]: Restricted
+        - generic [ref=e1053] [box=737,1168,1060,26]: High risk
+        - generic [ref=e1054] [box=737,1199,1060,21]: 4 member(s), 5 key(s), 4 evidence link(s), 0 contradiction(s)
+        - generic [ref=e1055] [box=737,1226,1060,17]: Source Topology / Restricted / hash 023a6ced12f2 / updated kvě 19, 17:43
+        - generic [ref=e1056] [box=737,1249,1060,17]: "Keys: Project Scope=Project scope; Source Topology=WorkbenchProjectStructure/ProjectNode; Entity=workbenchprojectstructure; Temporal=Updated 2026-05; Access Risk=Restricted/High/Redacted"
+        - generic [ref=e1057] [box=737,1272,1060,17]: "Members: Memory Record d460639e Approved; Memory Record 90bdffcc Approved; Source Item 0ae75372 Approved; Source Item e0dbd3a6 Approved"
+      - generic [ref=e1058] [box=723,1312,1088,204]:
+        - strong [ref=e1059] [box=737,1324,1060,21]: Restricted/High/Redacted
+        - generic [ref=e1060] [box=737,1351,1060,26]: Restricted
+        - generic [ref=e1061] [box=737,1382,1060,26]: High risk
+        - generic [ref=e1062] [box=737,1414,1060,21]: 4 member(s), 5 key(s), 4 evidence link(s), 0 contradiction(s)
+        - generic [ref=e1063] [box=737,1440,1060,17]: Access Risk / Restricted / hash f781de3dc64b / updated kvě 19, 17:43
+        - generic [ref=e1064] [box=737,1463,1060,17]: "Keys: Project Scope=Project scope; Source Topology=WorkbenchProjectStructure/ProjectNode; Entity=workbenchprojectstructure; Temporal=Updated 2026-05; Access Risk=Restricted/High/Redacted"
+        - generic [ref=e1065] [box=737,1486,1060,17]: "Members: Memory Record 90bdffcc Approved; Memory Record d460639e Approved; Source Item e0dbd3a6 Approved; Source Item 0ae75372 Approved"
+    - generic [ref=e1066] [box=723,1530,1088,53]:
+      - generic [ref=e1067] [box=723,1553,46,20]: 1-5 of 5
+      - generic [ref=e1068] [box=1713,1544,98,38]:
+        - button "Previous Cluster Search Results page" [disabled] [ref=e1069] [box=1713,1544,46,38]:
+          - generic [ref=e1070] [box=1726,1553,20,20]: chevron_left
+          - generic [ref=e1071] [box=1735,1563,1,1]: chevron left
+        - button "Next Cluster Search Results page" [disabled] [ref=e1072] [box=1765,1544,46,38]:
+          - generic [ref=e1073] [box=1778,1553,20,20]: chevron_right
+          - generic [ref=e1074] [box=1788,1563,1,1]: chevron right

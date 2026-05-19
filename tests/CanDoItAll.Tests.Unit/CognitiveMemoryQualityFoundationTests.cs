@@ -187,6 +187,7 @@ public sealed class CognitiveMemoryQualityFoundationTests
         Assert.True(result.Metrics.ValidationRecordsCreated > 0);
         Assert.True(result.Metrics.ApprovedCandidates > 0);
         Assert.All(result.AggregateCandidates, candidate => Assert.NotEqual(CognitiveMemoryDreamAggregateCandidateStatus.Proposed, candidate.Status));
+        Assert.Contains(result.AggregateCandidates, candidate => candidate.Title.Contains("offline.deployment.procedure", StringComparison.OrdinalIgnoreCase));
         Assert.Equal(0, await fixture.DbContext.Set<CognitiveMemoryReviewItemRecord>().CountAsync());
 
         var diagnostics = new CognitiveMemoryQualityDiagnosticsService(fixture.Factory, fixture.Clock);

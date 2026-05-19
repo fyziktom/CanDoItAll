@@ -1,0 +1,9 @@
+{
+  "profileId": "541fbd90-f0e1-4ed7-b3bd-220dc4dd1473",
+  "displayName": "Cognitive Memory source multicycle 2026-05-17 03",
+  "providerKind": 1,
+  "sourceKind": 3,
+  "descriptor": "127.0.0.1:5432/candoitall_cognitive_memory_multicycle_20260517_03",
+  "isActive": false,
+  "isRuntimeLocked": false
+}

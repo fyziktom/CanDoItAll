@@ -1,0 +1,89 @@
+- generic [ref=e1406]:
+  - generic [ref=e1407]:
+    - generic [ref=e1408]:
+      - generic [ref=e1409]:
+        - paragraph [ref=e1410]: Quality operations
+        - heading "Diagnostics, clusters, and dreaming" [level=2] [ref=e1411]
+      - generic [ref=e1412]: 5 cluster(s), 1 dream run(s), 5 aggregate candidate(s), 0 synthesized recall(s).
+    - generic [ref=e1413]:
+      - generic [ref=e1414]:
+        - generic [ref=e1415]:
+          - generic [ref=e1416]: Clusters
+          - strong [ref=e1417]: "5"
+        - generic [ref=e1418]:
+          - generic [ref=e1419]: Dream runs
+          - strong [ref=e1420]: "1"
+        - generic [ref=e1421]:
+          - generic [ref=e1422]: Candidates
+          - strong [ref=e1423]: "5"
+        - generic [ref=e1424]:
+          - generic [ref=e1425]: Syntheses
+          - strong [ref=e1426]: "0"
+      - generic [ref=e1427]:
+        - generic [ref=e1428]:
+          - generic [ref=e1429]: Dream mode
+          - combobox "Dream mode" [ref=e1430]:
+            - option "Project Nightly" [selected]
+            - option "Cross Project Weekly"
+            - option "Procedure Mining"
+            - option "Failure Learning"
+            - option "Knowledge Coverage Refresh"
+            - option "Epistemic Drive Scan"
+            - option "Learning Opportunity Review"
+        - generic [ref=e1431]:
+          - generic [ref=e1432]: Idempotency key
+          - textbox "Idempotency key" [ref=e1433]: quality-ui:8b1fc53e69f141258397b68cc445a515
+      - generic [ref=e1434]:
+        - generic [ref=e1435]:
+          - generic [ref=e1436]: Max records
+          - spinbutton "Max records" [ref=e1437]: "500"
+        - generic [ref=e1438]:
+          - generic [ref=e1439]: Max clusters
+          - spinbutton "Max clusters" [ref=e1440]: "25"
+        - generic [ref=e1441]:
+          - generic [ref=e1442]: Min members
+          - spinbutton "Min members" [ref=e1443]: "2"
+      - generic [ref=e1444]:
+        - generic [ref=e1445]:
+          - checkbox "Persist dream output" [checked] [ref=e1446]
+          - generic [ref=e1447]: Persist dream output
+        - generic [ref=e1448]:
+          - checkbox "Include restricted source truth" [checked] [ref=e1449]
+          - generic [ref=e1450]: Include restricted source truth
+      - generic [ref=e1451]:
+        - button "Diagnostics" [ref=e1452]:
+          - generic [ref=e1453]: monitor_heart
+          - generic [ref=e1454]: Diagnostics
+        - button "Plan clusters" [ref=e1455]:
+          - generic [ref=e1456]: account_tree
+          - generic [ref=e1457]: Plan clusters
+        - button "Run dream" [ref=e1458]:
+          - generic [ref=e1459]: auto_awesome
+          - generic [ref=e1460]: Run dream
+      - generic [ref=e1461]:
+        - progressbar [ref=e1462]
+        - generic [ref=e1463]: 5 cluster(s), 1 dream run(s), 5 aggregate candidate(s), 0 synthesized recall(s).
+  - generic [ref=e1464]:
+    - paragraph [ref=e1465]: Diagnostics
+    - heading "Quality counters and warnings" [level=2] [ref=e1466]
+    - generic [ref=e1467]:
+      - generic [ref=e1468]:
+        - generic [ref=e1469]:
+          - generic [ref=e1470]: Sources
+          - strong [ref=e1471]: "750"
+        - generic [ref=e1472]:
+          - generic [ref=e1473]: Memory
+          - strong [ref=e1474]: "2"
+        - generic [ref=e1475]:
+          - generic [ref=e1476]: Members
+          - strong [ref=e1477]: "20"
+        - generic [ref=e1478]:
+          - generic [ref=e1479]: Validations
+          - strong [ref=e1480]: "5"
+        - generic [ref=e1481]:
+          - generic [ref=e1482]: Reviews
+          - strong [ref=e1483]: "85"
+        - generic [ref=e1484]:
+          - generic [ref=e1485]: Elapsed
+          - strong [ref=e1486]: 0:00:00,0551516
+      - paragraph [ref=e1487]: No quality diagnostics warnings.

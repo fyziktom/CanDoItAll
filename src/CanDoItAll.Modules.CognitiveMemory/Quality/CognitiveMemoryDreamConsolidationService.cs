@@ -245,8 +245,13 @@ public sealed class CognitiveMemoryDreamConsolidationService(
             .OrderBy(record => record.Title)
             .ToListAsync(cancellationToken);
         var support = await CognitiveMemoryQualitySupportLoader.LoadAsync(dbContext, memoryRecordIds, cancellationToken);
+        var primaryKeyTitle = cluster.Keys
+            .Where(key => key.Family == cluster.PrimaryKeyFamily)
+            .Concat(cluster.Keys)
+            .Select(key => key.DisplayText)
+            .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
         var title = CognitiveMemoryQualityText.TrimText(
-            $"{request.Mode} synthesis: {cluster.Keys.FirstOrDefault()?.DisplayText ?? records.FirstOrDefault()?.Title ?? "quality cluster"}",
+            $"{request.Mode} synthesis: {FirstNonEmpty(primaryKeyTitle, records.FirstOrDefault()?.Title, "quality cluster")}",
             300);
         var canonicalText = BuildAggregateCanonicalText(records, support.ByRecordId);
         var candidateId = Guid.NewGuid();

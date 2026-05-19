@@ -165,6 +165,13 @@
                             <CognitiveMemoryQualityOperationsTab @key="uiRevision" />
                         </TabsItem>
 
+                        <TabsItem Text="Cluster search"
+                                  Icon="manage_search"
+                                  BadgeText="@ClusterSearchBadgeText"
+                                  data-testid="cognitive-memory-tab-cluster-search">
+                            <CognitiveMemoryClusterSearchTab @key="uiRevision" />
+                        </TabsItem>
+
                         <TabsItem Text="Settings"
                                   Icon="tune"
                                   data-testid="cognitive-memory-tab-settings">

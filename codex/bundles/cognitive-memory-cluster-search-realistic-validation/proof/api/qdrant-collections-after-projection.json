@@ -1,0 +1,14 @@
+{
+  "result": {
+    "collections": [
+      {
+        "name": "candoitall-knowledge"
+      },
+      {
+        "name": "candoitall-validation-cognitive-memory"
+      }
+    ]
+  },
+  "status": "ok",
+  "time": 0.000104361
+}

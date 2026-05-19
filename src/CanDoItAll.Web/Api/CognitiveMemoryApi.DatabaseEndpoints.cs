@@ -78,5 +78,35 @@ internal static partial class CognitiveMemoryApi
                     CognitiveMemoryDatabaseProfileApiResponse.From(profile));
             }))
             .WithName(EndpointName("SwitchCognitiveMemoryDatabaseProfile", surface));
+
+        memory.MapGet("/database/transfer/sources/{targetProfileId:guid}", async (
+                Guid targetProfileId,
+                IDatabaseTransferService transferService,
+                CancellationToken cancellationToken) =>
+            await ExecuteAsync(async () =>
+                await transferService.ListSourcesAsync(
+                    EnsureNonEmpty(targetProfileId, nameof(targetProfileId)),
+                    cancellationToken)))
+            .WithName(EndpointName("ListCognitiveMemoryDatabaseTransferSources", surface));
+
+        memory.MapGet("/database/transfer/preview", async (
+                [FromQuery] Guid sourceProfileId,
+                [FromQuery] Guid targetProfileId,
+                IDatabaseTransferService transferService,
+                CancellationToken cancellationToken) =>
+            await ExecuteAsync(async () =>
+                await transferService.PreviewAsync(
+                    EnsureNonEmpty(sourceProfileId, nameof(sourceProfileId)),
+                    EnsureNonEmpty(targetProfileId, nameof(targetProfileId)),
+                    cancellationToken)))
+            .WithName(EndpointName("PreviewCognitiveMemoryDatabaseTransfer", surface));
+
+        memory.MapPost("/database/transfer", async (
+                DatabaseTransferRequest request,
+                IDatabaseTransferService transferService,
+                CancellationToken cancellationToken) =>
+            await ExecuteAsync(async () =>
+                await transferService.TransferAsync(request, cancellationToken)))
+            .WithName(EndpointName("RunCognitiveMemoryDatabaseTransfer", surface));
     }
 }

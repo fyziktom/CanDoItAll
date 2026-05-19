@@ -1,0 +1,16 @@
+{
+  "profile": {
+    "id": "541fbd90-f0e1-4ed7-b3bd-220dc4dd1473",
+    "displayName": "Cognitive Memory source multicycle 2026-05-17 03",
+    "providerKind": 1,
+    "providerKindName": "PostgreSql",
+    "sourceKind": 3,
+    "sourceKindName": "PostgresConnection",
+    "fingerprint": "postgres:127.0.0.1:5432:candoitall_cognitive_memory_multicycle_20260517_03:candoitall",
+    "workspaceRoot": "C:\\repositories\\CanDoItAll\\src\\CanDoItAll.Web\\.artifacts\\cognitive-memory-multicycle-postgres\\workspace",
+    "descriptor": "127.0.0.1:5432/candoitall_cognitive_memory_multicycle_20260517_03",
+    "connectionString": "Host=127.0.0.1;Port=5432;Database=candoitall_cognitive_memory_multicycle_20260517_03;Username=candoitall;Password=candoitall",
+    "isPostgreSql": true
+  },
+  "switch": null
+}

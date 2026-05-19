@@ -25,6 +25,8 @@ public sealed class CognitiveMemoryPageTests
         Assert.Single(memoryRecord.SourceLinks);
         Assert.Single(directSnapshot.ReviewItems);
         Assert.Single(directSnapshot.ProcedureSkills);
+        var clusterSearchResult = Assert.Single(directSnapshot.ClusterSearchResults);
+        Assert.Contains(clusterSearchResult.Keys, key => key.DisplayText == "Component validation cluster");
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
 
         navigation.NavigateTo($"/cognitive-memory?projectId={projectId:D}");
@@ -44,6 +46,22 @@ public sealed class CognitiveMemoryPageTests
         Assert.NotNull(cut.Find("[data-testid='cognitive-memory-probe-voice-question']"));
         Assert.NotNull(cut.Find("[data-testid='cognitive-memory-probe-voice-correction']"));
         Assert.Contains("Audio ready.", cut.Markup);
+
+        cut.Find("[data-testid='cognitive-memory-tab-cluster-search']").Click();
+        cut.WaitForElement("[data-testid='cognitive-memory-cluster-search']");
+        Assert.Contains("Component validation cluster", cut.Markup);
+        cut.Find("[data-testid='cognitive-memory-cluster-search-text']").Change("component validation");
+        cut.Find("[data-testid='cognitive-memory-cluster-search-submit']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Component validation cluster", cut.Markup);
+            Assert.Contains("1-1 of 1", cut.Markup);
+        });
+
+        cut.Find("[data-testid='cognitive-memory-tab-quality']").Click();
+        cut.WaitForElement("[data-testid='cognitive-memory-quality-operations']");
+        Assert.NotNull(cut.Find("[data-testid='cognitive-memory-quality-allow-restricted']"));
+        Assert.Contains("Include restricted source truth", cut.Markup);
 
         cut.Find("[data-testid='cognitive-memory-tab-settings']").Click();
         cut.WaitForElement("[data-testid='cognitive-memory-settings']");
@@ -125,6 +143,7 @@ public sealed class CognitiveMemoryPageTests
         var simulationRiskTraceId = Guid.NewGuid();
         var replayPriorityTraceId = Guid.NewGuid();
         var consolidationRunId = Guid.NewGuid();
+        var qualityClusterId = Guid.NewGuid();
         var memoryRecord = new CognitiveMemoryRecord
         {
             Id = Guid.NewGuid(),
@@ -463,6 +482,48 @@ public sealed class CognitiveMemoryPageTests
             UpdatedAtUtc = now,
             ConcurrencyToken = Guid.NewGuid()
         };
+        var qualityCluster = new CognitiveMemoryQualityClusterRecord
+        {
+            Id = qualityClusterId,
+            ProjectId = projectId,
+            ClusterHash = CognitiveMemoryHash.FromUtf8("component quality cluster").Value,
+            PrimaryKeyFamily = CognitiveMemoryQualityClusterKeyFamily.SemanticTopic,
+            Readiness = CognitiveMemoryQualityClusterReadiness.AggregateReady,
+            AccessLevel = CognitiveMemoryAccessLevel.Project,
+            RiskLevel = CognitiveMemoryRiskLevel.Low,
+            PolicyProfileId = "component-test",
+            AlgorithmVersion = "component-test",
+            KeyCount = 2,
+            MemberCount = 2,
+            SourceEvidenceCount = 1,
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now,
+            ConcurrencyToken = Guid.NewGuid()
+        };
+        var qualityClusterKey = new CognitiveMemoryQualityClusterKeyRecord
+        {
+            Id = Guid.NewGuid(),
+            ClusterId = qualityClusterId,
+            ProjectId = projectId,
+            KeyFamily = CognitiveMemoryQualityClusterKeyFamily.SemanticTopic,
+            Key = "topic:component-validation",
+            DisplayText = "Component validation cluster",
+            CreatedAtUtc = now
+        };
+        var qualityClusterMember = new CognitiveMemoryQualityClusterMemberRecord
+        {
+            Id = Guid.NewGuid(),
+            ClusterId = qualityClusterId,
+            ProjectId = projectId,
+            MemberKind = CognitiveMemoryQualityClusterMemberKind.MemoryRecord,
+            MemoryRecordId = memoryRecord.Id,
+            EvidenceAnchorId = evidenceAnchor.Id,
+            AccessLevel = CognitiveMemoryAccessLevel.Project,
+            RiskLevel = CognitiveMemoryRiskLevel.Low,
+            ValidationState = CognitiveMemoryValidationState.Approved,
+            StabilityState = CognitiveMemoryStabilityState.Active,
+            CreatedAtUtc = now
+        };
 
         dbContext.AddRange(
             CreateScoreTrace(
@@ -535,7 +596,10 @@ public sealed class CognitiveMemoryPageTests
             consolidationCandidate,
             projectionState,
             simulation,
-            replayJob);
+            replayJob,
+            qualityCluster,
+            qualityClusterKey,
+            qualityClusterMember);
         await dbContext.SaveChangesAsync();
         return reviewItem.Id;
     }

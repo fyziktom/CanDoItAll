@@ -1,0 +1,14 @@
+[
+  {
+    "id": "b594d52c-300e-4c1d-9b17-f2e8dc22918b",
+    "displayName": "Cognitive Memory cluster validation 2026-05-19",
+    "providerKind": 1,
+    "sourceKind": 3,
+    "descriptor": "127.0.0.1:5432/candoitall_cognitive_memory_cluster_validation_20260519",
+    "fingerprint": "postgres:127.0.0.1:5432:candoitall_cognitive_memory_cluster_validation_20260519:candoitall",
+    "isActive": false,
+    "isRuntimeLocked": false,
+    "createdUtc": "2026-05-19T17:08:01.9238788-04:00",
+    "lastUsedUtc": null
+  }
+]
