@@ -266,7 +266,9 @@ public partial class CognitiveMemoryPage
         try
         {
             snapshot = await ReviewUiService.GetSnapshotAsync(
-                new CognitiveMemoryReviewUiQuery(ProjectId),
+                new CognitiveMemoryReviewUiQuery(
+                    ProjectId,
+                    IncludeResolvedReviewItems: true),
                 CancellationToken.None);
             selectedMemoryRecordId = ResolveSelectedMemoryRecordId(snapshot, selectedMemoryRecordId);
             selectedReviewItemId = ResolveSelectedReviewItemId(snapshot, selectedReviewItemId);
@@ -341,7 +343,9 @@ public partial class CognitiveMemoryPage
     private async Task ReloadSnapshotAsync()
     {
         snapshot = await ReviewUiService.GetSnapshotAsync(
-            new CognitiveMemoryReviewUiQuery(ProjectId),
+            new CognitiveMemoryReviewUiQuery(
+                ProjectId,
+                IncludeResolvedReviewItems: true),
             CancellationToken.None);
         selectedMemoryRecordId = ResolveSelectedMemoryRecordId(snapshot, selectedMemoryRecordId);
         selectedReviewItemId = ResolveSelectedReviewItemId(snapshot, selectedReviewItemId);

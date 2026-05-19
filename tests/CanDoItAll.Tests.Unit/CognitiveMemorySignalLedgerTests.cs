@@ -155,6 +155,40 @@ public sealed class CognitiveMemorySignalLedgerTests
     }
 
     [Fact]
+    public async Task QueryAsync_AppliesSinceFilterBeforePagingSignals()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var oldObservedAtUtc = DateTimeOffset.UnixEpoch;
+        var recentObservedAtUtc = oldObservedAtUtc.AddHours(2);
+        await using (var dbContext = fixture.Factory.CreateDbContext())
+        {
+            for (var index = 0; index < 5; index++)
+            {
+                dbContext.Add(CreateSignal(
+                    projectId,
+                    $"old-signal-{index}",
+                    oldObservedAtUtc.AddMinutes(index)));
+            }
+
+            dbContext.Add(CreateSignal(
+                projectId,
+                "recent-signal",
+                recentObservedAtUtc));
+            await dbContext.SaveChangesAsync();
+        }
+
+        var result = await CreateLedger(fixture).QueryAsync(new CognitiveMemorySignalQuery(
+            projectId,
+            Policy(projectId),
+            new CognitiveMemoryPageRequest(take: 1),
+            SinceUtc: oldObservedAtUtc.AddHours(1)));
+
+        var signal = Assert.Single(result.Signals);
+        Assert.Equal("recent-signal", signal.Summary);
+    }
+
+    [Fact]
     public async Task PublishAsync_RejectsAnonymousOrScalarOnlySignals()
     {
         var fixture = CreateFixture();
@@ -218,6 +252,31 @@ public sealed class CognitiveMemorySignalLedgerTests
             new CognitiveMemoryPolicyProfileId("policy:test"),
             CognitiveMemoryRiskLevel.Low,
             AllowRestrictedContent: false);
+
+    private static CognitiveMemorySignalRecord CreateSignal(
+        Guid projectId,
+        string summary,
+        DateTimeOffset observedAtUtc)
+        => new()
+        {
+            ProjectId = projectId,
+            SignalKind = CognitiveMemorySignalKind.Risk,
+            SourceKind = CognitiveMemorySignalSourceKind.ProbeFeedback,
+            ActorKind = CognitiveMemoryActorKind.Agent,
+            ActorId = "agent:test",
+            PolicyProfileId = "policy:test",
+            AccessLevel = CognitiveMemoryAccessLevel.Project,
+            RiskLevel = CognitiveMemoryRiskLevel.Low,
+            SignalScoreEvaluationTraceId = Guid.NewGuid(),
+            ScoreSchemaVersion = CognitiveMemoryScoreSpaceRegistry.CurrentSchemaVersion.Value,
+            NormalizationProfileId = "unit-test",
+            AlgorithmVersion = CognitiveMemoryScoreSpaceRegistry.CurrentAlgorithmVersion.Value,
+            ComponentCount = 1,
+            Summary = summary,
+            ObservedAtUtc = observedAtUtc,
+            CreatedAtUtc = observedAtUtc,
+            ConcurrencyToken = Guid.NewGuid()
+        };
 
     private static TestFixture CreateFixture()
     {

@@ -184,7 +184,8 @@ internal static class CognitiveMemoryApi
             await ExecuteAsync(() => reviewUiService.GetSnapshotAsync(
                 new CognitiveMemoryReviewUiQuery(
                     query.ProjectId,
-                    NormalizeTake(query.Take, 12, 200)),
+                    NormalizeTake(query.Take, 12, 200),
+                    query.IncludeResolvedReviewItems.GetValueOrDefault()),
                 cancellationToken)))
             .WithName("GetCognitiveMemorySnapshot");
 
@@ -1019,6 +1020,8 @@ internal sealed class CognitiveMemorySnapshotApiQuery
     public Guid? ProjectId { get; set; }
 
     public int? Take { get; set; }
+
+    public bool? IncludeResolvedReviewItems { get; set; }
 }
 
 internal sealed class CognitiveMemoryPostgreSqlDatabaseProfileApiRequest

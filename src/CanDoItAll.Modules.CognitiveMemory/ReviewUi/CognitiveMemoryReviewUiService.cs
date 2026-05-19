@@ -338,13 +338,25 @@ public sealed class CognitiveMemoryReviewUiService(
             reviewItemsQuery = reviewItemsQuery.Where(item => item.ProjectId == projectId);
         }
 
-        var reviewItems = (await reviewItemsQuery
-            .ToListAsync(cancellationToken))
-            .OrderBy(item => item.Status == CognitiveMemoryReviewStatus.Pending ? 0 : 1)
-            .ThenByDescending(item => item.RiskLevel)
-            .ThenByDescending(item => item.CreatedAtUtc)
-            .Take(query.Take)
-            .ToArray();
+        if (!query.IncludeResolvedReviewItems)
+        {
+            reviewItemsQuery = reviewItemsQuery.Where(item => item.Status == CognitiveMemoryReviewStatus.Pending);
+        }
+
+        var reviewItems = dbContext.Database.IsSqlite()
+            ? (await reviewItemsQuery
+                .ToListAsync(cancellationToken))
+                .OrderBy(item => item.Status == CognitiveMemoryReviewStatus.Pending ? 0 : 1)
+                .ThenByDescending(item => item.RiskLevel)
+                .ThenByDescending(item => item.CreatedAtUtc)
+                .Take(query.Take)
+                .ToArray()
+            : await reviewItemsQuery
+                .OrderBy(item => item.Status == CognitiveMemoryReviewStatus.Pending ? 0 : 1)
+                .ThenByDescending(item => item.RiskLevel)
+                .ThenByDescending(item => item.CreatedAtUtc)
+                .Take(query.Take)
+                .ToArrayAsync(cancellationToken);
         var subjectTitles = await ResolveSubjectTitlesAsync(dbContext, reviewItems, cancellationToken);
         var candidatePreviews = await LoadCandidatePreviewsAsync(dbContext, reviewItems, cancellationToken);
         return reviewItems
