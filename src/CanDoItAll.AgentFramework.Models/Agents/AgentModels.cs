@@ -71,6 +71,14 @@ DateTimeOffset UpdatedAtUtc)
     public string? AvatarImageUrl { get; init; }
 }
 
+public sealed record AgentTeamDefinition(
+    Guid Id,
+    string Name,
+    string Description,
+    IReadOnlyList<Guid> AgentIds,
+    DateTimeOffset CreatedAtUtc,
+    DateTimeOffset UpdatedAtUtc);
+
 public sealed record AgentExportResult(string PackagePath, string Summary);
 
 public sealed record AgentChatRunResult(

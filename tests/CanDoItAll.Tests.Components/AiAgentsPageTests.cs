@@ -1,4 +1,5 @@
 using Bunit;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Infrastructure.Persistence;
@@ -322,6 +323,66 @@ public sealed class AiAgentsPageTests
     }
 
     [Fact]
+    public async Task Agent_catalog_team_tree_filters_agents_and_member_modal_updates_membership()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-component-tests");
+        var activeProfile = testEnvironment.CreateInMemoryProfile("primary", $"agent-teams-{Guid.NewGuid():N}");
+        await using var harness = await ComponentTestHarness.CreateAsync(options: new TestHarnessOptions
+        {
+            TestEnvironment = testEnvironment,
+            ActiveProfile = activeProfile
+        });
+        var workspaceFactory = harness.Context.Services.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+
+        var builderId = await CreateTechnicalAgentAsync(workspaceService, "Tree Team Builder");
+        var reviewerId = await CreateTechnicalAgentAsync(workspaceService, "Tree Team Reviewer");
+        await workspaceService.SaveAgentTeamAsync(new AgentTeamEditorModel
+        {
+            Name = "Tree Delivery Team",
+            AgentIds = [builderId]
+        });
+
+        var host = harness.Context.RenderComponent<DialogHost>();
+        var cut = harness.Context.RenderComponent<AgentCatalogPanel>(
+            parameters => parameters.Add(component => component.SkipCatalogRepair, true));
+
+        cut.WaitForElement("[data-testid='agents-team-tree-team']");
+        cut.FindAll("[data-testid='agents-team-tree-team']")
+            .First(node => node.TextContent.Contains("Tree Delivery Team", StringComparison.Ordinal))
+            .Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var results = cut.Find("[data-testid='agents-catalog-results']").TextContent;
+            Assert.Contains("Tree Team Builder", results);
+            Assert.DoesNotContain("Tree Team Reviewer", results);
+        });
+
+        cut.Find("[data-testid='agents-team-members']").Click();
+        host.WaitForElement("[data-testid='agents-team-member-card']");
+        host.FindAll("[data-testid='agents-team-member-card']")
+            .First(card => card.TextContent.Contains("Tree Team Reviewer", StringComparison.Ordinal))
+            .Click();
+        host.Find("[data-testid='agents-team-members-confirm']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var results = cut.Find("[data-testid='agents-catalog-results']").TextContent;
+            Assert.Contains("Tree Team Builder", results);
+            Assert.Contains("Tree Team Reviewer", results);
+        });
+
+        var updatedTeam = Assert.Single(
+            await workspaceService.ListAgentTeamsAsync(),
+            team => string.Equals(team.Name, "Tree Delivery Team", StringComparison.Ordinal));
+        Assert.Contains(builderId, updatedTeam.AgentIds);
+        Assert.Contains(reviewerId, updatedTeam.AgentIds);
+        host.Dispose();
+        cut.Dispose();
+    }
+
+    [Fact]
     public async Task Agent_catalog_exposes_project_structure_access_controls_and_project_choices()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-component-tests");
@@ -631,6 +692,21 @@ public sealed class AiAgentsPageTests
                 AriaLabel = "Agent details editor",
                 TestId = "agents-details-dialog"
             });
+    }
+
+    private static async Task<Guid> CreateTechnicalAgentAsync(
+        IAgentFrameworkWorkspaceService workspaceService,
+        string name)
+    {
+        var editor = await workspaceService.GetAgentEditorAsync();
+        editor.Name = name;
+        editor.RoleTitle = "Delivery specialist";
+        editor.Summary = $"{name} participates in team-scoped technical delivery.";
+        editor.Instructions = "Stay within the selected team scope.";
+        editor.Status = AgentLifecycleStatus.Active;
+        editor.IsTemplate = false;
+        editor.TemplateKey = string.Empty;
+        return await workspaceService.SaveAgentAsync(editor);
     }
 
     private static async Task<Guid> CreatePersonAsync(PartyDirectoryService partyDirectoryService, string displayName, string email)

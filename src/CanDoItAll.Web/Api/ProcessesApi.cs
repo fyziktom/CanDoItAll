@@ -610,11 +610,13 @@ internal static class ProcessesApi
 
         processes.MapPost("/launch-plans/{launchPlanId:guid}/hr-match", async (
                 Guid launchPlanId,
+                Guid? agentTeamId,
                 string? requestedBy,
                 ProcessesService processesService,
                 CancellationToken cancellationToken) =>
             ApiEndpointResults.FromResult(await processesService.MatchLaunchPlanWithHrManagerAsync(
                 launchPlanId,
+                agentTeamId,
                 NormalizeActor(requestedBy),
                 cancellationToken)))
             .WithName("MatchProcessLaunchPlanWithHr");

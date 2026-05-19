@@ -7,6 +7,11 @@ namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
 public partial class AgentCatalogPanel
 {
+    private const string AllAgentsTreeNodeId = "agents:all";
+    private const string TeamRootTreeNodeId = "agents:teams";
+    private const string TeamTreeNodePrefix = "agents:team:";
+    private const string AgentTreeNodePrefix = "agents:agent:";
+
     [Parameter]
     public Guid? RequestedAgentId { get; set; }
 
@@ -32,24 +37,97 @@ public partial class AgentCatalogPanel
     public DialogService DialogService { get; set; } = default!;
 
     private IReadOnlyList<AgentDefinition> agents = [];
+    private IReadOnlyList<AgentTeamDefinition> teams = [];
+    private readonly HashSet<string> expandedTreeNodeIds = [TeamRootTreeNodeId];
     private string agentSearch = string.Empty;
     private bool hasLoaded;
     private bool isLoading = true;
     private bool interactiveReloadAttempted;
     private Task? loadTask;
     private Guid? selectedAgentId;
+    private Guid? selectedTeamId;
     private Guid? openedRequestedAgentId;
 
     private IReadOnlyList<AgentDefinition> FilteredAgents => agents
-        .Where(agent =>
-            string.IsNullOrWhiteSpace(agentSearch) ||
-            agent.Name.Contains(agentSearch, StringComparison.OrdinalIgnoreCase) ||
-            agent.RoleTitle.Contains(agentSearch, StringComparison.OrdinalIgnoreCase) ||
-            agent.Summary.Contains(agentSearch, StringComparison.OrdinalIgnoreCase) ||
-            agent.Model.Contains(agentSearch, StringComparison.OrdinalIgnoreCase) ||
-            agent.Tags.Any(tag => tag.Contains(agentSearch, StringComparison.OrdinalIgnoreCase)))
+        .Where(MatchesSelectedTeam)
+        .Where(MatchesAgentSearch)
         .OrderBy(agent => agent.Name, StringComparer.OrdinalIgnoreCase)
         .ToList();
+
+    private AgentTeamDefinition? SelectedTeam => selectedTeamId.HasValue
+        ? teams.FirstOrDefault(item => item.Id == selectedTeamId.Value)
+        : null;
+
+    private string TeamPanelTitle => SelectedTeam is null ? "All agents" : SelectedTeam.Name;
+
+    private IReadOnlyList<TreeViewNode> AgentTeamTreeNodes
+    {
+        get
+        {
+            var agentsById = agents.ToDictionary(item => item.Id);
+            var teamNodes = teams
+                .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(team =>
+                {
+                    var teamNodeId = BuildTeamTreeNodeId(team.Id);
+                    return new TreeViewNode
+                    {
+                        Id = teamNodeId,
+                        Text = team.Name,
+                        Icon = "groups",
+                        Tooltip = $"{team.Name}. {team.AgentIds.Count} agent(s).",
+                        BadgeText = team.AgentIds.Count.ToString(),
+                        IsExpanded = expandedTreeNodeIds.Contains(teamNodeId),
+                        IsSelected = selectedTeamId == team.Id,
+                        DataTestId = "agents-team-tree-team",
+                        ChildrenDataTestId = "agents-team-tree-team-members",
+                        Children = team.AgentIds
+                            .Select(agentId => agentsById.TryGetValue(agentId, out var agent) ? agent : null)
+                            .Where(agent => agent is not null)
+                            .Cast<AgentDefinition>()
+                            .OrderBy(agent => agent.Name, StringComparer.OrdinalIgnoreCase)
+                            .Select(agent => new TreeViewNode
+                            {
+                                Id = BuildAgentTreeNodeId(agent.Id),
+                                Text = agent.Name,
+                                Icon = "person",
+                                Tooltip = agent.RoleTitle,
+                                IsSelected = selectedAgentId == agent.Id,
+                                DataTestId = "agents-team-tree-agent"
+                            })
+                            .ToList()
+                    };
+                })
+                .ToList();
+
+            return
+            [
+                new TreeViewNode
+                {
+                    Id = AllAgentsTreeNodeId,
+                    Text = "All agents",
+                    Icon = "support_agent",
+                    Tooltip = "Show every technical agent.",
+                    BadgeText = agents.Count.ToString(),
+                    IsSelected = selectedTeamId is null,
+                    DataTestId = "agents-team-tree-all"
+                },
+                new TreeViewNode
+                {
+                    Id = TeamRootTreeNodeId,
+                    Text = "Teams",
+                    Icon = "account_tree",
+                    Tooltip = "Agent teams.",
+                    BadgeText = teams.Count.ToString(),
+                    IsExpanded = expandedTreeNodeIds.Contains(TeamRootTreeNodeId),
+                    IsSelectable = false,
+                    DataTestId = "agents-team-tree-root",
+                    ChildrenDataTestId = "agents-team-tree-root-children",
+                    Children = teamNodes
+                }
+            ];
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -103,9 +181,14 @@ public partial class AgentCatalogPanel
                 await OrganizationCatalogRepairService.EnsureCurrentOrganizationCatalogAsync();
             }
 
-            agents = InitialAgents is null
-                ? (await WorkspaceService.ListAgentsAsync(includeTemplates: false)).ToList()
-                : InitialAgents.ToList();
+            var agentsTask = InitialAgents is null
+                ? WorkspaceService.ListAgentsAsync(includeTemplates: false)
+                : Task.FromResult(InitialAgents);
+            var teamsTask = WorkspaceService.ListAgentTeamsAsync();
+
+            agents = (await agentsTask).ToList();
+            teams = (await teamsTask).ToList();
+            ExpandTeamNodes();
 
             if (RequestedAgentId.HasValue &&
                 agents.Any(item => item.Id == RequestedAgentId.Value))
@@ -141,12 +224,67 @@ public partial class AgentCatalogPanel
         selectedAgentId = agentId;
     }
 
+    private Task HandleAgentTeamTreeSelectAsync(string nodeId)
+    {
+        if (string.Equals(nodeId, AllAgentsTreeNodeId, StringComparison.Ordinal))
+        {
+            selectedTeamId = null;
+            return Task.CompletedTask;
+        }
+
+        if (TryParseTeamTreeNodeId(nodeId, out var teamId) &&
+            teams.Any(item => item.Id == teamId))
+        {
+            selectedTeamId = teamId;
+            expandedTreeNodeIds.Add(nodeId);
+            return Task.CompletedTask;
+        }
+
+        if (TryParseAgentTreeNodeId(nodeId, out var agentId) &&
+            agents.Any(item => item.Id == agentId))
+        {
+            selectedAgentId = agentId;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task HandleAgentTeamTreeToggleAsync(string nodeId)
+    {
+        if (!expandedTreeNodeIds.Add(nodeId))
+        {
+            expandedTreeNodeIds.Remove(nodeId);
+        }
+
+        return Task.CompletedTask;
+    }
+
     private Task OpenNewAgentDialogAsync()
         => QueueAgentDetailsDialogAsync(agentId: null);
+
+    private Task OpenNewTeamDialogAsync()
+        => QueueTeamDetailsDialogAsync(teamId: null);
+
+    private Task OpenSelectedTeamDialogAsync()
+        => SelectedTeam is null
+            ? Task.CompletedTask
+            : QueueTeamDetailsDialogAsync(SelectedTeam.Id);
+
+    private Task OpenSelectedTeamMembersDialogAsync()
+    {
+        _ = OpenTeamMembersDialogAsync();
+        return Task.CompletedTask;
+    }
 
     private Task QueueAgentDetailsDialogAsync(Guid? agentId)
     {
         _ = OpenAgentDetailsDialogAsync(agentId);
+        return Task.CompletedTask;
+    }
+
+    private Task QueueTeamDetailsDialogAsync(Guid? teamId)
+    {
+        _ = OpenTeamDetailsDialogAsync(teamId);
         return Task.CompletedTask;
     }
 
@@ -203,7 +341,7 @@ public partial class AgentCatalogPanel
 
     private async Task HandleAgentDialogSavedAsync(AgentDetailsDialogResult result)
     {
-        agents = await WorkspaceService.ListAgentsAsync(includeTemplates: false);
+        await ReloadCatalogAsync();
         if (result.Deleted)
         {
             selectedAgentId = agents.FirstOrDefault()?.Id;
@@ -218,8 +356,171 @@ public partial class AgentCatalogPanel
         await InvokeAsync(StateHasChanged);
     }
 
+    private async Task OpenTeamDetailsDialogAsync(Guid? teamId)
+    {
+        try
+        {
+            var result = await DialogService.OpenAsync<AgentTeamDetailsDialog>(
+                teamId.HasValue ? "Edit agent team" : "New agent team",
+                new Dictionary<string, object?>
+                {
+                    [nameof(AgentTeamDetailsDialog.TeamId)] = teamId
+                },
+                new DialogOptions
+                {
+                    Eyebrow = "Technical team",
+                    Subtitle = "Create or rename an AgentFramework team for filtering and process delivery.",
+                    Size = ModalSize.Compact,
+                    AriaLabel = "Agent team editor",
+                    TestId = "agents-team-details-dialog"
+                });
+
+            if (result is AgentTeamDetailsDialogResult teamResult)
+            {
+                await ReloadCatalogAsync();
+                selectedTeamId = teamResult.TeamId;
+                expandedTreeNodeIds.Add(BuildTeamTreeNodeId(teamResult.TeamId));
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Team dialog failed", exception.Message);
+        }
+    }
+
+    private async Task OpenTeamMembersDialogAsync()
+    {
+        var team = SelectedTeam;
+        if (team is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var result = await DialogService.OpenAsync<AgentTeamMembersDialog>(
+                $"Add agents to {team.Name}",
+                new Dictionary<string, object?>
+                {
+                    [nameof(AgentTeamMembersDialog.Team)] = team,
+                    [nameof(AgentTeamMembersDialog.Agents)] = agents
+                },
+                new DialogOptions
+                {
+                    Eyebrow = "Team membership",
+                    Subtitle = "Click agent cards to select multiple agents, then confirm the team membership.",
+                    Size = ModalSize.Wide,
+                    AriaLabel = "Add agents to team",
+                    TestId = "agents-team-members-dialog-shell"
+                });
+
+            if (result is AgentTeamMembersDialogResult membersResult)
+            {
+                await WorkspaceService.UpdateAgentTeamMembersAsync(
+                    membersResult.TeamId,
+                    membersResult.AgentIds,
+                    CancellationToken.None);
+                await ReloadCatalogAsync();
+                selectedTeamId = membersResult.TeamId;
+                expandedTreeNodeIds.Add(BuildTeamTreeNodeId(membersResult.TeamId));
+                NotificationService.Success("Team updated", "Agent team membership was saved.");
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Team membership failed", exception.Message);
+        }
+    }
+
+    private async Task DeleteSelectedTeamAsync()
+    {
+        var team = SelectedTeam;
+        if (team is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await WorkspaceService.DeleteAgentTeamAsync(team.Id);
+            selectedTeamId = null;
+            await ReloadCatalogAsync();
+            NotificationService.Success("Team deleted", $"Deleted {team.Name}.");
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Team delete failed", exception.Message);
+        }
+    }
+
     private void ResetAgentSearch()
     {
         agentSearch = string.Empty;
+    }
+
+    private async Task ReloadCatalogAsync()
+    {
+        var agentsTask = WorkspaceService.ListAgentsAsync(includeTemplates: false);
+        var teamsTask = WorkspaceService.ListAgentTeamsAsync();
+        agents = (await agentsTask).ToList();
+        teams = (await teamsTask).ToList();
+        if (selectedTeamId.HasValue &&
+            teams.All(item => item.Id != selectedTeamId.Value))
+        {
+            selectedTeamId = null;
+        }
+
+        ExpandTeamNodes();
+    }
+
+    private void ExpandTeamNodes()
+    {
+        expandedTreeNodeIds.Add(TeamRootTreeNodeId);
+        foreach (var team in teams)
+        {
+            expandedTreeNodeIds.Add(BuildTeamTreeNodeId(team.Id));
+        }
+    }
+
+    private bool MatchesSelectedTeam(AgentDefinition agent)
+    {
+        var team = SelectedTeam;
+        return team is null || team.AgentIds.Contains(agent.Id);
+    }
+
+    private bool MatchesAgentSearch(AgentDefinition agent)
+    {
+        if (string.IsNullOrWhiteSpace(agentSearch))
+        {
+            return true;
+        }
+
+        return agent.Name.Contains(agentSearch, StringComparison.OrdinalIgnoreCase) ||
+               agent.RoleTitle.Contains(agentSearch, StringComparison.OrdinalIgnoreCase) ||
+               agent.Summary.Contains(agentSearch, StringComparison.OrdinalIgnoreCase) ||
+               agent.Model.Contains(agentSearch, StringComparison.OrdinalIgnoreCase) ||
+               agent.Tags.Any(tag => tag.Contains(agentSearch, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string BuildTeamTreeNodeId(Guid teamId)
+        => $"{TeamTreeNodePrefix}{teamId:N}";
+
+    private static string BuildAgentTreeNodeId(Guid agentId)
+        => $"{AgentTreeNodePrefix}{agentId:N}";
+
+    private static bool TryParseTeamTreeNodeId(string nodeId, out Guid teamId)
+        => TryParsePrefixedGuid(nodeId, TeamTreeNodePrefix, out teamId);
+
+    private static bool TryParseAgentTreeNodeId(string nodeId, out Guid agentId)
+        => TryParsePrefixedGuid(nodeId, AgentTreeNodePrefix, out agentId);
+
+    private static bool TryParsePrefixedGuid(string nodeId, string prefix, out Guid id)
+    {
+        id = Guid.Empty;
+        return nodeId.StartsWith(prefix, StringComparison.Ordinal) &&
+               Guid.TryParseExact(nodeId[prefix.Length..], "N", out id);
     }
 }

@@ -219,7 +219,7 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
             var importedCapabilityIds = importedCapabilities
                 .Select(item => item.Id)
                 .ToHashSet();
-            var prunedDocument = PruneAgentWorkspace(document, importedAgent.Id);
+            var prunedDocument = PruneAgentWorkspace(document, importedAgent.Id, pruneTeamMemberships: false);
             EnsureUniqueTemplateKey(prunedDocument.Agents, importedAgent.Id, WorkspaceCatalogIdentityNormalizer.GetAgentTemplateIdentity(importedAgent), "Agent import");
 
             return prunedDocument with
@@ -281,7 +281,10 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
         return imported.Agent.Id;
     }
 
-    private static SandboxWorkspaceDocument PruneAgentWorkspace(SandboxWorkspaceDocument document, Guid agentId)
+    private static SandboxWorkspaceDocument PruneAgentWorkspace(
+        SandboxWorkspaceDocument document,
+        Guid agentId,
+        bool pruneTeamMemberships = true)
     {
         var sessionIdsToDelete = document.ChatSessions
             .Where(item => item.AgentId == agentId)
@@ -322,8 +325,36 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
                 .ToList(),
             ToolExecutionReceipts = document.ToolExecutionReceipts
                 .Where(item => !runIdsToDelete.Contains(item.ExecutionRunId))
-                .ToList()
+                .ToList(),
+            AgentTeams = pruneTeamMemberships
+                ? PruneAgentTeamMemberships(document.AgentTeams, agentId)
+                : document.AgentTeams
         };
+    }
+
+    private static IReadOnlyList<AgentTeamDefinition> PruneAgentTeamMemberships(
+        IReadOnlyList<AgentTeamDefinition> teams,
+        Guid agentId)
+    {
+        var now = DateTimeOffset.UtcNow;
+        return teams
+            .Select(team =>
+            {
+                if (!team.AgentIds.Contains(agentId))
+                {
+                    return team;
+                }
+
+                return team with
+                {
+                    AgentIds = team.AgentIds
+                        .Where(item => item != agentId)
+                        .ToList(),
+                    UpdatedAtUtc = now
+                };
+            })
+            .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     private IReadOnlyDictionary<Guid, Guid> BuildProviderIdMap(

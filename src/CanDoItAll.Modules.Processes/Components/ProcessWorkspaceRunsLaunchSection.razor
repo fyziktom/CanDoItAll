@@ -109,6 +109,32 @@
                                 <p class="text-sm leading-6 text-slate-600">@launchPlan.StatusDetail</p>
                             }
 
+                            <SurfaceCard Soft="true"
+                                         data-testid="processes-launch-hr-match-panel">
+                                <Grid Gap="LayoutGap.Medium"
+                                      ColumnsMd="3">
+                                    <div class="md:col-span-2">
+                                        <label class="cda-field-label">Delivery team</label>
+                                        <InputSelect @bind-Value="Presenter.SelectedLaunchAgentTeamId"
+                                                     class="cda-input"
+                                                     data-testid="processes-launch-agent-team-select">
+                                            <option value="">All available agents</option>
+                                            @foreach (var team in Presenter.AgentTeams)
+                                            {
+                                                <option value="@team.Id">@team.Name</option>
+                                            }
+                                        </InputSelect>
+                                    </div>
+                                    <div class="flex items-end">
+                                        <Button Text="Run HR match"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Disabled="@(launchPlan.Status is not ProcessLaunchPlanStatus.Draft and not ProcessLaunchPlanStatus.ChangesRequested)"
+                                                Click="Presenter.MatchLaunchPlanWithHrManagerAsync"
+                                                data-testid="processes-launch-hr-match-button" />
+                                    </div>
+                                </Grid>
+                            </SurfaceCard>
+
                             @if (!string.IsNullOrWhiteSpace(launchPlan.TriggerReason))
                             {
                                 <SurfaceCard Soft="true">
@@ -161,6 +187,18 @@
                                                                 @if (candidate.RequiresProvisioning)
                                                                 {
                                                                     <StatusBadge Tone="warning" Text="Provisioning" />
+                                                                }
+                                                                @if (candidate.IsOutsideSelectedTeam)
+                                                                {
+                                                                    <StatusBadge Tone="warning"
+                                                                                 Text="Outside team"
+                                                                                 data-testid="processes-launch-candidate-outside-team" />
+                                                                }
+                                                                else if (candidate.AgentTeamId.HasValue)
+                                                                {
+                                                                    <StatusBadge Tone="info"
+                                                                                 Text="Team"
+                                                                                 data-testid="processes-launch-candidate-team-member" />
                                                                 }
                                                             </Cluster>
                                                         </Status>

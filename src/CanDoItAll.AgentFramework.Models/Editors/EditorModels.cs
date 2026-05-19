@@ -63,6 +63,25 @@ public sealed class AgentEditorModel
     }
 }
 
+public sealed class AgentTeamEditorModel
+{
+    public Guid? Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public List<Guid> AgentIds { get; set; } = [];
+
+    public static AgentTeamEditorModel FromDefinition(AgentTeamDefinition definition)
+    {
+        return new AgentTeamEditorModel
+        {
+            Id = definition.Id,
+            Name = definition.Name,
+            Description = definition.Description,
+            AgentIds = definition.AgentIds.ToList()
+        };
+    }
+}
+
 public sealed class ProviderProfileEditorModel
 {
     public Guid? Id { get; set; }

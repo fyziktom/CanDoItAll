@@ -140,22 +140,31 @@ public sealed partial class ProcessesService
                 group => (IReadOnlyList<ProcessLaunchCandidateViewModel>)group
                     .OrderByDescending(item => item.Score)
                     .ThenBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
-                    .Select(item => new ProcessLaunchCandidateViewModel(
-                        item.Id,
-                        item.CandidateKind,
-                        item.PartyId,
-                        item.TechnicalAgentId,
-                        item.WorkflowDefinitionId,
-                        item.WorkflowVersionId,
-                        item.DisplayName,
-                        item.ExecutorKind,
-                        item.Score,
-                        item.IsRecommended,
-                        item.AllowsDirectMessaging,
-                        item.RequiresProvisioning,
-                        item.RecommendationSummary,
-                        item.AvailabilitySummary,
-                        item.SourceRegistryKey))
+                    .Select(item =>
+                    {
+                        var teamMatch = ParseLaunchAgentTeamMatchMetadata(item.MetadataJson);
+                        return new ProcessLaunchCandidateViewModel(
+                            item.Id,
+                            item.CandidateKind,
+                            item.PartyId,
+                            item.TechnicalAgentId,
+                            item.WorkflowDefinitionId,
+                            item.WorkflowVersionId,
+                            item.DisplayName,
+                            item.ExecutorKind,
+                            item.Score,
+                            item.IsRecommended,
+                            item.AllowsDirectMessaging,
+                            item.RequiresProvisioning,
+                            item.RecommendationSummary,
+                            item.AvailabilitySummary,
+                            item.SourceRegistryKey)
+                        {
+                            AgentTeamId = teamMatch.AgentTeamId,
+                            AgentTeamName = teamMatch.AgentTeamName,
+                            IsOutsideSelectedTeam = teamMatch.IsOutsideSelectedTeam
+                        };
+                    })
                     .ToList());
         var displayProjection = ProcessLaunchPlanDisplayProjector.Resolve(plan.Status, generatedRunStatus);
 

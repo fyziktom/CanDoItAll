@@ -52,6 +52,31 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService(
         await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
     }
 
+    public Task<IReadOnlyList<AgentTeamDefinition>> ListAgentTeamsAsync(CancellationToken cancellationToken = default)
+    {
+        return ResolveService().ListAgentTeamsAsync(cancellationToken);
+    }
+
+    public Task<AgentTeamEditorModel> GetAgentTeamEditorAsync(Guid? teamId = null, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().GetAgentTeamEditorAsync(teamId, cancellationToken);
+    }
+
+    public Task<Guid> SaveAgentTeamAsync(AgentTeamEditorModel model, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().SaveAgentTeamAsync(model, cancellationToken);
+    }
+
+    public Task<AgentTeamDefinition> UpdateAgentTeamMembersAsync(Guid teamId, IReadOnlyList<Guid> agentIds, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().UpdateAgentTeamMembersAsync(teamId, agentIds, cancellationToken);
+    }
+
+    public Task DeleteAgentTeamAsync(Guid teamId, CancellationToken cancellationToken = default)
+    {
+        return ResolveService().DeleteAgentTeamAsync(teamId, cancellationToken);
+    }
+
     public async Task<Guid> CloneAgentAsync(Guid agentId, string cloneName, CancellationToken cancellationToken = default)
     {
         var cloneId = await ResolveService().CloneAgentAsync(agentId, cloneName, cancellationToken);

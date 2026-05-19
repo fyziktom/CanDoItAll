@@ -1,3 +1,5 @@
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
@@ -454,6 +456,144 @@ public sealed class ProcessLaunchPlanningIntegrationTests
 
         Assert.Equal(roleMatchedAgentId, selectedCandidate.PartyId);
         Assert.True(selectedCandidate.Score > genericCandidate.Score);
+    }
+
+    [Fact]
+    public async Task MatchLaunchPlanWithHrManagerAsync_marks_required_agents_outside_selected_delivery_team()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var hrService = scope.ServiceProvider.GetRequiredService<HrService>();
+        var aiAgentService = scope.ServiceProvider.GetRequiredService<AiAgentService>();
+        var agentWorkspaceService = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var suffix = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture);
+        var projectId = await CreateProjectAsync(projectsService, $"Team Scoped HR Match {suffix}");
+        var ownerId = await CreatePartyAsync(
+            partyDirectoryService,
+            $"Team Scoped Owner {suffix}",
+            PartyType.Person,
+            PartyLifecycleStatus.Active,
+            PartyRoleKind.Employee,
+            $"owner.teamscope.{suffix}@example.test");
+        var teamAgentPartyId = await CreatePartyAsync(
+            partyDirectoryService,
+            $"General Team Agent {suffix}",
+            PartyType.AiAgent,
+            PartyLifecycleStatus.Active,
+            PartyRoleKind.AiSteward,
+            $"team.agent.{suffix}@example.test");
+        var outsideAgentPartyId = await CreatePartyAsync(
+            partyDirectoryService,
+            $"Specialist Outside Team Agent {suffix}",
+            PartyType.AiAgent,
+            PartyLifecycleStatus.Active,
+            PartyRoleKind.AiSteward,
+            $"outside.agent.{suffix}@example.test");
+
+        await SaveApprovedAiProfileAsync(
+            aiAgentService,
+            teamAgentPartyId,
+            ownerId,
+            "General delivery",
+            "Handles broad delivery tasks.",
+            "Workspace build",
+            "General AI resource for team-scoped HR matching.");
+        await SaveApprovedAiProfileAsync(
+            aiAgentService,
+            outsideAgentPartyId,
+            ownerId,
+            "Skill-guided implementation",
+            "Owns required specialist delivery work.",
+            "Workspace build",
+            "Specialist AI resource outside the selected team.");
+        await aiAgentService.SynchronizeDirectoryProjectionAsync();
+        var aiDirectory = await aiAgentService.ListAgentDirectoryAsync();
+        var teamTechnicalAgentId = Assert.Single(aiDirectory, item => item.PartyId == teamAgentPartyId).TechnicalAgentId;
+        Assert.True(teamTechnicalAgentId.HasValue);
+
+        var technicalAgents = await agentWorkspaceService.ListAgentsAsync(includeTemplates: false);
+        if (technicalAgents.All(item => item.Id != teamTechnicalAgentId.Value))
+        {
+            var teamAgentEditor = await agentWorkspaceService.GetAgentEditorAsync();
+            teamAgentEditor.Id = teamTechnicalAgentId.Value;
+            teamAgentEditor.Name = $"General Team Agent {suffix}";
+            teamAgentEditor.RoleTitle = "General delivery agent";
+            teamAgentEditor.Summary = "AgentFramework backing agent for team-scoped HR matching.";
+            teamAgentEditor.Instructions = "Participate in the selected delivery team.";
+            teamAgentEditor.Status = AgentLifecycleStatus.Active;
+            teamAgentEditor.IsTemplate = false;
+            teamAgentEditor.TemplateKey = $"team-scope-{teamTechnicalAgentId.Value:N}";
+            await agentWorkspaceService.SaveAgentAsync(teamAgentEditor);
+        }
+
+        var skillDefinition = await hrService.SaveSkillDefinitionAsync(new SkillDefinitionEditorModel
+        {
+            Name = $"Team Scope Specialist Skill {suffix}",
+            Category = "Delivery",
+            Description = "Required role capability for team-scoped HR matching proof."
+        });
+        Assert.True(skillDefinition.IsSuccess, string.Join(" | ", skillDefinition.Errors.Select(error => error.Message)));
+
+        var skillAssignment = await hrService.SavePartySkillAsync(new PartySkillEditorModel
+        {
+            PartyId = outsideAgentPartyId,
+            SkillId = skillDefinition.Value,
+            Proficiency = SkillProficiencyLevel.Expert,
+            YearsExperience = 6,
+            CertificationStatus = "Validated",
+            Notes = "Specialist outside the selected delivery team."
+        });
+        Assert.True(skillAssignment.IsSuccess, string.Join(" | ", skillAssignment.Errors.Select(error => error.Message)));
+
+        var teamId = await agentWorkspaceService.SaveAgentTeamAsync(new AgentTeamEditorModel
+        {
+            Name = $"Primary Delivery Team {suffix}",
+            Description = "Contains the preferred delivery pod for HR matching.",
+            AgentIds = [teamTechnicalAgentId.Value]
+        });
+
+        var definition = BuildSkillGuidedLaunchPlanningDefinition(projectId, skillDefinition.Value);
+        var saveResult = await processesService.SaveAsync(definition);
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+
+        var launchResult = await processesService.CreateLaunchPlanAsync(new ProcessLaunchCreateRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            LaunchName = $"Team scoped launch {suffix}",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Integration test team-scoped HR match validation.",
+            RequestedBy = "integration-tests"
+        });
+        Assert.True(launchResult.IsSuccess, string.Join(" | ", launchResult.Errors.Select(error => error.Message)));
+
+        var matchResult = await processesService.MatchLaunchPlanWithHrManagerAsync(
+            launchResult.Value,
+            teamId,
+            "integration-tests");
+        Assert.True(matchResult.IsSuccess, string.Join(" | ", matchResult.Errors.Select(error => error.Message)));
+
+        var details = await processesService.GetLaunchPlanAsync(launchResult.Value);
+        Assert.NotNull(details);
+
+        var role = Assert.Single(details!.Roles);
+        Assert.True(role.SelectedCandidateId.HasValue);
+        var selectedCandidate = Assert.Single(role.Candidates, item => item.Id == role.SelectedCandidateId.Value);
+        var teamCandidate = Assert.Single(role.Candidates, item => item.PartyId == teamAgentPartyId);
+
+        Assert.Equal(outsideAgentPartyId, selectedCandidate.PartyId);
+        Assert.Equal(teamId, selectedCandidate.AgentTeamId);
+        Assert.Equal($"Primary Delivery Team {suffix}", selectedCandidate.AgentTeamName);
+        Assert.True(selectedCandidate.IsOutsideSelectedTeam);
+        Assert.Equal(teamId, teamCandidate.AgentTeamId);
+        Assert.False(teamCandidate.IsOutsideSelectedTeam);
     }
 
     [Fact]
@@ -1650,7 +1790,7 @@ public sealed class ProcessLaunchPlanningIntegrationTests
         Assert.True(result.IsSuccess, string.Join(" | ", result.Errors.Select(error => error.Message)));
     }
 
-    private static async Task SaveApprovedAiProfileAsync(
+    private static async Task<Guid> SaveApprovedAiProfileAsync(
         AiAgentService aiAgentService,
         Guid partyId,
         Guid ownerPartyId,
@@ -1682,6 +1822,7 @@ public sealed class ProcessLaunchPlanningIntegrationTests
         });
 
         Assert.True(profile.IsSuccess, string.Join(" | ", profile.Errors.Select(error => error.Message)));
+        return profile.Value;
     }
 
     private static ProcessLaunchCandidateViewModel GetSelectedCandidate(
