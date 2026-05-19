@@ -6,10 +6,17 @@ namespace CanDoItAll.Modules.Processes;
 public sealed class ProcessTemplateProjectionService
 {
     private readonly ProcessTemplatePackLoader packLoader;
+    private readonly ProcessCanvasRecompositionService recompositionService;
 
-    public ProcessTemplateProjectionService(ProcessTemplatePackLoader packLoader)
+    public ProcessTemplateProjectionService(
+        ProcessTemplatePackLoader packLoader,
+        ProcessCanvasRecompositionService? recompositionService = null)
     {
         this.packLoader = packLoader;
+        this.recompositionService = recompositionService ??
+            new ProcessCanvasRecompositionService(
+                new ProcessCanvasSurfaceFactory(
+                    new ProcessCanvasChromeCatalogService(packLoader)));
     }
 
     public ProcessImportExportEnvelope GetProjectedEnvelope(
@@ -19,15 +26,18 @@ public sealed class ProcessTemplateProjectionService
     {
         var pack = packLoader.Load();
         var process = GetProcess(pack, processKey);
+        var definition = BuildDefinition(pack, process, projectId, definitionName);
+        ApplyBalancedFlowComposition(definition);
 
         return new ProcessImportExportEnvelope
         {
             Definition = ProcessDependencyCompatibilityBridge.ToImportExportModel(
-                BuildDefinition(pack, process, projectId, definitionName)),
+                definition),
             SourceFormat = "CanDoItAll.ProcessTemplatePack/current-module-projection",
             Warnings =
             [
                 $"Projected from template pack process '{process.Key}'.",
+                "Canvas positions were normalized with the Balanced Flow composition.",
                 "Detailed sidecar metadata remains in the process-template pack files."
             ]
         };
@@ -229,6 +239,11 @@ public sealed class ProcessTemplateProjectionService
         }
 
         return definition;
+    }
+
+    private void ApplyBalancedFlowComposition(ProcessDefinitionEditorModel definition)
+    {
+        recompositionService.Apply(definition, ProcessCanvasRecompositionMode.Recompose);
     }
 
     private static ProcessTemplateDefinition GetProcess(ProcessTemplatePack pack, string processKey)

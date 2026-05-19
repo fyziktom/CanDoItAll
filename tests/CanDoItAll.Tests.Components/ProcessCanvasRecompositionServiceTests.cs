@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Processes;
 
@@ -5,6 +6,20 @@ namespace CanDoItAll.Tests.Components;
 
 public sealed class ProcessCanvasRecompositionServiceTests
 {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
+    private static readonly string[] DefaultProcessKeys =
+    [
+        "dotnet-solution-setup",
+        "dotnet-feature-function-implementation",
+        "dotnet-development-slice",
+        "software-delivery",
+        "ai-assisted-change-delivery",
+        "branching-code-review",
+        "architecture-decision-governance",
+        "release-readiness-and-deployment"
+    ];
+
     [Fact]
     public void Resolve_collisions_separates_overlapping_process_nodes()
     {
@@ -104,6 +119,39 @@ public sealed class ProcessCanvasRecompositionServiceTests
     }
 
     [Fact]
+    public void Default_process_template_projections_load_in_balanced_flow()
+    {
+        var packLoader = new ProcessTemplatePackLoader();
+        var surfaceFactory = CreateSurfaceFactory(packLoader);
+        var service = new ProcessCanvasRecompositionService(surfaceFactory);
+        var projectionService = new ProcessTemplateProjectionService(packLoader, service);
+
+        foreach (var processKey in DefaultProcessKeys)
+        {
+            var envelope = projectionService.GetProjectedEnvelope(processKey);
+            var editor = ToEditorModel(envelope.Definition);
+            var beforePositions = editor.Steps.ToDictionary(
+                step => ProcessCanvasBranching.BuildDefinitionStepNodeId(step),
+                step => $"{step.Key} ({step.CanvasX}, {step.CanvasY})",
+                StringComparer.Ordinal);
+            foreach (var step in editor.Steps.Where(ProcessCanvasBranching.ShouldRenderBranchRouter))
+            {
+                beforePositions[ProcessCanvasBranching.BuildDefinitionBranchNodeId(step)] =
+                    $"{step.Key} branch ({step.BranchCanvasX}, {step.BranchCanvasY})";
+            }
+            var repeatResult = service.Apply(editor, ProcessCanvasRecompositionMode.Recompose);
+
+            Assert.Contains(
+                envelope.Warnings,
+                warning => warning.Contains("Balanced Flow", StringComparison.Ordinal));
+            Assert.True(
+                repeatResult.RepositionedNodeCount == 0,
+                $"{processKey} changed {repeatResult.RepositionedNodeCount} node(s) after projection: {string.Join("; ", repeatResult.RepositionedNodeIds.Select(nodeId => beforePositions.GetValueOrDefault(nodeId, nodeId)))}.");
+            AssertNoOverlaps(ResolveBalancedFlowBoxes(surfaceFactory, editor), processKey);
+        }
+    }
+
+    [Fact]
     public void Main_path_spine_pushes_branches_farther_from_the_default_path()
     {
         var surfaceFactory = CreateSurfaceFactory();
@@ -192,11 +240,11 @@ public sealed class ProcessCanvasRecompositionServiceTests
         Assert.Contains("acyclic dependency graph", exception.Message, StringComparison.Ordinal);
     }
 
-    private static ProcessCanvasSurfaceFactory CreateSurfaceFactory()
+    private static ProcessCanvasSurfaceFactory CreateSurfaceFactory(ProcessTemplatePackLoader? packLoader = null)
     {
         return new ProcessCanvasSurfaceFactory(
             new ProcessCanvasChromeCatalogService(
-                new ProcessTemplatePackLoader()));
+                packLoader ?? new ProcessTemplatePackLoader()));
     }
 
     private static IReadOnlyList<CanvasLayoutNodeBox> ResolveBoxes(
@@ -208,6 +256,26 @@ public sealed class ProcessCanvasRecompositionServiceTests
             .ToList();
     }
 
+    private static IReadOnlyList<CanvasLayoutNodeBox> ResolveBalancedFlowBoxes(
+        ProcessCanvasSurfaceFactory surfaceFactory,
+        ProcessDefinitionEditorModel editor)
+    {
+        return surfaceFactory.BuildDefinitionSurface(editor).Nodes
+            .Where(node =>
+                string.Equals(node.Kind, ProcessCanvasCatalog.NodeKinds.DefinitionStep, StringComparison.Ordinal) ||
+                string.Equals(node.Kind, ProcessCanvasCatalog.NodeKinds.DefinitionBranchRouter, StringComparison.Ordinal) ||
+                string.Equals(node.Kind, ProcessCanvasCatalog.NodeKinds.DefinitionRole, StringComparison.Ordinal))
+            .Select(node => CanvasLayoutNodeBox.FromNode(node))
+            .ToList();
+    }
+
+    private static ProcessDefinitionEditorModel ToEditorModel(ProcessDefinitionImportExportModel definition)
+    {
+        return JsonSerializer.Deserialize<ProcessDefinitionEditorModel>(
+            JsonSerializer.Serialize(definition, JsonOptions),
+            JsonOptions) ?? new ProcessDefinitionEditorModel();
+    }
+
     private static CanvasLayoutNodeBox ResolveStepBox(
         ProcessDefinitionEditorModel editor,
         IReadOnlyDictionary<string, CanvasLayoutNodeBox> boxesById,
@@ -217,16 +285,18 @@ public sealed class ProcessCanvasRecompositionServiceTests
         return boxesById[ProcessCanvasBranching.BuildDefinitionStepNodeId(step)];
     }
 
-    private static void AssertNoOverlaps(IEnumerable<CanvasLayoutNodeBox> boxes)
+    private static void AssertNoOverlaps(IEnumerable<CanvasLayoutNodeBox> boxes, string scope = "")
     {
         var materialized = boxes.ToList();
         for (var index = 0; index < materialized.Count - 1; index++)
         {
             for (var otherIndex = index + 1; otherIndex < materialized.Count; otherIndex++)
             {
+                var left = materialized[index];
+                var right = materialized[otherIndex];
                 Assert.False(
-                    Overlaps(materialized[index], materialized[otherIndex]),
-                    $"{materialized[index].NodeId} overlaps {materialized[otherIndex].NodeId}.");
+                    Overlaps(left, right),
+                    $"{scope} {left.NodeId} ({left.X}, {left.Y}, {left.Width}x{left.Height}) overlaps {right.NodeId} ({right.X}, {right.Y}, {right.Width}x{right.Height}).".Trim());
             }
         }
     }

@@ -7,6 +7,10 @@ public sealed partial class ProcessCanvasSurfaceFactory
 {
     private const double DefinitionRoleInstanceOffsetX = 430d;
     private const double DefinitionRoleInstanceRowGap = 260d;
+    private const double DefinitionRoleInstanceCandidateColumnGap = 430d;
+    private const double DefinitionRoleInstanceCandidateRowGap = 300d;
+    private const double DefinitionRoleInstanceMinimumGapX = 32d;
+    private const double DefinitionRoleInstanceMinimumGapY = 28d;
     private const double DefinitionArtifactNodeOffsetX = 360d;
     private const double DefinitionArtifactCloneOffsetX = 260d;
     private const double DefinitionArtifactNodeRowGap = 230d;
@@ -91,6 +95,7 @@ public sealed partial class ProcessCanvasSurfaceFactory
         nodes.AddRange(branchNodes);
         nodes.AddRange(roleNodes);
         nodes.AddRange(artifactNodes);
+        ResolveDefinitionRoleInstanceNodePositions(nodes);
         var links = BuildDefinitionLinks(editor.Steps, rolesById, editor.MessagingPolicies, roleNodeIds);
 
         return new CanvasWorkbenchSurface
@@ -482,6 +487,114 @@ public sealed partial class ProcessCanvasSurfaceFactory
         }
 
         return plans;
+    }
+
+    private static void ResolveDefinitionRoleInstanceNodePositions(IReadOnlyList<CanvasWorkbenchNode> nodes)
+    {
+        // Role-instance positions are derived from step and role contracts, so keep their display cleanup deterministic.
+        var nodeBoxes = nodes
+            .Select(node => CanvasLayoutNodeBox.FromNode(node))
+            .ToDictionary(node => node.NodeId, StringComparer.Ordinal);
+        var roleInstanceNodes = nodes
+            .Where(IsDefinitionRoleInstanceNode)
+            .Select(node => new
+            {
+                Node = node,
+                Anchor = ResolveDefinitionRoleInstanceAnchorBox(nodeBoxes, node.Id)
+            })
+            .OrderBy(item => item.Anchor?.X ?? item.Node.X)
+            .ThenBy(item => item.Anchor?.Y ?? item.Node.Y)
+            .ThenBy(item => item.Node.Id, StringComparer.Ordinal)
+            .Select(item => item.Node)
+            .ToList();
+        if (roleInstanceNodes.Count == 0)
+        {
+            return;
+        }
+
+        var occupied = nodes
+            .Where(node => !IsDefinitionRoleInstanceNode(node))
+            .Select(node => CanvasLayoutNodeBox.FromNode(node))
+            .ToList();
+        foreach (var node in roleInstanceNodes)
+        {
+            var sourceBox = CanvasLayoutNodeBox.FromNode(node);
+            var anchorBox = ResolveDefinitionRoleInstanceAnchorBox(nodeBoxes, node.Id) ?? sourceBox;
+            var resolvedBox = EnumerateDefinitionRoleInstanceCandidates(anchorBox, sourceBox)
+                .FirstOrDefault(candidate => !HasDefinitionRoleInstanceOverlap(candidate, occupied)) ??
+                sourceBox;
+
+            node.X = Math.Round(resolvedBox.X, 2, MidpointRounding.AwayFromZero);
+            node.Y = Math.Round(resolvedBox.Y, 2, MidpointRounding.AwayFromZero);
+            occupied.Add(resolvedBox);
+        }
+    }
+
+    private static CanvasLayoutNodeBox? ResolveDefinitionRoleInstanceAnchorBox(
+        IReadOnlyDictionary<string, CanvasLayoutNodeBox> nodeBoxes,
+        string nodeId)
+    {
+        if (!ProcessCanvasBranching.TryResolveDefinitionRoleInstanceTokens(nodeId, out _, out var stepToken))
+        {
+            return null;
+        }
+
+        return nodeBoxes.GetValueOrDefault($"{ProcessCanvasBranching.DefinitionStepNodePrefix}{stepToken}");
+    }
+
+    private static IEnumerable<CanvasLayoutNodeBox> EnumerateDefinitionRoleInstanceCandidates(
+        CanvasLayoutNodeBox anchorBox,
+        CanvasLayoutNodeBox sourceBox)
+    {
+        var xOffsets = new[]
+        {
+            -DefinitionRoleInstanceOffsetX,
+            DefinitionRoleInstanceOffsetX,
+            -(DefinitionRoleInstanceOffsetX + DefinitionRoleInstanceCandidateColumnGap),
+            DefinitionRoleInstanceOffsetX + DefinitionRoleInstanceCandidateColumnGap,
+            -(DefinitionRoleInstanceOffsetX + (DefinitionRoleInstanceCandidateColumnGap * 2d)),
+            DefinitionRoleInstanceOffsetX + (DefinitionRoleInstanceCandidateColumnGap * 2d)
+        };
+        var yOffsets = new[]
+        {
+            0d,
+            -DefinitionRoleInstanceCandidateRowGap,
+            DefinitionRoleInstanceCandidateRowGap,
+            -(DefinitionRoleInstanceCandidateRowGap * 2d),
+            DefinitionRoleInstanceCandidateRowGap * 2d,
+            -(DefinitionRoleInstanceCandidateRowGap * 3d),
+            DefinitionRoleInstanceCandidateRowGap * 3d,
+            -(DefinitionRoleInstanceCandidateRowGap * 4d),
+            DefinitionRoleInstanceCandidateRowGap * 4d
+        };
+
+        foreach (var yOffset in yOffsets)
+        {
+            foreach (var xOffset in xOffsets)
+            {
+                var candidate = sourceBox.Clone();
+                candidate.X = anchorBox.X + xOffset;
+                candidate.Y = anchorBox.Y + yOffset;
+                yield return candidate;
+            }
+        }
+    }
+
+    private static bool IsDefinitionRoleInstanceNode(CanvasWorkbenchNode node)
+    {
+        return string.Equals(node.Kind, ProcessCanvasCatalog.NodeKinds.DefinitionRole, StringComparison.Ordinal) &&
+            ProcessCanvasBranching.TryResolveDefinitionRoleInstanceTokens(node.Id, out _, out _);
+    }
+
+    private static bool HasDefinitionRoleInstanceOverlap(
+        CanvasLayoutNodeBox candidate,
+        IReadOnlyList<CanvasLayoutNodeBox> occupied)
+    {
+        return occupied.Any(box =>
+            candidate.Left < box.Right + DefinitionRoleInstanceMinimumGapX &&
+            candidate.Right > box.Left - DefinitionRoleInstanceMinimumGapX &&
+            candidate.Top < box.Bottom + DefinitionRoleInstanceMinimumGapY &&
+            candidate.Bottom > box.Top - DefinitionRoleInstanceMinimumGapY);
     }
 
     private static Dictionary<DefinitionRoleNodeKey, string> BuildDefinitionRoleNodeIdMap(
