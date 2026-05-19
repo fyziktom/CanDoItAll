@@ -20,6 +20,7 @@ public sealed record ProcessCanvasRecompositionResult(
 public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactory surfaceFactory)
 {
     private const double StepColumnStartX = 260d;
+    private const double StepRowStartY = 180d;
     private const double StepColumnGap = 900d;
     private const double StepLaneGap = 380d;
     private const double RoleColumnGap = 430d;
@@ -331,7 +332,7 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
             var node = nodeMap[nodeId];
             var box = CanvasLayoutNodeBox.FromNode(node);
             box.X = StepColumnStartX + (column * profile.StepColumnGap);
-            box.Y = lane * profile.StepLaneGap;
+            box.Y = StepRowStartY + (lane * profile.StepLaneGap);
             stepBoxes[nodeId] = box;
         }
 
@@ -347,9 +348,15 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
         var roleBoxes = new Dictionary<string, CanvasLayoutNodeBox>(StringComparer.Ordinal);
         var roleNodes = nodeMap.Values
             .Where(node => string.Equals(node.Kind, ProcessCanvasCatalog.NodeKinds.DefinitionRole, StringComparison.Ordinal))
-            .OrderBy(node => node.X)
-            .ThenBy(node => node.Y)
-            .ThenBy(node => node.Id, StringComparer.Ordinal)
+            .Select(node => new
+            {
+                Node = node,
+                Order = ResolveRoleNodeLayoutOrder(editor, node.Id)
+            })
+            .OrderBy(item => item.Order.StepIndex)
+            .ThenBy(item => item.Order.RoleIndex)
+            .ThenBy(item => item.Node.Id, StringComparer.Ordinal)
+            .Select(item => item.Node)
             .ToList();
         var anchorsByRoleId = BuildRoleAnchors(editor, stepBoxes);
         var roleColumnX = stepBoxes.Count == 0
@@ -366,7 +373,10 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
                 StringComparer.Ordinal)
             .ToDictionary(
                 group => group.Key,
-                group => group.OrderBy(node => node.Y).ThenBy(node => node.Id, StringComparer.Ordinal).ToList(),
+                group => group
+                    .OrderBy(node => ResolveRoleNodeLayoutOrder(editor, node.Id).RoleIndex)
+                    .ThenBy(node => node.Id, StringComparer.Ordinal)
+                    .ToList(),
                 StringComparer.Ordinal);
 
         for (var index = 0; index < roleNodes.Count; index++)
@@ -404,6 +414,58 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
         }
 
         return roleBoxes;
+    }
+
+    private static (int StepIndex, int RoleIndex) ResolveRoleNodeLayoutOrder(
+        ProcessDefinitionEditorModel editor,
+        string nodeId)
+    {
+        if (ProcessCanvasBranching.TryResolveDefinitionRoleInstanceTokens(nodeId, out var roleToken, out var stepToken))
+        {
+            return (
+                ResolveStepTokenIndex(editor.Steps, stepToken, fallback: int.MaxValue),
+                ResolveRoleTokenIndex(editor.Roles, roleToken));
+        }
+
+        if (ProcessCanvasBranching.TryResolveDefinitionRoleToken(nodeId, out var canonicalRoleToken))
+        {
+            return (-1, ResolveRoleTokenIndex(editor.Roles, canonicalRoleToken));
+        }
+
+        return (int.MaxValue, int.MaxValue);
+    }
+
+    private static int ResolveStepTokenIndex(
+        IReadOnlyList<ProcessStepEditorModel> steps,
+        string token,
+        int fallback)
+    {
+        for (var index = 0; index < steps.Count; index++)
+        {
+            var step = steps[index];
+            if (MatchesNodeToken(token, step.Id, step.Key, step.Title))
+            {
+                return index;
+            }
+        }
+
+        return fallback;
+    }
+
+    private static int ResolveRoleTokenIndex(
+        IReadOnlyList<ProcessRoleEditorModel> roles,
+        string token)
+    {
+        for (var index = 0; index < roles.Count; index++)
+        {
+            var role = roles[index];
+            if (MatchesNodeToken(token, role.Id, role.Key, role.DisplayName))
+            {
+                return index;
+            }
+        }
+
+        return int.MaxValue;
     }
 
     private Dictionary<string, CanvasLayoutNodeBox> BuildBranchLayout(
@@ -495,12 +557,13 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
         double anchorY,
         RecompositionLayoutProfile profile)
     {
-        if (anchorY < -(profile.StepLaneGap / 2d))
+        var relativeAnchorY = anchorY - StepRowStartY;
+        if (relativeAnchorY < -(profile.StepLaneGap / 2d))
         {
             return -1d;
         }
 
-        if (anchorY > profile.StepLaneGap / 2d)
+        if (relativeAnchorY > profile.StepLaneGap / 2d)
         {
             return 1d;
         }
@@ -515,7 +578,7 @@ public sealed class ProcessCanvasRecompositionService(ProcessCanvasSurfaceFactor
         int roleCount,
         RecompositionLayoutProfile profile)
     {
-        return (index - ((roleCount - 1) / 2d)) * (profile.StepLaneGap * 0.72d);
+        return StepRowStartY + ((index - ((roleCount - 1) / 2d)) * (profile.StepLaneGap * 0.72d));
     }
 
     private static int ResolveRoleInstanceSiblingIndex(
