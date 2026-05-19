@@ -94,6 +94,20 @@
                          Badge="true"
                          Compact="true"
                          ShowHelperTextAsTooltip="true" />
+            <SummaryTile Label="Quality clusters"
+                         Value="@SummaryValue(snapshot?.Summary.QualityClusterCount)"
+                         HelperText="Paged aggregate-quality clusters available to dream consolidation."
+                         Tone="info"
+                         Badge="true"
+                         Compact="true"
+                         ShowHelperTextAsTooltip="true" />
+            <SummaryTile Label="Dream candidates"
+                         Value="@SummaryValue(snapshot?.Summary.AggregateCandidateCount)"
+                         HelperText="Paged aggregate memory candidates produced by dream consolidation."
+                         Tone="@(snapshot?.Summary.AggregateCandidateCount > 0 ? "warning" : "secondary")"
+                         Badge="true"
+                         Compact="true"
+                         ShowHelperTextAsTooltip="true" />
         </Cluster>
     </Lead>
 
@@ -144,6 +158,13 @@
                             <CognitiveMemoryProbeWorkbenchTab @key="uiRevision" />
                         </TabsItem>
 
+                        <TabsItem Text="Quality operations"
+                                  Icon="schema"
+                                  BadgeText="@QualityBadgeText"
+                                  data-testid="cognitive-memory-tab-quality">
+                            <CognitiveMemoryQualityOperationsTab @key="uiRevision" />
+                        </TabsItem>
+
                         <TabsItem Text="Settings"
                                   Icon="tune"
                                   data-testid="cognitive-memory-tab-settings">
@@ -158,7 +179,7 @@
 
                         <TabsItem Text="Memory"
                                   Icon="storage"
-                                  BadgeText="@snapshot.MemoryRecords.Count.ToString()"
+                                  BadgeText="@snapshot.Summary.MemoryRecordCount.ToString()"
                                   data-testid="cognitive-memory-tab-memory">
                             <CognitiveMemoryMemoryTab @key="uiRevision" />
                         </TabsItem>
@@ -172,7 +193,7 @@
 
                         <TabsItem Text="Recall traces"
                                   Icon="travel_explore"
-                                  BadgeText="@snapshot.RecallTraces.Count.ToString()"
+                                  BadgeText="@snapshot.Summary.RecallTraceCount.ToString()"
                                   data-testid="cognitive-memory-tab-traces">
                             <CognitiveMemoryRecallTracesTab @key="uiRevision" />
                         </TabsItem>
@@ -250,6 +271,7 @@
             }
         }));
         builder.CloseComponent();
+        builder.AddContent(8, CollectionPager(CognitiveMemoryReviewUiCollectionKind.MemoryRecords));
     };
 
     internal RenderFragment MemoryDetailPanel() => builder =>
@@ -346,6 +368,7 @@
             }
         }));
         builder.CloseComponent();
+        builder.AddContent(8, CollectionPager(CognitiveMemoryReviewUiCollectionKind.ReviewItems));
     };
 
     internal RenderFragment ReviewDecisionPanel() => builder =>
@@ -526,6 +549,7 @@
             }
 
             RenderProjectionRows(contentBuilder, 10);
+            contentBuilder.AddContent(20, CollectionPager(CognitiveMemoryReviewUiCollectionKind.ProjectionHealth));
         }));
         builder.CloseComponent();
     };
@@ -560,6 +584,7 @@
             }
 
             RenderConsolidationRows(contentBuilder, 10);
+            contentBuilder.AddContent(20, CollectionPager(CognitiveMemoryReviewUiCollectionKind.ConsolidationRuns));
         }));
         builder.CloseComponent();
     };
@@ -594,6 +619,7 @@
             }
 
             RenderReplayRows(contentBuilder, 10);
+            contentBuilder.AddContent(20, CollectionPager(CognitiveMemoryReviewUiCollectionKind.ReplayJobs));
         }));
         builder.CloseComponent();
     };
@@ -628,6 +654,7 @@
             }
 
             RenderProcedureRows(contentBuilder, 10);
+            contentBuilder.AddContent(20, CollectionPager(CognitiveMemoryReviewUiCollectionKind.ProcedureSkills));
         }));
         builder.CloseComponent();
     };
@@ -662,12 +689,14 @@
             }
 
             RenderOperatorAuditRows(contentBuilder, 10);
+            contentBuilder.AddContent(20, CollectionPager(CognitiveMemoryReviewUiCollectionKind.OperatorAudit));
         }));
         builder.CloseComponent();
     };
 
     internal RenderFragment ProbePanel()
         => AdvancedCollectionPanel(
+            CognitiveMemoryReviewUiCollectionKind.ProbeSessions,
             "cognitive-memory-probe-sessions",
             "Interactive probing",
             "Probe sessions and turns",
@@ -679,6 +708,7 @@
 
     internal RenderFragment SelfRegulationPanel()
         => AdvancedCollectionPanel(
+            CognitiveMemoryReviewUiCollectionKind.SelfRegulationAssessments,
             "cognitive-memory-self-regulation-assessments",
             "Self-regulation",
             "State, posture inputs, and required actions",
@@ -690,6 +720,7 @@
 
     internal RenderFragment AnswerGatePanel()
         => AdvancedCollectionPanel(
+            CognitiveMemoryReviewUiCollectionKind.AnswerGateDecisions,
             "cognitive-memory-answer-gates",
             "Answer gate",
             "Warnings, review, learning, and abstention",
@@ -701,6 +732,7 @@
 
     internal RenderFragment ProfessorReviewPanel()
         => AdvancedCollectionPanel(
+            CognitiveMemoryReviewUiCollectionKind.ProfessorReviews,
             "cognitive-memory-professor-reviews",
             "Professor review",
             "Governed challenge input",
@@ -712,6 +744,7 @@
 
     internal RenderFragment LearningProposalPanel()
         => AdvancedCollectionPanel(
+            CognitiveMemoryReviewUiCollectionKind.LearningProposals,
             "cognitive-memory-learning-proposals",
             "Epistemic Drive",
             "Learning proposals",
@@ -723,6 +756,7 @@
 
     internal RenderFragment CrossProjectPanel()
         => AdvancedCollectionPanel(
+            CognitiveMemoryReviewUiCollectionKind.CrossProjectPromotions,
             "cognitive-memory-cross-project-promotions",
             "Cross-project memory",
             "Promotion review candidates",
@@ -734,6 +768,7 @@
 
     internal RenderFragment DistributedPanel()
         => AdvancedCollectionPanel(
+            CognitiveMemoryReviewUiCollectionKind.DistributedJobs,
             "cognitive-memory-distributed-jobs",
             "Distributed compute",
             "Leases, hashes, and schema validation",
@@ -743,7 +778,8 @@
             snapshot?.DistributedJobs.Count ?? 0,
             RenderDistributedRows);
 
-    internal static RenderFragment AdvancedCollectionPanel(
+    internal RenderFragment AdvancedCollectionPanel(
+        CognitiveMemoryReviewUiCollectionKind collectionKind,
         string testId,
         string eyebrow,
         string title,
@@ -777,6 +813,7 @@
                 }
 
                 renderRows(contentBuilder, 10);
+                contentBuilder.AddContent(20, CollectionPager(collectionKind));
             }));
             builder.CloseComponent();
         };

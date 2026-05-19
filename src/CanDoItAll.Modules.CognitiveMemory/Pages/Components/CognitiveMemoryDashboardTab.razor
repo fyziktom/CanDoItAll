@@ -24,7 +24,7 @@
                                         <TextBlock TextStyle="TextStyle.Eyebrow" Value="Recall trace" />
                                         <h2 class="cognitive-memory-card-title">Why memory entered context</h2>
                                     </div>
-                                    <StatusBadge Tone="info" Text="@($"{snapshot.RecallTraces.Count} loaded")" />
+                                    <StatusBadge Tone="info" Text="@($"{snapshot.Summary.RecallTraceCount} total")" />
                                 </Split>
                                 @Page.RecallTraceDetail(Compact: true)
                             </SurfaceCard>

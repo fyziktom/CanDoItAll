@@ -1,0 +1,300 @@
+@namespace CanDoItAll.Modules.CognitiveMemory.Pages
+
+@if (Page.snapshot is { } snapshot)
+{
+                        <Grid Gap="LayoutGap.Large"
+                              Class="cognitive-memory-layout cognitive-memory-quality-layout"
+                              ColumnTemplateXl="minmax(24rem,0.7fr) minmax(0,1.3fr)"
+                              data-testid="cognitive-memory-quality-operations">
+                            <SurfaceCard data-testid="cognitive-memory-quality-controls">
+                                <Split Gap="LayoutGap.Small"
+                                       AlignItems="AlignItems.Start">
+                                    <div>
+                                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Quality operations" />
+                                        <h2 class="cognitive-memory-card-title">Diagnostics, clusters, and dreaming</h2>
+                                    </div>
+                                    <StatusBadge Tone="info" Text="@Page.qualityOperationStatus" />
+                                </Split>
+
+                                <Stack GapScale="LayoutGap.Medium" Class="mt-4">
+                                    <div class="cognitive-memory-facts">
+                                        @CognitiveMemoryPage.RenderFactFragment("Clusters", snapshot.Summary.QualityClusterCount.ToString())
+                                        @CognitiveMemoryPage.RenderFactFragment("Dream runs", snapshot.Summary.DreamRunCount.ToString())
+                                        @CognitiveMemoryPage.RenderFactFragment("Candidates", snapshot.Summary.AggregateCandidateCount.ToString())
+                                        @CognitiveMemoryPage.RenderFactFragment("Syntheses", snapshot.Summary.SynthesizedRecallCount.ToString())
+                                    </div>
+
+                                    <Grid Gap="LayoutGap.Medium"
+                                          ColumnTemplateXl="minmax(0,1fr) minmax(0,1fr)">
+                                        <label class="cognitive-memory-field">
+                                            <span>Dream mode</span>
+                                            <InputSelect class="cda-input"
+                                                         @bind-Value="Page.qualityDreamMode"
+                                                         data-testid="cognitive-memory-quality-dream-mode">
+                                                @foreach (var mode in CognitiveMemoryPage.QualityDreamModes)
+                                                {
+                                                    <option value="@mode">@CognitiveMemoryPage.FormatLabel(mode)</option>
+                                                }
+                                            </InputSelect>
+                                        </label>
+                                        <label class="cognitive-memory-field">
+                                            <span>Idempotency key</span>
+                                            <InputText class="cda-input"
+                                                       @bind-Value="Page.qualityIdempotencyKey"
+                                                       data-testid="cognitive-memory-quality-idempotency" />
+                                        </label>
+                                    </Grid>
+
+                                    <Grid Gap="LayoutGap.Medium"
+                                          ColumnTemplateXl="minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)">
+                                        <label class="cognitive-memory-field">
+                                            <span>Max records</span>
+                                            <InputNumber class="cda-input"
+                                                         @bind-Value="Page.qualityMaxRecords"
+                                                         data-testid="cognitive-memory-quality-max-records" />
+                                        </label>
+                                        <label class="cognitive-memory-field">
+                                            <span>Max clusters</span>
+                                            <InputNumber class="cda-input"
+                                                         @bind-Value="Page.qualityMaxClusters"
+                                                         data-testid="cognitive-memory-quality-max-clusters" />
+                                        </label>
+                                        <label class="cognitive-memory-field">
+                                            <span>Min members</span>
+                                            <InputNumber class="cda-input"
+                                                         @bind-Value="Page.qualityMinMembers"
+                                                         data-testid="cognitive-memory-quality-min-members" />
+                                        </label>
+                                    </Grid>
+
+                                    <div class="cognitive-memory-checks">
+                                        <label>
+                                            <InputCheckbox @bind-Value="Page.qualityPersistDream"
+                                                           data-testid="cognitive-memory-quality-persist-dream" />
+                                            <span>Persist dream output</span>
+                                        </label>
+                                    </div>
+
+                                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                        <Button Text="Diagnostics"
+                                                Icon="monitor_heart"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Size="ButtonSize.Small"
+                                                Disabled="@Page.isBusy"
+                                                IsBusy="@Page.isBusy"
+                                                Click="Page.RunQualityDiagnosticsAsync"
+                                                data-testid="cognitive-memory-quality-diagnostics" />
+                                        <Button Text="Plan clusters"
+                                                Icon="account_tree"
+                                                ButtonStyle="ButtonStyle.Primary"
+                                                Size="ButtonSize.Small"
+                                                Disabled="@Page.isBusy"
+                                                IsBusy="@Page.isBusy"
+                                                Click="Page.PlanQualityClustersAsync"
+                                                data-testid="cognitive-memory-quality-plan-clusters" />
+                                        <Button Text="Run dream"
+                                                Icon="auto_awesome"
+                                                ButtonStyle="ButtonStyle.Primary"
+                                                Size="ButtonSize.Small"
+                                                Disabled="@Page.isBusy"
+                                                IsBusy="@Page.isBusy"
+                                                Click="Page.RunQualityDreamAsync"
+                                                data-testid="cognitive-memory-quality-run-dream" />
+                                    </Cluster>
+
+                                    <div class="cognitive-memory-progress" data-testid="cognitive-memory-quality-progress">
+                                        <progress value="@Page.qualityOperationProgress" max="100"></progress>
+                                        <span>@Page.qualityOperationStatus</span>
+                                    </div>
+                                </Stack>
+                            </SurfaceCard>
+
+                            <SurfaceCard data-testid="cognitive-memory-quality-diagnostics-report">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Diagnostics" />
+                                <h2 class="cognitive-memory-card-title">Quality counters and warnings</h2>
+                                @if (Page.qualityDiagnosticsReport is null)
+                                {
+                                    <EmptyState Eyebrow="No report"
+                                                Title="Diagnostics have not run"
+                                                Description="Run diagnostics to verify cluster, dream, validation, review, and synthesis row consistency." />
+                                }
+                                else
+                                {
+                                    <div class="cognitive-memory-detail-stack" data-testid="cognitive-memory-quality-diagnostics-result">
+                                        <div class="cognitive-memory-facts">
+                                            @CognitiveMemoryPage.RenderFactFragment("Sources", Page.qualityDiagnosticsReport.SourceItemCount.ToString())
+                                            @CognitiveMemoryPage.RenderFactFragment("Memory", Page.qualityDiagnosticsReport.MemoryRecordCount.ToString())
+                                            @CognitiveMemoryPage.RenderFactFragment("Members", Page.qualityDiagnosticsReport.ClusterMemberCount.ToString())
+                                            @CognitiveMemoryPage.RenderFactFragment("Validations", Page.qualityDiagnosticsReport.ValidationCount.ToString())
+                                            @CognitiveMemoryPage.RenderFactFragment("Reviews", Page.qualityDiagnosticsReport.ReviewItemCount.ToString())
+                                            @CognitiveMemoryPage.RenderFactFragment("Elapsed", Page.qualityDiagnosticsReport.Elapsed.ToString("g"))
+                                        </div>
+
+                                        @if (Page.qualityDiagnosticsReport.Warnings.Count == 0)
+                                        {
+                                            <p class="cognitive-memory-muted">No quality diagnostics warnings.</p>
+                                        }
+                                        else
+                                        {
+                                            <section class="cognitive-memory-section">
+                                                <h3>Warnings</h3>
+                                                <div class="cognitive-memory-list">
+                                                    @foreach (var warning in Page.qualityDiagnosticsReport.Warnings)
+                                                    {
+                                                        <div class="cognitive-memory-row">
+                                                            <strong>@warning.Code</strong>
+                                                            <StatusBadge Tone="@CognitiveMemoryPage.RiskTone(warning.RiskLevel)"
+                                                                         Text="@CognitiveMemoryPage.FormatLabel(warning.RiskLevel)" />
+                                                            <span>@warning.Message</span>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </section>
+                                        }
+                                    </div>
+                                }
+                            </SurfaceCard>
+                        </Grid>
+
+                        <Grid Gap="LayoutGap.Large"
+                              Class="cognitive-memory-layout cognitive-memory-quality-grid"
+                              ColumnTemplateXl="minmax(0,1fr) minmax(0,1fr)">
+                            <SurfaceCard data-testid="cognitive-memory-quality-clusters">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Quality clusters" />
+                                <h2 class="cognitive-memory-card-title">Aggregate readiness</h2>
+                                @if (snapshot.QualityClusters.Count == 0)
+                                {
+                                    <EmptyState Eyebrow="No clusters"
+                                                Title="No quality clusters yet"
+                                                Description="Cluster planning creates paged groups for dream consolidation." />
+                                }
+                                else
+                                {
+                                    <div class="cognitive-memory-list mt-4">
+                                        @foreach (var cluster in snapshot.QualityClusters)
+                                        {
+                                            <div class="cognitive-memory-row">
+                                                <strong>@($"{CognitiveMemoryPage.FormatLabel(cluster.PrimaryKeyFamily)} / {CognitiveMemoryPage.FormatShortId(cluster.Id.Value)}")</strong>
+                                                <StatusBadge Tone="@CognitiveMemoryPage.QualityClusterTone(cluster.Readiness)"
+                                                             Text="@CognitiveMemoryPage.FormatLabel(cluster.Readiness)" />
+                                                <span>@($"{cluster.MemberCount} member(s), {cluster.KeyCount} key(s), {cluster.SourceEvidenceCount} source link(s), {cluster.ContradictionCount} contradiction(s)")</span>
+                                                <small>@($"{CognitiveMemoryPage.FormatLabel(cluster.AccessLevel)} / {CognitiveMemoryPage.FormatLabel(cluster.RiskLevel)} / {CognitiveMemoryPage.FormatDate(cluster.UpdatedAtUtc)}")</small>
+                                            </div>
+                                        }
+                                    </div>
+                                    @Page.CollectionPager(CognitiveMemoryReviewUiCollectionKind.QualityClusters)
+                                }
+                            </SurfaceCard>
+
+                            <SurfaceCard data-testid="cognitive-memory-quality-dream-runs">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Dream runs" />
+                                <h2 class="cognitive-memory-card-title">Run history and output counts</h2>
+                                @if (snapshot.DreamRuns.Count == 0)
+                                {
+                                    <EmptyState Eyebrow="No runs"
+                                                Title="No dream runs yet"
+                                                Description="Manual dream consolidation writes run rows when persistence is enabled." />
+                                }
+                                else
+                                {
+                                    <div class="cognitive-memory-list mt-4">
+                                        @foreach (var run in snapshot.DreamRuns)
+                                        {
+                                            <div class="cognitive-memory-row">
+                                                <strong>@($"{CognitiveMemoryPage.FormatLabel(run.Mode)} / {CognitiveMemoryPage.FormatShortId(run.Id.Value)}")</strong>
+                                                <StatusBadge Tone="@CognitiveMemoryPage.RunTone(run.Status)"
+                                                             Text="@CognitiveMemoryPage.FormatLabel(run.Status)" />
+                                                <span>@($"{run.ClustersConsidered} cluster(s), {run.AggregateCandidatesCreated} candidate(s), {run.ApprovedCandidates} approved, {run.NeedsReviewCandidates} review, {run.RejectedCandidates} rejected")</span>
+                                                <small>@($"{run.EvidenceCoverageRatio:0.00} evidence coverage / {CognitiveMemoryPage.FormatDate(run.StartedAtUtc)}")</small>
+                                                @if (!string.IsNullOrWhiteSpace(run.FailureMessage))
+                                                {
+                                                    <small>@run.FailureMessage</small>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                    @Page.CollectionPager(CognitiveMemoryReviewUiCollectionKind.DreamRuns)
+                                }
+                            </SurfaceCard>
+
+                            <SurfaceCard data-testid="cognitive-memory-quality-aggregate-candidates">
+                                <Split Gap="LayoutGap.Small"
+                                       AlignItems="AlignItems.Start">
+                                    <div>
+                                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Aggregate candidates" />
+                                        <h2 class="cognitive-memory-card-title">Review-gated memory creation</h2>
+                                    </div>
+                                    <Button Text="Apply selected"
+                                            Icon="playlist_add_check"
+                                            ButtonStyle="ButtonStyle.Success"
+                                            Size="ButtonSize.Small"
+                                            Disabled="@(!Page.CanApplySelectedAggregate)"
+                                            IsBusy="@Page.isBusy"
+                                            Click="Page.ApplySelectedAggregateAsync"
+                                            data-testid="cognitive-memory-quality-apply-aggregate" />
+                                </Split>
+                                @if (snapshot.AggregateCandidates.Count == 0)
+                                {
+                                    <EmptyState Eyebrow="No candidates"
+                                                Title="No aggregate candidates yet"
+                                                Description="Dream consolidation creates candidates after clusters have enough evidence." />
+                                }
+                                else
+                                {
+                                    <div class="cognitive-memory-list mt-4">
+                                        @foreach (var candidate in snapshot.AggregateCandidates)
+                                        {
+                                            <button type="button"
+                                                    class="cognitive-memory-row cognitive-memory-row-button"
+                                                    @onclick="() => Page.SelectAggregateCandidate(candidate.Id.Value)"
+                                                    data-selected="@(Page.selectedAggregateCandidateId == candidate.Id.Value ? "true" : "false")"
+                                                    data-testid="@($"cognitive-memory-quality-candidate-{candidate.Id.Value:N}")">
+                                                <strong>@CognitiveMemoryPage.FirstNonEmpty(candidate.Title, CognitiveMemoryPage.FormatShortId(candidate.Id.Value))</strong>
+                                                <StatusBadge Tone="@CognitiveMemoryPage.AggregateCandidateTone(candidate.Status)"
+                                                             Text="@CognitiveMemoryPage.FormatLabel(candidate.Status)" />
+                                                <span>@CognitiveMemoryPage.TruncateListText(CognitiveMemoryPage.FirstNonEmpty(candidate.SummaryText, "No summary available."), 320)</span>
+                                                <small>@($"{candidate.ClaimCount} claim(s), {candidate.SourceMapCount} source map(s), {CognitiveMemoryPage.FormatLabel(candidate.RiskLevel)} risk, updated {CognitiveMemoryPage.FormatDate(candidate.UpdatedAtUtc)}")</small>
+                                                @if (candidate.MemoryRecordId is { } memoryRecordId)
+                                                {
+                                                    <small>@($"Applied to memory {CognitiveMemoryPage.FormatShortId(memoryRecordId.Value)}")</small>
+                                                }
+                                            </button>
+                                        }
+                                    </div>
+                                    @Page.CollectionPager(CognitiveMemoryReviewUiCollectionKind.AggregateCandidates)
+                                }
+                            </SurfaceCard>
+
+                            <SurfaceCard data-testid="cognitive-memory-quality-synthesized-recalls">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Synthesized recall" />
+                                <h2 class="cognitive-memory-card-title">Source-mapped answer briefs</h2>
+                                @if (snapshot.SynthesizedRecalls.Count == 0)
+                                {
+                                    <EmptyState Eyebrow="No syntheses"
+                                                Title="No synthesized recalls yet"
+                                                Description="Recall synthesis rows appear after source-mapped answer summaries are persisted." />
+                                }
+                                else
+                                {
+                                    <div class="cognitive-memory-list mt-4">
+                                        @foreach (var recall in snapshot.SynthesizedRecalls)
+                                        {
+                                            <div class="cognitive-memory-row">
+                                                <strong>@CognitiveMemoryPage.FormatShortId(recall.Id.Value)</strong>
+                                                <StatusBadge Tone="info"
+                                                             Text="@(recall.ReferencesShownByDefault ? "Refs shown" : "Refs hidden")" />
+                                                <span>@CognitiveMemoryPage.TruncateListText(CognitiveMemoryPage.FirstNonEmpty(recall.Brief, "No brief available."), 320)</span>
+                                                <small>@($"{recall.StatementCount} statement(s), {recall.SourceMapCount} source map(s), trace {CognitiveMemoryPage.FormatShortId(recall.RecallTraceId)}, {CognitiveMemoryPage.FormatDate(recall.CreatedAtUtc)}")</small>
+                                            </div>
+                                        }
+                                    </div>
+                                    @Page.CollectionPager(CognitiveMemoryReviewUiCollectionKind.SynthesizedRecalls)
+                                }
+                            </SurfaceCard>
+                        </Grid>
+}
+
+@code {
+    [CascadingParameter]
+    internal CognitiveMemoryPage Page { get; set; } = default!;
+}

@@ -32,7 +32,7 @@
                                     </label>
 
                                     <Grid Gap="LayoutGap.Medium"
-                                          ColumnTemplateLg="minmax(0,1fr) minmax(0,1fr)">
+                                          ColumnTemplateXl="minmax(0,1fr) minmax(0,1fr)">
                                         <label class="cognitive-memory-field">
                                             <span>Recall mode</span>
                                             <InputSelect class="cda-input"
@@ -80,7 +80,7 @@
                                         <section class="cognitive-memory-section">
                                             <h3>Recent sessions</h3>
                                             <div class="cognitive-memory-list">
-                                                @foreach (var session in snapshot.ProbeSessions.Take(4))
+                                                @foreach (var session in snapshot.ProbeSessions)
                                                 {
                                                     <button type="button"
                                                             class="cognitive-memory-row cognitive-memory-row-button"
@@ -92,6 +92,7 @@
                                                     </button>
                                                 }
                                             </div>
+                                            @Page.CollectionPager(CognitiveMemoryReviewUiCollectionKind.ProbeSessions)
                                         </section>
                                     }
                                 </Stack>
@@ -200,7 +201,7 @@
                                 <h2 class="cognitive-memory-card-title">Correction and review signal</h2>
                                 <Stack GapScale="LayoutGap.Medium" Class="mt-4">
                                     <Grid Gap="LayoutGap.Medium"
-                                          ColumnTemplateLg="minmax(0,1fr) minmax(0,1fr)">
+                                          ColumnTemplateXl="minmax(0,1fr) minmax(0,1fr)">
                                         <label class="cognitive-memory-field">
                                             <span>Action</span>
                                             <InputSelect class="cda-input"

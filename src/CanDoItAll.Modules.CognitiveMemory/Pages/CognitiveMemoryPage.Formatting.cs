@@ -262,4 +262,25 @@ public partial class CognitiveMemoryPage
                 _ => "secondary"
             }
         };
+
+    internal static string QualityClusterTone(CognitiveMemoryQualityClusterReadiness readiness)
+        => readiness switch
+        {
+            CognitiveMemoryQualityClusterReadiness.AggregateReady => "success",
+            CognitiveMemoryQualityClusterReadiness.NeedsHumanReview or CognitiveMemoryQualityClusterReadiness.Contradictory => "warning",
+            CognitiveMemoryQualityClusterReadiness.Restricted => "danger",
+            CognitiveMemoryQualityClusterReadiness.NeedsMoreEvidence => "info",
+            _ => "secondary"
+        };
+
+    internal static string AggregateCandidateTone(CognitiveMemoryDreamAggregateCandidateStatus status)
+        => status switch
+        {
+            CognitiveMemoryDreamAggregateCandidateStatus.Approved => "success",
+            CognitiveMemoryDreamAggregateCandidateStatus.NeedsHumanReview => "warning",
+            CognitiveMemoryDreamAggregateCandidateStatus.Rejected => "danger",
+            CognitiveMemoryDreamAggregateCandidateStatus.Applied => "info",
+            CognitiveMemoryDreamAggregateCandidateStatus.Proposed => "secondary",
+            _ => "secondary"
+        };
 }

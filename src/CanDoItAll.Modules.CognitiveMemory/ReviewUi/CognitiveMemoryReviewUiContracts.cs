@@ -11,7 +11,61 @@ public enum CognitiveMemoryReviewDecisionKind
 public sealed record CognitiveMemoryReviewUiQuery(
     Guid? ProjectId = null,
     int Take = 12,
-    bool IncludeResolvedReviewItems = false);
+    bool IncludeResolvedReviewItems = false,
+    IReadOnlyList<CognitiveMemoryReviewUiPageRequest>? PageRequests = null);
+
+public enum CognitiveMemoryReviewUiCollectionKind
+{
+    MemoryRecords = 0,
+    ReviewItems = 1,
+    RecallTraces = 2,
+    ConsolidationRuns = 3,
+    ProjectionHealth = 4,
+    ProcedureSkills = 5,
+    ReplayJobs = 6,
+    ProbeSessions = 7,
+    SelfRegulationAssessments = 8,
+    AnswerGateDecisions = 9,
+    ProfessorReviews = 10,
+    LearningProposals = 11,
+    CrossProjectPromotions = 12,
+    DistributedJobs = 13,
+    OperatorAudit = 14,
+    QualityClusters = 15,
+    DreamRuns = 16,
+    AggregateCandidates = 17,
+    SynthesizedRecalls = 18
+}
+
+public sealed record CognitiveMemoryReviewUiPageRequest(
+    CognitiveMemoryReviewUiCollectionKind CollectionKind,
+    int PageIndex,
+    int PageSize);
+
+public sealed record CognitiveMemoryReviewUiPageInfo(
+    CognitiveMemoryReviewUiCollectionKind CollectionKind,
+    int PageIndex,
+    int PageSize,
+    int TotalCount)
+{
+    public int TotalPages => PageSize <= 0 ? 0 : (int)Math.Ceiling((double)TotalCount / PageSize);
+
+    public int FirstRowNumber => TotalCount == 0 ? 0 : PageIndex * PageSize + 1;
+
+    public int LastRowNumber => TotalCount == 0 ? 0 : Math.Min(TotalCount, (PageIndex + 1) * PageSize);
+
+    public bool CanMovePrevious => PageIndex > 0;
+
+    public bool CanMoveNext => PageIndex + 1 < TotalPages;
+}
+
+public sealed record CognitiveMemoryReviewUiPagingState(
+    IReadOnlyList<CognitiveMemoryReviewUiPageInfo> Pages)
+{
+    public CognitiveMemoryReviewUiPageInfo PageFor(CognitiveMemoryReviewUiCollectionKind collectionKind)
+        => Pages.FirstOrDefault(page => page.CollectionKind == collectionKind) ??
+           new CognitiveMemoryReviewUiPageInfo(collectionKind, 0, 12, 0);
+}
 
 public sealed record CognitiveMemoryReviewDecisionRequest(
     CognitiveMemoryReviewItemId ReviewItemId,
@@ -59,6 +113,7 @@ public enum CognitiveMemoryOperatorAuditStatus
 
 public sealed record CognitiveMemoryReviewUiSnapshot(
     CognitiveMemoryReviewUiSummary Summary,
+    CognitiveMemoryReviewUiPagingState Paging,
     IReadOnlyList<CognitiveMemoryExplorerItem> MemoryRecords,
     IReadOnlyList<CognitiveMemoryReviewQueueItem> ReviewItems,
     IReadOnlyList<CognitiveMemoryRecallTraceView> RecallTraces,
@@ -73,24 +128,44 @@ public sealed record CognitiveMemoryReviewUiSnapshot(
     IReadOnlyList<CognitiveMemoryLearningProposalView> LearningProposals,
     IReadOnlyList<CognitiveMemoryCrossProjectPromotionView> CrossProjectPromotions,
     IReadOnlyList<CognitiveMemoryDistributedJobView> DistributedJobs,
-    IReadOnlyList<CognitiveMemoryOperatorAuditItem> OperatorAudit);
+    IReadOnlyList<CognitiveMemoryOperatorAuditItem> OperatorAudit,
+    IReadOnlyList<CognitiveMemoryQualityClusterView> QualityClusters,
+    IReadOnlyList<CognitiveMemoryDreamRunView> DreamRuns,
+    IReadOnlyList<CognitiveMemoryAggregateCandidateView> AggregateCandidates,
+    IReadOnlyList<CognitiveMemorySynthesizedRecallView> SynthesizedRecalls);
 
 public sealed record CognitiveMemoryReviewUiSummary(
     int MemoryRecordCount,
+    int ReviewItemCount,
     int PendingReviewCount,
     int HighRiskReviewCount,
     int RecallTraceCount,
+    int ConsolidationRunCount,
     int ConsolidationIssueCount,
+    int ProjectionStateCount,
     int ProjectionIssueCount,
+    int ProcedureSkillCount,
     int ProcedureReviewCount,
     int SimulationReviewCount,
+    int ReplayJobCount,
     int ProbeSessionCount,
+    int SelfRegulationAssessmentCount,
     int SelfRegulationActionCount,
+    int AnswerGateDecisionCount,
     int AnswerGateInterventionCount,
+    int ProfessorReviewTotalCount,
     int ProfessorReviewCount,
+    int LearningProposalTotalCount,
     int LearningProposalCount,
+    int CrossProjectPromotionCount,
     int CrossProjectReviewCount,
-    int DistributedIssueCount);
+    int DistributedJobCount,
+    int DistributedIssueCount,
+    int OperatorAuditCount,
+    int QualityClusterCount,
+    int DreamRunCount,
+    int AggregateCandidateCount,
+    int SynthesizedRecallCount);
 
 public sealed record CognitiveMemoryExplorerItem(
     CognitiveMemoryRecordId Id,
@@ -342,6 +417,64 @@ public sealed record CognitiveMemoryOperatorAuditItem(
     CognitiveMemoryOperatorAuditStatus Status,
     string Summary,
     string Detail,
+    DateTimeOffset CreatedAtUtc);
+
+public sealed record CognitiveMemoryQualityClusterView(
+    CognitiveMemoryQualityClusterId Id,
+    Guid? ProjectId,
+    CognitiveMemoryQualityClusterKeyFamily PrimaryKeyFamily,
+    CognitiveMemoryQualityClusterReadiness Readiness,
+    CognitiveMemoryAccessLevel AccessLevel,
+    CognitiveMemoryRiskLevel RiskLevel,
+    int KeyCount,
+    int MemberCount,
+    int SourceEvidenceCount,
+    int ContradictionCount,
+    DateTimeOffset UpdatedAtUtc);
+
+public sealed record CognitiveMemoryDreamRunView(
+    CognitiveMemoryDreamRunId Id,
+    Guid? ProjectId,
+    CognitiveMemoryConsolidationMode Mode,
+    CognitiveMemoryConsolidationTriggerKind TriggerKind,
+    CognitiveMemoryRunStatus Status,
+    int ClustersConsidered,
+    int AggregateCandidatesCreated,
+    int ApprovedCandidates,
+    int NeedsReviewCandidates,
+    int RejectedCandidates,
+    double EvidenceCoverageRatio,
+    string FailureCode,
+    string FailureMessage,
+    DateTimeOffset StartedAtUtc,
+    DateTimeOffset? CompletedAtUtc);
+
+public sealed record CognitiveMemoryAggregateCandidateView(
+    CognitiveMemoryDreamAggregateCandidateId Id,
+    CognitiveMemoryDreamRunId DreamRunId,
+    CognitiveMemoryQualityClusterId ClusterId,
+    Guid? ProjectId,
+    CognitiveMemoryConsolidationMode Mode,
+    CognitiveMemoryDreamAggregateCandidateStatus Status,
+    string Title,
+    string SummaryText,
+    CognitiveMemoryAccessLevel AccessLevel,
+    CognitiveMemoryRiskLevel RiskLevel,
+    int ClaimCount,
+    int SourceMapCount,
+    Guid? ValidationRecordId,
+    Guid? ReviewItemId,
+    CognitiveMemoryRecordId? MemoryRecordId,
+    DateTimeOffset UpdatedAtUtc);
+
+public sealed record CognitiveMemorySynthesizedRecallView(
+    CognitiveMemorySynthesizedRecallId Id,
+    Guid ProjectId,
+    Guid RecallTraceId,
+    string Brief,
+    bool ReferencesShownByDefault,
+    int StatementCount,
+    int SourceMapCount,
     DateTimeOffset CreatedAtUtc);
 
 public interface ICognitiveMemoryReviewUiService
