@@ -15,6 +15,7 @@
 - Added source-generation metadata for new durable validation/diagnostic payloads in `CognitiveMemoryJson`.
 - Fixed recall focus selection so `SideContext` and `Excluded` candidates are not promoted to `Selected`.
 - Added unit and integration coverage for diagnostics, all required cluster key families, explicit dream runs, aggregate claim provenance, validation/review routing, aggregate application, synthesized recall briefs, reference-on-demand lookup, and quality persistence mappings.
+- Follow-up hardening completed under `codex\bundles\cognitive-memory-quality-foundation-hardening-followup`, adding repeat-run, dry-run, failure-state, explicit mode-policy, restricted aggregate text, merged synthesis, reference denial, and service-split proof.
 
 ## Subbundle Gate Results
 

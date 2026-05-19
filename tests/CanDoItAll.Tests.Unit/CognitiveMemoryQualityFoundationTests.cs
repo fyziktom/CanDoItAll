@@ -114,6 +114,41 @@ public sealed class CognitiveMemoryQualityFoundationTests
     }
 
     [Fact]
+    public async Task ClusterPlanner_ReusesPersistedClusterIdsAndPersistsSourceItemMembers()
+    {
+        await using var fixture = await CreateFixtureAsync();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-000000000061"),
+            "Incident rollback workflow",
+            "Incident rollback workflow uses a documented procedure.",
+            "Incident rollback workflow source evidence.",
+            topicKey: "incident.rollback.workflow");
+        await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-000000000062"),
+            "Incident rollback workflow",
+            "Incident rollback workflow captures operator validation.",
+            "Incident rollback workflow source evidence.",
+            topicKey: "incident.rollback.workflow");
+        var planner = new CognitiveMemoryClusterPlanner(fixture.Factory, fixture.Clock);
+
+        var first = await planner.PlanAsync(new CognitiveMemoryClusterPlanningRequest(projectId, Policy(projectId)));
+        fixture.DbContext.ChangeTracker.Clear();
+        var second = await planner.PlanAsync(new CognitiveMemoryClusterPlanningRequest(projectId, Policy(projectId)));
+
+        var firstIdsByHash = first.Clusters.ToDictionary(cluster => cluster.ClusterHash, cluster => cluster.ClusterId);
+        Assert.NotEmpty(firstIdsByHash);
+        Assert.All(second.Clusters, cluster => Assert.Equal(firstIdsByHash[cluster.ClusterHash], cluster.ClusterId));
+        Assert.Equal(first.Clusters.Count, await fixture.DbContext.Set<CognitiveMemoryQualityClusterRecord>().CountAsync());
+        Assert.True(await fixture.DbContext.Set<CognitiveMemoryQualityClusterMemberRecord>()
+            .AnyAsync(member => member.MemberKind == CognitiveMemoryQualityClusterMemberKind.SourceItem));
+    }
+
+    [Fact]
     public async Task DreamRun_ProjectNightlyCreatesApprovedCandidateAndMetrics()
     {
         await using var fixture = await CreateFixtureAsync();
@@ -160,6 +195,171 @@ public sealed class CognitiveMemoryQualityFoundationTests
     }
 
     [Fact]
+    public async Task DreamRun_SecondRunUsesExistingClustersWithoutForeignKeyFailures()
+    {
+        await using var fixture = await CreateFixtureAsync();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-000000000071"),
+            "Release validation workflow",
+            "Release validation workflow checks health before rollout.",
+            "Release validation health evidence.",
+            topicKey: "release.validation.workflow");
+        await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-000000000072"),
+            "Release validation workflow",
+            "Release validation workflow records operator approval.",
+            "Release validation approval evidence.",
+            topicKey: "release.validation.workflow");
+        var dream = CreateDreamService(fixture);
+
+        var first = await dream.RunAsync(new CognitiveMemoryDreamRunRequest(
+            projectId,
+            CognitiveMemoryConsolidationMode.ProjectNightly,
+            CognitiveMemoryConsolidationTriggerKind.Nightly,
+            Policy(projectId),
+            new CognitiveMemoryIdempotencyKey("dream-existing-cluster-first")));
+        var second = await dream.RunAsync(new CognitiveMemoryDreamRunRequest(
+            projectId,
+            CognitiveMemoryConsolidationMode.ProjectNightly,
+            CognitiveMemoryConsolidationTriggerKind.Nightly,
+            Policy(projectId),
+            new CognitiveMemoryIdempotencyKey("dream-existing-cluster-second")));
+
+        Assert.Equal(CognitiveMemoryRunStatus.Succeeded, first.Status);
+        Assert.Equal(CognitiveMemoryRunStatus.Succeeded, second.Status);
+        Assert.True(second.Metrics.AggregateCandidatesCreated > 0);
+        Assert.Equal(2, await fixture.DbContext.Set<CognitiveMemoryDreamRunRecord>().CountAsync());
+    }
+
+    [Fact]
+    public async Task DreamRun_DryRunDoesNotPersistQualityRecords()
+    {
+        await using var fixture = await CreateFixtureAsync();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-000000000073"),
+            "Dry run workflow",
+            "Dry run workflow prepares a release report.",
+            "Dry run release evidence.",
+            topicKey: "dry.run.workflow");
+        await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-000000000074"),
+            "Dry run workflow",
+            "Dry run workflow verifies release report completeness.",
+            "Dry run report evidence.",
+            topicKey: "dry.run.workflow");
+        var dream = CreateDreamService(fixture);
+
+        var result = await dream.RunAsync(new CognitiveMemoryDreamRunRequest(
+            projectId,
+            CognitiveMemoryConsolidationMode.ProjectNightly,
+            CognitiveMemoryConsolidationTriggerKind.Manual,
+            Policy(projectId),
+            new CognitiveMemoryIdempotencyKey("dream-dry-run"),
+            persistChanges: false));
+
+        Assert.Equal(CognitiveMemoryRunStatus.Succeeded, result.Status);
+        Assert.NotEmpty(result.AggregateCandidates);
+        Assert.Equal(0, await fixture.DbContext.Set<CognitiveMemoryDreamRunRecord>().CountAsync());
+        Assert.Equal(0, await fixture.DbContext.Set<CognitiveMemoryQualityClusterRecord>().CountAsync());
+        Assert.Equal(0, await fixture.DbContext.Set<CognitiveMemoryDreamAggregateCandidateRecord>().CountAsync());
+        Assert.Equal(0, await fixture.DbContext.Set<CognitiveMemoryDreamValidationRecord>().CountAsync());
+    }
+
+    [Fact]
+    public async Task DreamRun_UnsupportedModesFailBeforeWritingRunState()
+    {
+        await using var fixture = await CreateFixtureAsync();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var dream = CreateDreamService(fixture);
+
+        await Assert.ThrowsAsync<NotSupportedException>(() => dream.RunAsync(new CognitiveMemoryDreamRunRequest(
+            projectId,
+            CognitiveMemoryConsolidationMode.ProjectionRebuild,
+            CognitiveMemoryConsolidationTriggerKind.Manual,
+            Policy(projectId),
+            new CognitiveMemoryIdempotencyKey("dream-unsupported"))).AsTask());
+
+        Assert.Equal(0, await fixture.DbContext.Set<CognitiveMemoryDreamRunRecord>().CountAsync());
+    }
+
+    [Fact]
+    public async Task DreamRun_RecordsFailedStateWhenPlannerFails()
+    {
+        await using var fixture = await CreateFixtureAsync();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var dream = new CognitiveMemoryDreamConsolidationService(
+            fixture.Factory,
+            new ThrowingClusterPlanner(),
+            new CognitiveMemoryDreamValidator(fixture.Factory, fixture.Clock),
+            fixture.Clock);
+
+        var result = await dream.RunAsync(new CognitiveMemoryDreamRunRequest(
+            projectId,
+            CognitiveMemoryConsolidationMode.ProjectNightly,
+            CognitiveMemoryConsolidationTriggerKind.Manual,
+            Policy(projectId),
+            new CognitiveMemoryIdempotencyKey("dream-planner-failure")));
+
+        Assert.Equal(CognitiveMemoryRunStatus.Failed, result.Status);
+        var failedRun = await fixture.DbContext.Set<CognitiveMemoryDreamRunRecord>().SingleAsync();
+        Assert.Equal(CognitiveMemoryRunStatus.Failed, failedRun.Status);
+        Assert.Equal("quality.dream.run-failed", failedRun.FailureCode);
+        Assert.DoesNotContain("SECRET", failedRun.FailureMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task DreamRun_IdempotentReplayDoesNotDuplicateValidationOrReviewRecords()
+    {
+        await using var fixture = await CreateFixtureAsync();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-000000000075"),
+            "Replay workflow",
+            "Replay workflow stores deployment evidence.",
+            "Replay deployment evidence.",
+            topicKey: "replay.workflow");
+        await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-000000000076"),
+            "Replay workflow",
+            "Replay workflow stores validation evidence.",
+            "Replay validation evidence.",
+            topicKey: "replay.workflow");
+        var dream = CreateDreamService(fixture);
+
+        await dream.RunAsync(new CognitiveMemoryDreamRunRequest(
+            projectId,
+            CognitiveMemoryConsolidationMode.ProjectNightly,
+            CognitiveMemoryConsolidationTriggerKind.Nightly,
+            Policy(projectId),
+            new CognitiveMemoryIdempotencyKey("dream-replay")));
+        var validationsBeforeReplay = await fixture.DbContext.Set<CognitiveMemoryDreamValidationRecord>().CountAsync();
+        var reviewsBeforeReplay = await fixture.DbContext.Set<CognitiveMemoryReviewItemRecord>().CountAsync();
+        await dream.RunAsync(new CognitiveMemoryDreamRunRequest(
+            projectId,
+            CognitiveMemoryConsolidationMode.ProjectNightly,
+            CognitiveMemoryConsolidationTriggerKind.Nightly,
+            Policy(projectId),
+            new CognitiveMemoryIdempotencyKey("dream-replay")));
+
+        Assert.Equal(validationsBeforeReplay, await fixture.DbContext.Set<CognitiveMemoryDreamValidationRecord>().CountAsync());
+        Assert.Equal(reviewsBeforeReplay, await fixture.DbContext.Set<CognitiveMemoryReviewItemRecord>().CountAsync());
+    }
+
+    [Fact]
     public async Task DreamValidation_RoutesRestrictedAggregateToReview()
     {
         await using var fixture = await CreateFixtureAsync();
@@ -199,6 +399,94 @@ public sealed class CognitiveMemoryQualityFoundationTests
         var review = reviews[0];
         Assert.Equal(CognitiveMemoryReviewStatus.Pending, review.Status);
         Assert.Equal(CognitiveMemoryReviewSubjectKind.Run, review.SubjectKind);
+    }
+
+    [Fact]
+    public async Task DreamValidation_RoutesContradictoryClusterToReview()
+    {
+        await using var fixture = await CreateFixtureAsync();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var first = await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-000000000077"),
+            "Database backup procedure",
+            "Database backup procedure runs before migration.",
+            "Database backup before migration evidence.",
+            topicKey: "database.backup.procedure");
+        var second = await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-000000000078"),
+            "Database backup procedure",
+            "Database backup procedure is skipped before migration.",
+            "Database backup skipped evidence.",
+            topicKey: "database.backup.procedure");
+        fixture.DbContext.Add(new CognitiveMemoryRelationRecord
+        {
+            ProjectId = projectId,
+            SourceMemoryRecordId = first.RecordId,
+            TargetMemoryRecordId = second.RecordId,
+            RelationKind = CognitiveMemoryRelationKind.Contradicts,
+            EvidenceCount = 2,
+            RelationBucket = CognitiveMemoryScoreProjectionBucket.StrongAccept,
+            Reason = "Migration backup requirement conflicts.",
+            AlgorithmVersion = "unit-test",
+            CreatedAtUtc = fixture.Clock.GetUtcNow(),
+            ConcurrencyToken = Guid.NewGuid()
+        });
+        await fixture.DbContext.SaveChangesAsync();
+        var dream = CreateDreamService(fixture);
+
+        var result = await dream.RunAsync(new CognitiveMemoryDreamRunRequest(
+            projectId,
+            CognitiveMemoryConsolidationMode.ProjectNightly,
+            CognitiveMemoryConsolidationTriggerKind.Nightly,
+            Policy(projectId),
+            new CognitiveMemoryIdempotencyKey("dream-contradictory-review")));
+
+        Assert.True(result.Metrics.NeedsReviewCandidates > 0);
+        Assert.Contains(result.AggregateCandidates, candidate => candidate.Status == CognitiveMemoryDreamAggregateCandidateStatus.NeedsHumanReview);
+        Assert.Contains(await fixture.DbContext.Set<CognitiveMemoryDreamValidationRecord>().ToListAsync(), validation => validation.Decision == CognitiveMemoryDreamValidationDecision.NeedsHumanReview);
+    }
+
+    [Fact]
+    public async Task DreamAggregate_DoesNotCopyRestrictedSourceTextIntoCandidateText()
+    {
+        await using var fixture = await CreateFixtureAsync();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-000000000079"),
+            "Credential rotation procedure",
+            "Credential rotation procedure requires approval.",
+            "Credential rotation approval evidence.",
+            topicKey: "credential.rotation.procedure");
+        await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-000000000080"),
+            "Credential rotation procedure",
+            "Credential rotation procedure uses SECRET_TOKEN=do-not-leak.",
+            "SECRET_TOKEN=do-not-leak",
+            topicKey: "credential.rotation.procedure",
+            sourceAccessLevel: CognitiveMemoryAccessLevel.Restricted,
+            sourceRedactionState: CognitiveMemoryRedactionState.Restricted);
+        var dream = CreateDreamService(fixture);
+
+        var result = await dream.RunAsync(new CognitiveMemoryDreamRunRequest(
+            projectId,
+            CognitiveMemoryConsolidationMode.ProjectNightly,
+            CognitiveMemoryConsolidationTriggerKind.Nightly,
+            Policy(projectId),
+            new CognitiveMemoryIdempotencyKey("dream-redacted-candidate")));
+
+        Assert.All(result.AggregateCandidates, candidate =>
+        {
+            Assert.DoesNotContain("SECRET_TOKEN", candidate.CanonicalText, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("SECRET_TOKEN", candidate.SummaryText, StringComparison.OrdinalIgnoreCase);
+        });
     }
 
     [Fact]
@@ -253,6 +541,56 @@ public sealed class CognitiveMemoryQualityFoundationTests
             .AnyAsync(link => link.MemoryRecordId == result.MemoryRecordId.Value));
         Assert.True(await fixture.DbContext.Set<CognitiveMemorySourceLinkRecord>()
             .AnyAsync(link => link.MemoryRecordId == result.MemoryRecordId.Value));
+    }
+
+    [Fact]
+    public async Task AggregateApplicator_RepeatedApplyReturnsExistingMemoryWithoutDuplicates()
+    {
+        await using var fixture = await CreateFixtureAsync();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-000000000081"),
+            "Cache rebuild procedure",
+            "Cache rebuild procedure warms primary cache.",
+            "Cache rebuild primary evidence.",
+            topicKey: "cache.rebuild.procedure");
+        await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-000000000082"),
+            "Cache rebuild procedure",
+            "Cache rebuild procedure warms secondary cache.",
+            "Cache rebuild secondary evidence.",
+            topicKey: "cache.rebuild.procedure");
+        var dream = CreateDreamService(fixture);
+        await dream.RunAsync(new CognitiveMemoryDreamRunRequest(
+            projectId,
+            CognitiveMemoryConsolidationMode.ProjectNightly,
+            CognitiveMemoryConsolidationTriggerKind.Nightly,
+            Policy(projectId),
+            new CognitiveMemoryIdempotencyKey("dream-repeat-apply")));
+        var candidate = await fixture.DbContext.Set<CognitiveMemoryDreamAggregateCandidateRecord>()
+            .FirstAsync(candidate => candidate.Status == CognitiveMemoryDreamAggregateCandidateStatus.Approved);
+        var applicator = new CognitiveMemoryAggregateMemoryApplicator(
+            fixture.Factory,
+            new CognitiveMemoryRecordValidator(),
+            fixture.Clock);
+
+        var first = await applicator.ApplyAsync(new CognitiveMemoryAggregateMemoryApplyRequest(
+            new CognitiveMemoryDreamAggregateCandidateId(candidate.Id),
+            "agent:unit-test",
+            Policy(projectId)));
+        var second = await applicator.ApplyAsync(new CognitiveMemoryAggregateMemoryApplyRequest(
+            new CognitiveMemoryDreamAggregateCandidateId(candidate.Id),
+            "agent:unit-test",
+            Policy(projectId)));
+
+        Assert.True(first.Created);
+        Assert.False(second.Created);
+        Assert.Equal(first.MemoryRecordId, second.MemoryRecordId);
+        Assert.Equal(1, await fixture.DbContext.Set<CognitiveMemoryDreamAggregateCandidateRecord>().CountAsync(row => row.MemoryRecordId == first.MemoryRecordId.Value));
     }
 
     [Fact]
@@ -332,6 +670,128 @@ public sealed class CognitiveMemoryQualityFoundationTests
         Assert.Equal($"/unit/{seeded.RecordId:D}", resolved.Locator);
     }
 
+    [Fact]
+    public async Task RecallSynthesis_MergesRelatedSelectedMemoriesIntoSingleGroundedStatement()
+    {
+        await using var fixture = await CreateFixtureAsync();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var first = await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-000000000083"),
+            "Deployment rollback",
+            "Use rollback runbook when health checks fail.",
+            "Use rollback runbook when health checks fail.");
+        var second = await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-000000000084"),
+            "Deployment rollback",
+            "Notify release owner after rollback starts.",
+            "Notify release owner after rollback starts.");
+        var traceId = await SeedRecallTraceAsync(fixture, projectId, "recall-synthesis-merge");
+        var firstRef = CreateSourceRef(first, "Use rollback runbook when health checks fail.");
+        var secondRef = CreateSourceRef(second, "Notify release owner after rollback starts.");
+        var recallResult = new CognitiveMemoryRecallResult(
+            traceId,
+            new CognitiveMemoryRecallContextPack(
+                CognitiveMemoryRecallContextPackId.New(),
+                projectId,
+                null,
+                "Recall context",
+                "Selected 2 source-backed memory candidate(s).",
+                [
+                    new CognitiveMemoryRecallContextSection(
+                        new CognitiveMemorySectionId("selected-0"),
+                        CognitiveMemoryRecallContextSectionKind.SelectedMemory,
+                        "Deployment rollback",
+                        "Use rollback runbook when health checks fail.",
+                        [new CognitiveMemoryRecordId(first.RecordId)],
+                        [],
+                        [firstRef]),
+                    new CognitiveMemoryRecallContextSection(
+                        new CognitiveMemorySectionId("selected-1"),
+                        CognitiveMemoryRecallContextSectionKind.SelectedMemory,
+                        "Deployment rollback",
+                        "Notify release owner after rollback starts.",
+                        [new CognitiveMemoryRecordId(second.RecordId)],
+                        [],
+                        [secondRef])
+                ],
+                [firstRef, secondRef],
+                [],
+                new Dictionary<string, string>()),
+            [],
+            [],
+            []);
+        var synthesis = new CognitiveMemoryRecallSynthesisService(fixture.Factory, fixture.Clock);
+
+        var result = await synthesis.SynthesizeAsync(new CognitiveMemoryRecallSynthesisRequest(recallResult, Policy(projectId)));
+
+        var statement = Assert.Single(result.Statements);
+        Assert.Contains("Use rollback runbook", statement.Text, StringComparison.Ordinal);
+        Assert.Contains("Notify release owner", statement.Text, StringComparison.Ordinal);
+        Assert.Equal(2, statement.SourceRefs.Count);
+        Assert.DoesNotContain($"/unit/{first.RecordId:D}", result.Brief, StringComparison.Ordinal);
+        Assert.DoesNotContain($"/unit/{second.RecordId:D}", result.Brief, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ReferenceResolver_DeniesRestrictedReferenceWithoutLocatorOrSummary()
+    {
+        await using var fixture = await CreateFixtureAsync();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var seeded = await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-000000000085"),
+            "Credential rotation",
+            "Credential rotation has restricted evidence.",
+            "Credential rotation restricted evidence.");
+        var traceId = await SeedRecallTraceAsync(fixture, projectId, "recall-restricted-reference");
+        var sourceRef = CreateSourceRef(
+            seeded,
+            "Restricted source summary",
+            accessLevel: CognitiveMemoryAccessLevel.Project,
+            redactionState: CognitiveMemoryRedactionState.Restricted);
+        var recallResult = new CognitiveMemoryRecallResult(
+            traceId,
+            new CognitiveMemoryRecallContextPack(
+                CognitiveMemoryRecallContextPackId.New(),
+                projectId,
+                null,
+                "Recall context",
+                "Selected 1 source-backed memory candidate(s).",
+                [
+                    new CognitiveMemoryRecallContextSection(
+                        new CognitiveMemorySectionId("selected-0"),
+                        CognitiveMemoryRecallContextSectionKind.SelectedMemory,
+                        "Credential rotation",
+                        "Credential rotation has restricted evidence.",
+                        [new CognitiveMemoryRecordId(seeded.RecordId)],
+                        [],
+                        [sourceRef])
+                ],
+                [sourceRef],
+                [],
+                new Dictionary<string, string>()),
+            [],
+            [],
+            []);
+        var synthesis = new CognitiveMemoryRecallSynthesisService(fixture.Factory, fixture.Clock);
+        var result = await synthesis.SynthesizeAsync(new CognitiveMemoryRecallSynthesisRequest(recallResult, Policy(projectId)));
+        var statement = Assert.Single(result.Statements);
+        var resolver = new CognitiveMemoryReferenceResolver(fixture.Factory);
+
+        var references = await resolver.ResolveAsync(new CognitiveMemoryReferenceResolverRequest(statement.StatementId, Policy(projectId)));
+
+        var resolved = Assert.Single(references.References);
+        Assert.False(resolved.Included);
+        Assert.Equal(string.Empty, resolved.Locator);
+        Assert.Equal(string.Empty, resolved.Summary);
+        Assert.Equal(CognitiveMemoryRecallExclusionReasonKind.RedactedSource, resolved.ExclusionReasonKind);
+    }
+
     private static ICognitiveMemoryDreamConsolidationService CreateDreamService(QualityFixture fixture)
     {
         var planner = new CognitiveMemoryClusterPlanner(fixture.Factory, fixture.Clock);
@@ -341,6 +801,56 @@ public sealed class CognitiveMemoryQualityFoundationTests
             planner,
             validator,
             fixture.Clock);
+    }
+
+    private static async Task<Guid> SeedRecallTraceAsync(
+        QualityFixture fixture,
+        Guid projectId,
+        string requestMaterial)
+    {
+        var traceId = Guid.NewGuid();
+        fixture.DbContext.Add(new CognitiveMemoryRecallTraceRecord
+        {
+            Id = traceId,
+            ProjectId = projectId,
+            OperationMode = CognitiveMemoryOperationMode.Recall,
+            RecallMode = CognitiveMemoryRecallMode.FocusedTaskContext,
+            RequestedByActorId = "agent:test",
+            PolicyProfileId = "policy:test",
+            RequestHash = CognitiveMemoryHash.FromUtf8(requestMaterial).Value,
+            AlgorithmVersion = "unit-test",
+            Outcome = CognitiveMemoryRunStatus.Succeeded,
+            StartedAtUtc = fixture.Clock.GetUtcNow(),
+            CompletedAtUtc = fixture.Clock.GetUtcNow(),
+            ConcurrencyToken = Guid.NewGuid()
+        });
+        await fixture.DbContext.SaveChangesAsync();
+        return traceId;
+    }
+
+    private static CognitiveMemoryRecallSourceRef CreateSourceRef(
+        SeededMemory seeded,
+        string summary,
+        CognitiveMemoryAccessLevel accessLevel = CognitiveMemoryAccessLevel.Project,
+        CognitiveMemoryRedactionState redactionState = CognitiveMemoryRedactionState.Safe)
+        => new(
+            new CognitiveMemoryRecordId(seeded.RecordId),
+            new CognitiveMemorySourceItemId(seeded.SourceItemId),
+            new CognitiveMemoryEvidenceAnchorId(seeded.EvidenceAnchorId),
+            "unit-test",
+            $"/unit/{seeded.RecordId:D}",
+            summary,
+            accessLevel,
+            redactionState,
+            IncludedInContext: true,
+            CognitiveMemoryRecallExclusionReasonKind.None);
+
+    private sealed class ThrowingClusterPlanner : ICognitiveMemoryClusterPlanner
+    {
+        public ValueTask<CognitiveMemoryClusterPlanningResult> PlanAsync(
+            CognitiveMemoryClusterPlanningRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("Planner failure with SECRET_TOKEN=masked.");
     }
 
     private static CognitiveMemoryPolicyContext Policy(Guid projectId)
