@@ -53,7 +53,7 @@ Supported external extraction paths include text-like files, `.docx`, `.pptx`, `
 | --- | --- | --- | --- |
 | `GET` | `/api/cognitive-memory/snapshot` | `/api/cognitive-memory/v1/snapshot` | Returns the operator/agent snapshot, with optional resolved-review history and operator audit signals. |
 | `POST` | `/api/cognitive-memory/consolidation/runs` | `/api/cognitive-memory/v1/consolidation/runs` | Runs consolidation over source items. |
-| `POST` | `/api/cognitive-memory/recall` | `/api/cognitive-memory/v1/recall` | Builds and persists a recall context pack and trace. |
+| `POST` | `/api/cognitive-memory/recall` | `/api/cognitive-memory/v1/recall` | Builds and persists a recall context pack and trace, with optional vector projection settings. |
 | `POST` | `/api/cognitive-memory/review-items/{reviewItemId}/decisions` | `/api/cognitive-memory/v1/review-items/{reviewItemId}/decisions` | Applies an operator review decision. |
 
 ## Operations
@@ -66,7 +66,7 @@ Supported external extraction paths include text-like files, `.docx`, `.pptx`, `
 
 `/automation/run` is an explicit operational command and is also exposed from the Cognitive Memory settings tab. It honors persisted schedule settings, but it is not a hosted background scheduler by itself. Manual trigger is always allowed; nightly, idle-timeout, and scheduled-moment triggers run only when the persisted schedule mode matches.
 
-`/projections/rebuild` rebuilds projection state from relational memory and is also exposed from the Cognitive Memory settings tab. The rebuild path reconstructs projection payloads from memory records, claims, evidence anchors, source links, context frames, entity ids, and context-boundary policies. Qdrant/RAG remains a projection target, not authoritative memory. Provider failures leave rows failed and rebuildable.
+`/projections/rebuild` rebuilds projection state from relational memory and is also exposed from the Cognitive Memory settings tab. The rebuild path reconstructs projection payloads from memory records, claims, evidence anchors, source links, context frames, entity ids, and context-boundary policies. It can also project missing durable records when `projectMissingRecords` is true and the request or configured defaults provide `collectionName`, `projectionProfileId`, `embeddingProfileId`, `targetProviderName`, `projectionStoreKind`, and `vectorDimensions`. Qdrant/RAG remains a projection target, not authoritative memory. Provider failures leave rows failed and rebuildable.
 
 `/retention/cleanup` defaults to dry-run. It can delete old recall traces, rejected/duplicate consolidation candidates, closed probe sessions, and completed/rejected/expired distributed jobs. It does not delete canonical memory records, source manifests, source items, claims, evidence anchors, or projection state; see [retention cleanup](retention-cleanup.md).
 
@@ -99,5 +99,48 @@ Supported external extraction paths include text-like files, `.docx`, `.pptx`, `
 - Use `GET /api/access/status` before API automation to confirm whether bearer tokens are required.
 - Prefer PostgreSQL profiles for realistic multi-cycle memory validation.
 - Prefer `/api/cognitive-memory/v1` for new automation and use `/contract` to generate clients or smoke checks.
+- For Qdrant-backed recall, include `projectionCollectionName`, `projectionProfileId`, and `embeddingProfileId` in the recall request. A successful vector proof must show a recall stage with provider trace such as `rag:qdrant:search:2`; a skipped vector stage is not provider proof.
+- For live Docker Qdrant projection, the current beta proof uses collection `candoitall-knowledge`, projection profile `qdrant-default-v1`, embedding profile `local-hashing-v1:dimension=384`, target provider `qdrant`, store kind `Qdrant`, and vector dimension `384`.
 - Do not treat `/snapshot` as the only proof. For memory quality, inspect recall traces, source refs, review decisions, operator audit, and source truth.
 - Keep agent-facing context separate from diagnostic candidate payloads when adding new API DTOs. MAF uses an agent-facing `CognitiveMemoryAgentContextPackage`.
+
+## Qdrant Beta Request Examples
+
+Projection rebuild for missing durable records:
+
+```json
+{
+  "projectId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+  "take": 10,
+  "actorId": "operator:projection-rebuild",
+  "collectionName": "candoitall-knowledge",
+  "projectMissingRecords": true,
+  "projectionProfileId": "qdrant-default-v1",
+  "embeddingProfileId": "local-hashing-v1:dimension=384",
+  "targetProviderName": "qdrant",
+  "projectionStoreKind": "Qdrant",
+  "vectorDimensions": 384
+}
+```
+
+Qdrant-backed recall:
+
+```json
+{
+  "projectId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+  "query": "Which source-backed facts must be considered?",
+  "intent": "SourceLookup",
+  "mode": "DeepSourceGrounded",
+  "projectionCollectionName": "candoitall-knowledge",
+  "projectionProfileId": "qdrant-default-v1",
+  "embeddingProfileId": "local-hashing-v1:dimension=384",
+  "budget": {
+    "coarseCandidateLimit": 24,
+    "vectorResultLimit": 12,
+    "focusLimit": 8,
+    "detailItemLimit": 8,
+    "contextCharacterBudget": 12000,
+    "maxSourceBytes": 24000
+  }
+}
+```

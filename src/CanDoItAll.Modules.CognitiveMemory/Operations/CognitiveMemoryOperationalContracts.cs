@@ -18,11 +18,41 @@ public enum CognitiveMemoryRetentionCleanupScope
     DistributedJobs = 3
 }
 
+public sealed class CognitiveMemoryProjectionOptions
+{
+    public bool Enabled { get; set; }
+
+    public string CollectionName { get; set; } = string.Empty;
+
+    public string ProjectionProfileId { get; set; } = string.Empty;
+
+    public string EmbeddingProfileId { get; set; } = string.Empty;
+
+    public string TargetProviderName { get; set; } = string.Empty;
+
+    public CognitiveMemoryProjectionStoreKind ProjectionStoreKind { get; set; } = CognitiveMemoryProjectionStoreKind.GenericRag;
+
+    public int? VectorDimensions { get; set; }
+
+    public bool CanProjectMissingRecords
+        => Enabled &&
+           !string.IsNullOrWhiteSpace(CollectionName) &&
+           !string.IsNullOrWhiteSpace(ProjectionProfileId) &&
+           !string.IsNullOrWhiteSpace(EmbeddingProfileId) &&
+           !string.IsNullOrWhiteSpace(TargetProviderName);
+}
+
 public sealed record CognitiveMemoryProjectionRebuildRequest(
     Guid? ProjectId,
     int Take,
     string ActorId,
-    CognitiveMemoryProjectionCollectionName? CollectionName = null);
+    CognitiveMemoryProjectionCollectionName? CollectionName = null,
+    bool ProjectMissingRecords = false,
+    CognitiveMemoryProjectionProfileId? ProjectionProfileId = null,
+    CognitiveMemoryEmbeddingProfileId? EmbeddingProfileId = null,
+    string? TargetProviderName = null,
+    CognitiveMemoryProjectionStoreKind? ProjectionStoreKind = null,
+    int? ExpectedVectorDimensions = null);
 
 public sealed record CognitiveMemoryProjectionRebuildItemResult(
     Guid ProjectionRecordId,

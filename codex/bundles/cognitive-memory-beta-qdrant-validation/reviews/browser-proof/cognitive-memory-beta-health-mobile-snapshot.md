@@ -1,0 +1,118 @@
+- main [ref=e526]:
+  - group [ref=e614]:
+    - generic "Workspace navigation" [ref=e615] [cursor=pointer]
+  - generic [ref=e527]:
+    - generic [ref=e531]:
+      - button "Dashboard" [ref=e533]:
+        - generic [ref=e534]: Dashboard
+        - generic [ref=e536]: push_pin
+      - button "Cognitive Memory" [ref=e538]:
+        - generic [ref=e539]: Cognitive Memory
+    - generic [ref=e541]:
+      - generic [ref=e542]:
+        - generic [ref=e543]: Delivery Workspace
+        - generic [ref=e544]: Cognitive Memory
+      - generic [ref=e545]: Interactive Server
+      - generic [ref=e546]: Live items 0
+      - generic [ref=e547]: Tabs 2
+  - generic [ref=e616]:
+    - generic [ref=e618]:
+      - generic [ref=e620]:
+        - paragraph [ref=e621]: Cognitive Memory
+        - heading "Memory review" [level=1] [ref=e622]
+        - paragraph [ref=e623]: Inspect recall evidence, review decisions, probing, self-regulation, answer gates, learning proposals, projection health, and worker safety.
+      - button "Refresh memory review" [ref=e625]:
+        - generic [ref=e626]: refresh
+        - generic [ref=e627]: refresh
+    - generic [ref=e629]:
+      - generic [ref=e631]:
+        - generic [ref=e632]:
+          - paragraph [ref=e633]: Memory items
+          - button "Show help for Memory items" [ref=e635] [cursor=pointer]
+        - paragraph [ref=e637]: "906"
+      - generic [ref=e639]:
+        - generic [ref=e640]:
+          - paragraph [ref=e641]: Pending review
+          - button "Show help for Pending review" [ref=e643] [cursor=pointer]
+        - paragraph [ref=e645]: "3"
+      - generic [ref=e647]:
+        - generic [ref=e648]:
+          - paragraph [ref=e649]: Recall traces
+          - button "Show help for Recall traces" [ref=e651] [cursor=pointer]
+        - paragraph [ref=e653]: "272"
+      - generic [ref=e655]:
+        - generic [ref=e656]:
+          - paragraph [ref=e657]: Projection issues
+          - button "Show help for Projection issues" [ref=e659] [cursor=pointer]
+        - paragraph [ref=e661]: "0"
+      - generic [ref=e663]:
+        - generic [ref=e664]:
+          - paragraph [ref=e665]: Procedure review
+          - button "Show help for Procedure review" [ref=e667] [cursor=pointer]
+        - paragraph [ref=e669]: "0"
+      - generic [ref=e671]:
+        - generic [ref=e672]:
+          - paragraph [ref=e673]: Simulation review
+          - button "Show help for Simulation review" [ref=e675] [cursor=pointer]
+        - paragraph [ref=e677]: "0"
+      - generic [ref=e679]:
+        - generic [ref=e680]:
+          - paragraph [ref=e681]: Answer gates
+          - button "Show help for Answer gates" [ref=e683] [cursor=pointer]
+        - paragraph [ref=e685]: "0"
+      - generic [ref=e687]:
+        - generic [ref=e688]:
+          - paragraph [ref=e689]: Learning proposals
+          - button "Show help for Learning proposals" [ref=e691] [cursor=pointer]
+        - paragraph [ref=e693]: "5"
+      - generic [ref=e695]:
+        - generic [ref=e696]:
+          - paragraph [ref=e697]: Worker issues
+          - button "Show help for Worker issues" [ref=e699] [cursor=pointer]
+        - paragraph [ref=e701]: "0"
+    - generic [ref=e704]:
+      - tablist "Cognitive Memory review tabs" [ref=e705]:
+        - tab "Dashboard" [ref=e706]:
+          - generic [ref=e707]: dashboard
+          - generic [ref=e708]: Dashboard
+        - tab "Probe workbench 16" [ref=e709]:
+          - generic [ref=e710]: forum
+          - generic [ref=e711]: Probe workbench
+          - generic [ref=e712]: "16"
+        - tab "Settings" [ref=e713]:
+          - generic [ref=e714]: tune
+          - generic [ref=e715]: Settings
+        - tab "Sources" [ref=e716]:
+          - generic [ref=e717]: upload_file
+          - generic [ref=e718]: Sources
+        - tab "Memory 12" [ref=e719]:
+          - generic [ref=e720]: storage
+          - generic [ref=e721]: Memory
+          - generic [ref=e722]: "12"
+        - tab "Review queue 3" [ref=e723]:
+          - generic [ref=e724]: fact_check
+          - generic [ref=e725]: Review queue
+          - generic [ref=e726]: "3"
+        - tab "Recall traces 12" [ref=e727]:
+          - generic [ref=e728]: travel_explore
+          - generic [ref=e729]: Recall traces
+          - generic [ref=e730]: "12"
+        - tab "Health 0" [active] [selected] [ref=e731]:
+          - generic [ref=e732]: monitor_heart
+          - generic [ref=e733]: Health
+          - generic [ref=e734]: "0"
+        - tab "Self-regulation 5" [ref=e735]:
+          - generic [ref=e736]: psychology
+          - generic [ref=e737]: Self-regulation
+          - generic [ref=e738]: "5"
+        - tab "Scale 0" [ref=e739]:
+          - generic [ref=e740]: hub
+          - generic [ref=e741]: Scale
+          - generic [ref=e742]: "0"
+      - tabpanel "Health 0" [ref=e1062]:
+        - generic [ref=e1063]:
+          - generic [ref=e1064]
+          - generic [ref=e1071]
+          - generic [ref=e1123]
+          - generic [ref=e1130]
+          - generic [ref=e1137]

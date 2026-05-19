@@ -110,6 +110,48 @@ public sealed class CognitiveMemoryOperationalServicesTests
     }
 
     [Fact]
+    public async Task ProjectionRebuildService_ProjectsMissingDurableMemoryRecordsWhenRequested()
+    {
+        var fixture = CreateFixture();
+        var graph = await SeedProjectionGraphAsync(fixture.Factory, includeClaim: true, includeProjectionRecord: false);
+        var lifecycle = new RecordingProjectionLifecycleService();
+        var service = new CognitiveMemoryProjectionRebuildService(
+            fixture.Factory,
+            lifecycle,
+            fixture.Clock,
+            NullLogger<CognitiveMemoryProjectionRebuildService>.Instance);
+
+        var result = await service.RebuildAsync(new CognitiveMemoryProjectionRebuildRequest(
+            graph.ProjectId,
+            Take: 10,
+            ActorId: "test:operator",
+            CollectionName: new CognitiveMemoryProjectionCollectionName("cm-project-semantic"),
+            ProjectMissingRecords: true,
+            ProjectionProfileId: new CognitiveMemoryProjectionProfileId("projection-v1"),
+            EmbeddingProfileId: new CognitiveMemoryEmbeddingProfileId("embedding-v1"),
+            TargetProviderName: "fake-rag",
+            ProjectionStoreKind: CognitiveMemoryProjectionStoreKind.GenericRag,
+            ExpectedVectorDimensions: 3));
+
+        Assert.Equal(CognitiveMemoryRunStatus.Succeeded, result.Status);
+        Assert.Equal(1, result.SelectedCount);
+        Assert.Equal(1, result.ProjectedCount);
+        Assert.Equal(0, result.FailedCount);
+        Assert.Equal(0, result.SkippedCount);
+        var rebuildRequest = Assert.Single(lifecycle.Requests);
+        Assert.Equal(graph.RecordId, rebuildRequest.MemoryRecord.Id);
+        Assert.Equal("cm-project-semantic", rebuildRequest.CollectionName.Value);
+        Assert.Equal("projection-v1", rebuildRequest.ProjectionProfileId.Value);
+        Assert.Equal("embedding-v1", rebuildRequest.EmbeddingProfileId.Value);
+
+        await using var dbContext = fixture.Factory.CreateDbContext();
+        var projection = await dbContext.Set<CognitiveMemoryProjectionRecord>().SingleAsync();
+        Assert.Equal(graph.RecordId, projection.MemoryRecordId);
+        Assert.Equal(CognitiveMemoryProjectionStatus.Projected, projection.Status);
+        Assert.Equal("rebuilt-point", projection.PointId);
+    }
+
+    [Fact]
     public async Task ProjectionRebuildService_RecordsProviderFailureAndKeepsProjectionRebuildable()
     {
         var fixture = CreateFixture();
@@ -301,7 +343,8 @@ public sealed class CognitiveMemoryOperationalServicesTests
 
     private static async Task<ProjectionGraph> SeedProjectionGraphAsync(
         TestDbContextFactory factory,
-        bool includeClaim)
+        bool includeClaim,
+        bool includeProjectionRecord = true)
     {
         var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         var recordId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
@@ -445,28 +488,31 @@ public sealed class CognitiveMemoryOperationalServicesTests
             });
         }
 
-        dbContext.Add(new CognitiveMemoryProjectionRecord
+        if (includeProjectionRecord)
         {
-            ProjectId = projectId,
-            MemoryRecordId = recordId,
-            ProjectionStoreKind = CognitiveMemoryProjectionStoreKind.GenericRag,
-            ProjectionKind = CognitiveMemoryProjectionKind.VectorCollection,
-            TargetProviderName = "fake-rag",
-            CollectionName = "cm-project-semantic",
-            PointId = "old-point",
-            ProjectionProfileId = "projection-v1",
-            EmbeddingProfileId = "embedding-v1",
-            ProjectionSchemaVersion = "projection-payload-v1",
-            AlgorithmVersion = "taxonomy-v1",
-            VectorDimensions = 3,
-            SourceHash = CognitiveMemoryHash.FromUtf8("old-source").Value,
-            PayloadHash = CognitiveMemoryHash.FromUtf8("old-payload").Value,
-            Status = CognitiveMemoryProjectionStatus.RebuildRequired,
-            StaleReason = CognitiveMemoryProjectionStaleReason.SourceHashChanged,
-            RebuildRequired = true,
-            CreatedAtUtc = now,
-            UpdatedAtUtc = now
-        });
+            dbContext.Add(new CognitiveMemoryProjectionRecord
+            {
+                ProjectId = projectId,
+                MemoryRecordId = recordId,
+                ProjectionStoreKind = CognitiveMemoryProjectionStoreKind.GenericRag,
+                ProjectionKind = CognitiveMemoryProjectionKind.VectorCollection,
+                TargetProviderName = "fake-rag",
+                CollectionName = "cm-project-semantic",
+                PointId = "old-point",
+                ProjectionProfileId = "projection-v1",
+                EmbeddingProfileId = "embedding-v1",
+                ProjectionSchemaVersion = "projection-payload-v1",
+                AlgorithmVersion = "taxonomy-v1",
+                VectorDimensions = 3,
+                SourceHash = CognitiveMemoryHash.FromUtf8("old-source").Value,
+                PayloadHash = CognitiveMemoryHash.FromUtf8("old-payload").Value,
+                Status = CognitiveMemoryProjectionStatus.RebuildRequired,
+                StaleReason = CognitiveMemoryProjectionStaleReason.SourceHashChanged,
+                RebuildRequired = true,
+                CreatedAtUtc = now,
+                UpdatedAtUtc = now
+            });
+        }
         await dbContext.SaveChangesAsync();
 
         return new ProjectionGraph(projectId, recordId, claimId);

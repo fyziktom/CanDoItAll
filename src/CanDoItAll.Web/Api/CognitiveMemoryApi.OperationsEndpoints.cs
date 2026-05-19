@@ -22,9 +22,18 @@ internal static partial class CognitiveMemoryApi
                     request.ProjectId,
                     NormalizeTake(request.Take, 50, 500),
                     NormalizeActorId(request.ActorId),
-                    string.IsNullOrWhiteSpace(request.CollectionName)
+                    CreateProjectionCollectionName(request.CollectionName),
+                    request.ProjectMissingRecords,
+                    CreateProjectionProfileId(request.ProjectionProfileId),
+                    CreateEmbeddingProfileId(request.EmbeddingProfileId),
+                    NormalizeOptionalText(request.TargetProviderName),
+                    string.IsNullOrWhiteSpace(request.ProjectionStoreKind)
                         ? null
-                        : new CognitiveMemoryProjectionCollectionName(request.CollectionName.Trim())),
+                        : ParseEnum(
+                            request.ProjectionStoreKind,
+                            CognitiveMemoryProjectionStoreKind.GenericRag,
+                            nameof(request.ProjectionStoreKind)),
+                    request.VectorDimensions),
                 cancellationToken)))
             .WithName(EndpointName("RebuildCognitiveMemoryProjections", surface));
 

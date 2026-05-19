@@ -86,6 +86,8 @@ public sealed class CognitiveMemoryTaxonomyTests
         Assert.Equal("node-1", entry.SourceItemKey);
         Assert.NotNull(entry.EvidenceAnchorIds);
         Assert.Equal([evidenceAnchorId.Value.ToString("D")], entry.EvidenceAnchorIds.Select(id => id.Value.ToString("D")).ToArray());
+        Assert.NotNull(entry.Metadata);
+        Assert.Equal(first.ProjectionRecord.Id.ToString("D"), entry.Metadata["projectionRecordId"]);
     }
 
     [Fact]

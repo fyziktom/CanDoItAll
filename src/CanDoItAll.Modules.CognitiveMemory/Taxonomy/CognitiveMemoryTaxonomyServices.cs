@@ -199,6 +199,7 @@ public sealed class CognitiveMemoryProjectionLifecycleService(
             embedding.Vector.Length,
             nowUtc);
 
+        var metadata = BuildProjectionMetadata(request.Metadata, projectionRecord.Id);
         var writeRequest = new CognitiveMemoryProjectionWriteRequest(
             request.CollectionName,
             [
@@ -222,13 +223,18 @@ public sealed class CognitiveMemoryProjectionLifecycleService(
                     sourceItemKey,
                     nowUtc,
                     request.EvidenceAnchorIds,
-                    request.Metadata,
+                    metadata,
                     request.Tags)
             ],
             request.ExpectedVectorDimensions);
 
         try
         {
+            await projectionAdapter.EnsureCollectionAsync(
+                new CognitiveMemoryProjectionCollectionRequest(
+                    request.CollectionName,
+                    request.ExpectedVectorDimensions ?? embedding.Vector.Length),
+                cancellationToken);
             await projectionAdapter.ProjectAsync(writeRequest, cancellationToken);
             projectionRecord.Status = CognitiveMemoryProjectionStatus.Projected;
             projectionRecord.LastProjectedAtUtc = nowUtc;
@@ -372,6 +378,24 @@ public sealed class CognitiveMemoryProjectionLifecycleService(
             StaleReason = CognitiveMemoryProjectionStaleReason.None,
             RebuildRequired = false,
             CreatedAtUtc = nowUtc,
-            UpdatedAtUtc = nowUtc
+            UpdatedAtUtc = nowUtc,
+            ConcurrencyToken = Guid.NewGuid()
         };
+
+    private static IReadOnlyDictionary<string, string> BuildProjectionMetadata(
+        IReadOnlyDictionary<string, string>? requestMetadata,
+        Guid projectionRecordId)
+    {
+        var metadata = requestMetadata is null
+            ? new Dictionary<string, string>(StringComparer.Ordinal)
+            : new Dictionary<string, string>(requestMetadata, StringComparer.Ordinal);
+
+        if (!metadata.TryGetValue("projectionRecordId", out var currentValue) ||
+            string.Equals(currentValue, "missing", StringComparison.OrdinalIgnoreCase))
+        {
+            metadata["projectionRecordId"] = projectionRecordId.ToString("D");
+        }
+
+        return metadata;
+    }
 }

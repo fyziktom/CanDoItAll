@@ -186,6 +186,18 @@ internal sealed class CognitiveMemoryProjectionRebuildApiRequest
     public string? ActorId { get; set; }
 
     public string? CollectionName { get; set; }
+
+    public bool ProjectMissingRecords { get; set; }
+
+    public string? ProjectionProfileId { get; set; }
+
+    public string? EmbeddingProfileId { get; set; }
+
+    public string? TargetProviderName { get; set; }
+
+    public string? ProjectionStoreKind { get; set; }
+
+    public int? VectorDimensions { get; set; }
 }
 
 internal sealed class CognitiveMemoryAutomationRunApiRequest
@@ -328,6 +340,12 @@ internal sealed class CognitiveMemoryRecallApiRequest
     public CognitiveMemoryRecallBudgetApiRequest? Budget { get; set; }
 
     public IReadOnlyList<string>? PreferredRecordKinds { get; set; }
+
+    public string? ProjectionCollectionName { get; set; }
+
+    public string? ProjectionProfileId { get; set; }
+
+    public string? EmbeddingProfileId { get; set; }
 
     public IReadOnlyDictionary<string, string>? Metadata { get; set; }
 }

@@ -70,6 +70,15 @@ classDiagram
         Guid SubjectId
     }
 
+    class CognitiveMemoryProjectionRecord {
+        Guid Id
+        Guid MemoryRecordId
+        string CollectionName
+        string ProjectionProfileId
+        string EmbeddingProfileId
+        CognitiveMemoryProjectionStatus Status
+    }
+
     CognitiveMemorySourceManifestRecord "1" --> "*" CognitiveMemorySourceItemRecord
     CognitiveMemorySourceItemRecord "1" --> "*" CognitiveMemoryEvidenceAnchorRecord
     CognitiveMemoryRecord "1" --> "*" CognitiveMemoryClaimRecord
@@ -80,6 +89,7 @@ classDiagram
     CognitiveMemoryClaimRecord "1" --> "*" CognitiveMemoryClaimEvidenceLinkRecord
     CognitiveMemoryEvidenceAnchorRecord "1" --> "*" CognitiveMemoryClaimEvidenceLinkRecord
     CognitiveMemoryReviewItemRecord ..> CognitiveMemoryRecord : may review
+    CognitiveMemoryRecord "1" --> "*" CognitiveMemoryProjectionRecord
 ```
 
 ## Service Class Diagram
@@ -130,6 +140,14 @@ classDiagram
         RebuildAsync(request)
     }
 
+    class CognitiveMemoryProjectionOptions {
+        string CollectionName
+        string ProjectionProfileId
+        string EmbeddingProfileId
+        string TargetProviderName
+        int VectorDimensions
+    }
+
     class ICognitiveMemoryScheduledAutomationRunner {
         RunAsync(request)
     }
@@ -155,6 +173,7 @@ classDiagram
     ICognitiveMemoryProjectionRebuildService --> ICognitiveMemoryProjectionAdapter
     ICognitiveMemoryProjectionRebuildService --> CognitiveMemoryRecord
     ICognitiveMemoryProjectionRebuildService --> CognitiveMemoryClaimRecord
+    ICognitiveMemoryProjectionRebuildService --> CognitiveMemoryProjectionOptions
     ICognitiveMemoryScheduledAutomationRunner --> ICognitiveMemorySourceIngestionService
     ICognitiveMemoryScheduledAutomationRunner --> ICognitiveMemoryConsolidationEngine
     CognitiveMemoryAgentContextContributor --> ICognitiveMemoryRecallOrchestrator

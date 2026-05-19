@@ -347,6 +347,9 @@ internal static partial class CognitiveMemoryApi
             BuildPolicyContext(projectId, request.Policy),
             BuildRecallBudget(request.Budget),
             PreferredRecordKinds: ParseEnumList<CognitiveMemoryRecordKind>(request.PreferredRecordKinds, nameof(request.PreferredRecordKinds)),
+            ProjectionCollectionName: CreateProjectionCollectionName(request.ProjectionCollectionName),
+            ProjectionProfileId: CreateProjectionProfileId(request.ProjectionProfileId),
+            EmbeddingProfileId: CreateEmbeddingProfileId(request.EmbeddingProfileId),
             Metadata: request.Metadata);
     }
 
@@ -514,6 +517,27 @@ internal static partial class CognitiveMemoryApi
     private static string? NormalizeOptionalText(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
+    private static CognitiveMemoryProjectionCollectionName? CreateProjectionCollectionName(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? null
+            : new CognitiveMemoryProjectionCollectionName(value.Trim());
+    }
+
+    private static CognitiveMemoryProjectionProfileId? CreateProjectionProfileId(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? null
+            : new CognitiveMemoryProjectionProfileId(value.Trim());
+    }
+
+    private static CognitiveMemoryEmbeddingProfileId? CreateEmbeddingProfileId(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? null
+            : new CognitiveMemoryEmbeddingProfileId(value.Trim());
     }
 
     private static string BuildErrorMessage(IReadOnlyList<Error> errors)

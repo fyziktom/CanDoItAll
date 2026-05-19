@@ -53,7 +53,7 @@ sequenceDiagram
     participant Signals as Signal ledger
     participant Scoring as Score geometry driver
 
-    Caller->>Recall: RecallAsync(project, query, intent, mode, budget)
+    Caller->>Recall: RecallAsync(project, query, intent, mode, budget, optional projection settings)
     Recall->>Db: Load lexical candidates from memory and source text
     opt projection inputs and provider available
         Recall->>Projection: Embed/search provider-scoped vector projection
@@ -95,16 +95,17 @@ sequenceDiagram
     participant Lifecycle as ProjectionLifecycleService
     participant Provider as RAG/Qdrant projection provider
 
-    Caller->>Rebuild: RebuildAsync(project, take, collection)
+    Caller->>Rebuild: RebuildAsync(project, take, collection, projectMissingRecords)
     Rebuild->>Db: Select stale, rebuild-required, or failed projection records
-    loop each selected projection
+    Rebuild->>Db: If requested, select projection-ready durable records without matching projection rows
+    loop each stale, failed, or missing projection target
         Rebuild->>Db: Load memory record, source links, evidence anchors, claims, context frames, entities, boundaries
         alt durable inputs are complete
             Rebuild->>Lifecycle: ProjectAsync(lifecycle request)
             Lifecycle->>Provider: Upsert/delete projection point as needed
             Provider-->>Lifecycle: Provider trace and projection state
             Lifecycle-->>Rebuild: Projection record result
-            Rebuild->>Db: Preserve row identity and update projection status/hash/provider trace
+            Rebuild->>Db: Preserve or create row identity and update projection status/hash/provider trace
         else provider fails
             Rebuild->>Db: Mark projection failed, keep RebuildRequired=true, store failure code/message
         else durable inputs missing
@@ -209,7 +210,7 @@ sequenceDiagram
 ## Current Flow Limits
 
 - Recall always records stages and warnings when vector projection is skipped or unavailable.
-- Projection invalidation and explicit rebuild are first-class service/API/UI flows. Adapter-backed RAG proof and deterministic provider-failure proof exist; live Qdrant/provider validation is still required for beta.
+- Projection invalidation and explicit rebuild are first-class service/API/UI flows. Adapter-backed RAG proof, deterministic provider-failure proof, and live Docker Qdrant proof exist for P1 beta.
 - Scheduled automation settings are persisted and can be executed explicitly through the API runner or operator settings tab. There is intentionally no dedicated hosted cognitive-memory worker in P0/P1.
 - Retention cleanup is explicit and dry-run-first. It removes old operational rows only, not canonical memory truth.
 

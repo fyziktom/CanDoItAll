@@ -1,0 +1,141 @@
+{
+  "capturedAtUtc": "2026-05-19T14:41:31.2516907Z",
+  "projectId": "b0653e0a-652b-4e11-9f70-8f571ec7cdb8",
+  "docker": [
+    "NAMES                     IMAGE                   STATUS                  PORTS",
+    "candoitall-qdrant         qdrant/qdrant:v1.15.3   Up 15 hours (healthy)   0.0.0.0:6333-6334->6333-6334/tcp, [::]:6333-6334->6333-6334/tcp",
+    "candoitall-qdrant-proof   qdrant/qdrant:latest    Up 5 days               6333-6334/tcp",
+    "candoitall-postgres       postgres:16-alpine      Up 2 days (healthy)     0.0.0.0:5432->5432/tcp, [::]:5432->5432/tcp"
+  ],
+  "apiStatus": {
+    "activeProfileId": "6f0221c6-b0f5-b74b-b037-c5c332d2a41b",
+    "providerKindName": "PostgreSql",
+    "descriptor": "127.0.0.1:5432/candoitall_cognitive_memory_multicycle_20260517_03",
+    "routeCount": 35
+  },
+  "upload": {
+    "operationId": "1af07419-193d-4364-951c-c6d13fb0b88a",
+    "sourceKind": 0,
+    "status": 2,
+    "progressPercent": 100,
+    "statusMessage": "2 source chunk(s) and evidence anchor(s) were ingested.",
+    "projectId": "b0653e0a-652b-4e11-9f70-8f571ec7cdb8",
+    "sourceManifestId": "e9ff00de-9d68-40f7-9d25-14339c92fc8b",
+    "sourceItemId": "d2edc8e0-8adc-41eb-b17b-9d8acb89b4ae",
+    "evidenceAnchorId": "d3fa25fa-c469-4da9-947f-999c7dae82ca",
+    "failureMessage": null
+  },
+  "consolidation": {
+    "runId": {
+      "value": "15ab7c65-ee9e-4673-840e-3b29939aa83e"
+    },
+    "status": 2,
+    "sourceItemsScanned": 2,
+    "candidatesCreated": 2,
+    "mutationCommandsSubmitted": 2,
+    "reviewItemsCreated": 0,
+    "projectionInvalidations": 0,
+    "nextCursor": "d2edc8e0-8adc-41eb-b17b-9d8acb89b4ae",
+    "reportHash": "e15c743d5d9f5d674082d134090839e15de721a66ad46bf756bc8c961b86a578",
+    "warnings": []
+  },
+  "projection": {
+    "runId": "756ef669-afb5-4234-96f3-ef7f626dc77c",
+    "status": 2,
+    "selectedCount": 2,
+    "projectedCount": 2,
+    "failedCount": 0,
+    "skippedCount": 0,
+    "items": [
+      {
+        "projectionRecordId": "658c5ff1-6daa-4e29-9000-3963165a91d1",
+        "memoryRecordId": "280898cc-8161-426f-9feb-85376c19eb3e",
+        "decisionKind": 1,
+        "status": 1,
+        "providerTrace": "projection:qdrant:projected",
+        "failureMessage": null
+      },
+      {
+        "projectionRecordId": "b5e5ac03-9186-488b-853d-660fe88662ae",
+        "memoryRecordId": "d2dc3059-4566-4644-8c99-58065667e5df",
+        "decisionKind": 1,
+        "status": 1,
+        "providerTrace": "projection:qdrant:projected",
+        "failureMessage": null
+      }
+    ],
+    "warnings": []
+  },
+  "qdrantCollection": {
+    "status": "green",
+    "pointsCount": 4,
+    "vectorSize": 384,
+    "distance": "Cosine"
+  },
+  "qdrantFilteredPoints": [
+    {
+      "id": "9e231d8d-8e56-c4e6-6ffd-fb6f9f3005d5",
+      "memoryRecordId": "280898cc-8161-426f-9feb-85376c19eb3e",
+      "projectionRecordId": "658c5ff1-6daa-4e29-9000-3963165a91d1",
+      "projectionProfileId": "qdrant-default-v1",
+      "embeddingProfileId": "local-hashing-v1:dimension=384",
+      "projectId": "b0653e0a-652b-4e11-9f70-8f571ec7cdb8",
+      "textPreview": "qdrant-beta-source.md - Recall Check\r\nSource title: qdrant-beta-source.md - Recall Check\r\nDetected planning dimensions: risk-and-validation, milestones\r\nExtracted source-backed fac"
+    },
+    {
+      "id": "acdb7739-71a1-e1a1-ef96-1a4891d594e8",
+      "memoryRecordId": "d2dc3059-4566-4644-8c99-58065667e5df",
+      "projectionRecordId": "b5e5ac03-9186-488b-853d-660fe88662ae",
+      "projectionProfileId": "qdrant-default-v1",
+      "embeddingProfileId": "local-hashing-v1:dimension=384",
+      "projectId": "b0653e0a-652b-4e11-9f70-8f571ec7cdb8",
+      "textPreview": "qdrant-beta-source.md - Projection Ready Fact\r\nSource title: qdrant-beta-source.md - Projection Ready Fact\r\nDetected planning dimensions: risk-and-validation, milestones\r\nExtracted"
+    }
+  ],
+  "recall": {
+    "traceId": "16caba04-2f15-4711-ba1b-c2a5a76c408c",
+    "summary": "Selected 2 source-backed memory candidate(s).",
+    "candidateCount": 2,
+    "warnings": [],
+    "vectorStage": {
+      "stageKind": 2,
+      "channelKind": 2,
+      "status": 1,
+      "candidateCount": 2,
+      "selectedCount": 2,
+      "excludedCount": 0,
+      "limitingBudget": null,
+      "providerTrace": "rag:qdrant:search:2",
+      "failureCode": "",
+      "failureMessage": "",
+      "completedAtUtc": "2026-05-19T10:41:30.4762492-04:00"
+    },
+    "candidateReasons": [
+      "Lexical channel matched durable memory text. Vector projection channel returned a provider-scoped hit.",
+      "Lexical channel matched durable memory text. Vector projection channel returned a provider-scoped hit."
+    ],
+    "sourceRefs": [
+      {
+        "sourceSystem": "ExternalFile",
+        "locator": "qdrant-beta-source.md#section-02-recall-check",
+        "includedInContext": true
+      },
+      {
+        "sourceSystem": "ExternalFile",
+        "locator": "qdrant-beta-source.md#section-01-projection-ready-fact",
+        "includedInContext": true
+      },
+      {
+        "sourceSystem": "ExternalFile",
+        "locator": "qdrant-beta-source.md#section-02-recall-check",
+        "includedInContext": true
+      },
+      {
+        "sourceSystem": "ExternalFile",
+        "locator": "qdrant-beta-source.md#section-01-projection-ready-fact",
+        "includedInContext": true
+      }
+    ]
+  },
+  "conclusion": "PASS: Docker Qdrant is healthy, missing durable records were projected to Qdrant, and public recall used a completed rag:qdrant vector stage."
+}
