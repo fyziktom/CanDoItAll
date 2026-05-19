@@ -1,7 +1,0 @@
-{
-  "runId": "20260517-204808-post-repair-recall-20260517-210220",
-  "sourceRunId": "20260517-204808",
-  "evidenceDirectory": "C:\\repositories\\CanDoItAll\\codex\\bundles\\realistic-project-memory-validation\\validation\\evidence\\20260517-204808-post-repair-recall-20260517-210220",
-  "recallProbeCount": 10,
-  "providerKindName": "PostgreSql"
-}

@@ -1,2 +1,0 @@
-[    1737ms] [INFO] [2026-05-19T14:41:46.121Z] Information: Normalizing '_blazor' to 'http://127.0.0.1:5289/_blazor'. @ http://127.0.0.1:5289/_framework/blazor.web.ej96puwv3k.js:0
-[    1868ms] [INFO] [2026-05-19T14:41:46.253Z] Information: WebSocket connected to ws://127.0.0.1:5289/_blazor?id=9dHukaPJAhq-Pnn62qZNtg. @ http://127.0.0.1:5289/_framework/blazor.web.ej96puwv3k.js:0
