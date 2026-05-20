@@ -178,7 +178,7 @@
                             <p class="workflows-muted mt-3"
                                data-testid="workflow-canvas-provider-options">@BuildProviderOptionsSummary()</p>
                             @{
-                                var newComponentModelOptions = ResolveNewComponentModelOptions();
+                                var selectedNewComponentProvider = ResolveSelectedNewComponentProvider();
                             }
                             <Grid Gap="LayoutGap.Small" ColumnsLg="2" Class="mt-3">
                                 @if (ProviderOptions.Count > 0)
@@ -201,28 +201,16 @@
                                         </select>
                                     </label>
                                 }
-                                <label class="workflow-canvas-field">
-                                    <span>Model</span>
-                                    @if (newComponentModelOptions.Count > 0)
-                                    {
-                                        <select class="cda-input"
-                                                value="@newComponentModel"
-                                                @onchange="HandleNewComponentModelChanged"
-                                                data-testid="workflow-canvas-component-model">
-                                            @foreach (var model in newComponentModelOptions)
-                                            {
-                                                <option value="@model">@model</option>
-                                            }
-                                        </select>
-                                    }
-                                    else
-                                    {
-                                        <input class="cda-input"
-                                               value="@newComponentModel"
-                                               @onchange="HandleNewComponentModelChanged"
-                                               data-testid="workflow-canvas-component-model" />
-                                    }
-                                </label>
+                                <ProviderModelSelector ProviderName="@selectedNewComponentProvider?.Name"
+                                                       ProviderDefaultModel="@selectedNewComponentProvider?.DefaultModel"
+                                                       ModelOptions="@selectedNewComponentProvider?.ModelOptions"
+                                                       Value="@newComponentModel"
+                                                       ValueChanged="HandleNewComponentModelChangedAsync"
+                                                       UseEmptyValueForProviderDefault="false"
+                                                       TestId="workflow-canvas-component-model-selector"
+                                                       ChoiceTestId="workflow-canvas-component-model"
+                                                       OverrideTestId="workflow-canvas-component-model-override"
+                                                       CustomModelTestId="workflow-canvas-component-model-custom" />
                             </Grid>
                             @if (componentOptions.Count == 0)
                             {

@@ -46,6 +46,7 @@ public sealed class AiAgentFlowTests
         await page.GetByTestId("agents-catalog-summary").FillAsync("Coordinates structured analysis and guarded delivery support.");
         await page.GetByTestId("agents-catalog-instructions").FillAsync("Review the brief, keep the runtime explicit, and create durable delivery evidence.");
         await page.GetByTestId("agents-catalog-provider").SelectOptionAsync(new[] { seededDependencies.ProviderId.ToString() });
+        await page.GetByTestId("agents-catalog-model-override").CheckAsync();
         await page.GetByTestId("agents-catalog-model").FillAsync("llama3.2");
         await page.GetByTestId("agents-catalog-save").ClickAsync();
 

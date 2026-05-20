@@ -1106,9 +1106,12 @@ public partial class WorkflowCanvasEditor
         newComponentModel = ResolveDefaultModel(ResolveSelectedNewComponentProvider());
     }
 
-    private void HandleNewComponentModelChanged(ChangeEventArgs args)
+    private Task HandleNewComponentModelChangedAsync(string? model)
     {
-        newComponentModel = args.Value?.ToString()?.Trim() ?? string.Empty;
+        newComponentModel = string.IsNullOrWhiteSpace(model)
+            ? string.Empty
+            : model.Trim();
+        return Task.CompletedTask;
     }
 
     private void HandleSelectedNodeNameChanged(WorkflowCanvasNodeDraft node, ChangeEventArgs args)
@@ -2716,11 +2719,6 @@ public partial class WorkflowCanvasEditor
         }
 
         return ProviderOptions.FirstOrDefault(option => option.ProviderProfileId == providerId);
-    }
-
-    private IReadOnlyList<string> ResolveNewComponentModelOptions()
-    {
-        return ResolveSelectedNewComponentProvider()?.ModelOptions ?? [];
     }
 
     private string ResolveNewComponentModel(WorkflowProviderOption? providerOption)
