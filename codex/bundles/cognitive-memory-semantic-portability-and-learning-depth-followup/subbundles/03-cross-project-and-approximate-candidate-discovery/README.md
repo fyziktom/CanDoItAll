@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: `Ready`
+- Status: `Completed`
 - Criticality: `Critical`
 - Execution order: `SB03`
 
@@ -24,11 +24,11 @@ Make cross-project weekly clustering real and add bounded approximate candidate 
 
 ## Exact Source References
 
-- /mnt/data/cogmem_review/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryClusterPlanner.cs
-- /mnt/data/cogmem_review/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryClusterFormation.cs
-- /mnt/data/cogmem_review/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryQualityContracts.cs
-- /mnt/data/cogmem_review/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryQualityAlgorithmOptions.cs
-- /mnt/data/cogmem_review/CanDoItAll-cognitive-memory/tests/CanDoItAll.Tests.Unit/CognitiveMemoryQualityFoundationTests.cs
+- repo://src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryClusterPlanner.cs
+- repo://src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryClusterFormation.cs
+- repo://src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryQualityContracts.cs
+- repo://src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryQualityAlgorithmOptions.cs
+- repo://tests/CanDoItAll.Tests.Unit/CognitiveMemoryQualityFoundationTests.cs
 
 ## Deliverables
 
@@ -77,6 +77,8 @@ Make cross-project weekly clustering real and add bounded approximate candidate 
 - Failing-first and passing transcripts for cross-project weekly and no-exact-key paraphrase tests.
 - Metrics/assertions showing approximate pairs are generated for paraphrases.
 - Negative transcript showing restricted cross-project pair is blocked.
+- Proof manifest: `bundle://proof/SB03/manifest.md`
+- Semantic invariant contract: `bundle://proof/SB03/semantic-invariants.md`
 
 ## Browser Validation Logging
 

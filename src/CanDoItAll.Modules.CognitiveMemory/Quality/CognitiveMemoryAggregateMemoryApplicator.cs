@@ -11,10 +11,12 @@ public sealed class CognitiveMemoryAggregateMemoryApplicator(
     IDbContextFactory<AppDbContext> dbContextFactory,
     ICognitiveMemoryRecordValidator recordValidator,
     IClock clock,
-    ICognitiveMemoryAggregateConfidenceCalibrator? confidenceCalibrator = null) : ICognitiveMemoryAggregateMemoryApplicator
+    ICognitiveMemoryAggregateConfidenceCalibrator? confidenceCalibrator = null,
+    CognitiveMemoryQualityAlgorithmOptions? algorithmOptions = null) : ICognitiveMemoryAggregateMemoryApplicator
 {
-    private static string AlgorithmVersion => CognitiveMemoryQualityAlgorithmOptions.Current.AggregateApply.AlgorithmVersion.Value;
     private readonly ICognitiveMemoryAggregateConfidenceCalibrator aggregateConfidenceCalibrator = confidenceCalibrator ?? new CognitiveMemoryAggregateConfidenceCalibrator();
+    private readonly CognitiveMemoryQualityAggregateApplyAlgorithmOptions options = (algorithmOptions ?? new CognitiveMemoryQualityAlgorithmOptions()).AggregateApply;
+    private string AlgorithmVersion => options.AlgorithmVersion.Value;
 
     public async ValueTask<CognitiveMemoryAggregateMemoryApplyResult> ApplyAsync(
         CognitiveMemoryAggregateMemoryApplyRequest request,
@@ -124,7 +126,11 @@ public sealed class CognitiveMemoryAggregateMemoryApplicator(
             validation.IssueCount,
             claims.Count,
             distinctSourceItemCount,
-            strongestClaimSourceMemoryCount));
+            strongestClaimSourceMemoryCount,
+            validation.ClaimsChecked,
+            validation.SourceMapsChecked,
+            claims.Count(claim => CognitiveMemoryDreamEntailmentValidator.CountSemanticOperatorSignals(claim.ClaimText) > 0),
+            claims.Sum(claim => CognitiveMemoryDreamEntailmentValidator.CountSemanticOperatorSignals(claim.ClaimText))));
         var confidenceScore = confidence.Score;
         var confidenceBucket = confidence.Bucket;
         var stabilityState = confidence.StabilityState;

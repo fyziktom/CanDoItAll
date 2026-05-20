@@ -233,7 +233,7 @@ public sealed class CognitiveMemoryCuratorCapturedImprovementRecord : IHasConcur
 
     public CognitiveMemoryCuratorTargetingStatus TargetingStatus { get; set; } = CognitiveMemoryCuratorTargetingStatus.Untargeted;
 
-    public CognitiveMemoryProfessorAnchorState AnchorState { get; set; } = CognitiveMemoryProfessorAnchorState.Active;
+    public CognitiveMemoryProfessorAnchorState AnchorState { get; set; } = CognitiveMemoryProfessorAnchorState.NotProfessorAnchor;
 
     public Guid? SourceItemId { get; set; }
 

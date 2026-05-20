@@ -59,6 +59,7 @@ public sealed class CognitiveMemoryModuleRegistrationTests
         Assert.IsAssignableFrom<ICognitiveMemoryClusterKeyExtractor>(provider.GetRequiredService<ICognitiveMemoryClusterKeyExtractor>());
         Assert.IsAssignableFrom<ICognitiveMemoryCandidatePairSelector>(provider.GetRequiredService<ICognitiveMemoryCandidatePairSelector>());
         Assert.IsAssignableFrom<ICognitiveMemoryDreamClaimSynthesizer>(provider.GetRequiredService<ICognitiveMemoryDreamClaimSynthesizer>());
+        Assert.IsAssignableFrom<ICognitiveMemoryDreamModeClusterSelector>(provider.GetRequiredService<ICognitiveMemoryDreamModeClusterSelector>());
         Assert.IsAssignableFrom<ICognitiveMemoryDreamEntailmentValidator>(provider.GetRequiredService<ICognitiveMemoryDreamEntailmentValidator>());
         Assert.IsAssignableFrom<ICognitiveMemoryRecallBriefComposer>(provider.GetRequiredService<ICognitiveMemoryRecallBriefComposer>());
         Assert.IsAssignableFrom<ICognitiveMemoryProfessorTeachingExtractor>(provider.GetRequiredService<ICognitiveMemoryProfessorTeachingExtractor>());

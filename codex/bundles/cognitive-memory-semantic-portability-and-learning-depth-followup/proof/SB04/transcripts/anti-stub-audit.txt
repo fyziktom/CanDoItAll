@@ -1,0 +1,5 @@
+Command: rg -n "NotImplementedException|TODO|HACK|stub|fake|dummy" src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityAlgorithmOptions.cs src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityContracts.cs src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterFormation.cs src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs
+Invariant: SB04-KEY-COVERAGE-01
+Test name: SemanticInvariant_ClusterKeysExcludeSignalsBelowCoverageThreshold
+No stubs, TODO placeholders, fake implementations, dummy branches, or NotImplementedException markers found in SB04 changed production files.
+ExitCode: 0

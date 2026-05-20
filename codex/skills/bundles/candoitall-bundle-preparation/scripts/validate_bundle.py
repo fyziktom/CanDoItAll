@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import re
 from pathlib import Path
 
@@ -167,12 +168,26 @@ SHA256_PATTERN = re.compile(r"\b[A-Fa-f0-9]{64}\b")
 WINDOWS_ABSOLUTE_PATTERN = re.compile(r"^[A-Za-z]:[\\/]")
 POSIX_ABSOLUTE_PATTERN = re.compile(r"^/")
 ARTIFACT_PATH_PATTERN = re.compile(
-    r"(?<![A-Za-z0-9_])(?:[A-Za-z]:[\\/][^`<>()\s|]+|/[^`<>()\s|]+|proof[\\/][^`<>()\s|]+)",
+    r"(?<![A-Za-z0-9_])(?:repo://[^`<>()\s|]+|bundle://[^`<>()\s|]+|[A-Za-z]:[\\/][^`<>()\s|]+|/[^`<>()\s|]+|proof[\\/][^`<>()\s|]+)",
     re.IGNORECASE,
 )
+PORTABLE_REFERENCE_PATTERN = re.compile(r"^(repo|bundle)://(.+)$", re.IGNORECASE)
 COMMAND_FIELD_PATTERN = re.compile(r'["\']?Command["\']?\s*:', re.IGNORECASE)
 EXIT_CODE_PATTERN = re.compile(r'["\']?Exit(?:Code| code)["\']?\s*:\s*(-?\d+)\b', re.IGNORECASE)
 TEST_NAME_PATTERN = re.compile(r"^\s*-\s*Test name\s*:\s*`?([^`]+?)`?\s*$", re.IGNORECASE | re.MULTILINE)
+INVARIANT_ID_PATTERN = re.compile(r"^\s*-\s*Invariant ID\s*:\s*`?([^`\r\n]+?)`?\s*$", re.IGNORECASE | re.MULTILINE)
+SEMANTIC_INVARIANT_REQUIRED_LABELS = [
+    "Invariant ID",
+    "Source raw note",
+    "Expected behavior",
+    "Disallowed shallow implementation",
+    "Failing-first test",
+    "Passing test",
+    "Changed source files",
+    "Production assertions",
+    "Red-team negative case",
+    "Downstream dependency check",
+]
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -180,6 +195,8 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("bundle_path", help="Path to the bundle root.")
     parser.add_argument("--profile", choices=("feedback", "initiative"), default="feedback")
     parser.add_argument("--stage", choices=("prepared", "completed"), default="prepared")
+    parser.add_argument("--repo-root", help="Repository root used to resolve repo:// references.")
+    parser.add_argument("--bundle-root", help="Bundle root used to resolve bundle:// references. Defaults to bundle_path.")
     return parser.parse_args()
 
 
@@ -246,6 +263,55 @@ def normalize_markdown_value(value: str) -> str:
     return value.strip()
 
 
+def discover_repo_root(start: Path) -> Path:
+    for candidate in (start, *start.parents):
+        if (candidate / ".git").exists():
+            return candidate
+
+        if (candidate / "src").is_dir() and (candidate / "codex").is_dir():
+            return candidate
+
+    return Path.cwd().resolve()
+
+
+def is_portable_reference(path_value: str) -> bool:
+    return PORTABLE_REFERENCE_PATTERN.match(path_value.strip()) is not None
+
+
+def has_portable_reference(content: str) -> bool:
+    return "repo://" in content.lower() or "bundle://" in content.lower()
+
+
+def is_absolute_reference_path(path_value: str) -> bool:
+    return WINDOWS_ABSOLUTE_PATTERN.match(path_value) is not None or POSIX_ABSOLUTE_PATTERN.match(path_value) is not None
+
+
+def resolve_under_root(root: Path, relative_value: str) -> Path:
+    normalized = relative_value.replace("\\", "/").lstrip("/")
+    if not normalized or any(part in {"", ".", ".."} for part in normalized.split("/")):
+        raise ValueError(f"portable reference escapes its root: {relative_value}")
+
+    resolved_root = root.resolve()
+    resolved_path = (resolved_root / normalized).resolve()
+    if resolved_path != resolved_root and resolved_root not in resolved_path.parents:
+        raise ValueError(f"portable reference escapes its root: {relative_value}")
+
+    return resolved_path
+
+
+def resolve_reference_path(path_value: str, bundle_root: Path, repo_root: Path) -> Path:
+    normalized = normalize_artifact_path_token(path_value)
+    match = PORTABLE_REFERENCE_PATTERN.match(normalized)
+    if match is not None:
+        root = repo_root if match.group(1).lower() == "repo" else bundle_root
+        return resolve_under_root(root, match.group(2))
+
+    if is_absolute_reference_path(normalized):
+        return Path(normalized)
+
+    return bundle_root / normalized
+
+
 def extract_bullet_values(section_content: str) -> list[str]:
     values: list[str] = []
     for line in section_content.splitlines():
@@ -273,7 +339,7 @@ def validate_required_bullets_for_group(path: Path, content: str, heading_group:
     return [f"{path}: {heading} must include at least one markdown bullet"]
 
 
-def validate_exact_source_references(path: Path, content: str) -> list[str]:
+def validate_exact_source_references(path: Path, content: str, bundle_root: Path, repo_root: Path) -> list[str]:
     section_content = extract_markdown_section(content, "## Exact Source References")
     if section_content is None:
         return []
@@ -284,9 +350,15 @@ def validate_exact_source_references(path: Path, content: str) -> list[str]:
 
     issues: list[str] = []
     for reference in references:
-        reference_path = Path(reference)
-        if not reference_path.is_absolute():
-            issues.append(f"{path}: source reference is not an absolute path: {reference}")
+        normalized = normalize_artifact_path_token(reference)
+        if not is_portable_reference(normalized) and not is_absolute_reference_path(normalized):
+            issues.append(f"{path}: source reference is not absolute or portable: {reference}")
+            continue
+
+        try:
+            reference_path = resolve_reference_path(normalized, bundle_root, repo_root)
+        except ValueError as exception:
+            issues.append(f"{path}: {exception}")
             continue
 
         if not reference_path.exists():
@@ -329,11 +401,11 @@ def validate_root_readme(path: Path, stage: str) -> list[str]:
     return issues
 
 
-def validate_subbundle_readme(path: Path, stage: str) -> list[str]:
+def validate_subbundle_readme(path: Path, stage: str, bundle_root: Path, repo_root: Path) -> list[str]:
     content = path.read_text(encoding="utf-8")
     issues = validate_heading_groups(path, content, SUBBUNDLE_HEADING_GROUPS)
 
-    issues.extend(validate_exact_source_references(path, content))
+    issues.extend(validate_exact_source_references(path, content, bundle_root, repo_root))
 
     for heading_group in SUBBUNDLE_REQUIRED_BULLET_GROUPS:
         issues.extend(validate_required_bullets_for_group(path, content, heading_group))
@@ -703,12 +775,8 @@ def is_absolute_artifact_path(path_value: str) -> bool:
     return WINDOWS_ABSOLUTE_PATTERN.match(path_value) is not None or POSIX_ABSOLUTE_PATTERN.match(path_value) is not None
 
 
-def resolve_artifact_path(bundle_path: Path, path_value: str) -> Path:
-    normalized = normalize_artifact_path_token(path_value)
-    if is_absolute_artifact_path(normalized):
-        return Path(normalized)
-
-    return bundle_path / normalized
+def resolve_artifact_path(bundle_path: Path, repo_root: Path, path_value: str) -> Path:
+    return resolve_reference_path(path_value, bundle_path, repo_root)
 
 
 def extract_artifact_path_tokens(content: str) -> list[str]:
@@ -778,6 +846,100 @@ def extract_test_names(content: str) -> list[str]:
     return names
 
 
+def semantic_invariant_contract_paths(bundle_path: Path, subbundle_number: str) -> list[Path]:
+    proof_root = bundle_path / "proof" / f"SB{subbundle_number}"
+    return [
+        proof_root / "semantic-invariants.json",
+        proof_root / "semantic-invariants.md",
+    ]
+
+
+def semantic_invariant_citations(subbundle_number: str) -> list[str]:
+    return [
+        f"proof/SB{subbundle_number}/semantic-invariants.json",
+        f"proof/SB{subbundle_number}/semantic-invariants.md",
+        f"bundle://proof/SB{subbundle_number}/semantic-invariants.json",
+        f"bundle://proof/SB{subbundle_number}/semantic-invariants.md",
+    ]
+
+
+def extract_markdown_invariant_ids(content: str) -> list[str]:
+    ids: list[str] = []
+    seen: set[str] = set()
+    for match in INVARIANT_ID_PATTERN.finditer(content):
+        invariant_id = normalize_markdown_value(match.group(1)).strip()
+        if not invariant_id or invariant_id in seen:
+            continue
+
+        ids.append(invariant_id)
+        seen.add(invariant_id)
+
+    return ids
+
+
+def validate_markdown_semantic_invariants(path: Path, content: str) -> tuple[list[str], list[str]]:
+    issues: list[str] = []
+    lowered = content.lower()
+    for label in SEMANTIC_INVARIANT_REQUIRED_LABELS:
+        if label.lower() not in lowered:
+            issues.append(f"{path}: semantic invariant contract is missing '{label}'")
+
+    invariant_ids = extract_markdown_invariant_ids(content)
+    if not invariant_ids:
+        issues.append(f"{path}: semantic invariant contract must include at least one invariant id")
+
+    return issues, invariant_ids
+
+
+def normalize_json_key(value: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", value.lower())
+
+
+def validate_json_semantic_invariants(path: Path, content: str) -> tuple[list[str], list[str]]:
+    issues: list[str] = []
+    try:
+        data = json.loads(content)
+    except json.JSONDecodeError as exception:
+        return [f"{path}: semantic invariant JSON is invalid: {exception}"], []
+
+    raw_invariants = data.get("invariants") if isinstance(data, dict) else data
+    if isinstance(raw_invariants, dict):
+        invariants = [raw_invariants]
+    elif isinstance(raw_invariants, list):
+        invariants = raw_invariants
+    else:
+        return [f"{path}: semantic invariant JSON must contain an object, array, or 'invariants' array"], []
+
+    ids: list[str] = []
+    for index, invariant in enumerate(invariants):
+        if not isinstance(invariant, dict):
+            issues.append(f"{path}: invariant at index {index} must be an object")
+            continue
+
+        normalized_keys = {normalize_json_key(key): key for key in invariant.keys()}
+        for label in SEMANTIC_INVARIANT_REQUIRED_LABELS:
+            normalized_label = normalize_json_key(label)
+            if normalized_label not in normalized_keys:
+                issues.append(f"{path}: invariant at index {index} is missing '{label}'")
+
+        invariant_id = invariant.get("Invariant ID") or invariant.get("invariantId") or invariant.get("id")
+        if isinstance(invariant_id, str) and invariant_id.strip():
+            ids.append(invariant_id.strip())
+
+    if not ids:
+        issues.append(f"{path}: semantic invariant JSON must include at least one invariant id")
+
+    return issues, ids
+
+
+def validate_semantic_invariant_contract(contract_path: Path) -> tuple[list[str], list[str]]:
+    content = contract_path.read_text(encoding="utf-8", errors="replace")
+    if contract_path.suffix.lower() == ".json":
+        return validate_json_semantic_invariants(contract_path, content)
+
+    return validate_markdown_semantic_invariants(contract_path, content)
+
+
 def validate_transcript(path: Path, expectation: str | None) -> tuple[list[str], str]:
     issues: list[str] = []
     content = path.read_text(encoding="utf-8", errors="replace")
@@ -796,7 +958,7 @@ def validate_transcript(path: Path, expectation: str | None) -> tuple[list[str],
     return issues, content
 
 
-def validate_completed_proof_manifests(bundle_path: Path, subbundle_directories: list[Path]) -> list[str]:
+def validate_completed_proof_manifests(bundle_path: Path, repo_root: Path, subbundle_directories: list[Path]) -> list[str]:
     issues: list[str] = []
     phase_plan_path = bundle_path / "plan" / "01-phase-plan.md"
     execution_report_path = bundle_path / "reviews" / "01-execution-report.md"
@@ -841,9 +1003,34 @@ def validate_completed_proof_manifests(bundle_path: Path, subbundle_directories:
         if SHA256_PATTERN.search(manifest_content) is None:
             issues.append(f"{manifest_path}: proof manifest must include at least one SHA-256 changed-file hash")
 
+        if not has_portable_reference(manifest_content):
+            issues.append(f"{manifest_path}: proof manifest must include at least one portable repo:// or bundle:// reference")
+
+        manifest_ids: set[str] = set()
+        invariant_contracts = [candidate for candidate in semantic_invariant_contract_paths(bundle_path, subbundle_number) if candidate.is_file()]
+        if not invariant_contracts:
+            issues.append(f"{manifest_path}: completed critical subbundle SB{subbundle_number} is missing semantic invariant contract")
+        else:
+            normalized_manifest_content = manifest_content.replace("\\", "/")
+            contract_citations = semantic_invariant_citations(subbundle_number)
+            if not any(citation in normalized_report_content for citation in contract_citations):
+                issues.append(f"{execution_report_path}: completed critical subbundle SB{subbundle_number} must cite proof/SB{subbundle_number}/semantic-invariants.*")
+
+            if not any(citation in normalized_manifest_content or citation in normalized_readme_content for citation in contract_citations):
+                issues.append(f"{manifest_path}: proof manifest or subbundle README must cite proof/SB{subbundle_number}/semantic-invariants.*")
+
+            for invariant_contract in invariant_contracts:
+                contract_issues, invariant_ids = validate_semantic_invariant_contract(invariant_contract)
+                issues.extend(contract_issues)
+                if not invariant_ids:
+                    continue
+
+                manifest_ids.update(invariant_ids)
+                break
+
         artifact_tokens = extract_artifact_path_tokens(manifest_content)
         for artifact_token in artifact_tokens:
-            artifact_path = resolve_artifact_path(bundle_path, artifact_token)
+            artifact_path = resolve_artifact_path(bundle_path, repo_root, artifact_token)
             if not artifact_path.exists():
                 issues.append(f"{manifest_path}: referenced artifact path does not exist: {artifact_token}")
 
@@ -853,7 +1040,7 @@ def validate_completed_proof_manifests(bundle_path: Path, subbundle_directories:
 
         transcript_contents: list[str] = []
         for transcript_token in transcript_tokens:
-            transcript_path = resolve_artifact_path(bundle_path, transcript_token)
+            transcript_path = resolve_artifact_path(bundle_path, repo_root, transcript_token)
             if not transcript_path.is_file():
                 continue
 
@@ -872,7 +1059,7 @@ def validate_completed_proof_manifests(bundle_path: Path, subbundle_directories:
             issues.append(f"{manifest_path}: proof manifest must cite a failing-first transcript or an explicit process/non-production exemption")
 
         for failing_token in failing_tokens:
-            failing_path = resolve_artifact_path(bundle_path, failing_token)
+            failing_path = resolve_artifact_path(bundle_path, repo_root, failing_token)
             if not failing_path.is_file():
                 continue
 
@@ -890,7 +1077,7 @@ def validate_completed_proof_manifests(bundle_path: Path, subbundle_directories:
             issues.append(f"{manifest_path}: proof manifest must cite a passing transcript")
 
         for passing_token in passing_tokens:
-            passing_path = resolve_artifact_path(bundle_path, passing_token)
+            passing_path = resolve_artifact_path(bundle_path, repo_root, passing_token)
             if not passing_path.is_file():
                 continue
 
@@ -905,6 +1092,10 @@ def validate_completed_proof_manifests(bundle_path: Path, subbundle_directories:
             issues.append(f"{manifest_path}: proof manifest must cite an anti-stub audit transcript")
 
         combined_transcripts = "\n".join(transcript_contents)
+        for invariant_id in manifest_ids:
+            if invariant_id not in combined_transcripts:
+                issues.append(f"{manifest_path}: invariant id is missing from transcript output: {invariant_id}")
+
         for test_name in extract_test_names(manifest_content):
             if test_name not in combined_transcripts:
                 issues.append(f"{manifest_path}: cited test name is missing from transcript output: {test_name}")
@@ -940,7 +1131,8 @@ def validate_completed_raw_note_proof_depth(path: Path) -> list[str]:
 
 def main() -> int:
     arguments = parse_arguments()
-    bundle_path = Path(arguments.bundle_path).resolve()
+    bundle_path = Path(arguments.bundle_root or arguments.bundle_path).resolve()
+    repo_root = Path(arguments.repo_root).resolve() if arguments.repo_root else discover_repo_root(bundle_path)
 
     issues: list[str] = []
     if not bundle_path.is_dir():
@@ -972,7 +1164,7 @@ def main() -> int:
                 issues.append(f"Missing README.md in {subbundle_directory}")
                 continue
 
-            issues.extend(validate_subbundle_readme(subbundle_readme_path, arguments.stage))
+            issues.extend(validate_subbundle_readme(subbundle_readme_path, arguments.stage, bundle_path, repo_root))
 
     execution_report_path = bundle_path / "reviews" / "01-execution-report.md"
     if execution_report_path.is_file():
@@ -989,7 +1181,7 @@ def main() -> int:
             issues.extend(validate_completed_raw_note_proof_depth(execution_report_path))
 
         issues.extend(validate_completed_semantic_proof(bundle_path, subbundle_directories))
-        issues.extend(validate_completed_proof_manifests(bundle_path, subbundle_directories))
+        issues.extend(validate_completed_proof_manifests(bundle_path, repo_root, subbundle_directories))
 
     if issues:
         print("Bundle validation failed:")

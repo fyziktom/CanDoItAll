@@ -1,0 +1,85 @@
+Command: transcript metadata repair for .\codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup\proof\SB06\transcripts\source-assertions.txt
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityAlgorithmOptions.cs:48:    public CognitiveMemoryAlgorithmVersion AlgorithmVersion { get; init; } = new("quality-aggregate-apply-v3-semantic-calibrated");
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryAggregateConfidenceCalibrator.cs:12:        var validatedClaimCount = request.ValidatedClaimCount <= 0 ? request.ClaimCount : request.ValidatedClaimCount;
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryAggregateConfidenceCalibrator.cs:13:        var sourceMapCount = request.SourceMapCount <= 0 ? request.DistinctSourceItemCount : request.SourceMapCount;
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryAggregateConfidenceCalibrator.cs:21:        var complexityPenalty = Math.Clamp(request.OperatorBearingClaimCount * 0.025 + request.ClaimComplexityScore * 0.006, 0, 0.14);
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryAggregateConfidenceCalibrator.cs:47:    int ValidatedClaimCount = 0,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryAggregateConfidenceCalibrator.cs:48:    int SourceMapCount = 0,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryAggregateConfidenceCalibrator.cs:49:    int OperatorBearingClaimCount = 0,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryAggregateConfidenceCalibrator.cs:50:    int ClaimComplexityScore = 0);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:963:    public async Task DreamValidation_RoutesNumericReversalToReviewWithIssueReason()
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:1005:            issue.Message.Contains("Numeric value", StringComparison.Ordinal));
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:1312:    public void AggregateConfidenceCalibrator_DemotesOperatorBearingAggregateDespiteBroadEvidence()
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:1321:            ValidatedClaimCount: 1,
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:1322:            SourceMapCount: 8,
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:1323:            OperatorBearingClaimCount: 1,
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:1324:            ClaimComplexityScore: 8));
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:1664:                SourceMapCount = 2,
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:2360:    public void SemanticInvariant_DreamEntailmentRejectsNumericTemporalActorConditionalAndScopeReversals(
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:2378:    public void DreamEntailment_SupportsMatchingSemanticOperators(
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryAggregateMemoryApplicator.cs:130:            claims.Count(claim => CognitiveMemoryDreamEntailmentValidator.CountSemanticOperatorSignals(claim.ClaimText) > 0),
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryAggregateMemoryApplicator.cs:131:            claims.Sum(claim => CognitiveMemoryDreamEntailmentValidator.CountSemanticOperatorSignals(claim.ClaimText))));
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:440:        var claimProfile = CognitiveMemoryDreamEntailmentProfile.Create(request.ClaimText);
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:441:        var sourceProfile = CognitiveMemoryDreamEntailmentProfile.Create(sourceMaterial);
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:442:        var semanticBlocker = FindSemanticBlocker(claimProfile, sourceProfile);
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:458:    public static int CountSemanticOperatorSignals(string text)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:459:        => CognitiveMemoryDreamEntailmentProfile.Create(text).RiskSignalCount;
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:464:    private static string FindSemanticBlocker(
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:465:        CognitiveMemoryDreamEntailmentProfile claim,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:466:        CognitiveMemoryDreamEntailmentProfile source)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:473:                return $"Numeric value '{measurement.DisplayText}' is contradicted by source value(s) {string.Join(", ", sameUnit.Select(value => value.DisplayText))}.";
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:478:                return $"Numeric value '{measurement.DisplayText}' is not supported by mapped source value(s).";
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:487:                return $"Temporal relation '{relation.Marker} {relation.AnchorKey}' contradicts mapped source order.";
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:492:                return $"Temporal relation '{relation.Marker} {relation.AnchorKey}' is not supported by mapped source order.";
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:503:        if (claim.ConditionPolarity != CognitiveMemoryDreamConditionPolarity.Neutral &&
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:504:            source.ConditionPolarity != CognitiveMemoryDreamConditionPolarity.Neutral &&
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:505:            claim.ConditionPolarity != source.ConditionPolarity)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:507:            return $"Conditional polarity '{claim.ConditionPolarity}' is contradicted by source condition '{source.ConditionPolarity}'.";
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:510:        if (source.OnlyScopes.Count > 0 && claim.ScopeTargets.Count > 0 && !claim.ScopeTargets.Any(source.OnlyScopes.Contains))
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:512:            return $"Scope target '{string.Join(".", claim.ScopeTargets.Order(StringComparer.Ordinal))}' exceeds source-only scope '{string.Join(".", source.OnlyScopes.Order(StringComparer.Ordinal))}'.";
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:530:                return $"Actor/action role '{claimRole.SubjectKey}.{claimRole.PredicateKey}.{claimRole.ObjectKey}' is contradicted by mapped source role(s).";
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:569:    private sealed record CognitiveMemoryDreamEntailmentProfile(
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:570:        IReadOnlyList<CognitiveMemoryDreamMeasurement> Measurements,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:571:        IReadOnlyList<CognitiveMemoryDreamTemporalRelation> TemporalRelations,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:572:        IReadOnlyList<CognitiveMemoryDreamSemanticRole> Roles,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:574:        CognitiveMemoryDreamConditionPolarity ConditionPolarity,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:575:        IReadOnlySet<string> OnlyScopes,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:583:            (ConditionPolarity == CognitiveMemoryDreamConditionPolarity.Neutral ? 0 : 1) +
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:584:            OnlyScopes.Count +
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:587:        public static CognitiveMemoryDreamEntailmentProfile Create(string text)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:590:            return new CognitiveMemoryDreamEntailmentProfile(
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:595:                ExtractConditionPolarity(normalized),
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:596:                ExtractOnlyScopes(normalized),
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:601:    private sealed record CognitiveMemoryDreamMeasurement(
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:606:    private sealed record CognitiveMemoryDreamTemporalRelation(
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:610:        public bool HasSameAnchor(CognitiveMemoryDreamTemporalRelation other)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:613:        public bool Matches(CognitiveMemoryDreamTemporalRelation other)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:617:        public bool IsOppositeOf(CognitiveMemoryDreamTemporalRelation other)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:623:    private sealed record CognitiveMemoryDreamSemanticRole(
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:628:        public bool Matches(CognitiveMemoryDreamSemanticRole other)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:632:        public bool HasMeaningfulRoleConflict(CognitiveMemoryDreamSemanticRole other)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:655:    private enum CognitiveMemoryDreamConditionPolarity
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:662:    private static IReadOnlyList<CognitiveMemoryDreamMeasurement> ExtractMeasurements(string text)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:668:                return new CognitiveMemoryDreamMeasurement(
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:677:    private static IReadOnlyList<CognitiveMemoryDreamTemporalRelation> ExtractTemporalRelations(string text)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:680:            .Select(match => new CognitiveMemoryDreamTemporalRelation(
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:687:    private static IReadOnlyList<CognitiveMemoryDreamSemanticRole> ExtractRoles(string text)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:689:        var roles = new List<CognitiveMemoryDreamSemanticRole>();
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:725:                roles.Add(new CognitiveMemoryDreamSemanticRole(predicate, subject, obj));
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:759:    private static CognitiveMemoryDreamConditionPolarity ExtractConditionPolarity(string text)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:764:            return CognitiveMemoryDreamConditionPolarity.Neutral;
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:769:            return CognitiveMemoryDreamConditionPolarity.Fail;
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:774:            return CognitiveMemoryDreamConditionPolarity.Pass;
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:777:        return CognitiveMemoryDreamConditionPolarity.Neutral;
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:780:    private static IReadOnlySet<string> ExtractOnlyScopes(string text)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamValidator.cs:180:            var supportResult = ValidateClaimSupport(claim, claimSourceMaps, sourceRecordsById);
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamValidator.cs:186:                    $"Aggregate claim '{claim.Id:D}' is not entailed by its mapped source memories: {supportResult.Reason}"));
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamValidator.cs:351:    private CognitiveMemoryDreamEntailmentResult ValidateClaimSupport(
+ExitCode: 0
+Invariant: SB06-DEEP-ENTAILMENT-01
+Test: DreamValidation_RoutesUnsupportedMappedClaimToReview
+Test: DreamValidation_RejectsNegatedClaimDespiteHighTokenOverlap
+Test: DreamRun_ProjectNightlyCreatesApprovedCandidateAndMetrics
+Test: DreamRun_IntegratesComplementaryProcedureClaimsIntoSingleAggregateStatement
+Test: SemanticInvariant_DreamRunSeparatesUnrelatedClaimsSharingPrimaryClusterKey
+Test: SemanticInvariant_ClusterKeysExcludeSignalsBelowCoverageThreshold

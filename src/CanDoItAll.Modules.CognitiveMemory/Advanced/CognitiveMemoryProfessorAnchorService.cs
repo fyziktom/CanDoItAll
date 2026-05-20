@@ -36,10 +36,19 @@ public sealed class CognitiveMemoryProfessorAnchorService(
         }
 
         var now = clock.GetUtcNow();
+        var previousState = capture.AnchorState;
         capture.AnchorState = CognitiveMemoryProfessorAnchorState.Faded;
         capture.AnchorRetiredAtUtc = now;
         capture.ConcurrencyToken = Guid.NewGuid();
         await DemoteDirectCaptureMemoryAsync(dbContext, capture, now, cancellationToken);
+        CognitiveMemoryProfessorAnchorTransitionAudit.AddTransition(
+            dbContext,
+            capture,
+            previousState,
+            capture.AnchorState,
+            now,
+            "Assimilated professor anchor was faded after derived memory took over.",
+            derivedMemoryRecordId: capture.AssimilatedMemoryRecordId);
         await dbContext.SaveChangesAsync(cancellationToken);
         return new CognitiveMemoryProfessorAnchorResult(
             capture.Id,
@@ -127,12 +136,18 @@ public sealed class CognitiveMemoryProfessorAnchorService(
             throw new InvalidOperationException($"Professor anchor capture '{request.CaptureId:D}' cannot be assimilated: {evaluation.Reason}");
         }
 
+        if (!requireUsageAndIntegration && !request.ManualReviewConfirmed)
+        {
+            throw new InvalidOperationException($"Manual professor anchor assimilation for capture '{request.CaptureId:D}' requires explicit review confirmation.");
+        }
+
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var capture = await dbContext.Set<CognitiveMemoryCuratorCapturedImprovementRecord>()
             .SingleOrDefaultAsync(item => item.Id == request.CaptureId, cancellationToken)
             ?? throw new InvalidOperationException($"Professor anchor capture '{request.CaptureId:D}' was not found.");
 
         var now = clock.GetUtcNow();
+        var previousState = capture.AnchorState;
         capture.AssimilatedMemoryRecordId = request.DerivedMemoryRecordId.Value;
         capture.AnchorState = request.FadeAnchor
             ? CognitiveMemoryProfessorAnchorState.Faded
@@ -144,6 +159,17 @@ public sealed class CognitiveMemoryProfessorAnchorService(
             await DemoteDirectCaptureMemoryAsync(dbContext, capture, now, cancellationToken);
         }
 
+        CognitiveMemoryProfessorAnchorTransitionAudit.AddTransition(
+            dbContext,
+            capture,
+            previousState,
+            capture.AnchorState,
+            now,
+            requireUsageAndIntegration
+                ? "Automatic professor anchor assimilation accepted event-backed mastery and integration evidence."
+                : "Manual professor anchor assimilation was explicitly review-confirmed.",
+            request.ManualReviewConfirmed,
+            request.DerivedMemoryRecordId.Value);
         await dbContext.SaveChangesAsync(cancellationToken);
         return new CognitiveMemoryProfessorAnchorResult(
             capture.Id,

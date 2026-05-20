@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: `Ready`
+- Status: `Completed`
 - Criticality: `Critical`
 - Execution order: `SB10`
 
@@ -25,13 +25,13 @@ Refactor service boundaries, replace static option access, and run end-to-end se
 
 ## Exact Source References
 
-- /mnt/data/cogmem_review/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryCuratorConversationService.cs
-- /mnt/data/cogmem_review/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryClusterPlanner.cs
-- /mnt/data/cogmem_review/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryDreamConsolidationService.cs
-- /mnt/data/cogmem_review/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryQualityAlgorithmOptions.cs
-- /mnt/data/cogmem_review/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/CognitiveMemoryModuleServiceCollectionExtensions.cs
-- /mnt/data/cogmem_review/CanDoItAll-cognitive-memory/tests/CanDoItAll.Tests.Unit/CognitiveMemoryQualityFoundationTests.cs
-- /mnt/data/cogmem_review/CanDoItAll-cognitive-memory/tests/CanDoItAll.Tests.Unit/CognitiveMemoryAdvancedServicesTests.cs
+- repo://src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryCuratorConversationService.cs
+- repo://src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryClusterPlanner.cs
+- repo://src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryDreamConsolidationService.cs
+- repo://src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryQualityAlgorithmOptions.cs
+- repo://src/CanDoItAll.Modules.CognitiveMemory/CognitiveMemoryModuleServiceCollectionExtensions.cs
+- repo://tests/CanDoItAll.Tests.Unit/CognitiveMemoryQualityFoundationTests.cs
+- repo://tests/CanDoItAll.Tests.Unit/CognitiveMemoryAdvancedServicesTests.cs
 
 ## Deliverables
 
@@ -92,6 +92,20 @@ Refactor service boundaries, replace static option access, and run end-to-end se
 ## Progression Gate
 
 - Do not proceed to the next subbundle until this subbundle's proof manifest, semantic invariant contract, targeted transcripts, anti-stub audit, and downstream dependency checks are complete.
+
+## Closure Evidence
+
+- Semantic invariant contract: `bundle://proof/SB10/semantic-invariants.md`
+- Proof manifest: `bundle://proof/SB10/manifest.md`
+- Failing-first transcript: `bundle://proof/SB10/transcripts/failing-first-current.txt`
+- Passing transcript: `bundle://proof/SB10/transcripts/passing-semantic-tests.txt`
+- Broad cognitive-memory transcript: `bundle://proof/SB10/transcripts/broad-cognitive-memory-tests.txt`
+- Completed-stage validator transcript: `bundle://proof/SB10/transcripts/completed-validator.txt`
+- Fake-proof rejection transcript: `bundle://proof/SB10/transcripts/fake-proof-fixtures.txt`
+- Red-team verdict: `bundle://proof/SB10/red-team-verdict.md`
+- Service-size/responsibility report: `bundle://proof/SB10/service-size-responsibility-report.md`
+- Economic-governance scope guard: `bundle://proof/SB10/transcripts/economic-governance-scope-guard.txt`
+- Browser validation: N/A; backend service boundaries, DI/options wiring, proof artifacts, and tests only.
 
 ## Suggested Agent Prompt
 

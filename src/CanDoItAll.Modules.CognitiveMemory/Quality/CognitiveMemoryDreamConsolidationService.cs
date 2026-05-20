@@ -12,20 +12,23 @@ public sealed class CognitiveMemoryDreamConsolidationService(
     ICognitiveMemoryClusterPlanner clusterPlanner,
     ICognitiveMemoryDreamValidator validator,
     IClock clock,
-    ICognitiveMemoryDreamClaimSynthesizer? claimSynthesizer = null) : ICognitiveMemoryDreamConsolidationService
+    ICognitiveMemoryDreamClaimSynthesizer? claimSynthesizer = null,
+    CognitiveMemoryQualityAlgorithmOptions? algorithmOptions = null,
+    ICognitiveMemoryDreamModeClusterSelector? modeClusterSelector = null) : ICognitiveMemoryDreamConsolidationService
 {
-    private static readonly CognitiveMemoryQualityDreamAlgorithmOptions AlgorithmOptions = CognitiveMemoryQualityAlgorithmOptions.Current.Dream;
     private readonly ICognitiveMemoryDreamClaimSynthesizer claimSynthesizer = claimSynthesizer ?? CognitiveMemoryDreamClaimSynthesizer.Instance;
-    private static string AlgorithmVersion => AlgorithmOptions.AlgorithmVersion.Value;
-    private static int MaxAggregateClaims => AlgorithmOptions.MaxAggregateClaims;
-    private static string AggregateClaimPredicateKey => AlgorithmOptions.AggregateClaimPredicateKey;
+    private readonly ICognitiveMemoryDreamModeClusterSelector modeClusterSelector = modeClusterSelector ?? CognitiveMemoryDreamModeClusterSelector.Instance;
+    private readonly CognitiveMemoryQualityDreamAlgorithmOptions options = (algorithmOptions ?? new CognitiveMemoryQualityAlgorithmOptions()).Dream;
+    private string AlgorithmVersion => options.AlgorithmVersion.Value;
+    private int MaxAggregateClaims => options.MaxAggregateClaims;
+    private string AggregateClaimPredicateKey => options.AggregateClaimPredicateKey;
 
     public async ValueTask<CognitiveMemoryDreamRunResult> RunAsync(
         CognitiveMemoryDreamRunRequest request,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
-        var modePolicy = CognitiveMemoryDreamModePolicy.Resolve(request.Mode);
+        var modePolicy = modeClusterSelector.ResolvePolicy(request.Mode);
 
         var stopwatch = Stopwatch.StartNew();
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -53,10 +56,11 @@ public sealed class CognitiveMemoryDreamConsolidationService(
                     request.PolicyContext,
                     minMembers: request.MinMembersPerCluster,
                     maxRecords: 1000,
-                    persistClusters: false),
+                    persistClusters: false,
+                    scope: modeClusterSelector.ResolvePlanningScope(request)),
                 cancellationToken);
             var dryRunClusters = dryRunPlannerResult.Clusters
-                .Where(cluster => IsClusterSelectedForMode(modePolicy, cluster))
+                .Where(cluster => modeClusterSelector.IsSelected(modePolicy.Mode, cluster))
                 .Take(request.MaxClusters)
                 .ToArray();
             var dryRunRunId = CognitiveMemoryDreamRunId.New();
@@ -126,10 +130,11 @@ public sealed class CognitiveMemoryDreamConsolidationService(
                     request.PolicyContext,
                     minMembers: request.MinMembersPerCluster,
                     maxRecords: 1000,
-                    persistClusters: request.PersistChanges),
+                    persistClusters: request.PersistChanges,
+                    scope: modeClusterSelector.ResolvePlanningScope(request)),
                 cancellationToken);
             var selectedClusters = plannerResult.Clusters
-                .Where(cluster => IsClusterSelectedForMode(modePolicy, cluster))
+                .Where(cluster => modeClusterSelector.IsSelected(modePolicy.Mode, cluster))
                 .Take(request.MaxClusters)
                 .ToArray();
             var warningsList = plannerResult.Warnings.ToList();
@@ -159,7 +164,7 @@ public sealed class CognitiveMemoryDreamConsolidationService(
                     ClusterId = cluster.ClusterId.Value,
                     ProjectId = request.ProjectId,
                     Readiness = cluster.Readiness,
-                    SelectionReasonCode = ResolveSelectionReasonCode(modePolicy, cluster),
+                    SelectionReasonCode = modeClusterSelector.ResolveSelectionReasonCode(modePolicy.Mode, cluster),
                     MemberCount = cluster.Members.Count,
                     ClaimCount = contract.Claims.Count,
                     CreatedAtUtc = nowUtc
@@ -255,7 +260,7 @@ public sealed class CognitiveMemoryDreamConsolidationService(
         var canonicalText = BuildAggregateCanonicalText(request.Mode, cluster, records, claimUnits);
         var candidateId = Guid.NewGuid();
         var aggregateClaims = new List<CognitiveMemoryDreamAggregateClaim>();
-        var subjectKey = ResolveAggregateSubjectKey(cluster, records);
+        var fallbackSubjectKey = ResolveAggregateSubjectKey(cluster, records);
         var claimSequence = 0;
         foreach (var claimGroup in BuildClaimGroups(claimUnits).Take(MaxAggregateClaims))
         {
@@ -271,13 +276,17 @@ public sealed class CognitiveMemoryDreamConsolidationService(
             }
 
             var aggregateClaimId = Guid.NewGuid();
+            var claimKind = claimGroup.RepresentativeSlots.ClaimKind;
+            var subjectKey = FirstNonEmpty(claimGroup.RepresentativeSlots.SubjectKey, fallbackSubjectKey);
+            var predicateKey = FirstNonEmpty(claimGroup.RepresentativeSlots.PredicateKey, AggregateClaimPredicateKey);
+            var objectKey = FirstNonEmpty(claimGroup.RepresentativeSlots.ObjectKey, claimGroup.Signature);
             aggregateClaims.Add(new CognitiveMemoryDreamAggregateClaim(
                 aggregateClaimId,
-                ResolveAggregateClaimKind(request.Mode, claimGroup.Units.FirstOrDefault()?.Record),
+                claimKind,
                 aggregateClaimText,
                 subjectKey,
-                AggregateClaimPredicateKey,
-                CognitiveMemoryQualityText.TrimText(claimGroup.Signature, 240),
+                CognitiveMemoryQualityText.TrimText(predicateKey, 160),
+                CognitiveMemoryQualityText.TrimText(objectKey, 240),
                 aggregateSourceMaps));
             if (persistChanges)
             {
@@ -287,11 +296,11 @@ public sealed class CognitiveMemoryDreamConsolidationService(
                     AggregateCandidateId = candidateId,
                     ProjectId = request.ProjectId,
                     Sequence = claimSequence,
-                    ClaimKind = ResolveAggregateClaimKind(request.Mode, claimGroup.Units.FirstOrDefault()?.Record),
+                    ClaimKind = claimKind,
                     ClaimText = aggregateClaimText,
                     SubjectKey = subjectKey,
-                    PredicateKey = AggregateClaimPredicateKey,
-                    ObjectKey = CognitiveMemoryQualityText.TrimText(claimGroup.Signature, 240),
+                    PredicateKey = CognitiveMemoryQualityText.TrimText(predicateKey, 160),
+                    ObjectKey = CognitiveMemoryQualityText.TrimText(objectKey, 240),
                     CreatedAtUtc = nowUtc
                 });
                 foreach (var sourceMap in aggregateSourceMaps)
@@ -483,55 +492,6 @@ public sealed class CognitiveMemoryDreamConsolidationService(
             run.EvidenceCoverageRatio,
             elapsed);
 
-    private static bool IsClusterSelectedForMode(
-        CognitiveMemoryDreamModePolicy modePolicy,
-        CognitiveMemoryClusterPlan cluster)
-        => modePolicy.Mode switch
-        {
-            CognitiveMemoryConsolidationMode.ProjectNightly => cluster.Readiness is CognitiveMemoryQualityClusterReadiness.AggregateReady
-                or CognitiveMemoryQualityClusterReadiness.NeedsHumanReview
-                or CognitiveMemoryQualityClusterReadiness.Contradictory
-                or CognitiveMemoryQualityClusterReadiness.Restricted,
-            CognitiveMemoryConsolidationMode.CrossProjectWeekly => cluster.Readiness == CognitiveMemoryQualityClusterReadiness.AggregateReady &&
-                                                                   cluster.QualityMetrics.AggregateEligible &&
-                                                                   cluster.Keys.Any(key => key.Family == CognitiveMemoryQualityClusterKeyFamily.ProjectScope),
-            CognitiveMemoryConsolidationMode.ProcedureMining => HasKey(cluster, CognitiveMemoryQualityClusterKeyFamily.TaskIntent, "procedure") ||
-                                                                HasKey(cluster, CognitiveMemoryQualityClusterKeyFamily.TaskIntent, "workflow"),
-            CognitiveMemoryConsolidationMode.FailureLearning => HasKey(cluster, CognitiveMemoryQualityClusterKeyFamily.TaskIntent, "failure") ||
-                                                                cluster.Readiness == CognitiveMemoryQualityClusterReadiness.Contradictory,
-            CognitiveMemoryConsolidationMode.KnowledgeCoverageRefresh => cluster.Readiness is CognitiveMemoryQualityClusterReadiness.NeedsMoreEvidence
-                or CognitiveMemoryQualityClusterReadiness.NeedsHumanReview,
-            CognitiveMemoryConsolidationMode.EpistemicDriveScan => cluster.Readiness is CognitiveMemoryQualityClusterReadiness.NeedsMoreEvidence
-                or CognitiveMemoryQualityClusterReadiness.Contradictory,
-            CognitiveMemoryConsolidationMode.LearningOpportunityReview => HasKey(cluster, CognitiveMemoryQualityClusterKeyFamily.TaskIntent, "testing") ||
-                                                                          HasKey(cluster, CognitiveMemoryQualityClusterKeyFamily.TaskIntent, "coverage") ||
-                                                                          cluster.Readiness == CognitiveMemoryQualityClusterReadiness.NeedsHumanReview,
-            _ => false
-        };
-
-    private static string ResolveSelectionReasonCode(
-        CognitiveMemoryDreamModePolicy modePolicy,
-        CognitiveMemoryClusterPlan cluster)
-        => modePolicy.Mode switch
-        {
-            CognitiveMemoryConsolidationMode.ProjectNightly => "dream.project-nightly.aggregate-ready",
-            CognitiveMemoryConsolidationMode.CrossProjectWeekly => "dream.cross-project-weekly.project-scope",
-            CognitiveMemoryConsolidationMode.ProcedureMining => "dream.procedure-mining.task-intent",
-            CognitiveMemoryConsolidationMode.FailureLearning => cluster.Readiness == CognitiveMemoryQualityClusterReadiness.Contradictory
-                ? "dream.failure-learning.contradiction"
-                : "dream.failure-learning.incident",
-            CognitiveMemoryConsolidationMode.KnowledgeCoverageRefresh => "dream.knowledge-coverage.refresh",
-            CognitiveMemoryConsolidationMode.EpistemicDriveScan => "dream.epistemic-drive.scan",
-            CognitiveMemoryConsolidationMode.LearningOpportunityReview => "dream.learning-opportunity.review",
-            _ => modePolicy.ReasonCode
-        };
-
-    private static bool HasKey(
-        CognitiveMemoryClusterPlan cluster,
-        CognitiveMemoryQualityClusterKeyFamily family,
-        string value)
-        => cluster.Keys.Any(key => key.Family == family && key.Key.Contains(value, StringComparison.OrdinalIgnoreCase));
-
     private static CognitiveMemoryClaimKind ResolveAggregateClaimKind(
         CognitiveMemoryConsolidationMode mode,
         CognitiveMemoryRecord? record)
@@ -608,18 +568,39 @@ public sealed class CognitiveMemoryDreamConsolidationService(
                 continue;
             }
 
-            var sourceClaimTexts = support.Claims
+            var sourceClaims = support.Claims
                 .Where(claim => claim.ValidationState != CognitiveMemoryValidationState.Rejected)
-                .Select(claim => claim.ClaimText)
-                .DefaultIfEmpty(CreateSafeClaimText(record, support))
-                .Select(NormalizeConclusionFragment)
-                .Where(text => !string.IsNullOrWhiteSpace(text))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Select(claim => new SourceClaimDescriptor(
+                    NormalizeConclusionFragment(claim.ClaimText),
+                    claim.ClaimKind,
+                    claim.SubjectKey,
+                    claim.PredicateKey,
+                    claim.ObjectKey))
+                .Where(claim => !string.IsNullOrWhiteSpace(claim.ClaimText))
                 .ToArray();
-            foreach (var sourceClaimText in sourceClaimTexts)
+            if (sourceClaims.Length == 0)
             {
-                var signature = BuildClaimSignature(mode, cluster, sourceClaimText);
-                units.Add(new DreamClaimUnit(record, sourceClaimText, signature, sourceMaps));
+                sourceClaims =
+                [
+                    new SourceClaimDescriptor(
+                        NormalizeConclusionFragment(CreateSafeClaimText(record, support)),
+                        ResolveAggregateClaimKind(mode, record),
+                        string.Empty,
+                        string.Empty,
+                        string.Empty)
+                ];
+            }
+
+            foreach (var sourceClaim in sourceClaims.DistinctBy(claim => claim.ClaimText, StringComparer.OrdinalIgnoreCase))
+            {
+                var slots = CognitiveMemoryDreamClaimSlotExtractor.Extract(
+                    sourceClaim.ClaimText,
+                    sourceClaim.ClaimKind,
+                    sourceClaim.SubjectKey,
+                    sourceClaim.PredicateKey,
+                    sourceClaim.ObjectKey);
+                var signature = BuildClaimSignature(mode, slots);
+                units.Add(new DreamClaimUnit(record, sourceClaim.ClaimText, signature, sourceMaps, slots));
             }
         }
 
@@ -634,11 +615,17 @@ public sealed class CognitiveMemoryDreamConsolidationService(
                 group
                     .OrderBy(unit => unit.Record.Title, StringComparer.OrdinalIgnoreCase)
                     .ThenBy(unit => unit.ClaimText, StringComparer.OrdinalIgnoreCase)
-                    .ToArray()))
+                    .ToArray(),
+                group
+                    .OrderBy(unit => unit.Slots.SubjectKey, StringComparer.Ordinal)
+                    .ThenBy(unit => unit.Slots.PredicateKey, StringComparer.Ordinal)
+                    .ThenBy(unit => unit.Slots.ObjectKey, StringComparer.Ordinal)
+                    .First()
+                    .Slots))
             .OrderByDescending(group => group.Units.Select(unit => unit.Record.Id).Distinct().Count())
             .ThenBy(group => group.Units[0].ClaimText, StringComparer.OrdinalIgnoreCase)
             .ToArray();
-    
+
     private string SynthesizeClaimGroupText(CognitiveMemoryConsolidationMode mode, DreamClaimGroup claimGroup)
         => claimSynthesizer.Synthesize(new CognitiveMemoryDreamClaimSynthesisRequest(
             mode,
@@ -646,13 +633,39 @@ public sealed class CognitiveMemoryDreamConsolidationService(
 
     private static string BuildClaimSignature(
         CognitiveMemoryConsolidationMode mode,
-        CognitiveMemoryClusterPlan cluster,
-        string claimText)
+        CognitiveMemoryDreamClaimSlots slots)
     {
         var modeKey = CognitiveMemoryQualityText.NormalizeKey(mode.ToString());
-        var primaryKey = CognitiveMemoryQualityText.NormalizeKey(ResolvePrimaryClusterKey(cluster)?.DisplayText ?? "aggregate");
-        return CognitiveMemoryQualityText.TrimText($"{modeKey}.{primaryKey}", 240);
+        var kindKey = CognitiveMemoryQualityText.NormalizeKey(slots.ClaimKind.ToString());
+        var subjectKey = FirstNonEmpty(slots.SubjectKey, "unknown.subject");
+        var complementarySubject = SubjectSupportsComplementaryClaims(slots.SubjectKey);
+        var predicateScopeKey = complementarySubject
+            ? "complementary"
+            : ResolveClaimGroupingPredicateKey(slots);
+        var scopeKey = complementarySubject
+            ? "complementary"
+            : FirstNonEmpty(slots.ScopeKey, "none");
+        return CognitiveMemoryQualityText.TrimText($"{modeKey}.{kindKey}.{subjectKey}.{predicateScopeKey}.{scopeKey}", 240);
     }
+
+    private static string ResolveClaimGroupingPredicateKey(CognitiveMemoryDreamClaimSlots slots)
+    {
+        if (SubjectSupportsComplementaryClaims(slots.SubjectKey))
+        {
+            return "complementary";
+        }
+
+        return CognitiveMemoryQualityText.TrimText(
+            $"{FirstNonEmpty(slots.PredicateKey, "states")}.{FirstNonEmpty(slots.ObjectKey, "object")}",
+            160);
+    }
+
+    private static bool SubjectSupportsComplementaryClaims(string subjectKey)
+        => subjectKey.Contains("procedure", StringComparison.Ordinal) ||
+           subjectKey.Contains("checklist", StringComparison.Ordinal) ||
+           subjectKey.Contains("runbook", StringComparison.Ordinal) ||
+           subjectKey.Contains("workflow", StringComparison.Ordinal) ||
+           subjectKey.Contains("policy", StringComparison.Ordinal);
 
     private static void AppendModeHeader(StringBuilder builder, CognitiveMemoryConsolidationMode mode)
     {
@@ -748,28 +761,19 @@ public sealed class CognitiveMemoryDreamConsolidationService(
         CognitiveMemoryRecord Record,
         string ClaimText,
         string Signature,
-        IReadOnlyList<CognitiveMemoryDreamAggregateSourceMap> SourceMaps);
+        IReadOnlyList<CognitiveMemoryDreamAggregateSourceMap> SourceMaps,
+        CognitiveMemoryDreamClaimSlots Slots);
 
     private sealed record DreamClaimGroup(
         string Signature,
-        IReadOnlyList<DreamClaimUnit> Units);
+        IReadOnlyList<DreamClaimUnit> Units,
+        CognitiveMemoryDreamClaimSlots RepresentativeSlots);
 
-    private sealed record CognitiveMemoryDreamModePolicy(
-        CognitiveMemoryConsolidationMode Mode,
-        string ReasonCode)
-    {
-        public static CognitiveMemoryDreamModePolicy Resolve(CognitiveMemoryConsolidationMode mode)
-            => mode switch
-            {
-                CognitiveMemoryConsolidationMode.ProjectNightly => new(mode, "dream.project-nightly"),
-                CognitiveMemoryConsolidationMode.CrossProjectWeekly => new(mode, "dream.cross-project-weekly"),
-                CognitiveMemoryConsolidationMode.ProcedureMining => new(mode, "dream.procedure-mining"),
-                CognitiveMemoryConsolidationMode.FailureLearning => new(mode, "dream.failure-learning"),
-                CognitiveMemoryConsolidationMode.KnowledgeCoverageRefresh => new(mode, "dream.knowledge-coverage-refresh"),
-                CognitiveMemoryConsolidationMode.EpistemicDriveScan => new(mode, "dream.epistemic-drive-scan"),
-                CognitiveMemoryConsolidationMode.LearningOpportunityReview => new(mode, "dream.learning-opportunity-review"),
-                CognitiveMemoryConsolidationMode.IncrementalRecent => throw new ArgumentException("Dream consolidation must be explicit and must not run through the incremental profile.", nameof(mode)),
-                _ => throw new NotSupportedException($"Consolidation mode '{mode}' is not supported by dream consolidation.")
-            };
-    }
+    private sealed record SourceClaimDescriptor(
+        string ClaimText,
+        CognitiveMemoryClaimKind ClaimKind,
+        string SubjectKey,
+        string PredicateKey,
+        string ObjectKey);
+
 }

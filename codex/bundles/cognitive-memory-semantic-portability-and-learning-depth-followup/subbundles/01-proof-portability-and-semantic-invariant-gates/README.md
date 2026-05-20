@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: `Ready`
+- Status: `Completed`
 - Criticality: `Critical`
 - Execution order: `SB01`
 
@@ -24,13 +24,13 @@ Make the bundle workflow skill and completed-stage validator portable and invari
 
 ## Exact Source References
 
-- /mnt/data/cogmem_review/CanDoItAll-cognitive-memory/codex/skills/bundles/candoitall-bundle-workflow/SKILL.md
-- /mnt/data/cogmem_review/CanDoItAll-cognitive-memory/codex/skills/bundles/candoitall-bundle-execution/SKILL.md
-- /mnt/data/cogmem_review/CanDoItAll-cognitive-memory/codex/skills/bundles/candoitall-bundle-validator/SKILL.md
-- /mnt/data/cogmem_review/CanDoItAll-cognitive-memory/codex/skills/bundles/candoitall-subbundle-validator/SKILL.md
-- /mnt/data/cogmem_review/CanDoItAll-cognitive-memory/codex/skills/bundles/candoitall-bundle-preparation/SKILL.md
-- /mnt/data/cogmem_review/CanDoItAll-cognitive-memory/codex/skills/bundles/candoitall-bundle-preparation/scripts/validate_bundle.py
-- /mnt/data/cogmem_review/CanDoItAll-cognitive-memory/codex/bundles/cognitive-memory-followup/reviews/01-execution-report.md
+- repo://codex/skills/bundles/candoitall-bundle-workflow/SKILL.md
+- repo://codex/skills/bundles/candoitall-bundle-execution/SKILL.md
+- repo://codex/skills/bundles/candoitall-bundle-validator/SKILL.md
+- repo://codex/skills/bundles/candoitall-subbundle-validator/SKILL.md
+- repo://codex/skills/bundles/candoitall-bundle-preparation/SKILL.md
+- repo://codex/skills/bundles/candoitall-bundle-preparation/scripts/validate_bundle.py
+- repo://codex/bundles/cognitive-memory-followup/reviews/01-execution-report.md
 
 ## Deliverables
 
@@ -68,25 +68,25 @@ Make the bundle workflow skill and completed-stage validator portable and invari
 
 ## Acceptance Checklist
 
-- All owned requirements are implemented without downgrading semantics.
-- Semantic invariant contract exists and is cited by the proof manifest.
-- Failing-first and passing transcripts exist for targeted tests.
-- Changed source files are hashed and mapped to invariant IDs.
-- No economic-governance scope creep is introduced.
+- All owned requirements are implemented without downgrading semantics: `Completed`.
+- Semantic invariant contract exists and is cited by the proof manifest: `bundle://proof/SB01/semantic-invariants.md`.
+- Failing-first and passing transcripts exist for targeted tests: `bundle://proof/SB01/transcripts/fake-proof-fixtures.txt` and `bundle://proof/SB01/transcripts/positive-portable-fixture.txt`.
+- Changed source files are hashed and mapped to invariant IDs: `bundle://proof/SB01/transcripts/changed-file-hashes.txt`.
+- No economic-governance scope creep is introduced: no cognitive-memory economic-governance files were touched in SB01.
 
 ## Proof Required
 
-- Completed-stage validator transcript for fake fixtures and positive fixture.
-- Transcript showing the current completed Codex bundle or a copied fixture validates through portable references after path normalization.
-- Hashes for modified skill and validator files.
+- Completed-stage validator transcript for fake fixtures and positive fixture: `bundle://proof/SB01/transcripts/fake-proof-fixtures.txt`, `bundle://proof/SB01/transcripts/positive-portable-fixture.txt`.
+- Transcript showing a copied fixture validates through portable references after path normalization: `bundle://proof/SB01/transcripts/positive-portable-fixture.txt`.
+- Hashes for modified skill and validator files: `bundle://proof/SB01/transcripts/changed-file-hashes.txt` and `bundle://proof/SB01/transcripts/active-skill-sync-hashes.txt`.
 
 ## Browser Validation Logging
 
-- Backend-only unless this subbundle changes UI routes/components; if UI changes, add Playwright MCP evidence and screenshots.
+- Backend-only. SB01 changed bundle workflow validation scripts, skill instructions, and proof fixtures only; no UI routes/components changed.
 
 ## Progression Gate
 
-- Do not proceed to the next subbundle until this subbundle's proof manifest, semantic invariant contract, targeted transcripts, anti-stub audit, and downstream dependency checks are complete.
+- Completed. The proof manifest, semantic invariant contract, targeted transcripts, anti-stub audit, active skill sync hashes, and downstream prepared-bundle validation are present under `bundle://proof/SB01/`.
 
 ## Suggested Agent Prompt
 

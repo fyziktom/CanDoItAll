@@ -13,7 +13,8 @@ This skill is for delivery, not planning. If the bundle is missing, unclear, unv
 
 - Work outcome-first inside the current subbundle. Avoid re-planning the whole bundle unless the current gate, raw inputs, or repo observations prove the bundle is wrong.
 - Keep context durable in files: subbundle status, proof paths, commands, browser analytics, gate rows, and closure decisions should survive compaction or a different agent taking over.
-- For critical subbundles, keep proof durable under `proof/SBxx/`: manifests, command transcripts, hashes, source assertions, browser/host artifacts, and red-team notes.
+- For critical subbundles, keep proof durable under `proof/SBxx/`: manifests, semantic invariant contracts, command transcripts, hashes, source assertions, browser/host artifacts, and red-team notes.
+- Use portable `repo://relative/path` and `bundle://relative/path` references in manifests and source references. Native absolute paths may be included as local context, but they must not be the only durable proof path.
 - Use tools until the proof contract passes. If a test, browser check, or lookup returns weak evidence, diagnose or retry with a better strategy instead of summarizing around the gap.
 - Use selective parallelism for independent file reads or inspections, then synthesize before editing. Do not parallelize dependent implementation steps.
 - Keep updates concise and proof-oriented: changed files, validation run, gate decision, and remaining blocker when there is one.
@@ -27,7 +28,7 @@ This skill is for delivery, not planning. If the bundle is missing, unclear, unv
 5. Audit the exact source references named by the bundle and the nearby tests they imply.
 6. If implementation reality reveals that the bundle weakened or missed a raw note, repair the bundle before proceeding.
 7. Implement the smallest correct change set for the current subbundle only.
-8. For every critical subbundle, create or update `proof/SBxx/manifest.md` before closure. The manifest must list changed-file hashes, command transcript paths, failing-first and passing proof where behavior changed, source-level assertions, anti-stub audit output, and downstream smoke proof when required.
+8. For every critical subbundle, create or update `proof/SBxx/manifest.md` and `proof/SBxx/semantic-invariants.md` or `.json` before closure. The manifest must list changed-file hashes, command transcript paths, failing-first and passing proof where behavior changed, source-level assertions, anti-stub audit output, downstream smoke proof when required, and portable `repo://` or `bundle://` paths.
 9. For every critical subbundle, complete the Semantic Adequacy Gate before accepting local tests as proof:
    - name the shallow-pass trap the implementation could fake
    - add or cite an adversarial negative proof that fails the shallow implementation
@@ -72,7 +73,7 @@ This skill is for delivery, not planning. If the bundle is missing, unclear, unv
 
 ## Semantic Adequacy Gate Rule
 
-Critical subbundles must include both a semantic proof block and an artifact-backed `proof/SBxx/manifest.md` before closure. The block must cover raw-note ownership, the shallow-pass trap, adversarial negative proof, semantic positive proof, and anti-stub audit. The manifest must point to command transcripts, changed-file hashes, source assertions, and any browser/host/red-team artifacts. See `references/semantic-adequacy-proof.md` and `references/artifact-backed-proof-manifest.md`.
+Critical subbundles must include a semantic proof block, `proof/SBxx/semantic-invariants.md` or `.json`, and an artifact-backed `proof/SBxx/manifest.md` before closure. The invariant contract must name invariant IDs and link each raw note to expected behavior, disallowed shallow implementation, failing-first proof, passing proof, changed source files, production assertions, red-team negative case, and downstream dependency check. The manifest must point to command transcripts, changed-file hashes, source assertions, and any browser/host/red-team artifacts. See `references/semantic-adequacy-proof.md` and `references/artifact-backed-proof-manifest.md`.
 
 If any required semantic proof element is absent, fixture-specific, only verifies scaffolding, or is not backed by an existing manifest artifact, the subbundle remains `In progress` or `Blocked`; it must not be marked `Completed`.
 

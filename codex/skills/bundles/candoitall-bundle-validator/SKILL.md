@@ -39,7 +39,8 @@ Use this skill when the bundle needs a gate, not more implementation. It exists 
    - UI-relevant subbundles require real Playwright MCP proof plus screenshot review
    - critical foundations require deeper validation before dependent phases may continue
    - critical subbundles require a Semantic Adequacy Gate covering shallow-pass trap, adversarial negative proof, semantic positive proof, anti-stub audit, and raw-note literal closure
-   - critical subbundles require `proof/SBxx/manifest.md` with existing transcript, hash, source-assertion, and anti-stub artifact paths
+   - critical subbundles require `proof/SBxx/manifest.md` plus `proof/SBxx/semantic-invariants.md` or `.json` with existing transcript, hash, source-assertion, invariant, and anti-stub artifact paths
+   - critical manifests contain portable `repo://` or `bundle://` references and are not tied only to one machine's absolute path layout
 8. At final closure, audit shipped proof:
    - no executed subbundle remains `Ready` or `In progress`
    - execution report gate rows and browser analytics rows are populated and no longer pending
@@ -59,7 +60,7 @@ Use this skill when the bundle needs a gate, not more implementation. It exists 
 - Do not pass the final closure gate when later proof already showed an earlier critical foundation is shaky.
 - Do not replace UI proof with reasoning when the request depends on actual rendered behavior.
 - Do not pass a readiness or final closure gate for a critical subbundle whose proof only demonstrates file existence, table completion, non-empty strings, diagnostic template markers, or happy-path fixture output.
-- Do not pass a final closure gate from prose-only proof. Missing proof manifests, missing transcript files, missing changed-file hashes, or absent red-team closure artifacts are failures for critical work.
+- Do not pass a final closure gate from prose-only proof. Missing proof manifests, missing semantic invariant contracts, missing transcript files, missing changed-file hashes, machine-specific-only proof paths, or absent red-team closure artifacts are failures for critical work.
 
 ## Semantic Proof Failure Rule
 

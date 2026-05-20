@@ -1,0 +1,57 @@
+Command: rg -n -- "--repo-root|--bundle-root|repo://|bundle://|semantic-invariants|PORTABLE_REFERENCE_PATTERN|validate_semantic_invariant_contract|invariant id is missing|proof manifest must include at least one portable|resolve_reference_path" <changed workflow files>
+WorkingDirectory: C:\repositories\CanDoItAll
+Invariant: SB01-PORTABILITY-01
+Invariant: SB01-INVARIANT-02
+Test: ArtifactProof.SourceAssertionsCoverPortableAndInvariantGates
+codex\skills\bundles\candoitall-bundle-preparation\SKILL.md:196:- subbundle `## Exact Source References` must prefer portable `repo://relative/path` and `bundle://relative/path` references; native absolute paths are allowed only as local development aids and must not be the only durable source reference
+codex\skills\bundles\candoitall-bundle-workflow\SKILL.md:27:- every completed critical subbundle has an artifact-backed `proof/SBxx/manifest.md` and `proof/SBxx/semantic-invariants.md` or `.json` with changed-file hashes, command transcripts, failing-first and passing proof where behavior changed, source assertions, invariant IDs, and anti-stub audit results
+codex\skills\bundles\candoitall-bundle-workflow\SKILL.md:28:- critical proof uses portable `repo://` and `bundle://` references so moved bundles, WSL, Linux, CI, and Windows checks can resolve the same evidence
+codex\skills\bundles\candoitall-bundle-validator\SKILL.md:42:   - critical subbundles require `proof/SBxx/manifest.md` plus `proof/SBxx/semantic-invariants.md` or `.json` with existing transcript, hash, source-assertion, invariant, and anti-stub artifact paths
+codex\skills\bundles\candoitall-bundle-validator\SKILL.md:43:   - critical manifests contain portable `repo://` or `bundle://` references and are not tied only to one machine's absolute path layout
+codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py:171:    r"(?<![A-Za-z0-9_])(?:repo://[^`<>()\s|]+|bundle://[^`<>()\s|]+|[A-Za-z]:[\\/][^`<>()\s|]+|/[^`<>()\s|]+|proof[\\/][^`<>()\s|]+)",
+codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py:174:PORTABLE_REFERENCE_PATTERN = re.compile(r"^(repo|bundle)://(.+)$", re.IGNORECASE)
+codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py:198:    parser.add_argument("--repo-root", help="Repository root used to resolve repo:// references.")
+codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py:199:    parser.add_argument("--bundle-root", help="Bundle root used to resolve bundle:// references. Defaults to bundle_path.")
+codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py:278:    return PORTABLE_REFERENCE_PATTERN.match(path_value.strip()) is not None
+codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py:282:    return "repo://" in content.lower() or "bundle://" in content.lower()
+codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py:302:def resolve_reference_path(path_value: str, bundle_root: Path, repo_root: Path) -> Path:
+codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py:304:    match = PORTABLE_REFERENCE_PATTERN.match(normalized)
+codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py:359:            reference_path = resolve_reference_path(normalized, bundle_root, repo_root)
+codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py:779:    return resolve_reference_path(path_value, bundle_path, repo_root)
+codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py:852:        proof_root / "semantic-invariants.json",
+codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py:853:        proof_root / "semantic-invariants.md",
+codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py:859:        f"proof/SB{subbundle_number}/semantic-invariants.json",
+codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py:860:        f"proof/SB{subbundle_number}/semantic-invariants.md",
+codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py:861:        f"bundle://proof/SB{subbundle_number}/semantic-invariants.json",
+codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py:862:        f"bundle://proof/SB{subbundle_number}/semantic-invariants.md",
+codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py:935:def validate_semantic_invariant_contract(contract_path: Path) -> tuple[list[str], list[str]]:
+codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py:1007:            issues.append(f"{manifest_path}: proof manifest must include at least one portable repo:// or bundle:// reference")
+codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py:1017:                issues.append(f"{execution_report_path}: completed critical subbundle SB{subbundle_number} must cite proof/SB{subbundle_number}/semantic-invariants.*")
+codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py:1020:                issues.append(f"{manifest_path}: proof manifest or subbundle README must cite proof/SB{subbundle_number}/semantic-invariants.*")
+codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py:1023:                contract_issues, invariant_ids = validate_semantic_invariant_contract(invariant_contract)
+codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py:1097:                issues.append(f"{manifest_path}: invariant id is missing from transcript output: {invariant_id}")
+codex\skills\bundles\candoitall-subbundle-validator\SKILL.md:32:   - critical subbundles include `proof/SBxx/manifest.md` and `proof/SBxx/semantic-invariants.md` or `.json`, and every transcript, hash, source assertion, browser, host, smoke, or red-team path cited by that manifest exists
+codex\skills\bundles\candoitall-subbundle-validator\SKILL.md:33:   - critical manifests use portable `repo://` or `bundle://` references and do not rely only on machine-specific absolute paths
+codex\skills\bundles\candoitall-bundle-execution\SKILL.md:17:- Use portable `repo://relative/path` and `bundle://relative/path` references in manifests and source references. Native absolute paths may be included as local context, but they must not be the only durable proof path.
+codex\skills\bundles\candoitall-bundle-execution\SKILL.md:31:8. For every critical subbundle, create or update `proof/SBxx/manifest.md` and `proof/SBxx/semantic-invariants.md` or `.json` before closure. The manifest must list changed-file hashes, command transcript paths, failing-first and passing proof where behavior changed, source-level assertions, anti-stub audit output, downstream smoke proof when required, and portable `repo://` or `bundle://` paths.
+codex\skills\bundles\candoitall-bundle-execution\SKILL.md:76:Critical subbundles must include a semantic proof block, `proof/SBxx/semantic-invariants.md` or `.json`, and an artifact-backed `proof/SBxx/manifest.md` before closure. The invariant contract must name invariant IDs and link each raw note to expected behavior, disallowed shallow implementation, failing-first proof, passing proof, changed source files, production assertions, red-team negative case, and downstream dependency check. The manifest must point to command transcripts, changed-file hashes, source assertions, and any browser/host/red-team artifacts. See `references/semantic-adequacy-proof.md` and `references/artifact-backed-proof-manifest.md`.
+codex\skills\bundles\candoitall-bundle-execution\references\artifact-backed-proof-manifest.md:10:- a portable semantic invariant contract path, `bundle://proof/SBxx/semantic-invariants.md` or `.json`;
+codex\skills\bundles\candoitall-bundle-execution\references\artifact-backed-proof-manifest.md:21:Use `repo://relative/path` for repository files and `bundle://relative/path` for bundle-owned proof artifacts. Native absolute paths may appear as local context, but a critical manifest must not rely on machine-specific absolute paths as its only durable references.
+codex\skills\bundles\candoitall-bundle-execution\references\artifact-backed-proof-manifest.md:25:Create `proof/SBxx/semantic-invariants.md` or `.json` for each critical subbundle. Each invariant must include:
+RgExitCode: 0
+AllRequiredAssertionsPresent: True
+ExitCode: 0
+Test: ValidatorScript.Compiles
+Test: ArtifactProof.ValidatesCompleteFixture
+Test: ArtifactProof.ValidatesRelocatedPortableFixture
+Test: ArtifactProof.RejectsMachineSpecificOnlyPaths
+Test: ArtifactProof.RejectsMissingOrUncitedInvariantContracts
+Test: ArtifactProof.RejectsProseOnlyProof
+Test: ArtifactProof.RejectsMissingTranscript
+Test: ArtifactProof.RejectsFakeTestName
+Test: ArtifactProof.RejectsMissingHash
+Test: ArtifactProof.RejectsMissingFailingFirst
+Test: ArtifactProof.AntiStubAudit
+Test: ArtifactProof.ActiveSkillCopiesMatchRepository
+Test: Bundle.PreparedValidationAfterPortableReferenceConversion
+Test: ArtifactProof.ChangedFilesHaveSha256Hashes

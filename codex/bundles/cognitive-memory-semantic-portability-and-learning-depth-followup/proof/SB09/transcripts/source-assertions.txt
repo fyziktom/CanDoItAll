@@ -1,0 +1,134 @@
+Command: transcript metadata repair for .\codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup\proof\SB09\transcripts\source-assertions.txt
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityCollaboratorTests.cs:70:    public void RecallBriefComposer_SplitsApprovalConflictAndCarriesAggregateClaimIds()
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityCollaboratorTests.cs:105:        Assert.All(result.Statements, statement => Assert.Equal(CognitiveMemoryRecallStatementPlanKind.Conflict, statement.PlanKind));
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityCollaboratorTests.cs:106:        Assert.All(result.Statements, statement => Assert.Single(statement.AggregateClaimIds));
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityCollaboratorTests.cs:107:        Assert.Contains(result.Statements, statement => statement.AggregateClaimIds.Contains(new CognitiveMemoryClaimId(requiredClaimId)));
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityCollaboratorTests.cs:108:        Assert.Contains(result.Statements, statement => statement.AggregateClaimIds.Contains(new CognitiveMemoryClaimId(exceptionClaimId)));
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityEntities.cs:254:    public Guid AggregateClaimId { get; set; }
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityEntities.cs:310:    public bool ReferencesShownByDefault { get; set; }
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityEntities.cs:336:public sealed class CognitiveMemorySynthesizedStatementSourceMapRecord
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityEntities.cs:348:    public Guid? AggregateClaimId { get; set; }
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:1694:                AggregateClaimId = migrationClaimId,
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:1708:                AggregateClaimId = rollbackClaimId,
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:1759:        var persistedMap = Assert.Single(await fixture.DbContext.Set<CognitiveMemorySynthesizedStatementSourceMapRecord>()
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:1762:        Assert.Equal(migrationClaimId, persistedMap.AggregateClaimId);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:1837:        Assert.False(result.ReferencesShownByDefault);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:1907:        Assert.Equal(CognitiveMemoryRecallStatementPlanKind.Action, statement.PlanKind);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:1974:        Assert.All(result.Statements, statement => Assert.Equal(CognitiveMemoryRecallStatementPlanKind.Action, statement.PlanKind));
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:1980:        Assert.False(result.ReferencesShownByDefault);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:2045:        Assert.All(result.Statements, statement => Assert.Equal(CognitiveMemoryRecallStatementPlanKind.Conflict, statement.PlanKind));
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:2050:        Assert.False(result.ReferencesShownByDefault);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:2110:    public void RecallBriefComposer_ProducesTypedTaskFacingPlanKindsAndHidesDiagnostics()
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:2173:        var planKinds = result.Statements.Select(statement => statement.PlanKind).ToHashSet();
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:2174:        Assert.Contains(CognitiveMemoryRecallStatementPlanKind.Answer, planKinds);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:2175:        Assert.Contains(CognitiveMemoryRecallStatementPlanKind.Action, planKinds);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:2176:        Assert.Contains(CognitiveMemoryRecallStatementPlanKind.Caveat, planKinds);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:2177:        Assert.Contains(CognitiveMemoryRecallStatementPlanKind.MissingEvidence, planKinds);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:2178:        Assert.Contains(CognitiveMemoryRecallStatementPlanKind.ReferenceHint, planKinds);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:2230:        Assert.Equal(CognitiveMemoryRecallStatementPlanKind.Caveat, result.Statements[0].PlanKind);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:2231:        Assert.Contains(result.Warnings, warning => warning.Contains("Omitted important caveat", StringComparison.OrdinalIgnoreCase));
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:2562:            Assert.Equal(CognitiveMemoryRecallStatementPlanKind.Action, statement.PlanKind);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:2563:            Assert.Single(statement.AggregateClaimIds);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:2744:                    AggregateClaimId = claim.ClaimId,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryReferenceResolver.cs:20:        var rows = await dbContext.Set<CognitiveMemorySynthesizedStatementSourceMapRecord>()
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryReferenceResolver.cs:56:                .Where(row => row.AggregateClaimId is not null)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryReferenceResolver.cs:61:                        .Select(row => row.AggregateClaimId!.Value)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryReferenceResolver.cs:73:                    mappedClaimIds.Contains(sourceMap.AggregateClaimId))
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryReferenceResolver.cs:90:                var row = new CognitiveMemorySynthesizedStatementSourceMapRecord
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryReferenceResolver.cs:136:                var row = new CognitiveMemorySynthesizedStatementSourceMapRecord
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryReferenceResolver.cs:175:        CognitiveMemorySynthesizedStatementSourceMapRecord row,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryReferenceResolver.cs:192:        CognitiveMemorySynthesizedStatementSourceMapRecord row,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallSynthesisService.cs:32:        var aggregateClaimIds = await LoadAggregateClaimIdsAsync(selectedSections, cancellationToken);
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallSynthesisService.cs:55:            ReferencesShownByDefault: false,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallSynthesisService.cs:81:            ReferencesShownByDefault = false,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallSynthesisService.cs:100:            var aggregateClaimIds = statement.AggregateClaimIds.Count == 0
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallSynthesisService.cs:102:                : statement.AggregateClaimIds
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallSynthesisService.cs:106:            var seenSourceMaps = new HashSet<(Guid MemoryRecordId, Guid? AggregateClaimId, Guid? SourceItemId, Guid? EvidenceAnchorId)>();
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallSynthesisService.cs:120:                    dbContext.Add(new CognitiveMemorySynthesizedStatementSourceMapRecord
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallSynthesisService.cs:127:                        AggregateClaimId = aggregateClaimId,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallSynthesisService.cs:146:    private async Task<HashSet<Guid>> LoadAggregateClaimIdsAsync(
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallSynthesisService.cs:170:        => statement.SourceRefs.Count * Math.Max(1, statement.AggregateClaimIds.Count);
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityContracts.cs:75:public enum CognitiveMemoryRecallStatementPlanKind
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityContracts.cs:464:    CognitiveMemoryRecallStatementPlanKind PlanKind,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityContracts.cs:465:    IReadOnlyList<CognitiveMemoryClaimId> AggregateClaimIds,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityContracts.cs:480:    bool ReferencesShownByDefault,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:8:    IReadOnlySet<Guid> AggregateClaimIds,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:65:            .SelectMany(section => CreateSectionCandidates(section, queryTerms, request.AggregateClaimIds, request.Intent))
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:69:            .OrderBy(plan => ResolvePlanPriority(plan.PlanKind))
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:98:        var sectionAggregateClaimIds = section.ClaimIds
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:102:        if (sectionAggregateClaimIds.Length == 0)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:110:        return sectionAggregateClaimIds
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:125:        var planKind = ResolveCandidatePlanKind(hasSourceEvidence, hasCaveatSignal, statementText, intent);
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:158:                $"conflict:{candidate.ConflictKey}:{candidate.ConflictPolarity}:{candidate.Section.SectionId.Value}:{candidate.AggregateClaimId?.Value:D}",
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:159:                CognitiveMemoryRecallStatementPlanKind.Conflict,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:166:            .Select(group => new StatementPlan(group.Key, ResolveGroupPlanKind(group), group.ToArray())));
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:168:        if (IsExplicitReferenceRequest(request.QueryText))
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:183:            plan.PlanKind,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:184:            ResolveAggregateClaimIds(plan),
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:211:        var prefix = ShouldPrefixWithTopic(plan.PlanKind) && !string.IsNullOrWhiteSpace(queryTopic)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:214:        var caveat = plan.PlanKind switch
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:216:            CognitiveMemoryRecallStatementPlanKind.Conflict => " Resolve the conflict before relying on this.",
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:217:            CognitiveMemoryRecallStatementPlanKind.Caveat => " Inspect references before relying on this.",
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:221:        return CognitiveMemoryQualityText.TrimText($"{prefix}{ResolvePlanPrefix(plan.PlanKind)}{JoinFragments(fragments)}.{caveat}", options.MaxStatementCharacters);
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:224:    private static IReadOnlyList<CognitiveMemoryClaimId> ResolveAggregateClaimIds(StatementPlan plan)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:225:        => plan.AggregateClaimIdsOverride ??
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:227:               .Select(candidate => candidate.AggregateClaimId)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:251:            CognitiveMemoryRecallStatementPlanKind.MissingEvidence,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:268:            CognitiveMemoryRecallStatementPlanKind.ReferenceHint,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:270:            "Reference hint - source locators and summaries are available through statement reference resolution; they are hidden from the brief by default.",
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:279:        if (candidate.AggregateClaimId is { } aggregateClaimId)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:281:            return $"claim:{aggregateClaimId.Value:D}";
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:284:        var planPrefix = $"plan:{candidate.PlanKind}";
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:304:    private static CognitiveMemoryRecallStatementPlanKind ResolveGroupPlanKind(
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:307:        var kinds = candidates.Select(candidate => candidate.PlanKind).ToArray();
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:310:            CognitiveMemoryRecallStatementPlanKind.MissingEvidence,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:311:            CognitiveMemoryRecallStatementPlanKind.Caveat,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:312:            CognitiveMemoryRecallStatementPlanKind.Action,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:313:            CognitiveMemoryRecallStatementPlanKind.Answer
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:322:        return CognitiveMemoryRecallStatementPlanKind.Answer;
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:325:    private static CognitiveMemoryRecallStatementPlanKind ResolveCandidatePlanKind(
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:333:            return CognitiveMemoryRecallStatementPlanKind.MissingEvidence;
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:338:            return CognitiveMemoryRecallStatementPlanKind.Caveat;
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:342:            ? CognitiveMemoryRecallStatementPlanKind.Action
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:343:            : CognitiveMemoryRecallStatementPlanKind.Answer;
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:346:    private static int ResolvePlanPriority(CognitiveMemoryRecallStatementPlanKind planKind)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:349:            CognitiveMemoryRecallStatementPlanKind.Conflict => 0,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:350:            CognitiveMemoryRecallStatementPlanKind.Caveat => 1,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:351:            CognitiveMemoryRecallStatementPlanKind.MissingEvidence => 2,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:352:            CognitiveMemoryRecallStatementPlanKind.Action => 3,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:353:            CognitiveMemoryRecallStatementPlanKind.Answer => 4,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:354:            CognitiveMemoryRecallStatementPlanKind.ReferenceHint => 5,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:370:        var importantPlanKinds = omittedPlans
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:371:            .Where(plan => plan.PlanKind is CognitiveMemoryRecallStatementPlanKind.Caveat
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:372:                or CognitiveMemoryRecallStatementPlanKind.Conflict
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:373:                or CognitiveMemoryRecallStatementPlanKind.MissingEvidence)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:374:            .Select(plan => plan.PlanKind)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:378:        if (importantPlanKinds.Length > 0)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:380:            warnings.Add($"Omitted important {string.Join('/', importantPlanKinds.Select(FormatPlanKind))} recall detail(s); request a larger statement budget before relying on the brief.");
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:384:    private static string ResolvePlanPrefix(CognitiveMemoryRecallStatementPlanKind planKind)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:387:            CognitiveMemoryRecallStatementPlanKind.Action => "Action - ",
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:388:            CognitiveMemoryRecallStatementPlanKind.Caveat => "Caveat - ",
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:389:            CognitiveMemoryRecallStatementPlanKind.Conflict => "Conflict - ",
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:390:            CognitiveMemoryRecallStatementPlanKind.MissingEvidence => "Missing evidence - ",
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:391:            CognitiveMemoryRecallStatementPlanKind.ReferenceHint => "Reference hint - ",
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:395:    private static bool ShouldPrefixWithTopic(CognitiveMemoryRecallStatementPlanKind planKind)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:396:        => planKind is CognitiveMemoryRecallStatementPlanKind.Answer
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:397:            or CognitiveMemoryRecallStatementPlanKind.Action
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:398:            or CognitiveMemoryRecallStatementPlanKind.Caveat
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:399:            or CognitiveMemoryRecallStatementPlanKind.Conflict;
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:401:    private static string FormatPlanKind(CognitiveMemoryRecallStatementPlanKind planKind)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:404:    private static bool IsExplicitReferenceRequest(string requestText)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:575:        CognitiveMemoryClaimId? AggregateClaimId,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:576:        CognitiveMemoryRecallStatementPlanKind PlanKind);
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:580:        CognitiveMemoryRecallStatementPlanKind PlanKind,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:584:        IReadOnlyList<CognitiveMemoryClaimId>? AggregateClaimIdsOverride = null)
+ExitCode: 0
+Invariant: SB09-RECALL-LINEAGE-01
+Invariant: SB09-PLAN-KINDS-02
+Invariant: SB09-BUDGET-AND-REFERENCE-03
+Test: SemanticInvariant_RecallBriefKeepsAggregateClaimLineageAtStatementLineLevel
+Test: RecallBriefComposer_WarnsWhenBudgetOmitsImportantCaveats
+Test: RecallSynthesis_SeparatesConflictingClaimsIntoCaveatStatements
+Test: ReferenceResolver_UsesPersistedAggregateClaimMapToAvoidSiblingClaimExpansion
+Test: ReferenceResolver_ExpandsAggregateMemoryToOriginalSourceMaps
+Test: ReferenceResolver_ExpandsFadedProfessorAnchorLineage

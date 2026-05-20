@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: `Ready`
+- Status: `Completed`
 - Criticality: `Critical`
 - Execution order: `SB09`
 
@@ -23,13 +23,13 @@ Improve recall synthesis from fragment joining into task-facing answer/action/ca
 
 ## Exact Source References
 
-- /mnt/data/cogmem_review/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryRecallBriefComposition.cs
-- /mnt/data/cogmem_review/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryRecallSynthesisService.cs
-- /mnt/data/cogmem_review/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryReferenceResolver.cs
-- /mnt/data/cogmem_review/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Recall/CognitiveMemoryRecallContextPackBuilder.cs
-- /mnt/data/cogmem_review/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryQualityContracts.cs
-- /mnt/data/cogmem_review/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryQualityEntities.cs
-- /mnt/data/cogmem_review/CanDoItAll-cognitive-memory/tests/CanDoItAll.Tests.Unit/CognitiveMemoryQualityFoundationTests.cs
+- repo://src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryRecallBriefComposition.cs
+- repo://src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryRecallSynthesisService.cs
+- repo://src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryReferenceResolver.cs
+- repo://src/CanDoItAll.Modules.CognitiveMemory/Recall/CognitiveMemoryRecallContextPackBuilder.cs
+- repo://src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryQualityContracts.cs
+- repo://src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryQualityEntities.cs
+- repo://tests/CanDoItAll.Tests.Unit/CognitiveMemoryQualityFoundationTests.cs
 
 ## Deliverables
 
@@ -87,6 +87,18 @@ Improve recall synthesis from fragment joining into task-facing answer/action/ca
 ## Progression Gate
 
 - Do not proceed to the next subbundle until this subbundle's proof manifest, semantic invariant contract, targeted transcripts, anti-stub audit, and downstream dependency checks are complete.
+
+## Closure Evidence
+
+- Semantic invariant contract: `bundle://proof/SB09/semantic-invariants.md`
+- Proof manifest: `bundle://proof/SB09/manifest.md`
+- Failing-first transcript: `bundle://proof/SB09/transcripts/failing-first-current.txt`
+- Passing transcript: `bundle://proof/SB09/transcripts/passing-semantic-tests.txt`
+- Regression transcript: `bundle://proof/SB09/transcripts/regression-tests.txt`
+- Source assertions: `bundle://proof/SB09/transcripts/source-assertions.txt`
+- Anti-stub audit: `bundle://proof/SB09/transcripts/anti-stub-audit.txt`
+- No-migration proof: `bundle://proof/SB09/transcripts/no-migration-proof.txt`
+- Browser validation: N/A; backend recall synthesis, reference resolution, contracts, and unit tests only.
 
 ## Suggested Agent Prompt
 

@@ -7,7 +7,8 @@ public sealed record CognitiveMemoryRecallBriefComposerRequest(
     IReadOnlyList<CognitiveMemoryRecallContextSection> SelectedSections,
     IReadOnlySet<Guid> AggregateClaimIds,
     CognitiveMemoryPolicyContext PolicyContext,
-    int MaxStatements);
+    int MaxStatements,
+    CognitiveMemoryRecallIntentKind Intent = CognitiveMemoryRecallIntentKind.Unknown);
 
 public sealed record CognitiveMemoryRecallBriefComposerResult(
     string Brief,
@@ -22,7 +23,7 @@ public interface ICognitiveMemoryRecallBriefComposer
 public sealed class CognitiveMemoryRecallBriefComposer(
     CognitiveMemoryQualityAlgorithmOptions? algorithmOptions = null) : ICognitiveMemoryRecallBriefComposer
 {
-    private readonly CognitiveMemoryQualityRecallAlgorithmOptions options = (algorithmOptions ?? CognitiveMemoryQualityAlgorithmOptions.Current).Recall;
+    private readonly CognitiveMemoryQualityRecallAlgorithmOptions options = (algorithmOptions ?? new CognitiveMemoryQualityAlgorithmOptions()).Recall;
 
     private static readonly IReadOnlySet<string> QueryStopWords = new HashSet<string>([
         "about",
@@ -33,11 +34,15 @@ public sealed class CognitiveMemoryRecallBriefComposer(
         "during",
         "happen",
         "happens",
+        "handled",
         "memory",
+        "please",
         "recall",
         "selected",
         "should",
+        "show",
         "source",
+        "sources",
         "tell",
         "what",
         "when",
@@ -57,50 +62,36 @@ public sealed class CognitiveMemoryRecallBriefComposer(
         var queryTerms = ExtractQueryTerms(request.QueryText);
         var queryTopic = ResolveQueryTopic(request.QueryText, queryTerms);
         var sectionCandidates = request.SelectedSections
-            .Select(section => CreateSectionCandidate(section, queryTerms, request.AggregateClaimIds))
+            .SelectMany(section => CreateSectionCandidates(section, queryTerms, request.AggregateClaimIds, request.Intent))
             .Where(candidate => !string.IsNullOrWhiteSpace(candidate.Text))
             .ToArray();
-        var statementGroups = CreateStatementGroups(sectionCandidates, queryTerms)
-            .OrderByDescending(group => group.QueryOverlap)
-            .ThenByDescending(group => group.IncludedSourceCount)
-            .ThenBy(group => group.Key, StringComparer.Ordinal)
+        var statementPlans = CreateStatementPlans(sectionCandidates, queryTerms, request)
+            .OrderBy(plan => ResolvePlanPriority(plan.PlanKind))
+            .ThenByDescending(plan => plan.QueryOverlap)
+            .ThenByDescending(plan => plan.IncludedSourceCount)
+            .ThenBy(plan => plan.Key, StringComparer.Ordinal)
             .ToArray();
-        var omittedDetailCount = statementGroups
+        var omittedPlans = statementPlans
             .Skip(request.MaxStatements)
-            .Sum(group => group.Candidates.Count);
-        if (omittedDetailCount > 0)
-        {
-            warnings.Add($"Omitted {omittedDetailCount} selected recall detail(s) because the statement budget is {request.MaxStatements}.");
-        }
+            .ToArray();
+        AddOmittedWarnings(omittedPlans, request.MaxStatements, warnings);
 
-        var statements = statementGroups
+        var statements = statementPlans
             .Take(request.MaxStatements)
-            .Select(group => new CognitiveMemorySynthesizedRecallStatement(
-                CognitiveMemorySynthesizedStatementId.New(),
-                ComposeStatementText(queryTopic, group.Candidates, group.IsConflictCaveat),
-                group.Candidates
-                    .SelectMany(candidate => candidate.AggregateClaimIds)
-                    .Distinct()
-                    .ToArray(),
-                group
-                    .Candidates
-                    .SelectMany(candidate => candidate.Section.SourceRefs)
-                    .Where(sourceRef => sourceRef.IncludedInContext && CognitiveMemoryQualityText.PolicyCanRead(sourceRef.AccessLevel, request.PolicyContext))
-                    .GroupBy(sourceRef => new { sourceRef.MemoryRecordId, sourceRef.SourceItemId, sourceRef.EvidenceAnchorId })
-                    .Select(group => group.First())
-                    .ToArray()))
+            .Select(plan => CreateStatement(plan, queryTopic, request.PolicyContext))
             .Where(statement => !string.IsNullOrWhiteSpace(statement.Text))
             .ToArray();
         var brief = statements.Length == 0
-            ? "No source-backed recall statements were synthesized."
+            ? "Missing evidence - no source-backed recall statements were synthesized."
             : string.Join(Environment.NewLine, statements.Select(statement => statement.Text));
         return new CognitiveMemoryRecallBriefComposerResult(brief, statements, warnings);
     }
 
-    private SectionCandidate CreateSectionCandidate(
+    private SectionCandidate[] CreateSectionCandidates(
         CognitiveMemoryRecallContextSection section,
         IReadOnlySet<string> queryTerms,
-        IReadOnlySet<Guid> aggregateClaimIds)
+        IReadOnlySet<Guid> aggregateClaimIds,
+        CognitiveMemoryRecallIntentKind intent)
     {
         var statementText = ExtractStatementText(section);
         var statementTokens = CognitiveMemoryQualityText.ExtractMeaningfulTokens($"{section.Title} {statementText}", 32).ToHashSet(StringComparer.Ordinal);
@@ -108,23 +99,101 @@ public sealed class CognitiveMemoryRecallBriefComposer(
             .Where(claimId => aggregateClaimIds.Contains(claimId.Value))
             .Distinct()
             .ToArray();
+        if (sectionAggregateClaimIds.Length == 0)
+        {
+            return
+            [
+                CreateSectionCandidate(section, statementText, statementTokens, queryTerms, aggregateClaimId: null, intent)
+            ];
+        }
+
+        return sectionAggregateClaimIds
+            .Select(claimId => CreateSectionCandidate(section, statementText, statementTokens, queryTerms, claimId, intent))
+            .ToArray();
+    }
+
+    private static SectionCandidate CreateSectionCandidate(
+        CognitiveMemoryRecallContextSection section,
+        string statementText,
+        IReadOnlySet<string> statementTokens,
+        IReadOnlySet<string> queryTerms,
+        CognitiveMemoryClaimId? aggregateClaimId,
+        CognitiveMemoryRecallIntentKind intent)
+    {
+        var hasSourceEvidence = section.SourceRefs.Count > 0;
+        var hasCaveatSignal = HasCaveatSignal(section, statementText);
+        var planKind = ResolveCandidatePlanKind(hasSourceEvidence, hasCaveatSignal, statementText, intent);
         return new SectionCandidate(
             section,
             statementText,
             statementTokens.Count(queryTerms.Contains),
-            HasCaveatSignal(section, statementText),
-            HasActionSignal(statementText),
+            hasCaveatSignal,
             ResolveConflictKey(section, statementText, queryTerms),
             ResolveConflictPolarity(section, statementText),
-            sectionAggregateClaimIds);
+            aggregateClaimId,
+            planKind);
     }
+
+    private static IReadOnlyList<StatementPlan> CreateStatementPlans(
+        IReadOnlyList<SectionCandidate> candidates,
+        IReadOnlySet<string> queryTerms,
+        CognitiveMemoryRecallBriefComposerRequest request)
+    {
+        if (candidates.Count == 0)
+        {
+            return [CreateMissingEvidencePlan(request)];
+        }
+
+        var plans = new List<StatementPlan>();
+        var conflictSectionKeys = candidates
+            .Where(candidate => candidate.ConflictPolarity != StatementConflictPolarity.None)
+            .GroupBy(candidate => candidate.ConflictKey, StringComparer.Ordinal)
+            .Where(group => group.Select(candidate => candidate.ConflictPolarity).Distinct().Count() > 1)
+            .SelectMany(group => group.Select(candidate => candidate.Section.SectionId.Value))
+            .ToHashSet(StringComparer.Ordinal);
+
+        foreach (var candidate in candidates.Where(candidate => conflictSectionKeys.Contains(candidate.Section.SectionId.Value)))
+        {
+            plans.Add(new StatementPlan(
+                $"conflict:{candidate.ConflictKey}:{candidate.ConflictPolarity}:{candidate.Section.SectionId.Value}:{candidate.AggregateClaimId?.Value:D}",
+                CognitiveMemoryRecallStatementPlanKind.Conflict,
+                [candidate]));
+        }
+
+        plans.AddRange(candidates
+            .Where(candidate => !conflictSectionKeys.Contains(candidate.Section.SectionId.Value))
+            .GroupBy(candidate => ResolveStatementGroupKey(candidate, queryTerms), StringComparer.Ordinal)
+            .Select(group => new StatementPlan(group.Key, ResolveGroupPlanKind(group), group.ToArray())));
+
+        if (IsExplicitReferenceRequest(request.QueryText))
+        {
+            plans.Add(CreateReferenceHintPlan(candidates, request.PolicyContext));
+        }
+
+        return plans;
+    }
+
+    private CognitiveMemorySynthesizedRecallStatement CreateStatement(
+        StatementPlan plan,
+        string queryTopic,
+        CognitiveMemoryPolicyContext policyContext)
+        => new(
+            CognitiveMemorySynthesizedStatementId.New(),
+            ComposeStatementText(queryTopic, plan),
+            plan.PlanKind,
+            ResolveAggregateClaimIds(plan),
+            ResolveSourceRefs(plan, policyContext));
 
     private string ComposeStatementText(
         string queryTopic,
-        IReadOnlyList<SectionCandidate> candidates,
-        bool isConflictCaveat)
+        StatementPlan plan)
     {
-        var orderedCandidates = candidates
+        if (!string.IsNullOrWhiteSpace(plan.ExplicitText))
+        {
+            return CognitiveMemoryQualityText.TrimText(plan.ExplicitText, options.MaxStatementCharacters);
+        }
+
+        var orderedCandidates = plan.Candidates
             .OrderByDescending(candidate => candidate.QueryOverlap)
             .ThenBy(candidate => candidate.Text, StringComparer.OrdinalIgnoreCase)
             .ToArray();
@@ -139,60 +208,88 @@ public sealed class CognitiveMemoryRecallBriefComposer(
             return string.Empty;
         }
 
-        var prefix = string.IsNullOrWhiteSpace(queryTopic)
-            ? string.Empty
-            : $"{queryTopic}: ";
-        var kind = isConflictCaveat
-            ? "Conflict caveat - "
-            : orderedCandidates.Any(candidate => candidate.HasActionSignal)
-                ? "Action - "
-                : "Answer - ";
-        var caveat = orderedCandidates.Any(candidate => candidate.HasCaveatSignal)
-            ? " Review caveat: recalled sources include stale, contradictory, or restricted context; inspect references before relying on this."
+        var prefix = ShouldPrefixWithTopic(plan.PlanKind) && !string.IsNullOrWhiteSpace(queryTopic)
+            ? $"{queryTopic}: "
             : string.Empty;
-        return CognitiveMemoryQualityText.TrimText($"{prefix}{kind}{JoinFragments(fragments)}.{caveat}", options.MaxStatementCharacters);
+        var caveat = plan.PlanKind switch
+        {
+            CognitiveMemoryRecallStatementPlanKind.Conflict => " Resolve the conflict before relying on this.",
+            CognitiveMemoryRecallStatementPlanKind.Caveat => " Inspect references before relying on this.",
+            _ when orderedCandidates.Any(candidate => candidate.HasCaveatSignal) => " Review caveat: recalled sources include stale, contradictory, or restricted context; inspect references before relying on this.",
+            _ => string.Empty
+        };
+        return CognitiveMemoryQualityText.TrimText($"{prefix}{ResolvePlanPrefix(plan.PlanKind)}{JoinFragments(fragments)}.{caveat}", options.MaxStatementCharacters);
     }
 
-    private static IReadOnlyList<StatementCandidateGroup> CreateStatementGroups(
-        IReadOnlyList<SectionCandidate> candidates,
-        IReadOnlySet<string> queryTerms)
+    private static IReadOnlyList<CognitiveMemoryClaimId> ResolveAggregateClaimIds(StatementPlan plan)
+        => plan.AggregateClaimIdsOverride ??
+           plan.Candidates
+               .Select(candidate => candidate.AggregateClaimId)
+               .Where(claimId => claimId is not null)
+               .Select(claimId => claimId!.Value)
+               .Distinct()
+               .ToArray();
+
+    private static IReadOnlyList<CognitiveMemoryRecallSourceRef> ResolveSourceRefs(
+        StatementPlan plan,
+        CognitiveMemoryPolicyContext policyContext)
+        => (plan.SourceRefsOverride ??
+            plan.Candidates
+                .SelectMany(candidate => candidate.Section.SourceRefs))
+            .Where(sourceRef => sourceRef.IncludedInContext && CognitiveMemoryQualityText.PolicyCanRead(sourceRef.AccessLevel, policyContext))
+            .GroupBy(sourceRef => new { sourceRef.MemoryRecordId, sourceRef.SourceItemId, sourceRef.EvidenceAnchorId })
+            .Select(group => group.First())
+            .ToArray();
+
+    private static StatementPlan CreateMissingEvidencePlan(CognitiveMemoryRecallBriefComposerRequest request)
     {
-        var groups = new List<StatementCandidateGroup>();
-        var conflictSectionKeys = candidates
-            .Where(candidate => candidate.ConflictPolarity != StatementConflictPolarity.None)
-            .GroupBy(candidate => candidate.ConflictKey, StringComparer.Ordinal)
-            .Where(group => group.Select(candidate => candidate.ConflictPolarity).Distinct().Count() > 1)
-            .SelectMany(group => group.Select(candidate => candidate.Section.SectionId.Value))
-            .ToHashSet(StringComparer.Ordinal);
+        var subject = string.IsNullOrWhiteSpace(request.QueryText)
+            ? "the recall request"
+            : CognitiveMemoryQualityText.TrimText(request.QueryText.Trim(), 160);
+        return new StatementPlan(
+            "missing-evidence:selected-context",
+            CognitiveMemoryRecallStatementPlanKind.MissingEvidence,
+            [],
+            $"Missing evidence - no selected source-backed memory was available for {subject}.");
+    }
 
-        foreach (var candidate in candidates.Where(candidate => conflictSectionKeys.Contains(candidate.Section.SectionId.Value)))
-        {
-            groups.Add(new StatementCandidateGroup(
-                $"conflict:{candidate.ConflictKey}:{candidate.ConflictPolarity}:{candidate.Section.SectionId.Value}",
-                IsConflictCaveat: true,
-                [candidate]));
-        }
-
-        groups.AddRange(candidates
-            .Where(candidate => !conflictSectionKeys.Contains(candidate.Section.SectionId.Value))
-            .GroupBy(candidate => ResolveStatementGroupKey(candidate, queryTerms), StringComparer.Ordinal)
-            .Select(group => new StatementCandidateGroup(group.Key, IsConflictCaveat: false, group.ToArray())));
-
-        return groups;
+    private static StatementPlan CreateReferenceHintPlan(
+        IReadOnlyList<SectionCandidate> candidates,
+        CognitiveMemoryPolicyContext policyContext)
+    {
+        var sourceRefs = candidates
+            .SelectMany(candidate => candidate.Section.SourceRefs)
+            .Where(sourceRef => sourceRef.IncludedInContext && CognitiveMemoryQualityText.PolicyCanRead(sourceRef.AccessLevel, policyContext))
+            .GroupBy(sourceRef => new { sourceRef.MemoryRecordId, sourceRef.SourceItemId, sourceRef.EvidenceAnchorId })
+            .Select(group => group.First())
+            .ToArray();
+        return new StatementPlan(
+            "reference-hint:on-demand",
+            CognitiveMemoryRecallStatementPlanKind.ReferenceHint,
+            [],
+            "Reference hint - source locators and summaries are available through statement reference resolution; they are hidden from the brief by default.",
+            sourceRefs,
+            []);
     }
 
     private static string ResolveStatementGroupKey(
         SectionCandidate candidate,
         IReadOnlySet<string> queryTerms)
     {
+        if (candidate.AggregateClaimId is { } aggregateClaimId)
+        {
+            return $"claim:{aggregateClaimId.Value:D}";
+        }
+
+        var planPrefix = $"plan:{candidate.PlanKind}";
         if (queryTerms.Count == 0)
         {
-            return "selected-context";
+            return $"{planPrefix}:selected-context";
         }
 
         if (candidate.QueryOverlap > 0)
         {
-            return $"query:{string.Join('.', queryTerms.Order(StringComparer.Ordinal).Take(6))}";
+            return $"{planPrefix}:query:{string.Join('.', queryTerms.Order(StringComparer.Ordinal).Take(6))}";
         }
 
         var contentKey = CognitiveMemoryQualityText.ExtractMeaningfulTokens(candidate.Text, 6)
@@ -200,8 +297,115 @@ public sealed class CognitiveMemoryRecallBriefComposer(
             .Take(4)
             .ToArray();
         return contentKey.Length == 0
-            ? $"section:{candidate.Section.SectionId.Value}"
-            : $"content:{string.Join('.', contentKey)}";
+            ? $"{planPrefix}:section:{candidate.Section.SectionId.Value}"
+            : $"{planPrefix}:content:{string.Join('.', contentKey)}";
+    }
+
+    private static CognitiveMemoryRecallStatementPlanKind ResolveGroupPlanKind(
+        IEnumerable<SectionCandidate> candidates)
+    {
+        var kinds = candidates.Select(candidate => candidate.PlanKind).ToArray();
+        foreach (var planKind in new[]
+        {
+            CognitiveMemoryRecallStatementPlanKind.MissingEvidence,
+            CognitiveMemoryRecallStatementPlanKind.Caveat,
+            CognitiveMemoryRecallStatementPlanKind.Action,
+            CognitiveMemoryRecallStatementPlanKind.Answer
+        })
+        {
+            if (kinds.Contains(planKind))
+            {
+                return planKind;
+            }
+        }
+
+        return CognitiveMemoryRecallStatementPlanKind.Answer;
+    }
+
+    private static CognitiveMemoryRecallStatementPlanKind ResolveCandidatePlanKind(
+        bool hasSourceEvidence,
+        bool hasCaveatSignal,
+        string text,
+        CognitiveMemoryRecallIntentKind intent)
+    {
+        if (!hasSourceEvidence)
+        {
+            return CognitiveMemoryRecallStatementPlanKind.MissingEvidence;
+        }
+
+        if (hasCaveatSignal)
+        {
+            return CognitiveMemoryRecallStatementPlanKind.Caveat;
+        }
+
+        return HasActionSignal(text, intent)
+            ? CognitiveMemoryRecallStatementPlanKind.Action
+            : CognitiveMemoryRecallStatementPlanKind.Answer;
+    }
+
+    private static int ResolvePlanPriority(CognitiveMemoryRecallStatementPlanKind planKind)
+        => planKind switch
+        {
+            CognitiveMemoryRecallStatementPlanKind.Conflict => 0,
+            CognitiveMemoryRecallStatementPlanKind.Caveat => 1,
+            CognitiveMemoryRecallStatementPlanKind.MissingEvidence => 2,
+            CognitiveMemoryRecallStatementPlanKind.Action => 3,
+            CognitiveMemoryRecallStatementPlanKind.Answer => 4,
+            CognitiveMemoryRecallStatementPlanKind.ReferenceHint => 5,
+            _ => 6
+        };
+
+    private static void AddOmittedWarnings(
+        IReadOnlyList<StatementPlan> omittedPlans,
+        int maxStatements,
+        List<string> warnings)
+    {
+        var omittedDetailCount = omittedPlans.Sum(plan => Math.Max(1, plan.Candidates.Count));
+        if (omittedDetailCount == 0)
+        {
+            return;
+        }
+
+        warnings.Add($"Omitted {omittedDetailCount} selected recall detail(s) because the statement budget is {maxStatements}.");
+        var importantPlanKinds = omittedPlans
+            .Where(plan => plan.PlanKind is CognitiveMemoryRecallStatementPlanKind.Caveat
+                or CognitiveMemoryRecallStatementPlanKind.Conflict
+                or CognitiveMemoryRecallStatementPlanKind.MissingEvidence)
+            .Select(plan => plan.PlanKind)
+            .Distinct()
+            .Order()
+            .ToArray();
+        if (importantPlanKinds.Length > 0)
+        {
+            warnings.Add($"Omitted important {string.Join('/', importantPlanKinds.Select(FormatPlanKind))} recall detail(s); request a larger statement budget before relying on the brief.");
+        }
+    }
+
+    private static string ResolvePlanPrefix(CognitiveMemoryRecallStatementPlanKind planKind)
+        => planKind switch
+        {
+            CognitiveMemoryRecallStatementPlanKind.Action => "Action - ",
+            CognitiveMemoryRecallStatementPlanKind.Caveat => "Caveat - ",
+            CognitiveMemoryRecallStatementPlanKind.Conflict => "Conflict - ",
+            CognitiveMemoryRecallStatementPlanKind.MissingEvidence => "Missing evidence - ",
+            CognitiveMemoryRecallStatementPlanKind.ReferenceHint => "Reference hint - ",
+            _ => "Answer - "
+        };
+
+    private static bool ShouldPrefixWithTopic(CognitiveMemoryRecallStatementPlanKind planKind)
+        => planKind is CognitiveMemoryRecallStatementPlanKind.Answer
+            or CognitiveMemoryRecallStatementPlanKind.Action
+            or CognitiveMemoryRecallStatementPlanKind.Caveat
+            or CognitiveMemoryRecallStatementPlanKind.Conflict;
+
+    private static string FormatPlanKind(CognitiveMemoryRecallStatementPlanKind planKind)
+        => planKind.ToString().Replace("Evidence", "-evidence", StringComparison.Ordinal).ToLowerInvariant();
+
+    private static bool IsExplicitReferenceRequest(string requestText)
+    {
+        var normalized = requestText.Trim().ToLowerInvariant();
+        return ContainsAny(normalized, ["debug", "provenance", "lineage", "citation", "citations"]) ||
+               Regex.IsMatch(normalized, "\\b(show|include|with|resolve|open|inspect)\\s+(the\\s+)?(source\\s+)?references?\\b", RegexOptions.CultureInvariant);
     }
 
     private static IReadOnlySet<string> ExtractQueryTerms(string requestText)
@@ -280,8 +484,17 @@ public sealed class CognitiveMemoryRecallBriefComposer(
                                                    sourceRef.ExclusionReasonKind != CognitiveMemoryRecallExclusionReasonKind.None);
     }
 
-    private static bool HasActionSignal(string text)
-        => ContainsAny(text, ["use ", "notify ", "requires ", "must ", "should ", "verify ", "restore ", "assign ", "run "]);
+    private static bool HasActionSignal(
+        string text,
+        CognitiveMemoryRecallIntentKind intent)
+        => IsActionIntent(intent) || ContainsAny(text, ["use ", "notify ", "requires ", "must ", "should ", "verify ", "restore ", "assign ", "run "]);
+
+    private static bool IsActionIntent(CognitiveMemoryRecallIntentKind intent)
+        => intent is CognitiveMemoryRecallIntentKind.Implementation
+            or CognitiveMemoryRecallIntentKind.Procedure
+            or CognitiveMemoryRecallIntentKind.Debugging
+            or CognitiveMemoryRecallIntentKind.Testing
+            or CognitiveMemoryRecallIntentKind.Deployment;
 
     private static string ResolveConflictKey(
         CognitiveMemoryRecallContextSection section,
@@ -342,7 +555,12 @@ public sealed class CognitiveMemoryRecallBriefComposer(
                !normalized.StartsWith("sources:", StringComparison.Ordinal) &&
                !normalized.StartsWith("reference:", StringComparison.Ordinal) &&
                !normalized.StartsWith("references:", StringComparison.Ordinal) &&
+               !normalized.StartsWith("diagnostic:", StringComparison.Ordinal) &&
+               !normalized.StartsWith("diagnostics:", StringComparison.Ordinal) &&
+               !normalized.StartsWith("internal:", StringComparison.Ordinal) &&
+               !normalized.StartsWith("score:", StringComparison.Ordinal) &&
                !normalized.Contains("displaybeliefscore", StringComparison.Ordinal) &&
+               !normalized.Contains("display rank", StringComparison.Ordinal) &&
                !normalized.Contains("internal score", StringComparison.Ordinal) &&
                !normalized.Contains("belief score", StringComparison.Ordinal);
     }
@@ -352,20 +570,22 @@ public sealed class CognitiveMemoryRecallBriefComposer(
         string Text,
         int QueryOverlap,
         bool HasCaveatSignal,
-        bool HasActionSignal,
         string ConflictKey,
         StatementConflictPolarity ConflictPolarity,
-        IReadOnlyList<CognitiveMemoryClaimId> AggregateClaimIds);
+        CognitiveMemoryClaimId? AggregateClaimId,
+        CognitiveMemoryRecallStatementPlanKind PlanKind);
 
-    private sealed record StatementCandidateGroup(
+    private sealed record StatementPlan(
         string Key,
-        bool IsConflictCaveat,
-        IReadOnlyList<SectionCandidate> Candidates)
+        CognitiveMemoryRecallStatementPlanKind PlanKind,
+        IReadOnlyList<SectionCandidate> Candidates,
+        string? ExplicitText = null,
+        IReadOnlyList<CognitiveMemoryRecallSourceRef>? SourceRefsOverride = null,
+        IReadOnlyList<CognitiveMemoryClaimId>? AggregateClaimIdsOverride = null)
     {
         public int QueryOverlap => Candidates.Sum(candidate => candidate.QueryOverlap);
 
-        public int IncludedSourceCount => Candidates
-            .SelectMany(candidate => candidate.Section.SourceRefs)
+        public int IncludedSourceCount => (SourceRefsOverride ?? Candidates.SelectMany(candidate => candidate.Section.SourceRefs))
             .Count(sourceRef => sourceRef.IncludedInContext);
     }
 

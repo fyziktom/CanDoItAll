@@ -1,0 +1,5 @@
+Command: python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup --stage prepared --repo-root C:\repositories\CanDoItAll
+Invariant: SB04-KEY-COVERAGE-01
+Test name: SemanticInvariant_ClusterKeysExcludeSignalsBelowCoverageThreshold
+Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup
+ExitCode: 0

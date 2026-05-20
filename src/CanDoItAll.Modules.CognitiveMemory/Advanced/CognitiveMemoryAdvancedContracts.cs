@@ -88,7 +88,8 @@ public enum CognitiveMemoryProfessorAnchorState
     Comparing = 1,
     Assimilated = 2,
     Faded = 3,
-    Rejected = 4
+    Rejected = 4,
+    NotProfessorAnchor = 5
 }
 
 public enum CognitiveMemoryProbeRegressionStatus
@@ -513,7 +514,8 @@ public sealed record CognitiveMemoryCuratorSendResult(
 public sealed record CognitiveMemoryProfessorAnchorAssimilationRequest(
     Guid CaptureId,
     CognitiveMemoryRecordId DerivedMemoryRecordId,
-    bool FadeAnchor = false);
+    bool FadeAnchor = false,
+    bool ManualReviewConfirmed = false);
 
 public sealed record CognitiveMemoryProfessorAnchorAssimilationEvaluationRequest(
     Guid CaptureId,

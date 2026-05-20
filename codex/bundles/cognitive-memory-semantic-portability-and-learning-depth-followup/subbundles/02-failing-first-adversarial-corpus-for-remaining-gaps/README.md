@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: `Ready`
+- Status: `Completed`
 - Criticality: `Critical`
 - Execution order: `SB02`
 
@@ -30,13 +30,13 @@ Create failing-first tests for all remaining cognitive-memory gaps before modify
 
 ## Exact Source References
 
-- /mnt/data/cogmem_review/CanDoItAll-cognitive-memory/tests/CanDoItAll.Tests.Unit/CognitiveMemoryQualityFoundationTests.cs
-- /mnt/data/cogmem_review/CanDoItAll-cognitive-memory/tests/CanDoItAll.Tests.Unit/CognitiveMemoryAdvancedServicesTests.cs
-- /mnt/data/cogmem_review/CanDoItAll-cognitive-memory/tests/CanDoItAll.Tests.Unit/CognitiveMemoryRecallOrchestratorTests.cs
-- /mnt/data/cogmem_review/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryClusterPlanner.cs
-- /mnt/data/cogmem_review/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryDreamConsolidationService.cs
-- /mnt/data/cogmem_review/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryCuratorConversationService.cs
-- /mnt/data/cogmem_review/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryRecallSynthesisService.cs
+- repo://tests/CanDoItAll.Tests.Unit/CognitiveMemoryQualityFoundationTests.cs
+- repo://tests/CanDoItAll.Tests.Unit/CognitiveMemoryAdvancedServicesTests.cs
+- repo://tests/CanDoItAll.Tests.Unit/CognitiveMemoryRecallOrchestratorTests.cs
+- repo://src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryClusterPlanner.cs
+- repo://src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryDreamConsolidationService.cs
+- repo://src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryCuratorConversationService.cs
+- repo://src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryRecallSynthesisService.cs
 
 ## Deliverables
 
@@ -72,25 +72,25 @@ Create failing-first tests for all remaining cognitive-memory gaps before modify
 
 ## Acceptance Checklist
 
-- All owned requirements are implemented without downgrading semantics.
-- Semantic invariant contract exists and is cited by the proof manifest.
-- Failing-first and passing transcripts exist for targeted tests.
-- Changed source files are hashed and mapped to invariant IDs.
-- No economic-governance scope creep is introduced.
+- All owned requirements are implemented without downgrading semantics: `Completed`.
+- Semantic invariant contract exists and is cited by the proof manifest: `bundle://proof/SB02/semantic-invariants.md`.
+- Failing-first and passing transcripts exist for targeted tests: `bundle://proof/SB02/transcripts/failing-first-semantic-corpus.txt` and `bundle://proof/SB02/transcripts/production-diff-proof.txt`.
+- Changed source files are hashed and mapped to invariant IDs: `bundle://proof/SB02/transcripts/changed-file-hashes.txt`.
+- No economic-governance scope creep is introduced: no economic-governance files or production cognitive-memory files changed in SB02.
 
 ## Proof Required
 
-- Failing-first transcript with non-zero exit code.
-- Semantic invariant contracts mapped to test names.
-- Production diff proof showing no production code changed in SB02.
+- Failing-first transcript with non-zero exit code: `bundle://proof/SB02/transcripts/failing-first-semantic-corpus.txt`.
+- Semantic invariant contracts mapped to test names: `bundle://proof/SB02/semantic-invariants.md` plus `bundle://proof/SB03/semantic-invariants.md` through `bundle://proof/SB09/semantic-invariants.md`.
+- Production diff proof showing no production code changed in SB02: `bundle://proof/SB02/transcripts/production-diff-proof.txt`.
 
 ## Browser Validation Logging
 
-- Backend-only unless this subbundle changes UI routes/components; if UI changes, add Playwright MCP evidence and screenshots.
+- Backend-only. SB02 added unit tests and proof contracts only; no UI routes/components changed.
 
 ## Progression Gate
 
-- Do not proceed to the next subbundle until this subbundle's proof manifest, semantic invariant contract, targeted transcripts, anti-stub audit, and downstream dependency checks are complete.
+- Completed. SB02 proof manifest, semantic invariant contract, targeted failing-first transcript, no-production-diff proof, source assertions, anti-stub audit, and downstream SB03-SB09 invariant contracts are present under `bundle://proof/`.
 
 ## Suggested Agent Prompt
 

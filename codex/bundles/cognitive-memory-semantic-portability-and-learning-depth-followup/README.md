@@ -6,10 +6,10 @@ This bundle is a follow-up after Codex claimed completion of `codex/bundles/cogn
 
 - Bundle preparation status: `Prepared`
 - Bundle readiness gate: `Passed local structural validation after creation`
-- Execution status: `Not started - follow-up bundle only`
-- Subbundle gate review: `Not started - required during Codex execution`
-- Final closure gate: `Not started - must use completed-stage validation and red-team proof`
-- Browser validation analytics: `Backend-first; required only if UI bindings are changed`
+- Execution status: `Completed - SB01 through SB10 completed with manifest-backed proof`
+- Subbundle gate review: `SB01-SB10 completed with portable proof, semantic invariant gates, failing-first cognitive-memory corpus, cross-project/approximate candidate discovery, coverage-aware cluster keys, claim-aware dream grouping/synthesis, semantic entailment/calibrated apply, natural professor capture/anchor semantics, event-backed professor mastery/fading, task-facing recall brief lineage, DI options wiring, collaborator extraction, and final red-team closure`
+- Final closure gate: `Passed - completed-stage validation, fake-proof rejection, broad cognitive-memory tests, scope guard, service-size review, and red-team proof captured`
+- Browser validation analytics: `SB01-SB10 backend-only N/A; no UI bindings/routes/components changed`
 
 ## Why This Bundle Exists
 

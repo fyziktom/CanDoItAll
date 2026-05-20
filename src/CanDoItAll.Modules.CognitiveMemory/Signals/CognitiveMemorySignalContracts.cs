@@ -25,7 +25,9 @@ public enum CognitiveMemorySignalKind
     SelfModelUpdated = 18,
     CalibrationDrift = 19,
     HumilityTriggerFired = 20,
-    ConfidenceReinforced = 21
+    ConfidenceReinforced = 21,
+    ProfessorAnchorAcceptedUse = 22,
+    ProfessorAnchorLifecycleTransition = 23
 }
 
 public enum CognitiveMemorySignalSourceKind
@@ -44,7 +46,8 @@ public enum CognitiveMemorySignalSourceKind
     SelfRegulation = 11,
     ProfessorReview = 12,
     AttentionRouting = 13,
-    RecallTrace = 14
+    RecallTrace = 14,
+    ProfessorAnchorLifecycle = 15
 }
 
 public enum CognitiveMemorySignalConsumerKind

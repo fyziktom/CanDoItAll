@@ -1,0 +1,52 @@
+Command: rg -n "MinimumRepresentativeKeyCoverageRatio|SupportCount|CoverageRatio|LowCoverageKeyCount|PrimaryKeyCoverageRatio|BuildSharedClusterKeys|IsRepresentativeClusterKey|SummarizeLowCoverageKeys|pair-local|SemanticInvariant_ClusterKeysExcludeSignalsBelowCoverageThreshold" src\CanDoItAll.Modules.CognitiveMemory\Quality tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs
+Invariant: SB04-KEY-COVERAGE-01
+Test name: SemanticInvariant_ClusterKeysExcludeSignalsBelowCoverageThreshold
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:2177:    public async Task SemanticInvariant_ClusterKeysExcludeSignalsBelowCoverageThreshold()
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:2223:        Assert.Equal(4, topicKey.SupportCount);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:2224:        Assert.Equal(1, topicKey.CoverageRatio, precision: 3);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:2225:        Assert.All(cluster.Keys, key => Assert.True(key.CoverageRatio > 0.5));
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:2227:        Assert.True(cluster.QualityMetrics.PrimaryKeyCoverageRatio > 0.5);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:2228:        Assert.True(cluster.QualityMetrics.LowCoverageKeyCount > 0);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:2230:        Assert.Contains(cluster.Warnings, warning => warning.Contains("pair-local", StringComparison.OrdinalIgnoreCase));
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityAlgorithmOptions.cs:30:    public double MinimumRepresentativeKeyCoverageRatio { get; init; } = 0.5;
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityContracts.cs:191:    int SupportCount = 0,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityContracts.cs:192:    double CoverageRatio = 0);
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityContracts.cs:216:    double PrimaryKeyCoverageRatio = 0,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityContracts.cs:217:    int LowCoverageKeyCount = 0);
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityContracts.cs:333:    double EvidenceCoverageRatio,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityEntities.cs:142:    public double EvidenceCoverageRatio { get; set; }
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterFormation.cs:8:    int SupportCount = 1,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterFormation.cs:9:    double CoverageRatio = 1);
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamConsolidationService.cs:199:            runToUpdate.EvidenceCoverageRatio = totalClaims == 0
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamConsolidationService.cs:485:            run.EvidenceCoverageRatio,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:16:    private static double MinimumRepresentativeKeyCoverageRatio => AlgorithmOptions.MinimumRepresentativeKeyCoverageRatio;
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:144:                .Select(key => new CognitiveMemoryClusterKey(key.Family, key.Key, key.DisplayText, key.SupportCount, RoundScore(key.CoverageRatio)))
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:158:            var lowCoverageSummary = SummarizeLowCoverageKeys(compositeCluster.LowCoverageKeys);
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:174:                    ? [new CognitiveMemoryClusterKey(primaryKey.Family, primaryKey.Key, primaryKey.DisplayText, primaryKey.SupportCount, RoundScore(primaryKey.CoverageRatio))]
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:409:            var keyCoverage = BuildSharedClusterKeys(members);
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:568:    private static ClusterKeyCoverageResult BuildSharedClusterKeys(IReadOnlyList<CognitiveMemoryClusterRecordEntry> members)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:581:                    SupportCount = supportCount,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:582:                    CoverageRatio = coverageRatio
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:585:            .Where(key => key.SupportCount >= Math.Min(2, memberCount))
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:592:            .Where(key => IsRepresentativeClusterKey(key))
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:595:            .Where(key => !IsRepresentativeClusterKey(key))
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:605:            .OrderByDescending(key => key.CoverageRatio)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:626:    private static string SummarizeLowCoverageKeys(IReadOnlyList<CognitiveMemoryClusterKeyWithRecord> lowCoverageKeys)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:631:                .OrderByDescending(key => key.CoverageRatio)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:634:                .Select(key => $"{key.DisplayText} {key.SupportCount} member(s), coverage {RoundScore(key.CoverageRatio):0.###}"));
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:644:            builder.Append(" Coverage excluded pair-local key(s): ");
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:714:    private static bool IsRepresentativeClusterKey(CognitiveMemoryClusterKeyWithRecord key)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:715:        => key.CoverageRatio > MinimumRepresentativeKeyCoverageRatio;
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:775:                                IsRepresentativeClusterKey(primaryKey) &&
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:793:            RoundScore(primaryKey.CoverageRatio),
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:914:            if (qualityMetrics.PrimaryKeyCoverageRatio <= MinimumRepresentativeKeyCoverageRatio)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:945:        if (qualityMetrics.LowCoverageKeyCount > 0)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:947:            warnings.Add($"Cluster excluded {qualityMetrics.LowCoverageKeyCount} pair-local key(s) below representative coverage.");
+ExitCode: 0
+Test: SemanticInvariant_CrossProjectWeeklyFormsOnlyPolicyAllowedCrossProjectClusters
+Test: SemanticInvariant_ApproximateCandidateDiscoveryPairsParaphrasesWithoutExactSharedKeys
+Test: SemanticInvariant_CrossProjectPlanningReportsPolicyBlockedPairsWithoutRestrictedMembers
+Test: ClusterPlanner_PersistsCompositeClustersWithSupportingKeyFamilies
+Test: ClusterPlanner_MergesRelatedMemoriesAcrossDifferentTitlesAndTopicKeys
+Test: ClusterPlanner_UsesHighFanoutFallbackForParaphrasedSemanticPair
+Test: DreamRun_ProjectNightlyCreatesApprovedCandidateAndMetrics

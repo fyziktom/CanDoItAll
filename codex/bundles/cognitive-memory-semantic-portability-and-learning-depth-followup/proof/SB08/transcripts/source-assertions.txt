@@ -1,0 +1,63 @@
+Command: transcript metadata repair for .\codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup\proof\SB08\transcripts\source-assertions.txt
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamValidator.cs:178:            CognitiveMemoryProfessorAnchorTransitionAudit.AddTransition(
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamValidator.cs:194:                CognitiveMemoryProfessorAnchorTransitionAudit.AddTransition(
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamValidator.cs:271:        if (cluster is not null && !cluster.AggregateEligible)
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorTransitionAudit.cs:6:internal static class CognitiveMemoryProfessorAnchorTransitionAudit
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorTransitionAudit.cs:57:            SignalKind = CognitiveMemorySignalKind.ProfessorAnchorLifecycleTransition,
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorTransitionAudit.cs:58:            SourceKind = CognitiveMemorySignalSourceKind.ProfessorAnchorLifecycle,
+src\CanDoItAll.Modules.CognitiveMemory\Signals\CognitiveMemorySignalContracts.cs:29:    ProfessorAnchorAcceptedUse = 22,
+src\CanDoItAll.Modules.CognitiveMemory\Signals\CognitiveMemorySignalContracts.cs:30:    ProfessorAnchorLifecycleTransition = 23
+src\CanDoItAll.Modules.CognitiveMemory\Signals\CognitiveMemorySignalContracts.cs:50:    ProfessorAnchorLifecycle = 15
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorService.cs:44:        CognitiveMemoryProfessorAnchorTransitionAudit.AddTransition(
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorService.cs:139:        if (!requireUsageAndIntegration && !request.ManualReviewConfirmed)
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorService.cs:162:        CognitiveMemoryProfessorAnchorTransitionAudit.AddTransition(
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorService.cs:171:            request.ManualReviewConfirmed,
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryAdvancedContracts.cs:518:    bool ManualReviewConfirmed = false);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:420:        await SeedAcceptedProfessorUseEventsAsync(fixture, projectId, derivedMemoryId, useCount: 1);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:427:            ManualReviewConfirmed: true));
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:474:    public async Task ProfessorAnchor_ManualAssimilationRequiresReviewConfirmation()
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:497:        await SeedAcceptedProfessorUseEventsAsync(fixture, projectId, derivedMemoryId, useCount: 1);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:603:        await SeedAcceptedProfessorUseEventsAsync(fixture, projectId, derivedMemoryId, useCount: 1);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:608:            ManualReviewConfirmed: true));
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:652:        await SeedAcceptedProfessorUseEventsAsync(fixture, projectId, derivedMemoryId, useCount: 2);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:662:            .Where(signal => signal.SignalKind == CognitiveMemorySignalKind.ProfessorAnchorLifecycleTransition)
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:675:    public async Task SemanticInvariant_ProfessorAnchorScanRequiresAcceptedUseEventsInsteadOfSourceMapMentions()
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:704:        await SeedProfessorRecallSourceMapMentionsAsync(
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:722:    public async Task ProfessorAnchor_ScanRequiresAggregateReadyIntegration()
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:745:        await SeedAcceptedProfessorUseEventsAsync(
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:750:        await SeedNonAggregateReadyClusterMembershipAsync(fixture, projectId, derivedMemoryId);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:810:    public async Task ProfessorAnchor_RejectedComparisonReturnsAnchorToActiveWithAudit()
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:837:            .Where(signal => signal.SignalKind == CognitiveMemorySignalKind.ProfessorAnchorLifecycleTransition)
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:868:        await SeedAcceptedProfessorUseEventsAsync(fixture, projectId, derivedMemoryId, useCount: 1);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:873:            ManualReviewConfirmed: true));
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:1017:        await SeedAcceptedProfessorUseEventsAsync(
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:2191:            Readiness = CognitiveMemoryQualityClusterReadiness.AggregateReady,
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:2201:            AggregateEligible = true,
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:2291:    private static async Task SeedProfessorRecallSourceMapMentionsAsync(
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:2341:    private static async Task SeedAcceptedProfessorUseEventsAsync(
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:2374:                SignalKind = CognitiveMemorySignalKind.ProfessorAnchorAcceptedUse,
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:2402:    private static async Task SeedNonAggregateReadyClusterMembershipAsync(
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:2425:            AggregateEligible = false,
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:2478:            Readiness = CognitiveMemoryQualityClusterReadiness.AggregateReady,
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:2488:            AggregateEligible = true,
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAssimilationEvaluator.cs:74:        var repeatedUseCount = await CountAcceptedUseEventsAsync(dbContext, derivedMemory.Id, cancellationToken);
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAssimilationEvaluator.cs:82:        var hasIntegrationEvidence = await HasDreamOrClusterIntegrationAsync(dbContext, derivedMemory.Id, cancellationToken);
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAssimilationEvaluator.cs:210:        return Math.Max(sourceSupportCount, evidenceSupportCount);
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAssimilationEvaluator.cs:213:    private static async Task<int> CountAcceptedUseEventsAsync(
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAssimilationEvaluator.cs:221:                signal.SignalKind == CognitiveMemorySignalKind.ProfessorAnchorAcceptedUse &&
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAssimilationEvaluator.cs:227:    private static async Task<bool> HasDreamOrClusterIntegrationAsync(
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAssimilationEvaluator.cs:236:                candidate.SourceMapCount >= 2 &&
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAssimilationEvaluator.cs:250:                  cluster.AggregateEligible &&
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAssimilationEvaluator.cs:251:                  cluster.Readiness == CognitiveMemoryQualityClusterReadiness.AggregateReady
+ExitCode: 0
+Invariant: SB08-EVENT-MASTERY-01
+Invariant: SB08-INTEGRATION-02
+Invariant: SB08-TRANSITION-AUDIT-03
+Test: ProfessorAnchor_ScanAssimilatesAndFadesIntegratedMasteryEvidence
+Test: ProfessorAnchor_AssimilationRequiresMasteryEvidenceBeyondIndependentSupport
+Test: ProfessorAnchor_AssimilatesAndFadesOnlyAfterDerivedMemoryExists
+Test: ProfessorAnchor_DirectCaptureMemoryCannotAssimilateItsOwnAnchor
+Test: ProfessorAnchor_RejectsDescendantOnlyAggregateSupport
+Test: ProfessorAnchor_FadeDemotesDirectCaptureMemory
+Test: ReferenceResolver_ExpandsFadedProfessorAnchorLineage
+Test: EndToEndProfessorCorrection_DreamsAssimilatesRecallsAndResolvesLineage

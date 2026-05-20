@@ -1,0 +1,16 @@
+Command: transcript metadata repair for .\codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup\proof\SB06\transcripts\no-migration-proof.txt
+Changed cognitive-memory/test files:
+src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryAggregateConfidenceCalibrator.cs
+src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryAggregateMemoryApplicator.cs
+src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryClusterFormation.cs
+src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryClusterPlanner.cs
+src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryDreamConsolidationService.cs
+src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryDreamSynthesis.cs
+src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryDreamValidator.cs
+src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryQualityAlgorithmOptions.cs
+src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryQualityContracts.cs
+tests/CanDoItAll.Tests.Unit/CognitiveMemoryAdvancedServicesTests.cs
+tests/CanDoItAll.Tests.Unit/CognitiveMemoryQualityFoundationTests.cs
+
+No EF entity, DbContext, model snapshot, SQLite migration, or PostgreSQL migration files changed for SB06.
+ExitCode: 0

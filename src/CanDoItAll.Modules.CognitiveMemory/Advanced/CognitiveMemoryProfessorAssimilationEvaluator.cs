@@ -7,7 +7,7 @@ internal sealed class CognitiveMemoryProfessorAssimilationEvaluator(
     IDbContextFactory<AppDbContext> dbContextFactory,
     CognitiveMemoryQualityAlgorithmOptions? algorithmOptions = null) : ICognitiveMemoryProfessorAssimilationEvaluator
 {
-    private readonly CognitiveMemoryQualityProfessorLifecycleAlgorithmOptions options = (algorithmOptions ?? CognitiveMemoryQualityAlgorithmOptions.Current).ProfessorLifecycle;
+    private readonly CognitiveMemoryQualityProfessorLifecycleAlgorithmOptions options = (algorithmOptions ?? new CognitiveMemoryQualityAlgorithmOptions()).ProfessorLifecycle;
 
     public async ValueTask<CognitiveMemoryProfessorAnchorAssimilationEvaluationResult> EvaluateAsync(
         CognitiveMemoryProfessorAnchorAssimilationEvaluationRequest request,
@@ -71,17 +71,19 @@ internal sealed class CognitiveMemoryProfessorAssimilationEvaluator(
             return Reject("Professor anchor cannot be assimilated without independent non-descendant support.");
         }
 
-        if (!HasMasteryEvidence(derivedMemory, sourceLinks, evidenceLinks))
+        var repeatedUseCount = await CountAcceptedUseEventsAsync(dbContext, derivedMemory.Id, cancellationToken);
+        if (repeatedUseCount == 0)
         {
-            return Reject("Professor anchor cannot be assimilated until the derived memory shows mastery beyond independent support.", independentSupportCount);
+            return Reject(
+                "Professor anchor cannot be assimilated until the derived memory has durable accepted-use evidence.",
+                independentSupportCount);
         }
 
-        var repeatedUseCount = await CountRepeatedUseAsync(dbContext, derivedMemory.Id, cancellationToken);
         var hasIntegrationEvidence = await HasDreamOrClusterIntegrationAsync(dbContext, derivedMemory.Id, cancellationToken);
         if (request.RequireUsageAndIntegration && repeatedUseCount < options.RequiredRepeatedUseCount)
         {
             return Reject(
-                $"Professor anchor automatic assimilation requires at least {options.RequiredRepeatedUseCount} repeated successful recall uses.",
+                $"Professor anchor automatic assimilation requires at least {options.RequiredRepeatedUseCount} accepted-use events.",
                 independentSupportCount,
                 repeatedUseCount,
                 hasIntegrationEvidence);
@@ -98,7 +100,7 @@ internal sealed class CognitiveMemoryProfessorAssimilationEvaluator(
 
         return new CognitiveMemoryProfessorAnchorAssimilationEvaluationResult(
             true,
-            "Professor anchor has anchor lineage, independent non-descendant support, mastery evidence, and required integration.",
+            "Professor anchor has anchor lineage, independent non-descendant support, accepted-use events, and required integration.",
             independentSupportCount,
             repeatedUseCount,
             hasIntegrationEvidence);
@@ -205,41 +207,20 @@ internal sealed class CognitiveMemoryProfessorAssimilationEvaluator(
             .Where(evidenceAnchorId => evidenceAnchorId != Guid.Empty)
             .Distinct()
             .Count();
-        return sourceSupportCount + evidenceSupportCount;
+        return Math.Max(sourceSupportCount, evidenceSupportCount);
     }
 
-    private static bool HasMasteryEvidence(
-        CognitiveMemoryRecord derivedMemory,
-        IReadOnlyList<CognitiveMemorySourceLinkRecord> sourceLinks,
-        IReadOnlyList<CognitiveMemoryRecordEvidenceAnchorRecord> evidenceLinks)
-    {
-        var evidenceText = string.Join(
-            " ",
-            new[]
-            {
-                derivedMemory.Title,
-                derivedMemory.CanonicalText,
-                derivedMemory.SummaryText,
-                derivedMemory.GeneratedReason
-            }
-            .Concat(sourceLinks.Select(link => link.Summary))
-            .Concat(evidenceLinks.Select(link => link.Summary)));
-        if (ContainsAny(evidenceText, ["not yet mastered", "not mastered", "has not yet been mastered", "without mastery", "mastery missing"]))
-        {
-            return false;
-        }
-
-        return ContainsAny(evidenceText, ["internalized", "mastered", "repeated use", "validated use", "reinforced", "independently reinforced", "confirms"]);
-    }
-
-    private static async Task<int> CountRepeatedUseAsync(
+    private static async Task<int> CountAcceptedUseEventsAsync(
         AppDbContext dbContext,
         Guid derivedMemoryRecordId,
         CancellationToken cancellationToken)
-        => await dbContext.Set<CognitiveMemorySynthesizedStatementSourceMapRecord>()
+        => await dbContext.Set<CognitiveMemorySignalRecord>()
             .AsNoTracking()
-            .Where(sourceMap => sourceMap.MemoryRecordId == derivedMemoryRecordId)
-            .Select(sourceMap => sourceMap.SynthesisId)
+            .Where(signal =>
+                signal.MemoryRecordId == derivedMemoryRecordId &&
+                signal.SignalKind == CognitiveMemorySignalKind.ProfessorAnchorAcceptedUse &&
+                !signal.RequiresReview)
+            .Select(signal => signal.Id)
             .Distinct()
             .CountAsync(cancellationToken);
 
@@ -252,6 +233,7 @@ internal sealed class CognitiveMemoryProfessorAssimilationEvaluator(
             .AsNoTracking()
             .AnyAsync(candidate =>
                 candidate.MemoryRecordId == derivedMemoryRecordId &&
+                candidate.SourceMapCount >= 2 &&
                 (candidate.Status == CognitiveMemoryDreamAggregateCandidateStatus.Approved ||
                  candidate.Status == CognitiveMemoryDreamAggregateCandidateStatus.Applied),
                 cancellationToken))
@@ -259,14 +241,15 @@ internal sealed class CognitiveMemoryProfessorAssimilationEvaluator(
             return true;
         }
 
-        return await dbContext.Set<CognitiveMemoryQualityClusterMemberRecord>()
-            .AsNoTracking()
-            .AnyAsync(member =>
-                member.MemberKind == CognitiveMemoryQualityClusterMemberKind.MemoryRecord &&
-                member.MemoryRecordId == derivedMemoryRecordId,
-                cancellationToken);
+        return await (
+            from member in dbContext.Set<CognitiveMemoryQualityClusterMemberRecord>().AsNoTracking()
+            join cluster in dbContext.Set<CognitiveMemoryQualityClusterRecord>().AsNoTracking()
+                on member.ClusterId equals cluster.Id
+            where member.MemberKind == CognitiveMemoryQualityClusterMemberKind.MemoryRecord &&
+                  member.MemoryRecordId == derivedMemoryRecordId &&
+                  cluster.AggregateEligible &&
+                  cluster.Readiness == CognitiveMemoryQualityClusterReadiness.AggregateReady
+            select member.Id)
+            .AnyAsync(cancellationToken);
     }
-
-    private static bool ContainsAny(string value, IReadOnlyList<string> candidates)
-        => candidates.Any(candidate => value.Contains(candidate, StringComparison.OrdinalIgnoreCase));
 }
