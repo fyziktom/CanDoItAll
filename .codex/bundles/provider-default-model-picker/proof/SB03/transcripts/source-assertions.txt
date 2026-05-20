@@ -1,0 +1,114 @@
+﻿Command: Select-String source assertions for ProviderModelSelector and AgentFrameworkWorkspaceCatalogService.Agents
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTime: 2026-05-20T17:11:48.3116480-04:00
+ExitCode: 0
+Output:
+
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:71:
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:72:    [Parameter]
+> src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:73:    public bool 
+UseEmptyValueForProviderDefault { get; set; } = true;
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:74:
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:75:    [Parameter]
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:76:    public bool Disabled { get; set; }
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:118:    }
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:119:
+> src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:120:    public static string 
+NormalizeProviderDefaultModel(string? value, ProviderProfile? provider)
+> src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:121:        => 
+NormalizeProviderDefaultModel(value, provider?.DefaultModel);
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:122:
+> src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:123:    public static string 
+NormalizeProviderDefaultModel(string? value, string? providerDefaultModel)
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:124:        => NormalizeModel(value);
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:125:
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:126:    private void RebuildModelChoices()
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:158:    private void ApplyExternalValue(string 
+currentValue)
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:159:    {
+> src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:160:        if 
+(TryResolveKnownChoice(currentValue, out var choiceValue))
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:161:        {
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:162:            selectedChoiceValue = 
+choiceValue;
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:163:            isOverrideEnabled = false;
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:173:    }
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:174:
+> src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:175:    private bool 
+TryResolveKnownChoice(string currentValue, out string choiceValue)
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:176:    {
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:177:        if 
+(string.IsNullOrWhiteSpace(currentValue) ||
+> src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:178:            
+!UseEmptyValueForProviderDefault && IsProviderDefaultModel(currentValue))
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:179:        {
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:180:            choiceValue = 
+ProviderDefaultChoiceValue;
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:181:            return true;
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:208:        isOverrideEnabled = false;
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:209:        var nextValue = 
+string.Equals(selectedChoiceValue, ProviderDefaultChoiceValue, StringComparison.Ordinal)
+> src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:210:            ? 
+ResolveProviderDefaultEmittedValue()
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:211:            : selectedChoiceValue;
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:212:        customModelName = 
+string.IsNullOrWhiteSpace(nextValue)
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:213:            ? ResolveProviderDefaultModel()
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:232:
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:233:        selectedChoiceValue = 
+ProviderDefaultChoiceValue;
+> src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:234:        var nextValue = 
+ResolveProviderDefaultEmittedValue();
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:235:        customModelName = 
+ResolveProviderDefaultModel();
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:236:        await EmitValueAsync(nextValue);
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:237:    }
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:265:    }
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:266:
+> src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:267:    private string 
+ResolveProviderDefaultEmittedValue()
+> src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:268:        => UseEmptyValueForProviderDefault 
+? string.Empty : ResolveProviderDefaultModel();
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:269:
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:270:    private string 
+ResolveProviderDefaultModel()
+  src\CanDoItAll.AgentFramework.Components\ProviderModelSelector.razor:271:        => 
+NormalizeModel(ProviderDefaultModel ?? Provider?.DefaultModel);
+
+
+
+
+  src\CanDoItAll.AgentFramework.Core\Catalog\AgentFrameworkWorkspaceCatalogService.Agents.cs:63:
+  src\CanDoItAll.AgentFramework.Core\Catalog\AgentFrameworkWorkspaceCatalogService.Agents.cs:64:            
+EnsureUniqueTemplateKey(catalog.Agents, id, normalizedTemplateKey, "Agent save");
+> src\CanDoItAll.AgentFramework.Core\Catalog\AgentFrameworkWorkspaceCatalogService.Agents.cs:65:            var 
+normalizedModel = NormalizeAgentModelForSave(model.Model);
+  src\CanDoItAll.AgentFramework.Core\Catalog\AgentFrameworkWorkspaceCatalogService.Agents.cs:66:
+  src\CanDoItAll.AgentFramework.Core\Catalog\AgentFrameworkWorkspaceCatalogService.Agents.cs:67:            var 
+definition = new AgentDefinition(
+  src\CanDoItAll.AgentFramework.Core\Catalog\AgentFrameworkWorkspaceCatalogService.Agents.cs:68:                Id: id,
+  src\CanDoItAll.AgentFramework.Core\Catalog\AgentFrameworkWorkspaceCatalogService.Agents.cs:73:                
+Status: model.Status,
+  src\CanDoItAll.AgentFramework.Core\Catalog\AgentFrameworkWorkspaceCatalogService.Agents.cs:74:                
+ProviderProfileId: model.ProviderProfileId,
+> src\CanDoItAll.AgentFramework.Core\Catalog\AgentFrameworkWorkspaceCatalogService.Agents.cs:75:                Model: 
+normalizedModel,
+  src\CanDoItAll.AgentFramework.Core\Catalog\AgentFrameworkWorkspaceCatalogService.Agents.cs:76:                
+Workload: model.Workload,
+  src\CanDoItAll.AgentFramework.Core\Catalog\AgentFrameworkWorkspaceCatalogService.Agents.cs:77:                
+ChatHistoryMode: model.ChatHistoryMode,
+  src\CanDoItAll.AgentFramework.Core\Catalog\AgentFrameworkWorkspaceCatalogService.Agents.cs:78:                
+Temperature: model.Temperature,
+  src\CanDoItAll.AgentFramework.Core\Catalog\AgentFrameworkWorkspaceCatalogService.Agents.cs:112:    }
+  src\CanDoItAll.AgentFramework.Core\Catalog\AgentFrameworkWorkspaceCatalogService.Agents.cs:113:
+> src\CanDoItAll.AgentFramework.Core\Catalog\AgentFrameworkWorkspaceCatalogService.Agents.cs:114:    private static 
+string NormalizeAgentModelForSave(string? model)
+  src\CanDoItAll.AgentFramework.Core\Catalog\AgentFrameworkWorkspaceCatalogService.Agents.cs:115:        => 
+string.IsNullOrWhiteSpace(model) ? string.Empty : model.Trim();
+  src\CanDoItAll.AgentFramework.Core\Catalog\AgentFrameworkWorkspaceCatalogService.Agents.cs:116:
+  src\CanDoItAll.AgentFramework.Core\Catalog\AgentFrameworkWorkspaceCatalogService.Agents.cs:117:    public async Task 
+DeleteAgentAsync(Guid agentId, CancellationToken cancellationToken = default)
+
+
+
+

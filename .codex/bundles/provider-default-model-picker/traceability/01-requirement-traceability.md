@@ -7,6 +7,7 @@
 | OpenAI known names and Ollama available models should appear. | R003 | Provider model options | Tests seed provider `SuggestedModels`; code relies on provider profile `SuggestedModels`. | 01 |
 | Override checkbox and standard text field must remain. | R004 | Shared selector, Agent Runtime tab | Component test and existing Playwright flow update | 01, 02 |
 | Generic component because providers are used in workflows, memory, etc. | R005, R006 | AgentFramework shared components, workflow/memory review | Source diff and execution report notes | 01, 02 |
+| Follow-up: saving an override says saved but then returns to unselected. | R004, R007 | Agent Details dialog Runtime tab and catalog save canonical model semantics | Failing-first bUnit test, passing bUnit test, source assertion, browser proof or explicit blocker | 03 |
 
 ## Literal Language Preservation
 
@@ -15,3 +16,4 @@
 - "options that specified model allows" is implemented through provider `SuggestedModels` rather than a new hard-coded list.
 - "also checkbox override model name" is preserved as R004.
 - "generic component" is preserved as R005.
+- "saved ... then the dialog get back to unselected" is preserved as R007.

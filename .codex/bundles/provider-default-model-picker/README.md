@@ -5,9 +5,9 @@
 - Bundle preparation status: `Prepared`
 - Bundle readiness gate: `Ready for validator`
 - Execution status: `Completed`
-- Subbundle gate review: `Passed`
+- Subbundle gate review: `Passed with browser blocker recorded`
 - Final closure gate: `Ready for completed validator`
-- Browser validation analytics: `Captured for Agents Runtime tab`
+- Browser validation analytics: `Targeted tests passed; browser startup blocked by HealthTimeout`
 
 ## Source Input
 
@@ -27,4 +27,11 @@
 - Provider default linkage is stored as an empty agent model so changing the provider default later updates all linked agents at runtime.
 - The selector offers provider default plus known or discovered provider `SuggestedModels`, including OpenAI seeded names and Ollama health-check discoveries.
 - Custom model names remain possible through an explicit "Override model name" checkbox and text field.
+- Explicit model overrides survive the save/reload path even when the chosen text equals the provider default; only an empty model is canonical provider-default linkage.
 - The implementation is available as a reusable provider model selector component, not a one-off agent dialog field.
+
+## Follow-Up Closure
+
+- SB03 repaired the canonical model rule: empty model means provider-default linkage; any non-empty model string means explicit override.
+- Proof manifest: `proof/SB03/manifest.md`.
+- Browser proof for `/agents?tab=agents` was attempted through the managed dotnet-watch app but blocked by a five-minute `HealthTimeout` while the app stayed in `Building`; see `proof/SB03/transcripts/browser-proof-blocker.txt`.

@@ -100,6 +100,22 @@ public sealed class ProviderModelSelectorTests
     }
 
     [Fact]
+    public void ProviderModelSelector_treats_non_empty_provider_default_value_as_explicit_override()
+    {
+        using var context = new TestContext();
+        var provider = CreateProvider("gpt-5-mini", ["gpt-5.4"]);
+
+        var cut = context.RenderComponent<ProviderModelSelector>(parameters => parameters
+            .Add(component => component.Provider, provider)
+            .Add(component => component.Value, "gpt-5-mini")
+            .Add(component => component.ChoiceTestId, "model-choice")
+            .Add(component => component.OverrideTestId, "model-override")
+            .Add(component => component.CustomModelTestId, "model-text"));
+
+        Assert.Equal("gpt-5-mini", cut.Find("[data-testid='model-text']").GetAttribute("value"));
+    }
+
+    [Fact]
     public void ProviderModelSelector_supports_scalar_provider_metadata_for_workflow_surfaces()
     {
         using var context = new TestContext();

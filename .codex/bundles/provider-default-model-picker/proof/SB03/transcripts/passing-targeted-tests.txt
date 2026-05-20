@@ -1,0 +1,28 @@
+﻿Command: dotnet test tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --configuration Release --no-build --filter 'ProviderModelSelector|AgentDetails_runtime' --logger 'console;verbosity=normal'
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTime: 2026-05-20T17:10:28.2170567-04:00
+ExitCode: 0
+Output:
+Test run for C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\bin\Release\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.7)
+[xUnit.net 00:00:01.90]   Discovering: CanDoItAll.Tests.Components
+[xUnit.net 00:00:02.10]   Discovered:  CanDoItAll.Tests.Components
+[xUnit.net 00:00:02.15]   Starting:    CanDoItAll.Tests.Components
+  Passed CanDoItAll.Tests.Components.ProviderModelSelectorTests.ProviderModelSelector_lists_provider_default_and_suggested_models [1 s]
+  Passed CanDoItAll.Tests.Components.ProviderModelSelectorTests.ProviderModelSelector_starts_in_override_for_unknown_existing_model [22 ms]
+  Passed CanDoItAll.Tests.Components.ProviderModelSelectorTests.ProviderModelSelector_treats_non_empty_provider_default_value_as_explicit_override [7 ms]
+  Passed CanDoItAll.Tests.Components.ProviderModelSelectorTests.ProviderModelSelector_unchecking_override_returns_to_provider_default [17 ms]
+  Passed CanDoItAll.Tests.Components.ProviderModelSelectorTests.ProviderModelSelector_keeps_custom_model_behind_override [8 ms]
+  Passed CanDoItAll.Tests.Components.ProviderModelSelectorTests.ProviderModelSelector_supports_scalar_provider_metadata_for_workflow_surfaces [194 ms]
+  Passed CanDoItAll.Tests.Components.AiAgentsPageTests.AgentDetails_runtime_model_override_with_provider_default_text_reopens_checked [34 s]
+  Passed CanDoItAll.Tests.Components.AiAgentsPageTests.AgentDetails_runtime_unchecking_model_override_saves_provider_default_and_reopens_unchecked [10 s]
+  Passed CanDoItAll.Tests.Components.AiAgentsPageTests.AgentDetails_runtime_model_override_saves_custom_model [5 s]
+[xUnit.net 00:00:56.22]   Finished:    CanDoItAll.Tests.Components
+  Passed CanDoItAll.Tests.Components.AiAgentsPageTests.AgentDetails_runtime_provider_default_model_saves_as_provider_linked_empty_model [4 s]
+
+Test Run Successful.
+Total tests: 10
+     Passed: 10
+ Total time: 57.8449 Seconds
+
