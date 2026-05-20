@@ -2,7 +2,20 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
+
+## Execution Proof
+
+- Entry gate: passed. SB01 has no prerequisites, owns R-01 and the process-correction raw notes, and explicitly blocks cognitive-memory source edits.
+- Changed repo-local skill files:
+  - `codex/skills/bundles/candoitall-bundle-execution/SKILL.md`
+  - `codex/skills/bundles/candoitall-bundle-validator/SKILL.md`
+  - `codex/skills/bundles/candoitall-subbundle-validator/SKILL.md`
+  - `codex/skills/bundles/candoitall-bundle-preparation/SKILL.md`
+  - `codex/skills/bundles/candoitall-bundle-execution/references/semantic-adequacy-proof.md`
+- Installation proof: copied those exact changed skill files into `C:\Users\lucys\.codex\skills` using `Copy-Item -Force`; command output recorded `synced` for each file.
+- Reload proof: reopened the active skill files and verified the new `Semantic Adequacy Gate`, `Semantic Proof Failure Rule`, `Semantic Adequacy Closure Rule`, and preparation requirement for semantic proof gates.
+- Cognitive-memory source files were not edited in SB01.
 
 ## Objective
 
@@ -27,11 +40,11 @@
 
 ## Exact Source References
 
-- /mnt/data/review_current/CanDoItAll-cognitive-memory/codex/skills/bundles/candoitall-bundle-execution/SKILL.md
-- /mnt/data/review_current/CanDoItAll-cognitive-memory/codex/skills/bundles/candoitall-bundle-validator/SKILL.md
-- /mnt/data/review_current/CanDoItAll-cognitive-memory/codex/skills/bundles/candoitall-subbundle-validator/SKILL.md
-- /mnt/data/review_current/CanDoItAll-cognitive-memory/codex/skills/bundles/candoitall-bundle-preparation/SKILL.md
-- /mnt/data/review_current/CanDoItAll-cognitive-memory/codex/skills/bundles/candoitall-bundle-preparation/scripts/validate_bundle.py
+- C:/repositories/CanDoItAll/codex/skills/bundles/candoitall-bundle-execution/SKILL.md
+- C:/repositories/CanDoItAll/codex/skills/bundles/candoitall-bundle-validator/SKILL.md
+- C:/repositories/CanDoItAll/codex/skills/bundles/candoitall-subbundle-validator/SKILL.md
+- C:/repositories/CanDoItAll/codex/skills/bundles/candoitall-bundle-preparation/SKILL.md
+- C:/repositories/CanDoItAll/codex/skills/bundles/candoitall-bundle-preparation/scripts/validate_bundle.py
 
 ## Deliverables
 

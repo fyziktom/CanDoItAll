@@ -96,6 +96,52 @@ public sealed class CognitiveMemoryReferenceResolver(
             }
         }
 
+        var professorAnchors = await dbContext.Set<CognitiveMemoryCuratorCapturedImprovementRecord>()
+            .AsNoTracking()
+            .Where(capture =>
+                capture.SourceItemId != null &&
+                (capture.AppliedMemoryRecordId != null && aggregateRecordIds.Contains(capture.AppliedMemoryRecordId.Value) ||
+                 capture.AssimilatedMemoryRecordId != null && aggregateRecordIds.Contains(capture.AssimilatedMemoryRecordId.Value)))
+            .ToListAsync(cancellationToken);
+        if (professorAnchors.Count > 0)
+        {
+            var anchorSourceItemIds = professorAnchors
+                .Select(anchor => anchor.SourceItemId!.Value)
+                .Distinct()
+                .ToArray();
+            var anchorSourceItems = await dbContext.Set<CognitiveMemorySourceItemRecord>()
+                .AsNoTracking()
+                .Where(item => anchorSourceItemIds.Contains(item.Id))
+                .ToDictionaryAsync(item => item.Id, cancellationToken);
+            foreach (var anchor in professorAnchors)
+            {
+                var sourceItem = anchorSourceItems.GetValueOrDefault(anchor.SourceItemId!.Value);
+                var row = new CognitiveMemorySynthesizedStatementSourceMapRecord
+                {
+                    StatementId = request.StatementId.Value,
+                    MemoryRecordId = anchor.AssimilatedMemoryRecordId ?? anchor.AppliedMemoryRecordId!.Value,
+                    SourceItemId = anchor.SourceItemId,
+                    EvidenceAnchorId = anchor.EvidenceAnchorId,
+                    SourceSystem = sourceItem?.SourceSystem ?? "professor-anchor",
+                    Locator = sourceItem?.Locator ?? string.Empty,
+                    Summary = FirstNonEmpty(anchor.Summary, anchor.CorrectionText, sourceItem?.Title),
+                    AccessLevel = sourceItem?.AccessLevel ?? CognitiveMemoryAccessLevel.Project,
+                    RedactionState = sourceItem?.RedactionState ?? CognitiveMemoryRedactionState.Safe
+                };
+                var included = CanResolve(row, request);
+                references.Add(new CognitiveMemoryResolvedReference(
+                    request.StatementId,
+                    new CognitiveMemoryRecordId(row.MemoryRecordId),
+                    row.SourceItemId is null ? null : new CognitiveMemorySourceItemId(row.SourceItemId.Value),
+                    row.EvidenceAnchorId is null ? null : new CognitiveMemoryEvidenceAnchorId(row.EvidenceAnchorId.Value),
+                    row.SourceSystem,
+                    included ? row.Locator : string.Empty,
+                    included ? CognitiveMemoryQualityText.Redact(row.Summary) : string.Empty,
+                    included,
+                    included ? CognitiveMemoryRecallExclusionReasonKind.None : ResolveExclusion(row, request.PolicyContext)));
+            }
+        }
+
         references = references
             .GroupBy(reference => new { reference.MemoryRecordId, reference.SourceItemId, reference.EvidenceAnchorId })
             .Select(group => group.First())
@@ -104,6 +150,9 @@ public sealed class CognitiveMemoryReferenceResolver(
             .ToList();
         return new CognitiveMemoryReferenceResolverResult(references, warnings);
     }
+
+    private static string FirstNonEmpty(params string?[] values)
+        => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
 
     private static bool CanResolve(
         CognitiveMemorySynthesizedStatementSourceMapRecord row,

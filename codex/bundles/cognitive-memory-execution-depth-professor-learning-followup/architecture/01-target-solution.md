@@ -63,3 +63,19 @@ Recall should create a brief, not a context dump:
 - no internal diagnostic scores by default;
 - stable reference tokens or statement IDs for on-demand source expansion;
 - phrase/claim-level source map so references can explain why each statement appeared.
+
+## Implemented Boundary Map
+
+The SB08 refactor kept behavior stable and extracted the policy with the highest drift risk:
+
+- `CognitiveMemoryClusterPlanner`: owns bounded key-index candidate generation, composite edge scoring, connected-component cluster formation, and `quality-clustering-v2` persistence.
+- `CognitiveMemoryDreamConsolidationService`: owns claim extraction, claim grouping, canonical aggregate text, claim/source maps, and `quality-dream-v2-claim-synthesis` persistence.
+- `CognitiveMemoryDreamValidator`: owns claim-support validation, near-duplicate claim/source signature checks, and professor-anchor comparison gating.
+- `CognitiveMemoryAggregateConfidenceCalibrator`: owns aggregate confidence score, bucket, and stability policy from source breadth, claim count, claim support, and validation issues.
+- `CognitiveMemoryAggregateMemoryApplicator`: owns approved candidate loading, provenance persistence, generated memory/claim creation, duplicate apply handling, and `quality-aggregate-apply-v2-calibrated` persistence.
+- `CognitiveMemoryCuratorConversationService`: owns curator/professor capture, correction targeting, professor-anchor creation, and `curator-conversation-v2-professor-anchor` persistence.
+- `CognitiveMemoryProfessorAnchorService`: owns professor-anchor assimilation and fade lifecycle, including distinct derived memory and independent-support checks.
+- `CognitiveMemoryRecallSynthesisService`: owns query-shaped brief composition and statement source maps.
+- `CognitiveMemoryReferenceResolver`: owns on-demand expansion from synthesized statement references to aggregate and professor-anchor lineage.
+
+No additive migration was required because SB08 introduced a stateless service boundary and version constants; existing persisted algorithm-version string columns already cover compatibility.

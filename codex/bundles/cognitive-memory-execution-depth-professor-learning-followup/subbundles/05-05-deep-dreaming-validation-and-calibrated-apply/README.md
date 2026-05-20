@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -29,12 +29,12 @@
 
 ## Exact Source References
 
-- /mnt/data/review_current/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryDreamConsolidationService.cs
-- /mnt/data/review_current/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryDreamValidator.cs
-- /mnt/data/review_current/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryAggregateMemoryApplicator.cs
-- /mnt/data/review_current/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryQualityContracts.cs
-- /mnt/data/review_current/CanDoItAll-cognitive-memory/tests/CanDoItAll.Tests.Unit/CognitiveMemoryQualityFoundationTests.cs
-- /mnt/data/review_current/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Consolidation/CognitiveMemoryConsolidationCandidateApplicator.cs
+- C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryDreamConsolidationService.cs
+- C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryDreamValidator.cs
+- C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryAggregateMemoryApplicator.cs
+- C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryQualityContracts.cs
+- C:/repositories/CanDoItAll/tests/CanDoItAll.Tests.Unit/CognitiveMemoryQualityFoundationTests.cs
+- C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Consolidation/CognitiveMemoryConsolidationCandidateApplicator.cs
 
 ## Deliverables
 
@@ -105,3 +105,12 @@
 ```text
 Implement deep dream claim synthesis, validation, and calibrated apply. Remove diagnostic boilerplate from canonical memory and prove unsupported/duplicate/weak aggregates cannot pass as strong stable knowledge.
 ```
+
+## Execution Proof
+
+- Implemented deterministic claim-unit synthesis in `CognitiveMemoryDreamConsolidationService`: canonical aggregate text is now built from domain claims and claim records carry their own source maps.
+- Strengthened `CognitiveMemoryDreamValidator`: unsupported mapped claims are reviewed, duplicate detection compares generated aggregate claim/source signatures, and generated-only/restricted/contradictory gates remain enforced.
+- Calibrated `CognitiveMemoryAggregateMemoryApplicator`: ordinary approved dream aggregates now apply as `WeakAccept` / `Experimental` unless strong per-claim source agreement is present.
+- Targeted proof passed: `dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~DreamRun_CanonicalAggregateMemoryContainsDomainKnowledgeWithoutDiagnosticBoilerplate|FullyQualifiedName~DreamValidation_RoutesUnsupportedMappedClaimToReview|FullyQualifiedName~DreamValidation_DetectsNearDuplicateAggregateByClaimAndSourceSignature|FullyQualifiedName~AggregateApplicator_KeepsOrdinaryDreamAggregateWeakAndExperimental|FullyQualifiedName~DreamRun_ProjectNightlyCreatesApprovedCandidateAndMetrics" --logger "console;verbosity=normal"` passed `5/5`.
+- Quality foundation proof for SB05 surface passed: `dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~CognitiveMemoryQualityFoundationTests&FullyQualifiedName!~RecallSynthesis_BuildsQueryShapedBriefInsteadOfTitleGroupedConcatenation" --logger "console;verbosity=minimal"` passed `25/25`; the excluded recall test is the known SB07 regression-first gate.
+- Browser validation: not required; no UI changed.

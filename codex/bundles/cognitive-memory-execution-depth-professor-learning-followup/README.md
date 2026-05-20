@@ -13,24 +13,23 @@ Economic memory governance, attention markets, cognitive-resource budgeting, and
 
 - Bundle preparation status: `Completed`
 - Bundle readiness gate: `Passed local structural validation`
-- Execution status: `Not started`
-- Subbundle gate review: `Not started`
-- Final closure gate: `Not started`
-- Browser validation analytics: `N/A until execution`
+- Execution status: `Completed - SB01-SB09 implemented and locally validated`
+- Subbundle gate review: `SB01-SB09 closure passed locally`
+- Final closure gate: `Completed-stage validator passed in repo and active skill root`
+- Browser validation analytics: `No UI-visible changes; component cognitive-memory page filter passed`
 
 ## Current Review Summary
 
-Codex did implement several scaffolding pieces: stronger primary key filtering, a dream run service path, additional validation issue kinds, ambiguous curator-target review handling, professor anchor states, and reference expansion for aggregate source maps. Those changes are helpful but not yet enough for the intended cognitive-memory behavior.
+The follow-up implementation closes the reviewed shallow paths:
 
-The remaining critical gaps are:
+- Clustering now uses bounded composite pair scoring instead of single-primary-key grouping.
+- Dreaming now synthesizes claim-backed aggregate text and validates claim/source support.
+- Aggregate application now calibrates confidence and keeps ordinary dream aggregates weak/experimental.
+- Professor anchors now require distinct derived support and independent evidence before assimilation/fade.
+- Recall synthesis now returns query-shaped briefs with references hidden by default and resolvable on demand.
+- Bundle execution/validation skills now require semantic adequacy evidence, adversarial negative proof, and anti-stub audits for completed critical subbundles.
 
-- Clustering is still created by grouping on a single primary key and only scoring signals after that group exists.
-- Dreaming still builds aggregate memory text by template and by joining first-line fragments from source records.
-- Validation still mostly checks plumbing, counts, policy, and duplicate title, not claim-level semantic support.
-- Aggregate application still promotes approved dream candidates to approved active memory with high confidence too easily.
-- Curator/professor learning still stores a trusted turn and applies it immediately; it does not prove that the memory later internalized the professor's anchor through independent derived knowledge.
-- Recall synthesis still groups selected context by title and concatenates lines; it is not a query-shaped memory brief with phrase/claim-level provenance.
-- The previous tests and bundle gates allowed shallow behavior to pass.
+Economic memory governance, attention markets, cognitive-resource budgeting, and memory pricing remain excluded.
 
 ## Execution Strategy
 

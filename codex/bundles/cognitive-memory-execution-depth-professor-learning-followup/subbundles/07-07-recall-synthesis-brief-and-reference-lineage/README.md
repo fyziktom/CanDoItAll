@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -29,10 +29,10 @@
 
 ## Exact Source References
 
-- /mnt/data/review_current/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryRecallSynthesisService.cs
-- /mnt/data/review_current/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryReferenceResolver.cs
-- /mnt/data/review_current/CanDoItAll-cognitive-memory/tests/CanDoItAll.Tests.Unit/CognitiveMemoryQualityFoundationTests.cs
-- /mnt/data/review_current/CanDoItAll-cognitive-memory/tests/CanDoItAll.Tests.Unit/CognitiveMemoryAdvancedServicesTests.cs
+- C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryRecallSynthesisService.cs
+- C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryReferenceResolver.cs
+- C:/repositories/CanDoItAll/tests/CanDoItAll.Tests.Unit/CognitiveMemoryQualityFoundationTests.cs
+- C:/repositories/CanDoItAll/tests/CanDoItAll.Tests.Unit/CognitiveMemoryAdvancedServicesTests.cs
 
 ## Deliverables
 
@@ -101,3 +101,13 @@
 ```text
 Implement agent-facing recall synthesis and provenance. Make the default brief useful and concise, and make references available by statement/claim on demand.
 ```
+
+## Execution Proof
+
+- Replaced title-grouped recall synthesis with query/topic-aware statement composition in `CognitiveMemoryRecallSynthesisService`.
+- Default briefs are concise, no longer bullet raw first-line concatenations, and keep references hidden by default.
+- Statement source maps remain persisted for reference-on-demand; `CognitiveMemoryReferenceResolver` now expands both dream aggregate lineage and professor-anchor lineage.
+- Targeted recall/reference proof passed: `dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~RecallSynthesis_BuildsQueryShapedBriefInsteadOfTitleGroupedConcatenation|FullyQualifiedName~RecallSynthesis_MergesRelatedSelectedMemoriesIntoSingleGroundedStatement|FullyQualifiedName~RecallSynthesis_PersistsBriefAndResolvesReferencesOnlyOnDemand|FullyQualifiedName~ReferenceResolver_ExpandsAggregateMemoryToOriginalSourceMaps|FullyQualifiedName~ReferenceResolver_DeniesRestrictedReferenceWithoutLocatorOrSummary" --logger "console;verbosity=minimal"` passed `5/5`.
+- Full quality subset passed: `dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~CognitiveMemoryQualityFoundationTests" --logger "console;verbosity=minimal"` passed `26/26`.
+- Professor-lineage proof passed: `ReferenceResolver_ExpandsFadedProfessorAnchorLineage`; full advanced subset passed `26/26`.
+- Browser validation: not required; no UI changed.

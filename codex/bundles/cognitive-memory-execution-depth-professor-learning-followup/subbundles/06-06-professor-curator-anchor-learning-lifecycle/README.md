@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -31,13 +31,13 @@
 
 ## Exact Source References
 
-- /mnt/data/review_current/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryCuratorConversationService.cs
-- /mnt/data/review_current/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryProfessorAnchorService.cs
-- /mnt/data/review_current/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryAdvancedContracts.cs
-- /mnt/data/review_current/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryAdvancedEntities.cs
-- /mnt/data/review_current/CanDoItAll-cognitive-memory/tests/CanDoItAll.Tests.Unit/CognitiveMemoryAdvancedServicesTests.cs
-- /mnt/data/review_current/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryDreamConsolidationService.cs
-- /mnt/data/review_current/CanDoItAll-cognitive-memory/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryClusterPlanner.cs
+- C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryCuratorConversationService.cs
+- C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryProfessorAnchorService.cs
+- C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryAdvancedContracts.cs
+- C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryAdvancedEntities.cs
+- C:/repositories/CanDoItAll/tests/CanDoItAll.Tests.Unit/CognitiveMemoryAdvancedServicesTests.cs
+- C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryDreamConsolidationService.cs
+- C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryClusterPlanner.cs
 
 ## Deliverables
 
@@ -109,3 +109,12 @@
 ```text
 Implement the professor/student learning lifecycle. Separate direct trusted capture from true internalization, require distinct derived proof for assimilation, and prove fading only happens after assimilation.
 ```
+
+## Execution Proof
+
+- Updated `CognitiveMemoryProfessorAnchorService` so direct curator-applied memory cannot assimilate its own capture, and distinct derived memory must retain anchor lineage plus independent support before assimilation/fade.
+- Reused existing structured capture persistence for anchor assertions: assertion summary/correction text, scope, target memory ids, target claim ids, language, confidence, source item id, and evidence anchor id.
+- Updated dream validation so active professor-anchor source memories enter `Comparing` and force review when used in aggregate candidates before assimilation.
+- Targeted proof passed: `dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~ProfessorAnchor_AssimilatesAndFadesOnlyAfterDerivedMemoryExists|FullyQualifiedName~ProfessorAnchor_DirectCaptureMemoryCannotAssimilateItsOwnAnchor|FullyQualifiedName~ProfessorAnchor_ActiveAnchorSourceMovesDreamCandidateToComparisonReview|FullyQualifiedName~CuratorCapture_CorrectionTargetsIncludedRecallMemoryAndSupersedesIt|FullyQualifiedName~CuratorCapture_AmbiguousCorrectionWithMultipleRecallMemoriesCreatesReviewWithoutBroadSupersede" --logger "console;verbosity=normal"` passed `5/5`.
+- Full advanced subset passed: `dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~CognitiveMemoryAdvancedServicesTests" --logger "console;verbosity=minimal"` passed `25/25`.
+- Browser validation: not required; no UI changed.

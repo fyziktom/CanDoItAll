@@ -71,6 +71,7 @@ public static class CognitiveMemoryModuleServiceCollectionExtensions
         services.TryAddScoped<ICognitiveMemoryClusterPlanner, CognitiveMemoryClusterPlanner>();
         services.TryAddScoped<ICognitiveMemoryDreamValidator, CognitiveMemoryDreamValidator>();
         services.TryAddScoped<ICognitiveMemoryDreamConsolidationService, CognitiveMemoryDreamConsolidationService>();
+        services.TryAddSingleton<ICognitiveMemoryAggregateConfidenceCalibrator, CognitiveMemoryAggregateConfidenceCalibrator>();
         services.TryAddScoped<ICognitiveMemoryAggregateMemoryApplicator, CognitiveMemoryAggregateMemoryApplicator>();
         services.TryAddScoped<ICognitiveMemoryRecallSynthesisService, CognitiveMemoryRecallSynthesisService>();
         services.TryAddScoped<ICognitiveMemoryReferenceResolver, CognitiveMemoryReferenceResolver>();

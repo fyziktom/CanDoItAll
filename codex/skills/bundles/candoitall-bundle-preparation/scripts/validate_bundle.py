@@ -132,6 +132,37 @@ SUBBUNDLE_GATE_RESULTS_HEADER = "| Subbundle | Entry gate | Closure gate | Downs
 BROWSER_ANALYTICS_HEADER = "| Subbundle | Route | Viewport | Playwright MCP evidence | Screenshots | Result |"
 RAW_NOTE_CLOSURE_HEADER = "| Raw note | Status | Proof |"
 
+SEMANTIC_PROOF_LABELS = [
+    "Raw note owned",
+    "Shipped behavior",
+    "Source proof",
+    "Test proof",
+    "Shallow-pass trap",
+    "Adversarial negative proof",
+    "Semantic positive proof",
+    "Anti-stub audit",
+]
+
+WEAK_PROOF_VALUES = {
+    "",
+    "n/a",
+    "none",
+    "done",
+    "completed",
+    "passed",
+    "fixed",
+    "see above",
+    "see report",
+    "manual",
+    "tested",
+}
+
+PROOF_TOKEN_PATTERN = re.compile(
+    r"(`[^`]+`|[A-Za-z]:[\\/]|[/\\]|\.md\b|\.cs\b|\.py\b|dotnet\b|python\b|"
+    r"Select-String\b|Copy-Item\b|test\b|command\b|proof\b|SB\d{2}\b)",
+    re.IGNORECASE,
+)
+
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Validate a CanDoItAll bundle structure.")
@@ -525,6 +556,160 @@ def validate_completed_execution_report(path: Path) -> list[str]:
     return issues
 
 
+def extract_critical_subbundle_numbers(phase_plan_path: Path) -> set[str]:
+    content = phase_plan_path.read_text(encoding="utf-8")
+    critical_section = extract_markdown_section(content, "## Critical Subbundles")
+    if critical_section is None:
+        return set()
+
+    return {
+        f"{int(match.group(1)):02d}"
+        for match in re.finditer(r"\bSB\s*0*(\d+)\b", critical_section, re.IGNORECASE)
+    }
+
+
+def extract_subbundle_number(subbundle_directory: Path) -> str | None:
+    match = re.match(r"^(\d{2})-", subbundle_directory.name)
+    if match is None:
+        return None
+
+    return match.group(1)
+
+
+def extract_semantic_evidence_section(content: str, subbundle_number: str) -> str | None:
+    heading_candidates = [
+        f"## SB{subbundle_number} Semantic Adequacy Evidence",
+        f"## Subbundle {subbundle_number} Semantic Adequacy Evidence",
+        f"## {subbundle_number} Semantic Adequacy Evidence",
+    ]
+
+    for heading in heading_candidates:
+        section = extract_markdown_section(content, heading)
+        if section is not None:
+            return section
+
+    return None
+
+
+def extract_labeled_bullet_values(section_content: str) -> dict[str, str]:
+    values: dict[str, str] = {}
+
+    for line in section_content.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("- "):
+            continue
+
+        bullet = stripped[2:].strip()
+        if ":" not in bullet:
+            continue
+
+        label, value = bullet.split(":", 1)
+        values[label.strip().lower()] = value.strip()
+
+    return values
+
+
+def is_meaningful_proof_value(value: str) -> bool:
+    normalized = normalize_markdown_value(value).strip()
+    if contains_pending_marker(normalized):
+        return False
+
+    lowered = normalized.lower().strip(". ")
+    if lowered in WEAK_PROOF_VALUES:
+        return False
+
+    return True
+
+
+def validate_semantic_evidence_block(path: Path, subbundle_number: str, section_content: str) -> list[str]:
+    issues: list[str] = []
+    values = extract_labeled_bullet_values(section_content)
+
+    for label in SEMANTIC_PROOF_LABELS:
+        key = label.lower()
+        value = values.get(key)
+        if value is None:
+            issues.append(f"{path}: SB{subbundle_number} semantic proof is missing '{label}'")
+            continue
+
+        if not is_meaningful_proof_value(value):
+            issues.append(f"{path}: SB{subbundle_number} semantic proof has weak '{label}': {value}")
+
+    anti_stub_value = values.get("anti-stub audit", "")
+    lowered_anti_stub = anti_stub_value.lower()
+    if anti_stub_value and not any(token in lowered_anti_stub for token in ("no", "none", "not ")):
+        issues.append(f"{path}: SB{subbundle_number} anti-stub audit must explicitly state no stubs or name a blocker")
+
+    test_proof_value = values.get("test proof", "")
+    if test_proof_value and PROOF_TOKEN_PATTERN.search(test_proof_value) is None:
+        issues.append(f"{path}: SB{subbundle_number} test proof must cite a command, test, file, or proof artifact")
+
+    return issues
+
+
+def validate_completed_semantic_proof(bundle_path: Path, subbundle_directories: list[Path]) -> list[str]:
+    issues: list[str] = []
+    phase_plan_path = bundle_path / "plan" / "01-phase-plan.md"
+    execution_report_path = bundle_path / "reviews" / "01-execution-report.md"
+
+    if not phase_plan_path.is_file() or not execution_report_path.is_file():
+        return issues
+
+    critical_subbundle_numbers = extract_critical_subbundle_numbers(phase_plan_path)
+    if not critical_subbundle_numbers:
+        issues.append(f"{phase_plan_path}: completed-stage semantic validation could not identify critical SBxx subbundles")
+        return issues
+
+    report_content = execution_report_path.read_text(encoding="utf-8")
+    for subbundle_directory in subbundle_directories:
+        subbundle_number = extract_subbundle_number(subbundle_directory)
+        if subbundle_number is None or subbundle_number not in critical_subbundle_numbers:
+            continue
+
+        readme_path = subbundle_directory / "README.md"
+        if not readme_path.is_file():
+            continue
+
+        status = extract_first_status_value(readme_path.read_text(encoding="utf-8"))
+        if status != "Completed":
+            continue
+
+        section_content = extract_semantic_evidence_section(report_content, subbundle_number)
+        if section_content is None:
+            issues.append(f"{execution_report_path}: completed critical subbundle SB{subbundle_number} is missing semantic adequacy evidence")
+            continue
+
+        issues.extend(validate_semantic_evidence_block(execution_report_path, subbundle_number, section_content))
+
+    return issues
+
+
+def validate_completed_raw_note_proof_depth(path: Path) -> list[str]:
+    content = path.read_text(encoding="utf-8")
+    raw_note_section = extract_markdown_section(content, "## Raw Note Closure")
+    if raw_note_section is None:
+        return []
+
+    issues: list[str] = []
+    for row in data_table_rows(raw_note_section):
+        if len(row) < 3:
+            continue
+
+        status = normalize_markdown_value(row[1])
+        proof = normalize_markdown_value(row[2])
+        if status not in {"Solved", "Partially solved"}:
+            continue
+
+        if not is_meaningful_proof_value(proof):
+            issues.append(f"{path}: raw note closure has weak proof: {' | '.join(row)}")
+            continue
+
+        if PROOF_TOKEN_PATTERN.search(proof) is None:
+            issues.append(f"{path}: raw note closure proof must cite a command, test, file, gate row, or proof artifact: {' | '.join(row)}")
+
+    return issues
+
+
 def main() -> int:
     arguments = parse_arguments()
     bundle_path = Path(arguments.bundle_path).resolve()
@@ -573,6 +758,9 @@ def main() -> int:
 
         if execution_report_path.is_file():
             issues.extend(validate_completed_execution_report(execution_report_path))
+            issues.extend(validate_completed_raw_note_proof_depth(execution_report_path))
+
+        issues.extend(validate_completed_semantic_proof(bundle_path, subbundle_directories))
 
     if issues:
         print("Bundle validation failed:")

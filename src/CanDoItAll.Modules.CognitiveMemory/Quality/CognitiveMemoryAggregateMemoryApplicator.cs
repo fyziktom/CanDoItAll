@@ -10,9 +10,11 @@ namespace CanDoItAll.Modules.CognitiveMemory;
 public sealed class CognitiveMemoryAggregateMemoryApplicator(
     IDbContextFactory<AppDbContext> dbContextFactory,
     ICognitiveMemoryRecordValidator recordValidator,
-    IClock clock) : ICognitiveMemoryAggregateMemoryApplicator
+    IClock clock,
+    ICognitiveMemoryAggregateConfidenceCalibrator? confidenceCalibrator = null) : ICognitiveMemoryAggregateMemoryApplicator
 {
-    private const string AlgorithmVersion = "quality-aggregate-apply-v1";
+    private const string AlgorithmVersion = "quality-aggregate-apply-v2-calibrated";
+    private readonly ICognitiveMemoryAggregateConfidenceCalibrator aggregateConfidenceCalibrator = confidenceCalibrator ?? new CognitiveMemoryAggregateConfidenceCalibrator();
 
     public async ValueTask<CognitiveMemoryAggregateMemoryApplyResult> ApplyAsync(
         CognitiveMemoryAggregateMemoryApplyRequest request,
@@ -110,10 +112,22 @@ public sealed class CognitiveMemoryAggregateMemoryApplicator(
         }
 
         var distinctSourceItemCount = sourceItemIds.Length;
-        var confidenceScore = CalibrateConfidence(validation, claims.Count, distinctSourceItemCount);
-        var confidenceBucket = confidenceScore >= 0.86
-            ? CognitiveMemoryScoreProjectionBucket.StrongAccept
-            : CognitiveMemoryScoreProjectionBucket.WeakAccept;
+        var strongestClaimSourceMemoryCount = claims
+            .Select(claim => sourceMaps
+                .Where(sourceMap => sourceMap.AggregateClaimId == claim.Id)
+                .Select(sourceMap => sourceMap.SourceMemoryRecordId)
+                .Distinct()
+                .Count())
+            .DefaultIfEmpty(0)
+            .Max();
+        var confidence = aggregateConfidenceCalibrator.Calibrate(new CognitiveMemoryAggregateConfidenceCalibrationRequest(
+            validation.IssueCount,
+            claims.Count,
+            distinctSourceItemCount,
+            strongestClaimSourceMemoryCount));
+        var confidenceScore = confidence.Score;
+        var confidenceBucket = confidence.Bucket;
+        var stabilityState = confidence.StabilityState;
         var contextFrame = new CognitiveMemoryContextFrameRecord
         {
             Id = Guid.NewGuid(),
@@ -136,13 +150,13 @@ public sealed class CognitiveMemoryAggregateMemoryApplicator(
             SummaryText = candidate.SummaryText,
             TopicKey = CognitiveMemoryQualityText.TrimText(CognitiveMemoryQualityText.NormalizeKey(candidate.Title), 240),
             ValidationState = CognitiveMemoryValidationState.Approved,
-            StabilityState = CognitiveMemoryStabilityState.Active,
+            StabilityState = stabilityState,
             CreatedInMode = CognitiveMemoryOperationMode.Consolidate,
             AlgorithmVersion = AlgorithmVersion,
             ContentHash = stableContentHash,
             SourceEvidenceCount = sourceItemIds.Length,
             EvidenceAnchorCount = sourceMaps.Select(sourceMap => sourceMap.EvidenceAnchorId).Where(id => id is not null).Distinct().Count(),
-            GeneratedReason = CognitiveMemoryQualityText.TrimText($"Approved dream aggregate candidate {candidate.Id:D}; calibrated confidence {confidenceScore:0.###} from {distinctSourceItemCount} independent source item(s).", 500),
+            GeneratedReason = CognitiveMemoryQualityText.TrimText($"Approved dream aggregate candidate {candidate.Id:D}; calibrated confidence {confidenceScore:0.###} from {distinctSourceItemCount} source item(s), strongest claim support {strongestClaimSourceMemoryCount} source memory(s).", 500),
             PrimaryContextFrameId = contextFrame.Id,
             ConfidenceBucket = confidenceBucket,
             ActivationBucket = confidenceBucket,
@@ -178,7 +192,7 @@ public sealed class CognitiveMemoryAggregateMemoryApplicator(
                 CurrentBeliefBucket = confidenceBucket,
                 DisplayBeliefScore = confidenceScore,
                 ValidationState = CognitiveMemoryValidationState.Approved,
-                StabilityState = CognitiveMemoryStabilityState.Active,
+                StabilityState = stabilityState,
                 AlgorithmVersion = AlgorithmVersion,
                 CreatedAtUtc = nowUtc,
                 UpdatedAtUtc = nowUtc,
@@ -260,17 +274,6 @@ public sealed class CognitiveMemoryAggregateMemoryApplicator(
         candidate.ConcurrencyToken = Guid.NewGuid();
         await dbContext.SaveChangesAsync(cancellationToken);
         return new CognitiveMemoryAggregateMemoryApplyResult(new CognitiveMemoryRecordId(memory.Id), createdClaimIds, Created: true);
-    }
-
-    private static double CalibrateConfidence(
-        CognitiveMemoryDreamValidationRecord validation,
-        int claimCount,
-        int distinctSourceItemCount)
-    {
-        var evidenceScore = Math.Clamp(distinctSourceItemCount / 4d, 0, 0.12);
-        var claimPenalty = Math.Clamp((claimCount - 1) * 0.015, 0, 0.06);
-        var issuePenalty = Math.Clamp(validation.IssueCount * 0.05, 0, 0.2);
-        return Math.Round(Math.Clamp(0.78 + evidenceScore - claimPenalty - issuePenalty, 0.55, 0.92), 3, MidpointRounding.AwayFromZero);
     }
 
     private static CognitiveMemoryRecordKind ResolveRecordKind(CognitiveMemoryConsolidationMode mode)

@@ -218,6 +218,7 @@ public sealed record CognitiveMemoryClusterPlannerMetrics(
     int RecordsConsidered,
     int SourceItemsConsidered,
     int KeysGenerated,
+    int CandidatePairsEvaluated,
     int ClustersCreated,
     int MembersLinked,
     int ContradictionRelationsObserved,

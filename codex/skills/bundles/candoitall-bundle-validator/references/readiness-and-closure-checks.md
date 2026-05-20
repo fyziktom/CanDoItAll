@@ -19,5 +19,5 @@ Confirm all of these before the bundle is finished:
 - `## Subbundle Gate Results` and `## Browser Validation Analytics` are populated and no longer pending
 - raw note closure rows are populated and no longer pending
 - the root `README.md` validation summary matches reality
-- final validation passes with `scripts/validate_bundle.py --stage completed`
+- final validation passes with `scripts/validate_bundle.py --stage completed`, including proof-depth checks for completed critical subbundles
 - any proof gap that matters to user-visible behavior has reopened the affected subbundle instead of being hidden in residual risks
