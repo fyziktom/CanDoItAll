@@ -1,0 +1,11 @@
+{
+  "Command": "Copy validate_bundle.py to active candoitall-bundle-preparation skill root and compare SHA-256 hashes",
+  "WorkingDirectory": "C:\\repositories\\CanDoItAll",
+  "StartedUtc": "2026-05-20T17:40:57.9918491Z",
+  "RepoPath": "C:\\repositories\\CanDoItAll\\codex\\skills\\bundles\\candoitall-bundle-preparation\\scripts\\validate_bundle.py",
+  "RepoHash": "079561F5460E68FAE447ECA8CD1D5072EEDB7CCD9A7FF09035131EAA92012D9A",
+  "ActivePath": "C:\\Users\\lucys\\.codex\\skills\\candoitall-bundle-preparation\\scripts\\validate_bundle.py",
+  "ActiveHash": "079561F5460E68FAE447ECA8CD1D5072EEDB7CCD9A7FF09035131EAA92012D9A",
+  "Match": true,
+  "ExitCode": 0
+}

@@ -1,0 +1,36 @@
+Command: rg -n "ICognitiveMemoryDreamClaimSynthesizer|ICognitiveMemoryDreamEntailmentValidator|CognitiveMemoryDreamClaimSynthesizer|CognitiveMemoryDreamEntailmentValidator" src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs ; rg -n "quality-dream-v3-claim-synthesis|AppendModeHeader|SynthesizeClaimGroupText|BuildClaimSignature" src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamConsolidationService.cs ; rg -n "IsClaimSupportedBySourceMaps|IsRepresentativeCopyAggregate|EntailmentValidator" src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamValidator.cs ; rg -n "DistinctSourceItemCount >= 6|sourceBreadthScore" src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryAggregateConfidenceCalibrator.cs
+
+SourceAssertion: rg -n "ICognitiveMemoryDreamClaimSynthesizer|ICognitiveMemoryDreamEntailmentValidator|CognitiveMemoryDreamClaimSynthesizer|CognitiveMemoryDreamEntailmentValidator" src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs
+17:internal interface ICognitiveMemoryDreamClaimSynthesizer
+22:internal interface ICognitiveMemoryDreamEntailmentValidator
+27:internal sealed partial class CognitiveMemoryDreamClaimSynthesizer : ICognitiveMemoryDreamClaimSynthesizer
+29:    public static readonly CognitiveMemoryDreamClaimSynthesizer Instance = new();
+31:    private CognitiveMemoryDreamClaimSynthesizer()
+132:internal sealed class CognitiveMemoryDreamEntailmentValidator : ICognitiveMemoryDreamEntailmentValidator
+134:    public static readonly CognitiveMemoryDreamEntailmentValidator Instance = new();
+136:    private CognitiveMemoryDreamEntailmentValidator()
+
+SourceAssertion: rg -n "quality-dream-v3-claim-synthesis|AppendModeHeader|SynthesizeClaimGroupText|BuildClaimSignature" src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamConsolidationService.cs
+16:    private const string AlgorithmVersion = "quality-dream-v3-claim-synthesis";
+260:            var aggregateClaimText = SynthesizeClaimGroupText(request.Mode, claimGroup);
+556:            .Select(group => SynthesizeClaimGroupText(mode, group))
+568:        AppendModeHeader(builder, mode);
+619:                var signature = BuildClaimSignature(mode, cluster, sourceClaimText);
+640:    private static string SynthesizeClaimGroupText(CognitiveMemoryConsolidationMode mode, DreamClaimGroup claimGroup)
+645:    private static string BuildClaimSignature(
+655:    private static void AppendModeHeader(StringBuilder builder, CognitiveMemoryConsolidationMode mode)
+
+SourceAssertion: rg -n "IsClaimSupportedBySourceMaps|IsRepresentativeCopyAggregate|EntailmentValidator" src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamValidator.cs
+14:    private static readonly ICognitiveMemoryDreamEntailmentValidator EntailmentValidator = CognitiveMemoryDreamEntailmentValidator.Instance;
+179:            if (!IsClaimSupportedBySourceMaps(claim, claimSourceMaps, sourceRecordsById))
+188:        if (sourceRecords.Count >= 2 && IsRepresentativeCopyAggregate(claims, sourceMaps, sourceRecords))
+349:    private static bool IsClaimSupportedBySourceMaps(
+369:        return EntailmentValidator.Validate(new CognitiveMemoryDreamEntailmentRequest(claim.ClaimText, sourceTexts)).Supported;
+372:    private static bool IsRepresentativeCopyAggregate(
+423:        => CognitiveMemoryDreamEntailmentValidator.BuildTextSignature(text);
+
+SourceAssertion: rg -n "DistinctSourceItemCount >= 6|sourceBreadthScore" src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryAggregateConfidenceCalibrator.cs
+12:        var sourceBreadthScore = Math.Clamp(request.DistinctSourceItemCount / 6d, 0, 1) * 0.08;
+17:            Math.Clamp(0.68 + sourceBreadthScore + claimAgreementScore - claimPenalty - issuePenalty, 0.55, 0.92),
+21:                     request.DistinctSourceItemCount >= 6 &&
+ExitCode: 0

@@ -1,0 +1,19 @@
+Command: rg -n "Assert.DoesNotContain\(candidate.CanonicalText|stages the bank file|verifies the checksum|IsRepresentativeCopyAggregate|copies representative source" tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamValidator.cs ; rg -n "Procedure steps:|Failure pattern:" src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamConsolidationService.cs tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs
+
+AntiCopyEvidence: rg -n "Assert.DoesNotContain\(candidate.CanonicalText|stages the bank file|verifies the checksum|IsRepresentativeCopyAggregate|copies representative source" tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamValidator.cs
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamValidator.cs:188:        if (sourceRecords.Count >= 2 && IsRepresentativeCopyAggregate(claims, sourceMaps, sourceRecords))
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamValidator.cs:193:                "Aggregate candidate copies representative source claims instead of synthesizing complementary evidence."));
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamValidator.cs:372:    private static bool IsRepresentativeCopyAggregate(
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:493:            "Payment export procedure stages the bank file before upload.",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:501:            "Payment export procedure verifies the checksum after bank upload.",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:516:            claim.ClaimText.Contains("stages the bank file", StringComparison.OrdinalIgnoreCase) &&
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:517:            claim.ClaimText.Contains("verifies the checksum", StringComparison.OrdinalIgnoreCase));
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:518:        Assert.DoesNotContain(candidate.CanonicalText.Split(Environment.NewLine), line =>
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:519:            line.Equals("Payment export procedure stages the bank file before upload.", StringComparison.Ordinal));
+
+AntiCopyEvidence: rg -n "Procedure steps:|Failure pattern:" src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamConsolidationService.cs tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:576:        Assert.Contains("Procedure steps:", procedureText, StringComparison.OrdinalIgnoreCase);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:577:        Assert.Contains("Failure pattern:", failureText, StringComparison.OrdinalIgnoreCase);
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamConsolidationService.cs:659:            CognitiveMemoryConsolidationMode.ProcedureMining => "Procedure steps:",
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamConsolidationService.cs:660:            CognitiveMemoryConsolidationMode.FailureLearning => "Failure pattern:",
+ExitCode: 0

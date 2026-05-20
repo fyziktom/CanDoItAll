@@ -9,7 +9,7 @@ public sealed class CognitiveMemoryAggregateConfidenceCalibrator : ICognitiveMem
 {
     public CognitiveMemoryAggregateConfidenceCalibration Calibrate(CognitiveMemoryAggregateConfidenceCalibrationRequest request)
     {
-        var sourceBreadthScore = Math.Clamp(request.DistinctSourceItemCount / 6d, 0, 0.08);
+        var sourceBreadthScore = Math.Clamp(request.DistinctSourceItemCount / 6d, 0, 1) * 0.08;
         var claimAgreementScore = Math.Clamp((request.StrongestClaimSourceMemoryCount - 1) * 0.04, 0, 0.12);
         var claimPenalty = Math.Clamp((request.ClaimCount - 1) * 0.015, 0, 0.06);
         var issuePenalty = Math.Clamp(request.ValidationIssueCount * 0.05, 0, 0.2);
@@ -18,6 +18,7 @@ public sealed class CognitiveMemoryAggregateConfidenceCalibrator : ICognitiveMem
             3,
             MidpointRounding.AwayFromZero);
         var bucket = score >= 0.88 &&
+                     request.DistinctSourceItemCount >= 6 &&
                      request.StrongestClaimSourceMemoryCount >= 3 &&
                      request.ClaimCount <= 2
             ? CognitiveMemoryScoreProjectionBucket.StrongAccept

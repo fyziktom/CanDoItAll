@@ -9,8 +9,11 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Modules.CognitiveMemory;
 public sealed class CognitiveMemoryDreamValidator(
     IDbContextFactory<AppDbContext> dbContextFactory,
-    IClock clock) : ICognitiveMemoryDreamValidator
+    IClock clock,
+    ICognitiveMemoryDreamEntailmentValidator? entailmentValidator = null) : ICognitiveMemoryDreamValidator
 {
+    private readonly ICognitiveMemoryDreamEntailmentValidator entailmentValidator = entailmentValidator ?? CognitiveMemoryDreamEntailmentValidator.Instance;
+
     public async ValueTask<CognitiveMemoryDreamValidationResult> ValidateAsync(
         CognitiveMemoryDreamValidationRequest request,
         CancellationToken cancellationToken = default)
@@ -148,7 +151,7 @@ public sealed class CognitiveMemoryDreamValidator(
         return new CognitiveMemoryDreamValidationResult(request.AggregateCandidateId, decision, issues, reviewItemId);
     }
 
-    private static IReadOnlyList<CognitiveMemoryDreamValidationIssue> ResolveIssues(
+    private IReadOnlyList<CognitiveMemoryDreamValidationIssue> ResolveIssues(
         CognitiveMemoryDreamAggregateCandidateRecord candidate,
         IReadOnlyList<CognitiveMemoryDreamAggregateClaimRecord> claims,
         IReadOnlyList<CognitiveMemoryDreamAggregateClaimSourceMapRecord> sourceMaps,
@@ -174,13 +177,21 @@ public sealed class CognitiveMemoryDreamValidator(
                 continue;
             }
 
-            if (claimSourceMaps.Any(sourceMap => !IsClaimSupportedBySourceMap(claim, sourceMap, sourceRecordsById)))
+            if (!IsClaimSupportedBySourceMaps(claim, claimSourceMaps, sourceRecordsById))
             {
                 issues.Add(new CognitiveMemoryDreamValidationIssue(
                     CognitiveMemoryDreamValidationIssueKind.UnsupportedClaim,
                     CognitiveMemoryRiskLevel.Medium,
-                    $"Aggregate claim '{claim.Id:D}' is not supported by every mapped source memory."));
+                    $"Aggregate claim '{claim.Id:D}' is not entailed by its mapped source memories."));
             }
+        }
+
+        if (sourceRecords.Count >= 2 && IsRepresentativeCopyAggregate(claims, sourceMaps, sourceRecords))
+        {
+            issues.Add(new CognitiveMemoryDreamValidationIssue(
+                CognitiveMemoryDreamValidationIssueKind.UnsupportedClaim,
+                CognitiveMemoryRiskLevel.Medium,
+                "Aggregate candidate copies representative source claims instead of synthesizing complementary evidence."));
         }
 
         if (sourceMaps.Select(sourceMap => sourceMap.SourceMemoryRecordId).Distinct().Count() < 2)
@@ -336,30 +347,51 @@ public sealed class CognitiveMemoryDreamValidator(
         return false;
     }
 
-    private static bool IsClaimSupportedBySourceMap(
+    private bool IsClaimSupportedBySourceMaps(
         CognitiveMemoryDreamAggregateClaimRecord claim,
-        CognitiveMemoryDreamAggregateClaimSourceMapRecord sourceMap,
+        IReadOnlyList<CognitiveMemoryDreamAggregateClaimSourceMapRecord> sourceMaps,
         IReadOnlyDictionary<Guid, CognitiveMemoryRecord> sourceRecordsById)
     {
-        if (sourceMap.Direction != CognitiveMemoryEvidenceDirection.Supports ||
-            !sourceRecordsById.TryGetValue(sourceMap.SourceMemoryRecordId, out var sourceRecord))
+        if (sourceMaps.Any(sourceMap => sourceMap.Direction != CognitiveMemoryEvidenceDirection.Supports))
         {
             return false;
         }
 
-        var claimTokens = BuildTextSignature(claim.ClaimText);
-        if (claimTokens.Count == 0)
-        {
-            return false;
-        }
-
-        var sourceTokens = BuildTextSignature($"{sourceRecord.Title} {sourceRecord.CanonicalText} {sourceRecord.SummaryText} {sourceMap.Summary}");
-        var overlap = claimTokens.Count(sourceTokens.Contains);
-        var requiredOverlap = claimTokens.Count <= 4
-            ? Math.Min(2, claimTokens.Count)
-            : Math.Min(4, Math.Max(3, claimTokens.Count / 3));
-        return overlap >= requiredOverlap;
+        var sourceTexts = sourceMaps
+            .Select(sourceMap =>
+            {
+                sourceRecordsById.TryGetValue(sourceMap.SourceMemoryRecordId, out var sourceRecord);
+                return sourceRecord is null
+                    ? sourceMap.Summary
+                    : $"{sourceRecord.Title} {sourceRecord.CanonicalText} {sourceRecord.SummaryText} {sourceMap.Summary}";
+            })
+            .Where(text => !string.IsNullOrWhiteSpace(text))
+            .ToArray();
+        return entailmentValidator.Validate(new CognitiveMemoryDreamEntailmentRequest(claim.ClaimText, sourceTexts)).Supported;
     }
+
+    private static bool IsRepresentativeCopyAggregate(
+        IReadOnlyList<CognitiveMemoryDreamAggregateClaimRecord> claims,
+        IReadOnlyList<CognitiveMemoryDreamAggregateClaimSourceMapRecord> sourceMaps,
+        IReadOnlyList<CognitiveMemoryRecord> sourceRecords)
+    {
+        if (claims.Count == 0)
+        {
+            return false;
+        }
+
+        var sourceTexts = sourceRecords
+            .SelectMany(record => new[] { record.CanonicalText, record.SummaryText })
+            .Select(NormalizeCopyText)
+            .Where(text => !string.IsNullOrWhiteSpace(text))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var copiedClaimCount = claims.Count(claim => sourceTexts.Contains(NormalizeCopyText(claim.ClaimText)));
+        return copiedClaimCount == claims.Count &&
+               claims.All(claim => sourceMaps.Count(sourceMap => sourceMap.AggregateClaimId == claim.Id) <= 1);
+    }
+
+    private static string NormalizeCopyText(string text)
+        => CognitiveMemoryQualityText.TrimText(text.Trim().TrimEnd('.'), 1200);
 
     private static bool HasMeaningfulSourceOverlap(
         IReadOnlySet<Guid> candidateSourceItemIds,
@@ -389,7 +421,7 @@ public sealed class CognitiveMemoryDreamValidator(
     }
 
     private static HashSet<string> BuildTextSignature(string text)
-        => CognitiveMemoryQualityText.ExtractMeaningfulTokens(text, 32).ToHashSet(StringComparer.Ordinal);
+        => CognitiveMemoryDreamEntailmentValidator.BuildTextSignature(text);
 
     private static string FirstNonEmpty(params string?[] values)
         => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;

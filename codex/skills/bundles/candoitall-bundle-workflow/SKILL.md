@@ -24,6 +24,7 @@ The workflow is complete only when all of these are true:
 - raw inputs are preserved and mapped to requirements, owning subbundles, proof, and closure status
 - the bundle has a usable dependency map, critical-foundation labels, and progression gates
 - every executed subbundle has passed its entry and closure gates or is honestly blocked
+- every completed critical subbundle has an artifact-backed `proof/SBxx/manifest.md` with changed-file hashes, command transcripts, failing-first and passing proof where behavior changed, source assertions, and anti-stub audit results
 - code changes, tests, browser or host proof, screenshots, and execution report rows support the same conclusion
 - raw feedback has a note-by-note closure result of `Solved`, `Partially solved`, or `Not solved`
 - unresolved gaps are represented as blockers, reopened work, or explicit follow-up subbundles, not hidden as residual-risk prose
@@ -39,9 +40,10 @@ The workflow is complete only when all of these are true:
 7. Before each subbundle, run the entry gate with `candoitall-subbundle-validator`.
 8. After each subbundle, record proof and run the closure gate with `candoitall-subbundle-validator`.
 9. Reopen earlier work when later observations weaken a prerequisite or critical foundation.
-10. After implementation, audit the original raw notes and source artifacts one by one.
-11. Run the final closure gate with `candoitall-bundle-validator` and `scripts/validate_bundle.py --stage completed`.
-12. Synchronize root status, subbundle status, execution report, analytics rows, proof paths, residual risks, and follow-up items.
+10. Before a critical subbundle is marked complete, verify that every path referenced by its proof manifest exists and that required failing-first, passing, source-assertion, and anti-stub transcripts are present.
+11. After implementation, audit the original raw notes and source artifacts one by one.
+12. Run the final closure gate with `candoitall-bundle-validator` and `scripts/validate_bundle.py --stage completed`.
+13. Synchronize root status, subbundle status, execution report, analytics rows, proof paths, residual risks, and follow-up items.
 
 ## Decision Rule
 
@@ -57,6 +59,7 @@ The workflow is complete only when all of these are true:
 - Do not weaken words such as `all`, `every`, `each`, `same flow`, `must`, or `missing ability` unless the bundle lists the exception and follow-up path.
 - Do not let a dependent subbundle start before prerequisite gates pass.
 - Do not treat missing proof as a harmless residual risk when that proof is necessary to know whether the request works.
+- Do not close a critical subbundle from prose-only semantic evidence. Missing or invalid `proof/SBxx/manifest.md` is a stop-and-repair condition, not a warning.
 - If targeted tests become the bottleneck and the repo uses Microsoft Testing Platform, `mtp-hot-reload` may speed iteration, but final proof still needs a clean standard confirmation run.
 
 ## Proof Rules
@@ -66,6 +69,7 @@ The workflow is complete only when all of these are true:
 - Browser proof must include route or window, viewport, actions, assertions, screenshots, and pass or fail result in `reviews/01-execution-report.md`.
 - Overlays, contextual help, dropdowns, menus, dialogs, and floating windows require open-state proof for readability, clipping, lateral overflow, and layering.
 - Host-visible behavior such as PowerShell launch, UAC, file opening, or desktop integration requires host-level proof or an explicit validation gap.
+- Critical proof must be artifact-backed: command transcripts, changed-file hashes, source assertions, anti-stub audit output, and failing-first or red-team artifacts must live under `proof/SBxx/`.
 - Use `screenshot` when browser capture cannot prove the desktop or window context.
 - Use `imagegen` only as a planning aid when visual direction is unclear. Generated images never count as shipped proof.
 
@@ -94,12 +98,14 @@ Before the workflow exits:
 - root `README.md` validation summary reflects readiness, execution, subbundle gates, final closure, and browser validation state
 - completed subbundles no longer remain `Ready` or `In progress`
 - `reviews/01-execution-report.md` contains shipped proof, final raw-note closure, browser-validation analytics, and subbundle gate results
+- critical subbundle proof manifests exist, their referenced transcript/source/browser artifacts exist, and final closure cites those artifacts instead of prose-only claims
 - material bundle edits made during execution have passed the prepared-stage validator again
 
 ## References
 
 - Read [references/workflow-decision-tree.md](references/workflow-decision-tree.md) when choosing between preparation, repair, and execution.
 - Read [references/handoff-rules.md](references/handoff-rules.md) to keep the bundle structure and execution flow compatible.
+- Read [../candoitall-bundle-execution/references/artifact-backed-proof-manifest.md](../candoitall-bundle-execution/references/artifact-backed-proof-manifest.md) before closing critical subbundles.
 - Use `candoitall-bundle-preparation` for raw inputs and bundle repair.
 - Use `candoitall-bundle-execution` for implementation and proof updates.
 - Use `candoitall-bundle-validator` for readiness and final closure gates.

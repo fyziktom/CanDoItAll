@@ -8433,6 +8433,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<int>("AccessLevel")
                         .HasColumnType("integer");
 
+                    b.Property<Guid?>("AggregateClaimId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -8473,6 +8476,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AggregateClaimId");
+
                     b.HasIndex("EvidenceAnchorId");
 
                     b.HasIndex("MemoryRecordId");
@@ -8481,10 +8486,13 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.HasIndex("SynthesisId");
 
+                    b.HasIndex("StatementId", "AggregateClaimId");
+
                     b.HasIndex("ProjectId", "AccessLevel", "RedactionState");
 
-                    b.HasIndex("StatementId", "MemoryRecordId", "SourceItemId", "EvidenceAnchorId")
-                        .IsUnique();
+                    b.HasIndex("StatementId", "MemoryRecordId", "AggregateClaimId", "SourceItemId", "EvidenceAnchorId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_CognitiveMemory_SynthesizedStatementSourceMaps_StatementId~1");
 
                     b.ToTable("CognitiveMemory_SynthesizedStatementSourceMaps", (string)null);
                 });
@@ -15912,37 +15920,43 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
             modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemorySynthesizedStatementSourceMapRecord", b =>
                 {
+                    b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryDreamAggregateClaimRecord", null)
+                        .WithMany()
+                        .HasForeignKey("AggregateClaimId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryEvidenceAnchorRecord", null)
                         .WithMany()
                         .HasForeignKey("EvidenceAnchorId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_CognitiveMemory_SynthesizedStatementSourceMaps_CognitiveMe~1");
 
                     b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryRecord", null)
                         .WithMany()
                         .HasForeignKey("MemoryRecordId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
-                        .HasConstraintName("FK_CognitiveMemory_SynthesizedStatementSourceMaps_CognitiveMe~1");
+                        .HasConstraintName("FK_CognitiveMemory_SynthesizedStatementSourceMaps_CognitiveMe~2");
 
                     b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemorySourceItemRecord", null)
                         .WithMany()
                         .HasForeignKey("SourceItemId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("FK_CognitiveMemory_SynthesizedStatementSourceMaps_CognitiveMe~2");
+                        .HasConstraintName("FK_CognitiveMemory_SynthesizedStatementSourceMaps_CognitiveMe~3");
 
                     b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemorySynthesizedStatementRecord", null)
                         .WithMany()
                         .HasForeignKey("StatementId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("FK_CognitiveMemory_SynthesizedStatementSourceMaps_CognitiveMe~3");
+                        .HasConstraintName("FK_CognitiveMemory_SynthesizedStatementSourceMaps_CognitiveMe~4");
 
                     b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemorySynthesizedRecallRecord", null)
                         .WithMany()
                         .HasForeignKey("SynthesisId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("FK_CognitiveMemory_SynthesizedStatementSourceMaps_CognitiveMe~4");
+                        .HasConstraintName("FK_CognitiveMemory_SynthesizedStatementSourceMaps_CognitiveMe~5");
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryTemporalEpisodeLinkRecord", b =>

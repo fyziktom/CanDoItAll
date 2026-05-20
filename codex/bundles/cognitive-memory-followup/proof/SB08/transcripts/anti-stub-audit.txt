@@ -1,0 +1,3 @@
+Command: rg -n "TODO|NotImplemented|throw new NotImplemented|ReferenceResolver_UsesPersistedAggregateClaimMapToAvoidSiblingClaimExpansion|RecallSynthesis_SeparatesConflictingClaimsIntoCaveatStatements" src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallSynthesisService.cs src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryReferenceResolver.cs src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityContracts.cs src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityEntities.cs src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityEntityConfigurations.cs
+No TODO, NotImplemented, or fixture-specific production branches found in SB08 changed production files.
+ExitCode: 0

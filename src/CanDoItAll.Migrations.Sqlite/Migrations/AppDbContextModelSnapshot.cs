@@ -8428,6 +8428,9 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.Property<int>("AccessLevel")
                         .HasColumnType("INTEGER");
 
+                    b.Property<Guid?>("AggregateClaimId")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("TEXT");
 
@@ -8468,6 +8471,8 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AggregateClaimId");
+
                     b.HasIndex("EvidenceAnchorId");
 
                     b.HasIndex("MemoryRecordId");
@@ -8476,9 +8481,11 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
 
                     b.HasIndex("SynthesisId");
 
+                    b.HasIndex("StatementId", "AggregateClaimId");
+
                     b.HasIndex("ProjectId", "AccessLevel", "RedactionState");
 
-                    b.HasIndex("StatementId", "MemoryRecordId", "SourceItemId", "EvidenceAnchorId")
+                    b.HasIndex("StatementId", "MemoryRecordId", "AggregateClaimId", "SourceItemId", "EvidenceAnchorId")
                         .IsUnique();
 
                     b.ToTable("CognitiveMemory_SynthesizedStatementSourceMaps", (string)null);
@@ -15881,6 +15888,11 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
 
             modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemorySynthesizedStatementSourceMapRecord", b =>
                 {
+                    b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryDreamAggregateClaimRecord", null)
+                        .WithMany()
+                        .HasForeignKey("AggregateClaimId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryEvidenceAnchorRecord", null)
                         .WithMany()
                         .HasForeignKey("EvidenceAnchorId")

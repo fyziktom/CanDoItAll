@@ -29,6 +29,7 @@ Use this skill before and after each subbundle. It exists to stop dependency mis
    - screenshot review questions were actually answered, not only captured
    - `## Browser Validation Analytics` and `## Subbundle Gate Results` were updated while the proof was fresh
    - critical subbundles include Semantic Adequacy Gate evidence for shallow-pass trap, adversarial negative proof, semantic positive proof, anti-stub audit, and raw-note literal closure
+   - critical subbundles include `proof/SBxx/manifest.md`, and every transcript, hash, source assertion, browser, host, smoke, or red-team path cited by that manifest exists
 5. If the subbundle is a critical foundation, run one dependent-flow smoke or dependent-surface validation before allowing the next subbundle to start.
 6. If later work exposes a defect in the current subbundle, reopen it immediately and rerun the closure gate after repair.
 
@@ -39,6 +40,7 @@ Use this skill before and after each subbundle. It exists to stop dependency mis
 - Do not let a later subbundle bury evidence that an earlier foundation was incomplete.
 - Treat `Progression Gate` as a real stop sign, not as bundle decoration.
 - Do not pass a critical closure gate when proof only checks structure, counts, status flags, non-empty output, or template markers instead of domain behavior.
+- Do not pass a critical closure gate when the proof manifest is missing, cites missing files, omits changed-file hashes, or lacks failing-first and passing transcripts for behavior-changing work.
 
 ## Semantic Adequacy Closure Rule
 
@@ -49,10 +51,13 @@ Closure for a critical subbundle is `Fail` unless the proof names the shallow-pa
 
 The closure gate also fails when the anti-stub audit is missing or when raw-note closure silently narrows literal request language. Use `../candoitall-bundle-execution/references/semantic-adequacy-proof.md` as the checklist.
 
+Artifact-backed proof is part of the closure gate. A critical subbundle with only execution-report prose, table rows, or uncited command names is `Fail`; repair the proof manifest before downstream work starts.
+
 ## References
 
 - Read [references/prerequisite-and-closure-gates.md](references/prerequisite-and-closure-gates.md) for the phase checklist.
 - Read [../candoitall-bundle-execution/references/semantic-adequacy-proof.md](../candoitall-bundle-execution/references/semantic-adequacy-proof.md) when validating a critical subbundle.
+- Read [../candoitall-bundle-execution/references/artifact-backed-proof-manifest.md](../candoitall-bundle-execution/references/artifact-backed-proof-manifest.md) when validating critical proof manifests.
 - Use `candoitall-watch-playwright-loop` when the proof depends on fast nearby browser validation.
 - Use `candoitall-bundle-validator` for bundle-level readiness and final closure.
 

@@ -104,6 +104,68 @@ public sealed class CognitiveMemoryRecallOrchestratorTests
     }
 
     [Fact]
+    public async Task RecallAsync_ExcludesActiveProfessorAnchorMemoryByDefault()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var activeAnchorMemory = await SeedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-000000000201"),
+            "Temporary professor rollback approval",
+            "Temporary professor anchor says rollback approval requires release-owner approval.",
+            "Professor anchor source evidence.");
+        var stableMemory = await SeedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-000000000202"),
+            "Stable rollback approval rule",
+            "Release audit stable memory says rollback approval requires release-owner approval.",
+            "Stable release audit evidence.");
+        fixture.DbContext.Add(new CognitiveMemoryCuratorCapturedImprovementRecord
+        {
+            CuratorSessionId = Guid.NewGuid(),
+            CuratorTurnId = Guid.NewGuid(),
+            ProjectId = projectId,
+            CaptureKind = CognitiveMemoryCuratorCaptureKind.NewKnowledge,
+            ConversationDepth = CognitiveMemoryCuratorConversationDepth.Medium,
+            Status = CognitiveMemoryCuratorCaptureStatus.Applied,
+            TargetingStatus = CognitiveMemoryCuratorTargetingStatus.Untargeted,
+            AnchorState = CognitiveMemoryProfessorAnchorState.Active,
+            AppliedMemoryRecordId = activeAnchorMemory.RecordId,
+            ActorId = "agent:test",
+            ConfidenceScore = 0.82,
+            PriorityScore = 0.82,
+            TargetConfidenceScore = 0.82,
+            CaptureLanguage = "en",
+            CaptureScope = "rollback approval",
+            Summary = "Claim: rollback approval requires release-owner approval.",
+            CorrectionText = "Structured professor anchor fixture.",
+            CreatedAtUtc = fixture.Clock.GetUtcNow(),
+            ConcurrencyToken = Guid.NewGuid()
+        });
+        await fixture.DbContext.SaveChangesAsync();
+        var orchestrator = CreateOrchestrator(fixture, new RecordingProjectionAdapter([]));
+
+        var defaultResult = await orchestrator.RecallAsync(CreateRequest(projectId, "rollback approval release-owner"));
+        var includeResult = await orchestrator.RecallAsync(CreateRequest(
+            projectId,
+            "rollback approval release-owner",
+            metadata: new Dictionary<string, string>
+            {
+                ["includeProfessorAnchors"] = "true"
+            }));
+
+        Assert.DoesNotContain(defaultResult.Candidates, candidate => candidate.MemoryRecordId.Value == activeAnchorMemory.RecordId);
+        Assert.Contains(defaultResult.Candidates, candidate =>
+            candidate.MemoryRecordId.Value == stableMemory.RecordId &&
+            candidate.DecisionKind == CognitiveMemoryRecallCandidateDecisionKind.Selected);
+        Assert.Contains(includeResult.Candidates, candidate =>
+            candidate.MemoryRecordId.Value == activeAnchorMemory.RecordId &&
+            candidate.DecisionKind == CognitiveMemoryRecallCandidateDecisionKind.Selected);
+    }
+
+    [Fact]
     public async Task RecallAsync_UsesScoredProjectLexicalScanWhenFirstTermMisses()
     {
         var fixture = CreateFixture();

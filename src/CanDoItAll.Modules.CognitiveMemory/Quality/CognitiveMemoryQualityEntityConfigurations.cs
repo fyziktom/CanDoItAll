@@ -296,6 +296,11 @@ internal sealed class CognitiveMemorySynthesizedStatementSourceMapRecordConfigur
             .HasForeignKey(sourceMap => sourceMap.MemoryRecordId)
             .OnDelete(DeleteBehavior.Restrict);
         builder
+            .HasOne<CognitiveMemoryDreamAggregateClaimRecord>()
+            .WithMany()
+            .HasForeignKey(sourceMap => sourceMap.AggregateClaimId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder
             .HasOne<CognitiveMemorySourceItemRecord>()
             .WithMany()
             .HasForeignKey(sourceMap => sourceMap.SourceItemId)
@@ -305,7 +310,8 @@ internal sealed class CognitiveMemorySynthesizedStatementSourceMapRecordConfigur
             .WithMany()
             .HasForeignKey(sourceMap => sourceMap.EvidenceAnchorId)
             .OnDelete(DeleteBehavior.Restrict);
-        builder.HasIndex(sourceMap => new { sourceMap.StatementId, sourceMap.MemoryRecordId, sourceMap.SourceItemId, sourceMap.EvidenceAnchorId }).IsUnique();
+        builder.HasIndex(sourceMap => new { sourceMap.StatementId, sourceMap.AggregateClaimId });
+        builder.HasIndex(sourceMap => new { sourceMap.StatementId, sourceMap.MemoryRecordId, sourceMap.AggregateClaimId, sourceMap.SourceItemId, sourceMap.EvidenceAnchorId }).IsUnique();
         builder.HasIndex(sourceMap => new { sourceMap.ProjectId, sourceMap.AccessLevel, sourceMap.RedactionState });
     }
 }

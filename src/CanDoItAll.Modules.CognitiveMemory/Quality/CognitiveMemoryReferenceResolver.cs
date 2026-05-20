@@ -51,10 +51,27 @@ public sealed class CognitiveMemoryReferenceResolver(
         if (aggregateCandidates.Count > 0)
         {
             var candidateIds = aggregateCandidates.Select(candidate => candidate.Id).ToArray();
+            var candidateById = aggregateCandidates.ToDictionary(candidate => candidate.Id);
+            var mappedClaimIdsByMemoryRecord = rows
+                .Where(row => row.AggregateClaimId is not null)
+                .GroupBy(row => row.MemoryRecordId)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group
+                        .Select(row => row.AggregateClaimId!.Value)
+                        .Distinct()
+                        .ToHashSet());
             var sourceMaps = await dbContext.Set<CognitiveMemoryDreamAggregateClaimSourceMapRecord>()
                 .AsNoTracking()
                 .Where(sourceMap => candidateIds.Contains(sourceMap.AggregateCandidateId))
                 .ToListAsync(cancellationToken);
+            sourceMaps = sourceMaps
+                .Where(sourceMap =>
+                    !candidateById.TryGetValue(sourceMap.AggregateCandidateId, out var candidate) ||
+                    candidate.MemoryRecordId is not { } memoryRecordId ||
+                    !mappedClaimIdsByMemoryRecord.TryGetValue(memoryRecordId, out var mappedClaimIds) ||
+                    mappedClaimIds.Contains(sourceMap.AggregateClaimId))
+                .ToList();
             var sourceItemIds = sourceMaps
                 .Select(sourceMap => sourceMap.SourceItemId)
                 .Where(id => id is not null)

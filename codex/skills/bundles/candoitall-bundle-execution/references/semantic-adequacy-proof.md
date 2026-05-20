@@ -15,6 +15,19 @@ Each critical subbundle must record these fields in the execution report or a li
 - Semantic positive proof: include a realistic intended case and prove the system produces the desired domain behavior.
 - Anti-stub audit: state whether template-only output, fixture-specific branching, `TODO`, or `NotImplemented` paths remain in production flow.
 
+## Artifact-Backed Evidence
+
+Semantic labels do not count unless the underlying evidence is durable. For every critical subbundle, the execution report must cite `proof/SBxx/manifest.md`, and that manifest must point to existing transcripts or artifacts for:
+
+- failing-first negative proof when behavior changes;
+- passing positive proof after implementation;
+- source assertions showing the behavior in production code, not only fixtures;
+- changed-file hashes;
+- anti-stub audit output;
+- browser, host, downstream smoke, or red-team artifacts when those proof types are required.
+
+If the manifest is missing or a cited path does not exist, the semantic gate fails even when the prose labels are present.
+
 ## What Does Not Count
 
 The following evidence can support a gate, but cannot close a critical subbundle by itself:

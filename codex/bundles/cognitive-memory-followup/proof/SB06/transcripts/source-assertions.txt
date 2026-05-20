@@ -1,0 +1,55 @@
+Command: rg -n "CognitiveMemoryProfessorTeachingExtractor|CognitiveMemoryProfessorAnchorExtraction|AnchorState|includeProfessorAnchors|ICognitiveMemoryProfessorTeachingExtractor|mastery|NeedsHumanReview|Experimental" src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorExtraction.cs src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryCuratorConversationService.cs src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorService.cs src\CanDoItAll.Modules.CognitiveMemory\Recall\CognitiveMemoryRecallDataLoading.cs src\CanDoItAll.Modules.CognitiveMemory\CognitiveMemoryModuleServiceCollectionExtensions.cs tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs tests\CanDoItAll.Tests.Unit\CognitiveMemoryRecallOrchestratorTests.cs
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryRecallOrchestratorTests.cs:134:            AnchorState = CognitiveMemoryProfessorAnchorState.Active,
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryRecallOrchestratorTests.cs:156:                ["includeProfessorAnchors"] = "true"
+src\CanDoItAll.Modules.CognitiveMemory\Recall\CognitiveMemoryRecallDataLoading.cs:81:                (capture.AnchorState == CognitiveMemoryProfessorAnchorState.Active ||
+src\CanDoItAll.Modules.CognitiveMemory\Recall\CognitiveMemoryRecallDataLoading.cs:82:                 capture.AnchorState == CognitiveMemoryProfessorAnchorState.Comparing))
+src\CanDoItAll.Modules.CognitiveMemory\Recall\CognitiveMemoryRecallDataLoading.cs:89:           request.Metadata.TryGetValue("includeProfessorAnchors", out var value) &&
+src\CanDoItAll.Modules.CognitiveMemory\CognitiveMemoryModuleServiceCollectionExtensions.cs:99:        services.TryAddSingleton<ICognitiveMemoryProfessorTeachingExtractor>(CognitiveMemoryProfessorTeachingExtractor.Instance);
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorService.cs:33:        if (capture.AnchorState != CognitiveMemoryProfessorAnchorState.Assimilated || capture.AssimilatedMemoryRecordId is null)
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorService.cs:39:        capture.AnchorState = CognitiveMemoryProfessorAnchorState.Faded;
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorService.cs:46:            capture.AnchorState,
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorService.cs:71:                capture.AnchorState != CognitiveMemoryProfessorAnchorState.Assimilated &&
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorService.cs:72:                capture.AnchorState != CognitiveMemoryProfessorAnchorState.Faded &&
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorService.cs:73:                capture.AnchorState != CognitiveMemoryProfessorAnchorState.Rejected)
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorService.cs:137:        capture.AnchorState = request.FadeAnchor
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorService.cs:138:            ? CognitiveMemoryProfessorAnchorState.Faded
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorService.cs:139:            : CognitiveMemoryProfessorAnchorState.Assimilated;
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorService.cs:150:            capture.AnchorState,
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorExtraction.cs:18:public sealed record CognitiveMemoryProfessorAnchorExtraction(
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorExtraction.cs:32:public interface ICognitiveMemoryProfessorTeachingExtractor
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorExtraction.cs:34:    CognitiveMemoryProfessorAnchorExtraction? TryExtract(CognitiveMemoryProfessorTeachingExtractionRequest request);
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorExtraction.cs:37:internal sealed class CognitiveMemoryProfessorTeachingExtractor : ICognitiveMemoryProfessorTeachingExtractor
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorExtraction.cs:39:    public static CognitiveMemoryProfessorTeachingExtractor Instance { get; } = new();
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorExtraction.cs:83:    public CognitiveMemoryProfessorAnchorExtraction? TryExtract(CognitiveMemoryProfessorTeachingExtractionRequest request)
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorExtraction.cs:124:        return new CognitiveMemoryProfessorAnchorExtraction(
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryCuratorConversationService.cs:17:    ICognitiveMemoryProfessorTeachingExtractor? teachingExtractor = null) : ICognitiveMemoryCuratorConversationService
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryCuratorConversationService.cs:30:    private readonly ICognitiveMemoryProfessorTeachingExtractor teachingExtractor = teachingExtractor ?? CognitiveMemoryProfessorTeachingExtractor.Instance;
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryCuratorConversationService.cs:502:    private async Task<CognitiveMemoryProfessorAnchorExtraction?> ExtractProfessorAnchorAsync(
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryCuratorConversationService.cs:535:        CognitiveMemoryProfessorAnchorExtraction? professorAnchor,
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryCuratorConversationService.cs:715:            AnchorState = CognitiveMemoryProfessorAnchorState.Active,
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryCuratorConversationService.cs:792:            professorAnchor is null ? CognitiveMemoryValidationState.Approved : CognitiveMemoryValidationState.NeedsHumanReview,
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryCuratorConversationService.cs:793:            professorAnchor is null ? CognitiveMemoryStabilityState.Active : CognitiveMemoryStabilityState.Experimental,
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryCuratorConversationService.cs:1017:        CognitiveMemoryProfessorAnchorExtraction? professorAnchor)
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryCuratorConversationService.cs:1048:        CognitiveMemoryProfessorAnchorExtraction? professorAnchor)
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryCuratorConversationService.cs:1089:    private static string CreateProfessorAnchorSummary(CognitiveMemoryProfessorAnchorExtraction anchor)
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryCuratorConversationService.cs:1097:                $"Lifecycle: {CognitiveMemoryProfessorAnchorState.Active}",
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryCuratorConversationService.cs:1103:    private static string CreateProfessorAnchorPayloadText(CognitiveMemoryProfessorAnchorExtraction anchor)
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryCuratorConversationService.cs:1120:        CognitiveMemoryProfessorAnchorExtraction? professorAnchor)
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:327:        Assert.Equal(CognitiveMemoryProfessorAnchorState.Active, capture.AnchorState);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:371:        Assert.Equal(CognitiveMemoryProfessorAnchorState.Assimilated, assimilated.AnchorState);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:372:        Assert.Equal(CognitiveMemoryProfessorAnchorState.Faded, faded.AnchorState);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:373:        Assert.Equal(CognitiveMemoryProfessorAnchorState.Faded, persistedCapture.AnchorState);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:386:            "Professor mastery gate chat",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:408:        Assert.Contains("mastery", error.Message, StringComparison.OrdinalIgnoreCase);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:558:        Assert.Equal(CognitiveMemoryProfessorAnchorState.Faded, scanResult.AnchorState);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:560:        Assert.Equal(CognitiveMemoryProfessorAnchorState.Faded, persistedCapture.AnchorState);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:608:        Assert.Contains(dreamResult.AggregateCandidates, candidate => candidate.Status == CognitiveMemoryDreamAggregateCandidateStatus.NeedsHumanReview);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:609:        Assert.Equal(CognitiveMemoryProfessorAnchorState.Comparing, persistedCapture.AnchorState);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:733:            Assert.Equal(CognitiveMemoryProfessorAnchorState.Active, persistedCapture.AnchorState);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:764:            Assert.Contains(comparisonDream.AggregateCandidates, candidate => candidate.Status == CognitiveMemoryDreamAggregateCandidateStatus.NeedsHumanReview);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:765:            Assert.Equal(CognitiveMemoryProfessorAnchorState.Comparing, persistedCapture.AnchorState);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:791:        Assert.Equal(CognitiveMemoryProfessorAnchorState.Faded, scanResult.AnchorState);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:798:            Assert.Equal(CognitiveMemoryProfessorAnchorState.Faded, persistedCapture.AnchorState);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:863:            Assert.Equal(CognitiveMemoryStabilityState.Experimental, aggregateMemory.StabilityState);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:2033:                Brief = $"Professor mastery recall use {index}.",
+ExitCode: 0

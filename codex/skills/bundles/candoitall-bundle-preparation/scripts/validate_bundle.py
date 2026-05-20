@@ -163,6 +163,17 @@ PROOF_TOKEN_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+SHA256_PATTERN = re.compile(r"\b[A-Fa-f0-9]{64}\b")
+WINDOWS_ABSOLUTE_PATTERN = re.compile(r"^[A-Za-z]:[\\/]")
+POSIX_ABSOLUTE_PATTERN = re.compile(r"^/")
+ARTIFACT_PATH_PATTERN = re.compile(
+    r"(?<![A-Za-z0-9_])(?:[A-Za-z]:[\\/][^`<>()\s|]+|/[^`<>()\s|]+|proof[\\/][^`<>()\s|]+)",
+    re.IGNORECASE,
+)
+COMMAND_FIELD_PATTERN = re.compile(r'["\']?Command["\']?\s*:', re.IGNORECASE)
+EXIT_CODE_PATTERN = re.compile(r'["\']?Exit(?:Code| code)["\']?\s*:\s*(-?\d+)\b', re.IGNORECASE)
+TEST_NAME_PATTERN = re.compile(r"^\s*-\s*Test name\s*:\s*`?([^`]+?)`?\s*$", re.IGNORECASE | re.MULTILINE)
+
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Validate a CanDoItAll bundle structure.")
@@ -684,6 +695,223 @@ def validate_completed_semantic_proof(bundle_path: Path, subbundle_directories: 
     return issues
 
 
+def normalize_artifact_path_token(token: str) -> str:
+    return token.strip().strip("`<>\"'").rstrip(".,;:)]}")
+
+
+def is_absolute_artifact_path(path_value: str) -> bool:
+    return WINDOWS_ABSOLUTE_PATTERN.match(path_value) is not None or POSIX_ABSOLUTE_PATTERN.match(path_value) is not None
+
+
+def resolve_artifact_path(bundle_path: Path, path_value: str) -> Path:
+    normalized = normalize_artifact_path_token(path_value)
+    if is_absolute_artifact_path(normalized):
+        return Path(normalized)
+
+    return bundle_path / normalized
+
+
+def extract_artifact_path_tokens(content: str) -> list[str]:
+    tokens: list[str] = []
+    seen: set[str] = set()
+
+    for match in ARTIFACT_PATH_PATTERN.finditer(content):
+        token = normalize_artifact_path_token(match.group(0))
+        if re.search(r"\bSBxx\b", token, re.IGNORECASE):
+            continue
+
+        if token in seen:
+            continue
+
+        tokens.append(token)
+        seen.add(token)
+
+    return tokens
+
+
+def is_transcript_path(path_value: str) -> bool:
+    normalized = path_value.replace("\\", "/").lower()
+    return "/transcripts/" in normalized
+
+
+def extract_labeled_artifact_paths(content: str, labels: tuple[str, ...]) -> list[str]:
+    paths: list[str] = []
+    lower_labels = tuple(label.lower() for label in labels)
+
+    for line in content.splitlines():
+        lowered = line.lower()
+        if not any(label in lowered for label in lower_labels):
+            continue
+
+        paths.extend(extract_artifact_path_tokens(line))
+
+    return paths
+
+
+def has_explicit_failing_first_exemption(content: str) -> bool:
+    for line in content.splitlines():
+        lowered = line.lower()
+        if "failing-first" not in lowered and "adversarial negative proof" not in lowered:
+            continue
+
+        if "n/a" not in lowered:
+            continue
+
+        if any(token in lowered for token in ("process", "non-production", "no behavior", "no production")):
+            return True
+
+    return False
+
+
+def extract_test_names(content: str) -> list[str]:
+    names: list[str] = []
+    seen: set[str] = set()
+
+    for match in TEST_NAME_PATTERN.finditer(content):
+        value = normalize_markdown_value(match.group(1)).strip()
+        if not value or value in seen:
+            continue
+
+        names.append(value)
+        seen.add(value)
+
+    return names
+
+
+def validate_transcript(path: Path, expectation: str | None) -> tuple[list[str], str]:
+    issues: list[str] = []
+    content = path.read_text(encoding="utf-8", errors="replace")
+
+    if COMMAND_FIELD_PATTERN.search(content) is None:
+        issues.append(f"{path}: transcript must include 'Command:'")
+
+    exit_codes = [int(match.group(1)) for match in EXIT_CODE_PATTERN.finditer(content)]
+    if not exit_codes:
+        issues.append(f"{path}: transcript must include an ExitCode or Exit code field")
+    elif expectation == "failure" and all(exit_code == 0 for exit_code in exit_codes):
+        issues.append(f"{path}: failing-first transcript must contain a non-zero exit code")
+    elif expectation == "success" and not any(exit_code == 0 for exit_code in exit_codes):
+        issues.append(f"{path}: passing transcript must contain exit code 0")
+
+    return issues, content
+
+
+def validate_completed_proof_manifests(bundle_path: Path, subbundle_directories: list[Path]) -> list[str]:
+    issues: list[str] = []
+    phase_plan_path = bundle_path / "plan" / "01-phase-plan.md"
+    execution_report_path = bundle_path / "reviews" / "01-execution-report.md"
+
+    if not phase_plan_path.is_file() or not execution_report_path.is_file():
+        return issues
+
+    critical_subbundle_numbers = extract_critical_subbundle_numbers(phase_plan_path)
+    if not critical_subbundle_numbers:
+        return issues
+
+    report_content = execution_report_path.read_text(encoding="utf-8")
+    normalized_report_content = report_content.replace("\\", "/")
+
+    for subbundle_directory in subbundle_directories:
+        subbundle_number = extract_subbundle_number(subbundle_directory)
+        if subbundle_number is None or subbundle_number not in critical_subbundle_numbers:
+            continue
+
+        readme_path = subbundle_directory / "README.md"
+        if not readme_path.is_file():
+            continue
+
+        readme_content = readme_path.read_text(encoding="utf-8")
+        status = extract_first_status_value(readme_content)
+        if status != "Completed":
+            continue
+
+        manifest_relative = f"proof/SB{subbundle_number}/manifest.md"
+        manifest_path = bundle_path / manifest_relative
+        manifest_citation = manifest_relative.replace("\\", "/")
+        normalized_readme_content = readme_content.replace("\\", "/")
+
+        if manifest_citation not in normalized_report_content and manifest_citation not in normalized_readme_content:
+            issues.append(f"{execution_report_path}: completed critical subbundle SB{subbundle_number} must cite {manifest_relative}")
+
+        if not manifest_path.is_file():
+            issues.append(f"{manifest_path}: completed critical subbundle SB{subbundle_number} is missing proof manifest")
+            continue
+
+        manifest_content = manifest_path.read_text(encoding="utf-8")
+        if SHA256_PATTERN.search(manifest_content) is None:
+            issues.append(f"{manifest_path}: proof manifest must include at least one SHA-256 changed-file hash")
+
+        artifact_tokens = extract_artifact_path_tokens(manifest_content)
+        for artifact_token in artifact_tokens:
+            artifact_path = resolve_artifact_path(bundle_path, artifact_token)
+            if not artifact_path.exists():
+                issues.append(f"{manifest_path}: referenced artifact path does not exist: {artifact_token}")
+
+        transcript_tokens = [token for token in artifact_tokens if is_transcript_path(token)]
+        if not transcript_tokens:
+            issues.append(f"{manifest_path}: proof manifest must cite at least one command transcript path")
+
+        transcript_contents: list[str] = []
+        for transcript_token in transcript_tokens:
+            transcript_path = resolve_artifact_path(bundle_path, transcript_token)
+            if not transcript_path.is_file():
+                continue
+
+            transcript_issues, transcript_content = validate_transcript(transcript_path, None)
+            issues.extend(transcript_issues)
+            transcript_contents.append(transcript_content)
+
+        failing_tokens = [
+            token for token in extract_labeled_artifact_paths(
+                manifest_content,
+                ("failing-first", "adversarial negative proof"),
+            )
+            if is_transcript_path(token)
+        ]
+        if not failing_tokens and not has_explicit_failing_first_exemption(manifest_content):
+            issues.append(f"{manifest_path}: proof manifest must cite a failing-first transcript or an explicit process/non-production exemption")
+
+        for failing_token in failing_tokens:
+            failing_path = resolve_artifact_path(bundle_path, failing_token)
+            if not failing_path.is_file():
+                continue
+
+            transcript_issues, _ = validate_transcript(failing_path, "failure")
+            issues.extend(transcript_issues)
+
+        passing_tokens = [
+            token for token in extract_labeled_artifact_paths(
+                manifest_content,
+                ("passing", "semantic positive proof"),
+            )
+            if is_transcript_path(token)
+        ]
+        if not passing_tokens:
+            issues.append(f"{manifest_path}: proof manifest must cite a passing transcript")
+
+        for passing_token in passing_tokens:
+            passing_path = resolve_artifact_path(bundle_path, passing_token)
+            if not passing_path.is_file():
+                continue
+
+            transcript_issues, _ = validate_transcript(passing_path, "success")
+            issues.extend(transcript_issues)
+
+        anti_stub_tokens = [
+            token for token in extract_labeled_artifact_paths(manifest_content, ("anti-stub",))
+            if is_transcript_path(token)
+        ]
+        if not anti_stub_tokens:
+            issues.append(f"{manifest_path}: proof manifest must cite an anti-stub audit transcript")
+
+        combined_transcripts = "\n".join(transcript_contents)
+        for test_name in extract_test_names(manifest_content):
+            if test_name not in combined_transcripts:
+                issues.append(f"{manifest_path}: cited test name is missing from transcript output: {test_name}")
+
+    return issues
+
+
 def validate_completed_raw_note_proof_depth(path: Path) -> list[str]:
     content = path.read_text(encoding="utf-8")
     raw_note_section = extract_markdown_section(content, "## Raw Note Closure")
@@ -761,6 +989,7 @@ def main() -> int:
             issues.extend(validate_completed_raw_note_proof_depth(execution_report_path))
 
         issues.extend(validate_completed_semantic_proof(bundle_path, subbundle_directories))
+        issues.extend(validate_completed_proof_manifests(bundle_path, subbundle_directories))
 
     if issues:
         print("Bundle validation failed:")

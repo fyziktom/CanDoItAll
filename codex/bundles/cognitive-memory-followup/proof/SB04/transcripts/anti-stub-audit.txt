@@ -1,0 +1,3 @@
+Command: rg -n "TODO|NotImplemented|throw new NotImplementedException|ClusterPlanner_SplitsBridgeChainsInsteadOfMergingUnrelatedEndpoints|ClusterPlanner_RoutesContradictionOnlyRelationToReviewCluster|ClusterPlanner_UsesHighFanoutFallbackForParaphrasedSemanticPair" src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterFormation.cs
+Result: no TODO, NotImplemented, or fixture/test-name-specific production branches found in SB04 production files.
+ExitCode: 0

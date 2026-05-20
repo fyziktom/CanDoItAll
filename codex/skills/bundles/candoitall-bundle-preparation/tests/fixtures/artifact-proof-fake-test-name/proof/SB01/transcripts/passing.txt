@@ -1,0 +1,5 @@
+Command: python validate_bundle.py proof-depth-complete --stage completed
+WorkingDirectory: C:\repositories\CanDoItAll
+Test: ArtifactProof.ValidatesCompleteFixture
+Output: complete fixture accepted with proof manifest and transcripts
+ExitCode: 0
