@@ -66,7 +66,10 @@ else
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
                                     <label class="cda-field-label">Provider</label>
-                                    <InputSelect @bind-Value="editorModel.ProviderProfileId"
+                                    <InputSelect TValue="Guid?"
+                                                 Value="@editorModel.ProviderProfileId"
+                                                 ValueChanged="HandleRuntimeProviderChangedAsync"
+                                                 ValueExpression="@(() => editorModel.ProviderProfileId)"
                                                  class="cda-input"
                                                  disabled="@(!areProvidersLoaded && string.IsNullOrWhiteSpace(providerLoadErrorMessage))"
                                                  data-testid="agents-catalog-provider">
@@ -86,10 +89,14 @@ else
                                         <p class="mt-2 text-sm leading-6 text-rose-700">@providerLoadErrorMessage</p>
                                     }
                                 </div>
-                                <div>
-                                    <label class="cda-field-label">Model</label>
-                                    <InputText @bind-Value="editorModel.Model" class="cda-input" data-testid="agents-catalog-model" />
-                                </div>
+                                <ProviderModelSelector Provider="@SelectedRuntimeProvider"
+                                                       Value="@editorModel.Model"
+                                                       ValueChanged="HandleRuntimeModelChangedAsync"
+                                                       Disabled="@(!areProvidersLoaded && string.IsNullOrWhiteSpace(providerLoadErrorMessage))"
+                                                       TestId="agents-catalog-model-selector"
+                                                       ChoiceTestId="agents-catalog-model-choice"
+                                                       OverrideTestId="agents-catalog-model-override"
+                                                       CustomModelTestId="agents-catalog-model" />
                             </Grid>
 
                             <Grid Gap="LayoutGap.Large" ColumnsMd="3">

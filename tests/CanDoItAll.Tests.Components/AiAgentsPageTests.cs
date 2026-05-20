@@ -17,6 +17,9 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
+using AgentProviderKind = CanDoItAll.AgentFramework.Models.ProviderKind;
+using AgentProviderProfileEditorModel = CanDoItAll.AgentFramework.Models.ProviderProfileEditorModel;
+using AgentProviderTransportKind = CanDoItAll.AgentFramework.Models.ProviderTransportKind;
 
 namespace CanDoItAll.Tests.Components;
 
@@ -151,6 +154,107 @@ public sealed class AiAgentsPageTests
         Assert.NotNull(rosterItem.TechnicalAgentId);
         Assert.NotNull(workspace);
         Assert.NotNull(workspace!.TechnicalAgentId);
+    }
+
+    [Fact]
+    public async Task AgentDetails_runtime_provider_default_model_saves_as_provider_linked_empty_model()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var workspaceFactory = harness.Context.Services.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+        var notificationService = harness.Context.Services.GetRequiredService<NotificationService>();
+        var providerId = await workspaceService.SaveProviderAsync(new AgentProviderProfileEditorModel
+        {
+            Name = "Selector OpenAI",
+            Kind = AgentProviderKind.OpenAi,
+            BaseUrl = "https://api.openai.com/v1",
+            ApiKeyEnvironmentVariable = "OPENAI_API_KEY",
+            DefaultModel = "gpt-5-mini",
+            Transport = AgentProviderTransportKind.Responses,
+            SuggestedModels = ["gpt-5-mini", "gpt-5.4"]
+        });
+        var providers = await workspaceService.ListProvidersAsync();
+
+        var cut = harness.Context.RenderComponent<AgentDetailsDialog>(parameters => parameters
+            .Add(component => component.InitialProviders, providers));
+
+        cut.WaitForElement("[data-testid='agents-catalog-name']");
+        cut.Find("[data-testid='agents-catalog-name']").Change("Provider Linked Agent");
+        cut.Find("[data-testid='agents-catalog-role']").Change("Runtime role");
+        cut.Find("[data-testid='agents-catalog-summary']").Change("Uses provider default model linkage.");
+        cut.Find("[data-testid='agents-catalog-instructions']").Change("Keep model selection provider-linked.");
+        await OpenAgentRuntimeTabAsync(cut);
+        cut.Find("[data-testid='agents-catalog-provider']").Change(providerId.ToString("D"));
+
+        cut.WaitForElement("[data-testid='agents-catalog-model-choice']");
+        Assert.Contains("Provider default (gpt-5-mini)", cut.Markup);
+
+        cut.Find("[data-testid='agents-catalog-save']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(notificationService.Messages, message => message.Summary == "Agent saved");
+        });
+
+        var agent = Assert.Single(
+            await workspaceService.ListAgentsAsync(includeTemplates: false),
+            item => item.Name == "Provider Linked Agent");
+        Assert.Equal(providerId, agent.ProviderProfileId);
+        Assert.Equal(string.Empty, agent.Model);
+    }
+
+    [Fact]
+    public async Task AgentDetails_runtime_model_override_saves_custom_model()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var workspaceFactory = harness.Context.Services.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+        var notificationService = harness.Context.Services.GetRequiredService<NotificationService>();
+        var providerId = await workspaceService.SaveProviderAsync(new AgentProviderProfileEditorModel
+        {
+            Name = "Selector Ollama",
+            Kind = AgentProviderKind.Ollama,
+            BaseUrl = "http://localhost:11434",
+            DefaultModel = "llama3.1",
+            Transport = AgentProviderTransportKind.ChatCompletions,
+            SuggestedModels = ["llama3.1", "llama3.2"]
+        });
+        var providers = await workspaceService.ListProvidersAsync();
+
+        var cut = harness.Context.RenderComponent<AgentDetailsDialog>(parameters => parameters
+            .Add(component => component.InitialProviders, providers));
+
+        cut.WaitForElement("[data-testid='agents-catalog-name']");
+        cut.Find("[data-testid='agents-catalog-name']").Change("Override Model Agent");
+        cut.Find("[data-testid='agents-catalog-role']").Change("Runtime role");
+        cut.Find("[data-testid='agents-catalog-summary']").Change("Uses custom model override.");
+        cut.Find("[data-testid='agents-catalog-instructions']").Change("Keep explicit custom model.");
+        await OpenAgentRuntimeTabAsync(cut);
+        cut.Find("[data-testid='agents-catalog-provider']").Change(providerId.ToString("D"));
+        cut.Find("[data-testid='agents-catalog-model-override']").Change(true);
+        cut.Find("[data-testid='agents-catalog-model']").Change(" qwen3.5:9b ");
+        cut.Find("[data-testid='agents-catalog-save']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(notificationService.Messages, message => message.Summary == "Agent saved");
+        });
+
+        var agent = Assert.Single(
+            await workspaceService.ListAgentsAsync(includeTemplates: false),
+            item => item.Name == "Override Model Agent");
+        Assert.Equal(providerId, agent.ProviderProfileId);
+        Assert.Equal("qwen3.5:9b", agent.Model);
+    }
+
+    private static async Task OpenAgentRuntimeTabAsync(IRenderedComponent<AgentDetailsDialog> cut)
+    {
+        await cut.InvokeAsync(() =>
+        {
+            cut.FindAll("button")
+                .First(button => button.TextContent.Contains("Runtime", StringComparison.OrdinalIgnoreCase))
+                .Click();
+        });
+        cut.WaitForElement("[data-testid='agents-catalog-provider']");
     }
 
     [Fact]

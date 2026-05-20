@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.CrmHr;
@@ -305,6 +306,7 @@ public partial class AgentDetailsDialog
     private async Task<Guid> PersistEditorAsync()
     {
         SyncWorkspaceToolAccessFromEditorText();
+        NormalizeRuntimeModelSelectionForSave();
         editorModel.Tags = BuildAgentTagsForSave().ToList();
         return await WorkspaceService.SaveAgentAsync(editorModel);
     }
@@ -832,6 +834,34 @@ public partial class AgentDetailsDialog
     {
         tagValues = NormalizeVisibleTags(value);
         return Task.CompletedTask;
+    }
+
+    private Task HandleRuntimeProviderChangedAsync(Guid? providerId)
+    {
+        if (editorModel.ProviderProfileId != providerId)
+        {
+            editorModel.ProviderProfileId = providerId;
+            editorModel.Model = string.Empty;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task HandleRuntimeModelChangedAsync(string? model)
+    {
+        editorModel.Model = string.IsNullOrWhiteSpace(model)
+            ? string.Empty
+            : model.Trim();
+        return Task.CompletedTask;
+    }
+
+    private void NormalizeRuntimeModelSelectionForSave()
+    {
+        editorModel.Model = SelectedRuntimeProvider is { } provider
+            ? ProviderModelSelector.NormalizeProviderDefaultModel(editorModel.Model, provider)
+            : string.IsNullOrWhiteSpace(editorModel.Model)
+                ? string.Empty
+                : editorModel.Model.Trim();
     }
 
     private void SyncWorkspaceToolAccessFromEditorText()
