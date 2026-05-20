@@ -1,0 +1,24 @@
+# Current State
+
+- Root `README.md` already describes the modular architecture, Development PostgreSQL defaults, Qdrant, and skill installation, but the script coverage is incomplete for public setup: `tools\Install-CanDoItAllWebApp.ps1` and `tools\Reinstall-CanDoItAllMcps.ps1` need first-class mention.
+- `docs\development-runtime.md` exists and correctly points to PostgreSQL-first local development, Docker Compose services, the native PostgreSQL preparation script, and Qdrant. It can be sharpened with concrete ports, health checks, and reset commands.
+- `docker-compose.yml` defines `postgres:16-alpine` on `5432` with database/user/password `candoitall` and `qdrant/qdrant:v1.15.3` on `6333`/`6334`.
+- `src\CanDoItAll.Web\appsettings.Development.json` and launch profiles set `Database:Provider=PostgreSql`, connection string `Host=127.0.0.1;Port=5432;Database=candoitall_development;Username=candoitall;Password=candoitall;Include Error Detail=true`, and local control-plane/workspace roots under `%LOCALAPPDATA%\CanDoItAll`.
+- `src\CanDoItAll.Web\appsettings.json` enables Qdrant under `Rag:Qdrant` at `localhost:6334`, collection `candoitall-knowledge`, vector size `384`, distance `Cosine`, and create-collection-if-missing enabled.
+- `tools\Install-CanDoItAllWebApp.ps1` publishes `CanDoItAll.Web` as a Windows self-contained app under `%LOCALAPPDATA%\CanDoItAll\WebApp` by default and creates a desktop shortcut plus launcher script.
+- `tools\Reinstall-CanDoItAllMcps.ps1` publishes MCP sidecars and companion tools into `.artifacts\mcp-installs`, prepares DotNetWatch shadow output, updates VS Code MCP config, updates user Codex MCP config, creates DotNetWatch tray shortcuts, syncs repo-managed skills unless skipped, and removes stale Processes/ProjectStructure MCP config sections.
+- `codex\scripts\install-candoitall-skills.ps1` installs repo-managed CanDoItAll skills plus public sibling skills from `openai/skills` and `dotnet/skills`.
+- `rg --files -g "*.csproj"` found 71 tracked project files. Thirteen project directories lacked `README.md` at preparation time:
+  - `src\CanDoItAll.AgentFramework.Voice`
+  - `src\CanDoItAll.Components.Charts`
+  - `src\CanDoItAll.Components.Mermaid`
+  - `src\CanDoItAll.Modules.CognitiveMemory`
+  - `src\CanDoItAll.Modules.Plugins`
+  - `src\CanDoItAll.Modules.SchedulerPlanner`
+  - `src\CanDoItAll.Plugins.Abstractions`
+  - `src\CanDoItAll.Tools.Documents`
+  - `src\plugins\CanDoItAll.Plugin.Docker`
+  - `src\plugins\CanDoItAll.Plugin.Email`
+  - `src\plugins\CanDoItAll.Plugin.Gmail`
+  - `src\plugins\CanDoItAll.Plugin.Office365`
+  - `tests\CanDoItAll.Mcp.Mermaid.Tests`

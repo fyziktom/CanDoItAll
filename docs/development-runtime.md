@@ -16,6 +16,14 @@ For the repo-managed containers on a clean machine:
 docker compose up -d postgres qdrant
 ```
 
+The compose services expose PostgreSQL on `127.0.0.1:5432`, Qdrant HTTP on `localhost:6333`, and Qdrant gRPC on `localhost:6334`. The PostgreSQL service uses database `candoitall_development`, role `candoitall`, and password `candoitall`.
+
+Check container health:
+
+```powershell
+docker compose ps
+```
+
 For a native PostgreSQL service:
 
 ```powershell
@@ -37,7 +45,18 @@ The database selection endpoint should report provider `PostgreSql` and database
 
 ## Qdrant
 
-Qdrant is configured in `appsettings.json` at `localhost:6334` with collection `candoitall-knowledge`. It is needed for Cognitive Memory projection and vector recall validation. It is not authoritative storage; PostgreSQL remains the durable AppDbContext profile.
+Qdrant is configured in `src\CanDoItAll.Web\appsettings.json` at `localhost:6334` with collection `candoitall-knowledge`, vector size `384`, cosine distance, and create-collection-if-missing enabled. It is needed for Cognitive Memory projection and vector recall validation. It is not authoritative storage; PostgreSQL remains the durable AppDbContext profile.
+
+If the local vector index becomes disposable during development, reset only the container-backed Qdrant volume with:
+
+```powershell
+docker compose stop qdrant
+docker compose rm -f qdrant
+docker volume rm candoitall_qdrant_data
+docker compose up -d qdrant
+```
+
+Use that reset only for local development data. It deletes the Qdrant collection storage.
 
 ## SQLite Status
 

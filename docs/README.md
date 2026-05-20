@@ -15,6 +15,7 @@ These docs are for readers who need to understand what CanDoItAll does before th
 
 ## Runtime, API, And MCP
 
+- [Root quick start](../README.md#quick-start-with-postgresql-and-qdrant): public entry point for PostgreSQL, Qdrant, build, test, and setup script commands.
 - [API control plane](api-control-plane.md): current HTTP API surface for projects, project structure, processes, agents, and API access.
 - [Development runtime](development-runtime.md): default PostgreSQL/Qdrant setup for Visual Studio and local Development runs.
 - [Cognitive Memory](cognitive-memory/README.md): current implementation stage, architecture, API, validation, and roadmap for the Cognitive Memory module.
@@ -23,6 +24,12 @@ These docs are for readers who need to understand what CanDoItAll does before th
 - [DotNetWatch persistent backend benefits](mcp-dotnetwatch-persistent-backend-benefits.md): development-sidecar runtime notes.
 - [Process agent operator runbook](process-agent-operator-runbook.md): operational triage for escalations, approvals, rework, and recovery.
 - [Agent output contracts](agent-output-contracts.md): typed structured-output and finalizer-tool contracts for machine-critical agent decisions.
+
+## Setup Scripts
+
+- `tools\Install-CanDoItAllWebApp.ps1`: publishes the web app as a local Windows install with launcher and desktop shortcut.
+- `tools\Reinstall-CanDoItAllMcps.ps1`: rebuilds the repo-managed Components, CodeAnalytics, and SshOps MCP sidecars, updates Codex/VS Code MCP config, prepares DotNetWatch tray support, and removes stale retired MCP config sections.
+- `codex\scripts\install-candoitall-skills.ps1`: installs repo-managed CanDoItAll skills plus required public sibling skills.
 
 ## Components And UI
 

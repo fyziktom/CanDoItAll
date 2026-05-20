@@ -51,10 +51,24 @@ flowchart LR
 - Windows PowerShell for local install scripts and Playwright browser install
 - Node.js and npm when rebuilding the shared Tailwind output
 - `git` when installing or refreshing the portable Codex skill pack
+- Docker Desktop or another Docker-compatible runtime when using the repo-managed PostgreSQL and Qdrant containers
 - PostgreSQL on `127.0.0.1:5432` for the default Development/Visual Studio profile
 - Qdrant on `localhost:6334` when validating Cognitive Memory vector projection or recall
 
-## Run The Web App
+## Quick Start With PostgreSQL And Qdrant
+
+From a clean clone, start the default local services:
+
+```powershell
+docker compose up -d postgres qdrant
+```
+
+The compose file starts:
+
+- PostgreSQL `postgres:16-alpine` on `127.0.0.1:5432` with database `candoitall_development`, user `candoitall`, and password `candoitall`.
+- Qdrant `qdrant/qdrant:v1.15.3` on HTTP port `6333` and gRPC port `6334`.
+
+Run the web app after the containers are healthy:
 
 From the repo root:
 
@@ -62,11 +76,23 @@ From the repo root:
 dotnet run --project src/CanDoItAll.Web
 ```
 
+The Development and Visual Studio `http`/`https` launch profiles point at:
+
+```text
+Host=127.0.0.1;Port=5432;Database=candoitall_development;Username=candoitall;Password=candoitall;Include Error Detail=true
+```
+
+If you use a native PostgreSQL service instead of Docker, prepare the same role and database with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\dev\Ensure-DevelopmentPostgres.ps1
+```
+
 Runtime notes:
 
 - The app uses Blazor Interactive Server rendering.
 - The default Development and Visual Studio `http`/`https` profiles use PostgreSQL database `candoitall_development` with username/password `candoitall`/`candoitall`.
-- Native PostgreSQL machines can be prepared with `powershell -ExecutionPolicy Bypass -File .\tools\dev\Ensure-DevelopmentPostgres.ps1`; Docker-based clean machines can use `docker compose up -d postgres qdrant`.
+- Qdrant is configured in `src/CanDoItAll.Web/appsettings.json` under `Rag:Qdrant` with gRPC port `6334`, collection `candoitall-knowledge`, vector size `384`, and create-collection-if-missing enabled.
 - Development control-plane and workspace files are rooted under `%LOCALAPPDATA%\CanDoItAll`, not repo `.artifacts`, so a clean clone can start without carrying local artifact settings.
 - Development readiness is exposed at `/_dev/runtime`.
 - Development database selection is exposed at `/_dev/database/selection`.
@@ -74,6 +100,24 @@ Runtime notes:
 - SQLite profiles still exist for now, but they are no longer the default development path. They are likely to be removed after more analysis because governed process runs are too slow on SQLite for this runtime.
 
 See [Development runtime](docs/development-runtime.md) for PostgreSQL/Qdrant setup details and troubleshooting.
+
+## Install And Local Tooling Scripts
+
+Use these scripts from the repo root:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\Install-CanDoItAllWebApp.ps1
+powershell -ExecutionPolicy Bypass -File .\tools\Reinstall-CanDoItAllMcps.ps1
+powershell -ExecutionPolicy Bypass -File .\codex\scripts\install-candoitall-skills.ps1
+```
+
+What they do:
+
+- `tools\Install-CanDoItAllWebApp.ps1` publishes `CanDoItAll.Web` as a self-contained Windows app under `%LOCALAPPDATA%\CanDoItAll\WebApp` by default, creates `Start-CanDoItAll.ps1`, creates a desktop shortcut, and can launch the app with `-StartAfterInstall`.
+- `tools\Reinstall-CanDoItAllMcps.ps1` rebuilds and installs the repo-managed Components, CodeAnalytics, and SshOps MCP sidecars plus companion tools under `.artifacts\mcp-installs`, prepares the DotNetWatch shadow artifact, updates VS Code and Codex MCP configuration, creates DotNetWatch tray shortcuts, and removes stale `candoitall_processes` and `candoitall_projectstructure` config sections.
+- `codex\scripts\install-candoitall-skills.ps1` installs repo-managed CanDoItAll skills into `$CODEX_HOME\skills` and installs required public sibling skills from `openai/skills` and `dotnet/skills`.
+
+Current active MCP sidecars are CodeAnalytics, Components, DotNetWatch, Mermaid, SshOps, and LocalRuntime helpers. Processes and ProjectStructure MCP servers are not active; use the HTTP API control plane and repo-managed `candoitall-api-*` skills for those surfaces.
 
 ## Run The Development Manager
 
@@ -113,13 +157,14 @@ powershell -ExecutionPolicy Bypass -File tests\CanDoItAll.Tests.Playwright\bin\D
 | Family | Responsibility |
 | --- | --- |
 | `CanDoItAll.Web`, `CanDoItAll.Composition`, `CanDoItAll.Infrastructure`, `CanDoItAll.SharedKernel` | Host, composition, data/control-plane/storage/readiness, shared primitives. |
-| `CanDoItAll.Modules.*` | Product modules for projects, processes, workbench, workspace, prompts, resources, validation, automation, CRM/HR, AgentFramework, activity, collaboration, security, and test lab. |
-| `CanDoItAll.AgentFramework.*` | Technical agent catalog, provider profiles, file-backed workspaces, Microsoft Agent Framework runtime adapter, workspace tools, MCP capabilities, execution runs, artifacts, and UI components. |
-| `CanDoItAll.Components.*` | Shared Razor UI primitives, canvas controls, overlay windows, WebGL workbench runtime, facade, and sandbox projects. |
+| `CanDoItAll.Modules.*` | Product modules for projects, processes, workbench, workspace, prompts, resources, validation, automation, CRM/HR, AgentFramework, activity, collaboration, security, test lab, Scheduler Planner, Plugins, and Cognitive Memory. |
+| `CanDoItAll.AgentFramework.*` | Technical agent catalog, provider profiles, file-backed workspaces, Microsoft Agent Framework runtime adapter, workspace tools, MCP capabilities, execution runs, artifacts, UI components, and voice capture/synthesis services. |
+| `CanDoItAll.Components.*` | Shared Razor UI primitives, charts, Mermaid diagrams, canvas controls, overlay windows, WebGL workbench runtime, facade, and sandbox projects. |
+| `src/plugins/*` and `CanDoItAll.Plugins.Abstractions` | Bundled plugin contracts and implementations for Docker, Gmail, Office 365, and shared email workflow payloads. |
 | `CanDoItAll.Mcp.*` | Agent-facing sidecars for code analytics, components, dotnet watch, Mermaid, SSH operations, and local runtime helpers. Processes and ProjectStructure MCPs are not active; use HTTP APIs for those surfaces. |
 | `CanDoItAll.Migrations.*` | Provider-specific EF Core migrations for SQLite and PostgreSQL. |
 | `tests/*` | Unit, integration, component, Playwright, support, and MCP-focused tests. |
-| `tools/*` | Local manager, dotnet-watch tray, MCP harness, RPI validation artifacts, and scenario seeding tools. |
+| `tools/*` | Local manager, dotnet-watch tray, MCP harness, RPI validation artifacts, scenario seeding tools, and install/dev scripts. |
 
 Each tracked `.csproj` directory under `src`, `tests`, and `tools` has a local `README.md` with the project purpose, references, and validation notes.
 
@@ -157,6 +202,8 @@ Current API and MCP notes:
 - [Processes MCP transition note](docs/processes-mcp-setup.md)
 - [Project Structure MCP transition note](docs/project-structure-mcp-setup.md)
 - [DotNetWatch persistent backend notes](docs/mcp-dotnetwatch-persistent-backend-benefits.md)
+
+For full local MCP resetup, use `tools\Reinstall-CanDoItAllMcps.ps1`; it includes skill sync unless `-SkipSkillSync` is supplied.
 
 ## Styling
 
