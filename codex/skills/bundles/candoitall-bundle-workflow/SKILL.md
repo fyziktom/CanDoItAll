@@ -24,7 +24,8 @@ The workflow is complete only when all of these are true:
 - raw inputs are preserved and mapped to requirements, owning subbundles, proof, and closure status
 - the bundle has a usable dependency map, critical-foundation labels, and progression gates
 - every executed subbundle has passed its entry and closure gates or is honestly blocked
-- every completed critical subbundle has an artifact-backed `proof/SBxx/manifest.md` with changed-file hashes, command transcripts, failing-first and passing proof where behavior changed, source assertions, and anti-stub audit results
+- every completed critical subbundle has an artifact-backed `proof/SBxx/manifest.md` and `proof/SBxx/semantic-invariants.md` or `.json` with changed-file hashes, command transcripts, failing-first and passing proof where behavior changed, source assertions, invariant IDs, and anti-stub audit results
+- critical proof uses portable `repo://` and `bundle://` references so moved bundles, WSL, Linux, CI, and Windows checks can resolve the same evidence
 - code changes, tests, browser or host proof, screenshots, and execution report rows support the same conclusion
 - raw feedback has a note-by-note closure result of `Solved`, `Partially solved`, or `Not solved`
 - unresolved gaps are represented as blockers, reopened work, or explicit follow-up subbundles, not hidden as residual-risk prose
@@ -40,7 +41,7 @@ The workflow is complete only when all of these are true:
 7. Before each subbundle, run the entry gate with `candoitall-subbundle-validator`.
 8. After each subbundle, record proof and run the closure gate with `candoitall-subbundle-validator`.
 9. Reopen earlier work when later observations weaken a prerequisite or critical foundation.
-10. Before a critical subbundle is marked complete, verify that every path referenced by its proof manifest exists and that required failing-first, passing, source-assertion, and anti-stub transcripts are present.
+10. Before a critical subbundle is marked complete, verify that every path referenced by its proof manifest exists, that the semantic invariant contract exists, and that required failing-first, passing, source-assertion, and anti-stub transcripts are present.
 11. After implementation, audit the original raw notes and source artifacts one by one.
 12. Run the final closure gate with `candoitall-bundle-validator` and `scripts/validate_bundle.py --stage completed`.
 13. Synchronize root status, subbundle status, execution report, analytics rows, proof paths, residual risks, and follow-up items.

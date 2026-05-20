@@ -1,0 +1,8 @@
+Command: rg -n --ignore-case -- "TODO|NotImplemented|raise NotImplementedError|hardcoded-for-test|stubbed|fake implementation" <changed SB02 test files>
+WorkingDirectory: C:\repositories\CanDoItAll
+Invariant: SB02-FAILING-CORPUS-01
+Invariant: SB02-NO-PRODUCTION-02
+Test: SemanticInvariant_AntiStubAudit
+RgExitCode: 1
+AntiStubFindings: None
+ExitCode: 0

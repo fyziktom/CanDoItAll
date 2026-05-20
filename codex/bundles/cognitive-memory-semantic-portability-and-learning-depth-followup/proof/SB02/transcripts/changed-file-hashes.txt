@@ -1,0 +1,58 @@
+Command: compute before and after SHA-256 for SB02 changed test and proof files
+WorkingDirectory: C:\repositories\CanDoItAll
+Invariant: SB02-FAILING-CORPUS-01
+Invariant: SB02-NO-PRODUCTION-02
+Test: SemanticInvariant_ChangedFilesHaveSha256Hashes
+File: repo://tests/CanDoItAll.Tests.Unit/CognitiveMemoryQualityFoundationTests.cs
+Before SHA-256: a6e7dc7a228fd26303e7113830a31b0b6bae56ad89e0b1611b6e15664f640ed3
+After SHA-256: b52c8d7783db16267cd8721922e5108a95e248f64df46905e11f074bf78feb96
+File: repo://tests/CanDoItAll.Tests.Unit/CognitiveMemoryAdvancedServicesTests.cs
+Before SHA-256: 8da55d5b8b7d61a3aaf3bc720085d7872957e8a4e15cc40be098c4de93db29ad
+After SHA-256: 48450dc32a9209e5b2051b0e5ff8bf58c077697aa4a743328c3f76382fbaaac1
+File: repo://codex/bundles/cognitive-memory-semantic-portability-and-learning-depth-followup/README.md
+Before SHA-256: 912e6222ad5d0fbfef78a9dc47c80f24ef3bc9195ae2c230fe80a647718528ad
+After SHA-256: ef8518c2880e07402863468ffb46a69a3f9ecb9daa4d21fdb443be98fa051b06
+File: repo://codex/bundles/cognitive-memory-semantic-portability-and-learning-depth-followup/reviews/01-execution-report.md
+Before SHA-256: 42f05145a0b4159e062bb203beff295077d30670f9bc78d99c86ea7049db90eb
+After SHA-256: b408a0d038582981739d3707ce8ff88bdc1ba9421af1c0c6d31796179880ed5b
+File: repo://codex/bundles/cognitive-memory-semantic-portability-and-learning-depth-followup/subbundles/02-failing-first-adversarial-corpus-for-remaining-gaps/README.md
+Before SHA-256: 7caf715fb9248ebfb3e1575f368a43cc1e4177e578788c20d4ed6ba9bc5ce673
+After SHA-256: e4888a1bfea91949cb79fba11511bdec81c6060f1383bc78d7789e76df56a4b6
+File: repo://codex/bundles/cognitive-memory-semantic-portability-and-learning-depth-followup/proof/SB02/semantic-invariants.md
+Before SHA-256: <new file>
+After SHA-256: bf84704baef30f801314da08eb71a5011185bf7950e7e389535da1315931c20f
+File: repo://codex/bundles/cognitive-memory-semantic-portability-and-learning-depth-followup/proof/SB02/transcripts/failing-first-semantic-corpus.txt
+Before SHA-256: <new file>
+After SHA-256: 3d6a7ade749911b91be3b4b9fd4d87049afa651a7c966d86feefdaedc5f0bb28
+File: repo://codex/bundles/cognitive-memory-semantic-portability-and-learning-depth-followup/proof/SB02/transcripts/production-diff-proof.txt
+Before SHA-256: <new file>
+After SHA-256: bc4d067065986fb4e9d92404520e9f4eb5aa19ba2a930470bf237296b8344408
+File: repo://codex/bundles/cognitive-memory-semantic-portability-and-learning-depth-followup/proof/SB02/transcripts/test-source-assertions.txt
+Before SHA-256: <new file>
+After SHA-256: fd12499dc5c65ee4b3234f1e079637b7a59d0a0d0a1135d2a41eddbf7e60ee8d
+File: repo://codex/bundles/cognitive-memory-semantic-portability-and-learning-depth-followup/proof/SB02/transcripts/anti-stub-audit.txt
+Before SHA-256: <new file>
+After SHA-256: 990dc6edf70a7b211077c85392393804b9486b80d776bad302a403e607967c4d
+File: repo://codex/bundles/cognitive-memory-semantic-portability-and-learning-depth-followup/proof/SB03/semantic-invariants.md
+Before SHA-256: <new file>
+After SHA-256: a6d4078e732376bc020ea75ba306735ce17e4fe4a357df21f02df55192545635
+File: repo://codex/bundles/cognitive-memory-semantic-portability-and-learning-depth-followup/proof/SB04/semantic-invariants.md
+Before SHA-256: <new file>
+After SHA-256: cc3262a8d1eeea4d6e6ca27be4b7398b7481d133cf21a6453b31ba586a79a0c1
+File: repo://codex/bundles/cognitive-memory-semantic-portability-and-learning-depth-followup/proof/SB05/semantic-invariants.md
+Before SHA-256: <new file>
+After SHA-256: 074e0db1b051834ca1242cdffcf5a49cfd594652dfdd08616156693eaf86da92
+File: repo://codex/bundles/cognitive-memory-semantic-portability-and-learning-depth-followup/proof/SB06/semantic-invariants.md
+Before SHA-256: <new file>
+After SHA-256: 8bbadcddf5c6bc72d8223f0b7cc6a78d8ea187b5cdc81e362e410ddada448e07
+File: repo://codex/bundles/cognitive-memory-semantic-portability-and-learning-depth-followup/proof/SB07/semantic-invariants.md
+Before SHA-256: <new file>
+After SHA-256: 05492c4821dbbc042ecf39e4e32e8c13a81de29c7a94f034f7afe75939cb116c
+File: repo://codex/bundles/cognitive-memory-semantic-portability-and-learning-depth-followup/proof/SB08/semantic-invariants.md
+Before SHA-256: <new file>
+After SHA-256: 773fca7258e96bf276ecea16fb48e27bb23c58541cca1f33e4386fdfecde3402
+File: repo://codex/bundles/cognitive-memory-semantic-portability-and-learning-depth-followup/proof/SB09/semantic-invariants.md
+Before SHA-256: <new file>
+After SHA-256: 3be309928f7425433927552e76096e7909392df8e9ada4d697e71f73328aef3e
+ChangedFileCount: 17
+ExitCode: 0

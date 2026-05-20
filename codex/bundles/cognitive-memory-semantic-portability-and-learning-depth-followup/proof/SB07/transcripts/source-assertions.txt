@@ -1,0 +1,93 @@
+Command: transcript metadata repair for .\codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup\proof\SB07\transcripts\source-assertions.txt
+src\CanDoItAll.Modules.CognitiveMemory\Recall\CognitiveMemoryRecallDataLoading.cs:36:        return ExcludeActiveProfessorAnchorRecords(dbContext, request, query);
+src\CanDoItAll.Modules.CognitiveMemory\Recall\CognitiveMemoryRecallDataLoading.cs:63:        return ExcludeActiveProfessorAnchorRecords(dbContext, request, query);
+src\CanDoItAll.Modules.CognitiveMemory\Recall\CognitiveMemoryRecallDataLoading.cs:66:    private static IQueryable<CognitiveMemoryRecord> ExcludeActiveProfessorAnchorRecords(
+src\CanDoItAll.Modules.CognitiveMemory\Recall\CognitiveMemoryRecallDataLoading.cs:71:        if (ShouldIncludeActiveProfessorAnchors(request))
+src\CanDoItAll.Modules.CognitiveMemory\Recall\CognitiveMemoryRecallDataLoading.cs:81:                (capture.AnchorState == CognitiveMemoryProfessorAnchorState.Active ||
+src\CanDoItAll.Modules.CognitiveMemory\Recall\CognitiveMemoryRecallDataLoading.cs:87:    private static bool ShouldIncludeActiveProfessorAnchors(CognitiveMemoryRecallRequest request)
+src\CanDoItAll.Modules.CognitiveMemory\Recall\CognitiveMemoryRecallDataLoading.cs:89:           request.Metadata.TryGetValue("includeProfessorAnchors", out var value) &&
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamValidator.cs:51:        var sourceRecordSourceItemIds = await dbContext.Set<CognitiveMemorySourceLinkRecord>()
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamValidator.cs:57:        var allSourceItemIds = sourceItemIds
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamValidator.cs:58:            .Concat(sourceRecordSourceItemIds)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamValidator.cs:64:                 capture.SourceItemId != null && allSourceItemIds.Contains(capture.SourceItemId.Value) ||
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamValidator.cs:66:                (capture.AnchorState == CognitiveMemoryProfessorAnchorState.Active ||
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamValidator.cs:73:        foreach (var sourceAnchor in sourceAnchors.Where(anchor => anchor.AnchorState == CognitiveMemoryProfessorAnchorState.Active))
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryAdvancedEntities.cs:236:    public CognitiveMemoryProfessorAnchorState AnchorState { get; set; } = CognitiveMemoryProfessorAnchorState.NotProfessorAnchor;
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryRecallOrchestratorTests.cs:107:    public async Task RecallAsync_ExcludesActiveProfessorAnchorMemoryByDefault()
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryRecallOrchestratorTests.cs:134:            AnchorState = CognitiveMemoryProfessorAnchorState.Active,
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryRecallOrchestratorTests.cs:156:                ["includeProfessorAnchors"] = "true"
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryCuratorConversationService.cs:130:                ExplicitCaptureKind: request.ExplicitCaptureKind,
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryCuratorConversationService.cs:521:            request.ExplicitCaptureKind));
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryCuratorConversationService.cs:712:                ? CognitiveMemoryProfessorAnchorState.NotProfessorAnchor
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryCuratorConversationService.cs:713:                : CognitiveMemoryProfessorAnchorState.Active,
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryCuratorConversationService.cs:816:        if (request.ExplicitCaptureKind is { } explicitKind)
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryCuratorConversationService.cs:1095:                $"Lifecycle: {CognitiveMemoryProfessorAnchorState.Active}",
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorExtraction.cs:31:    CognitiveMemoryCuratorCaptureKind? ExplicitCaptureKind = null);
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorExtraction.cs:90:        if (LooksLikeQuestionOnly(userMessage) && !HasQuestionAnswerTeachingContext(request.PreviousTurns))
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorExtraction.cs:103:        var sourceUtterances = ResolveSourceUtterances(request.PreviousTurns, userMessage, curatorResponse);
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorExtraction.cs:104:        if (!HasProfessorTeachingIntent(request, conversationText, sourceUtterances))
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorExtraction.cs:110:        var claims = ExtractClaims(userMessage, curatorResponse, sourceUtterances, captureKind);
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorExtraction.cs:118:            ExtractTargetScope(userMessage),
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorExtraction.cs:119:            ExtractTargetScope(curatorResponse),
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorExtraction.cs:120:            ExtractTargetScope(sourceUtterances.LastOrDefault() ?? string.Empty));
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorExtraction.cs:126:        var misconception = ExtractMisconception(conversationText);
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorExtraction.cs:133:            sourceUtterances,
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorExtraction.cs:159:    private static IReadOnlyList<CognitiveMemoryProfessorAnchorClaim> ExtractClaims(
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorExtraction.cs:162:        IReadOnlyList<string> sourceUtterances,
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorExtraction.cs:166:        foreach (var sentence in SplitSentences(string.Join(" ", sourceUtterances.Append(userMessage).Append(curatorResponse))))
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorExtraction.cs:200:    private static string ExtractTargetScope(string text)
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorExtraction.cs:232:    private static string ExtractMisconception(string text)
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorExtraction.cs:274:    private static bool HasProfessorTeachingIntent(
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorExtraction.cs:277:        IReadOnlyList<string> sourceUtterances)
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorExtraction.cs:279:        if (HasQuestionAnswerTeachingContext(request.PreviousTurns) &&
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorExtraction.cs:285:        if (request.ExplicitCaptureKind == CognitiveMemoryCuratorCaptureKind.NewKnowledge &&
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorExtraction.cs:293:                sourceUtterances.Any(utterance => LooksLikeQuestionOnly(utterance)));
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorExtraction.cs:296:    private static bool HasQuestionAnswerTeachingContext(IReadOnlyList<CognitiveMemoryCuratorTurnRecord> previousTurns)
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorExtraction.cs:301:    private static IReadOnlyList<string> ResolveSourceUtterances(
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryAdvancedContracts.cs:92:    NotProfessorAnchor = 5
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryAdvancedContracts.cs:470:    CognitiveMemoryCuratorCaptureKind? ExplicitCaptureKind = null,
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryAdvancedContracts.cs:486:    CognitiveMemoryCuratorCaptureKind? ExplicitCaptureKind = null,
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:263:    public async Task CuratorCapture_NewKnowledgeAppliesTrustedMemoryWithoutReview()
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:279:            ExplicitCaptureKind: CognitiveMemoryCuratorCaptureKind.NewKnowledge));
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:292:        Assert.Equal(CognitiveMemoryProfessorAnchorState.NotProfessorAnchor, persistedCapture.AnchorState);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:328:        Assert.Equal(CognitiveMemoryProfessorAnchorState.Active, capture.AnchorState);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:338:    public async Task CuratorCapture_ExplicitProfessorExamplesAndCounterexamplesCreateAnchor()
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:351:            "Store this: Example: production rollback approval is the release-owner gate. Counterexample: health-check recovery is not approval.",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:354:            ExplicitCaptureKind: CognitiveMemoryCuratorCaptureKind.NewKnowledge));
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:359:        Assert.Equal(CognitiveMemoryProfessorAnchorState.Active, capture.AnchorState);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:360:        Assert.Equal(CognitiveMemoryProfessorAnchorState.Active, persistedCapture.AnchorState);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:362:        Assert.Contains("Counterexample", persistedCapture.Summary, StringComparison.OrdinalIgnoreCase);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:367:    public async Task SemanticInvariant_CuratorCaptureNaturalProfessorQuestionAnswerAndShortCorrectionCreateAnchors()
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:390:        Assert.Equal(CognitiveMemoryProfessorAnchorState.Active, capture.AnchorState);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:412:            ExplicitCaptureKind: CognitiveMemoryCuratorCaptureKind.NewKnowledge));
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:454:            ExplicitCaptureKind: CognitiveMemoryCuratorCaptureKind.NewKnowledge));
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:487:            ExplicitCaptureKind: CognitiveMemoryCuratorCaptureKind.NewKnowledge));
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:515:            ExplicitCaptureKind: CognitiveMemoryCuratorCaptureKind.NewKnowledge));
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:555:            ExplicitCaptureKind: CognitiveMemoryCuratorCaptureKind.NewKnowledge));
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:595:            ExplicitCaptureKind: CognitiveMemoryCuratorCaptureKind.NewKnowledge));
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:643:            ExplicitCaptureKind: CognitiveMemoryCuratorCaptureKind.NewKnowledge));
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:669:        Assert.Equal(CognitiveMemoryProfessorAnchorState.Active, persistedCapture.AnchorState);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:690:            ExplicitCaptureKind: CognitiveMemoryCuratorCaptureKind.NewKnowledge));
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:692:        Assert.Equal(CognitiveMemoryProfessorAnchorState.Active, capture.AnchorState);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:737:            ExplicitCaptureKind: CognitiveMemoryCuratorCaptureKind.NewKnowledge));
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:841:            Assert.Equal(CognitiveMemoryProfessorAnchorState.Active, persistedCapture.AnchorState);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:1058:            ExplicitCaptureKind: CognitiveMemoryCuratorCaptureKind.Correction));
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:1114:            ExplicitCaptureKind: CognitiveMemoryCuratorCaptureKind.Correction,
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:1170:            ExplicitCaptureKind: CognitiveMemoryCuratorCaptureKind.Correction));
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:1241:            ExplicitCaptureKind: CognitiveMemoryCuratorCaptureKind.NewKnowledge));
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:1291:            ExplicitCaptureKind: CognitiveMemoryCuratorCaptureKind.NewKnowledge));
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:1295:            ExplicitCaptureKind: CognitiveMemoryCuratorCaptureKind.NewKnowledge));
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:1341:            ExplicitCaptureKind: CognitiveMemoryCuratorCaptureKind.NewKnowledge));
+ExitCode: 0
+Invariant: SB07-NATURAL-PROFESSOR-01
+Invariant: SB07-EXPLICIT-ANCHOR-02
+Invariant: SB07-RECALL-ANCHOR-VISIBILITY-03
+Test: CuratorCapture_NaturalProfessorGuidanceCreatesStructuredTemporaryAnchor
+Test: ProfessorAnchor_ActiveAnchorSourceMovesDreamCandidateToComparisonReview
+Test: ProfessorAnchor_AssimilatesAndFadesOnlyAfterDerivedMemoryExists
+Test: ProfessorAnchor_AssimilationRequiresMasteryEvidenceBeyondIndependentSupport
+Test: ProfessorAnchor_DirectCaptureMemoryCannotAssimilateItsOwnAnchor
+Test: ProfessorAnchor_RejectsDescendantOnlyAggregateSupport
+Test: ProfessorAnchor_FadeDemotesDirectCaptureMemory
+Test: ProfessorAnchor_ScanAssimilatesAndFadesIntegratedMasteryEvidence
+Test: ReferenceResolver_ExpandsFadedProfessorAnchorLineage

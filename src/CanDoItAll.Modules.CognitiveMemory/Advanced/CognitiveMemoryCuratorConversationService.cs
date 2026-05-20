@@ -207,7 +207,7 @@ public sealed class CognitiveMemoryCuratorConversationService(
         await dbContext.SaveChangesAsync(cancellationToken);
 
         var captureKind = ResolveCaptureKind(request, includedMemoryRecordIds);
-        var professorAnchor = captureKind is null
+        var professorAnchor = captureKind is null or CognitiveMemoryCuratorCaptureKind.NewKnowledge
             ? await ExtractProfessorAnchorAsync(dbContext, session, turn, request, cancellationToken)
             : null;
         captureKind ??= professorAnchor is null ? null : CognitiveMemoryCuratorCaptureKind.NewKnowledge;
@@ -506,11 +506,6 @@ public sealed class CognitiveMemoryCuratorConversationService(
         CognitiveMemoryCuratorTurnCaptureRequest request,
         CancellationToken cancellationToken)
     {
-        if (request.ExplicitCaptureKind is not null)
-        {
-            return null;
-        }
-
         var previousTurns = await dbContext.Set<CognitiveMemoryCuratorTurnRecord>()
             .AsNoTracking()
             .Where(item => item.CuratorSessionId == session.Id && item.Sequence < turn.Sequence)
@@ -522,7 +517,8 @@ public sealed class CognitiveMemoryCuratorConversationService(
             turn.UserMessage,
             turn.CuratorResponse,
             previousTurns,
-            request.CaptureScope));
+            request.CaptureScope,
+            request.ExplicitCaptureKind));
     }
 
     private async ValueTask<CognitiveMemoryCuratorCapturedImprovementRecord> CreateTrustedImprovementAsync(
@@ -712,7 +708,9 @@ public sealed class CognitiveMemoryCuratorConversationService(
             AffectedMemoryRecordIdsJson = SerializeGuidList(affectedMemoryRecordIds),
             TargetClaimIdsJson = SerializeGuidList(targetResolution.TargetClaimIds),
             TargetingStatus = targetResolution.Status,
-            AnchorState = CognitiveMemoryProfessorAnchorState.Active,
+            AnchorState = professorAnchor is null
+                ? CognitiveMemoryProfessorAnchorState.NotProfessorAnchor
+                : CognitiveMemoryProfessorAnchorState.Active,
             SourceItemId = sourceItem.Id,
             EvidenceAnchorId = evidenceAnchor.Id,
             MutationCommandId = mutationCommand.Id,

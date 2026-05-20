@@ -32,22 +32,49 @@ public sealed class CognitiveMemoryDreamValidator(
             .Where(sourceMap => sourceMap.AggregateCandidateId == candidate.Id)
             .ToListAsync(cancellationToken);
         var sourceRecordIds = sourceMaps.Select(sourceMap => sourceMap.SourceMemoryRecordId).Distinct().ToArray();
+        var sourceItemIds = sourceMaps
+            .Select(sourceMap => sourceMap.SourceItemId)
+            .Where(id => id is not null)
+            .Select(id => id!.Value)
+            .Distinct()
+            .ToArray();
+        var evidenceAnchorIds = sourceMaps
+            .Select(sourceMap => sourceMap.EvidenceAnchorId)
+            .Where(id => id is not null)
+            .Select(id => id!.Value)
+            .Distinct()
+            .ToArray();
         var sourceRecords = await dbContext.Set<CognitiveMemoryRecord>()
             .AsNoTracking()
             .Where(record => sourceRecordIds.Contains(record.Id))
             .ToListAsync(cancellationToken);
+        var sourceRecordSourceItemIds = await dbContext.Set<CognitiveMemorySourceLinkRecord>()
+            .AsNoTracking()
+            .Where(link => sourceRecordIds.Contains(link.MemoryRecordId))
+            .Select(link => link.SourceItemId)
+            .Distinct()
+            .ToArrayAsync(cancellationToken);
+        var allSourceItemIds = sourceItemIds
+            .Concat(sourceRecordSourceItemIds)
+            .Distinct()
+            .ToArray();
         var sourceAnchors = await dbContext.Set<CognitiveMemoryCuratorCapturedImprovementRecord>()
             .Where(capture =>
-                capture.AppliedMemoryRecordId != null &&
-                sourceRecordIds.Contains(capture.AppliedMemoryRecordId.Value) &&
+                (capture.AppliedMemoryRecordId != null && sourceRecordIds.Contains(capture.AppliedMemoryRecordId.Value) ||
+                 capture.SourceItemId != null && allSourceItemIds.Contains(capture.SourceItemId.Value) ||
+                 capture.EvidenceAnchorId != null && evidenceAnchorIds.Contains(capture.EvidenceAnchorId.Value)) &&
                 (capture.AnchorState == CognitiveMemoryProfessorAnchorState.Active ||
                  capture.AnchorState == CognitiveMemoryProfessorAnchorState.Comparing))
             .ToListAsync(cancellationToken);
+        var activeSourceAnchors = sourceAnchors
+            .Where(anchor => anchor.AnchorState == CognitiveMemoryProfessorAnchorState.Active)
+            .ToArray();
         var unassimilatedProfessorAnchorSourceMemoryIds = sourceAnchors
+            .Where(capture => capture.AppliedMemoryRecordId != null)
             .Select(capture => capture.AppliedMemoryRecordId!.Value)
             .Distinct()
             .ToHashSet();
-        foreach (var sourceAnchor in sourceAnchors.Where(anchor => anchor.AnchorState == CognitiveMemoryProfessorAnchorState.Active))
+        foreach (var sourceAnchor in activeSourceAnchors)
         {
             sourceAnchor.AnchorState = CognitiveMemoryProfessorAnchorState.Comparing;
             sourceAnchor.ConcurrencyToken = Guid.NewGuid();
@@ -146,6 +173,35 @@ public sealed class CognitiveMemoryDreamValidator(
         };
         candidate.UpdatedAtUtc = nowUtc;
         candidate.ConcurrencyToken = Guid.NewGuid();
+        foreach (var sourceAnchor in activeSourceAnchors)
+        {
+            CognitiveMemoryProfessorAnchorTransitionAudit.AddTransition(
+                dbContext,
+                sourceAnchor,
+                CognitiveMemoryProfessorAnchorState.Active,
+                CognitiveMemoryProfessorAnchorState.Comparing,
+                nowUtc,
+                $"Dream aggregate candidate '{candidate.Id:D}' opened professor comparison review.",
+                derivedMemoryRecordId: candidate.MemoryRecordId);
+        }
+
+        if (decision == CognitiveMemoryDreamValidationDecision.Rejected)
+        {
+            foreach (var sourceAnchor in activeSourceAnchors)
+            {
+                sourceAnchor.AnchorState = CognitiveMemoryProfessorAnchorState.Active;
+                sourceAnchor.ConcurrencyToken = Guid.NewGuid();
+                CognitiveMemoryProfessorAnchorTransitionAudit.AddTransition(
+                    dbContext,
+                    sourceAnchor,
+                    CognitiveMemoryProfessorAnchorState.Comparing,
+                    CognitiveMemoryProfessorAnchorState.Active,
+                    nowUtc,
+                    $"Dream aggregate candidate '{candidate.Id:D}' was rejected, so comparison returned to the active professor anchor.",
+                    derivedMemoryRecordId: candidate.MemoryRecordId);
+            }
+        }
+
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return new CognitiveMemoryDreamValidationResult(request.AggregateCandidateId, decision, issues, reviewItemId);
@@ -177,12 +233,13 @@ public sealed class CognitiveMemoryDreamValidator(
                 continue;
             }
 
-            if (!IsClaimSupportedBySourceMaps(claim, claimSourceMaps, sourceRecordsById))
+            var supportResult = ValidateClaimSupport(claim, claimSourceMaps, sourceRecordsById);
+            if (!supportResult.Supported)
             {
                 issues.Add(new CognitiveMemoryDreamValidationIssue(
                     CognitiveMemoryDreamValidationIssueKind.UnsupportedClaim,
                     CognitiveMemoryRiskLevel.Medium,
-                    $"Aggregate claim '{claim.Id:D}' is not entailed by its mapped source memories."));
+                    $"Aggregate claim '{claim.Id:D}' is not entailed by its mapped source memories: {supportResult.Reason}"));
             }
         }
 
@@ -285,7 +342,7 @@ public sealed class CognitiveMemoryDreamValidator(
         }
 
         return issues
-            .GroupBy(issue => issue.IssueKind)
+            .GroupBy(issue => $"{issue.IssueKind}:{issue.Message}", StringComparer.Ordinal)
             .Select(group => group.First())
             .ToArray();
     }
@@ -347,14 +404,14 @@ public sealed class CognitiveMemoryDreamValidator(
         return false;
     }
 
-    private bool IsClaimSupportedBySourceMaps(
+    private CognitiveMemoryDreamEntailmentResult ValidateClaimSupport(
         CognitiveMemoryDreamAggregateClaimRecord claim,
         IReadOnlyList<CognitiveMemoryDreamAggregateClaimSourceMapRecord> sourceMaps,
         IReadOnlyDictionary<Guid, CognitiveMemoryRecord> sourceRecordsById)
     {
         if (sourceMaps.Any(sourceMap => sourceMap.Direction != CognitiveMemoryEvidenceDirection.Supports))
         {
-            return false;
+            return new CognitiveMemoryDreamEntailmentResult(false, "At least one mapped source is not marked as supporting evidence.");
         }
 
         var sourceTexts = sourceMaps
@@ -367,7 +424,7 @@ public sealed class CognitiveMemoryDreamValidator(
             })
             .Where(text => !string.IsNullOrWhiteSpace(text))
             .ToArray();
-        return entailmentValidator.Validate(new CognitiveMemoryDreamEntailmentRequest(claim.ClaimText, sourceTexts)).Supported;
+        return entailmentValidator.Validate(new CognitiveMemoryDreamEntailmentRequest(claim.ClaimText, sourceTexts));
     }
 
     private static bool IsRepresentativeCopyAggregate(

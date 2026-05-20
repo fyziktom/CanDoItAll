@@ -21,6 +21,14 @@ public enum CognitiveMemoryQualityClusterMemberKind
     SourceItem = 1
 }
 
+public enum CognitiveMemoryClusterPlanningScope
+{
+    ProjectOnly = 0,
+    Global = 1,
+    CrossProject = 2,
+    PolicyConstrainedCrossProject = 3
+}
+
 public enum CognitiveMemoryQualityClusterReadiness
 {
     Unknown = 0,
@@ -62,6 +70,17 @@ public enum CognitiveMemoryDreamValidationIssueKind
     WeakSourceIndependence = 10,
     DuplicateAggregate = 11,
     UnsupportedClaim = 12
+}
+
+public enum CognitiveMemoryRecallStatementPlanKind
+{
+    Unknown = 0,
+    Answer = 1,
+    Action = 2,
+    Caveat = 3,
+    Conflict = 4,
+    MissingEvidence = 5,
+    ReferenceHint = 6
 }
 
 public readonly record struct CognitiveMemoryQualityClusterId
@@ -179,13 +198,16 @@ public sealed record CognitiveMemoryQualityDiagnosticsReport(
 public sealed record CognitiveMemoryClusterKey(
     CognitiveMemoryQualityClusterKeyFamily Family,
     string Key,
-    string DisplayText);
+    string DisplayText,
+    int SupportCount = 0,
+    double CoverageRatio = 0);
 
 public sealed record CognitiveMemoryClusterMember(
     CognitiveMemoryQualityClusterMemberKind MemberKind,
     CognitiveMemoryRecordId? MemoryRecordId,
     CognitiveMemorySourceItemId? SourceItemId,
     CognitiveMemoryEvidenceAnchorId? EvidenceAnchorId,
+    Guid? ProjectId,
     string Title,
     CognitiveMemoryAccessLevel AccessLevel,
     CognitiveMemoryRiskLevel RiskLevel,
@@ -201,7 +223,9 @@ public sealed record CognitiveMemoryClusterQualityMetrics(
     double GuardPenaltyScore,
     double CompositeScore,
     bool AggregateEligible,
-    string EligibilityReason);
+    string EligibilityReason,
+    double PrimaryKeyCoverageRatio = 0,
+    int LowCoverageKeyCount = 0);
 
 public sealed record CognitiveMemoryClusterPlan(
     CognitiveMemoryQualityClusterId ClusterId,
@@ -222,7 +246,12 @@ public sealed record CognitiveMemoryClusterPlannerMetrics(
     int ClustersCreated,
     int MembersLinked,
     int ContradictionRelationsObserved,
-    TimeSpan Elapsed);
+    TimeSpan Elapsed,
+    int ExactCandidatePairsGenerated = 0,
+    int ApproximateCandidatePairsGenerated = 0,
+    int SkippedCandidatePairs = 0,
+    int PolicyBlockedCandidatePairs = 0,
+    bool CandidatePairBudgetReached = false);
 
 public sealed record CognitiveMemoryClusterPlanningRequest
 {
@@ -232,7 +261,8 @@ public sealed record CognitiveMemoryClusterPlanningRequest
         IReadOnlyList<CognitiveMemoryQualityClusterKeyFamily>? keyFamilies = null,
         int minMembers = 2,
         int maxRecords = 500,
-        bool persistClusters = true)
+        bool persistClusters = true,
+        CognitiveMemoryClusterPlanningScope? scope = null)
     {
         if (minMembers < 2)
         {
@@ -246,6 +276,7 @@ public sealed record CognitiveMemoryClusterPlanningRequest
 
         ProjectId = projectId;
         PolicyContext = policyContext;
+        Scope = ResolveScope(projectId, scope);
         KeyFamilies = keyFamilies is null || keyFamilies.Count == 0
             ? Enum.GetValues<CognitiveMemoryQualityClusterKeyFamily>()
             : keyFamilies.Distinct().ToArray();
@@ -258,6 +289,8 @@ public sealed record CognitiveMemoryClusterPlanningRequest
 
     public CognitiveMemoryPolicyContext PolicyContext { get; }
 
+    public CognitiveMemoryClusterPlanningScope Scope { get; }
+
     public IReadOnlyList<CognitiveMemoryQualityClusterKeyFamily> KeyFamilies { get; }
 
     public int MinMembers { get; }
@@ -265,6 +298,30 @@ public sealed record CognitiveMemoryClusterPlanningRequest
     public int MaxRecords { get; }
 
     public bool PersistClusters { get; }
+
+    private static CognitiveMemoryClusterPlanningScope ResolveScope(
+        Guid? projectId,
+        CognitiveMemoryClusterPlanningScope? scope)
+    {
+        var resolved = scope ?? (projectId is null
+            ? CognitiveMemoryClusterPlanningScope.Global
+            : CognitiveMemoryClusterPlanningScope.ProjectOnly);
+        if (resolved == CognitiveMemoryClusterPlanningScope.ProjectOnly && projectId is null)
+        {
+            throw new ArgumentException("Project-only cluster planning requires a project id.", nameof(projectId));
+        }
+
+        if (IsCrossProjectScope(resolved) && projectId is not null)
+        {
+            throw new ArgumentException("Cross-project cluster planning must not be constrained to a single project id.", nameof(scope));
+        }
+
+        return resolved;
+    }
+
+    private static bool IsCrossProjectScope(CognitiveMemoryClusterPlanningScope scope)
+        => scope is CognitiveMemoryClusterPlanningScope.CrossProject
+            or CognitiveMemoryClusterPlanningScope.PolicyConstrainedCrossProject;
 }
 
 public sealed record CognitiveMemoryClusterPlanningResult(
@@ -404,6 +461,7 @@ public sealed record CognitiveMemoryAggregateMemoryApplyResult(
 public sealed record CognitiveMemorySynthesizedRecallStatement(
     CognitiveMemorySynthesizedStatementId StatementId,
     string Text,
+    CognitiveMemoryRecallStatementPlanKind PlanKind,
     IReadOnlyList<CognitiveMemoryClaimId> AggregateClaimIds,
     IReadOnlyList<CognitiveMemoryRecallSourceRef> SourceRefs);
 

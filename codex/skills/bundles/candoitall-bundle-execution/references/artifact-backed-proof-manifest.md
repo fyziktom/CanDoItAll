@@ -7,6 +7,7 @@ Critical subbundles must leave machine-checkable proof artifacts, not only execu
 Create `proof/SBxx/manifest.md` before closing each critical subbundle. The manifest must include:
 
 - subbundle id, status, owned requirements, and raw notes;
+- a portable semantic invariant contract path, `bundle://proof/SBxx/semantic-invariants.md` or `.json`;
 - changed-file manifest with before and after SHA-256 hashes for source, test, skill, and bundle files touched by the subbundle;
 - command transcript paths for every required validation command;
 - failing-first transcript paths for adversarial tests that must fail before production changes;
@@ -16,6 +17,25 @@ Create `proof/SBxx/manifest.md` before closing each critical subbundle. The mani
 - browser, screenshot, or host proof paths when the subbundle changes user-visible or host-visible behavior;
 - downstream smoke proof when the subbundle is a critical foundation for later phases;
 - red-team or verifier artifact path for final closure subbundles.
+
+Use `repo://relative/path` for repository files and `bundle://relative/path` for bundle-owned proof artifacts. Native absolute paths may appear as local context, but a critical manifest must not rely on machine-specific absolute paths as its only durable references.
+
+## Semantic Invariant Contract
+
+Create `proof/SBxx/semantic-invariants.md` or `.json` for each critical subbundle. Each invariant must include:
+
+- invariant id;
+- source raw note;
+- expected behavior;
+- disallowed shallow implementation;
+- failing-first test and transcript;
+- passing test and transcript;
+- changed source files and hashes;
+- production assertions;
+- red-team negative case;
+- downstream dependency check.
+
+The invariant id must appear in at least one command transcript cited by the manifest so the completed-stage validator can prove that the transcript is tied to the invariant contract.
 
 For skill-installation subbundles, the manifest must also include the repository skill path, active Codex skill-root path, and before or after SHA-256 hashes for both copies. A subbundle that changes skill instructions is not complete until the active skill root has been synchronized and reopened by the agent.
 

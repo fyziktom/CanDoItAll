@@ -16,7 +16,7 @@ public static class CognitiveMemoryModuleServiceCollectionExtensions
     public static IServiceCollection AddCognitiveMemoryModule(this IServiceCollection services)
     {
         services.TryAddScoped<ICognitiveMemoryAccessPolicy, CognitiveMemoryDefaultAccessPolicy>();
-        services.TryAddSingleton(CognitiveMemoryQualityAlgorithmOptions.Current);
+        services.TryAddSingleton<CognitiveMemoryQualityAlgorithmOptions>();
         services.TryAddSingleton<ICognitiveMemoryRecordValidator, CognitiveMemoryRecordValidator>();
         services.TryAddSingleton<ICognitiveMemoryScoreSpaceRegistry, CognitiveMemoryScoreSpaceRegistry>();
         services.TryAddSingleton<ICognitiveMemoryScoreGeometryDriver, CognitiveMemoryScoreGeometryDriver>();
@@ -80,8 +80,10 @@ public static class CognitiveMemoryModuleServiceCollectionExtensions
             provider.GetRequiredService<IDbContextFactory<AppDbContext>>(),
             provider.GetRequiredService<IClock>(),
             provider.GetRequiredService<ICognitiveMemoryClusterKeyExtractor>(),
-            provider.GetRequiredService<ICognitiveMemoryCandidatePairSelector>()));
+            provider.GetRequiredService<ICognitiveMemoryCandidatePairSelector>(),
+            provider.GetRequiredService<CognitiveMemoryQualityAlgorithmOptions>()));
         services.TryAddSingleton<ICognitiveMemoryDreamClaimSynthesizer>(CognitiveMemoryDreamClaimSynthesizer.Instance);
+        services.TryAddSingleton<ICognitiveMemoryDreamModeClusterSelector>(CognitiveMemoryDreamModeClusterSelector.Instance);
         services.TryAddSingleton<ICognitiveMemoryDreamEntailmentValidator>(CognitiveMemoryDreamEntailmentValidator.Instance);
         services.TryAddScoped<ICognitiveMemoryDreamValidator, CognitiveMemoryDreamValidator>();
         services.TryAddScoped<ICognitiveMemoryDreamConsolidationService, CognitiveMemoryDreamConsolidationService>();

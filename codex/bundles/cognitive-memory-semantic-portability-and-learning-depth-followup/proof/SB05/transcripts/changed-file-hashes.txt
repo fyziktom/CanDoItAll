@@ -1,0 +1,19 @@
+Command: transcript metadata repair for .\codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup\proof\SB05\transcripts\changed-file-hashes.txt
+
+Path                                                                                                                                                        SHA256
+----                                                                                                                                                        ------
+codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup\README.md                                                                   a375d8fbfaec0b3188e55751ad580e406995ca1fedadf566d3e07cb3bb410766
+codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup\reviews\01-execution-report.md                                              3c90f4489db6691001a57549c53bc7e017ba2bd5d5fcfceb3c86b7b8eade911b
+codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup\subbundles\05-claim-aware-dream-grouping-and-structured-synthesis\README.md ed382046ae1bfc68cd28e9919456a4e180a553146921b05832c867810f8d5216
+codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup\proof\SB05\manifest.md                                                      0e644562c6e9071738ad7714a76a71c6a830ae2b9f195bd4f4a0e4e26d8f50ae
+codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup\proof\SB05\semantic-invariants.md                                           d5d1fbb888f169fe16608b597b17131833f6ff313dd0bda9bfd74117cb85ad28
+codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup\proof\SB05\transcripts\passing-semantic-tests.txt                           5959daa565462c6776506752ef9cb2ac8d8875983f384477559b39e43c07f642
+codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup\proof\SB05\transcripts\regression-tests.txt                                 c2d641912b75c477594f412c27c0e9dfa0410e422d4cd582dfef81ed2dcf22c9
+codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup\proof\SB05\transcripts\source-assertions.txt                                c7fc10dec1420d7298991a5a8e4fe79273a6b6423f8ebc9285280c0ff595cda1
+codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup\proof\SB05\transcripts\anti-stub-audit.txt                                  5e22bb6a32f814a40b8f8630bf4ede9716ebe41b706a5a38598f85bc06745011
+codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup\proof\SB05\transcripts\no-migration-proof.txt                               c50aa0ca9623785fdbee032c40ce62e2ff10cbea510f67b14ef6b1e330bb0020
+codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup\proof\SB05\transcripts\prepared-validator-after-sb05.txt                    82d3589dae65838af0e194407fff5e1a5613a333f7ecdbfccbcf193e68d19f4d
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamConsolidationService.cs                                                                  3acc48d889f995aed662bd11aacc26a2f563b6af4f6ba155ed06aa7ad7151b78
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs                                                                             e40b53eaa4a78d4434f05a5a7ded9303ebc58a98da4b0ccad6cf172e01f8aeec
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs                                                                                        d1b30ba471d926802db0ff78b26a406e806ba8a4bfdf54bf1e2436522b25091f
+ExitCode: 0

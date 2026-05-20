@@ -1,0 +1,18 @@
+Command: transcript metadata repair for .\codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup\proof\SB09\transcripts\build.txt
+  CanDoItAll.Components.Common -> C:\repositories\CanDoItAll\src\CanDoItAll.Components.Common\bin\Debug\net10.0\CanDoItAll.Components.Common.dll
+  CanDoItAll.SharedKernel -> C:\repositories\CanDoItAll\src\CanDoItAll.SharedKernel\bin\Debug\net10.0\CanDoItAll.SharedKernel.dll
+  CanDoItAll.AgentFramework.Rag.Driver -> C:\repositories\CanDoItAll.AgentFramework.Rag\src\CanDoItAll.AgentFramework.Rag.Driver\bin\Debug\net10.0\CanDoItAll.AgentFramework.Rag.Driver.dll
+  CanDoItAll.AgentFramework.SemanticCompletion.Driver -> C:\repositories\CanDoItAll.AgentFramework.SemanticCompletion\src\CanDoItAll.AgentFramework.SemanticCompletion.Driver\bin\Debug\net10.0\CanDoItAll.AgentFramework.SemanticCompletion.Driver.dll
+  CanDoItAll.AgentFramework.Models -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Models\bin\Debug\net10.0\CanDoItAll.AgentFramework.Models.dll
+  CanDoItAll.Infrastructure -> C:\repositories\CanDoItAll\src\CanDoItAll.Infrastructure\bin\Debug\net10.0\CanDoItAll.Infrastructure.dll
+  CanDoItAll.AgentFramework.Core -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.Core.dll
+  CanDoItAll.Components.BaseLib -> C:\repositories\CanDoItAll\src\CanDoItAll.Components.BaseLib\bin\Debug\net10.0\CanDoItAll.Components.BaseLib.dll
+  CanDoItAll.AgentFramework.Voice -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Voice\bin\Debug\net10.0\CanDoItAll.AgentFramework.Voice.dll
+  CanDoItAll.Modules.CognitiveMemory -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CognitiveMemory\bin\Debug\net10.0\CanDoItAll.Modules.CognitiveMemory.dll
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:03.34
+ExitCode: 0

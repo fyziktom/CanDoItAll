@@ -11,10 +11,41 @@ public sealed class CognitiveMemoryQualityCollaboratorTests
 
         Assert.Equal("quality-clustering-v3", options.Cluster.AlgorithmVersion.Value);
         Assert.Equal("quality-dream-v3-claim-synthesis", options.Dream.AlgorithmVersion.Value);
-        Assert.Equal("quality-aggregate-apply-v2-calibrated", options.AggregateApply.AlgorithmVersion.Value);
+        Assert.Equal("quality-aggregate-apply-v3-semantic-calibrated", options.AggregateApply.AlgorithmVersion.Value);
         Assert.Equal(2, options.ProfessorLifecycle.RequiredRepeatedUseCount);
         Assert.Equal(4, options.ProfessorLifecycle.DescendantTraversalDepth);
         Assert.Equal(4, options.Recall.MaxFragmentsPerStatement);
+    }
+
+    [Fact]
+    public void SemanticInvariant_DreamModeClusterSelectorKeepsModePolicyOutsideRunOrchestration()
+    {
+        var selector = new CognitiveMemoryDreamModeClusterSelector();
+        var projectNightlyReviewCluster = CreateClusterPlan(
+            CognitiveMemoryQualityClusterReadiness.NeedsHumanReview,
+            Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+            Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"));
+        var crossProjectSingleProjectCluster = CreateClusterPlan(
+            CognitiveMemoryQualityClusterReadiness.AggregateReady,
+            Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+            Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"));
+        var crossProjectAggregateCluster = CreateClusterPlan(
+            CognitiveMemoryQualityClusterReadiness.AggregateReady,
+            Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+            Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"));
+
+        Assert.True(selector.IsSelected(CognitiveMemoryConsolidationMode.ProjectNightly, projectNightlyReviewCluster));
+        Assert.False(selector.IsSelected(CognitiveMemoryConsolidationMode.CrossProjectWeekly, crossProjectSingleProjectCluster));
+        Assert.True(selector.IsSelected(CognitiveMemoryConsolidationMode.CrossProjectWeekly, crossProjectAggregateCluster));
+        Assert.Equal("dream.cross-project-weekly.policy-constrained-cross-project", selector.ResolveSelectionReasonCode(CognitiveMemoryConsolidationMode.CrossProjectWeekly, crossProjectAggregateCluster));
+        Assert.Equal(
+            CognitiveMemoryClusterPlanningScope.PolicyConstrainedCrossProject,
+            selector.ResolvePlanningScope(new CognitiveMemoryDreamRunRequest(
+                null,
+                CognitiveMemoryConsolidationMode.CrossProjectWeekly,
+                CognitiveMemoryConsolidationTriggerKind.Nightly,
+                Policy(Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")),
+                new CognitiveMemoryIdempotencyKey("selector-cross-project"))));
     }
 
     [Fact]
@@ -101,7 +132,8 @@ public sealed class CognitiveMemoryQualityCollaboratorTests
             MaxStatements: 5));
 
         Assert.Equal(2, result.Statements.Count);
-        Assert.Contains("Conflict caveat", result.Brief, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Conflict", result.Brief, StringComparison.OrdinalIgnoreCase);
+        Assert.All(result.Statements, statement => Assert.Equal(CognitiveMemoryRecallStatementPlanKind.Conflict, statement.PlanKind));
         Assert.All(result.Statements, statement => Assert.Single(statement.AggregateClaimIds));
         Assert.Contains(result.Statements, statement => statement.AggregateClaimIds.Contains(new CognitiveMemoryClaimId(requiredClaimId)));
         Assert.Contains(result.Statements, statement => statement.AggregateClaimIds.Contains(new CognitiveMemoryClaimId(exceptionClaimId)));
@@ -119,6 +151,30 @@ public sealed class CognitiveMemoryQualityCollaboratorTests
             CognitiveMemoryRedactionState.Safe,
             IncludedInContext: true,
             CognitiveMemoryRecallExclusionReasonKind.None);
+
+    private static CognitiveMemoryClusterPlan CreateClusterPlan(
+        CognitiveMemoryQualityClusterReadiness readiness,
+        params Guid?[] memberProjectIds)
+        => new(
+            CognitiveMemoryQualityClusterId.New(),
+            memberProjectIds.FirstOrDefault(),
+            $"cluster:{readiness}:{string.Join(':', memberProjectIds.Select(projectId => projectId?.ToString("N") ?? "global"))}",
+            CognitiveMemoryQualityClusterKeyFamily.SemanticTopic,
+            readiness,
+            [new CognitiveMemoryClusterKey(CognitiveMemoryQualityClusterKeyFamily.SemanticTopic, "topic:release", "release", memberProjectIds.Length, 1)],
+            memberProjectIds.Select((projectId, index) => new CognitiveMemoryClusterMember(
+                CognitiveMemoryQualityClusterMemberKind.MemoryRecord,
+                new CognitiveMemoryRecordId(Guid.Parse($"50000000-0000-0000-0000-{index + 1:000000000000}")),
+                null,
+                null,
+                projectId,
+                $"Member {index + 1}",
+                CognitiveMemoryAccessLevel.Project,
+                CognitiveMemoryRiskLevel.Low,
+                CognitiveMemoryValidationState.Approved,
+                CognitiveMemoryStabilityState.Active)).ToArray(),
+            new CognitiveMemoryClusterQualityMetrics(0.8, 1, 1, 1, 1, 0, 0.8, readiness == CognitiveMemoryQualityClusterReadiness.AggregateReady, "unit-test"),
+            []);
 
     private static CognitiveMemoryPolicyContext Policy(Guid projectId)
         => new(

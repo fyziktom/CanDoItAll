@@ -1,0 +1,6 @@
+Command: python -m py_compile codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py
+WorkingDirectory: C:\repositories\CanDoItAll
+Invariant: SB01-PORTABILITY-01
+Invariant: SB01-INVARIANT-02
+Test: ValidatorScript.Compiles
+ExitCode: 0

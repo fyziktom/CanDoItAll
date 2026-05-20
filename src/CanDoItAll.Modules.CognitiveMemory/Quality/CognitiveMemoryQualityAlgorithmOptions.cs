@@ -27,6 +27,8 @@ public sealed record CognitiveMemoryQualityClusterAlgorithmOptions
 
     public int MaxFallbackSignalFanout { get; init; } = 24;
 
+    public double MinimumRepresentativeKeyCoverageRatio { get; init; } = 0.5;
+
     public double CompositeEdgeThreshold { get; init; } = 0.58;
 
     public double SemanticFallbackThreshold { get; init; } = 0.62;
@@ -43,7 +45,7 @@ public sealed record CognitiveMemoryQualityDreamAlgorithmOptions
 
 public sealed record CognitiveMemoryQualityAggregateApplyAlgorithmOptions
 {
-    public CognitiveMemoryAlgorithmVersion AlgorithmVersion { get; init; } = new("quality-aggregate-apply-v2-calibrated");
+    public CognitiveMemoryAlgorithmVersion AlgorithmVersion { get; init; } = new("quality-aggregate-apply-v3-semantic-calibrated");
 }
 
 public sealed record CognitiveMemoryQualityProfessorLifecycleAlgorithmOptions

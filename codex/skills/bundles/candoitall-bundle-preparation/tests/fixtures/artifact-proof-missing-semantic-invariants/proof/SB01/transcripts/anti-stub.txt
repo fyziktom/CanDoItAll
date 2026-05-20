@@ -1,0 +1,5 @@
+Command: rg -n "TODO|NotImplemented|fixture-specific" codex/skills/bundles/candoitall-bundle-preparation/scripts/validate_bundle.py
+WorkingDirectory: C:\repositories\CanDoItAll
+Test: ArtifactProof.ValidatesCompleteFixture
+Output: no production stub markers found in validator flow
+ExitCode: 0

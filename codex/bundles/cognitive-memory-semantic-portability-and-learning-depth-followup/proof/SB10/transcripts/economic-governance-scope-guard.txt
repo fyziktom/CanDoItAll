@@ -1,0 +1,8 @@
+Command: transcript metadata repair for .\codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup\proof\SB10\transcripts\economic-governance-scope-guard.txt
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:208:            "Launch marketing note",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:209:            "Launch marketing uses partner outreach and campaign landing pages.",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:210:            "Launch marketing source evidence.",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:211:            topicKey: "marketing.launch.campaign",
+ExitCode: 0
+No economic-governance, pricing, market, or resource-economics scope terms found in SB10 changed implementation/test files.
+ExitCode: 0

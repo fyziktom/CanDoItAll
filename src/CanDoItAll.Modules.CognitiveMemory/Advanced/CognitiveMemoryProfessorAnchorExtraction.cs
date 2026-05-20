@@ -27,7 +27,8 @@ public sealed record CognitiveMemoryProfessorTeachingExtractionRequest(
     string UserMessage,
     string CuratorResponse,
     IReadOnlyList<CognitiveMemoryCuratorTurnRecord> PreviousTurns,
-    string? ExplicitCaptureScope);
+    string? ExplicitCaptureScope,
+    CognitiveMemoryCuratorCaptureKind? ExplicitCaptureKind = null);
 
 public interface ICognitiveMemoryProfessorTeachingExtractor
 {
@@ -54,14 +55,15 @@ internal sealed class CognitiveMemoryProfessorTeachingExtractor : ICognitiveMemo
         " therefore ",
         " distinction ",
         " confuse ",
-        " gate ",
-        " requires ",
-        " require ",
         " must ",
         " only applies ",
         " applies only ",
         " source of truth ",
-        " approval "
+        " approval ",
+        " example ",
+        " counterexample ",
+        " not ",
+        " instead "
     ];
 
     private static readonly string[] QuestionLeadIns =
@@ -85,7 +87,7 @@ internal sealed class CognitiveMemoryProfessorTeachingExtractor : ICognitiveMemo
         ArgumentNullException.ThrowIfNull(request);
         var userMessage = NormalizeText(request.UserMessage);
         var curatorResponse = NormalizeText(request.CuratorResponse);
-        if (userMessage.Length < 40 || LooksLikeQuestionOnly(userMessage))
+        if (LooksLikeQuestionOnly(userMessage) && !HasQuestionAnswerTeachingContext(request.PreviousTurns))
         {
             return null;
         }
@@ -98,13 +100,14 @@ internal sealed class CognitiveMemoryProfessorTeachingExtractor : ICognitiveMemo
                 .Append(curatorResponse)
                 .Where(value => !string.IsNullOrWhiteSpace(value))
                 .Select(NormalizeText));
-        if (!HasTeachingSignal(conversationText))
+        var sourceUtterances = ResolveSourceUtterances(request.PreviousTurns, userMessage, curatorResponse);
+        if (!HasProfessorTeachingIntent(request, conversationText, sourceUtterances))
         {
             return null;
         }
 
         var captureKind = ResolveCaptureKind(conversationText);
-        var claims = ExtractClaims(userMessage, curatorResponse, captureKind);
+        var claims = ExtractClaims(userMessage, curatorResponse, sourceUtterances, captureKind);
         if (claims.Count == 0)
         {
             return null;
@@ -113,7 +116,8 @@ internal sealed class CognitiveMemoryProfessorTeachingExtractor : ICognitiveMemo
         var targetScope = FirstNonEmpty(
             NormalizeText(request.ExplicitCaptureScope),
             ExtractTargetScope(userMessage),
-            ExtractTargetScope(curatorResponse));
+            ExtractTargetScope(curatorResponse),
+            ExtractTargetScope(sourceUtterances.LastOrDefault() ?? string.Empty));
         if (string.IsNullOrWhiteSpace(targetScope))
         {
             return null;
@@ -126,7 +130,7 @@ internal sealed class CognitiveMemoryProfessorTeachingExtractor : ICognitiveMemo
             claims,
             targetScope,
             misconception,
-            [userMessage, curatorResponse],
+            sourceUtterances,
             confidence);
     }
 
@@ -155,18 +159,19 @@ internal sealed class CognitiveMemoryProfessorTeachingExtractor : ICognitiveMemo
     private static IReadOnlyList<CognitiveMemoryProfessorAnchorClaim> ExtractClaims(
         string userMessage,
         string curatorResponse,
+        IReadOnlyList<string> sourceUtterances,
         CognitiveMemoryProfessorAnchorCaptureKind captureKind)
     {
         var claims = new List<CognitiveMemoryProfessorAnchorClaim>();
-        foreach (var sentence in SplitSentences($"{userMessage} {curatorResponse}"))
+        foreach (var sentence in SplitSentences(string.Join(" ", sourceUtterances.Append(userMessage).Append(curatorResponse))))
         {
             var candidate = TrimTeachingPrefix(sentence);
-            if (candidate.Length < 24 || LooksLikeQuestionOnly(candidate))
+            if (candidate.Length < 12 || LooksLikeQuestionOnly(candidate))
             {
                 continue;
             }
 
-            if (!ContainsAny($" {candidate} ", [" must ", " require ", " requires ", " is a ", " is an ", " are ", " means ", " gate ", " evidence "]))
+            if (!ContainsAny($" {candidate} ", [" must ", " need ", " needs ", " require ", " requires ", " is a ", " is an ", " are ", " means ", " gate ", " evidence ", " example ", " counterexample ", " not "]))
             {
                 continue;
             }
@@ -195,13 +200,22 @@ internal sealed class CognitiveMemoryProfessorTeachingExtractor : ICognitiveMemo
     private static string ExtractTargetScope(string text)
     {
         var value = TrimTeachingPrefix(text);
+        foreach (var prefix in new[] { "no: ", "no, ", "actually, ", "actually " })
+        {
+            if (value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                value = value[prefix.Length..].Trim();
+                break;
+            }
+        }
+
         var becauseIndex = value.IndexOf(" because ", StringComparison.OrdinalIgnoreCase);
         if (becauseIndex > 0)
         {
             value = value[..becauseIndex].Trim();
         }
 
-        foreach (var separator in new[] { " is a ", " is an ", " requires ", " require ", " must " })
+        foreach (var separator in new[] { " is a ", " is an ", " requires ", " require ", " needs ", " need ", " must " })
         {
             var index = value.IndexOf(separator, StringComparison.OrdinalIgnoreCase);
             if (index > 0)
@@ -220,7 +234,7 @@ internal sealed class CognitiveMemoryProfessorTeachingExtractor : ICognitiveMemo
         var match = MisconceptionRegex.Match(text);
         if (!match.Success)
         {
-            return ContainsAny(text, [" distinction ", " instead "])
+            return ContainsAny(text, [" distinction ", " instead ", " not "])
                 ? "The professor guidance corrected a distinction in the current conversation."
                 : string.Empty;
         }
@@ -256,6 +270,49 @@ internal sealed class CognitiveMemoryProfessorTeachingExtractor : ICognitiveMemo
 
     private static bool HasTeachingSignal(string text)
         => ContainsAny($" {text} ", TeachingSignals);
+
+    private static bool HasProfessorTeachingIntent(
+        CognitiveMemoryProfessorTeachingExtractionRequest request,
+        string conversationText,
+        IReadOnlyList<string> sourceUtterances)
+    {
+        if (HasQuestionAnswerTeachingContext(request.PreviousTurns) &&
+            ContainsAny($" {request.UserMessage} ", [" no:", " no,", " not ", " instead ", " gate "]))
+        {
+            return true;
+        }
+
+        if (request.ExplicitCaptureKind == CognitiveMemoryCuratorCaptureKind.NewKnowledge &&
+            ContainsAny(conversationText, ["approval", "gate", "source of truth", " only ", "before traffic", "before launch"]))
+        {
+            return true;
+        }
+
+        return HasTeachingSignal(conversationText) &&
+               (ContainsAny($" {conversationText} ", [" confuse ", " distinction ", " because ", " counterexample ", " example ", " wrong scope ", " only "]) ||
+                sourceUtterances.Any(utterance => LooksLikeQuestionOnly(utterance)));
+    }
+
+    private static bool HasQuestionAnswerTeachingContext(IReadOnlyList<CognitiveMemoryCuratorTurnRecord> previousTurns)
+        => previousTurns.Any(turn =>
+            LooksLikeQuestionOnly(NormalizeText(turn.UserMessage)) &&
+            HasTeachingSignal(NormalizeText(turn.CuratorResponse)));
+
+    private static IReadOnlyList<string> ResolveSourceUtterances(
+        IReadOnlyList<CognitiveMemoryCuratorTurnRecord> previousTurns,
+        string userMessage,
+        string curatorResponse)
+    {
+        var values = previousTurns
+            .Where(turn => LooksLikeQuestionOnly(NormalizeText(turn.UserMessage)) || HasTeachingSignal(NormalizeText(turn.CuratorResponse)))
+            .SelectMany(turn => new[] { NormalizeText(turn.UserMessage), NormalizeText(turn.CuratorResponse) })
+            .Concat([userMessage, curatorResponse])
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .TakeLast(6)
+            .ToArray();
+        return values.Length == 0 ? [userMessage, curatorResponse] : values;
+    }
 
     private static bool LooksLikeQuestionOnly(string text)
     {

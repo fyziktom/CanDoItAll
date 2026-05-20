@@ -193,7 +193,7 @@ The validator is not just a folder-shape check.
 - the dependency map must include a mermaid diagram
 - `analysis/02-assumptions-and-risks.md` must include `## Critical Path Risks`, `## Validation Risks`, and `## Reopen Triggers`
 - subbundle READMEs must include `## Prerequisites`, `## Dependency Impact`, `## Validation Depth`, and `## Progression Gate`
-- subbundle `## Exact Source References` must contain absolute paths that already exist
+- subbundle `## Exact Source References` must prefer portable `repo://relative/path` and `bundle://relative/path` references; native absolute paths are allowed only as local development aids and must not be the only durable source reference
 - subbundle READMEs must include `## Browser Validation Logging`, using `N/A` only when the subbundle does not affect browser-visible or host-visible proof
 - critical subbundle READMEs must require Semantic Adequacy Gate proof with shallow-pass trap, adversarial negative proof, semantic positive proof, anti-stub audit, and raw-note literal closure
 - critical subbundle READMEs must require `proof/SBxx/manifest.md` with changed-file hashes, validation transcripts, source assertions, anti-stub audit output, and red-team or verifier artifacts when the subbundle closes final quality

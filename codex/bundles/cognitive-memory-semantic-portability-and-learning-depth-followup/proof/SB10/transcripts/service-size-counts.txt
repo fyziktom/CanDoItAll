@@ -1,0 +1,9 @@
+Command: transcript metadata repair for .\codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup\proof\SB10\transcripts\service-size-counts.txt
+1225	src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryCuratorConversationService.cs
+1048	src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs
+779	src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamConsolidationService.cs
+108	src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamModeClusterSelection.cs
+667	src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterFormation.cs
+255	src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAssimilationEvaluator.cs
+598	src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs
+ExitCode: 0

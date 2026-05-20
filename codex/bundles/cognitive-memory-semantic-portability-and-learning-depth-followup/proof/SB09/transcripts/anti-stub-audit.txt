@@ -1,0 +1,3 @@
+Command: transcript metadata repair for .\codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup\proof\SB09\transcripts\anti-stub-audit.txt
+No anti-stub markers found in changed SB09 production files.
+ExitCode: 0

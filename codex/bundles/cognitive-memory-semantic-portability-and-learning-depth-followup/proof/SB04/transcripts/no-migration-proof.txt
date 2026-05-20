@@ -1,0 +1,5 @@
+Command: git diff --name-only -- src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityEntities.cs src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityEntityConfigurations.cs src\CanDoItAll.Migrations.Sqlite src\CanDoItAll.Migrations.PostgreSql
+Invariant: SB04-KEY-COVERAGE-01
+Test name: SemanticInvariant_ClusterKeysExcludeSignalsBelowCoverageThreshold
+No EF entity/configuration or migration files changed; SB04 coverage metadata is contract/runtime-only and no migration is required.
+ExitCode: 0

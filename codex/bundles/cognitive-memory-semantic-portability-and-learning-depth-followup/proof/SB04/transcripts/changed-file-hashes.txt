@@ -1,0 +1,26 @@
+Command: Get-FileHash for SB04 changed source, tests, semantic contract, and proof transcripts
+Invariant: SB04-KEY-COVERAGE-01
+Test name: SemanticInvariant_ClusterKeysExcludeSignalsBelowCoverageThreshold
+repo-path: src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityAlgorithmOptions.cs
+SHA-256: 719e469947bad6ec515f663d4d5f64f311f7e0d8ac6f082247b2a5762b977f08
+repo-path: src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityContracts.cs
+SHA-256: ab1a03c0a9d6153464682d62577e9b58380e1844e0930ea2543955e205593427
+repo-path: src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterFormation.cs
+SHA-256: 4e88308d5d1b8bb9c4e2513c18aaad9b48887a87be9b885fac756b4f78a2d0e0
+repo-path: src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs
+SHA-256: b789335dfb0eb275a6714d7a0994fe57f6705abe2647513e05a10009fba1a308
+repo-path: tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs
+SHA-256: d1b30ba471d926802db0ff78b26a406e806ba8a4bfdf54bf1e2436522b25091f
+repo-path: codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup\proof\SB04\semantic-invariants.md
+SHA-256: 48e5dedf7cfb633f83119be89bf3490be2da583c3c5f0db9b92ca422ccb5fe4e
+repo-path: codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup\proof\SB04\transcripts\passing-semantic-tests.txt
+SHA-256: 383477a6b504c2377a6dda10520d859d40c25b7fa57bc075e2a111766af2cb77
+repo-path: codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup\proof\SB04\transcripts\regression-tests.txt
+SHA-256: acf1218f662a18ef04770ed6418b7547900ffcc58a7b8012ae51a1be0c703e3b
+repo-path: codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup\proof\SB04\transcripts\source-assertions.txt
+SHA-256: f67366f40d1a4b7cff74d73195bbde9689c32acec0a1886807a3c6256ffb2b85
+repo-path: codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup\proof\SB04\transcripts\no-migration-proof.txt
+SHA-256: 7c356e5a979383cf6d8576daaf31c25665bf8772af1ea763ab669851a8845e32
+repo-path: codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup\proof\SB04\transcripts\anti-stub-audit.txt
+SHA-256: 57aae105a24a979b5f3750f4381d1b4382c57c08309adf1a7a02cc9027da5f6c
+ExitCode: 0
