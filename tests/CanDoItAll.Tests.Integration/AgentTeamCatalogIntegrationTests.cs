@@ -77,11 +77,46 @@ public sealed class AgentTeamCatalogIntegrationTests
         };
 
         var normalized = SandboxWorkspaceSeedFactory.NormalizeCatalog(catalog);
-        var normalizedTeam = Assert.Single(normalized.AgentTeams);
+        var normalizedTeam = Assert.Single(normalized.AgentTeams, item => item.Id == team.Id);
 
         Assert.Equal("Normalized Team", normalizedTeam.Name);
         Assert.Equal("Keeps real agents only.", normalizedTeam.Description);
         Assert.Equal([agent.Id], normalizedTeam.AgentIds);
+    }
+
+    [Fact]
+    public void Default_agent_template_pack_seeds_team_memberships()
+    {
+        var pack = new AgentTemplatePackLoader().Load();
+        Assert.Equal(5, pack.Teams.Count);
+        Assert.All(
+            pack.Teams.SelectMany(item => item.MemberTemplates),
+            member =>
+            {
+                Assert.False(string.IsNullOrWhiteSpace(member.Instructions));
+                Assert.False(string.IsNullOrWhiteSpace(member.Settings.ProviderProfileKey));
+                Assert.NotEmpty(member.Skills.CapabilityKeys);
+            });
+
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var teams = seed.AgentTeams;
+
+        Assert.Contains(teams, item => string.Equals(item.Name, "Delivery Platform Team", StringComparison.Ordinal));
+        Assert.Contains(teams, item => string.Equals(item.Name, ".NET Delivery Team", StringComparison.Ordinal));
+        Assert.Contains(teams, item => string.Equals(item.Name, "JavaScript Delivery Team", StringComparison.Ordinal));
+        Assert.Contains(teams, item => string.Equals(item.Name, "Business And Research Team", StringComparison.Ordinal));
+        Assert.Contains(teams, item => string.Equals(item.Name, "Visual Automation Template Team", StringComparison.Ordinal));
+
+        var agentsByTemplateKey = seed.Agents.ToDictionary(item => item.TemplateKey, StringComparer.OrdinalIgnoreCase);
+        var deliveryTeam = Assert.Single(teams, item => string.Equals(item.Name, "Delivery Platform Team", StringComparison.Ordinal));
+        Assert.Contains(agentsByTemplateKey["portfolio-architect"].Id, deliveryTeam.AgentIds);
+        Assert.Contains(agentsByTemplateKey["programming-workspace-analyst"].Id, deliveryTeam.AgentIds);
+        Assert.Contains(agentsByTemplateKey["delivery-qa-observer"].Id, deliveryTeam.AgentIds);
+
+        var visualTemplateTeam = Assert.Single(teams, item => string.Equals(item.Name, "Visual Automation Template Team", StringComparison.Ordinal));
+        Assert.Contains(agentsByTemplateKey["app-screenshot-capture-agent"].Id, visualTemplateTeam.AgentIds);
+        Assert.Contains(agentsByTemplateKey["screenshot-review-storage-agent"].Id, visualTemplateTeam.AgentIds);
+        Assert.Contains(agentsByTemplateKey["layout-image-generation-agent"].Id, visualTemplateTeam.AgentIds);
     }
 
     private static async Task<Guid> CreateAgentAsync(

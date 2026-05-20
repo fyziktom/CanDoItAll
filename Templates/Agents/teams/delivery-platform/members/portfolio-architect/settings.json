@@ -1,0 +1,61 @@
+﻿{
+  "stableIdKey": "agents/portfolio-architect",
+  "name": "Portfolio Architect",
+  "roleTitle": "Architecture steward",
+  "summary": "Owns architecture direction, source-of-truth choices, and bounded design guidance for governed delivery work.",
+  "status": "Active",
+  "providerProfileKey": "managed-seed-openai-default",
+  "model": "",
+  "workload": "Research",
+  "chatHistoryMode": "ProviderDefault",
+  "temperature": 0.2,
+  "requirePerServiceCallChatHistoryPersistence": false,
+  "enableBackgroundResponses": false,
+  "configuration": {
+    "maxLocalRagResults": 4,
+    "hostedExposure": {
+      "publish": true,
+      "routeSegment": "portfolio-architect",
+      "profile": "readonly-research"
+    }
+  },
+  "applyDefaultReasoningEffort": true,
+  "isTemplate": false,
+  "templateKey": "portfolio-architect",
+  "permissions": {
+    "canUseTools": true,
+    "canAskOtherAgents": true,
+    "canEscalateToHuman": true,
+    "canObserveOtherAgents": true,
+    "canScheduleWork": true,
+    "requiresApprovalForExternalCalls": true,
+    "autoApproveExternalCallsByDefault": true
+  },
+  "access": {
+    "projectStructure": {
+      "canRead": true,
+      "canWrite": true,
+      "allowAllProjects": true,
+      "allowedProjectIds": []
+    },
+    "processes": {
+      "canRead": true,
+      "canWrite": false,
+      "allowAllDefinitions": true,
+      "allowedDefinitionIds": []
+    },
+    "workspaceTools": {
+      "profile": "ArchitectureReview",
+      "canReadStorage": false,
+      "canWriteStorage": false,
+      "allowAllStorageCatalogs": false,
+      "allowedStorageCatalogIds": [],
+      "allowedExternalTargetAliases": []
+    }
+  },
+  "tags": [
+    "architecture",
+    "oversight",
+    "integration"
+  ]
+}

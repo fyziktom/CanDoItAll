@@ -17,32 +17,6 @@ internal static class SandboxWorkspaceSeedNormalizer
         "OpenAI image generation"
     };
 
-    private static readonly HashSet<string> ManagedSeriousDeliveryTemplateKeys = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "portfolio-architect",
-        "delivery-qa-observer",
-        "programming-workspace-analyst",
-        "code-review-lead",
-        "ui-review-lead",
-        "security-reviewer",
-        "release-readiness-manager",
-        "hr-staffing-manager",
-        "research-deep-dive-analyst",
-        "dotnet-solution-architect",
-        "dotnet-application-developer",
-        "blazor-application-developer",
-        "dotnet-qa-review-lead",
-        "javascript-solution-architect",
-        "javascript-application-developer",
-        "javascript-qa-review-lead",
-        "business-strategist",
-        "financial-strategist",
-        "marketing-specialist",
-        "app-screenshot-capture-agent",
-        "screenshot-review-storage-agent",
-        "layout-image-generation-agent"
-    };
-
     internal static SandboxWorkspaceDocument Normalize(SandboxWorkspaceDocument document)
     {
         return SandboxWorkspaceDocument.Combine(
@@ -59,7 +33,7 @@ internal static class SandboxWorkspaceSeedNormalizer
         var memory = MergeMemory(catalog.Memory, seeded.Memory, agents.IdMap);
         var activeCapabilities = RemoveRetiredCapabilities(capabilities.Items, seeded.Capabilities);
         var activeAgents = RemoveUnavailableAgentCapabilities(agents.Items, activeCapabilities);
-        var agentTeams = NormalizeAgentTeams(catalog.AgentTeams, activeAgents);
+        var agentTeams = MergeAgentTeams(catalog.AgentTeams, seeded.AgentTeams, agents.IdMap, activeAgents);
 
         return catalog with
         {
@@ -293,7 +267,7 @@ internal static class SandboxWorkspaceSeedNormalizer
             return false;
         }
 
-        return ManagedSeriousDeliveryTemplateKeys.Contains(seededAgent.TemplateKey);
+        return !string.IsNullOrWhiteSpace(seededAgent.TemplateKey);
     }
 
     private static AgentDefinition RefreshManagedAgentFromSeed(AgentDefinition existingAgent, AgentDefinition seededAgent)
@@ -728,6 +702,62 @@ internal static class SandboxWorkspaceSeedNormalizer
             .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
             .ThenBy(item => item.Id)
             .ToList();
+    }
+
+    private static IReadOnlyList<AgentTeamDefinition> MergeAgentTeams(
+        IReadOnlyList<AgentTeamDefinition>? existingTeams,
+        IReadOnlyList<AgentTeamDefinition> seededTeams,
+        IReadOnlyDictionary<Guid, Guid> agentIdMap,
+        IReadOnlyList<AgentDefinition> activeAgents)
+    {
+        var merged = (existingTeams ?? []).ToList();
+        foreach (var seededTeam in seededTeams.Select(team => RemapSeedTeam(team, agentIdMap)))
+        {
+            var match = merged.FirstOrDefault(item => item.Id == seededTeam.Id)
+                ?? merged.FirstOrDefault(item => string.Equals(item.Name, seededTeam.Name, StringComparison.OrdinalIgnoreCase));
+
+            if (match is null)
+            {
+                merged.Add(seededTeam);
+                continue;
+            }
+
+            ReplaceTeamById(
+                merged,
+                match.Id,
+                seededTeam with
+                {
+                    Id = match.Id,
+                    CreatedAtUtc = match.CreatedAtUtc,
+                    UpdatedAtUtc = seededTeam.UpdatedAtUtc
+                });
+        }
+
+        return NormalizeAgentTeams(merged, activeAgents);
+    }
+
+    private static AgentTeamDefinition RemapSeedTeam(
+        AgentTeamDefinition team,
+        IReadOnlyDictionary<Guid, Guid> agentIdMap)
+    {
+        return team with
+        {
+            AgentIds = team.AgentIds
+                .Select(agentId => agentIdMap.TryGetValue(agentId, out var mappedAgentId) ? mappedAgentId : agentId)
+                .ToList()
+        };
+    }
+
+    private static void ReplaceTeamById(
+        List<AgentTeamDefinition> teams,
+        Guid id,
+        AgentTeamDefinition replacement)
+    {
+        var index = teams.FindIndex(item => item.Id == id);
+        if (index >= 0)
+        {
+            teams[index] = replacement;
+        }
     }
 
     private static IReadOnlyList<ChatSessionRecord> NormalizeChatSessions(

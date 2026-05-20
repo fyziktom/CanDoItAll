@@ -1,0 +1,27 @@
+{
+  "capabilityKeys": [
+    "playwright-local-mcp",
+    "candoitall-bundle-workflow",
+    "concrete-deliverable-delivery-inline-skill",
+    "candoitall-frontend-theme",
+    "frontend-skill",
+    "candoitall-watch-playwright-loop",
+    "run-tests",
+    "writing-mstest-tests",
+    "dotnet-app-delivery-inline-skill",
+    "blazor-ssr-delivery-inline-skill",
+    "candoitall-components-mcp",
+    "workspace-list-files",
+    "workspace-search",
+    "workspace-read-file",
+    "workspace-stat-path",
+    "workspace-create-directory",
+    "workspace-write-file",
+    "workspace-append-file",
+    "workspace-dotnet-build",
+    "workspace-dotnet-test",
+    "workspace-dotnet-run",
+    "workspace-pwsh-run-script"
+  ],
+  "notes": "Resolved against the built-in capability catalog during seed materialization. Keep this list role-specific."
+}

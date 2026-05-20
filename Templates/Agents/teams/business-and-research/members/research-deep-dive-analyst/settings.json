@@ -1,0 +1,58 @@
+﻿{
+  "stableIdKey": "agents/research-deep-dive-analyst",
+  "name": "Research Deep Dive Analyst",
+  "roleTitle": "Research and long-context worker",
+  "summary": "Uses provider-managed responses, RAG, memory, and framework-native tools for multi-step research and generated-app summary flows.",
+  "status": "Active",
+  "providerProfileKey": "managed-seed-openai-default",
+  "model": "",
+  "workload": "Research",
+  "chatHistoryMode": "ProviderManaged",
+  "temperature": 0.2,
+  "requirePerServiceCallChatHistoryPersistence": false,
+  "enableBackgroundResponses": true,
+  "configuration": {
+    "enableCompaction": true,
+    "maxInjectedMemoryItems": 6,
+    "maxLocalRagResults": 5
+  },
+  "applyDefaultReasoningEffort": true,
+  "isTemplate": false,
+  "templateKey": "research-deep-dive-analyst",
+  "permissions": {
+    "canUseTools": true,
+    "canAskOtherAgents": true,
+    "canEscalateToHuman": true,
+    "canObserveOtherAgents": true,
+    "canScheduleWork": false,
+    "requiresApprovalForExternalCalls": true,
+    "autoApproveExternalCallsByDefault": false
+  },
+  "access": {
+    "projectStructure": {
+      "canRead": true,
+      "canWrite": false,
+      "allowAllProjects": true,
+      "allowedProjectIds": []
+    },
+    "processes": {
+      "canRead": true,
+      "canWrite": false,
+      "allowAllDefinitions": true,
+      "allowedDefinitionIds": []
+    },
+    "workspaceTools": {
+      "profile": "ReadOnly",
+      "canReadStorage": false,
+      "canWriteStorage": false,
+      "allowAllStorageCatalogs": false,
+      "allowedStorageCatalogIds": [],
+      "allowedExternalTargetAliases": []
+    }
+  },
+  "tags": [
+    "research",
+    "background",
+    "evidence"
+  ]
+}

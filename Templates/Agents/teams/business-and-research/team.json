@@ -1,0 +1,37 @@
+{
+  "key": "business-and-research",
+  "stableIdKey": "agent-teams/business-and-research",
+  "name": "Business And Research Team",
+  "description": "Default non-code planning, finance, marketing, mail, spreadsheet, and research agents.",
+  "settings": {
+    "defaultProviderPolicy": "member-settings",
+    "membershipMode": "managed-default-seed",
+    "instructionsSource": "member-folders"
+  },
+  "members": [
+    {
+      "key": "business-strategist",
+      "relativePath": "members/business-strategist"
+    },
+    {
+      "key": "financial-strategist",
+      "relativePath": "members/financial-strategist"
+    },
+    {
+      "key": "marketing-specialist",
+      "relativePath": "members/marketing-specialist"
+    },
+    {
+      "key": "spreadsheet-analyst",
+      "relativePath": "members/spreadsheet-analyst"
+    },
+    {
+      "key": "mail-triage-analyst",
+      "relativePath": "members/mail-triage-analyst"
+    },
+    {
+      "key": "research-deep-dive-analyst",
+      "relativePath": "members/research-deep-dive-analyst"
+    }
+  ]
+}

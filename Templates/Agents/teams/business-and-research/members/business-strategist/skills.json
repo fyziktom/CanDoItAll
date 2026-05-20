@@ -1,0 +1,18 @@
+{
+  "capabilityKeys": [
+    "candoitall-bundle-workflow",
+    "concrete-deliverable-delivery-inline-skill",
+    "workspace-list-files",
+    "workspace-search",
+    "workspace-read-file",
+    "workspace-stat-path",
+    "workspace-create-directory",
+    "workspace-write-file",
+    "workspace-append-file",
+    "workspace-convert-document",
+    "workspace-source-rag",
+    "research-briefing-context",
+    "provider-native-web-search"
+  ],
+  "notes": "Resolved against the built-in capability catalog during seed materialization. Keep this list role-specific."
+}

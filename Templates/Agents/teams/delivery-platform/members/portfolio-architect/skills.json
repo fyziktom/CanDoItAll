@@ -1,0 +1,25 @@
+{
+  "capabilityKeys": [
+    "candoitall-bundle-workflow",
+    "aspnet-core-skill",
+    "candoitall-codeanalytics-mcp",
+    "candoitall-components-mcp",
+    "repository-playbook",
+    "workspace-list-files",
+    "workspace-search",
+    "workspace-read-file",
+    "workspace-stat-path",
+    "workspace-create-directory",
+    "workspace-write-file",
+    "workspace-append-file",
+    "workspace-diff-text",
+    "workspace-execution-boundary",
+    "workspace-git-status",
+    "workspace-git-diff",
+    "architecture-source-rag",
+    "research-briefing-context",
+    "provider-native-web-search",
+    "provider-health"
+  ],
+  "notes": "Resolved against the built-in capability catalog during seed materialization. Keep this list role-specific."
+}

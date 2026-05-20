@@ -52,7 +52,7 @@ public sealed class ManagedSeedExecutionFallbackIntegrationTests
     }
 
     [Fact]
-    public async Task Organization_catalog_repair_rewrites_managed_seed_agents_to_openai_chat_completions()
+    public async Task Organization_catalog_repair_keeps_managed_seed_agents_on_openai_default()
     {
         var originalOpenAiApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
         Environment.SetEnvironmentVariable("OPENAI_API_KEY", null);
@@ -79,15 +79,15 @@ public sealed class ManagedSeedExecutionFallbackIntegrationTests
             await repairService.EnsureCurrentOrganizationCatalogAsync();
 
             var providersAfterRepair = await workspaceService.ListProvidersAsync();
-            var openAiChatProvider = Assert.Single(
+            var openAiDefaultProviderAfterRepair = Assert.Single(
                 providersAfterRepair,
                 item => item.Kind == ProviderKind.OpenAi &&
-                        string.Equals(item.Name, "OpenAI chat completions", StringComparison.Ordinal));
+                        string.Equals(item.Name, "OpenAI default", StringComparison.Ordinal));
             var qaAgentAfterRepair = Assert.Single(
                 await workspaceService.ListAgentsAsync(includeTemplates: false),
                 item => string.Equals(item.Name, "Delivery QA Observer", StringComparison.Ordinal));
 
-            Assert.Equal(openAiChatProvider.Id, qaAgentAfterRepair.ProviderProfileId);
+            Assert.Equal(openAiDefaultProviderAfterRepair.Id, qaAgentAfterRepair.ProviderProfileId);
             Assert.Equal(string.Empty, qaAgentAfterRepair.Model);
         }
         finally
