@@ -2,7 +2,7 @@
 
 ## Working Assumptions
 
-- The extracted repo under `/mnt/data/review/CanDoItAll-development` represents the current implementation submitted by the implementation agent.
+- The extracted repo under `C:/repositories/CanDoItAll` represents the current implementation submitted by the implementation agent.
 - Existing database entities can be extended through migrations, but the implementation agent must preserve backward compatibility where practical.
 - The previous quality-foundation bundle remains the intended design direction, but this follow-up may supersede weak implementation details.
 - Curator/professor mode is allowed to trust the user as source of truth, but it must still model target ambiguity and evidence lineage.

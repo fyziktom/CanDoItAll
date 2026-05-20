@@ -3,7 +3,7 @@
 | Artifact | Path | Role |
 |---|---|---|
 | Current implementation ZIP | `/mnt/data/CanDoItAll-development (2).zip` | Uploaded current code that the implementation agent claimed was complete. |
-| Extracted current repo | `/mnt/data/review/CanDoItAll-development` | Local extraction used for code-grounded review. |
+| Extracted current repo | `C:/repositories/CanDoItAll` | Local extraction used for code-grounded review. |
 | Previous quality-foundation bundle | `/mnt/data/cognitive-memory-quality-foundation-dreaming-synthesis.zip` | Prior instruction bundle whose intent must be checked against the implementation. |
 
 ## Reviewed Code Areas

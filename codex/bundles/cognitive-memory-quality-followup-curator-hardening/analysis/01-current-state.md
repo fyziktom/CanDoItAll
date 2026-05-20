@@ -10,9 +10,9 @@ The current implementation adds important tables, services, UI surfaces, and tes
 
 Relevant code:
 
-- `/mnt/data/review/CanDoItAll-development/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryClusterPlanner.cs` lines 52-105: `keyEntries.GroupBy(...)` creates clusters from one key at a time.
-- `/mnt/data/review/CanDoItAll-development/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryQualityContracts.cs` lines 209-233: default `KeyFamilies` is `Enum.GetValues`, so every key family is enabled by default.
-- `/mnt/data/review/CanDoItAll-development/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryClusterPlanner.cs` lines 214-275: key generation includes project scope, source topology, month, access/risk, and simple tokens.
+- `C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryClusterPlanner.cs` lines 52-105: `keyEntries.GroupBy(...)` creates clusters from one key at a time.
+- `C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryQualityContracts.cs` lines 209-233: default `KeyFamilies` is `Enum.GetValues`, so every key family is enabled by default.
+- `C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryClusterPlanner.cs` lines 214-275: key generation includes project scope, source topology, month, access/risk, and simple tokens.
 
 Why this is a problem:
 
@@ -31,9 +31,9 @@ Existing tests reinforce this weak behavior. `CognitiveMemoryQualityFoundationTe
 
 Relevant code:
 
-- `/mnt/data/review/CanDoItAll-development/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryDreamConsolidationService.cs` lines 476-496: mode selection is driven by readiness and simple key-family checks.
-- `/mnt/data/review/CanDoItAll-development/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryDreamConsolidationService.cs` lines 537-565: canonical aggregate text is `Synthesis from N source-backed memory record(s)` plus copied bullet lines.
-- `/mnt/data/review/CanDoItAll-development/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryDreamConsolidationService.cs` lines 584-596: claim text comes from existing memory summary/canonical/title, not from a validated abstraction step.
+- `C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryDreamConsolidationService.cs` lines 476-496: mode selection is driven by readiness and simple key-family checks.
+- `C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryDreamConsolidationService.cs` lines 537-565: canonical aggregate text is `Synthesis from N source-backed memory record(s)` plus copied bullet lines.
+- `C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryDreamConsolidationService.cs` lines 584-596: claim text comes from existing memory summary/canonical/title, not from a validated abstraction step.
 
 Why this is a problem:
 
@@ -48,9 +48,9 @@ Why this is a problem:
 
 Relevant code:
 
-- `/mnt/data/review/CanDoItAll-development/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryDreamValidator.cs` lines 99-180: issue detection is rule-based and limited to map existence/status.
-- `/mnt/data/review/CanDoItAll-development/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryDreamValidator.cs` lines 183-193: only missing source maps reject; most other issues become human review.
-- `/mnt/data/review/CanDoItAll-development/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryDreamValidator.cs` lines 60-83: review item is attached to the run subject, while the candidate receives the review id.
+- `C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryDreamValidator.cs` lines 99-180: issue detection is rule-based and limited to map existence/status.
+- `C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryDreamValidator.cs` lines 183-193: only missing source maps reject; most other issues become human review.
+- `C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryDreamValidator.cs` lines 60-83: review item is attached to the run subject, while the candidate receives the review id.
 
 Missing validation behavior:
 
@@ -68,9 +68,9 @@ Missing validation behavior:
 
 Relevant code:
 
-- `/mnt/data/review/CanDoItAll-development/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryAggregateMemoryApplicator.cs` lines 99-125: applied memory is machine-generated, approved, active, strong confidence/activation.
-- `/mnt/data/review/CanDoItAll-development/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryAggregateMemoryApplicator.cs` lines 137-157: every claim becomes `Validated`, `StrongAccept`, and `DisplayBeliefScore = 1`.
-- `/mnt/data/review/CanDoItAll-development/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryAggregateMemoryApplicator.cs` lines 206-226: mutation command kind is `ProposeClaim` even after accepted aggregate application.
+- `C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryAggregateMemoryApplicator.cs` lines 99-125: applied memory is machine-generated, approved, active, strong confidence/activation.
+- `C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryAggregateMemoryApplicator.cs` lines 137-157: every claim becomes `Validated`, `StrongAccept`, and `DisplayBeliefScore = 1`.
+- `C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryAggregateMemoryApplicator.cs` lines 206-226: mutation command kind is `ProposeClaim` even after accepted aggregate application.
 
 Why this is a problem:
 
@@ -85,9 +85,9 @@ Why this is a problem:
 
 Relevant code:
 
-- `/mnt/data/review/CanDoItAll-development/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryRecallSynthesisService.cs` lines 24-56: grouping by section title and first-line extraction.
-- `/mnt/data/review/CanDoItAll-development/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryRecallSynthesisService.cs` lines 59-138: persistence stores statement-source maps.
-- `/mnt/data/review/CanDoItAll-development/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryReferenceResolver.cs` is available for reference-on-demand but only resolves persisted statement maps.
+- `C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryRecallSynthesisService.cs` lines 24-56: grouping by section title and first-line extraction.
+- `C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryRecallSynthesisService.cs` lines 59-138: persistence stores statement-source maps.
+- `C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryReferenceResolver.cs` is available for reference-on-demand but only resolves persisted statement maps.
 
 Missing behavior:
 
@@ -103,7 +103,7 @@ The prior issue where `SideContext` candidates could be converted into selected 
 
 Relevant code:
 
-- `/mnt/data/review/CanDoItAll-development/src/CanDoItAll.Modules.CognitiveMemory/Recall/CognitiveMemoryRecallEvaluation.cs` lines 75-91.
+- `C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Recall/CognitiveMemoryRecallEvaluation.cs` lines 75-91.
 
 This should remain protected by regression tests.
 
@@ -113,11 +113,11 @@ This should remain protected by regression tests.
 
 Relevant code:
 
-- `/mnt/data/review/CanDoItAll-development/src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryCuratorConversationService.cs` lines 68-147: curator send performs recall, obtains a response, and records the turn.
-- `/mnt/data/review/CanDoItAll-development/src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryCuratorConversationService.cs` lines 484-701: trusted improvement creates source manifest/item/evidence/candidate and applies it immediately.
-- `/mnt/data/review/CanDoItAll-development/src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryCuratorConversationService.cs` lines 704-731: capture-kind detection is English substring-based.
-- `/mnt/data/review/CanDoItAll-development/src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryCuratorConversationService.cs` lines 736-774: affected memories are resolved from explicit request plus all included recall source refs/candidates/context sections.
-- `/mnt/data/review/CanDoItAll-development/src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryCuratorConversationService.cs` lines 776-819: corrections mark all affected records as superseded/stale.
+- `C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryCuratorConversationService.cs` lines 68-147: curator send performs recall, obtains a response, and records the turn.
+- `C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryCuratorConversationService.cs` lines 484-701: trusted improvement creates source manifest/item/evidence/candidate and applies it immediately.
+- `C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryCuratorConversationService.cs` lines 704-731: capture-kind detection is English substring-based.
+- `C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryCuratorConversationService.cs` lines 736-774: affected memories are resolved from explicit request plus all included recall source refs/candidates/context sections.
+- `C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryCuratorConversationService.cs` lines 776-819: corrections mark all affected records as superseded/stale.
 
 Missing professor behavior:
 
@@ -134,9 +134,9 @@ When a correction is recorded with a recall trace, the service can include all m
 
 Relevant code:
 
-- `/mnt/data/review/CanDoItAll-development/src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryCuratorConversationService.cs` lines 105-128: `SendAsync` passes all included memory ids as affected ids.
-- `/mnt/data/review/CanDoItAll-development/src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryCuratorConversationService.cs` lines 736-774: `ResolveIncludedMemoryRecordIdsAsync` aggregates source refs, selected candidates, and context sections.
-- `/mnt/data/review/CanDoItAll-development/src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryCuratorConversationService.cs` lines 790-818: all affected records are superseded or refined.
+- `C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryCuratorConversationService.cs` lines 105-128: `SendAsync` passes all included memory ids as affected ids.
+- `C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryCuratorConversationService.cs` lines 736-774: `ResolveIncludedMemoryRecordIdsAsync` aggregates source refs, selected candidates, and context sections.
+- `C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryCuratorConversationService.cs` lines 790-818: all affected records are superseded or refined.
 
 This must be treated as a critical safety issue. A professor correction should target an explicit claim or a small target set with confidence. Ambiguous targets must become a review item or a clarification question, not a broad supersede.
 
@@ -146,10 +146,10 @@ The curator tab can start a session, send a message, use voice mode, show transc
 
 Relevant code:
 
-- `/mnt/data/review/CanDoItAll-development/src/CanDoItAll.Modules.CognitiveMemory/Pages/Components/CognitiveMemoryCuratorTab.razor` lines 27-74: session controls.
-- `/mnt/data/review/CanDoItAll-development/src/CanDoItAll.Modules.CognitiveMemory/Pages/Components/CognitiveMemoryCuratorTab.razor` lines 82-118: message/voice controls.
-- `/mnt/data/review/CanDoItAll-development/src/CanDoItAll.Modules.CognitiveMemory/Pages/Components/CognitiveMemoryCuratorTab.razor` lines 188-224: trusted capture state display.
-- `/mnt/data/review/CanDoItAll-development/src/CanDoItAll.Modules.CognitiveMemory/Pages/CognitiveMemoryPage.Curator.cs` lines 145-149: UI sends no explicit capture kind or target selection.
+- `C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Pages/Components/CognitiveMemoryCuratorTab.razor` lines 27-74: session controls.
+- `C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Pages/Components/CognitiveMemoryCuratorTab.razor` lines 82-118: message/voice controls.
+- `C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Pages/Components/CognitiveMemoryCuratorTab.razor` lines 188-224: trusted capture state display.
+- `C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Pages/CognitiveMemoryPage.Curator.cs` lines 145-149: UI sends no explicit capture kind or target selection.
 
 This is acceptable for a prototype but not for a reliable professor learning mode.
 
@@ -159,10 +159,10 @@ The current tests check that clusters are created, dream runs create candidates,
 
 Relevant code:
 
-- `/mnt/data/review/CanDoItAll-development/tests/CanDoItAll.Tests.Unit/CognitiveMemoryQualityFoundationTests.cs` lines 98-111 assert broad cluster families exist.
-- `/mnt/data/review/CanDoItAll-development/tests/CanDoItAll.Tests.Unit/CognitiveMemoryAdvancedServicesTests.cs` lines 262-306 test trusted new knowledge happy path.
-- `/mnt/data/review/CanDoItAll-development/tests/CanDoItAll.Tests.Unit/CognitiveMemoryAdvancedServicesTests.cs` lines 308-360 test correction with one affected recall memory.
-- `/mnt/data/review/CanDoItAll-development/tests/CanDoItAll.Tests.Unit/CognitiveMemoryAdvancedServicesTests.cs` lines 461-502 assert agent mode uses auto-approved tool calls.
+- `C:/repositories/CanDoItAll/tests/CanDoItAll.Tests.Unit/CognitiveMemoryQualityFoundationTests.cs` lines 98-111 assert broad cluster families exist.
+- `C:/repositories/CanDoItAll/tests/CanDoItAll.Tests.Unit/CognitiveMemoryAdvancedServicesTests.cs` lines 262-306 test trusted new knowledge happy path.
+- `C:/repositories/CanDoItAll/tests/CanDoItAll.Tests.Unit/CognitiveMemoryAdvancedServicesTests.cs` lines 308-360 test correction with one affected recall memory.
+- `C:/repositories/CanDoItAll/tests/CanDoItAll.Tests.Unit/CognitiveMemoryAdvancedServicesTests.cs` lines 461-502 assert agent mode uses auto-approved tool calls.
 
 Missing tests:
 

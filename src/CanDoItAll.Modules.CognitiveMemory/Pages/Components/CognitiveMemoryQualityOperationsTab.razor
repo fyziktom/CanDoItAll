@@ -182,7 +182,14 @@
                                                 <strong>@($"{CognitiveMemoryPage.FormatLabel(cluster.PrimaryKeyFamily)} / {CognitiveMemoryPage.FormatShortId(cluster.Id.Value)}")</strong>
                                                 <StatusBadge Tone="@CognitiveMemoryPage.QualityClusterTone(cluster.Readiness)"
                                                              Text="@CognitiveMemoryPage.FormatLabel(cluster.Readiness)" />
+                                                <StatusBadge Tone="@(cluster.AggregateEligible ? "success" : "warning")"
+                                                             Text="@(cluster.AggregateEligible ? "Aggregate eligible" : "Needs more signal")" />
                                                 <span>@($"{cluster.MemberCount} member(s), {cluster.KeyCount} key(s), {cluster.SourceEvidenceCount} source link(s), {cluster.ContradictionCount} contradiction(s)")</span>
+                                                <small>@($"Quality: composite {cluster.CompositeScore:0.00}, cohesion {cluster.CohesionScore:0.00}, source independence {cluster.SourceIndependenceScore:0.00}, diversity {cluster.SourceDiversityScore:0.00}")</small>
+                                                @if (!string.IsNullOrWhiteSpace(cluster.EligibilityReason))
+                                                {
+                                                    <small>@cluster.EligibilityReason</small>
+                                                }
                                                 <small>@($"{CognitiveMemoryPage.FormatLabel(cluster.AccessLevel)} / {CognitiveMemoryPage.FormatLabel(cluster.RiskLevel)} / {CognitiveMemoryPage.FormatDate(cluster.UpdatedAtUtc)}")</small>
                                             </div>
                                         }

@@ -15,6 +15,11 @@ public partial class CognitiveMemoryPage
     internal Guid? activeCuratorSessionId;
     internal CognitiveMemoryCuratorRuntimeMode curatorRuntimeMode = CognitiveMemoryCuratorRuntimeMode.DirectLlm;
     internal CognitiveMemoryCuratorConversationDepth curatorConversationDepth = CognitiveMemoryCuratorConversationDepth.Medium;
+    internal string curatorExplicitCaptureKindText = string.Empty;
+    internal string curatorTargetMemoryRecordIdsText = string.Empty;
+    internal string curatorTargetClaimIdsText = string.Empty;
+    internal double? curatorTargetConfidenceScore;
+    internal string curatorCaptureScopeText = string.Empty;
     internal CognitiveMemoryCuratorRuntimeMode? activeCuratorSessionMode;
     internal CognitiveMemoryCuratorConversationDepth? activeCuratorSessionDepth;
     internal string activeCuratorSessionTitle = string.Empty;
@@ -146,7 +151,12 @@ public partial class CognitiveMemoryPage
                 sessionId,
                 message,
                 Intent: CognitiveMemoryRecallIntentKind.Implementation,
-                ConversationDepth: curatorConversationDepth));
+                ExplicitCaptureKind: ParseOptionalEnum<CognitiveMemoryCuratorCaptureKind>(curatorExplicitCaptureKindText),
+                ConversationDepth: curatorConversationDepth,
+                ExplicitTargetMemoryRecordIds: ParseCuratorTargetMemoryRecordIds(curatorTargetMemoryRecordIdsText),
+                ExplicitTargetClaimIds: ParseCuratorTargetClaimIds(curatorTargetClaimIdsText),
+                TargetConfidenceScore: NormalizeCuratorTargetConfidence(curatorTargetConfidenceScore),
+                CaptureScope: NormalizeOptionalText(curatorCaptureScopeText)));
             lastCuratorSendResult = result;
             activeCuratorSessionId = result.Session.Id;
             activeCuratorSessionMode = result.Session.RuntimeMode;
@@ -396,6 +406,86 @@ public partial class CognitiveMemoryPage
             _ => "warning"
         };
 
+    internal static string CuratorTargetingTone(CognitiveMemoryCuratorTargetingStatus status)
+        => status switch
+        {
+            CognitiveMemoryCuratorTargetingStatus.ExplicitTarget => "success",
+            CognitiveMemoryCuratorTargetingStatus.InferredSingleTarget => "info",
+            CognitiveMemoryCuratorTargetingStatus.AmbiguousNeedsReview => "warning",
+            _ => "secondary"
+        };
+
+    internal static string CuratorAnchorTone(CognitiveMemoryProfessorAnchorState state)
+        => state switch
+        {
+            CognitiveMemoryProfessorAnchorState.Assimilated => "success",
+            CognitiveMemoryProfessorAnchorState.Faded => "secondary",
+            CognitiveMemoryProfessorAnchorState.Rejected => "danger",
+            CognitiveMemoryProfessorAnchorState.Comparing => "info",
+            _ => "primary"
+        };
+
+    internal static IReadOnlyList<CognitiveMemoryRecordId>? ParseCuratorTargetMemoryRecordIds(string value)
+    {
+        var ids = ParseCuratorTargetGuids(value, "Target memory ids")
+            .Select(id => new CognitiveMemoryRecordId(id))
+            .ToArray();
+        return ids.Length == 0 ? null : ids;
+    }
+
+    internal static IReadOnlyList<CognitiveMemoryClaimId>? ParseCuratorTargetClaimIds(string value)
+    {
+        var ids = ParseCuratorTargetGuids(value, "Target claim ids")
+            .Select(id => new CognitiveMemoryClaimId(id))
+            .ToArray();
+        return ids.Length == 0 ? null : ids;
+    }
+
+    internal static double? NormalizeCuratorTargetConfidence(double? value)
+    {
+        if (value is null)
+        {
+            return null;
+        }
+
+        if (value is < 0 or > 1)
+        {
+            throw new InvalidOperationException("Target confidence must be between 0 and 1.");
+        }
+
+        return value;
+    }
+
+    internal static string? NormalizeOptionalText(string value)
+    {
+        var text = value.Trim();
+        return string.IsNullOrWhiteSpace(text) ? null : text;
+    }
+
+    private static IReadOnlyList<Guid> ParseCuratorTargetGuids(string value, string fieldName)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return [];
+        }
+
+        var ids = new List<Guid>();
+        var parts = value.Split(
+            [',', ';', '\r', '\n', '\t', ' '],
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        foreach (var part in parts)
+        {
+            if (!Guid.TryParse(part, out var id) || id == Guid.Empty)
+            {
+                throw new InvalidOperationException($"{fieldName} must contain only non-empty GUID values.");
+            }
+
+            ids.Add(id);
+        }
+
+        return ids;
+    }
+
     internal sealed record CognitiveMemoryCuratorTurnViewModel(
         int Sequence,
         string UserMessage,
@@ -427,18 +517,30 @@ public partial class CognitiveMemoryPage
     internal sealed record CognitiveMemoryCuratorCaptureViewModel(
         CognitiveMemoryCuratorCaptureKind CaptureKind,
         CognitiveMemoryCuratorCaptureStatus Status,
+        CognitiveMemoryCuratorTargetingStatus TargetingStatus,
+        CognitiveMemoryProfessorAnchorState AnchorState,
         string Summary,
         Guid? AppliedMemoryRecordId,
+        Guid? ReviewItemId,
         double ConfidenceScore,
-        double PriorityScore)
+        double PriorityScore,
+        double TargetConfidenceScore,
+        string CaptureLanguage,
+        string CaptureScope)
     {
         public static CognitiveMemoryCuratorCaptureViewModel FromRecord(CognitiveMemoryCuratorCapturedImprovementRecord record)
             => new(
                 record.CaptureKind,
                 record.Status,
+                record.TargetingStatus,
+                record.AnchorState,
                 record.Summary,
                 record.AppliedMemoryRecordId,
+                record.ReviewItemId,
                 record.ConfidenceScore,
-                record.PriorityScore);
+                record.PriorityScore,
+                record.TargetConfidenceScore,
+                record.CaptureLanguage,
+                record.CaptureScope);
     }
 }

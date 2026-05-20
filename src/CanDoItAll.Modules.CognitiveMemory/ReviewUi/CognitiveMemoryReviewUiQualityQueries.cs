@@ -42,6 +42,12 @@ public sealed partial class CognitiveMemoryReviewUiService
                 cluster.MemberCount,
                 cluster.SourceEvidenceCount,
                 cluster.ContradictionCount,
+                cluster.CompositeScore,
+                cluster.CohesionScore,
+                cluster.SourceIndependenceScore,
+                cluster.SourceDiversityScore,
+                cluster.AggregateEligible,
+                cluster.EligibilityReason,
                 cluster.UpdatedAtUtc))
             .ToArrayAsync(cancellationToken);
     }
@@ -87,6 +93,12 @@ public sealed partial class CognitiveMemoryReviewUiService
                 cluster.MemberCount,
                 cluster.SourceEvidenceCount,
                 cluster.ContradictionCount,
+                cluster.CompositeScore,
+                cluster.CohesionScore,
+                cluster.SourceIndependenceScore,
+                cluster.SourceDiversityScore,
+                cluster.AggregateEligible,
+                cluster.EligibilityReason,
                 cluster.UpdatedAtUtc,
                 keysByCluster.TryGetValue(cluster.Id, out var keys) ? keys : [],
                 membersByCluster.TryGetValue(cluster.Id, out var members) ? members : []))

@@ -132,6 +132,7 @@ internal static partial class CognitiveMemoryQualityText
         "has",
         "into",
         "must",
+        "note",
         "not",
         "the",
         "this",

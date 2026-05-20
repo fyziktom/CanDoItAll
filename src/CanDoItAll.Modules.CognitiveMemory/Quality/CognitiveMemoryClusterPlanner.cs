@@ -11,7 +11,25 @@ public sealed class CognitiveMemoryClusterPlanner(
     IDbContextFactory<AppDbContext> dbContextFactory,
     IClock clock) : ICognitiveMemoryClusterPlanner
 {
-    private const string AlgorithmVersion = "quality-clustering-v1";
+    private const string AlgorithmVersion = "quality-clustering-v2";
+    private const int MaxAggregateReadyMemoryRecords = 20;
+
+    private static readonly IReadOnlySet<CognitiveMemoryQualityClusterKeyFamily> StrongPrimaryFamilies = new HashSet<CognitiveMemoryQualityClusterKeyFamily>
+    {
+        CognitiveMemoryQualityClusterKeyFamily.SemanticTopic,
+        CognitiveMemoryQualityClusterKeyFamily.Entity,
+        CognitiveMemoryQualityClusterKeyFamily.TaskIntent,
+        CognitiveMemoryQualityClusterKeyFamily.EvidenceOverlap,
+        CognitiveMemoryQualityClusterKeyFamily.Relation
+    };
+
+    private static readonly IReadOnlySet<CognitiveMemoryQualityClusterKeyFamily> SupportingFamilies = new HashSet<CognitiveMemoryQualityClusterKeyFamily>
+    {
+        CognitiveMemoryQualityClusterKeyFamily.ProjectScope,
+        CognitiveMemoryQualityClusterKeyFamily.SourceTopology,
+        CognitiveMemoryQualityClusterKeyFamily.Temporal,
+        CognitiveMemoryQualityClusterKeyFamily.AccessRisk
+    };
 
     public async ValueTask<CognitiveMemoryClusterPlanningResult> PlanAsync(
         CognitiveMemoryClusterPlanningRequest request,
@@ -62,6 +80,7 @@ public sealed class CognitiveMemoryClusterPlanner(
         var warnings = new List<string>();
         var clusters = new List<CognitiveMemoryClusterPlan>();
         foreach (var group in keyEntries
+            .Where(entry => IsStrongPrimaryKey(entry.Key))
             .GroupBy(entry => new { entry.Key.Family, entry.Key.Key })
             .OrderBy(group => group.Key.Family)
             .ThenBy(group => group.Key.Key, StringComparer.Ordinal))
@@ -75,20 +94,29 @@ public sealed class CognitiveMemoryClusterPlanner(
                 continue;
             }
 
+            if (group.Key.Family == CognitiveMemoryQualityClusterKeyFamily.TaskIntent &&
+                string.Equals(group.Key.Key, "intent:general", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
             var memberRecordIds = members.Select(member => member.Record.Id).ToHashSet();
-            var clusterKeys = members
+            var clusterKeySignals = members
                 .SelectMany(member => CreateKeys(member.Record, member.Support, relationKeysByRecordId.GetValueOrDefault(member.Record.Id) ?? [], request.KeyFamilies))
                 .GroupBy(key => new { key.Family, key.Key })
                 .Where(keyGroup => keyGroup.Count(key => memberRecordIds.Contains(key.RecordId)) >= Math.Min(2, members.Length))
                 .Select(keyGroup => keyGroup.First() with { RecordId = Guid.Empty })
                 .OrderBy(key => key.Family)
                 .ThenBy(key => key.Key, StringComparer.Ordinal)
+                .ToArray();
+            var clusterKeys = clusterKeySignals
                 .Select(key => new CognitiveMemoryClusterKey(key.Family, key.Key, key.DisplayText))
                 .ToArray();
             var clusterMembers = members
                 .SelectMany(member => ToClusterMembers(member.Record, member.Support))
                 .ToArray();
-            var readiness = ResolveReadiness(members, contradictionPairs);
+            var qualityMetrics = ScoreCluster(group.Key.Family, group.Key.Key, members, clusterKeySignals, contradictionPairs);
+            var readiness = ResolveReadiness(members, contradictionPairs, qualityMetrics);
             var clusterHash = CreateClusterHash(request.ProjectId, group.Key.Family, group.Key.Key, members.Select(member => member.Record.Id));
             var cluster = new CognitiveMemoryClusterPlan(
                 CognitiveMemoryQualityClusterId.New(),
@@ -100,7 +128,8 @@ public sealed class CognitiveMemoryClusterPlanner(
                     ? [new CognitiveMemoryClusterKey(group.Key.Family, group.Key.Key, group.First().Key.DisplayText)]
                     : clusterKeys,
                 clusterMembers,
-                ResolveClusterWarnings(readiness, clusterMembers));
+                qualityMetrics,
+                ResolveClusterWarnings(readiness, clusterMembers, qualityMetrics));
             clusters.Add(cluster);
         }
 
@@ -177,6 +206,15 @@ public sealed class CognitiveMemoryClusterPlanner(
             clusterRecord.MemberCount = persistedPlan.Members.Count;
             clusterRecord.SourceEvidenceCount = persistedPlan.Members.Count(member => member.EvidenceAnchorId is not null);
             clusterRecord.ContradictionCount = persistedPlan.Readiness == CognitiveMemoryQualityClusterReadiness.Contradictory ? 1 : 0;
+            clusterRecord.CohesionScore = persistedPlan.QualityMetrics.CohesionScore;
+            clusterRecord.SourceIndependenceScore = persistedPlan.QualityMetrics.SourceIndependenceScore;
+            clusterRecord.SourceDiversityScore = persistedPlan.QualityMetrics.SourceDiversityScore;
+            clusterRecord.SemanticSignalScore = persistedPlan.QualityMetrics.SemanticSignalScore;
+            clusterRecord.SupportingSignalScore = persistedPlan.QualityMetrics.SupportingSignalScore;
+            clusterRecord.GuardPenaltyScore = persistedPlan.QualityMetrics.GuardPenaltyScore;
+            clusterRecord.CompositeScore = persistedPlan.QualityMetrics.CompositeScore;
+            clusterRecord.AggregateEligible = persistedPlan.QualityMetrics.AggregateEligible;
+            clusterRecord.EligibilityReason = persistedPlan.QualityMetrics.EligibilityReason;
             clusterRecord.UpdatedAtUtc = nowUtc;
             clusterRecord.ConcurrencyToken = Guid.NewGuid();
             dbContext.AddRange(cluster.Keys.Select(key => new CognitiveMemoryQualityClusterKeyRecord
@@ -348,9 +386,170 @@ public sealed class CognitiveMemoryClusterPlanner(
             ? CognitiveMemoryRiskLevel.High
             : CognitiveMemoryRiskLevel.Low;
 
+    private static bool IsStrongPrimaryKey(CognitiveMemoryClusterKeyWithRecord key)
+    {
+        if (!StrongPrimaryFamilies.Contains(key.Family))
+        {
+            return false;
+        }
+
+        return key.Family != CognitiveMemoryQualityClusterKeyFamily.TaskIntent ||
+               !string.Equals(key.Key, "intent:general", StringComparison.Ordinal);
+    }
+
+    private static CognitiveMemoryClusterQualityMetrics ScoreCluster(
+        CognitiveMemoryQualityClusterKeyFamily primaryFamily,
+        string primaryKey,
+        IReadOnlyList<ClusterKeyEntry> members,
+        IReadOnlyList<CognitiveMemoryClusterKeyWithRecord> clusterKeys,
+        HashSet<string> contradictionPairs)
+    {
+        var memoryRecordCount = members.Select(member => member.Record.Id).Distinct().Count();
+        var distinctSourceItemCount = members
+            .SelectMany(member => member.Support.SourceItems.Select(item => item.Id))
+            .Distinct()
+            .Count();
+        var distinctSourceSystemCount = members
+            .SelectMany(member => member.Support.SourceItems.Select(item => CognitiveMemoryQualityText.NormalizeKey(item.SourceSystem)))
+            .Distinct(StringComparer.Ordinal)
+            .Count();
+        var strongKeyCount = clusterKeys
+            .Where(IsStrongPrimaryKey)
+            .Select(key => new { key.Family, key.Key })
+            .Distinct()
+            .Count();
+        var supportingKeyCount = clusterKeys
+            .Where(key => SupportingFamilies.Contains(key.Family))
+            .Select(key => new { key.Family, key.Key })
+            .Distinct()
+            .Count();
+        var semanticSignalScore = Math.Clamp(ScorePrimarySignal(primaryFamily, primaryKey) + Math.Min(strongKeyCount, 4) * 0.08, 0, 1);
+        var sourceIndependenceScore = Math.Clamp(distinctSourceItemCount / 2d, 0, 1);
+        var sourceDiversityScore = Math.Clamp(distinctSourceSystemCount / 2d, 0, 1);
+        var supportingSignalScore = Math.Clamp(supportingKeyCount / 4d, 0, 1);
+        var guardPenalty = ResolveGuardPenalty(members, contradictionPairs, memoryRecordCount);
+        var cohesionScore = Math.Clamp(semanticSignalScore + Math.Min(memoryRecordCount, 5) * 0.03, 0, 1);
+        var compositeScore = Math.Clamp(
+            cohesionScore * 0.48 +
+            sourceIndependenceScore * 0.22 +
+            sourceDiversityScore * 0.12 +
+            supportingSignalScore * 0.08 -
+            guardPenalty,
+            0,
+            1);
+        var aggregateEligible = compositeScore >= 0.62 &&
+                                cohesionScore >= 0.55 &&
+                                sourceIndependenceScore >= 1 &&
+                                guardPenalty == 0 &&
+                                memoryRecordCount <= MaxAggregateReadyMemoryRecords &&
+                                members.All(member => member.Support.EvidenceAnchors.Count > 0);
+        var reason = aggregateEligible
+            ? "Composite semantic, source independence, and guard metrics passed."
+            : ResolveEligibilityReason(cohesionScore, sourceIndependenceScore, guardPenalty, memoryRecordCount, members);
+
+        return new CognitiveMemoryClusterQualityMetrics(
+            RoundScore(cohesionScore),
+            RoundScore(sourceIndependenceScore),
+            RoundScore(sourceDiversityScore),
+            RoundScore(semanticSignalScore),
+            RoundScore(supportingSignalScore),
+            RoundScore(guardPenalty),
+            RoundScore(compositeScore),
+            aggregateEligible,
+            reason);
+    }
+
+    private static double ScorePrimarySignal(CognitiveMemoryQualityClusterKeyFamily primaryFamily, string primaryKey)
+        => primaryFamily switch
+        {
+            CognitiveMemoryQualityClusterKeyFamily.SemanticTopic => 0.58,
+            CognitiveMemoryQualityClusterKeyFamily.Relation => 0.54,
+            CognitiveMemoryQualityClusterKeyFamily.EvidenceOverlap => 0.52,
+            CognitiveMemoryQualityClusterKeyFamily.Entity => 0.46,
+            CognitiveMemoryQualityClusterKeyFamily.TaskIntent when !string.Equals(primaryKey, "intent:general", StringComparison.Ordinal) => 0.42,
+            _ => 0.2
+        };
+
+    private static double ResolveGuardPenalty(
+        IReadOnlyList<ClusterKeyEntry> members,
+        HashSet<string> contradictionPairs,
+        int memoryRecordCount)
+    {
+        var penalty = 0d;
+        if (memoryRecordCount > MaxAggregateReadyMemoryRecords)
+        {
+            penalty += 0.35;
+        }
+
+        if (members.Any(member => member.Record.AccessLevel == CognitiveMemoryAccessLevel.Restricted ||
+                                  member.Support.HighestRedactionState == CognitiveMemoryRedactionState.Restricted))
+        {
+            penalty += 0.45;
+        }
+
+        if (members.Any(member => member.Record.StabilityState is CognitiveMemoryStabilityState.Stale or CognitiveMemoryStabilityState.Deprecated ||
+                                  member.Record.ValidationState is CognitiveMemoryValidationState.NeedsHumanReview or CognitiveMemoryValidationState.Superseded))
+        {
+            penalty += 0.25;
+        }
+
+        for (var left = 0; left < members.Count; left++)
+        {
+            for (var right = left + 1; right < members.Count; right++)
+            {
+                if (contradictionPairs.Contains(NormalizePair(members[left].Record.Id, members[right].Record.Id)))
+                {
+                    penalty += 0.55;
+                    return Math.Clamp(penalty, 0, 1);
+                }
+            }
+        }
+
+        return Math.Clamp(penalty, 0, 1);
+    }
+
+    private static string ResolveEligibilityReason(
+        double cohesionScore,
+        double sourceIndependenceScore,
+        double guardPenalty,
+        int memoryRecordCount,
+        IReadOnlyList<ClusterKeyEntry> members)
+    {
+        if (guardPenalty > 0)
+        {
+            return "Guard metrics require review before aggregate promotion.";
+        }
+
+        if (memoryRecordCount > MaxAggregateReadyMemoryRecords)
+        {
+            return "Cluster is too broad for automatic aggregate promotion.";
+        }
+
+        if (sourceIndependenceScore < 1)
+        {
+            return "Cluster lacks two independent source items.";
+        }
+
+        if (cohesionScore < 0.55)
+        {
+            return "Cluster semantic cohesion is below aggregate threshold.";
+        }
+
+        if (members.Any(member => member.Support.EvidenceAnchors.Count == 0))
+        {
+            return "Cluster contains memory records without evidence anchors.";
+        }
+
+        return "Composite score is below aggregate threshold.";
+    }
+
+    private static double RoundScore(double value)
+        => Math.Round(value, 3, MidpointRounding.AwayFromZero);
+
     private static CognitiveMemoryQualityClusterReadiness ResolveReadiness(
         IReadOnlyList<ClusterKeyEntry> members,
-        HashSet<string> contradictionPairs)
+        HashSet<string> contradictionPairs,
+        CognitiveMemoryClusterQualityMetrics qualityMetrics)
     {
         if (members.Any(member => member.Record.AccessLevel == CognitiveMemoryAccessLevel.Restricted ||
                                   member.Support.HighestRedactionState == CognitiveMemoryRedactionState.Restricted))
@@ -375,6 +574,13 @@ public sealed class CognitiveMemoryClusterPlanner(
             return CognitiveMemoryQualityClusterReadiness.NeedsHumanReview;
         }
 
+        if (!qualityMetrics.AggregateEligible)
+        {
+            return qualityMetrics.GuardPenaltyScore > 0 || members.Count > MaxAggregateReadyMemoryRecords
+                ? CognitiveMemoryQualityClusterReadiness.NeedsHumanReview
+                : CognitiveMemoryQualityClusterReadiness.NeedsMoreEvidence;
+        }
+
         return members.All(member => member.Support.EvidenceAnchors.Count > 0)
             ? CognitiveMemoryQualityClusterReadiness.AggregateReady
             : CognitiveMemoryQualityClusterReadiness.NeedsMoreEvidence;
@@ -382,7 +588,8 @@ public sealed class CognitiveMemoryClusterPlanner(
 
     private static IReadOnlyList<string> ResolveClusterWarnings(
         CognitiveMemoryQualityClusterReadiness readiness,
-        IReadOnlyList<CognitiveMemoryClusterMember> members)
+        IReadOnlyList<CognitiveMemoryClusterMember> members,
+        CognitiveMemoryClusterQualityMetrics qualityMetrics)
     {
         var warnings = new List<string>();
         if (readiness is CognitiveMemoryQualityClusterReadiness.Restricted or CognitiveMemoryQualityClusterReadiness.Contradictory)
@@ -393,6 +600,11 @@ public sealed class CognitiveMemoryClusterPlanner(
         if (members.Any(member => member.EvidenceAnchorId is null))
         {
             warnings.Add("Cluster contains one or more members without explicit evidence anchors.");
+        }
+
+        if (!qualityMetrics.AggregateEligible)
+        {
+            warnings.Add(qualityMetrics.EligibilityReason);
         }
 
         return warnings;

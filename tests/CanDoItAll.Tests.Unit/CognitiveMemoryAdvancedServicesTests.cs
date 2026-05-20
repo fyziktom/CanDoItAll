@@ -306,6 +306,43 @@ public sealed class CognitiveMemoryAdvancedServicesTests
     }
 
     [Fact]
+    public async Task ProfessorAnchor_AssimilatesAndFadesOnlyAfterDerivedMemoryExists()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var service = CreateCuratorService(fixture);
+        var session = await service.StartAsync(new CognitiveMemoryCuratorSessionStartRequest(
+            projectId,
+            "Professor anchor chat",
+            Policy(projectId),
+            CognitiveMemoryCuratorRuntimeMode.DirectLlm));
+        var result = await service.RecordTurnAsync(new CognitiveMemoryCuratorTurnCaptureRequest(
+            session.Id,
+            "Remember that production rollback needs signed release-owner approval.",
+            "I will retain that as trusted project knowledge.",
+            CognitiveMemoryCuratorRuntimeMode.DirectLlm,
+            ExplicitCaptureKind: CognitiveMemoryCuratorCaptureKind.NewKnowledge));
+        var capture = Assert.Single(result.CapturedImprovements);
+        var anchorService = new CognitiveMemoryProfessorAnchorService(fixture.Factory, fixture.Clock);
+
+        var fadeError = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await anchorService.FadeAsync(capture.Id));
+        var assimilated = await anchorService.MarkAssimilatedAsync(new CognitiveMemoryProfessorAnchorAssimilationRequest(
+            capture.Id,
+            new CognitiveMemoryRecordId(capture.AppliedMemoryRecordId!.Value)));
+        var faded = await anchorService.FadeAsync(capture.Id);
+
+        await using var dbContext = fixture.Factory.CreateDbContext();
+        var persistedCapture = await dbContext.Set<CognitiveMemoryCuratorCapturedImprovementRecord>().SingleAsync(item => item.Id == capture.Id);
+        Assert.Contains("cannot fade before assimilation", fadeError.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(CognitiveMemoryProfessorAnchorState.Assimilated, assimilated.AnchorState);
+        Assert.Equal(CognitiveMemoryProfessorAnchorState.Faded, faded.AnchorState);
+        Assert.Equal(CognitiveMemoryProfessorAnchorState.Faded, persistedCapture.AnchorState);
+        Assert.Equal(capture.AppliedMemoryRecordId, persistedCapture.AssimilatedMemoryRecordId);
+        Assert.NotNull(persistedCapture.AnchorRetiredAtUtc);
+    }
+
+    [Fact]
     public async Task CuratorCapture_CorrectionTargetsIncludedRecallMemoryAndSupersedesIt()
     {
         var fixture = CreateFixture();
@@ -356,6 +393,131 @@ public sealed class CognitiveMemoryAdvancedServicesTests
         Assert.Equal(CognitiveMemoryRelationKind.Supersedes, relation.RelationKind);
         Assert.Contains("signed release branch", appliedMemory.CanonicalText, StringComparison.Ordinal);
         Assert.Equal(0, await dbContext.Set<CognitiveMemoryReviewItemRecord>().CountAsync());
+    }
+
+    [Fact]
+    public async Task CuratorCapture_ExplicitCorrectionTargetWinsOverMultipleRecalledMemories()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var firstMemoryId = await SeedMemoryRecordAsync(fixture, projectId, CognitiveMemoryAccessLevel.Project);
+        var targetMemoryId = await SeedMemoryRecordAsync(fixture, projectId, CognitiveMemoryAccessLevel.Project);
+        var thirdMemoryId = await SeedMemoryRecordAsync(fixture, projectId, CognitiveMemoryAccessLevel.Project);
+        var targetClaimId = await SeedClaimAsync(fixture, projectId, targetMemoryId);
+        var recallTraceId = await SeedRecallTraceWithIncludedMemoriesAsync(fixture, projectId, [firstMemoryId, targetMemoryId, thirdMemoryId]);
+        var service = CreateCuratorService(fixture);
+        var session = await service.StartAsync(new CognitiveMemoryCuratorSessionStartRequest(
+            projectId,
+            "Explicit curator correction chat",
+            Policy(projectId),
+            CognitiveMemoryCuratorRuntimeMode.DirectLlm));
+
+        var result = await service.RecordTurnAsync(new CognitiveMemoryCuratorTurnCaptureRequest(
+            session.Id,
+            "That is not correct. The signed release branch is the production source of truth.",
+            "I found several deployment memories.",
+            CognitiveMemoryCuratorRuntimeMode.DirectLlm,
+            RecallTraceId: recallTraceId,
+            ExplicitCaptureKind: CognitiveMemoryCuratorCaptureKind.Correction,
+            ExplicitTargetMemoryRecordIds: [new CognitiveMemoryRecordId(targetMemoryId)],
+            ExplicitTargetClaimIds: [new CognitiveMemoryClaimId(targetClaimId)],
+            TargetConfidenceScore: 0.74,
+            CaptureScope: "Project"));
+
+        await using var dbContext = fixture.Factory.CreateDbContext();
+        var capture = Assert.Single(result.CapturedImprovements);
+        var persistedCapture = await dbContext.Set<CognitiveMemoryCuratorCapturedImprovementRecord>().SingleAsync();
+        var mutation = await dbContext.Set<CognitiveMemoryMutationCommandRecord>().SingleAsync();
+        var firstMemory = await dbContext.Set<CognitiveMemoryRecord>().SingleAsync(record => record.Id == firstMemoryId);
+        var targetMemory = await dbContext.Set<CognitiveMemoryRecord>().SingleAsync(record => record.Id == targetMemoryId);
+        var thirdMemory = await dbContext.Set<CognitiveMemoryRecord>().SingleAsync(record => record.Id == thirdMemoryId);
+        var capturedAffectedIds = DeserializeGuidList(persistedCapture.AffectedMemoryRecordIdsJson);
+        var capturedClaimIds = DeserializeGuidList(persistedCapture.TargetClaimIdsJson);
+        var mutationAffectedIds = DeserializeGuidList(mutation.AffectedMemoryRecordIdsJson);
+        var mutationClaimIds = DeserializeGuidList(mutation.AffectedClaimIdsJson);
+
+        Assert.Equal(CognitiveMemoryCuratorCaptureStatus.Applied, capture.Status);
+        Assert.Equal(CognitiveMemoryCuratorTargetingStatus.ExplicitTarget, persistedCapture.TargetingStatus);
+        Assert.Equal(0.74, persistedCapture.TargetConfidenceScore, 3);
+        Assert.Equal("Project", persistedCapture.CaptureScope);
+        Assert.Contains(targetMemoryId, capturedAffectedIds);
+        Assert.DoesNotContain(firstMemoryId, capturedAffectedIds);
+        Assert.DoesNotContain(thirdMemoryId, capturedAffectedIds);
+        Assert.Contains(targetClaimId, capturedClaimIds);
+        Assert.Contains(targetMemoryId, mutationAffectedIds);
+        Assert.Contains(targetClaimId, mutationClaimIds);
+        Assert.Equal(CognitiveMemoryValidationState.Superseded, targetMemory.ValidationState);
+        Assert.Equal(CognitiveMemoryStabilityState.Stale, targetMemory.StabilityState);
+        Assert.Equal(CognitiveMemoryValidationState.Approved, firstMemory.ValidationState);
+        Assert.Equal(CognitiveMemoryValidationState.Approved, thirdMemory.ValidationState);
+    }
+
+    [Fact]
+    public async Task CuratorCapture_AmbiguousCorrectionWithMultipleRecallMemoriesCreatesReviewWithoutBroadSupersede()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var firstMemoryId = await SeedMemoryRecordAsync(fixture, projectId, CognitiveMemoryAccessLevel.Project);
+        var secondMemoryId = await SeedMemoryRecordAsync(fixture, projectId, CognitiveMemoryAccessLevel.Project);
+        var thirdMemoryId = await SeedMemoryRecordAsync(fixture, projectId, CognitiveMemoryAccessLevel.Project);
+        var recallTraceId = await SeedRecallTraceWithIncludedMemoriesAsync(fixture, projectId, [firstMemoryId, secondMemoryId, thirdMemoryId]);
+        var service = CreateCuratorService(fixture);
+        var session = await service.StartAsync(new CognitiveMemoryCuratorSessionStartRequest(
+            projectId,
+            "Ambiguous curator correction chat",
+            Policy(projectId),
+            CognitiveMemoryCuratorRuntimeMode.DirectLlm));
+
+        var result = await service.RecordTurnAsync(new CognitiveMemoryCuratorTurnCaptureRequest(
+            session.Id,
+            "That is not correct. The signed release branch is the production source of truth.",
+            "I found several deployment memories.",
+            CognitiveMemoryCuratorRuntimeMode.DirectLlm,
+            RecallTraceId: recallTraceId,
+            ExplicitCaptureKind: CognitiveMemoryCuratorCaptureKind.Correction));
+
+        await using var dbContext = fixture.Factory.CreateDbContext();
+        var capture = Assert.Single(result.CapturedImprovements);
+        var records = await dbContext.Set<CognitiveMemoryRecord>()
+            .Where(record => new[] { firstMemoryId, secondMemoryId, thirdMemoryId }.Contains(record.Id))
+            .ToListAsync();
+
+        Assert.Equal(CognitiveMemoryCuratorCaptureStatus.Captured, capture.Status);
+        Assert.All(records, record =>
+        {
+            Assert.Equal(CognitiveMemoryValidationState.Approved, record.ValidationState);
+            Assert.Equal(CognitiveMemoryStabilityState.Active, record.StabilityState);
+        });
+        Assert.Equal(0, await dbContext.Set<CognitiveMemoryRelationRecord>().CountAsync());
+        Assert.Equal(0, await dbContext.Set<CognitiveMemoryConsolidationCandidateRecord>().CountAsync());
+        Assert.Single(await dbContext.Set<CognitiveMemoryReviewItemRecord>().ToListAsync());
+    }
+
+    [Fact]
+    public async Task CuratorCapture_CzechNewKnowledgePhraseIsCapturedDeterministically()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var service = CreateCuratorService(fixture);
+        var session = await service.StartAsync(new CognitiveMemoryCuratorSessionStartRequest(
+            projectId,
+            "Czech curator chat",
+            Policy(projectId),
+            CognitiveMemoryCuratorRuntimeMode.DirectLlm));
+
+        var result = await service.RecordTurnAsync(new CognitiveMemoryCuratorTurnCaptureRequest(
+            session.Id,
+            "Zapamatuj si, ze produkcni nasazeni vzdy vyzaduje podepsanou release branch.",
+            "Rozumim, ulozim to jako znalost projektu.",
+            CognitiveMemoryCuratorRuntimeMode.DirectLlm));
+
+        await using var dbContext = fixture.Factory.CreateDbContext();
+        var capture = Assert.Single(result.CapturedImprovements);
+        var memory = await dbContext.Set<CognitiveMemoryRecord>().SingleAsync();
+
+        Assert.Equal(CognitiveMemoryCuratorCaptureKind.NewKnowledge, capture.CaptureKind);
+        Assert.Contains("produkcni nasazeni", memory.CanonicalText, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(CognitiveMemoryCuratorCaptureStatus.Applied, capture.Status);
     }
 
     [Fact]
@@ -915,6 +1077,12 @@ public sealed class CognitiveMemoryAdvancedServicesTests
     }
 
     private static async Task<Guid> SeedRecallTraceWithIncludedMemoryAsync(TestFixture fixture, Guid projectId, Guid memoryRecordId)
+        => await SeedRecallTraceWithIncludedMemoriesAsync(fixture, projectId, [memoryRecordId]);
+
+    private static async Task<Guid> SeedRecallTraceWithIncludedMemoriesAsync(
+        TestFixture fixture,
+        Guid projectId,
+        IReadOnlyList<Guid> memoryRecordIds)
     {
         await using var dbContext = fixture.Factory.CreateDbContext();
         var trace = new CognitiveMemoryRecallTraceRecord
@@ -928,10 +1096,10 @@ public sealed class CognitiveMemoryAdvancedServicesTests
             Outcome = CognitiveMemoryRunStatus.Succeeded,
             StartedAtUtc = fixture.Clock.GetUtcNow(),
             CompletedAtUtc = fixture.Clock.GetUtcNow(),
-            IncludedRecordCount = 1,
+            IncludedRecordCount = memoryRecordIds.Count,
             ConcurrencyToken = Guid.NewGuid()
         };
-        var sourceRef = new CognitiveMemoryRecallSourceRefRecord
+        var sourceRefs = memoryRecordIds.Select(memoryRecordId => new CognitiveMemoryRecallSourceRefRecord
         {
             RecallTraceId = trace.Id,
             ProjectId = projectId,
@@ -943,8 +1111,9 @@ public sealed class CognitiveMemoryAdvancedServicesTests
             RedactionState = CognitiveMemoryRedactionState.Safe,
             IncludedInContext = true,
             CreatedAtUtc = fixture.Clock.GetUtcNow()
-        };
-        dbContext.AddRange(trace, sourceRef);
+        }).ToArray();
+        dbContext.Add(trace);
+        dbContext.AddRange(sourceRefs);
         await dbContext.SaveChangesAsync();
         return trace.Id;
     }
@@ -1019,6 +1188,36 @@ public sealed class CognitiveMemoryAdvancedServicesTests
         dbContext.Add(record);
         await dbContext.SaveChangesAsync();
         return record.Id;
+    }
+
+    private static async Task<Guid> SeedClaimAsync(
+        TestFixture fixture,
+        Guid projectId,
+        Guid memoryRecordId)
+    {
+        await using var dbContext = fixture.Factory.CreateDbContext();
+        var claim = new CognitiveMemoryClaimRecord
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = projectId,
+            MemoryRecordId = memoryRecordId,
+            ClaimKind = CognitiveMemoryClaimKind.Fact,
+            ClaimText = "Production deploy source of truth is unresolved.",
+            SubjectKey = "production.deploy",
+            PredicateKey = "source-of-truth",
+            ObjectKey = "unresolved",
+            CurrentBeliefState = CognitiveMemoryBeliefStateKind.Supported,
+            CurrentBeliefBucket = CognitiveMemoryScoreProjectionBucket.StrongAccept,
+            ValidationState = CognitiveMemoryValidationState.Approved,
+            StabilityState = CognitiveMemoryStabilityState.Active,
+            AlgorithmVersion = "unit-test",
+            CreatedAtUtc = fixture.Clock.GetUtcNow(),
+            UpdatedAtUtc = fixture.Clock.GetUtcNow(),
+            ConcurrencyToken = Guid.NewGuid()
+        };
+        dbContext.Add(claim);
+        await dbContext.SaveChangesAsync();
+        return claim.Id;
     }
 
     private static async Task SeedSourceItemAsync(

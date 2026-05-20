@@ -12,10 +12,12 @@ internal sealed class CognitiveMemoryQualityClusterRecordConfiguration : IEntity
         builder.Property(cluster => cluster.ClusterHash).HasMaxLength(128).IsRequired();
         builder.Property(cluster => cluster.PolicyProfileId).HasMaxLength(120).IsRequired();
         builder.Property(cluster => cluster.AlgorithmVersion).HasMaxLength(120).IsRequired();
+        builder.Property(cluster => cluster.EligibilityReason).HasMaxLength(500).IsRequired();
         builder.Property(cluster => cluster.ConcurrencyToken).IsConcurrencyToken();
         builder.HasIndex(cluster => new { cluster.ProjectId, cluster.ClusterHash }).IsUnique();
         builder.HasIndex(cluster => new { cluster.ProjectId, cluster.PrimaryKeyFamily, cluster.Readiness });
         builder.HasIndex(cluster => new { cluster.ProjectId, cluster.AccessLevel, cluster.RiskLevel });
+        builder.HasIndex(cluster => new { cluster.ProjectId, cluster.AggregateEligible, cluster.CompositeScore });
     }
 }
 

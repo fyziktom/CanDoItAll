@@ -85,6 +85,57 @@
                                    @bind-Value="Page.curatorMessage"
                                    data-testid="cognitive-memory-curator-message" />
                 </label>
+
+                <Grid Gap="LayoutGap.Medium"
+                      ColumnTemplateXl="minmax(0,0.7fr) minmax(0,1.3fr)">
+                    <label class="cognitive-memory-field">
+                        <span>Capture kind</span>
+                        <InputSelect class="cda-input"
+                                     @bind-Value="Page.curatorExplicitCaptureKindText"
+                                     data-testid="cognitive-memory-curator-capture-kind">
+                            <option value="">Auto detect</option>
+                            @foreach (var captureKind in Enum.GetValues<CognitiveMemoryCuratorCaptureKind>())
+                            {
+                                <option value="@captureKind.ToString()">@CognitiveMemoryPage.FormatLabel(captureKind)</option>
+                            }
+                        </InputSelect>
+                    </label>
+
+                    <label class="cognitive-memory-field">
+                        <span>Target memory ids</span>
+                        <InputText class="cda-input"
+                                   @bind-Value="Page.curatorTargetMemoryRecordIdsText"
+                                   data-testid="cognitive-memory-curator-target-memory-ids" />
+                    </label>
+                </Grid>
+
+                <Grid Gap="LayoutGap.Medium"
+                      ColumnTemplateXl="minmax(0,1fr) minmax(0,0.45fr) minmax(0,0.55fr)">
+                    <label class="cognitive-memory-field">
+                        <span>Target claim ids</span>
+                        <InputText class="cda-input"
+                                   @bind-Value="Page.curatorTargetClaimIdsText"
+                                   data-testid="cognitive-memory-curator-target-claim-ids" />
+                    </label>
+
+                    <label class="cognitive-memory-field">
+                        <span>Confidence</span>
+                        <InputNumber class="cda-input"
+                                     @bind-Value="Page.curatorTargetConfidenceScore"
+                                     min="0"
+                                     max="1"
+                                     step="0.01"
+                                     data-testid="cognitive-memory-curator-target-confidence" />
+                    </label>
+
+                    <label class="cognitive-memory-field">
+                        <span>Scope</span>
+                        <InputText class="cda-input"
+                                   @bind-Value="Page.curatorCaptureScopeText"
+                                   data-testid="cognitive-memory-curator-capture-scope" />
+                    </label>
+                </Grid>
+
                 <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                     <Button Text="Send"
                             Icon="send"
@@ -173,7 +224,15 @@
                                                 <strong>@CognitiveMemoryPage.FormatLabel(capture.CaptureKind)</strong>
                                                 <StatusBadge Tone="@CognitiveMemoryPage.CuratorCaptureTone(capture.Status)"
                                                              Text="@CognitiveMemoryPage.FormatLabel(capture.Status)" />
+                                                <StatusBadge Tone="@CognitiveMemoryPage.CuratorTargetingTone(capture.TargetingStatus)"
+                                                             Text="@CognitiveMemoryPage.FormatLabel(capture.TargetingStatus)" />
+                                                <StatusBadge Tone="@CognitiveMemoryPage.CuratorAnchorTone(capture.AnchorState)"
+                                                             Text="@CognitiveMemoryPage.FormatLabel(capture.AnchorState)" />
                                                 <span>@CognitiveMemoryPage.FirstNonEmpty(capture.Summary, "No capture summary.")</span>
+                                                @if (capture.ReviewItemId is { } reviewItemId)
+                                                {
+                                                    <small>@($"Review {CognitiveMemoryPage.FormatShortId(reviewItemId)}")</small>
+                                                }
                                             </div>
                                         }
                                     </div>
@@ -212,8 +271,24 @@
                             <strong>@CognitiveMemoryPage.FormatLabel(capture.CaptureKind)</strong>
                             <StatusBadge Tone="@CognitiveMemoryPage.CuratorCaptureTone(capture.Status)"
                                          Text="@CognitiveMemoryPage.FormatLabel(capture.Status)" />
+                            <StatusBadge Tone="@CognitiveMemoryPage.CuratorTargetingTone(capture.TargetingStatus)"
+                                         Text="@CognitiveMemoryPage.FormatLabel(capture.TargetingStatus)" />
+                            <StatusBadge Tone="@CognitiveMemoryPage.CuratorAnchorTone(capture.AnchorState)"
+                                         Text="@CognitiveMemoryPage.FormatLabel(capture.AnchorState)" />
                             <span>@CognitiveMemoryPage.FirstNonEmpty(capture.Summary, "No capture summary.")</span>
                             <small>@($"Confidence {capture.ConfidenceScore:0.00} / priority {capture.PriorityScore:0.00}")</small>
+                            @if (capture.TargetConfidenceScore > 0)
+                            {
+                                <small>@($"Target confidence {capture.TargetConfidenceScore:0.00}")</small>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(capture.CaptureScope) || !string.IsNullOrWhiteSpace(capture.CaptureLanguage))
+                            {
+                                <small>@($"Scope {CognitiveMemoryPage.FirstNonEmpty(capture.CaptureScope, "auto")} / {CognitiveMemoryPage.FirstNonEmpty(capture.CaptureLanguage, "language unknown")}")</small>
+                            }
+                            @if (capture.ReviewItemId is { } reviewItemId)
+                            {
+                                <small>@($"Review {CognitiveMemoryPage.FormatShortId(reviewItemId)}")</small>
+                            }
                             @if (capture.AppliedMemoryRecordId is { } appliedMemoryRecordId)
                             {
                                 <small>@($"Applied memory {CognitiveMemoryPage.FormatShortId(appliedMemoryRecordId)}")</small>

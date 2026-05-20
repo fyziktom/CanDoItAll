@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: `Ready for implementation`
+- Status: `Completed`
 
 ## Objective
 
@@ -22,13 +22,13 @@ Make curator/professor capture structured, multilingual enough for Czech/English
 
 ## Exact Source References
 
-- /mnt/data/review/CanDoItAll-development/src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryCuratorConversationService.cs
-- /mnt/data/review/CanDoItAll-development/src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryAdvancedContracts.cs
-- /mnt/data/review/CanDoItAll-development/src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryAdvancedEntities.cs
-- /mnt/data/review/CanDoItAll-development/src/CanDoItAll.Modules.CognitiveMemory/Pages/Components/CognitiveMemoryCuratorTab.razor
-- /mnt/data/review/CanDoItAll-development/src/CanDoItAll.Modules.CognitiveMemory/Pages/CognitiveMemoryPage.Curator.cs
-- /mnt/data/review/CanDoItAll-development/tests/CanDoItAll.Tests.Unit/CognitiveMemoryAdvancedServicesTests.cs
-- /mnt/data/review/CanDoItAll-development/tests/CanDoItAll.Tests.Components/CognitiveMemoryPageTests.cs
+- C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryCuratorConversationService.cs
+- C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryAdvancedContracts.cs
+- C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryAdvancedEntities.cs
+- C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Pages/Components/CognitiveMemoryCuratorTab.razor
+- C:/repositories/CanDoItAll/src/CanDoItAll.Modules.CognitiveMemory/Pages/CognitiveMemoryPage.Curator.cs
+- C:/repositories/CanDoItAll/tests/CanDoItAll.Tests.Unit/CognitiveMemoryAdvancedServicesTests.cs
+- C:/repositories/CanDoItAll/tests/CanDoItAll.Tests.Components/CognitiveMemoryPageTests.cs
 
 ## Deliverables
 
@@ -80,6 +80,12 @@ Make curator/professor capture structured, multilingual enough for Czech/English
 - Targeted advanced service tests.
 - Component test output for curator UI if changed.
 - Execution report row updated.
+
+## Implementation Evidence
+
+- Added structured capture and target fields to API contracts and persisted capture records.
+- Added explicit curator UI controls for capture kind, target memory ids, target claim ids, target confidence, and scope.
+- Ambiguous corrections with multiple recalled memories create review state instead of broad supersede; Czech phrase baseline is deterministic.
 
 ## Browser Validation Logging
 

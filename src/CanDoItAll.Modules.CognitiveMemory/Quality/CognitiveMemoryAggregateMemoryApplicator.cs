@@ -85,13 +85,42 @@ public sealed class CognitiveMemoryAggregateMemoryApplicator(
         }
 
         var nowUtc = clock.GetUtcNow();
+        var stableContentHash = CognitiveMemoryHash.FromUtf8($"dream-aggregate|{candidate.PayloadHash}|{candidate.CanonicalText}").Value;
+        var duplicateMemory = await dbContext.Set<CognitiveMemoryRecord>()
+            .AsNoTracking()
+            .Where(record =>
+                record.ProjectId == candidate.ProjectId &&
+                record.Origin == CognitiveMemoryRecordOrigin.MachineGenerated &&
+                record.ContentHash == stableContentHash &&
+                record.StabilityState != CognitiveMemoryStabilityState.Deprecated)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (duplicateMemory is not null)
+        {
+            var existingClaims = await dbContext.Set<CognitiveMemoryClaimRecord>()
+                .AsNoTracking()
+                .Where(claim => claim.MemoryRecordId == duplicateMemory.Id)
+                .Select(claim => new CognitiveMemoryClaimId(claim.Id))
+                .ToArrayAsync(cancellationToken);
+            candidate.Status = CognitiveMemoryDreamAggregateCandidateStatus.Applied;
+            candidate.MemoryRecordId = duplicateMemory.Id;
+            candidate.UpdatedAtUtc = nowUtc;
+            candidate.ConcurrencyToken = Guid.NewGuid();
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return new CognitiveMemoryAggregateMemoryApplyResult(new CognitiveMemoryRecordId(duplicateMemory.Id), existingClaims, Created: false);
+        }
+
+        var distinctSourceItemCount = sourceItemIds.Length;
+        var confidenceScore = CalibrateConfidence(validation, claims.Count, distinctSourceItemCount);
+        var confidenceBucket = confidenceScore >= 0.86
+            ? CognitiveMemoryScoreProjectionBucket.StrongAccept
+            : CognitiveMemoryScoreProjectionBucket.WeakAccept;
         var contextFrame = new CognitiveMemoryContextFrameRecord
         {
             Id = Guid.NewGuid(),
             ProjectId = candidate.ProjectId,
             FrameKind = CognitiveMemoryContextFrameKind.Composite,
             DisplayName = candidate.Title,
-            ConfidenceBucket = CognitiveMemoryScoreProjectionBucket.StrongAccept,
+            ConfidenceBucket = confidenceBucket,
             CreatedAtUtc = nowUtc,
             UpdatedAtUtc = nowUtc,
             ConcurrencyToken = Guid.NewGuid()
@@ -110,13 +139,13 @@ public sealed class CognitiveMemoryAggregateMemoryApplicator(
             StabilityState = CognitiveMemoryStabilityState.Active,
             CreatedInMode = CognitiveMemoryOperationMode.Consolidate,
             AlgorithmVersion = AlgorithmVersion,
-            ContentHash = CognitiveMemoryHash.FromUtf8($"{candidate.Id:D}|{candidate.PayloadHash}|{candidate.CanonicalText}").Value,
+            ContentHash = stableContentHash,
             SourceEvidenceCount = sourceItemIds.Length,
             EvidenceAnchorCount = sourceMaps.Select(sourceMap => sourceMap.EvidenceAnchorId).Where(id => id is not null).Distinct().Count(),
-            GeneratedReason = CognitiveMemoryQualityText.TrimText($"Approved dream aggregate candidate {candidate.Id:D}.", 500),
+            GeneratedReason = CognitiveMemoryQualityText.TrimText($"Approved dream aggregate candidate {candidate.Id:D}; calibrated confidence {confidenceScore:0.###} from {distinctSourceItemCount} independent source item(s).", 500),
             PrimaryContextFrameId = contextFrame.Id,
-            ConfidenceBucket = CognitiveMemoryScoreProjectionBucket.StrongAccept,
-            ActivationBucket = CognitiveMemoryScoreProjectionBucket.StrongAccept,
+            ConfidenceBucket = confidenceBucket,
+            ActivationBucket = confidenceBucket,
             AccessLevel = candidate.AccessLevel,
             RiskLevel = candidate.RiskLevel,
             CreatedAtUtc = nowUtc,
@@ -146,8 +175,8 @@ public sealed class CognitiveMemoryAggregateMemoryApplicator(
                 ObjectKey = aggregateClaim.ObjectKey,
                 PrimaryContextFrameId = contextFrame.Id,
                 CurrentBeliefState = CognitiveMemoryBeliefStateKind.Validated,
-                CurrentBeliefBucket = CognitiveMemoryScoreProjectionBucket.StrongAccept,
-                DisplayBeliefScore = 1,
+                CurrentBeliefBucket = confidenceBucket,
+                DisplayBeliefScore = confidenceScore,
                 ValidationState = CognitiveMemoryValidationState.Approved,
                 StabilityState = CognitiveMemoryStabilityState.Active,
                 AlgorithmVersion = AlgorithmVersion,
@@ -207,7 +236,7 @@ public sealed class CognitiveMemoryAggregateMemoryApplicator(
         {
             Id = Guid.NewGuid(),
             ProjectId = candidate.ProjectId,
-            CommandKind = CognitiveMemoryMutationCommandKind.ProposeClaim,
+            CommandKind = CognitiveMemoryMutationCommandKind.ValidateClaim,
             Status = CognitiveMemoryMutationCommandStatus.Accepted,
             ActorKind = CognitiveMemoryActorKind.System,
             ActorId = request.ActorId.Trim(),
@@ -231,6 +260,17 @@ public sealed class CognitiveMemoryAggregateMemoryApplicator(
         candidate.ConcurrencyToken = Guid.NewGuid();
         await dbContext.SaveChangesAsync(cancellationToken);
         return new CognitiveMemoryAggregateMemoryApplyResult(new CognitiveMemoryRecordId(memory.Id), createdClaimIds, Created: true);
+    }
+
+    private static double CalibrateConfidence(
+        CognitiveMemoryDreamValidationRecord validation,
+        int claimCount,
+        int distinctSourceItemCount)
+    {
+        var evidenceScore = Math.Clamp(distinctSourceItemCount / 4d, 0, 0.12);
+        var claimPenalty = Math.Clamp((claimCount - 1) * 0.015, 0, 0.06);
+        var issuePenalty = Math.Clamp(validation.IssueCount * 0.05, 0, 0.2);
+        return Math.Round(Math.Clamp(0.78 + evidenceScore - claimPenalty - issuePenalty, 0.55, 0.92), 3, MidpointRounding.AwayFromZero);
     }
 
     private static CognitiveMemoryRecordKind ResolveRecordKind(CognitiveMemoryConsolidationMode mode)

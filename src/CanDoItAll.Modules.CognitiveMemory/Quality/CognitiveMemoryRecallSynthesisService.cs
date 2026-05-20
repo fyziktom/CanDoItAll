@@ -32,6 +32,7 @@ public sealed class CognitiveMemoryRecallSynthesisService(
 
         var statements = selectedSections
             .GroupBy(section => CognitiveMemoryQualityText.NormalizeKey(section.Title), StringComparer.Ordinal)
+            .OrderByDescending(sectionGroup => sectionGroup.SelectMany(section => section.SourceRefs).Count(sourceRef => sourceRef.IncludedInContext))
             .Take(request.MaxStatements)
             .Select(sectionGroup => new CognitiveMemorySynthesizedRecallStatement(
                 CognitiveMemorySynthesizedStatementId.New(),
@@ -146,9 +147,34 @@ public sealed class CognitiveMemoryRecallSynthesisService(
             return section.Title;
         }
 
-        var firstLine = content.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault();
-        return string.IsNullOrWhiteSpace(firstLine)
+        var usefulLines = content
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(IsUsefulBriefLine)
+            .Take(3)
+            .Select(line => line.Trim().TrimStart('-', '*').Trim())
+            .Where(line => !string.IsNullOrWhiteSpace(line))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var statement = string.Join(" ", usefulLines);
+        return string.IsNullOrWhiteSpace(statement)
             ? section.Title
-            : firstLine;
+            : CognitiveMemoryQualityText.TrimText(statement, 900);
+    }
+
+    private static bool IsUsefulBriefLine(string line)
+    {
+        if (string.IsNullOrWhiteSpace(line))
+        {
+            return false;
+        }
+
+        var normalized = line.Trim().ToLowerInvariant();
+        return !normalized.StartsWith("source:", StringComparison.Ordinal) &&
+               !normalized.StartsWith("sources:", StringComparison.Ordinal) &&
+               !normalized.StartsWith("reference:", StringComparison.Ordinal) &&
+               !normalized.StartsWith("references:", StringComparison.Ordinal) &&
+               !normalized.Contains("displaybeliefscore", StringComparison.Ordinal) &&
+               !normalized.Contains("internal score", StringComparison.Ordinal) &&
+               !normalized.Contains("belief score", StringComparison.Ordinal);
     }
 }

@@ -229,6 +229,12 @@ public sealed class CognitiveMemoryCuratorCapturedImprovementRecord : IHasConcur
 
     public string AffectedMemoryRecordIdsJson { get; set; } = "[]";
 
+    public string TargetClaimIdsJson { get; set; } = "[]";
+
+    public CognitiveMemoryCuratorTargetingStatus TargetingStatus { get; set; } = CognitiveMemoryCuratorTargetingStatus.Untargeted;
+
+    public CognitiveMemoryProfessorAnchorState AnchorState { get; set; } = CognitiveMemoryProfessorAnchorState.Active;
+
     public Guid? SourceItemId { get; set; }
 
     public Guid? EvidenceAnchorId { get; set; }
@@ -239,17 +245,29 @@ public sealed class CognitiveMemoryCuratorCapturedImprovementRecord : IHasConcur
 
     public Guid? AppliedMemoryRecordId { get; set; }
 
+    public Guid? AssimilatedMemoryRecordId { get; set; }
+
+    public Guid? ReviewItemId { get; set; }
+
     public string ActorId { get; set; } = string.Empty;
 
     public double ConfidenceScore { get; set; }
 
     public double PriorityScore { get; set; }
 
+    public double TargetConfidenceScore { get; set; }
+
+    public string CaptureLanguage { get; set; } = string.Empty;
+
+    public string CaptureScope { get; set; } = string.Empty;
+
     public string Summary { get; set; } = string.Empty;
 
     public string CorrectionText { get; set; } = string.Empty;
 
     public DateTimeOffset CreatedAtUtc { get; set; }
+
+    public DateTimeOffset? AnchorRetiredAtUtc { get; set; }
 
     public Guid ConcurrencyToken { get; set; }
 }

@@ -74,6 +74,23 @@ public enum CognitiveMemoryCuratorCaptureStatus
     Applied = 1
 }
 
+public enum CognitiveMemoryCuratorTargetingStatus
+{
+    Untargeted = 0,
+    ExplicitTarget = 1,
+    InferredSingleTarget = 2,
+    AmbiguousNeedsReview = 3
+}
+
+public enum CognitiveMemoryProfessorAnchorState
+{
+    Active = 0,
+    Comparing = 1,
+    Assimilated = 2,
+    Faded = 3,
+    Rejected = 4
+}
+
 public enum CognitiveMemoryProbeRegressionStatus
 {
     Draft = 0,
@@ -450,7 +467,11 @@ public sealed record CognitiveMemoryCuratorSendRequest(
     CognitiveMemoryRecallIntentKind Intent = CognitiveMemoryRecallIntentKind.Implementation,
     CognitiveMemoryRecallBudget? Budget = null,
     CognitiveMemoryCuratorCaptureKind? ExplicitCaptureKind = null,
-    CognitiveMemoryCuratorConversationDepth? ConversationDepth = null);
+    CognitiveMemoryCuratorConversationDepth? ConversationDepth = null,
+    IReadOnlyList<CognitiveMemoryRecordId>? ExplicitTargetMemoryRecordIds = null,
+    IReadOnlyList<CognitiveMemoryClaimId>? ExplicitTargetClaimIds = null,
+    double? TargetConfidenceScore = null,
+    string? CaptureScope = null);
 
 public sealed record CognitiveMemoryCuratorTurnCaptureRequest(
     Guid SessionId,
@@ -464,7 +485,11 @@ public sealed record CognitiveMemoryCuratorTurnCaptureRequest(
     CognitiveMemoryCuratorCaptureKind? ExplicitCaptureKind = null,
     Guid? AgentId = null,
     Guid? ProviderProfileId = null,
-    CognitiveMemoryExecutionModelId? ModelId = null);
+    CognitiveMemoryExecutionModelId? ModelId = null,
+    IReadOnlyList<CognitiveMemoryRecordId>? ExplicitTargetMemoryRecordIds = null,
+    IReadOnlyList<CognitiveMemoryClaimId>? ExplicitTargetClaimIds = null,
+    double? TargetConfidenceScore = null,
+    string? CaptureScope = null);
 
 public sealed record CognitiveMemoryCuratorTurnCaptureResult(
     CognitiveMemoryCuratorSessionRecord Session,
@@ -484,6 +509,16 @@ public sealed record CognitiveMemoryCuratorSendResult(
     IReadOnlyList<CognitiveMemoryRecordId> IncludedMemoryRecordIds,
     IReadOnlyList<CognitiveMemoryCuratorCapturedImprovementRecord> CapturedImprovements,
     IReadOnlyList<string> Warnings);
+
+public sealed record CognitiveMemoryProfessorAnchorAssimilationRequest(
+    Guid CaptureId,
+    CognitiveMemoryRecordId DerivedMemoryRecordId,
+    bool FadeAnchor = false);
+
+public sealed record CognitiveMemoryProfessorAnchorResult(
+    Guid CaptureId,
+    CognitiveMemoryProfessorAnchorState AnchorState,
+    CognitiveMemoryRecordId? DerivedMemoryRecordId);
 
 public interface ICognitiveMemoryProbeService
 {
@@ -521,6 +556,17 @@ public interface ICognitiveMemoryCuratorConversationService
     ValueTask<IReadOnlyList<CognitiveMemoryCuratorTurnRecord>> GetRecentTurnsAsync(
         Guid sessionId,
         int take = 50,
+        CancellationToken cancellationToken = default);
+}
+
+public interface ICognitiveMemoryProfessorAnchorService
+{
+    ValueTask<CognitiveMemoryProfessorAnchorResult> MarkAssimilatedAsync(
+        CognitiveMemoryProfessorAnchorAssimilationRequest request,
+        CancellationToken cancellationToken = default);
+
+    ValueTask<CognitiveMemoryProfessorAnchorResult> FadeAsync(
+        Guid captureId,
         CancellationToken cancellationToken = default);
 }
 

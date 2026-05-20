@@ -112,9 +112,16 @@
                             <strong>@ClusterTitle(cluster)</strong>
                             <StatusBadge Tone="@CognitiveMemoryPage.QualityClusterTone(cluster.Readiness)"
                                          Text="@CognitiveMemoryPage.FormatLabel(cluster.Readiness)" />
+                            <StatusBadge Tone="@(cluster.AggregateEligible ? "success" : "warning")"
+                                         Text="@(cluster.AggregateEligible ? "Aggregate eligible" : "Needs more signal")" />
                             <StatusBadge Tone="@CognitiveMemoryPage.RiskTone(cluster.RiskLevel)"
                                          Text="@($"{CognitiveMemoryPage.FormatLabel(cluster.RiskLevel)} risk")" />
                             <span>@($"{cluster.MemberCount} member(s), {cluster.KeyCount} key(s), {cluster.SourceEvidenceCount} evidence link(s), {cluster.ContradictionCount} contradiction(s)")</span>
+                            <small>@($"Quality: composite {cluster.CompositeScore:0.00}, cohesion {cluster.CohesionScore:0.00}, source independence {cluster.SourceIndependenceScore:0.00}, diversity {cluster.SourceDiversityScore:0.00}")</small>
+                            @if (!string.IsNullOrWhiteSpace(cluster.EligibilityReason))
+                            {
+                                <small>@cluster.EligibilityReason</small>
+                            }
                             <small>@($"{CognitiveMemoryPage.FormatLabel(cluster.PrimaryKeyFamily)} / {CognitiveMemoryPage.FormatLabel(cluster.AccessLevel)} / hash {ShortHash(cluster.ClusterHash)} / updated {CognitiveMemoryPage.FormatDate(cluster.UpdatedAtUtc)}")</small>
 
                             @if (cluster.Keys.Count > 0)
