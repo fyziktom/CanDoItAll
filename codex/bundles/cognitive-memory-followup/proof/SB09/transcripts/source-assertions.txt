@@ -1,0 +1,322 @@
+codex\bundles\cognitive-memory-followup\architecture\03-cognitive-memory-responsibility-map.md:1:# Cognitive Memory Responsibility Map
+codex\bundles\cognitive-memory-followup\architecture\03-cognitive-memory-responsibility-map.md:9:- `CognitiveMemoryQualityAlgorithmOptions` is the single owned configuration root for quality memory algorithms.
+codex\bundles\cognitive-memory-followup\architecture\03-cognitive-memory-responsibility-map.md:16:- `ICognitiveMemoryClusterKeyExtractor` owns deterministic text/key extraction.
+codex\bundles\cognitive-memory-followup\architecture\03-cognitive-memory-responsibility-map.md:17:- `ICognitiveMemoryCandidatePairSelector` owns candidate fanout, semantic fallback, and pair selection.
+codex\bundles\cognitive-memory-followup\architecture\03-cognitive-memory-responsibility-map.md:23:- `ICognitiveMemoryDreamClaimSynthesizer` owns claim text synthesis from grouped source claims.
+codex\bundles\cognitive-memory-followup\architecture\03-cognitive-memory-responsibility-map.md:25:- `ICognitiveMemoryDreamEntailmentValidator` owns source entailment checks used by validation.
+codex\bundles\cognitive-memory-followup\architecture\03-cognitive-memory-responsibility-map.md:30:- `ICognitiveMemoryProfessorTeachingExtractor` owns natural-language professor anchor extraction from curator turns.
+codex\bundles\cognitive-memory-followup\architecture\03-cognitive-memory-responsibility-map.md:37:- `ICognitiveMemoryRecallBriefComposer` owns query-shaped brief composition, caveat/conflict statement shaping, and per-statement aggregate claim lineage.
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:842:            Assert.Equal("quality-aggregate-apply-v2-calibrated", aggregateMemory.AlgorithmVersion);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:1590:            AlgorithmVersion = "unit-test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:1655:            AlgorithmVersion = "unit-test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:1712:            AlgorithmVersion = "unit-test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:1756:            AlgorithmVersion = "unit-test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:1796:            AlgorithmVersion = "unit-test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:1846:            AlgorithmVersion = "unit-test-derived-professor",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:1923:            AlgorithmVersion = "unit-test-professor-integration",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:2067:            AlgorithmVersion = "unit-test-linked",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:2194:            AlgorithmVersion = "unit-test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryFoundationTests.cs:30:        Assert.Throws<ArgumentException>(() => new CognitiveMemoryAlgorithmVersion(" "));
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryFoundationTests.cs:99:            AlgorithmVersion = "foundation-v1",
+src\CanDoItAll.Modules.CognitiveMemory\Foundation\CognitiveMemoryRecordValidator.cs:27:        if (string.IsNullOrWhiteSpace(record.AlgorithmVersion))
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryOperationalServicesTests.cs:497:            AlgorithmVersion = "taxonomy-v1",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryOperationalServicesTests.cs:543:                AlgorithmVersion = "taxonomy-v1",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryOperationalServicesTests.cs:563:                AlgorithmVersion = "taxonomy-v1",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryOperationalServicesTests.cs:606:                AlgorithmVersion = "test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryOperationalServicesTests.cs:618:                AlgorithmVersion = "test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryOperationalServicesTests.cs:676:                AlgorithmVersion = "test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryOperationalServicesTests.cs:687:                AlgorithmVersion = "test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryOperationalServicesTests.cs:697:                AlgorithmVersion = "test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryOperationalServicesTests.cs:774:                AlgorithmVersion = "test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryOperationalServicesTests.cs:788:                AlgorithmVersion = "test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryOperationalServicesTests.cs:802:                AlgorithmVersion = "test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryOperationalServicesTests.cs:815:                AlgorithmVersion = "test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryOperationalServicesTests.cs:860:                AlgorithmVersion = request.AlgorithmVersion.Value,
+src\CanDoItAll.Modules.CognitiveMemory\Foundation\CognitiveMemoryFoundationContracts.cs:281:public readonly record struct CognitiveMemoryAlgorithmVersion
+src\CanDoItAll.Modules.CognitiveMemory\Foundation\CognitiveMemoryFoundationContracts.cs:283:    public CognitiveMemoryAlgorithmVersion(string value)
+src\CanDoItAll.Modules.CognitiveMemory\Foundation\CognitiveMemoryEntityConfigurations.cs:56:        builder.Property(record => record.AlgorithmVersion).HasMaxLength(120).IsRequired();
+src\CanDoItAll.Modules.CognitiveMemory\Foundation\CognitiveMemoryEntityConfigurations.cs:128:        builder.Property(relation => relation.AlgorithmVersion).HasMaxLength(120).IsRequired();
+src\CanDoItAll.Modules.CognitiveMemory\Foundation\CognitiveMemoryEntityConfigurations.cs:166:        builder.Property(projection => projection.AlgorithmVersion).HasMaxLength(120).IsRequired();
+src\CanDoItAll.Modules.CognitiveMemory\Foundation\CognitiveMemoryEntityConfigurations.cs:185:        builder.Property(trace => trace.AlgorithmVersion).HasMaxLength(120).IsRequired();
+src\CanDoItAll.Modules.CognitiveMemory\Foundation\CognitiveMemoryEntityConfigurations.cs:234:        builder.Property(run => run.AlgorithmVersion).HasMaxLength(120).IsRequired();
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryModuleRegistrationTests.cs:57:        var options = provider.GetRequiredService<CognitiveMemoryQualityAlgorithmOptions>();
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryModuleRegistrationTests.cs:58:        Assert.Equal("quality-clustering-v3", options.Cluster.AlgorithmVersion.Value);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryModuleRegistrationTests.cs:59:        Assert.IsAssignableFrom<ICognitiveMemoryClusterKeyExtractor>(provider.GetRequiredService<ICognitiveMemoryClusterKeyExtractor>());
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryModuleRegistrationTests.cs:60:        Assert.IsAssignableFrom<ICognitiveMemoryCandidatePairSelector>(provider.GetRequiredService<ICognitiveMemoryCandidatePairSelector>());
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryModuleRegistrationTests.cs:61:        Assert.IsAssignableFrom<ICognitiveMemoryDreamClaimSynthesizer>(provider.GetRequiredService<ICognitiveMemoryDreamClaimSynthesizer>());
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryModuleRegistrationTests.cs:62:        Assert.IsAssignableFrom<ICognitiveMemoryDreamEntailmentValidator>(provider.GetRequiredService<ICognitiveMemoryDreamEntailmentValidator>());
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryModuleRegistrationTests.cs:63:        Assert.IsAssignableFrom<ICognitiveMemoryRecallBriefComposer>(provider.GetRequiredService<ICognitiveMemoryRecallBriefComposer>());
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryModuleRegistrationTests.cs:64:        Assert.IsAssignableFrom<ICognitiveMemoryProfessorTeachingExtractor>(provider.GetRequiredService<ICognitiveMemoryProfessorTeachingExtractor>());
+src\CanDoItAll.Modules.CognitiveMemory\Foundation\CognitiveMemoryEntities.cs:101:    public string AlgorithmVersion { get; set; } = string.Empty;
+src\CanDoItAll.Modules.CognitiveMemory\Foundation\CognitiveMemoryEntities.cs:179:    public string AlgorithmVersion { get; set; } = string.Empty;
+src\CanDoItAll.Modules.CognitiveMemory\Foundation\CognitiveMemoryEntities.cs:198:    public string AlgorithmVersion { get; set; } = string.Empty;
+src\CanDoItAll.Modules.CognitiveMemory\Foundation\CognitiveMemoryEntities.cs:249:    public string AlgorithmVersion { get; set; } = string.Empty;
+src\CanDoItAll.Modules.CognitiveMemory\Foundation\CognitiveMemoryEntities.cs:325:    public string AlgorithmVersion { get; set; } = string.Empty;
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryProcedureSkillMemoryTests.cs:267:            AlgorithmVersion = "unit-test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryScoreGeometryTests.cs:43:            CognitiveMemoryScoreSpaceRegistry.CurrentAlgorithmVersion,
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityCollaboratorTests.cs:10:        var options = CognitiveMemoryQualityAlgorithmOptions.Current;
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityCollaboratorTests.cs:12:        Assert.Equal("quality-clustering-v3", options.Cluster.AlgorithmVersion.Value);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityCollaboratorTests.cs:13:        Assert.Equal("quality-dream-v3-claim-synthesis", options.Dream.AlgorithmVersion.Value);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityCollaboratorTests.cs:14:        Assert.Equal("quality-aggregate-apply-v2-calibrated", options.AggregateApply.AlgorithmVersion.Value);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityCollaboratorTests.cs:15:        Assert.Equal(2, options.ProfessorLifecycle.RequiredRepeatedUseCount);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityCollaboratorTests.cs:16:        Assert.Equal(4, options.ProfessorLifecycle.DescendantTraversalDepth);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityCollaboratorTests.cs:77:        var composer = new CognitiveMemoryRecallBriefComposer();
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityCollaboratorTests.cs:79:        var result = composer.Compose(new CognitiveMemoryRecallBriefComposerRequest(
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryReviewUiServiceTests.cs:113:                AlgorithmVersion = "unit-test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryReviewUiServiceTests.cs:130:                AlgorithmVersion = "unit-test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryReviewUiServiceTests.cs:165:                AlgorithmVersion = "unit-test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryReviewUiServiceTests.cs:314:            AlgorithmVersion = "unit-test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryReviewUiServiceTests.cs:396:            AlgorithmVersion = "unit-test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryReviewUiServiceTests.cs:445:            AlgorithmVersion = "unit-test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryReviewUiServiceTests.cs:473:            AlgorithmVersion = "unit-test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryReviewUiServiceTests.cs:544:            AlgorithmVersion = "unit-test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryReviewUiServiceTests.cs:561:            AlgorithmVersion = "unit-test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryReviewUiServiceTests.cs:600:            AlgorithmVersion = "unit-test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryReviewUiServiceTests.cs:614:            AlgorithmVersion = "unit-test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryReviewUiServiceTests.cs:635:            AlgorithmVersion = "unit-test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryReviewUiServiceTests.cs:715:            AlgorithmVersion = "unit-test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryReviewUiServiceTests.cs:730:            AlgorithmVersion = "unit-test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryReviewUiServiceTests.cs:808:                AlgorithmVersion = "unit-test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryReviewUiServiceTests.cs:886:                AlgorithmVersion = "unit-test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryReviewUiServiceTests.cs:912:                AlgorithmVersion = "unit-test",
+src\CanDoItAll.Modules.CognitiveMemory\Workspace\CognitiveMemoryWorkspaceServices.cs:598:            CognitiveMemoryScoreSpaceRegistry.CurrentAlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Workspace\CognitiveMemoryWorkspaceServices.cs:633:        var algorithm = CognitiveMemoryScoreSpaceRegistry.CurrentAlgorithmVersion;
+tests\CanDoItAll.Tests.Unit\CognitiveMemorySignalLedgerTests.cs:273:            AlgorithmVersion = CognitiveMemoryScoreSpaceRegistry.CurrentAlgorithmVersion.Value,
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryRecallOrchestratorTests.cs:41:            AlgorithmVersion = "taxonomy-v1",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryRecallOrchestratorTests.cs:862:            AlgorithmVersion = "taxonomy-v1",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryRecallOrchestratorTests.cs:924:            AlgorithmVersion = "taxonomy-v1",
+src\CanDoItAll.Modules.CognitiveMemory\Procedural\CognitiveMemoryProcedureSkillService.cs:15:    private const string AlgorithmVersion = "procedure-skill-v1";
+src\CanDoItAll.Modules.CognitiveMemory\Procedural\CognitiveMemoryProcedureSkillService.cs:85:            AlgorithmVersion = AlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Procedural\CognitiveMemoryProcedureSkillService.cs:344:            new CognitiveMemoryAlgorithmVersion(AlgorithmVersion),
+src\CanDoItAll.Modules.CognitiveMemory\Procedural\CognitiveMemoryProcedureSkillService.cs:386:            new CognitiveMemoryAlgorithmVersion(AlgorithmVersion),
+src\CanDoItAll.Modules.CognitiveMemory\Procedural\CognitiveMemoryProcedureSkillService.cs:869:        var algorithm = new CognitiveMemoryAlgorithmVersion(AlgorithmVersion);
+src\CanDoItAll.Modules.CognitiveMemory\Procedural\CognitiveMemoryProcedureSkillService.cs:880:        var algorithm = new CognitiveMemoryAlgorithmVersion(AlgorithmVersion);
+src\CanDoItAll.Modules.CognitiveMemory\Procedural\CognitiveMemoryProcedureSkillService.cs:893:        CognitiveMemoryAlgorithmVersion algorithm)
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:32:            AlgorithmVersion = "unit-test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:91:            AlgorithmVersion = "unit-test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:278:            AlgorithmVersion = "unit-test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:369:            AlgorithmVersion = "unit-test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:857:            AlgorithmVersion = "unit-test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:1059:            AlgorithmVersion = "unit-test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:1535:                AlgorithmVersion = "unit-test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:1550:                AlgorithmVersion = "unit-test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:1571:                AlgorithmVersion = "unit-test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:1594:                AlgorithmVersion = "unit-test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:1731:            AlgorithmVersion = "unit-test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:2073:            AlgorithmVersion = "unit-test",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:2196:            AlgorithmVersion = "unit-test",
+src\CanDoItAll.Modules.CognitiveMemory\CognitiveMemoryModuleServiceCollectionExtensions.cs:19:        services.TryAddSingleton(CognitiveMemoryQualityAlgorithmOptions.Current);
+src\CanDoItAll.Modules.CognitiveMemory\CognitiveMemoryModuleServiceCollectionExtensions.cs:75:        services.TryAddSingleton<ICognitiveMemoryClusterKeyExtractor>(CognitiveMemoryClusterKeyExtractor.Instance);
+src\CanDoItAll.Modules.CognitiveMemory\CognitiveMemoryModuleServiceCollectionExtensions.cs:76:        services.TryAddSingleton<ICognitiveMemoryCandidatePairSelector>(provider => new CognitiveMemoryCandidatePairSelector(
+src\CanDoItAll.Modules.CognitiveMemory\CognitiveMemoryModuleServiceCollectionExtensions.cs:78:            provider.GetRequiredService<CognitiveMemoryQualityAlgorithmOptions>()));
+src\CanDoItAll.Modules.CognitiveMemory\CognitiveMemoryModuleServiceCollectionExtensions.cs:82:            provider.GetRequiredService<ICognitiveMemoryClusterKeyExtractor>(),
+src\CanDoItAll.Modules.CognitiveMemory\CognitiveMemoryModuleServiceCollectionExtensions.cs:83:            provider.GetRequiredService<ICognitiveMemoryCandidatePairSelector>()));
+src\CanDoItAll.Modules.CognitiveMemory\CognitiveMemoryModuleServiceCollectionExtensions.cs:84:        services.TryAddSingleton<ICognitiveMemoryDreamClaimSynthesizer>(CognitiveMemoryDreamClaimSynthesizer.Instance);
+src\CanDoItAll.Modules.CognitiveMemory\CognitiveMemoryModuleServiceCollectionExtensions.cs:85:        services.TryAddSingleton<ICognitiveMemoryDreamEntailmentValidator>(CognitiveMemoryDreamEntailmentValidator.Instance);
+src\CanDoItAll.Modules.CognitiveMemory\CognitiveMemoryModuleServiceCollectionExtensions.cs:90:        services.TryAddSingleton<ICognitiveMemoryRecallBriefComposer, CognitiveMemoryRecallBriefComposer>();
+src\CanDoItAll.Modules.CognitiveMemory\CognitiveMemoryModuleServiceCollectionExtensions.cs:99:        services.TryAddSingleton<ICognitiveMemoryProfessorTeachingExtractor>(CognitiveMemoryProfessorTeachingExtractor.Instance);
+src\CanDoItAll.Modules.CognitiveMemory\Procedural\CognitiveMemoryProceduralEntityConfigurations.cs:20:        builder.Property(skill => skill.AlgorithmVersion).HasMaxLength(120).IsRequired();
+src\CanDoItAll.Modules.CognitiveMemory\Consolidation\CognitiveMemoryConsolidationCandidateApplicator.cs:158:            AlgorithmVersion = candidate.AlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Consolidation\CognitiveMemoryConsolidationCandidateApplicator.cs:200:            AlgorithmVersion = candidate.AlgorithmVersion,
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryTaxonomyTests.cs:38:            new CognitiveMemoryAlgorithmVersion("taxonomy-v1")));
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryTaxonomyTests.cs:46:            new CognitiveMemoryAlgorithmVersion("taxonomy-v1")));
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryTaxonomyTests.cs:54:            new CognitiveMemoryAlgorithmVersion("taxonomy-v1")));
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryTaxonomyTests.cs:128:            new CognitiveMemoryAlgorithmVersion("taxonomy-v1"),
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryTaxonomyTests.cs:137:            new CognitiveMemoryAlgorithmVersion("taxonomy-v1"),
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryTaxonomyTests.cs:146:            new CognitiveMemoryAlgorithmVersion("taxonomy-v1"),
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryTaxonomyTests.cs:207:            new CognitiveMemoryAlgorithmVersion("taxonomy-v1"),
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryTaxonomyTests.cs:226:            AlgorithmVersion = "taxonomy-v1",
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryTaxonomyTests.cs:263:            AlgorithmVersion = "taxonomy-v1",
+src\CanDoItAll.Modules.CognitiveMemory\Taxonomy\CognitiveMemoryTaxonomyServices.cs:73:        if (string.IsNullOrWhiteSpace(draft.AlgorithmVersion.Value))
+src\CanDoItAll.Modules.CognitiveMemory\Taxonomy\CognitiveMemoryTaxonomyServices.cs:146:        if (!string.Equals(request.ExistingProjection.AlgorithmVersion, request.AlgorithmVersion.Value, StringComparison.Ordinal))
+src\CanDoItAll.Modules.CognitiveMemory\Taxonomy\CognitiveMemoryTaxonomyServices.cs:148:            return Rebuild(CognitiveMemoryProjectionStaleReason.AlgorithmVersionChanged, "Projection algorithm version changed.");
+src\CanDoItAll.Modules.CognitiveMemory\Taxonomy\CognitiveMemoryTaxonomyServices.cs:325:        builder.AppendLine(request.AlgorithmVersion.Value);
+src\CanDoItAll.Modules.CognitiveMemory\Taxonomy\CognitiveMemoryTaxonomyServices.cs:371:            AlgorithmVersion = request.AlgorithmVersion.Value,
+src\CanDoItAll.Modules.CognitiveMemory\Procedural\CognitiveMemoryProceduralEntities.cs:53:    public string AlgorithmVersion { get; set; } = string.Empty;
+src\CanDoItAll.Modules.CognitiveMemory\Taxonomy\CognitiveMemoryTaxonomyEntityConfigurations.cs:62:        builder.Property(projection => projection.AlgorithmVersion).HasMaxLength(120).IsRequired();
+src\CanDoItAll.Modules.CognitiveMemory\Taxonomy\CognitiveMemoryTaxonomyEntities.cs:59:    public string AlgorithmVersion { get; set; } = string.Empty;
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryTemporalReplaySchedulerTests.cs:165:            job.AlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Taxonomy\CognitiveMemoryTaxonomyContracts.cs:29:    AlgorithmVersionChanged = 7,
+src\CanDoItAll.Modules.CognitiveMemory\Taxonomy\CognitiveMemoryTaxonomyContracts.cs:41:    CognitiveMemoryAlgorithmVersion AlgorithmVersion);
+src\CanDoItAll.Modules.CognitiveMemory\Taxonomy\CognitiveMemoryTaxonomyContracts.cs:55:    CognitiveMemoryAlgorithmVersion AlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Taxonomy\CognitiveMemoryTaxonomyContracts.cs:72:    CognitiveMemoryAlgorithmVersion AlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryAdvancedContracts.cs:815:    string AlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Consolidation\CognitiveMemoryConsolidationServices.cs:18:    private const string AlgorithmVersion = "consolidation-v3";
+src\CanDoItAll.Modules.CognitiveMemory\Consolidation\CognitiveMemoryConsolidationServices.cs:71:            AlgorithmVersion = AlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Consolidation\CognitiveMemoryConsolidationServices.cs:87:            AlgorithmVersion = AlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Consolidation\CognitiveMemoryConsolidationServices.cs:256:                AlgorithmVersion = AlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Consolidation\CognitiveMemoryConsolidationServices.cs:511:            AlgorithmVersion = AlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Consolidation\CognitiveMemoryConsolidationServices.cs:529:            AlgorithmVersion = AlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Consolidation\CognitiveMemoryConsolidationServices.cs:580:            candidate.AlgorithmVersion == AlgorithmVersion));
+src\CanDoItAll.Modules.CognitiveMemory\Consolidation\CognitiveMemoryConsolidationServices.cs:618:                candidate.AlgorithmVersion == AlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Consolidation\CognitiveMemoryConsolidationServices.cs:663:            CognitiveMemoryScoreSpaceRegistry.CurrentAlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Consolidation\CognitiveMemoryConsolidationServices.cs:704:        var algorithm = CognitiveMemoryScoreSpaceRegistry.CurrentAlgorithmVersion;
+src\CanDoItAll.Modules.CognitiveMemory\Consolidation\CognitiveMemoryConsolidationServices.cs:763:                ["algorithmVersion"] = AlgorithmVersion
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryAdvancedEntityConfigurations.cs:20:        builder.Property(item => item.AlgorithmVersion).HasMaxLength(80);
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryAdvancedEntityConfigurations.cs:76:        builder.Property(item => item.AlgorithmVersion).HasMaxLength(80);
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryAdvancedEntityConfigurations.cs:187:        builder.Property(item => item.AlgorithmVersion).HasMaxLength(80);
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryAdvancedEntityConfigurations.cs:318:        builder.Property(item => item.AlgorithmVersion).HasMaxLength(80);
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryAdvancedEntityConfigurations.cs:538:        builder.Property(item => item.AlgorithmVersion).HasMaxLength(80);
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryAdvancedEntityConfigurations.cs:557:        builder.Property(item => item.AlgorithmVersion).HasMaxLength(80);
+src\CanDoItAll.Modules.CognitiveMemory\Operations\CognitiveMemoryRetentionCleanupService.cs:13:    private const string AlgorithmVersion = "retention-cleanup-v1";
+src\CanDoItAll.Modules.CognitiveMemory\Operations\CognitiveMemoryRetentionCleanupService.cs:42:            AlgorithmVersion = AlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Signals\CognitiveMemorySignalServices.cs:124:            AlgorithmVersion = CognitiveMemoryScoreSpaceRegistry.CurrentAlgorithmVersion.Value,
+src\CanDoItAll.Modules.CognitiveMemory\Signals\CognitiveMemorySignalServices.cs:213:            AlgorithmVersion = severityTrace.AlgorithmVersion.Value,
+src\CanDoItAll.Modules.CognitiveMemory\Signals\CognitiveMemorySignalServices.cs:341:            AlgorithmVersion = trace.AlgorithmVersion.Value,
+src\CanDoItAll.Modules.CognitiveMemory\Signals\CognitiveMemorySignalServices.cs:488:            CognitiveMemoryScoreSpaceRegistry.CurrentAlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Signals\CognitiveMemorySignalServices.cs:496:        var algorithm = CognitiveMemoryScoreSpaceRegistry.CurrentAlgorithmVersion;
+src\CanDoItAll.Modules.CognitiveMemory\Signals\CognitiveMemorySignalServices.cs:537:        var algorithm = CognitiveMemoryScoreSpaceRegistry.CurrentAlgorithmVersion;
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryAdvancedEntities.cs:35:    public string AlgorithmVersion { get; set; } = string.Empty;
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryAdvancedEntities.cs:158:    public string AlgorithmVersion { get; set; } = string.Empty;
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryAdvancedEntities.cs:362:    public string AlgorithmVersion { get; set; } = string.Empty;
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryAdvancedEntities.cs:624:    public string AlgorithmVersion { get; set; } = string.Empty;
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryAdvancedEntities.cs:1001:    public string AlgorithmVersion { get; set; } = string.Empty;
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryAdvancedEntities.cs:1034:    public string AlgorithmVersion { get; set; } = string.Empty;
+src\CanDoItAll.Modules.CognitiveMemory\TemporalReplay\CognitiveMemoryTemporalReplayServices.cs:16:    private const string AlgorithmVersion = "temporal-replay-v1";
+src\CanDoItAll.Modules.CognitiveMemory\TemporalReplay\CognitiveMemoryTemporalReplayServices.cs:41:            AlgorithmVersion = AlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\TemporalReplay\CognitiveMemoryTemporalReplayServices.cs:263:            AlgorithmVersion = CognitiveMemoryGuard.EnsureText(submission.AlgorithmVersion, nameof(submission.AlgorithmVersion)),
+src\CanDoItAll.Modules.CognitiveMemory\TemporalReplay\CognitiveMemoryTemporalReplayServices.cs:334:            AlgorithmVersion = AlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\TemporalReplay\CognitiveMemoryTemporalReplayServices.cs:414:            CognitiveMemoryScoreSpaceRegistry.CurrentAlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\TemporalReplay\CognitiveMemoryTemporalReplayServices.cs:459:        var algorithm = CognitiveMemoryScoreSpaceRegistry.CurrentAlgorithmVersion;
+src\CanDoItAll.Modules.CognitiveMemory\TemporalReplay\CognitiveMemoryTemporalReplayServices.cs:693:        if (!StringComparer.Ordinal.Equals(job.AlgorithmVersion, submission.AlgorithmVersion))
+src\CanDoItAll.Modules.CognitiveMemory\TemporalReplay\CognitiveMemoryTemporalReplayServices.cs:695:            return "AlgorithmVersionMismatch";
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryAdvancedSupport.cs:47:            CognitiveMemoryScoreSpaceRegistry.CurrentAlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryAdvancedSupport.cs:65:            CognitiveMemoryScoreSpaceRegistry.CurrentAlgorithmVersion);
+src\CanDoItAll.Modules.CognitiveMemory\Operations\CognitiveMemoryProjectionRebuildService.cs:16:    private const string AlgorithmVersion = "projection-rebuild-runner-v1";
+src\CanDoItAll.Modules.CognitiveMemory\Operations\CognitiveMemoryProjectionRebuildService.cs:47:            AlgorithmVersion = AlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Operations\CognitiveMemoryProjectionRebuildService.cs:328:                new CognitiveMemoryAlgorithmVersion(string.IsNullOrWhiteSpace(projection.AlgorithmVersion) ? AlgorithmVersion : projection.AlgorithmVersion),
+src\CanDoItAll.Modules.CognitiveMemory\Operations\CognitiveMemoryProjectionRebuildService.cs:457:            options.AlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Operations\CognitiveMemoryProjectionRebuildService.cs:542:        var algorithmVersion = string.IsNullOrWhiteSpace(record.AlgorithmVersion)
+src\CanDoItAll.Modules.CognitiveMemory\Operations\CognitiveMemoryProjectionRebuildService.cs:543:            ? AlgorithmVersion
+src\CanDoItAll.Modules.CognitiveMemory\Operations\CognitiveMemoryProjectionRebuildService.cs:544:            : record.AlgorithmVersion.Trim();
+src\CanDoItAll.Modules.CognitiveMemory\Operations\CognitiveMemoryProjectionRebuildService.cs:554:            new CognitiveMemoryAlgorithmVersion(algorithmVersion),
+src\CanDoItAll.Modules.CognitiveMemory\Operations\CognitiveMemoryProjectionRebuildService.cs:587:        CognitiveMemoryAlgorithmVersion AlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Consolidation\CognitiveMemoryConsolidationEntityConfigurations.cs:16:        builder.Property(run => run.AlgorithmVersion).HasMaxLength(120).IsRequired();
+src\CanDoItAll.Modules.CognitiveMemory\Consolidation\CognitiveMemoryConsolidationEntityConfigurations.cs:42:        builder.Property(candidate => candidate.AlgorithmVersion).HasMaxLength(120).IsRequired();
+src\CanDoItAll.Modules.CognitiveMemory\Consolidation\CognitiveMemoryConsolidationEntityConfigurations.cs:53:        builder.HasIndex(candidate => new { candidate.ProjectId, candidate.SourceItemId, candidate.CandidateKind, candidate.SourceContentHash, candidate.AlgorithmVersion }).IsUnique();
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryAdvancedServices.cs:27:    private const string ProbeFeedbackAlgorithmVersion = "probe-feedback-repair-v1";
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryAdvancedServices.cs:66:            AlgorithmVersion = "probe-core-v1",
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryAdvancedServices.cs:413:            ProviderVersion = ProbeFeedbackAlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryAdvancedServices.cs:488:            AlgorithmVersion = ProbeFeedbackAlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryAdvancedServices.cs:504:            AlgorithmVersion = ProbeFeedbackAlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryAdvancedServices.cs:542:            AlgorithmVersion = ProbeFeedbackAlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\TemporalReplay\CognitiveMemoryTemporalReplayEntityConfigurations.cs:16:        builder.Property(episode => episode.AlgorithmVersion).HasMaxLength(120).IsRequired();
+src\CanDoItAll.Modules.CognitiveMemory\TemporalReplay\CognitiveMemoryTemporalReplayEntityConfigurations.cs:139:        builder.Property(job => job.AlgorithmVersion).HasMaxLength(120).IsRequired();
+src\CanDoItAll.Modules.CognitiveMemory\TemporalReplay\CognitiveMemoryTemporalReplayEntityConfigurations.cs:260:        builder.Property(result => result.AlgorithmVersion).HasMaxLength(120).IsRequired();
+src\CanDoItAll.Modules.CognitiveMemory\Common\CognitiveMemoryEfGuardrails.cs:112:        new(typeof(CognitiveMemoryConsolidationCandidateRecord), [nameof(CognitiveMemoryConsolidationCandidateRecord.ProjectId), nameof(CognitiveMemoryConsolidationCandidateRecord.SourceItemId), nameof(CognitiveMemoryConsolidationCandidateRecord.CandidateKind), nameof(CognitiveMemoryConsolidationCandidateRecord.SourceContentHash), nameof(CognitiveMemoryConsolidationCandidateRecord.AlgorithmVersion)], true),
+src\CanDoItAll.Modules.CognitiveMemory\Consolidation\CognitiveMemoryConsolidationEntities.cs:29:    public string AlgorithmVersion { get; set; } = string.Empty;
+src\CanDoItAll.Modules.CognitiveMemory\Consolidation\CognitiveMemoryConsolidationEntities.cs:96:    public string AlgorithmVersion { get; set; } = string.Empty;
+src\CanDoItAll.Modules.CognitiveMemory\TemporalReplay\CognitiveMemoryTemporalReplayEntities.cs:33:    public string AlgorithmVersion { get; set; } = string.Empty;
+src\CanDoItAll.Modules.CognitiveMemory\TemporalReplay\CognitiveMemoryTemporalReplayEntities.cs:168:    public string AlgorithmVersion { get; set; } = string.Empty;
+src\CanDoItAll.Modules.CognitiveMemory\TemporalReplay\CognitiveMemoryTemporalReplayEntities.cs:289:    public string AlgorithmVersion { get; set; } = string.Empty;
+src\CanDoItAll.Modules.CognitiveMemory\Signals\CognitiveMemorySignalEntityConfigurations.cs:17:        builder.Property(expectation => expectation.AlgorithmVersion).HasMaxLength(120).IsRequired();
+src\CanDoItAll.Modules.CognitiveMemory\Signals\CognitiveMemorySignalEntityConfigurations.cs:89:        builder.Property(error => error.AlgorithmVersion).HasMaxLength(120).IsRequired();
+src\CanDoItAll.Modules.CognitiveMemory\Signals\CognitiveMemorySignalEntityConfigurations.cs:191:        builder.Property(signal => signal.AlgorithmVersion).HasMaxLength(120).IsRequired();
+src\CanDoItAll.Modules.CognitiveMemory\TemporalReplay\CognitiveMemoryTemporalReplayContracts.cs:271:    string AlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Signals\CognitiveMemorySignalEntities.cs:49:    public string AlgorithmVersion { get; set; } = string.Empty;
+src\CanDoItAll.Modules.CognitiveMemory\Signals\CognitiveMemorySignalEntities.cs:133:    public string AlgorithmVersion { get; set; } = string.Empty;
+src\CanDoItAll.Modules.CognitiveMemory\Signals\CognitiveMemorySignalEntities.cs:222:    public string AlgorithmVersion { get; set; } = string.Empty;
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryCuratorConversationService.cs:17:    ICognitiveMemoryProfessorTeachingExtractor? teachingExtractor = null) : ICognitiveMemoryCuratorConversationService
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryCuratorConversationService.cs:21:    private const string CuratorAlgorithmVersion = "curator-conversation-v2-professor-anchor";
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryCuratorConversationService.cs:30:    private readonly ICognitiveMemoryProfessorTeachingExtractor teachingExtractor = teachingExtractor ?? CognitiveMemoryProfessorTeachingExtractor.Instance;
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryCuratorConversationService.cs:58:            AlgorithmVersion = CuratorAlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryCuratorConversationService.cs:563:            ProviderVersion = CuratorAlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryCuratorConversationService.cs:640:            AlgorithmVersion = CuratorAlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryCuratorConversationService.cs:656:            AlgorithmVersion = CuratorAlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryCuratorConversationService.cs:692:            AlgorithmVersion = CuratorAlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryCuratorConversationService.cs:960:                AlgorithmVersion = CuratorAlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorExtraction.cs:32:public interface ICognitiveMemoryProfessorTeachingExtractor
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorExtraction.cs:37:internal sealed class CognitiveMemoryProfessorTeachingExtractor : ICognitiveMemoryProfessorTeachingExtractor
+src\CanDoItAll.Modules.CognitiveMemory\Settings\CognitiveMemorySettingsServices.cs:430:            AlgorithmVersion = "external-source-ingestion-v1",
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAssimilationEvaluator.cs:8:    CognitiveMemoryQualityAlgorithmOptions? algorithmOptions = null) : ICognitiveMemoryProfessorAssimilationEvaluator
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAssimilationEvaluator.cs:10:    private readonly CognitiveMemoryQualityProfessorLifecycleAlgorithmOptions options = (algorithmOptions ?? CognitiveMemoryQualityAlgorithmOptions.Current).ProfessorLifecycle;
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAssimilationEvaluator.cs:81:        if (request.RequireUsageAndIntegration && repeatedUseCount < options.RequiredRepeatedUseCount)
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAssimilationEvaluator.cs:84:                $"Professor anchor automatic assimilation requires at least {options.RequiredRepeatedUseCount} repeated successful recall uses.",
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAssimilationEvaluator.cs:134:        for (var depth = 0; depth < options.DescendantTraversalDepth && frontier.Count > 0; depth++)
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemorySelfRegulationOrchestrator.cs:103:            AlgorithmVersion = "self-regulation-v1",
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryDistributedComputeCoordinator.cs:77:            AlgorithmVersion = CognitiveMemoryGuard.EnsureText(request.AlgorithmVersion, nameof(request.AlgorithmVersion)),
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryDistributedComputeCoordinator.cs:149:            AlgorithmVersion = algorithmVersion.Trim(),
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryDistributedComputeCoordinator.cs:206:        if (!string.Equals(job.AlgorithmVersion, result.AlgorithmVersion, StringComparison.Ordinal))
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemorySelfModelStore.cs:42:            AlgorithmVersion = "self-model-v1",
+src\CanDoItAll.Modules.CognitiveMemory\Neuro\CognitiveMemoryNeuroFoundationEntityConfigurations.cs:45:        builder.Property(claim => claim.AlgorithmVersion).HasMaxLength(120).IsRequired();
+src\CanDoItAll.Modules.CognitiveMemory\Neuro\CognitiveMemoryNeuroFoundationEntityConfigurations.cs:99:        builder.Property(belief => belief.AlgorithmVersion).HasMaxLength(120).IsRequired();
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:17:public interface ICognitiveMemoryDreamClaimSynthesizer
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:22:public interface ICognitiveMemoryDreamEntailmentValidator
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:27:public sealed partial class CognitiveMemoryDreamClaimSynthesizer : ICognitiveMemoryDreamClaimSynthesizer
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs:132:public sealed class CognitiveMemoryDreamEntailmentValidator : ICognitiveMemoryDreamEntailmentValidator
+src\CanDoItAll.Modules.CognitiveMemory\Neuro\CognitiveMemoryNeuroFoundationEntities.cs:82:    public string AlgorithmVersion { get; set; } = string.Empty;
+src\CanDoItAll.Modules.CognitiveMemory\Neuro\CognitiveMemoryNeuroFoundationEntities.cs:122:    public string AlgorithmVersion { get; set; } = string.Empty;
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamConsolidationService.cs:15:    ICognitiveMemoryDreamClaimSynthesizer? claimSynthesizer = null) : ICognitiveMemoryDreamConsolidationService
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamConsolidationService.cs:17:    private static readonly CognitiveMemoryQualityDreamAlgorithmOptions AlgorithmOptions = CognitiveMemoryQualityAlgorithmOptions.Current.Dream;
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamConsolidationService.cs:18:    private readonly ICognitiveMemoryDreamClaimSynthesizer claimSynthesizer = claimSynthesizer ?? CognitiveMemoryDreamClaimSynthesizer.Instance;
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamConsolidationService.cs:19:    private static string AlgorithmVersion => AlgorithmOptions.AlgorithmVersion.Value;
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamConsolidationService.cs:114:            AlgorithmVersion = AlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamConsolidationService.cs:343:                AlgorithmVersion = AlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryAggregateMemoryApplicator.cs:16:    private static string AlgorithmVersion => CognitiveMemoryQualityAlgorithmOptions.Current.AggregateApply.AlgorithmVersion.Value;
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryAggregateMemoryApplicator.cs:155:            AlgorithmVersion = AlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryAggregateMemoryApplicator.cs:196:                AlgorithmVersion = AlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:12:    private static readonly CognitiveMemoryQualityClusterAlgorithmOptions AlgorithmOptions = CognitiveMemoryQualityAlgorithmOptions.Current.Cluster;
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:13:    private static string AlgorithmVersion => AlgorithmOptions.AlgorithmVersion.Value;
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:19:    private readonly ICognitiveMemoryClusterKeyExtractor keyExtractor;
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:20:    private readonly ICognitiveMemoryCandidatePairSelector candidatePairSelector;
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:36:        ICognitiveMemoryClusterKeyExtractor keyExtractor,
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:37:        ICognitiveMemoryCandidatePairSelector candidatePairSelector)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:237:            clusterRecord.AlgorithmVersion = AlgorithmVersion;
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:315:        ICognitiveMemoryCandidatePairSelector candidatePairSelector,
+src\CanDoItAll.Modules.CognitiveMemory\Ingestion\CognitiveMemorySourceIngestionService.cs:70:            AlgorithmVersion = "source-ingestion-v1",
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityAlgorithmOptions.cs:3:public sealed record CognitiveMemoryQualityAlgorithmOptions
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityAlgorithmOptions.cs:5:    public static CognitiveMemoryQualityAlgorithmOptions Current { get; } = new();
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityAlgorithmOptions.cs:20:    public CognitiveMemoryAlgorithmVersion AlgorithmVersion { get; init; } = new("quality-clustering-v3");
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityAlgorithmOptions.cs:37:    public CognitiveMemoryAlgorithmVersion AlgorithmVersion { get; init; } = new("quality-dream-v3-claim-synthesis");
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityAlgorithmOptions.cs:46:    public CognitiveMemoryAlgorithmVersion AlgorithmVersion { get; init; } = new("quality-aggregate-apply-v2-calibrated");
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityAlgorithmOptions.cs:51:    public int RequiredRepeatedUseCount { get; init; } = 2;
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityAlgorithmOptions.cs:53:    public int DescendantTraversalDepth { get; init; } = 4;
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallSynthesisService.cs:9:    ICognitiveMemoryRecallBriefComposer? briefComposer = null) : ICognitiveMemoryRecallSynthesisService
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallSynthesisService.cs:11:    private readonly ICognitiveMemoryRecallBriefComposer briefComposer = briefComposer ?? new CognitiveMemoryRecallBriefComposer();
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallSynthesisService.cs:33:        var composition = briefComposer.Compose(new CognitiveMemoryRecallBriefComposerRequest(
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamValidator.cs:13:    ICognitiveMemoryDreamEntailmentValidator? entailmentValidator = null) : ICognitiveMemoryDreamValidator
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamValidator.cs:15:    private readonly ICognitiveMemoryDreamEntailmentValidator entailmentValidator = entailmentValidator ?? CognitiveMemoryDreamEntailmentValidator.Instance;
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityEntities.cs:23:    public string AlgorithmVersion { get; set; } = string.Empty;
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityEntities.cs:118:    public string AlgorithmVersion { get; set; } = string.Empty;
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityEntities.cs:202:    public string AlgorithmVersion { get; set; } = string.Empty;
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityEntityConfigurations.cs:14:        builder.Property(cluster => cluster.AlgorithmVersion).HasMaxLength(120).IsRequired();
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityEntityConfigurations.cs:83:        builder.Property(run => run.AlgorithmVersion).HasMaxLength(120).IsRequired();
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityEntityConfigurations.cs:124:        builder.Property(candidate => candidate.AlgorithmVersion).HasMaxLength(120).IsRequired();
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterFormation.cs:26:internal interface ICognitiveMemoryClusterKeyExtractor
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterFormation.cs:35:internal interface ICognitiveMemoryCandidatePairSelector
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterFormation.cs:51:internal sealed class CognitiveMemoryClusterKeyExtractor : ICognitiveMemoryClusterKeyExtractor
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterFormation.cs:140:internal sealed class CognitiveMemoryCandidatePairSelector : ICognitiveMemoryCandidatePairSelector
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterFormation.cs:149:        CognitiveMemoryQualityAlgorithmOptions? algorithmOptions = null)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterFormation.cs:152:        options = (algorithmOptions ?? CognitiveMemoryQualityAlgorithmOptions.Current).Cluster;
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:5:public sealed record CognitiveMemoryRecallBriefComposerRequest(
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:12:public sealed record CognitiveMemoryRecallBriefComposerResult(
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:17:public interface ICognitiveMemoryRecallBriefComposer
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:19:    CognitiveMemoryRecallBriefComposerResult Compose(CognitiveMemoryRecallBriefComposerRequest request);
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:22:public sealed class CognitiveMemoryRecallBriefComposer(
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:23:    CognitiveMemoryQualityAlgorithmOptions? algorithmOptions = null) : ICognitiveMemoryRecallBriefComposer
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:25:    private readonly CognitiveMemoryQualityRecallAlgorithmOptions options = (algorithmOptions ?? CognitiveMemoryQualityAlgorithmOptions.Current).Recall;
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:48:    public CognitiveMemoryRecallBriefComposerResult Compose(CognitiveMemoryRecallBriefComposerRequest request)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs:97:        return new CognitiveMemoryRecallBriefComposerResult(brief, statements, warnings);
+src\CanDoItAll.Modules.CognitiveMemory\Recall\CognitiveMemoryRecallServices.cs:204:            AlgorithmVersion = CognitiveMemoryScoreSpaceRegistry.CurrentAlgorithmVersion.Value,
+src\CanDoItAll.Modules.CognitiveMemory\Recall\CognitiveMemoryRecallScoring.cs:52:            CognitiveMemoryScoreSpaceRegistry.CurrentAlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Recall\CognitiveMemoryRecallScoring.cs:90:        var algorithm = CognitiveMemoryScoreSpaceRegistry.CurrentAlgorithmVersion;
+src\CanDoItAll.Modules.CognitiveMemory\Scoring\CognitiveMemoryScoreGeometryContracts.cs:329:        CognitiveMemoryAlgorithmVersion algorithmVersion)
+src\CanDoItAll.Modules.CognitiveMemory\Scoring\CognitiveMemoryScoreGeometryContracts.cs:353:        AlgorithmVersion = algorithmVersion;
+src\CanDoItAll.Modules.CognitiveMemory\Scoring\CognitiveMemoryScoreGeometryContracts.cs:368:    public CognitiveMemoryAlgorithmVersion AlgorithmVersion { get; }
+src\CanDoItAll.Modules.CognitiveMemory\Scoring\CognitiveMemoryScoreGeometryContracts.cs:418:        CognitiveMemoryAlgorithmVersion algorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Scoring\CognitiveMemoryScoreGeometryContracts.cs:442:        AlgorithmVersion = algorithmVersion;
+src\CanDoItAll.Modules.CognitiveMemory\Scoring\CognitiveMemoryScoreGeometryContracts.cs:455:    public CognitiveMemoryAlgorithmVersion AlgorithmVersion { get; }
+src\CanDoItAll.Modules.CognitiveMemory\Scoring\CognitiveMemoryScoreGeometryContracts.cs:526:        CognitiveMemoryAlgorithmVersion algorithmVersion)
+src\CanDoItAll.Modules.CognitiveMemory\Scoring\CognitiveMemoryScoreGeometryContracts.cs:557:        AlgorithmVersion = algorithmVersion;
+src\CanDoItAll.Modules.CognitiveMemory\Scoring\CognitiveMemoryScoreGeometryContracts.cs:576:    public CognitiveMemoryAlgorithmVersion AlgorithmVersion { get; }
+src\CanDoItAll.Modules.CognitiveMemory\Scoring\CognitiveMemoryScoreGeometryContracts.cs:612:    CognitiveMemoryAlgorithmVersion AlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Scoring\CognitiveMemoryScoreGeometryDriver.cs:47:            definition.AlgorithmVersion,
+src\CanDoItAll.Modules.CognitiveMemory\Scoring\CognitiveMemoryScoreTracePersistence.cs:41:            AlgorithmVersion = trace.AlgorithmVersion.Value,
+src\CanDoItAll.Modules.CognitiveMemory\Scoring\CognitiveMemoryScoreTracePersistence.cs:77:                    AlgorithmVersion = vector.AlgorithmVersion.Value,
+src\CanDoItAll.Modules.CognitiveMemory\Scoring\CognitiveMemoryScoreSpaceRegistry.cs:9:    public static CognitiveMemoryAlgorithmVersion CurrentAlgorithmVersion { get; } = new("score-geometry-v1");
+src\CanDoItAll.Modules.CognitiveMemory\Scoring\CognitiveMemoryScoreSpaceRegistry.cs:331:            CurrentAlgorithmVersion);
+src\CanDoItAll.Modules.CognitiveMemory\Scoring\CognitiveMemoryScoreGeometryEntityConfigurations.cs:14:        builder.Property(trace => trace.AlgorithmVersion).HasMaxLength(120).IsRequired();
+src\CanDoItAll.Modules.CognitiveMemory\Scoring\CognitiveMemoryScoreGeometryEntityConfigurations.cs:31:        builder.Property(component => component.AlgorithmVersion).HasMaxLength(120).IsRequired();
+src\CanDoItAll.Modules.CognitiveMemory\Scoring\CognitiveMemoryScoreGeometryEntities.cs:21:    public string AlgorithmVersion { get; set; } = string.Empty;
+src\CanDoItAll.Modules.CognitiveMemory\Scoring\CognitiveMemoryScoreGeometryEntities.cs:76:    public string AlgorithmVersion { get; set; } = string.Empty;
+src\CanDoItAll.Modules.CognitiveMemory\ReviewUi\CognitiveMemoryReviewUiAuditQueries.cs:264:                $"{run.OperationMode} / {run.Status} / scopes {FirstNonEmpty(run.Cursor, "default")} / {FirstNonEmpty(run.FailureMessage, run.FailureCode, run.AlgorithmVersion)}",

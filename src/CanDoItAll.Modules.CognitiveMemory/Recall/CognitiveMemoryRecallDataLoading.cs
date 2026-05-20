@@ -33,7 +33,7 @@ public sealed partial class CognitiveMemoryRecallOrchestrator
             query = query.Where(record => record.AccessLevel <= request.PolicyContext.AccessLevel);
         }
 
-        return query;
+        return ExcludeActiveProfessorAnchorRecords(dbContext, request, query);
     }
 
     private static IQueryable<CognitiveMemoryRecord> BuildRecordQuery(
@@ -60,8 +60,35 @@ public sealed partial class CognitiveMemoryRecallOrchestrator
             query = query.Where(record => record.AccessLevel <= request.PolicyContext.AccessLevel);
         }
 
-        return query;
+        return ExcludeActiveProfessorAnchorRecords(dbContext, request, query);
     }
+
+    private static IQueryable<CognitiveMemoryRecord> ExcludeActiveProfessorAnchorRecords(
+        AppDbContext dbContext,
+        CognitiveMemoryRecallRequest request,
+        IQueryable<CognitiveMemoryRecord> query)
+    {
+        if (ShouldIncludeActiveProfessorAnchors(request))
+        {
+            return query;
+        }
+
+        var activeAnchorMemoryRecordIds = dbContext.Set<CognitiveMemoryCuratorCapturedImprovementRecord>()
+            .AsNoTracking()
+            .Where(capture =>
+                capture.ProjectId == request.ProjectId &&
+                capture.AppliedMemoryRecordId != null &&
+                (capture.AnchorState == CognitiveMemoryProfessorAnchorState.Active ||
+                 capture.AnchorState == CognitiveMemoryProfessorAnchorState.Comparing))
+            .Select(capture => capture.AppliedMemoryRecordId!.Value);
+        return query.Where(record => !activeAnchorMemoryRecordIds.Contains(record.Id));
+    }
+
+    private static bool ShouldIncludeActiveProfessorAnchors(CognitiveMemoryRecallRequest request)
+        => request.Metadata is not null &&
+           request.Metadata.TryGetValue("includeProfessorAnchors", out var value) &&
+           bool.TryParse(value, out var include) &&
+           include;
 
     private async Task<IReadOnlyList<MemoryRecordSnapshot>> LoadRecordsByIdAsync(
         AppDbContext dbContext,

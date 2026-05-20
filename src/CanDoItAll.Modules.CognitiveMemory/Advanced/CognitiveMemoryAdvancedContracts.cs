@@ -515,10 +515,34 @@ public sealed record CognitiveMemoryProfessorAnchorAssimilationRequest(
     CognitiveMemoryRecordId DerivedMemoryRecordId,
     bool FadeAnchor = false);
 
+public sealed record CognitiveMemoryProfessorAnchorAssimilationEvaluationRequest(
+    Guid CaptureId,
+    CognitiveMemoryRecordId DerivedMemoryRecordId,
+    bool RequireUsageAndIntegration = false);
+
+public sealed record CognitiveMemoryProfessorAnchorAssimilationEvaluationResult(
+    bool CanAssimilate,
+    string Reason,
+    int IndependentSupportCount,
+    int RepeatedUseCount,
+    bool HasIntegrationEvidence);
+
+public sealed record CognitiveMemoryProfessorAnchorAssimilationScanRequest(
+    Guid ProjectId,
+    bool FadeAnchor = true,
+    int MaxAnchors = 50);
+
 public sealed record CognitiveMemoryProfessorAnchorResult(
     Guid CaptureId,
     CognitiveMemoryProfessorAnchorState AnchorState,
     CognitiveMemoryRecordId? DerivedMemoryRecordId);
+
+public interface ICognitiveMemoryProfessorAssimilationEvaluator
+{
+    ValueTask<CognitiveMemoryProfessorAnchorAssimilationEvaluationResult> EvaluateAsync(
+        CognitiveMemoryProfessorAnchorAssimilationEvaluationRequest request,
+        CancellationToken cancellationToken = default);
+}
 
 public interface ICognitiveMemoryProbeService
 {
@@ -567,6 +591,10 @@ public interface ICognitiveMemoryProfessorAnchorService
 
     ValueTask<CognitiveMemoryProfessorAnchorResult> FadeAsync(
         Guid captureId,
+        CancellationToken cancellationToken = default);
+
+    ValueTask<IReadOnlyList<CognitiveMemoryProfessorAnchorResult>> ScanAssimilationAsync(
+        CognitiveMemoryProfessorAnchorAssimilationScanRequest request,
         CancellationToken cancellationToken = default);
 }
 

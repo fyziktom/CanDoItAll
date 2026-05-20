@@ -13,7 +13,8 @@ public sealed class CognitiveMemoryCuratorConversationService(
     ICognitiveMemoryAutomationSettingsService settingsService,
     IAgentFrameworkWorkspaceService workspaceService,
     ICognitiveMemoryConsolidationCandidateApplicator consolidationCandidateApplicator,
-    IClock clock) : ICognitiveMemoryCuratorConversationService
+    IClock clock,
+    ICognitiveMemoryProfessorTeachingExtractor? teachingExtractor = null) : ICognitiveMemoryCuratorConversationService
 {
     private const string CuratorSourceSystem = "CuratorConversation";
     private const string CuratorSourceItemType = "CuratorTrustedTurn";
@@ -26,6 +27,7 @@ public sealed class CognitiveMemoryCuratorConversationService(
     private const int MaximumCorrectionLength = 8000;
     private const double TrustedConfidenceScore = 0.95;
     private const double TrustedPriorityScore = 0.95;
+    private readonly ICognitiveMemoryProfessorTeachingExtractor teachingExtractor = teachingExtractor ?? CognitiveMemoryProfessorTeachingExtractor.Instance;
 
     public async ValueTask<CognitiveMemoryCuratorSessionRecord> StartAsync(
         CognitiveMemoryCuratorSessionStartRequest request,
@@ -205,6 +207,10 @@ public sealed class CognitiveMemoryCuratorConversationService(
         await dbContext.SaveChangesAsync(cancellationToken);
 
         var captureKind = ResolveCaptureKind(request, includedMemoryRecordIds);
+        var professorAnchor = captureKind is null
+            ? await ExtractProfessorAnchorAsync(dbContext, session, turn, request, cancellationToken)
+            : null;
+        captureKind ??= professorAnchor is null ? null : CognitiveMemoryCuratorCaptureKind.NewKnowledge;
         var captured = new List<CognitiveMemoryCuratorCapturedImprovementRecord>();
         if (captureKind is { } kind)
         {
@@ -216,6 +222,7 @@ public sealed class CognitiveMemoryCuratorConversationService(
                 request,
                 kind,
                 targetResolution,
+                professorAnchor,
                 now,
                 cancellationToken);
             captured.Add(capture);
@@ -492,6 +499,32 @@ public sealed class CognitiveMemoryCuratorConversationService(
             ? null
             : new CognitiveMemoryExecutionModelId(value.Trim());
 
+    private async Task<CognitiveMemoryProfessorAnchorExtraction?> ExtractProfessorAnchorAsync(
+        AppDbContext dbContext,
+        CognitiveMemoryCuratorSessionRecord session,
+        CognitiveMemoryCuratorTurnRecord turn,
+        CognitiveMemoryCuratorTurnCaptureRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (request.ExplicitCaptureKind is not null)
+        {
+            return null;
+        }
+
+        var previousTurns = await dbContext.Set<CognitiveMemoryCuratorTurnRecord>()
+            .AsNoTracking()
+            .Where(item => item.CuratorSessionId == session.Id && item.Sequence < turn.Sequence)
+            .OrderByDescending(item => item.Sequence)
+            .Take(4)
+            .ToListAsync(cancellationToken);
+        previousTurns.Reverse();
+        return teachingExtractor.TryExtract(new CognitiveMemoryProfessorTeachingExtractionRequest(
+            turn.UserMessage,
+            turn.CuratorResponse,
+            previousTurns,
+            request.CaptureScope));
+    }
+
     private async ValueTask<CognitiveMemoryCuratorCapturedImprovementRecord> CreateTrustedImprovementAsync(
         AppDbContext dbContext,
         CognitiveMemoryCuratorSessionRecord session,
@@ -499,18 +532,26 @@ public sealed class CognitiveMemoryCuratorConversationService(
         CognitiveMemoryCuratorTurnCaptureRequest request,
         CognitiveMemoryCuratorCaptureKind captureKind,
         CuratorTargetResolution targetResolution,
+        CognitiveMemoryProfessorAnchorExtraction? professorAnchor,
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
         var affectedMemoryRecordIds = targetResolution.TargetMemoryRecordIds;
-        var summary = CreateCaptureSummary(captureKind, turn.UserMessage);
-        var content = CreateSourceContent(session, turn, captureKind, affectedMemoryRecordIds);
+        var summary = professorAnchor is null
+            ? CreateCaptureSummary(captureKind, turn.UserMessage)
+            : CreateProfessorAnchorSummary(professorAnchor);
+        var content = CreateSourceContent(session, turn, captureKind, affectedMemoryRecordIds, professorAnchor);
         var contentHash = CognitiveMemoryHash.FromUtf8(content).Value;
         var outputHash = CognitiveMemoryHash.FromUtf8(summary).Value;
         var captureId = Guid.NewGuid();
         var locator = $"curator-session/{session.Id:D}/turn/{turn.Id:D}/capture/{captureId:D}";
         var idempotencyKey = $"curator-conversation:{captureId:D}";
-        var title = TrimText(CreateCaptureTitle(captureKind, turn.UserMessage), MaximumTitleLength);
+        var title = TrimText(CreateCaptureTitle(captureKind, turn.UserMessage, professorAnchor), MaximumTitleLength);
+        var candidateScoreBucket = professorAnchor is null
+            ? CognitiveMemoryScoreProjectionBucket.StrongAccept
+            : CognitiveMemoryScoreProjectionBucket.WeakAccept;
+        var priorityScore = professorAnchor?.ConfidenceScore ?? TrustedPriorityScore;
+        var confidenceScore = professorAnchor?.ConfidenceScore ?? TrustedConfidenceScore;
         var sourceManifest = new CognitiveMemorySourceManifestRecord
         {
             Id = Guid.NewGuid(),
@@ -541,7 +582,7 @@ public sealed class CognitiveMemoryCuratorConversationService(
             RedactionState = CognitiveMemoryRedactionState.Safe,
             AccessLevel = session.AccessLevel,
             AccessScope = session.ProjectId.ToString("D"),
-            ProvenanceJson = CreateProvenanceJson(session, turn, captureKind, affectedMemoryRecordIds),
+            ProvenanceJson = CreateProvenanceJson(session, turn, captureKind, affectedMemoryRecordIds, professorAnchor),
             ObservedAtUtc = now,
             CreatedAtUtc = now,
             UpdatedAtUtc = now,
@@ -644,8 +685,8 @@ public sealed class CognitiveMemoryCuratorConversationService(
             SourceItemId = sourceItem.Id,
             EvidenceAnchorId = evidenceAnchor.Id,
             MutationCommandId = mutationCommand.Id,
-            ScoreBucket = CognitiveMemoryScoreProjectionBucket.StrongAccept,
-            DisplayPriorityProjection = TrustedPriorityScore,
+            ScoreBucket = candidateScoreBucket,
+            DisplayPriorityProjection = priorityScore,
             SourceContentHash = contentHash,
             OutputHash = outputHash,
             AlgorithmVersion = CuratorAlgorithmVersion,
@@ -677,15 +718,15 @@ public sealed class CognitiveMemoryCuratorConversationService(
             MutationCommandId = mutationCommand.Id,
             ConsolidationCandidateId = candidate.Id,
             ActorId = session.ActorId,
-            ConfidenceScore = TrustedConfidenceScore,
-            PriorityScore = TrustedPriorityScore,
+            ConfidenceScore = confidenceScore,
+            PriorityScore = priorityScore,
             TargetConfidenceScore = request.TargetConfidenceScore is { } targetConfidence
                 ? Math.Clamp(targetConfidence, 0, 1)
-                : TrustedConfidenceScore,
+                : confidenceScore,
             CaptureLanguage = ResolveCaptureLanguage(turn.UserMessage),
-            CaptureScope = TrimText(request.CaptureScope ?? string.Empty, 500),
+            CaptureScope = TrimText(FirstNonEmpty(request.CaptureScope, professorAnchor?.TargetScope), 500),
             Summary = TrimText(summary, MaximumSummaryLength),
-            CorrectionText = TrimText(turn.UserMessage, MaximumCorrectionLength),
+            CorrectionText = TrimText(professorAnchor is null ? turn.UserMessage : CreateProfessorAnchorPayloadText(professorAnchor), MaximumCorrectionLength),
             CreatedAtUtc = now,
             ConcurrencyToken = Guid.NewGuid()
         };
@@ -748,8 +789,8 @@ public sealed class CognitiveMemoryCuratorConversationService(
             dbContext,
             candidate,
             payload,
-            CognitiveMemoryValidationState.Approved,
-            CognitiveMemoryStabilityState.Active,
+            professorAnchor is null ? CognitiveMemoryValidationState.Approved : CognitiveMemoryValidationState.NeedsHumanReview,
+            professorAnchor is null ? CognitiveMemoryStabilityState.Active : CognitiveMemoryStabilityState.Experimental,
             session.ActorId,
             now,
             cancellationToken);
@@ -972,29 +1013,39 @@ public sealed class CognitiveMemoryCuratorConversationService(
         CognitiveMemoryCuratorSessionRecord session,
         CognitiveMemoryCuratorTurnRecord turn,
         CognitiveMemoryCuratorCaptureKind captureKind,
-        IReadOnlyList<Guid> affectedMemoryRecordIds)
-        => string.Join(
-            Environment.NewLine,
-            [
-                $"Session: {session.Id:D}",
-                $"Turn: {turn.Id:D}",
-                $"Actor: {session.ActorId}",
-                $"Runtime mode: {turn.RuntimeMode}",
-                $"Conversation depth: {turn.ConversationDepth}",
-                $"Capture kind: {captureKind}",
-                $"Recall trace: {turn.RecallTraceId?.ToString("D") ?? "none"}",
-                $"Affected memory records: {string.Join(", ", affectedMemoryRecordIds.Select(item => item.ToString("D")))}",
-                "User message:",
-                turn.UserMessage,
-                "Curator response before capture:",
-                FirstNonEmpty(turn.CuratorResponse, "No curator response was recorded.")
-            ]);
+        IReadOnlyList<Guid> affectedMemoryRecordIds,
+        CognitiveMemoryProfessorAnchorExtraction? professorAnchor)
+    {
+        var lines = new List<string>
+        {
+            $"Session: {session.Id:D}",
+            $"Turn: {turn.Id:D}",
+            $"Actor: {session.ActorId}",
+            $"Runtime mode: {turn.RuntimeMode}",
+            $"Conversation depth: {turn.ConversationDepth}",
+            $"Capture kind: {captureKind}",
+            $"Recall trace: {turn.RecallTraceId?.ToString("D") ?? "none"}",
+            $"Affected memory records: {string.Join(", ", affectedMemoryRecordIds.Select(item => item.ToString("D")))}",
+            "User message:",
+            turn.UserMessage,
+            "Curator response before capture:",
+            FirstNonEmpty(turn.CuratorResponse, "No curator response was recorded.")
+        };
+        if (professorAnchor is not null)
+        {
+            lines.Add("Structured professor anchor:");
+            lines.Add(CreateProfessorAnchorSummary(professorAnchor));
+        }
+
+        return string.Join(Environment.NewLine, lines);
+    }
 
     private static string CreateProvenanceJson(
         CognitiveMemoryCuratorSessionRecord session,
         CognitiveMemoryCuratorTurnRecord turn,
         CognitiveMemoryCuratorCaptureKind captureKind,
-        IReadOnlyList<Guid> affectedMemoryRecordIds)
+        IReadOnlyList<Guid> affectedMemoryRecordIds,
+        CognitiveMemoryProfessorAnchorExtraction? professorAnchor)
     {
         var payload = new Dictionary<string, string>
         {
@@ -1010,6 +1061,16 @@ public sealed class CognitiveMemoryCuratorConversationService(
             ["approvalBypass"] = "true",
             ["affectedMemoryRecordIds"] = string.Join(",", affectedMemoryRecordIds.Select(item => item.ToString("D")))
         };
+        if (professorAnchor is not null)
+        {
+            payload["professorAnchorCaptureKind"] = professorAnchor.CaptureKind.ToString();
+            payload["professorAnchorTargetScope"] = professorAnchor.TargetScope;
+            payload["professorAnchorClaimCount"] = professorAnchor.Claims.Count.ToString();
+            payload["confidenceScore"] = professorAnchor.ConfidenceScore.ToString("0.00");
+            payload["priorityScore"] = professorAnchor.ConfidenceScore.ToString("0.00");
+            payload["approvalBypass"] = "false";
+        }
+
         if (turn.RecallTraceId is { } recallTraceId)
         {
             payload["recallTraceId"] = recallTraceId.ToString("D");
@@ -1025,6 +1086,23 @@ public sealed class CognitiveMemoryCuratorConversationService(
             CognitiveMemoryJsonSerializerContext.Default.DictionaryStringString);
     }
 
+    private static string CreateProfessorAnchorSummary(CognitiveMemoryProfessorAnchorExtraction anchor)
+        => string.Join(
+            Environment.NewLine,
+            [
+                $"Anchor kind: {anchor.CaptureKind}",
+                $"Target: {anchor.TargetScope}",
+                ..anchor.Claims.Select(claim => $"Claim: {claim.Text}"),
+                $"Misconception: {FirstNonEmpty(anchor.MisconceptionCorrected, "none")}",
+                $"Lifecycle: {CognitiveMemoryProfessorAnchorState.Active}",
+                $"Confidence: {anchor.ConfidenceScore:0.00}",
+                "Source utterances:",
+                ..anchor.SourceUtterances.Select(utterance => $"- {utterance}")
+            ]);
+
+    private static string CreateProfessorAnchorPayloadText(CognitiveMemoryProfessorAnchorExtraction anchor)
+        => JsonSerializer.Serialize(anchor, CognitiveMemoryAdvancedJson.Options);
+
     private static string CreateCaptureSummary(CognitiveMemoryCuratorCaptureKind captureKind, string userMessage)
     {
         var normalized = NormalizeUserKnowledgeText(userMessage);
@@ -1036,8 +1114,16 @@ public sealed class CognitiveMemoryCuratorConversationService(
         }, MaximumSummaryLength);
     }
 
-    private static string CreateCaptureTitle(CognitiveMemoryCuratorCaptureKind captureKind, string userMessage)
+    private static string CreateCaptureTitle(
+        CognitiveMemoryCuratorCaptureKind captureKind,
+        string userMessage,
+        CognitiveMemoryProfessorAnchorExtraction? professorAnchor)
     {
+        if (professorAnchor is not null)
+        {
+            return $"Professor anchor: {TrimText(professorAnchor.TargetScope, 220)}";
+        }
+
         var prefix = captureKind switch
         {
             CognitiveMemoryCuratorCaptureKind.NewKnowledge => "Curator knowledge",

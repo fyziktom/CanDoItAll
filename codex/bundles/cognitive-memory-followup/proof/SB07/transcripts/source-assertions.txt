@@ -1,0 +1,48 @@
+Command: rg -n "ICognitiveMemoryProfessorAssimilationEvaluator|BuildAnchorDescendantMemoryIdsAsync|CountIndependentNonDescendantSupportAsync|CountRepeatedUseAsync|HasDreamOrClusterIntegrationAsync|ScanAssimilationAsync|DemoteDirectCaptureMemoryAsync|ValidationState\.Retired|StabilityState\.Deprecated|RequireUsageAndIntegration" src\CanDoItAll.Modules.CognitiveMemory tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:512:        Assert.Equal(CognitiveMemoryValidationState.Retired, directMemory.ValidationState);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:513:        Assert.Equal(CognitiveMemoryStabilityState.Deprecated, directMemory.StabilityState);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:514:        Assert.Equal(CognitiveMemoryValidationState.Retired, directClaim.ValidationState);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:515:        Assert.Equal(CognitiveMemoryStabilityState.Deprecated, directClaim.StabilityState);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:552:        var scanResults = await anchorService.ScanAssimilationAsync(new CognitiveMemoryProfessorAnchorAssimilationScanRequest(projectId));
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:563:        Assert.Equal(CognitiveMemoryValidationState.Retired, directMemory.ValidationState);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:564:        Assert.Equal(CognitiveMemoryStabilityState.Deprecated, directMemory.StabilityState);
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:795:            oldMemory.StabilityState = CognitiveMemoryStabilityState.Deprecated;
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:799:            directCaptureMemory.StabilityState = CognitiveMemoryStabilityState.Deprecated;
+src\CanDoItAll.Modules.CognitiveMemory\CognitiveMemoryModuleServiceCollectionExtensions.cs:85:        services.TryAddScoped<ICognitiveMemoryProfessorAssimilationEvaluator, CognitiveMemoryProfessorAssimilationEvaluator>();
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryAdvancedContracts.cs:521:    bool RequireUsageAndIntegration = false);
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryAdvancedContracts.cs:540:public interface ICognitiveMemoryProfessorAssimilationEvaluator
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryAdvancedContracts.cs:596:    ValueTask<IReadOnlyList<CognitiveMemoryProfessorAnchorResult>> ScanAssimilationAsync(
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryAggregateMemoryApplicator.cs:97:                record.StabilityState != CognitiveMemoryStabilityState.Deprecated)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:74:            .Where(record => record.StabilityState != CognitiveMemoryStabilityState.Deprecated)
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:475:        if (left.Record.StabilityState is CognitiveMemoryStabilityState.Stale or CognitiveMemoryStabilityState.Deprecated ||
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:476:            right.Record.StabilityState is CognitiveMemoryStabilityState.Stale or CognitiveMemoryStabilityState.Deprecated ||
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:729:        if (members.Any(member => member.Record.StabilityState is CognitiveMemoryStabilityState.Stale or CognitiveMemoryStabilityState.Deprecated ||
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs:810:        if (members.Any(member => member.Record.StabilityState is CognitiveMemoryStabilityState.Stale or CognitiveMemoryStabilityState.Deprecated ||
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamValidator.cs:64:                record.StabilityState != CognitiveMemoryStabilityState.Deprecated &&
+src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamValidator.cs:246:                                        record.StabilityState is CognitiveMemoryStabilityState.Stale or CognitiveMemoryStabilityState.Deprecated))
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorService.cs:10:    ICognitiveMemoryProfessorAssimilationEvaluator? assimilationEvaluator = null) : ICognitiveMemoryProfessorAnchorService
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorService.cs:13:    private readonly ICognitiveMemoryProfessorAssimilationEvaluator assimilationEvaluator = assimilationEvaluator ?? new CognitiveMemoryProfessorAssimilationEvaluator(dbContextFactory);
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorService.cs:42:        await DemoteDirectCaptureMemoryAsync(dbContext, capture, now, cancellationToken);
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorService.cs:50:    public async ValueTask<IReadOnlyList<CognitiveMemoryProfessorAnchorResult>> ScanAssimilationAsync(
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorService.cs:87:                        RequireUsageAndIntegration: true),
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorService.cs:144:            await DemoteDirectCaptureMemoryAsync(dbContext, capture, now, cancellationToken);
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorService.cs:209:    private static async Task DemoteDirectCaptureMemoryAsync(
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorService.cs:228:        directMemory.ValidationState = CognitiveMemoryValidationState.Retired;
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorService.cs:229:        directMemory.StabilityState = CognitiveMemoryStabilityState.Deprecated;
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorService.cs:239:            claim.ValidationState = CognitiveMemoryValidationState.Retired;
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorService.cs:240:            claim.StabilityState = CognitiveMemoryStabilityState.Deprecated;
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAssimilationEvaluator.cs:7:    IDbContextFactory<AppDbContext> dbContextFactory) : ICognitiveMemoryProfessorAssimilationEvaluator
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAssimilationEvaluator.cs:60:        var descendantMemoryIds = await BuildAnchorDescendantMemoryIdsAsync(dbContext, capture, cancellationToken);
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAssimilationEvaluator.cs:61:        var independentSupportCount = await CountIndependentNonDescendantSupportAsync(
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAssimilationEvaluator.cs:79:        var repeatedUseCount = await CountRepeatedUseAsync(dbContext, derivedMemory.Id, cancellationToken);
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAssimilationEvaluator.cs:80:        var hasIntegrationEvidence = await HasDreamOrClusterIntegrationAsync(dbContext, derivedMemory.Id, cancellationToken);
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAssimilationEvaluator.cs:81:        if (request.RequireUsageAndIntegration && repeatedUseCount < RequiredRepeatedUseCount)
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAssimilationEvaluator.cs:90:        if (request.RequireUsageAndIntegration && !hasIntegrationEvidence)
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAssimilationEvaluator.cs:121:    private static async Task<HashSet<Guid>> BuildAnchorDescendantMemoryIdsAsync(
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAssimilationEvaluator.cs:166:    private static async Task<int> CountIndependentNonDescendantSupportAsync(
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAssimilationEvaluator.cs:235:    private static async Task<int> CountRepeatedUseAsync(
+src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAssimilationEvaluator.cs:246:    private static async Task<bool> HasDreamOrClusterIntegrationAsync(
+src\CanDoItAll.Modules.CognitiveMemory\Recall\CognitiveMemoryRecallDataLoading.cs:23:                record.ValidationState != CognitiveMemoryValidationState.Retired &&
+src\CanDoItAll.Modules.CognitiveMemory\Recall\CognitiveMemoryRecallDataLoading.cs:56:                record.ValidationState != CognitiveMemoryValidationState.Retired &&
+src\CanDoItAll.Modules.CognitiveMemory\Recall\CognitiveMemoryRecallMappingAndTypes.cs:495:            CognitiveMemoryStabilityState.Deprecated => 1,
+ExitCode: 0

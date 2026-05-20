@@ -1,0 +1,3 @@
+Command: rg -n "TODO|NotImplemented|throw new NotImplementedException|DreamRun_IntegratesComplementaryProcedureClaimsIntoSingleAggregateStatement|DreamRun_ProducesModeSpecificStructuredOutputsBeyondTitlePrefix|DreamValidation_RejectsNegatedClaimDespiteHighTokenOverlap" src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamConsolidationService.cs src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamValidator.cs src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamSynthesis.cs src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryAggregateConfidenceCalibrator.cs
+Result: no TODO, NotImplemented, or fixture/test-name-specific production branches found in SB05 production files.
+ExitCode: 0

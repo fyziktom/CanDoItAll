@@ -404,6 +404,7 @@ public sealed record CognitiveMemoryAggregateMemoryApplyResult(
 public sealed record CognitiveMemorySynthesizedRecallStatement(
     CognitiveMemorySynthesizedStatementId StatementId,
     string Text,
+    IReadOnlyList<CognitiveMemoryClaimId> AggregateClaimIds,
     IReadOnlyList<CognitiveMemoryRecallSourceRef> SourceRefs);
 
 public sealed record CognitiveMemoryRecallSynthesisRequest(

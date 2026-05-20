@@ -293,6 +293,139 @@ public sealed class CognitiveMemoryQualityFoundationTests
     }
 
     [Fact]
+    public async Task ClusterPlanner_SplitsBridgeChainsInsteadOfMergingUnrelatedEndpoints()
+    {
+        await using var fixture = await CreateFixtureAsync();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var database = await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-000000000091"),
+            "Postgres failover lock",
+            "Postgres failover runbook requires promotion lock before replica promotion.",
+            "Postgres failover lock source evidence.",
+            topicKey: "database.failover.lock");
+        var bridge = await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-000000000092"),
+            "Operator handoff bridge",
+            "Postgres failover runbook and Kafka replay checklist both require operator handoff.",
+            "Operator handoff bridge source evidence.",
+            topicKey: "operations.handoff.bridge");
+        var kafka = await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-000000000093"),
+            "Kafka replay checkpoint",
+            "Kafka replay checklist requires checkpoint verification before consumer restart.",
+            "Kafka replay checkpoint source evidence.",
+            topicKey: "messaging.kafka.replay");
+        var planner = new CognitiveMemoryClusterPlanner(fixture.Factory, fixture.Clock);
+
+        var result = await planner.PlanAsync(new CognitiveMemoryClusterPlanningRequest(projectId, Policy(projectId)));
+
+        Assert.DoesNotContain(result.Clusters, cluster =>
+            ContainsMemory(cluster, database.RecordId) &&
+            ContainsMemory(cluster, kafka.RecordId));
+        Assert.Contains(result.Clusters, cluster =>
+            ContainsMemory(cluster, database.RecordId) &&
+            ContainsMemory(cluster, bridge.RecordId));
+        Assert.Contains(result.Clusters, cluster =>
+            ContainsMemory(cluster, bridge.RecordId) &&
+            ContainsMemory(cluster, kafka.RecordId));
+    }
+
+    [Fact]
+    public async Task ClusterPlanner_RoutesContradictionOnlyRelationToReviewCluster()
+    {
+        await using var fixture = await CreateFixtureAsync();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var first = await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-0000000000a4"),
+            "Blue deploy freeze",
+            "Blue deploy freezes traffic before package promotion.",
+            "Blue deploy freeze source evidence.",
+            topicKey: "release.blue.freeze");
+        var second = await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-0000000000a5"),
+            "Emergency traffic restore",
+            "Emergency restore may resume requests before artifact activation.",
+            "Emergency restore source evidence.",
+            topicKey: "incident.restore.exception");
+        fixture.DbContext.Add(new CognitiveMemoryRelationRecord
+        {
+            ProjectId = projectId,
+            SourceMemoryRecordId = first.RecordId,
+            TargetMemoryRecordId = second.RecordId,
+            RelationKind = CognitiveMemoryRelationKind.Contradicts,
+            EvidenceCount = 1,
+            RelationBucket = CognitiveMemoryScoreProjectionBucket.NeedsReview,
+            Reason = "The approval-free exception contradicts the release freeze rule.",
+            AlgorithmVersion = "unit-test",
+            CreatedAtUtc = fixture.Clock.GetUtcNow(),
+            ConcurrencyToken = Guid.NewGuid()
+        });
+        await fixture.DbContext.SaveChangesAsync();
+        var planner = new CognitiveMemoryClusterPlanner(fixture.Factory, fixture.Clock);
+
+        var result = await planner.PlanAsync(new CognitiveMemoryClusterPlanningRequest(projectId, Policy(projectId)));
+
+        var cluster = Assert.Single(result.Clusters, cluster =>
+            cluster.Readiness == CognitiveMemoryQualityClusterReadiness.Contradictory &&
+            ContainsMemory(cluster, first.RecordId) &&
+            ContainsMemory(cluster, second.RecordId));
+        Assert.False(cluster.QualityMetrics.AggregateEligible);
+        Assert.Contains(cluster.Warnings, warning => warning.Contains("contradiction-only", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task ClusterPlanner_UsesHighFanoutFallbackForParaphrasedSemanticPair()
+    {
+        await using var fixture = await CreateFixtureAsync();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        for (var index = 0; index < 82; index++)
+        {
+            await SeedLinkedMemoryAsync(
+                fixture,
+                projectId,
+                Guid.Parse($"20000000-0000-0000-0000-{index:x12}"),
+                $"Release operations note {index}",
+                $"Release operations note {index} records ordinary status handoff material.",
+                $"Release operations note {index} source evidence.",
+                topicKey: "operations.release.highfanout");
+        }
+
+        var blue = await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("20000000-0000-0000-0000-000000000101"),
+            "Blue deployment freeze",
+            "Blue deploy freezes traffic before promoting package.",
+            "Blue deployment freeze source evidence.",
+            topicKey: "operations.release.highfanout");
+        var canary = await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("20000000-0000-0000-0000-000000000102"),
+            "Canary activation pause",
+            "Canary rollout pauses requests ahead of artifact activation.",
+            "Canary activation pause source evidence.",
+            topicKey: "operations.release.highfanout");
+        var planner = new CognitiveMemoryClusterPlanner(fixture.Factory, fixture.Clock);
+
+        var result = await planner.PlanAsync(new CognitiveMemoryClusterPlanningRequest(projectId, Policy(projectId)));
+
+        Assert.Contains(result.Clusters, cluster =>
+            ContainsMemory(cluster, blue.RecordId) &&
+            ContainsMemory(cluster, canary.RecordId));
+    }
+
+    [Fact]
     public async Task DreamRun_ProjectNightlyCreatesApprovedCandidateAndMetrics()
     {
         await using var fixture = await CreateFixtureAsync();
@@ -345,6 +478,104 @@ public sealed class CognitiveMemoryQualityFoundationTests
         var diagnostics = new CognitiveMemoryQualityDiagnosticsService(fixture.Factory, fixture.Clock);
         var report = await diagnostics.CreateReportAsync(new CognitiveMemoryQualityDiagnosticsRequest(projectId, Policy(projectId)));
         Assert.False(report.IsShallowDreamRun);
+    }
+
+    [Fact]
+    public async Task DreamRun_IntegratesComplementaryProcedureClaimsIntoSingleAggregateStatement()
+    {
+        await using var fixture = await CreateFixtureAsync();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-000000000094"),
+            "Payment export procedure",
+            "Payment export procedure stages the bank file before upload.",
+            "Payment export staging source evidence.",
+            topicKey: "payment.export.procedure");
+        await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-000000000095"),
+            "Payment export procedure",
+            "Payment export procedure verifies the checksum after bank upload.",
+            "Payment export checksum source evidence.",
+            topicKey: "payment.export.procedure");
+        var dream = CreateDreamService(fixture);
+
+        var result = await dream.RunAsync(new CognitiveMemoryDreamRunRequest(
+            projectId,
+            CognitiveMemoryConsolidationMode.ProjectNightly,
+            CognitiveMemoryConsolidationTriggerKind.Nightly,
+            Policy(projectId),
+            new CognitiveMemoryIdempotencyKey("dream-integrated-procedure")));
+
+        var candidate = Assert.Single(result.AggregateCandidates, candidate =>
+            candidate.Title.Contains("payment.export.procedure", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(candidate.Claims, claim =>
+            claim.ClaimText.Contains("stages the bank file", StringComparison.OrdinalIgnoreCase) &&
+            claim.ClaimText.Contains("verifies the checksum", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(candidate.CanonicalText.Split(Environment.NewLine), line =>
+            line.Equals("Payment export procedure stages the bank file before upload.", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task DreamRun_ProducesModeSpecificStructuredOutputsBeyondTitlePrefix()
+    {
+        await using var fixture = await CreateFixtureAsync();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-0000000000a6"),
+            "Release procedure",
+            "Release procedure stages package artifacts before approval.",
+            "Release procedure package source evidence.",
+            topicKey: "release.procedure");
+        await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-0000000000a7"),
+            "Release procedure",
+            "Release procedure validates rollback checks after approval.",
+            "Release procedure rollback source evidence.",
+            topicKey: "release.procedure");
+        await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-0000000000a8"),
+            "Incident failure learning",
+            "Incident failure learning records timeout cause and retry guard.",
+            "Incident failure learning timeout source evidence.",
+            topicKey: "incident.failure.learning");
+        await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-0000000000a9"),
+            "Incident failure learning",
+            "Incident failure learning records remediation owner and detection signal.",
+            "Incident failure learning remediation source evidence.",
+            topicKey: "incident.failure.learning");
+        var dream = CreateDreamService(fixture);
+
+        var procedure = await dream.RunAsync(new CognitiveMemoryDreamRunRequest(
+            projectId,
+            CognitiveMemoryConsolidationMode.ProcedureMining,
+            CognitiveMemoryConsolidationTriggerKind.Manual,
+            Policy(projectId),
+            new CognitiveMemoryIdempotencyKey("dream-mode-procedure")));
+        var failure = await dream.RunAsync(new CognitiveMemoryDreamRunRequest(
+            projectId,
+            CognitiveMemoryConsolidationMode.FailureLearning,
+            CognitiveMemoryConsolidationTriggerKind.Manual,
+            Policy(projectId),
+            new CognitiveMemoryIdempotencyKey("dream-mode-failure")));
+
+        var procedureText = string.Join(Environment.NewLine, procedure.AggregateCandidates.Select(candidate => candidate.CanonicalText));
+        var failureText = string.Join(Environment.NewLine, failure.AggregateCandidates.Select(candidate => candidate.CanonicalText));
+        Assert.Contains("Procedure steps:", procedureText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Failure pattern:", failureText, StringComparison.OrdinalIgnoreCase);
+        Assert.NotEqual(procedureText, failureText);
     }
 
     [Fact]
@@ -726,6 +957,50 @@ public sealed class CognitiveMemoryQualityFoundationTests
         Assert.Contains(result.Issues, issue => issue.IssueKind == CognitiveMemoryDreamValidationIssueKind.UnsupportedClaim);
         var updatedCandidate = await fixture.DbContext.Set<CognitiveMemoryDreamAggregateCandidateRecord>().SingleAsync(row => row.Id == candidate.Id);
         Assert.Equal(CognitiveMemoryDreamAggregateCandidateStatus.NeedsHumanReview, updatedCandidate.Status);
+    }
+
+    [Fact]
+    public async Task DreamValidation_RejectsNegatedClaimDespiteHighTokenOverlap()
+    {
+        await using var fixture = await CreateFixtureAsync();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-000000000096"),
+            "Credential rotation approval",
+            "Credential rotation requires manager approval during emergency deployment.",
+            "Credential rotation approval source evidence.",
+            topicKey: "credential.rotation.approval");
+        await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-000000000097"),
+            "Credential rotation approval",
+            "Credential rotation records manager approval before emergency deployment.",
+            "Credential rotation manager approval source evidence.",
+            topicKey: "credential.rotation.approval");
+        var dream = CreateDreamService(fixture);
+        await dream.RunAsync(new CognitiveMemoryDreamRunRequest(
+            projectId,
+            CognitiveMemoryConsolidationMode.ProjectNightly,
+            CognitiveMemoryConsolidationTriggerKind.Nightly,
+            Policy(projectId),
+            new CognitiveMemoryIdempotencyKey("dream-negated-token-overlap")));
+        var candidate = await fixture.DbContext.Set<CognitiveMemoryDreamAggregateCandidateRecord>()
+            .FirstAsync(candidate => candidate.Status == CognitiveMemoryDreamAggregateCandidateStatus.Approved);
+        var claim = await fixture.DbContext.Set<CognitiveMemoryDreamAggregateClaimRecord>()
+            .FirstAsync(claim => claim.AggregateCandidateId == candidate.Id);
+        claim.ClaimText = "Credential rotation can skip manager approval during emergency deployment.";
+        await fixture.DbContext.SaveChangesAsync();
+        var validator = new CognitiveMemoryDreamValidator(fixture.Factory, fixture.Clock);
+
+        var result = await validator.ValidateAsync(new CognitiveMemoryDreamValidationRequest(
+            new CognitiveMemoryDreamAggregateCandidateId(candidate.Id),
+            Policy(projectId)));
+
+        Assert.Equal(CognitiveMemoryDreamValidationDecision.NeedsHumanReview, result.Decision);
+        Assert.Contains(result.Issues, issue => issue.IssueKind == CognitiveMemoryDreamValidationIssueKind.UnsupportedClaim);
     }
 
     [Fact]
@@ -1124,6 +1399,314 @@ public sealed class CognitiveMemoryQualityFoundationTests
     }
 
     [Fact]
+    public async Task ReferenceResolver_LimitsAggregateExpansionToRequestedClaimLineage()
+    {
+        await using var fixture = await CreateFixtureAsync();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-0000000000b3"),
+            "Release checklist migration",
+            "Release checklist verifies database migration readiness.",
+            "Release checklist migration source evidence.",
+            topicKey: "release.checklist.procedure");
+        await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-0000000000b4"),
+            "Release checklist rollback",
+            "Release checklist verifies rollback owner assignment.",
+            "Release checklist rollback source evidence.",
+            topicKey: "release.checklist.procedure");
+        var dream = CreateDreamService(fixture);
+        await dream.RunAsync(new CognitiveMemoryDreamRunRequest(
+            projectId,
+            CognitiveMemoryConsolidationMode.ProjectNightly,
+            CognitiveMemoryConsolidationTriggerKind.Nightly,
+            Policy(projectId),
+            new CognitiveMemoryIdempotencyKey("dream-claim-lineage-filter")));
+        var candidate = await fixture.DbContext.Set<CognitiveMemoryDreamAggregateCandidateRecord>()
+            .FirstAsync(candidate => candidate.Status == CognitiveMemoryDreamAggregateCandidateStatus.Approved);
+        var selectedClaim = await fixture.DbContext.Set<CognitiveMemoryDreamAggregateClaimRecord>()
+            .Where(claim => claim.AggregateCandidateId == candidate.Id)
+            .OrderBy(claim => claim.Sequence)
+            .FirstAsync();
+        var selectedSourceIds = await fixture.DbContext.Set<CognitiveMemoryDreamAggregateClaimSourceMapRecord>()
+            .Where(sourceMap => sourceMap.AggregateClaimId == selectedClaim.Id)
+            .Select(sourceMap => sourceMap.SourceMemoryRecordId)
+            .ToListAsync();
+        var applicator = new CognitiveMemoryAggregateMemoryApplicator(
+            fixture.Factory,
+            new CognitiveMemoryRecordValidator(),
+            fixture.Clock);
+        var applyResult = await applicator.ApplyAsync(new CognitiveMemoryAggregateMemoryApplyRequest(
+            new CognitiveMemoryDreamAggregateCandidateId(candidate.Id),
+            "agent:unit-test",
+            Policy(projectId)));
+        var traceId = await SeedRecallTraceAsync(fixture, projectId, "aggregate-claim-lineage-filter");
+        var aggregateRef = new CognitiveMemoryRecallSourceRef(
+            applyResult.MemoryRecordId,
+            null,
+            null,
+            "aggregate-memory",
+            $"memory:{applyResult.MemoryRecordId.Value:D}",
+            selectedClaim.ClaimText,
+            CognitiveMemoryAccessLevel.Project,
+            CognitiveMemoryRedactionState.Safe,
+            IncludedInContext: true,
+            CognitiveMemoryRecallExclusionReasonKind.None);
+        var recallResult = new CognitiveMemoryRecallResult(
+            traceId,
+            new CognitiveMemoryRecallContextPack(
+                CognitiveMemoryRecallContextPackId.New(),
+                projectId,
+                null,
+                "Which release checklist item covers migration readiness?",
+                "Selected one aggregate claim.",
+                [
+                    new CognitiveMemoryRecallContextSection(
+                        new CognitiveMemorySectionId("selected-aggregate-claim"),
+                        CognitiveMemoryRecallContextSectionKind.SelectedMemory,
+                        "Release checklist aggregate",
+                        selectedClaim.ClaimText,
+                        [applyResult.MemoryRecordId],
+                        [new CognitiveMemoryClaimId(selectedClaim.Id)],
+                        [aggregateRef])
+                ],
+                [aggregateRef],
+                [],
+                new Dictionary<string, string>()),
+            [],
+            [],
+            []);
+        var synthesis = new CognitiveMemoryRecallSynthesisService(fixture.Factory, fixture.Clock);
+        var synthesisResult = await synthesis.SynthesizeAsync(new CognitiveMemoryRecallSynthesisRequest(recallResult, Policy(projectId)));
+        var statement = Assert.Single(synthesisResult.Statements);
+        var resolver = new CognitiveMemoryReferenceResolver(fixture.Factory);
+
+        var references = await resolver.ResolveAsync(new CognitiveMemoryReferenceResolverRequest(statement.StatementId, Policy(projectId)));
+
+        var expandedSourceIds = references.References
+            .Where(reference => reference.MemoryRecordId != applyResult.MemoryRecordId)
+            .Select(reference => reference.MemoryRecordId.Value)
+            .ToArray();
+        Assert.NotEmpty(expandedSourceIds);
+        Assert.All(expandedSourceIds, sourceId => Assert.Contains(sourceId, selectedSourceIds));
+    }
+
+    [Fact]
+    public async Task ReferenceResolver_UsesPersistedAggregateClaimMapToAvoidSiblingClaimExpansion()
+    {
+        await using var fixture = await CreateFixtureAsync();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var migration = await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-0000000000d1"),
+            "Release checklist migration",
+            "Release checklist verifies database migration readiness.",
+            "Release checklist migration source evidence.",
+            topicKey: "release.checklist.procedure");
+        var rollback = await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-0000000000d2"),
+            "Release checklist rollback",
+            "Release checklist verifies rollback owner assignment.",
+            "Release checklist rollback source evidence.",
+            topicKey: "release.checklist.procedure");
+        var dreamRunId = Guid.Parse("30000000-0000-0000-0000-0000000000d1");
+        var clusterId = Guid.Parse("30000000-0000-0000-0000-0000000000d2");
+        var candidateId = Guid.Parse("30000000-0000-0000-0000-0000000000d3");
+        var migrationClaimId = Guid.Parse("30000000-0000-0000-0000-0000000000d4");
+        var rollbackClaimId = Guid.Parse("30000000-0000-0000-0000-0000000000d5");
+        var aggregateMemoryId = Guid.Parse("30000000-0000-0000-0000-0000000000d6");
+        fixture.DbContext.AddRange(
+            new CognitiveMemoryDreamRunRecord
+            {
+                Id = dreamRunId,
+                ProjectId = projectId,
+                Mode = CognitiveMemoryConsolidationMode.ProjectNightly,
+                TriggerKind = CognitiveMemoryConsolidationTriggerKind.Nightly,
+                Status = CognitiveMemoryRunStatus.Succeeded,
+                IdempotencyKey = "dream-manual-claim-lineage",
+                PolicyProfileId = "policy:test",
+                AlgorithmVersion = "unit-test",
+                StartedAtUtc = fixture.Clock.GetUtcNow(),
+                CompletedAtUtc = fixture.Clock.GetUtcNow(),
+                ConcurrencyToken = Guid.NewGuid()
+            },
+            new CognitiveMemoryQualityClusterRecord
+            {
+                Id = clusterId,
+                ProjectId = projectId,
+                ClusterHash = CognitiveMemoryHash.FromUtf8("manual-claim-lineage-cluster").Value,
+                PrimaryKeyFamily = CognitiveMemoryQualityClusterKeyFamily.SemanticTopic,
+                Readiness = CognitiveMemoryQualityClusterReadiness.AggregateReady,
+                AccessLevel = CognitiveMemoryAccessLevel.Project,
+                RiskLevel = CognitiveMemoryRiskLevel.Low,
+                PolicyProfileId = "policy:test",
+                AlgorithmVersion = "unit-test",
+                MemberCount = 2,
+                AggregateEligible = true,
+                EligibilityReason = "unit-test",
+                CreatedAtUtc = fixture.Clock.GetUtcNow(),
+                UpdatedAtUtc = fixture.Clock.GetUtcNow(),
+                ConcurrencyToken = Guid.NewGuid()
+            },
+            new CognitiveMemoryRecord
+            {
+                Id = aggregateMemoryId,
+                ProjectId = projectId,
+                Kind = CognitiveMemoryRecordKind.Semantic,
+                Origin = CognitiveMemoryRecordOrigin.MachineGenerated,
+                Title = "Release checklist aggregate",
+                CanonicalText = "Release checklist includes database migration readiness and rollback owner assignment.",
+                SummaryText = "Release checklist includes database migration readiness and rollback owner assignment.",
+                TopicKey = "release.checklist.procedure",
+                ValidationState = CognitiveMemoryValidationState.Approved,
+                StabilityState = CognitiveMemoryStabilityState.Active,
+                CreatedInMode = CognitiveMemoryOperationMode.Consolidate,
+                AlgorithmVersion = "unit-test",
+                ContentHash = CognitiveMemoryHash.FromUtf8("release-checklist-aggregate").Value,
+                SourceEvidenceCount = 2,
+                EvidenceAnchorCount = 2,
+                AccessLevel = CognitiveMemoryAccessLevel.Project,
+                RiskLevel = CognitiveMemoryRiskLevel.Low,
+                CreatedAtUtc = fixture.Clock.GetUtcNow(),
+                UpdatedAtUtc = fixture.Clock.GetUtcNow(),
+                ConcurrencyToken = Guid.NewGuid()
+            },
+            new CognitiveMemoryDreamAggregateCandidateRecord
+            {
+                Id = candidateId,
+                DreamRunId = dreamRunId,
+                ClusterId = clusterId,
+                ProjectId = projectId,
+                Mode = CognitiveMemoryConsolidationMode.ProjectNightly,
+                Status = CognitiveMemoryDreamAggregateCandidateStatus.Applied,
+                Title = "Release checklist aggregate",
+                SummaryText = "Release checklist includes database migration readiness and rollback owner assignment.",
+                CanonicalText = "Release checklist includes database migration readiness and rollback owner assignment.",
+                AccessLevel = CognitiveMemoryAccessLevel.Project,
+                RiskLevel = CognitiveMemoryRiskLevel.Low,
+                AlgorithmVersion = "unit-test",
+                PayloadHash = CognitiveMemoryHash.FromUtf8("release-checklist-aggregate-payload").Value,
+                MemoryRecordId = aggregateMemoryId,
+                ClaimCount = 2,
+                SourceMapCount = 2,
+                CreatedAtUtc = fixture.Clock.GetUtcNow(),
+                UpdatedAtUtc = fixture.Clock.GetUtcNow(),
+                ConcurrencyToken = Guid.NewGuid()
+            },
+            new CognitiveMemoryDreamAggregateClaimRecord
+            {
+                Id = migrationClaimId,
+                AggregateCandidateId = candidateId,
+                ProjectId = projectId,
+                Sequence = 0,
+                ClaimKind = CognitiveMemoryClaimKind.Fact,
+                ClaimText = "Release checklist verifies database migration readiness.",
+                SubjectKey = "release.checklist",
+                PredicateKey = "verifies",
+                ObjectKey = "database.migration.readiness",
+                CreatedAtUtc = fixture.Clock.GetUtcNow()
+            },
+            new CognitiveMemoryDreamAggregateClaimRecord
+            {
+                Id = rollbackClaimId,
+                AggregateCandidateId = candidateId,
+                ProjectId = projectId,
+                Sequence = 1,
+                ClaimKind = CognitiveMemoryClaimKind.Fact,
+                ClaimText = "Release checklist verifies rollback owner assignment.",
+                SubjectKey = "release.checklist",
+                PredicateKey = "verifies",
+                ObjectKey = "rollback.owner.assignment",
+                CreatedAtUtc = fixture.Clock.GetUtcNow()
+            },
+            new CognitiveMemoryDreamAggregateClaimSourceMapRecord
+            {
+                AggregateCandidateId = candidateId,
+                AggregateClaimId = migrationClaimId,
+                ProjectId = projectId,
+                SourceMemoryRecordId = migration.RecordId,
+                SourceItemId = migration.SourceItemId,
+                EvidenceAnchorId = migration.EvidenceAnchorId,
+                Direction = CognitiveMemoryEvidenceDirection.Supports,
+                AccessLevel = CognitiveMemoryAccessLevel.Project,
+                RedactionState = CognitiveMemoryRedactionState.Safe,
+                Summary = "Release checklist migration source evidence.",
+                CreatedAtUtc = fixture.Clock.GetUtcNow()
+            },
+            new CognitiveMemoryDreamAggregateClaimSourceMapRecord
+            {
+                AggregateCandidateId = candidateId,
+                AggregateClaimId = rollbackClaimId,
+                ProjectId = projectId,
+                SourceMemoryRecordId = rollback.RecordId,
+                SourceItemId = rollback.SourceItemId,
+                EvidenceAnchorId = rollback.EvidenceAnchorId,
+                Direction = CognitiveMemoryEvidenceDirection.Supports,
+                AccessLevel = CognitiveMemoryAccessLevel.Project,
+                RedactionState = CognitiveMemoryRedactionState.Safe,
+                Summary = "Release checklist rollback source evidence.",
+                CreatedAtUtc = fixture.Clock.GetUtcNow()
+            });
+        await fixture.DbContext.SaveChangesAsync();
+        var traceId = await SeedRecallTraceAsync(fixture, projectId, "manual aggregate claim lineage");
+        var aggregateRef = new CognitiveMemoryRecallSourceRef(
+            new CognitiveMemoryRecordId(aggregateMemoryId),
+            null,
+            null,
+            "aggregate-memory",
+            $"memory:{aggregateMemoryId:D}",
+            "Release checklist verifies database migration readiness.",
+            CognitiveMemoryAccessLevel.Project,
+            CognitiveMemoryRedactionState.Safe,
+            IncludedInContext: true,
+            CognitiveMemoryRecallExclusionReasonKind.None);
+        var recallResult = new CognitiveMemoryRecallResult(
+            traceId,
+            new CognitiveMemoryRecallContextPack(
+                CognitiveMemoryRecallContextPackId.New(),
+                projectId,
+                null,
+                "Which release checklist item covers migration readiness?",
+                "Selected one aggregate claim.",
+                [
+                    new CognitiveMemoryRecallContextSection(
+                        new CognitiveMemorySectionId("selected-manual-aggregate-claim"),
+                        CognitiveMemoryRecallContextSectionKind.SelectedMemory,
+                        "Release checklist aggregate",
+                        "Release checklist verifies database migration readiness.",
+                        [new CognitiveMemoryRecordId(aggregateMemoryId)],
+                        [new CognitiveMemoryClaimId(migrationClaimId)],
+                        [aggregateRef])
+                ],
+                [aggregateRef],
+                [],
+                new Dictionary<string, string>()),
+            [],
+            [],
+            []);
+        var synthesis = new CognitiveMemoryRecallSynthesisService(fixture.Factory, fixture.Clock);
+        var synthesisResult = await synthesis.SynthesizeAsync(new CognitiveMemoryRecallSynthesisRequest(recallResult, Policy(projectId)));
+        var statement = Assert.Single(synthesisResult.Statements);
+        var persistedMap = Assert.Single(await fixture.DbContext.Set<CognitiveMemorySynthesizedStatementSourceMapRecord>()
+            .Where(sourceMap => sourceMap.StatementId == statement.StatementId.Value)
+            .ToListAsync());
+        Assert.Equal(migrationClaimId, persistedMap.AggregateClaimId);
+        var resolver = new CognitiveMemoryReferenceResolver(fixture.Factory);
+
+        var references = await resolver.ResolveAsync(new CognitiveMemoryReferenceResolverRequest(statement.StatementId, Policy(projectId)));
+
+        Assert.Contains(references.References, reference => reference.MemoryRecordId.Value == migration.RecordId);
+        Assert.DoesNotContain(references.References, reference => reference.MemoryRecordId.Value == rollback.RecordId);
+    }
+
+    [Fact]
     public async Task RecallSynthesis_PersistsBriefAndResolvesReferencesOnlyOnDemand()
     {
         await using var fixture = await CreateFixtureAsync();
@@ -1334,6 +1917,75 @@ public sealed class CognitiveMemoryQualityFoundationTests
     }
 
     [Fact]
+    public async Task RecallSynthesis_SeparatesConflictingClaimsIntoCaveatStatements()
+    {
+        await using var fixture = await CreateFixtureAsync();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var approvalRequired = await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-000000000098"),
+            "Rollback approval required",
+            "Production rollback requires signed release-owner approval before traffic restoration.",
+            "Rollback approval required source evidence.");
+        var approvalSkipped = await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-000000000099"),
+            "Rollback approval skipped",
+            "Production rollback may restore traffic without release-owner approval during incidents.",
+            "Rollback approval skipped source evidence.");
+        var traceId = await SeedRecallTraceAsync(fixture, projectId, "how should production rollback approval be handled");
+        var requiredRef = CreateSourceRef(approvalRequired, "Rollback approval required source evidence.");
+        var skippedRef = CreateSourceRef(approvalSkipped, "Rollback approval skipped source evidence.");
+        var recallResult = new CognitiveMemoryRecallResult(
+            traceId,
+            new CognitiveMemoryRecallContextPack(
+                CognitiveMemoryRecallContextPackId.New(),
+                projectId,
+                null,
+                "How should production rollback approval be handled?",
+                "Selected conflicting rollback memories.",
+                [
+                    new CognitiveMemoryRecallContextSection(
+                        new CognitiveMemorySectionId("selected-required"),
+                        CognitiveMemoryRecallContextSectionKind.SelectedMemory,
+                        "Rollback approval required",
+                        "Production rollback requires signed release-owner approval before traffic restoration.",
+                        [new CognitiveMemoryRecordId(approvalRequired.RecordId)],
+                        [],
+                        [requiredRef]),
+                    new CognitiveMemoryRecallContextSection(
+                        new CognitiveMemorySectionId("selected-skipped"),
+                        CognitiveMemoryRecallContextSectionKind.SelectedMemory,
+                        "Rollback approval skipped",
+                        "Production rollback may restore traffic without release-owner approval during incidents.",
+                        [new CognitiveMemoryRecordId(approvalSkipped.RecordId)],
+                        [],
+                        [skippedRef])
+                ],
+                [requiredRef, skippedRef],
+                [],
+                new Dictionary<string, string>()),
+            [],
+            [],
+            []);
+        var synthesis = new CognitiveMemoryRecallSynthesisService(fixture.Factory, fixture.Clock);
+
+        var result = await synthesis.SynthesizeAsync(new CognitiveMemoryRecallSynthesisRequest(recallResult, Policy(projectId)));
+        var recallText = string.Join(
+            Environment.NewLine,
+            result.Warnings.Concat([result.Brief]).Concat(result.Statements.Select(statement => statement.Text)));
+
+        Assert.Contains("conflict", recallText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(
+            "requires signed release-owner approval before traffic restoration; Production rollback may restore traffic without release-owner approval during incidents",
+            result.Brief,
+            StringComparison.Ordinal);
+        Assert.False(result.ReferencesShownByDefault);
+    }
+
+    [Fact]
     public async Task ReferenceResolver_DeniesRestrictedReferenceWithoutLocatorOrSummary()
     {
         await using var fixture = await CreateFixtureAsync();
@@ -1399,6 +2051,9 @@ public sealed class CognitiveMemoryQualityFoundationTests
             validator,
             fixture.Clock);
     }
+
+    private static bool ContainsMemory(CognitiveMemoryClusterPlan cluster, Guid recordId)
+        => cluster.Members.Any(member => member.MemoryRecordId?.Value == recordId);
 
     private static async Task<Guid> SeedRecallTraceAsync(
         QualityFixture fixture,

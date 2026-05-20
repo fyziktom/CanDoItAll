@@ -1,0 +1,157 @@
+Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~ClusterPlanner_SplitsBridgeChainsInsteadOfMergingUnrelatedEndpoints|FullyQualifiedName~ClusterPlanner_RoutesContradictionOnlyRelationToReviewCluster|FullyQualifiedName~ClusterPlanner_UsesHighFanoutFallbackForParaphrasedSemanticPair|FullyQualifiedName~DreamRun_IntegratesComplementaryProcedureClaimsIntoSingleAggregateStatement|FullyQualifiedName~DreamRun_ProducesModeSpecificStructuredOutputsBeyondTitlePrefix|FullyQualifiedName~DreamValidation_RejectsNegatedClaimDespiteHighTokenOverlap|FullyQualifiedName~RecallSynthesis_SeparatesConflictingClaimsIntoCaveatStatements|FullyQualifiedName~ReferenceResolver_LimitsAggregateExpansionToRequestedClaimLineage|FullyQualifiedName~CuratorCapture_NaturalProfessorGuidanceCreatesStructuredTemporaryAnchor|FullyQualifiedName~ProfessorAnchor_AssimilationRequiresMasteryEvidenceBeyondIndependentSupport"
+WorkingDirectory: C:\repositories\CanDoItAll
+StartedUtc: 2026-05-20T17:52:08.2187610Z
+Expected: non-zero. These are SB03 failing-first tests added before SB04-SB08 production fixes.
+Output:
+  CanDoItAll.AgentFramework.SemanticCompletion.Driver -> C:\repositories\CanDoItAll.AgentFramework.SemanticCompletion\src\CanDoItAll.AgentFramework.SemanticCompletion.Driver\bin\Debug\net10.0\CanDoItAll.AgentFramework.SemanticCompletion.Driver.dll
+  CanDoItAll.Tools.Documents -> C:\repositories\CanDoItAll\src\CanDoItAll.Tools.Documents\bin\Debug\net10.0\CanDoItAll.Tools.Documents.dll
+  CanDoItAll.AgentFramework.Rag.Driver -> C:\repositories\CanDoItAll.AgentFramework.Rag\src\CanDoItAll.AgentFramework.Rag.Driver\bin\Debug\net10.0\CanDoItAll.AgentFramework.Rag.Driver.dll
+  CanDoItAll.Components.Common -> C:\repositories\CanDoItAll\src\CanDoItAll.Components.Common\bin\Debug\net10.0\CanDoItAll.Components.Common.dll
+  CanDoItAll.SharedKernel -> C:\repositories\CanDoItAll\src\CanDoItAll.SharedKernel\bin\Debug\net10.0\CanDoItAll.SharedKernel.dll
+  CanDoItAll.Space3D.Mouse.Driver -> C:\repositories\CanDoItAll\src\Space3D\CanDoItAll.Space3D.Mouse.Driver\bin\Debug\net10.0\CanDoItAll.Space3D.Mouse.Driver.dll
+  CanDoItAll.Components.Charts -> C:\repositories\CanDoItAll\src\CanDoItAll.Components.Charts\bin\Debug\net10.0\CanDoItAll.Components.Charts.dll
+  CanDoItAll.Mcp.Core -> C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.Core\bin\Debug\net10.0\CanDoItAll.Mcp.Core.dll
+  CanDoItAll.Infrastructure -> C:\repositories\CanDoItAll\src\CanDoItAll.Infrastructure\bin\Debug\net10.0\CanDoItAll.Infrastructure.dll
+  CanDoItAll.AgentFramework.Models -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Models\bin\Debug\net10.0\CanDoItAll.AgentFramework.Models.dll
+  CanDoItAll.Components.BaseLib -> C:\repositories\CanDoItAll\src\CanDoItAll.Components.BaseLib\bin\Debug\net10.0\CanDoItAll.Components.BaseLib.dll
+  CanDoItAll.AgentFramework.Rag.Qdrant -> C:\repositories\CanDoItAll.AgentFramework.Rag\src\CanDoItAll.AgentFramework.Rag.Qdrant\bin\Debug\net10.0\CanDoItAll.AgentFramework.Rag.Qdrant.dll
+  CanDoItAll.Mcp.SshOps -> C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.SshOps\bin\Debug\net10.0\CanDoItAll.Mcp.SshOps.dll
+  CanDoItAll.Components.Mermaid -> C:\repositories\CanDoItAll\src\CanDoItAll.Components.Mermaid\bin\Debug\net10.0\CanDoItAll.Components.Mermaid.dll
+  CanDoItAll.Modules.Security -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Security\bin\Debug\net10.0\CanDoItAll.Modules.Security.dll
+  CanDoItAll.Manager -> C:\repositories\CanDoItAll\tools\CanDoItAll.Manager\bin\Debug\net10.0\CanDoItAll.Manager.dll
+  CanDoItAll.Modules.Collaboration -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Collaboration\bin\Debug\net10.0\CanDoItAll.Modules.Collaboration.dll
+  CanDoItAll.Components.OverlayLib -> C:\repositories\CanDoItAll\src\CanDoItAll.Components.OverlayLib\bin\Debug\net10.0\CanDoItAll.Components.OverlayLib.dll
+  CanDoItAll.AgentFramework.Core -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.Core.dll
+  CanDoItAll.AgentFramework.Persistence -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Persistence\bin\Debug\net10.0\CanDoItAll.AgentFramework.Persistence.dll
+  CanDoItAll.AgentFramework.Voice -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Voice\bin\Debug\net10.0\CanDoItAll.AgentFramework.Voice.dll
+  CanDoItAll.Plugin.Email -> C:\repositories\CanDoItAll\src\plugins\CanDoItAll.Plugin.Email\bin\Debug\net10.0\CanDoItAll.Plugin.Email.dll
+  CanDoItAll.Plugins.Abstractions -> C:\repositories\CanDoItAll\src\CanDoItAll.Plugins.Abstractions\bin\Debug\net10.0\CanDoItAll.Plugins.Abstractions.dll
+  CanDoItAll.Modules.Projects -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Projects\bin\Debug\net10.0\CanDoItAll.Modules.Projects.dll
+  CanDoItAll.Modules.Plugins -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Plugins\bin\Debug\net10.0\CanDoItAll.Modules.Plugins.dll
+  CanDoItAll.Plugin.Office365 -> C:\repositories\CanDoItAll\src\plugins\CanDoItAll.Plugin.Office365\bin\Debug\net10.0\CanDoItAll.Plugin.Office365.dll
+  CanDoItAll.Plugin.Gmail -> C:\repositories\CanDoItAll\src\plugins\CanDoItAll.Plugin.Gmail\bin\Debug\net10.0\CanDoItAll.Plugin.Gmail.dll
+  CanDoItAll.Components.WebGlLib -> C:\repositories\CanDoItAll\src\CanDoItAll.Components.WebGlLib\bin\Debug\net10.0\CanDoItAll.Components.WebGlLib.dll
+  CanDoItAll.Components.CanvasLib -> C:\repositories\CanDoItAll\src\CanDoItAll.Components.CanvasLib\bin\Debug\net10.0\CanDoItAll.Components.CanvasLib.dll
+  CanDoItAll.Modules.CognitiveMemory -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CognitiveMemory\bin\Debug\net10.0\CanDoItAll.Modules.CognitiveMemory.dll
+  CanDoItAll.Modules.Workspace -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workspace\bin\Debug\net10.0\CanDoItAll.Modules.Workspace.dll
+  CanDoItAll.Modules.Activity -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Activity\bin\Debug\net10.0\CanDoItAll.Modules.Activity.dll
+  CanDoItAll.AgentFramework.Components -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Components\bin\Debug\net10.0\CanDoItAll.AgentFramework.Components.dll
+  CanDoItAll.Components -> C:\repositories\CanDoItAll\src\CanDoItAll.Components\bin\Debug\net10.0\CanDoItAll.Components.dll
+  CanDoItAll.Modules.CrmHr -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CrmHr\bin\Debug\net10.0\CanDoItAll.Modules.CrmHr.dll
+  CanDoItAll.Modules.Validation -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Validation\bin\Debug\net10.0\CanDoItAll.Modules.Validation.dll
+  CanDoItAll.Modules.Resources -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Resources\bin\Debug\net10.0\CanDoItAll.Modules.Resources.dll
+  CanDoItAll.Modules.Automation -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Automation\bin\Debug\net10.0\CanDoItAll.Modules.Automation.dll
+  CanDoItAll.Modules.Prompts -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Prompts\bin\Debug\net10.0\CanDoItAll.Modules.Prompts.dll
+  CanDoItAll.Modules.TestLab -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.TestLab\bin\Debug\net10.0\CanDoItAll.Modules.TestLab.dll
+  CanDoItAll.Modules.Processes -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\bin\Debug\net10.0\CanDoItAll.Modules.Processes.dll
+  CanDoItAll.Modules.Factory -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Factory\bin\Debug\net10.0\CanDoItAll.Modules.Factory.dll
+  CanDoItAll.Modules.Workbench -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench\bin\Debug\net10.0\CanDoItAll.Modules.Workbench.dll
+  CanDoItAll.Modules.SchedulerPlanner -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.SchedulerPlanner\bin\Debug\net10.0\CanDoItAll.Modules.SchedulerPlanner.dll
+  CanDoItAll.AgentFramework.Maf -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Maf\bin\Debug\net10.0\CanDoItAll.AgentFramework.Maf.dll
+  CanDoItAll.AgentFramework.Hosting -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Hosting\bin\Debug\net10.0\CanDoItAll.AgentFramework.Hosting.dll
+  CanDoItAll.Modules.AgentFramework -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.AgentFramework\bin\Debug\net10.0\CanDoItAll.Modules.AgentFramework.dll
+  CanDoItAll.Composition -> C:\repositories\CanDoItAll\src\CanDoItAll.Composition\bin\Debug\net10.0\CanDoItAll.Composition.dll
+  CanDoItAll.Migrations.PostgreSql -> C:\repositories\CanDoItAll\src\CanDoItAll.Migrations.PostgreSql\bin\Debug\net10.0\CanDoItAll.Migrations.PostgreSql.dll
+  CanDoItAll.Migrations.Sqlite -> C:\repositories\CanDoItAll\src\CanDoItAll.Migrations.Sqlite\bin\Debug\net10.0\CanDoItAll.Migrations.Sqlite.dll
+  CanDoItAll.Web -> C:\repositories\CanDoItAll\src\CanDoItAll.Web\bin\Debug\net10.0\CanDoItAll.Web.dll
+  CanDoItAll.Tests.Support -> C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Support\bin\Debug\net10.0\CanDoItAll.Tests.Support.dll
+  CanDoItAll.Tests.Unit -> C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:03.02]     CanDoItAll.Tests.Unit.CognitiveMemoryAdvancedServicesTests.CuratorCapture_NaturalProfessorGuidanceCreatesStructuredTemporaryAnchor [FAIL]
+  Neúspěšné CanDoItAll.Tests.Unit.CognitiveMemoryAdvancedServicesTests.CuratorCapture_NaturalProfessorGuidanceCreatesStructuredTemporaryAnchor [2 s]
+  Chybová zpráva:
+   Assert.Single() Failure: The collection was empty
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Unit.CognitiveMemoryAdvancedServicesTests.CuratorCapture_NaturalProfessorGuidanceCreatesStructuredTemporaryAnchor() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:line 326
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:04.07]     CanDoItAll.Tests.Unit.CognitiveMemoryAdvancedServicesTests.ProfessorAnchor_AssimilationRequiresMasteryEvidenceBeyondIndependentSupport [FAIL]
+[xUnit.net 00:00:04.20]     CanDoItAll.Tests.Unit.CognitiveMemoryQualityFoundationTests.ClusterPlanner_RoutesContradictionOnlyRelationToReviewCluster [FAIL]
+  Neúspěšné CanDoItAll.Tests.Unit.CognitiveMemoryAdvancedServicesTests.ProfessorAnchor_AssimilationRequiresMasteryEvidenceBeyondIndependentSupport [1 s]
+  Chybová zpráva:
+   Assert.Throws() Failure: No exception was thrown
+Expected: typeof(System.InvalidOperationException)
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Unit.CognitiveMemoryAdvancedServicesTests.ProfessorAnchor_AssimilationRequiresMasteryEvidenceBeyondIndependentSupport() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:line 403
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Unit.CognitiveMemoryQualityFoundationTests.ClusterPlanner_RoutesContradictionOnlyRelationToReviewCluster [3 s]
+  Chybová zpráva:
+   Assert.Contains() Failure: Filter not matched in collection
+Collection: ["Cluster requires validation review because readine"···, "Guard metrics require review before aggregate prom"···]
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Unit.CognitiveMemoryQualityFoundationTests.ClusterPlanner_RoutesContradictionOnlyRelationToReviewCluster() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:line 383
+   at CanDoItAll.Tests.Unit.CognitiveMemoryQualityFoundationTests.ClusterPlanner_RoutesContradictionOnlyRelationToReviewCluster() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:line 383
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:05.05]     CanDoItAll.Tests.Unit.CognitiveMemoryQualityFoundationTests.DreamRun_ProducesModeSpecificStructuredOutputsBeyondTitlePrefix [FAIL]
+[xUnit.net 00:00:05.54]     CanDoItAll.Tests.Unit.CognitiveMemoryQualityFoundationTests.DreamValidation_RejectsNegatedClaimDespiteHighTokenOverlap [FAIL]
+[xUnit.net 00:00:06.03]     CanDoItAll.Tests.Unit.CognitiveMemoryQualityFoundationTests.RecallSynthesis_SeparatesConflictingClaimsIntoCaveatStatements [FAIL]
+  Neúspěšné CanDoItAll.Tests.Unit.CognitiveMemoryQualityFoundationTests.DreamRun_ProducesModeSpecificStructuredOutputsBeyondTitlePrefix [850 ms]
+  Chybová zpráva:
+   Assert.Contains() Failure: Sub-string not found
+String:    "Release procedure stages package artifact"···
+Not found: "Procedure steps:"
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Unit.CognitiveMemoryQualityFoundationTests.DreamRun_ProducesModeSpecificStructuredOutputsBeyondTitlePrefix() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:line 576
+   at CanDoItAll.Tests.Unit.CognitiveMemoryQualityFoundationTests.DreamRun_ProducesModeSpecificStructuredOutputsBeyondTitlePrefix() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:line 578
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Unit.CognitiveMemoryQualityFoundationTests.DreamValidation_RejectsNegatedClaimDespiteHighTokenOverlap [484 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: NeedsHumanReview
+Actual:   Approved
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Unit.CognitiveMemoryQualityFoundationTests.DreamValidation_RejectsNegatedClaimDespiteHighTokenOverlap() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:line 1002
+   at CanDoItAll.Tests.Unit.CognitiveMemoryQualityFoundationTests.DreamValidation_RejectsNegatedClaimDespiteHighTokenOverlap() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:line 1003
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Unit.CognitiveMemoryQualityFoundationTests.RecallSynthesis_SeparatesConflictingClaimsIntoCaveatStatements [488 ms]
+  Chybová zpráva:
+   Assert.Contains() Failure: Sub-string not found
+String:    "Production Rollback Approval: Production "···
+Not found: "conflict"
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Unit.CognitiveMemoryQualityFoundationTests.RecallSynthesis_SeparatesConflictingClaimsIntoCaveatStatements() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:line 1769
+   at CanDoItAll.Tests.Unit.CognitiveMemoryQualityFoundationTests.RecallSynthesis_SeparatesConflictingClaimsIntoCaveatStatements() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:line 1774
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:06.65]     CanDoItAll.Tests.Unit.CognitiveMemoryQualityFoundationTests.ReferenceResolver_LimitsAggregateExpansionToRequestedClaimLineage [FAIL]
+  Neúspěšné CanDoItAll.Tests.Unit.CognitiveMemoryQualityFoundationTests.ReferenceResolver_LimitsAggregateExpansionToRequestedClaimLineage [616 ms]
+  Chybová zpráva:
+   Assert.All() Failure: 1 out of 2 items in the collection did not pass.
+[1]: Item:  10000000-0000-0000-0000-0000000000b4
+     Error: Assert.Contains() Failure: Item not found in collection
+            Collection: [10000000-0000-0000-0000-0000000000b3]
+            Not found:  10000000-0000-0000-0000-0000000000b4
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Unit.CognitiveMemoryQualityFoundationTests.ReferenceResolver_LimitsAggregateExpansionToRequestedClaimLineage() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:line 1495
+   at CanDoItAll.Tests.Unit.CognitiveMemoryQualityFoundationTests.ReferenceResolver_LimitsAggregateExpansionToRequestedClaimLineage() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:line 1495
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:08.11]     CanDoItAll.Tests.Unit.CognitiveMemoryQualityFoundationTests.ClusterPlanner_UsesHighFanoutFallbackForParaphrasedSemanticPair [FAIL]
+[xUnit.net 00:00:08.37]     CanDoItAll.Tests.Unit.CognitiveMemoryQualityFoundationTests.ClusterPlanner_SplitsBridgeChainsInsteadOfMergingUnrelatedEndpoints [FAIL]
+[xUnit.net 00:00:08.55]     CanDoItAll.Tests.Unit.CognitiveMemoryQualityFoundationTests.DreamRun_IntegratesComplementaryProcedureClaimsIntoSingleAggregateStatement [FAIL]
+  Neúspěšné CanDoItAll.Tests.Unit.CognitiveMemoryQualityFoundationTests.ClusterPlanner_UsesHighFanoutFallbackForParaphrasedSemanticPair [1 s]
+  Chybová zpráva:
+   Assert.Contains() Failure: Filter not matched in collection
+Collection: []
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Unit.CognitiveMemoryQualityFoundationTests.ClusterPlanner_UsesHighFanoutFallbackForParaphrasedSemanticPair() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:line 423
+   at CanDoItAll.Tests.Unit.CognitiveMemoryQualityFoundationTests.ClusterPlanner_UsesHighFanoutFallbackForParaphrasedSemanticPair() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:line 423
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Unit.CognitiveMemoryQualityFoundationTests.ClusterPlanner_SplitsBridgeChainsInsteadOfMergingUnrelatedEndpoints [263 ms]
+  Chybová zpráva:
+   Assert.DoesNotContain() Failure: Filter matched in collection
+             ↓ (pos 0)
+Collection: [CognitiveMemoryClusterPlan { ClusterId = 6245f9b5-fb0c-4b90-b63c-d2e20d956d86, ProjectId = aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa, ClusterHash = e0e62cac21fc104a7d24884ca04e27d127ab595f1cbbc8959c30ac0c848de132, PrimaryKeyFamily = Entity, Readiness = AggregateReady, Keys = CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryClusterKey[], Members = CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryClusterMember[], QualityMetrics = CognitiveMemoryClusterQualityMetrics { CohesionScore = 0,87, SourceIndependenceScore = 1, SourceDiversityScore = 0,5, SemanticSignalScore = 0,78, SupportingSignalScore = 1, GuardPenaltyScore = 0, CompositeScore = 0,778, AggregateEligible = True, EligibilityReason = Composite semantic, source independence, and guard metrics passed. Edge signals: 0,99:SourceTopology:unit-test/test-node; Entity:kafka,replay,checklist; TaskIntent:procedure; Temporal:Updated 1970-01; AccessRisk:Project/Low/Safe; Content:checklist,kafka,replay | 0,99:SourceTopology:unit-test/test-node; Entity:postgres,failover,runbook; TaskIntent:procedure; Temporal:Updated 1970-01; AccessRisk:Project/Low/Safe; Content:failover,postgres,runbook | 0,73:SourceTopology:unit-test/test-node; Entity:requires,before; TaskIntent:procedure; Temporal:Updated 1970-01; AccessRisk:Project/Low/Safe; Content:before,requires }, Warnings = System.Collections.Generic.List`1[System.String] }]
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Unit.CognitiveMemoryQualityFoundationTests.ClusterPlanner_SplitsBridgeChainsInsteadOfMergingUnrelatedEndpoints() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:line 328
+   at CanDoItAll.Tests.Unit.CognitiveMemoryQualityFoundationTests.ClusterPlanner_SplitsBridgeChainsInsteadOfMergingUnrelatedEndpoints() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:line 334
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Unit.CognitiveMemoryQualityFoundationTests.DreamRun_IntegratesComplementaryProcedureClaimsIntoSingleAggregateStatement [181 ms]
+  Chybová zpráva:
+   Assert.Contains() Failure: Filter not matched in collection
+Collection: [CognitiveMemoryDreamAggregateClaim { ClaimId = 07377ab4-bf21-450d-8fb8-51917e390da9, ClaimKind = Fact, ClaimText = Payment export procedure stages the bank file before upload, SubjectKey = payment.export.procedure, PredicateKey = supported-by-source-memory, ObjectKey = projectnightly.payment.export.procedure.bank.before.export.file.payment.procedure.stages.upload, SourceMaps = CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryDreamAggregateSourceMap[] }, CognitiveMemoryDreamAggregateClaim { ClaimId = 22148068-2b27-4e59-b80a-2d4eb6e22630, ClaimKind = Fact, ClaimText = Payment export procedure verifies the checksum after bank upload, SubjectKey = payment.export.procedure, PredicateKey = supported-by-source-memory, ObjectKey = projectnightly.payment.export.procedure.bank.checksum.export.payment.procedure.upload.verifies, SourceMaps = CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryDreamAggregateSourceMap[] }]
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Unit.CognitiveMemoryQualityFoundationTests.DreamRun_IntegratesComplementaryProcedureClaimsIntoSingleAggregateStatement() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:line 515
+   at CanDoItAll.Tests.Unit.CognitiveMemoryQualityFoundationTests.DreamRun_IntegratesComplementaryProcedureClaimsIntoSingleAggregateStatement() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs:line 518
+--- End of stack trace from previous location ---
+
+Neúspěšné!  - Neúspěšné:    10, Úspěšné:     0, Přeskočeno:     0, Celkem:    10, Doba trvání: 8 s - CanDoItAll.Tests.Unit.dll (net10.0)
+ExitCode: 1

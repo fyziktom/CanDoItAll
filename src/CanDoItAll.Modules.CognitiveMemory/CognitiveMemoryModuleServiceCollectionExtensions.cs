@@ -3,7 +3,9 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.SemanticCompletion.Driver.Embeddings;
 using CanDoItAll.AgentFramework.SemanticCompletion.Driver.Semantics;
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -14,6 +16,7 @@ public static class CognitiveMemoryModuleServiceCollectionExtensions
     public static IServiceCollection AddCognitiveMemoryModule(this IServiceCollection services)
     {
         services.TryAddScoped<ICognitiveMemoryAccessPolicy, CognitiveMemoryDefaultAccessPolicy>();
+        services.TryAddSingleton(CognitiveMemoryQualityAlgorithmOptions.Current);
         services.TryAddSingleton<ICognitiveMemoryRecordValidator, CognitiveMemoryRecordValidator>();
         services.TryAddSingleton<ICognitiveMemoryScoreSpaceRegistry, CognitiveMemoryScoreSpaceRegistry>();
         services.TryAddSingleton<ICognitiveMemoryScoreGeometryDriver, CognitiveMemoryScoreGeometryDriver>();
@@ -68,11 +71,23 @@ public static class CognitiveMemoryModuleServiceCollectionExtensions
         services.TryAddScoped<ICognitiveMemorySimulationSandboxService>(provider => provider.GetRequiredService<CognitiveMemoryProcedureSkillService>());
         services.TryAddScoped<ICognitiveMemoryReviewUiService, CognitiveMemoryReviewUiService>();
         services.TryAddScoped<ICognitiveMemoryQualityDiagnosticsService, CognitiveMemoryQualityDiagnosticsService>();
-        services.TryAddScoped<ICognitiveMemoryClusterPlanner, CognitiveMemoryClusterPlanner>();
+        services.TryAddSingleton<ICognitiveMemoryClusterSemanticSimilarityProvider>(CognitiveMemoryAliasClusterSemanticSimilarityProvider.Instance);
+        services.TryAddSingleton<ICognitiveMemoryClusterKeyExtractor>(CognitiveMemoryClusterKeyExtractor.Instance);
+        services.TryAddSingleton<ICognitiveMemoryCandidatePairSelector>(provider => new CognitiveMemoryCandidatePairSelector(
+            provider.GetRequiredService<ICognitiveMemoryClusterSemanticSimilarityProvider>(),
+            provider.GetRequiredService<CognitiveMemoryQualityAlgorithmOptions>()));
+        services.TryAddScoped<ICognitiveMemoryClusterPlanner>(provider => new CognitiveMemoryClusterPlanner(
+            provider.GetRequiredService<IDbContextFactory<AppDbContext>>(),
+            provider.GetRequiredService<IClock>(),
+            provider.GetRequiredService<ICognitiveMemoryClusterKeyExtractor>(),
+            provider.GetRequiredService<ICognitiveMemoryCandidatePairSelector>()));
+        services.TryAddSingleton<ICognitiveMemoryDreamClaimSynthesizer>(CognitiveMemoryDreamClaimSynthesizer.Instance);
+        services.TryAddSingleton<ICognitiveMemoryDreamEntailmentValidator>(CognitiveMemoryDreamEntailmentValidator.Instance);
         services.TryAddScoped<ICognitiveMemoryDreamValidator, CognitiveMemoryDreamValidator>();
         services.TryAddScoped<ICognitiveMemoryDreamConsolidationService, CognitiveMemoryDreamConsolidationService>();
         services.TryAddSingleton<ICognitiveMemoryAggregateConfidenceCalibrator, CognitiveMemoryAggregateConfidenceCalibrator>();
         services.TryAddScoped<ICognitiveMemoryAggregateMemoryApplicator, CognitiveMemoryAggregateMemoryApplicator>();
+        services.TryAddSingleton<ICognitiveMemoryRecallBriefComposer, CognitiveMemoryRecallBriefComposer>();
         services.TryAddScoped<ICognitiveMemoryRecallSynthesisService, CognitiveMemoryRecallSynthesisService>();
         services.TryAddScoped<ICognitiveMemoryReferenceResolver, CognitiveMemoryReferenceResolver>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentContextContributor, CognitiveMemoryAgentContextContributor>());
@@ -81,6 +96,8 @@ public static class CognitiveMemoryModuleServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, CognitiveMemoryProbeWorkflowExecutor>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, CognitiveMemoryLearningProposalWorkflowExecutor>());
         services.TryAddScoped<ICognitiveMemoryProbeService, CognitiveMemoryProbeService>();
+        services.TryAddSingleton<ICognitiveMemoryProfessorTeachingExtractor>(CognitiveMemoryProfessorTeachingExtractor.Instance);
+        services.TryAddScoped<ICognitiveMemoryProfessorAssimilationEvaluator, CognitiveMemoryProfessorAssimilationEvaluator>();
         services.TryAddScoped<ICognitiveMemoryCuratorConversationService, CognitiveMemoryCuratorConversationService>();
         services.TryAddScoped<ICognitiveMemoryProfessorAnchorService, CognitiveMemoryProfessorAnchorService>();
         services.TryAddScoped<ICognitiveMemorySelfModelStore, CognitiveMemorySelfModelStore>();

@@ -13,7 +13,7 @@ public sealed class CognitiveMemoryAggregateMemoryApplicator(
     IClock clock,
     ICognitiveMemoryAggregateConfidenceCalibrator? confidenceCalibrator = null) : ICognitiveMemoryAggregateMemoryApplicator
 {
-    private const string AlgorithmVersion = "quality-aggregate-apply-v2-calibrated";
+    private static string AlgorithmVersion => CognitiveMemoryQualityAlgorithmOptions.Current.AggregateApply.AlgorithmVersion.Value;
     private readonly ICognitiveMemoryAggregateConfidenceCalibrator aggregateConfidenceCalibrator = confidenceCalibrator ?? new CognitiveMemoryAggregateConfidenceCalibrator();
 
     public async ValueTask<CognitiveMemoryAggregateMemoryApplyResult> ApplyAsync(

@@ -1,0 +1,22 @@
+Command: rg -n "ICognitiveMemoryClusterKeyExtractor|ICognitiveMemoryCandidatePairSelector|ICognitiveMemoryClusterSemanticSimilarityProvider|CognitiveMemoryClusterTextSignals" src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterFormation.cs ; rg -n "BuildCohesiveClusterCandidates|CanJoinCohesiveCandidate|Relation:contradiction-only|quality-clustering-v3" src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs
+
+SourceAssertion: rg -n "ICognitiveMemoryClusterKeyExtractor|ICognitiveMemoryCandidatePairSelector|ICognitiveMemoryClusterSemanticSimilarityProvider|CognitiveMemoryClusterTextSignals" src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterFormation.cs
+26:internal interface ICognitiveMemoryClusterKeyExtractor
+35:internal interface ICognitiveMemoryCandidatePairSelector
+42:internal interface ICognitiveMemoryClusterSemanticSimilarityProvider
+51:internal sealed class CognitiveMemoryClusterKeyExtractor : ICognitiveMemoryClusterKeyExtractor
+89:        foreach (var signal in CognitiveMemoryClusterTextSignals.ExtractSignals(
+96:        foreach (var keyphrase in CognitiveMemoryClusterTextSignals.ExtractKeyphrases(
+141:    ICognitiveMemoryClusterSemanticSimilarityProvider semanticSimilarityProvider) : ICognitiveMemoryCandidatePairSelector
+348:internal sealed class CognitiveMemoryAliasClusterSemanticSimilarityProvider : ICognitiveMemoryClusterSemanticSimilarityProvider
+357:        => CognitiveMemoryClusterTextSignals
+383:internal static class CognitiveMemoryClusterTextSignals
+
+SourceAssertion: rg -n "BuildCohesiveClusterCandidates|CanJoinCohesiveCandidate|Relation:contradiction-only|quality-clustering-v3" src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs
+12:    private const string AlgorithmVersion = "quality-clustering-v3";
+334:        return BuildCohesiveClusterCandidates(records, edges, minMembers)
+341:    private static IReadOnlyList<CompositeClusterCandidate> BuildCohesiveClusterCandidates(
+362:                if (CanJoinCohesiveCandidate(candidate.Record.Id, memberIds, edgeByPair))
+397:    private static bool CanJoinCohesiveCandidate(
+500:            explanations.Add("Relation:contradiction-only");
+ExitCode: 0

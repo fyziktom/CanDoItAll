@@ -1,0 +1,3 @@
+Command: rg -n -i "economic|attention market|pricing|borrowing|memory-budget policy|resource pricing|governance model" <changed cognitive-memory source/test files>
+No forbidden economic-governance scope terms found in changed cognitive-memory source/test files.
+ExitCode: 0

@@ -45,6 +45,25 @@ public sealed class CognitiveMemoryModuleRegistrationTests
         Assert.Contains("ISemanticClassifier", classifierError.Message);
     }
 
+    [Fact]
+    public void CognitiveMemoryModule_RegistersQualityCollaboratorsAndVersionedOptions()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IClock>(new FixedClock());
+        services.AddCognitiveMemoryModule();
+
+        using var provider = services.BuildServiceProvider();
+
+        var options = provider.GetRequiredService<CognitiveMemoryQualityAlgorithmOptions>();
+        Assert.Equal("quality-clustering-v3", options.Cluster.AlgorithmVersion.Value);
+        Assert.IsAssignableFrom<ICognitiveMemoryClusterKeyExtractor>(provider.GetRequiredService<ICognitiveMemoryClusterKeyExtractor>());
+        Assert.IsAssignableFrom<ICognitiveMemoryCandidatePairSelector>(provider.GetRequiredService<ICognitiveMemoryCandidatePairSelector>());
+        Assert.IsAssignableFrom<ICognitiveMemoryDreamClaimSynthesizer>(provider.GetRequiredService<ICognitiveMemoryDreamClaimSynthesizer>());
+        Assert.IsAssignableFrom<ICognitiveMemoryDreamEntailmentValidator>(provider.GetRequiredService<ICognitiveMemoryDreamEntailmentValidator>());
+        Assert.IsAssignableFrom<ICognitiveMemoryRecallBriefComposer>(provider.GetRequiredService<ICognitiveMemoryRecallBriefComposer>());
+        Assert.IsAssignableFrom<ICognitiveMemoryProfessorTeachingExtractor>(provider.GetRequiredService<ICognitiveMemoryProfessorTeachingExtractor>());
+    }
+
     private enum RegistrationTestLabel
     {
         Unknown = 0,

@@ -345,6 +345,8 @@ public sealed class CognitiveMemorySynthesizedStatementSourceMapRecord
 
     public Guid MemoryRecordId { get; set; }
 
+    public Guid? AggregateClaimId { get; set; }
+
     public Guid? SourceItemId { get; set; }
 
     public Guid? EvidenceAnchorId { get; set; }
