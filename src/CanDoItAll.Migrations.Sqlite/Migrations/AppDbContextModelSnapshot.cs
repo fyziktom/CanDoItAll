@@ -2302,6 +2302,11 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.Property<Guid?>("ContextPackId")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("ConversationDepth")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(1);
+
                     b.Property<string>("CorrectionText")
                         .IsRequired()
                         .HasMaxLength(8000)
@@ -2392,6 +2397,11 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("ConversationDepth")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(1);
+
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("TEXT");
 
@@ -2438,6 +2448,8 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
 
                     b.HasIndex("ProjectId", "Status", "UpdatedAtUtc");
 
+                    b.HasIndex("ProjectId", "RuntimeMode", "ConversationDepth", "Status");
+
                     b.ToTable("CognitiveMemory_CuratorSessions", (string)null);
                 });
 
@@ -2459,6 +2471,11 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
 
                     b.Property<Guid?>("ContextPackId")
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("ConversationDepth")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(1);
 
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("TEXT");

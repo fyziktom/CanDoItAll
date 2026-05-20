@@ -62,7 +62,9 @@ internal sealed class CognitiveMemoryCuratorSessionRecordConfiguration : IEntity
         builder.HasKey(item => item.Id);
         builder.HasIndex(item => new { item.ProjectId, item.Status, item.UpdatedAtUtc });
         builder.HasIndex(item => new { item.ProjectId, item.RuntimeMode, item.Status });
+        builder.HasIndex(item => new { item.ProjectId, item.RuntimeMode, item.ConversationDepth, item.Status });
         builder.HasIndex(item => item.AgentChatSessionId);
+        builder.Property(item => item.ConversationDepth).HasDefaultValue(CognitiveMemoryCuratorConversationDepth.Medium);
         builder.Property(item => item.Title).HasMaxLength(300);
         builder.Property(item => item.ActorId).HasMaxLength(160);
         builder.Property(item => item.PolicyProfileId).HasMaxLength(160);
@@ -85,6 +87,7 @@ internal sealed class CognitiveMemoryCuratorTurnRecordConfiguration : IEntityTyp
         builder.HasIndex(item => new { item.CuratorSessionId, item.Sequence }).IsUnique();
         builder.HasIndex(item => new { item.ProjectId, item.CreatedAtUtc });
         builder.HasIndex(item => item.RecallTraceId);
+        builder.Property(item => item.ConversationDepth).HasDefaultValue(CognitiveMemoryCuratorConversationDepth.Medium);
         builder.Property(item => item.UserMessage).HasMaxLength(8000);
         builder.Property(item => item.CuratorResponse).HasMaxLength(12000);
         builder.Property(item => item.IncludedMemoryRecordIdsJson).HasMaxLength(8000);
@@ -108,6 +111,7 @@ internal sealed class CognitiveMemoryCuratorCapturedImprovementRecordConfigurati
         builder.HasIndex(item => item.RecallTraceId);
         builder.HasIndex(item => item.MutationCommandId);
         builder.HasIndex(item => item.ConsolidationCandidateId);
+        builder.Property(item => item.ConversationDepth).HasDefaultValue(CognitiveMemoryCuratorConversationDepth.Medium);
         builder.Property(item => item.AffectedMemoryRecordIdsJson).HasMaxLength(8000);
         builder.Property(item => item.ActorId).HasMaxLength(160);
         builder.Property(item => item.Summary).HasMaxLength(4000);

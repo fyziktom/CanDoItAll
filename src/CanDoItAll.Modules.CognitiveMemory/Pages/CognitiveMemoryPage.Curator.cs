@@ -14,7 +14,9 @@ public partial class CognitiveMemoryPage
 
     internal Guid? activeCuratorSessionId;
     internal CognitiveMemoryCuratorRuntimeMode curatorRuntimeMode = CognitiveMemoryCuratorRuntimeMode.DirectLlm;
+    internal CognitiveMemoryCuratorConversationDepth curatorConversationDepth = CognitiveMemoryCuratorConversationDepth.Medium;
     internal CognitiveMemoryCuratorRuntimeMode? activeCuratorSessionMode;
+    internal CognitiveMemoryCuratorConversationDepth? activeCuratorSessionDepth;
     internal string activeCuratorSessionTitle = string.Empty;
     internal string curatorSessionTitle = "Cognitive Memory curator";
     internal string curatorMessage = string.Empty;
@@ -32,7 +34,8 @@ public partial class CognitiveMemoryPage
 
     internal bool HasActiveCuratorSession
         => activeCuratorSessionId.HasValue &&
-           activeCuratorSessionMode == curatorRuntimeMode;
+           activeCuratorSessionMode == curatorRuntimeMode &&
+           activeCuratorSessionDepth == curatorConversationDepth;
 
     internal bool CanStartCurator
         => !isBusy && ProjectId is { } projectId && projectId != Guid.Empty;
@@ -61,7 +64,9 @@ public partial class CognitiveMemoryPage
             ? "Start a curator session before talking."
             : activeCuratorSessionMode != curatorRuntimeMode
                 ? "Runtime mode changed; next turn starts a new session."
-                : $"{FormatLabel(curatorRuntimeMode)} / {curatorTurns.Count} turn(s)";
+                : activeCuratorSessionDepth != curatorConversationDepth
+                    ? "Response length changed; next turn starts a new session."
+                    : $"{FormatLabel(curatorRuntimeMode)} / {FormatLabel(curatorConversationDepth)} / {curatorTurns.Count} turn(s)";
 
     internal async Task StartCuratorSessionAsync()
     {
@@ -127,7 +132,9 @@ public partial class CognitiveMemoryPage
 
         try
         {
-            if (activeCuratorSessionId is null || activeCuratorSessionMode != curatorRuntimeMode)
+            if (activeCuratorSessionId is null ||
+                activeCuratorSessionMode != curatorRuntimeMode ||
+                activeCuratorSessionDepth != curatorConversationDepth)
             {
                 var session = await CreateCuratorSessionAsync(projectId);
                 ActivateCuratorSession(session, clearTranscript: true);
@@ -139,10 +146,11 @@ public partial class CognitiveMemoryPage
                 sessionId,
                 message,
                 Intent: CognitiveMemoryRecallIntentKind.Implementation,
-                Budget: CreateCuratorRecallBudget()));
+                ConversationDepth: curatorConversationDepth));
             lastCuratorSendResult = result;
             activeCuratorSessionId = result.Session.Id;
             activeCuratorSessionMode = result.Session.RuntimeMode;
+            activeCuratorSessionDepth = result.Turn.ConversationDepth;
             activeCuratorSessionTitle = result.Session.Title;
             selectedRecallTraceId = result.RecallTraceId;
             curatorTurns.Add(CognitiveMemoryCuratorTurnViewModel.FromResult(result));
@@ -306,12 +314,14 @@ public partial class CognitiveMemoryPage
             projectId,
             string.IsNullOrWhiteSpace(curatorSessionTitle) ? "Cognitive Memory curator" : curatorSessionTitle.Trim(),
             CreateCuratorPolicyContext(projectId),
-            curatorRuntimeMode));
+            curatorRuntimeMode,
+            curatorConversationDepth));
 
     internal void ActivateCuratorSession(CognitiveMemoryCuratorSessionRecord session, bool clearTranscript)
     {
         activeCuratorSessionId = session.Id;
         activeCuratorSessionMode = session.RuntimeMode;
+        activeCuratorSessionDepth = session.ConversationDepth;
         activeCuratorSessionTitle = session.Title;
         lastCuratorSendResult = null;
         selectedRecallTraceId = null;
@@ -343,16 +353,6 @@ public partial class CognitiveMemoryPage
             new CognitiveMemoryPolicyProfileId("cognitive-memory-curator-ui"),
             CognitiveMemoryRiskLevel.Medium,
             AllowRestrictedContent: false);
-
-    internal static CognitiveMemoryRecallBudget CreateCuratorRecallBudget()
-        => new(
-            coarseCandidateLimit: 80,
-            graphExpansionDepth: 2,
-            vectorResultLimit: 24,
-            focusLimit: 24,
-            detailItemLimit: 24,
-            contextCharacterBudget: 48_000,
-            maxSourceBytes: 384_000);
 
     internal static string CreateCuratorStatus(CognitiveMemoryCuratorSendResult result)
     {
@@ -401,6 +401,7 @@ public partial class CognitiveMemoryPage
         string UserMessage,
         string CuratorResponse,
         CognitiveMemoryCuratorRuntimeMode RuntimeMode,
+        CognitiveMemoryCuratorConversationDepth ConversationDepth,
         Guid? RecallTraceId,
         Guid? ContextPackId,
         int IncludedMemoryRecordCount,
@@ -414,6 +415,7 @@ public partial class CognitiveMemoryPage
                 result.Turn.UserMessage,
                 result.ResponseText,
                 result.RuntimeMode,
+                result.Turn.ConversationDepth,
                 result.RecallTraceId,
                 result.ContextPackId,
                 result.IncludedMemoryRecordIds.Count,

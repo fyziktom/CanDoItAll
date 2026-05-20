@@ -9,7 +9,9 @@
 - A Curator tab exists in Cognitive Memory.
 - The tab supports text chat and voice controls.
 - The operator can choose `Agent` or `Direct LLM` runtime mode.
+- The operator can choose `Short`, `Medium`, or `Long` response length/depth.
 - Curator answers preserve recall trace and included memory ids.
+- Conversation depth controls both reply guidance and how much recall/aggregation input is used for capture.
 - User corrections/new knowledge are captured as trusted, high-confidence memory-improvement artifacts.
 - Trusted curator captures skip manual approval while normal probe/review flows remain governed.
 
@@ -27,11 +29,11 @@
 
 ## Source Artifacts
 
-- `SRC-001` through `SRC-005` in `inputs/01-source-artifacts.md`.
+- `SRC-001` through `SRC-006` in `inputs/01-source-artifacts.md`.
 
 ## Input Coverage Signals
 
-- The requirement says "must" for two modes, voice both ways, high priority/confidence, approval bypass, and correction of the wrong memory used in the answer. Each remains a separate requirement.
+- The requirement says "must" for two modes, voice both ways, high priority/confidence, approval bypass, correction of the wrong memory used in the answer, and response-length/depth modes that change memory input breadth. Each remains a separate requirement.
 
 ## Dependency And Sequencing Signals
 

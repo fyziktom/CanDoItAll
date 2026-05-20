@@ -133,6 +133,8 @@ public sealed class CognitiveMemoryCuratorSessionRecord : IHasConcurrencyToken
 
     public CognitiveMemoryCuratorRuntimeMode RuntimeMode { get; set; } = CognitiveMemoryCuratorRuntimeMode.DirectLlm;
 
+    public CognitiveMemoryCuratorConversationDepth ConversationDepth { get; set; } = CognitiveMemoryCuratorConversationDepth.Medium;
+
     public string Title { get; set; } = string.Empty;
 
     public string ActorId { get; set; } = string.Empty;
@@ -178,6 +180,8 @@ public sealed class CognitiveMemoryCuratorTurnRecord : IHasConcurrencyToken
 
     public CognitiveMemoryCuratorRuntimeMode RuntimeMode { get; set; } = CognitiveMemoryCuratorRuntimeMode.DirectLlm;
 
+    public CognitiveMemoryCuratorConversationDepth ConversationDepth { get; set; } = CognitiveMemoryCuratorConversationDepth.Medium;
+
     public string UserMessage { get; set; } = string.Empty;
 
     public string CuratorResponse { get; set; } = string.Empty;
@@ -214,6 +218,8 @@ public sealed class CognitiveMemoryCuratorCapturedImprovementRecord : IHasConcur
     public Guid ProjectId { get; set; }
 
     public CognitiveMemoryCuratorCaptureKind CaptureKind { get; set; } = CognitiveMemoryCuratorCaptureKind.NewKnowledge;
+
+    public CognitiveMemoryCuratorConversationDepth ConversationDepth { get; set; } = CognitiveMemoryCuratorConversationDepth.Medium;
 
     public CognitiveMemoryCuratorCaptureStatus Status { get; set; } = CognitiveMemoryCuratorCaptureStatus.Captured;
 

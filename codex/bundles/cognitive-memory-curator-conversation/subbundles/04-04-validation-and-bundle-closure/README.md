@@ -11,13 +11,14 @@ Run final validation, audit raw-note closure, record proof, and synchronize bund
 
 ## Covered Inputs
 
-- All requirements `R-001` through `R-009`.
-- All raw notes `N001` through `N008`.
+- All requirements `R-001` through `R-010`.
+- All raw notes `N001` through `N009`.
 
 ## Prerequisites
 
-- Subbundles 01, 02, and 03 closure gates passed.
+- Subbundles 01, 02, 03, and 05 closure gates passed.
 - Browser validation analytics from subbundle 03 recorded.
+- Follow-up browser validation analytics from subbundle 05 recorded.
 
 ## Exact Source References
 

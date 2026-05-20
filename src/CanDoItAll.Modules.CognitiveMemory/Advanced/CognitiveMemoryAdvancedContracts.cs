@@ -48,6 +48,13 @@ public enum CognitiveMemoryCuratorRuntimeMode
     Agent = 1
 }
 
+public enum CognitiveMemoryCuratorConversationDepth
+{
+    Short = 0,
+    Medium = 1,
+    Long = 2
+}
+
 public enum CognitiveMemoryCuratorSessionStatus
 {
     Active = 0,
@@ -432,6 +439,7 @@ public sealed record CognitiveMemoryCuratorSessionStartRequest(
     string Title,
     CognitiveMemoryPolicyContext PolicyContext,
     CognitiveMemoryCuratorRuntimeMode RuntimeMode,
+    CognitiveMemoryCuratorConversationDepth ConversationDepth = CognitiveMemoryCuratorConversationDepth.Medium,
     Guid? AgentId = null,
     Guid? ProviderProfileId = null,
     CognitiveMemoryExecutionModelId? ModelId = null);
@@ -441,13 +449,15 @@ public sealed record CognitiveMemoryCuratorSendRequest(
     string Message,
     CognitiveMemoryRecallIntentKind Intent = CognitiveMemoryRecallIntentKind.Implementation,
     CognitiveMemoryRecallBudget? Budget = null,
-    CognitiveMemoryCuratorCaptureKind? ExplicitCaptureKind = null);
+    CognitiveMemoryCuratorCaptureKind? ExplicitCaptureKind = null,
+    CognitiveMemoryCuratorConversationDepth? ConversationDepth = null);
 
 public sealed record CognitiveMemoryCuratorTurnCaptureRequest(
     Guid SessionId,
     string UserMessage,
     string CuratorResponse,
     CognitiveMemoryCuratorRuntimeMode RuntimeMode,
+    CognitiveMemoryCuratorConversationDepth? ConversationDepth = null,
     Guid? RecallTraceId = null,
     Guid? ContextPackId = null,
     IReadOnlyList<CognitiveMemoryRecordId>? AffectedMemoryRecordIds = null,

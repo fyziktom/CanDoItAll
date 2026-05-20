@@ -11,3 +11,4 @@
 | `R-007` | `SRC-001` | Normal probe review remains approval-oriented. | Memory improvement path. | Gate 1. | `01-01-curator-contracts-and-capture-pipeline` | Unit tests for curator vs probe behavior. |
 | `R-008` | `SRC-001` | Consolidation/dreaming read source-backed candidates. | Memory improvement path. | Gate 2. | `02-02-curator-runtime-modes-and-memory-routing` | Unit/integration assertions. |
 | `R-009` | `SRC-001` | Existing page uses BaseLib tabs/cards. | UI strategy. | Gate 3. | `03-03-curator-ui-and-voice` | Browser screenshot review. |
+| `R-010` | `SRC-006` | Existing curator implementation used fixed response/recall depth. | Depth profile in curator service plus UI selector. | Gate 4. | `05-05-conversation-depth-modes` | Unit/component/integration tests, EF pending-model checks, and browser screenshot review. |

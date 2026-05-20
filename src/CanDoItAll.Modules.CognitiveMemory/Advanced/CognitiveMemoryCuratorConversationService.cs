@@ -24,17 +24,8 @@ public sealed class CognitiveMemoryCuratorConversationService(
     private const int MaximumCuratorResponseLength = 12000;
     private const int MaximumSummaryLength = 4000;
     private const int MaximumCorrectionLength = 8000;
-    private const int MaximumContextContentLength = 7000;
     private const double TrustedConfidenceScore = 0.95;
     private const double TrustedPriorityScore = 0.95;
-    private static readonly CognitiveMemoryRecallBudget DefaultCuratorRecallBudget = new(
-        coarseCandidateLimit: 20,
-        graphExpansionDepth: 1,
-        vectorResultLimit: 10,
-        focusLimit: 8,
-        detailItemLimit: 8,
-        contextCharacterBudget: 7000,
-        maxSourceBytes: 64000);
 
     public async ValueTask<CognitiveMemoryCuratorSessionRecord> StartAsync(
         CognitiveMemoryCuratorSessionStartRequest request,
@@ -52,6 +43,7 @@ public sealed class CognitiveMemoryCuratorConversationService(
             ProjectId = request.ProjectId,
             Status = CognitiveMemoryCuratorSessionStatus.Active,
             RuntimeMode = request.RuntimeMode,
+            ConversationDepth = request.ConversationDepth,
             Title = TrimText(CognitiveMemoryGuard.EnsureText(request.Title, nameof(request.Title)), MaximumTitleLength),
             ActorId = CognitiveMemoryGuard.EnsureText(request.PolicyContext.ActorId, nameof(request.PolicyContext.ActorId)),
             PolicyProfileId = request.PolicyContext.PolicyProfileId.Value,
@@ -93,6 +85,7 @@ public sealed class CognitiveMemoryCuratorConversationService(
             throw new InvalidOperationException($"Curator session '{session.Id:D}' is not active.");
         }
 
+        var conversationDepth = request.ConversationDepth ?? session.ConversationDepth;
         var policyContext = CreatePolicyContext(session);
         var recallResult = await recallOrchestrator.RecallAsync(
             new CognitiveMemoryRecallRequest(
@@ -101,18 +94,19 @@ public sealed class CognitiveMemoryCuratorConversationService(
                 request.Intent,
                 CognitiveMemoryRecallMode.DeepSourceGrounded,
                 policyContext,
-                request.Budget ?? DefaultCuratorRecallBudget,
+                request.Budget ?? ResolveCuratorRecallBudget(conversationDepth),
                 Metadata: new Dictionary<string, string>
                 {
                     ["curatorSessionId"] = session.Id.ToString("D"),
-                    ["curatorRuntimeMode"] = session.RuntimeMode.ToString()
+                    ["curatorRuntimeMode"] = session.RuntimeMode.ToString(),
+                    ["curatorConversationDepth"] = conversationDepth.ToString()
                 }),
             cancellationToken);
         var includedMemoryRecordIds = ResolveIncludedMemoryRecordIds(recallResult);
         var response = session.RuntimeMode switch
         {
-            CognitiveMemoryCuratorRuntimeMode.DirectLlm => await SendDirectLlmAsync(session, recallResult.ContextPack, request.Message, cancellationToken),
-            CognitiveMemoryCuratorRuntimeMode.Agent => await SendAgentAsync(session, recallResult.ContextPack, request.Message, cancellationToken),
+            CognitiveMemoryCuratorRuntimeMode.DirectLlm => await SendDirectLlmAsync(session, recallResult.ContextPack, request.Message, conversationDepth, cancellationToken),
+            CognitiveMemoryCuratorRuntimeMode.Agent => await SendAgentAsync(session, recallResult.ContextPack, request.Message, conversationDepth, cancellationToken),
             _ => throw new InvalidOperationException($"Unsupported curator runtime mode '{session.RuntimeMode}'.")
         };
 
@@ -127,6 +121,7 @@ public sealed class CognitiveMemoryCuratorConversationService(
                 request.Message,
                 response.ResponseText,
                 session.RuntimeMode,
+                ConversationDepth: conversationDepth,
                 RecallTraceId: recallResult.TraceId,
                 ContextPackId: recallResult.ContextPack.Id.Value,
                 AffectedMemoryRecordIds: includedMemoryRecordIds,
@@ -172,6 +167,7 @@ public sealed class CognitiveMemoryCuratorConversationService(
 
         var now = clock.GetUtcNow();
         var includedMemoryRecordIds = await ResolveIncludedMemoryRecordIdsAsync(dbContext, request, cancellationToken);
+        var conversationDepth = request.ConversationDepth ?? session.ConversationDepth;
         var sequence = session.TurnCount + 1;
         var turn = new CognitiveMemoryCuratorTurnRecord
         {
@@ -179,6 +175,7 @@ public sealed class CognitiveMemoryCuratorConversationService(
             ProjectId = session.ProjectId,
             Sequence = sequence,
             RuntimeMode = request.RuntimeMode,
+            ConversationDepth = conversationDepth,
             UserMessage = TrimText(CognitiveMemoryGuard.EnsureText(request.UserMessage, nameof(request.UserMessage)), MaximumUserMessageLength),
             CuratorResponse = TrimText(request.CuratorResponse, MaximumCuratorResponseLength),
             RecallTraceId = request.RecallTraceId,
@@ -248,6 +245,7 @@ public sealed class CognitiveMemoryCuratorConversationService(
         CognitiveMemoryCuratorSessionRecord session,
         CognitiveMemoryRecallContextPack contextPack,
         string message,
+        CognitiveMemoryCuratorConversationDepth conversationDepth,
         CancellationToken cancellationToken)
     {
         var settings = await settingsService.GetAsync(cancellationToken);
@@ -257,7 +255,8 @@ public sealed class CognitiveMemoryCuratorConversationService(
                                 settings.DefaultProviderProfileId ??
                                 throw new InvalidOperationException("Direct curator mode requires a configured provider profile. Set the Cognitive Memory default provider or the curator conversation execution profile provider.");
         var modelId = session.ModelId ?? profile.ModelId;
-        var previousTurns = await GetRecentTurnsAsync(session.Id, take: 12, cancellationToken);
+        var depthProfile = ResolveDepthProfile(conversationDepth);
+        var previousTurns = await GetRecentTurnsAsync(session.Id, take: depthProfile.HistoryTurnLimit, cancellationToken);
         var history = previousTurns
             .SelectMany(turn => new[]
             {
@@ -270,7 +269,7 @@ public sealed class CognitiveMemoryCuratorConversationService(
             providerProfileId,
             new ProviderTestChatRequest(
                 modelId.Value,
-                BuildCuratorSystemPrompt(session, contextPack),
+                BuildCuratorSystemPrompt(session, contextPack, conversationDepth),
                 history,
                 message.Trim()),
             cancellationToken);
@@ -285,6 +284,7 @@ public sealed class CognitiveMemoryCuratorConversationService(
         CognitiveMemoryCuratorSessionRecord session,
         CognitiveMemoryRecallContextPack contextPack,
         string message,
+        CognitiveMemoryCuratorConversationDepth conversationDepth,
         CancellationToken cancellationToken)
     {
         var settings = await settingsService.GetAsync(cancellationToken);
@@ -303,7 +303,7 @@ public sealed class CognitiveMemoryCuratorConversationService(
         var result = await workspaceService.ExecuteRunAsync(
             new ExecutionRunRequest(
                 agentId,
-                BuildCuratorAgentPrompt(session, contextPack, message),
+                BuildCuratorAgentPrompt(session, contextPack, message, conversationDepth),
                 ChatSessionId: chatSession.Id,
                 AutoApprovePendingToolCalls: true),
             cancellationToken);
@@ -341,6 +341,56 @@ public sealed class CognitiveMemoryCuratorConversationService(
         => settings.ModelExecutionProfiles.FirstOrDefault(profile => profile.Role == CognitiveMemoryModelExecutionRole.CuratorConversation) ??
            CognitiveMemoryModelExecutionProfileDefaults.CreateOpenAi(CognitiveMemoryModelExecutionRole.CuratorConversation);
 
+    private static CognitiveMemoryRecallBudget ResolveCuratorRecallBudget(CognitiveMemoryCuratorConversationDepth conversationDepth)
+        => ResolveDepthProfile(conversationDepth).RecallBudget;
+
+    private static CuratorConversationDepthProfile ResolveDepthProfile(CognitiveMemoryCuratorConversationDepth conversationDepth)
+        => conversationDepth switch
+        {
+            CognitiveMemoryCuratorConversationDepth.Short => new CuratorConversationDepthProfile(
+                new CognitiveMemoryRecallBudget(
+                    coarseCandidateLimit: 24,
+                    graphExpansionDepth: 1,
+                    vectorResultLimit: 8,
+                    focusLimit: 8,
+                    detailItemLimit: 6,
+                    contextCharacterBudget: 8_000,
+                    maxSourceBytes: 64_000),
+                ContextSectionLimit: 3,
+                SourceRefLimit: 4,
+                ContextContentLength: 2_500,
+                HistoryTurnLimit: 4,
+                ResponseInstruction: "Keep the response short: answer in one to three focused sentences unless the user explicitly asks for detail."),
+            CognitiveMemoryCuratorConversationDepth.Long => new CuratorConversationDepthProfile(
+                new CognitiveMemoryRecallBudget(
+                    coarseCandidateLimit: 96,
+                    graphExpansionDepth: 3,
+                    vectorResultLimit: 32,
+                    focusLimit: 32,
+                    detailItemLimit: 32,
+                    contextCharacterBudget: 64_000,
+                    maxSourceBytes: 512_000),
+                ContextSectionLimit: 12,
+                SourceRefLimit: 16,
+                ContextContentLength: 10_000,
+                HistoryTurnLimit: 24,
+                ResponseInstruction: "Use a detailed response: include relevant evidence, uncertainty, competing hypotheses, and memory implications when they help the operator validate knowledge."),
+            _ => new CuratorConversationDepthProfile(
+                new CognitiveMemoryRecallBudget(
+                    coarseCandidateLimit: 48,
+                    graphExpansionDepth: 2,
+                    vectorResultLimit: 16,
+                    focusLimit: 16,
+                    detailItemLimit: 16,
+                    contextCharacterBudget: 24_000,
+                    maxSourceBytes: 192_000),
+                ContextSectionLimit: 6,
+                SourceRefLimit: 8,
+                ContextContentLength: 5_000,
+                HistoryTurnLimit: 12,
+                ResponseInstruction: "Use a balanced response: answer directly, cite relevant memory context, and keep caveats proportional to the evidence.")
+        };
+
     private static IReadOnlyList<CognitiveMemoryRecordId> ResolveIncludedMemoryRecordIds(CognitiveMemoryRecallResult recallResult)
     {
         var values = recallResult.ContextPack.SourceRefs
@@ -357,53 +407,62 @@ public sealed class CognitiveMemoryCuratorConversationService(
 
     private static string BuildCuratorSystemPrompt(
         CognitiveMemoryCuratorSessionRecord session,
-        CognitiveMemoryRecallContextPack contextPack)
+        CognitiveMemoryRecallContextPack contextPack,
+        CognitiveMemoryCuratorConversationDepth conversationDepth)
         => string.Join(
             Environment.NewLine,
             [
                 "You are the curator of Cognitive Memory.",
                 "Answer conversationally, using the supplied memory context when it is relevant.",
+                ResolveDepthProfile(conversationDepth).ResponseInstruction,
                 "When the user gives a correction or new knowledge, acknowledge it naturally. The application will persist the memory improvement separately.",
                 "Do not claim that unsupported memory is certain. If context is thin, say what is missing.",
                 $"Project id: {session.ProjectId:D}",
+                $"Conversation depth: {conversationDepth}",
                 "Memory context:",
-                RenderContextPack(contextPack)
+                RenderContextPack(contextPack, conversationDepth)
             ]);
 
     private static string BuildCuratorAgentPrompt(
         CognitiveMemoryCuratorSessionRecord session,
         CognitiveMemoryRecallContextPack contextPack,
-        string message)
+        string message,
+        CognitiveMemoryCuratorConversationDepth conversationDepth)
         => string.Join(
             Environment.NewLine,
             [
                 "Curator conversation request.",
                 "Use the Cognitive Memory context below as the source for the answer.",
+                ResolveDepthProfile(conversationDepth).ResponseInstruction,
                 "Manual tool approvals are disabled for this trusted curator conversation run; only use tools that can run under the configured auto-approval policy.",
                 $"Project id: {session.ProjectId:D}",
+                $"Conversation depth: {conversationDepth}",
                 "Memory context:",
-                RenderContextPack(contextPack),
+                RenderContextPack(contextPack, conversationDepth),
                 "User message:",
                 message.Trim()
             ]);
 
-    private static string RenderContextPack(CognitiveMemoryRecallContextPack contextPack)
+    private static string RenderContextPack(
+        CognitiveMemoryRecallContextPack contextPack,
+        CognitiveMemoryCuratorConversationDepth conversationDepth)
     {
+        var depthProfile = ResolveDepthProfile(conversationDepth);
         var lines = new List<string>
         {
             $"Context pack: {contextPack.Id.Value:D}",
             $"Title: {contextPack.Title}",
             $"Summary: {contextPack.Summary}"
         };
-        foreach (var section in contextPack.Sections.Take(8))
+        foreach (var section in contextPack.Sections.Take(depthProfile.ContextSectionLimit))
         {
             lines.Add($"Section: {section.Title}");
-            lines.Add(TrimText(section.Content, MaximumContextContentLength));
+            lines.Add(TrimText(section.Content, depthProfile.ContextContentLength));
         }
 
         var sources = contextPack.SourceRefs
             .Where(sourceRef => sourceRef.IncludedInContext)
-            .Take(8)
+            .Take(depthProfile.SourceRefLimit)
             .ToArray();
         if (sources.Length > 0)
         {
@@ -592,6 +651,7 @@ public sealed class CognitiveMemoryCuratorConversationService(
             CuratorTurnId = turn.Id,
             ProjectId = session.ProjectId,
             CaptureKind = captureKind,
+            ConversationDepth = turn.ConversationDepth,
             Status = CognitiveMemoryCuratorCaptureStatus.Captured,
             RecallTraceId = turn.RecallTraceId,
             ContextPackId = turn.ContextPackId,
@@ -809,6 +869,7 @@ public sealed class CognitiveMemoryCuratorConversationService(
                 $"Turn: {turn.Id:D}",
                 $"Actor: {session.ActorId}",
                 $"Runtime mode: {turn.RuntimeMode}",
+                $"Conversation depth: {turn.ConversationDepth}",
                 $"Capture kind: {captureKind}",
                 $"Recall trace: {turn.RecallTraceId?.ToString("D") ?? "none"}",
                 $"Affected memory records: {string.Join(", ", affectedMemoryRecordIds.Select(item => item.ToString("D")))}",
@@ -831,6 +892,7 @@ public sealed class CognitiveMemoryCuratorConversationService(
             ["turnId"] = turn.Id.ToString("D"),
             ["actorId"] = session.ActorId,
             ["runtimeMode"] = turn.RuntimeMode.ToString(),
+            ["conversationDepth"] = turn.ConversationDepth.ToString(),
             ["captureKind"] = captureKind.ToString(),
             ["confidenceScore"] = TrustedConfidenceScore.ToString("0.00"),
             ["priorityScore"] = TrustedPriorityScore.ToString("0.00"),
@@ -928,4 +990,12 @@ public sealed class CognitiveMemoryCuratorConversationService(
         Guid? AgentId,
         Guid? ProviderProfileId,
         CognitiveMemoryExecutionModelId? ModelId);
+
+    private sealed record CuratorConversationDepthProfile(
+        CognitiveMemoryRecallBudget RecallBudget,
+        int ContextSectionLimit,
+        int SourceRefLimit,
+        int ContextContentLength,
+        int HistoryTurnLimit,
+        string ResponseInstruction);
 }

@@ -85,15 +85,18 @@ public sealed class CognitiveMemoryAdvancedPersistenceModelTests
             [typeof(CognitiveMemoryCuratorSessionRecord)] =
             [
                 nameof(CognitiveMemoryCuratorSessionRecord.Status),
-                nameof(CognitiveMemoryCuratorSessionRecord.RuntimeMode)
+                nameof(CognitiveMemoryCuratorSessionRecord.RuntimeMode),
+                nameof(CognitiveMemoryCuratorSessionRecord.ConversationDepth)
             ],
             [typeof(CognitiveMemoryCuratorTurnRecord)] =
             [
-                nameof(CognitiveMemoryCuratorTurnRecord.RuntimeMode)
+                nameof(CognitiveMemoryCuratorTurnRecord.RuntimeMode),
+                nameof(CognitiveMemoryCuratorTurnRecord.ConversationDepth)
             ],
             [typeof(CognitiveMemoryCuratorCapturedImprovementRecord)] =
             [
                 nameof(CognitiveMemoryCuratorCapturedImprovementRecord.CaptureKind),
+                nameof(CognitiveMemoryCuratorCapturedImprovementRecord.ConversationDepth),
                 nameof(CognitiveMemoryCuratorCapturedImprovementRecord.Status)
             ],
             [typeof(CognitiveMemorySelfRegulationAssessmentRecord)] =

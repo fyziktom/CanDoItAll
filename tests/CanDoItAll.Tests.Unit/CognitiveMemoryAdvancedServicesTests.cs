@@ -402,6 +402,63 @@ public sealed class CognitiveMemoryAdvancedServicesTests
     }
 
     [Fact]
+    public async Task CuratorSend_ConversationDepthControlsRecallBudgetPromptAndCaptureMetadata()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var providerId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        var recall = new FakeRecallOrchestrator(projectId);
+        var workspace = new FakeAgentFrameworkWorkspaceService
+        {
+            DirectResponseText = "Depth-aware curator response."
+        };
+        var service = CreateCuratorService(
+            fixture,
+            recall,
+            CreateSettingsService(fixture, defaultProviderProfileId: providerId),
+            workspace);
+        var shortSession = await service.StartAsync(new CognitiveMemoryCuratorSessionStartRequest(
+            projectId,
+            "Short curator chat",
+            Policy(projectId),
+            CognitiveMemoryCuratorRuntimeMode.DirectLlm,
+            CognitiveMemoryCuratorConversationDepth.Short));
+        var longSession = await service.StartAsync(new CognitiveMemoryCuratorSessionStartRequest(
+            projectId,
+            "Long curator chat",
+            Policy(projectId),
+            CognitiveMemoryCuratorRuntimeMode.DirectLlm,
+            CognitiveMemoryCuratorConversationDepth.Long));
+
+        var shortResult = await service.SendAsync(new CognitiveMemoryCuratorSendRequest(
+            shortSession.Id,
+            "Remember that the compact review asks only for release blockers.",
+            ExplicitCaptureKind: CognitiveMemoryCuratorCaptureKind.NewKnowledge));
+        var longResult = await service.SendAsync(new CognitiveMemoryCuratorSendRequest(
+            longSession.Id,
+            "Remember that the long review should aggregate adjacent release evidence and alternative hypotheses.",
+            ExplicitCaptureKind: CognitiveMemoryCuratorCaptureKind.NewKnowledge));
+
+        await using var dbContext = fixture.Factory.CreateDbContext();
+        var shortRecall = recall.Requests[0];
+        var longRecall = recall.Requests[1];
+        var captures = await dbContext.Set<CognitiveMemoryCuratorCapturedImprovementRecord>().ToListAsync();
+        var shortCapture = Assert.Single(captures, item => item.Summary.Contains("compact review", StringComparison.Ordinal));
+        var longCapture = Assert.Single(captures, item => item.Summary.Contains("long review", StringComparison.Ordinal));
+
+        Assert.Equal(CognitiveMemoryCuratorConversationDepth.Short, shortResult.Turn.ConversationDepth);
+        Assert.Equal(CognitiveMemoryCuratorConversationDepth.Long, longResult.Turn.ConversationDepth);
+        Assert.True(shortRecall.Budget.ContextCharacterBudget < longRecall.Budget.ContextCharacterBudget);
+        Assert.True(shortRecall.Budget.FocusLimit < longRecall.Budget.FocusLimit);
+        Assert.Equal("Short", shortRecall.Metadata?["curatorConversationDepth"]);
+        Assert.Equal("Long", longRecall.Metadata?["curatorConversationDepth"]);
+        Assert.Contains("Keep the response short", workspace.DirectRequests[0].Request.SystemPrompt, StringComparison.Ordinal);
+        Assert.Contains("Use a detailed response", workspace.DirectRequests[1].Request.SystemPrompt, StringComparison.Ordinal);
+        Assert.Equal(CognitiveMemoryCuratorConversationDepth.Short, shortCapture.ConversationDepth);
+        Assert.Equal(CognitiveMemoryCuratorConversationDepth.Long, longCapture.ConversationDepth);
+    }
+
+    [Fact]
     public async Task CuratorSend_AgentModeUsesConfiguredAgentWithAutoApprovalAndSharedCapturePath()
     {
         var fixture = CreateFixture();

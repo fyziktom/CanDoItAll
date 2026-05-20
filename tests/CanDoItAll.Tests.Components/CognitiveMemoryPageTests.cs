@@ -34,17 +34,20 @@ public sealed class CognitiveMemoryPageTests
         cut.Find("[data-testid='cognitive-memory-tab-curator']").Click();
         cut.WaitForElement("[data-testid='cognitive-memory-curator-tab']");
         Assert.NotNull(cut.Find("[data-testid='cognitive-memory-curator-mode']"));
+        Assert.NotNull(cut.Find("[data-testid='cognitive-memory-curator-depth']"));
         Assert.NotNull(cut.Find("[data-testid='cognitive-memory-curator-voice-mode']"));
         Assert.NotNull(cut.Find("[data-testid='cognitive-memory-curator-voice-record']"));
 
         cut.Find("[data-testid='cognitive-memory-curator-mode']").Change("Agent");
+        cut.Find("[data-testid='cognitive-memory-curator-depth']").Change("Long");
         cut.Find("[data-testid='cognitive-memory-curator-message']").Change("Remember that release health review is owned by the curator conversation.");
         cut.Find("[data-testid='cognitive-memory-curator-send']").Click();
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains("Curator response in Agent mode.", cut.Markup);
+            Assert.Contains("Curator response in Agent Long mode.", cut.Markup);
             Assert.Contains("Turn 1: 1 trusted capture", cut.Markup);
+            Assert.Contains("Turn 1 / Agent / Long", cut.Markup);
             Assert.Contains("Trusted capture state", cut.Markup);
             Assert.Contains("Applied", cut.Markup);
             Assert.Contains("Release health review is owned by the curator conversation.", cut.Markup);
@@ -692,6 +695,7 @@ public sealed class CognitiveMemoryPageTests
                 ProjectId = request.ProjectId,
                 Status = CognitiveMemoryCuratorSessionStatus.Active,
                 RuntimeMode = request.RuntimeMode,
+                ConversationDepth = request.ConversationDepth,
                 Title = request.Title,
                 ActorId = request.PolicyContext.ActorId,
                 PolicyProfileId = request.PolicyContext.PolicyProfileId.Value,
@@ -728,8 +732,9 @@ public sealed class CognitiveMemoryPageTests
                 ProjectId = session.ProjectId,
                 Sequence = sessionTurns.Count + 1,
                 RuntimeMode = session.RuntimeMode,
+                ConversationDepth = request.ConversationDepth ?? session.ConversationDepth,
                 UserMessage = request.Message,
-                CuratorResponse = $"Curator response in {session.RuntimeMode} mode.",
+                CuratorResponse = $"Curator response in {session.RuntimeMode} {request.ConversationDepth ?? session.ConversationDepth} mode.",
                 RecallTraceId = traceId,
                 ContextPackId = contextPackId,
                 IncludedMemoryRecordIdsJson = "[]",
@@ -772,6 +777,7 @@ public sealed class CognitiveMemoryPageTests
                 ProjectId = session.ProjectId,
                 Sequence = sessionTurns.Count + 1,
                 RuntimeMode = request.RuntimeMode,
+                ConversationDepth = request.ConversationDepth ?? session.ConversationDepth,
                 UserMessage = request.UserMessage,
                 CuratorResponse = request.CuratorResponse,
                 RecallTraceId = request.RecallTraceId,
@@ -821,6 +827,7 @@ public sealed class CognitiveMemoryPageTests
                     CuratorTurnId = turn.Id,
                     ProjectId = session.ProjectId,
                     CaptureKind = CognitiveMemoryCuratorCaptureKind.NewKnowledge,
+                    ConversationDepth = turn.ConversationDepth,
                     Status = CognitiveMemoryCuratorCaptureStatus.Applied,
                     RecallTraceId = traceId,
                     ContextPackId = contextPackId,

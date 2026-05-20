@@ -43,6 +43,18 @@
                     </InputSelect>
                 </label>
 
+                <label class="cognitive-memory-field">
+                    <span>Response length</span>
+                    <InputSelect class="cda-input"
+                                 @bind-Value="Page.curatorConversationDepth"
+                                 data-testid="cognitive-memory-curator-depth">
+                        @foreach (var depth in Enum.GetValues<CognitiveMemoryCuratorConversationDepth>())
+                        {
+                            <option value="@depth">@CognitiveMemoryPage.FormatLabel(depth)</option>
+                        }
+                    </InputSelect>
+                </label>
+
                 <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                     <Button Text="Start"
                             Icon="play_arrow"
@@ -127,7 +139,7 @@
                     {
                         <article class="cognitive-memory-row cognitive-memory-curator-turn"
                                  data-testid="@($"cognitive-memory-curator-turn-{turn.Sequence}")">
-                            <strong>@($"Turn {turn.Sequence} / {CognitiveMemoryPage.FormatLabel(turn.RuntimeMode)}")</strong>
+                            <strong>@($"Turn {turn.Sequence} / {CognitiveMemoryPage.FormatLabel(turn.RuntimeMode)} / {CognitiveMemoryPage.FormatLabel(turn.ConversationDepth)}")</strong>
                             <small>@($"{turn.IncludedMemoryRecordCount} included memory record(s) / {CognitiveMemoryPage.FormatDate(turn.CreatedAtUtc)}")</small>
                             <p class="cognitive-memory-review-memory-text">@turn.UserMessage</p>
                             <p class="cognitive-memory-review-memory-text">@turn.CuratorResponse</p>
