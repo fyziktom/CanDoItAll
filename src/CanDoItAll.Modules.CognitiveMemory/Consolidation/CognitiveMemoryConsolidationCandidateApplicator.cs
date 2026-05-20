@@ -346,6 +346,7 @@ public sealed class CognitiveMemoryConsolidationCandidateApplicator(
             CognitiveMemoryConsolidationCandidateKind.Procedure => CognitiveMemoryRecordKind.Procedural,
             CognitiveMemoryConsolidationCandidateKind.Decision => CognitiveMemoryRecordKind.Decision,
             CognitiveMemoryConsolidationCandidateKind.Reflection => CognitiveMemoryRecordKind.Reflection,
+            CognitiveMemoryConsolidationCandidateKind.Knowledge => CognitiveMemoryRecordKind.Semantic,
             CognitiveMemoryConsolidationCandidateKind.Contradiction => CognitiveMemoryRecordKind.Reflection,
             CognitiveMemoryConsolidationCandidateKind.ProjectionInvalidation => CognitiveMemoryRecordKind.Metacognitive,
             CognitiveMemoryConsolidationCandidateKind.ReviewRequired => CognitiveMemoryRecordKind.Reflection,
@@ -357,6 +358,7 @@ public sealed class CognitiveMemoryConsolidationCandidateApplicator(
         {
             CognitiveMemoryConsolidationCandidateKind.Procedure => CognitiveMemoryClaimKind.ProcedureConstraint,
             CognitiveMemoryConsolidationCandidateKind.Decision => CognitiveMemoryClaimKind.Decision,
+            CognitiveMemoryConsolidationCandidateKind.Knowledge => CognitiveMemoryClaimKind.Fact,
             CognitiveMemoryConsolidationCandidateKind.Contradiction => CognitiveMemoryClaimKind.Observation,
             CognitiveMemoryConsolidationCandidateKind.Episode => CognitiveMemoryClaimKind.Observation,
             _ => CognitiveMemoryClaimKind.Fact

@@ -15,7 +15,8 @@ public enum CognitiveMemoryEvidenceAnchorKind
     ReviewDecision = 8,
     SelfRegulationAssessment = 9,
     ProfessorReview = 10,
-    CalibrationOutcome = 11
+    CalibrationOutcome = 11,
+    CuratorConversationTurn = 12
 }
 
 public enum CognitiveMemoryEvidenceDirection

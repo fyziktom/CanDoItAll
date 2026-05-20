@@ -123,6 +123,137 @@ public sealed class CognitiveMemoryProbeFeedbackRecord : IHasConcurrencyToken
     public Guid ConcurrencyToken { get; set; }
 }
 
+public sealed class CognitiveMemoryCuratorSessionRecord : IHasConcurrencyToken
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid ProjectId { get; set; }
+
+    public CognitiveMemoryCuratorSessionStatus Status { get; set; } = CognitiveMemoryCuratorSessionStatus.Active;
+
+    public CognitiveMemoryCuratorRuntimeMode RuntimeMode { get; set; } = CognitiveMemoryCuratorRuntimeMode.DirectLlm;
+
+    public CognitiveMemoryCuratorConversationDepth ConversationDepth { get; set; } = CognitiveMemoryCuratorConversationDepth.Medium;
+
+    public string Title { get; set; } = string.Empty;
+
+    public string ActorId { get; set; } = string.Empty;
+
+    public string PolicyProfileId { get; set; } = string.Empty;
+
+    public CognitiveMemoryAccessLevel AccessLevel { get; set; } = CognitiveMemoryAccessLevel.Project;
+
+    public CognitiveMemoryRiskLevel RiskLevel { get; set; } = CognitiveMemoryRiskLevel.Low;
+
+    public bool AllowRestrictedContent { get; set; }
+
+    public Guid? AgentId { get; set; }
+
+    public Guid? ProviderProfileId { get; set; }
+
+    public CognitiveMemoryExecutionModelId? ModelId { get; set; }
+
+    public Guid? AgentChatSessionId { get; set; }
+
+    public string AlgorithmVersion { get; set; } = string.Empty;
+
+    public int TurnCount { get; set; }
+
+    public DateTimeOffset CreatedAtUtc { get; set; }
+
+    public DateTimeOffset UpdatedAtUtc { get; set; }
+
+    public DateTimeOffset? ClosedAtUtc { get; set; }
+
+    public Guid ConcurrencyToken { get; set; }
+}
+
+public sealed class CognitiveMemoryCuratorTurnRecord : IHasConcurrencyToken
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid CuratorSessionId { get; set; }
+
+    public Guid ProjectId { get; set; }
+
+    public int Sequence { get; set; }
+
+    public CognitiveMemoryCuratorRuntimeMode RuntimeMode { get; set; } = CognitiveMemoryCuratorRuntimeMode.DirectLlm;
+
+    public CognitiveMemoryCuratorConversationDepth ConversationDepth { get; set; } = CognitiveMemoryCuratorConversationDepth.Medium;
+
+    public string UserMessage { get; set; } = string.Empty;
+
+    public string CuratorResponse { get; set; } = string.Empty;
+
+    public Guid? RecallTraceId { get; set; }
+
+    public Guid? ContextPackId { get; set; }
+
+    public string IncludedMemoryRecordIdsJson { get; set; } = "[]";
+
+    public Guid? AgentId { get; set; }
+
+    public Guid? ProviderProfileId { get; set; }
+
+    public CognitiveMemoryExecutionModelId? ModelId { get; set; }
+
+    public int CaptureCount { get; set; }
+
+    public DateTimeOffset CreatedAtUtc { get; set; }
+
+    public DateTimeOffset UpdatedAtUtc { get; set; }
+
+    public Guid ConcurrencyToken { get; set; }
+}
+
+public sealed class CognitiveMemoryCuratorCapturedImprovementRecord : IHasConcurrencyToken
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid CuratorSessionId { get; set; }
+
+    public Guid CuratorTurnId { get; set; }
+
+    public Guid ProjectId { get; set; }
+
+    public CognitiveMemoryCuratorCaptureKind CaptureKind { get; set; } = CognitiveMemoryCuratorCaptureKind.NewKnowledge;
+
+    public CognitiveMemoryCuratorConversationDepth ConversationDepth { get; set; } = CognitiveMemoryCuratorConversationDepth.Medium;
+
+    public CognitiveMemoryCuratorCaptureStatus Status { get; set; } = CognitiveMemoryCuratorCaptureStatus.Captured;
+
+    public Guid? RecallTraceId { get; set; }
+
+    public Guid? ContextPackId { get; set; }
+
+    public string AffectedMemoryRecordIdsJson { get; set; } = "[]";
+
+    public Guid? SourceItemId { get; set; }
+
+    public Guid? EvidenceAnchorId { get; set; }
+
+    public Guid? MutationCommandId { get; set; }
+
+    public Guid? ConsolidationCandidateId { get; set; }
+
+    public Guid? AppliedMemoryRecordId { get; set; }
+
+    public string ActorId { get; set; } = string.Empty;
+
+    public double ConfidenceScore { get; set; }
+
+    public double PriorityScore { get; set; }
+
+    public string Summary { get; set; } = string.Empty;
+
+    public string CorrectionText { get; set; } = string.Empty;
+
+    public DateTimeOffset CreatedAtUtc { get; set; }
+
+    public Guid ConcurrencyToken { get; set; }
+}
+
 public sealed class CognitiveMemoryProbeFindingRecord
 {
     public Guid Id { get; set; } = Guid.NewGuid();

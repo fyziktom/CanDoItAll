@@ -80,6 +80,7 @@ public static class CognitiveMemoryModuleServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, CognitiveMemoryProbeWorkflowExecutor>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, CognitiveMemoryLearningProposalWorkflowExecutor>());
         services.TryAddScoped<ICognitiveMemoryProbeService, CognitiveMemoryProbeService>();
+        services.TryAddScoped<ICognitiveMemoryCuratorConversationService, CognitiveMemoryCuratorConversationService>();
         services.TryAddScoped<ICognitiveMemorySelfModelStore, CognitiveMemorySelfModelStore>();
         services.TryAddScoped<ICognitiveMemoryCalibrationHealthService, CognitiveMemoryCalibrationHealthService>();
         services.TryAddScoped<ICognitiveMemorySelfRegulationOrchestrator, CognitiveMemorySelfRegulationOrchestrator>();

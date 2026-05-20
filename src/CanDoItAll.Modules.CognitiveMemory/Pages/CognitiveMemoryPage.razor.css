@@ -206,6 +206,11 @@
     resize: vertical;
 }
 
+::deep .cognitive-memory-curator-message {
+    min-height: 9rem;
+    resize: vertical;
+}
+
 ::deep .cognitive-memory-row-button {
     width: 100%;
     cursor: pointer;

@@ -7,11 +7,54 @@ using CanDoItAll.Modules.Projects;
 using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CanDoItAll.Tests.Components;
 
 public sealed class CognitiveMemoryPageTests
 {
+    [Fact]
+    public async Task CognitiveMemoryPage_CuratorTabSendsConversationAndShowsTrustedCapture()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+        {
+            services.RemoveAll<ICognitiveMemoryReviewUiService>();
+            services.RemoveAll<ICognitiveMemoryCuratorConversationService>();
+            services.AddScoped<ICognitiveMemoryReviewUiService, FakeReviewUiService>();
+            services.AddScoped<ICognitiveMemoryCuratorConversationService, FakeCuratorConversationService>();
+        });
+        var projectId = Guid.NewGuid();
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+
+        navigation.NavigateTo($"/cognitive-memory?projectId={projectId:D}");
+        var cut = harness.Context.RenderComponent<CognitiveMemoryPage>();
+
+        cut.WaitForElement("[data-testid='cognitive-memory-summary']");
+        cut.WaitForElement("[data-testid='cognitive-memory-tabs']");
+        cut.Find("[data-testid='cognitive-memory-tab-curator']").Click();
+        cut.WaitForElement("[data-testid='cognitive-memory-curator-tab']");
+        Assert.NotNull(cut.Find("[data-testid='cognitive-memory-curator-mode']"));
+        Assert.NotNull(cut.Find("[data-testid='cognitive-memory-curator-depth']"));
+        Assert.NotNull(cut.Find("[data-testid='cognitive-memory-curator-voice-mode']"));
+        Assert.NotNull(cut.Find("[data-testid='cognitive-memory-curator-voice-record']"));
+
+        cut.Find("[data-testid='cognitive-memory-curator-mode']").Change("Agent");
+        cut.Find("[data-testid='cognitive-memory-curator-depth']").Change("Long");
+        cut.Find("[data-testid='cognitive-memory-curator-message']").Change("Remember that release health review is owned by the curator conversation.");
+        cut.Find("[data-testid='cognitive-memory-curator-send']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Curator response in Agent Long mode.", cut.Markup);
+            Assert.Contains("Turn 1: 1 trusted capture", cut.Markup);
+            Assert.Contains("Turn 1 / Agent / Long", cut.Markup);
+            Assert.Contains("Trusted capture state", cut.Markup);
+            Assert.Contains("Applied", cut.Markup);
+            Assert.Contains("Release health review is owned by the curator conversation.", cut.Markup);
+        });
+        cut.Dispose();
+    }
+
     [Fact]
     public async Task CognitiveMemoryPage_RendersReviewTraceHealthAndPersistsReviewDecision()
     {
@@ -634,5 +677,245 @@ public sealed class CognitiveMemoryPageTests
             CreatedAtUtc = now,
             ConcurrencyToken = Guid.NewGuid()
         };
+    }
+
+    private sealed class FakeCuratorConversationService : ICognitiveMemoryCuratorConversationService
+    {
+        private readonly Dictionary<Guid, CognitiveMemoryCuratorSessionRecord> sessions = [];
+        private readonly Dictionary<Guid, List<CognitiveMemoryCuratorTurnRecord>> turns = [];
+
+        public ValueTask<CognitiveMemoryCuratorSessionRecord> StartAsync(
+            CognitiveMemoryCuratorSessionStartRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            var now = DateTimeOffset.UnixEpoch;
+            var session = new CognitiveMemoryCuratorSessionRecord
+            {
+                Id = Guid.NewGuid(),
+                ProjectId = request.ProjectId,
+                Status = CognitiveMemoryCuratorSessionStatus.Active,
+                RuntimeMode = request.RuntimeMode,
+                ConversationDepth = request.ConversationDepth,
+                Title = request.Title,
+                ActorId = request.PolicyContext.ActorId,
+                PolicyProfileId = request.PolicyContext.PolicyProfileId.Value,
+                AccessLevel = request.PolicyContext.AccessLevel,
+                RiskLevel = request.PolicyContext.RiskLevel,
+                AllowRestrictedContent = request.PolicyContext.AllowRestrictedContent,
+                AgentId = request.AgentId,
+                ProviderProfileId = request.ProviderProfileId,
+                ModelId = request.ModelId,
+                AlgorithmVersion = "component-test",
+                CreatedAtUtc = now,
+                UpdatedAtUtc = now,
+                ConcurrencyToken = Guid.NewGuid()
+            };
+            sessions[session.Id] = session;
+            turns[session.Id] = [];
+            return ValueTask.FromResult(session);
+        }
+
+        public ValueTask<CognitiveMemoryCuratorSendResult> SendAsync(
+            CognitiveMemoryCuratorSendRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            var session = sessions[request.SessionId];
+            var sessionTurns = turns[session.Id];
+            var now = DateTimeOffset.UnixEpoch.AddMinutes(sessionTurns.Count + 1);
+            var traceId = Guid.NewGuid();
+            var contextPackId = Guid.NewGuid();
+            var includedMemoryRecordIds = new[] { CognitiveMemoryRecordId.New() };
+            var turn = new CognitiveMemoryCuratorTurnRecord
+            {
+                Id = Guid.NewGuid(),
+                CuratorSessionId = session.Id,
+                ProjectId = session.ProjectId,
+                Sequence = sessionTurns.Count + 1,
+                RuntimeMode = session.RuntimeMode,
+                ConversationDepth = request.ConversationDepth ?? session.ConversationDepth,
+                UserMessage = request.Message,
+                CuratorResponse = $"Curator response in {session.RuntimeMode} {request.ConversationDepth ?? session.ConversationDepth} mode.",
+                RecallTraceId = traceId,
+                ContextPackId = contextPackId,
+                IncludedMemoryRecordIdsJson = "[]",
+                CreatedAtUtc = now,
+                UpdatedAtUtc = now,
+                ConcurrencyToken = Guid.NewGuid()
+            };
+            var captures = CreateCaptures(session, turn, request.Message, traceId, contextPackId);
+            turn.CaptureCount = captures.Count;
+            session.TurnCount = turn.Sequence;
+            session.UpdatedAtUtc = now;
+            sessionTurns.Add(turn);
+
+            return ValueTask.FromResult(new CognitiveMemoryCuratorSendResult(
+                session,
+                turn,
+                session.RuntimeMode,
+                turn.CuratorResponse,
+                session.AgentId,
+                session.ProviderProfileId,
+                session.ModelId,
+                traceId,
+                contextPackId,
+                includedMemoryRecordIds,
+                captures,
+                Warnings: []));
+        }
+
+        public ValueTask<CognitiveMemoryCuratorTurnCaptureResult> RecordTurnAsync(
+            CognitiveMemoryCuratorTurnCaptureRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            var session = sessions[request.SessionId];
+            var sessionTurns = turns[session.Id];
+            var now = DateTimeOffset.UnixEpoch.AddMinutes(sessionTurns.Count + 1);
+            var turn = new CognitiveMemoryCuratorTurnRecord
+            {
+                Id = Guid.NewGuid(),
+                CuratorSessionId = session.Id,
+                ProjectId = session.ProjectId,
+                Sequence = sessionTurns.Count + 1,
+                RuntimeMode = request.RuntimeMode,
+                ConversationDepth = request.ConversationDepth ?? session.ConversationDepth,
+                UserMessage = request.UserMessage,
+                CuratorResponse = request.CuratorResponse,
+                RecallTraceId = request.RecallTraceId,
+                ContextPackId = request.ContextPackId,
+                IncludedMemoryRecordIdsJson = "[]",
+                CreatedAtUtc = now,
+                UpdatedAtUtc = now,
+                ConcurrencyToken = Guid.NewGuid()
+            };
+            var captures = CreateCaptures(session, turn, request.UserMessage, request.RecallTraceId, request.ContextPackId);
+            turn.CaptureCount = captures.Count;
+            session.TurnCount = turn.Sequence;
+            session.UpdatedAtUtc = now;
+            sessionTurns.Add(turn);
+            return ValueTask.FromResult(new CognitiveMemoryCuratorTurnCaptureResult(session, turn, captures));
+        }
+
+        public ValueTask<IReadOnlyList<CognitiveMemoryCuratorTurnRecord>> GetRecentTurnsAsync(
+            Guid sessionId,
+            int take = 50,
+            CancellationToken cancellationToken = default)
+        {
+            var result = turns.TryGetValue(sessionId, out var sessionTurns)
+                ? sessionTurns.TakeLast(take).ToArray()
+                : [];
+            return ValueTask.FromResult<IReadOnlyList<CognitiveMemoryCuratorTurnRecord>>(result);
+        }
+
+        private static IReadOnlyList<CognitiveMemoryCuratorCapturedImprovementRecord> CreateCaptures(
+            CognitiveMemoryCuratorSessionRecord session,
+            CognitiveMemoryCuratorTurnRecord turn,
+            string message,
+            Guid? traceId,
+            Guid? contextPackId)
+        {
+            if (!message.Contains("remember", StringComparison.OrdinalIgnoreCase))
+            {
+                return [];
+            }
+
+            return
+            [
+                new CognitiveMemoryCuratorCapturedImprovementRecord
+                {
+                    Id = Guid.NewGuid(),
+                    CuratorSessionId = session.Id,
+                    CuratorTurnId = turn.Id,
+                    ProjectId = session.ProjectId,
+                    CaptureKind = CognitiveMemoryCuratorCaptureKind.NewKnowledge,
+                    ConversationDepth = turn.ConversationDepth,
+                    Status = CognitiveMemoryCuratorCaptureStatus.Applied,
+                    RecallTraceId = traceId,
+                    ContextPackId = contextPackId,
+                    AffectedMemoryRecordIdsJson = "[]",
+                    AppliedMemoryRecordId = Guid.NewGuid(),
+                    ActorId = session.ActorId,
+                    ConfidenceScore = 0.95,
+                    PriorityScore = 0.95,
+                    Summary = "Release health review is owned by the curator conversation.",
+                    CorrectionText = message,
+                    CreatedAtUtc = turn.CreatedAtUtc,
+                    ConcurrencyToken = Guid.NewGuid()
+                }
+            ];
+        }
+    }
+
+    private sealed class FakeReviewUiService : ICognitiveMemoryReviewUiService
+    {
+        public ValueTask<CognitiveMemoryReviewUiSnapshot> GetSnapshotAsync(
+            CognitiveMemoryReviewUiQuery query,
+            CancellationToken cancellationToken = default)
+            => ValueTask.FromResult(CreateEmptySnapshot());
+
+        public ValueTask<CognitiveMemoryReviewQueueItem> DecideReviewItemAsync(
+            CognitiveMemoryReviewDecisionRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        private static CognitiveMemoryReviewUiSnapshot CreateEmptySnapshot()
+        {
+            var summary = new CognitiveMemoryReviewUiSummary(
+                MemoryRecordCount: 0,
+                ReviewItemCount: 0,
+                PendingReviewCount: 0,
+                HighRiskReviewCount: 0,
+                RecallTraceCount: 0,
+                ConsolidationRunCount: 0,
+                ConsolidationIssueCount: 0,
+                ProjectionStateCount: 0,
+                ProjectionIssueCount: 0,
+                ProcedureSkillCount: 0,
+                ProcedureReviewCount: 0,
+                SimulationReviewCount: 0,
+                ReplayJobCount: 0,
+                ProbeSessionCount: 0,
+                SelfRegulationAssessmentCount: 0,
+                SelfRegulationActionCount: 0,
+                AnswerGateDecisionCount: 0,
+                AnswerGateInterventionCount: 0,
+                ProfessorReviewTotalCount: 0,
+                ProfessorReviewCount: 0,
+                LearningProposalTotalCount: 0,
+                LearningProposalCount: 0,
+                CrossProjectPromotionCount: 0,
+                CrossProjectReviewCount: 0,
+                DistributedJobCount: 0,
+                DistributedIssueCount: 0,
+                OperatorAuditCount: 0,
+                QualityClusterCount: 0,
+                ClusterSearchResultCount: 0,
+                DreamRunCount: 0,
+                AggregateCandidateCount: 0,
+                SynthesizedRecallCount: 0);
+
+            return new CognitiveMemoryReviewUiSnapshot(
+                summary,
+                new CognitiveMemoryReviewUiPagingState([]),
+                MemoryRecords: [],
+                ReviewItems: [],
+                RecallTraces: [],
+                ConsolidationRuns: [],
+                ProjectionHealth: [],
+                ProcedureSkills: [],
+                ReplayJobs: [],
+                ProbeSessions: [],
+                SelfRegulationAssessments: [],
+                AnswerGateDecisions: [],
+                ProfessorReviews: [],
+                LearningProposals: [],
+                CrossProjectPromotions: [],
+                DistributedJobs: [],
+                OperatorAudit: [],
+                QualityClusters: [],
+                ClusterSearchResults: [],
+                DreamRuns: [],
+                AggregateCandidates: [],
+                SynthesizedRecalls: []);
+        }
     }
 }

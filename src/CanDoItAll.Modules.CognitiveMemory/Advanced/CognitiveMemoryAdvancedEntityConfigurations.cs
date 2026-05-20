@@ -54,6 +54,72 @@ internal sealed class CognitiveMemoryProbeFeedbackRecordConfiguration : IEntityT
     }
 }
 
+internal sealed class CognitiveMemoryCuratorSessionRecordConfiguration : IEntityTypeConfiguration<CognitiveMemoryCuratorSessionRecord>
+{
+    public void Configure(EntityTypeBuilder<CognitiveMemoryCuratorSessionRecord> builder)
+    {
+        builder.ToTable("CognitiveMemory_CuratorSessions");
+        builder.HasKey(item => item.Id);
+        builder.HasIndex(item => new { item.ProjectId, item.Status, item.UpdatedAtUtc });
+        builder.HasIndex(item => new { item.ProjectId, item.RuntimeMode, item.Status });
+        builder.HasIndex(item => new { item.ProjectId, item.RuntimeMode, item.ConversationDepth, item.Status });
+        builder.HasIndex(item => item.AgentChatSessionId);
+        builder.Property(item => item.ConversationDepth).HasDefaultValue(CognitiveMemoryCuratorConversationDepth.Medium);
+        builder.Property(item => item.Title).HasMaxLength(300);
+        builder.Property(item => item.ActorId).HasMaxLength(160);
+        builder.Property(item => item.PolicyProfileId).HasMaxLength(160);
+        builder.Property(item => item.ModelId)
+            .HasConversion(
+                item => item.HasValue ? item.Value.Value : string.Empty,
+                value => string.IsNullOrWhiteSpace(value) ? null : new CognitiveMemoryExecutionModelId(value))
+            .HasMaxLength(160);
+        builder.Property(item => item.AlgorithmVersion).HasMaxLength(80);
+        builder.Property(item => item.ConcurrencyToken).IsConcurrencyToken();
+    }
+}
+
+internal sealed class CognitiveMemoryCuratorTurnRecordConfiguration : IEntityTypeConfiguration<CognitiveMemoryCuratorTurnRecord>
+{
+    public void Configure(EntityTypeBuilder<CognitiveMemoryCuratorTurnRecord> builder)
+    {
+        builder.ToTable("CognitiveMemory_CuratorTurns");
+        builder.HasKey(item => item.Id);
+        builder.HasIndex(item => new { item.CuratorSessionId, item.Sequence }).IsUnique();
+        builder.HasIndex(item => new { item.ProjectId, item.CreatedAtUtc });
+        builder.HasIndex(item => item.RecallTraceId);
+        builder.Property(item => item.ConversationDepth).HasDefaultValue(CognitiveMemoryCuratorConversationDepth.Medium);
+        builder.Property(item => item.UserMessage).HasMaxLength(8000);
+        builder.Property(item => item.CuratorResponse).HasMaxLength(12000);
+        builder.Property(item => item.IncludedMemoryRecordIdsJson).HasMaxLength(8000);
+        builder.Property(item => item.ModelId)
+            .HasConversion(
+                item => item.HasValue ? item.Value.Value : string.Empty,
+                value => string.IsNullOrWhiteSpace(value) ? null : new CognitiveMemoryExecutionModelId(value))
+            .HasMaxLength(160);
+        builder.Property(item => item.ConcurrencyToken).IsConcurrencyToken();
+    }
+}
+
+internal sealed class CognitiveMemoryCuratorCapturedImprovementRecordConfiguration : IEntityTypeConfiguration<CognitiveMemoryCuratorCapturedImprovementRecord>
+{
+    public void Configure(EntityTypeBuilder<CognitiveMemoryCuratorCapturedImprovementRecord> builder)
+    {
+        builder.ToTable("CognitiveMemory_CuratorCapturedImprovements");
+        builder.HasKey(item => item.Id);
+        builder.HasIndex(item => new { item.CuratorTurnId, item.CaptureKind });
+        builder.HasIndex(item => new { item.ProjectId, item.CaptureKind, item.Status, item.CreatedAtUtc });
+        builder.HasIndex(item => item.RecallTraceId);
+        builder.HasIndex(item => item.MutationCommandId);
+        builder.HasIndex(item => item.ConsolidationCandidateId);
+        builder.Property(item => item.ConversationDepth).HasDefaultValue(CognitiveMemoryCuratorConversationDepth.Medium);
+        builder.Property(item => item.AffectedMemoryRecordIdsJson).HasMaxLength(8000);
+        builder.Property(item => item.ActorId).HasMaxLength(160);
+        builder.Property(item => item.Summary).HasMaxLength(4000);
+        builder.Property(item => item.CorrectionText).HasMaxLength(8000);
+        builder.Property(item => item.ConcurrencyToken).IsConcurrencyToken();
+    }
+}
+
 internal sealed class CognitiveMemoryProbeFindingRecordConfiguration : IEntityTypeConfiguration<CognitiveMemoryProbeFindingRecord>
 {
     public void Configure(EntityTypeBuilder<CognitiveMemoryProbeFindingRecord> builder)

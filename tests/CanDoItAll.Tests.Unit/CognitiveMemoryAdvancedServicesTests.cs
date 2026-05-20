@@ -1,7 +1,10 @@
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.CognitiveMemory;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -254,6 +257,284 @@ public sealed class CognitiveMemoryAdvancedServicesTests
         Assert.False(mutation.RequiresHumanReview);
         Assert.Single(await dbContext.Set<CognitiveMemorySourceLinkRecord>().ToListAsync());
         Assert.Single(await dbContext.Set<CognitiveMemoryClaimEvidenceLinkRecord>().ToListAsync());
+    }
+
+    [Fact]
+    public async Task CuratorCapture_NewKnowledgeAppliesTrustedMemoryWithoutReview()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var service = CreateCuratorService(fixture);
+        var session = await service.StartAsync(new CognitiveMemoryCuratorSessionStartRequest(
+            projectId,
+            "Curator chat",
+            Policy(projectId),
+            CognitiveMemoryCuratorRuntimeMode.DirectLlm));
+
+        var result = await service.RecordTurnAsync(new CognitiveMemoryCuratorTurnCaptureRequest(
+            session.Id,
+            "Remember that LB4U payroll reserve must cover two months of salaries.",
+            "I will retain that as trusted project knowledge.",
+            CognitiveMemoryCuratorRuntimeMode.DirectLlm,
+            ExplicitCaptureKind: CognitiveMemoryCuratorCaptureKind.NewKnowledge));
+
+        await using var dbContext = fixture.Factory.CreateDbContext();
+        var capture = Assert.Single(result.CapturedImprovements);
+        var persistedCapture = await dbContext.Set<CognitiveMemoryCuratorCapturedImprovementRecord>().SingleAsync();
+        var mutation = await dbContext.Set<CognitiveMemoryMutationCommandRecord>().SingleAsync();
+        var candidate = await dbContext.Set<CognitiveMemoryConsolidationCandidateRecord>().SingleAsync();
+        var evidence = await dbContext.Set<CognitiveMemoryEvidenceAnchorRecord>().SingleAsync();
+        var memory = await dbContext.Set<CognitiveMemoryRecord>().SingleAsync();
+
+        Assert.Equal(capture.Id, persistedCapture.Id);
+        Assert.Equal(CognitiveMemoryCuratorCaptureStatus.Applied, persistedCapture.Status);
+        Assert.Equal(CognitiveMemoryCuratorCaptureKind.NewKnowledge, persistedCapture.CaptureKind);
+        Assert.Equal("agent:test", persistedCapture.ActorId);
+        Assert.Equal(0.95, persistedCapture.ConfidenceScore);
+        Assert.Equal(0.95, persistedCapture.PriorityScore);
+        Assert.Equal(CognitiveMemoryMutationCommandStatus.Accepted, mutation.Status);
+        Assert.Equal(CognitiveMemoryMutationCommandKind.ProposeClaim, mutation.CommandKind);
+        Assert.False(mutation.RequiresHumanReview);
+        Assert.Equal(CognitiveMemorySourceTrustLevel.HumanReview, evidence.TrustLevel);
+        Assert.Equal(CognitiveMemoryConsolidationCandidateKind.Knowledge, candidate.CandidateKind);
+        Assert.Equal(CognitiveMemoryConsolidationCandidateStatus.MutationSubmitted, candidate.Status);
+        Assert.Equal(memory.Id, candidate.MemoryRecordId);
+        Assert.Equal("LB4U payroll reserve must cover two months of salaries.", memory.CanonicalText);
+        Assert.Equal(CognitiveMemoryValidationState.Approved, memory.ValidationState);
+        Assert.Equal(CognitiveMemoryStabilityState.Active, memory.StabilityState);
+        Assert.Equal(0, await dbContext.Set<CognitiveMemoryReviewItemRecord>().CountAsync());
+    }
+
+    [Fact]
+    public async Task CuratorCapture_CorrectionTargetsIncludedRecallMemoryAndSupersedesIt()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var affectedMemoryId = await SeedMemoryRecordAsync(fixture, projectId, CognitiveMemoryAccessLevel.Project);
+        var recallTraceId = await SeedRecallTraceWithIncludedMemoryAsync(fixture, projectId, affectedMemoryId);
+        var service = CreateCuratorService(fixture);
+        var session = await service.StartAsync(new CognitiveMemoryCuratorSessionStartRequest(
+            projectId,
+            "Curator correction chat",
+            Policy(projectId),
+            CognitiveMemoryCuratorRuntimeMode.DirectLlm));
+
+        var result = await service.RecordTurnAsync(new CognitiveMemoryCuratorTurnCaptureRequest(
+            session.Id,
+            "That is not correct. Production deploys from the signed release branch, not from a local Docker context.",
+            "Production deploys from a local Docker context.",
+            CognitiveMemoryCuratorRuntimeMode.DirectLlm,
+            RecallTraceId: recallTraceId,
+            ExplicitCaptureKind: CognitiveMemoryCuratorCaptureKind.Correction));
+
+        await using var dbContext = fixture.Factory.CreateDbContext();
+        var capture = Assert.Single(result.CapturedImprovements);
+        var persistedCapture = await dbContext.Set<CognitiveMemoryCuratorCapturedImprovementRecord>().SingleAsync();
+        var mutation = await dbContext.Set<CognitiveMemoryMutationCommandRecord>().SingleAsync();
+        var candidate = await dbContext.Set<CognitiveMemoryConsolidationCandidateRecord>().SingleAsync();
+        var relation = await dbContext.Set<CognitiveMemoryRelationRecord>().SingleAsync();
+        var affectedMemory = await dbContext.Set<CognitiveMemoryRecord>().SingleAsync(record => record.Id == affectedMemoryId);
+        var appliedMemory = await dbContext.Set<CognitiveMemoryRecord>().SingleAsync(record => record.Id == capture.AppliedMemoryRecordId);
+        var capturedAffectedIds = DeserializeGuidList(persistedCapture.AffectedMemoryRecordIdsJson);
+        var mutationAffectedIds = DeserializeGuidList(mutation.AffectedMemoryRecordIdsJson);
+
+        Assert.Equal(CognitiveMemoryCuratorCaptureStatus.Applied, persistedCapture.Status);
+        Assert.Equal(CognitiveMemoryCuratorCaptureKind.Correction, persistedCapture.CaptureKind);
+        Assert.Equal(recallTraceId, persistedCapture.RecallTraceId);
+        Assert.Contains(affectedMemoryId, capturedAffectedIds);
+        Assert.Contains(affectedMemoryId, mutationAffectedIds);
+        Assert.Contains(appliedMemory.Id, mutationAffectedIds);
+        Assert.Equal(CognitiveMemoryMutationCommandKind.SupersedeClaim, mutation.CommandKind);
+        Assert.Equal(CognitiveMemoryMutationCommandStatus.Accepted, mutation.Status);
+        Assert.False(mutation.RequiresHumanReview);
+        Assert.Equal(CognitiveMemoryConsolidationCandidateKind.Contradiction, candidate.CandidateKind);
+        Assert.Equal(appliedMemory.Id, candidate.MemoryRecordId);
+        Assert.Equal(CognitiveMemoryValidationState.Superseded, affectedMemory.ValidationState);
+        Assert.Equal(CognitiveMemoryStabilityState.Stale, affectedMemory.StabilityState);
+        Assert.Equal(appliedMemory.Id, relation.SourceMemoryRecordId);
+        Assert.Equal(affectedMemoryId, relation.TargetMemoryRecordId);
+        Assert.Equal(CognitiveMemoryRelationKind.Supersedes, relation.RelationKind);
+        Assert.Contains("signed release branch", appliedMemory.CanonicalText, StringComparison.Ordinal);
+        Assert.Equal(0, await dbContext.Set<CognitiveMemoryReviewItemRecord>().CountAsync());
+    }
+
+    [Fact]
+    public async Task CuratorSend_DirectLlmUsesConfiguredProviderAndSharedCapturePath()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var providerId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        var recall = new FakeRecallOrchestrator(projectId);
+        var workspace = new FakeAgentFrameworkWorkspaceService
+        {
+            DirectResponseText = "Direct curator response."
+        };
+        var service = CreateCuratorService(
+            fixture,
+            recall,
+            CreateSettingsService(fixture, defaultProviderProfileId: providerId),
+            workspace);
+        var session = await service.StartAsync(new CognitiveMemoryCuratorSessionStartRequest(
+            projectId,
+            "Direct curator chat",
+            Policy(projectId),
+            CognitiveMemoryCuratorRuntimeMode.DirectLlm));
+
+        var result = await service.SendAsync(new CognitiveMemoryCuratorSendRequest(
+            session.Id,
+            "Remember that production releases require signed artifacts.",
+            ExplicitCaptureKind: CognitiveMemoryCuratorCaptureKind.NewKnowledge));
+
+        await using var dbContext = fixture.Factory.CreateDbContext();
+        Assert.Equal("Direct curator response.", result.ResponseText);
+        Assert.Equal(CognitiveMemoryCuratorRuntimeMode.DirectLlm, result.RuntimeMode);
+        Assert.Equal(providerId, result.ProviderProfileId);
+        Assert.Equal(CognitiveMemoryModelExecutionProfileDefaults.OpenAiDefaultModelId, result.ModelId?.Value);
+        Assert.Single(recall.Requests);
+        var directRequest = Assert.Single(workspace.DirectRequests);
+        Assert.Equal(providerId, directRequest.ProviderId);
+        Assert.Contains("Memory context:", directRequest.Request.SystemPrompt, StringComparison.Ordinal);
+        Assert.Equal("Remember that production releases require signed artifacts.", directRequest.Request.Prompt);
+        Assert.Single(result.CapturedImprovements);
+        Assert.Single(await dbContext.Set<CognitiveMemoryCuratorTurnRecord>().ToListAsync());
+        Assert.Single(await dbContext.Set<CognitiveMemoryConsolidationCandidateRecord>().ToListAsync());
+        Assert.Equal(0, await dbContext.Set<CognitiveMemoryReviewItemRecord>().CountAsync());
+    }
+
+    [Fact]
+    public async Task CuratorSend_ConversationDepthControlsRecallBudgetPromptAndCaptureMetadata()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var providerId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        var recall = new FakeRecallOrchestrator(projectId);
+        var workspace = new FakeAgentFrameworkWorkspaceService
+        {
+            DirectResponseText = "Depth-aware curator response."
+        };
+        var service = CreateCuratorService(
+            fixture,
+            recall,
+            CreateSettingsService(fixture, defaultProviderProfileId: providerId),
+            workspace);
+        var shortSession = await service.StartAsync(new CognitiveMemoryCuratorSessionStartRequest(
+            projectId,
+            "Short curator chat",
+            Policy(projectId),
+            CognitiveMemoryCuratorRuntimeMode.DirectLlm,
+            CognitiveMemoryCuratorConversationDepth.Short));
+        var longSession = await service.StartAsync(new CognitiveMemoryCuratorSessionStartRequest(
+            projectId,
+            "Long curator chat",
+            Policy(projectId),
+            CognitiveMemoryCuratorRuntimeMode.DirectLlm,
+            CognitiveMemoryCuratorConversationDepth.Long));
+
+        var shortResult = await service.SendAsync(new CognitiveMemoryCuratorSendRequest(
+            shortSession.Id,
+            "Remember that the compact review asks only for release blockers.",
+            ExplicitCaptureKind: CognitiveMemoryCuratorCaptureKind.NewKnowledge));
+        var longResult = await service.SendAsync(new CognitiveMemoryCuratorSendRequest(
+            longSession.Id,
+            "Remember that the long review should aggregate adjacent release evidence and alternative hypotheses.",
+            ExplicitCaptureKind: CognitiveMemoryCuratorCaptureKind.NewKnowledge));
+
+        await using var dbContext = fixture.Factory.CreateDbContext();
+        var shortRecall = recall.Requests[0];
+        var longRecall = recall.Requests[1];
+        var captures = await dbContext.Set<CognitiveMemoryCuratorCapturedImprovementRecord>().ToListAsync();
+        var shortCapture = Assert.Single(captures, item => item.Summary.Contains("compact review", StringComparison.Ordinal));
+        var longCapture = Assert.Single(captures, item => item.Summary.Contains("long review", StringComparison.Ordinal));
+
+        Assert.Equal(CognitiveMemoryCuratorConversationDepth.Short, shortResult.Turn.ConversationDepth);
+        Assert.Equal(CognitiveMemoryCuratorConversationDepth.Long, longResult.Turn.ConversationDepth);
+        Assert.True(shortRecall.Budget.ContextCharacterBudget < longRecall.Budget.ContextCharacterBudget);
+        Assert.True(shortRecall.Budget.FocusLimit < longRecall.Budget.FocusLimit);
+        Assert.Equal("Short", shortRecall.Metadata?["curatorConversationDepth"]);
+        Assert.Equal("Long", longRecall.Metadata?["curatorConversationDepth"]);
+        Assert.Contains("Keep the response short", workspace.DirectRequests[0].Request.SystemPrompt, StringComparison.Ordinal);
+        Assert.Contains("Use a detailed response", workspace.DirectRequests[1].Request.SystemPrompt, StringComparison.Ordinal);
+        Assert.Equal(CognitiveMemoryCuratorConversationDepth.Short, shortCapture.ConversationDepth);
+        Assert.Equal(CognitiveMemoryCuratorConversationDepth.Long, longCapture.ConversationDepth);
+    }
+
+    [Fact]
+    public async Task CuratorSend_AgentModeUsesConfiguredAgentWithAutoApprovalAndSharedCapturePath()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var agentId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        var recall = new FakeRecallOrchestrator(projectId);
+        var workspace = new FakeAgentFrameworkWorkspaceService
+        {
+            AgentResponseText = "Agent curator response."
+        };
+        var service = CreateCuratorService(
+            fixture,
+            recall,
+            CreateSettingsService(fixture, defaultAgentId: agentId),
+            workspace);
+        var session = await service.StartAsync(new CognitiveMemoryCuratorSessionStartRequest(
+            projectId,
+            "Agent curator chat",
+            Policy(projectId),
+            CognitiveMemoryCuratorRuntimeMode.Agent));
+
+        var result = await service.SendAsync(new CognitiveMemoryCuratorSendRequest(
+            session.Id,
+            "Remember that support escalations need the on-call runbook.",
+            ExplicitCaptureKind: CognitiveMemoryCuratorCaptureKind.NewKnowledge));
+
+        await using var dbContext = fixture.Factory.CreateDbContext();
+        var persistedSession = await dbContext.Set<CognitiveMemoryCuratorSessionRecord>().SingleAsync();
+        var executionRequest = Assert.Single(workspace.ExecutionRequests);
+        Assert.Equal("Agent curator response.", result.ResponseText);
+        Assert.Equal(CognitiveMemoryCuratorRuntimeMode.Agent, result.RuntimeMode);
+        Assert.Equal(agentId, result.AgentId);
+        Assert.Equal(agentId, executionRequest.AgentId);
+        Assert.True(executionRequest.AutoApprovePendingToolCalls);
+        Assert.NotNull(executionRequest.ChatSessionId);
+        Assert.Equal(executionRequest.ChatSessionId, persistedSession.AgentChatSessionId);
+        Assert.Contains("Memory context:", executionRequest.Prompt, StringComparison.Ordinal);
+        Assert.Single(result.CapturedImprovements);
+        Assert.Single(await dbContext.Set<CognitiveMemoryCuratorTurnRecord>().ToListAsync());
+        Assert.Single(await dbContext.Set<CognitiveMemoryConsolidationCandidateRecord>().ToListAsync());
+        Assert.Equal(0, await dbContext.Set<CognitiveMemoryReviewItemRecord>().CountAsync());
+    }
+
+    [Fact]
+    public async Task CuratorSend_MissingDirectProviderAndAgentConfigurationFailExplicitly()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var directService = CreateCuratorService(
+            fixture,
+            new FakeRecallOrchestrator(projectId),
+            CreateSettingsService(fixture),
+            new FakeAgentFrameworkWorkspaceService());
+        var directSession = await directService.StartAsync(new CognitiveMemoryCuratorSessionStartRequest(
+            projectId,
+            "Direct curator chat",
+            Policy(projectId),
+            CognitiveMemoryCuratorRuntimeMode.DirectLlm));
+        var directError = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await directService.SendAsync(new CognitiveMemoryCuratorSendRequest(directSession.Id, "What do you know?")));
+
+        var agentService = CreateCuratorService(
+            fixture,
+            new FakeRecallOrchestrator(projectId),
+            CreateSettingsService(fixture),
+            new FakeAgentFrameworkWorkspaceService());
+        var agentSession = await agentService.StartAsync(new CognitiveMemoryCuratorSessionStartRequest(
+            projectId,
+            "Agent curator chat",
+            Policy(projectId),
+            CognitiveMemoryCuratorRuntimeMode.Agent));
+        var agentError = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await agentService.SendAsync(new CognitiveMemoryCuratorSendRequest(agentSession.Id, "What do you know?")));
+
+        Assert.Contains("provider profile", directError.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("configured agent", agentError.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -633,6 +914,41 @@ public sealed class CognitiveMemoryAdvancedServicesTests
         return trace.Id;
     }
 
+    private static async Task<Guid> SeedRecallTraceWithIncludedMemoryAsync(TestFixture fixture, Guid projectId, Guid memoryRecordId)
+    {
+        await using var dbContext = fixture.Factory.CreateDbContext();
+        var trace = new CognitiveMemoryRecallTraceRecord
+        {
+            ProjectId = projectId,
+            RecallMode = CognitiveMemoryRecallMode.FocusedTaskContext,
+            RequestedByActorId = "agent:test",
+            PolicyProfileId = "policy:test",
+            RequestHash = CognitiveMemoryHash.FromUtf8(Guid.NewGuid().ToString("D")).Value,
+            AlgorithmVersion = "unit-test",
+            Outcome = CognitiveMemoryRunStatus.Succeeded,
+            StartedAtUtc = fixture.Clock.GetUtcNow(),
+            CompletedAtUtc = fixture.Clock.GetUtcNow(),
+            IncludedRecordCount = 1,
+            ConcurrencyToken = Guid.NewGuid()
+        };
+        var sourceRef = new CognitiveMemoryRecallSourceRefRecord
+        {
+            RecallTraceId = trace.Id,
+            ProjectId = projectId,
+            MemoryRecordId = memoryRecordId,
+            SourceSystem = "MemoryRecord",
+            Locator = $"memory:{memoryRecordId:D}",
+            Summary = "Seeded memory included in answer context.",
+            AccessLevel = CognitiveMemoryAccessLevel.Project,
+            RedactionState = CognitiveMemoryRedactionState.Safe,
+            IncludedInContext = true,
+            CreatedAtUtc = fixture.Clock.GetUtcNow()
+        };
+        dbContext.AddRange(trace, sourceRef);
+        await dbContext.SaveChangesAsync();
+        return trace.Id;
+    }
+
     private static async Task<CognitiveMemoryAnswerPostureDecisionRecord> SeedPostureAsync(
         TestFixture fixture,
         Guid projectId,
@@ -763,6 +1079,34 @@ public sealed class CognitiveMemoryAdvancedServicesTests
             riskLevel,
             allowRestrictedContent);
 
+    private static ICognitiveMemoryCuratorConversationService CreateCuratorService(
+        TestFixture fixture,
+        ICognitiveMemoryRecallOrchestrator? recallOrchestrator = null,
+        ICognitiveMemoryAutomationSettingsService? settingsService = null,
+        IAgentFrameworkWorkspaceService? workspaceService = null)
+        => new CognitiveMemoryCuratorConversationService(
+            fixture.Factory,
+            recallOrchestrator ?? new FakeRecallOrchestrator(Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")),
+            settingsService ?? CreateSettingsService(fixture),
+            workspaceService ?? new FakeAgentFrameworkWorkspaceService(),
+            new CognitiveMemoryConsolidationCandidateApplicator(new CognitiveMemoryRecordValidator()),
+            fixture.Clock);
+
+    private static ICognitiveMemoryAutomationSettingsService CreateSettingsService(
+        TestFixture fixture,
+        Guid? defaultProviderProfileId = null,
+        Guid? defaultAgentId = null)
+        => new FakeAutomationSettingsService(CognitiveMemoryAutomationSettings.Defaults(fixture.Clock.GetUtcNow()) with
+        {
+            DefaultProviderProfileId = defaultProviderProfileId,
+            DefaultAgentId = defaultAgentId
+        });
+
+    private static IReadOnlyList<Guid> DeserializeGuidList(string json)
+        => JsonSerializer.Deserialize(
+            json,
+            CognitiveMemoryJsonSerializerContext.Default.GuidArray) ?? [];
+
     private static TestFixture CreateFixture()
     {
         AppDbContextModelRegistry.ConfigureAssemblies([typeof(CognitiveMemoryModuleAssemblyMarker).Assembly]);
@@ -782,6 +1126,230 @@ public sealed class CognitiveMemoryAdvancedServicesTests
     private sealed class FixedClock : IClock
     {
         public DateTimeOffset GetUtcNow() => DateTimeOffset.UnixEpoch;
+    }
+
+    private sealed class FakeAutomationSettingsService(CognitiveMemoryAutomationSettings settings) : ICognitiveMemoryAutomationSettingsService
+    {
+        public ValueTask<CognitiveMemoryAutomationSettings> GetAsync(CancellationToken cancellationToken = default)
+            => ValueTask.FromResult(settings);
+
+        public ValueTask<CognitiveMemoryAutomationSettings> SaveAsync(
+            CognitiveMemoryAutomationSettingsUpdate update,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+    }
+
+    private sealed class FakeAgentFrameworkWorkspaceService : IAgentFrameworkWorkspaceService
+    {
+        public event EventHandler<ExecutionLogEntry>? ExecutionUpdated
+        {
+            add { }
+            remove { }
+        }
+
+        public string DirectResponseText { get; init; } = "Direct response.";
+
+        public string AgentResponseText { get; init; } = "Agent response.";
+
+        public List<(Guid ProviderId, ProviderTestChatRequest Request)> DirectRequests { get; } = [];
+
+        public List<ExecutionRunRequest> ExecutionRequests { get; } = [];
+
+        public Task<ProviderTestChatResult> RunProviderTestChatAsync(
+            Guid providerId,
+            ProviderTestChatRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            DirectRequests.Add((providerId, request));
+            return Task.FromResult(new ProviderTestChatResult(
+                request.Model,
+                DirectResponseText,
+                InputTokens: 12,
+                OutputTokens: 6));
+        }
+
+        public Task<ChatSessionRecord> GetOrCreateChatSessionAsync(
+            Guid agentId,
+            Guid? chatSessionId = null,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new ChatSessionRecord(
+                chatSessionId ?? Guid.NewGuid(),
+                agentId,
+                "Curator test chat",
+                DateTimeOffset.UnixEpoch,
+                DateTimeOffset.UnixEpoch,
+                Messages: []));
+        }
+
+        public Task<ExecutionRunResult> ExecuteRunAsync(
+            ExecutionRunRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            ExecutionRequests.Add(request);
+            var executionRunId = Guid.NewGuid();
+            var metric = new AgentRunMetric(
+                Guid.NewGuid(),
+                request.AgentId,
+                request.ChatSessionId,
+                DateTimeOffset.UnixEpoch,
+                RunOutcome.Succeeded,
+                "fake-provider",
+                CognitiveMemoryModelExecutionProfileDefaults.OpenAiDefaultModelId,
+                DurationMs: 10,
+                InputTokens: 20,
+                OutputTokens: 8,
+                ToolCalls: 0)
+            {
+                ExecutionRunId = executionRunId
+            };
+            return Task.FromResult(new ExecutionRunResult(
+                executionRunId,
+                request.ChatSessionId,
+                AgentResponseText,
+                new ChatMessageRecord(
+                    Guid.NewGuid(),
+                    ChatMessageRole.Assistant,
+                    AgentResponseText,
+                    DateTimeOffset.UnixEpoch,
+                    TokenEstimate: 8),
+                metric));
+        }
+
+        public Task<SandboxDashboardSnapshot> GetDashboardAsync(CancellationToken cancellationToken = default)
+            => NotSupported<SandboxDashboardSnapshot>();
+
+        public Task<IReadOnlyList<AgentDefinition>> ListAgentsAsync(bool includeTemplates = true, CancellationToken cancellationToken = default)
+            => NotSupported<IReadOnlyList<AgentDefinition>>();
+
+        public Task<AgentEditorModel> GetAgentEditorAsync(Guid? agentId = null, CancellationToken cancellationToken = default)
+            => NotSupported<AgentEditorModel>();
+
+        public Task<Guid> SaveAgentAsync(AgentEditorModel model, CancellationToken cancellationToken = default)
+            => NotSupported<Guid>();
+
+        public Task DeleteAgentAsync(Guid agentId, CancellationToken cancellationToken = default)
+            => NotSupported();
+
+        public Task<IReadOnlyList<AgentTeamDefinition>> ListAgentTeamsAsync(CancellationToken cancellationToken = default)
+            => NotSupported<IReadOnlyList<AgentTeamDefinition>>();
+
+        public Task<AgentTeamEditorModel> GetAgentTeamEditorAsync(Guid? teamId = null, CancellationToken cancellationToken = default)
+            => NotSupported<AgentTeamEditorModel>();
+
+        public Task<Guid> SaveAgentTeamAsync(AgentTeamEditorModel model, CancellationToken cancellationToken = default)
+            => NotSupported<Guid>();
+
+        public Task<AgentTeamDefinition> UpdateAgentTeamMembersAsync(Guid teamId, IReadOnlyList<Guid> agentIds, CancellationToken cancellationToken = default)
+            => NotSupported<AgentTeamDefinition>();
+
+        public Task DeleteAgentTeamAsync(Guid teamId, CancellationToken cancellationToken = default)
+            => NotSupported();
+
+        public Task<Guid> CloneAgentAsync(Guid agentId, string cloneName, CancellationToken cancellationToken = default)
+            => NotSupported<Guid>();
+
+        public Task<Guid> ConvertToTemplateAsync(Guid agentId, string templateKey, CancellationToken cancellationToken = default)
+            => NotSupported<Guid>();
+
+        public Task<AgentExportResult> ExportAgentAsync(Guid agentId, CancellationToken cancellationToken = default)
+            => NotSupported<AgentExportResult>();
+
+        public Task<Guid> ImportAgentAsync(string packagePath, CancellationToken cancellationToken = default)
+            => NotSupported<Guid>();
+
+        public Task<IReadOnlyList<ProviderProfile>> ListProvidersAsync(CancellationToken cancellationToken = default)
+            => NotSupported<IReadOnlyList<ProviderProfile>>();
+
+        public Task<ProviderProfileEditorModel> GetProviderEditorAsync(Guid? providerId = null, CancellationToken cancellationToken = default)
+            => NotSupported<ProviderProfileEditorModel>();
+
+        public Task<Guid> SaveProviderAsync(ProviderProfileEditorModel model, CancellationToken cancellationToken = default)
+            => NotSupported<Guid>();
+
+        public Task DeleteProviderAsync(Guid providerId, CancellationToken cancellationToken = default)
+            => NotSupported();
+
+        public Task<ProviderHealthResult> TestProviderAsync(Guid providerId, CancellationToken cancellationToken = default)
+            => NotSupported<ProviderHealthResult>();
+
+        public Task<OllamaModelfileResult> CreateOrUpdateOllamaModelAsync(Guid providerId, OllamaModelfileRequest request, CancellationToken cancellationToken = default)
+            => NotSupported<OllamaModelfileResult>();
+
+        public Task<IReadOnlyList<CapabilityCatalogItem>> ListCapabilitiesAsync(CancellationToken cancellationToken = default)
+            => NotSupported<IReadOnlyList<CapabilityCatalogItem>>();
+
+        public Task<CapabilityEditorModel> GetCapabilityEditorAsync(Guid? capabilityId = null, CancellationToken cancellationToken = default)
+            => NotSupported<CapabilityEditorModel>();
+
+        public Task<Guid> SaveCapabilityAsync(CapabilityEditorModel model, CancellationToken cancellationToken = default)
+            => NotSupported<Guid>();
+
+        public Task DeleteCapabilityAsync(Guid capabilityId, CancellationToken cancellationToken = default)
+            => NotSupported();
+
+        public Task VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task<IReadOnlyList<ChatSessionRecord>> ListChatSessionsAsync(Guid agentId, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<ChatSessionRecord>>([]);
+
+        public Task<ChatPageBootstrapSnapshot> GetChatPageBootstrapAsync(bool includeTemplates = false, CancellationToken cancellationToken = default)
+            => NotSupported<ChatPageBootstrapSnapshot>();
+
+        public Task<ChatAgentWorkspaceSnapshot> GetChatAgentWorkspaceAsync(Guid agentId, Guid? preferredSessionId = null, CancellationToken cancellationToken = default)
+            => NotSupported<ChatAgentWorkspaceSnapshot>();
+
+        public Task<ChatSessionRecord> RenameChatSessionAsync(Guid agentId, Guid chatSessionId, string title, CancellationToken cancellationToken = default)
+            => NotSupported<ChatSessionRecord>();
+
+        public Task<ExecutionRunResult> ContinueExecutionRunAsync(Guid executionRunId, bool approved, bool autoApprovePendingToolCalls = false, CancellationToken cancellationToken = default)
+            => NotSupported<ExecutionRunResult>();
+
+        public Task<AgentChatRunResult> SendMessageAsync(Guid agentId, Guid? chatSessionId, string prompt, CancellationToken cancellationToken = default)
+            => NotSupported<AgentChatRunResult>();
+
+        public Task<AgentChatRunResult> RespondToPendingApprovalsAsync(Guid agentId, Guid chatSessionId, bool approved, bool autoApprovePendingToolCalls = false, CancellationToken cancellationToken = default)
+            => NotSupported<AgentChatRunResult>();
+
+        public Task<IReadOnlyList<ExecutionLogEntry>> ListExecutionLogAsync(Guid agentId, Guid? chatSessionId = null, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<ExecutionLogEntry>>([]);
+
+        public Task<ChatRuntimeSnapshot> GetChatRuntimeSnapshotAsync(Guid agentId, Guid? chatSessionId = null, CancellationToken cancellationToken = default)
+            => NotSupported<ChatRuntimeSnapshot>();
+
+        public Task<IReadOnlyList<AgentRunMetric>> ListMetricsAsync(Guid agentId, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<AgentRunMetric>>([]);
+
+        public Task<IReadOnlyList<AgentMemoryRecord>> ListMemoryAsync(Guid agentId, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<AgentMemoryRecord>>([]);
+
+        public Task<Guid> SaveMemoryAsync(MemoryEditorModel model, CancellationToken cancellationToken = default)
+            => NotSupported<Guid>();
+
+        public Task DeleteMemoryAsync(Guid memoryId, CancellationToken cancellationToken = default)
+            => NotSupported();
+
+        public Task<IReadOnlyList<ExecutionRunRecord>> ListExecutionRunsAsync(ExecutionRunQuery query, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<ExecutionRunRecord>>([]);
+
+        public Task<ExecutionRunDetail> GetExecutionRunDetailAsync(Guid executionRunId, CancellationToken cancellationToken = default)
+            => NotSupported<ExecutionRunDetail>();
+
+        public Task<IReadOnlyList<ExecutionArtifactRecord>> ListExecutionArtifactsAsync(Guid executionRunId, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<ExecutionArtifactRecord>>([]);
+
+        public Task<IReadOnlyList<ExecutionWorkflowCheckpointRecord>> ListExecutionWorkflowCheckpointsAsync(Guid executionRunId, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<ExecutionWorkflowCheckpointRecord>>([]);
+
+        public Task<IReadOnlyList<ToolExecutionReceiptRecord>> ListToolExecutionReceiptsAsync(Guid executionRunId, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<ToolExecutionReceiptRecord>>([]);
+
+        private static Task<T> NotSupported<T>()
+            => Task.FromException<T>(new NotSupportedException());
+
+        private static Task NotSupported()
+            => Task.FromException(new NotSupportedException());
     }
 
     private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>

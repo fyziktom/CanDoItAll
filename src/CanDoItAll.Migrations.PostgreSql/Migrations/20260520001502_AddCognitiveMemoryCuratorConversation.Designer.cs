@@ -3,6 +3,7 @@ using System;
 using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CanDoItAll.Migrations.PostgreSql.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260520001502_AddCognitiveMemoryCuratorConversation")]
+    partial class AddCognitiveMemoryCuratorConversation
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2307,11 +2310,6 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<Guid?>("ContextPackId")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("ConversationDepth")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(1);
-
                     b.Property<string>("CorrectionText")
                         .IsRequired()
                         .HasMaxLength(8000)
@@ -2402,11 +2400,6 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("uuid");
 
-                    b.Property<int>("ConversationDepth")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(1);
-
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -2453,8 +2446,6 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.HasIndex("ProjectId", "Status", "UpdatedAtUtc");
 
-                    b.HasIndex("ProjectId", "RuntimeMode", "ConversationDepth", "Status");
-
                     b.ToTable("CognitiveMemory_CuratorSessions", (string)null);
                 });
 
@@ -2476,11 +2467,6 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.Property<Guid?>("ContextPackId")
                         .HasColumnType("uuid");
-
-                    b.Property<int>("ConversationDepth")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(1);
 
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
