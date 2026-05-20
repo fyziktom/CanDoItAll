@@ -55,7 +55,10 @@ Direct package references:
 
 The web host should orchestrate startup, endpoint mapping, and Blazor rendering. Keep non-trivial product behavior in modules or application services.
 
+Development and Visual Studio `http`/`https` launch profiles are PostgreSQL-first. They target `127.0.0.1:5432/candoitall_development` with `candoitall/candoitall` credentials and keep development workspace/control-plane files under `%LOCALAPPDATA%\CanDoItAll`. Use `tools/dev/Ensure-DevelopmentPostgres.ps1` to prepare native PostgreSQL, or `docker compose up -d postgres qdrant` for the repo-managed containers.
+
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root
 - Current architecture: `docs/architecture-beta.md`
+- Development runtime: `docs/development-runtime.md`

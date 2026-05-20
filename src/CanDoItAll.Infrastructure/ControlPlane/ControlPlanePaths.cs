@@ -58,12 +58,13 @@ public static class ControlPlanePathDefaults
 
     public static string ResolveConfiguredPath(string contentRootPath, string configuredPath)
     {
-        if (Path.IsPathRooted(configuredPath))
+        var expandedPath = Environment.ExpandEnvironmentVariables(configuredPath);
+        if (Path.IsPathRooted(expandedPath))
         {
-            return Path.GetFullPath(configuredPath);
+            return Path.GetFullPath(expandedPath);
         }
 
-        return Path.GetFullPath(Path.Combine(contentRootPath, configuredPath));
+        return Path.GetFullPath(Path.Combine(contentRootPath, expandedPath));
     }
 }
 

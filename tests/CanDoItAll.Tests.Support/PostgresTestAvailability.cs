@@ -13,8 +13,8 @@ public sealed record PostgresAvailabilityResult(
 public static class PostgresTestAvailability
 {
     private const string ConnectionOverrideVariable = "CANDOITALL_TESTS_POSTGRES_CONNECTION";
-    private const string LocalDefaultConnectionString = "Host=127.0.0.1;Port=5432;Database=postgres;Username=candoitall;Password=candoitall;Include Error Detail=true;Timeout=3;Command Timeout=5";
-    private const string DockerComposeConnectionString = "Host=127.0.0.1;Port=5432;Database=candoitall;Username=candoitall;Password=candoitall;Include Error Detail=true;Timeout=3;Command Timeout=5";
+    private const string LocalDefaultConnectionString = "Host=127.0.0.1;Port=5432;Database=candoitall_development;Username=candoitall;Password=candoitall;Include Error Detail=true;Timeout=3;Command Timeout=5";
+    private const string DockerComposeConnectionString = "Host=127.0.0.1;Port=5432;Database=candoitall_development;Username=candoitall;Password=candoitall;Include Error Detail=true;Timeout=3;Command Timeout=5";
 
     public static async Task<PostgresAvailabilityResult> EnsureAvailableAsync(
         string repositoryRoot,

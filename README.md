@@ -51,6 +51,8 @@ flowchart LR
 - Windows PowerShell for local install scripts and Playwright browser install
 - Node.js and npm when rebuilding the shared Tailwind output
 - `git` when installing or refreshing the portable Codex skill pack
+- PostgreSQL on `127.0.0.1:5432` for the default Development/Visual Studio profile
+- Qdrant on `localhost:6334` when validating Cognitive Memory vector projection or recall
 
 ## Run The Web App
 
@@ -63,10 +65,15 @@ dotnet run --project src/CanDoItAll.Web
 Runtime notes:
 
 - The app uses Blazor Interactive Server rendering.
+- The default Development and Visual Studio `http`/`https` profiles use PostgreSQL database `candoitall_development` with username/password `candoitall`/`candoitall`.
+- Native PostgreSQL machines can be prepared with `powershell -ExecutionPolicy Bypass -File .\tools\dev\Ensure-DevelopmentPostgres.ps1`; Docker-based clean machines can use `docker compose up -d postgres qdrant`.
+- Development control-plane and workspace files are rooted under `%LOCALAPPDATA%\CanDoItAll`, not repo `.artifacts`, so a clean clone can start without carrying local artifact settings.
 - Development readiness is exposed at `/_dev/runtime`.
 - Development database selection is exposed at `/_dev/database/selection`.
 - If no explicit `Database:Provider` and `Database:ConnectionString` override is supplied, the app resolves its active database through the control plane rooted at `%LOCALAPPDATA%\CanDoItAll\control-plane` by default.
-- Managed SQLite profiles are provisioned under the active control-plane profile storage root.
+- SQLite profiles still exist for now, but they are no longer the default development path. They are likely to be removed after more analysis because governed process runs are too slow on SQLite for this runtime.
+
+See [Development runtime](docs/development-runtime.md) for PostgreSQL/Qdrant setup details and troubleshooting.
 
 ## Run The Development Manager
 

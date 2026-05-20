@@ -9,9 +9,9 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "Database__Provider": "PostgreSql",
-        "Database__ConnectionString": "Host=127.0.0.1;Port=5432;Database=candoitall_cognitive_memory_multicycle_20260517_03;Username=candoitall;Password=candoitall;Include Error Detail=true",
-        "Storage__WorkspaceRoot": ".artifacts/cognitive-memory-multicycle-postgres/workspace",
-        "ControlPlane__RootPath": ".artifacts/cognitive-memory-multicycle-postgres/control-plane",
+        "Database__ConnectionString": "Host=127.0.0.1;Port=5432;Database=candoitall_development;Username=candoitall;Password=candoitall;Include Error Detail=true",
+        "Storage__WorkspaceRoot": "%LOCALAPPDATA%\\CanDoItAll\\workspace",
+        "ControlPlane__RootPath": "%LOCALAPPDATA%\\CanDoItAll\\control-plane",
         "Processes__Runtime__RequirePostgreSqlForAgentAutomation": "true"
       }
     },
@@ -23,9 +23,9 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "Database__Provider": "PostgreSql",
-        "Database__ConnectionString": "Host=127.0.0.1;Port=5432;Database=candoitall_cognitive_memory_multicycle_20260517_03;Username=candoitall;Password=candoitall;Include Error Detail=true",
-        "Storage__WorkspaceRoot": ".artifacts/cognitive-memory-multicycle-postgres/workspace",
-        "ControlPlane__RootPath": ".artifacts/cognitive-memory-multicycle-postgres/control-plane",
+        "Database__ConnectionString": "Host=127.0.0.1;Port=5432;Database=candoitall_development;Username=candoitall;Password=candoitall;Include Error Detail=true",
+        "Storage__WorkspaceRoot": "%LOCALAPPDATA%\\CanDoItAll\\workspace",
+        "ControlPlane__RootPath": "%LOCALAPPDATA%\\CanDoItAll\\control-plane",
         "Processes__Runtime__RequirePostgreSqlForAgentAutomation": "true"
       }
     },

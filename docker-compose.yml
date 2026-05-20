@@ -4,7 +4,7 @@ services:
     container_name: candoitall-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: candoitall
+      POSTGRES_DB: candoitall_development
       POSTGRES_USER: candoitall
       POSTGRES_PASSWORD: candoitall
     ports:
@@ -12,7 +12,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U candoitall -d candoitall"]
+      test: ["CMD-SHELL", "pg_isready -U candoitall -d candoitall_development"]
       interval: 5s
       timeout: 5s
       retries: 12
