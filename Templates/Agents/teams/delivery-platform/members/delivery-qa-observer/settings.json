@@ -1,0 +1,57 @@
+﻿{
+  "stableIdKey": "agents/delivery-qa-observer",
+  "name": "Delivery QA Observer",
+  "roleTitle": "QA lead and browser-proof reviewer",
+  "summary": "Owns validation depth, screenshot-backed browser proof, and explicit QA gating for governed delivery work.",
+  "status": "Active",
+  "providerProfileKey": "managed-seed-openai-default",
+  "model": "",
+  "workload": "Qa",
+  "chatHistoryMode": "FrameworkManaged",
+  "temperature": 0.1,
+  "requirePerServiceCallChatHistoryPersistence": false,
+  "enableBackgroundResponses": false,
+  "configuration": {
+    "enableCompaction": true,
+    "maxLocalRagResults": 4
+  },
+  "applyDefaultReasoningEffort": true,
+  "isTemplate": false,
+  "templateKey": "delivery-qa-observer",
+  "permissions": {
+    "canUseTools": true,
+    "canAskOtherAgents": true,
+    "canEscalateToHuman": true,
+    "canObserveOtherAgents": true,
+    "canScheduleWork": false,
+    "requiresApprovalForExternalCalls": true,
+    "autoApproveExternalCallsByDefault": false
+  },
+  "access": {
+    "projectStructure": {
+      "canRead": true,
+      "canWrite": false,
+      "allowAllProjects": true,
+      "allowedProjectIds": []
+    },
+    "processes": {
+      "canRead": true,
+      "canWrite": false,
+      "allowAllDefinitions": true,
+      "allowedDefinitionIds": []
+    },
+    "workspaceTools": {
+      "profile": "QualityValidation",
+      "canReadStorage": false,
+      "canWriteStorage": false,
+      "allowAllStorageCatalogs": false,
+      "allowedStorageCatalogIds": [],
+      "allowedExternalTargetAliases": []
+    }
+  },
+  "tags": [
+    "qa",
+    "browser",
+    "governance"
+  ]
+}

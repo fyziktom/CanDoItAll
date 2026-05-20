@@ -1,0 +1,10 @@
+﻿Command: mcp__candoitall_dotnetwatch__.candoitall_app_start projectPath=C:\repositories\CanDoItAll\src\CanDoItAll.Web\CanDoItAll.Web.csproj waitFor=Healthy logicalAppId=candoitall-web-agent-model-override-proof
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTime: 2026-05-20T21:12:27Z
+ExitCode: 1
+Output:
+Managed app session app_6ee168b2fd404779b67026ac6962cb59 did not satisfy wait condition Healthy within 302448 ms.
+ObservedState: Restarting
+Health: Unhealthy; lastUrl=http://127.0.0.1:5501/_dev/runtime; summary=Health probe did not succeed within timeout; runtimePid=null.
+Watch: state=Building; summary=Building C:\repositories\CanDoItAll\src\CanDoItAll.Web\CanDoItAll.Web.csproj ...; watcherPid=34580; runtimePid=null.
+Stop: mcp__candoitall_dotnetwatch__.candoitall_app_stop force=true stopped session and killed watcher PID 34580.

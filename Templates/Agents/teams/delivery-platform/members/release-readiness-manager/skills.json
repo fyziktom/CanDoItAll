@@ -1,0 +1,17 @@
+{
+  "capabilityKeys": [
+    "playwright-local-mcp",
+    "candoitall-bundle-workflow",
+    "concrete-deliverable-delivery-inline-skill",
+    "candoitall-watch-playwright-loop",
+    "repository-playbook",
+    "workspace-list-files",
+    "workspace-read-file",
+    "workspace-stat-path",
+    "workspace-create-directory",
+    "workspace-write-file",
+    "workspace-append-file",
+    "workspace-pwsh-run-script"
+  ],
+  "notes": "Resolved against the built-in capability catalog during seed materialization. Keep this list role-specific."
+}

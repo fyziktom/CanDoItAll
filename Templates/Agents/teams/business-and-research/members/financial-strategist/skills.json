@@ -1,0 +1,20 @@
+{
+  "capabilityKeys": [
+    "spreadsheet-skill",
+    "concrete-deliverable-delivery-inline-skill",
+    "document-spreadsheet-reconciliation-inline-skill",
+    "workspace-list-files",
+    "workspace-search",
+    "workspace-read-file",
+    "workspace-stat-path",
+    "workspace-create-directory",
+    "workspace-write-file",
+    "workspace-append-file",
+    "workspace-convert-document",
+    "workspace-inspect-spreadsheet",
+    "workspace-source-rag",
+    "research-briefing-context",
+    "provider-native-code-interpreter"
+  ],
+  "notes": "Resolved against the built-in capability catalog during seed materialization. Keep this list role-specific."
+}

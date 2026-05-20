@@ -1,0 +1,66 @@
+﻿{
+  "stableIdKey": "agents/layout-image-generation-agent-template",
+  "name": "Layout Image Generation Agent Template",
+  "roleTitle": "Layout image generator and asset writer",
+  "summary": "Reads stored app screenshots, generates improved layout recommendation images through the preferred image provider, and stores generated images as managed project assets.",
+  "status": "Active",
+  "providerProfileKey": "managed-seed-openai-default",
+  "model": "",
+  "workload": "Qa",
+  "chatHistoryMode": "FrameworkManaged",
+  "temperature": 0.2,
+  "requirePerServiceCallChatHistoryPersistence": false,
+  "enableBackgroundResponses": false,
+  "configuration": {
+    "enableCompaction": true,
+    "maxLocalRagResults": 4,
+    "runtimeUse": "layout-image-generation"
+  },
+  "applyDefaultReasoningEffort": true,
+  "isTemplate": true,
+  "templateKey": "layout-image-generation-agent",
+  "permissions": {
+    "canUseTools": true,
+    "canAskOtherAgents": true,
+    "canEscalateToHuman": true,
+    "canObserveOtherAgents": false,
+    "canScheduleWork": false,
+    "requiresApprovalForExternalCalls": true,
+    "autoApproveExternalCallsByDefault": false
+  },
+  "access": {
+    "projectStructure": {
+      "canRead": true,
+      "canWrite": true,
+      "allowAllProjects": true,
+      "allowedProjectIds": []
+    },
+    "processes": {
+      "canRead": true,
+      "canWrite": true,
+      "allowAllDefinitions": true,
+      "allowedDefinitionIds": []
+    },
+    "workspaceTools": {
+      "profile": "QualityValidation",
+      "canReadStorage": true,
+      "canWriteStorage": true,
+      "allowAllStorageCatalogs": true,
+      "allowedStorageCatalogIds": [],
+      "allowedExternalTargetAliases": []
+    },
+    "imageGeneration": {
+      "canGenerateImages": true,
+      "preferredProviderProfileKey": "openai-image-generation",
+      "defaultModel": "gpt-image-1-mini",
+      "canStoreImagesAsProjectAssets": true
+    }
+  },
+  "tags": [
+    "template",
+    "layout",
+    "image-generation",
+    "asset-storage",
+    "openai"
+  ]
+}

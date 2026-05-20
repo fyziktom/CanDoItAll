@@ -251,6 +251,61 @@ public sealed class AiAgentsPageTests
     }
 
     [Fact]
+    public async Task AgentDetails_runtime_model_override_with_provider_default_text_reopens_checked()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var workspaceFactory = harness.Context.Services.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+        var notificationService = harness.Context.Services.GetRequiredService<NotificationService>();
+        var providerId = await workspaceService.SaveProviderAsync(new AgentProviderProfileEditorModel
+        {
+            Name = "Selector explicit default",
+            Kind = AgentProviderKind.OpenAi,
+            BaseUrl = "https://api.openai.com/v1",
+            ApiKeyEnvironmentVariable = "OPENAI_API_KEY",
+            DefaultModel = "gpt-5-mini",
+            Transport = AgentProviderTransportKind.Responses,
+            SuggestedModels = ["gpt-5-mini", "gpt-5.4"]
+        });
+        var providers = await workspaceService.ListProvidersAsync();
+
+        var cut = harness.Context.RenderComponent<AgentDetailsDialog>(parameters => parameters
+            .Add(component => component.InitialProviders, providers));
+
+        cut.WaitForElement("[data-testid='agents-catalog-name']");
+        cut.Find("[data-testid='agents-catalog-name']").Change("Explicit Default Override Agent");
+        cut.Find("[data-testid='agents-catalog-role']").Change("Runtime role");
+        cut.Find("[data-testid='agents-catalog-summary']").Change("Pins the provider default as an explicit override.");
+        cut.Find("[data-testid='agents-catalog-instructions']").Change("Keep explicit model state after save.");
+        await OpenAgentRuntimeTabAsync(cut);
+        cut.Find("[data-testid='agents-catalog-provider']").Change(providerId.ToString("D"));
+        cut.Find("[data-testid='agents-catalog-model-override']").Change(true);
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal("gpt-5-mini", cut.Find("[data-testid='agents-catalog-model']").GetAttribute("value"));
+        });
+        cut.Find("[data-testid='agents-catalog-save']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(notificationService.Messages, message => message.Summary == "Agent saved");
+        });
+
+        var savedAgent = Assert.Single(
+            await workspaceService.ListAgentsAsync(includeTemplates: false),
+            item => item.Name == "Explicit Default Override Agent");
+        Assert.Equal(providerId, savedAgent.ProviderProfileId);
+        Assert.Equal("gpt-5-mini", savedAgent.Model);
+
+        var reopened = harness.Context.RenderComponent<AgentDetailsDialog>(parameters => parameters
+            .Add(component => component.AgentId, savedAgent.Id)
+            .Add(component => component.InitialProviders, providers));
+        await OpenAgentRuntimeTabAsync(reopened);
+
+        Assert.Equal("gpt-5-mini", reopened.Find("[data-testid='agents-catalog-model']").GetAttribute("value"));
+    }
+
+    [Fact]
     public async Task AgentDetails_runtime_unchecking_model_override_saves_provider_default_and_reopens_unchecked()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();

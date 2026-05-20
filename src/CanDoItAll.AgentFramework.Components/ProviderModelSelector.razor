@@ -121,14 +121,7 @@
         => NormalizeProviderDefaultModel(value, provider?.DefaultModel);
 
     public static string NormalizeProviderDefaultModel(string? value, string? providerDefaultModel)
-    {
-        var normalizedValue = NormalizeModel(value);
-        var normalizedDefault = NormalizeModel(providerDefaultModel);
-        return !string.IsNullOrWhiteSpace(normalizedDefault) &&
-               string.Equals(normalizedValue, normalizedDefault, StringComparison.OrdinalIgnoreCase)
-            ? string.Empty
-            : normalizedValue;
-    }
+        => NormalizeModel(value);
 
     private void RebuildModelChoices()
     {
@@ -182,7 +175,7 @@
     private bool TryResolveKnownChoice(string currentValue, out string choiceValue)
     {
         if (string.IsNullOrWhiteSpace(currentValue) ||
-            IsProviderDefaultModel(currentValue))
+            !UseEmptyValueForProviderDefault && IsProviderDefaultModel(currentValue))
         {
             choiceValue = ProviderDefaultChoiceValue;
             return true;

@@ -1,0 +1,45 @@
+{
+  "key": "delivery-platform",
+  "stableIdKey": "agent-teams/delivery-platform",
+  "name": "Delivery Platform Team",
+  "description": "Default governance, implementation, validation, review, security, release, and staffing agents for governed delivery.",
+  "settings": {
+    "defaultProviderPolicy": "member-settings",
+    "membershipMode": "managed-default-seed",
+    "instructionsSource": "member-folders"
+  },
+  "members": [
+    {
+      "key": "portfolio-architect",
+      "relativePath": "members/portfolio-architect"
+    },
+    {
+      "key": "programming-workspace-analyst",
+      "relativePath": "members/programming-workspace-analyst"
+    },
+    {
+      "key": "delivery-qa-observer",
+      "relativePath": "members/delivery-qa-observer"
+    },
+    {
+      "key": "code-review-lead",
+      "relativePath": "members/code-review-lead"
+    },
+    {
+      "key": "ui-review-lead",
+      "relativePath": "members/ui-review-lead"
+    },
+    {
+      "key": "security-reviewer",
+      "relativePath": "members/security-reviewer"
+    },
+    {
+      "key": "release-readiness-manager",
+      "relativePath": "members/release-readiness-manager"
+    },
+    {
+      "key": "hr-staffing-manager",
+      "relativePath": "members/hr-staffing-manager"
+    }
+  ]
+}

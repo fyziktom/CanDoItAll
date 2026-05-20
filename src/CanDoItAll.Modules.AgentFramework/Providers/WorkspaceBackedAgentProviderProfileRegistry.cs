@@ -21,6 +21,7 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
 {
     private const string OpenAiApiKeyEnvironmentVariable = "OPENAI_API_KEY";
     private const string OpenAiChatCompletionsProviderName = "OpenAI chat completions";
+    private static readonly Guid ManagedSqliteRemoteOllamaProviderId = Guid.Parse("12E4C814-E822-0B58-9B9F-52577D7B374E");
 
     public async Task<IReadOnlyList<AgentFrameworkProviderProfile>> ListProvidersAsync(
         CancellationToken cancellationToken = default)
@@ -43,6 +44,11 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         Guid providerId,
         CancellationToken cancellationToken = default)
     {
+        if (providerId == ManagedSqliteRemoteOllamaProviderId)
+        {
+            return CreateManagedSqliteRemoteOllamaProvider();
+        }
+
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var provider = await dbContext.Set<WorkspaceProviderProfile>()
             .SingleOrDefaultAsync(item => item.Id == providerId, cancellationToken);
@@ -235,7 +241,7 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
             .Select(item => item.Id)
             .ToHashSet();
 
-        return catalog.Providers
+        var mergedProviders = catalog.Providers
             .Concat(providers)
             .Select(ApplyManagedSqliteFallbackIfNeeded)
             .GroupBy(item => item.Id)
@@ -247,6 +253,18 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
                 .First())
             .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
+
+        if (!mergedProviders.Any(item =>
+                item.Kind == AgentFrameworkProviderKind.Ollama &&
+                string.Equals(item.Name, ManagedSeedProviderFallbacks.FallbackProviderName, StringComparison.OrdinalIgnoreCase)))
+        {
+            mergedProviders.Add(CreateManagedSqliteRemoteOllamaProvider());
+            mergedProviders = mergedProviders
+                .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        return mergedProviders;
     }
 
     private async Task<AgentFrameworkProviderProfile?> LoadCatalogProviderAsync(
@@ -347,8 +365,46 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
     private AgentFrameworkProviderProfile ApplyManagedSqliteFallbackIfNeeded(
         AgentFrameworkProviderProfile provider)
     {
-        var isManagedSqliteProfile = profileAccessor.ResolveCurrentProfile().Profile.SourceKind == DatabaseProfileSourceKind.ManagedSqlite;
+        var isManagedSqliteProfile = IsManagedSqliteProfile();
         return ManagedSeedProviderFallbacks.ApplyForManagedSqliteSeedProvider(provider, isManagedSqliteProfile);
+    }
+
+    private bool IsManagedSqliteProfile()
+    {
+        return profileAccessor.ResolveCurrentProfile().Profile.SourceKind == DatabaseProfileSourceKind.ManagedSqlite;
+    }
+
+    private static AgentFrameworkProviderProfile CreateManagedSqliteRemoteOllamaProvider()
+    {
+        return new AgentFrameworkProviderProfile(
+            ManagedSqliteRemoteOllamaProviderId,
+            ManagedSeedProviderFallbacks.FallbackProviderName,
+            AgentFrameworkProviderKind.Ollama,
+            ManagedSeedProviderFallbacks.FallbackBaseUrl,
+            string.Empty,
+            ManagedSeedProviderFallbacks.FallbackModel,
+            ProviderTransportKind.ChatCompletions,
+            true,
+            true,
+            true,
+            true,
+            false,
+            System.Text.Json.JsonSerializer.Serialize(new
+            {
+                history = "framework-managed",
+                fallback = "managed-sqlite-remote-ollama",
+                timeoutSeconds = ManagedSeedProviderFallbacks.FallbackTimeoutSeconds
+            }),
+            "Remote Ollama fallback provider kept available alongside managed SQLite OpenAI seed agents.",
+            "Not checked",
+            null,
+            [
+                ManagedSeedProviderFallbacks.FallbackModel,
+                "qwen3.5:9b",
+                "gemma3-12b-128k:latest",
+                "deepseek-r1:8b-32k",
+                "phi4-16k"
+            ]);
     }
 
     private static string ResolveDefaultModel(

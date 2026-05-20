@@ -62,10 +62,7 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
                 .ToList();
 
             EnsureUniqueTemplateKey(catalog.Agents, id, normalizedTemplateKey, "Agent save");
-            var normalizedModel = NormalizeAgentModelForSave(
-                model.Model,
-                model.ProviderProfileId,
-                catalog.Providers);
+            var normalizedModel = NormalizeAgentModelForSave(model.Model);
 
             var definition = new AgentDefinition(
                 Id: id,
@@ -114,27 +111,8 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
         return id;
     }
 
-    private static string NormalizeAgentModelForSave(
-        string? model,
-        Guid? providerProfileId,
-        IReadOnlyList<ProviderProfile> providers)
-    {
-        var normalizedModel = string.IsNullOrWhiteSpace(model) ? string.Empty : model.Trim();
-        if (string.IsNullOrWhiteSpace(normalizedModel) || !providerProfileId.HasValue)
-        {
-            return normalizedModel;
-        }
-
-        var provider = providers.FirstOrDefault(item => item.Id == providerProfileId.Value);
-        if (provider is null || string.IsNullOrWhiteSpace(provider.DefaultModel))
-        {
-            return normalizedModel;
-        }
-
-        return string.Equals(normalizedModel, provider.DefaultModel.Trim(), StringComparison.OrdinalIgnoreCase)
-            ? string.Empty
-            : normalizedModel;
-    }
+    private static string NormalizeAgentModelForSave(string? model)
+        => string.IsNullOrWhiteSpace(model) ? string.Empty : model.Trim();
 
     public async Task DeleteAgentAsync(Guid agentId, CancellationToken cancellationToken = default)
     {

@@ -1,0 +1,59 @@
+﻿{
+  "stableIdKey": "agents/app-screenshot-capture-agent-template",
+  "name": "App Screenshot Capture Agent Template",
+  "roleTitle": "Runnable app screenshot capture agent",
+  "summary": "Runs .NET or JavaScript apps once for a screenshot process step and captures route screenshots through Playwright MCP.",
+  "status": "Active",
+  "providerProfileKey": "managed-seed-openai-default",
+  "model": "",
+  "workload": "Qa",
+  "chatHistoryMode": "FrameworkManaged",
+  "temperature": 0.2,
+  "requirePerServiceCallChatHistoryPersistence": false,
+  "enableBackgroundResponses": false,
+  "configuration": {
+    "enableCompaction": true,
+    "maxLocalRagResults": 4,
+    "runtimeUse": "app-screenshot-capture"
+  },
+  "applyDefaultReasoningEffort": true,
+  "isTemplate": true,
+  "templateKey": "app-screenshot-capture-agent",
+  "permissions": {
+    "canUseTools": true,
+    "canAskOtherAgents": true,
+    "canEscalateToHuman": true,
+    "canObserveOtherAgents": false,
+    "canScheduleWork": false,
+    "requiresApprovalForExternalCalls": true,
+    "autoApproveExternalCallsByDefault": false
+  },
+  "access": {
+    "projectStructure": {
+      "canRead": true,
+      "canWrite": false,
+      "allowAllProjects": true,
+      "allowedProjectIds": []
+    },
+    "processes": {
+      "canRead": true,
+      "canWrite": false,
+      "allowAllDefinitions": true,
+      "allowedDefinitionIds": []
+    },
+    "workspaceTools": {
+      "profile": "QualityValidation",
+      "canReadStorage": false,
+      "canWriteStorage": false,
+      "allowAllStorageCatalogs": false,
+      "allowedStorageCatalogIds": [],
+      "allowedExternalTargetAliases": []
+    }
+  },
+  "tags": [
+    "template",
+    "screenshot",
+    "playwright",
+    "runtime"
+  ]
+}

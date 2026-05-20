@@ -1,0 +1,20 @@
+{
+  "capabilityKeys": [
+    "candoitall-bundle-workflow",
+    "generated-app-summary-inline-skill",
+    "workspace-list-files",
+    "workspace-search",
+    "workspace-read-file",
+    "workspace-stat-path",
+    "workspace-diff-text",
+    "workspace-execution-boundary",
+    "workspace-git-status",
+    "workspace-git-diff",
+    "workspace-source-rag",
+    "research-briefing-context",
+    "provider-native-code-interpreter",
+    "provider-native-web-search",
+    "provider-health"
+  ],
+  "notes": "Resolved against the built-in capability catalog during seed materialization. Keep this list role-specific."
+}

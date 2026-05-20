@@ -9,7 +9,7 @@ namespace CanDoItAll.AgentFramework.Persistence;
 internal static class SandboxWorkspaceSeedBuilder
 {
     private const string LatestVersion = "3.0";
-    private const string SeriousDeliveryManagedSeedVersion = "2026-05-generic-app-delivery-agents-v74";
+    private const string SeriousDeliveryManagedSeedVersion = "2026-05-agent-template-teams-v1";
     private static readonly DateTimeOffset SeedTimestamp = new(2026, 4, 10, 0, 0, 0, TimeSpan.Zero);
 
     private static readonly IReadOnlyList<string> OpenAiSuggestedModels =
@@ -94,30 +94,6 @@ internal static class SandboxWorkspaceSeedBuilder
         var researchContextCapabilityId = CreateStableGuid("capabilities/research-briefing-context");
         var mem0CapabilityId = CreateStableGuid("capabilities/mem0-shared-memory");
 
-        var architectAgentId = CreateStableGuid("agents/portfolio-architect");
-        var qaAgentId = CreateStableGuid("agents/delivery-qa-observer");
-        var programmingAgentId = CreateStableGuid("agents/programming-workspace-analyst");
-        var codeReviewAgentId = CreateStableGuid("agents/code-review-lead");
-        var uiReviewAgentId = CreateStableGuid("agents/ui-review-lead");
-        var securityReviewerAgentId = CreateStableGuid("agents/security-reviewer");
-        var releaseManagerAgentId = CreateStableGuid("agents/release-readiness-manager");
-        var hrStaffingManagerAgentId = CreateStableGuid("agents/hr-staffing-manager");
-        var spreadsheetAgentId = CreateStableGuid("agents/spreadsheet-analyst");
-        var mailAgentId = CreateStableGuid("agents/mail-triage-analyst");
-        var researchAgentId = CreateStableGuid("agents/research-deep-dive-analyst");
-        var dotnetArchitectAgentId = CreateStableGuid("agents/dotnet-solution-architect");
-        var dotnetDeveloperAgentId = CreateStableGuid("agents/dotnet-application-developer");
-        var blazorDeveloperAgentId = CreateStableGuid("agents/blazor-application-developer");
-        var dotnetQaAgentId = CreateStableGuid("agents/dotnet-qa-review-lead");
-        var javascriptArchitectAgentId = CreateStableGuid("agents/javascript-solution-architect");
-        var javascriptDeveloperAgentId = CreateStableGuid("agents/javascript-application-developer");
-        var javascriptQaAgentId = CreateStableGuid("agents/javascript-qa-review-lead");
-        var businessStrategistAgentId = CreateStableGuid("agents/business-strategist");
-        var financialStrategistAgentId = CreateStableGuid("agents/financial-strategist");
-        var marketingSpecialistAgentId = CreateStableGuid("agents/marketing-specialist");
-        var screenshotCaptureAgentTemplateId = CreateStableGuid("agents/app-screenshot-capture-agent-template");
-        var screenshotReviewStorageAgentTemplateId = CreateStableGuid("agents/screenshot-review-storage-agent-template");
-        var layoutImageGenerationAgentTemplateId = CreateStableGuid("agents/layout-image-generation-agent-template");
         var sessionId = CreateStableGuid("sessions/integration-target-summary");
         var capabilities = new List<CapabilityCatalogItem>
         {
@@ -515,1248 +491,30 @@ internal static class SandboxWorkspaceSeedBuilder
                 ["qwen3.5:9b", "gemma3-12b-128k:latest", "deepseek-r1:8b-32k", "qwen3.5:2b", "phi4-16k", "mistral-nemo"])
         };
 
-        var architectAgent = new AgentDefinition(
-            architectAgentId,
-            "Portfolio Architect",
-            "Architecture steward",
-            "Owns architecture direction, source-of-truth choices, and bounded design guidance for governed delivery work.",
-            GetSeedText("agents/portfolio-architect.instructions"),
-            AgentLifecycleStatus.Active,
-            openAiProviderId,
-            string.Empty,
-            AgentWorkloadKind.Research,
-            AgentChatHistoryMode.ProviderDefault,
-            0.2d,
-            false,
-            false,
-            WithDefaultReasoningEffort(
-            WithWorkspaceToolProfile(
-                WithProcessAccess(
-                WithProjectStructureAccess(
-                    SerializeConfiguration(new
-                    {
-                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
-                        maxLocalRagResults = 4,
-                        hostedExposure = new
-                        {
-                            publish = true,
-                            routeSegment = "portfolio-architect",
-                            profile = "readonly-research"
-                        }
-                    }),
-                    canRead: true,
-                    canWrite: true,
-                    allowAllProjects: true),
-                canRead: true,
-                canWrite: false,
-                allowAllDefinitions: true),
-                AgentWorkspaceToolProfileKind.ArchitectureReview)),
-            false,
-            "portfolio-architect",
-            AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, CanScheduleWork = true, AutoApproveExternalCallsByDefault = true },
-            [
-                CreateAssignment(bundleWorkflowCapabilityId, "candoitall-bundle-workflow", CapabilityKind.Skill),
-                CreateAssignment(aspNetCoreCapabilityId, "aspnet-core-skill", CapabilityKind.Skill),
-                CreateAssignment(codeanalyticsCapabilityId, "candoitall-codeanalytics-mcp", CapabilityKind.Skill),
-                CreateAssignment(componentsCapabilityId, "candoitall-components-mcp", CapabilityKind.Skill),
-                CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
-                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
-                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
-                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
-                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceDiffTextCapabilityId, "workspace-diff-text", CapabilityKind.Tool),
-                CreateAssignment(workspaceExecutionBoundaryCapabilityId, "workspace-execution-boundary", CapabilityKind.Tool),
-                CreateAssignment(workspaceGitStatusCapabilityId, "workspace-git-status", CapabilityKind.Tool),
-                CreateAssignment(workspaceGitDiffCapabilityId, "workspace-git-diff", CapabilityKind.Tool),
-                CreateAssignment(architectureDocsCapabilityId, "architecture-source-rag", CapabilityKind.Rag),
-                CreateAssignment(researchContextCapabilityId, "research-briefing-context", CapabilityKind.AiContext),
-                CreateAssignment(providerNativeWebSearchCapabilityId, "provider-native-web-search", CapabilityKind.Tool),
-                CreateAssignment(providerHealthCapabilityId, "provider-health", CapabilityKind.Tool)
-            ],
-            ["architecture", "oversight", "integration"],
-            now,
-            now);
-
-        var qaAgent = new AgentDefinition(
-            qaAgentId,
-            "Delivery QA Observer",
-            "QA lead and browser-proof reviewer",
-            "Owns validation depth, screenshot-backed browser proof, and explicit QA gating for governed delivery work.",
-            GetSeedText("agents/delivery-qa-observer.instructions"),
-            AgentLifecycleStatus.Active,
-            openAiProviderId,
-            string.Empty,
-            AgentWorkloadKind.Qa,
-            AgentChatHistoryMode.FrameworkManaged,
-            0.1d,
-            false,
-            false,
-            WithDefaultReasoningEffort(
-            WithWorkspaceToolProfile(
-                WithProcessAccess(
-                WithProjectStructureAccess(
-                    SerializeConfiguration(new
-                    {
-                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
-                        enableCompaction = true,
-                        maxLocalRagResults = 4
-                    }),
-                    canRead: true,
-                    canWrite: false,
-                    allowAllProjects: true),
-                canRead: true,
-                canWrite: false,
-                allowAllDefinitions: true),
-                AgentWorkspaceToolProfileKind.QualityValidation)),
-            false,
-            "delivery-qa-observer",
-            AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true },
-            [
-                CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
-                CreateAssignment(bundleWorkflowCapabilityId, "candoitall-bundle-workflow", CapabilityKind.Skill),
-                CreateAssignment(concreteDeliverableDeliveryInlineSkillCapabilityId, "concrete-deliverable-delivery-inline-skill", CapabilityKind.Skill),
-                CreateAssignment(frontendThemeCapabilityId, "candoitall-frontend-theme", CapabilityKind.Skill),
-                CreateAssignment(frontendSkillCapabilityId, "frontend-skill", CapabilityKind.Skill),
-                CreateAssignment(playwrightWorkflowCapabilityId, "candoitall-watch-playwright-loop", CapabilityKind.Skill),
-                CreateAssignment(runTestsCapabilityId, "run-tests", CapabilityKind.Skill),
-                CreateAssignment(mstestCapabilityId, "writing-mstest-tests", CapabilityKind.Skill),
-                CreateAssignment(dotnetAppDeliveryInlineSkillCapabilityId, "dotnet-app-delivery-inline-skill", CapabilityKind.Skill),
-                CreateAssignment(blazorSsrDeliveryInlineSkillCapabilityId, "blazor-ssr-delivery-inline-skill", CapabilityKind.Skill),
-                CreateAssignment(componentsCapabilityId, "candoitall-components-mcp", CapabilityKind.Skill),
-                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
-                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
-                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
-                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceDotnetBuildCapabilityId, "workspace-dotnet-build", CapabilityKind.Tool),
-                CreateAssignment(workspaceDotnetTestCapabilityId, "workspace-dotnet-test", CapabilityKind.Tool),
-                CreateAssignment(workspaceDotnetRunCapabilityId, "workspace-dotnet-run", CapabilityKind.Tool),
-                CreateAssignment(workspacePwshRunScriptCapabilityId, "workspace-pwsh-run-script", CapabilityKind.Tool)
-            ],
-            ["qa", "browser", "governance"],
-            now,
-            now);
-
-        var programmingAgent = CreateWorkloadAgent(
-            programmingAgentId,
-            "Programming Workspace Analyst",
-            "Programming and repository worker",
-            "Implements C# and Blazor changes with bounded source inspection, concrete validation, and real UI proof when needed.",
-            GetSeedText("agents/programming-workspace-analyst.instructions"),
-            openAiProviderId,
-            AgentWorkloadKind.Programming,
-            "programming-workspace-analyst",
-            WithWorkspaceToolProfile(
-                WithProcessAccess(
-                WithProjectStructureAccess(
-                    SerializeConfiguration(new
-                    {
-                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
-                        preferredSkillRoots = new[] { GetSeedSkillRoot("repository-playbook") },
-                        enableCompaction = true,
-                        slidingWindowTurns = 10,
-                        maxLocalRagResults = 5
-                    }),
-                    canRead: true,
-                    canWrite: false,
-                    allowAllProjects: true),
-                canRead: true,
-                canWrite: false,
-                allowAllDefinitions: true),
-                AgentWorkspaceToolProfileKind.SoftwareDevelopment),
-            AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
-            [
-                CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
-                CreateAssignment(aspNetCoreCapabilityId, "aspnet-core-skill", CapabilityKind.Skill),
-                CreateAssignment(codeanalyticsCapabilityId, "candoitall-codeanalytics-mcp", CapabilityKind.Skill),
-                CreateAssignment(componentsCapabilityId, "candoitall-components-mcp", CapabilityKind.Skill),
-                CreateAssignment(frontendThemeCapabilityId, "candoitall-frontend-theme", CapabilityKind.Skill),
-                CreateAssignment(frontendSkillCapabilityId, "frontend-skill", CapabilityKind.Skill),
-                CreateAssignment(playwrightWorkflowCapabilityId, "candoitall-watch-playwright-loop", CapabilityKind.Skill),
-                CreateAssignment(runTestsCapabilityId, "run-tests", CapabilityKind.Skill),
-                CreateAssignment(mstestCapabilityId, "writing-mstest-tests", CapabilityKind.Skill),
-                CreateAssignment(concreteDeliverableDeliveryInlineSkillCapabilityId, "concrete-deliverable-delivery-inline-skill", CapabilityKind.Skill),
-                CreateAssignment(dotnetAppDeliveryInlineSkillCapabilityId, "dotnet-app-delivery-inline-skill", CapabilityKind.Skill),
-                CreateAssignment(blazorSsrDeliveryInlineSkillCapabilityId, "blazor-ssr-delivery-inline-skill", CapabilityKind.Skill),
-                CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
-                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
-                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
-                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
-                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceCopyPathCapabilityId, "workspace-copy-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceMovePathCapabilityId, "workspace-move-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceDeletePathCapabilityId, "workspace-delete-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceDiffTextCapabilityId, "workspace-diff-text", CapabilityKind.Tool),
-                CreateAssignment(workspaceExecutionBoundaryCapabilityId, "workspace-execution-boundary", CapabilityKind.Tool),
-                CreateAssignment(workspaceGitStatusCapabilityId, "workspace-git-status", CapabilityKind.Tool),
-                CreateAssignment(workspaceGitDiffCapabilityId, "workspace-git-diff", CapabilityKind.Tool),
-                CreateAssignment(workspaceDotnetRestoreCapabilityId, "workspace-dotnet-restore", CapabilityKind.Tool),
-                CreateAssignment(workspaceDotnetBuildCapabilityId, "workspace-dotnet-build", CapabilityKind.Tool),
-                CreateAssignment(workspaceDotnetTestCapabilityId, "workspace-dotnet-test", CapabilityKind.Tool),
-                CreateAssignment(workspaceDotnetRunCapabilityId, "workspace-dotnet-run", CapabilityKind.Tool),
-                CreateAssignment(workspaceDotnetNewCapabilityId, "workspace-dotnet-new", CapabilityKind.Tool),
-                CreateAssignment(workspacePythonRunFileCapabilityId, "workspace-python-run-file", CapabilityKind.Tool),
-                CreateAssignment(workspacePwshRunScriptCapabilityId, "workspace-pwsh-run-script", CapabilityKind.Tool),
-                CreateAssignment(localDocsCapabilityId, "workspace-source-rag", CapabilityKind.Rag)
-            ],
-            ["programming", "workspace", "approval"],
-            now,
-            string.Empty);
-
-        var codeReviewAgent = CreateWorkloadAgent(
-            codeReviewAgentId,
-            "Code Review Lead",
-            "Code reviewer",
-            "Reviews C# and Blazor changes for regressions, architectural drift, weak evidence, and reviewable quality.",
-            GetSeedText("agents/code-review-lead.instructions"),
-            openAiProviderId,
-            AgentWorkloadKind.Qa,
-            "code-review-lead",
-            WithWorkspaceToolProfile(
-                WithProcessAccess(
-                WithProjectStructureAccess(
-                    SerializeConfiguration(new
-                    {
-                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
-                        enableCompaction = true,
-                        maxLocalRagResults = 5
-                    }),
-                    canRead: true,
-                    canWrite: false,
-                    allowAllProjects: true),
-                canRead: true,
-                canWrite: false,
-                allowAllDefinitions: true),
-                AgentWorkspaceToolProfileKind.QualityValidation),
-            AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
-            [
-                CreateAssignment(aspNetCoreCapabilityId, "aspnet-core-skill", CapabilityKind.Skill),
-                CreateAssignment(codeanalyticsCapabilityId, "candoitall-codeanalytics-mcp", CapabilityKind.Skill),
-                CreateAssignment(componentsCapabilityId, "candoitall-components-mcp", CapabilityKind.Skill),
-                CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
-                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
-                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
-                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceDiffTextCapabilityId, "workspace-diff-text", CapabilityKind.Tool),
-                CreateAssignment(architectureDocsCapabilityId, "architecture-source-rag", CapabilityKind.Rag)
-            ],
-            ["review", "code", "quality"],
-            now,
-            string.Empty);
-
-        var uiReviewAgent = CreateWorkloadAgent(
-            uiReviewAgentId,
-            "UI Review Lead",
-            "UI reviewer",
-            "Reviews rendered Blazor UI with Playwright, screenshot analysis, and component-library expectations.",
-            GetSeedText("agents/ui-review-lead.instructions"),
-            openAiProviderId,
-            AgentWorkloadKind.Qa,
-            "ui-review-lead",
-            WithWorkspaceToolProfile(
-                WithProcessAccess(
-                WithProjectStructureAccess(
-                    SerializeConfiguration(new
-                    {
-                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
-                        enableCompaction = true,
-                        maxLocalRagResults = 4
-                    }),
-                    canRead: true,
-                    canWrite: false,
-                    allowAllProjects: true),
-                canRead: true,
-                canWrite: false,
-                allowAllDefinitions: true),
-                AgentWorkspaceToolProfileKind.QualityValidation),
-            AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
-            [
-                CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
-                CreateAssignment(aspNetCoreCapabilityId, "aspnet-core-skill", CapabilityKind.Skill),
-                CreateAssignment(componentsCapabilityId, "candoitall-components-mcp", CapabilityKind.Skill),
-                CreateAssignment(frontendThemeCapabilityId, "candoitall-frontend-theme", CapabilityKind.Skill),
-                CreateAssignment(frontendSkillCapabilityId, "frontend-skill", CapabilityKind.Skill),
-                CreateAssignment(playwrightWorkflowCapabilityId, "candoitall-watch-playwright-loop", CapabilityKind.Skill),
-                CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
-                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
-                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
-                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
-                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
-                CreateAssignment(workspacePwshRunScriptCapabilityId, "workspace-pwsh-run-script", CapabilityKind.Tool)
-            ],
-            ["ui", "review", "browser"],
-            now,
-            string.Empty);
-
-        var securityReviewerAgent = CreateWorkloadAgent(
-            securityReviewerAgentId,
-            "Security Reviewer",
-            "Security reviewer",
-            "Reviews C# and Blazor changes for trust-boundary risk, hidden fallbacks, and explicit security posture.",
-            GetSeedText("agents/security-reviewer.instructions"),
-            openAiProviderId,
-            AgentWorkloadKind.Qa,
-            "security-reviewer",
-            WithWorkspaceToolProfile(
-                WithProcessAccess(
-                WithProjectStructureAccess(
-                    SerializeConfiguration(new
-                    {
-                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
-                        enableCompaction = true,
-                        maxLocalRagResults = 4
-                    }),
-                    canRead: true,
-                    canWrite: false,
-                    allowAllProjects: true),
-                canRead: true,
-                canWrite: false,
-                allowAllDefinitions: true),
-                AgentWorkspaceToolProfileKind.SecurityReview),
-            AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
-            [
-                CreateAssignment(aspNetCoreCapabilityId, "aspnet-core-skill", CapabilityKind.Skill),
-                CreateAssignment(codeanalyticsCapabilityId, "candoitall-codeanalytics-mcp", CapabilityKind.Skill),
-                CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
-                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
-                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
-                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceDiffTextCapabilityId, "workspace-diff-text", CapabilityKind.Tool),
-                CreateAssignment(workspaceGitDiffCapabilityId, "workspace-git-diff", CapabilityKind.Tool),
-                CreateAssignment(architectureDocsCapabilityId, "architecture-source-rag", CapabilityKind.Rag)
-            ],
-            ["security", "review", "risk"],
-            now,
-            string.Empty);
-
-        var releaseManagerAgent = CreateWorkloadAgent(
-            releaseManagerAgentId,
-            "Release Readiness Manager",
-            "Release readiness manager",
-            "Synthesizes QA, security, rollback, and smoke-proof evidence into an explicit release-readiness decision.",
-            GetSeedText("agents/release-readiness-manager.instructions"),
-            openAiProviderId,
-            AgentWorkloadKind.Management,
-            "release-readiness-manager",
-            WithWorkspaceToolProfile(
-                WithProcessAccess(
-                WithProjectStructureAccess(
-                    SerializeConfiguration(new
-                    {
-                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
-                        enableCompaction = true,
-                        maxLocalRagResults = 4
-                    }),
-                    canRead: true,
-                    canWrite: false,
-                    allowAllProjects: true),
-                canRead: true,
-                canWrite: false,
-                allowAllDefinitions: true),
-                AgentWorkspaceToolProfileKind.QualityValidation),
-            AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
-            [
-                CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
-                CreateAssignment(bundleWorkflowCapabilityId, "candoitall-bundle-workflow", CapabilityKind.Skill),
-                CreateAssignment(concreteDeliverableDeliveryInlineSkillCapabilityId, "concrete-deliverable-delivery-inline-skill", CapabilityKind.Skill),
-                CreateAssignment(playwrightWorkflowCapabilityId, "candoitall-watch-playwright-loop", CapabilityKind.Skill),
-                CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
-                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
-                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
-                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
-                CreateAssignment(workspacePwshRunScriptCapabilityId, "workspace-pwsh-run-script", CapabilityKind.Tool)
-            ],
-            ["release", "readiness", "operations"],
-            now,
-            string.Empty);
-
-        var spreadsheetAgent = CreateWorkloadAgent(
-            spreadsheetAgentId,
-            "Spreadsheet Analyst",
-            "Spreadsheet and tabular-data worker",
-            "Uses spreadsheet skill guidance plus framework-native tools to inspect workbook-like artifacts, compare purchasing documents, and call out concrete findings.",
-            GetSeedText("agents/spreadsheet-analyst.instructions"),
-            openAiChatProviderId,
-            AgentWorkloadKind.Spreadsheet,
-            "spreadsheet-analyst",
-            WithWorkspaceToolProfile(
-                SerializeConfiguration(new { enableCompaction = true, maxLocalRagResults = 4 }),
-                AgentWorkspaceToolProfileKind.BusinessAnalysis),
-            AgentPermissionsPolicy.Default,
-            [
-                CreateAssignment(spreadsheetCapabilityId, "spreadsheet-skill", CapabilityKind.Skill),
-                CreateAssignment(concreteDeliverableDeliveryInlineSkillCapabilityId, "concrete-deliverable-delivery-inline-skill", CapabilityKind.Skill),
-                CreateAssignment(documentSpreadsheetReconciliationInlineSkillCapabilityId, "document-spreadsheet-reconciliation-inline-skill", CapabilityKind.Skill),
-                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
-                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
-                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceConvertDocumentCapabilityId, "workspace-convert-document", CapabilityKind.Tool),
-                CreateAssignment(workspaceInspectSpreadsheetCapabilityId, "workspace-inspect-spreadsheet", CapabilityKind.Tool),
-                CreateAssignment(localDocsCapabilityId, "workspace-source-rag", CapabilityKind.Rag)
-            ],
-            ["spreadsheet", "analysis", "tabular"],
-            now);
-
-        var hrStaffingManagerAgent = CreateWorkloadAgent(
-            hrStaffingManagerAgentId,
-            "HR Staffing Manager",
-            "HR staffing and assignment manager",
-            "Matches governed process roles to actual project assignments, workforce records, and AI agents using factual fit instead of convenience or guesswork.",
-            GetSeedText("agents/hr-staffing-manager.instructions"),
-            openAiProviderId,
-            AgentWorkloadKind.Management,
-            "hr-staffing-manager",
-            WithWorkspaceToolProfile(
-                WithProcessAccess(
-                WithProjectStructureAccess(
-                    SerializeConfiguration(new
-                    {
-                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
-                        enableCompaction = true,
-                        maxLocalRagResults = 4
-                    }),
-                    canRead: true,
-                    canWrite: false,
-                    allowAllProjects: true),
-                canRead: true,
-                canWrite: true,
-                allowAllDefinitions: true),
-                AgentWorkspaceToolProfileKind.ReadOnly),
-            AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
-            [
-                CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
-                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
-                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
-                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceDiffTextCapabilityId, "workspace-diff-text", CapabilityKind.Tool),
-                CreateAssignment(localDocsCapabilityId, "workspace-source-rag", CapabilityKind.Rag)
-            ],
-            ["hr", "staffing", "assignment"],
-            now,
-            string.Empty);
-
-        var mailAgent = CreateWorkloadAgent(
-            mailAgentId,
-            "Mail Triage Analyst",
-            "Mail and inbox worker",
-            "Uses inline skill instructions, AI context, and workspace document tools to summarize mail-like artifacts and extract participant-owned tasks.",
-            GetSeedText("agents/mail-triage-analyst.instructions"),
-            openAiChatProviderId,
-            AgentWorkloadKind.Mail,
-            "mail-triage-analyst",
-            WithWorkspaceToolProfile(
-                SerializeConfiguration(new { enableCompaction = true, maxLocalRagResults = 4 }),
-                AgentWorkspaceToolProfileKind.BusinessAnalysis),
-            AgentPermissionsPolicy.Default,
-            [
-                CreateAssignment(mailInlineSkillCapabilityId, "mail-triage-inline-skill", CapabilityKind.Skill),
-                CreateAssignment(mailSummaryInlineSkillCapabilityId, "mail-summary-inline-skill", CapabilityKind.Skill),
-                CreateAssignment(mailContextCapabilityId, "mail-triage-context", CapabilityKind.AiContext),
-                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
-                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
-                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceConvertDocumentCapabilityId, "workspace-convert-document", CapabilityKind.Tool),
-                CreateAssignment(localDocsCapabilityId, "workspace-source-rag", CapabilityKind.Rag)
-            ],
-            ["mail", "triage", "reply"],
-            now);
-
-        var researchAgent = new AgentDefinition(
-            researchAgentId,
-            "Research Deep Dive Analyst",
-            "Research and long-context worker",
-            "Uses provider-managed responses, RAG, memory, and framework-native tools for multi-step research and generated-app summary flows.",
-            GetSeedText("agents/research-deep-dive-analyst.instructions"),
-            AgentLifecycleStatus.Active,
-            openAiProviderId,
-            string.Empty,
-            AgentWorkloadKind.Research,
-            AgentChatHistoryMode.ProviderManaged,
-            0.2d,
-            false,
-            true,
-            WithDefaultReasoningEffort(
-            WithWorkspaceToolProfile(
-                WithProcessAccess(
-                WithProjectStructureAccess(
-                    SerializeConfiguration(new
-                    {
-                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
-                        enableCompaction = true,
-                        maxInjectedMemoryItems = 6,
-                        maxLocalRagResults = 5
-                    }),
-                    canRead: true,
-                    canWrite: false,
-                    allowAllProjects: true),
-                canRead: true,
-                canWrite: false,
-                allowAllDefinitions: true),
-                AgentWorkspaceToolProfileKind.ReadOnly)),
-            false,
-            "research-deep-dive-analyst",
-            AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
-            [
-                CreateAssignment(bundleWorkflowCapabilityId, "candoitall-bundle-workflow", CapabilityKind.Skill),
-                CreateAssignment(appSummaryInlineSkillCapabilityId, "generated-app-summary-inline-skill", CapabilityKind.Skill),
-                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
-                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
-                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceDiffTextCapabilityId, "workspace-diff-text", CapabilityKind.Tool),
-                CreateAssignment(workspaceExecutionBoundaryCapabilityId, "workspace-execution-boundary", CapabilityKind.Tool),
-                CreateAssignment(workspaceGitStatusCapabilityId, "workspace-git-status", CapabilityKind.Tool),
-                CreateAssignment(workspaceGitDiffCapabilityId, "workspace-git-diff", CapabilityKind.Tool),
-                CreateAssignment(localDocsCapabilityId, "workspace-source-rag", CapabilityKind.Rag),
-                CreateAssignment(researchContextCapabilityId, "research-briefing-context", CapabilityKind.AiContext),
-                CreateAssignment(providerNativeCodeInterpreterCapabilityId, "provider-native-code-interpreter", CapabilityKind.Tool),
-                CreateAssignment(providerNativeWebSearchCapabilityId, "provider-native-web-search", CapabilityKind.Tool),
-                CreateAssignment(providerHealthCapabilityId, "provider-health", CapabilityKind.Tool)
-            ],
-            ["research", "background", "evidence"],
-            now,
-            now);
-
-        var dotnetArchitectAgent = CreateWorkloadAgent(
-            dotnetArchitectAgentId,
-            ".NET Solution Architect",
-            ".NET architecture specialist",
-            "Designs maintainable C#, ASP.NET Core, and Blazor project structures with explicit boundaries and validation plans.",
-            GetSeedText("agents/dotnet-solution-architect.instructions"),
-            openAiProviderId,
-            AgentWorkloadKind.Research,
-            "dotnet-solution-architect",
-            WithWorkspaceToolProfile(
-                WithProcessAccess(
-                WithProjectStructureAccess(
-                    SerializeConfiguration(new
-                    {
-                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
-                        enableCompaction = true,
-                        maxLocalRagResults = 5
-                    }),
-                    canRead: true,
-                    canWrite: false,
-                    allowAllProjects: true),
-                canRead: true,
-                canWrite: false,
-                allowAllDefinitions: true),
-                AgentWorkspaceToolProfileKind.ArchitectureReview),
-            AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
-            [
-                CreateAssignment(bundleWorkflowCapabilityId, "candoitall-bundle-workflow", CapabilityKind.Skill),
-                CreateAssignment(concreteDeliverableDeliveryInlineSkillCapabilityId, "concrete-deliverable-delivery-inline-skill", CapabilityKind.Skill),
-                CreateAssignment(aspNetCoreCapabilityId, "aspnet-core-skill", CapabilityKind.Skill),
-                CreateAssignment(codeanalyticsCapabilityId, "candoitall-codeanalytics-mcp", CapabilityKind.Skill),
-                CreateAssignment(componentsCapabilityId, "candoitall-components-mcp", CapabilityKind.Skill),
-                CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
-                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
-                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
-                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
-                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceDiffTextCapabilityId, "workspace-diff-text", CapabilityKind.Tool),
-                CreateAssignment(workspaceGitStatusCapabilityId, "workspace-git-status", CapabilityKind.Tool),
-                CreateAssignment(workspaceGitDiffCapabilityId, "workspace-git-diff", CapabilityKind.Tool),
-                CreateAssignment(architectureDocsCapabilityId, "architecture-source-rag", CapabilityKind.Rag),
-                CreateAssignment(researchContextCapabilityId, "research-briefing-context", CapabilityKind.AiContext),
-                CreateAssignment(providerNativeWebSearchCapabilityId, "provider-native-web-search", CapabilityKind.Tool)
-            ],
-            ["dotnet", "architecture", "blazor"],
-            now,
-            string.Empty);
-
-        var dotnetDeveloperAgent = CreateWorkloadAgent(
-            dotnetDeveloperAgentId,
-            ".NET Application Developer",
-            ".NET implementation specialist",
-            "Implements C#, ASP.NET Core, and Blazor deliverables with real source changes, focused tests, and runnable proof.",
-            GetSeedText("agents/dotnet-application-developer.instructions"),
-            openAiProviderId,
-            AgentWorkloadKind.Programming,
-            "dotnet-application-developer",
-            WithWorkspaceToolProfile(
-                WithProcessAccess(
-                WithProjectStructureAccess(
-                    SerializeConfiguration(new
-                    {
-                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
-                        enableCompaction = true,
-                        slidingWindowTurns = 10,
-                        maxLocalRagResults = 5
-                    }),
-                    canRead: true,
-                    canWrite: false,
-                    allowAllProjects: true),
-                canRead: true,
-                canWrite: false,
-                allowAllDefinitions: true),
-                AgentWorkspaceToolProfileKind.SoftwareDevelopment),
-            AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
-            [
-                CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
-                CreateAssignment(aspNetCoreCapabilityId, "aspnet-core-skill", CapabilityKind.Skill),
-                CreateAssignment(codeanalyticsCapabilityId, "candoitall-codeanalytics-mcp", CapabilityKind.Skill),
-                CreateAssignment(componentsCapabilityId, "candoitall-components-mcp", CapabilityKind.Skill),
-                CreateAssignment(frontendThemeCapabilityId, "candoitall-frontend-theme", CapabilityKind.Skill),
-                CreateAssignment(frontendSkillCapabilityId, "frontend-skill", CapabilityKind.Skill),
-                CreateAssignment(playwrightWorkflowCapabilityId, "candoitall-watch-playwright-loop", CapabilityKind.Skill),
-                CreateAssignment(runTestsCapabilityId, "run-tests", CapabilityKind.Skill),
-                CreateAssignment(mstestCapabilityId, "writing-mstest-tests", CapabilityKind.Skill),
-                CreateAssignment(concreteDeliverableDeliveryInlineSkillCapabilityId, "concrete-deliverable-delivery-inline-skill", CapabilityKind.Skill),
-                CreateAssignment(dotnetAppDeliveryInlineSkillCapabilityId, "dotnet-app-delivery-inline-skill", CapabilityKind.Skill),
-                CreateAssignment(blazorSsrDeliveryInlineSkillCapabilityId, "blazor-ssr-delivery-inline-skill", CapabilityKind.Skill),
-                CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
-                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
-                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
-                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
-                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceCopyPathCapabilityId, "workspace-copy-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceMovePathCapabilityId, "workspace-move-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceDeletePathCapabilityId, "workspace-delete-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceDiffTextCapabilityId, "workspace-diff-text", CapabilityKind.Tool),
-                CreateAssignment(workspaceGitStatusCapabilityId, "workspace-git-status", CapabilityKind.Tool),
-                CreateAssignment(workspaceGitDiffCapabilityId, "workspace-git-diff", CapabilityKind.Tool),
-                CreateAssignment(workspaceDotnetRestoreCapabilityId, "workspace-dotnet-restore", CapabilityKind.Tool),
-                CreateAssignment(workspaceDotnetBuildCapabilityId, "workspace-dotnet-build", CapabilityKind.Tool),
-                CreateAssignment(workspaceDotnetTestCapabilityId, "workspace-dotnet-test", CapabilityKind.Tool),
-                CreateAssignment(workspaceDotnetRunCapabilityId, "workspace-dotnet-run", CapabilityKind.Tool),
-                CreateAssignment(workspaceDotnetNewCapabilityId, "workspace-dotnet-new", CapabilityKind.Tool),
-                CreateAssignment(workspacePythonRunFileCapabilityId, "workspace-python-run-file", CapabilityKind.Tool),
-                CreateAssignment(workspacePwshRunScriptCapabilityId, "workspace-pwsh-run-script", CapabilityKind.Tool),
-                CreateAssignment(localDocsCapabilityId, "workspace-source-rag", CapabilityKind.Rag)
-            ],
-            ["dotnet", "programming", "blazor"],
-            now,
-            string.Empty);
-
-        var blazorDeveloperAgent = CreateWorkloadAgent(
-            blazorDeveloperAgentId,
-            "Blazor Application Developer",
-            "Blazor implementation specialist",
-            "Builds Blazor Web App and component-driven ASP.NET Core UI deliverables with BaseLib/component-library guidance, focused tests, startup proof, and browser evidence.",
-            GetSeedText("agents/blazor-application-developer.instructions"),
-            openAiProviderId,
-            AgentWorkloadKind.Programming,
-            "blazor-application-developer",
-            WithWorkspaceToolProfile(
-                WithProcessAccess(
-                WithProjectStructureAccess(
-                    SerializeConfiguration(new
-                    {
-                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
-                        enableCompaction = true,
-                        slidingWindowTurns = 10,
-                        maxLocalRagResults = 5
-                    }),
-                    canRead: true,
-                    canWrite: false,
-                    allowAllProjects: true),
-                canRead: true,
-                canWrite: false,
-                allowAllDefinitions: true),
-                AgentWorkspaceToolProfileKind.SoftwareDevelopment),
-            AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
-            [
-                CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
-                CreateAssignment(aspNetCoreCapabilityId, "aspnet-core-skill", CapabilityKind.Skill),
-                CreateAssignment(codeanalyticsCapabilityId, "candoitall-codeanalytics-mcp", CapabilityKind.Skill),
-                CreateAssignment(componentsCapabilityId, "candoitall-components-mcp", CapabilityKind.Skill),
-                CreateAssignment(frontendThemeCapabilityId, "candoitall-frontend-theme", CapabilityKind.Skill),
-                CreateAssignment(frontendSkillCapabilityId, "frontend-skill", CapabilityKind.Skill),
-                CreateAssignment(playwrightWorkflowCapabilityId, "candoitall-watch-playwright-loop", CapabilityKind.Skill),
-                CreateAssignment(runTestsCapabilityId, "run-tests", CapabilityKind.Skill),
-                CreateAssignment(mstestCapabilityId, "writing-mstest-tests", CapabilityKind.Skill),
-                CreateAssignment(concreteDeliverableDeliveryInlineSkillCapabilityId, "concrete-deliverable-delivery-inline-skill", CapabilityKind.Skill),
-                CreateAssignment(dotnetAppDeliveryInlineSkillCapabilityId, "dotnet-app-delivery-inline-skill", CapabilityKind.Skill),
-                CreateAssignment(blazorSsrDeliveryInlineSkillCapabilityId, "blazor-ssr-delivery-inline-skill", CapabilityKind.Skill),
-                CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
-                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
-                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
-                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
-                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceCopyPathCapabilityId, "workspace-copy-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceMovePathCapabilityId, "workspace-move-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceDeletePathCapabilityId, "workspace-delete-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceDiffTextCapabilityId, "workspace-diff-text", CapabilityKind.Tool),
-                CreateAssignment(workspaceGitStatusCapabilityId, "workspace-git-status", CapabilityKind.Tool),
-                CreateAssignment(workspaceGitDiffCapabilityId, "workspace-git-diff", CapabilityKind.Tool),
-                CreateAssignment(workspaceDotnetRestoreCapabilityId, "workspace-dotnet-restore", CapabilityKind.Tool),
-                CreateAssignment(workspaceDotnetBuildCapabilityId, "workspace-dotnet-build", CapabilityKind.Tool),
-                CreateAssignment(workspaceDotnetTestCapabilityId, "workspace-dotnet-test", CapabilityKind.Tool),
-                CreateAssignment(workspaceDotnetRunCapabilityId, "workspace-dotnet-run", CapabilityKind.Tool),
-                CreateAssignment(workspaceDotnetNewCapabilityId, "workspace-dotnet-new", CapabilityKind.Tool),
-                CreateAssignment(workspacePythonRunFileCapabilityId, "workspace-python-run-file", CapabilityKind.Tool),
-                CreateAssignment(workspacePwshRunScriptCapabilityId, "workspace-pwsh-run-script", CapabilityKind.Tool),
-                CreateAssignment(localDocsCapabilityId, "workspace-source-rag", CapabilityKind.Rag)
-            ],
-            ["blazor", "dotnet", "frontend", "programming"],
-            now,
-            string.Empty);
-
-        var dotnetQaAgent = CreateWorkloadAgent(
-            dotnetQaAgentId,
-            ".NET QA Review Lead",
-            ".NET QA specialist",
-            "Reviews C#, ASP.NET Core, and Blazor deliverables with build, test, launch, browser, and durable artifact proof.",
-            GetSeedText("agents/dotnet-qa-review-lead.instructions"),
-            openAiProviderId,
-            AgentWorkloadKind.Qa,
-            "dotnet-qa-review-lead",
-            WithWorkspaceToolProfile(
-                WithProcessAccess(
-                WithProjectStructureAccess(
-                    SerializeConfiguration(new
-                    {
-                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
-                        enableCompaction = true,
-                        maxLocalRagResults = 4
-                    }),
-                    canRead: true,
-                    canWrite: false,
-                    allowAllProjects: true),
-                canRead: true,
-                canWrite: false,
-                allowAllDefinitions: true),
-                AgentWorkspaceToolProfileKind.QualityValidation),
-            AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
-            [
-                CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
-                CreateAssignment(aspNetCoreCapabilityId, "aspnet-core-skill", CapabilityKind.Skill),
-                CreateAssignment(codeanalyticsCapabilityId, "candoitall-codeanalytics-mcp", CapabilityKind.Skill),
-                CreateAssignment(componentsCapabilityId, "candoitall-components-mcp", CapabilityKind.Skill),
-                CreateAssignment(frontendThemeCapabilityId, "candoitall-frontend-theme", CapabilityKind.Skill),
-                CreateAssignment(frontendSkillCapabilityId, "frontend-skill", CapabilityKind.Skill),
-                CreateAssignment(playwrightWorkflowCapabilityId, "candoitall-watch-playwright-loop", CapabilityKind.Skill),
-                CreateAssignment(runTestsCapabilityId, "run-tests", CapabilityKind.Skill),
-                CreateAssignment(mstestCapabilityId, "writing-mstest-tests", CapabilityKind.Skill),
-                CreateAssignment(concreteDeliverableDeliveryInlineSkillCapabilityId, "concrete-deliverable-delivery-inline-skill", CapabilityKind.Skill),
-                CreateAssignment(dotnetAppDeliveryInlineSkillCapabilityId, "dotnet-app-delivery-inline-skill", CapabilityKind.Skill),
-                CreateAssignment(blazorSsrDeliveryInlineSkillCapabilityId, "blazor-ssr-delivery-inline-skill", CapabilityKind.Skill),
-                CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
-                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
-                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
-                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
-                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceDotnetBuildCapabilityId, "workspace-dotnet-build", CapabilityKind.Tool),
-                CreateAssignment(workspaceDotnetTestCapabilityId, "workspace-dotnet-test", CapabilityKind.Tool),
-                CreateAssignment(workspaceDotnetRunCapabilityId, "workspace-dotnet-run", CapabilityKind.Tool),
-                CreateAssignment(workspacePwshRunScriptCapabilityId, "workspace-pwsh-run-script", CapabilityKind.Tool)
-            ],
-            ["dotnet", "qa", "browser"],
-            now,
-            string.Empty);
-
-        var javascriptArchitectAgent = CreateWorkloadAgent(
-            javascriptArchitectAgentId,
-            "JavaScript Solution Architect",
-            "JavaScript architecture specialist",
-            "Designs maintainable JavaScript and TypeScript app structures, package boundaries, and validation paths.",
-            GetSeedText("agents/javascript-solution-architect.instructions"),
-            openAiProviderId,
-            AgentWorkloadKind.Research,
-            "javascript-solution-architect",
-            WithWorkspaceToolProfile(
-                WithProcessAccess(
-                WithProjectStructureAccess(
-                    SerializeConfiguration(new
-                    {
-                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
-                        enableCompaction = true,
-                        maxLocalRagResults = 5
-                    }),
-                    canRead: true,
-                    canWrite: false,
-                    allowAllProjects: true),
-                canRead: true,
-                canWrite: false,
-                allowAllDefinitions: true),
-                AgentWorkspaceToolProfileKind.ArchitectureReview),
-            AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
-            [
-                CreateAssignment(bundleWorkflowCapabilityId, "candoitall-bundle-workflow", CapabilityKind.Skill),
-                CreateAssignment(concreteDeliverableDeliveryInlineSkillCapabilityId, "concrete-deliverable-delivery-inline-skill", CapabilityKind.Skill),
-                CreateAssignment(frontendSkillCapabilityId, "frontend-skill", CapabilityKind.Skill),
-                CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
-                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
-                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
-                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
-                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceDiffTextCapabilityId, "workspace-diff-text", CapabilityKind.Tool),
-                CreateAssignment(workspaceGitStatusCapabilityId, "workspace-git-status", CapabilityKind.Tool),
-                CreateAssignment(workspaceGitDiffCapabilityId, "workspace-git-diff", CapabilityKind.Tool),
-                CreateAssignment(localDocsCapabilityId, "workspace-source-rag", CapabilityKind.Rag),
-                CreateAssignment(researchContextCapabilityId, "research-briefing-context", CapabilityKind.AiContext),
-                CreateAssignment(providerNativeWebSearchCapabilityId, "provider-native-web-search", CapabilityKind.Tool)
-            ],
-            ["javascript", "typescript", "architecture"],
-            now,
-            string.Empty);
-
-        var javascriptDeveloperAgent = CreateWorkloadAgent(
-            javascriptDeveloperAgentId,
-            "JavaScript Application Developer",
-            "JavaScript implementation specialist",
-            "Implements JavaScript and TypeScript deliverables with package-script validation and browser proof when needed.",
-            GetSeedText("agents/javascript-application-developer.instructions"),
-            openAiProviderId,
-            AgentWorkloadKind.Programming,
-            "javascript-application-developer",
-            WithWorkspaceToolProfile(
-                WithProcessAccess(
-                WithProjectStructureAccess(
-                    SerializeConfiguration(new
-                    {
-                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
-                        enableCompaction = true,
-                        slidingWindowTurns = 10,
-                        maxLocalRagResults = 5
-                    }),
-                    canRead: true,
-                    canWrite: false,
-                    allowAllProjects: true),
-                canRead: true,
-                canWrite: false,
-                allowAllDefinitions: true),
-                AgentWorkspaceToolProfileKind.SoftwareDevelopment),
-            AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
-            [
-                CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
-                CreateAssignment(concreteDeliverableDeliveryInlineSkillCapabilityId, "concrete-deliverable-delivery-inline-skill", CapabilityKind.Skill),
-                CreateAssignment(frontendSkillCapabilityId, "frontend-skill", CapabilityKind.Skill),
-                CreateAssignment(playwrightWorkflowCapabilityId, "candoitall-watch-playwright-loop", CapabilityKind.Skill),
-                CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
-                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
-                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
-                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
-                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceCopyPathCapabilityId, "workspace-copy-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceMovePathCapabilityId, "workspace-move-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceDeletePathCapabilityId, "workspace-delete-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceDiffTextCapabilityId, "workspace-diff-text", CapabilityKind.Tool),
-                CreateAssignment(workspaceGitStatusCapabilityId, "workspace-git-status", CapabilityKind.Tool),
-                CreateAssignment(workspaceGitDiffCapabilityId, "workspace-git-diff", CapabilityKind.Tool),
-                CreateAssignment(workspacePythonRunFileCapabilityId, "workspace-python-run-file", CapabilityKind.Tool),
-                CreateAssignment(workspacePwshRunScriptCapabilityId, "workspace-pwsh-run-script", CapabilityKind.Tool),
-                CreateAssignment(localDocsCapabilityId, "workspace-source-rag", CapabilityKind.Rag)
-            ],
-            ["javascript", "typescript", "programming"],
-            now,
-            string.Empty);
-
-        var javascriptQaAgent = CreateWorkloadAgent(
-            javascriptQaAgentId,
-            "JavaScript QA Review Lead",
-            "JavaScript QA specialist",
-            "Reviews JavaScript and TypeScript deliverables with package-script, browser, console, and screenshot evidence.",
-            GetSeedText("agents/javascript-qa-review-lead.instructions"),
-            openAiProviderId,
-            AgentWorkloadKind.Qa,
-            "javascript-qa-review-lead",
-            WithWorkspaceToolProfile(
-                WithProcessAccess(
-                WithProjectStructureAccess(
-                    SerializeConfiguration(new
-                    {
-                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
-                        enableCompaction = true,
-                        maxLocalRagResults = 4
-                    }),
-                    canRead: true,
-                    canWrite: false,
-                    allowAllProjects: true),
-                canRead: true,
-                canWrite: false,
-                allowAllDefinitions: true),
-                AgentWorkspaceToolProfileKind.QualityValidation),
-            AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
-            [
-                CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
-                CreateAssignment(concreteDeliverableDeliveryInlineSkillCapabilityId, "concrete-deliverable-delivery-inline-skill", CapabilityKind.Skill),
-                CreateAssignment(frontendSkillCapabilityId, "frontend-skill", CapabilityKind.Skill),
-                CreateAssignment(playwrightWorkflowCapabilityId, "candoitall-watch-playwright-loop", CapabilityKind.Skill),
-                CreateAssignment(repositoryPlaybookCapabilityId, "repository-playbook", CapabilityKind.Skill),
-                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
-                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
-                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
-                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
-                CreateAssignment(workspacePythonRunFileCapabilityId, "workspace-python-run-file", CapabilityKind.Tool),
-                CreateAssignment(workspacePwshRunScriptCapabilityId, "workspace-pwsh-run-script", CapabilityKind.Tool)
-            ],
-            ["javascript", "qa", "browser"],
-            now,
-            string.Empty);
-
-        var businessStrategistAgent = CreateWorkloadAgent(
-            businessStrategistAgentId,
-            "Business Strategist",
-            "Business planning specialist",
-            "Creates grounded business plans, operating assumptions, risk views, and cross-functional handoffs for non-code processes.",
-            GetSeedText("agents/business-strategist.instructions"),
-            openAiProviderId,
-            AgentWorkloadKind.Management,
-            "business-strategist",
-            WithWorkspaceToolProfile(
-                WithProcessAccess(
-                WithProjectStructureAccess(
-                    SerializeConfiguration(new
-                    {
-                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
-                        enableCompaction = true,
-                        maxLocalRagResults = 5
-                    }),
-                    canRead: true,
-                    canWrite: false,
-                    allowAllProjects: true),
-                canRead: true,
-                canWrite: false,
-                allowAllDefinitions: true),
-                AgentWorkspaceToolProfileKind.BusinessAnalysis),
-            AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, CanScheduleWork = true, RequiresApprovalForExternalCalls = true },
-            [
-                CreateAssignment(bundleWorkflowCapabilityId, "candoitall-bundle-workflow", CapabilityKind.Skill),
-                CreateAssignment(concreteDeliverableDeliveryInlineSkillCapabilityId, "concrete-deliverable-delivery-inline-skill", CapabilityKind.Skill),
-                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
-                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
-                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
-                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceConvertDocumentCapabilityId, "workspace-convert-document", CapabilityKind.Tool),
-                CreateAssignment(localDocsCapabilityId, "workspace-source-rag", CapabilityKind.Rag),
-                CreateAssignment(researchContextCapabilityId, "research-briefing-context", CapabilityKind.AiContext),
-                CreateAssignment(providerNativeWebSearchCapabilityId, "provider-native-web-search", CapabilityKind.Tool)
-            ],
-            ["business", "strategy", "planning"],
-            now,
-            string.Empty);
-
-        var financialStrategistAgent = CreateWorkloadAgent(
-            financialStrategistAgentId,
-            "Financial Strategist",
-            "Financial planning specialist",
-            "Builds assumption-driven budgets, unit economics, spreadsheet analysis, and sensitivity views for planning processes.",
-            GetSeedText("agents/financial-strategist.instructions"),
-            openAiProviderId,
-            AgentWorkloadKind.Spreadsheet,
-            "financial-strategist",
-            WithWorkspaceToolProfile(
-                WithProcessAccess(
-                WithProjectStructureAccess(
-                    SerializeConfiguration(new
-                    {
-                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
-                        enableCompaction = true,
-                        maxLocalRagResults = 5
-                    }),
-                    canRead: true,
-                    canWrite: false,
-                    allowAllProjects: true),
-                canRead: true,
-                canWrite: false,
-                allowAllDefinitions: true),
-                AgentWorkspaceToolProfileKind.BusinessAnalysis),
-            AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
-            [
-                CreateAssignment(spreadsheetCapabilityId, "spreadsheet-skill", CapabilityKind.Skill),
-                CreateAssignment(concreteDeliverableDeliveryInlineSkillCapabilityId, "concrete-deliverable-delivery-inline-skill", CapabilityKind.Skill),
-                CreateAssignment(documentSpreadsheetReconciliationInlineSkillCapabilityId, "document-spreadsheet-reconciliation-inline-skill", CapabilityKind.Skill),
-                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
-                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
-                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
-                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceConvertDocumentCapabilityId, "workspace-convert-document", CapabilityKind.Tool),
-                CreateAssignment(workspaceInspectSpreadsheetCapabilityId, "workspace-inspect-spreadsheet", CapabilityKind.Tool),
-                CreateAssignment(localDocsCapabilityId, "workspace-source-rag", CapabilityKind.Rag),
-                CreateAssignment(researchContextCapabilityId, "research-briefing-context", CapabilityKind.AiContext),
-                CreateAssignment(providerNativeCodeInterpreterCapabilityId, "provider-native-code-interpreter", CapabilityKind.Tool)
-            ],
-            ["finance", "strategy", "spreadsheet"],
-            now,
-            string.Empty);
-
-        var marketingSpecialistAgent = CreateWorkloadAgent(
-            marketingSpecialistAgentId,
-            "Marketing Specialist",
-            "Marketing planning specialist",
-            "Creates positioning, messaging, go-to-market plans, campaign briefs, and validation experiments for non-code processes.",
-            GetSeedText("agents/marketing-specialist.instructions"),
-            openAiProviderId,
-            AgentWorkloadKind.Sales,
-            "marketing-specialist",
-            WithWorkspaceToolProfile(
-                WithProcessAccess(
-                WithProjectStructureAccess(
-                    SerializeConfiguration(new
-                    {
-                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
-                        enableCompaction = true,
-                        maxLocalRagResults = 5
-                    }),
-                    canRead: true,
-                    canWrite: false,
-                    allowAllProjects: true),
-                canRead: true,
-                canWrite: false,
-                allowAllDefinitions: true),
-                AgentWorkspaceToolProfileKind.BusinessAnalysis),
-            AgentPermissionsPolicy.Default with { CanObserveOtherAgents = true, RequiresApprovalForExternalCalls = true },
-            [
-                CreateAssignment(bundleWorkflowCapabilityId, "candoitall-bundle-workflow", CapabilityKind.Skill),
-                CreateAssignment(concreteDeliverableDeliveryInlineSkillCapabilityId, "concrete-deliverable-delivery-inline-skill", CapabilityKind.Skill),
-                CreateAssignment(frontendSkillCapabilityId, "frontend-skill", CapabilityKind.Skill),
-                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
-                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
-                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
-                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceConvertDocumentCapabilityId, "workspace-convert-document", CapabilityKind.Tool),
-                CreateAssignment(localDocsCapabilityId, "workspace-source-rag", CapabilityKind.Rag),
-                CreateAssignment(researchContextCapabilityId, "research-briefing-context", CapabilityKind.AiContext),
-                CreateAssignment(providerNativeWebSearchCapabilityId, "provider-native-web-search", CapabilityKind.Tool)
-            ],
-            ["marketing", "strategy", "go-to-market"],
-            now,
-            string.Empty);
-
-        var screenshotCaptureAgentTemplate = CreateWorkloadAgent(
-            screenshotCaptureAgentTemplateId,
-            "App Screenshot Capture Agent Template",
-            "Runnable app screenshot capture agent",
-            "Runs .NET or JavaScript apps once for a screenshot process step and captures route screenshots through Playwright MCP.",
-            GetSeedText("agents/app-screenshot-capture-template.instructions"),
-            openAiProviderId,
-            AgentWorkloadKind.Qa,
-            "app-screenshot-capture-agent",
-            WithWorkspaceToolProfile(
-                WithProcessAccess(
-                WithProjectStructureAccess(
-                    SerializeConfiguration(new
-                    {
-                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
-                        enableCompaction = true,
-                        maxLocalRagResults = 4,
-                        runtimeUse = "app-screenshot-capture"
-                    }),
-                    canRead: true,
-                    canWrite: false,
-                    allowAllProjects: true),
-                canRead: true,
-                canWrite: false,
-                allowAllDefinitions: true),
-                AgentWorkspaceToolProfileKind.QualityValidation),
-            AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
-            [
-                CreateAssignment(playwrightLocalMcpCapabilityId, "playwright-local-mcp", CapabilityKind.McpServer),
-                CreateAssignment(concreteDeliverableDeliveryInlineSkillCapabilityId, "concrete-deliverable-delivery-inline-skill", CapabilityKind.Skill),
-                CreateAssignment(dotnetAppDeliveryInlineSkillCapabilityId, "dotnet-app-delivery-inline-skill", CapabilityKind.Skill),
-                CreateAssignment(blazorSsrDeliveryInlineSkillCapabilityId, "blazor-ssr-delivery-inline-skill", CapabilityKind.Skill),
-                CreateAssignment(frontendSkillCapabilityId, "frontend-skill", CapabilityKind.Skill),
-                CreateAssignment(playwrightWorkflowCapabilityId, "candoitall-watch-playwright-loop", CapabilityKind.Skill),
-                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
-                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
-                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
-                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceDotnetBuildCapabilityId, "workspace-dotnet-build", CapabilityKind.Tool),
-                CreateAssignment(workspaceDotnetRunCapabilityId, "workspace-dotnet-run", CapabilityKind.Tool),
-                CreateAssignment(workspacePwshRunScriptCapabilityId, "workspace-pwsh-run-script", CapabilityKind.Tool)
-            ],
-            ["template", "screenshot", "playwright", "runtime"],
-            now,
-            string.Empty,
-            isTemplate: true);
-
-        var screenshotReviewStorageAgentTemplate = CreateWorkloadAgent(
-            screenshotReviewStorageAgentTemplateId,
-            "Screenshot Review Storage Agent Template",
-            "Screenshot reviewer and asset writer",
-            "Reviews captured screenshots and writes accepted images back to project structure as managed image asset nodes.",
-            GetSeedText("agents/screenshot-review-storage-template.instructions"),
-            openAiProviderId,
-            AgentWorkloadKind.Qa,
-            "screenshot-review-storage-agent",
-            WithImageGenerationAccess(
-            WithWorkspaceToolAccess(
-                WithProcessAccess(
-                WithProjectStructureAccess(
-                    SerializeConfiguration(new
-                    {
-                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
-                        enableCompaction = true,
-                        maxLocalRagResults = 4,
-                        runtimeUse = "screenshot-review-storage"
-                    }),
-                    canRead: true,
-                    canWrite: true,
-                    allowAllProjects: true),
-                canRead: true,
-                canWrite: true,
-                allowAllDefinitions: true),
-                AgentWorkspaceToolProfileKind.QualityValidation,
-                settings =>
-                {
-                    settings.CanReadStorage = true;
-                    settings.CanWriteStorage = true;
-                    settings.AllowAllStorageCatalogs = true;
-                }),
-            canGenerateImages: false,
-            preferredProviderProfileId: null,
-            defaultModel: string.Empty,
-            canStoreImagesAsProjectAssets: true),
-            AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
-            [
-                CreateAssignment(concreteDeliverableDeliveryInlineSkillCapabilityId, "concrete-deliverable-delivery-inline-skill", CapabilityKind.Skill),
-                CreateAssignment(frontendSkillCapabilityId, "frontend-skill", CapabilityKind.Skill),
-                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
-                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
-                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
-                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceInspectImageCapabilityId, "workspace-inspect-image", CapabilityKind.Tool),
-                CreateAssignment(localDocsCapabilityId, "workspace-source-rag", CapabilityKind.Rag)
-            ],
-            ["template", "screenshot", "review", "asset-storage"],
-            now,
-            string.Empty,
-            isTemplate: true);
-
-        var layoutImageGenerationAgentTemplate = CreateWorkloadAgent(
-            layoutImageGenerationAgentTemplateId,
-            "Layout Image Generation Agent Template",
-            "Layout image generator and asset writer",
-            "Reads stored app screenshots, generates improved layout recommendation images through the preferred image provider, and stores generated images as managed project assets.",
-            GetSeedText("agents/layout-image-generation-template.instructions"),
-            openAiProviderId,
-            AgentWorkloadKind.Qa,
-            "layout-image-generation-agent",
-            WithImageGenerationAccess(
-            WithWorkspaceToolAccess(
-                WithProcessAccess(
-                WithProjectStructureAccess(
-                    SerializeConfiguration(new
-                    {
-                        managedSeedVersion = SeriousDeliveryManagedSeedVersion,
-                        enableCompaction = true,
-                        maxLocalRagResults = 4,
-                        runtimeUse = "layout-image-generation"
-                    }),
-                    canRead: true,
-                    canWrite: true,
-                    allowAllProjects: true),
-                canRead: true,
-                canWrite: true,
-                allowAllDefinitions: true),
-                AgentWorkspaceToolProfileKind.QualityValidation,
-                settings =>
-                {
-                    settings.CanReadStorage = true;
-                    settings.CanWriteStorage = true;
-                    settings.AllowAllStorageCatalogs = true;
-                }),
-            canGenerateImages: true,
-            preferredProviderProfileId: openAiImageProviderId,
-            defaultModel: "gpt-image-1-mini",
-            canStoreImagesAsProjectAssets: true),
-            AgentPermissionsPolicy.Default with { RequiresApprovalForExternalCalls = true },
-            [
-                CreateAssignment(concreteDeliverableDeliveryInlineSkillCapabilityId, "concrete-deliverable-delivery-inline-skill", CapabilityKind.Skill),
-                CreateAssignment(frontendSkillCapabilityId, "frontend-skill", CapabilityKind.Skill),
-                CreateAssignment(workspaceListFilesCapabilityId, "workspace-list-files", CapabilityKind.Tool),
-                CreateAssignment(workspaceSearchCapabilityId, "workspace-search", CapabilityKind.Tool),
-                CreateAssignment(workspaceReadCapabilityId, "workspace-read-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceStatPathCapabilityId, "workspace-stat-path", CapabilityKind.Tool),
-                CreateAssignment(workspaceCreateDirectoryCapabilityId, "workspace-create-directory", CapabilityKind.Tool),
-                CreateAssignment(workspaceWriteFileCapabilityId, "workspace-write-file", CapabilityKind.Tool),
-                CreateAssignment(workspaceAppendFileCapabilityId, "workspace-append-file", CapabilityKind.Tool),
-                CreateAssignment(localDocsCapabilityId, "workspace-source-rag", CapabilityKind.Rag)
-            ],
-            ["template", "layout", "image-generation", "asset-storage", "openai"],
-            now,
-            string.Empty,
-            isTemplate: true);
+        var providerIdsByKey = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["openai-default"] = openAiProviderId,
+            ["openai-chat-completions"] = openAiChatProviderId,
+            ["openai-image-generation"] = openAiImageProviderId,
+            ["ollama-local"] = ollamaProviderId,
+            ["managed-seed-openai-default"] = ollamaProviderId
+        };
+        var agentSeed = BuildAgentSeedFromTemplates(now, providerIdsByKey, capabilities);
+        var agentIdsByTemplateKey = agentSeed.Agents.ToDictionary(
+            item => item.TemplateKey,
+            item => item.Id,
+            StringComparer.OrdinalIgnoreCase);
+        var architectAgentId = RequireAgentId(agentIdsByTemplateKey, "portfolio-architect");
+        var qaAgentId = RequireAgentId(agentIdsByTemplateKey, "delivery-qa-observer");
+        var programmingAgentId = RequireAgentId(agentIdsByTemplateKey, "programming-workspace-analyst");
+        var hrStaffingManagerAgentId = RequireAgentId(agentIdsByTemplateKey, "hr-staffing-manager");
+        var spreadsheetAgentId = RequireAgentId(agentIdsByTemplateKey, "spreadsheet-analyst");
+        var mailAgentId = RequireAgentId(agentIdsByTemplateKey, "mail-triage-analyst");
+        var researchAgentId = RequireAgentId(agentIdsByTemplateKey, "research-deep-dive-analyst");
 
         return new SandboxWorkspaceDocument(
             LatestVersion,
-            [
-                architectAgent,
-                qaAgent,
-                programmingAgent,
-                codeReviewAgent,
-                uiReviewAgent,
-                securityReviewerAgent,
-                releaseManagerAgent,
-                hrStaffingManagerAgent,
-                spreadsheetAgent,
-                mailAgent,
-                researchAgent,
-                dotnetArchitectAgent,
-                dotnetDeveloperAgent,
-                blazorDeveloperAgent,
-                dotnetQaAgent,
-                javascriptArchitectAgent,
-                javascriptDeveloperAgent,
-                javascriptQaAgent,
-                businessStrategistAgent,
-                financialStrategistAgent,
-                marketingSpecialistAgent,
-                screenshotCaptureAgentTemplate,
-                screenshotReviewStorageAgentTemplate,
-                layoutImageGenerationAgentTemplate
-            ],
+            agentSeed.Agents,
             providers,
             capabilities,
             [
@@ -1784,49 +542,259 @@ internal static class SandboxWorkspaceSeedBuilder
                 new AgentMemoryRecord(CreateStableGuid("memory/spreadsheet-review-checklist"), spreadsheetAgentId, MemoryKind.Context, "Spreadsheet review checklist", "Explain key metrics, anomalies, and any rows that deserve follow-up.", "seed", 3, "{}", now),
                 new AgentMemoryRecord(CreateStableGuid("memory/reply-style"), mailAgentId, MemoryKind.Preference, "Reply style", "Keep drafted replies concise, direct, and explicit about the next action.", "seed", 3, "{}", now),
                 new AgentMemoryRecord(CreateStableGuid("memory/evidence-first-claims"), researchAgentId, MemoryKind.Context, "Evidence-first claims", "Separate proven repo evidence from inference and capture any validation gap honestly.", "seed", 5, "{}", now)
-            ]);
+            ])
+        {
+            AgentTeams = agentSeed.Teams
+        };
     }
 
-    private static AgentDefinition CreateWorkloadAgent(
-        Guid id,
-        string name,
-        string roleTitle,
-        string summary,
-        string instructions,
-        Guid providerId,
-        AgentWorkloadKind workload,
-        string templateKey,
-        string configurationJson,
-        AgentPermissionsPolicy permissions,
-        IReadOnlyList<AgentCapabilityAssignment> capabilities,
-        IReadOnlyList<string> tags,
+    private static AgentTemplateSeed BuildAgentSeedFromTemplates(
         DateTimeOffset now,
-        string model = "",
-        bool isTemplate = false)
+        IReadOnlyDictionary<string, Guid> providerIdsByKey,
+        IReadOnlyList<CapabilityCatalogItem> capabilities)
     {
-        return new AgentDefinition(
-            id,
-            name,
-            roleTitle,
-            summary,
-            instructions,
-            AgentLifecycleStatus.Active,
-            providerId,
-            model,
-            workload,
-            AgentChatHistoryMode.FrameworkManaged,
-            0.2d,
-            false,
-            false,
-            WithDefaultReasoningEffort(configurationJson),
-            isTemplate,
-            templateKey,
-            permissions,
-            capabilities,
-            tags,
-            now,
-            now);
+        var pack = new AgentTemplatePackLoader().Load();
+        var seedVersion = string.IsNullOrWhiteSpace(pack.Manifest.SeedVersion)
+            ? SeriousDeliveryManagedSeedVersion
+            : pack.Manifest.SeedVersion.Trim();
+        var capabilitiesByKey = capabilities.ToDictionary(item => item.Key, StringComparer.OrdinalIgnoreCase);
+        var agents = new List<AgentDefinition>();
+
+        foreach (var member in pack.Teams.SelectMany(team => team.MemberTemplates))
+        {
+            var settings = member.Settings;
+            var id = CreateStableGuid(RequireTemplateValue(settings.StableIdKey, member.Key, "stableIdKey"));
+            var templateKey = RequireTemplateValue(settings.TemplateKey, member.Key, "templateKey");
+            var configurationJson = BuildAgentTemplateConfigurationJson(settings, providerIdsByKey, seedVersion);
+            var providerProfileId = ResolveProviderProfileId(settings.ProviderProfileKey, providerIdsByKey, member.Key);
+            var assignments = ResolveCapabilityAssignments(member, capabilitiesByKey);
+
+            agents.Add(new AgentDefinition(
+                id,
+                RequireTemplateValue(settings.Name, member.Key, "name"),
+                RequireTemplateValue(settings.RoleTitle, member.Key, "roleTitle"),
+                RequireTemplateValue(settings.Summary, member.Key, "summary"),
+                RequireTemplateValue(member.Instructions, member.Key, "instructions"),
+                ParseEnumOrDefault(settings.Status, AgentLifecycleStatus.Active),
+                providerProfileId,
+                NormalizeTemplateText(settings.Model),
+                ParseEnumOrDefault(settings.Workload, AgentWorkloadKind.General),
+                ParseEnumOrDefault(settings.ChatHistoryMode, AgentChatHistoryMode.FrameworkManaged),
+                settings.Temperature,
+                settings.RequirePerServiceCallChatHistoryPersistence,
+                settings.EnableBackgroundResponses,
+                configurationJson,
+                settings.IsTemplate,
+                templateKey,
+                BuildPermissions(settings.Permissions),
+                assignments,
+                settings.Tags
+                    .Where(item => !string.IsNullOrWhiteSpace(item))
+                    .Select(item => item.Trim())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList(),
+                now,
+                now));
+        }
+
+        EnsureUniqueTemplateKeys(agents);
+        var agentsByTemplateKey = agents.ToDictionary(item => item.TemplateKey, item => item.Id, StringComparer.OrdinalIgnoreCase);
+        var teams = pack.Teams
+            .Select(team => new AgentTeamDefinition(
+                CreateStableGuid(RequireTemplateValue(team.StableIdKey, team.Key, "stableIdKey")),
+                RequireTemplateValue(team.Name, team.Key, "name"),
+                NormalizeTemplateText(team.Description),
+                team.MemberTemplates
+                    .Select(member => RequireAgentId(agentsByTemplateKey, member.Settings.TemplateKey))
+                    .ToList(),
+                now,
+                now))
+            .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return new AgentTemplateSeed(
+            agents.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ToList(),
+            teams);
     }
+
+    private static string BuildAgentTemplateConfigurationJson(
+        AgentTemplateSettings settings,
+        IReadOnlyDictionary<string, Guid> providerIdsByKey,
+        string seedVersion)
+    {
+        var configuration = settings.Configuration.ToDictionary(
+            item => item.Key,
+            item => ConvertSeedConfigurationValue(item.Value),
+            StringComparer.OrdinalIgnoreCase);
+        configuration["managedSeedVersion"] = seedVersion;
+        var configurationJson = SerializeConfiguration(configuration);
+
+        if (settings.Access.ProjectStructure is { } projectStructure)
+        {
+            configurationJson = AgentProjectStructureAccessMetadata.Write(
+                configurationJson,
+                new AgentProjectStructureAccessSettings
+                {
+                    CanRead = projectStructure.CanRead,
+                    CanWrite = projectStructure.CanWrite,
+                    AllowAllProjects = projectStructure.AllowAllProjects,
+                    AllowedProjectIds = projectStructure.AllowedProjectIds
+                });
+        }
+
+        if (settings.Access.Processes is { } processes)
+        {
+            configurationJson = AgentProcessAccessMetadata.Write(
+                configurationJson,
+                new AgentProcessAccessSettings
+                {
+                    CanRead = processes.CanRead,
+                    CanWrite = processes.CanWrite,
+                    AllowAllDefinitions = processes.AllowAllDefinitions,
+                    AllowedDefinitionIds = processes.AllowedDefinitionIds
+                });
+        }
+
+        if (settings.Access.WorkspaceTools is { } workspaceTools)
+        {
+            var profile = ParseEnumOrDefault(workspaceTools.Profile, AgentWorkspaceToolProfileKind.Custom);
+            var access = AgentWorkspaceToolAccessProfiles.CreateSettings(profile);
+            access.CanReadStorage = workspaceTools.CanReadStorage;
+            access.CanWriteStorage = workspaceTools.CanWriteStorage;
+            access.AllowAllStorageCatalogs = workspaceTools.AllowAllStorageCatalogs;
+            access.AllowedStorageCatalogIds = workspaceTools.AllowedStorageCatalogIds;
+            access.AllowedExternalTargetAliases = workspaceTools.AllowedExternalTargetAliases;
+            configurationJson = AgentWorkspaceToolAccessMetadata.Write(configurationJson, access);
+        }
+
+        if (settings.Access.ImageGeneration is { } imageGeneration)
+        {
+            configurationJson = AgentImageGenerationAccessMetadata.Write(
+                configurationJson,
+                new AgentImageGenerationAccessSettings
+                {
+                    CanGenerateImages = imageGeneration.CanGenerateImages,
+                    PreferredProviderProfileId = ResolveOptionalProviderProfileId(
+                        imageGeneration.PreferredProviderProfileKey,
+                        providerIdsByKey),
+                    DefaultModel = imageGeneration.DefaultModel,
+                    CanStoreImagesAsProjectAssets = imageGeneration.CanStoreImagesAsProjectAssets
+                });
+        }
+
+        return settings.ApplyDefaultReasoningEffort
+            ? WithDefaultReasoningEffort(configurationJson)
+            : configurationJson;
+    }
+
+    private static IReadOnlyList<AgentCapabilityAssignment> ResolveCapabilityAssignments(
+        AgentTemplateMember member,
+        IReadOnlyDictionary<string, CapabilityCatalogItem> capabilitiesByKey)
+    {
+        return member.Skills.CapabilityKeys
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Select(item =>
+            {
+                var capabilityKey = item.Trim();
+                if (!capabilitiesByKey.TryGetValue(capabilityKey, out var capability))
+                {
+                    throw new InvalidOperationException(
+                        $"Agent template '{member.Key}' references missing capability '{capabilityKey}'.");
+                }
+
+                return CreateAssignment(capability.Id, capability.Key, capability.Kind);
+            })
+            .ToList();
+    }
+
+    private static AgentPermissionsPolicy BuildPermissions(AgentTemplatePermissions template)
+    {
+        var defaults = AgentPermissionsPolicy.Default;
+        return new AgentPermissionsPolicy(
+            template.CanUseTools ?? defaults.CanUseTools,
+            template.CanAskOtherAgents ?? defaults.CanAskOtherAgents,
+            template.CanEscalateToHuman ?? defaults.CanEscalateToHuman,
+            template.CanObserveOtherAgents ?? defaults.CanObserveOtherAgents,
+            template.CanScheduleWork ?? defaults.CanScheduleWork,
+            template.RequiresApprovalForExternalCalls ?? defaults.RequiresApprovalForExternalCalls,
+            template.AutoApproveExternalCallsByDefault ?? defaults.AutoApproveExternalCallsByDefault,
+            []);
+    }
+
+    private static Guid? ResolveProviderProfileId(
+        string providerProfileKey,
+        IReadOnlyDictionary<string, Guid> providerIdsByKey,
+        string templateKey)
+    {
+        if (string.IsNullOrWhiteSpace(providerProfileKey))
+        {
+            return null;
+        }
+
+        return providerIdsByKey.TryGetValue(providerProfileKey.Trim(), out var providerId)
+            ? providerId
+            : throw new InvalidOperationException(
+                $"Agent template '{templateKey}' references missing provider profile key '{providerProfileKey}'.");
+    }
+
+    private static Guid? ResolveOptionalProviderProfileId(
+        string providerProfileKey,
+        IReadOnlyDictionary<string, Guid> providerIdsByKey)
+    {
+        if (string.IsNullOrWhiteSpace(providerProfileKey))
+        {
+            return null;
+        }
+
+        return providerIdsByKey.TryGetValue(providerProfileKey.Trim(), out var providerId)
+            ? providerId
+            : throw new InvalidOperationException(
+                $"Agent template references missing provider profile key '{providerProfileKey}'.");
+    }
+
+    private static Guid RequireAgentId(
+        IReadOnlyDictionary<string, Guid> agentIdsByTemplateKey,
+        string templateKey)
+    {
+        return agentIdsByTemplateKey.TryGetValue(templateKey, out var agentId)
+            ? agentId
+            : throw new InvalidOperationException($"Seed agent template '{templateKey}' was not materialized.");
+    }
+
+    private static void EnsureUniqueTemplateKeys(IReadOnlyList<AgentDefinition> agents)
+    {
+        var duplicateTemplateKey = agents
+            .GroupBy(item => item.TemplateKey, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault(group => group.Count() > 1);
+        if (duplicateTemplateKey is not null)
+        {
+            throw new InvalidOperationException(
+                $"Agent template pack contains duplicate template key '{duplicateTemplateKey.Key}'.");
+        }
+    }
+
+    private static TEnum ParseEnumOrDefault<TEnum>(string value, TEnum defaultValue)
+        where TEnum : struct, Enum
+    {
+        return !string.IsNullOrWhiteSpace(value) &&
+               Enum.TryParse<TEnum>(value.Trim(), ignoreCase: true, out var parsed)
+            ? parsed
+            : defaultValue;
+    }
+
+    private static string RequireTemplateValue(string value, string templateKey, string label)
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? throw new InvalidOperationException($"Agent template '{templateKey}' is missing required setting '{label}'.")
+            : value.Trim();
+    }
+
+    private static string NormalizeTemplateText(string? value)
+        => string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+
+    private sealed record AgentTemplateSeed(
+        IReadOnlyList<AgentDefinition> Agents,
+        IReadOnlyList<AgentTeamDefinition> Teams);
 
     private static AgentCapabilityAssignment CreateAssignment(
         Guid capabilityId,

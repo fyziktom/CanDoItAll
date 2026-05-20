@@ -1,0 +1,25 @@
+{
+  "key": "javascript-delivery",
+  "stableIdKey": "agent-teams/javascript-delivery",
+  "name": "JavaScript Delivery Team",
+  "description": "Specialists for JavaScript and TypeScript architecture, implementation, and browser validation.",
+  "settings": {
+    "defaultProviderPolicy": "member-settings",
+    "membershipMode": "managed-default-seed",
+    "instructionsSource": "member-folders"
+  },
+  "members": [
+    {
+      "key": "javascript-solution-architect",
+      "relativePath": "members/javascript-solution-architect"
+    },
+    {
+      "key": "javascript-application-developer",
+      "relativePath": "members/javascript-application-developer"
+    },
+    {
+      "key": "javascript-qa-review-lead",
+      "relativePath": "members/javascript-qa-review-lead"
+    }
+  ]
+}

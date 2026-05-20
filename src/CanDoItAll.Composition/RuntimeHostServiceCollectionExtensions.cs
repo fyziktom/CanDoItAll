@@ -202,6 +202,7 @@ public sealed class AppDatabaseBootstrapper(
     private const string ManagedSqliteOpenAiDefaultProviderName = "OpenAI default";
     private const string ManagedSqliteOpenAiChatCompletionsProviderName = "OpenAI chat completions";
     private static readonly Guid ManagedSqliteOpenAiProviderId = Guid.Parse("2DB76580-21A4-B156-81A7-68DC0EE7513C");
+    private static readonly Guid ManagedSqliteRemoteOllamaProviderId = Guid.Parse("12E4C814-E822-0B58-9B9F-52577D7B374E");
     private static readonly IReadOnlySet<string> ManagedSqliteOpenAiProviderNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         ManagedSqliteOpenAiDefaultProviderName,
@@ -611,6 +612,10 @@ public sealed class AppDatabaseBootstrapper(
         await store.UpdateCatalogAsync(catalog =>
         {
             var openAiCatalogProvider = CreateManagedSqliteOpenAiCatalogProvider();
+            var remoteOllamaCatalogProvider = catalog.Providers.FirstOrDefault(provider =>
+                provider.Id != ManagedSqliteOpenAiProviderId &&
+                provider.Kind == CanDoItAll.AgentFramework.Models.ProviderKind.Ollama &&
+                string.Equals(provider.Name, ManagedSeedProviderFallbacks.FallbackProviderName, StringComparison.OrdinalIgnoreCase)) ?? CreateManagedSqliteRemoteOllamaCatalogProvider();
             var providerIdsToRedirect = catalog.Providers
                 .Where(item => ManagedSqliteOpenAiProviderNames.Contains(item.Name))
                 .Select(item => item.Id)
@@ -619,7 +624,9 @@ public sealed class AppDatabaseBootstrapper(
 
             var updatedProviders = catalog.Providers
                 .Where(item => item.Id != ManagedSqliteOpenAiProviderId)
+                .Where(item => item.Id != remoteOllamaCatalogProvider.Id)
                 .Append(openAiCatalogProvider)
+                .Append(remoteOllamaCatalogProvider)
                 .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
                 .ToList();
             var updatedAgents = catalog.Agents
@@ -875,6 +882,39 @@ public sealed class AppDatabaseBootstrapper(
             "OpenAI active",
             null,
             ManagedSqliteOpenAiSuggestedModels);
+    }
+
+    private static CanDoItAll.AgentFramework.Models.ProviderProfile CreateManagedSqliteRemoteOllamaCatalogProvider()
+    {
+        return new CanDoItAll.AgentFramework.Models.ProviderProfile(
+            ManagedSqliteRemoteOllamaProviderId,
+            ManagedSeedProviderFallbacks.FallbackProviderName,
+            CanDoItAll.AgentFramework.Models.ProviderKind.Ollama,
+            ManagedSeedProviderFallbacks.FallbackBaseUrl,
+            string.Empty,
+            ManagedSeedProviderFallbacks.FallbackModel,
+            ProviderTransportKind.ChatCompletions,
+            true,
+            true,
+            true,
+            true,
+            false,
+            JsonSerializer.Serialize(new
+            {
+                history = "framework-managed",
+                fallback = "managed-sqlite-remote-ollama",
+                timeoutSeconds = ManagedSeedProviderFallbacks.FallbackTimeoutSeconds
+            }),
+            "Remote Ollama fallback provider kept available alongside managed SQLite OpenAI seed agents.",
+            "Not checked",
+            null,
+            [
+                ManagedSeedProviderFallbacks.FallbackModel,
+                "qwen3.5:9b",
+                "gemma3-12b-128k:latest",
+                "deepseek-r1:8b-32k",
+                "phi4-16k"
+            ]);
     }
 
     private async Task<bool> HasManagedSqliteOpenAiCredentialAsync(

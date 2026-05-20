@@ -1,0 +1,60 @@
+﻿Command: dotnet test tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --configuration Release --no-build --filter 'FullyQualifiedName~ProviderModelSelector_treats_non_empty_provider_default_value_as_explicit_override|FullyQualifiedName~AgentDetails_runtime_model_override_with_provider_default_text_reopens_checked' --logger 'console;verbosity=normal'
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTime: 2026-05-20T17:02:37.5966170-04:00
+ExitCode: 1
+Output:
+Test run for C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\bin\Release\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.7)
+[xUnit.net 00:00:00.44]   Discovering: CanDoItAll.Tests.Components
+[xUnit.net 00:00:00.64]   Discovered:  CanDoItAll.Tests.Components
+[xUnit.net 00:00:00.69]   Starting:    CanDoItAll.Tests.Components
+dotnet.exe : [xUnit.net 00:00:01.79]     CanDoItAll.Tests.Components.ProviderModelSelectorTests.ProviderModelSelector_t
+reats_non_empty_provider_default_value_as_explicit_override [FAIL]
+At line:6 char:11
++ $output = & dotnet test tests\CanDoItAll.Tests.Components\CanDoItAll. ...
++           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([xUnit.net 00:0...override [FAIL]:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[xUnit.net 00:00:01.79]       Bunit.ElementNotFoundException : No elements were found that matches the selector '[data-testid='model-text']'
+[xUnit.net 00:00:01.80]       Stack Trace:
+[xUnit.net 00:00:01.80]         /_/src/bunit.web/Extensions/RenderedFragmentExtensions.cs(27,0): at Bunit.RenderedFragmentExtensions.Find(IRenderedFragment renderedFragment, String cssSelector)
+[xUnit.net 00:00:01.80]         C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\ProviderModelSelectorTests.cs(115,0): at CanDoItAll.Tests.Components.ProviderModelSelectorTests.ProviderModelSelector_treats_non_empty_provider_default_value_as_explicit_override()
+[xUnit.net 00:00:01.80]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+[xUnit.net 00:00:01.80]            at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Failed CanDoItAll.Tests.Components.ProviderModelSelectorTests.ProviderModelSelector_treats_non_empty_provider_default_value_as_explicit_override [989 ms]
+  Error Message:
+   Bunit.ElementNotFoundException : No elements were found that matches the selector '[data-testid='model-text']'
+  Stack Trace:
+     at Bunit.RenderedFragmentExtensions.Find(IRenderedFragment renderedFragment, String cssSelector) in /_/src/bunit.web/Extensions/RenderedFragmentExtensions.cs:line 27
+   at CanDoItAll.Tests.Components.ProviderModelSelectorTests.ProviderModelSelector_treats_non_empty_provider_default_value_as_explicit_override() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\ProviderModelSelectorTests.cs:line 115
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+[xUnit.net 00:00:25.93]     CanDoItAll.Tests.Components.AiAgentsPageTests.AgentDetails_runtime_model_override_with_prov
+ider_default_text_reopens_checked [FAIL]
+[xUnit.net 00:00:25.93]       Assert.Equal() Failure: Strings differ
+[xUnit.net 00:00:25.93]                  ↓ (pos 0)
+[xUnit.net 00:00:25.93]       Expected: "gpt-5-mini"
+[xUnit.net 00:00:25.93]       Actual:   ""
+[xUnit.net 00:00:25.93]       Stack Trace:
+[xUnit.net 00:00:25.93]         C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\AiAgentsPageTests.cs(298,0): at CanDoItAll.Tests.Components.AiAgentsPageTests.AgentDetails_runtime_model_override_with_provider_default_text_reopens_checked()
+[xUnit.net 00:00:25.93]         C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\AiAgentsPageTests.cs(305,0): at CanDoItAll.Tests.Components.AiAgentsPageTests.AgentDetails_runtime_model_override_with_provider_default_text_reopens_checked()
+[xUnit.net 00:00:25.93]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:25.94]   Finished:    CanDoItAll.Tests.Components
+  Failed CanDoItAll.Tests.Components.AiAgentsPageTests.AgentDetails_runtime_model_override_with_provider_default_text_reopens_checked [25 s]
+  Error Message:
+   Assert.Equal() Failure: Strings differ
+           ↓ (pos 0)
+Expected: "gpt-5-mini"
+Actual:   ""
+  Stack Trace:
+     at CanDoItAll.Tests.Components.AiAgentsPageTests.AgentDetails_runtime_model_override_with_provider_default_text_reopens_checked() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\AiAgentsPageTests.cs:line 298
+   at CanDoItAll.Tests.Components.AiAgentsPageTests.AgentDetails_runtime_model_override_with_provider_default_text_reopens_checked() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\AiAgentsPageTests.cs:line 305
+--- End of stack trace from previous location ---
+
+Test Run Failed.
+Total tests: 2
+     Failed: 2
+ Total time: 28.0186 Seconds
+

@@ -1,0 +1,25 @@
+{
+  "key": "visual-automation-templates",
+  "stableIdKey": "agent-teams/visual-automation-templates",
+  "name": "Visual Automation Template Team",
+  "description": "Template agents used by screenshot capture, screenshot review/storage, and layout image-generation process steps.",
+  "settings": {
+    "defaultProviderPolicy": "member-settings",
+    "membershipMode": "managed-default-seed",
+    "instructionsSource": "member-folders"
+  },
+  "members": [
+    {
+      "key": "app-screenshot-capture-agent",
+      "relativePath": "members/app-screenshot-capture-agent"
+    },
+    {
+      "key": "screenshot-review-storage-agent",
+      "relativePath": "members/screenshot-review-storage-agent"
+    },
+    {
+      "key": "layout-image-generation-agent",
+      "relativePath": "members/layout-image-generation-agent"
+    }
+  ]
+}
