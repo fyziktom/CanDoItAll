@@ -541,15 +541,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
             try
             {
                 var editor = await workspaceService.GetAgentEditorAsync(technicalAgentId, cancellationToken);
+                var resolvedEditorModel = NormalizeFallbackEditorModel(fallbackResolution);
                 if (editor.ProviderProfileId == fallbackResolution.Provider.Id &&
-                    string.Equals(editor.Model, fallbackResolution.Model, StringComparison.Ordinal))
+                    string.Equals(editor.Model, resolvedEditorModel, StringComparison.Ordinal))
                 {
                     affectedAgentCount++;
                     continue;
                 }
 
                 editor.ProviderProfileId = fallbackResolution.Provider.Id;
-                editor.Model = fallbackResolution.Model;
+                editor.Model = resolvedEditorModel;
                 await workspaceService.SaveAgentAsync(editor, cancellationToken);
                 affectedAgentCount++;
             }
@@ -650,6 +651,20 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         return partyIds;
+    }
+
+    private static string NormalizeFallbackEditorModel(ProviderFallbackResolution fallbackResolution)
+    {
+        if (!string.IsNullOrWhiteSpace(fallbackResolution.Provider.DefaultModel) &&
+            string.Equals(
+                fallbackResolution.Model,
+                fallbackResolution.Provider.DefaultModel,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return string.Empty;
+        }
+
+        return fallbackResolution.Model;
     }
 
 }

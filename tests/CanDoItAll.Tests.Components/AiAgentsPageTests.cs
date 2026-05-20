@@ -231,8 +231,12 @@ public sealed class AiAgentsPageTests
         await OpenAgentRuntimeTabAsync(cut);
         cut.Find("[data-testid='agents-catalog-provider']").Change(providerId.ToString("D"));
         cut.Find("[data-testid='agents-catalog-model-override']").Change(true);
-        cut.Find("[data-testid='agents-catalog-model']").Change(" qwen3.5:9b ");
-        cut.Find("[data-testid='agents-catalog-save']").Click();
+        cut.Find("[data-testid='agents-catalog-model']").Input(" qwen3.5:9b ");
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal("qwen3.5:9b", cut.Find("[data-testid='agents-catalog-model']").GetAttribute("value"));
+        });
+        cut.Find("form").Submit();
 
         cut.WaitForAssertion(() =>
         {
@@ -246,8 +250,74 @@ public sealed class AiAgentsPageTests
         Assert.Equal("qwen3.5:9b", agent.Model);
     }
 
+    [Fact]
+    public async Task AgentDetails_runtime_unchecking_model_override_saves_provider_default_and_reopens_unchecked()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var workspaceFactory = harness.Context.Services.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+        var notificationService = harness.Context.Services.GetRequiredService<NotificationService>();
+        var providerId = await workspaceService.SaveProviderAsync(new AgentProviderProfileEditorModel
+        {
+            Name = "Selector default reset",
+            Kind = AgentProviderKind.OpenAi,
+            BaseUrl = "https://api.openai.com/v1",
+            ApiKeyEnvironmentVariable = "OPENAI_API_KEY",
+            DefaultModel = "gpt-5-mini",
+            Transport = AgentProviderTransportKind.Responses,
+            SuggestedModels = ["gpt-5-mini", "gpt-5.4"]
+        });
+        var editor = await workspaceService.GetAgentEditorAsync();
+        editor.Name = "Override Reset Agent";
+        editor.RoleTitle = "Runtime role";
+        editor.Summary = "Starts with custom model override.";
+        editor.Instructions = "Save back to provider default.";
+        editor.ProviderProfileId = providerId;
+        editor.Model = "custom-model";
+        var agentId = await workspaceService.SaveAgentAsync(editor);
+        var providers = await workspaceService.ListProvidersAsync();
+
+        var cut = harness.Context.RenderComponent<AgentDetailsDialog>(parameters => parameters
+            .Add(component => component.AgentId, agentId)
+            .Add(component => component.InitialProviders, providers));
+
+        await OpenAgentRuntimeTabAsync(cut);
+        cut.WaitForElement("[data-testid='agents-catalog-model']");
+        cut.Find("[data-testid='agents-catalog-model-override']").Change(false);
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Empty(cut.FindAll("[data-testid='agents-catalog-model']"));
+        });
+        cut.Find("[data-testid='agents-catalog-save']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(notificationService.Messages, message => message.Summary == "Agent saved");
+        });
+
+        var savedAgent = Assert.Single(
+            await workspaceService.ListAgentsAsync(includeTemplates: false),
+            item => item.Id == agentId);
+        Assert.Equal(providerId, savedAgent.ProviderProfileId);
+        Assert.Equal(string.Empty, savedAgent.Model);
+
+        var reopened = harness.Context.RenderComponent<AgentDetailsDialog>(parameters => parameters
+            .Add(component => component.AgentId, agentId)
+            .Add(component => component.InitialProviders, providers));
+        await OpenAgentRuntimeTabAsync(reopened);
+
+        Assert.Contains("Provider default (gpt-5-mini)", reopened.Markup);
+        Assert.Empty(reopened.FindAll("[data-testid='agents-catalog-model']"));
+    }
+
     private static async Task OpenAgentRuntimeTabAsync(IRenderedComponent<AgentDetailsDialog> cut)
     {
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(
+                cut.FindAll("button"),
+                button => button.TextContent.Contains("Runtime", StringComparison.OrdinalIgnoreCase));
+        });
         await cut.InvokeAsync(() =>
         {
             cut.FindAll("button")

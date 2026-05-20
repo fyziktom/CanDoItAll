@@ -70,7 +70,7 @@ public sealed class ProcessMockAgentRuntimeIntegrationTests
 
             Assert.Equal(AgentLifecycleStatus.Active, agent.Status);
             Assert.Contains(agent.Tags, item => string.Equals(item, ProcessMockAgentCatalog.AgentTag, StringComparison.OrdinalIgnoreCase));
-            Assert.Equal(ProcessMockAgentCatalog.Model, agent.Model);
+            Assert.Equal(string.Empty, agent.Model);
         }
 
         var technicalAgentBridge = scope.ServiceProvider.GetRequiredService<IAiTechnicalAgentBridge>();

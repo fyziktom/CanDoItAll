@@ -587,7 +587,7 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
                 normalizedCapabilities);
             editor.ProviderProfileId = model.ProviderProfileId;
             editor.Model = string.IsNullOrWhiteSpace(model.DefaultModel)
-                ? selectedProvider?.DefaultModel ?? string.Empty
+                ? string.Empty
                 : model.DefaultModel.Trim();
             editor.Status = AgentLifecycleStatus.Active;
             editor.ConfigurationJson = AgentFrameworkCrmHrMetadata.Write(

@@ -164,7 +164,7 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
             .Where(RequiresManagedSeedFallbackRepair)
             .Where(agent =>
                 agent.ProviderProfileId != openAiProvider.Id ||
-                !string.Equals(agent.Model, openAiProvider.DefaultModel, StringComparison.Ordinal) ||
+                !string.IsNullOrWhiteSpace(agent.Model) ||
                 !string.Equals(
                     agent.ConfigurationJson,
                     ManagedSeedProviderFallbacks.EnsureDefaultReasoningConfigurationJson(agent.ConfigurationJson),
@@ -186,7 +186,7 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
                     ? agent with
                     {
                         ProviderProfileId = openAiProvider.Id,
-                        Model = openAiProvider.DefaultModel,
+                        Model = string.Empty,
                         ConfigurationJson = ManagedSeedProviderFallbacks.EnsureDefaultReasoningConfigurationJson(agent.ConfigurationJson),
                         UpdatedAtUtc = updatedAtUtc
                     }

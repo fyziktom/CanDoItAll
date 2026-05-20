@@ -61,6 +61,29 @@ public sealed class ProviderModelSelectorTests
     }
 
     [Fact]
+    public void ProviderModelSelector_unchecking_override_returns_to_provider_default()
+    {
+        using var context = new TestContext();
+        var provider = CreateProvider("gpt-5-mini", ["gpt-5.4"]);
+        string? selectedModel = "custom-model";
+
+        var cut = context.RenderComponent<ProviderModelSelector>(parameters => parameters
+            .Add(component => component.Provider, provider)
+            .Add(component => component.Value, selectedModel)
+            .Add(component => component.ValueChanged, EventCallback.Factory.Create<string?>(this, value => selectedModel = value))
+            .Add(component => component.ChoiceTestId, "model-choice")
+            .Add(component => component.OverrideTestId, "model-override")
+            .Add(component => component.CustomModelTestId, "model-text"));
+
+        Assert.Equal("custom-model", cut.Find("[data-testid='model-text']").GetAttribute("value"));
+
+        cut.Find("[data-testid='model-override']").Change(false);
+
+        Assert.Equal(string.Empty, selectedModel);
+        Assert.Empty(cut.FindAll("[data-testid='model-text']"));
+    }
+
+    [Fact]
     public void ProviderModelSelector_starts_in_override_for_unknown_existing_model()
     {
         using var context = new TestContext();

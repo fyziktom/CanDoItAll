@@ -523,7 +523,7 @@ internal static class SandboxWorkspaceSeedBuilder
             GetSeedText("agents/portfolio-architect.instructions"),
             AgentLifecycleStatus.Active,
             openAiProviderId,
-            ManagedSeedProviderFallbacks.OpenAiDefaultModel,
+            string.Empty,
             AgentWorkloadKind.Research,
             AgentChatHistoryMode.ProviderDefault,
             0.2d,
@@ -588,7 +588,7 @@ internal static class SandboxWorkspaceSeedBuilder
             GetSeedText("agents/delivery-qa-observer.instructions"),
             AgentLifecycleStatus.Active,
             openAiProviderId,
-            ManagedSeedProviderFallbacks.OpenAiDefaultModel,
+            string.Empty,
             AgentWorkloadKind.Qa,
             AgentChatHistoryMode.FrameworkManaged,
             0.1d,
@@ -709,7 +709,7 @@ internal static class SandboxWorkspaceSeedBuilder
             ],
             ["programming", "workspace", "approval"],
             now,
-            ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+            string.Empty);
 
         var codeReviewAgent = CreateWorkloadAgent(
             codeReviewAgentId,
@@ -753,7 +753,7 @@ internal static class SandboxWorkspaceSeedBuilder
             ],
             ["review", "code", "quality"],
             now,
-            ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+            string.Empty);
 
         var uiReviewAgent = CreateWorkloadAgent(
             uiReviewAgentId,
@@ -800,7 +800,7 @@ internal static class SandboxWorkspaceSeedBuilder
             ],
             ["ui", "review", "browser"],
             now,
-            ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+            string.Empty);
 
         var securityReviewerAgent = CreateWorkloadAgent(
             securityReviewerAgentId,
@@ -844,7 +844,7 @@ internal static class SandboxWorkspaceSeedBuilder
             ],
             ["security", "review", "risk"],
             now,
-            ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+            string.Empty);
 
         var releaseManagerAgent = CreateWorkloadAgent(
             releaseManagerAgentId,
@@ -888,7 +888,7 @@ internal static class SandboxWorkspaceSeedBuilder
             ],
             ["release", "readiness", "operations"],
             now,
-            ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+            string.Empty);
 
         var spreadsheetAgent = CreateWorkloadAgent(
             spreadsheetAgentId,
@@ -955,7 +955,7 @@ internal static class SandboxWorkspaceSeedBuilder
             ],
             ["hr", "staffing", "assignment"],
             now,
-            ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+            string.Empty);
 
         var mailAgent = CreateWorkloadAgent(
             mailAgentId,
@@ -992,7 +992,7 @@ internal static class SandboxWorkspaceSeedBuilder
             GetSeedText("agents/research-deep-dive-analyst.instructions"),
             AgentLifecycleStatus.Active,
             openAiProviderId,
-            ManagedSeedProviderFallbacks.OpenAiDefaultModel,
+            string.Empty,
             AgentWorkloadKind.Research,
             AgentChatHistoryMode.ProviderManaged,
             0.2d,
@@ -1089,7 +1089,7 @@ internal static class SandboxWorkspaceSeedBuilder
             ],
             ["dotnet", "architecture", "blazor"],
             now,
-            ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+            string.Empty);
 
         var dotnetDeveloperAgent = CreateWorkloadAgent(
             dotnetDeveloperAgentId,
@@ -1156,7 +1156,7 @@ internal static class SandboxWorkspaceSeedBuilder
             ],
             ["dotnet", "programming", "blazor"],
             now,
-            ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+            string.Empty);
 
         var blazorDeveloperAgent = CreateWorkloadAgent(
             blazorDeveloperAgentId,
@@ -1223,7 +1223,7 @@ internal static class SandboxWorkspaceSeedBuilder
             ],
             ["blazor", "dotnet", "frontend", "programming"],
             now,
-            ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+            string.Empty);
 
         var dotnetQaAgent = CreateWorkloadAgent(
             dotnetQaAgentId,
@@ -1279,7 +1279,7 @@ internal static class SandboxWorkspaceSeedBuilder
             ],
             ["dotnet", "qa", "browser"],
             now,
-            ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+            string.Empty);
 
         var javascriptArchitectAgent = CreateWorkloadAgent(
             javascriptArchitectAgentId,
@@ -1328,7 +1328,7 @@ internal static class SandboxWorkspaceSeedBuilder
             ],
             ["javascript", "typescript", "architecture"],
             now,
-            ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+            string.Empty);
 
         var javascriptDeveloperAgent = CreateWorkloadAgent(
             javascriptDeveloperAgentId,
@@ -1382,7 +1382,7 @@ internal static class SandboxWorkspaceSeedBuilder
             ],
             ["javascript", "typescript", "programming"],
             now,
-            ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+            string.Empty);
 
         var javascriptQaAgent = CreateWorkloadAgent(
             javascriptQaAgentId,
@@ -1428,7 +1428,7 @@ internal static class SandboxWorkspaceSeedBuilder
             ],
             ["javascript", "qa", "browser"],
             now,
-            ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+            string.Empty);
 
         var businessStrategistAgent = CreateWorkloadAgent(
             businessStrategistAgentId,
@@ -1473,7 +1473,7 @@ internal static class SandboxWorkspaceSeedBuilder
             ],
             ["business", "strategy", "planning"],
             now,
-            ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+            string.Empty);
 
         var financialStrategistAgent = CreateWorkloadAgent(
             financialStrategistAgentId,
@@ -1520,7 +1520,7 @@ internal static class SandboxWorkspaceSeedBuilder
             ],
             ["finance", "strategy", "spreadsheet"],
             now,
-            ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+            string.Empty);
 
         var marketingSpecialistAgent = CreateWorkloadAgent(
             marketingSpecialistAgentId,
@@ -1566,7 +1566,7 @@ internal static class SandboxWorkspaceSeedBuilder
             ],
             ["marketing", "strategy", "go-to-market"],
             now,
-            ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+            string.Empty);
 
         var screenshotCaptureAgentTemplate = CreateWorkloadAgent(
             screenshotCaptureAgentTemplateId,
@@ -1615,7 +1615,7 @@ internal static class SandboxWorkspaceSeedBuilder
             ],
             ["template", "screenshot", "playwright", "runtime"],
             now,
-            ManagedSeedProviderFallbacks.OpenAiDefaultModel,
+            string.Empty,
             isTemplate: true);
 
         var screenshotReviewStorageAgentTemplate = CreateWorkloadAgent(
@@ -1671,7 +1671,7 @@ internal static class SandboxWorkspaceSeedBuilder
             ],
             ["template", "screenshot", "review", "asset-storage"],
             now,
-            ManagedSeedProviderFallbacks.OpenAiDefaultModel,
+            string.Empty,
             isTemplate: true);
 
         var layoutImageGenerationAgentTemplate = CreateWorkloadAgent(
@@ -1726,7 +1726,7 @@ internal static class SandboxWorkspaceSeedBuilder
             ],
             ["template", "layout", "image-generation", "asset-storage", "openai"],
             now,
-            ManagedSeedProviderFallbacks.OpenAiDefaultModel,
+            string.Empty,
             isTemplate: true);
 
         return new SandboxWorkspaceDocument(
@@ -1801,7 +1801,7 @@ internal static class SandboxWorkspaceSeedBuilder
         IReadOnlyList<AgentCapabilityAssignment> capabilities,
         IReadOnlyList<string> tags,
         DateTimeOffset now,
-        string model = ManagedSeedProviderFallbacks.OpenAiDefaultModel,
+        string model = "",
         bool isTemplate = false)
     {
         return new AgentDefinition(

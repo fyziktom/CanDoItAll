@@ -1086,13 +1086,14 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
 
     private static void AssertOpenAiBacked(AgentDefinition agent, Guid providerId, string expectedModel)
     {
+        Assert.False(string.IsNullOrWhiteSpace(expectedModel));
         Assert.Equal(providerId, agent.ProviderProfileId);
-        Assert.Equal(expectedModel, agent.Model);
+        Assert.Equal(string.Empty, agent.Model);
     }
 
     private static void AssertManagedSeedRefreshed((string Model, string ConfigurationJson) snapshot)
     {
-        Assert.Equal(ManagedSeedProviderFallbacks.OpenAiDefaultModel, snapshot.Model);
+        Assert.Equal(string.Empty, snapshot.Model);
         Assert.Contains(GetExpectedManagedSeedVersion(), snapshot.ConfigurationJson, StringComparison.Ordinal);
     }
 
