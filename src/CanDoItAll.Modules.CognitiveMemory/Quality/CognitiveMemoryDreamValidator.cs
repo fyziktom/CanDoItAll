@@ -33,12 +33,19 @@ public sealed class CognitiveMemoryDreamValidator(
             .AsNoTracking()
             .Where(record => sourceRecordIds.Contains(record.Id))
             .ToListAsync(cancellationToken);
-        var clusterReadiness = await dbContext.Set<CognitiveMemoryQualityClusterRecord>()
+        var cluster = await dbContext.Set<CognitiveMemoryQualityClusterRecord>()
             .AsNoTracking()
             .Where(cluster => cluster.Id == candidate.ClusterId)
-            .Select(cluster => (CognitiveMemoryQualityClusterReadiness?)cluster.Readiness)
             .SingleOrDefaultAsync(cancellationToken);
-        var issues = ResolveIssues(candidate, claims, sourceMaps, sourceRecords, clusterReadiness, request.PolicyContext);
+        var duplicateExists = await dbContext.Set<CognitiveMemoryRecord>()
+            .AsNoTracking()
+            .AnyAsync(record =>
+                record.ProjectId == candidate.ProjectId &&
+                record.Origin == CognitiveMemoryRecordOrigin.MachineGenerated &&
+                record.StabilityState != CognitiveMemoryStabilityState.Deprecated &&
+                record.Title == candidate.Title,
+                cancellationToken);
+        var issues = ResolveIssues(candidate, claims, sourceMaps, sourceRecords, cluster, duplicateExists, request.PolicyContext);
         var decision = ResolveDecision(issues);
         var nowUtc = clock.GetUtcNow();
         var validation = new CognitiveMemoryDreamValidationRecord
@@ -101,7 +108,8 @@ public sealed class CognitiveMemoryDreamValidator(
         IReadOnlyList<CognitiveMemoryDreamAggregateClaimRecord> claims,
         IReadOnlyList<CognitiveMemoryDreamAggregateClaimSourceMapRecord> sourceMaps,
         IReadOnlyList<CognitiveMemoryRecord> sourceRecords,
-        CognitiveMemoryQualityClusterReadiness? clusterReadiness,
+        CognitiveMemoryQualityClusterRecord? cluster,
+        bool duplicateExists,
         CognitiveMemoryPolicyContext policyContext)
     {
         var issues = new List<CognitiveMemoryDreamValidationIssue>();
@@ -119,18 +127,53 @@ public sealed class CognitiveMemoryDreamValidator(
         if (sourceMaps.Select(sourceMap => sourceMap.SourceMemoryRecordId).Distinct().Count() < 2)
         {
             issues.Add(new CognitiveMemoryDreamValidationIssue(
-                CognitiveMemoryDreamValidationIssueKind.WeakEvidence,
+                CognitiveMemoryDreamValidationIssueKind.WeakSourceIndependence,
                 CognitiveMemoryRiskLevel.Medium,
                 "Aggregate candidate has fewer than two independent source memories."));
         }
 
-        if (clusterReadiness == CognitiveMemoryQualityClusterReadiness.Contradictory ||
+        if (cluster?.Readiness == CognitiveMemoryQualityClusterReadiness.Contradictory ||
             sourceMaps.Any(sourceMap => sourceMap.Direction == CognitiveMemoryEvidenceDirection.Attacks))
         {
             issues.Add(new CognitiveMemoryDreamValidationIssue(
                 CognitiveMemoryDreamValidationIssueKind.Contradiction,
                 CognitiveMemoryRiskLevel.High,
                 "Aggregate candidate includes attacking or contradictory source evidence."));
+        }
+
+        if (cluster is not null && !cluster.AggregateEligible)
+        {
+            issues.Add(new CognitiveMemoryDreamValidationIssue(
+                cluster.MemberCount > 20 ? CognitiveMemoryDreamValidationIssueKind.OverbroadCluster : CognitiveMemoryDreamValidationIssueKind.LowCohesion,
+                CognitiveMemoryRiskLevel.Medium,
+                $"Cluster quality is not aggregate-eligible: {cluster.EligibilityReason}"));
+        }
+
+        if (cluster is { SourceIndependenceScore: < 1 })
+        {
+            issues.Add(new CognitiveMemoryDreamValidationIssue(
+                CognitiveMemoryDreamValidationIssueKind.WeakSourceIndependence,
+                CognitiveMemoryRiskLevel.Medium,
+                "Aggregate candidate lacks independent source-item support."));
+        }
+
+        if (duplicateExists)
+        {
+            issues.Add(new CognitiveMemoryDreamValidationIssue(
+                CognitiveMemoryDreamValidationIssueKind.DuplicateAggregate,
+                CognitiveMemoryRiskLevel.Medium,
+                "An active generated aggregate with the same title already exists."));
+        }
+
+        if (claims.Any(claim => sourceMaps.Where(sourceMap => sourceMap.AggregateClaimId == claim.Id)
+                .Select(sourceMap => sourceMap.SourceMemoryRecordId)
+                .Distinct()
+                .Count() < 2))
+        {
+            issues.Add(new CognitiveMemoryDreamValidationIssue(
+                CognitiveMemoryDreamValidationIssueKind.UnsupportedClaim,
+                CognitiveMemoryRiskLevel.Medium,
+                "Each synthesized aggregate claim must be supported by at least two source memories."));
         }
 
         if (sourceRecords.Any(record => record.ValidationState is CognitiveMemoryValidationState.Superseded or CognitiveMemoryValidationState.Rejected ||

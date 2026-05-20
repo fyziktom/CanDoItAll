@@ -2288,11 +2288,30 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasMaxLength(8000)
                         .HasColumnType("character varying(8000)");
 
+                    b.Property<DateTimeOffset?>("AnchorRetiredAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("AnchorState")
+                        .HasColumnType("integer");
+
                     b.Property<Guid?>("AppliedMemoryRecordId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AssimilatedMemoryRecordId")
                         .HasColumnType("uuid");
 
                     b.Property<int>("CaptureKind")
                         .HasColumnType("integer");
+
+                    b.Property<string>("CaptureLanguage")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("CaptureScope")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<Guid>("ConcurrencyToken")
                         .IsConcurrencyToken()
@@ -2341,6 +2360,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<Guid?>("RecallTraceId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("ReviewItemId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("SourceItemId")
                         .HasColumnType("uuid");
 
@@ -2352,7 +2374,22 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasMaxLength(4000)
                         .HasColumnType("character varying(4000)");
 
+                    b.Property<string>("TargetClaimIdsJson")
+                        .IsRequired()
+                        .HasMaxLength(8000)
+                        .HasColumnType("character varying(8000)");
+
+                    b.Property<double>("TargetConfidenceScore")
+                        .HasColumnType("double precision");
+
+                    b.Property<int>("TargetingStatus")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("AppliedMemoryRecordId");
+
+                    b.HasIndex("AssimilatedMemoryRecordId");
 
                     b.HasIndex("ConsolidationCandidateId");
 
@@ -2360,7 +2397,13 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.HasIndex("RecallTraceId");
 
+                    b.HasIndex("ReviewItemId");
+
                     b.HasIndex("CuratorTurnId", "CaptureKind");
+
+                    b.HasIndex("ProjectId", "AnchorState", "CreatedAtUtc");
+
+                    b.HasIndex("ProjectId", "TargetingStatus", "CreatedAtUtc");
 
                     b.HasIndex("ProjectId", "CaptureKind", "Status", "CreatedAtUtc");
 
@@ -5903,6 +5946,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<int>("AccessLevel")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("AggregateEligible")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("AlgorithmVersion")
                         .IsRequired()
                         .HasMaxLength(120)
@@ -5913,6 +5959,12 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
+                    b.Property<double>("CohesionScore")
+                        .HasColumnType("double precision");
+
+                    b.Property<double>("CompositeScore")
+                        .HasColumnType("double precision");
+
                     b.Property<Guid>("ConcurrencyToken")
                         .IsConcurrencyToken()
                         .HasColumnType("uuid");
@@ -5922,6 +5974,14 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EligibilityReason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<double>("GuardPenaltyScore")
+                        .HasColumnType("double precision");
 
                     b.Property<int>("KeyCount")
                         .HasColumnType("integer");
@@ -5946,8 +6006,20 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<int>("RiskLevel")
                         .HasColumnType("integer");
 
+                    b.Property<double>("SemanticSignalScore")
+                        .HasColumnType("double precision");
+
+                    b.Property<double>("SourceDiversityScore")
+                        .HasColumnType("double precision");
+
                     b.Property<int>("SourceEvidenceCount")
                         .HasColumnType("integer");
+
+                    b.Property<double>("SourceIndependenceScore")
+                        .HasColumnType("double precision");
+
+                    b.Property<double>("SupportingSignalScore")
+                        .HasColumnType("double precision");
 
                     b.Property<DateTimeOffset>("UpdatedAtUtc")
                         .HasColumnType("timestamp with time zone");
@@ -5958,6 +6030,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .IsUnique();
 
                     b.HasIndex("ProjectId", "AccessLevel", "RiskLevel");
+
+                    b.HasIndex("ProjectId", "AggregateEligible", "CompositeScore");
 
                     b.HasIndex("ProjectId", "PrimaryKeyFamily", "Readiness");
 

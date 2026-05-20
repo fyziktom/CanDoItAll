@@ -35,11 +35,23 @@ public sealed class CognitiveMemoryPageTests
         cut.WaitForElement("[data-testid='cognitive-memory-curator-tab']");
         Assert.NotNull(cut.Find("[data-testid='cognitive-memory-curator-mode']"));
         Assert.NotNull(cut.Find("[data-testid='cognitive-memory-curator-depth']"));
+        Assert.NotNull(cut.Find("[data-testid='cognitive-memory-curator-capture-kind']"));
+        Assert.NotNull(cut.Find("[data-testid='cognitive-memory-curator-target-memory-ids']"));
+        Assert.NotNull(cut.Find("[data-testid='cognitive-memory-curator-target-claim-ids']"));
+        Assert.NotNull(cut.Find("[data-testid='cognitive-memory-curator-target-confidence']"));
+        Assert.NotNull(cut.Find("[data-testid='cognitive-memory-curator-capture-scope']"));
         Assert.NotNull(cut.Find("[data-testid='cognitive-memory-curator-voice-mode']"));
         Assert.NotNull(cut.Find("[data-testid='cognitive-memory-curator-voice-record']"));
 
+        var targetMemoryRecordId = Guid.NewGuid();
+        var targetClaimId = Guid.NewGuid();
         cut.Find("[data-testid='cognitive-memory-curator-mode']").Change("Agent");
         cut.Find("[data-testid='cognitive-memory-curator-depth']").Change("Long");
+        cut.Find("[data-testid='cognitive-memory-curator-capture-kind']").Change("Correction");
+        cut.Find("[data-testid='cognitive-memory-curator-target-memory-ids']").Change(targetMemoryRecordId.ToString("D"));
+        cut.Find("[data-testid='cognitive-memory-curator-target-claim-ids']").Change(targetClaimId.ToString("D"));
+        cut.Find("[data-testid='cognitive-memory-curator-target-confidence']").Change("0.77");
+        cut.Find("[data-testid='cognitive-memory-curator-capture-scope']").Change("Project");
         cut.Find("[data-testid='cognitive-memory-curator-message']").Change("Remember that release health review is owned by the curator conversation.");
         cut.Find("[data-testid='cognitive-memory-curator-send']").Click();
 
@@ -50,6 +62,10 @@ public sealed class CognitiveMemoryPageTests
             Assert.Contains("Turn 1 / Agent / Long", cut.Markup);
             Assert.Contains("Trusted capture state", cut.Markup);
             Assert.Contains("Applied", cut.Markup);
+            Assert.Contains("Correction", cut.Markup);
+            Assert.Contains("Explicit Target", cut.Markup);
+            Assert.Contains("Target confidence", cut.Markup);
+            Assert.Contains("Scope Project / en", cut.Markup);
             Assert.Contains("Release health review is owned by the curator conversation.", cut.Markup);
         });
         cut.Dispose();
@@ -93,6 +109,9 @@ public sealed class CognitiveMemoryPageTests
         cut.Find("[data-testid='cognitive-memory-tab-cluster-search']").Click();
         cut.WaitForElement("[data-testid='cognitive-memory-cluster-search']");
         Assert.Contains("Component validation cluster", cut.Markup);
+        Assert.Contains("Quality: composite", cut.Markup);
+        Assert.Contains("source independence", cut.Markup);
+        Assert.Contains("Aggregate eligible", cut.Markup);
         cut.Find("[data-testid='cognitive-memory-cluster-search-text']").Change("component validation");
         cut.Find("[data-testid='cognitive-memory-cluster-search-submit']").Click();
         cut.WaitForAssertion(() =>
@@ -539,6 +558,15 @@ public sealed class CognitiveMemoryPageTests
             KeyCount = 2,
             MemberCount = 2,
             SourceEvidenceCount = 1,
+            CohesionScore = 0.84,
+            SourceIndependenceScore = 0.72,
+            SourceDiversityScore = 0.67,
+            SemanticSignalScore = 0.9,
+            SupportingSignalScore = 0.55,
+            GuardPenaltyScore = 0,
+            CompositeScore = 0.82,
+            AggregateEligible = true,
+            EligibilityReason = "Strong semantic topic with independent source support.",
             CreatedAtUtc = now,
             UpdatedAtUtc = now,
             ConcurrencyToken = Guid.NewGuid()
@@ -742,7 +770,17 @@ public sealed class CognitiveMemoryPageTests
                 UpdatedAtUtc = now,
                 ConcurrencyToken = Guid.NewGuid()
             };
-            var captures = CreateCaptures(session, turn, request.Message, traceId, contextPackId);
+            var captures = CreateCaptures(
+                session,
+                turn,
+                request.Message,
+                traceId,
+                contextPackId,
+                request.ExplicitCaptureKind,
+                request.ExplicitTargetMemoryRecordIds,
+                request.ExplicitTargetClaimIds,
+                request.TargetConfidenceScore,
+                request.CaptureScope);
             turn.CaptureCount = captures.Count;
             session.TurnCount = turn.Sequence;
             session.UpdatedAtUtc = now;
@@ -787,7 +825,17 @@ public sealed class CognitiveMemoryPageTests
                 UpdatedAtUtc = now,
                 ConcurrencyToken = Guid.NewGuid()
             };
-            var captures = CreateCaptures(session, turn, request.UserMessage, request.RecallTraceId, request.ContextPackId);
+            var captures = CreateCaptures(
+                session,
+                turn,
+                request.UserMessage,
+                request.RecallTraceId,
+                request.ContextPackId,
+                request.ExplicitCaptureKind,
+                request.ExplicitTargetMemoryRecordIds,
+                request.ExplicitTargetClaimIds,
+                request.TargetConfidenceScore,
+                request.CaptureScope);
             turn.CaptureCount = captures.Count;
             session.TurnCount = turn.Sequence;
             session.UpdatedAtUtc = now;
@@ -811,12 +859,23 @@ public sealed class CognitiveMemoryPageTests
             CognitiveMemoryCuratorTurnRecord turn,
             string message,
             Guid? traceId,
-            Guid? contextPackId)
+            Guid? contextPackId,
+            CognitiveMemoryCuratorCaptureKind? explicitCaptureKind,
+            IReadOnlyList<CognitiveMemoryRecordId>? explicitTargetMemoryRecordIds,
+            IReadOnlyList<CognitiveMemoryClaimId>? explicitTargetClaimIds,
+            double? targetConfidenceScore,
+            string? captureScope)
         {
             if (!message.Contains("remember", StringComparison.OrdinalIgnoreCase))
             {
                 return [];
             }
+
+            var targetMemoryRecordIds = explicitTargetMemoryRecordIds?.Select(id => id.Value).ToArray() ?? [];
+            var targetClaimIds = explicitTargetClaimIds?.Select(id => id.Value).ToArray() ?? [];
+            var targetStatus = targetMemoryRecordIds.Length > 0 || targetClaimIds.Length > 0
+                ? CognitiveMemoryCuratorTargetingStatus.ExplicitTarget
+                : CognitiveMemoryCuratorTargetingStatus.Untargeted;
 
             return
             [
@@ -826,16 +885,22 @@ public sealed class CognitiveMemoryPageTests
                     CuratorSessionId = session.Id,
                     CuratorTurnId = turn.Id,
                     ProjectId = session.ProjectId,
-                    CaptureKind = CognitiveMemoryCuratorCaptureKind.NewKnowledge,
+                    CaptureKind = explicitCaptureKind ?? CognitiveMemoryCuratorCaptureKind.NewKnowledge,
                     ConversationDepth = turn.ConversationDepth,
                     Status = CognitiveMemoryCuratorCaptureStatus.Applied,
                     RecallTraceId = traceId,
                     ContextPackId = contextPackId,
-                    AffectedMemoryRecordIdsJson = "[]",
+                    AffectedMemoryRecordIdsJson = JsonSerializer.Serialize(targetMemoryRecordIds),
+                    TargetClaimIdsJson = JsonSerializer.Serialize(targetClaimIds),
+                    TargetingStatus = targetStatus,
+                    AnchorState = CognitiveMemoryProfessorAnchorState.Active,
                     AppliedMemoryRecordId = Guid.NewGuid(),
                     ActorId = session.ActorId,
                     ConfidenceScore = 0.95,
                     PriorityScore = 0.95,
+                    TargetConfidenceScore = targetConfidenceScore ?? 0,
+                    CaptureLanguage = "en",
+                    CaptureScope = captureScope ?? string.Empty,
                     Summary = "Release health review is owned by the curator conversation.",
                     CorrectionText = message,
                     CreatedAtUtc = turn.CreatedAtUtc,

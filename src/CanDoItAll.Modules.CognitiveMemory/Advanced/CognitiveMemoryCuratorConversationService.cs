@@ -124,11 +124,15 @@ public sealed class CognitiveMemoryCuratorConversationService(
                 ConversationDepth: conversationDepth,
                 RecallTraceId: recallResult.TraceId,
                 ContextPackId: recallResult.ContextPack.Id.Value,
-                AffectedMemoryRecordIds: includedMemoryRecordIds,
+                AffectedMemoryRecordIds: request.ExplicitTargetMemoryRecordIds,
                 ExplicitCaptureKind: request.ExplicitCaptureKind,
                 AgentId: response.AgentId,
                 ProviderProfileId: response.ProviderProfileId,
-                ModelId: response.ModelId),
+                ModelId: response.ModelId,
+                ExplicitTargetMemoryRecordIds: request.ExplicitTargetMemoryRecordIds,
+                ExplicitTargetClaimIds: request.ExplicitTargetClaimIds,
+                TargetConfidenceScore: request.TargetConfidenceScore,
+                CaptureScope: request.CaptureScope),
             cancellationToken);
 
         return new CognitiveMemoryCuratorSendResult(
@@ -166,7 +170,13 @@ public sealed class CognitiveMemoryCuratorConversationService(
         }
 
         var now = clock.GetUtcNow();
-        var includedMemoryRecordIds = await ResolveIncludedMemoryRecordIdsAsync(dbContext, request, cancellationToken);
+        var recallCandidateMemoryRecordIds = await ResolveRecallCandidateMemoryRecordIdsAsync(dbContext, request, cancellationToken);
+        var explicitTargetMemoryRecordIds = ResolveExplicitTargetMemoryRecordIds(request);
+        var includedMemoryRecordIds = recallCandidateMemoryRecordIds
+            .Concat(explicitTargetMemoryRecordIds)
+            .Where(id => id != Guid.Empty)
+            .Distinct()
+            .ToArray();
         var conversationDepth = request.ConversationDepth ?? session.ConversationDepth;
         var sequence = session.TurnCount + 1;
         var turn = new CognitiveMemoryCuratorTurnRecord
@@ -198,13 +208,14 @@ public sealed class CognitiveMemoryCuratorConversationService(
         var captured = new List<CognitiveMemoryCuratorCapturedImprovementRecord>();
         if (captureKind is { } kind)
         {
+            var targetResolution = ResolveTargetResolution(kind, explicitTargetMemoryRecordIds, ResolveExplicitTargetClaimIds(request), recallCandidateMemoryRecordIds);
             var capture = await CreateTrustedImprovementAsync(
                 dbContext,
                 session,
                 turn,
                 request,
                 kind,
-                includedMemoryRecordIds,
+                targetResolution,
                 now,
                 cancellationToken);
             captured.Add(capture);
@@ -487,10 +498,11 @@ public sealed class CognitiveMemoryCuratorConversationService(
         CognitiveMemoryCuratorTurnRecord turn,
         CognitiveMemoryCuratorTurnCaptureRequest request,
         CognitiveMemoryCuratorCaptureKind captureKind,
-        IReadOnlyList<Guid> affectedMemoryRecordIds,
+        CuratorTargetResolution targetResolution,
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
+        var affectedMemoryRecordIds = targetResolution.TargetMemoryRecordIds;
         var summary = CreateCaptureSummary(captureKind, turn.UserMessage);
         var content = CreateSourceContent(session, turn, captureKind, affectedMemoryRecordIds);
         var contentHash = CognitiveMemoryHash.FromUtf8(content).Value;
@@ -565,6 +577,7 @@ public sealed class CognitiveMemoryCuratorConversationService(
             ActorId = session.ActorId,
             IdempotencyKey = idempotencyKey,
             AffectedMemoryRecordIdsJson = SerializeGuidList(affectedMemoryRecordIds),
+            AffectedClaimIdsJson = SerializeGuidList(targetResolution.TargetClaimIds),
             EvidenceAnchorIdsJson = SerializeGuidList([evidenceAnchor.Id]),
             PayloadJson = content,
             RequiresHumanReview = false,
@@ -656,6 +669,9 @@ public sealed class CognitiveMemoryCuratorConversationService(
             RecallTraceId = turn.RecallTraceId,
             ContextPackId = turn.ContextPackId,
             AffectedMemoryRecordIdsJson = SerializeGuidList(affectedMemoryRecordIds),
+            TargetClaimIdsJson = SerializeGuidList(targetResolution.TargetClaimIds),
+            TargetingStatus = targetResolution.Status,
+            AnchorState = CognitiveMemoryProfessorAnchorState.Active,
             SourceItemId = sourceItem.Id,
             EvidenceAnchorId = evidenceAnchor.Id,
             MutationCommandId = mutationCommand.Id,
@@ -663,11 +679,57 @@ public sealed class CognitiveMemoryCuratorConversationService(
             ActorId = session.ActorId,
             ConfidenceScore = TrustedConfidenceScore,
             PriorityScore = TrustedPriorityScore,
+            TargetConfidenceScore = request.TargetConfidenceScore is { } targetConfidence
+                ? Math.Clamp(targetConfidence, 0, 1)
+                : TrustedConfidenceScore,
+            CaptureLanguage = ResolveCaptureLanguage(turn.UserMessage),
+            CaptureScope = TrimText(request.CaptureScope ?? string.Empty, 500),
             Summary = TrimText(summary, MaximumSummaryLength),
             CorrectionText = TrimText(turn.UserMessage, MaximumCorrectionLength),
             CreatedAtUtc = now,
             ConcurrencyToken = Guid.NewGuid()
         };
+
+        if (targetResolution.Status == CognitiveMemoryCuratorTargetingStatus.AmbiguousNeedsReview)
+        {
+            mutationCommand.Status = CognitiveMemoryMutationCommandStatus.ReviewRequired;
+            mutationCommand.RequiresHumanReview = true;
+            mutationCommand.ReviewReason = "Curator correction matched multiple recalled memories and needs an explicit target before mutation.";
+            candidate.Status = CognitiveMemoryConsolidationCandidateStatus.ReviewRequired;
+            var reviewItem = new CognitiveMemoryReviewItemRecord
+            {
+                Id = Guid.NewGuid(),
+                ProjectId = session.ProjectId,
+                ReviewKind = CognitiveMemoryReviewKind.Contradiction,
+                Status = CognitiveMemoryReviewStatus.Pending,
+                SubjectKind = turn.RecallTraceId is null ? CognitiveMemoryReviewSubjectKind.Run : CognitiveMemoryReviewSubjectKind.RecallTrace,
+                SubjectId = turn.RecallTraceId ?? turn.Id,
+                RiskLevel = CognitiveMemoryRiskLevel.Medium,
+                ReasonCode = "curator.capture.ambiguous-target",
+                ReasonText = "Professor correction referenced multiple recalled memories. Select explicit memory or claim targets before applying.",
+                SourceEvidenceCount = targetResolution.CandidateMemoryRecordIds.Count,
+                CreatedAtUtc = now,
+                DecidedByActorId = string.Empty,
+                DecisionNotes = string.Empty,
+                ConcurrencyToken = Guid.NewGuid()
+            };
+            capture.ReviewItemId = reviewItem.Id;
+            capture.ConsolidationCandidateId = null;
+            capture.MutationCommandId = mutationCommand.Id;
+            dbContext.AddRange(sourceManifest, sourceItem, evidenceAnchor, mutationCommand, run, consolidationRun, capture, reviewItem);
+            dbContext.Add(new CognitiveMemoryMutationAuditEventRecord
+            {
+                Id = Guid.NewGuid(),
+                MutationCommandId = mutationCommand.Id,
+                ProjectId = session.ProjectId,
+                Sequence = 1,
+                EventKind = CognitiveMemoryMutationAuditEventKind.ReviewRequired,
+                Message = $"Trusted curator capture '{capture.Id:D}' requires explicit target selection.",
+                CreatedAtUtc = now
+            });
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return capture;
+        }
 
         dbContext.AddRange(sourceManifest, sourceItem, evidenceAnchor, mutationCommand, run, consolidationRun, candidate, capture);
         dbContext.Add(new CognitiveMemoryMutationAuditEventRecord
@@ -693,7 +755,14 @@ public sealed class CognitiveMemoryCuratorConversationService(
             cancellationToken);
 
         await MarkAffectedMemoryRecordsAsync(dbContext, captureKind, affectedMemoryRecordIds, applyResult.MemoryRecordId, session, now, cancellationToken);
-        await PreserveMutationTargetingAsync(dbContext, mutationCommand.Id, affectedMemoryRecordIds, applyResult.MemoryRecordId, now, cancellationToken);
+        await PreserveMutationTargetingAsync(
+            dbContext,
+            mutationCommand.Id,
+            affectedMemoryRecordIds,
+            targetResolution.TargetClaimIds,
+            applyResult.MemoryRecordId,
+            now,
+            cancellationToken);
 
         capture.Status = CognitiveMemoryCuratorCaptureStatus.Applied;
         capture.AppliedMemoryRecordId = applyResult.MemoryRecordId;
@@ -711,18 +780,18 @@ public sealed class CognitiveMemoryCuratorConversationService(
         }
 
         var message = request.UserMessage.Trim();
-        if (ContainsAny(message, ["wrong scope", "wrong context", "different scope", "narrow that", "only applies to"]))
+        if (ContainsAny(message, ["wrong scope", "wrong context", "different scope", "narrow that", "only applies to", "spatny rozsah", "jiny kontext", "plati pouze"]))
         {
             return CognitiveMemoryCuratorCaptureKind.WrongScope;
         }
 
-        if (ContainsAny(message, ["not correct", "incorrect", "wrong", "right version", "actually it is", "actually, it is", "different than", "instead"]) ||
-            affectedMemoryRecordIds.Count > 0 && ContainsAny(message, ["actually", "no,"]))
+        if (ContainsAny(message, ["not correct", "incorrect", "wrong", "right version", "actually it is", "actually, it is", "different than", "instead", "neni spravne", "neni pravda", "ve skutecnosti", "spravne je"]) ||
+            affectedMemoryRecordIds.Count > 0 && ContainsAny(message, ["actually", "no,", "ne,"]))
         {
             return CognitiveMemoryCuratorCaptureKind.Correction;
         }
 
-        if (ContainsAny(message, ["remember", "add this", "learn this", "store this", "save this", "you should know", "memory should know"]))
+        if (ContainsAny(message, ["remember", "add this", "learn this", "store this", "save this", "you should know", "memory should know", "zapamatuj si", "uloz si", "nauc se", "mela bys vedet"]))
         {
             return CognitiveMemoryCuratorCaptureKind.NewKnowledge;
         }
@@ -733,18 +802,54 @@ public sealed class CognitiveMemoryCuratorConversationService(
     private static bool ContainsAny(string value, IReadOnlyList<string> candidates)
         => candidates.Any(candidate => value.Contains(candidate, StringComparison.OrdinalIgnoreCase));
 
-    private async ValueTask<IReadOnlyList<Guid>> ResolveIncludedMemoryRecordIdsAsync(
+    private static IReadOnlyList<Guid> ResolveExplicitTargetMemoryRecordIds(CognitiveMemoryCuratorTurnCaptureRequest request)
+        => (request.ExplicitTargetMemoryRecordIds ?? request.AffectedMemoryRecordIds ?? [])
+            .Select(item => item.Value)
+            .Where(item => item != Guid.Empty)
+            .Distinct()
+            .ToArray();
+
+    private static IReadOnlyList<Guid> ResolveExplicitTargetClaimIds(CognitiveMemoryCuratorTurnCaptureRequest request)
+        => (request.ExplicitTargetClaimIds ?? [])
+            .Select(item => item.Value)
+            .Where(item => item != Guid.Empty)
+            .Distinct()
+            .ToArray();
+
+    private static CuratorTargetResolution ResolveTargetResolution(
+        CognitiveMemoryCuratorCaptureKind captureKind,
+        IReadOnlyList<Guid> explicitTargetMemoryRecordIds,
+        IReadOnlyList<Guid> explicitTargetClaimIds,
+        IReadOnlyList<Guid> recallCandidateMemoryRecordIds)
+    {
+        if (captureKind == CognitiveMemoryCuratorCaptureKind.NewKnowledge)
+        {
+            return new CuratorTargetResolution([], [], [], CognitiveMemoryCuratorTargetingStatus.Untargeted);
+        }
+
+        if (explicitTargetMemoryRecordIds.Count > 0 || explicitTargetClaimIds.Count > 0)
+        {
+            return new CuratorTargetResolution(
+                explicitTargetMemoryRecordIds,
+                explicitTargetClaimIds,
+                recallCandidateMemoryRecordIds,
+                CognitiveMemoryCuratorTargetingStatus.ExplicitTarget);
+        }
+
+        return recallCandidateMemoryRecordIds.Count switch
+        {
+            0 => new CuratorTargetResolution([], [], [], CognitiveMemoryCuratorTargetingStatus.Untargeted),
+            1 => new CuratorTargetResolution(recallCandidateMemoryRecordIds, [], recallCandidateMemoryRecordIds, CognitiveMemoryCuratorTargetingStatus.InferredSingleTarget),
+            _ => new CuratorTargetResolution([], [], recallCandidateMemoryRecordIds, CognitiveMemoryCuratorTargetingStatus.AmbiguousNeedsReview)
+        };
+    }
+
+    private async ValueTask<IReadOnlyList<Guid>> ResolveRecallCandidateMemoryRecordIdsAsync(
         AppDbContext dbContext,
         CognitiveMemoryCuratorTurnCaptureRequest request,
         CancellationToken cancellationToken)
     {
         var values = new List<Guid>();
-        if (request.AffectedMemoryRecordIds is not null)
-        {
-            values.AddRange(request.AffectedMemoryRecordIds
-                .Select(item => item.Value)
-                .Where(item => item != Guid.Empty));
-        }
 
         if (request.RecallTraceId is { } recallTraceId)
         {
@@ -822,6 +927,7 @@ public sealed class CognitiveMemoryCuratorConversationService(
         AppDbContext dbContext,
         Guid mutationCommandId,
         IReadOnlyList<Guid> affectedMemoryRecordIds,
+        IReadOnlyList<Guid> targetClaimIds,
         Guid appliedMemoryRecordId,
         DateTimeOffset now,
         CancellationToken cancellationToken)
@@ -830,6 +936,11 @@ public sealed class CognitiveMemoryCuratorConversationService(
             .SingleAsync(item => item.Id == mutationCommandId, cancellationToken);
         mutation.AffectedMemoryRecordIdsJson = SerializeGuidList(affectedMemoryRecordIds
             .Append(appliedMemoryRecordId)
+            .Distinct()
+            .ToArray());
+        var appliedClaimIds = DeserializeGuidList(mutation.AffectedClaimIdsJson);
+        mutation.AffectedClaimIdsJson = SerializeGuidList(targetClaimIds
+            .Concat(appliedClaimIds)
             .Distinct()
             .ToArray());
         mutation.UpdatedAtUtc = now;
@@ -959,7 +1070,15 @@ public sealed class CognitiveMemoryCuratorConversationService(
             "add this: ",
             "learn this: ",
             "store this: ",
-            "save this: "
+            "save this: ",
+            "zapamatuj si, ze ",
+            "zapamatuj si, že ",
+            "zapamatuj si ze ",
+            "zapamatuj si že ",
+            "uloz si, ze ",
+            "ulož si, že ",
+            "nauc se, ze ",
+            "nauč se, že "
         })
         {
             if (value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
@@ -971,10 +1090,25 @@ public sealed class CognitiveMemoryCuratorConversationService(
         return value;
     }
 
+    private static string ResolveCaptureLanguage(string userMessage)
+        => ContainsAny(userMessage, ["zapamatuj", "uloz", "ulož", "nauc", "nauč", "neni", "není", "spravne", "správně", "skutecnosti", "skutečnosti"])
+            ? "cs"
+            : "en";
+
     private static string SerializeGuidList(IReadOnlyList<Guid> values)
         => JsonSerializer.Serialize(
             values.ToArray(),
             CognitiveMemoryJsonSerializerContext.Default.GuidArray);
+
+    private static IReadOnlyList<Guid> DeserializeGuidList(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return [];
+        }
+
+        return JsonSerializer.Deserialize(json, CognitiveMemoryJsonSerializerContext.Default.GuidArray) ?? [];
+    }
 
     private static string FirstNonEmpty(params string?[] values)
         => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
@@ -990,6 +1124,12 @@ public sealed class CognitiveMemoryCuratorConversationService(
         Guid? AgentId,
         Guid? ProviderProfileId,
         CognitiveMemoryExecutionModelId? ModelId);
+
+    private sealed record CuratorTargetResolution(
+        IReadOnlyList<Guid> TargetMemoryRecordIds,
+        IReadOnlyList<Guid> TargetClaimIds,
+        IReadOnlyList<Guid> CandidateMemoryRecordIds,
+        CognitiveMemoryCuratorTargetingStatus Status);
 
     private sealed record CuratorConversationDepthProfile(
         CognitiveMemoryRecallBudget RecallBudget,

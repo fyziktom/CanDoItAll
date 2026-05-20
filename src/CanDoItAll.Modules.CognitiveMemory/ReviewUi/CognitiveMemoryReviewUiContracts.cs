@@ -440,6 +440,12 @@ public sealed record CognitiveMemoryQualityClusterView(
     int MemberCount,
     int SourceEvidenceCount,
     int ContradictionCount,
+    double CompositeScore,
+    double CohesionScore,
+    double SourceIndependenceScore,
+    double SourceDiversityScore,
+    bool AggregateEligible,
+    string EligibilityReason,
     DateTimeOffset UpdatedAtUtc);
 
 public sealed record CognitiveMemoryClusterSearchResultView(
@@ -454,6 +460,12 @@ public sealed record CognitiveMemoryClusterSearchResultView(
     int MemberCount,
     int SourceEvidenceCount,
     int ContradictionCount,
+    double CompositeScore,
+    double CohesionScore,
+    double SourceIndependenceScore,
+    double SourceDiversityScore,
+    bool AggregateEligible,
+    string EligibilityReason,
     DateTimeOffset UpdatedAtUtc,
     IReadOnlyList<CognitiveMemoryClusterSearchKeyView> Keys,
     IReadOnlyList<CognitiveMemoryClusterSearchMemberPreviewView> Members);

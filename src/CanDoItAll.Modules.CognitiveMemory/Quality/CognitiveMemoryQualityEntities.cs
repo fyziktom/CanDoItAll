@@ -30,6 +30,24 @@ public sealed class CognitiveMemoryQualityClusterRecord : IHasConcurrencyToken
 
     public int ContradictionCount { get; set; }
 
+    public double CohesionScore { get; set; }
+
+    public double SourceIndependenceScore { get; set; }
+
+    public double SourceDiversityScore { get; set; }
+
+    public double SemanticSignalScore { get; set; }
+
+    public double SupportingSignalScore { get; set; }
+
+    public double GuardPenaltyScore { get; set; }
+
+    public double CompositeScore { get; set; }
+
+    public bool AggregateEligible { get; set; }
+
+    public string EligibilityReason { get; set; } = string.Empty;
+
     public DateTimeOffset CreatedAtUtc { get; set; }
 
     public DateTimeOffset UpdatedAtUtc { get; set; }

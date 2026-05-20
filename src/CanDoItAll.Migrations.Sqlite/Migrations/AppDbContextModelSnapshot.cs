@@ -2283,11 +2283,30 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .HasMaxLength(8000)
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTimeOffset?>("AnchorRetiredAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("AnchorState")
+                        .HasColumnType("INTEGER");
+
                     b.Property<Guid?>("AppliedMemoryRecordId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("AssimilatedMemoryRecordId")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("CaptureKind")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("CaptureLanguage")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CaptureScope")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("ConcurrencyToken")
                         .IsConcurrencyToken()
@@ -2336,6 +2355,9 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.Property<Guid?>("RecallTraceId")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("ReviewItemId")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid?>("SourceItemId")
                         .HasColumnType("TEXT");
 
@@ -2347,7 +2369,22 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .HasMaxLength(4000)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("TargetClaimIdsJson")
+                        .IsRequired()
+                        .HasMaxLength(8000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("TargetConfidenceScore")
+                        .HasColumnType("REAL");
+
+                    b.Property<int>("TargetingStatus")
+                        .HasColumnType("INTEGER");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("AppliedMemoryRecordId");
+
+                    b.HasIndex("AssimilatedMemoryRecordId");
 
                     b.HasIndex("ConsolidationCandidateId");
 
@@ -2355,7 +2392,13 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
 
                     b.HasIndex("RecallTraceId");
 
+                    b.HasIndex("ReviewItemId");
+
                     b.HasIndex("CuratorTurnId", "CaptureKind");
+
+                    b.HasIndex("ProjectId", "AnchorState", "CreatedAtUtc");
+
+                    b.HasIndex("ProjectId", "TargetingStatus", "CreatedAtUtc");
 
                     b.HasIndex("ProjectId", "CaptureKind", "Status", "CreatedAtUtc");
 
@@ -5898,6 +5941,9 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.Property<int>("AccessLevel")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("AggregateEligible")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("AlgorithmVersion")
                         .IsRequired()
                         .HasMaxLength(120)
@@ -5908,6 +5954,12 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("TEXT");
 
+                    b.Property<double>("CohesionScore")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("CompositeScore")
+                        .HasColumnType("REAL");
+
                     b.Property<Guid>("ConcurrencyToken")
                         .IsConcurrencyToken()
                         .HasColumnType("TEXT");
@@ -5917,6 +5969,14 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
 
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("TEXT");
+
+                    b.Property<string>("EligibilityReason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("GuardPenaltyScore")
+                        .HasColumnType("REAL");
 
                     b.Property<int>("KeyCount")
                         .HasColumnType("INTEGER");
@@ -5941,8 +6001,20 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.Property<int>("RiskLevel")
                         .HasColumnType("INTEGER");
 
+                    b.Property<double>("SemanticSignalScore")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("SourceDiversityScore")
+                        .HasColumnType("REAL");
+
                     b.Property<int>("SourceEvidenceCount")
                         .HasColumnType("INTEGER");
+
+                    b.Property<double>("SourceIndependenceScore")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("SupportingSignalScore")
+                        .HasColumnType("REAL");
 
                     b.Property<DateTimeOffset>("UpdatedAtUtc")
                         .HasColumnType("TEXT");
@@ -5953,6 +6025,8 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                         .IsUnique();
 
                     b.HasIndex("ProjectId", "AccessLevel", "RiskLevel");
+
+                    b.HasIndex("ProjectId", "AggregateEligible", "CompositeScore");
 
                     b.HasIndex("ProjectId", "PrimaryKeyFamily", "Readiness");
 

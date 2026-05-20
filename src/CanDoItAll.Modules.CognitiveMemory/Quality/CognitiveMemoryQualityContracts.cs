@@ -56,7 +56,12 @@ public enum CognitiveMemoryDreamValidationIssueKind
     RestrictedContent = 4,
     RedactedSource = 5,
     AccessPolicy = 6,
-    GeneratedTextLeakage = 7
+    GeneratedTextLeakage = 7,
+    OverbroadCluster = 8,
+    LowCohesion = 9,
+    WeakSourceIndependence = 10,
+    DuplicateAggregate = 11,
+    UnsupportedClaim = 12
 }
 
 public readonly record struct CognitiveMemoryQualityClusterId
@@ -187,6 +192,17 @@ public sealed record CognitiveMemoryClusterMember(
     CognitiveMemoryValidationState ValidationState,
     CognitiveMemoryStabilityState StabilityState);
 
+public sealed record CognitiveMemoryClusterQualityMetrics(
+    double CohesionScore,
+    double SourceIndependenceScore,
+    double SourceDiversityScore,
+    double SemanticSignalScore,
+    double SupportingSignalScore,
+    double GuardPenaltyScore,
+    double CompositeScore,
+    bool AggregateEligible,
+    string EligibilityReason);
+
 public sealed record CognitiveMemoryClusterPlan(
     CognitiveMemoryQualityClusterId ClusterId,
     Guid? ProjectId,
@@ -195,6 +211,7 @@ public sealed record CognitiveMemoryClusterPlan(
     CognitiveMemoryQualityClusterReadiness Readiness,
     IReadOnlyList<CognitiveMemoryClusterKey> Keys,
     IReadOnlyList<CognitiveMemoryClusterMember> Members,
+    CognitiveMemoryClusterQualityMetrics QualityMetrics,
     IReadOnlyList<string> Warnings);
 
 public sealed record CognitiveMemoryClusterPlannerMetrics(
