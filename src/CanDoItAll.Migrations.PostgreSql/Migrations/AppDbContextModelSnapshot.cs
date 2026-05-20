@@ -2272,6 +2272,254 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.ToTable("CognitiveMemory_CrossProjectPromotionCandidates", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryCuratorCapturedImprovementRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ActorId")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<string>("AffectedMemoryRecordIdsJson")
+                        .IsRequired()
+                        .HasMaxLength(8000)
+                        .HasColumnType("character varying(8000)");
+
+                    b.Property<Guid?>("AppliedMemoryRecordId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("CaptureKind")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ConcurrencyToken")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.Property<double>("ConfidenceScore")
+                        .HasColumnType("double precision");
+
+                    b.Property<Guid?>("ConsolidationCandidateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ContextPackId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CorrectionText")
+                        .IsRequired()
+                        .HasMaxLength(8000)
+                        .HasColumnType("character varying(8000)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CuratorSessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CuratorTurnId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("EvidenceAnchorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("MutationCommandId")
+                        .HasColumnType("uuid");
+
+                    b.Property<double>("PriorityScore")
+                        .HasColumnType("double precision");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("RecallTraceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("SourceItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConsolidationCandidateId");
+
+                    b.HasIndex("MutationCommandId");
+
+                    b.HasIndex("RecallTraceId");
+
+                    b.HasIndex("CuratorTurnId", "CaptureKind");
+
+                    b.HasIndex("ProjectId", "CaptureKind", "Status", "CreatedAtUtc");
+
+                    b.ToTable("CognitiveMemory_CuratorCapturedImprovements", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryCuratorSessionRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AccessLevel")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ActorId")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<Guid?>("AgentChatSessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AgentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AlgorithmVersion")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<bool>("AllowRestrictedContent")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("ClosedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ConcurrencyToken")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ModelId")
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<string>("PolicyProfileId")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ProviderProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("RiskLevel")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RuntimeMode")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<int>("TurnCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AgentChatSessionId");
+
+                    b.HasIndex("ProjectId", "RuntimeMode", "Status");
+
+                    b.HasIndex("ProjectId", "Status", "UpdatedAtUtc");
+
+                    b.ToTable("CognitiveMemory_CuratorSessions", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryCuratorTurnRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AgentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("CaptureCount")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ConcurrencyToken")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ContextPackId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CuratorResponse")
+                        .IsRequired()
+                        .HasMaxLength(12000)
+                        .HasColumnType("character varying(12000)");
+
+                    b.Property<Guid>("CuratorSessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("IncludedMemoryRecordIdsJson")
+                        .IsRequired()
+                        .HasMaxLength(8000)
+                        .HasColumnType("character varying(8000)");
+
+                    b.Property<string>("ModelId")
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ProviderProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("RecallTraceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("RuntimeMode")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Sequence")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UserMessage")
+                        .IsRequired()
+                        .HasMaxLength(8000)
+                        .HasColumnType("character varying(8000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RecallTraceId");
+
+                    b.HasIndex("CuratorSessionId", "Sequence")
+                        .IsUnique();
+
+                    b.HasIndex("ProjectId", "CreatedAtUtc");
+
+                    b.ToTable("CognitiveMemory_CuratorTurns", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryDistributedJobRecord", b =>
                 {
                     b.Property<Guid>("Id")

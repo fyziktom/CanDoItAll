@@ -1,0 +1,3 @@
+# Implementation Prompt
+
+You are implementing the Cognitive Memory curator conversation bundle. Read the root README, phase plan, traceability, and the active subbundle README first. Keep changes scoped to the active subbundle. Do not change existing probe feedback to bypass manual review globally; implement trusted bypass only through the curator conversation service. Preserve recall trace ids, affected memory ids, actor credit, confidence, and approval-bypass metadata on captured improvements. Use existing CanDoItAll components and AgentFramework voice services. Validate with the proof required in the subbundle and update `reviews/01-execution-report.md` immediately after each proof run.

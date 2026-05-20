@@ -18,6 +18,9 @@ public sealed class CognitiveMemoryAdvancedPersistenceModelTests
         AssertEntityTable<CognitiveMemoryProbeSessionRecord>(entityTypes, "CognitiveMemory_ProbeSessions");
         AssertEntityTable<CognitiveMemoryProbeTurnRecord>(entityTypes, "CognitiveMemory_ProbeTurns");
         AssertEntityTable<CognitiveMemoryProbeFeedbackRecord>(entityTypes, "CognitiveMemory_ProbeFeedback");
+        AssertEntityTable<CognitiveMemoryCuratorSessionRecord>(entityTypes, "CognitiveMemory_CuratorSessions");
+        AssertEntityTable<CognitiveMemoryCuratorTurnRecord>(entityTypes, "CognitiveMemory_CuratorTurns");
+        AssertEntityTable<CognitiveMemoryCuratorCapturedImprovementRecord>(entityTypes, "CognitiveMemory_CuratorCapturedImprovements");
         AssertEntityTable<CognitiveMemoryProbeRegressionTestCaseRecord>(entityTypes, "CognitiveMemory_ProbeRegressionTestCases");
         AssertEntityTable<CognitiveMemorySelfModelProfileRecord>(entityTypes, "CognitiveMemory_SelfModelProfiles");
         AssertEntityTable<CognitiveMemoryDomainCompetenceProfileRecord>(entityTypes, "CognitiveMemory_DomainCompetenceProfiles");
@@ -78,6 +81,20 @@ public sealed class CognitiveMemoryAdvancedPersistenceModelTests
                 nameof(CognitiveMemoryProbeFeedbackRecord.Action),
                 nameof(CognitiveMemoryProbeFeedbackRecord.CalibrationOutcome),
                 nameof(CognitiveMemoryProbeFeedbackRecord.RiskLevel)
+            ],
+            [typeof(CognitiveMemoryCuratorSessionRecord)] =
+            [
+                nameof(CognitiveMemoryCuratorSessionRecord.Status),
+                nameof(CognitiveMemoryCuratorSessionRecord.RuntimeMode)
+            ],
+            [typeof(CognitiveMemoryCuratorTurnRecord)] =
+            [
+                nameof(CognitiveMemoryCuratorTurnRecord.RuntimeMode)
+            ],
+            [typeof(CognitiveMemoryCuratorCapturedImprovementRecord)] =
+            [
+                nameof(CognitiveMemoryCuratorCapturedImprovementRecord.CaptureKind),
+                nameof(CognitiveMemoryCuratorCapturedImprovementRecord.Status)
             ],
             [typeof(CognitiveMemorySelfRegulationAssessmentRecord)] =
             [

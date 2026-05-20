@@ -42,6 +42,31 @@ public enum CognitiveMemoryProbeFindingKind
     Underconfident = 6
 }
 
+public enum CognitiveMemoryCuratorRuntimeMode
+{
+    DirectLlm = 0,
+    Agent = 1
+}
+
+public enum CognitiveMemoryCuratorSessionStatus
+{
+    Active = 0,
+    Closed = 1
+}
+
+public enum CognitiveMemoryCuratorCaptureKind
+{
+    NewKnowledge = 0,
+    Correction = 1,
+    WrongScope = 2
+}
+
+public enum CognitiveMemoryCuratorCaptureStatus
+{
+    Captured = 0,
+    Applied = 1
+}
+
 public enum CognitiveMemoryProbeRegressionStatus
 {
     Draft = 0,
@@ -402,6 +427,54 @@ public sealed record CognitiveMemoryProbeAskResult(
     CognitiveMemoryProbeTurnRecord Turn,
     CognitiveMemoryRecallResult RecallResult);
 
+public sealed record CognitiveMemoryCuratorSessionStartRequest(
+    Guid ProjectId,
+    string Title,
+    CognitiveMemoryPolicyContext PolicyContext,
+    CognitiveMemoryCuratorRuntimeMode RuntimeMode,
+    Guid? AgentId = null,
+    Guid? ProviderProfileId = null,
+    CognitiveMemoryExecutionModelId? ModelId = null);
+
+public sealed record CognitiveMemoryCuratorSendRequest(
+    Guid SessionId,
+    string Message,
+    CognitiveMemoryRecallIntentKind Intent = CognitiveMemoryRecallIntentKind.Implementation,
+    CognitiveMemoryRecallBudget? Budget = null,
+    CognitiveMemoryCuratorCaptureKind? ExplicitCaptureKind = null);
+
+public sealed record CognitiveMemoryCuratorTurnCaptureRequest(
+    Guid SessionId,
+    string UserMessage,
+    string CuratorResponse,
+    CognitiveMemoryCuratorRuntimeMode RuntimeMode,
+    Guid? RecallTraceId = null,
+    Guid? ContextPackId = null,
+    IReadOnlyList<CognitiveMemoryRecordId>? AffectedMemoryRecordIds = null,
+    CognitiveMemoryCuratorCaptureKind? ExplicitCaptureKind = null,
+    Guid? AgentId = null,
+    Guid? ProviderProfileId = null,
+    CognitiveMemoryExecutionModelId? ModelId = null);
+
+public sealed record CognitiveMemoryCuratorTurnCaptureResult(
+    CognitiveMemoryCuratorSessionRecord Session,
+    CognitiveMemoryCuratorTurnRecord Turn,
+    IReadOnlyList<CognitiveMemoryCuratorCapturedImprovementRecord> CapturedImprovements);
+
+public sealed record CognitiveMemoryCuratorSendResult(
+    CognitiveMemoryCuratorSessionRecord Session,
+    CognitiveMemoryCuratorTurnRecord Turn,
+    CognitiveMemoryCuratorRuntimeMode RuntimeMode,
+    string ResponseText,
+    Guid? AgentId,
+    Guid? ProviderProfileId,
+    CognitiveMemoryExecutionModelId? ModelId,
+    Guid RecallTraceId,
+    Guid ContextPackId,
+    IReadOnlyList<CognitiveMemoryRecordId> IncludedMemoryRecordIds,
+    IReadOnlyList<CognitiveMemoryCuratorCapturedImprovementRecord> CapturedImprovements,
+    IReadOnlyList<string> Warnings);
+
 public interface ICognitiveMemoryProbeService
 {
     ValueTask<CognitiveMemoryProbeSessionRecord> StartAsync(
@@ -418,6 +491,26 @@ public interface ICognitiveMemoryProbeService
 
     ValueTask<CognitiveMemoryProbeRegressionRunRecord> ReplayRegressionAsync(
         CognitiveMemoryProbeReplayRequest request,
+        CancellationToken cancellationToken = default);
+}
+
+public interface ICognitiveMemoryCuratorConversationService
+{
+    ValueTask<CognitiveMemoryCuratorSessionRecord> StartAsync(
+        CognitiveMemoryCuratorSessionStartRequest request,
+        CancellationToken cancellationToken = default);
+
+    ValueTask<CognitiveMemoryCuratorSendResult> SendAsync(
+        CognitiveMemoryCuratorSendRequest request,
+        CancellationToken cancellationToken = default);
+
+    ValueTask<CognitiveMemoryCuratorTurnCaptureResult> RecordTurnAsync(
+        CognitiveMemoryCuratorTurnCaptureRequest request,
+        CancellationToken cancellationToken = default);
+
+    ValueTask<IReadOnlyList<CognitiveMemoryCuratorTurnRecord>> GetRecentTurnsAsync(
+        Guid sessionId,
+        int take = 50,
         CancellationToken cancellationToken = default);
 }
 

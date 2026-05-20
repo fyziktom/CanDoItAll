@@ -46,7 +46,8 @@ public enum CognitiveMemoryModelExecutionRole
     Consolidation = 1,
     EpistemicDrive = 2,
     Probe = 3,
-    ProfessorReview = 4
+    ProfessorReview = 4,
+    CuratorConversation = 5
 }
 
 public readonly record struct CognitiveMemoryExecutionModelId
@@ -140,7 +141,8 @@ public static class CognitiveMemoryModelExecutionProfileDefaults
         CreateOpenAi(CognitiveMemoryModelExecutionRole.Consolidation),
         CreateOpenAi(CognitiveMemoryModelExecutionRole.EpistemicDrive),
         CreateOpenAi(CognitiveMemoryModelExecutionRole.Probe),
-        CreateOpenAi(CognitiveMemoryModelExecutionRole.ProfessorReview)
+        CreateOpenAi(CognitiveMemoryModelExecutionRole.ProfessorReview),
+        CreateOpenAi(CognitiveMemoryModelExecutionRole.CuratorConversation)
     ];
 
     public static CognitiveMemoryModelExecutionProfile CreateOpenAi(CognitiveMemoryModelExecutionRole role)

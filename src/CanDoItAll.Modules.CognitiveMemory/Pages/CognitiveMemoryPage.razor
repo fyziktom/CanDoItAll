@@ -151,6 +151,12 @@
                             <CognitiveMemoryDashboardTab @key="uiRevision" />
                         </TabsItem>
 
+                        <TabsItem Text="Curator"
+                                  Icon="record_voice_over"
+                                  data-testid="cognitive-memory-tab-curator">
+                            <CognitiveMemoryCuratorTab @key="uiRevision" />
+                        </TabsItem>
+
                         <TabsItem Text="Probe workbench"
                                   Icon="forum"
                                   BadgeText="@snapshot.Summary.ProbeSessionCount.ToString()"

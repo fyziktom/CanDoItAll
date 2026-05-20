@@ -33,7 +33,8 @@ public enum CognitiveMemoryConsolidationCandidateKind
     Reflection = 3,
     Contradiction = 4,
     ProjectionInvalidation = 5,
-    ReviewRequired = 6
+    ReviewRequired = 6,
+    Knowledge = 7
 }
 
 public enum CognitiveMemoryConsolidationCandidateStatus

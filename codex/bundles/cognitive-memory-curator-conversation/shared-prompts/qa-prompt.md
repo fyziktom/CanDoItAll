@@ -1,0 +1,3 @@
+# QA Prompt
+
+Validate that the Curator tab is a fluent conversation surface, not another manual approval form. Check that `Agent` and `Direct LLM` modes both route through one result/capture contract. Confirm corrections create trusted human source/evidence/mutation/consolidation artifacts with `RequiresHumanReview = false`, high confidence/priority metadata, actor credit, recall trace id, and affected memory ids when correcting a curator answer. In the browser, inspect `/cognitive-memory` at a large viewport and a narrower viewport; verify readable transcript, mode controls, text composer, voice controls, captured-improvement state, no overlapping text, and no lateral overflow.
