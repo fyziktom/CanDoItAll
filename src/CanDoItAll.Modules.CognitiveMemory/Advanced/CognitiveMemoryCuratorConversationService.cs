@@ -17,7 +17,7 @@ public sealed class CognitiveMemoryCuratorConversationService(
 {
     private const string CuratorSourceSystem = "CuratorConversation";
     private const string CuratorSourceItemType = "CuratorTrustedTurn";
-    private const string CuratorAlgorithmVersion = "curator-conversation-v1";
+    private const string CuratorAlgorithmVersion = "curator-conversation-v2-professor-anchor";
     private const string ApprovalBypassReason = "Trusted curator conversation mode accepts direct operator corrections without manual review.";
     private const int MaximumTitleLength = 300;
     private const int MaximumUserMessageLength = 8000;

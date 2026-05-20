@@ -28,6 +28,7 @@ Use this skill before and after each subbundle. It exists to stop dependency mis
    - tests, builds, Playwright proof, screenshots, and host proof ran when required
    - screenshot review questions were actually answered, not only captured
    - `## Browser Validation Analytics` and `## Subbundle Gate Results` were updated while the proof was fresh
+   - critical subbundles include Semantic Adequacy Gate evidence for shallow-pass trap, adversarial negative proof, semantic positive proof, anti-stub audit, and raw-note literal closure
 5. If the subbundle is a critical foundation, run one dependent-flow smoke or dependent-surface validation before allowing the next subbundle to start.
 6. If later work exposes a defect in the current subbundle, reopen it immediately and rerun the closure gate after repair.
 
@@ -37,10 +38,21 @@ Use this skill before and after each subbundle. It exists to stop dependency mis
 - Do not pass the closure gate when browser proof is missing or visually wrong.
 - Do not let a later subbundle bury evidence that an earlier foundation was incomplete.
 - Treat `Progression Gate` as a real stop sign, not as bundle decoration.
+- Do not pass a critical closure gate when proof only checks structure, counts, status flags, non-empty output, or template markers instead of domain behavior.
+
+## Semantic Adequacy Closure Rule
+
+Closure for a critical subbundle is `Fail` unless the proof names the shallow-pass trap and demonstrates both:
+
+- an adversarial negative case that the shallow implementation would mishandle
+- a semantic positive case that represents the intended realistic behavior
+
+The closure gate also fails when the anti-stub audit is missing or when raw-note closure silently narrows literal request language. Use `../candoitall-bundle-execution/references/semantic-adequacy-proof.md` as the checklist.
 
 ## References
 
 - Read [references/prerequisite-and-closure-gates.md](references/prerequisite-and-closure-gates.md) for the phase checklist.
+- Read [../candoitall-bundle-execution/references/semantic-adequacy-proof.md](../candoitall-bundle-execution/references/semantic-adequacy-proof.md) when validating a critical subbundle.
 - Use `candoitall-watch-playwright-loop` when the proof depends on fast nearby browser validation.
 - Use `candoitall-bundle-validator` for bundle-level readiness and final closure.
 

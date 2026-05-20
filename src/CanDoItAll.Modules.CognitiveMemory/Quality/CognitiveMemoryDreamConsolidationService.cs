@@ -13,7 +13,9 @@ public sealed class CognitiveMemoryDreamConsolidationService(
     ICognitiveMemoryDreamValidator validator,
     IClock clock) : ICognitiveMemoryDreamConsolidationService
 {
-    private const string AlgorithmVersion = "quality-dream-v1";
+    private const string AlgorithmVersion = "quality-dream-v2-claim-synthesis";
+    private const int MaxAggregateClaims = 8;
+    private const string AggregateClaimPredicateKey = "supported-by-source-memory";
 
     public async ValueTask<CognitiveMemoryDreamRunResult> RunAsync(
         CognitiveMemoryDreamRunRequest request,
@@ -246,29 +248,33 @@ public sealed class CognitiveMemoryDreamConsolidationService(
             .ToListAsync(cancellationToken);
         var support = await CognitiveMemoryQualitySupportLoader.LoadAsync(dbContext, memoryRecordIds, cancellationToken);
         var title = ResolveAggregateTitle(request.Mode, cluster, records);
-        var canonicalText = BuildAggregateCanonicalText(cluster, records, support.ByRecordId);
+        var claimUnits = CreateClaimUnits(request.Mode, cluster, records, support.ByRecordId);
+        var canonicalText = BuildAggregateCanonicalText(cluster, records, claimUnits);
         var candidateId = Guid.NewGuid();
         var aggregateClaims = new List<CognitiveMemoryDreamAggregateClaim>();
-        var aggregateClaimText = CreateSynthesizedClaimText(request.Mode, cluster, records, support.ByRecordId);
-        var aggregateSourceMaps = records
-            .SelectMany(record =>
-            {
-                var recordSupport = support.ByRecordId.GetValueOrDefault(record.Id) ?? CognitiveMemoryRecordSupport.Empty(record.Id);
-                return CreateSourceMaps(record, recordSupport);
-            })
-            .GroupBy(sourceMap => new { sourceMap.SourceMemoryRecordId, sourceMap.SourceItemId, sourceMap.EvidenceAnchorId, sourceMap.Direction })
-            .Select(group => group.First())
-            .ToArray();
-        if (!string.IsNullOrWhiteSpace(aggregateClaimText))
+        var subjectKey = ResolveAggregateSubjectKey(cluster, records);
+        var claimSequence = 0;
+        foreach (var claimGroup in BuildClaimGroups(claimUnits).Take(MaxAggregateClaims))
         {
+            var aggregateClaimText = SynthesizeClaimGroupText(claimGroup);
+            var aggregateSourceMaps = claimGroup.Units
+                .SelectMany(unit => unit.SourceMaps)
+                .GroupBy(sourceMap => new { sourceMap.SourceMemoryRecordId, sourceMap.SourceItemId, sourceMap.EvidenceAnchorId, sourceMap.Direction })
+                .Select(group => group.First())
+                .ToArray();
+            if (string.IsNullOrWhiteSpace(aggregateClaimText) || aggregateSourceMaps.Length == 0)
+            {
+                continue;
+            }
+
             var aggregateClaimId = Guid.NewGuid();
             aggregateClaims.Add(new CognitiveMemoryDreamAggregateClaim(
                 aggregateClaimId,
-                ResolveAggregateClaimKind(request.Mode, records.FirstOrDefault()),
+                ResolveAggregateClaimKind(request.Mode, claimGroup.Units.FirstOrDefault()?.Record),
                 aggregateClaimText,
-                CognitiveMemoryQualityText.TrimText(CognitiveMemoryQualityText.NormalizeKey(ResolvePrimaryClusterKey(cluster)?.DisplayText ?? records.FirstOrDefault()?.TopicKey ?? records.FirstOrDefault()?.Title ?? "aggregate"), 240),
-                "is-supported-by-cluster",
-                CognitiveMemoryQualityText.TrimText(cluster.ClusterHash, 240),
+                subjectKey,
+                AggregateClaimPredicateKey,
+                CognitiveMemoryQualityText.TrimText(claimGroup.Signature, 240),
                 aggregateSourceMaps));
             if (persistChanges)
             {
@@ -277,12 +283,12 @@ public sealed class CognitiveMemoryDreamConsolidationService(
                     Id = aggregateClaimId,
                     AggregateCandidateId = candidateId,
                     ProjectId = request.ProjectId,
-                    Sequence = 0,
-                    ClaimKind = ResolveAggregateClaimKind(request.Mode, records.FirstOrDefault()),
+                    Sequence = claimSequence,
+                    ClaimKind = ResolveAggregateClaimKind(request.Mode, claimGroup.Units.FirstOrDefault()?.Record),
                     ClaimText = aggregateClaimText,
-                    SubjectKey = CognitiveMemoryQualityText.TrimText(CognitiveMemoryQualityText.NormalizeKey(ResolvePrimaryClusterKey(cluster)?.DisplayText ?? records.FirstOrDefault()?.TopicKey ?? records.FirstOrDefault()?.Title ?? "aggregate"), 240),
-                    PredicateKey = "is-supported-by-cluster",
-                    ObjectKey = CognitiveMemoryQualityText.TrimText(cluster.ClusterHash, 240),
+                    SubjectKey = subjectKey,
+                    PredicateKey = AggregateClaimPredicateKey,
+                    ObjectKey = CognitiveMemoryQualityText.TrimText(claimGroup.Signature, 240),
                     CreatedAtUtc = nowUtc
                 });
                 foreach (var sourceMap in aggregateSourceMaps)
@@ -304,6 +310,8 @@ public sealed class CognitiveMemoryDreamConsolidationService(
                     });
                 }
             }
+
+            claimSequence++;
         }
 
         var sourceMapCount = aggregateClaims.Sum(claim => claim.SourceMaps.Count);
@@ -540,81 +548,111 @@ public sealed class CognitiveMemoryDreamConsolidationService(
     private static string BuildAggregateCanonicalText(
         CognitiveMemoryClusterPlan cluster,
         IReadOnlyList<CognitiveMemoryRecord> records,
-        IReadOnlyDictionary<Guid, CognitiveMemoryRecordSupport> supportByRecordId)
+        IReadOnlyList<DreamClaimUnit> claimUnits)
     {
-        var primaryKey = ResolvePrimaryClusterKey(cluster);
-        var sourceItemCount = supportByRecordId.Values
-            .SelectMany(support => support.SourceItems.Select(item => item.Id))
-            .Distinct()
-            .Count();
-        var sourceSystemCount = supportByRecordId.Values
-            .SelectMany(support => support.SourceItems.Select(item => item.SourceSystem))
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Count();
-        var conclusions = records
-            .Select(record => CreateSafeClaimText(record, supportByRecordId.GetValueOrDefault(record.Id) ?? CognitiveMemoryRecordSupport.Empty(record.Id)))
+        var claimTexts = BuildClaimGroups(claimUnits)
+            .Select(SynthesizeClaimGroupText)
             .Where(text => !string.IsNullOrWhiteSpace(text))
-            .Select(NormalizeConclusionFragment)
             .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Take(4)
+            .Take(MaxAggregateClaims)
             .ToArray();
         var builder = new StringBuilder();
-        builder.AppendLine($"Synthesized aggregate: {primaryKey?.DisplayText ?? "quality cluster"}.");
-        builder.AppendLine($"This candidate consolidates {records.Count} memory record(s) into source-backed conclusions using {sourceItemCount} source item(s) across {sourceSystemCount} source system(s).");
-        builder.AppendLine($"Cluster quality: cohesion {cluster.QualityMetrics.CohesionScore:0.###}, independence {cluster.QualityMetrics.SourceIndependenceScore:0.###}, diversity {cluster.QualityMetrics.SourceDiversityScore:0.###}, composite {cluster.QualityMetrics.CompositeScore:0.###}.");
-        if (cluster.Keys.Count > 0)
+
+        if (claimTexts.Length == 0)
         {
-            builder.AppendLine($"Shared signals: {string.Join("; ", cluster.Keys.Take(6).Select(key => $"{key.Family}:{key.DisplayText}"))}.");
+            builder.AppendLine($"{ResolvePrimaryClusterKey(cluster)?.DisplayText ?? records.FirstOrDefault()?.Title ?? "The cluster"} needs human review because no readable source-supported claim could be synthesized.");
         }
 
-        if (conclusions.Length > 0)
+        foreach (var claimText in claimTexts)
         {
-            builder.AppendLine($"Conclusions: {JoinHumanReadable(conclusions)}.");
+            builder.AppendLine(EnsureSentence(claimText));
         }
 
-        if (records.Count > conclusions.Length)
+        if (cluster.Readiness == CognitiveMemoryQualityClusterReadiness.Contradictory)
         {
-            builder.AppendLine($"Coverage note: {records.Count - conclusions.Length} additional source-backed record(s) remain available through claim-level references.");
+            builder.AppendLine("Review required because source memories in this cluster disagree; keep the conflicting claims separate until a curator resolves them.");
         }
-
-        if (!cluster.QualityMetrics.AggregateEligible)
+        else if (!cluster.QualityMetrics.AggregateEligible)
         {
-            builder.AppendLine($"Uncertainty: {cluster.QualityMetrics.EligibilityReason}");
+            builder.AppendLine("Review required before applying this aggregate because the clustered evidence is not yet strong enough for unattended memory promotion.");
         }
 
         return builder.ToString().Trim();
     }
 
-    private static string CreateSynthesizedClaimText(
+    private static IReadOnlyList<DreamClaimUnit> CreateClaimUnits(
         CognitiveMemoryConsolidationMode mode,
         CognitiveMemoryClusterPlan cluster,
         IReadOnlyList<CognitiveMemoryRecord> records,
         IReadOnlyDictionary<Guid, CognitiveMemoryRecordSupport> supportByRecordId)
     {
-        var primaryText = ResolvePrimaryClusterKey(cluster)?.DisplayText ?? records.FirstOrDefault()?.Title ?? "the clustered topic";
-        var fragments = records
-            .Select(record => CreateSafeClaimText(record, supportByRecordId.GetValueOrDefault(record.Id) ?? CognitiveMemoryRecordSupport.Empty(record.Id)))
-            .Where(text => !string.IsNullOrWhiteSpace(text))
-            .Select(NormalizeConclusionFragment)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Take(4)
-            .ToArray();
-        if (fragments.Length == 0)
+        var units = new List<DreamClaimUnit>();
+        foreach (var record in records)
         {
-            return string.Empty;
+            var support = supportByRecordId.GetValueOrDefault(record.Id) ?? CognitiveMemoryRecordSupport.Empty(record.Id);
+            var sourceMaps = CreateSourceMaps(record, support);
+            if (sourceMaps.Count == 0)
+            {
+                continue;
+            }
+
+            var sourceClaimTexts = support.Claims
+                .Where(claim => claim.ValidationState != CognitiveMemoryValidationState.Rejected)
+                .Select(claim => claim.ClaimText)
+                .DefaultIfEmpty(CreateSafeClaimText(record, support))
+                .Select(NormalizeConclusionFragment)
+                .Where(text => !string.IsNullOrWhiteSpace(text))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            foreach (var sourceClaimText in sourceClaimTexts)
+            {
+                var signature = BuildClaimSignature(mode, cluster, sourceClaimText);
+                units.Add(new DreamClaimUnit(record, sourceClaimText, signature, sourceMaps));
+            }
         }
 
-        var modePhrase = mode switch
-        {
-            CognitiveMemoryConsolidationMode.ProcedureMining => "procedure pattern",
-            CognitiveMemoryConsolidationMode.FailureLearning => "failure-learning pattern",
-            CognitiveMemoryConsolidationMode.LearningOpportunityReview => "learning opportunity",
-            _ => "project knowledge"
-        };
-        return CognitiveMemoryQualityText.TrimText(
-            $"The {modePhrase} for {primaryText} is supported by independent source-backed conclusions: {JoinHumanReadable(fragments)}.",
-            1200);
+        return units;
+    }
+
+    private static IReadOnlyList<DreamClaimGroup> BuildClaimGroups(IReadOnlyList<DreamClaimUnit> claimUnits)
+        => claimUnits
+            .GroupBy(unit => unit.Signature, StringComparer.Ordinal)
+            .Select(group => new DreamClaimGroup(
+                group.Key,
+                group
+                    .OrderBy(unit => unit.Record.Title, StringComparer.OrdinalIgnoreCase)
+                    .ThenBy(unit => unit.ClaimText, StringComparer.OrdinalIgnoreCase)
+                    .ToArray()))
+            .OrderByDescending(group => group.Units.Select(unit => unit.Record.Id).Distinct().Count())
+            .ThenBy(group => group.Units[0].ClaimText, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    
+    private static string SynthesizeClaimGroupText(DreamClaimGroup claimGroup)
+    {
+        var representative = claimGroup.Units
+            .Select(unit => unit.ClaimText)
+            .Where(text => !string.IsNullOrWhiteSpace(text))
+            .OrderByDescending(text => CognitiveMemoryQualityText.ExtractMeaningfulTokens(text, 20).Count)
+            .ThenBy(text => text, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault() ?? string.Empty;
+        return CognitiveMemoryQualityText.TrimText(representative.Trim().TrimEnd('.'), 1200);
+    }
+
+    private static string BuildClaimSignature(
+        CognitiveMemoryConsolidationMode mode,
+        CognitiveMemoryClusterPlan cluster,
+        string claimText)
+    {
+        var modeKey = CognitiveMemoryQualityText.NormalizeKey(mode.ToString());
+        var primaryKey = CognitiveMemoryQualityText.NormalizeKey(ResolvePrimaryClusterKey(cluster)?.DisplayText ?? "aggregate");
+        var tokens = CognitiveMemoryQualityText.ExtractMeaningfulTokens(claimText, 12)
+            .Order(StringComparer.Ordinal)
+            .Take(10)
+            .ToArray();
+        var claimKey = tokens.Length == 0
+            ? CognitiveMemoryQualityText.NormalizeKey(claimText)
+            : string.Join('.', tokens);
+        return CognitiveMemoryQualityText.TrimText($"{modeKey}.{primaryKey}.{claimKey}", 240);
     }
 
     private static string NormalizeConclusionFragment(string text)
@@ -634,20 +672,14 @@ public sealed class CognitiveMemoryDreamConsolidationService(
         return CognitiveMemoryQualityText.TrimText(normalized, 240);
     }
 
-    private static string JoinHumanReadable(IReadOnlyList<string> values)
+    private static string EnsureSentence(string value)
     {
-        var cleaned = values
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Select(value => value.Trim().TrimEnd('.'))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-        return cleaned.Length switch
-        {
-            0 => string.Empty,
-            1 => cleaned[0],
-            2 => $"{cleaned[0]} and {cleaned[1]}",
-            _ => $"{string.Join("; ", cleaned.Take(cleaned.Length - 1))}; and {cleaned[^1]}"
-        };
+        var trimmed = value.Trim();
+        return trimmed.EndsWith(".", StringComparison.Ordinal) ||
+               trimmed.EndsWith("?", StringComparison.Ordinal) ||
+               trimmed.EndsWith("!", StringComparison.Ordinal)
+            ? trimmed
+            : $"{trimmed}.";
     }
 
     private static string ResolveAggregateTitle(
@@ -660,6 +692,13 @@ public sealed class CognitiveMemoryDreamConsolidationService(
             $"{mode} synthesis: {titleKey?.DisplayText ?? records.FirstOrDefault()?.Title ?? "quality cluster"}",
             300);
     }
+
+    private static string ResolveAggregateSubjectKey(
+        CognitiveMemoryClusterPlan cluster,
+        IReadOnlyList<CognitiveMemoryRecord> records)
+        => CognitiveMemoryQualityText.TrimText(
+            CognitiveMemoryQualityText.NormalizeKey(ResolvePrimaryClusterKey(cluster)?.DisplayText ?? records.FirstOrDefault()?.TopicKey ?? records.FirstOrDefault()?.Title ?? "aggregate"),
+            240);
 
     private static CognitiveMemoryClusterKey? ResolvePrimaryClusterKey(CognitiveMemoryClusterPlan cluster)
         => cluster.Keys.FirstOrDefault(key => key.Family == cluster.PrimaryKeyFamily) ??
@@ -682,31 +721,21 @@ public sealed class CognitiveMemoryDreamConsolidationService(
             1200);
     }
 
-    private static string CreateSafeSourceSupportText(CognitiveMemoryRecordSupport support)
-    {
-        if (support.HighestRedactionState is CognitiveMemoryRedactionState.Redacted or CognitiveMemoryRedactionState.Restricted ||
-            support.SourceItems.Any(item => item.AccessLevel == CognitiveMemoryAccessLevel.Restricted))
-        {
-            return "restricted or redacted source support requires review";
-        }
-
-        var sourceSummaries = support.SourceLinks
-            .Select(link => CognitiveMemoryQualityText.Redact(FirstNonEmpty(link.Summary, link.Locator)))
-            .Concat(support.EvidenceAnchors.Select(anchor => CognitiveMemoryQualityText.Redact(anchor.Locator)))
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Take(3)
-            .Select(value => CognitiveMemoryQualityText.TrimText(value, 180))
-            .ToArray();
-
-        return string.Join("; ", sourceSummaries);
-    }
-
     private static string SerializeStringArray(IReadOnlyList<string> values)
         => JsonSerializer.Serialize(values.ToArray(), CognitiveMemoryJsonSerializerContext.Default.StringArray);
 
     private static string FirstNonEmpty(params string?[] values)
         => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
+
+    private sealed record DreamClaimUnit(
+        CognitiveMemoryRecord Record,
+        string ClaimText,
+        string Signature,
+        IReadOnlyList<CognitiveMemoryDreamAggregateSourceMap> SourceMaps);
+
+    private sealed record DreamClaimGroup(
+        string Signature,
+        IReadOnlyList<DreamClaimUnit> Units);
 
     private sealed record CognitiveMemoryDreamModePolicy(
         CognitiveMemoryConsolidationMode Mode,

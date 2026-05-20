@@ -13,6 +13,9 @@ public sealed class CognitiveMemoryClusterPlanner(
 {
     private const string AlgorithmVersion = "quality-clustering-v2";
     private const int MaxAggregateReadyMemoryRecords = 20;
+    private const int MaxCandidateKeyFanout = 80;
+    private const int MaxCandidatePairs = 5000;
+    private const double CompositeEdgeThreshold = 0.58;
 
     private static readonly IReadOnlySet<CognitiveMemoryQualityClusterKeyFamily> StrongPrimaryFamilies = new HashSet<CognitiveMemoryQualityClusterKeyFamily>
     {
@@ -67,11 +70,14 @@ public sealed class CognitiveMemoryClusterPlanner(
             .ToHashSet(StringComparer.Ordinal);
         var sourceItemCount = support.SourceItemsById.Count;
 
+        var recordEntries = new List<ClusterRecordEntry>(records.Count);
         var keyEntries = new List<ClusterKeyEntry>();
         foreach (var record in records)
         {
             var recordSupport = support.ByRecordId.GetValueOrDefault(record.Id) ?? CognitiveMemoryRecordSupport.Empty(record.Id);
-            foreach (var key in CreateKeys(record, recordSupport, relationKeysByRecordId.GetValueOrDefault(record.Id) ?? [], request.KeyFamilies))
+            var recordKeys = CreateKeys(record, recordSupport, relationKeysByRecordId.GetValueOrDefault(record.Id) ?? [], request.KeyFamilies);
+            recordEntries.Add(new ClusterRecordEntry(record, recordSupport, recordKeys));
+            foreach (var key in recordKeys)
             {
                 keyEntries.Add(new ClusterKeyEntry(record, recordSupport, key));
             }
@@ -79,53 +85,48 @@ public sealed class CognitiveMemoryClusterPlanner(
 
         var warnings = new List<string>();
         var clusters = new List<CognitiveMemoryClusterPlan>();
-        foreach (var group in keyEntries
-            .Where(entry => IsStrongPrimaryKey(entry.Key))
-            .GroupBy(entry => new { entry.Key.Family, entry.Key.Key })
-            .OrderBy(group => group.Key.Family)
-            .ThenBy(group => group.Key.Key, StringComparer.Ordinal))
+        var compositeClusters = BuildCompositeClusters(recordEntries, request.MinMembers, contradictionPairs, out var candidatePairCount);
+        if (candidatePairCount >= MaxCandidatePairs)
         {
-            var members = group
-                .GroupBy(entry => entry.Record.Id)
-                .Select(entryGroup => entryGroup.First())
-                .ToArray();
-            if (members.Length < request.MinMembers)
+            warnings.Add($"Cluster candidate pair budget reached at {MaxCandidatePairs} pair(s); later records were not compared.");
+        }
+
+        foreach (var compositeCluster in compositeClusters)
+        {
+            var members = compositeCluster.Members;
+            var primaryKey = SelectPrimaryClusterKey(compositeCluster.Keys);
+            if (primaryKey is null)
             {
                 continue;
             }
 
-            if (group.Key.Family == CognitiveMemoryQualityClusterKeyFamily.TaskIntent &&
-                string.Equals(group.Key.Key, "intent:general", StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            var memberRecordIds = members.Select(member => member.Record.Id).ToHashSet();
-            var clusterKeySignals = members
-                .SelectMany(member => CreateKeys(member.Record, member.Support, relationKeysByRecordId.GetValueOrDefault(member.Record.Id) ?? [], request.KeyFamilies))
-                .GroupBy(key => new { key.Family, key.Key })
-                .Where(keyGroup => keyGroup.Count(key => memberRecordIds.Contains(key.RecordId)) >= Math.Min(2, members.Length))
-                .Select(keyGroup => keyGroup.First() with { RecordId = Guid.Empty })
-                .OrderBy(key => key.Family)
-                .ThenBy(key => key.Key, StringComparer.Ordinal)
+            var memberKeyEntries = members
+                .Select(member => new ClusterKeyEntry(member.Record, member.Support, primaryKey with { RecordId = member.Record.Id }))
                 .ToArray();
-            var clusterKeys = clusterKeySignals
+            var clusterKeys = compositeCluster.Keys
                 .Select(key => new CognitiveMemoryClusterKey(key.Family, key.Key, key.DisplayText))
                 .ToArray();
             var clusterMembers = members
                 .SelectMany(member => ToClusterMembers(member.Record, member.Support))
                 .ToArray();
-            var qualityMetrics = ScoreCluster(group.Key.Family, group.Key.Key, members, clusterKeySignals, contradictionPairs);
-            var readiness = ResolveReadiness(members, contradictionPairs, qualityMetrics);
-            var clusterHash = CreateClusterHash(request.ProjectId, group.Key.Family, group.Key.Key, members.Select(member => member.Record.Id));
+            var qualityMetrics = ScoreCluster(primaryKey.Family, primaryKey.Key, memberKeyEntries, compositeCluster.Keys, contradictionPairs);
+            var readiness = ResolveReadiness(memberKeyEntries, contradictionPairs, qualityMetrics);
+            var signalSummary = SummarizeEdgeSignals(compositeCluster.Edges);
+            qualityMetrics = qualityMetrics with
+            {
+                EligibilityReason = string.IsNullOrWhiteSpace(signalSummary)
+                    ? qualityMetrics.EligibilityReason
+                    : $"{qualityMetrics.EligibilityReason} Edge signals: {signalSummary}"
+            };
+            var clusterHash = CreateClusterHash(request.ProjectId, primaryKey.Family, primaryKey.Key, members.Select(member => member.Record.Id));
             var cluster = new CognitiveMemoryClusterPlan(
                 CognitiveMemoryQualityClusterId.New(),
                 request.ProjectId,
                 clusterHash,
-                group.Key.Family,
+                primaryKey.Family,
                 readiness,
                 clusterKeys.Length == 0
-                    ? [new CognitiveMemoryClusterKey(group.Key.Family, group.Key.Key, group.First().Key.DisplayText)]
+                    ? [new CognitiveMemoryClusterKey(primaryKey.Family, primaryKey.Key, primaryKey.DisplayText)]
                     : clusterKeys,
                 clusterMembers,
                 qualityMetrics,
@@ -148,6 +149,7 @@ public sealed class CognitiveMemoryClusterPlanner(
             records.Count,
             sourceItemCount,
             keyEntries.Count,
+            candidatePairCount,
             materializedClusters.Count,
             materializedClusters.Sum(cluster => cluster.Members.Count),
             relationRows.Count(relation => relation.RelationKind == CognitiveMemoryRelationKind.Contradicts),
@@ -279,7 +281,9 @@ public sealed class CognitiveMemoryClusterPlanner(
             CognitiveMemoryQualityClusterKeyFamily.SemanticTopic,
             $"topic:{CognitiveMemoryQualityText.NormalizeKey(FirstNonEmpty(record.TopicKey, record.Title))}",
             FirstNonEmpty(record.TopicKey, record.Title));
-        foreach (var token in CognitiveMemoryQualityText.ExtractMeaningfulTokens($"{record.Title} {record.TopicKey} {string.Join(' ', support.Claims.Select(claim => claim.SubjectKey))}", maxTokens: 4))
+        foreach (var token in CognitiveMemoryQualityText.ExtractMeaningfulTokens(
+            $"{record.Title} {record.TopicKey} {record.CanonicalText} {record.SummaryText} {string.Join(' ', support.Claims.Select(claim => $"{claim.SubjectKey} {claim.ObjectKey}"))}",
+            maxTokens: 10))
         {
             Add(CognitiveMemoryQualityClusterKeyFamily.Entity, $"entity:{token}", token);
         }
@@ -341,6 +345,280 @@ public sealed class CognitiveMemoryClusterPlanner(
 
             keys.Add(key);
         }
+    }
+
+    private static IReadOnlyList<CompositeClusterCandidate> BuildCompositeClusters(
+        IReadOnlyList<ClusterRecordEntry> records,
+        int minMembers,
+        HashSet<string> contradictionPairs,
+        out int candidatePairCount)
+    {
+        var candidatePairs = BuildCandidatePairs(records);
+        candidatePairCount = candidatePairs.Count;
+        var parentByRecordId = records.ToDictionary(record => record.Record.Id, record => record.Record.Id);
+        var edges = new List<CompositeEdgeSignal>();
+
+        foreach (var pair in candidatePairs.Values)
+        {
+            var edge = ScoreCompositeEdge(pair.Left, pair.Right, contradictionPairs);
+            if (!edge.Connects)
+            {
+                continue;
+            }
+
+            edges.Add(edge);
+            Union(parentByRecordId, pair.Left.Record.Id, pair.Right.Record.Id);
+        }
+
+        var connectedRecordIds = edges
+            .SelectMany(edge => new[] { edge.LeftRecordId, edge.RightRecordId })
+            .ToHashSet();
+        return records
+            .Where(record => connectedRecordIds.Contains(record.Record.Id))
+            .GroupBy(record => Find(parentByRecordId, record.Record.Id))
+            .Select(group => group.OrderBy(record => record.Record.Id).ToArray())
+            .Where(group => group.Length >= minMembers)
+            .Select(group =>
+            {
+                var memberIds = group.Select(member => member.Record.Id).ToHashSet();
+                var componentEdges = edges
+                    .Where(edge => memberIds.Contains(edge.LeftRecordId) && memberIds.Contains(edge.RightRecordId))
+                    .OrderByDescending(edge => edge.Score)
+                    .ToArray();
+                return new CompositeClusterCandidate(
+                    group,
+                    BuildSharedClusterKeys(group),
+                    componentEdges);
+            })
+            .Where(candidate => candidate.Keys.Any())
+            .OrderBy(candidate => candidate.Keys.First().Family)
+            .ThenBy(candidate => candidate.Keys.First().Key, StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    private static IReadOnlyDictionary<string, (ClusterRecordEntry Left, ClusterRecordEntry Right)> BuildCandidatePairs(
+        IReadOnlyList<ClusterRecordEntry> records)
+    {
+        var pairs = new Dictionary<string, (ClusterRecordEntry Left, ClusterRecordEntry Right)>(StringComparer.Ordinal);
+        var indexedRecords = records
+            .SelectMany(record => record.Keys
+                .Where(IsCandidatePreselectionKey)
+                .Select(key => new { Key = $"{key.Family}:{key.Key}", Record = record }))
+            .GroupBy(entry => entry.Key, StringComparer.Ordinal)
+            .Where(group => group.Count() is >= 2 and <= MaxCandidateKeyFanout)
+            .OrderBy(group => group.Key, StringComparer.Ordinal);
+
+        foreach (var group in indexedRecords)
+        {
+            var groupRecords = group
+                .Select(entry => entry.Record)
+                .DistinctBy(entry => entry.Record.Id)
+                .OrderBy(entry => entry.Record.Id)
+                .ToArray();
+            for (var leftIndex = 0; leftIndex < groupRecords.Length - 1; leftIndex++)
+            {
+                for (var rightIndex = leftIndex + 1; rightIndex < groupRecords.Length; rightIndex++)
+                {
+                    var left = groupRecords[leftIndex];
+                    var right = groupRecords[rightIndex];
+                    if (left.Record.ProjectId != right.Record.ProjectId)
+                    {
+                        continue;
+                    }
+
+                    pairs.TryAdd(NormalizePair(left.Record.Id, right.Record.Id), (left, right));
+                    if (pairs.Count >= MaxCandidatePairs)
+                    {
+                        return pairs;
+                    }
+                }
+            }
+        }
+
+        return pairs;
+    }
+
+    private static bool IsCandidatePreselectionKey(CognitiveMemoryClusterKeyWithRecord key)
+        => IsStrongPrimaryKey(key) &&
+           (key.Family != CognitiveMemoryQualityClusterKeyFamily.TaskIntent ||
+            !string.Equals(key.Key, "intent:general", StringComparison.Ordinal));
+
+    private static CompositeEdgeSignal ScoreCompositeEdge(
+        ClusterRecordEntry left,
+        ClusterRecordEntry right,
+        HashSet<string> contradictionPairs)
+    {
+        var sharedKeys = left.Keys
+            .Join(
+                right.Keys,
+                leftKey => new { leftKey.Family, leftKey.Key },
+                rightKey => new { rightKey.Family, rightKey.Key },
+                (leftKey, _) => leftKey)
+            .DistinctBy(key => new { key.Family, key.Key })
+            .ToArray();
+        var positiveScore = 0d;
+        var explanations = new List<string>();
+        foreach (var keyGroup in sharedKeys.GroupBy(key => key.Family).OrderBy(group => group.Key))
+        {
+            var keys = keyGroup.Take(4).ToArray();
+            var familyScore = keyGroup.Key switch
+            {
+                CognitiveMemoryQualityClusterKeyFamily.SemanticTopic => 0.48,
+                CognitiveMemoryQualityClusterKeyFamily.Entity => Math.Min(keys.Length, 4) * 0.16,
+                CognitiveMemoryQualityClusterKeyFamily.TaskIntent => Math.Min(keys.Length, 3) * 0.12,
+                CognitiveMemoryQualityClusterKeyFamily.EvidenceOverlap => 0.34,
+                CognitiveMemoryQualityClusterKeyFamily.Relation => 0.44,
+                CognitiveMemoryQualityClusterKeyFamily.SourceTopology => 0.06,
+                CognitiveMemoryQualityClusterKeyFamily.Temporal => 0.03,
+                CognitiveMemoryQualityClusterKeyFamily.AccessRisk => 0.02,
+                _ => 0
+            };
+            if (familyScore <= 0)
+            {
+                continue;
+            }
+
+            positiveScore += familyScore;
+            explanations.Add($"{keyGroup.Key}:{string.Join(',', keys.Select(key => key.DisplayText).Distinct(StringComparer.OrdinalIgnoreCase))}");
+        }
+
+        var sharedContentTokens = SharedContentTokens(left.Record, right.Record);
+        if (sharedContentTokens.Count >= 3)
+        {
+            positiveScore += 0.28;
+            explanations.Add($"Content:{string.Join(',', sharedContentTokens.Take(5))}");
+        }
+        else if (sharedContentTokens.Count == 2)
+        {
+            positiveScore += 0.18;
+            explanations.Add($"Content:{string.Join(',', sharedContentTokens)}");
+        }
+
+        var contradiction = contradictionPairs.Contains(NormalizePair(left.Record.Id, right.Record.Id));
+        var penalty = contradiction ? 0.7 : 0d;
+        if (left.Record.AccessLevel != right.Record.AccessLevel ||
+            left.Support.HighestRedactionState != right.Support.HighestRedactionState)
+        {
+            penalty += 0.35;
+            explanations.Add("Guard:access/redaction mismatch");
+        }
+
+        if (left.Record.StabilityState is CognitiveMemoryStabilityState.Stale or CognitiveMemoryStabilityState.Deprecated ||
+            right.Record.StabilityState is CognitiveMemoryStabilityState.Stale or CognitiveMemoryStabilityState.Deprecated ||
+            left.Record.ValidationState is CognitiveMemoryValidationState.NeedsHumanReview or CognitiveMemoryValidationState.Superseded ||
+            right.Record.ValidationState is CognitiveMemoryValidationState.NeedsHumanReview or CognitiveMemoryValidationState.Superseded)
+        {
+            penalty += 0.25;
+            explanations.Add("Guard:stale/review state");
+        }
+
+        if (contradiction)
+        {
+            explanations.Add("Guard:contradiction");
+        }
+
+        if (!HasSemanticFormationSignal(sharedKeys, sharedContentTokens))
+        {
+            positiveScore = Math.Min(positiveScore, 0.45);
+        }
+
+        var edgeScore = Math.Clamp(positiveScore - penalty, 0, 1);
+        var connects = edgeScore >= CompositeEdgeThreshold ||
+                       contradiction && positiveScore >= 0.45;
+        return new CompositeEdgeSignal(
+            left.Record.Id,
+            right.Record.Id,
+            RoundScore(edgeScore),
+            connects,
+            string.Join("; ", explanations.Distinct(StringComparer.Ordinal)));
+    }
+
+    private static bool HasSemanticFormationSignal(
+        IReadOnlyList<CognitiveMemoryClusterKeyWithRecord> sharedKeys,
+        IReadOnlyList<string> sharedContentTokens)
+        => sharedContentTokens.Count >= 2 ||
+           sharedKeys.Any(key => key.Family is CognitiveMemoryQualityClusterKeyFamily.SemanticTopic
+               or CognitiveMemoryQualityClusterKeyFamily.Entity
+               or CognitiveMemoryQualityClusterKeyFamily.EvidenceOverlap
+               or CognitiveMemoryQualityClusterKeyFamily.Relation);
+
+    private static IReadOnlyList<string> SharedContentTokens(CognitiveMemoryRecord left, CognitiveMemoryRecord right)
+    {
+        var leftTokens = CognitiveMemoryQualityText
+            .ExtractMeaningfulTokens($"{left.Title} {left.TopicKey} {left.CanonicalText} {left.SummaryText}", maxTokens: 16)
+            .ToHashSet(StringComparer.Ordinal);
+        return CognitiveMemoryQualityText
+            .ExtractMeaningfulTokens($"{right.Title} {right.TopicKey} {right.CanonicalText} {right.SummaryText}", maxTokens: 16)
+            .Where(leftTokens.Contains)
+            .OrderBy(token => token, StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<CognitiveMemoryClusterKeyWithRecord> BuildSharedClusterKeys(IReadOnlyList<ClusterRecordEntry> members)
+        => members
+            .SelectMany(member => member.Keys)
+            .GroupBy(key => new { key.Family, key.Key })
+            .Where(group => group.Select(key => key.RecordId).Distinct().Count() >= Math.Min(2, members.Count))
+            .Select(group => group.First() with { RecordId = Guid.Empty })
+            .Where(key => key.Family != CognitiveMemoryQualityClusterKeyFamily.TaskIntent ||
+                          !string.Equals(key.Key, "intent:general", StringComparison.Ordinal))
+            .OrderBy(key => key.Family)
+            .ThenBy(key => key.Key, StringComparer.Ordinal)
+            .ToArray();
+
+    private static CognitiveMemoryClusterKeyWithRecord? SelectPrimaryClusterKey(IReadOnlyList<CognitiveMemoryClusterKeyWithRecord> keys)
+        => keys
+            .Where(key => IsStrongPrimaryKey(key))
+            .OrderByDescending(key => key.Family switch
+            {
+                CognitiveMemoryQualityClusterKeyFamily.SemanticTopic => 6,
+                CognitiveMemoryQualityClusterKeyFamily.Relation => 5,
+                CognitiveMemoryQualityClusterKeyFamily.EvidenceOverlap => 4,
+                CognitiveMemoryQualityClusterKeyFamily.Entity => 3,
+                CognitiveMemoryQualityClusterKeyFamily.TaskIntent => 2,
+                _ => 0
+            })
+            .ThenBy(key => key.Key, StringComparer.Ordinal)
+            .FirstOrDefault();
+
+    private static string SummarizeEdgeSignals(IReadOnlyList<CompositeEdgeSignal> edges)
+        => string.Join(
+            " | ",
+            edges
+                .OrderByDescending(edge => edge.Score)
+                .Take(3)
+                .Select(edge => $"{edge.Score:0.###}:{edge.Explanation}"));
+
+    private static void Union(Dictionary<Guid, Guid> parentByRecordId, Guid left, Guid right)
+    {
+        var leftRoot = Find(parentByRecordId, left);
+        var rightRoot = Find(parentByRecordId, right);
+        if (leftRoot == rightRoot)
+        {
+            return;
+        }
+
+        if (leftRoot.CompareTo(rightRoot) <= 0)
+        {
+            parentByRecordId[rightRoot] = leftRoot;
+        }
+        else
+        {
+            parentByRecordId[leftRoot] = rightRoot;
+        }
+    }
+
+    private static Guid Find(Dictionary<Guid, Guid> parentByRecordId, Guid recordId)
+    {
+        var parent = parentByRecordId[recordId];
+        if (parent == recordId)
+        {
+            return recordId;
+        }
+
+        var root = Find(parentByRecordId, parent);
+        parentByRecordId[recordId] = root;
+        return root;
     }
 
     private static IReadOnlyList<CognitiveMemoryClusterMember> ToClusterMembers(
@@ -632,6 +910,23 @@ public sealed class CognitiveMemoryClusterPlanner(
         CognitiveMemoryRecord Record,
         CognitiveMemoryRecordSupport Support,
         CognitiveMemoryClusterKeyWithRecord Key);
+
+    private sealed record ClusterRecordEntry(
+        CognitiveMemoryRecord Record,
+        CognitiveMemoryRecordSupport Support,
+        IReadOnlyList<CognitiveMemoryClusterKeyWithRecord> Keys);
+
+    private sealed record CompositeClusterCandidate(
+        IReadOnlyList<ClusterRecordEntry> Members,
+        IReadOnlyList<CognitiveMemoryClusterKeyWithRecord> Keys,
+        IReadOnlyList<CompositeEdgeSignal> Edges);
+
+    private sealed record CompositeEdgeSignal(
+        Guid LeftRecordId,
+        Guid RightRecordId,
+        double Score,
+        bool Connects,
+        string Explanation);
 
     private sealed record CognitiveMemoryClusterKeyWithRecord(
         Guid RecordId,

@@ -33,19 +33,64 @@ public sealed class CognitiveMemoryDreamValidator(
             .AsNoTracking()
             .Where(record => sourceRecordIds.Contains(record.Id))
             .ToListAsync(cancellationToken);
+        var sourceAnchors = await dbContext.Set<CognitiveMemoryCuratorCapturedImprovementRecord>()
+            .Where(capture =>
+                capture.AppliedMemoryRecordId != null &&
+                sourceRecordIds.Contains(capture.AppliedMemoryRecordId.Value) &&
+                (capture.AnchorState == CognitiveMemoryProfessorAnchorState.Active ||
+                 capture.AnchorState == CognitiveMemoryProfessorAnchorState.Comparing))
+            .ToListAsync(cancellationToken);
+        var unassimilatedProfessorAnchorSourceMemoryIds = sourceAnchors
+            .Select(capture => capture.AppliedMemoryRecordId!.Value)
+            .Distinct()
+            .ToHashSet();
+        foreach (var sourceAnchor in sourceAnchors.Where(anchor => anchor.AnchorState == CognitiveMemoryProfessorAnchorState.Active))
+        {
+            sourceAnchor.AnchorState = CognitiveMemoryProfessorAnchorState.Comparing;
+            sourceAnchor.ConcurrencyToken = Guid.NewGuid();
+        }
+
         var cluster = await dbContext.Set<CognitiveMemoryQualityClusterRecord>()
             .AsNoTracking()
             .Where(cluster => cluster.Id == candidate.ClusterId)
             .SingleOrDefaultAsync(cancellationToken);
-        var duplicateExists = await dbContext.Set<CognitiveMemoryRecord>()
+        var existingGeneratedMemories = await dbContext.Set<CognitiveMemoryRecord>()
             .AsNoTracking()
-            .AnyAsync(record =>
+            .Where(record =>
                 record.ProjectId == candidate.ProjectId &&
                 record.Origin == CognitiveMemoryRecordOrigin.MachineGenerated &&
                 record.StabilityState != CognitiveMemoryStabilityState.Deprecated &&
-                record.Title == candidate.Title,
-                cancellationToken);
-        var issues = ResolveIssues(candidate, claims, sourceMaps, sourceRecords, cluster, duplicateExists, request.PolicyContext);
+                record.Id != candidate.MemoryRecordId)
+            .ToListAsync(cancellationToken);
+        var existingGeneratedMemoryIds = existingGeneratedMemories.Select(record => record.Id).ToArray();
+        var existingGeneratedClaims = existingGeneratedMemoryIds.Length == 0
+            ? new List<CognitiveMemoryClaimRecord>()
+            : await dbContext.Set<CognitiveMemoryClaimRecord>()
+                .AsNoTracking()
+                .Where(claim => claim.MemoryRecordId != null && existingGeneratedMemoryIds.Contains(claim.MemoryRecordId.Value))
+                .ToListAsync(cancellationToken);
+        var existingGeneratedSourceLinks = existingGeneratedMemoryIds.Length == 0
+            ? new List<CognitiveMemorySourceLinkRecord>()
+            : await dbContext.Set<CognitiveMemorySourceLinkRecord>()
+                .AsNoTracking()
+                .Where(link => existingGeneratedMemoryIds.Contains(link.MemoryRecordId))
+                .ToListAsync(cancellationToken);
+        var duplicateExists = HasDuplicateAggregate(
+            candidate,
+            claims,
+            sourceMaps,
+            existingGeneratedMemories,
+            existingGeneratedClaims,
+            existingGeneratedSourceLinks);
+        var issues = ResolveIssues(
+            candidate,
+            claims,
+            sourceMaps,
+            sourceRecords,
+            cluster,
+            duplicateExists,
+            unassimilatedProfessorAnchorSourceMemoryIds,
+            request.PolicyContext);
         var decision = ResolveDecision(issues);
         var nowUtc = clock.GetUtcNow();
         var validation = new CognitiveMemoryDreamValidationRecord
@@ -110,17 +155,31 @@ public sealed class CognitiveMemoryDreamValidator(
         IReadOnlyList<CognitiveMemoryRecord> sourceRecords,
         CognitiveMemoryQualityClusterRecord? cluster,
         bool duplicateExists,
+        IReadOnlySet<Guid> unassimilatedProfessorAnchorSourceMemoryIds,
         CognitiveMemoryPolicyContext policyContext)
     {
         var issues = new List<CognitiveMemoryDreamValidationIssue>();
+        var sourceRecordsById = sourceRecords.ToDictionary(record => record.Id);
         foreach (var claim in claims)
         {
-            if (sourceMaps.All(sourceMap => sourceMap.AggregateClaimId != claim.Id))
+            var claimSourceMaps = sourceMaps
+                .Where(sourceMap => sourceMap.AggregateClaimId == claim.Id)
+                .ToArray();
+            if (claimSourceMaps.Length == 0)
             {
                 issues.Add(new CognitiveMemoryDreamValidationIssue(
                     CognitiveMemoryDreamValidationIssueKind.MissingSourceMap,
                     CognitiveMemoryRiskLevel.High,
                     $"Aggregate claim '{claim.Id:D}' has no claim-level source map."));
+                continue;
+            }
+
+            if (claimSourceMaps.Any(sourceMap => !IsClaimSupportedBySourceMap(claim, sourceMap, sourceRecordsById)))
+            {
+                issues.Add(new CognitiveMemoryDreamValidationIssue(
+                    CognitiveMemoryDreamValidationIssueKind.UnsupportedClaim,
+                    CognitiveMemoryRiskLevel.Medium,
+                    $"Aggregate claim '{claim.Id:D}' is not supported by every mapped source memory."));
             }
         }
 
@@ -162,18 +221,15 @@ public sealed class CognitiveMemoryDreamValidator(
             issues.Add(new CognitiveMemoryDreamValidationIssue(
                 CognitiveMemoryDreamValidationIssueKind.DuplicateAggregate,
                 CognitiveMemoryRiskLevel.Medium,
-                "An active generated aggregate with the same title already exists."));
+                "An active generated aggregate with the same title or claim/source signature already exists."));
         }
 
-        if (claims.Any(claim => sourceMaps.Where(sourceMap => sourceMap.AggregateClaimId == claim.Id)
-                .Select(sourceMap => sourceMap.SourceMemoryRecordId)
-                .Distinct()
-                .Count() < 2))
+        if (sourceRecords.Any(record => unassimilatedProfessorAnchorSourceMemoryIds.Contains(record.Id)))
         {
             issues.Add(new CognitiveMemoryDreamValidationIssue(
-                CognitiveMemoryDreamValidationIssueKind.UnsupportedClaim,
+                CognitiveMemoryDreamValidationIssueKind.WeakEvidence,
                 CognitiveMemoryRiskLevel.Medium,
-                "Each synthesized aggregate claim must be supported by at least two source memories."));
+                "Aggregate candidate depends on an unassimilated professor anchor memory and requires comparison review."));
         }
 
         if (sourceRecords.Any(record => record.ValidationState is CognitiveMemoryValidationState.Superseded or CognitiveMemoryValidationState.Rejected ||
@@ -222,6 +278,121 @@ public sealed class CognitiveMemoryDreamValidator(
             .Select(group => group.First())
             .ToArray();
     }
+
+    private static bool HasDuplicateAggregate(
+        CognitiveMemoryDreamAggregateCandidateRecord candidate,
+        IReadOnlyList<CognitiveMemoryDreamAggregateClaimRecord> claims,
+        IReadOnlyList<CognitiveMemoryDreamAggregateClaimSourceMapRecord> sourceMaps,
+        IReadOnlyList<CognitiveMemoryRecord> existingGeneratedMemories,
+        IReadOnlyList<CognitiveMemoryClaimRecord> existingGeneratedClaims,
+        IReadOnlyList<CognitiveMemorySourceLinkRecord> existingGeneratedSourceLinks)
+    {
+        if (existingGeneratedMemories.Count == 0)
+        {
+            return false;
+        }
+
+        var candidateClaimSignatures = claims
+            .Select(claim => BuildTextSignature(claim.ClaimText))
+            .Where(signature => signature.Count > 0)
+            .ToArray();
+        var candidateCanonicalSignature = BuildTextSignature(candidate.CanonicalText);
+        var candidateSourceItemIds = sourceMaps
+            .Select(sourceMap => sourceMap.SourceItemId)
+            .Where(id => id is not null)
+            .Select(id => id!.Value)
+            .Distinct()
+            .ToHashSet();
+        foreach (var existing in existingGeneratedMemories)
+        {
+            if (string.Equals(existing.Title, candidate.Title, StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            var existingSourceItemIds = existingGeneratedSourceLinks
+                .Where(link => link.MemoryRecordId == existing.Id)
+                .Select(link => link.SourceItemId)
+                .Distinct()
+                .ToHashSet();
+            if (!HasMeaningfulSourceOverlap(candidateSourceItemIds, existingSourceItemIds))
+            {
+                continue;
+            }
+
+            var existingClaimSignatures = existingGeneratedClaims
+                .Where(claim => claim.MemoryRecordId == existing.Id)
+                .Select(claim => BuildTextSignature(claim.ClaimText))
+                .Where(signature => signature.Count > 0)
+                .DefaultIfEmpty(BuildTextSignature(FirstNonEmpty(existing.CanonicalText, existing.SummaryText, existing.Title)))
+                .ToArray();
+            if (candidateClaimSignatures.Any(candidateSignature => existingClaimSignatures.Any(existingSignature => IsNearDuplicateSignature(candidateSignature, existingSignature))) ||
+                IsNearDuplicateSignature(candidateCanonicalSignature, BuildTextSignature(FirstNonEmpty(existing.CanonicalText, existing.SummaryText, existing.Title))))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsClaimSupportedBySourceMap(
+        CognitiveMemoryDreamAggregateClaimRecord claim,
+        CognitiveMemoryDreamAggregateClaimSourceMapRecord sourceMap,
+        IReadOnlyDictionary<Guid, CognitiveMemoryRecord> sourceRecordsById)
+    {
+        if (sourceMap.Direction != CognitiveMemoryEvidenceDirection.Supports ||
+            !sourceRecordsById.TryGetValue(sourceMap.SourceMemoryRecordId, out var sourceRecord))
+        {
+            return false;
+        }
+
+        var claimTokens = BuildTextSignature(claim.ClaimText);
+        if (claimTokens.Count == 0)
+        {
+            return false;
+        }
+
+        var sourceTokens = BuildTextSignature($"{sourceRecord.Title} {sourceRecord.CanonicalText} {sourceRecord.SummaryText} {sourceMap.Summary}");
+        var overlap = claimTokens.Count(sourceTokens.Contains);
+        var requiredOverlap = claimTokens.Count <= 4
+            ? Math.Min(2, claimTokens.Count)
+            : Math.Min(4, Math.Max(3, claimTokens.Count / 3));
+        return overlap >= requiredOverlap;
+    }
+
+    private static bool HasMeaningfulSourceOverlap(
+        IReadOnlySet<Guid> candidateSourceItemIds,
+        IReadOnlySet<Guid> existingSourceItemIds)
+    {
+        if (candidateSourceItemIds.Count == 0 || existingSourceItemIds.Count == 0)
+        {
+            return false;
+        }
+
+        var overlap = candidateSourceItemIds.Count(existingSourceItemIds.Contains);
+        return overlap >= Math.Min(2, Math.Min(candidateSourceItemIds.Count, existingSourceItemIds.Count));
+    }
+
+    private static bool IsNearDuplicateSignature(
+        IReadOnlySet<string> left,
+        IReadOnlySet<string> right)
+    {
+        if (left.Count == 0 || right.Count == 0)
+        {
+            return false;
+        }
+
+        var overlap = left.Count(right.Contains);
+        var union = left.Count + right.Count - overlap;
+        return overlap >= 4 && (double)overlap / union >= 0.6;
+    }
+
+    private static HashSet<string> BuildTextSignature(string text)
+        => CognitiveMemoryQualityText.ExtractMeaningfulTokens(text, 32).ToHashSet(StringComparer.Ordinal);
+
+    private static string FirstNonEmpty(params string?[] values)
+        => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
 
     private static CognitiveMemoryDreamValidationDecision ResolveDecision(
         IReadOnlyList<CognitiveMemoryDreamValidationIssue> issues)

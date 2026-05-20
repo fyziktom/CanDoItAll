@@ -25,7 +25,7 @@ Use this skill when the bundle needs a gate, not more implementation. It exists 
 1. Identify the bundle root and profile.
 2. Read the raw inputs, root `README.md`, `plan/01-phase-plan.md`, `traceability`, `reviews/00-bundle-self-review.md`, and `reviews/01-execution-report.md`.
 3. Run `scripts/validate_bundle.py --stage prepared` for readiness or re-entry validation.
-4. Run `scripts/validate_bundle.py --stage completed` for final closure validation.
+4. Run `scripts/validate_bundle.py --stage completed` for final closure validation; this includes proof-depth checks for critical semantic adequacy evidence.
 5. Audit input coverage:
    - every raw note or artifact is preserved
    - every raw note or artifact maps to a bundle destination and an owning subbundle, or has an explicit exception
@@ -38,11 +38,13 @@ Use this skill when the bundle needs a gate, not more implementation. It exists 
    - every subbundle has prerequisites, dependency impact, validation depth, and progression gate sections
    - UI-relevant subbundles require real Playwright MCP proof plus screenshot review
    - critical foundations require deeper validation before dependent phases may continue
+   - critical subbundles require a Semantic Adequacy Gate covering shallow-pass trap, adversarial negative proof, semantic positive proof, anti-stub audit, and raw-note literal closure
 8. At final closure, audit shipped proof:
    - no executed subbundle remains `Ready` or `In progress`
    - execution report gate rows and browser analytics rows are populated and no longer pending
    - raw note closure rows are no longer pending
    - weak proof is treated as a reopen condition, not a residual-risk paragraph
+   - completed critical subbundles have semantic proof that rejects template-only output, fixture-specific behavior, filled-table-only evidence, and status/count-only tests
 9. If any gate fails, do not mark the bundle ready or complete. Repair the bundle or reopen the affected subbundle and rerun the gate.
 
 ## Rules
@@ -52,12 +54,26 @@ Use this skill when the bundle needs a gate, not more implementation. It exists 
 - Do not accept a bundle whose dependency map is decorative instead of operational.
 - Do not pass the final closure gate when later proof already showed an earlier critical foundation is shaky.
 - Do not replace UI proof with reasoning when the request depends on actual rendered behavior.
+- Do not pass a readiness or final closure gate for a critical subbundle whose proof only demonstrates file existence, table completion, non-empty strings, diagnostic template markers, or happy-path fixture output.
+
+## Semantic Proof Failure Rule
+
+For critical work, the gate fails when any of these are true:
+
+- the shallow implementation that caused the bundle still passes the stated proof
+- no adversarial negative case proves harmful behavior is rejected
+- no semantic positive case proves realistic intended behavior
+- anti-stub audit is absent, incomplete, or admits production `TODO`, `NotImplemented`, template-only output, or fixture-specific branching without a blocker
+- raw notes are marked closed without preserving literal scope words such as `all`, `every`, `must`, `exactly`, or `same flow`
+
+Use `../candoitall-bundle-execution/references/semantic-adequacy-proof.md` as the audit rubric when evaluating these claims.
 
 ## References
 
 - Read [references/readiness-and-closure-checks.md](references/readiness-and-closure-checks.md) for the audit checklist.
+- Read [../candoitall-bundle-execution/references/semantic-adequacy-proof.md](../candoitall-bundle-execution/references/semantic-adequacy-proof.md) before passing final closure for critical work.
 - Use `candoitall-subbundle-validator` for per-subbundle entry and closure gates.
-- Use `scripts/validate_bundle.py` as the automation-backed baseline, then finish the manual audit before passing the gate.
+- Use `scripts/validate_bundle.py` as the automation-backed baseline for structural and proof-depth checks, then finish the manual audit before passing the gate.
 
 ## Exit Condition
 
