@@ -62,6 +62,11 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
                 .ToList();
 
             EnsureUniqueTemplateKey(catalog.Agents, id, normalizedTemplateKey, "Agent save");
+            var normalizedModel = NormalizeAgentModelForSave(
+                model.Model,
+                model.ProviderProfileId,
+                catalog.Providers);
+
             var definition = new AgentDefinition(
                 Id: id,
                 Name: model.Name.Trim(),
@@ -70,7 +75,7 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
                 Instructions: model.Instructions.Trim(),
                 Status: model.Status,
                 ProviderProfileId: model.ProviderProfileId,
-                Model: model.Model.Trim(),
+                Model: normalizedModel,
                 Workload: model.Workload,
                 ChatHistoryMode: model.ChatHistoryMode,
                 Temperature: model.Temperature,
@@ -107,6 +112,28 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
             };
         }, cancellationToken);
         return id;
+    }
+
+    private static string NormalizeAgentModelForSave(
+        string? model,
+        Guid? providerProfileId,
+        IReadOnlyList<ProviderProfile> providers)
+    {
+        var normalizedModel = string.IsNullOrWhiteSpace(model) ? string.Empty : model.Trim();
+        if (string.IsNullOrWhiteSpace(normalizedModel) || !providerProfileId.HasValue)
+        {
+            return normalizedModel;
+        }
+
+        var provider = providers.FirstOrDefault(item => item.Id == providerProfileId.Value);
+        if (provider is null || string.IsNullOrWhiteSpace(provider.DefaultModel))
+        {
+            return normalizedModel;
+        }
+
+        return string.Equals(normalizedModel, provider.DefaultModel.Trim(), StringComparison.OrdinalIgnoreCase)
+            ? string.Empty
+            : normalizedModel;
     }
 
     public async Task DeleteAgentAsync(Guid agentId, CancellationToken cancellationToken = default)

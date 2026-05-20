@@ -24,11 +24,13 @@
 
             @if (isOverrideEnabled)
             {
-                <TextBox Value="@customModelName"
-                         ValueChanged="HandleCustomModelChangedAsync"
-                         Disabled="@Disabled"
-                         Placeholder="@CustomModelPlaceholder"
-                         data-testid="@CustomModelTestId" />
+                <input class="cda-input"
+                       value="@customModelName"
+                       @oninput="HandleCustomModelInputAsync"
+                       @onchange="HandleCustomModelInputAsync"
+                       disabled="@Disabled"
+                       placeholder="@CustomModelPlaceholder"
+                       data-testid="@CustomModelTestId" />
             }
         </Stack>
     </FormField>
@@ -235,15 +237,9 @@
             return;
         }
 
-        if (!TryResolveKnownChoice(customModelName, out var choiceValue))
-        {
-            choiceValue = ProviderDefaultChoiceValue;
-        }
-
-        selectedChoiceValue = choiceValue;
-        var nextValue = string.Equals(selectedChoiceValue, ProviderDefaultChoiceValue, StringComparison.Ordinal)
-            ? ResolveProviderDefaultEmittedValue()
-            : selectedChoiceValue;
+        selectedChoiceValue = ProviderDefaultChoiceValue;
+        var nextValue = ResolveProviderDefaultEmittedValue();
+        customModelName = ResolveProviderDefaultModel();
         await EmitValueAsync(nextValue);
     }
 
@@ -252,6 +248,9 @@
         customModelName = NormalizeModel(value);
         await EmitValueAsync(customModelName);
     }
+
+    private Task HandleCustomModelInputAsync(ChangeEventArgs args)
+        => HandleCustomModelChangedAsync(args.Value?.ToString());
 
     private async Task EmitValueAsync(string? value)
     {

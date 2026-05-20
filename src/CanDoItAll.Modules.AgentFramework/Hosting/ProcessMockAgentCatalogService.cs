@@ -105,7 +105,7 @@ public sealed class ProcessMockAgentCatalogService(
             editor.Instructions = role.Instructions;
             editor.Status = AgentLifecycleStatus.Active;
             editor.ProviderProfileId = provider.Id;
-            editor.Model = ProcessMockAgentCatalog.Model;
+            editor.Model = string.Empty;
             editor.Workload = role.Workload;
             editor.ChatHistoryMode = AgentChatHistoryMode.ProviderDefault;
             editor.Temperature = 0d;
