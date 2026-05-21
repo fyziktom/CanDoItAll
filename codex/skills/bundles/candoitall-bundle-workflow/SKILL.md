@@ -25,6 +25,7 @@ The workflow is complete only when all of these are true:
 - the bundle has a usable dependency map, critical-foundation labels, and progression gates
 - every executed subbundle has passed its entry and closure gates or is honestly blocked
 - every completed critical subbundle has an artifact-backed `proof/SBxx/manifest.md` and `proof/SBxx/semantic-invariants.md` or `.json` with changed-file hashes, command transcripts, failing-first and passing proof where behavior changed, source assertions, invariant IDs, and anti-stub audit results
+- every new production signal, state, record, or event named by critical proof has a `## Production Behavior Artifact Matrix` in both the manifest and semantic invariant contract, with producer, consumer, lifecycle, and negative-test citations
 - critical proof uses portable `repo://` and `bundle://` references so moved bundles, WSL, Linux, CI, and Windows checks can resolve the same evidence
 - code changes, tests, browser or host proof, screenshots, and execution report rows support the same conclusion
 - raw feedback has a note-by-note closure result of `Solved`, `Partially solved`, or `Not solved`
@@ -71,6 +72,8 @@ The workflow is complete only when all of these are true:
 - Overlays, contextual help, dropdowns, menus, dialogs, and floating windows require open-state proof for readability, clipping, lateral overflow, and layering.
 - Host-visible behavior such as PowerShell launch, UAC, file opening, or desktop integration requires host-level proof or an explicit validation gap.
 - Critical proof must be artifact-backed: command transcripts, changed-file hashes, source assertions, anti-stub audit output, and failing-first or red-team artifacts must live under `proof/SBxx/`.
+- Production-only signals must not be manually seeded by positive tests unless the test is explicitly a migration, backfill, or validator fixture. Normal feature proof must show the production emitter and the lifecycle path that consumes it.
+- Dream synthesis proof must reject diagnostic templates such as `Conclusion: ... supported by N source-backed observation(s)` as shipped memory text; those strings belong in diagnostics, not in positive synthesis proof.
 - Use `screenshot` when browser capture cannot prove the desktop or window context.
 - Use `imagegen` only as a planning aid when visual direction is unclear. Generated images never count as shipped proof.
 

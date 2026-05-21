@@ -1,0 +1,3 @@
+A53AEC77C5C6463681DCDEE6C66694E7B473C314E625B517528810DBADE18FF8  repo://src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryAdvancedContracts.cs
+4A14B7BFB3BA744B62C5811243ABF93297BAE595F9A2A08F7D7A1B17D5C79CA0  repo://src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryProfessorReviewService.cs
+AA63276727CD6793DF76447A03F42E445431AB57774EF65D050B5D89231AE2CB  repo://tests/CanDoItAll.Tests.Unit/CognitiveMemoryAdvancedServicesTests.cs

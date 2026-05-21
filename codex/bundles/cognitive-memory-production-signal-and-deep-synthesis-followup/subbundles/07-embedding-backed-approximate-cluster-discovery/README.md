@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: `Ready`
+- Status: `Completed`
 
 ## Objective
 
@@ -71,6 +71,13 @@ Make approximate clustering robust to paraphrases and missing exact keys by usin
 - `bundle://proof/SB07/transcripts/passing.txt`.
 - `bundle://proof/SB07/transcripts/source-assertions.txt` with producer, consumer, and lifecycle assertions when applicable.
 - `bundle://proof/SB07/transcripts/anti-stub.txt`.
+
+## Completion Proof
+
+- Proof manifest: `bundle://proof/SB07/manifest.md`
+- Semantic invariants: `bundle://proof/SB07/semantic-invariants.md`
+- Passing transcript: `bundle://proof/SB07/transcripts/passing.txt`
+- Source assertions: `bundle://proof/SB07/transcripts/source-assertions.txt`
 
 ## Browser Validation Logging
 

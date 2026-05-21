@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: `Ready`
+- Status: `Completed`
 
 ## Objective
 
@@ -72,6 +72,13 @@ Replace dream meta-text and coarse record-wide source maps with useful claim-awa
 - `bundle://proof/SB06/transcripts/passing.txt`.
 - `bundle://proof/SB06/transcripts/source-assertions.txt` with producer, consumer, and lifecycle assertions when applicable.
 - `bundle://proof/SB06/transcripts/anti-stub.txt`.
+
+## Completion Proof
+
+- Proof manifest: `bundle://proof/SB06/manifest.md`
+- Semantic invariants: `bundle://proof/SB06/semantic-invariants.md`
+- Passing transcript: `bundle://proof/SB06/transcripts/passing.txt`
+- Source assertions: `bundle://proof/SB06/transcripts/source-assertions.txt`
 
 ## Browser Validation Logging
 

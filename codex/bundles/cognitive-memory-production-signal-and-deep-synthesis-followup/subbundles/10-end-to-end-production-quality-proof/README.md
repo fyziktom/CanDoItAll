@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: `Ready`
+- Status: `Completed`
 
 ## Objective
 
@@ -74,6 +74,13 @@ Prove the entire corrected cognitive memory loop end to end with production path
 - `bundle://proof/SB10/transcripts/passing.txt`.
 - `bundle://proof/SB10/transcripts/source-assertions.txt` with producer, consumer, and lifecycle assertions when applicable.
 - `bundle://proof/SB10/transcripts/anti-stub.txt`.
+
+## Completion Proof
+
+- Proof manifest: `bundle://proof/SB10/manifest.md`
+- Semantic invariants: `bundle://proof/SB10/semantic-invariants.md`
+- Passing transcript: `bundle://proof/SB10/transcripts/passing.txt`
+- Source assertions: `bundle://proof/SB10/transcripts/source-assertions.txt`
 
 ## Browser Validation Logging
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: `Ready`
+- Status: `Completed`
 
 ## Objective
 
@@ -72,6 +72,13 @@ Close the lifecycle gap where professor anchors can remain in `Comparing` after 
 - `bundle://proof/SB04/transcripts/passing.txt`.
 - `bundle://proof/SB04/transcripts/source-assertions.txt` with producer, consumer, and lifecycle assertions when applicable.
 - `bundle://proof/SB04/transcripts/anti-stub.txt`.
+
+## Completion Proof
+
+- Proof manifest: `bundle://proof/SB04/manifest.md`
+- Semantic invariants: `bundle://proof/SB04/semantic-invariants.md`
+- Passing transcript: `bundle://proof/SB04/transcripts/passing.txt`
+- Source assertions: `bundle://proof/SB04/transcripts/source-assertions.txt`
 
 ## Browser Validation Logging
 

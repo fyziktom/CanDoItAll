@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: `Ready`
+- Status: `Completed`
 
 ## Objective
 
@@ -72,6 +72,13 @@ Make recall synthesis use the real query and generate concise task-facing statem
 - `bundle://proof/SB08/transcripts/passing.txt`.
 - `bundle://proof/SB08/transcripts/source-assertions.txt` with producer, consumer, and lifecycle assertions when applicable.
 - `bundle://proof/SB08/transcripts/anti-stub.txt`.
+
+## Completion Proof
+
+- Proof manifest: `bundle://proof/SB08/manifest.md`
+- Semantic invariants: `bundle://proof/SB08/semantic-invariants.md`
+- Passing transcript: `bundle://proof/SB08/transcripts/passing.txt`
+- Source assertions: `bundle://proof/SB08/transcripts/source-assertions.txt`
 
 ## Browser Validation Logging
 

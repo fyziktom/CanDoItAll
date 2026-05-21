@@ -1,0 +1,6 @@
+Command: rg -n "TODO|NotImplemented|fixture-specific" codex/skills/bundles/candoitall-bundle-preparation/scripts/validate_bundle.py
+WorkingDirectory: C:\repositories\CanDoItAll
+Test: FakeProof.AcceptedUseConsumerOnly
+Invariant: FAKE-ACCEPTED-USE-01
+Output: no production stub markers found in validator flow
+ExitCode: 0

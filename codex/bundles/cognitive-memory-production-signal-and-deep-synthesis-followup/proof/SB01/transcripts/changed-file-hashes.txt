@@ -1,0 +1,16 @@
+Command: Get-FileHash -Algorithm SHA256 changed SB01 files
+WorkingDirectory: C:\repositories\CanDoItAll
+Test: ValidatorProof.ChangedFileHashes
+Invariant: SB01-PRODUCTION-MATRIX-01
+Invariant: SB01-DREAM-META-TEXT-02
+Output:
+C86FC0E2D611F2A9983EF7B118FFD7582A19EF8EBCABAB4E44D5109C83577F0B C:\repositories\CanDoItAll\codex\skills\bundles\candoitall-bundle-workflow\SKILL.md
+770A94BA24374CC280B942933D184EA7F050F15809FDE160AF57104982F47D38 C:\repositories\CanDoItAll\codex\skills\bundles\candoitall-bundle-execution\SKILL.md
+CF310CE08F37C9C8EF0C3ACFDD90E77C377F0B35B8942939CBEA70643728DDAE C:\repositories\CanDoItAll\codex\skills\bundles\candoitall-bundle-execution\references\artifact-backed-proof-manifest.md
+970BD9698F300FB0B4F5D73DDD8164413E9E02CE4BE2C82C39235AE49E805B39 C:\repositories\CanDoItAll\codex\skills\bundles\candoitall-bundle-execution\references\semantic-adequacy-proof.md
+DDDD654804B4244EB0612A49492A37F692286FF768EC644C350B85FFA29A19E8 C:\repositories\CanDoItAll\codex\skills\bundles\candoitall-bundle-validator\SKILL.md
+EE2F4DA123A89F4973F61A68F92E70C32B1FD4531FFA6E05207A56400CAC5C39 C:\repositories\CanDoItAll\codex\skills\bundles\candoitall-bundle-preparation\SKILL.md
+7D082597C99E690DB4C7152368BF4A128CAC754B085AF69CE1343E56845CB077 C:\repositories\CanDoItAll\codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py
+FCBB3EF566EDF47D659DE99D1216EE49E10F2B5CABEF4329365BA1FCCBBEC01C C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-production-signal-and-deep-synthesis-followup\templates\proof-manifest-template.md
+7CF63579884770107DA9CB0CC19D5A6DF72BBF657507D349DB43BADBECCDAD90 C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-production-signal-and-deep-synthesis-followup\templates\semantic-invariant-template.md
+ExitCode: 0

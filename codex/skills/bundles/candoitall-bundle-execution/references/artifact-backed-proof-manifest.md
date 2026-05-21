@@ -20,6 +20,16 @@ Create `proof/SBxx/manifest.md` before closing each critical subbundle. The mani
 
 Use `repo://relative/path` for repository files and `bundle://relative/path` for bundle-owned proof artifacts. Native absolute paths may appear as local context, but a critical manifest must not rely on machine-specific absolute paths as its only durable references.
 
+When a critical subbundle introduces or relies on a production signal, state, record, or event, the manifest must include:
+
+## Production Behavior Artifact Matrix
+
+| Artifact | Producer proof | Consumer proof | Lifecycle proof | Negative proof |
+|---|---|---|---|---|
+| `ArtifactName` | `repo://...` or `bundle://...` transcript proving the production emitter | `repo://...` or transcript proving production consumption | scheduler/review/cleanup path that runs it automatically | failing-first/adversarial test proving retrieval, consumer-only code, or manual test seeding is insufficient |
+
+Positive feature tests must not manually seed production-only signals unless the test is explicitly a migration, backfill, or validator fixture. Otherwise the test must exercise the production producer.
+
 ## Semantic Invariant Contract
 
 Create `proof/SBxx/semantic-invariants.md` or `.json` for each critical subbundle. Each invariant must include:
@@ -34,6 +44,7 @@ Create `proof/SBxx/semantic-invariants.md` or `.json` for each critical subbundl
 - production assertions;
 - red-team negative case;
 - downstream dependency check.
+- production behavior artifact matrix when the invariant names a production signal, state, record, or event.
 
 The invariant id must appear in at least one command transcript cited by the manifest so the completed-stage validator can prove that the transcript is tied to the invariant contract.
 

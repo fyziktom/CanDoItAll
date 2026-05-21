@@ -1,0 +1,15 @@
+Command: Select-String source assertions for SB03 accepted-use producer and scheduled assimilation
+WorkingDirectory: C:\repositories\CanDoItAll
+Test: SemanticInvariant_AcceptedUseSignalHasProductionEmitterAndScheduledAssimilation
+Invariant: SB03-ACCEPTED-USE-PRODUCER-01
+Invariant: SB03-SCHEDULED-ASSIMILATION-02
+Output:
+Source assertion audit for SB03:
+
+- `repo://src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryAdvancedContracts.cs` defines `CognitiveMemoryProfessorAcceptedUseSignalRequest`, `CognitiveMemoryProfessorAcceptedUseSignalResult`, and `ICognitiveMemoryProfessorAcceptedUseSignalEmitter`.
+- `repo://src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryProfessorAcceptedUseSignalEmitter.cs` validates actor/policy match, recall trace id, synthesis id, statement id, derived memory id, accepted outcome id, approved active derived memory state, and statement source-map membership before signal publication.
+- The emitter rejects a direct professor capture memory by checking `CognitiveMemoryCuratorCapturedImprovementRecord.AppliedMemoryRecordId`.
+- The emitter publishes through `ICognitiveMemorySignalLedger` with `SignalKind = CognitiveMemorySignalKind.ProfessorAnchorAcceptedUse` and `SourceKind = CognitiveMemorySignalSourceKind.RecallTrace`.
+- `repo://src/CanDoItAll.Modules.CognitiveMemory/Operations/CognitiveMemoryScheduledAutomationRunner.cs` accepts `ICognitiveMemoryProfessorAnchorService` and runs `ScanAssimilationAsync` after successful consolidation cycles.
+- `repo://src/CanDoItAll.Modules.CognitiveMemory/CognitiveMemoryModuleServiceCollectionExtensions.cs` registers `ICognitiveMemoryProfessorAcceptedUseSignalEmitter`.
+ExitCode: 0

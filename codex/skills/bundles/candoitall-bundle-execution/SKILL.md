@@ -29,6 +29,7 @@ This skill is for delivery, not planning. If the bundle is missing, unclear, unv
 6. If implementation reality reveals that the bundle weakened or missed a raw note, repair the bundle before proceeding.
 7. Implement the smallest correct change set for the current subbundle only.
 8. For every critical subbundle, create or update `proof/SBxx/manifest.md` and `proof/SBxx/semantic-invariants.md` or `.json` before closure. The manifest must list changed-file hashes, command transcript paths, failing-first and passing proof where behavior changed, source-level assertions, anti-stub audit output, downstream smoke proof when required, and portable `repo://` or `bundle://` paths.
+   - When the proof names a new production signal, state, record, or event, add `## Production Behavior Artifact Matrix` to both files with producer, consumer, lifecycle, and negative-test citations.
 9. For every critical subbundle, complete the Semantic Adequacy Gate before accepting local tests as proof:
    - name the shallow-pass trap the implementation could fake
    - add or cite an adversarial negative proof that fails the shallow implementation
@@ -67,6 +68,8 @@ This skill is for delivery, not planning. If the bundle is missing, unclear, unv
 - Do not cite a command, source assertion, browser check, or red-team result for critical closure unless an artifact-backed proof manifest points to a transcript or artifact path that exists.
 - If a test asserts diagnostic template text, a count, or a status without proving the user-facing/domain behavior, classify it as supporting evidence only and add semantic proof before closure.
 - Do not accept an implementation that only handles the exact fixture data. Add at least one adversarial negative or variation case when the behavior is critical.
+- Do not close production-only signals from enum/contract, consumer, and manually seeded positive tests. Positive tests may seed such signals only when the test is explicitly a migration, backfill, or validator fixture; otherwise they must exercise the production producer.
+- Do not close dream synthesis with diagnostic template text such as `Conclusion: ... supported by N source-backed observation(s)` as the shipped memory. That text can support diagnostics, not semantic positive proof.
 - If targeted tests keep failing during active development and the project uses Microsoft Testing Platform, use `mtp-hot-reload` to shorten the edit-run loop, record it as iteration-only evidence, then finish with a clean standard test run.
 - If a UI subbundle does not produce real Playwright MCP interaction plus screenshots or an explicit blocker, it is not done.
 - If a later subbundle reveals a defect in an earlier critical foundation, reopen the earlier subbundle and rerun its gate before claiming the later proof is valid.
@@ -74,6 +77,8 @@ This skill is for delivery, not planning. If the bundle is missing, unclear, unv
 ## Semantic Adequacy Gate Rule
 
 Critical subbundles must include a semantic proof block, `proof/SBxx/semantic-invariants.md` or `.json`, and an artifact-backed `proof/SBxx/manifest.md` before closure. The invariant contract must name invariant IDs and link each raw note to expected behavior, disallowed shallow implementation, failing-first proof, passing proof, changed source files, production assertions, red-team negative case, and downstream dependency check. The manifest must point to command transcripts, changed-file hashes, source assertions, and any browser/host/red-team artifacts. See `references/semantic-adequacy-proof.md` and `references/artifact-backed-proof-manifest.md`.
+
+If a critical invariant introduces or depends on a production signal, state, record, or event, both the invariant contract and manifest must include a production behavior artifact matrix. The matrix must cite production producer paths, production consumer paths, lifecycle/scheduler/review paths, and an adversarial negative test proving the artifact is not merely test-seeded or stranded.
 
 If any required semantic proof element is absent, fixture-specific, only verifies scaffolding, or is not backed by an existing manifest artifact, the subbundle remains `In progress` or `Blocked`; it must not be marked `Completed`.
 

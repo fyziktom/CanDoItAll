@@ -1,0 +1,14 @@
+Command: Select-String anti-stub audit for SB10 final E2E test
+WorkingDirectory: C:\repositories\CanDoItAll
+Test: ProfessorLearningLifecycle_CzechCaptureReviewAcceptedUseAssimilatesAndResolvesReferences
+Invariant: SB10-END-TO-END-LIFECYCLE-01
+Invariant: SB10-NO-MANUAL-ACCEPTED-USE-SEED-02
+Output:
+Anti-stub audit for SB10:
+
+- Final E2E test calls `CognitiveMemoryProfessorAcceptedUseSignalEmitter.EmitAsync`; it does not call `SeedAcceptedProfessorUseEventsAsync`.
+- Accepted-use signal count is asserted from persisted `CognitiveMemorySignalRecord` rows after emitter calls.
+- The lifecycle assertion checks actual persisted capture state is `Faded` with the derived memory id.
+- Reference proof uses `CognitiveMemoryReferenceResolver`, not direct source-map inspection only.
+- Browser proof is N/A because no UI route/component changed.
+ExitCode: 0

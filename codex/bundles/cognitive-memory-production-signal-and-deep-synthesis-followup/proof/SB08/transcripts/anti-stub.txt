@@ -1,0 +1,13 @@
+Command: Select-String anti-stub audit for SB08 recall synthesis implementation
+WorkingDirectory: C:\repositories\CanDoItAll
+Test: SemanticInvariant_RecallSynthesisRequestCarriesRealQueryIntentAndLineage
+Invariant: SB08-REAL-QUERY-INTENT-01
+Invariant: SB08-AGGREGATE-LINEAGE-02
+Output:
+Anti-stub audit for SB08:
+
+- Query/intent are production contract fields, not test-only parameters.
+- Existing constructor calls remain backward compatible through default values, but production callers can now pass real task query and intent.
+- Source assertion rejects the old title/summary-only query expression.
+- Lineage persistence still deduplicates source maps and retains aggregate claim ids.
+ExitCode: 0

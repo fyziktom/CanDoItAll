@@ -189,6 +189,28 @@ SEMANTIC_INVARIANT_REQUIRED_LABELS = [
     "Downstream dependency check",
 ]
 
+PRODUCTION_ARTIFACT_KIND_PATTERN = re.compile(
+    r"\b(?:new|added|introduce[sd]?|production-only|domain|lifecycle)\s+"
+    r"(?:signal|state|record|event)\b|\b(?:SignalKind|SourceKind)\b",
+    re.IGNORECASE,
+)
+PRODUCTION_ARTIFACT_IDENTIFIER_PATTERN = re.compile(
+    r"\b[A-Z][A-Za-z0-9]*(?:Signal|State|Record|Event|AcceptedUse|LifecycleTransition)\b"
+)
+PRODUCTION_ARTIFACT_MATRIX_HEADING = "## Production Behavior Artifact Matrix"
+PRODUCTION_ARTIFACT_MATRIX_COLUMNS = ("artifact", "producer", "consumer", "lifecycle", "negative")
+PRODUCTION_ARTIFACT_MATRIX_PROOF_COLUMNS = ("producer", "consumer", "lifecycle", "negative")
+DREAM_META_TEXT_PATTERN = re.compile(
+    r"\bConclusion:\s*[^`\r\n|]*\bsupported by\s+(?:N|\d+)\s+source-backed observation",
+    re.IGNORECASE,
+)
+DREAM_META_TEXT_PROHIBITED_LABELS = {
+    "expected behavior",
+    "shipped behavior",
+    "semantic positive proof",
+    "production assertions",
+}
+
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Validate a CanDoItAll bundle structure.")
@@ -704,6 +726,81 @@ def is_meaningful_proof_value(value: str) -> bool:
     return True
 
 
+def requires_production_behavior_matrix(content: str) -> bool:
+    if PRODUCTION_ARTIFACT_KIND_PATTERN.search(content) is not None:
+        return True
+
+    return PRODUCTION_ARTIFACT_IDENTIFIER_PATTERN.search(content) is not None
+
+
+def validate_production_behavior_matrix(path: Path, content: str) -> list[str]:
+    section = extract_markdown_section(content, PRODUCTION_ARTIFACT_MATRIX_HEADING)
+    if section is None:
+        return [f"{path}: production behavior artifacts require {PRODUCTION_ARTIFACT_MATRIX_HEADING}"]
+
+    rows = extract_table_rows(section)
+    if len(rows) < 2:
+        return [f"{path}: {PRODUCTION_ARTIFACT_MATRIX_HEADING} must include a populated markdown table"]
+
+    headers = [normalize_production_matrix_header(header) for header in rows[0]]
+    issues: list[str] = []
+    missing_columns = [column for column in PRODUCTION_ARTIFACT_MATRIX_COLUMNS if column not in headers]
+    if missing_columns:
+        issues.append(
+            f"{path}: {PRODUCTION_ARTIFACT_MATRIX_HEADING} is missing columns: {', '.join(missing_columns)}"
+        )
+        return issues
+
+    for row in rows[1:]:
+        if len(row) < len(headers):
+            issues.append(f"{path}: production behavior artifact matrix row is incomplete: {' | '.join(row)}")
+            continue
+
+        row_by_header = {
+            header: normalize_markdown_value(row[index]).strip()
+            for index, header in enumerate(headers)
+            if index < len(row)
+        }
+        artifact = row_by_header.get("artifact", "")
+        if not is_meaningful_proof_value(artifact):
+            issues.append(f"{path}: production behavior artifact matrix row is missing an artifact name")
+
+        for column in PRODUCTION_ARTIFACT_MATRIX_PROOF_COLUMNS:
+            value = row_by_header.get(column, "")
+            if not is_meaningful_proof_value(value):
+                issues.append(f"{path}: production behavior artifact matrix has weak {column} proof for `{artifact}`")
+                continue
+
+            if PROOF_TOKEN_PATTERN.search(value) is None:
+                issues.append(
+                    f"{path}: production behavior artifact matrix {column} proof for `{artifact}` "
+                    "must cite a command, test, file, or proof artifact"
+                )
+
+    return issues
+
+
+def normalize_production_matrix_header(value: str) -> str:
+    normalized = value.strip().lower()
+    for suffix in (" proof", " citation", " citations", " path", " paths"):
+        if normalized.endswith(suffix):
+            return normalized[: -len(suffix)]
+
+    return normalized
+
+
+def validate_dream_meta_text_claims(path: Path, values: dict[str, str]) -> list[str]:
+    issues: list[str] = []
+    for label in DREAM_META_TEXT_PROHIBITED_LABELS:
+        value = values.get(label, "")
+        if DREAM_META_TEXT_PATTERN.search(value) is not None:
+            issues.append(
+                f"{path}: '{label}' treats dream evidence-count template text as shipped synthesis"
+            )
+
+    return issues
+
+
 def validate_semantic_evidence_block(path: Path, subbundle_number: str, section_content: str) -> list[str]:
     issues: list[str] = []
     values = extract_labeled_bullet_values(section_content)
@@ -726,6 +823,8 @@ def validate_semantic_evidence_block(path: Path, subbundle_number: str, section_
     test_proof_value = values.get("test proof", "")
     if test_proof_value and PROOF_TOKEN_PATTERN.search(test_proof_value) is None:
         issues.append(f"{path}: SB{subbundle_number} test proof must cite a command, test, file, or proof artifact")
+
+    issues.extend(validate_dream_meta_text_claims(path, values))
 
     return issues
 
@@ -807,6 +906,9 @@ def extract_labeled_artifact_paths(content: str, labels: tuple[str, ...]) -> lis
     lower_labels = tuple(label.lower() for label in labels)
 
     for line in content.splitlines():
+        if line.lstrip().startswith("|"):
+            continue
+
         lowered = line.lower()
         if not any(label in lowered for label in lower_labels):
             continue
@@ -888,6 +990,10 @@ def validate_markdown_semantic_invariants(path: Path, content: str) -> tuple[lis
     if not invariant_ids:
         issues.append(f"{path}: semantic invariant contract must include at least one invariant id")
 
+    issues.extend(validate_dream_meta_text_claims(path, extract_labeled_bullet_values(content)))
+    if requires_production_behavior_matrix(content):
+        issues.extend(validate_production_behavior_matrix(path, content))
+
     return issues, invariant_ids
 
 
@@ -925,6 +1031,24 @@ def validate_json_semantic_invariants(path: Path, content: str) -> tuple[list[st
         invariant_id = invariant.get("Invariant ID") or invariant.get("invariantId") or invariant.get("id")
         if isinstance(invariant_id, str) and invariant_id.strip():
             ids.append(invariant_id.strip())
+
+        normalized_values = {
+            str(key).lower(): str(value)
+            for key, value in invariant.items()
+            if isinstance(value, (str, int, float, bool))
+        }
+        issues.extend(validate_dream_meta_text_claims(path, normalized_values))
+        serialized_invariant = json.dumps(invariant, ensure_ascii=False)
+        if requires_production_behavior_matrix(serialized_invariant):
+            matrix = (
+                invariant.get("Production behavior artifact matrix")
+                or invariant.get("productionBehaviorArtifactMatrix")
+                or invariant.get("production_behavior_artifact_matrix")
+            )
+            if not matrix:
+                issues.append(
+                    f"{path}: production behavior artifacts require a production behavior artifact matrix"
+                )
 
     if not ids:
         issues.append(f"{path}: semantic invariant JSON must include at least one invariant id")
@@ -1007,6 +1131,7 @@ def validate_completed_proof_manifests(bundle_path: Path, repo_root: Path, subbu
             issues.append(f"{manifest_path}: proof manifest must include at least one portable repo:// or bundle:// reference")
 
         manifest_ids: set[str] = set()
+        production_artifact_matrix_required = requires_production_behavior_matrix(manifest_content)
         invariant_contracts = [candidate for candidate in semantic_invariant_contract_paths(bundle_path, subbundle_number) if candidate.is_file()]
         if not invariant_contracts:
             issues.append(f"{manifest_path}: completed critical subbundle SB{subbundle_number} is missing semantic invariant contract")
@@ -1020,6 +1145,11 @@ def validate_completed_proof_manifests(bundle_path: Path, repo_root: Path, subbu
                 issues.append(f"{manifest_path}: proof manifest or subbundle README must cite proof/SB{subbundle_number}/semantic-invariants.*")
 
             for invariant_contract in invariant_contracts:
+                invariant_content = invariant_contract.read_text(encoding="utf-8", errors="replace")
+                production_artifact_matrix_required = (
+                    production_artifact_matrix_required
+                    or requires_production_behavior_matrix(invariant_content)
+                )
                 contract_issues, invariant_ids = validate_semantic_invariant_contract(invariant_contract)
                 issues.extend(contract_issues)
                 if not invariant_ids:
@@ -1027,6 +1157,9 @@ def validate_completed_proof_manifests(bundle_path: Path, repo_root: Path, subbu
 
                 manifest_ids.update(invariant_ids)
                 break
+
+        if production_artifact_matrix_required:
+            issues.extend(validate_production_behavior_matrix(manifest_path, manifest_content))
 
         artifact_tokens = extract_artifact_path_tokens(manifest_content)
         for artifact_token in artifact_tokens:

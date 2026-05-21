@@ -1,0 +1,7 @@
+Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~SemanticInvariant_ProfessorComparisonReviewResolutionIsExplicitAndAudited" --no-restore
+Exit code: 1 in SB02 red baseline before production changes.
+
+Relevant baseline failure:
+- Missing `CognitiveMemoryProfessorComparisonReviewOutcome`.
+- Missing `ResolveComparisonAsync`.
+- Missing review-service audit path for `ProfessorAnchorLifecycleTransition`.

@@ -1,0 +1,6 @@
+Command: python validate_bundle.py production-artifact-template-dream-meta-text --stage completed
+WorkingDirectory: C:\repositories\CanDoItAll
+Test: FakeProof.TemplateDreamMetaText
+Invariant: FAKE-DREAM-META-TEXT-01
+Output: old validator accepted template evidence-count text as synthesis
+ExitCode: 0

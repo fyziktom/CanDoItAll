@@ -1,0 +1,14 @@
+Command: Select-String anti-stub audit for SB03 accepted-use implementation
+WorkingDirectory: C:\repositories\CanDoItAll
+Test: AcceptedUseEmitter_PublishesRecallTraceSignalAndRejectsDirectCaptureMemory
+Invariant: SB03-ACCEPTED-USE-PRODUCER-01
+Invariant: SB03-SCHEDULED-ASSIMILATION-02
+Output:
+Anti-stub audit for SB03:
+
+- Production emitter is a concrete service in `repo://src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryProfessorAcceptedUseSignalEmitter.cs`; it is not a test helper.
+- Passing behavior test `AcceptedUseEmitter_PublishesRecallTraceSignalAndRejectsDirectCaptureMemory` calls the emitter and then reads the persisted `CognitiveMemorySignalRecord`.
+- The behavior test does not manually insert a `ProfessorAnchorAcceptedUse` signal for the positive path.
+- Direct capture memory is an adversarial negative case and fails before publication.
+- Scheduled lifecycle wiring is in `repo://src/CanDoItAll.Modules.CognitiveMemory/Operations/CognitiveMemoryScheduledAutomationRunner.cs`, not in test setup.
+ExitCode: 0

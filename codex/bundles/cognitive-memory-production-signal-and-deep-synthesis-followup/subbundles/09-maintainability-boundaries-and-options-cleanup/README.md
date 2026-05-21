@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: `Ready`
+- Status: `Completed`
 
 ## Objective
 
@@ -73,6 +73,14 @@ Refactor large cognitive memory services into maintainable units without weakeni
 - `bundle://proof/SB09/transcripts/passing.txt`.
 - `bundle://proof/SB09/transcripts/source-assertions.txt` with producer, consumer, and lifecycle assertions when applicable.
 - `bundle://proof/SB09/transcripts/anti-stub.txt`.
+
+## Completion Proof
+
+- Proof manifest: `bundle://proof/SB09/manifest.md`
+- Semantic invariants: `bundle://proof/SB09/semantic-invariants.md`
+- Responsibility inventory: `bundle://proof/SB09/responsibility-inventory.md`
+- Passing transcript: `bundle://proof/SB09/transcripts/passing.txt`
+- Source assertions: `bundle://proof/SB09/transcripts/source-assertions.txt`
 
 ## Browser Validation Logging
 

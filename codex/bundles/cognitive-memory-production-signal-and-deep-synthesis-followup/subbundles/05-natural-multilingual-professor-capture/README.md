@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: `Ready`
+- Status: `Completed`
 
 ## Objective
 
@@ -70,6 +70,13 @@ Improve curator/professor capture so natural Czech and Q&A teaching are captured
 - `bundle://proof/SB05/transcripts/passing.txt`.
 - `bundle://proof/SB05/transcripts/source-assertions.txt` with producer, consumer, and lifecycle assertions when applicable.
 - `bundle://proof/SB05/transcripts/anti-stub.txt`.
+
+## Completion Proof
+
+- Proof manifest: `bundle://proof/SB05/manifest.md`
+- Semantic invariants: `bundle://proof/SB05/semantic-invariants.md`
+- Passing transcript: `bundle://proof/SB05/transcripts/passing.txt`
+- Source assertions: `bundle://proof/SB05/transcripts/source-assertions.txt`
 
 ## Browser Validation Logging
 

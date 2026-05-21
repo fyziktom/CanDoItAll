@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: `Ready`
+- Status: `Completed`
 
 ## Objective
 
@@ -66,12 +66,12 @@ Create failing-first tests that demonstrate the remaining gaps in the current im
 
 ## Proof Required
 
-- `bundle://proof/SB02/manifest.md` with changed-file SHA-256 hashes.
-- `bundle://proof/SB02/semantic-invariants.md` or `.json`.
-- `bundle://proof/SB02/transcripts/failing-first.txt` unless SB01 process-only exemption is explicitly valid.
-- `bundle://proof/SB02/transcripts/passing.txt`.
-- `bundle://proof/SB02/transcripts/source-assertions.txt` with producer, consumer, and lifecycle assertions when applicable.
-- `bundle://proof/SB02/transcripts/anti-stub.txt`.
+- Completed: `bundle://proof/SB02/manifest.md` with changed-file SHA-256 hashes.
+- Completed: `bundle://proof/SB02/semantic-invariants.md`.
+- Completed: `bundle://proof/SB02/transcripts/failing-first.txt` with non-zero targeted test run.
+- Completed: `bundle://proof/SB02/transcripts/passing.txt` with no-production-diff proof.
+- Completed: `bundle://proof/SB02/transcripts/source-assertions.txt`.
+- Completed: `bundle://proof/SB02/transcripts/anti-stub.txt`.
 
 ## Browser Validation Logging
 
@@ -80,7 +80,7 @@ Create failing-first tests that demonstrate the remaining gaps in the current im
 
 ## Progression Gate
 
-- Do not proceed to dependent subbundles until this subbundle has passing targeted tests and artifact-backed proof.
+- Passed for SB03-SB08 production work: failing-first test corpus exists, current implementation fails with exit code 1, production cognitive-memory source is unchanged in SB02, and artifact-backed proof is recorded in `bundle://proof/SB02/manifest.md`.
 - Reopen this subbundle if later tests reveal a shallow pass, producer-less signal, stranded lifecycle state, or broad provenance mapping.
 
 ## Suggested Agent Prompt

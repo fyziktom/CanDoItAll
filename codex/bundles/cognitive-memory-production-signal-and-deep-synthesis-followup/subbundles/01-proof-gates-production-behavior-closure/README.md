@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: `Ready`
+- Status: `Completed`
 
 ## Objective
 
@@ -67,12 +67,12 @@ Install stronger workflow and validator gates so Codex cannot close behavioral w
 
 ## Proof Required
 
-- `bundle://proof/SB01/manifest.md` with changed-file SHA-256 hashes.
-- `bundle://proof/SB01/semantic-invariants.md` or `.json`.
-- `bundle://proof/SB01/transcripts/failing-first.txt` unless SB01 process-only exemption is explicitly valid.
-- `bundle://proof/SB01/transcripts/passing.txt`.
-- `bundle://proof/SB01/transcripts/source-assertions.txt` with producer, consumer, and lifecycle assertions when applicable.
-- `bundle://proof/SB01/transcripts/anti-stub.txt`.
+- Completed: `bundle://proof/SB01/manifest.md` with changed-file SHA-256 hashes.
+- Completed: `bundle://proof/SB01/semantic-invariants.md`.
+- Completed: `bundle://proof/SB01/transcripts/failing-first.txt`.
+- Completed: `bundle://proof/SB01/transcripts/passing.txt`.
+- Completed: `bundle://proof/SB01/transcripts/source-assertions.txt` with producer, consumer, and lifecycle matrix assertions.
+- Completed: `bundle://proof/SB01/transcripts/anti-stub.txt`.
 
 ## Browser Validation Logging
 
@@ -81,7 +81,7 @@ Install stronger workflow and validator gates so Codex cannot close behavioral w
 
 ## Progression Gate
 
-- Do not proceed to dependent subbundles until this subbundle has passing targeted tests and artifact-backed proof.
+- Passed for SB02: fake consumer-only accepted-use and template-only dream synthesis fixtures fail completed-stage validation, the positive proof-depth fixture still passes, the active skill root is synchronized, and artifact-backed proof is recorded in `bundle://proof/SB01/manifest.md`.
 - Reopen this subbundle if later tests reveal a shallow pass, producer-less signal, stranded lifecycle state, or broad provenance mapping.
 
 ## Suggested Agent Prompt

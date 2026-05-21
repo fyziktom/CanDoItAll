@@ -10,3 +10,11 @@
 - Production assertions: producer, consumer, lifecycle, and integration paths.
 - Red-team negative case: adversarial behavior that must fail.
 - Downstream dependency check: dependent services/tests verified.
+
+## Production Behavior Artifact Matrix
+
+Required when the invariant names a production signal, state, record, or event.
+
+| Artifact | Producer proof | Consumer proof | Lifecycle proof | Negative proof |
+|---|---|---|---|---|
+| `ArtifactName` | `repo://...` or `bundle://...` | `repo://...` or `bundle://...` | `repo://...` or `bundle://...` | `bundle://proof/SBxx/transcripts/...` |

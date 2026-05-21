@@ -52,12 +52,14 @@ public sealed class CognitiveMemoryModuleRegistrationTests
         services.AddSingleton<IClock>(new FixedClock());
         services.AddCognitiveMemoryModule();
 
+        Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(ICognitiveMemoryProfessorAcceptedUseSignalEmitter));
         using var provider = services.BuildServiceProvider();
 
         var options = provider.GetRequiredService<CognitiveMemoryQualityAlgorithmOptions>();
         Assert.Equal("quality-clustering-v3", options.Cluster.AlgorithmVersion.Value);
         Assert.IsAssignableFrom<ICognitiveMemoryClusterKeyExtractor>(provider.GetRequiredService<ICognitiveMemoryClusterKeyExtractor>());
         Assert.IsAssignableFrom<ICognitiveMemoryCandidatePairSelector>(provider.GetRequiredService<ICognitiveMemoryCandidatePairSelector>());
+        Assert.IsAssignableFrom<ICognitiveMemoryApproximateClusterCandidateProvider>(provider.GetRequiredService<ICognitiveMemoryApproximateClusterCandidateProvider>());
         Assert.IsAssignableFrom<ICognitiveMemoryDreamClaimSynthesizer>(provider.GetRequiredService<ICognitiveMemoryDreamClaimSynthesizer>());
         Assert.IsAssignableFrom<ICognitiveMemoryDreamModeClusterSelector>(provider.GetRequiredService<ICognitiveMemoryDreamModeClusterSelector>());
         Assert.IsAssignableFrom<ICognitiveMemoryDreamEntailmentValidator>(provider.GetRequiredService<ICognitiveMemoryDreamEntailmentValidator>());

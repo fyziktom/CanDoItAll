@@ -14,6 +14,7 @@ Each critical subbundle must record these fields in the execution report or a li
 - Adversarial negative proof: include a case the shallow implementation would mishandle and prove the system rejects or separates it correctly.
 - Semantic positive proof: include a realistic intended case and prove the system produces the desired domain behavior.
 - Anti-stub audit: state whether template-only output, fixture-specific branching, `TODO`, or `NotImplemented` paths remain in production flow.
+- Production behavior artifact matrix: when the invariant names a production signal, state, record, or event, cite producer, consumer, lifecycle, and negative-test proof. Enum definitions, consumers, and seeded tests alone do not prove a production artifact exists.
 
 ## Artifact-Backed Evidence
 
@@ -22,6 +23,7 @@ Semantic labels do not count unless the underlying evidence is durable. For ever
 - failing-first negative proof when behavior changes;
 - passing positive proof after implementation;
 - source assertions showing the behavior in production code, not only fixtures;
+- producer and lifecycle assertions for production-only signals, states, records, or events;
 - changed-file hashes;
 - anti-stub audit output;
 - browser, host, downstream smoke, or red-team artifacts when those proof types are required.
@@ -38,6 +40,7 @@ The following evidence can support a gate, but cannot close a critical subbundle
 - a non-empty string assertion
 - a count assertion without behavior checks
 - assertions for diagnostic boilerplate such as headings, template markers, or metric labels
+- diagnostic synthesis templates such as `Conclusion: ... supported by N source-backed observation(s)` as positive shipped memory behavior
 - happy-path fixture tests that do not vary the key inputs
 - a direct capture being used as its own derived proof
 - screenshots captured without explicit visual review questions when the work is UI-visible

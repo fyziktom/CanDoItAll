@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: `Ready`
+- Status: `Completed`
 
 ## Objective
 
@@ -74,6 +74,13 @@ Implement production-backed accepted-use signal emission and wire professor assi
 - `bundle://proof/SB03/transcripts/passing.txt`.
 - `bundle://proof/SB03/transcripts/source-assertions.txt` with producer, consumer, and lifecycle assertions when applicable.
 - `bundle://proof/SB03/transcripts/anti-stub.txt`.
+
+## Completion Proof
+
+- Proof manifest: `bundle://proof/SB03/manifest.md`
+- Semantic invariants: `bundle://proof/SB03/semantic-invariants.md`
+- Passing transcript: `bundle://proof/SB03/transcripts/passing.txt`
+- Source assertions: `bundle://proof/SB03/transcripts/source-assertions.txt`
 
 ## Browser Validation Logging
 

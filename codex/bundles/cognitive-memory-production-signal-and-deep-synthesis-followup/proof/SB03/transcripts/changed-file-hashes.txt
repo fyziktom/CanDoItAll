@@ -1,0 +1,12 @@
+Command: Get-FileHash -Algorithm SHA256 changed SB03 files
+WorkingDirectory: C:\repositories\CanDoItAll
+Test: SB03 changed-file hash capture
+Invariant: SB03-ACCEPTED-USE-PRODUCER-01
+Invariant: SB03-SCHEDULED-ASSIMILATION-02
+Output:
+A53AEC77C5C6463681DCDEE6C66694E7B473C314E625B517528810DBADE18FF8  repo://src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryAdvancedContracts.cs
+4087F7CDF078DA71E46E9AB3579A06894041838B850DBE7A4A070D85F55A0E62  repo://src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryProfessorAcceptedUseSignalEmitter.cs
+40C5D2BD16922578D7E1F84F8A3563E7368366A8B2CD358C91C16B6936EA45FC  repo://src/CanDoItAll.Modules.CognitiveMemory/Operations/CognitiveMemoryScheduledAutomationRunner.cs
+7EFA7C5BD3BC417FF1B29983B6930468EB22D19536C13E7298CFC50803A2C2E7  repo://src/CanDoItAll.Modules.CognitiveMemory/CognitiveMemoryModuleServiceCollectionExtensions.cs
+AA63276727CD6793DF76447A03F42E445431AB57774EF65D050B5D89231AE2CB  repo://tests/CanDoItAll.Tests.Unit/CognitiveMemoryAdvancedServicesTests.cs
+ExitCode: 0
