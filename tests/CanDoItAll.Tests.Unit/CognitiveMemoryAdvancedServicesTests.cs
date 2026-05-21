@@ -475,25 +475,25 @@ public sealed class CognitiveMemoryAdvancedServicesTests
     }
 
     [Fact]
-    public async Task ProfessorLearningLifecycle_CzechCaptureReviewAcceptedUseAssimilatesAndResolvesReferences()
+    public async Task ProfessorLearningLifecycle_EnglishCaptureReviewAcceptedUseAssimilatesAndResolvesReferences()
     {
         var fixture = CreateFixture();
         var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         var curator = CreateCuratorService(fixture);
         var session = await curator.StartAsync(new CognitiveMemoryCuratorSessionStartRequest(
             projectId,
-            "End-to-end Czech professor lifecycle",
+            "End-to-end English professor lifecycle",
             Policy(projectId),
             CognitiveMemoryCuratorRuntimeMode.DirectLlm));
         await curator.RecordTurnAsync(new CognitiveMemoryCuratorTurnCaptureRequest(
             session.Id,
-            "Proc je spatny rozsah rollback odpovedi?",
-            "Protoze špatný rozsah je tvrdit, že rollback schvaluje health-check; správně ho schvaluje release-owner.",
+            "Why is that the wrong scope for the rollback answer?",
+            "Because the wrong scope is saying that rollback approval comes from the health check; release-owner approval is the source of truth.",
             CognitiveMemoryCuratorRuntimeMode.DirectLlm));
         var captureResult = await curator.RecordTurnAsync(new CognitiveMemoryCuratorTurnCaptureRequest(
             session.Id,
-            "Můžeš uvést příklad a protipříklad?",
-            "Příklad: release-owner podepíše rollback před obnovou provozu. Protipříklad: samotný health-check není schválení.",
+            "Can you give an example and counterexample?",
+            "Example: the release-owner approves rollback before production traffic returns. Counterexample: a health check alone is not approval.",
             CognitiveMemoryCuratorRuntimeMode.DirectLlm));
         var capture = Assert.Single(captureResult.CapturedImprovements);
         var derivedMemoryId = await SeedDerivedProfessorMemoryAsync(
@@ -633,33 +633,33 @@ public sealed class CognitiveMemoryAdvancedServicesTests
     }
 
     [Fact]
-    public async Task SemanticInvariant_CuratorCaptureCzechDiacriticsAndNaturalScopeCreatesProfessorAnchor()
+    public async Task SemanticInvariant_CuratorCaptureEnglishQuestionAnswerAndNaturalScopeCreatesProfessorAnchor()
     {
         var fixture = CreateFixture();
         var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         var service = CreateCuratorService(fixture);
         var session = await service.StartAsync(new CognitiveMemoryCuratorSessionStartRequest(
             projectId,
-            "Czech diacritics professor chat",
+            "English professor question-answer chat",
             Policy(projectId),
             CognitiveMemoryCuratorRuntimeMode.DirectLlm));
 
         await service.RecordTurnAsync(new CognitiveMemoryCuratorTurnCaptureRequest(
             session.Id,
-            "Proc je spatny rozsah nasazeni v predchozi odpovedi?",
-            "Protoze špatný rozsah je tvrdit, že rollback schvaluje health-check; správně ho schvaluje release-owner.",
+            "Why is that the wrong scope for the previous deployment answer?",
+            "Because the wrong scope is saying that rollback approval comes from the health check; release-owner approval is the source of truth.",
             CognitiveMemoryCuratorRuntimeMode.DirectLlm));
         var result = await service.RecordTurnAsync(new CognitiveMemoryCuratorTurnCaptureRequest(
             session.Id,
-            "Můžeš uvést příklad a protipříklad?",
-            "Příklad: release-owner podepíše rollback před obnovou provozu. Protipříklad: samotný health-check není schválení.",
+            "Can you give an example and counterexample?",
+            "Example: the release-owner approves rollback before production traffic returns. Counterexample: a health check alone is not approval.",
             CognitiveMemoryCuratorRuntimeMode.DirectLlm));
 
         var capture = Assert.Single(result.CapturedImprovements);
         Assert.Equal(CognitiveMemoryProfessorAnchorState.Active, capture.AnchorState);
-        Assert.Contains("Příklad", capture.Summary, StringComparison.Ordinal);
-        Assert.Contains("Protipříklad", capture.Summary, StringComparison.Ordinal);
-        Assert.Contains("špatný rozsah", capture.Summary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Example", capture.Summary, StringComparison.Ordinal);
+        Assert.Contains("Counterexample", capture.Summary, StringComparison.Ordinal);
+        Assert.Contains("wrong scope", capture.Summary, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -1582,21 +1582,21 @@ public sealed class CognitiveMemoryAdvancedServicesTests
     }
 
     [Fact]
-    public async Task CuratorCapture_CzechNewKnowledgePhraseIsCapturedDeterministically()
+    public async Task CuratorCapture_EnglishNewKnowledgePhraseIsCapturedDeterministically()
     {
         var fixture = CreateFixture();
         var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         var service = CreateCuratorService(fixture);
         var session = await service.StartAsync(new CognitiveMemoryCuratorSessionStartRequest(
             projectId,
-            "Czech curator chat",
+            "English curator chat",
             Policy(projectId),
             CognitiveMemoryCuratorRuntimeMode.DirectLlm));
 
         var result = await service.RecordTurnAsync(new CognitiveMemoryCuratorTurnCaptureRequest(
             session.Id,
-            "Zapamatuj si, ze produkcni nasazeni vzdy vyzaduje podepsanou release branch.",
-            "Rozumim, ulozim to jako znalost projektu.",
+            "Remember that production deployment always requires a signed release branch.",
+            "I will store that as project knowledge.",
             CognitiveMemoryCuratorRuntimeMode.DirectLlm));
 
         await using var dbContext = fixture.Factory.CreateDbContext();
@@ -1604,7 +1604,7 @@ public sealed class CognitiveMemoryAdvancedServicesTests
         var memory = await dbContext.Set<CognitiveMemoryRecord>().SingleAsync();
 
         Assert.Equal(CognitiveMemoryCuratorCaptureKind.NewKnowledge, capture.CaptureKind);
-        Assert.Contains("produkcni nasazeni", memory.CanonicalText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("production deployment", memory.CanonicalText, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(CognitiveMemoryCuratorCaptureStatus.Applied, capture.Status);
     }
 

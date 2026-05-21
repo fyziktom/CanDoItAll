@@ -1,5 +1,3 @@
-using System.Globalization;
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace CanDoItAll.Modules.CognitiveMemory;
@@ -65,15 +63,7 @@ internal sealed class CognitiveMemoryProfessorTeachingExtractor : ICognitiveMemo
         " example ",
         " counterexample ",
         " not ",
-        " instead ",
-        " proc ",
-        " protoze ",
-        " spatny rozsah ",
-        " spravne ",
-        " priklad ",
-        " protipriklad ",
-        " schvaluje ",
-        " podepise "
+        " instead "
     ];
 
     private static readonly string[] QuestionLeadIns =
@@ -89,16 +79,7 @@ internal sealed class CognitiveMemoryProfessorTeachingExtractor : ICognitiveMemo
         "do ",
         "does ",
         "is ",
-        "are ",
-        "proc ",
-        "proč ",
-        "jak ",
-        "kdy ",
-        "kde ",
-        "muze ",
-        "může ",
-        "mela ",
-        "měla "
+        "are "
     ];
 
     public CognitiveMemoryProfessorAnchorExtraction? TryExtract(CognitiveMemoryProfessorTeachingExtractionRequest request)
@@ -155,12 +136,12 @@ internal sealed class CognitiveMemoryProfessorTeachingExtractor : ICognitiveMemo
 
     private static CognitiveMemoryProfessorAnchorCaptureKind ResolveCaptureKind(string conversationText)
     {
-        if (ContainsAny(conversationText, [" wrong scope ", " only applies ", " applies only ", " different scope ", " spatny rozsah "]))
+        if (ContainsAny(conversationText, [" wrong scope ", " only applies ", " applies only ", " different scope "]))
         {
             return CognitiveMemoryProfessorAnchorCaptureKind.ScopeCorrection;
         }
 
-        if (ContainsAny(conversationText, [" confuse ", " confused ", " confusing ", " distinction ", " not ", " instead ", " spravne ", " protipriklad "]))
+        if (ContainsAny(conversationText, [" confuse ", " confused ", " confusing ", " distinction ", " not ", " instead "]))
         {
             return CognitiveMemoryProfessorAnchorCaptureKind.MisconceptionCorrection;
         }
@@ -190,7 +171,7 @@ internal sealed class CognitiveMemoryProfessorTeachingExtractor : ICognitiveMemo
                 continue;
             }
 
-            if (!ContainsAny($" {candidate} ", [" must ", " need ", " needs ", " require ", " requires ", " is a ", " is an ", " are ", " means ", " gate ", " evidence ", " example ", " counterexample ", " not ", " priklad ", " protipriklad ", " spravne ", " schvaluje ", " podepise ", " spatny rozsah "]))
+            if (!ContainsAny($" {candidate} ", [" must ", " need ", " needs ", " require ", " requires ", " is a ", " is an ", " are ", " means ", " gate ", " evidence ", " example ", " counterexample ", " not "]))
             {
                 continue;
             }
@@ -234,7 +215,7 @@ internal sealed class CognitiveMemoryProfessorTeachingExtractor : ICognitiveMemo
             value = value[..becauseIndex].Trim();
         }
 
-        foreach (var separator in new[] { " is a ", " is an ", " requires ", " require ", " needs ", " need ", " must ", " je ", " schvaluje ", " podepise " })
+        foreach (var separator in new[] { " is a ", " is an ", " requires ", " require ", " needs ", " need ", " must " })
         {
             var index = IndexOfSearch(value, separator);
             if (index > 0)
@@ -264,17 +245,17 @@ internal sealed class CognitiveMemoryProfessorTeachingExtractor : ICognitiveMemo
     private static double ResolveConfidence(string userMessage, string curatorResponse, string misconception)
     {
         var score = 0.62;
-        if (ContainsAny(userMessage, [" in this project ", " for this project ", " v tomto projektu ", " pro tento projekt "]))
+        if (ContainsAny(userMessage, [" in this project ", " for this project "]))
         {
             score += 0.1;
         }
 
-        if (ContainsAny(userMessage, [" because ", " requires ", " must ", " gate ", " protoze ", " spravne ", " priklad ", " protipriklad "]))
+        if (ContainsAny(userMessage, [" because ", " requires ", " must ", " gate "]))
         {
             score += 0.1;
         }
 
-        if (!string.IsNullOrWhiteSpace(curatorResponse) && ContainsAny(curatorResponse, [" distinction ", " matters ", " gate ", " evidence ", " spatny rozsah ", " spravne ", " priklad ", " protipriklad "]))
+        if (!string.IsNullOrWhiteSpace(curatorResponse) && ContainsAny(curatorResponse, [" distinction ", " matters ", " gate ", " evidence "]))
         {
             score += 0.07;
         }
@@ -296,19 +277,19 @@ internal sealed class CognitiveMemoryProfessorTeachingExtractor : ICognitiveMemo
         IReadOnlyList<string> sourceUtterances)
     {
         if (HasQuestionAnswerTeachingContext(request.PreviousTurns) &&
-            ContainsAny($" {request.UserMessage} ", [" no:", " no,", " not ", " instead ", " gate ", " priklad ", " protipriklad ", " spravne ", " spatny rozsah "]))
+            ContainsAny($" {request.UserMessage} ", [" no:", " no,", " not ", " instead ", " gate "]))
         {
             return true;
         }
 
         if (request.ExplicitCaptureKind == CognitiveMemoryCuratorCaptureKind.NewKnowledge &&
-            ContainsAny(conversationText, ["approval", "gate", "source of truth", " only ", "before traffic", "before launch", "schvaluje", "spravne", "pred obnovou"]))
+            ContainsAny(conversationText, ["approval", "gate", "source of truth", " only ", "before traffic", "before launch"]))
         {
             return true;
         }
 
         return HasTeachingSignal(conversationText) &&
-               (ContainsAny($" {conversationText} ", [" confuse ", " distinction ", " because ", " counterexample ", " example ", " wrong scope ", " only ", " spatny rozsah ", " spravne ", " priklad ", " protipriklad ", " protoze "]) ||
+               (ContainsAny($" {conversationText} ", [" confuse ", " distinction ", " because ", " counterexample ", " example ", " wrong scope ", " only "]) ||
                 sourceUtterances.Any(utterance => LooksLikeQuestionOnly(utterance)));
     }
 
@@ -341,8 +322,7 @@ internal sealed class CognitiveMemoryProfessorTeachingExtractor : ICognitiveMemo
             return false;
         }
 
-        var searchValue = NormalizeForSearch(value);
-        return QuestionLeadIns.Any(prefix => searchValue.StartsWith(NormalizeForSearch(prefix), StringComparison.Ordinal));
+        return QuestionLeadIns.Any(prefix => value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
     }
 
     private static string TrimTeachingPrefix(string value)
@@ -367,15 +347,12 @@ internal sealed class CognitiveMemoryProfessorTeachingExtractor : ICognitiveMemo
 
     private static bool ContainsAny(string value, IReadOnlyList<string> candidates)
     {
-        var normalizedValue = NormalizeForSearch(value);
-        return candidates.Any(candidate => normalizedValue.Contains(NormalizeForSearch(candidate), StringComparison.Ordinal));
+        return candidates.Any(candidate => value.Contains(candidate, StringComparison.OrdinalIgnoreCase));
     }
 
     private static int IndexOfSearch(string value, string searchValue)
     {
-        var normalizedValue = NormalizeForSearch(value);
-        var normalizedSearchValue = NormalizeForSearch(searchValue);
-        return normalizedValue.IndexOf(normalizedSearchValue, StringComparison.Ordinal);
+        return value.IndexOf(searchValue, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string FirstNonEmpty(params string?[] values)
@@ -386,23 +363,4 @@ internal sealed class CognitiveMemoryProfessorTeachingExtractor : ICognitiveMemo
             ? string.Empty
             : Regex.Replace(value.Trim(), @"\s+", " ");
 
-    private static string NormalizeForSearch(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return string.Empty;
-        }
-
-        var normalized = NormalizeText(value).Normalize(NormalizationForm.FormD);
-        var builder = new StringBuilder(normalized.Length);
-        foreach (var character in normalized)
-        {
-            if (CharUnicodeInfo.GetUnicodeCategory(character) != UnicodeCategory.NonSpacingMark)
-            {
-                builder.Append(char.ToLowerInvariant(character));
-            }
-        }
-
-        return builder.ToString().Normalize(NormalizationForm.FormC);
-    }
 }
