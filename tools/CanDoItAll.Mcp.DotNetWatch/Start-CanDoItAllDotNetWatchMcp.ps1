@@ -81,6 +81,23 @@ function Get-SourceSignature {
     }
 }
 
+function Get-ShadowBuildRootName {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Signature,
+        [Parameter(Mandatory = $true)]
+        [bool]$IncludeTimestamp
+    )
+
+    $prefixLength = [Math]::Min(20, $Signature.Length)
+    $name = $Signature.Substring(0, $prefixLength)
+    if ($IncludeTimestamp) {
+        $name = "{0}-{1}" -f $name, ([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())
+    }
+
+    return $name
+}
+
 function Get-ShadowManifest {
     param(
         [Parameter(Mandatory = $true)]
@@ -97,6 +114,37 @@ function Get-ShadowManifest {
     catch {
         return $null
     }
+}
+
+function Get-MsBuildProperty {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ProjectPath,
+        [Parameter(Mandatory = $true)]
+        [string]$PropertyName,
+        [Parameter(Mandatory = $true)]
+        [string]$Configuration
+    )
+
+    $propertyArgument = "-getProperty:$PropertyName"
+    $output = & dotnet msbuild $ProjectPath -nologo $propertyArgument "-p:Configuration=$Configuration" "-p:UseAppHost=false" "-p:CopyRepositoryTemplatesToOutput=false" 2>&1
+    foreach ($line in $output) {
+        $text = $line.ToString()
+        if (-not [string]::IsNullOrWhiteSpace($text)) {
+            Add-Content -Path $script:BootstrapLogPath -Value ("{0} msbuild-property | {1}" -f [DateTimeOffset]::UtcNow.ToString("O"), $text)
+        }
+    }
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to resolve MSBuild property '$PropertyName' for '$ProjectPath' with exit code $LASTEXITCODE."
+    }
+
+    $value = ($output | Where-Object { -not [string]::IsNullOrWhiteSpace($_.ToString()) } | Select-Object -Last 1).ToString().Trim()
+    if ([string]::IsNullOrWhiteSpace($value)) {
+        throw "MSBuild property '$PropertyName' resolved to an empty value for '$ProjectPath'."
+    }
+
+    return Resolve-AbsolutePath $value
 }
 
 function Write-ShadowManifest {
@@ -249,6 +297,36 @@ function Remove-DirectoryRobust {
     }
 
     throw "Robust delete failed for '$Path'. Path still exists after retries. Details=$($attemptMessages -join '; ')"
+}
+
+function Copy-DirectoryContents {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$SourceDirectory,
+        [Parameter(Mandatory = $true)]
+        [string]$DestinationDirectory,
+        [string[]]$ExcludedTopLevelNames = @()
+    )
+
+    if (-not (Test-Path -LiteralPath $SourceDirectory)) {
+        throw "Source directory '$SourceDirectory' does not exist."
+    }
+
+    Remove-DirectoryRobust -Path $DestinationDirectory
+    New-Item -ItemType Directory -Force -Path $DestinationDirectory | Out-Null
+
+    $excludedNames = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($name in $ExcludedTopLevelNames) {
+        [void]$excludedNames.Add($name)
+    }
+
+    foreach ($item in Get-ChildItem -LiteralPath $SourceDirectory -Force) {
+        if ($excludedNames.Contains($item.Name)) {
+            continue
+        }
+
+        Copy-Item -LiteralPath $item.FullName -Destination $DestinationDirectory -Recurse -Force
+    }
 }
 
 function Move-BuildRootToRetired {
@@ -436,18 +514,16 @@ if (-not $shadowNeedsRefresh) {
 }
 
 if ($shadowNeedsRefresh) {
-    $buildRootName = $sourceSignature
-    if ($ForceRebuild.IsPresent) {
-        $buildRootName = "{0}-{1}" -f $sourceSignature, ([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())
-    }
-
+    $buildRootName = Get-ShadowBuildRootName -Signature $sourceSignature -IncludeTimestamp $ForceRebuild.IsPresent
     $buildRoot = Join-Path $buildsRoot $buildRootName
-    $shadowDllPath = Join-Path $buildRoot "bin\CanDoItAll.Mcp.DotNetWatch\$configurationSegment\CanDoItAll.Mcp.DotNetWatch.dll"
+    $shadowOutputPath = Join-Path $buildRoot "app"
+    $shadowDllPath = Join-Path $shadowOutputPath "CanDoItAll.Mcp.DotNetWatch.dll"
 
     if (-not (Test-Path -LiteralPath $shadowDllPath)) {
         Write-Bootstrap "shadow build start | buildRoot=$buildRoot"
         try {
-            $buildOutput = & dotnet build $ProjectPath -c $Configuration --artifacts-path $buildRoot -p:UseAppHost=false 2>&1
+            $targetDirectory = Get-MsBuildProperty -ProjectPath $ProjectPath -PropertyName "TargetDir" -Configuration $Configuration
+            $buildOutput = & dotnet build $ProjectPath -c $Configuration -p:UseAppHost=false -p:CopyRepositoryTemplatesToOutput=false 2>&1
             foreach ($line in $buildOutput) {
                 $text = $line.ToString()
                 [Console]::Error.WriteLine($text)
@@ -457,6 +533,9 @@ if ($shadowNeedsRefresh) {
             if ($LASTEXITCODE -ne 0) {
                 throw "Shadow build failed with exit code $LASTEXITCODE. See $script:BootstrapLogPath."
             }
+
+            Write-Bootstrap "shadow copy start | source=$targetDirectory | target=$shadowOutputPath"
+            Copy-DirectoryContents -SourceDirectory $targetDirectory -DestinationDirectory $shadowOutputPath -ExcludedTopLevelNames @("Templates")
 
             if (-not (Test-Path -LiteralPath $shadowDllPath)) {
                 throw "Shadow build completed without producing '$shadowDllPath'."

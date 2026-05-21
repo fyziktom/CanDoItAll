@@ -1,0 +1,165 @@
+Command: powershell -NoProfile -ExecutionPolicy Bypass -File C:\repositories\CanDoItAll\tools\Reinstall-CanDoItAllMcps.ps1
+Invariant: MCP-INSTALL-TEMPLATE-FREE
+Expectation: full MCP reinstall succeeds after the fix and syncs skills
+ExitCode: 0
+--- Output ---
+[CanDoItAll MCP Resetup] Stopping install-owned companion processes before publish
+[CanDoItAll MCP Resetup] Stopping process 14900 | CanDoItAll.Mcp.CodeAnalytics.exe
+[CanDoItAll MCP Resetup] Stopping process 19552 | CanDoItAll.Mcp.SshOps.exe
+[CanDoItAll MCP Resetup] Stopping process 3460 | CanDoItAll.Mcp.SshOps.exe
+[CanDoItAll MCP Resetup] Stopping process 28864 | CanDoItAll.Mcp.CodeAnalytics.exe
+[CanDoItAll MCP Resetup] Stopping process 36184 | CanDoItAll.Mcp.CodeAnalytics.exe
+[CanDoItAll MCP Resetup] Stopping process 25104 | CanDoItAll.Mcp.SshOps.exe
+[CanDoItAll MCP Resetup] Stopping process 36572 | CanDoItAll.Mcp.CodeAnalytics.exe
+[CanDoItAll MCP Resetup] Stopping process 6264 | CanDoItAll.Mcp.SshOps.exe
+[CanDoItAll MCP Resetup] Stopping process 9348 | CanDoItAll.Mcp.CodeAnalytics.exe
+[CanDoItAll MCP Resetup] Stopping process 27740 | CanDoItAll.Mcp.SshOps.exe
+[CanDoItAll MCP Resetup] Stopping process 15524 | CanDoItAll.Mcp.SshOps.exe
+[CanDoItAll MCP Resetup] Stopping process 29432 | CanDoItAll.Mcp.CodeAnalytics.exe
+[CanDoItAll MCP Resetup] Stopping process 31116 | CanDoItAll.Mcp.SshOps.exe
+[CanDoItAll MCP Resetup] Stopping process 27064 | CanDoItAll.Mcp.CodeAnalytics.exe
+[CanDoItAll MCP Resetup] Stopping currently running DotNetWatch, manager, and tray processes
+[CanDoItAll MCP Resetup] Stopping process 11876 | powershell.exe
+[CanDoItAll MCP Resetup] Stopping process 22484 | dotnet.exe
+[CanDoItAll MCP Resetup] Stopping process 25864 | dotnet.exe
+[CanDoItAll MCP Resetup] Stopping process 32036 | powershell.exe
+[CanDoItAll MCP Resetup] Stopping process 36736 | dotnet.exe
+[CanDoItAll MCP Resetup] Stopping process 30600 | powershell.exe
+[CanDoItAll MCP Resetup] Stopping process 20592 | dotnet.exe
+[CanDoItAll MCP Resetup] Stopping process 37828 | powershell.exe
+[CanDoItAll MCP Resetup] Stopping process 3588 | dotnet.exe
+[CanDoItAll MCP Resetup] Stopping process 16016 | powershell.exe
+[CanDoItAll MCP Resetup] Stopping process 33184 | dotnet.exe
+[CanDoItAll MCP Resetup] Stopping process 38252 | powershell.exe
+[CanDoItAll MCP Resetup] Stopping process 5596 | dotnet.exe
+[CanDoItAll MCP Resetup] Backend catalog cleanup for this workspace removed 1 stale record(s); failed to remove 0.
+[CanDoItAll MCP Resetup] Preparing shadow artifact for CanDoItAll.Mcp.DotNetWatch (Release)
+powershell.exe : 2026-05-21T13:01:45.0551989+00:00 wrapper start | repo=C:\repositories\CanDoItAll | 
+project=C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.DotNetWatch\CanDoItAll.Mcp.DotNetWatch.csproj | 
+settings=C:\repositories\CanDoItAll\CanDoItAll.Mcp.DotNetWatch.settings.json | 
+shadow=C:\repositories\CanDoItAll\.artifacts\mcp-server-shadow | 
+signature=ffd075afde22a7358ff66d16f76af39d7fcc5fd7581fc1d9cbe0438d0b119cf8
+At line:2 char:244
++ ... -pass.txt'; & powershell -NoProfile -ExecutionPolicy Bypass -File 'C: ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (2026-05-21T13:0...be0438d0b119cf8:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+2026-05-21T13:01:45.1050315+00:00 shadow build start | 
+buildRoot=C:\repositories\CanDoItAll\.artifacts\mcp-server-shadow\builds\ffd075afde22a7358ff6-1779368505
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  CanDoItAll.Mcp.Core -> C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.Core\bin\Release\net10.0\CanDoItAll.Mcp.Core.dll
+  CanDoItAll.Mcp.LocalRuntime -> 
+C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.LocalRuntime\bin\Release\net10.0\CanDoItAll.Mcp.LocalRuntime.dll
+  CanDoItAll.Mcp.DotNetWatch -> 
+C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.DotNetWatch\bin\Release\net10.0\CanDoItAll.Mcp.DotNetWatch.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:03.14
+2026-05-21T13:01:50.2553404+00:00 shadow copy start | 
+source=C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.DotNetWatch\bin\Release\net10.0\ | 
+target=C:\repositories\CanDoItAll\.artifacts\mcp-server-shadow\builds\ffd075afde22a7358ff6-1779368505\app
+2026-05-21T13:01:50.4052360+00:00 shadow build completed | 
+buildRoot=C:\repositories\CanDoItAll\.artifacts\mcp-server-shadow\builds\ffd075afde22a7358ff6-1779368505
+2026-05-21T13:01:51.2892433+00:00 shadow cleanup | removed buildRoot=C:\repositories\CanDoItAll\.artifacts\mcp-server-s
+hadow\builds\61a20e94288b778d2d20d360b0ef4fa2f3905b281ede39bed8361fda96c5c719
+2026-05-21T13:01:51.9895781+00:00 shadow cleanup | removed buildRoot=C:\repositories\CanDoItAll\.artifacts\mcp-server-s
+hadow\builds\4b2d2de61f70c11c22fe692d08940a823b118a599936e8537daa87743a8f48b9
+2026-05-21T13:02:13.5353450+00:00 shadow prepare completed | dll=C:\repositories\CanDoItAll\.artifacts\mcp-server-shado
+w\builds\ffd075afde22a7358ff6-1779368505\app\CanDoItAll.Mcp.DotNetWatch.dll
+C:\repositories\CanDoItAll\.artifacts\mcp-server-shadow\builds\ffd075afde22a7358ff6-1779368505\app\CanDoItAll.Mcp.DotNetWatch.dll
+[CanDoItAll MCP Resetup] Publishing CanDoItAll.Mcp.Components.csproj to C:\repositories\CanDoItAll\.artifacts\mcp-installs\CanDoItAll.Mcp.Components\current
+  Determining projects to restore...
+  Restored C:\repositories\CanDoItAll\src\CanDoItAll.Components.Common\CanDoItAll.Components.Common.csproj (in 262 ms).
+  Restored C:\repositories\CanDoItAll\src\CanDoItAll.Components.Charts\CanDoItAll.Components.Charts.csproj (in 976 ms).
+  Restored C:\repositories\CanDoItAll\src\CanDoItAll.Components.BaseLib\CanDoItAll.Components.BaseLib.csproj (in 976 ms).
+  Restored C:\repositories\CanDoItAll\src\CanDoItAll.Components.CanvasLib\CanDoItAll.Components.CanvasLib.csproj (in 977 ms).
+  Restored C:\repositories\CanDoItAll\src\CanDoItAll.Components.Sandbox\CanDoItAll.Components.Sandbox.csproj (in 1.05 sec).
+  Restored C:\repositories\CanDoItAll\src\CanDoItAll.Components.Mermaid\CanDoItAll.Components.Mermaid.csproj (in 976 ms).
+  Restored C:\repositories\CanDoItAll\src\CanDoItAll.Components.OverlayLib\CanDoItAll.Components.OverlayLib.csproj (in 975 ms).
+  Restored C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.Components\CanDoItAll.Mcp.Components.csproj (in 951 ms).
+  1 of 9 projects are up-to-date for restore.
+  CanDoItAll.Mcp.Core -> C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.Core\bin\Release\net10.0\CanDoItAll.Mcp.Core.dll
+  CanDoItAll.Components.Common -> C:\repositories\CanDoItAll\src\CanDoItAll.Components.Common\bin\Release\net10.0\CanDoItAll.Components.Common.dll
+  CanDoItAll.Components.Charts -> C:\repositories\CanDoItAll\src\CanDoItAll.Components.Charts\bin\Release\net10.0\CanDoItAll.Components.Charts.dll
+  CanDoItAll.Components.Mermaid -> C:\repositories\CanDoItAll\src\CanDoItAll.Components.Mermaid\bin\Release\net10.0\CanDoItAll.Components.Mermaid.dll
+  CanDoItAll.Components.BaseLib -> C:\repositories\CanDoItAll\src\CanDoItAll.Components.BaseLib\bin\Release\net10.0\CanDoItAll.Components.BaseLib.dll
+  CanDoItAll.Components.OverlayLib -> C:\repositories\CanDoItAll\src\CanDoItAll.Components.OverlayLib\bin\Release\net10.0\CanDoItAll.Components.OverlayLib.dll
+  CanDoItAll.Components.CanvasLib -> C:\repositories\CanDoItAll\src\CanDoItAll.Components.CanvasLib\bin\Release\net10.0\CanDoItAll.Components.CanvasLib.dll
+  CanDoItAll.Components.Sandbox -> C:\repositories\CanDoItAll\src\CanDoItAll.Components.Sandbox\bin\Release\net10.0\CanDoItAll.Components.Sandbox.dll
+  CanDoItAll.Mcp.Components -> C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.Components\bin\Release\net10.0\CanDoItAll.Mcp.Components.dll
+  CanDoItAll.Mcp.Components -> C:\repositories\CanDoItAll\.artifacts\mcp-installs\CanDoItAll.Mcp.Components\current\
+[CanDoItAll MCP Resetup] Publishing CanDoItAll.Mcp.CodeAnalytics.csproj to C:\repositories\CanDoItAll\.artifacts\mcp-installs\CanDoItAll.Mcp.CodeAnalytics\current
+  Determining projects to restore...
+  Restored C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.CodeAnalytics\CanDoItAll.Mcp.CodeAnalytics.csproj (in 1.4 sec).
+  9 of 10 projects are up-to-date for restore.
+  CanDoItAll.Mcp.Core -> C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.Core\bin\Release\net10.0\CanDoItAll.Mcp.Core.dll
+  CanDoItAll.CodeAnalytics.Domain -> C:\repositories\CanDoItAll.CodeAnalsis\src\CanDoItAll.CodeAnalytics.Domain\bin\Release\net10.0\CanDoItAll.CodeAnalytics.Domain.dll
+  CanDoItAll.CodeAnalytics.Abstractions -> C:\repositories\CanDoItAll.CodeAnalsis\src\CanDoItAll.CodeAnalytics.Abstractions\bin\Release\net10.0\CanDoItAll.CodeAnalytics.Abstractions.dll
+  CanDoItAll.CodeAnalytics.Workspace -> C:\repositories\CanDoItAll.CodeAnalsis\src\CanDoItAll.CodeAnalytics.Workspace\bin\Release\net10.0\CanDoItAll.CodeAnalytics.Workspace.dll
+  CanDoItAll.CodeAnalytics.Rendering -> C:\repositories\CanDoItAll.CodeAnalsis\src\CanDoItAll.CodeAnalytics.Rendering\bin\Release\net10.0\CanDoItAll.CodeAnalytics.Rendering.dll
+  CanDoItAll.CodeAnalytics.Storage -> C:\repositories\CanDoItAll.CodeAnalsis\src\CanDoItAll.CodeAnalytics.Storage\bin\Release\net10.0\CanDoItAll.CodeAnalytics.Storage.dll
+  CanDoItAll.CodeAnalytics.Facts -> C:\repositories\CanDoItAll.CodeAnalsis\src\CanDoItAll.CodeAnalytics.Facts\bin\Release\net10.0\CanDoItAll.CodeAnalytics.Facts.dll
+  CanDoItAll.CodeAnalytics.Analysis -> C:\repositories\CanDoItAll.CodeAnalsis\src\CanDoItAll.CodeAnalytics.Analysis\bin\Release\net10.0\CanDoItAll.CodeAnalytics.Analysis.dll
+  CanDoItAll.CodeAnalytics.Application -> C:\repositories\CanDoItAll.CodeAnalsis\src\CanDoItAll.CodeAnalytics.Application\bin\Release\net10.0\CanDoItAll.CodeAnalytics.Application.dll
+  CanDoItAll.Mcp.CodeAnalytics -> C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.CodeAnalytics\bin\Release\net10.0\CanDoItAll.Mcp.CodeAnalytics.dll
+  CanDoItAll.Mcp.CodeAnalytics -> C:\repositories\CanDoItAll\.artifacts\mcp-installs\CanDoItAll.Mcp.CodeAnalytics\current\
+[CanDoItAll MCP Resetup] Publishing CanDoItAll.Mcp.SshOps.csproj to C:\repositories\CanDoItAll\.artifacts\mcp-installs\CanDoItAll.Mcp.SshOps\current
+  Determining projects to restore...
+  Restored C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.SshOps\CanDoItAll.Mcp.SshOps.csproj (in 851 ms).
+  1 of 2 projects are up-to-date for restore.
+  CanDoItAll.Mcp.Core -> C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.Core\bin\Release\net10.0\CanDoItAll.Mcp.Core.dll
+  CanDoItAll.Mcp.SshOps -> C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.SshOps\bin\Release\net10.0\CanDoItAll.Mcp.SshOps.dll
+  CanDoItAll.Mcp.SshOps -> C:\repositories\CanDoItAll\.artifacts\mcp-installs\CanDoItAll.Mcp.SshOps\current\
+[CanDoItAll MCP Resetup] Publishing CanDoItAll.Manager.csproj to C:\repositories\CanDoItAll\.artifacts\mcp-installs\CanDoItAll.Manager\current
+  Determining projects to restore...
+  Restored C:\repositories\CanDoItAll\src\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj (in 284 ms).
+  Restored C:\repositories\CanDoItAll\tools\CanDoItAll.Manager\CanDoItAll.Manager.csproj (in 726 ms).
+  Restored C:\repositories\CanDoItAll\src\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj (in 865 ms).
+  CanDoItAll.SharedKernel -> C:\repositories\CanDoItAll\src\CanDoItAll.SharedKernel\bin\Release\net10.0\CanDoItAll.SharedKernel.dll
+  CanDoItAll.Infrastructure -> C:\repositories\CanDoItAll\src\CanDoItAll.Infrastructure\bin\Release\net10.0\CanDoItAll.Infrastructure.dll
+  CanDoItAll.Manager -> C:\repositories\CanDoItAll\tools\CanDoItAll.Manager\bin\Release\net10.0\CanDoItAll.Manager.dll
+  CanDoItAll.Manager -> C:\repositories\CanDoItAll\.artifacts\mcp-installs\CanDoItAll.Manager\current\
+[CanDoItAll MCP Resetup] Publishing CanDoItAll.Mcp.DotNetWatch.Tray.csproj to C:\repositories\CanDoItAll\.artifacts\mcp-installs\CanDoItAll.Mcp.DotNetWatch.Tray\current
+  Determining projects to restore...
+  Restored C:\repositories\CanDoItAll\tools\CanDoItAll.Mcp.DotNetWatch.Tray\CanDoItAll.Mcp.DotNetWatch.Tray.csproj (in 241 ms).
+  CanDoItAll.Mcp.DotNetWatch.Tray -> C:\repositories\CanDoItAll\tools\CanDoItAll.Mcp.DotNetWatch.Tray\bin\Release\net10.0-windows\CanDoItAll.Mcp.DotNetWatch.Tray.dll
+  CanDoItAll.Mcp.DotNetWatch.Tray -> C:\repositories\CanDoItAll\.artifacts\mcp-installs\CanDoItAll.Mcp.DotNetWatch.Tray\current\
+[CanDoItAll MCP Resetup] Updating startup shortcut for tray app
+[CanDoItAll MCP Resetup] Updating desktop shortcut for tray app
+[CanDoItAll MCP Resetup] Syncing repo-managed Codex skills
+[CanDoItAll MCP Resetup] Synced Codex skill 'architecture-drift-audit' to C:\Users\dell\.codex\skills\architecture-drift-audit
+[CanDoItAll MCP Resetup] Synced Codex skill 'canonical-model-review' to C:\Users\dell\.codex\skills\canonical-model-review
+[CanDoItAll MCP Resetup] Synced Codex skill 'feature-block-architecture-review' to C:\Users\dell\.codex\skills\feature-block-architecture-review
+[CanDoItAll MCP Resetup] Synced Codex skill 'candoitall-bundle-execution' to C:\Users\dell\.codex\skills\candoitall-bundle-execution
+[CanDoItAll MCP Resetup] Synced Codex skill 'candoitall-bundle-preparation' to C:\Users\dell\.codex\skills\candoitall-bundle-preparation
+[CanDoItAll MCP Resetup] Synced Codex skill 'candoitall-bundle-validator' to C:\Users\dell\.codex\skills\candoitall-bundle-validator
+[CanDoItAll MCP Resetup] Synced Codex skill 'candoitall-bundle-workflow' to C:\Users\dell\.codex\skills\candoitall-bundle-workflow
+[CanDoItAll MCP Resetup] Synced Codex skill 'candoitall-subbundle-validator' to C:\Users\dell\.codex\skills\candoitall-subbundle-validator
+[CanDoItAll MCP Resetup] Synced Codex skill 'candoitall-api-agents' to C:\Users\dell\.codex\skills\candoitall-api-agents
+[CanDoItAll MCP Resetup] Synced Codex skill 'candoitall-api-cognitive-memory' to C:\Users\dell\.codex\skills\candoitall-api-cognitive-memory
+[CanDoItAll MCP Resetup] Synced Codex skill 'candoitall-api-processes' to C:\Users\dell\.codex\skills\candoitall-api-processes
+[CanDoItAll MCP Resetup] Synced Codex skill 'candoitall-api-project-structure' to C:\Users\dell\.codex\skills\candoitall-api-project-structure
+[CanDoItAll MCP Resetup] Synced Codex skill 'candoitall-api-workflows' to C:\Users\dell\.codex\skills\candoitall-api-workflows
+[CanDoItAll MCP Resetup] Synced Codex skill 'candoitall-codeanalytics-mcp' to C:\Users\dell\.codex\skills\candoitall-codeanalytics-mcp
+[CanDoItAll MCP Resetup] Synced Codex skill 'candoitall-components-mcp' to C:\Users\dell\.codex\skills\candoitall-components-mcp
+[CanDoItAll MCP Resetup] Synced Codex skill 'candoitall-dotnetwatch-setup' to C:\Users\dell\.codex\skills\candoitall-dotnetwatch-setup
+[CanDoItAll MCP Resetup] Synced Codex skill 'candoitall-frontend-theme' to C:\Users\dell\.codex\skills\candoitall-frontend-theme
+[CanDoItAll MCP Resetup] Synced Codex skill 'candoitall-watch-playwright-loop' to C:\Users\dell\.codex\skills\candoitall-watch-playwright-loop
+[CanDoItAll MCP Resetup] Wrote install manifest to C:\repositories\CanDoItAll\.artifacts\mcp-installs\install-manifest.json
+[CanDoItAll MCP Resetup] Updating VS Code MCP config
+[CanDoItAll MCP Resetup] Updating Codex config
+[CanDoItAll MCP Resetup] Resetup completed.
+[CanDoItAll MCP Resetup] DotNetWatch shadow DLL: C:\repositories\CanDoItAll\.artifacts\mcp-server-shadow\builds\ffd075afde22a7358ff6-1779368505\app\CanDoItAll.Mcp.DotNetWatch.dll
+[CanDoItAll MCP Resetup] Components entrypoint: C:\repositories\CanDoItAll\.artifacts\mcp-installs\CanDoItAll.Mcp.Components\current\CanDoItAll.Mcp.Components.exe
+[CanDoItAll MCP Resetup] CodeAnalytics entrypoint: C:\repositories\CanDoItAll\.artifacts\mcp-installs\CanDoItAll.Mcp.CodeAnalytics\current\CanDoItAll.Mcp.CodeAnalytics.exe
+[CanDoItAll MCP Resetup] SshOps entrypoint: C:\repositories\CanDoItAll\.artifacts\mcp-installs\CanDoItAll.Mcp.SshOps\current\CanDoItAll.Mcp.SshOps.exe
+[CanDoItAll MCP Resetup] Manager entrypoint: C:\repositories\CanDoItAll\.artifacts\mcp-installs\CanDoItAll.Manager\current\CanDoItAll.Manager.exe
+[CanDoItAll MCP Resetup] Tray entrypoint: C:\repositories\CanDoItAll\.artifacts\mcp-installs\CanDoItAll.Mcp.DotNetWatch.Tray\current\CanDoItAll.Mcp.DotNetWatch.Tray.exe
+[CanDoItAll MCP Resetup] Tray desktop shortcut: C:\Users\dell\Desktop\CanDoItAll DotNetWatch Tray.lnk
+EXIT_CODE=0
+
