@@ -217,7 +217,7 @@ internal sealed class CognitiveMemoryProfessorTeachingExtractor : ICognitiveMemo
 
         foreach (var separator in new[] { " is a ", " is an ", " requires ", " require ", " needs ", " need ", " must " })
         {
-            var index = value.IndexOf(separator, StringComparison.OrdinalIgnoreCase);
+            var index = IndexOfSearch(value, separator);
             if (index > 0)
             {
                 return value[..index].Trim();
@@ -346,7 +346,14 @@ internal sealed class CognitiveMemoryProfessorTeachingExtractor : ICognitiveMemo
     }
 
     private static bool ContainsAny(string value, IReadOnlyList<string> candidates)
-        => candidates.Any(candidate => value.Contains(candidate, StringComparison.OrdinalIgnoreCase));
+    {
+        return candidates.Any(candidate => value.Contains(candidate, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static int IndexOfSearch(string value, string searchValue)
+    {
+        return value.IndexOf(searchValue, StringComparison.OrdinalIgnoreCase);
+    }
 
     private static string FirstNonEmpty(params string?[] values)
         => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
@@ -355,4 +362,5 @@ internal sealed class CognitiveMemoryProfessorTeachingExtractor : ICognitiveMemo
         => string.IsNullOrWhiteSpace(value)
             ? string.Empty
             : Regex.Replace(value.Trim(), @"\s+", " ");
+
 }

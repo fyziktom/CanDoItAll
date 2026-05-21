@@ -1,0 +1,9 @@
+Source assertion audit for SB09:
+
+- `ICognitiveMemoryProfessorAcceptedUseSignalEmitter` isolates accepted-use validation/publication and is registered with DI.
+- `ICognitiveMemoryApproximateClusterCandidateProvider` isolates approximate cluster candidate generation and is registered with DI.
+- `CognitiveMemoryCandidatePairSelector` now consumes the approximate provider instead of owning all approximate discovery policy inline.
+- `CognitiveMemoryDreamConsolidationService` has a named `CreateClaimSpecificSourceMaps` helper instead of inline broad source-map composition.
+- `CognitiveMemoryRecallSynthesisService` has a named `ResolveSynthesisQueryText` helper.
+- `CognitiveMemoryModule_RegistersQualityCollaboratorsAndVersionedOptions` asserts new registrations and preserves `quality-clustering-v3`.
+- `bundle://proof/SB09/responsibility-inventory.md` lists old/new responsibilities and the risk decision.

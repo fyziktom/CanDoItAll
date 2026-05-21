@@ -40,6 +40,7 @@ Use this skill when the bundle needs a gate, not more implementation. It exists 
    - critical foundations require deeper validation before dependent phases may continue
    - critical subbundles require a Semantic Adequacy Gate covering shallow-pass trap, adversarial negative proof, semantic positive proof, anti-stub audit, and raw-note literal closure
    - critical subbundles require `proof/SBxx/manifest.md` plus `proof/SBxx/semantic-invariants.md` or `.json` with existing transcript, hash, source-assertion, invariant, and anti-stub artifact paths
+   - critical proof for a new production signal, state, record, or event includes a `## Production Behavior Artifact Matrix` in both the manifest and semantic invariant contract, with producer, consumer, lifecycle, and negative-test citations
    - critical manifests contain portable `repo://` or `bundle://` references and are not tied only to one machine's absolute path layout
 8. At final closure, audit shipped proof:
    - no executed subbundle remains `Ready` or `In progress`
@@ -69,6 +70,8 @@ For critical work, the gate fails when any of these are true:
 - the shallow implementation that caused the bundle still passes the stated proof
 - no adversarial negative case proves harmful behavior is rejected
 - no semantic positive case proves realistic intended behavior
+- a production-only signal, state, record, or event is proved only by enum/contract definitions, consumers, or manually seeded positive tests instead of a production producer and lifecycle path
+- dream synthesis positive proof accepts diagnostic template text such as `Conclusion: ... supported by N source-backed observation(s)` as shipped memory text
 - anti-stub audit is absent, incomplete, or admits production `TODO`, `NotImplemented`, template-only output, or fixture-specific branching without a blocker
 - raw notes are marked closed without preserving literal scope words such as `all`, `every`, `must`, `exactly`, or `same flow`
 - `proof/SBxx/manifest.md` is absent, incomplete, or cites missing artifact paths

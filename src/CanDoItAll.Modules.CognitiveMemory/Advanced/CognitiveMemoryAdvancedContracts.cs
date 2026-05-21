@@ -92,6 +92,14 @@ public enum CognitiveMemoryProfessorAnchorState
     NotProfessorAnchor = 5
 }
 
+public enum CognitiveMemoryProfessorComparisonReviewOutcome
+{
+    AcceptAggregateMemory = 0,
+    RejectComparisonReturnActive = 1,
+    RejectAnchor = 2,
+    RequestMoreEvidence = 3
+}
+
 public enum CognitiveMemoryProbeRegressionStatus
 {
     Draft = 0,
@@ -539,6 +547,28 @@ public sealed record CognitiveMemoryProfessorAnchorResult(
     CognitiveMemoryProfessorAnchorState AnchorState,
     CognitiveMemoryRecordId? DerivedMemoryRecordId);
 
+public sealed record CognitiveMemoryProfessorAcceptedUseSignalRequest(
+    Guid ProjectId,
+    string ActorId,
+    CognitiveMemoryPolicyContext PolicyContext,
+    Guid RecallTraceId,
+    CognitiveMemorySynthesizedRecallId SynthesisId,
+    CognitiveMemorySynthesizedStatementId StatementId,
+    CognitiveMemoryRecordId DerivedMemoryRecordId,
+    Guid AcceptedOutcomeId,
+    string OutcomeSummary);
+
+public sealed record CognitiveMemoryProfessorAcceptedUseSignalResult(
+    CognitiveMemorySignalRecord Signal,
+    IReadOnlyList<CognitiveMemoryProfessorAnchorResult> AssimilationResults);
+
+public interface ICognitiveMemoryProfessorAcceptedUseSignalEmitter
+{
+    ValueTask<CognitiveMemoryProfessorAcceptedUseSignalResult> EmitAsync(
+        CognitiveMemoryProfessorAcceptedUseSignalRequest request,
+        CancellationToken cancellationToken = default);
+}
+
 public interface ICognitiveMemoryProfessorAssimilationEvaluator
 {
     ValueTask<CognitiveMemoryProfessorAnchorAssimilationEvaluationResult> EvaluateAsync(
@@ -720,6 +750,19 @@ public sealed record CognitiveMemoryProfessorReviewRequest(
     string ContextSummary,
     IReadOnlyList<CognitiveMemoryProfessorSuggestionKind> RequestedSuggestionKinds);
 
+public sealed record CognitiveMemoryProfessorComparisonReviewResolutionRequest(
+    Guid CaptureId,
+    CognitiveMemoryProfessorComparisonReviewOutcome Outcome,
+    string ActorId,
+    string Reason,
+    CognitiveMemoryRecordId? DerivedMemoryRecordId = null,
+    bool FadeAnchor = false);
+
+public sealed record CognitiveMemoryProfessorComparisonReviewResolutionResult(
+    Guid CaptureId,
+    CognitiveMemoryProfessorAnchorState AnchorState,
+    CognitiveMemoryRecordId? DerivedMemoryRecordId);
+
 public interface ICognitiveMemoryProfessorReviewService
 {
     ValueTask<CognitiveMemoryProfessorReviewRecord> RequestReviewAsync(
@@ -732,6 +775,10 @@ public interface ICognitiveMemoryProfessorReviewService
         string missingEvidence,
         CognitiveMemoryAnswerPostureKind recommendedPosture,
         IReadOnlyList<CognitiveMemoryProfessorSuggestionKind> suggestionKinds,
+        CancellationToken cancellationToken = default);
+
+    ValueTask<CognitiveMemoryProfessorComparisonReviewResolutionResult> ResolveComparisonAsync(
+        CognitiveMemoryProfessorComparisonReviewResolutionRequest request,
         CancellationToken cancellationToken = default);
 }
 

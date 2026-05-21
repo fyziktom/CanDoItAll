@@ -469,7 +469,9 @@ public sealed record CognitiveMemoryRecallSynthesisRequest(
     CognitiveMemoryRecallResult RecallResult,
     CognitiveMemoryPolicyContext PolicyContext,
     int MaxStatements = 5,
-    bool PersistSynthesis = true);
+    bool PersistSynthesis = true,
+    string QueryText = "",
+    CognitiveMemoryRecallIntentKind Intent = CognitiveMemoryRecallIntentKind.Unknown);
 
 public sealed record CognitiveMemorySynthesizedRecallResult(
     CognitiveMemorySynthesizedRecallId SynthesisId,

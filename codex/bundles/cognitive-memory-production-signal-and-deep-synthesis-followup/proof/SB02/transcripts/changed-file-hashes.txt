@@ -1,0 +1,14 @@
+Command: Get-FileHash -Algorithm SHA256 tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs
+WorkingDirectory: C:\repositories\CanDoItAll
+Test: SB02ChangedFileHashes
+Invariant: SB02-ACCEPTED-USE-01
+Invariant: SB02-COMPARISON-REVIEW-02
+Invariant: SB02-MULTILINGUAL-CAPTURE-03
+Invariant: SB02-DREAM-PROVENANCE-04
+Invariant: SB02-SEMANTIC-CLUSTERING-05
+Invariant: SB02-RECALL-LINEAGE-06
+Invariant: SB02-NO-PRODUCTION-DIFF-07
+Output:
+D790886E2DD65ADF2C7D4B75FB63435EFC2D59F4EE088FFA901EFBA94D536B27 C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs
+122C91531BF0286CE3184611E53D81AA89D923600E83AF12746C407E13690D4D C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs
+ExitCode: 0

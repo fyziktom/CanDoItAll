@@ -1,0 +1,5 @@
+Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~SemanticInvariant_CuratorCaptureCzechDiacriticsAndNaturalScopeCreatesProfessorAnchor" --no-restore
+Exit code: 1 in SB02 red baseline before production changes.
+
+Relevant baseline failure:
+- The real curator conversation service returned zero captured improvements for Czech Q&A teaching with examples and counterexamples.

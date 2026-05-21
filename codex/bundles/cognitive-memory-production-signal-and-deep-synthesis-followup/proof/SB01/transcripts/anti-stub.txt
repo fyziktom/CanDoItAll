@@ -1,0 +1,7 @@
+Command: rg -n "TODO|NotImplementedException|pass #|fixture-specific branch" codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py codex\skills\bundles\candoitall-bundle-workflow\SKILL.md codex\skills\bundles\candoitall-bundle-execution\SKILL.md codex\skills\bundles\candoitall-bundle-validator\SKILL.md
+WorkingDirectory: C:\repositories\CanDoItAll
+Test: ValidatorProof.AntiStubAudit
+Invariant: SB01-PRODUCTION-MATRIX-01
+Invariant: SB01-DREAM-META-TEXT-02
+Output: no TODO, NotImplementedException, pass placeholders, or fixture-specific branch markers found in changed validator/skill files
+ExitCode: 1

@@ -161,10 +161,101 @@ public sealed class CognitiveMemoryProfessorReviewService(
         return review;
     }
 
+    public async ValueTask<CognitiveMemoryProfessorComparisonReviewResolutionResult> ResolveComparisonAsync(
+        CognitiveMemoryProfessorComparisonReviewResolutionRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        if (request.CaptureId == Guid.Empty)
+        {
+            throw new ArgumentException("Professor comparison resolution requires a capture id.", nameof(request));
+        }
+
+        var actorId = CognitiveMemoryGuard.EnsureText(request.ActorId, nameof(request.ActorId));
+        var reason = CognitiveMemoryGuard.EnsureText(request.Reason, nameof(request.Reason));
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var capture = await dbContext.Set<CognitiveMemoryCuratorCapturedImprovementRecord>()
+            .SingleOrDefaultAsync(item => item.Id == request.CaptureId, cancellationToken)
+            ?? throw new InvalidOperationException($"Professor anchor capture '{request.CaptureId:D}' was not found.");
+        if (capture.AnchorState != CognitiveMemoryProfessorAnchorState.Comparing)
+        {
+            throw new InvalidOperationException($"Professor anchor capture '{request.CaptureId:D}' is '{capture.AnchorState}' and cannot be resolved as a comparison review.");
+        }
+
+        var now = clock.GetUtcNow();
+        var previousState = capture.AnchorState;
+        Guid? derivedMemoryRecordId = request.Outcome == CognitiveMemoryProfessorComparisonReviewOutcome.AcceptAggregateMemory
+            ? await ValidateAcceptedDerivedMemoryAsync(dbContext, capture, request.DerivedMemoryRecordId, cancellationToken)
+            : null;
+        capture.AnchorState = request.Outcome switch
+        {
+            CognitiveMemoryProfessorComparisonReviewOutcome.AcceptAggregateMemory => request.FadeAnchor
+                ? CognitiveMemoryProfessorAnchorState.Faded
+                : CognitiveMemoryProfessorAnchorState.Assimilated,
+            CognitiveMemoryProfessorComparisonReviewOutcome.RejectComparisonReturnActive => CognitiveMemoryProfessorAnchorState.Active,
+            CognitiveMemoryProfessorComparisonReviewOutcome.RejectAnchor => CognitiveMemoryProfessorAnchorState.Rejected,
+            CognitiveMemoryProfessorComparisonReviewOutcome.RequestMoreEvidence => CognitiveMemoryProfessorAnchorState.Active,
+            _ => throw new ArgumentOutOfRangeException(nameof(request), $"Unsupported professor comparison resolution outcome '{request.Outcome}'.")
+        };
+        capture.AssimilatedMemoryRecordId = request.Outcome == CognitiveMemoryProfessorComparisonReviewOutcome.AcceptAggregateMemory
+            ? derivedMemoryRecordId
+            : capture.AssimilatedMemoryRecordId;
+        capture.AnchorRetiredAtUtc = capture.AnchorState is CognitiveMemoryProfessorAnchorState.Faded or CognitiveMemoryProfessorAnchorState.Rejected
+            ? now
+            : null;
+        capture.ConcurrencyToken = Guid.NewGuid();
+
+        CognitiveMemoryProfessorAnchorTransitionAudit.AddTransition(
+            dbContext,
+            capture,
+            previousState,
+            capture.AnchorState,
+            now,
+            $"ProfessorAnchorLifecycleTransition comparison review resolved by {actorId}: {request.Outcome}. {reason}",
+            manualReviewConfirmed: true,
+            derivedMemoryRecordId);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return new CognitiveMemoryProfessorComparisonReviewResolutionResult(
+            capture.Id,
+            capture.AnchorState,
+            derivedMemoryRecordId is null ? null : new CognitiveMemoryRecordId(derivedMemoryRecordId.Value));
+    }
+
     private static string RedactRestrictedContext(string value)
         => string.IsNullOrWhiteSpace(value)
             ? string.Empty
             : "[redacted by cognitive-memory professor-review access policy]";
+
+    private static async Task<Guid> ValidateAcceptedDerivedMemoryAsync(
+        AppDbContext dbContext,
+        CognitiveMemoryCuratorCapturedImprovementRecord capture,
+        CognitiveMemoryRecordId? derivedMemoryRecordId,
+        CancellationToken cancellationToken)
+    {
+        if (derivedMemoryRecordId is null)
+        {
+            throw new InvalidOperationException("Accepting a professor comparison requires the accepted aggregate or derived memory id.");
+        }
+
+        if (capture.AppliedMemoryRecordId == derivedMemoryRecordId.Value.Value)
+        {
+            throw new InvalidOperationException("Professor comparison review cannot accept the direct capture memory as the derived aggregate.");
+        }
+
+        var memory = await dbContext.Set<CognitiveMemoryRecord>()
+            .AsNoTracking()
+            .SingleOrDefaultAsync(
+                record => record.Id == derivedMemoryRecordId.Value.Value && record.ProjectId == capture.ProjectId,
+                cancellationToken)
+            ?? throw new InvalidOperationException($"Derived memory '{derivedMemoryRecordId}' was not found in project '{capture.ProjectId:D}'.");
+        if (memory.ValidationState != CognitiveMemoryValidationState.Approved ||
+            memory.StabilityState is not (CognitiveMemoryStabilityState.Active or CognitiveMemoryStabilityState.Stable))
+        {
+            throw new InvalidOperationException($"Derived memory '{derivedMemoryRecordId}' must be approved and active before comparison review can accept it.");
+        }
+
+        return memory.Id;
+    }
 
     private static async Task<CognitiveMemoryKnowledgeRegionRecord> EnsureKnowledgeRegionAsync(
         AppDbContext dbContext,

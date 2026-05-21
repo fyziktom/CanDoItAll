@@ -72,10 +72,14 @@ public static class CognitiveMemoryModuleServiceCollectionExtensions
         services.TryAddScoped<ICognitiveMemoryReviewUiService, CognitiveMemoryReviewUiService>();
         services.TryAddScoped<ICognitiveMemoryQualityDiagnosticsService, CognitiveMemoryQualityDiagnosticsService>();
         services.TryAddSingleton<ICognitiveMemoryClusterSemanticSimilarityProvider>(CognitiveMemoryAliasClusterSemanticSimilarityProvider.Instance);
+        services.TryAddSingleton<ICognitiveMemoryApproximateClusterCandidateProvider>(provider => new CognitiveMemoryEmbeddingBackedApproximateClusterCandidateProvider(
+            provider.GetRequiredService<ICognitiveMemoryClusterSemanticSimilarityProvider>(),
+            provider.GetRequiredService<CognitiveMemoryQualityAlgorithmOptions>()));
         services.TryAddSingleton<ICognitiveMemoryClusterKeyExtractor>(CognitiveMemoryClusterKeyExtractor.Instance);
         services.TryAddSingleton<ICognitiveMemoryCandidatePairSelector>(provider => new CognitiveMemoryCandidatePairSelector(
             provider.GetRequiredService<ICognitiveMemoryClusterSemanticSimilarityProvider>(),
-            provider.GetRequiredService<CognitiveMemoryQualityAlgorithmOptions>()));
+            provider.GetRequiredService<CognitiveMemoryQualityAlgorithmOptions>(),
+            provider.GetRequiredService<ICognitiveMemoryApproximateClusterCandidateProvider>()));
         services.TryAddScoped<ICognitiveMemoryClusterPlanner>(provider => new CognitiveMemoryClusterPlanner(
             provider.GetRequiredService<IDbContextFactory<AppDbContext>>(),
             provider.GetRequiredService<IClock>(),
@@ -100,6 +104,7 @@ public static class CognitiveMemoryModuleServiceCollectionExtensions
         services.TryAddScoped<ICognitiveMemoryProbeService, CognitiveMemoryProbeService>();
         services.TryAddSingleton<ICognitiveMemoryProfessorTeachingExtractor>(CognitiveMemoryProfessorTeachingExtractor.Instance);
         services.TryAddScoped<ICognitiveMemoryProfessorAssimilationEvaluator, CognitiveMemoryProfessorAssimilationEvaluator>();
+        services.TryAddScoped<ICognitiveMemoryProfessorAcceptedUseSignalEmitter, CognitiveMemoryProfessorAcceptedUseSignalEmitter>();
         services.TryAddScoped<ICognitiveMemoryCuratorConversationService, CognitiveMemoryCuratorConversationService>();
         services.TryAddScoped<ICognitiveMemoryProfessorAnchorService, CognitiveMemoryProfessorAnchorService>();
         services.TryAddScoped<ICognitiveMemorySelfModelStore, CognitiveMemorySelfModelStore>();

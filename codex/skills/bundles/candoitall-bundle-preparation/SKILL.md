@@ -36,12 +36,13 @@ Turn messy inputs into a bundle that an implementation agent can execute without
 9. Mark the critical foundation subbundles whose correctness unlocks later phases or would invalidate downstream proof if they are wrong.
 10. For every critical subbundle, add a Semantic Adequacy Gate requirement covering shallow-pass trap, adversarial negative proof, semantic positive proof, anti-stub audit, and raw-note literal closure.
 11. For every critical subbundle, require an artifact-backed proof manifest under `proof/SBxx/manifest.md` with changed-file hashes, command transcript paths, source assertions, anti-stub audit output, and any required browser, host, downstream smoke, or red-team artifacts.
-12. Write reusable implementation and QA prompts under `shared-prompts`.
-13. Pre-create browser-validation logging instructions for each subbundle and seed the execution report with browser analytics and subbundle gate sections.
-14. Complete traceability so every requirement points to at least one concrete bundle file and one owning subbundle.
-15. Run `scripts/validate_bundle.py --stage prepared` before declaring the bundle ready.
-16. Run `candoitall-bundle-validator` as the readiness gate and repair the bundle until it passes.
-17. Finish the self-review from QA, architect, and manager perspectives. Do not mark the bundle ready while any of those three reviews is incomplete or inconclusive.
+12. When a critical subbundle names a new production signal, state, record, or event, require a `## Production Behavior Artifact Matrix` in both `proof/SBxx/manifest.md` and `proof/SBxx/semantic-invariants.*` with producer, consumer, lifecycle, and negative-test citations.
+13. Write reusable implementation and QA prompts under `shared-prompts`.
+14. Pre-create browser-validation logging instructions for each subbundle and seed the execution report with browser analytics and subbundle gate sections.
+15. Complete traceability so every requirement points to at least one concrete bundle file and one owning subbundle.
+16. Run `scripts/validate_bundle.py --stage prepared` before declaring the bundle ready.
+17. Run `candoitall-bundle-validator` as the readiness gate and repair the bundle until it passes.
+18. Finish the self-review from QA, architect, and manager perspectives. Do not mark the bundle ready while any of those three reviews is incomplete or inconclusive.
 
 ## Bundle Contract
 
@@ -164,6 +165,8 @@ When the likely implementation loop includes repeated test churn:
 - For UI work, require that the bundle already says where the browser-validation analytics and subbundle gate results will be recorded and what counts as sufficient Playwright proof.
 - Require dependency-aware phase gates. If a later subbundle cannot safely start before earlier proof is strong, say that in the bundle instead of hoping the executor notices.
 - Require semantic proof gates for critical work. Tests that only assert non-empty output, diagnostic template markers, table rows, counts, or happy-path fixture status are not enough.
+- Production-only signals must not be manually seeded by positive tests unless the test is explicitly a migration, backfill, or validator fixture; feature proof must exercise the production emitter and lifecycle path.
+- Dream synthesis proof must not accept diagnostic evidence-count templates such as `Conclusion: ... supported by N source-backed observation(s)` as shipped memory text.
 - Require artifact-backed proof manifests for critical work. Prose-only proof, uncaptured commands, and missing manifest paths must be planned as blocking validation failures.
 - Preserve the rule from the successful packs: the bundle is a coordination artifact first, not a place to sneak in implementation work.
 - Do not silently weaken raw feedback scope during normalization. If you narrow scope, show the exception list and make the follow-up path explicit inside the bundle.
@@ -197,6 +200,7 @@ The validator is not just a folder-shape check.
 - subbundle READMEs must include `## Browser Validation Logging`, using `N/A` only when the subbundle does not affect browser-visible or host-visible proof
 - critical subbundle READMEs must require Semantic Adequacy Gate proof with shallow-pass trap, adversarial negative proof, semantic positive proof, anti-stub audit, and raw-note literal closure
 - critical subbundle READMEs must require `proof/SBxx/manifest.md` with changed-file hashes, validation transcripts, source assertions, anti-stub audit output, and red-team or verifier artifacts when the subbundle closes final quality
+- critical proof for new production signals, states, records, or events must include a production behavior artifact matrix in both the manifest and semantic invariant contract
 - feedback-profile execution reports must already include `## Status`, `## Subbundle Gate Results`, `## Browser Validation Analytics`, `## Analytics Review`, and `## Raw Note Closure`
 - if validation fails, repair the bundle before calling it ready
 

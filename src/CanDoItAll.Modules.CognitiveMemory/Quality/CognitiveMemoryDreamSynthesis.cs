@@ -46,7 +46,7 @@ public sealed partial class CognitiveMemoryDreamClaimSynthesizer : ICognitiveMem
     public string Synthesize(CognitiveMemoryDreamClaimSynthesisRequest request)
     {
         var claims = request.SourceClaims
-            .Select(NormalizeClaim)
+            .Select(NormalizeClaimSourceMapText)
             .Where(claim => !string.IsNullOrWhiteSpace(claim))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
@@ -64,7 +64,7 @@ public sealed partial class CognitiveMemoryDreamClaimSynthesizer : ICognitiveMem
         var caveat = BuildCaveat(slots);
 
         return CognitiveMemoryQualityText.TrimText(
-            $"Conclusion: {conclusion}{Environment.NewLine}Support: {support}{Environment.NewLine}Condition: {condition}{Environment.NewLine}Caveat: {caveat}",
+            $"Claim: {conclusion}{Environment.NewLine}Evidence: {support}{Environment.NewLine}Condition: {condition}{Environment.NewLine}Caveat: {caveat}",
             1200);
     }
 
@@ -73,6 +73,9 @@ public sealed partial class CognitiveMemoryDreamClaimSynthesizer : ICognitiveMem
         var normalized = WhitespaceRegex().Replace(claim.Trim().TrimEnd('.'), " ");
         return CognitiveMemoryQualityText.TrimText(normalized, 1200);
     }
+
+    internal static string NormalizeClaimSourceMapText(string claim)
+        => NormalizeClaim(claim);
 
     private static string BuildConclusion(
         IReadOnlyList<CognitiveMemoryDreamClaimSlots> slots,
@@ -85,7 +88,7 @@ public sealed partial class CognitiveMemoryDreamClaimSynthesizer : ICognitiveMem
             .ToArray();
         if (subjectLabels.Length == 1)
         {
-            return EnsureSentence($"{subjectLabels[0]} is supported by {claims.Count} source-backed observation(s)");
+            return EnsureSentence($"{subjectLabels[0]} is consistently described across the mapped source claims");
         }
 
         return EnsureSentence($"The source claims stay separated across {subjectLabels.Length} subject(s): {JoinPhrases(subjectLabels)}");

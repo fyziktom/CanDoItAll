@@ -1,0 +1,6 @@
+Command: python validate_bundle.py production-artifact-consumer-only-accepted-use --stage completed
+WorkingDirectory: C:\repositories\CanDoItAll
+Test: FakeProof.AcceptedUseConsumerOnly
+Invariant: FAKE-ACCEPTED-USE-01
+Output: old validator accepted consumer-only accepted-use proof
+ExitCode: 0

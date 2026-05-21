@@ -1,0 +1,7 @@
+Source assertion audit for SB07:
+
+- `repo://src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryClusterFormation.cs` defines `CognitiveMemoryApproximateClusterCandidateRequest`, `CognitiveMemoryApproximateClusterCandidateResult`, and `ICognitiveMemoryApproximateClusterCandidateProvider`.
+- Request/result include `ContinuationCursor`, `EmbeddingProfileId`, skipped pair count, and `ApproximateCandidatePairsGenerated`.
+- `CognitiveMemoryEmbeddingBackedApproximateClusterCandidateProvider` extracts semantic signals, deduplicates normalized pair keys, enforces scope, applies semantic thresholding, and respects `MaxPairs`.
+- `CognitiveMemoryCandidatePairSelector` delegates approximate pair discovery to the provider.
+- `repo://src/CanDoItAll.Modules.CognitiveMemory/CognitiveMemoryModuleServiceCollectionExtensions.cs` registers the provider and passes it into the selector.

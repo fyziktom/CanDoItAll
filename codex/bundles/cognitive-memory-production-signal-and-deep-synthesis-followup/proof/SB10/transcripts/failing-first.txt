@@ -1,0 +1,17 @@
+Command: Read SB02 failing-first corpus for SB10 inherited red baseline
+WorkingDirectory: C:\repositories\CanDoItAll
+Test: SB10 inherited failing-first corpus
+Invariant: SB10-END-TO-END-LIFECYCLE-01
+Invariant: SB10-NO-MANUAL-ACCEPTED-USE-SEED-02
+Output:
+SB10 inherits the SB02 failing-first corpus for each production gap:
+
+- Accepted-use producer and scheduled assimilation were absent.
+- Comparison review resolution was absent.
+- Czech Q&A professor capture produced no anchor.
+- Dream synthesis/provenance were shallow.
+- Approximate provider boundary was absent.
+- Recall synthesis lacked real query/intent.
+
+Exit code basis: `bundle://proof/SB02/transcripts/failing-first.txt` records the non-zero seven-test baseline before production changes.
+ExitCode: 1

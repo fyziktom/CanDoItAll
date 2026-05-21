@@ -1,0 +1,7 @@
+Source assertion audit for SB05:
+
+- `repo://src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryProfessorAnchorExtraction.cs` adds Czech lead-ins: `proc/proč`, `jak`, `kdy`, `muze/může`, `mela/měla`.
+- Teaching signals include Czech correction, scope, approval, example, and counterexample terms.
+- `NormalizeForSearch` strips combining diacritics and lowercases only for matching.
+- `NormalizeText` remains the stored/display text path, preserving original source utterances.
+- `HasProfessorTeachingIntent`, `ResolveCaptureKind`, `ExtractClaims`, and `ResolveConfidence` use the normalized matcher.

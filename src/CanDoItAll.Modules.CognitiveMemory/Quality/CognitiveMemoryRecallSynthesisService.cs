@@ -30,12 +30,14 @@ public sealed class CognitiveMemoryRecallSynthesisService(
         }
 
         var aggregateClaimIds = await LoadAggregateClaimIdsAsync(selectedSections, cancellationToken);
+        var queryText = ResolveSynthesisQueryText(request);
         var composition = briefComposer.Compose(new CognitiveMemoryRecallBriefComposerRequest(
-            $"{request.RecallResult.ContextPack.Title} {request.RecallResult.ContextPack.Summary}",
-            selectedSections,
-            aggregateClaimIds,
-            request.PolicyContext,
-            request.MaxStatements));
+            QueryText: queryText,
+            SelectedSections: selectedSections,
+            AggregateClaimIds: aggregateClaimIds,
+            PolicyContext: request.PolicyContext,
+            MaxStatements: request.MaxStatements,
+            Intent: request.Intent));
         warnings.AddRange(composition.Warnings);
         var statements = composition.Statements;
         var brief = composition.Brief;
@@ -168,4 +170,18 @@ public sealed class CognitiveMemoryRecallSynthesisService(
 
     private static int CountPersistedSourceMaps(CognitiveMemorySynthesizedRecallStatement statement)
         => statement.SourceRefs.Count * Math.Max(1, statement.AggregateClaimIds.Count);
+
+    private static string ResolveSynthesisQueryText(CognitiveMemoryRecallSynthesisRequest request)
+    {
+        if (!string.IsNullOrWhiteSpace(request.QueryText))
+        {
+            return request.QueryText.Trim();
+        }
+
+        return string.Join(
+            ' ',
+            new[] { request.RecallResult.ContextPack.Title, request.RecallResult.ContextPack.Summary }
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Select(value => value.Trim()));
+    }
 }

@@ -1,0 +1,11 @@
+SB09 is a maintainability-gate subbundle after the behavior red/green work.
+
+Inherited failing-first baseline:
+- SB03: missing accepted-use producer and scheduled assimilation.
+- SB04: missing comparison resolver and audit path.
+- SB05: Czech Q&A capture returned no anchor.
+- SB06: dream text/provenance were shallow.
+- SB07: approximate provider boundary was absent.
+- SB08: recall synthesis lacked real query/intent.
+
+Exit code basis: each inherited behavior gap had non-zero SB02 baseline proof under `bundle://proof/SB02/transcripts/failing-first.txt`. SB09 did not introduce a separate behavior-red test because it is constrained to maintainability around the now-green paths.

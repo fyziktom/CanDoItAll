@@ -265,11 +265,7 @@ public sealed class CognitiveMemoryDreamConsolidationService(
         foreach (var claimGroup in BuildClaimGroups(claimUnits).Take(MaxAggregateClaims))
         {
             var aggregateClaimText = SynthesizeClaimGroupText(request.Mode, claimGroup);
-            var aggregateSourceMaps = claimGroup.Units
-                .SelectMany(unit => unit.SourceMaps)
-                .GroupBy(sourceMap => new { sourceMap.SourceMemoryRecordId, sourceMap.SourceItemId, sourceMap.EvidenceAnchorId, sourceMap.Direction })
-                .Select(group => group.First())
-                .ToArray();
+            var aggregateSourceMaps = CreateClaimSpecificSourceMaps(claimGroup);
             if (string.IsNullOrWhiteSpace(aggregateClaimText) || aggregateSourceMaps.Length == 0)
             {
                 continue;
@@ -407,6 +403,44 @@ public sealed class CognitiveMemoryDreamConsolidationService(
 
         return maps;
     }
+
+    private static CognitiveMemoryDreamAggregateSourceMap[] CreateClaimSpecificSourceMaps(
+        DreamClaimGroup claimGroup)
+    {
+        var maps = new List<CognitiveMemoryDreamAggregateSourceMap>();
+        var seen = new HashSet<(Guid SourceMemoryRecordId, Guid? SourceItemId, Guid? EvidenceAnchorId, CognitiveMemoryEvidenceDirection Direction)>();
+        foreach (var unit in claimGroup.Units
+            .OrderBy(unit => unit.Record.Title, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(unit => unit.ClaimText, StringComparer.OrdinalIgnoreCase))
+        {
+            foreach (var sourceMap in unit.SourceMaps)
+            {
+                if (!ClaimSourceMapSupportsUnit(claimGroup, unit, sourceMap))
+                {
+                    continue;
+                }
+
+                var key = (
+                    sourceMap.SourceMemoryRecordId.Value,
+                    sourceMap.SourceItemId?.Value,
+                    sourceMap.EvidenceAnchorId?.Value,
+                    sourceMap.Direction);
+                if (seen.Add(key))
+                {
+                    maps.Add(sourceMap);
+                }
+            }
+        }
+
+        return maps.ToArray();
+    }
+
+    private static bool ClaimSourceMapSupportsUnit(
+        DreamClaimGroup claimGroup,
+        DreamClaimUnit unit,
+        CognitiveMemoryDreamAggregateSourceMap sourceMap)
+        => sourceMap.SourceMemoryRecordId.Value == unit.Record.Id &&
+           string.Equals(unit.Signature, claimGroup.Signature, StringComparison.Ordinal);
 
     private static async Task<IReadOnlyList<CognitiveMemoryDreamAggregateCandidate>> LoadCandidateContractsAsync(
         AppDbContext dbContext,

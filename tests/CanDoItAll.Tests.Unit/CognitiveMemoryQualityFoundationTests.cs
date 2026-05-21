@@ -673,6 +673,58 @@ public sealed class CognitiveMemoryQualityFoundationTests
         Assert.DoesNotContain("Cluster quality:", candidate.CanonicalText, StringComparison.Ordinal);
         Assert.DoesNotContain("Shared signals:", candidate.CanonicalText, StringComparison.Ordinal);
         Assert.DoesNotContain("source-backed conclusions", candidate.CanonicalText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("source-backed observation", candidate.CanonicalText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void SemanticInvariant_DreamConsolidationCreatesClaimSpecificSourceMaps()
+    {
+        var consolidationSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.CognitiveMemory",
+            "Quality",
+            "CognitiveMemoryDreamConsolidationService.cs");
+        var synthesisSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.CognitiveMemory",
+            "Quality",
+            "CognitiveMemoryDreamSynthesis.cs");
+
+        Assert.Contains("CreateClaimSpecificSourceMaps", consolidationSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelectMany(unit => unit.SourceMaps)", consolidationSource, StringComparison.Ordinal);
+        Assert.Contains("ClaimSourceMap", synthesisSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SemanticInvariant_ClusterDiscoveryHasEmbeddingBackedApproximateCandidateProvider()
+    {
+        var qualitySource = ReadRepositoryFiles("src", "CanDoItAll.Modules.CognitiveMemory", "Quality");
+
+        Assert.Contains("ICognitiveMemoryApproximateClusterCandidateProvider", qualitySource, StringComparison.Ordinal);
+        Assert.Contains("Embedding", qualitySource, StringComparison.Ordinal);
+        Assert.Contains("ContinuationCursor", qualitySource, StringComparison.Ordinal);
+        Assert.Contains("ApproximateCandidatePairsGenerated", qualitySource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SemanticInvariant_RecallSynthesisRequestCarriesRealQueryIntentAndLineage()
+    {
+        var contractsSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.CognitiveMemory",
+            "Quality",
+            "CognitiveMemoryQualityContracts.cs");
+        var synthesisSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.CognitiveMemory",
+            "Quality",
+            "CognitiveMemoryRecallSynthesisService.cs");
+
+        Assert.Contains("string QueryText", contractsSource, StringComparison.Ordinal);
+        Assert.Contains("CognitiveMemoryRecallIntentKind Intent", contractsSource, StringComparison.Ordinal);
+        Assert.Contains("request.QueryText", synthesisSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ContextPack.Title} {request.RecallResult.ContextPack.Summary", synthesisSource, StringComparison.Ordinal);
+        Assert.Contains("AggregateClaimIds", synthesisSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -2526,10 +2578,11 @@ public sealed class CognitiveMemoryQualityFoundationTests
                 "If smoke tests fail, the rollback owner must be assigned before traffic restoration."
             ]));
 
-        Assert.Contains("Conclusion:", text, StringComparison.Ordinal);
-        Assert.Contains("Support:", text, StringComparison.Ordinal);
+        Assert.Contains("Claim:", text, StringComparison.Ordinal);
+        Assert.Contains("Evidence:", text, StringComparison.Ordinal);
         Assert.Contains("Condition:", text, StringComparison.Ordinal);
         Assert.Contains("Caveat:", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Conclusion:", text, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -2889,6 +2942,41 @@ public sealed class CognitiveMemoryQualityFoundationTests
             new CognitiveMemoryPolicyProfileId("policy:test"),
             CognitiveMemoryRiskLevel.Low,
             AllowRestrictedContent: false);
+
+    private static string ReadRepositoryFile(params string[] relativePathSegments)
+    {
+        var root = FindRepositoryRoot();
+        var pathSegments = new[] { root }.Concat(relativePathSegments).ToArray();
+        return File.ReadAllText(Path.Combine(pathSegments));
+    }
+
+    private static string ReadRepositoryFiles(params string[] relativePathSegments)
+    {
+        var root = FindRepositoryRoot();
+        var pathSegments = new[] { root }.Concat(relativePathSegments).ToArray();
+        var directory = Path.Combine(pathSegments);
+        return string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(directory, "*.cs", SearchOption.AllDirectories)
+                .OrderBy(path => path, StringComparer.Ordinal)
+                .Select(File.ReadAllText));
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        var current = new DirectoryInfo(Directory.GetCurrentDirectory());
+        while (current is not null)
+        {
+            if (File.Exists(Path.Combine(current.FullName, "CanDoItAll.slnx")))
+            {
+                return current.FullName;
+            }
+
+            current = current.Parent;
+        }
+
+        throw new DirectoryNotFoundException("Could not locate repository root from the test working directory.");
+    }
 
     private static async Task<SeededMemory> SeedLinkedMemoryAsync(
         QualityFixture fixture,

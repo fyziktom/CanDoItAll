@@ -1,0 +1,5 @@
+Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~SemanticInvariant_RecallSynthesisRequestCarriesRealQueryIntentAndLineage" --no-restore
+Exit code: 1 in SB02 red baseline before production changes.
+
+Relevant baseline failure:
+- `CognitiveMemoryRecallSynthesisRequest` had no `QueryText` or `Intent`, and synthesis composed from context pack title/summary.

@@ -7,7 +7,8 @@ public sealed class CognitiveMemoryScheduledAutomationRunner(
     ICognitiveMemoryAutomationSettingsService settingsService,
     ICognitiveMemorySourceIngestionService sourceIngestionService,
     ICognitiveMemoryConsolidationEngine consolidationEngine,
-    IClock clock) : ICognitiveMemoryScheduledAutomationRunner
+    IClock clock,
+    ICognitiveMemoryProfessorAnchorService? professorAnchorService = null) : ICognitiveMemoryScheduledAutomationRunner
 {
     private const int MaximumTake = 500;
     private const int MaximumCycles = 25;
@@ -115,6 +116,19 @@ public sealed class CognitiveMemoryScheduledAutomationRunner(
                 {
                     break;
                 }
+            }
+        }
+
+        if (professorAnchorService is not null &&
+            request.ProjectId is { } projectId &&
+            cycles.Any(cycle => cycle.Status == CognitiveMemoryRunStatus.Succeeded))
+        {
+            var assimilationResults = await professorAnchorService.ScanAssimilationAsync(
+                new CognitiveMemoryProfessorAnchorAssimilationScanRequest(projectId),
+                cancellationToken);
+            if (assimilationResults.Count > 0)
+            {
+                warnings.Add($"Professor anchor assimilation scan resolved {assimilationResults.Count} anchor(s).");
             }
         }
 

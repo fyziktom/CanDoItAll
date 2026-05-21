@@ -394,6 +394,275 @@ public sealed class CognitiveMemoryAdvancedServicesTests
     }
 
     [Fact]
+    public void SemanticInvariant_AcceptedUseSignalHasProductionEmitterAndScheduledAssimilation()
+    {
+        var moduleSource = ReadRepositoryFiles("src", "CanDoItAll.Modules.CognitiveMemory");
+        var scheduledAutomationSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.CognitiveMemory",
+            "Operations",
+            "CognitiveMemoryScheduledAutomationRunner.cs");
+
+        Assert.Contains("ICognitiveMemoryProfessorAcceptedUseSignalEmitter", moduleSource, StringComparison.Ordinal);
+        Assert.Contains("CognitiveMemoryProfessorAcceptedUseSignalRequest", moduleSource, StringComparison.Ordinal);
+        Assert.Contains("SignalKind = CognitiveMemorySignalKind.ProfessorAnchorAcceptedUse", moduleSource, StringComparison.Ordinal);
+        Assert.Contains("SourceKind = CognitiveMemorySignalSourceKind.RecallTrace", moduleSource, StringComparison.Ordinal);
+        Assert.Contains("ICognitiveMemoryProfessorAnchorService", scheduledAutomationSource, StringComparison.Ordinal);
+        Assert.Contains("ScanAssimilationAsync", scheduledAutomationSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task AcceptedUseEmitter_PublishesRecallTraceSignalAndRejectsDirectCaptureMemory()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var service = CreateCuratorService(fixture);
+        var session = await service.StartAsync(new CognitiveMemoryCuratorSessionStartRequest(
+            projectId,
+            "Accepted use emitter chat",
+            Policy(projectId),
+            CognitiveMemoryCuratorRuntimeMode.DirectLlm));
+        var result = await service.RecordTurnAsync(new CognitiveMemoryCuratorTurnCaptureRequest(
+            session.Id,
+            "Remember that rollback restore needs signed release-owner approval.",
+            "I will retain that as temporary professor guidance.",
+            CognitiveMemoryCuratorRuntimeMode.DirectLlm,
+            ExplicitCaptureKind: CognitiveMemoryCuratorCaptureKind.NewKnowledge));
+        var capture = Assert.Single(result.CapturedImprovements);
+        var derivedMemoryId = await SeedDerivedProfessorMemoryAsync(
+            fixture,
+            projectId,
+            capture,
+            "Rollback restore requires signed release-owner approval before traffic returns.");
+        var recallUse = await SeedSynthesizedRecallUseAsync(fixture, projectId, derivedMemoryId, capture.EvidenceAnchorId!.Value);
+        var signalLedger = CreateSignalLedger(fixture);
+        var anchorService = new CognitiveMemoryProfessorAnchorService(fixture.Factory, fixture.Clock);
+        var emitter = new CognitiveMemoryProfessorAcceptedUseSignalEmitter(fixture.Factory, signalLedger, anchorService);
+
+        var emitted = await emitter.EmitAsync(new CognitiveMemoryProfessorAcceptedUseSignalRequest(
+            projectId,
+            Policy(projectId).ActorId,
+            Policy(projectId),
+            recallUse.RecallTraceId,
+            recallUse.SynthesisId,
+            recallUse.StatementId,
+            new CognitiveMemoryRecordId(derivedMemoryId),
+            recallUse.AcceptedOutcomeId,
+            "Workflow answer was accepted by the operator."));
+
+        var directError = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await emitter.EmitAsync(new CognitiveMemoryProfessorAcceptedUseSignalRequest(
+                projectId,
+                Policy(projectId).ActorId,
+                Policy(projectId),
+                recallUse.RecallTraceId,
+                recallUse.SynthesisId,
+                recallUse.StatementId,
+                new CognitiveMemoryRecordId(capture.AppliedMemoryRecordId!.Value),
+                Guid.NewGuid(),
+                "Direct capture memory cannot be counted as mastery.")));
+
+        await using var dbContext = fixture.Factory.CreateDbContext();
+        var signal = await dbContext.Set<CognitiveMemorySignalRecord>()
+            .SingleAsync(item => item.Id == emitted.Signal.Id);
+        var metadata = JsonSerializer.Deserialize<Dictionary<string, string>>(signal.MetadataJson)!;
+        Assert.Equal(CognitiveMemorySignalKind.ProfessorAnchorAcceptedUse, signal.SignalKind);
+        Assert.Equal(CognitiveMemorySignalSourceKind.RecallTrace, signal.SourceKind);
+        Assert.Equal(derivedMemoryId, signal.MemoryRecordId);
+        Assert.False(signal.RequiresReview);
+        Assert.Equal(recallUse.AcceptedOutcomeId.ToString("D"), metadata["acceptedOutcomeId"]);
+        Assert.Contains("direct memory", directError.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ProfessorLearningLifecycle_EnglishCaptureReviewAcceptedUseAssimilatesAndResolvesReferences()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var curator = CreateCuratorService(fixture);
+        var session = await curator.StartAsync(new CognitiveMemoryCuratorSessionStartRequest(
+            projectId,
+            "End-to-end English professor lifecycle",
+            Policy(projectId),
+            CognitiveMemoryCuratorRuntimeMode.DirectLlm));
+        await curator.RecordTurnAsync(new CognitiveMemoryCuratorTurnCaptureRequest(
+            session.Id,
+            "Why is that the wrong scope for the rollback answer?",
+            "Because the wrong scope is saying that rollback approval comes from the health check; release-owner approval is the source of truth.",
+            CognitiveMemoryCuratorRuntimeMode.DirectLlm));
+        var captureResult = await curator.RecordTurnAsync(new CognitiveMemoryCuratorTurnCaptureRequest(
+            session.Id,
+            "Can you give an example and counterexample?",
+            "Example: the release-owner approves rollback before production traffic returns. Counterexample: a health check alone is not approval.",
+            CognitiveMemoryCuratorRuntimeMode.DirectLlm));
+        var capture = Assert.Single(captureResult.CapturedImprovements);
+        var derivedMemoryId = await SeedDerivedProfessorMemoryAsync(
+            fixture,
+            projectId,
+            capture,
+            "Rollback restoration requires release-owner approval before traffic returns.",
+            independentContent: "Independent release audit confirms release-owner approval is required before production traffic returns.");
+        await SeedDreamIntegrationForDerivedMemoryAsync(
+            fixture,
+            projectId,
+            capture,
+            derivedMemoryId,
+            includeIndependentSourceMap: true);
+
+        await using (var dbContext = fixture.Factory.CreateDbContext())
+        {
+            var comparingCapture = await dbContext.Set<CognitiveMemoryCuratorCapturedImprovementRecord>().SingleAsync(item => item.Id == capture.Id);
+            comparingCapture.AnchorState = CognitiveMemoryProfessorAnchorState.Comparing;
+            await dbContext.SaveChangesAsync();
+        }
+
+        var reviewService = new CognitiveMemoryProfessorReviewService(fixture.Factory, fixture.ScoreDriver, fixture.Clock);
+        var reviewResolution = await reviewService.ResolveComparisonAsync(new CognitiveMemoryProfessorComparisonReviewResolutionRequest(
+            capture.Id,
+            CognitiveMemoryProfessorComparisonReviewOutcome.RejectComparisonReturnActive,
+            Policy(projectId).ActorId,
+            "Keep the professor anchor active until accepted-use evidence proves the derived memory."));
+        var signalLedger = CreateSignalLedger(fixture);
+        var anchorService = new CognitiveMemoryProfessorAnchorService(fixture.Factory, fixture.Clock);
+        var emitter = new CognitiveMemoryProfessorAcceptedUseSignalEmitter(fixture.Factory, signalLedger, anchorService);
+        var firstUse = await SeedSynthesizedRecallUseAsync(fixture, projectId, derivedMemoryId, capture.EvidenceAnchorId!.Value);
+        var secondUse = await SeedSynthesizedRecallUseAsync(fixture, projectId, derivedMemoryId, capture.EvidenceAnchorId.Value);
+
+        await emitter.EmitAsync(new CognitiveMemoryProfessorAcceptedUseSignalRequest(
+            projectId,
+            Policy(projectId).ActorId,
+            Policy(projectId),
+            firstUse.RecallTraceId,
+            firstUse.SynthesisId,
+            firstUse.StatementId,
+            new CognitiveMemoryRecordId(derivedMemoryId),
+            firstUse.AcceptedOutcomeId,
+            "First accepted rollout answer used the derived professor memory."));
+        var finalEmission = await emitter.EmitAsync(new CognitiveMemoryProfessorAcceptedUseSignalRequest(
+            projectId,
+            Policy(projectId).ActorId,
+            Policy(projectId),
+            secondUse.RecallTraceId,
+            secondUse.SynthesisId,
+            secondUse.StatementId,
+            new CognitiveMemoryRecordId(derivedMemoryId),
+            secondUse.AcceptedOutcomeId,
+            "Second accepted rollout answer used the derived professor memory."));
+        var resolver = new CognitiveMemoryReferenceResolver(fixture.Factory);
+        var references = await resolver.ResolveAsync(new CognitiveMemoryReferenceResolverRequest(secondUse.StatementId, Policy(projectId)));
+
+        await using var assertContext = fixture.Factory.CreateDbContext();
+        var persistedCapture = await assertContext.Set<CognitiveMemoryCuratorCapturedImprovementRecord>().SingleAsync(item => item.Id == capture.Id);
+        var acceptedUseCount = await assertContext.Set<CognitiveMemorySignalRecord>()
+            .CountAsync(signal =>
+                signal.SignalKind == CognitiveMemorySignalKind.ProfessorAnchorAcceptedUse &&
+                signal.MemoryRecordId == derivedMemoryId);
+        Assert.Equal(CognitiveMemoryProfessorAnchorState.Active, reviewResolution.AnchorState);
+        Assert.Equal(CognitiveMemoryProfessorAnchorState.Faded, persistedCapture.AnchorState);
+        Assert.Equal(derivedMemoryId, persistedCapture.AssimilatedMemoryRecordId);
+        Assert.Equal(2, acceptedUseCount);
+        Assert.Contains(finalEmission.AssimilationResults, result => result.CaptureId == capture.Id && result.AnchorState == CognitiveMemoryProfessorAnchorState.Faded);
+        var reference = Assert.Single(references.References, item => item.MemoryRecordId.Value == derivedMemoryId);
+        Assert.Equal(capture.EvidenceAnchorId.Value, reference.EvidenceAnchorId!.Value.Value);
+        Assert.Contains("curator-session", reference.Locator, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void SemanticInvariant_ProfessorComparisonReviewResolutionIsExplicitAndAudited()
+    {
+        var advancedContracts = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.CognitiveMemory",
+            "Advanced",
+            "CognitiveMemoryAdvancedContracts.cs");
+        var reviewService = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.CognitiveMemory",
+            "Advanced",
+            "CognitiveMemoryProfessorReviewService.cs");
+
+        Assert.Contains("CognitiveMemoryProfessorComparisonReviewOutcome", advancedContracts, StringComparison.Ordinal);
+        Assert.Contains("ResolveComparisonAsync", advancedContracts, StringComparison.Ordinal);
+        Assert.Contains("ResolveComparisonAsync", reviewService, StringComparison.Ordinal);
+        Assert.Contains("ProfessorAnchorLifecycleTransition", reviewService, StringComparison.Ordinal);
+        Assert.Contains("Comparing", reviewService, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ProfessorComparisonReviewResolution_ReturnsComparingAnchorToActiveAndAuditsTransition()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var curator = CreateCuratorService(fixture);
+        var session = await curator.StartAsync(new CognitiveMemoryCuratorSessionStartRequest(
+            projectId,
+            "Professor comparison resolver chat",
+            Policy(projectId),
+            CognitiveMemoryCuratorRuntimeMode.DirectLlm));
+        var result = await curator.RecordTurnAsync(new CognitiveMemoryCuratorTurnCaptureRequest(
+            session.Id,
+            "Remember that restore requires release-owner approval before traffic returns.",
+            "I will retain that as temporary professor guidance.",
+            CognitiveMemoryCuratorRuntimeMode.DirectLlm,
+            ExplicitCaptureKind: CognitiveMemoryCuratorCaptureKind.NewKnowledge));
+        var capture = Assert.Single(result.CapturedImprovements);
+        await using (var dbContext = fixture.Factory.CreateDbContext())
+        {
+            var persisted = await dbContext.Set<CognitiveMemoryCuratorCapturedImprovementRecord>().SingleAsync(item => item.Id == capture.Id);
+            persisted.AnchorState = CognitiveMemoryProfessorAnchorState.Comparing;
+            await dbContext.SaveChangesAsync();
+        }
+
+        var reviewService = new CognitiveMemoryProfessorReviewService(fixture.Factory, fixture.ScoreDriver, fixture.Clock);
+        var resolved = await reviewService.ResolveComparisonAsync(new CognitiveMemoryProfessorComparisonReviewResolutionRequest(
+            capture.Id,
+            CognitiveMemoryProfessorComparisonReviewOutcome.RejectComparisonReturnActive,
+            Policy(projectId).ActorId,
+            "Aggregate comparison needs more production support before replacing the professor anchor."));
+
+        await using var assertContext = fixture.Factory.CreateDbContext();
+        var persistedCapture = await assertContext.Set<CognitiveMemoryCuratorCapturedImprovementRecord>().SingleAsync(item => item.Id == capture.Id);
+        var auditSignals = await assertContext.Set<CognitiveMemorySignalRecord>()
+            .Where(signal => signal.SignalKind == CognitiveMemorySignalKind.ProfessorAnchorLifecycleTransition)
+            .ToListAsync();
+        var auditSignal = Assert.Single(auditSignals, signal => signal.MetadataJson.Contains(capture.Id.ToString("D"), StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(CognitiveMemoryProfessorAnchorState.Active, resolved.AnchorState);
+        Assert.Equal(CognitiveMemoryProfessorAnchorState.Active, persistedCapture.AnchorState);
+        Assert.Contains("Comparing", auditSignal.MetadataJson, StringComparison.Ordinal);
+        Assert.Contains("Active", auditSignal.MetadataJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task SemanticInvariant_CuratorCaptureEnglishQuestionAnswerAndNaturalScopeCreatesProfessorAnchor()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var service = CreateCuratorService(fixture);
+        var session = await service.StartAsync(new CognitiveMemoryCuratorSessionStartRequest(
+            projectId,
+            "English professor question-answer chat",
+            Policy(projectId),
+            CognitiveMemoryCuratorRuntimeMode.DirectLlm));
+
+        await service.RecordTurnAsync(new CognitiveMemoryCuratorTurnCaptureRequest(
+            session.Id,
+            "Why is that the wrong scope for the previous deployment answer?",
+            "Because the wrong scope is saying that rollback approval comes from the health check; release-owner approval is the source of truth.",
+            CognitiveMemoryCuratorRuntimeMode.DirectLlm));
+        var result = await service.RecordTurnAsync(new CognitiveMemoryCuratorTurnCaptureRequest(
+            session.Id,
+            "Can you give an example and counterexample?",
+            "Example: the release-owner approves rollback before production traffic returns. Counterexample: a health check alone is not approval.",
+            CognitiveMemoryCuratorRuntimeMode.DirectLlm));
+
+        var capture = Assert.Single(result.CapturedImprovements);
+        Assert.Equal(CognitiveMemoryProfessorAnchorState.Active, capture.AnchorState);
+        Assert.Contains("Example", capture.Summary, StringComparison.Ordinal);
+        Assert.Contains("Counterexample", capture.Summary, StringComparison.Ordinal);
+        Assert.Contains("wrong scope", capture.Summary, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task ProfessorAnchor_AssimilatesAndFadesOnlyAfterDerivedMemoryExists()
     {
         var fixture = CreateFixture();
@@ -1313,21 +1582,21 @@ public sealed class CognitiveMemoryAdvancedServicesTests
     }
 
     [Fact]
-    public async Task CuratorCapture_CzechNewKnowledgePhraseIsCapturedDeterministically()
+    public async Task CuratorCapture_EnglishNewKnowledgePhraseIsCapturedDeterministically()
     {
         var fixture = CreateFixture();
         var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         var service = CreateCuratorService(fixture);
         var session = await service.StartAsync(new CognitiveMemoryCuratorSessionStartRequest(
             projectId,
-            "Czech curator chat",
+            "English curator chat",
             Policy(projectId),
             CognitiveMemoryCuratorRuntimeMode.DirectLlm));
 
         var result = await service.RecordTurnAsync(new CognitiveMemoryCuratorTurnCaptureRequest(
             session.Id,
-            "Zapamatuj si, ze produkcni nasazeni vzdy vyzaduje podepsanou release branch.",
-            "Rozumim, ulozim to jako znalost projektu.",
+            "Remember that production deployment always requires a signed release branch.",
+            "I will store that as project knowledge.",
             CognitiveMemoryCuratorRuntimeMode.DirectLlm));
 
         await using var dbContext = fixture.Factory.CreateDbContext();
@@ -1335,7 +1604,7 @@ public sealed class CognitiveMemoryAdvancedServicesTests
         var memory = await dbContext.Set<CognitiveMemoryRecord>().SingleAsync();
 
         Assert.Equal(CognitiveMemoryCuratorCaptureKind.NewKnowledge, capture.CaptureKind);
-        Assert.Contains("produkcni nasazeni", memory.CanonicalText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("production deployment", memory.CanonicalText, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(CognitiveMemoryCuratorCaptureStatus.Applied, capture.Status);
     }
 
@@ -2338,6 +2607,60 @@ public sealed class CognitiveMemoryAdvancedServicesTests
         await dbContext.SaveChangesAsync();
     }
 
+    private static async Task<AcceptedRecallUseFixture> SeedSynthesizedRecallUseAsync(
+        TestFixture fixture,
+        Guid projectId,
+        Guid memoryRecordId,
+        Guid evidenceAnchorId)
+    {
+        await using var dbContext = fixture.Factory.CreateDbContext();
+        var recallTraceId = Guid.NewGuid();
+        var synthesisId = CognitiveMemorySynthesizedRecallId.New();
+        var statementId = CognitiveMemorySynthesizedStatementId.New();
+        var acceptedOutcomeId = Guid.NewGuid();
+        var evidenceAnchor = await dbContext.Set<CognitiveMemoryEvidenceAnchorRecord>()
+            .AsNoTracking()
+            .SingleAsync(anchor => anchor.Id == evidenceAnchorId);
+        dbContext.Add(new CognitiveMemorySynthesizedRecallRecord
+        {
+            Id = synthesisId.Value,
+            ProjectId = projectId,
+            RecallTraceId = recallTraceId,
+            Brief = "Operator-facing recall used derived professor memory.",
+            ReferencesShownByDefault = false,
+            StatementCount = 1,
+            SourceMapCount = 1,
+            CreatedAtUtc = fixture.Clock.GetUtcNow(),
+            ConcurrencyToken = Guid.NewGuid()
+        });
+        dbContext.Add(new CognitiveMemorySynthesizedStatementRecord
+        {
+            Id = statementId.Value,
+            SynthesisId = synthesisId.Value,
+            ProjectId = projectId,
+            Sequence = 0,
+            Text = "Rollback restore requires signed release-owner approval before traffic returns.",
+            CreatedAtUtc = fixture.Clock.GetUtcNow()
+        });
+        dbContext.Add(new CognitiveMemorySynthesizedStatementSourceMapRecord
+        {
+            SynthesisId = synthesisId.Value,
+            StatementId = statementId.Value,
+            ProjectId = projectId,
+            MemoryRecordId = memoryRecordId,
+            SourceItemId = evidenceAnchor.SourceItemId,
+            EvidenceAnchorId = evidenceAnchor.Id,
+            SourceSystem = evidenceAnchor.SourceSystem,
+            Locator = evidenceAnchor.Locator,
+            Summary = "Derived professor memory supported the accepted statement.",
+            AccessLevel = CognitiveMemoryAccessLevel.Project,
+            RedactionState = CognitiveMemoryRedactionState.Safe,
+            CreatedAtUtc = fixture.Clock.GetUtcNow()
+        });
+        await dbContext.SaveChangesAsync();
+        return new AcceptedRecallUseFixture(recallTraceId, synthesisId, statementId, acceptedOutcomeId);
+    }
+
     private static async Task SeedAcceptedProfessorUseEventsAsync(
         TestFixture fixture,
         Guid projectId,
@@ -2775,6 +3098,13 @@ public sealed class CognitiveMemoryAdvancedServicesTests
             riskLevel,
             allowRestrictedContent);
 
+    private static CognitiveMemorySignalLedger CreateSignalLedger(TestFixture fixture)
+        => new(
+            fixture.Factory,
+            new CognitiveMemoryScoreSpaceRegistry(),
+            fixture.ScoreDriver,
+            fixture.Clock);
+
     private static ICognitiveMemoryCuratorConversationService CreateCuratorService(
         TestFixture fixture,
         ICognitiveMemoryRecallOrchestrator? recallOrchestrator = null,
@@ -2803,6 +3133,41 @@ public sealed class CognitiveMemoryAdvancedServicesTests
             json,
             CognitiveMemoryJsonSerializerContext.Default.GuidArray) ?? [];
 
+    private static string ReadRepositoryFile(params string[] relativePathSegments)
+    {
+        var root = FindRepositoryRoot();
+        var pathSegments = new[] { root }.Concat(relativePathSegments).ToArray();
+        return File.ReadAllText(Path.Combine(pathSegments));
+    }
+
+    private static string ReadRepositoryFiles(params string[] relativePathSegments)
+    {
+        var root = FindRepositoryRoot();
+        var pathSegments = new[] { root }.Concat(relativePathSegments).ToArray();
+        var directory = Path.Combine(pathSegments);
+        return string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(directory, "*.cs", SearchOption.AllDirectories)
+                .OrderBy(path => path, StringComparer.Ordinal)
+                .Select(File.ReadAllText));
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        var current = new DirectoryInfo(Directory.GetCurrentDirectory());
+        while (current is not null)
+        {
+            if (File.Exists(Path.Combine(current.FullName, "CanDoItAll.slnx")))
+            {
+                return current.FullName;
+            }
+
+            current = current.Parent;
+        }
+
+        throw new DirectoryNotFoundException("Could not locate repository root from the test working directory.");
+    }
+
     private static TestFixture CreateFixture()
     {
         AppDbContextModelRegistry.ConfigureAssemblies([typeof(CognitiveMemoryModuleAssemblyMarker).Assembly]);
@@ -2825,6 +3190,12 @@ public sealed class CognitiveMemoryAdvancedServicesTests
         TestDbContextFactory Factory,
         FixedClock Clock,
         ICognitiveMemoryScoreGeometryDriver ScoreDriver);
+
+    private sealed record AcceptedRecallUseFixture(
+        Guid RecallTraceId,
+        CognitiveMemorySynthesizedRecallId SynthesisId,
+        CognitiveMemorySynthesizedStatementId StatementId,
+        Guid AcceptedOutcomeId);
 
     private sealed class FixedClock : IClock
     {

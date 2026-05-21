@@ -721,7 +721,7 @@ public sealed class CognitiveMemoryCuratorConversationService(
             TargetConfidenceScore = request.TargetConfidenceScore is { } targetConfidence
                 ? Math.Clamp(targetConfidence, 0, 1)
                 : confidenceScore,
-            CaptureLanguage = ResolveCaptureLanguage(turn.UserMessage),
+            CaptureLanguage = ResolveCaptureLanguage(),
             CaptureScope = TrimText(FirstNonEmpty(request.CaptureScope, professorAnchor?.TargetScope), 500),
             Summary = TrimText(summary, MaximumSummaryLength),
             CorrectionText = TrimText(professorAnchor is null ? turn.UserMessage : CreateProfessorAnchorPayloadText(professorAnchor), MaximumCorrectionLength),
@@ -819,18 +819,18 @@ public sealed class CognitiveMemoryCuratorConversationService(
         }
 
         var message = request.UserMessage.Trim();
-        if (ContainsAny(message, ["wrong scope", "wrong context", "different scope", "narrow that", "only applies to", "spatny rozsah", "jiny kontext", "plati pouze"]))
+        if (ContainsAny(message, ["wrong scope", "wrong context", "different scope", "narrow that", "only applies to"]))
         {
             return CognitiveMemoryCuratorCaptureKind.WrongScope;
         }
 
-        if (ContainsAny(message, ["not correct", "incorrect", "wrong", "right version", "actually it is", "actually, it is", "different than", "instead", "neni spravne", "neni pravda", "ve skutecnosti", "spravne je"]) ||
-            affectedMemoryRecordIds.Count > 0 && ContainsAny(message, ["actually", "no,", "ne,"]))
+        if (ContainsAny(message, ["not correct", "incorrect", "wrong", "right version", "actually it is", "actually, it is", "different than", "instead"]) ||
+            affectedMemoryRecordIds.Count > 0 && ContainsAny(message, ["actually", "no,"]))
         {
             return CognitiveMemoryCuratorCaptureKind.Correction;
         }
 
-        if (ContainsAny(message, ["remember", "add this", "learn this", "store this", "save this", "you should know", "memory should know", "zapamatuj si", "uloz si", "nauc se", "mela bys vedet"]))
+        if (ContainsAny(message, ["remember", "add this", "learn this", "store this", "save this", "you should know", "memory should know"]))
         {
             return CognitiveMemoryCuratorCaptureKind.NewKnowledge;
         }
@@ -1154,15 +1154,7 @@ public sealed class CognitiveMemoryCuratorConversationService(
             "add this: ",
             "learn this: ",
             "store this: ",
-            "save this: ",
-            "zapamatuj si, ze ",
-            "zapamatuj si, že ",
-            "zapamatuj si ze ",
-            "zapamatuj si že ",
-            "uloz si, ze ",
-            "ulož si, že ",
-            "nauc se, ze ",
-            "nauč se, že "
+            "save this: "
         })
         {
             if (value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
@@ -1174,10 +1166,8 @@ public sealed class CognitiveMemoryCuratorConversationService(
         return value;
     }
 
-    private static string ResolveCaptureLanguage(string userMessage)
-        => ContainsAny(userMessage, ["zapamatuj", "uloz", "ulož", "nauc", "nauč", "neni", "není", "spravne", "správně", "skutecnosti", "skutečnosti"])
-            ? "cs"
-            : "en";
+    private static string ResolveCaptureLanguage()
+        => "en";
 
     private static string SerializeGuidList(IReadOnlyList<Guid> values)
         => JsonSerializer.Serialize(

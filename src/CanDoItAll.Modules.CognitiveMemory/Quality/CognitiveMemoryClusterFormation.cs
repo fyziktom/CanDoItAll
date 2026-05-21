@@ -24,6 +24,20 @@ internal sealed record CognitiveMemoryClusterCandidatePairSelection(
     int ApproximatePairsGenerated,
     int SkippedPairs);
 
+internal sealed record CognitiveMemoryApproximateClusterCandidateRequest(
+    IReadOnlyList<CognitiveMemoryClusterRecordEntry> Records,
+    IReadOnlyList<IReadOnlyList<CognitiveMemoryClusterRecordEntry>> FanoutGroups,
+    CognitiveMemoryClusterPlanningScope Scope,
+    int MaxPairs,
+    string? ContinuationCursor = null,
+    string EmbeddingProfileId = "lexical-signal-embedding-v1");
+
+internal sealed record CognitiveMemoryApproximateClusterCandidateResult(
+    IReadOnlyList<CognitiveMemoryClusterCandidatePair> Pairs,
+    int SkippedPairs,
+    string? ContinuationCursor,
+    int ApproximateCandidatePairsGenerated);
+
 internal sealed record CognitiveMemoryClusterSemanticSimilarity(
     double Score,
     IReadOnlyList<string> SharedSignals);
@@ -43,6 +57,12 @@ internal interface ICognitiveMemoryCandidatePairSelector
         IReadOnlyList<CognitiveMemoryClusterRecordEntry> records,
         IReadOnlySet<string> requiredPairKeys,
         CognitiveMemoryClusterPlanningScope scope);
+}
+
+internal interface ICognitiveMemoryApproximateClusterCandidateProvider
+{
+    CognitiveMemoryApproximateClusterCandidateResult FindApproximatePairs(
+        CognitiveMemoryApproximateClusterCandidateRequest request);
 }
 
 internal interface ICognitiveMemoryClusterSemanticSimilarityProvider
@@ -143,21 +163,137 @@ internal sealed class CognitiveMemoryClusterKeyExtractor : ICognitiveMemoryClust
         => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
 }
 
+internal sealed class CognitiveMemoryEmbeddingBackedApproximateClusterCandidateProvider : ICognitiveMemoryApproximateClusterCandidateProvider
+{
+    private readonly ICognitiveMemoryClusterSemanticSimilarityProvider semanticSimilarityProvider;
+    private readonly CognitiveMemoryQualityClusterAlgorithmOptions options;
+
+    public CognitiveMemoryEmbeddingBackedApproximateClusterCandidateProvider(
+        ICognitiveMemoryClusterSemanticSimilarityProvider semanticSimilarityProvider,
+        CognitiveMemoryQualityAlgorithmOptions? algorithmOptions = null)
+    {
+        this.semanticSimilarityProvider = semanticSimilarityProvider ?? throw new ArgumentNullException(nameof(semanticSimilarityProvider));
+        options = (algorithmOptions ?? new CognitiveMemoryQualityAlgorithmOptions()).Cluster;
+    }
+
+    public CognitiveMemoryApproximateClusterCandidateResult FindApproximatePairs(
+        CognitiveMemoryApproximateClusterCandidateRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var pairs = new List<CognitiveMemoryClusterCandidatePair>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var skipped = 0;
+        foreach (var fanoutGroup in request.FanoutGroups)
+        {
+            AddSemanticSignalPairs(fanoutGroup, request.Scope, request.MaxPairs, pairs, seen, ref skipped);
+            if (pairs.Count >= request.MaxPairs)
+            {
+                return ToResult(request.ContinuationCursor, pairs, skipped);
+            }
+        }
+
+        AddSemanticSignalPairs(request.Records, request.Scope, request.MaxPairs, pairs, seen, ref skipped);
+        return ToResult(request.ContinuationCursor, pairs, skipped);
+    }
+
+    private void AddSemanticSignalPairs(
+        IReadOnlyList<CognitiveMemoryClusterRecordEntry> records,
+        CognitiveMemoryClusterPlanningScope scope,
+        int maxPairs,
+        List<CognitiveMemoryClusterCandidatePair> pairs,
+        HashSet<string> seen,
+        ref int skipped)
+    {
+        var signalEntries = records
+            .Select(record => new
+            {
+                Record = record,
+                Signals = semanticSimilarityProvider.ExtractSignals(record)
+            })
+            .ToArray();
+        var rareSignalGroups = signalEntries
+            .SelectMany(entry => entry.Signals.Select(signal => new { entry.Record, Signal = signal }))
+            .GroupBy(entry => entry.Signal, StringComparer.Ordinal)
+            .Where(group => group.Count() >= 2 && group.Count() <= options.MaxFallbackSignalFanout)
+            .OrderBy(group => group.Key, StringComparer.Ordinal);
+        foreach (var signalGroup in rareSignalGroups)
+        {
+            var groupedRecords = signalGroup
+                .Select(entry => entry.Record)
+                .DistinctBy(record => record.Record.Id)
+                .OrderBy(record => record.Record.Id)
+                .ToArray();
+            for (var leftIndex = 0; leftIndex < groupedRecords.Length - 1; leftIndex++)
+            {
+                for (var rightIndex = leftIndex + 1; rightIndex < groupedRecords.Length; rightIndex++)
+                {
+                    var left = groupedRecords[leftIndex];
+                    var right = groupedRecords[rightIndex];
+                    if (!AllowsCrossProjectPairs(scope) && left.Record.ProjectId != right.Record.ProjectId)
+                    {
+                        skipped++;
+                        continue;
+                    }
+
+                    var pairKey = NormalizePair(left.Record.Id, right.Record.Id);
+                    if (!seen.Add(pairKey))
+                    {
+                        skipped++;
+                        continue;
+                    }
+
+                    var similarity = semanticSimilarityProvider.Score(left, right);
+                    if (similarity.Score < options.SemanticFallbackThreshold)
+                    {
+                        skipped++;
+                        continue;
+                    }
+
+                    pairs.Add(new CognitiveMemoryClusterCandidatePair(left, right));
+                    if (pairs.Count >= maxPairs)
+                    {
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    private static CognitiveMemoryApproximateClusterCandidateResult ToResult(
+        string? continuationCursor,
+        IReadOnlyList<CognitiveMemoryClusterCandidatePair> pairs,
+        int skipped)
+        => new(pairs, skipped, continuationCursor, pairs.Count);
+
+    private static string NormalizePair(Guid first, Guid second)
+        => first.CompareTo(second) <= 0
+            ? $"{first:D}:{second:D}"
+            : $"{second:D}:{first:D}";
+
+    private static bool AllowsCrossProjectPairs(CognitiveMemoryClusterPlanningScope scope)
+        => scope is CognitiveMemoryClusterPlanningScope.CrossProject
+            or CognitiveMemoryClusterPlanningScope.PolicyConstrainedCrossProject;
+}
+
 internal sealed class CognitiveMemoryCandidatePairSelector : ICognitiveMemoryCandidatePairSelector
 {
     public static readonly CognitiveMemoryCandidatePairSelector Default = new(
         CognitiveMemoryAliasClusterSemanticSimilarityProvider.Instance,
         new CognitiveMemoryQualityAlgorithmOptions());
 
-    private readonly ICognitiveMemoryClusterSemanticSimilarityProvider semanticSimilarityProvider;
+    private readonly ICognitiveMemoryApproximateClusterCandidateProvider approximateCandidateProvider;
     private readonly CognitiveMemoryQualityClusterAlgorithmOptions options;
 
     public CognitiveMemoryCandidatePairSelector(
         ICognitiveMemoryClusterSemanticSimilarityProvider semanticSimilarityProvider,
-        CognitiveMemoryQualityAlgorithmOptions? algorithmOptions = null)
+        CognitiveMemoryQualityAlgorithmOptions? algorithmOptions = null,
+        ICognitiveMemoryApproximateClusterCandidateProvider? approximateCandidateProvider = null)
     {
-        this.semanticSimilarityProvider = semanticSimilarityProvider ?? throw new ArgumentNullException(nameof(semanticSimilarityProvider));
-        options = (algorithmOptions ?? new CognitiveMemoryQualityAlgorithmOptions()).Cluster;
+        ArgumentNullException.ThrowIfNull(semanticSimilarityProvider);
+        var resolvedOptions = algorithmOptions ?? new CognitiveMemoryQualityAlgorithmOptions();
+        options = resolvedOptions.Cluster;
+        this.approximateCandidateProvider = approximateCandidateProvider ??
+            new CognitiveMemoryEmbeddingBackedApproximateClusterCandidateProvider(semanticSimilarityProvider, resolvedOptions);
     }
 
     public CognitiveMemoryClusterCandidatePairSelection SelectCandidatePairs(
@@ -203,12 +339,7 @@ internal sealed class CognitiveMemoryCandidatePairSelector : ICognitiveMemoryCan
             return pairs.ToSelection();
         }
 
-        if (!AddFallbackPairs(overFanoutGroups, pairs))
-        {
-            return pairs.ToSelection();
-        }
-
-        if (!AddApproximateSemanticPairs(records, pairs))
+        if (!AddApproximatePairs(records, overFanoutGroups, scope, pairs))
         {
             return pairs.ToSelection();
         }
@@ -264,109 +395,31 @@ internal sealed class CognitiveMemoryCandidatePairSelector : ICognitiveMemoryCan
         return true;
     }
 
-    private bool AddFallbackPairs(
+    private bool AddApproximatePairs(
+        IReadOnlyList<CognitiveMemoryClusterRecordEntry> records,
         IReadOnlyList<IReadOnlyList<CognitiveMemoryClusterRecordEntry>> overFanoutGroups,
+        CognitiveMemoryClusterPlanningScope scope,
         CandidatePairAccumulator pairs)
     {
-        var seenGroupSignatures = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var groupRecords in overFanoutGroups)
+        var result = approximateCandidateProvider.FindApproximatePairs(
+            new CognitiveMemoryApproximateClusterCandidateRequest(
+                records,
+                overFanoutGroups,
+                scope,
+                options.MaxCandidatePairs,
+                ContinuationCursor: null));
+        pairs.Skip(result.SkippedPairs);
+        foreach (var pair in result.Pairs)
         {
-            var signature = string.Join('|', groupRecords.Select(record => record.Record.Id).OrderBy(recordId => recordId));
-            if (!seenGroupSignatures.Add(signature))
+            if (pairs.Contains(pair.Left, pair.Right))
             {
+                pairs.Skip();
                 continue;
             }
 
-            var signalEntries = groupRecords
-                .Select(record => new
-                {
-                    Record = record,
-                    Signals = semanticSimilarityProvider.ExtractSignals(record)
-                })
-                .ToArray();
-            var rareSignalGroups = signalEntries
-                .SelectMany(entry => entry.Signals.Select(signal => new { entry.Record, Signal = signal }))
-                .GroupBy(entry => entry.Signal, StringComparer.Ordinal)
-                .Where(group => group.Count() >= 2 && group.Count() <= options.MaxFallbackSignalFanout)
-                .OrderBy(group => group.Key, StringComparer.Ordinal);
-            foreach (var signalGroup in rareSignalGroups)
+            if (!pairs.TryAdd(pair.Left, pair.Right, CognitiveMemoryCandidatePairDiscoveryKind.Approximate))
             {
-                var records = signalGroup
-                    .Select(entry => entry.Record)
-                    .DistinctBy(record => record.Record.Id)
-                    .OrderBy(record => record.Record.Id)
-                    .ToArray();
-                for (var leftIndex = 0; leftIndex < records.Length - 1; leftIndex++)
-                {
-                    for (var rightIndex = leftIndex + 1; rightIndex < records.Length; rightIndex++)
-                    {
-                        var left = records[leftIndex];
-                        var right = records[rightIndex];
-                        var similarity = semanticSimilarityProvider.Score(left, right);
-                        if (similarity.Score < options.SemanticFallbackThreshold)
-                        {
-                            pairs.Skip();
-                            continue;
-                        }
-
-                        if (!pairs.TryAdd(left, right, CognitiveMemoryCandidatePairDiscoveryKind.Approximate))
-                        {
-                            return false;
-                        }
-                    }
-                }
-            }
-        }
-
-        return true;
-    }
-
-    private bool AddApproximateSemanticPairs(
-        IReadOnlyList<CognitiveMemoryClusterRecordEntry> records,
-        CandidatePairAccumulator pairs)
-    {
-        var signalEntries = records
-            .Select(record => new
-            {
-                Record = record,
-                Signals = semanticSimilarityProvider.ExtractSignals(record)
-            })
-            .ToArray();
-        var rareSignalGroups = signalEntries
-            .SelectMany(entry => entry.Signals.Select(signal => new { entry.Record, Signal = signal }))
-            .GroupBy(entry => entry.Signal, StringComparer.Ordinal)
-            .Where(group => group.Count() >= 2 && group.Count() <= options.MaxFallbackSignalFanout)
-            .OrderBy(group => group.Key, StringComparer.Ordinal);
-        foreach (var signalGroup in rareSignalGroups)
-        {
-            var groupedRecords = signalGroup
-                .Select(entry => entry.Record)
-                .DistinctBy(record => record.Record.Id)
-                .OrderBy(record => record.Record.Id)
-                .ToArray();
-            for (var leftIndex = 0; leftIndex < groupedRecords.Length - 1; leftIndex++)
-            {
-                for (var rightIndex = leftIndex + 1; rightIndex < groupedRecords.Length; rightIndex++)
-                {
-                    var left = groupedRecords[leftIndex];
-                    var right = groupedRecords[rightIndex];
-                    if (pairs.Contains(left, right))
-                    {
-                        continue;
-                    }
-
-                    var similarity = semanticSimilarityProvider.Score(left, right);
-                    if (similarity.Score < options.SemanticFallbackThreshold)
-                    {
-                        pairs.Skip();
-                        continue;
-                    }
-
-                    if (!pairs.TryAdd(left, right, CognitiveMemoryCandidatePairDiscoveryKind.Approximate))
-                    {
-                        return false;
-                    }
-                }
+                return false;
             }
         }
 
@@ -441,6 +494,14 @@ internal sealed class CognitiveMemoryCandidatePairSelector : ICognitiveMemoryCan
             => pairs.ContainsKey(NormalizePair(left.Record.Id, right.Record.Id));
 
         public void Skip() => SkippedPairs++;
+
+        public void Skip(int count)
+        {
+            if (count > 0)
+            {
+                SkippedPairs += count;
+            }
+        }
 
         public bool TryAdd(
             CognitiveMemoryClusterRecordEntry left,
