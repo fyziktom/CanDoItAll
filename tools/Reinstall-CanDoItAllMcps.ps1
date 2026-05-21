@@ -228,7 +228,8 @@ function Publish-ReleaseArtifact {
         "Release",
         "-o",
         $OutputPath,
-        "-p:UseAppHost=true"
+        "-p:UseAppHost=true",
+        "-p:CopyRepositoryTemplatesToOutput=false"
     ) -WorkingDirectory $RepoRoot
 }
 

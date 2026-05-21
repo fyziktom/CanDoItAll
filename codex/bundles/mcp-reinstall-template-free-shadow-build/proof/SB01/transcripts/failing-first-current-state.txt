@@ -1,0 +1,91 @@
+Command: powershell -NoProfile -ExecutionPolicy Bypass -File C:\repositories\CanDoItAll\tools\CanDoItAll.Mcp.DotNetWatch\Start-CanDoItAllDotNetWatchMcp.ps1 -RepoRoot C:\repositories\CanDoItAll -Configuration Release -SettingsPath C:\repositories\CanDoItAll\CanDoItAll.Mcp.DotNetWatch.settings.json -ForceRebuild -PrepareOnly
+Invariant: MCP-INSTALL-TEMPLATE-FREE
+Expectation: failing-first current state reproduces template copy long-path failure before the fix
+ExitCode: 1
+--- Output ---
+powershell.exe : 2026-05-21T12:59:13.5326407+00:00 wrapper start | repo=C:\repositories\CanDoItAll | 
+project=C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.DotNetWatch\CanDoItAll.Mcp.DotNetWatch.csproj | 
+settings=C:\repositories\CanDoItAll\CanDoItAll.Mcp.DotNetWatch.settings.json | 
+shadow=C:\repositories\CanDoItAll\.artifacts\mcp-server-shadow | 
+signature=61a20e94288b778d2d20d360b0ef4fa2f3905b281ede39bed8361fda96c5c719
+At line:2 char:257
++ ... state.txt'; & powershell -NoProfile -ExecutionPolicy Bypass -File 'C: ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (2026-05-21T12:5...8361fda96c5c719:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+2026-05-21T12:59:13.5531173+00:00 shadow build start | buildRoot=C:\repositories\CanDoItAll\.artifacts\mcp-server-shado
+w\builds\61a20e94288b778d2d20d360b0ef4fa2f3905b281ede39bed8361fda96c5c719-1779368353
+  Determining projects to restore...
+  Restored C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.DotNetWatch\CanDoItAll.Mcp.DotNetWatch.csproj (in 409 ms).
+  Restored C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.LocalRuntime\CanDoItAll.Mcp.LocalRuntime.csproj (in 409 ms).
+  Restored C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.Core\CanDoItAll.Mcp.Core.csproj (in 409 ms).
+  CanDoItAll.Mcp.Core -> C:\repositories\CanDoItAll\.artifacts\mcp-server-shadow\builds\61a20e94288b778d2d20d360b0ef4fa
+2f3905b281ede39bed8361fda96c5c719-1779368353\bin\CanDoItAll.Mcp.Core\release\CanDoItAll.Mcp.Core.dll
+C:\repositories\CanDoItAll\Directory.Build.targets(8,5): error MSB3021: Unable to copy file "C:\repositories\CanDoItAll
+\Templates\Agents\teams\visual-automation-templates\members\screenshot-review-storage-agent\instructions.md" to "C:\rep
+ositories\CanDoItAll\.artifacts\mcp-server-shadow\builds\61a20e94288b778d2d20d360b0ef4fa2f3905b281ede39bed8361fda96c5c7
+19-1779368353\bin\CanDoItAll.Mcp.Core\release\Templates\Agents\teams\visual-automation-templates\members\screenshot-rev
+iew-storage-agent\instructions.md". Path: C:\repositories\CanDoItAll\.artifacts\mcp-server-shadow\builds\61a20e94288b77
+8d2d20d360b0ef4fa2f3905b281ede39bed8361fda96c5c719-1779368353\bin\CanDoItAll.Mcp.Core\release\Templates\Agents\teams\vi
+sual-automation-templates\members\screenshot-review-storage-agent exceeds the OS max path limit. The fully qualified 
+file name must be less than 260 characters. 
+[C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.Core\CanDoItAll.Mcp.Core.csproj]
+C:\repositories\CanDoItAll\Directory.Build.targets(8,5): error MSB3021: Unable to copy file "C:\repositories\CanDoItAll
+\Templates\Agents\teams\visual-automation-templates\members\screenshot-review-storage-agent\settings.json" to "C:\repos
+itories\CanDoItAll\.artifacts\mcp-server-shadow\builds\61a20e94288b778d2d20d360b0ef4fa2f3905b281ede39bed8361fda96c5c719
+-1779368353\bin\CanDoItAll.Mcp.Core\release\Templates\Agents\teams\visual-automation-templates\members\screenshot-revie
+w-storage-agent\settings.json". Path: C:\repositories\CanDoItAll\.artifacts\mcp-server-shadow\builds\61a20e94288b778d2d
+20d360b0ef4fa2f3905b281ede39bed8361fda96c5c719-1779368353\bin\CanDoItAll.Mcp.Core\release\Templates\Agents\teams\visual
+-automation-templates\members\screenshot-review-storage-agent exceeds the OS max path limit. The fully qualified file 
+name must be less than 260 characters. [C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.Core\CanDoItAll.Mcp.Core.csproj]
+C:\repositories\CanDoItAll\Directory.Build.targets(8,5): error MSB3021: Unable to copy file "C:\repositories\CanDoItAll
+\Templates\Agents\teams\visual-automation-templates\members\screenshot-review-storage-agent\skills.json" to "C:\reposit
+ories\CanDoItAll\.artifacts\mcp-server-shadow\builds\61a20e94288b778d2d20d360b0ef4fa2f3905b281ede39bed8361fda96c5c719-1
+779368353\bin\CanDoItAll.Mcp.Core\release\Templates\Agents\teams\visual-automation-templates\members\screenshot-review-
+storage-agent\skills.json". Path: C:\repositories\CanDoItAll\.artifacts\mcp-server-shadow\builds\61a20e94288b778d2d20d3
+60b0ef4fa2f3905b281ede39bed8361fda96c5c719-1779368353\bin\CanDoItAll.Mcp.Core\release\Templates\Agents\teams\visual-aut
+omation-templates\members\screenshot-review-storage-agent exceeds the OS max path limit. The fully qualified file name 
+must be less than 260 characters. [C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.Core\CanDoItAll.Mcp.Core.csproj]
+
+Build FAILED.
+
+C:\repositories\CanDoItAll\Directory.Build.targets(8,5): error MSB3021: Unable to copy file "C:\repositories\CanDoItAll
+\Templates\Agents\teams\visual-automation-templates\members\screenshot-review-storage-agent\instructions.md" to "C:\rep
+ositories\CanDoItAll\.artifacts\mcp-server-shadow\builds\61a20e94288b778d2d20d360b0ef4fa2f3905b281ede39bed8361fda96c5c7
+19-1779368353\bin\CanDoItAll.Mcp.Core\release\Templates\Agents\teams\visual-automation-templates\members\screenshot-rev
+iew-storage-agent\instructions.md". Path: C:\repositories\CanDoItAll\.artifacts\mcp-server-shadow\builds\61a20e94288b77
+8d2d20d360b0ef4fa2f3905b281ede39bed8361fda96c5c719-1779368353\bin\CanDoItAll.Mcp.Core\release\Templates\Agents\teams\vi
+sual-automation-templates\members\screenshot-review-storage-agent exceeds the OS max path limit. The fully qualified 
+file name must be less than 260 characters. 
+[C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.Core\CanDoItAll.Mcp.Core.csproj]
+C:\repositories\CanDoItAll\Directory.Build.targets(8,5): error MSB3021: Unable to copy file "C:\repositories\CanDoItAll
+\Templates\Agents\teams\visual-automation-templates\members\screenshot-review-storage-agent\settings.json" to "C:\repos
+itories\CanDoItAll\.artifacts\mcp-server-shadow\builds\61a20e94288b778d2d20d360b0ef4fa2f3905b281ede39bed8361fda96c5c719
+-1779368353\bin\CanDoItAll.Mcp.Core\release\Templates\Agents\teams\visual-automation-templates\members\screenshot-revie
+w-storage-agent\settings.json". Path: C:\repositories\CanDoItAll\.artifacts\mcp-server-shadow\builds\61a20e94288b778d2d
+20d360b0ef4fa2f3905b281ede39bed8361fda96c5c719-1779368353\bin\CanDoItAll.Mcp.Core\release\Templates\Agents\teams\visual
+-automation-templates\members\screenshot-review-storage-agent exceeds the OS max path limit. The fully qualified file 
+name must be less than 260 characters. [C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.Core\CanDoItAll.Mcp.Core.csproj]
+C:\repositories\CanDoItAll\Directory.Build.targets(8,5): error MSB3021: Unable to copy file "C:\repositories\CanDoItAll
+\Templates\Agents\teams\visual-automation-templates\members\screenshot-review-storage-agent\skills.json" to "C:\reposit
+ories\CanDoItAll\.artifacts\mcp-server-shadow\builds\61a20e94288b778d2d20d360b0ef4fa2f3905b281ede39bed8361fda96c5c719-1
+779368353\bin\CanDoItAll.Mcp.Core\release\Templates\Agents\teams\visual-automation-templates\members\screenshot-review-
+storage-agent\skills.json". Path: C:\repositories\CanDoItAll\.artifacts\mcp-server-shadow\builds\61a20e94288b778d2d20d3
+60b0ef4fa2f3905b281ede39bed8361fda96c5c719-1779368353\bin\CanDoItAll.Mcp.Core\release\Templates\Agents\teams\visual-aut
+omation-templates\members\screenshot-review-storage-agent exceeds the OS max path limit. The fully qualified file name 
+must be less than 260 characters. [C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.Core\CanDoItAll.Mcp.Core.csproj]
+    0 Warning(s)
+    3 Error(s)
+
+Time Elapsed 00:00:04.20
+Shadow build failed with exit code 1. See C:\repositories\CanDoItAll\.mcp-state\logs\mcp-dotnetwatch-bootstrap.log.
+At C:\repositories\CanDoItAll\tools\CanDoItAll.Mcp.DotNetWatch\Start-CanDoItAllDotNetWatchMcp.ps1:458 char:17
++ ...             throw "Shadow build failed with exit code $LASTEXITCODE.  ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (Shadow build fa...-bootstrap.log.:String) [], RuntimeException
+    + FullyQualifiedErrorId : Shadow build failed with exit code 1. See C:\repositories\CanDoItAll\.mcp-state\logs\mcp 
+   -dotnetwatch-bootstrap.log.
+ 
+EXIT_CODE=1
+

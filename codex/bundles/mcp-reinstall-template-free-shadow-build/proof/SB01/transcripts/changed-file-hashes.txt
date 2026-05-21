@@ -1,0 +1,9 @@
+Command: Get-FileHash SHA256 for changed implementation files
+Invariant: MCP-INSTALL-TEMPLATE-FREE
+Expectation: changed-file hashes captured for proof manifest
+ExitCode: 0
+--- Output ---
+c23286bad616de1dd5bbcd4c1cf7872e2bcead3db1927c1dd3e79fa563a399ec  C:\repositories\CanDoItAll\Directory.Build.targets
+3acf52c27f90fe15f64655c8ad9e664e84f66067b9a91950d69207017317c645  C:\repositories\CanDoItAll\tools\Reinstall-CanDoItAllMcps.ps1
+1ab837a898c50b6914f05fbd8662907ff0bb076b799ce5990a1cd1619306150b  C:\repositories\CanDoItAll\tools\CanDoItAll.Mcp.DotNetWatch\Start-CanDoItAllDotNetWatchMcp.ps1
+

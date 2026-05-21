@@ -1,0 +1,3 @@
+# Implementation Prompt
+
+Implement `SB01` only. Read the bundle root, phase plan, traceability matrix, and subbundle README before editing. Make the smallest script/MSBuild changes that let MCP reinstall build standard Release outputs, copy only final MCP outputs into artifacts, and skip repository template copying for MCP install builds. Preserve the existing process cleanup, config updates, install manifest, shortcuts, and skill sync. Capture failing-first/current-state proof, a full passing reinstall transcript, artifact scans, source assertions, changed-file hashes, anti-stub audit, and update the execution report before closure. Stop and repair the bundle if the full reinstall path requires scope outside the documented files.
