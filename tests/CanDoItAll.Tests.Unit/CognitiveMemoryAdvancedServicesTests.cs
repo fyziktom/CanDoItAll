@@ -364,6 +364,32 @@ public sealed class CognitiveMemoryAdvancedServicesTests
     }
 
     [Fact]
+    public async Task SemanticInvariant_CuratorCaptureCzechProfessorTeachingWithoutEnglishKeywordsPreservesDiacritics()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var service = CreateCuratorService(fixture);
+        var session = await service.StartAsync(new CognitiveMemoryCuratorSessionStartRequest(
+            projectId,
+            "Ceske uceni profesora",
+            Policy(projectId),
+            CognitiveMemoryCuratorRuntimeMode.DirectLlm));
+
+        var result = await service.RecordTurnAsync(new CognitiveMemoryCuratorTurnCaptureRequest(
+            session.Id,
+            "U nasazení platí: schválení vlastníkem vydání je brána před návratem provozu. Příklad: vlastník vydání podepíše obnovení před provozem. Protipříklad: samotná zdravotní kontrola nestačí.",
+            "Rozumím, zachovám to jako dočasné učení profesora.",
+            CognitiveMemoryCuratorRuntimeMode.DirectLlm));
+
+        var capture = Assert.Single(result.CapturedImprovements);
+        Assert.Equal(CognitiveMemoryProfessorAnchorState.Active, capture.AnchorState);
+        Assert.Contains("schválení", capture.Summary, StringComparison.Ordinal);
+        Assert.Contains("Příklad", capture.Summary, StringComparison.Ordinal);
+        Assert.Contains("Protipříklad", capture.Summary, StringComparison.Ordinal);
+        Assert.DoesNotContain("schvaleni", capture.Summary, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task SemanticInvariant_CuratorCaptureNaturalProfessorQuestionAnswerAndShortCorrectionCreateAnchors()
     {
         var fixture = CreateFixture();
@@ -394,7 +420,7 @@ public sealed class CognitiveMemoryAdvancedServicesTests
     }
 
     [Fact]
-    public void SemanticInvariant_AcceptedUseSignalHasProductionEmitterAndScheduledAssimilation()
+    public void SemanticInvariant_AcceptedUseSignalHasProductionOutcomeEventHandlerAndScheduledAssimilation()
     {
         var moduleSource = ReadRepositoryFiles("src", "CanDoItAll.Modules.CognitiveMemory");
         var scheduledAutomationSource = ReadRepositoryFile(
@@ -405,6 +431,9 @@ public sealed class CognitiveMemoryAdvancedServicesTests
 
         Assert.Contains("ICognitiveMemoryProfessorAcceptedUseSignalEmitter", moduleSource, StringComparison.Ordinal);
         Assert.Contains("CognitiveMemoryProfessorAcceptedUseSignalRequest", moduleSource, StringComparison.Ordinal);
+        Assert.Contains("ICognitiveMemoryRecallOutcomeAcceptedEventHandler", moduleSource, StringComparison.Ordinal);
+        Assert.Contains("CognitiveMemoryRecallOutcomeAcceptedEvent", moduleSource, StringComparison.Ordinal);
+        Assert.Contains("HandleAsync", moduleSource, StringComparison.Ordinal);
         Assert.Contains("SignalKind = CognitiveMemorySignalKind.ProfessorAnchorAcceptedUse", moduleSource, StringComparison.Ordinal);
         Assert.Contains("SourceKind = CognitiveMemorySignalSourceKind.RecallTrace", moduleSource, StringComparison.Ordinal);
         Assert.Contains("ICognitiveMemoryProfessorAnchorService", scheduledAutomationSource, StringComparison.Ordinal);
@@ -472,6 +501,79 @@ public sealed class CognitiveMemoryAdvancedServicesTests
         Assert.False(signal.RequiresReview);
         Assert.Equal(recallUse.AcceptedOutcomeId.ToString("D"), metadata["acceptedOutcomeId"]);
         Assert.Contains("direct memory", directError.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task AcceptedUseOutcomeEventHandler_EmitsAcceptedUseSignalIdempotentlyAndRejectsBroadLineage()
+    {
+        var fixture = CreateFixture();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var service = CreateCuratorService(fixture);
+        var session = await service.StartAsync(new CognitiveMemoryCuratorSessionStartRequest(
+            projectId,
+            "Accepted outcome event chat",
+            Policy(projectId),
+            CognitiveMemoryCuratorRuntimeMode.DirectLlm));
+        var result = await service.RecordTurnAsync(new CognitiveMemoryCuratorTurnCaptureRequest(
+            session.Id,
+            "Remember that rollback restore needs signed release-owner approval.",
+            "I will retain that as temporary professor guidance.",
+            CognitiveMemoryCuratorRuntimeMode.DirectLlm,
+            ExplicitCaptureKind: CognitiveMemoryCuratorCaptureKind.NewKnowledge));
+        var capture = Assert.Single(result.CapturedImprovements);
+        var derivedMemoryId = await SeedDerivedProfessorMemoryAsync(
+            fixture,
+            projectId,
+            capture,
+            "Rollback restore requires signed release-owner approval before traffic returns.");
+        var recallUse = await SeedSynthesizedRecallUseAsync(fixture, projectId, derivedMemoryId, capture.EvidenceAnchorId!.Value);
+        var broadRecallUse = await SeedSynthesizedRecallUseAsync(fixture, projectId, derivedMemoryId, capture.EvidenceAnchorId.Value);
+        await using (var dbContext = fixture.Factory.CreateDbContext())
+        {
+            var broadMap = await dbContext.Set<CognitiveMemorySynthesizedStatementSourceMapRecord>()
+                .SingleAsync(sourceMap => sourceMap.StatementId == broadRecallUse.StatementId.Value);
+            broadMap.EvidenceAnchorId = null;
+            await dbContext.SaveChangesAsync();
+        }
+
+        var signalLedger = CreateSignalLedger(fixture);
+        var anchorService = new CognitiveMemoryProfessorAnchorService(fixture.Factory, fixture.Clock);
+        var emitter = new CognitiveMemoryProfessorAcceptedUseSignalEmitter(fixture.Factory, signalLedger, anchorService);
+        var handler = new CognitiveMemoryRecallOutcomeAcceptedEventHandler(fixture.Factory, emitter);
+        var acceptedEvent = new CognitiveMemoryRecallOutcomeAcceptedEvent(
+            projectId,
+            Policy(projectId).ActorId,
+            Policy(projectId),
+            recallUse.RecallTraceId,
+            recallUse.SynthesisId,
+            recallUse.StatementId,
+            new CognitiveMemoryRecordId(derivedMemoryId),
+            recallUse.AcceptedOutcomeId,
+            "Workflow answer was accepted by the operator.");
+
+        var first = await handler.HandleAsync(acceptedEvent);
+        var second = await handler.HandleAsync(acceptedEvent);
+        var broadError = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await handler.HandleAsync(new CognitiveMemoryRecallOutcomeAcceptedEvent(
+                projectId,
+                Policy(projectId).ActorId,
+                Policy(projectId),
+                broadRecallUse.RecallTraceId,
+                broadRecallUse.SynthesisId,
+                broadRecallUse.StatementId,
+                new CognitiveMemoryRecordId(derivedMemoryId),
+                broadRecallUse.AcceptedOutcomeId,
+                "Broad lineage must not count as accepted use.")));
+
+        await using var assertContext = fixture.Factory.CreateDbContext();
+        Assert.True(first.AcceptedUseSignalEmitted);
+        Assert.False(second.AcceptedUseSignalEmitted);
+        Assert.Equal(first.Signal.Id, second.Signal.Id);
+        Assert.Equal(1, await assertContext.Set<CognitiveMemorySignalRecord>()
+            .CountAsync(signal =>
+                signal.SignalKind == CognitiveMemorySignalKind.ProfessorAnchorAcceptedUse &&
+                signal.MemoryRecordId == derivedMemoryId));
+        Assert.Contains("broad recall lineage", broadError.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

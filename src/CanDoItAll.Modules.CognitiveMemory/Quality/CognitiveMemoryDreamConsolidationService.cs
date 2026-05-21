@@ -18,7 +18,7 @@ public sealed class CognitiveMemoryDreamConsolidationService(
 {
     private readonly ICognitiveMemoryDreamClaimSynthesizer claimSynthesizer = claimSynthesizer ?? CognitiveMemoryDreamClaimSynthesizer.Instance;
     private readonly ICognitiveMemoryDreamModeClusterSelector modeClusterSelector = modeClusterSelector ?? CognitiveMemoryDreamModeClusterSelector.Instance;
-    private readonly CognitiveMemoryQualityDreamAlgorithmOptions options = (algorithmOptions ?? new CognitiveMemoryQualityAlgorithmOptions()).Dream;
+    private readonly CognitiveMemoryQualityDreamAlgorithmOptions options = (algorithmOptions ?? CognitiveMemoryQualityAlgorithmOptions.Current).Dream;
     private string AlgorithmVersion => options.AlgorithmVersion.Value;
     private int MaxAggregateClaims => options.MaxAggregateClaims;
     private string AggregateClaimPredicateKey => options.AggregateClaimPredicateKey;
@@ -372,24 +372,55 @@ public sealed class CognitiveMemoryDreamConsolidationService(
 
     private static IReadOnlyList<CognitiveMemoryDreamAggregateSourceMap> CreateSourceMaps(
         CognitiveMemoryRecord record,
-        CognitiveMemoryRecordSupport support)
+        CognitiveMemoryRecordSupport support,
+        Guid? claimId = null)
     {
         var maps = new List<CognitiveMemoryDreamAggregateSourceMap>();
+        var claimEvidenceAnchorIds = claimId is null
+            ? new HashSet<Guid>()
+            : support.ClaimEvidenceLinks
+                .Where(link => link.ClaimId == claimId.Value)
+                .Select(link => link.EvidenceAnchorId)
+                .ToHashSet();
+        var restrictToClaimEvidence = claimEvidenceAnchorIds.Count > 0;
         foreach (var sourceLink in support.SourceLinks)
         {
             var sourceItem = support.SourceItems.FirstOrDefault(item => item.Id == sourceLink.SourceItemId);
-            var evidenceAnchor = support.EvidenceAnchors.FirstOrDefault(anchor => anchor.SourceItemId == sourceLink.SourceItemId);
-            maps.Add(new CognitiveMemoryDreamAggregateSourceMap(
-                new CognitiveMemoryRecordId(record.Id),
-                new CognitiveMemorySourceItemId(sourceLink.SourceItemId),
-                evidenceAnchor is null ? null : new CognitiveMemoryEvidenceAnchorId(evidenceAnchor.Id),
-                CognitiveMemoryEvidenceDirection.Supports,
-                sourceItem?.AccessLevel ?? record.AccessLevel,
-                sourceItem?.RedactionState ?? CognitiveMemoryRedactionState.Unclassified,
-                CognitiveMemoryQualityText.Redact(sourceLink.Summary)));
+            var matchingAnchors = support.EvidenceAnchors
+                .Where(anchor =>
+                    anchor.SourceItemId == sourceLink.SourceItemId &&
+                    (!restrictToClaimEvidence || claimEvidenceAnchorIds.Contains(anchor.Id)))
+                .OrderBy(anchor => anchor.Id)
+                .ToArray();
+            if (matchingAnchors.Length == 0 && !restrictToClaimEvidence)
+            {
+                maps.Add(new CognitiveMemoryDreamAggregateSourceMap(
+                    new CognitiveMemoryRecordId(record.Id),
+                    new CognitiveMemorySourceItemId(sourceLink.SourceItemId),
+                    null,
+                    CognitiveMemoryEvidenceDirection.Supports,
+                    sourceItem?.AccessLevel ?? record.AccessLevel,
+                    sourceItem?.RedactionState ?? CognitiveMemoryRedactionState.Unclassified,
+                    CognitiveMemoryQualityText.Redact(sourceLink.Summary)));
+                continue;
+            }
+
+            foreach (var evidenceAnchor in matchingAnchors)
+            {
+                maps.Add(new CognitiveMemoryDreamAggregateSourceMap(
+                    new CognitiveMemoryRecordId(record.Id),
+                    new CognitiveMemorySourceItemId(sourceLink.SourceItemId),
+                    new CognitiveMemoryEvidenceAnchorId(evidenceAnchor.Id),
+                    CognitiveMemoryEvidenceDirection.Supports,
+                    sourceItem?.AccessLevel ?? record.AccessLevel,
+                    sourceItem?.RedactionState ?? evidenceAnchor.RedactionState,
+                    CognitiveMemoryQualityText.Redact(sourceLink.Summary)));
+            }
         }
 
-        foreach (var evidenceAnchor in support.EvidenceAnchors.Where(anchor => maps.All(map => map.EvidenceAnchorId?.Value != anchor.Id)))
+        foreach (var evidenceAnchor in support.EvidenceAnchors.Where(anchor =>
+            (!restrictToClaimEvidence || claimEvidenceAnchorIds.Contains(anchor.Id)) &&
+            maps.All(map => map.EvidenceAnchorId?.Value != anchor.Id)))
         {
             maps.Add(new CognitiveMemoryDreamAggregateSourceMap(
                 new CognitiveMemoryRecordId(record.Id),
@@ -596,15 +627,10 @@ public sealed class CognitiveMemoryDreamConsolidationService(
         foreach (var record in records)
         {
             var support = supportByRecordId.GetValueOrDefault(record.Id) ?? CognitiveMemoryRecordSupport.Empty(record.Id);
-            var sourceMaps = CreateSourceMaps(record, support);
-            if (sourceMaps.Count == 0)
-            {
-                continue;
-            }
-
             var sourceClaims = support.Claims
                 .Where(claim => claim.ValidationState != CognitiveMemoryValidationState.Rejected)
                 .Select(claim => new SourceClaimDescriptor(
+                    claim.Id,
                     NormalizeConclusionFragment(claim.ClaimText),
                     claim.ClaimKind,
                     claim.SubjectKey,
@@ -617,6 +643,7 @@ public sealed class CognitiveMemoryDreamConsolidationService(
                 sourceClaims =
                 [
                     new SourceClaimDescriptor(
+                        ClaimId: null,
                         NormalizeConclusionFragment(CreateSafeClaimText(record, support)),
                         ResolveAggregateClaimKind(mode, record),
                         string.Empty,
@@ -627,6 +654,12 @@ public sealed class CognitiveMemoryDreamConsolidationService(
 
             foreach (var sourceClaim in sourceClaims.DistinctBy(claim => claim.ClaimText, StringComparer.OrdinalIgnoreCase))
             {
+                var sourceMaps = CreateSourceMaps(record, support, sourceClaim.ClaimId);
+                if (sourceMaps.Count == 0)
+                {
+                    continue;
+                }
+
                 var slots = CognitiveMemoryDreamClaimSlotExtractor.Extract(
                     sourceClaim.ClaimText,
                     sourceClaim.ClaimKind,
@@ -804,6 +837,7 @@ public sealed class CognitiveMemoryDreamConsolidationService(
         CognitiveMemoryDreamClaimSlots RepresentativeSlots);
 
     private sealed record SourceClaimDescriptor(
+        Guid? ClaimId,
         string ClaimText,
         CognitiveMemoryClaimKind ClaimKind,
         string SubjectKey,

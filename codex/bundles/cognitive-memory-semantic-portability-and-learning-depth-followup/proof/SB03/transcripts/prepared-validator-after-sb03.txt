@@ -1,8 +1,0 @@
-Command: python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup --stage prepared --repo-root C:\repositories\CanDoItAll
-Invariant: SB03-CROSS-PROJECT-01
-Invariant: SB03-APPROX-CANDIDATES-02
-Test name: SemanticInvariant_CrossProjectWeeklyFormsOnlyPolicyAllowedCrossProjectClusters
-Test name: SemanticInvariant_ApproximateCandidateDiscoveryPairsParaphrasesWithoutExactSharedKeys
-Test name: SemanticInvariant_CrossProjectPlanningReportsPolicyBlockedPairsWithoutRestrictedMembers
-Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup
-ExitCode: 0

@@ -1,3 +1,0 @@
-Command: python C:\Users\lucys\.codex\skills\candoitall-bundle-preparation\scripts\validate_bundle.py C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-followup --stage prepared
-Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-followup
-ExitCode: 0

@@ -1,0 +1,8 @@
+Command: powershell -NoProfile -Command "$matches = rg -n 'new CognitiveMemoryQualityAlgorithmOptions\(' src\CanDoItAll.Modules.CognitiveMemory -g '*.cs'; if ($LASTEXITCODE -eq 0) { $matches; exit 1 }; exit 0"
+ExitCode: 1
+Output:
+src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryClusterFormation.cs:188: options = (algorithmOptions ?? new CognitiveMemoryQualityAlgorithmOptions()).Cluster;
+src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryClusterPlanner.cs:46: options = (algorithmOptions ?? new CognitiveMemoryQualityAlgorithmOptions()).Cluster;
+src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryDreamConsolidationService.cs:21: private readonly CognitiveMemoryQualityDreamAlgorithmOptions options = (algorithmOptions ?? new CognitiveMemoryQualityAlgorithmOptions()).Dream;
+SB09-ARCHITECTURE-OPTIONS-01
+

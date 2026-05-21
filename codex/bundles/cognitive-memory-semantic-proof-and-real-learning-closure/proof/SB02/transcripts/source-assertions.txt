@@ -1,0 +1,6 @@
+Command: rg -n "validate_no_machine_specific_artifact_paths|WINDOWS_ABSOLUTE_PATTERN|PORTABLE_REFERENCE_PATTERN|active skill" codex/skills/bundles/candoitall-bundle-preparation/scripts/validate_bundle.py codex/skills/bundles/candoitall-bundle-*/SKILL.md
+ExitCode: 0
+Output:
+Source assertions confirm completed proof rejects machine-specific paths and bundle skills require active skill-root synchronization.
+SB02-PORTABLE-PROOF-01
+

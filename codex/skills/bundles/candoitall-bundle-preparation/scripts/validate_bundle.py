@@ -210,6 +210,96 @@ DREAM_META_TEXT_PROHIBITED_LABELS = {
     "semantic positive proof",
     "production assertions",
 }
+PROOF_CLAIM_TO_CODE_MATRIX_HEADING = "## Proof Claim To Code Matrix"
+PROOF_CLAIM_TO_CODE_MATRIX_COLUMNS = (
+    "capability claim",
+    "required production source proof",
+    "required test proof",
+    "required negative fixture",
+    "result",
+)
+MACHINE_SPECIFIC_PATH_ALLOW_MARKERS = (
+    "non-artifact working-directory context",
+    "non-artifact local context",
+    "local context only",
+    "working directory context only",
+)
+CAPABILITY_CLAIM_PATTERNS: dict[str, tuple[re.Pattern[str], ...]] = {
+    "embedding-backed": (
+        re.compile(r"\bembedding[- ]backed\b", re.IGNORECASE),
+        re.compile(r"\bembedding/ranker\b", re.IGNORECASE),
+    ),
+    "Czech/diacritic": (
+        re.compile(r"\bczech/diacritic\b", re.IGNORECASE),
+        re.compile(r"\bczech\b[^.\n|]{0,80}\bdiacritic\b", re.IGNORECASE),
+        re.compile(r"\bdiacritic\b[^.\n|]{0,80}\bczech\b", re.IGNORECASE),
+    ),
+    "provider-backed": (
+        re.compile(r"\bprovider[- ]backed\b", re.IGNORECASE),
+    ),
+    "automatic": (
+        re.compile(r"\bautomatic accepted[- ]use\b", re.IGNORECASE),
+        re.compile(r"\bautomatic outcome\b", re.IGNORECASE),
+    ),
+    "scheduled": (
+        re.compile(r"\bscheduled assimilation\b", re.IGNORECASE),
+        re.compile(r"\bscheduled maintenance\b", re.IGNORECASE),
+    ),
+    "claim-specific": (
+        re.compile(r"\bclaim[- ]specific\b", re.IGNORECASE),
+    ),
+    "line-level": (
+        re.compile(r"\bline[- ]level\b", re.IGNORECASE),
+        re.compile(r"\bstatement[- ]level lineage\b", re.IGNORECASE),
+    ),
+    "domain synthesis": (
+        re.compile(r"\bdomain synthesis\b", re.IGNORECASE),
+        re.compile(r"\bdomain[- ]useful\b", re.IGNORECASE),
+    ),
+    "portable proof": (
+        re.compile(r"\bportable proof\b", re.IGNORECASE),
+    ),
+}
+CAPABILITY_SOURCE_REQUIREMENTS: dict[str, tuple[tuple[str, tuple[str, ...]], ...]] = {
+    "embedding-backed": (
+        ("embedding provider call", ("ICognitiveMemoryEmbeddingProvider", "IEmbeddingProvider", "EmbedAsync", "EmbeddingProvider")),
+        ("vector or ranker scoring", ("Vector", "Cosine", "Ranker", "SemanticSimilarity")),
+        ("honest lexical fallback", ("Lexical", "Fallback")),
+    ),
+    "Czech/diacritic": (
+        ("Czech signal model", ("Czech", "Cesky", "Cestina", "cs")),
+        ("diacritic folding", ("Diacritic", "RemoveDiacritics", "NonSpacingMark", "FormD")),
+        ("original text preservation", ("Original", "SourceUtterance", "Preserve")),
+    ),
+    "provider-backed": (
+        ("provider abstraction", ("Provider", "I", "interface")),
+        ("provider call or injection", ("GetRequiredService", "AddScoped", "AddSingleton", "Inject", "Async")),
+    ),
+    "automatic": (
+        ("outcome or feedback event", ("Outcome", "Feedback", "Event", "Handler")),
+        ("producer invokes workflow path", ("Handle", "Publish", "Emit", "AcceptedUse")),
+    ),
+    "scheduled": (
+        ("scheduler lifecycle", ("Scheduled", "Scheduler", "Maintenance", "Runner")),
+        ("assimilation scan invocation", ("ScanAssimilation", "Assimilation")),
+    ),
+    "claim-specific": (
+        ("claim evidence link", ("CognitiveMemoryClaimEvidenceLinkRecord", "ClaimEvidence", "ClaimId")),
+        ("unrelated evidence exclusion", ("Exclude", "Filter", "EvidenceAnchorId")),
+    ),
+    "line-level": (
+        ("statement lineage", ("Statement", "Lineage", "SourceMap")),
+        ("on-demand reference support", ("Reference", "Resolve", "Source")),
+    ),
+    "domain synthesis": (
+        ("domain claim construction", ("Domain", "Canonical", "Subject", "Predicate", "Object")),
+        ("diagnostics separated from text", ("Diagnostic", "Metadata", "Source")),
+    ),
+    "portable proof": (
+        ("portable references", ("repo://", "bundle://")),
+        ("moved checkout validation", ("moved", "checkout", "copy")),
+    ),
+}
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -608,7 +698,7 @@ def validate_completed_subbundles(subbundle_directories: list[Path]) -> list[str
 
 def validate_completed_execution_report(path: Path) -> list[str]:
     content = path.read_text(encoding="utf-8")
-    issues: list[str] = []
+    issues = validate_no_machine_specific_artifact_paths(path, content)
 
     report_status = extract_first_status_value(content)
     if contains_pending_marker(report_status):
@@ -796,6 +886,200 @@ def validate_dream_meta_text_claims(path: Path, values: dict[str, str]) -> list[
         if DREAM_META_TEXT_PATTERN.search(value) is not None:
             issues.append(
                 f"{path}: '{label}' treats dream evidence-count template text as shipped synthesis"
+            )
+
+    return issues
+
+
+def extract_capability_claims(content: str) -> set[str]:
+    claims: set[str] = set()
+    for claim, patterns in CAPABILITY_CLAIM_PATTERNS.items():
+        if any(pattern.search(content) is not None for pattern in patterns):
+            claims.add(claim)
+
+    return claims
+
+
+def normalize_capability_claim(value: str) -> str | None:
+    normalized = normalize_markdown_value(value).strip().lower()
+    normalized = normalized.strip("`* ")
+
+    for claim, patterns in CAPABILITY_CLAIM_PATTERNS.items():
+        if normalized == claim.lower():
+            return claim
+
+        if any(pattern.search(normalized) is not None for pattern in patterns):
+            return claim
+
+    return None
+
+
+def normalize_claim_matrix_header(value: str) -> str:
+    normalized = value.strip().lower()
+    for suffix in (" citation", " citations", " path", " paths"):
+        if normalized.endswith(suffix):
+            return normalized[: -len(suffix)]
+
+    return normalized
+
+
+def read_resolved_artifact_text(
+    path: Path,
+    bundle_path: Path,
+    repo_root: Path,
+    token: str,
+) -> tuple[list[str], str]:
+    try:
+        artifact_path = resolve_artifact_path(bundle_path, repo_root, token)
+    except ValueError as exception:
+        return [f"{path}: claim-to-code source proof has invalid artifact reference `{token}`: {exception}"], ""
+
+    if not artifact_path.is_file():
+        return [f"{path}: claim-to-code source proof references missing file: {token}"], ""
+
+    try:
+        return [], artifact_path.read_text(encoding="utf-8", errors="replace")
+    except OSError as exception:
+        return [f"{path}: claim-to-code source proof cannot read `{token}`: {exception}"], ""
+
+
+def validate_capability_source_requirements(
+    path: Path,
+    bundle_path: Path,
+    repo_root: Path,
+    claim: str,
+    source_proof: str,
+) -> list[str]:
+    issues: list[str] = []
+    source_tokens = extract_artifact_path_tokens(source_proof)
+    if not source_tokens:
+        return [f"{path}: `{claim}` source proof must cite at least one production source file or proof artifact"]
+
+    source_text_parts: list[str] = []
+    for source_token in source_tokens:
+        token_issues, source_text = read_resolved_artifact_text(path, bundle_path, repo_root, source_token)
+        issues.extend(token_issues)
+        if source_text:
+            source_text_parts.append(source_text)
+
+    source_text = "\n".join(source_text_parts)
+    for requirement, tokens in CAPABILITY_SOURCE_REQUIREMENTS.get(claim, ()):
+        if any(token in source_text for token in tokens):
+            continue
+
+        issues.append(
+            f"{path}: `{claim}` source proof does not show {requirement}; "
+            f"expected one of {', '.join(tokens)}"
+        )
+
+    return issues
+
+
+def validate_proof_claim_to_code_matrix(
+    path: Path,
+    content: str,
+    required_claims: set[str],
+    bundle_path: Path,
+    repo_root: Path,
+) -> list[str]:
+    if not required_claims:
+        return []
+
+    section = extract_markdown_section(content, PROOF_CLAIM_TO_CODE_MATRIX_HEADING)
+    if section is None:
+        return [
+            f"{path}: semantic capability claims require {PROOF_CLAIM_TO_CODE_MATRIX_HEADING} "
+            f"for {', '.join(sorted(required_claims))}"
+        ]
+
+    rows = extract_table_rows(section)
+    if len(rows) < 2:
+        return [f"{path}: {PROOF_CLAIM_TO_CODE_MATRIX_HEADING} must include a populated markdown table"]
+
+    headers = [normalize_claim_matrix_header(header) for header in rows[0]]
+    issues: list[str] = []
+    missing_columns = [column for column in PROOF_CLAIM_TO_CODE_MATRIX_COLUMNS if column not in headers]
+    if missing_columns:
+        issues.append(
+            f"{path}: {PROOF_CLAIM_TO_CODE_MATRIX_HEADING} is missing columns: {', '.join(missing_columns)}"
+        )
+        return issues
+
+    rows_by_claim: dict[str, dict[str, str]] = {}
+    for row in rows[1:]:
+        if len(row) < len(headers):
+            issues.append(f"{path}: proof claim-to-code matrix row is incomplete: {' | '.join(row)}")
+            continue
+
+        row_by_header = {
+            header: normalize_markdown_value(row[index]).strip()
+            for index, header in enumerate(headers)
+            if index < len(row)
+        }
+        raw_claim = row_by_header.get("capability claim", "")
+        claim = normalize_capability_claim(raw_claim)
+        if claim is None:
+            issues.append(f"{path}: proof claim-to-code matrix has unknown capability claim `{raw_claim}`")
+            continue
+
+        rows_by_claim[claim] = row_by_header
+
+    for claim in sorted(required_claims):
+        row = rows_by_claim.get(claim)
+        if row is None:
+            issues.append(f"{path}: proof claim-to-code matrix is missing `{claim}`")
+            continue
+
+        source_proof = row.get("required production source proof", "")
+        test_proof = row.get("required test proof", "")
+        negative_fixture = row.get("required negative fixture", "")
+        result = row.get("result", "")
+
+        for label, value in (
+            ("required production source proof", source_proof),
+            ("required test proof", test_proof),
+            ("required negative fixture", negative_fixture),
+            ("result", result),
+        ):
+            if is_meaningful_proof_value(value):
+                continue
+
+            issues.append(f"{path}: `{claim}` proof claim-to-code matrix has weak {label}: {value}")
+
+        if source_proof and PROOF_TOKEN_PATTERN.search(source_proof) is None:
+            issues.append(f"{path}: `{claim}` source proof must cite a command, test, file, or proof artifact")
+
+        if test_proof and PROOF_TOKEN_PATTERN.search(test_proof) is None:
+            issues.append(f"{path}: `{claim}` test proof must cite a command, test, file, or proof artifact")
+
+        if negative_fixture and PROOF_TOKEN_PATTERN.search(negative_fixture) is None:
+            issues.append(f"{path}: `{claim}` negative fixture must cite a command, test, file, or proof artifact")
+
+        if negative_fixture and not re.search(r"\b(fail|reject|negative|adversarial)\b", negative_fixture, re.IGNORECASE):
+            issues.append(f"{path}: `{claim}` negative fixture must prove a failing or rejected shallow case")
+
+        if result and not re.search(r"\b(pass|verified|satisfied|closed|complete)\b", result, re.IGNORECASE):
+            issues.append(f"{path}: `{claim}` result must state a passing or verified outcome")
+
+        issues.extend(validate_capability_source_requirements(path, bundle_path, repo_root, claim, source_proof))
+
+    return issues
+
+
+def validate_no_machine_specific_artifact_paths(path: Path, content: str) -> list[str]:
+    issues: list[str] = []
+    for line_number, line in enumerate(content.splitlines(), start=1):
+        lowered = line.lower()
+        if any(marker in lowered for marker in MACHINE_SPECIFIC_PATH_ALLOW_MARKERS):
+            continue
+
+        for token in extract_artifact_path_tokens(line):
+            if not is_absolute_artifact_path(token):
+                continue
+
+            issues.append(
+                f"{path}:{line_number}: artifact proof uses machine-specific absolute path "
+                f"instead of repo:// or bundle://: {token}"
             )
 
     return issues
@@ -1124,6 +1408,7 @@ def validate_completed_proof_manifests(bundle_path: Path, repo_root: Path, subbu
             continue
 
         manifest_content = manifest_path.read_text(encoding="utf-8")
+        issues.extend(validate_no_machine_specific_artifact_paths(manifest_path, manifest_content))
         if SHA256_PATTERN.search(manifest_content) is None:
             issues.append(f"{manifest_path}: proof manifest must include at least one SHA-256 changed-file hash")
 
@@ -1131,6 +1416,7 @@ def validate_completed_proof_manifests(bundle_path: Path, repo_root: Path, subbu
             issues.append(f"{manifest_path}: proof manifest must include at least one portable repo:// or bundle:// reference")
 
         manifest_ids: set[str] = set()
+        invariant_contents: list[str] = []
         production_artifact_matrix_required = requires_production_behavior_matrix(manifest_content)
         invariant_contracts = [candidate for candidate in semantic_invariant_contract_paths(bundle_path, subbundle_number) if candidate.is_file()]
         if not invariant_contracts:
@@ -1146,6 +1432,8 @@ def validate_completed_proof_manifests(bundle_path: Path, repo_root: Path, subbu
 
             for invariant_contract in invariant_contracts:
                 invariant_content = invariant_contract.read_text(encoding="utf-8", errors="replace")
+                invariant_contents.append(invariant_content)
+                issues.extend(validate_no_machine_specific_artifact_paths(invariant_contract, invariant_content))
                 production_artifact_matrix_required = (
                     production_artifact_matrix_required
                     or requires_production_behavior_matrix(invariant_content)
@@ -1160,6 +1448,20 @@ def validate_completed_proof_manifests(bundle_path: Path, repo_root: Path, subbu
 
         if production_artifact_matrix_required:
             issues.extend(validate_production_behavior_matrix(manifest_path, manifest_content))
+
+        semantic_evidence_content = extract_semantic_evidence_section(report_content, subbundle_number) or ""
+        capability_claims = extract_capability_claims(
+            "\n".join([semantic_evidence_content, manifest_content, *invariant_contents])
+        )
+        issues.extend(
+            validate_proof_claim_to_code_matrix(
+                manifest_path,
+                manifest_content,
+                capability_claims,
+                bundle_path,
+                repo_root,
+            )
+        )
 
         artifact_tokens = extract_artifact_path_tokens(manifest_content)
         for artifact_token in artifact_tokens:

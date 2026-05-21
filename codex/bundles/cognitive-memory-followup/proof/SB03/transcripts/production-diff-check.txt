@@ -1,6 +1,0 @@
-Command: git diff --name-only -- src/CanDoItAll.Modules.CognitiveMemory
-WorkingDirectory: C:\repositories\CanDoItAll
-StartedUtc: 2026-05-20T17:52:59.4578481Z
-Output:
-<no output>
-ExitCode: 0

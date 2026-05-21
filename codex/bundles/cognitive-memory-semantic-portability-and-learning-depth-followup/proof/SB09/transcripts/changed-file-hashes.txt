@@ -1,8 +1,0 @@
-Command: transcript metadata repair for .\codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup\proof\SB09\transcripts\changed-file-hashes.txt
-SHA256 5036D8C2A92CACDC1D2B28B59A39B06EC5A361F20DFF89220BD7C7ABADE76B1F C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityContracts.cs
-SHA256 B5F9C5ABD1620DB7BD78770768E1F71E49DFAF4E2E6B7CB569098383D4374DF5 C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallBriefComposition.cs
-SHA256 272C40DD7C01A9F4D2D5397FF9FD3C5CE369EE0C8B2E3CA4D819854D141FBED7 C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs
-SHA256 D307E65C6DB3A37404C004B12B5B7A11791C23547FBBC4F30B264D4CBDF23E1F C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityCollaboratorTests.cs
-SHA256 438CEB0BD06D72738F2CFC4765B47CCFDC45608443E385AD0634EC69B322C951 C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup\proof\SB09\semantic-invariants.md
-SHA256 9D6AFE2A2F99C58A8A4C20261FB2E4C6D07A757FBF3964A9D950416B9EDDF00E C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup\proof\SB09\manifest.md
-ExitCode: 0

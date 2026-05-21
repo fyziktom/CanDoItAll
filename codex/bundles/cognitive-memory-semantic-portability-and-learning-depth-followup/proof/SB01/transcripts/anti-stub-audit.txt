@@ -1,9 +1,0 @@
-Command: rg -n --ignore-case -- "TODO|NotImplemented|raise NotImplementedError|hardcoded-for-test|stubbed|fake implementation|pass\\s*(#.*)?$" codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py
-WorkingDirectory: C:\repositories\CanDoItAll
-Scope: changed executable validator code; skill documentation is covered by source assertions and intentionally contains the phrase anti-stub audit.
-Invariant: SB01-PORTABILITY-01
-Invariant: SB01-INVARIANT-02
-Test: ArtifactProof.AntiStubAudit
-RgExitCode: 1
-AntiStubFindings: None
-ExitCode: 0

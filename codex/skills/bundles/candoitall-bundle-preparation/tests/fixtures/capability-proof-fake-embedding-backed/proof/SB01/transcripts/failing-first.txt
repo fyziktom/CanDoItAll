@@ -1,0 +1,5 @@
+Command: python validate_bundle.py proof-depth-shallow --stage completed
+WorkingDirectory: C:\repositories\CanDoItAll
+Test: ArtifactProof.ValidatesCompleteFixture
+Output: shallow fixture rejected before artifact-backed proof was accepted
+ExitCode: 1

@@ -15,7 +15,7 @@ public sealed class CognitiveMemoryAggregateMemoryApplicator(
     CognitiveMemoryQualityAlgorithmOptions? algorithmOptions = null) : ICognitiveMemoryAggregateMemoryApplicator
 {
     private readonly ICognitiveMemoryAggregateConfidenceCalibrator aggregateConfidenceCalibrator = confidenceCalibrator ?? new CognitiveMemoryAggregateConfidenceCalibrator();
-    private readonly CognitiveMemoryQualityAggregateApplyAlgorithmOptions options = (algorithmOptions ?? new CognitiveMemoryQualityAlgorithmOptions()).AggregateApply;
+    private readonly CognitiveMemoryQualityAggregateApplyAlgorithmOptions options = (algorithmOptions ?? CognitiveMemoryQualityAlgorithmOptions.Current).AggregateApply;
     private string AlgorithmVersion => options.AlgorithmVersion.Value;
 
     public async ValueTask<CognitiveMemoryAggregateMemoryApplyResult> ApplyAsync(

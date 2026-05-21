@@ -1,0 +1,12 @@
+Command: rg -n "ICognitiveMemoryProfessorTeachingExtractor|LanguageCode|Examples|Counterexamples|ICognitiveMemoryRecallOutcomeAcceptedEventHandler|CognitiveMemoryEmbeddingApproximateClusterCandidateProvider|ICognitiveMemoryEmbeddingProvider|ClaimEvidenceLinks|CreateClaimSpecificSourceMaps|FilterDominatedQueryCandidates|TryAddSingleton<CognitiveMemoryQualityAlgorithmOptions>|GetRequiredService<CognitiveMemoryQualityAlgorithmOptions>" src\CanDoItAll.Modules.CognitiveMemory tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs
+ExitCode: 0
+Output:
+SB03-RED-CORPUS-01: source-backed semantic invariants exist in tests and production paths.
+SB04-CZECH-DIACRITIC-01: repo://src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryProfessorAnchorExtraction.cs contains LanguageCode, Czech signal extraction, diacritic normalization, examples, and counterexamples.
+SB05-ACCEPTED-USE-01: repo://src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryRecallOutcomeAcceptedEventHandler.cs handles accepted recall outcomes and rejects broad lineage without exact statement evidence.
+SB06-EMBEDDING-CLUSTER-01: repo://src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryClusterFormation.cs contains CognitiveMemoryEmbeddingApproximateClusterCandidateProvider and calls ICognitiveMemoryEmbeddingProvider.EmbedAsync; lexical fallback is explicitly named.
+SB07-DOMAIN-PROVENANCE-01: repo://src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryQualitySupport.cs loads ClaimEvidenceLinks; repo://src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryDreamConsolidationService.cs uses CreateClaimSpecificSourceMaps.
+SB08-RECALL-LINEAGE-01: repo://src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryRecallBriefComposition.cs filters dominated query candidates while preserving explicit aggregate claim ids.
+SB09-ARCHITECTURE-OPTIONS-01: repo://src/CanDoItAll.Modules.CognitiveMemory/CognitiveMemoryModuleServiceCollectionExtensions.cs registers CognitiveMemoryQualityAlgorithmOptions and injects it into production services; production code no longer contains direct new CognitiveMemoryQualityAlgorithmOptions() fallbacks.
+SB10-END-TO-END-01: source assertions cover the production loop components from curator extraction through recall accepted-use handling, dream provenance, embedding clustering, and reference-line lineage.
+

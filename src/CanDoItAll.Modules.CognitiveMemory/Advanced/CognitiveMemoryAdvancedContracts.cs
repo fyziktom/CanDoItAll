@@ -562,10 +562,34 @@ public sealed record CognitiveMemoryProfessorAcceptedUseSignalResult(
     CognitiveMemorySignalRecord Signal,
     IReadOnlyList<CognitiveMemoryProfessorAnchorResult> AssimilationResults);
 
+public sealed record CognitiveMemoryRecallOutcomeAcceptedEvent(
+    Guid ProjectId,
+    string ActorId,
+    CognitiveMemoryPolicyContext PolicyContext,
+    Guid RecallTraceId,
+    CognitiveMemorySynthesizedRecallId SynthesisId,
+    CognitiveMemorySynthesizedStatementId StatementId,
+    CognitiveMemoryRecordId DerivedMemoryRecordId,
+    Guid AcceptedOutcomeId,
+    string OutcomeSummary);
+
+public sealed record CognitiveMemoryRecallOutcomeAcceptedEventResult(
+    bool AcceptedUseSignalEmitted,
+    CognitiveMemorySignalRecord Signal,
+    IReadOnlyList<CognitiveMemoryProfessorAnchorResult> AssimilationResults,
+    string Reason);
+
 public interface ICognitiveMemoryProfessorAcceptedUseSignalEmitter
 {
     ValueTask<CognitiveMemoryProfessorAcceptedUseSignalResult> EmitAsync(
         CognitiveMemoryProfessorAcceptedUseSignalRequest request,
+        CancellationToken cancellationToken = default);
+}
+
+public interface ICognitiveMemoryRecallOutcomeAcceptedEventHandler
+{
+    ValueTask<CognitiveMemoryRecallOutcomeAcceptedEventResult> HandleAsync(
+        CognitiveMemoryRecallOutcomeAcceptedEvent acceptedEvent,
         CancellationToken cancellationToken = default);
 }
 

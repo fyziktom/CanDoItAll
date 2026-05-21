@@ -1,8 +1,0 @@
-Command: rg -n "NotImplementedException|TODO|HACK|stub|fake|dummy" src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityContracts.cs src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterFormation.cs src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryClusterPlanner.cs src\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryDreamConsolidationService.cs
-Invariant: SB03-CROSS-PROJECT-01
-Invariant: SB03-APPROX-CANDIDATES-02
-Test name: SemanticInvariant_CrossProjectWeeklyFormsOnlyPolicyAllowedCrossProjectClusters
-Test name: SemanticInvariant_ApproximateCandidateDiscoveryPairsParaphrasesWithoutExactSharedKeys
-Test name: SemanticInvariant_CrossProjectPlanningReportsPolicyBlockedPairsWithoutRestrictedMembers
-No stubs, TODO placeholders, fake implementations, dummy branches, or NotImplementedException markers found in SB03 changed production files.
-ExitCode: 0

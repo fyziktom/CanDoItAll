@@ -81,17 +81,22 @@ public sealed partial class CognitiveMemoryDreamClaimSynthesizer : ICognitiveMem
         IReadOnlyList<CognitiveMemoryDreamClaimSlots> slots,
         IReadOnlyList<string> claims)
     {
+        var domainClaims = claims
+            .Select(NormalizeClaim)
+            .Where(claim => !string.IsNullOrWhiteSpace(claim))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (domainClaims.Length > 0)
+        {
+            return EnsureSentence(JoinPhrases(domainClaims));
+        }
+
         var subjectLabels = slots
             .Select(slot => FormatKey(slot.SubjectKey))
             .Where(subject => !string.IsNullOrWhiteSpace(subject))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
-        if (subjectLabels.Length == 1)
-        {
-            return EnsureSentence($"{subjectLabels[0]} is consistently described across the mapped source claims");
-        }
-
-        return EnsureSentence($"The source claims stay separated across {subjectLabels.Length} subject(s): {JoinPhrases(subjectLabels)}");
+        return EnsureSentence(JoinPhrases(subjectLabels));
     }
 
     private static string BuildSupport(IReadOnlyList<string> claims)
@@ -105,7 +110,7 @@ public sealed partial class CognitiveMemoryDreamClaimSynthesizer : ICognitiveMem
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
         return conditions.Length == 0
-            ? "No explicit condition was present in the source claims."
+            ? "No explicit condition was detected."
             : EnsureSentence(JoinPhrases(conditions));
     }
 
@@ -117,7 +122,7 @@ public sealed partial class CognitiveMemoryDreamClaimSynthesizer : ICognitiveMem
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
         return caveats.Length == 0
-            ? "No explicit caveat was present in the source claims."
+            ? "No explicit caveat was detected."
             : EnsureSentence(JoinPhrases(caveats));
     }
 

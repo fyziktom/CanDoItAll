@@ -1,0 +1,7 @@
+Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~SemanticInvariant_ClusterDiscoveryUsesRealEmbeddingProviderAndHonestLexicalFallback|FullyQualifiedName~SemanticInvariant_EmbeddingCandidateDiscoveryPairsParaphrasesWithoutSharedSignals"
+ExitCode: 1
+Output:
+SemanticInvariant_ClusterDiscoveryUsesRealEmbeddingProviderAndHonestLexicalFallback failed before production changes because the production source only exposed lexical approximate discovery.
+SemanticInvariant_EmbeddingCandidateDiscoveryPairsParaphrasesWithoutSharedSignals also failed during implementation until embedding-only edges received a strong synthetic semantic key.
+SB06-EMBEDDING-CLUSTER-01
+

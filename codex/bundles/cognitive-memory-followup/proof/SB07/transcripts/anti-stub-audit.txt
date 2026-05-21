@@ -1,3 +1,0 @@
-Command: rg -n "TODO|NotImplemented|throw new NotImplemented|ProfessorAnchor_RejectsDescendantOnlyAggregateSupport|ProfessorAnchor_FadeDemotesDirectCaptureMemory|ProfessorAnchor_ScanAssimilatesAndFadesIntegratedMasteryEvidence" src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAssimilationEvaluator.cs src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorService.cs src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryAdvancedContracts.cs src\CanDoItAll.Modules.CognitiveMemory\CognitiveMemoryModuleServiceCollectionExtensions.cs
-No TODO, NotImplemented, or fixture-specific production branches found in SB07 changed production files.
-ExitCode: 0

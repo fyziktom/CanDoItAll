@@ -1,6 +1,0 @@
-Anti-stub audit for SB05:
-
-- The passing test exercises `CognitiveMemoryCuratorConversationService` and persisted capture records, not the extractor alone.
-- The extractor still returns null for question-only flows without teaching context.
-- Stored text is not replaced with search-normalized text.
-- The implementation adds specific Czech teaching signals rather than capturing all casual conversation.

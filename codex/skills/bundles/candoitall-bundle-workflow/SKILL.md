@@ -25,6 +25,7 @@ The workflow is complete only when all of these are true:
 - the bundle has a usable dependency map, critical-foundation labels, and progression gates
 - every executed subbundle has passed its entry and closure gates or is honestly blocked
 - every completed critical subbundle has an artifact-backed `proof/SBxx/manifest.md` and `proof/SBxx/semantic-invariants.md` or `.json` with changed-file hashes, command transcripts, failing-first and passing proof where behavior changed, source assertions, invariant IDs, and anti-stub audit results
+- any subbundle that changes bundle skills, validators, or proof rules has synchronized the repo skill copy into the active Codex skill root and recorded portable hash proof before dependent feature subbundles start
 - every new production signal, state, record, or event named by critical proof has a `## Production Behavior Artifact Matrix` in both the manifest and semantic invariant contract, with producer, consumer, lifecycle, and negative-test citations
 - critical proof uses portable `repo://` and `bundle://` references so moved bundles, WSL, Linux, CI, and Windows checks can resolve the same evidence
 - code changes, tests, browser or host proof, screenshots, and execution report rows support the same conclusion
@@ -42,10 +43,11 @@ The workflow is complete only when all of these are true:
 7. Before each subbundle, run the entry gate with `candoitall-subbundle-validator`.
 8. After each subbundle, record proof and run the closure gate with `candoitall-subbundle-validator`.
 9. Reopen earlier work when later observations weaken a prerequisite or critical foundation.
-10. Before a critical subbundle is marked complete, verify that every path referenced by its proof manifest exists, that the semantic invariant contract exists, and that required failing-first, passing, source-assertion, and anti-stub transcripts are present.
-11. After implementation, audit the original raw notes and source artifacts one by one.
-12. Run the final closure gate with `candoitall-bundle-validator` and `scripts/validate_bundle.py --stage completed`.
-13. Synchronize root status, subbundle status, execution report, analytics rows, proof paths, residual risks, and follow-up items.
+10. If the subbundle changed bundle skills, validators, or proof rules, install the updated repo skill into the active Codex skill root, reopen the skill instructions, and record repo/active hashes before continuing.
+11. Before a critical subbundle is marked complete, verify that every path referenced by its proof manifest exists, that the semantic invariant contract exists, and that required failing-first, passing, source-assertion, and anti-stub transcripts are present.
+12. After implementation, audit the original raw notes and source artifacts one by one.
+13. Run the final closure gate with `candoitall-bundle-validator` and `scripts/validate_bundle.py --stage completed`.
+14. Synchronize root status, subbundle status, execution report, analytics rows, proof paths, residual risks, and follow-up items.
 
 ## Decision Rule
 

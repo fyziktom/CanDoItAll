@@ -1,3 +1,0 @@
-Command: rg -n "TODO|NotImplemented|throw new NotImplementedException|stub|fake-proof|fake-test|hardcoded-for-test" src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorExtraction.cs src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryCuratorConversationService.cs src\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryProfessorAnchorService.cs src\CanDoItAll.Modules.CognitiveMemory\Recall\CognitiveMemoryRecallDataLoading.cs src\CanDoItAll.Modules.CognitiveMemory\CognitiveMemoryModuleServiceCollectionExtensions.cs
-No stub markers found in SB06 production files.
-ExitCode: 0

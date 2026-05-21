@@ -1089,9 +1089,12 @@ public sealed class CognitiveMemoryCuratorConversationService(
             Environment.NewLine,
             [
                 $"Anchor kind: {anchor.CaptureKind}",
+                $"Language: {anchor.LanguageCode}",
                 $"Target: {anchor.TargetScope}",
                 ..anchor.Claims.Select(claim => $"Claim: {claim.Text}"),
                 $"Misconception: {FirstNonEmpty(anchor.MisconceptionCorrected, "none")}",
+                ..anchor.Examples.Select(example => $"Example: {example}"),
+                ..anchor.Counterexamples.Select(counterexample => $"Counterexample: {counterexample}"),
                 $"Lifecycle: {CognitiveMemoryProfessorAnchorState.Active}",
                 $"Confidence: {anchor.ConfidenceScore:0.00}",
                 "Source utterances:",

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -25,6 +26,12 @@ public sealed class CognitiveMemoryProfessorAcceptedUseSignalEmitter(
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var existingSignal = await FindExistingAcceptedUseSignalAsync(dbContext, request, cancellationToken);
+        if (existingSignal is not null)
+        {
+            return new CognitiveMemoryProfessorAcceptedUseSignalResult(existingSignal, []);
+        }
+
         var memory = await dbContext.Set<CognitiveMemoryRecord>()
             .AsNoTracking()
             .SingleOrDefaultAsync(
@@ -92,20 +99,7 @@ public sealed class CognitiveMemoryProfessorAcceptedUseSignalEmitter(
             .ToArray();
         if (evidenceAnchorIds.Length == 0)
         {
-            var linkedEvidenceAnchorIds = await dbContext.Set<CognitiveMemoryRecordEvidenceAnchorRecord>()
-                .AsNoTracking()
-                .Where(anchor => anchor.MemoryRecordId == request.DerivedMemoryRecordId.Value)
-                .Select(anchor => anchor.EvidenceAnchorId)
-                .Distinct()
-                .ToListAsync(cancellationToken);
-            evidenceAnchorIds = linkedEvidenceAnchorIds
-                .Select(evidenceAnchorId => new CognitiveMemoryEvidenceAnchorId(evidenceAnchorId))
-                .ToArray();
-        }
-
-        if (evidenceAnchorIds.Length == 0)
-        {
-            throw new InvalidOperationException($"Accepted-use signal for derived memory '{request.DerivedMemoryRecordId}' requires persisted source evidence.");
+            throw new InvalidOperationException($"Accepted-use signal for derived memory '{request.DerivedMemoryRecordId}' requires exact persisted statement evidence.");
         }
 
         var signalContract = new
@@ -165,5 +159,41 @@ public sealed class CognitiveMemoryProfessorAcceptedUseSignalEmitter(
         return sourceItemIds.Length == 0
             ? null
             : new CognitiveMemorySourceItemId(sourceItemIds[0]);
+    }
+
+    internal static async Task<CognitiveMemorySignalRecord?> FindExistingAcceptedUseSignalAsync(
+        AppDbContext dbContext,
+        CognitiveMemoryProfessorAcceptedUseSignalRequest request,
+        CancellationToken cancellationToken)
+    {
+        var candidates = await dbContext.Set<CognitiveMemorySignalRecord>()
+            .AsNoTracking()
+            .Where(signal =>
+                signal.ProjectId == request.ProjectId &&
+                signal.SignalKind == CognitiveMemorySignalKind.ProfessorAnchorAcceptedUse &&
+                signal.SourceKind == CognitiveMemorySignalSourceKind.RecallTrace &&
+                signal.MemoryRecordId == request.DerivedMemoryRecordId.Value)
+            .OrderBy(signal => signal.CreatedAtUtc)
+            .ToListAsync(cancellationToken);
+        return candidates.FirstOrDefault(signal => MetadataMatchesAcceptedUse(signal.MetadataJson, request));
+    }
+
+    internal static bool MetadataMatchesAcceptedUse(
+        string metadataJson,
+        CognitiveMemoryProfessorAcceptedUseSignalRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(metadataJson))
+        {
+            return false;
+        }
+
+        var metadata = JsonSerializer.Deserialize<Dictionary<string, string>>(metadataJson, CognitiveMemoryJson.SerializerOptions);
+        return metadata is not null &&
+               metadata.TryGetValue("acceptedOutcomeId", out var acceptedOutcomeId) &&
+               metadata.TryGetValue("statementId", out var statementId) &&
+               metadata.TryGetValue("derivedMemoryRecordId", out var derivedMemoryRecordId) &&
+               string.Equals(acceptedOutcomeId, request.AcceptedOutcomeId.ToString("D"), StringComparison.Ordinal) &&
+               string.Equals(statementId, request.StatementId.Value.ToString("D"), StringComparison.Ordinal) &&
+               string.Equals(derivedMemoryRecordId, request.DerivedMemoryRecordId.Value.ToString("D"), StringComparison.Ordinal);
     }
 }

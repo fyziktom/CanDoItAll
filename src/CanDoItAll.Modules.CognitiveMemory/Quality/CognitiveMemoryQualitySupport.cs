@@ -13,7 +13,8 @@ internal sealed record CognitiveMemoryRecordSupport(
     IReadOnlyList<CognitiveMemorySourceItemRecord> SourceItems,
     IReadOnlyList<CognitiveMemoryRecordEvidenceAnchorRecord> EvidenceLinks,
     IReadOnlyList<CognitiveMemoryEvidenceAnchorRecord> EvidenceAnchors,
-    IReadOnlyList<CognitiveMemoryClaimRecord> Claims)
+    IReadOnlyList<CognitiveMemoryClaimRecord> Claims,
+    IReadOnlyList<CognitiveMemoryClaimEvidenceLinkRecord> ClaimEvidenceLinks)
 {
     public CognitiveMemoryRedactionState HighestRedactionState
         => SourceItems
@@ -23,7 +24,7 @@ internal sealed record CognitiveMemoryRecordSupport(
             .Max();
 
     public static CognitiveMemoryRecordSupport Empty(Guid recordId)
-        => new(recordId, [], [], [], [], []);
+        => new(recordId, [], [], [], [], [], []);
 }
 
 internal sealed record CognitiveMemorySupportSnapshot(
@@ -56,21 +57,29 @@ internal static class CognitiveMemoryQualitySupportLoader
             .AsNoTracking()
             .Where(item => sourceItemIds.Contains(item.Id))
             .ToListAsync(cancellationToken);
+        var claims = await dbContext.Set<CognitiveMemoryClaimRecord>()
+            .AsNoTracking()
+            .Where(claim => claim.MemoryRecordId != null && memoryRecordIds.Contains(claim.MemoryRecordId.Value))
+            .ToListAsync(cancellationToken);
+        var claimIds = claims.Select(claim => claim.Id).Distinct().ToArray();
+        var claimEvidenceLinks = claimIds.Length == 0
+            ? []
+            : await dbContext.Set<CognitiveMemoryClaimEvidenceLinkRecord>()
+                .AsNoTracking()
+                .Where(link => claimIds.Contains(link.ClaimId))
+                .ToListAsync(cancellationToken);
         var evidenceLinks = await dbContext.Set<CognitiveMemoryRecordEvidenceAnchorRecord>()
             .AsNoTracking()
             .Where(link => memoryRecordIds.Contains(link.MemoryRecordId))
             .ToListAsync(cancellationToken);
         var evidenceAnchorIds = evidenceLinks
             .Select(link => link.EvidenceAnchorId)
+            .Concat(claimEvidenceLinks.Select(link => link.EvidenceAnchorId))
             .Distinct()
             .ToArray();
         var evidenceAnchors = await dbContext.Set<CognitiveMemoryEvidenceAnchorRecord>()
             .AsNoTracking()
             .Where(anchor => evidenceAnchorIds.Contains(anchor.Id) || (anchor.SourceItemId != null && sourceItemIds.Contains(anchor.SourceItemId.Value)))
-            .ToListAsync(cancellationToken);
-        var claims = await dbContext.Set<CognitiveMemoryClaimRecord>()
-            .AsNoTracking()
-            .Where(claim => claim.MemoryRecordId != null && memoryRecordIds.Contains(claim.MemoryRecordId.Value))
             .ToListAsync(cancellationToken);
         var sourceItemsById = sourceItems.ToDictionary(item => item.Id);
         var evidenceAnchorsBySourceItemId = evidenceAnchors
@@ -109,7 +118,10 @@ internal static class CognitiveMemoryQualitySupportLoader
                 sourceItemsForRecord,
                 evidenceLinksForRecord,
                 evidenceAnchorsForRecord,
-                claims.Where(claim => claim.MemoryRecordId == memoryRecordId).ToArray());
+                claims.Where(claim => claim.MemoryRecordId == memoryRecordId).ToArray(),
+                claimEvidenceLinks
+                    .Where(link => claims.Any(claim => claim.MemoryRecordId == memoryRecordId && claim.Id == link.ClaimId))
+                    .ToArray());
         }
 
         return new CognitiveMemorySupportSnapshot(supportByRecordId, sourceItemsById);

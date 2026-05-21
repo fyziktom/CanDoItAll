@@ -50,6 +50,7 @@ Use this skill when the bundle needs a gate, not more implementation. It exists 
    - completed critical subbundles have semantic proof that rejects template-only output, fixture-specific behavior, filled-table-only evidence, and status/count-only tests
    - completed critical subbundles have proof manifests whose referenced paths exist
    - behavior-changing critical subbundles have failing-first and passing transcripts
+   - skill or validator changes include active Codex skill-root synchronization proof with portable repo-skill references and repo/active SHA-256 hashes
    - final closure has a red-team or verifier artifact that audits fake-proof resistance across all critical subbundles
 9. If any gate fails, do not mark the bundle ready or complete. Repair the bundle or reopen the affected subbundle and rerun the gate.
 

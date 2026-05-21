@@ -1,3 +1,0 @@
-Command: transcript metadata repair for .\codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup\proof\SB09\transcripts\no-migration-proof.txt
-No migration files changed for SB09. PlanKind is a synthesized recall contract value, and line-level provenance uses the existing AggregateClaimId statement source-map linkage.
-ExitCode: 0

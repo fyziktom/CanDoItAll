@@ -15,6 +15,7 @@ This skill is for delivery, not planning. If the bundle is missing, unclear, unv
 - Keep context durable in files: subbundle status, proof paths, commands, browser analytics, gate rows, and closure decisions should survive compaction or a different agent taking over.
 - For critical subbundles, keep proof durable under `proof/SBxx/`: manifests, semantic invariant contracts, command transcripts, hashes, source assertions, browser/host artifacts, and red-team notes.
 - Use portable `repo://relative/path` and `bundle://relative/path` references in manifests and source references. Native absolute paths may be included as local context, but they must not be the only durable proof path.
+- When a subbundle changes bundle skills, validators, or proof rules, treat active Codex skill-root synchronization as part of the implementation. Do not start dependent feature subbundles until repo and active skill hashes are recorded in proof.
 - Use tools until the proof contract passes. If a test, browser check, or lookup returns weak evidence, diagnose or retry with a better strategy instead of summarizing around the gap.
 - Use selective parallelism for independent file reads or inspections, then synthesize before editing. Do not parallelize dependent implementation steps.
 - Keep updates concise and proof-oriented: changed files, validation run, gate decision, and remaining blocker when there is one.
@@ -51,8 +52,9 @@ This skill is for delivery, not planning. If the bundle is missing, unclear, unv
    - proof artifacts
    - follow-up items when something cannot be closed in the current phase
    - note-by-note closure status for the raw feedback the subbundle owns
-14. Move to the next subbundle only after the current one is proven.
-15. Before declaring the bundle complete, run `candoitall-bundle-validator` and `scripts/validate_bundle.py --stage completed`; completed-stage validation includes the structural checks, manifest checks, and proof-depth checks for semantic adequacy evidence.
+14. If this subbundle changed bundle skills, validators, or proof rules, synchronize the active skill root, reopen the updated skill text, and capture portable repo/active hash proof before moving on.
+15. Move to the next subbundle only after the current one is proven.
+16. Before declaring the bundle complete, run `candoitall-bundle-validator` and `scripts/validate_bundle.py --stage completed`; completed-stage validation includes the structural checks, manifest checks, and proof-depth checks for semantic adequacy evidence.
 
 ## Execution Rules
 

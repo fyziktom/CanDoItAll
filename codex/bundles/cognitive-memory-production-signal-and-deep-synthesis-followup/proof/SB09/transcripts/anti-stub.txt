@@ -1,7 +1,0 @@
-Anti-stub audit for SB09:
-
-- No broad no-op file move was used as a substitute for behavior.
-- New interfaces have concrete production consumers.
-- DI registration test verifies service graph visibility.
-- Behavior suite remained green after maintainability changes.
-- Responsibility inventory explicitly avoids risky unrelated refactors in large services.
