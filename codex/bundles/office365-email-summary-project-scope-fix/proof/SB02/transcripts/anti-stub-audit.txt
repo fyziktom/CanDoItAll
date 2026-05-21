@@ -1,0 +1,8 @@
+Command: rg -n "simulated-preview|template-only|fixture-specific|NotImplementedException" src/plugins/CanDoItAll.Plugin.Office365 src/CanDoItAll.AgentFramework.Maf src/CanDoItAll.Modules.Workbench/ProjectStructure tests/CanDoItAll.Tests.Integration/ProjectStructureAgentApiIntegrationTests.cs
+ExitCode: 0
+
+Audit result: live Office365 proof used the real Office365 workflow executor through Graph and did not use preview simulation. The only simulated-preview strings are existing workflow preview template text in the Office365 executor source, not the live path.
+
+Invariant IDs:
+- SB02-INV01
+- SB02-INV02

@@ -91,14 +91,15 @@ public sealed partial class MafAgentRuntime
 
         EnsureStructuredOutputCapability(effectiveProvider, runtimeOptions.StructuredOutput);
         var finalizerCapture = CreateFinalizerCapture(runtimeOptions.StructuredOutput, runtimeOptions.FinalizerMode);
-        var capabilityState = await CreateCapabilityStateAsync(
+        var capabilityState = await CreateCapabilityStateCoreAsync(
             agent,
             effectiveProvider,
             capabilities,
             memory,
             progressCallback,
             cancellationToken,
-            suppressApprovalRequirements);
+            suppressApprovalRequirements,
+            runtimeOptions.ContextWorkspaceScope ?? workspaceScope);
         await FilterUnusableApprovalToolsAsync(
             capabilityState,
             effectiveProvider,

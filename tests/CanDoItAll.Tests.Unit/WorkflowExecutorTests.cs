@@ -694,6 +694,54 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
+    public async Task MafWorkflowLlmComponentInvokerPassesProjectScopeFromWorkflowPayload()
+    {
+        var projectId = Guid.Parse("ad8e7db7-4041-4fd7-a5f7-b5c6756f9a1f");
+        var runtime = new CapturingAgentRuntime(
+            $$"""
+            {
+              "markdown": "# Tetris request summary\n\nKeyboard-controlled static-web Tetris within one week.",
+              "projectId": "{{projectId:D}}",
+              "nodeId": "workflow-node-1"
+            }
+            """);
+        var provider = CreateProviderProfile("gpt-5-mini");
+        var invoker = new MafWorkflowLlmComponentInvoker(
+            runtime,
+            new TestProviderProfileRegistry([provider]),
+            new ProviderProfileService());
+        var component = CreateLlmComponent(JsonObjectShape, JsonObjectShape);
+        var node = CreateLlmNode("summarize-office365", component.Id);
+        var definition = CreateDefinition([node], [], node.Id.Value);
+
+        var result = await invoker.ExecuteAsync(
+            definition,
+            node,
+            component,
+            new WorkflowNodeInput($$"""
+            {
+              "projectId": "{{projectId:D}}",
+              "nodeId": "workflow-node-1",
+              "messages": [
+                {
+                  "subject": "Tetris",
+                  "bodyText": "Potřebujeme naprogramovat jednoduchou hru Tetris."
+                }
+              ]
+            }
+            """));
+
+        Assert.Contains("Tetris request summary", result.PayloadJson, StringComparison.Ordinal);
+        var executionOptions = runtime.LastExecutionOptions;
+        Assert.NotNull(executionOptions);
+        var scope = executionOptions!.ContextWorkspaceScope;
+        Assert.NotNull(scope);
+        Assert.Equal(WorkspaceScopeKind.Project, scope!.Kind);
+        Assert.Equal(projectId.ToString("D"), scope.Key);
+        Assert.Contains("Potřebujeme naprogramovat jednoduchou hru Tetris", runtime.LastPrompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task InvokerRetriesTransientExecutorFailure()
     {
         var executor = new RecordingWorkflowExecutor { FailuresBeforeSuccess = 1 };
@@ -1300,6 +1348,27 @@ public sealed class WorkflowExecutorTests
             DateTimeOffset.UtcNow,
             DateTimeOffset.UtcNow);
 
+    private static ProviderProfile CreateProviderProfile(string defaultModel)
+        => new(
+            Guid.NewGuid(),
+            "Workflow unit provider",
+            ProviderKind.OpenAi,
+            "https://api.openai.com/v1",
+            "UNIT_TEST_OPENAI_API_KEY",
+            defaultModel,
+            ProviderTransportKind.ChatCompletions,
+            IsEnabled: true,
+            SupportsStreaming: true,
+            SupportsTools: true,
+            PreferFrameworkManagedChatHistory: false,
+            SupportsBackgroundResponses: false,
+            ConfigurationJson: "{}",
+            Notes: string.Empty,
+            HealthStatus: "Not checked",
+            LastCheckedAtUtc: null,
+            SuggestedModels: [],
+            Purpose: ProviderProfilePurpose.Chat);
+
     private sealed class RecordingWorkflowExecutor : IWorkflowExecutor
     {
         public WorkflowExecutorDescriptor Descriptor => BuiltInWorkflowExecutorDescriptors.StorageFile;
@@ -1398,6 +1467,119 @@ public sealed class WorkflowExecutorTests
                 transform(input.PayloadJson),
                 component.ResultShape));
         }
+    }
+
+    private sealed class CapturingAgentRuntime(string responseText) : IAgentRuntime
+    {
+        public AgentRuntimeExecutionOptions? LastExecutionOptions { get; private set; }
+
+        public string LastPrompt { get; private set; } = string.Empty;
+
+        public Task<AgentRuntimeResponse> RunAsync(
+            AgentDefinition agent,
+            ProviderProfile provider,
+            ChatSessionRecord session,
+            IReadOnlyList<CapabilityCatalogItem> capabilities,
+            IReadOnlyList<AgentMemoryRecord> memory,
+            string prompt,
+            string? runtimeSessionKey,
+            Func<ExecutionState, string, string, Task> progressCallback,
+            CancellationToken cancellationToken = default,
+            bool suppressApprovalRequirements = false,
+            AgentStructuredOutputContract? structuredOutput = null,
+            AgentRuntimeExecutionOptions? executionOptions = null)
+        {
+            _ = agent;
+            _ = provider;
+            _ = session;
+            _ = capabilities;
+            _ = memory;
+            _ = runtimeSessionKey;
+            _ = progressCallback;
+            _ = suppressApprovalRequirements;
+            _ = structuredOutput;
+            cancellationToken.ThrowIfCancellationRequested();
+            LastPrompt = prompt;
+            LastExecutionOptions = executionOptions;
+            return Task.FromResult(new AgentRuntimeResponse(
+                responseText,
+                InputTokens: 12,
+                OutputTokens: 8,
+                ToolCalls: 0,
+                RuntimeSessionKey: string.Empty,
+                SerializedSessionStateJson: null,
+                PendingApprovals: []));
+        }
+
+        public Task<AgentRuntimeResponse> RespondToPendingApprovalsAsync(
+            AgentDefinition agent,
+            ProviderProfile provider,
+            ChatSessionRecord session,
+            IReadOnlyList<CapabilityCatalogItem> capabilities,
+            IReadOnlyList<AgentMemoryRecord> memory,
+            bool approved,
+            string? runtimeSessionKey,
+            Func<ExecutionState, string, string, Task> progressCallback,
+            CancellationToken cancellationToken = default,
+            bool suppressApprovalRequirements = false,
+            AgentStructuredOutputContract? structuredOutput = null,
+            AgentRuntimeExecutionOptions? executionOptions = null)
+            => throw new NotSupportedException();
+
+        public Task<OllamaModelfileResult> CreateOrUpdateOllamaModelAsync(
+            ProviderProfile provider,
+            OllamaModelfileRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<ProviderHealthResult> TestProviderAsync(
+            ProviderProfile provider,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<ProviderTestChatResult> RunProviderTestChatAsync(
+            ProviderProfile provider,
+            ProviderTestChatRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+    }
+
+    private sealed class TestProviderProfileRegistry(IReadOnlyList<ProviderProfile> providers) : IProviderProfileRegistry
+    {
+        public Task<IReadOnlyList<ProviderProfile>> ListProvidersAsync(CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(providers);
+        }
+
+        public Task<ProviderProfile?> GetProviderAsync(
+            Guid providerId,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(providers.FirstOrDefault(provider => provider.Id == providerId));
+        }
+
+        public Task<ProviderProfileEditorModel> GetProviderEditorAsync(
+            Guid? providerId = null,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<Guid> SaveProviderAsync(
+            ProviderProfileEditorModel model,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task DeleteProviderAsync(
+            Guid providerId,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<ProviderProfile> UpdateProviderAsync(
+            Guid providerId,
+            Func<ProviderProfile, ProviderProfile> update,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
     }
 
     private sealed class TempDirectory : IDisposable

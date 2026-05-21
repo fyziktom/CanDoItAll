@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -517,6 +518,92 @@ public sealed class ProjectStructureAgentApiIntegrationTests
         Assert.Contains(assetId, started.Status.Summary.CreatedAssetIds);
         Assert.Contains(generatedAsset.Id, metadata?.LastCreatedNodeIds ?? []);
         Assert.Contains(assetId, metadata?.LastCreatedAssetIds ?? []);
+    }
+
+    [Fact]
+    public async Task ProjectStructureAgentApi_llm_workflow_uses_project_scope_and_creates_markdown_asset_under_workflow_node()
+    {
+        var runtime = new ProjectScopedWorkflowAgentRuntime();
+        await using var host = await ProjectStructureAgentApiTestHost.CreateAsync(
+            "workflow-llm-project-scope",
+            testEnvironment => testEnvironment.CreateManagedSqliteProfile("workflow-llm-project-scope"),
+            services =>
+            {
+                services.AddSingleton<IAgentRuntime>(runtime);
+                services.AddScoped<IProviderProfileRegistry>(_ => new SingleProviderProfileRegistry(
+                    CreateProviderProfile("deterministic-tetris-summary")));
+            });
+        var project = await CreateWorkflowProjectAsync(host.Client, "Client Tetris request project");
+        var lease = await AcquireProjectLeaseAsync(host.Client, project.Id, "Run Tetris email summary workflow");
+        var parent = await CreateProjectBlockAsync(
+            host.Client,
+            project.Id,
+            lease.LeaseToken,
+            "Office365 email source",
+            "Category-triggered email summary.");
+        var component = await PostAndReadAsync<LlmCallComponent>(
+            host.Client,
+            "/api/workflows/components",
+            CreateTetrisSummaryComponentSaveRequest());
+        var definition = await PostAndReadAsync<WorkflowDefinition>(
+            host.Client,
+            "/api/workflows/definitions",
+            CreateTetrisSummaryWorkflowDefinitionSaveRequest(component.Id));
+        var inputSettings = ProjectStructureWorkflowInputSettings.Default();
+        inputSettings.ManualInputJson = """
+            {
+              "source": "office365",
+              "clientEmail": {
+                "from": "Jára Cimrman",
+                "subject": "Tetris webová hra",
+                "bodyText": "Dobrý den,\nPotřebujeme naprogramovat jednoduchou hru Tetris.\nPotřebujeme aby hra byla formou webové stránky. Chtěli bychom ji i jako mobilní aplikaci, ale to asi až později pokud by to bylo složité.\nHra se musí ovládat klávesnicí. Standardně šipkami nebo hráčské klávesy w,s,a,d.\nHra by si měla uložit poslední maximální dosažené skóre. Nicméně nechceme backend. Vše musí jet jen v aplikaci jako takové.Chceme ji hostovat na běžném statickém webhostingu.\nPotřebovali bychom aplikaci nejpozději do jednoho týdne.\nDěkuji,\n\nS pozdravem\n\nJára Cimrman"
+              }
+            }
+            """;
+
+        var workflowNode = await PostAndReadAsync<ProjectStructureWorkflowNodeCreateResult>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id}/nodes/{parent.Id}/workflow-definition",
+            new ProjectStructureWorkflowNodeCreateInput(
+                definition.Id,
+                definition.VersionId,
+                "Tetris email summary workflow",
+                InputSettings: inputSettings,
+                LeaseToken: lease.LeaseToken));
+        var started = await PostAndReadAsync<ProjectStructureWorkflowNodeStartResult>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id}/nodes/{workflowNode.Node.Id}/workflow/start",
+            new ProjectStructureWorkflowNodeStartInput(WorkflowRuntimeBackendKind.InProcess, LeaseToken: lease.LeaseToken));
+        var readback = await PostAndReadAsync<ProjectStructureReadResponse>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id}/structure/read",
+            new ProjectStructureReadRequest(
+                IncludeLinks: true,
+                IncludeAssets: true,
+                IncludeNotes: true,
+                IncludeMetadata: true));
+        var generatedAsset = Assert.Single(readback.Nodes, node => node.Title == "Client email summary");
+        var executionOptions = runtime.LastExecutionOptions;
+        Assert.NotNull(executionOptions);
+        var scope = executionOptions!.ContextWorkspaceScope;
+
+        Assert.Equal(WorkflowRunState.Completed, started.Status.State);
+        Assert.NotNull(scope);
+        Assert.Equal(WorkspaceScopeKind.Project, scope!.Kind);
+        Assert.Equal(project.Id.ToString("D"), scope.Key);
+        Assert.Equal(workflowNode.Node.Id, generatedAsset.ParentId);
+        Assert.Contains(readback.Links, link => link.SourceId == workflowNode.Node.Id && link.TargetId == generatedAsset.Id);
+        Assert.Contains(generatedAsset.Id, started.Status.Summary.CreatedNodeIds);
+        Assert.Contains("Tetris", generatedAsset.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("statický webhosting", generatedAsset.Notes, StringComparison.OrdinalIgnoreCase);
+
+        using var payloadDocument = JsonDocument.Parse(runtime.LastPayloadJson);
+        var emailBody = payloadDocument.RootElement
+            .GetProperty("manualInput")
+            .GetProperty("clientEmail")
+            .GetProperty("bodyText")
+            .GetString();
+        Assert.Contains("klávesnicí", emailBody, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -1100,6 +1187,66 @@ public sealed class ProjectStructureAgentApiIntegrationTests
                 ExposeAzureFunctionsMcpTool: false));
     }
 
+    private static LlmCallComponentSaveRequest CreateTetrisSummaryComponentSaveRequest()
+        => new(
+            Id: null,
+            Name: "Tetris email summary",
+            ProviderProfileId: null,
+            Model: "deterministic-tetris-summary",
+            Modality: WorkflowModality.Text,
+            ModelSettings: new WorkflowModelSettings(
+                Temperature: 0,
+                MaxOutputTokens: 1200,
+                RequireJsonOutput: true,
+                ResponseFormatJsonSchema: string.Empty),
+            Instructions: "Summarize the client email as markdown, preserve projectId and nodeId, and return JSON only.",
+            InputShape: CreateJsonShape(),
+            ResultShape: CreateJsonShape(),
+            Permissions: AgentPermissionsPolicy.Default);
+
+    private static WorkflowDefinitionSaveRequest CreateTetrisSummaryWorkflowDefinitionSaveRequest(WorkflowComponentId componentId)
+    {
+        var assetSettingsJson = JsonSerializer.Serialize(
+            new WorkflowProjectStructureExecutorSettings
+            {
+                Operation = WorkflowProjectStructureOperation.CreateAsset,
+                ProjectIdJsonPath = "$.projectId",
+                NodeIdJsonPath = "$.nodeId",
+                AssetKind = "md",
+                Title = "Client email summary",
+                ContentFromInput = true,
+                IncludeInputPayload = true,
+                ContentType = "text/markdown"
+            },
+            new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+        return new WorkflowDefinitionSaveRequest(
+            Id: null,
+            ExpectedVersionId: null,
+            Name: "Client email summary workflow",
+            Description: "Summarizes a client email and stores markdown under the workflow node.",
+            Status: WorkflowLifecycleStatus.Active,
+            Graph: new WorkflowGraph(
+                new WorkflowNodeId("start"),
+                [
+                    CreateWorkflowNode("start", WorkflowNodeKind.Start, resultShape: CreateJsonShape()),
+                    CreateLlmWorkflowNode("summarize-client-email", componentId),
+                    CreateExecutorWorkflowNode("store-client-summary", WorkflowExecutorIds.ProjectStructure, assetSettingsJson, CreateJsonShape()),
+                    CreateWorkflowNode("end", WorkflowNodeKind.End, inputShape: CreateJsonShape())
+                ],
+                [
+                    CreateWorkflowEdge("start-to-summary", "start", "summarize-client-email"),
+                    CreateWorkflowEdge("summary-to-store", "summarize-client-email", "store-client-summary"),
+                    CreateWorkflowEdge("store-to-end", "store-client-summary", "end")
+                ]),
+            RuntimePolicy: new WorkflowRuntimePolicy(
+                WorkflowRuntimeBackendKind.InProcess,
+                AllowInProcessPreviewRuns: true,
+                RequireDurableProductionRuns: false,
+                ExposeAzureFunctionsStatusEndpoint: false,
+                ExposeAzureFunctionsMcpTool: false));
+    }
+
     private static WorkflowNode CreateWorkflowNode(
         string id,
         WorkflowNodeKind kind,
@@ -1121,10 +1268,28 @@ public sealed class ProjectStructureAgentApiIntegrationTests
                 ResultShape: resultShape ?? WorkflowValueShape.Text));
     }
 
+    private static WorkflowNode CreateLlmWorkflowNode(string id, WorkflowComponentId componentId)
+    {
+        return new WorkflowNode(
+            new WorkflowNodeId(id),
+            WorkflowNodeKind.LlmCall,
+            id,
+            [],
+            new WorkflowNodeSettings(
+                componentId,
+                AgentId: null,
+                SubworkflowId: null,
+                ExternalRequestKind: null,
+                Instructions: string.Empty,
+                InputShape: CreateJsonShape(),
+                ResultShape: CreateJsonShape()));
+    }
+
     private static WorkflowNode CreateExecutorWorkflowNode(
         string id,
         WorkflowExecutorId executorId,
-        string executorSettingsJson)
+        string executorSettingsJson,
+        WorkflowValueShape? inputShape = null)
     {
         return new WorkflowNode(
             new WorkflowNodeId(id),
@@ -1137,7 +1302,7 @@ public sealed class ProjectStructureAgentApiIntegrationTests
                 SubworkflowId: null,
                 ExternalRequestKind: null,
                 Instructions: string.Empty,
-                InputShape: WorkflowValueShape.Text,
+                InputShape: inputShape ?? WorkflowValueShape.Text,
                 ResultShape: CreateJsonShape()) with
             {
                 ExecutorId = executorId,
@@ -1148,6 +1313,29 @@ public sealed class ProjectStructureAgentApiIntegrationTests
 
     private static WorkflowValueShape CreateJsonShape()
         => new(WorkflowValueShapeKind.Json, "{}", "JSON payload");
+
+    private static ProviderProfile CreateProviderProfile(string defaultModel)
+    {
+        return new ProviderProfile(
+            Guid.NewGuid(),
+            "Workflow integration provider",
+            ProviderKind.OpenAi,
+            "https://api.openai.com/v1",
+            "WORKFLOW_INTEGRATION_API_KEY",
+            defaultModel,
+            ProviderTransportKind.ChatCompletions,
+            IsEnabled: true,
+            SupportsStreaming: true,
+            SupportsTools: true,
+            PreferFrameworkManagedChatHistory: false,
+            SupportsBackgroundResponses: false,
+            ConfigurationJson: "{}",
+            Notes: string.Empty,
+            HealthStatus: "Not checked",
+            LastCheckedAtUtc: null,
+            SuggestedModels: [],
+            Purpose: ProviderProfilePurpose.Chat);
+    }
 
     private static WorkflowEdge CreateWorkflowEdge(string id, string source, string target)
     {
@@ -1210,6 +1398,157 @@ public sealed class ProjectStructureAgentApiIntegrationTests
         client.DefaultRequestHeaders.Add(ProjectStructureAgentHttpHeaders.BranchName, "tests/project-structure");
         client.DefaultRequestHeaders.Add(ProjectStructureAgentHttpHeaders.SessionId, Guid.NewGuid().ToString("N"));
         return client;
+    }
+
+    private sealed class ProjectScopedWorkflowAgentRuntime : IAgentRuntime
+    {
+        public AgentRuntimeExecutionOptions? LastExecutionOptions { get; private set; }
+
+        public string LastPrompt { get; private set; } = string.Empty;
+
+        public string LastPayloadJson { get; private set; } = "{}";
+
+        public Task<AgentRuntimeResponse> RunAsync(
+            AgentDefinition agent,
+            ProviderProfile provider,
+            ChatSessionRecord session,
+            IReadOnlyList<CapabilityCatalogItem> capabilities,
+            IReadOnlyList<AgentMemoryRecord> memory,
+            string prompt,
+            string? runtimeSessionKey,
+            Func<ExecutionState, string, string, Task> progressCallback,
+            CancellationToken cancellationToken = default,
+            bool suppressApprovalRequirements = false,
+            AgentStructuredOutputContract? structuredOutput = null,
+            AgentRuntimeExecutionOptions? executionOptions = null)
+        {
+            _ = agent;
+            _ = provider;
+            _ = session;
+            _ = capabilities;
+            _ = memory;
+            _ = runtimeSessionKey;
+            _ = progressCallback;
+            _ = suppressApprovalRequirements;
+            _ = structuredOutput;
+            cancellationToken.ThrowIfCancellationRequested();
+            LastPrompt = prompt;
+            LastExecutionOptions = executionOptions;
+            var payload = ExtractWorkflowPayload(prompt);
+            LastPayloadJson = payload;
+            using var document = JsonDocument.Parse(payload);
+            var projectId = document.RootElement.GetProperty("projectId").GetString();
+            var nodeId = document.RootElement.GetProperty("nodeId").GetString();
+            JsonObject response = new()
+            {
+                ["markdown"] = JsonValue.Create("""
+                    # Tetris request summary
+
+                    - Client asks for a simple Tetris game as a web page.
+                    - Controls must support arrow keys and W/S/A/D.
+                    - The app must store the best score locally without a backend.
+                    - Hosting target is statický webhosting.
+                    - Deadline is one week.
+                    """),
+                ["projectId"] = JsonValue.Create(projectId),
+                ["nodeId"] = JsonValue.Create(nodeId),
+                ["source"] = JsonValue.Create("office365")
+            };
+
+            if (document.RootElement.TryGetProperty("runContext", out var runContext))
+            {
+                response["runContext"] = JsonNode.Parse(runContext.GetRawText());
+            }
+
+            var responseJson = response.ToJsonString();
+            return Task.FromResult(new AgentRuntimeResponse(
+                responseJson,
+                InputTokens: 42,
+                OutputTokens: 64,
+                ToolCalls: 0,
+                RuntimeSessionKey: string.Empty,
+                SerializedSessionStateJson: null,
+                PendingApprovals: []));
+        }
+
+        public Task<AgentRuntimeResponse> RespondToPendingApprovalsAsync(
+            AgentDefinition agent,
+            ProviderProfile provider,
+            ChatSessionRecord session,
+            IReadOnlyList<CapabilityCatalogItem> capabilities,
+            IReadOnlyList<AgentMemoryRecord> memory,
+            bool approved,
+            string? runtimeSessionKey,
+            Func<ExecutionState, string, string, Task> progressCallback,
+            CancellationToken cancellationToken = default,
+            bool suppressApprovalRequirements = false,
+            AgentStructuredOutputContract? structuredOutput = null,
+            AgentRuntimeExecutionOptions? executionOptions = null)
+            => throw new NotSupportedException();
+
+        public Task<OllamaModelfileResult> CreateOrUpdateOllamaModelAsync(
+            ProviderProfile provider,
+            OllamaModelfileRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<ProviderHealthResult> TestProviderAsync(
+            ProviderProfile provider,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<ProviderTestChatResult> RunProviderTestChatAsync(
+            ProviderProfile provider,
+            ProviderTestChatRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        private static string ExtractWorkflowPayload(string prompt)
+        {
+            const string marker = "Workflow input payload:";
+            var index = prompt.IndexOf(marker, StringComparison.Ordinal);
+            return index < 0
+                ? "{}"
+                : prompt[(index + marker.Length)..].Trim();
+        }
+    }
+
+    private sealed class SingleProviderProfileRegistry(ProviderProfile provider) : IProviderProfileRegistry
+    {
+        public Task<IReadOnlyList<ProviderProfile>> ListProvidersAsync(CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult<IReadOnlyList<ProviderProfile>>([provider]);
+        }
+
+        public Task<ProviderProfile?> GetProviderAsync(
+            Guid providerId,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(provider.Id == providerId ? provider : null);
+        }
+
+        public Task<ProviderProfileEditorModel> GetProviderEditorAsync(
+            Guid? providerId = null,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<Guid> SaveProviderAsync(
+            ProviderProfileEditorModel model,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task DeleteProviderAsync(
+            Guid providerId,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<ProviderProfile> UpdateProviderAsync(
+            Guid providerId,
+            Func<ProviderProfile, ProviderProfile> update,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
     }
 }
 

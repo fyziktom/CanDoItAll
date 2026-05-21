@@ -1,0 +1,14 @@
+Command: Start Office365 category workflow through /api/project-structure before the empty-context fix and inspect /api/workflows/runs/604e7ad4-e42d-4cbd-bc19-222118d094d7/detail
+ExitCode: 1
+
+Result: run failed after Office365 Graph downloaded one categorized message.
+
+Observed failure:
+- Run id: 604e7ad4-e42d-4cbd-bc19-222118d094d7
+- Run result code: 5
+- Failure: Agent context contributor 'cognitive-memory.context' reported failure: Cognitive Memory recall returned an empty context pack.
+- Graph fetch: Office365 message subject "Vyvoj tetris hry" was downloaded from category CanDoItAllSummaryTest.
+
+Invariant IDs:
+- SB02-INV01
+- SB02-INV02

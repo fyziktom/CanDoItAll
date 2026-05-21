@@ -335,7 +335,8 @@ public sealed record AgentRuntimeExecutionOptions(
     AgentFinalizerMode FinalizerMode,
     bool RequireStructuredOutputValidation,
     int MaxStructuredOutputRepairAttempts,
-    AgentRuntimeHandoffExecutionOptions? Handoff = null);
+    AgentRuntimeHandoffExecutionOptions? Handoff = null,
+    WorkspaceScopeDescriptor? ContextWorkspaceScope = null);
 
 public sealed record AgentRuntimeHandoffExecutionOptions(
     AgentHandoffSettings Settings,

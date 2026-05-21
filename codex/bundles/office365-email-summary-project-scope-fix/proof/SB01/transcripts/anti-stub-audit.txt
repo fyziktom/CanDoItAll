@@ -1,0 +1,8 @@
+Command: rg -n "TODO|NotImplemented|throw new NotImplementedException|template-only|fixture-specific" src/CanDoItAll.AgentFramework.Maf src/CanDoItAll.Modules.CognitiveMemory/Advanced tests/CanDoItAll.Tests.Unit/AgentContextContributionTests.cs tests/CanDoItAll.Tests.Unit/WorkflowExecutorTests.cs
+ExitCode: 1
+
+Audit result: no matches; no stub implementation was added for SB01 production changes.
+
+Invariant IDs:
+- SB01-INV01
+- SB01-INV02

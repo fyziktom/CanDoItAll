@@ -44,7 +44,8 @@ public sealed class MafWorkflowLlmComponentInvoker(
             runtimeSessionKey: null,
             static (_, _, _) => Task.CompletedTask,
             cancellationToken,
-            suppressApprovalRequirements: true);
+            suppressApprovalRequirements: true,
+            executionOptions: CreateExecutionOptions(input));
 
         var payload = response.ResponseText.Trim();
         if (component.ModelSettings.RequireJsonOutput || component.ResultShape.Kind == WorkflowValueShapeKind.Json)
@@ -154,6 +155,72 @@ public sealed class MafWorkflowLlmComponentInvoker(
            Workflow input payload:
            {input.PayloadJson}
            """;
+
+    private static AgentRuntimeExecutionOptions CreateExecutionOptions(WorkflowNodeInput input)
+        => new(
+            StructuredOutput: null,
+            FinalizerMode: AgentFinalizerMode.Disabled,
+            RequireStructuredOutputValidation: true,
+            MaxStructuredOutputRepairAttempts: 0,
+            ContextWorkspaceScope: TryResolveProjectScope(input, out var projectScope)
+                ? projectScope
+                : null);
+
+    private static bool TryResolveProjectScope(
+        WorkflowNodeInput input,
+        out WorkspaceScopeDescriptor scope)
+    {
+        if (TryResolveProjectId(input.PayloadJson, out var projectId))
+        {
+            scope = WorkspaceScopeDescriptor.Project(projectId.ToString("D"));
+            return true;
+        }
+
+        scope = WorkspaceScopeDescriptor.Sandbox;
+        return false;
+    }
+
+    private static bool TryResolveProjectId(
+        string payloadJson,
+        out Guid projectId)
+    {
+        projectId = Guid.Empty;
+        if (string.IsNullOrWhiteSpace(payloadJson))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(payloadJson);
+            var root = document.RootElement;
+            if (TryReadGuidProperty(root, "projectId", out projectId))
+            {
+                return true;
+            }
+
+            return root.ValueKind == JsonValueKind.Object &&
+                   root.TryGetProperty("project", out var project) &&
+                   TryReadGuidProperty(project, "id", out projectId);
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static bool TryReadGuidProperty(
+        JsonElement element,
+        string propertyName,
+        out Guid value)
+    {
+        value = Guid.Empty;
+        return element.ValueKind == JsonValueKind.Object &&
+               element.TryGetProperty(propertyName, out var property) &&
+               property.ValueKind == JsonValueKind.String &&
+               Guid.TryParse(property.GetString(), out value) &&
+               value != Guid.Empty;
+    }
 
     private static void ValidateJsonPayload(
         string payload,

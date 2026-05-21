@@ -85,10 +85,13 @@ public sealed class CognitiveMemoryAgentContextContributor(
             var contextText = RenderContextPackage(package);
             if (string.IsNullOrWhiteSpace(contextText))
             {
-                return SkipOrFail(request, "Cognitive Memory recall returned an empty context pack.", new Dictionary<string, string>
+                return AgentContextContributionResult.Skipped(new Dictionary<string, string>
                 {
                     ["reason"] = "empty-context-pack",
-                    ["traceId"] = result.TraceId.ToString("D")
+                    ["traceId"] = result.TraceId.ToString("D"),
+                    ["contextPackId"] = package.ContextPackId.Value.ToString("D"),
+                    ["modelAccessMode"] = settings.ModelAccessMode.ToString(),
+                    ["providerProfileId"] = request.Provider.Id.ToString("D")
                 });
             }
 

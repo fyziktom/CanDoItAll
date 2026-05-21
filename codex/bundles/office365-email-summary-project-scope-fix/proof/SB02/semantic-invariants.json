@@ -1,0 +1,28 @@
+{
+  "invariants": [
+    {
+      "Invariant ID": "SB02-INV01",
+      "Source raw note": "Office365 workflow must fetch the categorized client email and create a markdown project-structure asset.",
+      "Expected behavior": "Live workflow run completes and reports a created asset id.",
+      "Disallowed shallow implementation": "Do not use preview simulation or a fake Office365 executor as live proof.",
+      "Failing-first test": "live-office365-pre-fix-failure.txt shows the pre-empty-context fix run failed after Graph fetch.",
+      "Passing test": "ProjectStructureAgentApi_llm_workflow_uses_project_scope_and_creates_markdown_asset_under_workflow_node",
+      "Changed source files": "repo://tests/CanDoItAll.Tests.Integration/ProjectStructureAgentApiIntegrationTests.cs",
+      "Production assertions": "Default Office365 workflow uses Graph executor, LLM node, project-structure executor, and mark-processed executor.",
+      "Red-team negative case": "Integration test preserves runContext so lease validation is exercised.",
+      "Downstream dependency check": "live-office365-asset-proof.txt verifies created asset parent and content."
+    },
+    {
+      "Invariant ID": "SB02-INV02",
+      "Source raw note": "The asset must be created under the node where the workflow was called from.",
+      "Expected behavior": "Created asset parent id equals the workflow node id and a link from workflow node to asset exists.",
+      "Disallowed shallow implementation": "Do not create the asset under the parent input node or project root.",
+      "Failing-first test": "A workflow output without runContext caused lease validation failure during integration development.",
+      "Passing test": "ProjectStructureAgentApi_llm_workflow_uses_project_scope_and_creates_markdown_asset_under_workflow_node",
+      "Changed source files": "repo://tests/CanDoItAll.Tests.Integration/ProjectStructureAgentApiIntegrationTests.cs",
+      "Production assertions": "ProjectStructureWorkflowExecutor reads runContext from the LLM output path.",
+      "Red-team negative case": "The fake LLM preserves runContext instead of inventing an agent context.",
+      "Downstream dependency check": "live-office365-asset-proof.txt reports assetIsUnderWorkflowNode=true and linksFromWorkflowToAsset=1."
+    }
+  ]
+}
