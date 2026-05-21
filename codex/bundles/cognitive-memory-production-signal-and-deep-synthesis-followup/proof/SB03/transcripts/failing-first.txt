@@ -1,8 +1,0 @@
-Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~SemanticInvariant_AcceptedUseSignalHasProductionEmitterAndScheduledAssimilation" --no-restore
-Exit code: 1 in SB02 red baseline before production changes.
-
-Relevant baseline failures were recorded in `bundle://proof/SB02/transcripts/failing-first.txt`:
-- Missing `ICognitiveMemoryProfessorAcceptedUseSignalEmitter`.
-- Missing `CognitiveMemoryProfessorAcceptedUseSignalRequest`.
-- Missing production assignment to `ProfessorAnchorAcceptedUse`.
-- Missing scheduled `ScanAssimilationAsync` lifecycle wiring.

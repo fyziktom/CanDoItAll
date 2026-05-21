@@ -1,4 +1,0 @@
-NAMES                     IMAGE                   PORTS                                                             STATUS
-candoitall-qdrant         qdrant/qdrant:v1.15.3   0.0.0.0:6333-6334->6333-6334/tcp, [::]:6333-6334->6333-6334/tcp   Up 22 hours (healthy)
-candoitall-qdrant-proof   qdrant/qdrant:latest    6333-6334/tcp                                                     Up 6 days
-candoitall-postgres       postgres:16-alpine      0.0.0.0:5432->5432/tcp, [::]:5432->5432/tcp                       Up 2 days (healthy)

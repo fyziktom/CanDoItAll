@@ -1,6 +1,0 @@
-Command: python -m py_compile codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py
-WorkingDirectory: C:\repositories\CanDoItAll
-StartedUtc: 2026-05-20T17:39:55.1412009Z
-Output:
-<no output>
-ExitCode: 0

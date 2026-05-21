@@ -1,3 +1,0 @@
-Command: transcript metadata repair for .\codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup\proof\SB06\transcripts\prepared-validator-after-sb06.txt
-Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup
-ExitCode: 0

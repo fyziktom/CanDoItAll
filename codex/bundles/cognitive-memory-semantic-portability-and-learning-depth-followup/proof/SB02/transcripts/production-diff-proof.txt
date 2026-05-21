@@ -1,6 +1,0 @@
-Command: git diff --name-only -- src/CanDoItAll.Modules.CognitiveMemory
-WorkingDirectory: C:\repositories\CanDoItAll
-Invariant: SB02-NO-PRODUCTION-02
-Test: SemanticInvariant_NoProductionCognitiveMemoryCodeChangedInSB02
-ProductionDiffIsEmpty: True
-ExitCode: 0

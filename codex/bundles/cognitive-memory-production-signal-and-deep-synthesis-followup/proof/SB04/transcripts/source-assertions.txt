@@ -1,7 +1,0 @@
-Source assertion audit for SB04:
-
-- `repo://src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryAdvancedContracts.cs` defines `CognitiveMemoryProfessorComparisonReviewOutcome`, `CognitiveMemoryProfessorComparisonReviewResolutionRequest`, `CognitiveMemoryProfessorComparisonReviewResolutionResult`, and `ResolveComparisonAsync`.
-- `repo://src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryProfessorReviewService.cs` requires a non-empty capture id, actor id, and reason.
-- `ResolveComparisonAsync` refuses anchors outside `CognitiveMemoryProfessorAnchorState.Comparing`.
-- Accept outcomes validate the derived memory is not the direct capture memory and is approved/active in the same project.
-- Every valid resolution calls `CognitiveMemoryProfessorAnchorTransitionAudit.AddTransition`.

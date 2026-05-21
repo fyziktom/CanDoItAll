@@ -1,7 +1,0 @@
-Command: python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py codex\skills\bundles\candoitall-bundle-preparation\tests\fixtures\proof-depth-complete --stage completed --profile feedback
-WorkingDirectory: C:\repositories\CanDoItAll
-StartedUtc: 2026-05-20T17:40:12.9332736Z
-Test: ArtifactProof.ValidatesCompleteFixture
-Output:
-Bundle is valid for stage 'completed': C:\repositories\CanDoItAll\codex\skills\bundles\candoitall-bundle-preparation\tests\fixtures\proof-depth-complete
-ExitCode: 0

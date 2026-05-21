@@ -1,3 +1,0 @@
-Command: python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup --stage completed
-Bundle is valid for stage 'completed': C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup
-ExitCode: 0

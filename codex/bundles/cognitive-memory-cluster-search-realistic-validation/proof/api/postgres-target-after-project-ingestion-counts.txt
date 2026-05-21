@@ -1,9 +1,0 @@
-           table_name            | count 
----------------------------------+-------
- CognitiveMemory_SourceManifests |    13
- CognitiveMemory_SourceItems     |   750
- CognitiveMemory_EvidenceAnchors |   750
- CognitiveMemory_Records         |     0
- CognitiveMemory_QualityClusters |     0
-(5 ��dek)
-

@@ -1,7 +1,0 @@
-Anti-stub audit for SB07:
-
-- Approximate discovery is in production cluster formation code, not a test-only string.
-- Provider result is consumed by `CognitiveMemoryCandidatePairSelector`.
-- The selector accumulator records approximate generated counts and skipped pairs.
-- DI test verifies the provider registration resolves through the module service graph.
-- Provider rejects cross-project pairs unless the planning scope explicitly allows them.

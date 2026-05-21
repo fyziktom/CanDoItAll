@@ -1,6 +1,0 @@
-Anti-stub audit for SB04:
-
-- Resolver is implemented in production `CognitiveMemoryProfessorReviewService`, not only in tests.
-- Test `ProfessorComparisonReviewResolution_ReturnsComparingAnchorToActiveAndAuditsTransition` mutates a real persisted capture into `Comparing`, calls the production service, reloads the capture, and verifies a persisted lifecycle signal.
-- Resolver throws for non-`Comparing` anchors, so it cannot be used as a silent fallback state clearer.
-- Accepting an aggregate validates the target memory instead of blindly accepting an arbitrary id.

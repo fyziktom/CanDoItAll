@@ -1,6 +1,0 @@
-       SourceSystem        | SourceItemType | count 
----------------------------+----------------+-------
- WorkbenchProjectStructure | ProjectLink    |   474
- WorkbenchProjectStructure | ProjectNode    |   276
-(2 ��dky)
-

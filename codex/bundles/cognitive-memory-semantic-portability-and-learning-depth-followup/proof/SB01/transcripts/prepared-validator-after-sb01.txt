@@ -1,7 +1,0 @@
-Command: python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup --stage prepared --repo-root C:\repositories\CanDoItAll
-WorkingDirectory: C:\repositories\CanDoItAll
-Invariant: SB01-PORTABILITY-01
-Invariant: SB01-INVARIANT-02
-Test: Bundle.PreparedValidationAfterPortableReferenceConversion
-Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\cognitive-memory-semantic-portability-and-learning-depth-followup
-ExitCode: 0
