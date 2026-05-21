@@ -32,6 +32,10 @@ public sealed record CognitiveMemoryQualityClusterAlgorithmOptions
     public double CompositeEdgeThreshold { get; init; } = 0.58;
 
     public double SemanticFallbackThreshold { get; init; } = 0.62;
+
+    public double EmbeddingSimilarityThreshold { get; init; } = 0.82;
+
+    public string EmbeddingProfileId { get; init; } = "quality-cluster-embedding-v1";
 }
 
 public sealed record CognitiveMemoryQualityDreamAlgorithmOptions

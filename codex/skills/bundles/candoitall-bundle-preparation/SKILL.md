@@ -37,12 +37,13 @@ Turn messy inputs into a bundle that an implementation agent can execute without
 10. For every critical subbundle, add a Semantic Adequacy Gate requirement covering shallow-pass trap, adversarial negative proof, semantic positive proof, anti-stub audit, and raw-note literal closure.
 11. For every critical subbundle, require an artifact-backed proof manifest under `proof/SBxx/manifest.md` with changed-file hashes, command transcript paths, source assertions, anti-stub audit output, and any required browser, host, downstream smoke, or red-team artifacts.
 12. When a critical subbundle names a new production signal, state, record, or event, require a `## Production Behavior Artifact Matrix` in both `proof/SBxx/manifest.md` and `proof/SBxx/semantic-invariants.*` with producer, consumer, lifecycle, and negative-test citations.
-13. Write reusable implementation and QA prompts under `shared-prompts`.
-14. Pre-create browser-validation logging instructions for each subbundle and seed the execution report with browser analytics and subbundle gate sections.
-15. Complete traceability so every requirement points to at least one concrete bundle file and one owning subbundle.
-16. Run `scripts/validate_bundle.py --stage prepared` before declaring the bundle ready.
-17. Run `candoitall-bundle-validator` as the readiness gate and repair the bundle until it passes.
-18. Finish the self-review from QA, architect, and manager perspectives. Do not mark the bundle ready while any of those three reviews is incomplete or inconclusive.
+13. When an early process subbundle changes bundle skills, validators, or proof rules, require active Codex skill-root synchronization proof with repo and active SHA-256 hashes before downstream feature subbundles can start.
+14. Write reusable implementation and QA prompts under `shared-prompts`.
+15. Pre-create browser-validation logging instructions for each subbundle and seed the execution report with browser analytics and subbundle gate sections.
+16. Complete traceability so every requirement points to at least one concrete bundle file and one owning subbundle.
+17. Run `scripts/validate_bundle.py --stage prepared` before declaring the bundle ready.
+18. Run `candoitall-bundle-validator` as the readiness gate and repair the bundle until it passes.
+19. Finish the self-review from QA, architect, and manager perspectives. Do not mark the bundle ready while any of those three reviews is incomplete or inconclusive.
 
 ## Bundle Contract
 

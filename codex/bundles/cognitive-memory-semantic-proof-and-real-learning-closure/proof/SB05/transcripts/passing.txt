@@ -1,0 +1,7 @@
+Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~SemanticInvariant_AcceptedUseSignalHasProductionOutcomeEventHandlerAndScheduledAssimilation|FullyQualifiedName~AcceptedUseOutcomeEventHandler_EmitsAcceptedUseSignalIdempotentlyAndRejectsBroadLineage" --no-restore
+ExitCode: 0
+Output:
+SemanticInvariant_AcceptedUseSignalHasProductionOutcomeEventHandlerAndScheduledAssimilation passed.
+AcceptedUseOutcomeEventHandler_EmitsAcceptedUseSignalIdempotentlyAndRejectsBroadLineage passed.
+SB05-ACCEPTED-USE-01
+

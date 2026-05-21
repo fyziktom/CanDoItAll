@@ -11,3 +11,4 @@ A completed critical subbundle must include:
 - Production behavior matrix for new signals/states/records/events.
 - Claim-to-code matrix when the execution report uses semantic capability labels.
 - Moved-checkout completed-stage validation for final closure.
+

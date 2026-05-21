@@ -1,0 +1,6 @@
+Command: python codex/skills/bundles/candoitall-bundle-preparation/scripts/validate_bundle.py codex/skills/bundles/candoitall-bundle-preparation/tests/fixtures/capability-proof-fake-czech-diacritic --stage completed; python codex/skills/bundles/candoitall-bundle-preparation/scripts/validate_bundle.py codex/skills/bundles/candoitall-bundle-preparation/tests/fixtures/capability-proof-fake-embedding-backed --stage completed
+ExitCode: 1
+Output:
+CapabilityProof.RejectsFakeCapabilityClaims rejected English-only Czech proof and lexical-only embedding proof.
+SB01-CLAIM-TO-CODE-01
+

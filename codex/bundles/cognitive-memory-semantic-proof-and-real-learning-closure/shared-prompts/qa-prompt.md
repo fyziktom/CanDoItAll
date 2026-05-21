@@ -10,3 +10,4 @@ Review the completed bundle as a skeptical architect. Search for capability labe
 - `portable proof` while proof artifacts contain `C:\`, `/home/`, `/mnt/`, user-profile paths, or active-skill root paths.
 
 Run failing-first and passing test transcripts. Run completed-stage validation from a copied checkout path. Inspect source directly, not just proof manifests.
+

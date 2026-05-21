@@ -1,0 +1,6 @@
+Command: python codex/skills/bundles/candoitall-bundle-preparation/scripts/validate_bundle.py codex/skills/bundles/candoitall-bundle-preparation/tests/fixtures/proof-depth-complete --stage completed
+ExitCode: 0
+Output:
+PortableProof.ValidatesMovedPortableFixtureAndActiveSkillSync passed with portable fixture validation and repo/active skill hash equality.
+SB02-PORTABLE-PROOF-01
+

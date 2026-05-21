@@ -27,3 +27,4 @@ Bundle validation failed:
 ## Maintainability notes
 
 The current implementation should not receive more broad feature changes without splitting the largest services into testable responsibilities. Otherwise Codex tends to satisfy one test at a time inside large orchestration methods instead of producing durable architecture.
+

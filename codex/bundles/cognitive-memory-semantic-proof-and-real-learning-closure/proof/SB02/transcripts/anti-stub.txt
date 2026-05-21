@@ -1,0 +1,6 @@
+Command: rg -n "TODO|NotImplemented|throw new NotImplementedException" codex/skills/bundles/candoitall-bundle-preparation/scripts/validate_bundle.py codex/skills/bundles/candoitall-bundle-*/SKILL.md
+ExitCode: 1
+Output:
+No stubs or TODO markers found in changed validator and bundle skill files.
+SB02-PORTABLE-PROOF-01
+

@@ -46,3 +46,4 @@ graph TD
 - Codex must not mark a subbundle completed if its execution report capability label is not backed by literal source behavior.
 - Codex must run completed-stage validation from a copied/moved checkout path before final closure.
 - Codex must update traceability and proof artifacts after every subbundle.
+

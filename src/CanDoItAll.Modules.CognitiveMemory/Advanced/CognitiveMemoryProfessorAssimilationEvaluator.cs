@@ -7,7 +7,7 @@ internal sealed class CognitiveMemoryProfessorAssimilationEvaluator(
     IDbContextFactory<AppDbContext> dbContextFactory,
     CognitiveMemoryQualityAlgorithmOptions? algorithmOptions = null) : ICognitiveMemoryProfessorAssimilationEvaluator
 {
-    private readonly CognitiveMemoryQualityProfessorLifecycleAlgorithmOptions options = (algorithmOptions ?? new CognitiveMemoryQualityAlgorithmOptions()).ProfessorLifecycle;
+    private readonly CognitiveMemoryQualityProfessorLifecycleAlgorithmOptions options = (algorithmOptions ?? CognitiveMemoryQualityAlgorithmOptions.Current).ProfessorLifecycle;
 
     public async ValueTask<CognitiveMemoryProfessorAnchorAssimilationEvaluationResult> EvaluateAsync(
         CognitiveMemoryProfessorAnchorAssimilationEvaluationRequest request,

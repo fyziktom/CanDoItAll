@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: `Ready`
+- Status: `Completed`
 
 ## Objective
 
@@ -93,3 +93,5 @@ Move recall output from selected-fragment composition toward task-facing briefs 
 ## Suggested Agent Prompt
 
 Implement Recall brief synthesis and reference lineage. Start by reading this README and every exact source reference. Create failing-first proof where required, implement production behavior, update tests, record portable proof artifacts, run the required validators, and only mark this subbundle completed when all acceptance checks pass.
+
+

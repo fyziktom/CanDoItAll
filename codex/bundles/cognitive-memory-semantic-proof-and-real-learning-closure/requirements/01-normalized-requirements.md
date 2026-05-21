@@ -11,3 +11,4 @@
 - R09: Recall synthesis must produce requester-facing briefs and maintain statement-level lineage that can resolve exact supporting claims and sources on demand.
 - R10: Refactor large services into stable boundaries and centralize configuration/options so future changes are maintainable.
 - R11: Final validation must include red-team end-to-end proof across Czech professor teaching, dream consolidation, semantic clustering, accepted-use integration, assimilation/fading, recall synthesis, and reference resolution.
+

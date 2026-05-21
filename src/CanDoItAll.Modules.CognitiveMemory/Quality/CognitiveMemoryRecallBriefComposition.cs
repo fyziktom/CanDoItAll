@@ -23,7 +23,7 @@ public interface ICognitiveMemoryRecallBriefComposer
 public sealed class CognitiveMemoryRecallBriefComposer(
     CognitiveMemoryQualityAlgorithmOptions? algorithmOptions = null) : ICognitiveMemoryRecallBriefComposer
 {
-    private readonly CognitiveMemoryQualityRecallAlgorithmOptions options = (algorithmOptions ?? new CognitiveMemoryQualityAlgorithmOptions()).Recall;
+    private readonly CognitiveMemoryQualityRecallAlgorithmOptions options = (algorithmOptions ?? CognitiveMemoryQualityAlgorithmOptions.Current).Recall;
 
     private static readonly IReadOnlySet<string> QueryStopWords = new HashSet<string>([
         "about",
@@ -144,6 +144,7 @@ public sealed class CognitiveMemoryRecallBriefComposer(
             return [CreateMissingEvidencePlan(request)];
         }
 
+        candidates = FilterDominatedQueryCandidates(candidates);
         var plans = new List<StatementPlan>();
         var conflictSectionKeys = candidates
             .Where(candidate => candidate.ConflictPolarity != StatementConflictPolarity.None)
@@ -171,6 +172,25 @@ public sealed class CognitiveMemoryRecallBriefComposer(
         }
 
         return plans;
+    }
+
+    private static IReadOnlyList<SectionCandidate> FilterDominatedQueryCandidates(
+        IReadOnlyList<SectionCandidate> candidates)
+    {
+        var maxOverlap = candidates.Max(candidate => candidate.QueryOverlap);
+        if (maxOverlap <= 1)
+        {
+            return candidates;
+        }
+
+        return candidates
+            .Where(candidate =>
+                candidate.QueryOverlap == maxOverlap ||
+                candidate.AggregateClaimId is not null ||
+                candidate.ConflictPolarity != StatementConflictPolarity.None ||
+                candidate.PlanKind is CognitiveMemoryRecallStatementPlanKind.Caveat
+                    or CognitiveMemoryRecallStatementPlanKind.MissingEvidence)
+            .ToArray();
     }
 
     private CognitiveMemorySynthesizedRecallStatement CreateStatement(

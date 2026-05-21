@@ -49,3 +49,4 @@ Several services are still too large and internally mixed:
 - `CognitiveMemoryRecallBriefComposition.cs` is around 600 lines.
 
 These files mix orchestration, extraction, scoring, persistence, formatting, and validation logic, which makes future Codex passes prone to shallow edits and hidden regressions.
+

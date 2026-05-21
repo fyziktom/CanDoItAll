@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: `Ready`
+- Status: `Completed`
 
 ## Objective
 
@@ -96,3 +96,5 @@ Create red tests for the exact current gaps before implementing feature changes.
 ## Suggested Agent Prompt
 
 Implement Failing-first regression corpus for current gaps. Start by reading this README and every exact source reference. Create failing-first proof where required, implement production behavior, update tests, record portable proof artifacts, run the required validators, and only mark this subbundle completed when all acceptance checks pass.
+
+

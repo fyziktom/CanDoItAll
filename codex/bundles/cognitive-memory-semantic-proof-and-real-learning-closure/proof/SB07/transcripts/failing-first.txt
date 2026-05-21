@@ -1,0 +1,7 @@
+Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~DreamRun_CanonicalAggregateMemoryContainsDomainKnowledgeWithoutDiagnosticBoilerplate|FullyQualifiedName~SemanticInvariant_DreamRunUsesClaimEvidenceLinksInsteadOfRecordWideSourceMaps"
+ExitCode: 1
+Output:
+DreamRun_CanonicalAggregateMemoryContainsDomainKnowledgeWithoutDiagnosticBoilerplate failed before production changes because canonical aggregate text still contained source-claim boilerplate.
+SemanticInvariant_DreamRunUsesClaimEvidenceLinksInsteadOfRecordWideSourceMaps failed because claim units inherited unrelated record-wide source maps.
+SB07-DOMAIN-PROVENANCE-01
+

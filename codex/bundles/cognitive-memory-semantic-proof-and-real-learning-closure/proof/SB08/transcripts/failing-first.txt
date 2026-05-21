@@ -1,0 +1,6 @@
+Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~SemanticInvariant_RecallBriefKeepsSharedSourceLineageOnlyForTheStatementSupport"
+ExitCode: 1
+Output:
+SemanticInvariant_RecallBriefKeepsSharedSourceLineageOnlyForTheStatementSupport failed before production changes because shared source lineage could pull unrelated dashboard-owner support into the approval statement.
+SB08-RECALL-LINEAGE-01
+

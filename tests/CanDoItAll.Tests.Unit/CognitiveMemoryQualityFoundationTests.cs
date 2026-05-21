@@ -674,6 +674,113 @@ public sealed class CognitiveMemoryQualityFoundationTests
         Assert.DoesNotContain("Shared signals:", candidate.CanonicalText, StringComparison.Ordinal);
         Assert.DoesNotContain("source-backed conclusions", candidate.CanonicalText, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("source-backed observation", candidate.CanonicalText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("source claims", candidate.CanonicalText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("mapped source claims", candidate.CanonicalText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("consistently described", candidate.CanonicalText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("subject(s)", candidate.CanonicalText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task SemanticInvariant_DreamRunUsesClaimEvidenceLinksInsteadOfRecordWideSourceMaps()
+    {
+        await using var fixture = await CreateFixtureAsync();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var mixed = await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-0000000000f1"),
+            "Release gate mixed claims",
+            "Release gate requires release-owner approval before traffic restoration. Payment export records finance archive owner.",
+            "Release gate requires release-owner approval before traffic restoration. Payment export records finance archive owner.",
+            topicKey: "release.gate.claim.provenance");
+        var peer = await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("10000000-0000-0000-0000-0000000000f2"),
+            "Release gate approval audit",
+            "Release gate requires release-owner approval before traffic restoration.",
+            "Release gate requires release-owner approval before traffic restoration.",
+            topicKey: "release.gate.claim.provenance");
+        var approvalClaimId = Guid.Parse("41000000-0000-0000-0000-0000000000f1");
+        var archiveClaimId = Guid.Parse("41000000-0000-0000-0000-0000000000f2");
+        var peerClaimId = Guid.Parse("41000000-0000-0000-0000-0000000000f3");
+        var unrelatedAnchorId = Guid.Parse("41000000-0000-0000-0000-0000000000f4");
+        var mixedSourceLink = await fixture.DbContext.Set<CognitiveMemorySourceLinkRecord>()
+            .SingleAsync(link => link.MemoryRecordId == mixed.RecordId);
+        var mixedSourceItem = await fixture.DbContext.Set<CognitiveMemorySourceItemRecord>()
+            .SingleAsync(item => item.Id == mixed.SourceItemId);
+        fixture.DbContext.AddRange(
+            new CognitiveMemoryEvidenceAnchorRecord
+            {
+                Id = unrelatedAnchorId,
+                ProjectId = projectId,
+                AnchorKind = CognitiveMemoryEvidenceAnchorKind.TextSpan,
+                SourceManifestId = mixedSourceLink.SourceManifestId,
+                SourceItemId = mixed.SourceItemId,
+                SourceSystem = mixedSourceItem.SourceSystem,
+                Locator = $"{mixedSourceItem.Locator}#archive-owner",
+                StructuredPath = "$.content[1]",
+                TextStart = 72,
+                TextEnd = mixedSourceItem.ContentText.Length,
+                QuoteHash = CognitiveMemoryHash.FromUtf8("unrelated-archive-quote").Value,
+                TrustLevel = CognitiveMemorySourceTrustLevel.RuntimeSource,
+                RedactionState = CognitiveMemoryRedactionState.Safe,
+                SourceHash = mixedSourceItem.ContentHash,
+                ObservedAtUtc = fixture.Clock.GetUtcNow(),
+                CreatedAtUtc = fixture.Clock.GetUtcNow(),
+                ConcurrencyToken = Guid.NewGuid()
+            },
+            new CognitiveMemoryRecordEvidenceAnchorRecord
+            {
+                MemoryRecordId = mixed.RecordId,
+                EvidenceAnchorId = unrelatedAnchorId,
+                EvidenceRole = CognitiveMemoryEvidenceRole.SupportingSource,
+                Summary = "Payment export records finance archive owner.",
+                CreatedAtUtc = fixture.Clock.GetUtcNow()
+            },
+            CreateClaim(projectId, mixed.RecordId, approvalClaimId, "Release gate requires release-owner approval before traffic restoration.", "release.gate", "requires", "release.owner.approval"),
+            CreateClaim(projectId, mixed.RecordId, archiveClaimId, "Payment export records finance archive owner.", "payment.export", "records", "finance.archive.owner"),
+            CreateClaim(projectId, peer.RecordId, peerClaimId, "Release gate requires release-owner approval before traffic restoration.", "release.gate", "requires", "release.owner.approval"),
+            new CognitiveMemoryClaimEvidenceLinkRecord
+            {
+                ClaimId = approvalClaimId,
+                EvidenceAnchorId = mixed.EvidenceAnchorId,
+                Direction = CognitiveMemoryEvidenceDirection.Supports,
+                Explanation = "Release approval source span.",
+                CreatedAtUtc = fixture.Clock.GetUtcNow()
+            },
+            new CognitiveMemoryClaimEvidenceLinkRecord
+            {
+                ClaimId = archiveClaimId,
+                EvidenceAnchorId = unrelatedAnchorId,
+                Direction = CognitiveMemoryEvidenceDirection.Supports,
+                Explanation = "Archive owner source span.",
+                CreatedAtUtc = fixture.Clock.GetUtcNow()
+            },
+            new CognitiveMemoryClaimEvidenceLinkRecord
+            {
+                ClaimId = peerClaimId,
+                EvidenceAnchorId = peer.EvidenceAnchorId,
+                Direction = CognitiveMemoryEvidenceDirection.Supports,
+                Explanation = "Peer release approval source span.",
+                CreatedAtUtc = fixture.Clock.GetUtcNow()
+            });
+        await fixture.DbContext.SaveChangesAsync();
+        var dream = CreateDreamService(fixture);
+
+        var result = await dream.RunAsync(new CognitiveMemoryDreamRunRequest(
+            projectId,
+            CognitiveMemoryConsolidationMode.ProjectNightly,
+            CognitiveMemoryConsolidationTriggerKind.Nightly,
+            Policy(projectId),
+            new CognitiveMemoryIdempotencyKey("dream-claim-evidence-specific-source-map")));
+
+        var approvalClaim = result.AggregateCandidates
+            .SelectMany(candidate => candidate.Claims)
+            .Single(claim =>
+                claim.SourceMaps.Any(sourceMap => sourceMap.EvidenceAnchorId?.Value == mixed.EvidenceAnchorId) &&
+                claim.SourceMaps.Any(sourceMap => sourceMap.SourceMemoryRecordId.Value == peer.RecordId));
+        Assert.DoesNotContain(approvalClaim.SourceMaps, sourceMap => sourceMap.EvidenceAnchorId?.Value == unrelatedAnchorId);
     }
 
     [Fact]
@@ -689,21 +796,57 @@ public sealed class CognitiveMemoryQualityFoundationTests
             "CanDoItAll.Modules.CognitiveMemory",
             "Quality",
             "CognitiveMemoryDreamSynthesis.cs");
+        var supportSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.CognitiveMemory",
+            "Quality",
+            "CognitiveMemoryQualitySupport.cs");
 
         Assert.Contains("CreateClaimSpecificSourceMaps", consolidationSource, StringComparison.Ordinal);
         Assert.DoesNotContain("SelectMany(unit => unit.SourceMaps)", consolidationSource, StringComparison.Ordinal);
+        Assert.Contains("CognitiveMemoryClaimEvidenceLinkRecord", supportSource, StringComparison.Ordinal);
+        Assert.Contains("ClaimEvidenceLinks", supportSource, StringComparison.Ordinal);
         Assert.Contains("ClaimSourceMap", synthesisSource, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void SemanticInvariant_ClusterDiscoveryHasEmbeddingBackedApproximateCandidateProvider()
+    public void SemanticInvariant_ClusterDiscoveryUsesRealEmbeddingProviderAndHonestLexicalFallback()
     {
         var qualitySource = ReadRepositoryFiles("src", "CanDoItAll.Modules.CognitiveMemory", "Quality");
 
         Assert.Contains("ICognitiveMemoryApproximateClusterCandidateProvider", qualitySource, StringComparison.Ordinal);
-        Assert.Contains("Embedding", qualitySource, StringComparison.Ordinal);
+        Assert.Contains("ICognitiveMemoryEmbeddingProvider", qualitySource, StringComparison.Ordinal);
+        Assert.Contains("EmbedAsync", qualitySource, StringComparison.Ordinal);
+        Assert.Contains("CognitiveMemoryEmbeddingApproximateClusterCandidateProvider", qualitySource, StringComparison.Ordinal);
+        Assert.Contains("CognitiveMemoryLexicalApproximateClusterCandidateProvider", qualitySource, StringComparison.Ordinal);
+        Assert.DoesNotContain("CognitiveMemoryEmbeddingBackedApproximateClusterCandidateProvider", qualitySource, StringComparison.Ordinal);
         Assert.Contains("ContinuationCursor", qualitySource, StringComparison.Ordinal);
         Assert.Contains("ApproximateCandidatePairsGenerated", qualitySource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SemanticInvariant_QualityArchitectureUsesFocusedBoundariesAndInjectedOptions()
+    {
+        var advancedSource = ReadRepositoryFiles("src", "CanDoItAll.Modules.CognitiveMemory", "Advanced");
+        var qualitySource = ReadRepositoryFiles("src", "CanDoItAll.Modules.CognitiveMemory", "Quality");
+        var moduleSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.CognitiveMemory",
+            "CognitiveMemoryModuleServiceCollectionExtensions.cs");
+        var productionSource = string.Join(Environment.NewLine, advancedSource, qualitySource, moduleSource);
+
+        Assert.Contains("TryAddSingleton<CognitiveMemoryQualityAlgorithmOptions>", moduleSource, StringComparison.Ordinal);
+        Assert.Contains("GetRequiredService<CognitiveMemoryQualityAlgorithmOptions>()", moduleSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("new CognitiveMemoryQualityAlgorithmOptions()", productionSource, StringComparison.Ordinal);
+        Assert.Contains("ICognitiveMemoryProfessorTeachingExtractor", advancedSource, StringComparison.Ordinal);
+        Assert.Contains("ICognitiveMemoryRecallOutcomeAcceptedEventHandler", advancedSource, StringComparison.Ordinal);
+        Assert.Contains("ICognitiveMemoryClusterKeyExtractor", qualitySource, StringComparison.Ordinal);
+        Assert.Contains("ICognitiveMemoryCandidatePairSelector", qualitySource, StringComparison.Ordinal);
+        Assert.Contains("ICognitiveMemoryApproximateClusterCandidateProvider", qualitySource, StringComparison.Ordinal);
+        Assert.Contains("CognitiveMemoryQualitySupportLoader", qualitySource, StringComparison.Ordinal);
+        Assert.Contains("ICognitiveMemoryDreamClaimSynthesizer", qualitySource, StringComparison.Ordinal);
+        Assert.Contains("ICognitiveMemoryDreamValidator", qualitySource, StringComparison.Ordinal);
+        Assert.Contains("CognitiveMemoryRecallBriefComposer", qualitySource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -2342,6 +2485,67 @@ public sealed class CognitiveMemoryQualityFoundationTests
     }
 
     [Fact]
+    public void SemanticInvariant_RecallBriefKeepsSharedSourceLineageOnlyForTheStatementSupport()
+    {
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var sharedSourceItemId = new CognitiveMemorySourceItemId(Guid.Parse("41000000-0000-0000-0000-000000000101"));
+        var approvalRef = new CognitiveMemoryRecallSourceRef(
+            new CognitiveMemoryRecordId(Guid.Parse("41000000-0000-0000-0000-000000000102")),
+            sharedSourceItemId,
+            new CognitiveMemoryEvidenceAnchorId(Guid.Parse("41000000-0000-0000-0000-000000000103")),
+            "unit-test",
+            "/unit/shared-runbook#approval",
+            "Traffic restoration requires release-owner approval before rollback completes.",
+            CognitiveMemoryAccessLevel.Project,
+            CognitiveMemoryRedactionState.Safe,
+            IncludedInContext: true,
+            CognitiveMemoryRecallExclusionReasonKind.None);
+        var dashboardRef = new CognitiveMemoryRecallSourceRef(
+            new CognitiveMemoryRecordId(Guid.Parse("41000000-0000-0000-0000-000000000104")),
+            sharedSourceItemId,
+            new CognitiveMemoryEvidenceAnchorId(Guid.Parse("41000000-0000-0000-0000-000000000105")),
+            "unit-test",
+            "/unit/shared-runbook#dashboard-owner",
+            "Approval dashboard owner rotates weekly for staffing reports.",
+            CognitiveMemoryAccessLevel.Project,
+            CognitiveMemoryRedactionState.Safe,
+            IncludedInContext: true,
+            CognitiveMemoryRecallExclusionReasonKind.None);
+        var composer = new CognitiveMemoryRecallBriefComposer();
+
+        var result = composer.Compose(new CognitiveMemoryRecallBriefComposerRequest(
+            "What approval is required before traffic restoration?",
+            [
+                new CognitiveMemoryRecallContextSection(
+                    new CognitiveMemorySectionId("approval"),
+                    CognitiveMemoryRecallContextSectionKind.SelectedMemory,
+                    "Traffic restoration approval",
+                    "Traffic restoration requires release-owner approval before rollback completes.",
+                    [approvalRef.MemoryRecordId],
+                    [],
+                    [approvalRef]),
+                new CognitiveMemoryRecallContextSection(
+                    new CognitiveMemorySectionId("dashboard"),
+                    CognitiveMemoryRecallContextSectionKind.SelectedMemory,
+                    "Approval dashboard owner",
+                    "Approval dashboard owner rotates weekly for staffing reports.",
+                    [dashboardRef.MemoryRecordId],
+                    [],
+                    [dashboardRef])
+            ],
+            new HashSet<Guid>(),
+            Policy(projectId),
+            MaxStatements: 2,
+            Intent: CognitiveMemoryRecallIntentKind.Deployment));
+
+        var approvalStatement = Assert.Single(result.Statements, statement =>
+            statement.Text.Contains("Traffic restoration", StringComparison.OrdinalIgnoreCase));
+        Assert.Single(approvalStatement.SourceRefs);
+        Assert.Equal(approvalRef.EvidenceAnchorId, approvalStatement.SourceRefs[0].EvidenceAnchorId);
+        Assert.DoesNotContain("dashboard owner", approvalStatement.Text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task SemanticInvariant_CrossProjectWeeklyFormsOnlyPolicyAllowedCrossProjectClusters()
     {
         await using var fixture = await CreateFixtureAsync();
@@ -2421,6 +2625,74 @@ public sealed class CognitiveMemoryQualityFoundationTests
             ContainsMemory(cluster, certificate.RecordId) &&
             ContainsMemory(cluster, paperwork.RecordId));
         Assert.InRange(result.Metrics.CandidatePairsEvaluated, 1, 20);
+    }
+
+    [Fact]
+    public async Task SemanticInvariant_EmbeddingCandidateDiscoveryPairsParaphrasesWithoutSharedSignals()
+    {
+        await using var fixture = await CreateFixtureAsync();
+        var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var first = await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("41000000-0000-0000-0000-000000000201"),
+            "Aster protocol",
+            "Aster protocol quarantines north queue until amber notarization lands.",
+            "Aster protocol quarantines north queue until amber notarization lands.",
+            topicKey: "aster.protocol");
+        var second = await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("41000000-0000-0000-0000-000000000202"),
+            "Harbor workflow",
+            "Harbor workflow defers blue intake pending cerulean attestation.",
+            "Harbor workflow defers blue intake pending cerulean attestation.",
+            topicKey: "harbor.workflow");
+        var unrelated = await SeedLinkedMemoryAsync(
+            fixture,
+            projectId,
+            Guid.Parse("41000000-0000-0000-0000-000000000203"),
+            "Payroll reserve",
+            "Payroll reserve keeps two months of salary cost available.",
+            "Payroll reserve keeps two months of salary cost available.",
+            topicKey: "payroll.reserve");
+        var firstSignals = CognitiveMemoryClusterSemanticSignals.ExtractSignals("Aster protocol quarantines north queue until amber notarization lands.", 24);
+        var secondSignals = CognitiveMemoryClusterSemanticSignals.ExtractSignals("Harbor workflow defers blue intake pending cerulean attestation.", 24);
+        var algorithmOptions = CognitiveMemoryQualityAlgorithmOptions.Current with
+        {
+            Cluster = CognitiveMemoryQualityAlgorithmOptions.Current.Cluster with
+            {
+                EmbeddingSimilarityThreshold = 0.9
+            }
+        };
+        var embeddingProvider = new FakeClusterEmbeddingProvider();
+        var candidateProvider = new CognitiveMemoryEmbeddingApproximateClusterCandidateProvider(
+            embeddingProvider,
+            CognitiveMemoryAliasClusterSemanticSimilarityProvider.Instance,
+            algorithmOptions);
+        var selector = new CognitiveMemoryCandidatePairSelector(
+            CognitiveMemoryAliasClusterSemanticSimilarityProvider.Instance,
+            algorithmOptions,
+            candidateProvider);
+        var planner = new CognitiveMemoryClusterPlanner(
+            fixture.Factory,
+            fixture.Clock,
+            CognitiveMemoryClusterKeyExtractor.Instance,
+            selector,
+            algorithmOptions);
+
+        var result = await planner.PlanAsync(new CognitiveMemoryClusterPlanningRequest(
+            projectId,
+            Policy(projectId),
+            persistClusters: false));
+
+        Assert.Empty(firstSignals.Intersect(secondSignals, StringComparer.Ordinal));
+        Assert.True(embeddingProvider.CallCount >= 3);
+        Assert.True(result.Metrics.ApproximateCandidatePairsGenerated > 0);
+        Assert.Contains(result.Clusters, cluster =>
+            ContainsMemory(cluster, first.RecordId) &&
+            ContainsMemory(cluster, second.RecordId) &&
+            !ContainsMemory(cluster, unrelated.RecordId));
     }
 
     [Fact]
@@ -2917,12 +3189,63 @@ public sealed class CognitiveMemoryQualityFoundationTests
             IncludedInContext: true,
             CognitiveMemoryRecallExclusionReasonKind.None);
 
+    private static CognitiveMemoryClaimRecord CreateClaim(
+        Guid projectId,
+        Guid memoryRecordId,
+        Guid claimId,
+        string claimText,
+        string subjectKey,
+        string predicateKey,
+        string objectKey)
+        => new()
+        {
+            Id = claimId,
+            ProjectId = projectId,
+            MemoryRecordId = memoryRecordId,
+            ClaimKind = CognitiveMemoryClaimKind.Fact,
+            ClaimText = claimText,
+            SubjectKey = subjectKey,
+            PredicateKey = predicateKey,
+            ObjectKey = objectKey,
+            CurrentBeliefState = CognitiveMemoryBeliefStateKind.Validated,
+            CurrentBeliefBucket = CognitiveMemoryScoreProjectionBucket.StrongAccept,
+            DisplayBeliefScore = 0.9,
+            ValidationState = CognitiveMemoryValidationState.Approved,
+            StabilityState = CognitiveMemoryStabilityState.Active,
+            AlgorithmVersion = "unit-test",
+            CreatedAtUtc = DateTimeOffset.UnixEpoch,
+            UpdatedAtUtc = DateTimeOffset.UnixEpoch,
+            ConcurrencyToken = Guid.NewGuid()
+        };
+
     private sealed class ThrowingClusterPlanner : ICognitiveMemoryClusterPlanner
     {
         public ValueTask<CognitiveMemoryClusterPlanningResult> PlanAsync(
             CognitiveMemoryClusterPlanningRequest request,
             CancellationToken cancellationToken = default)
             => throw new InvalidOperationException("Planner failure with SECRET_TOKEN=masked.");
+    }
+
+    private sealed class FakeClusterEmbeddingProvider : ICognitiveMemoryEmbeddingProvider
+    {
+        public int CallCount { get; private set; }
+
+        public ValueTask<CognitiveMemoryEmbeddingResult> EmbedAsync(
+            CognitiveMemoryEmbeddingRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            CallCount++;
+            var normalized = request.Input.ToLowerInvariant();
+            var vector = normalized.Contains("aster protocol", StringComparison.Ordinal) ||
+                         normalized.Contains("harbor workflow", StringComparison.Ordinal)
+                ? new CognitiveMemoryVector(new[] { 0.98f, 0.02f, 0f })
+                : new CognitiveMemoryVector(new[] { 0f, 0.04f, 0.96f });
+            return ValueTask.FromResult(new CognitiveMemoryEmbeddingResult(
+                request.EmbeddingProfileId,
+                CognitiveMemoryHash.FromUtf8(request.Input),
+                vector,
+                "fake-cluster-embedding"));
+        }
     }
 
     private static CognitiveMemoryPolicyContext Policy(Guid projectId)

@@ -24,3 +24,4 @@
 - repo://tests/CanDoItAll.Tests.Unit/CognitiveMemoryAdvancedServicesTests.cs
 - repo://tests/CanDoItAll.Tests.Unit/CognitiveMemoryQualityFoundationTests.cs
 - repo://tests/CanDoItAll.Tests.Unit/CognitiveMemoryModuleRegistrationTests.cs
+

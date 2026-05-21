@@ -72,11 +72,12 @@ public static class CognitiveMemoryModuleServiceCollectionExtensions
         services.TryAddScoped<ICognitiveMemoryReviewUiService, CognitiveMemoryReviewUiService>();
         services.TryAddScoped<ICognitiveMemoryQualityDiagnosticsService, CognitiveMemoryQualityDiagnosticsService>();
         services.TryAddSingleton<ICognitiveMemoryClusterSemanticSimilarityProvider>(CognitiveMemoryAliasClusterSemanticSimilarityProvider.Instance);
-        services.TryAddSingleton<ICognitiveMemoryApproximateClusterCandidateProvider>(provider => new CognitiveMemoryEmbeddingBackedApproximateClusterCandidateProvider(
+        services.TryAddScoped<ICognitiveMemoryApproximateClusterCandidateProvider>(provider => new CognitiveMemoryEmbeddingApproximateClusterCandidateProvider(
+            provider.GetRequiredService<ICognitiveMemoryEmbeddingProvider>(),
             provider.GetRequiredService<ICognitiveMemoryClusterSemanticSimilarityProvider>(),
             provider.GetRequiredService<CognitiveMemoryQualityAlgorithmOptions>()));
         services.TryAddSingleton<ICognitiveMemoryClusterKeyExtractor>(CognitiveMemoryClusterKeyExtractor.Instance);
-        services.TryAddSingleton<ICognitiveMemoryCandidatePairSelector>(provider => new CognitiveMemoryCandidatePairSelector(
+        services.TryAddScoped<ICognitiveMemoryCandidatePairSelector>(provider => new CognitiveMemoryCandidatePairSelector(
             provider.GetRequiredService<ICognitiveMemoryClusterSemanticSimilarityProvider>(),
             provider.GetRequiredService<CognitiveMemoryQualityAlgorithmOptions>(),
             provider.GetRequiredService<ICognitiveMemoryApproximateClusterCandidateProvider>()));
@@ -105,6 +106,7 @@ public static class CognitiveMemoryModuleServiceCollectionExtensions
         services.TryAddSingleton<ICognitiveMemoryProfessorTeachingExtractor>(CognitiveMemoryProfessorTeachingExtractor.Instance);
         services.TryAddScoped<ICognitiveMemoryProfessorAssimilationEvaluator, CognitiveMemoryProfessorAssimilationEvaluator>();
         services.TryAddScoped<ICognitiveMemoryProfessorAcceptedUseSignalEmitter, CognitiveMemoryProfessorAcceptedUseSignalEmitter>();
+        services.TryAddScoped<ICognitiveMemoryRecallOutcomeAcceptedEventHandler, CognitiveMemoryRecallOutcomeAcceptedEventHandler>();
         services.TryAddScoped<ICognitiveMemoryCuratorConversationService, CognitiveMemoryCuratorConversationService>();
         services.TryAddScoped<ICognitiveMemoryProfessorAnchorService, CognitiveMemoryProfessorAnchorService>();
         services.TryAddScoped<ICognitiveMemorySelfModelStore, CognitiveMemorySelfModelStore>();

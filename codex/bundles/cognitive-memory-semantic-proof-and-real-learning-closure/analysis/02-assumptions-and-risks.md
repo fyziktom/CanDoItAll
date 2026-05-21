@@ -29,3 +29,4 @@
 - Any execution report uses labels such as `embedding-backed`, `Czech/diacritic`, `provider-backed`, `automatic`, `claim-specific`, or `line-level` without code-level source assertions that prove the literal behavior.
 - Any dream aggregate text contains `source claims`, `mapped source claims`, `consistently described`, `supported by N`, or similar diagnostic wording.
 - Accepted-use events are produced only by direct tests, manual seed helpers, or service calls with no application outcome-event integration.
+

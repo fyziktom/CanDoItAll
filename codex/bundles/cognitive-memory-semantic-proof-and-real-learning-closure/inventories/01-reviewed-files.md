@@ -14,3 +14,4 @@
 | Support loader | `repo://src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryQualitySupport.cs` | Does not load `CognitiveMemoryClaimEvidenceLinkRecord`. |
 | Recall | `repo://src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryRecallBriefComposition.cs` | Better but still fragment-based. |
 | Tests | `repo://tests/CanDoItAll.Tests.Unit/CognitiveMemoryAdvancedServicesTests.cs` | Many tests exist, but Czech/diacritic and outcome-event integration need stronger failing-first coverage. |
+

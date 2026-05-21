@@ -36,3 +36,4 @@ The Cognitive Memory loop should behave like a student learning from a professor
 - Dream synthesis: claim grouping, domain claim synthesis, entailment/contradiction validation, provenance mapping, calibrated apply.
 - Recall synthesis: intent/query planner, statement composer, lineage mapper, reference resolver.
 - Proof validation: portable artifact resolver, claim-to-code verification, fake-proof fixtures, active skill sync proof.
+

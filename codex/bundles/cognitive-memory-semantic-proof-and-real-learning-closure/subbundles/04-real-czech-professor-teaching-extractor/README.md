@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: `Ready`
+- Status: `Completed`
 
 ## Objective
 
@@ -92,3 +92,5 @@ Replace English-only keyword capture with a multilingual teaching extraction pip
 ## Suggested Agent Prompt
 
 Implement Real Czech and multilingual professor teaching extractor. Start by reading this README and every exact source reference. Create failing-first proof where required, implement production behavior, update tests, record portable proof artifacts, run the required validators, and only mark this subbundle completed when all acceptance checks pass.
+
+

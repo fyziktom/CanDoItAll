@@ -28,7 +28,7 @@ public sealed class CognitiveMemoryClusterPlanner : ICognitiveMemoryClusterPlann
             clock,
             CognitiveMemoryClusterKeyExtractor.Instance,
             CognitiveMemoryCandidatePairSelector.Default,
-            new CognitiveMemoryQualityAlgorithmOptions())
+            CognitiveMemoryQualityAlgorithmOptions.Current)
     {
     }
 
@@ -43,7 +43,7 @@ public sealed class CognitiveMemoryClusterPlanner : ICognitiveMemoryClusterPlann
         this.clock = clock ?? throw new ArgumentNullException(nameof(clock));
         this.keyExtractor = keyExtractor ?? throw new ArgumentNullException(nameof(keyExtractor));
         this.candidatePairSelector = candidatePairSelector ?? throw new ArgumentNullException(nameof(candidatePairSelector));
-        options = (algorithmOptions ?? new CognitiveMemoryQualityAlgorithmOptions()).Cluster;
+        options = (algorithmOptions ?? CognitiveMemoryQualityAlgorithmOptions.Current).Cluster;
     }
 
     private static readonly IReadOnlySet<CognitiveMemoryQualityClusterKeyFamily> StrongPrimaryFamilies = new HashSet<CognitiveMemoryQualityClusterKeyFamily>
@@ -117,7 +117,7 @@ public sealed class CognitiveMemoryClusterPlanner : ICognitiveMemoryClusterPlann
 
         var warnings = new List<string>();
         var clusters = new List<CognitiveMemoryClusterPlan>();
-        var compositeClusters = BuildCompositeClusters(
+        var compositeBuildResult = await BuildCompositeClustersAsync(
             recordEntries,
             request.MinMembers,
             contradictionPairs,
@@ -125,8 +125,10 @@ public sealed class CognitiveMemoryClusterPlanner : ICognitiveMemoryClusterPlann
             request.Scope,
             CompositeEdgeThreshold,
             MinimumRepresentativeKeyCoverageRatio,
-            out var candidatePairCount,
-            out var pairDiscoveryMetrics);
+            cancellationToken);
+        var compositeClusters = compositeBuildResult.Candidates;
+        var candidatePairCount = compositeBuildResult.CandidatePairCount;
+        var pairDiscoveryMetrics = compositeBuildResult.PairDiscoveryMetrics;
         var pairBudgetReached = pairDiscoveryMetrics.PairBudgetReached;
         if (pairBudgetReached)
         {
@@ -332,7 +334,7 @@ public sealed class CognitiveMemoryClusterPlanner : ICognitiveMemoryClusterPlann
         }
     }
 
-    private static IReadOnlyList<CompositeClusterCandidate> BuildCompositeClusters(
+    private static async ValueTask<CompositeClusterBuildResult> BuildCompositeClustersAsync(
         IReadOnlyList<CognitiveMemoryClusterRecordEntry> records,
         int minMembers,
         HashSet<string> contradictionPairs,
@@ -340,17 +342,14 @@ public sealed class CognitiveMemoryClusterPlanner : ICognitiveMemoryClusterPlann
         CognitiveMemoryClusterPlanningScope scope,
         double compositeEdgeThreshold,
         double minimumRepresentativeKeyCoverageRatio,
-        out int candidatePairCount,
-        out CognitiveMemoryClusterCandidatePairSelection pairDiscoveryMetrics)
+        CancellationToken cancellationToken)
     {
-        var candidatePairs = candidatePairSelector.SelectCandidatePairs(records, contradictionPairs, scope);
-        candidatePairCount = candidatePairs.Pairs.Count;
-        pairDiscoveryMetrics = candidatePairs;
+        var candidatePairs = await candidatePairSelector.SelectCandidatePairsAsync(records, contradictionPairs, scope, cancellationToken);
         var edges = new List<CompositeEdgeSignal>();
 
         foreach (var pair in candidatePairs.Pairs.Values)
         {
-            var edge = ScoreCompositeEdge(pair.Left, pair.Right, contradictionPairs, compositeEdgeThreshold);
+            var edge = ScoreCompositeEdge(pair, contradictionPairs, compositeEdgeThreshold);
             if (!edge.Connects)
             {
                 continue;
@@ -359,11 +358,12 @@ public sealed class CognitiveMemoryClusterPlanner : ICognitiveMemoryClusterPlann
             edges.Add(edge);
         }
 
-        return BuildCohesiveClusterCandidates(records, edges, minMembers, compositeEdgeThreshold, minimumRepresentativeKeyCoverageRatio)
+        var candidates = BuildCohesiveClusterCandidates(records, edges, minMembers, compositeEdgeThreshold, minimumRepresentativeKeyCoverageRatio)
             .Where(candidate => candidate.Keys.Any())
             .OrderBy(candidate => candidate.Keys.First().Family)
             .ThenBy(candidate => candidate.Keys.First().Key, StringComparer.Ordinal)
             .ToArray();
+        return new CompositeClusterBuildResult(candidates, candidatePairs.Pairs.Count, candidatePairs);
     }
 
     private static IReadOnlyList<CompositeClusterCandidate> BuildCohesiveClusterCandidates(
@@ -416,15 +416,31 @@ public sealed class CognitiveMemoryClusterPlanner : ICognitiveMemoryClusterPlann
                 .OrderByDescending(edge => edge.Score)
                 .ToArray();
             var keyCoverage = BuildSharedClusterKeys(members, minimumRepresentativeKeyCoverageRatio);
+            var representativeKeys = candidateEdges.Any(edge => edge.IsEmbeddingApproximate) &&
+                                     !keyCoverage.RepresentativeKeys.Any(IsStrongPrimaryKey)
+                ? keyCoverage.RepresentativeKeys.Concat(CreateEmbeddingSimilarityKey(members)).ToArray()
+                : keyCoverage.RepresentativeKeys;
             candidates.Add(new CompositeClusterCandidate(
                 members,
-                keyCoverage.RepresentativeKeys,
+                representativeKeys,
                 keyCoverage.LowCoverageKeys,
                 candidateEdges));
         }
 
         return candidates;
     }
+
+    private static IReadOnlyList<CognitiveMemoryClusterKeyWithRecord> CreateEmbeddingSimilarityKey(
+        IReadOnlyList<CognitiveMemoryClusterRecordEntry> members)
+        => [
+            new CognitiveMemoryClusterKeyWithRecord(
+                Guid.Empty,
+                CognitiveMemoryQualityClusterKeyFamily.SemanticTopic,
+                $"embedding:{CognitiveMemoryHash.FromUtf8(string.Join('|', members.Select(member => member.Record.Id))).Value}",
+                "Embedding similarity",
+                members.Count,
+                CoverageRatio: 1)
+        ];
 
     private static bool CanJoinCohesiveCandidate(
         Guid candidateRecordId,
@@ -446,11 +462,12 @@ public sealed class CognitiveMemoryClusterPlanner : ICognitiveMemoryClusterPlann
     }
 
     private static CompositeEdgeSignal ScoreCompositeEdge(
-        CognitiveMemoryClusterRecordEntry left,
-        CognitiveMemoryClusterRecordEntry right,
+        CognitiveMemoryClusterCandidatePair pair,
         HashSet<string> contradictionPairs,
         double compositeEdgeThreshold)
     {
+        var left = pair.Left;
+        var right = pair.Right;
         var sharedKeys = left.Keys
             .Join(
                 right.Keys,
@@ -507,6 +524,17 @@ public sealed class CognitiveMemoryClusterPlanner : ICognitiveMemoryClusterPlann
             explanations.Add($"Content:{string.Join(',', sharedContentTokens)}");
         }
 
+        if (pair.DiscoveryKind == CognitiveMemoryCandidatePairDiscoveryKind.EmbeddingApproximate)
+        {
+            positiveScore += Math.Clamp(pair.SimilarityScore, 0, 1) * 0.72;
+            explanations.Add(pair.Explanation);
+        }
+        else if (pair.DiscoveryKind == CognitiveMemoryCandidatePairDiscoveryKind.LexicalApproximate)
+        {
+            positiveScore += Math.Clamp(pair.SimilarityScore, 0, 1) * 0.28;
+            explanations.Add(pair.Explanation);
+        }
+
         var contradiction = contradictionPairs.Contains(NormalizePair(left.Record.Id, right.Record.Id));
         var penalty = contradiction ? 0.7 : 0d;
         if (left.Record.AccessLevel != right.Record.AccessLevel ||
@@ -530,7 +558,8 @@ public sealed class CognitiveMemoryClusterPlanner : ICognitiveMemoryClusterPlann
             explanations.Add("Guard:contradiction");
         }
 
-        if (!HasSemanticFormationSignal(sharedKeys, sharedContentTokens))
+        if (!HasSemanticFormationSignal(sharedKeys, sharedContentTokens) &&
+            pair.DiscoveryKind != CognitiveMemoryCandidatePairDiscoveryKind.EmbeddingApproximate)
         {
             positiveScore = Math.Min(positiveScore, 0.45);
         }
@@ -552,6 +581,7 @@ public sealed class CognitiveMemoryClusterPlanner : ICognitiveMemoryClusterPlann
             connects,
             contradiction,
             contradictionOnly,
+            pair.DiscoveryKind == CognitiveMemoryCandidatePairDiscoveryKind.EmbeddingApproximate,
             string.Join("; ", explanations.Distinct(StringComparer.Ordinal)));
     }
 
@@ -1033,6 +1063,11 @@ public sealed class CognitiveMemoryClusterPlanner : ICognitiveMemoryClusterPlann
         IReadOnlyList<CognitiveMemoryClusterKeyWithRecord> LowCoverageKeys,
         IReadOnlyList<CompositeEdgeSignal> Edges);
 
+    private sealed record CompositeClusterBuildResult(
+        IReadOnlyList<CompositeClusterCandidate> Candidates,
+        int CandidatePairCount,
+        CognitiveMemoryClusterCandidatePairSelection PairDiscoveryMetrics);
+
     private sealed record ClusterKeyCoverageResult(
         IReadOnlyList<CognitiveMemoryClusterKeyWithRecord> RepresentativeKeys,
         IReadOnlyList<CognitiveMemoryClusterKeyWithRecord> LowCoverageKeys);
@@ -1044,5 +1079,6 @@ public sealed class CognitiveMemoryClusterPlanner : ICognitiveMemoryClusterPlann
         bool Connects,
         bool IsContradiction,
         bool IsContradictionOnly,
+        bool IsEmbeddingApproximate,
         string Explanation);
 }

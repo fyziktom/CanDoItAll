@@ -10,3 +10,4 @@
 - `ICognitiveMemoryClaimEvidenceSupportLoader` for exact claim evidence links.
 - `ICognitiveMemoryRecallTaskBriefPlanner` and `ICognitiveMemoryStatementLineageBuilder` for task-facing recall briefs.
 - Options should be injected through configuration/DI rather than created through scattered `new CognitiveMemoryQualityAlgorithmOptions()` fallbacks in production paths.
+

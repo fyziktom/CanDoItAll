@@ -2,7 +2,9 @@
 
 ## Status
 
-- Status: `Ready`
+- Status: `Completed`
+- Completed proof: `bundle://proof/SB02/manifest.md`
+- Semantic invariants: `bundle://proof/SB02/semantic-invariants.md`
 
 ## Objective
 
@@ -23,8 +25,8 @@ Fix proof portability and active-skill synchronization so completed bundles vali
 ## Exact Source References
 
 - repo://codex/skills/bundles/candoitall-bundle-preparation/scripts/validate_bundle.py
-- repo://codex/bundles/cognitive-memory-production-signal-and-deep-synthesis-followup/proof/SB01/manifest.md
-- repo://codex/bundles/cognitive-memory-production-signal-and-deep-synthesis-followup/reviews/01-execution-report.md
+- bundle://analysis/03-evidence-notes.md
+- bundle://inventories/01-reviewed-files.md
 - repo://codex/skills/bundles/candoitall-bundle-preparation/tests/fixtures/artifact-proof-machine-specific-paths/proof/SB01/transcripts/passing.txt
 
 ## Deliverables
@@ -91,3 +93,4 @@ Fix proof portability and active-skill synchronization so completed bundles vali
 ## Suggested Agent Prompt
 
 Implement Portable proof and installed skill sync closure. Start by reading this README and every exact source reference. Create failing-first proof where required, implement production behavior, update tests, record portable proof artifacts, run the required validators, and only mark this subbundle completed when all acceptance checks pass.
+

@@ -6,15 +6,17 @@ The first two subbundles are process-critical. Codex must harden the bundle work
 
 ## Validation Summary
 
-- Bundle preparation status: `Ready`
+- Bundle preparation status: `Completed`
 - Bundle readiness gate: `Passed locally with prepared-stage validator after bundle creation`
-- Execution status: `Not started - follow-up implementation bundle prepared for Codex`
-- Subbundle gate review: `Pending implementation by Codex`
-- Final closure gate: `Pending implementation by Codex`
-- Browser validation analytics: `N/A for preparation; backend-focused review bundle with UI checks required only if Codex changes UI routes/components`
+- Execution status: `Completed`
+- Subbundle gate review: `Passed for SB01-SB10`
+- Final closure gate: `Passed locally with completed-stage validator`
+- Browser validation analytics: `N/A - backend and proof changes only`
 
 ## Review Position
 
 Codex made meaningful progress. There is now a production accepted-use emitter service, scheduled assimilation scanning exists, comparison review resolution exists, direct professor anchors are better isolated, cross-project clustering is no longer blocked by the earlier project-only guard, and recall synthesis has a more explicit query/intent pathway.
 
 However, the implementation is still not complete enough for the intended cognitive-memory behavior. The latest execution report claims Czech/diacritic professor capture and embedding-backed clustering, but the reviewed source still contains English-only capture signals and a lexical rare-signal approximate clustering provider. Dream synthesis still produces meta text about mapped source claims instead of an internalized domain statement. Claim-specific provenance still maps every source map of a record to every claim unit from that record because claim evidence links are not loaded into quality support. The previous bundle's completed-stage validation also failed in this moved checkout because a proof manifest still references an absolute Windows skill path.
+
+
