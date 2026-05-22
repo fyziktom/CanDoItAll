@@ -445,6 +445,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("scaffold directly into it instead of adding an extra nested", instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Before any scaffold call", instructions, StringComparison.Ordinal);
         Assert.Contains("Workspace command timeout arguments are seconds", instructions, StringComparison.Ordinal);
+        Assert.Contains("Capture screenshot, browser_snapshot or browser_evaluate state output, and browser_console_messages as process-visible current-run artifacts", instructions, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -469,6 +470,26 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("For spreadsheets, inspect workbook structure", instructions, StringComparison.Ordinal);
         Assert.Contains("Final delivery order is strict", instructions, StringComparison.Ordinal);
         Assert.Contains("Do not claim completion with chat-only evidence", instructions, StringComparison.Ordinal);
+        Assert.Contains("Browser screenshots, snapshots, console logs, and state outputs must be process-visible current-run artifacts", instructions, StringComparison.Ordinal);
+        Assert.Contains("store accepted screenshots as ImageAsset nodes or record the exact project-structure asset handoff", instructions, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Organization_workspace_seeds_dotnet_app_delivery_skill_with_process_visible_browser_proof()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+
+        var capability = Assert.Single(
+            await workspaceService.ListCapabilitiesAsync(),
+            item => item.Kind == CapabilityKind.Skill &&
+                    string.Equals(item.Key, "dotnet-app-delivery-inline-skill", StringComparison.OrdinalIgnoreCase));
+        var instructions = ReadInlineSkillInstructions(capability.ConfigurationJson);
+
+        Assert.Contains("Browser screenshots, snapshots, console logs, and state outputs must be process-visible current-run artifacts", instructions, StringComparison.Ordinal);
+        Assert.Contains("capture screenshot, browser_snapshot or browser_evaluate state output, and browser_console_messages as process-visible artifacts", instructions, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -738,6 +759,9 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("If a .NET app is not already running", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("If a non-.NET app is not already running and only PowerShell execution is available", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("Do not call `workspace_dotnet_build`, `workspace_dotnet_test`, or `workspace_dotnet_run` for non-.NET deliverables", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Browser screenshots, snapshots, console logs, and state outputs must be process-visible current-run artifacts", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("project_structure_asset_create", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("screenshot asset handoff path and target project node", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("generated delivery workspaces or other non-git execution roots", codeReviewEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("treat them as secondary context only", codeReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("path-length failures", codeReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
@@ -747,12 +771,16 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("stock scaffold", uiReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("frontend-theme", uiReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("frontend-skill", uiReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("process-visible current-run artifacts", uiReviewEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("project_structure_asset_create", uiReviewEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("Do not accept vague statements like \"secure enough.\"", securityEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("Prior-run summaries do not override the current code", securityEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("filesystem assumptions", securityEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Keep the decision explicit: ready, blocked, or ready-with-residual-risk", releaseEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("Do not accept stale prior-run artifacts as proof for the current release", releaseEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("Treat obviously template-looking UI, unresolved screenshot quality concerns, or ambiguous artifact handoff as release blockers", releaseEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("For visible browser workflows, release readiness requires process-visible current-run browser artifacts", releaseEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("missing, empty, detached, stale, or chat-only browser proof", releaseEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("build-system fragility", releaseEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("project_structure_read", codeReviewEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("project-structure-context-brief", codeReviewEditor.Instructions, StringComparison.Ordinal);
@@ -795,24 +823,28 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("checking that the grounded product root is missing or safe to scaffold", dotnetDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("Workspace command timeout arguments are seconds", dotnetDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("host and tests as siblings", dotnetDeveloper.Instructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Browser proof must be process-visible current-run artifacts", dotnetDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("BaseLib", blazorDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("component-library", blazorDeveloper.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Before scaffolding, check the mapped product root", blazorDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("workspace_dotnet_run", blazorDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("Workspace command timeout arguments are seconds", blazorDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("small JavaScript interop", blazorDeveloper.Instructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Browser proof must be process-visible current-run artifacts", blazorDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("package.json", javascriptDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("package manager", javascriptDeveloper.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("For peer review and integration-readiness steps", javascriptDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("Do not satisfy a behavior defect by adding manifests", javascriptDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("browser_navigate", javascriptQa.Instructions, StringComparison.Ordinal);
         Assert.Contains("Do not submit Completed or Blocked for missing browser receipts from file inspection alone", javascriptQa.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Browser screenshots, snapshots, console logs, and state outputs must be process-visible current-run artifacts", javascriptQa.Instructions, StringComparison.Ordinal);
+        Assert.Contains("project_structure_asset_create", javascriptQa.Instructions, StringComparison.Ordinal);
         Assert.Contains("External generated app folders are often not git repositories", javascriptQa.Instructions, StringComparison.Ordinal);
         Assert.Contains("npm.cmd", javascriptQa.Instructions, StringComparison.Ordinal);
         Assert.Contains("Do not pass a server implementation script itself to `workspace_pwsh_run_script`", javascriptQa.Instructions, StringComparison.Ordinal);
         Assert.Contains("Do not use `[System.Threading.Tasks.Task]::Run({ ... })` with scriptblocks", javascriptQa.Instructions, StringComparison.Ordinal);
         Assert.Contains("use native absolute paths for redirect files", javascriptQa.Instructions, StringComparison.Ordinal);
-        Assert.Contains("do not put `$listener`, `$context`, `$request`, or `$file` variables inside a double-quoted `-Command` string", javascriptQa.Instructions, StringComparison.Ordinal);
+        Assert.Contains("do not put `$listener`, `$context`, `$request`, or `$file` variables inside a double-quoted `-Command` string", javascriptQa.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("artifacts/business/<project-slug>/", businessStrategist.Instructions, StringComparison.Ordinal);
         Assert.Contains("business-plan.md", businessStrategist.Instructions, StringComparison.Ordinal);
         Assert.Contains("unit economics", financialStrategist.Instructions, StringComparison.OrdinalIgnoreCase);

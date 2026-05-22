@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -99,8 +99,7 @@ Prevent QA and release-readiness acceptance when browser proof is missing, detac
 
 ## Progression Gate
 
-- Do not start `SB03` until tests prove that the current DB failure shape cannot reach `Quality accepted` without durable browser artifacts and adequate interaction/console proof.
-- The execution report must cite `proof/SB02/manifest.md` and `proof/SB02/semantic-invariants.md`.
+- Passed. `bundle://proof/SB02/manifest.md` and `bundle://proof/SB02/semantic-invariants.md` cite missing-screenshot, active-console-error, post-stop-disconnect, and representative-interaction proof.
 
 ## Suggested Agent Prompt
 

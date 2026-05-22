@@ -1,5 +1,9 @@
 # SB04 Semantic Invariants
 
+## Status
+
+- `Partially completed`
+
 ## Raw Notes Owned
 
 - `N001`: "final app was not properly tested"
@@ -33,4 +37,4 @@ Audit final proof for manual DB inserts, manually copied artifacts that bypass p
 
 ## Raw-Note Literal Closure
 
-Every raw note remains open until fresh live proof shows the process either catches product/runtime defects or records durable evidence for accepted quality.
+Every raw note is closed for code-level hardening and remains open for live-process closure until a clean development DB run proves screenshot, console, snapshot or evaluate state, and interaction proof are process-visible artifacts for the fresh run. The database is clean and migrated for that retest; the live multi-agent run was not executed so the clean state remains available to the user.

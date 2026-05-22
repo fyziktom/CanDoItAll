@@ -771,7 +771,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         return Regex.IsMatch(
                    value,
-                   @"\b(?:do\s+not|don't|must\s+not|should\s+not|never)\s+(?:use\s+)?(?:playwright|browser\s+tools?|browser[-\s]+proof)\b",
+                   @"\b(?:do\s+not|don't|must\s+not|should\s+not|never)\s+(?:use|run|start|capture|take|record)?\s*(?:playwright|browser\s+tools?|browser[-\s]+proof|web\s+app)\b",
+                   RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) ||
+               Regex.IsMatch(
+                   value,
+                   @"\bbrowser[-\s]+proof\s+is\s+not\s+applicable\b",
                    RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) ||
                Regex.IsMatch(
                    value,

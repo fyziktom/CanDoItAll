@@ -2629,6 +2629,59 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
+    public async Task Software_delivery_template_requires_process_visible_current_run_browser_evidence_only_when_browser_workflow_is_in_scope()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var packLoader = scope.ServiceProvider.GetRequiredService<ProcessTemplatePackLoader>();
+        var projectionService = scope.ServiceProvider.GetRequiredService<ProcessTemplateProjectionService>();
+
+        var pack = packLoader.Load();
+        var projectedEnvelope = projectionService.GetProjectedEnvelope("software-delivery");
+        var qaStep = Assert.Single(
+            projectedEnvelope.Definition.Steps,
+            step => string.Equals(step.Key, "qa-validation", StringComparison.OrdinalIgnoreCase));
+        var qaRecheckStep = Assert.Single(
+            projectedEnvelope.Definition.Steps,
+            step => string.Equals(step.Key, "qa-recheck", StringComparison.OrdinalIgnoreCase));
+        var regressionEvidencePack = pack.SharedArtifacts["regression-evidence-pack"];
+        var qaEvidenceChecklist = pack.SharedChecklists["qa-evidence-checklist"];
+        var qaRiskReviewPrompt = pack.SharedPrompts["prompt-qa-risk-review"];
+
+        var qaContract = string.Join(
+            Environment.NewLine,
+            qaStep.OutputContractSummary,
+            qaStep.EvidenceContractSummary,
+            string.Join(Environment.NewLine, qaStep.ArtifactExpectations.Select(item => item.ValidationRequirementSummary)));
+        var qaRecheckContract = string.Join(
+            Environment.NewLine,
+            qaRecheckStep.OutputContractSummary,
+            qaRecheckStep.EvidenceContractSummary,
+            string.Join(Environment.NewLine, qaRecheckStep.ArtifactExpectations.Select(item => item.ValidationRequirementSummary)));
+        var sharedContract = string.Join(
+            Environment.NewLine,
+            regressionEvidencePack.ValidationRequirementSummary,
+            string.Join(Environment.NewLine, qaEvidenceChecklist.Checks),
+            string.Join(Environment.NewLine, qaEvidenceChecklist.EvidenceExpectations),
+            string.Join(Environment.NewLine, qaRiskReviewPrompt.RequiredInputs),
+            string.Join(Environment.NewLine, qaRiskReviewPrompt.OutputSchema),
+            string.Join(Environment.NewLine, qaRiskReviewPrompt.RefusalConditions));
+        var fullContract = string.Join(Environment.NewLine, qaContract, qaRecheckContract, sharedContract);
+
+        Assert.Contains("visible browser workflow is in scope", fullContract, StringComparison.Ordinal);
+        Assert.Contains("current-run process-visible browser artifacts", fullContract, StringComparison.Ordinal);
+        Assert.Contains("artifacts/process-runs/<run-id>/browser/", fullContract, StringComparison.Ordinal);
+        Assert.Contains("browser_snapshot or browser_evaluate", fullContract, StringComparison.Ordinal);
+        Assert.Contains("browser_console_messages", fullContract, StringComparison.Ordinal);
+        Assert.Contains("acceptance-state assertion", fullContract, StringComparison.Ordinal);
+        Assert.Contains("missing, stale, detached, or chat-only", fullContract, StringComparison.Ordinal);
+
+        Assert.DoesNotContain("always capture browser", fullContract, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("browser proof is required for every", fullContract, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("browser artifacts are required for every", fullContract, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task TransitionStepAsync_rejects_stale_step_run_concurrency_token_after_prior_transition()
     {
         await using var application = await TestApplication.CreateAsync();

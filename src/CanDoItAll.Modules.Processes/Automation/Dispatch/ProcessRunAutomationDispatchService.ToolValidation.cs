@@ -155,6 +155,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     {
         if (!ExecutionInvocationMetadata.ResolveProcessBrowserToolsAllowed(detail.Run) ||
             !RequiresGovernedStepOutcome(candidate.StepRun) ||
+            !RequiresConcreteBrowserProof(candidate) ||
             IsDotNetSolutionSetupScaffoldMutationStep(candidate))
         {
             return [];
@@ -736,6 +737,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
             AddBrowserOutputFiles(outputFilesByToolName, pair.Key, pair.Value);
         }
 
+        foreach (var pair in ResolveBrowserEvidenceReferenceOutputFiles(detail.Run.ResultSummary))
+        {
+            AddBrowserOutputFiles(outputFilesByToolName, pair.Key, pair.Value);
+        }
+
         return outputFilesByToolName.ToDictionary(
             pair => pair.Key,
             pair => (IReadOnlyList<string>)pair.Value
@@ -805,6 +811,88 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
                 .ToList(),
             StringComparer.Ordinal);
+    }
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<string>> ResolveBrowserEvidenceReferenceOutputFiles(string? resultSummary)
+    {
+        if (string.IsNullOrWhiteSpace(resultSummary))
+        {
+            return new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+        }
+
+        var outputFilesByToolName = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+        foreach (var evidenceRef in ResolveBrowserEvidenceReferences(resultSummary))
+        {
+            var normalizedRef = WorkspaceScopeDescriptor.NormalizeRelativePath(evidenceRef);
+            if (!IsProviderNativeBrowserArtifactPath(normalizedRef))
+            {
+                continue;
+            }
+
+            var toolName = ResolveProviderNativeBrowserToolName(normalizedRef);
+            if (string.IsNullOrWhiteSpace(toolName))
+            {
+                continue;
+            }
+
+            if (!outputFilesByToolName.TryGetValue(toolName, out var outputFiles))
+            {
+                outputFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                outputFilesByToolName[toolName] = outputFiles;
+            }
+
+            outputFiles.Add(normalizedRef);
+        }
+
+        return outputFilesByToolName.ToDictionary(
+            pair => pair.Key,
+            pair => (IReadOnlyList<string>)pair.Value
+                .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+                .ToList(),
+            StringComparer.Ordinal);
+    }
+
+    private static IReadOnlyList<string> ResolveBrowserEvidenceReferences(string resultSummary)
+    {
+        var references = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+        TryAddStructuredEvidenceReferences(resultSummary, references);
+
+        foreach (Match match in Regex.Matches(
+                     resultSummary,
+                     @"(?:\.playwright-mcp|artifacts[\\/](?:scopes[\\/][^\s`""',\]\)]+[\\/])?process-runs)[\\/][^\s`""',\]\)]+\.(?:png|jpe?g|yml|yaml|log|txt|json)",
+                     RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+        {
+            references.Add(match.Value.Trim().TrimEnd('.', ',', ';', ':'));
+        }
+
+        return references.ToList();
+    }
+
+    private static void TryAddStructuredEvidenceReferences(
+        string resultSummary,
+        ISet<string> references)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(resultSummary);
+            if (!document.RootElement.TryGetProperty("evidenceRefs", out var evidenceRefs) ||
+                evidenceRefs.ValueKind != JsonValueKind.Array)
+            {
+                return;
+            }
+
+            foreach (var item in evidenceRefs.EnumerateArray())
+            {
+                if (item.ValueKind == JsonValueKind.String &&
+                    !string.IsNullOrWhiteSpace(item.GetString()))
+                {
+                    references.Add(item.GetString()!.Trim());
+                }
+            }
+        }
+        catch (JsonException)
+        {
+        }
     }
 
     private static bool TryResolveExecutionLogFilenameArgument(string message, out string fileName)

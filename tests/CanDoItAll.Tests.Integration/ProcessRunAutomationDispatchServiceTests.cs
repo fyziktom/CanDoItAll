@@ -6094,7 +6094,7 @@ Use only the project-structure mindmap requirements as scope. Create the request
 
         var shouldRetryResult = shouldRetry.Invoke(
             null,
-            [candidate, detail, detail.Run.ResultSummary, new[] { "workspace_write_file", "workspace_dotnet_build" }, 1, 3]);
+            [candidate, detail, detail.Run.ResultSummary, new[] { "workspace_write_file", "workspace_dotnet_build" }, CreateCarriedImplementationProof(false, false), 1, 3]);
 
         Assert.IsType<bool>(shouldRetryResult);
         Assert.True((bool)shouldRetryResult);
@@ -6172,7 +6172,7 @@ Use only the project-structure mindmap requirements as scope. Create the request
 
         var shouldRetryResult = shouldRetry.Invoke(
             null,
-            [candidate, detail, detail.Run.ResultSummary, Array.Empty<string>(), 1, 3]);
+            [candidate, detail, detail.Run.ResultSummary, Array.Empty<string>(), CreateCarriedImplementationProof(false, false), 1, 3]);
 
         Assert.IsType<bool>(shouldRetryResult);
         Assert.True((bool)shouldRetryResult);
@@ -6268,7 +6268,7 @@ Use only the project-structure mindmap requirements as scope. Create the request
 
         var shouldRetryResult = shouldRetry.Invoke(
             null,
-            [candidate, detail, responseText, Array.Empty<string>(), 1, 3]);
+            [candidate, detail, responseText, Array.Empty<string>(), CreateCarriedImplementationProof(false, false), 1, 3]);
 
         Assert.IsType<bool>(shouldRetryResult);
         Assert.True((bool)shouldRetryResult);
@@ -6328,7 +6328,7 @@ Use only the project-structure mindmap requirements as scope. Create the request
 
         var shouldRetryResult = shouldRetry.Invoke(
             null,
-            [candidate, detail, responseText, Array.Empty<string>(), 1, 3]);
+            [candidate, detail, responseText, Array.Empty<string>(), CreateCarriedImplementationProof(false, false), 1, 3]);
 
         Assert.IsType<bool>(shouldRetryResult);
         Assert.True((bool)shouldRetryResult);
@@ -6396,6 +6396,7 @@ Use only the project-structure mindmap requirements as scope. Create the request
                 detail,
                 responseText,
                 missingBrowserProofTools,
+                CreateCarriedImplementationProof(false, false),
                 1,
                 3
             ]);
@@ -6572,7 +6573,7 @@ Use only the project-structure mindmap requirements as scope. Create the request
 
         var shouldRetryResult = shouldRetry.Invoke(
             null,
-            [candidate, detail, detail.Run.ResultSummary, new[] { "workspace_write_file", "workspace_dotnet_build" }, 3, 3]);
+            [candidate, detail, detail.Run.ResultSummary, new[] { "workspace_write_file", "workspace_dotnet_build" }, CreateCarriedImplementationProof(false, false), 3, 3]);
 
         Assert.IsType<bool>(shouldRetryResult);
         Assert.False((bool)shouldRetryResult);
@@ -7529,6 +7530,303 @@ Use only the project-structure mindmap requirements as scope. Create the request
     }
 
     [Fact]
+    public void ResolveSuccessfulBrowserToolOutputFiles_reads_playwright_mcp_outputs_from_structured_evidence_refs()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveBrowserOutputs = serviceType.GetMethod("ResolveSuccessfulBrowserToolOutputFiles", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveSuccessfulBrowserToolOutputFiles method was not found.");
+        var responseText = StructuredOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "Required browser evidence was captured.",
+            evidenceRefs:
+            [
+                ".playwright-mcp\\page-2026-05-22T14-59-45-865Z.png",
+                ".playwright-mcp\\page-2026-05-22T14-58-45-608Z.yml",
+                ".playwright-mcp\\console-2026-05-22T14-58-45-447Z.log",
+                ".playwright-mcp\\page-dom.json"
+            ]);
+        var detail = CreateSuccessfulExecutionDetail(
+            responseText,
+            BuildSerializedSessionState(Array.Empty<(string ToolName, object Result)>()));
+
+        var outputs = Assert.IsAssignableFrom<IReadOnlyDictionary<string, IReadOnlyList<string>>>(
+            resolveBrowserOutputs.Invoke(null, [detail]));
+
+        Assert.Contains(".playwright-mcp/page-2026-05-22T14-59-45-865Z.png", outputs["browser_take_screenshot"], StringComparer.OrdinalIgnoreCase);
+        Assert.Contains(".playwright-mcp/page-2026-05-22T14-58-45-608Z.yml", outputs["browser_snapshot"], StringComparer.OrdinalIgnoreCase);
+        Assert.Contains(".playwright-mcp/console-2026-05-22T14-58-45-447Z.log", outputs["browser_console_messages"], StringComparer.OrdinalIgnoreCase);
+        Assert.Contains(".playwright-mcp/page-dom.json", outputs["browser_evaluate"], StringComparer.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData(".playwright-mcp/page-2026-05-22T14-59-45-865Z.png", true)]
+    [InlineData(".playwright-mcp/page-2026-05-22T14-58-45-608Z.yml", true)]
+    [InlineData(".playwright-mcp/console-2026-05-22T14-58-45-447Z.log", true)]
+    [InlineData(".playwright-mcp/page-dom.json", true)]
+    [InlineData("artifacts/process-runs/run-001/browser-proof.png", true)]
+    [InlineData("output/process-runs/run-001/browser-proof.png", false)]
+    public void IsProviderNativeBrowserArtifactPath_accepts_managed_and_playwright_browser_outputs(
+        string relativePath,
+        bool expected)
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var isProviderNativeBrowserArtifactPath = serviceType.GetMethod("IsProviderNativeBrowserArtifactPath", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("IsProviderNativeBrowserArtifactPath method was not found.");
+
+        var result = (bool)(isProviderNativeBrowserArtifactPath.Invoke(null, [relativePath]) ?? !expected);
+
+        Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    public void ResolveProviderNativeBrowserProjectedRelativePath_places_playwright_mcp_outputs_under_current_run_browser_artifacts()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveProjectedPath = serviceType.GetMethod("ResolveProviderNativeBrowserProjectedRelativePath", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveProviderNativeBrowserProjectedRelativePath method was not found.");
+        var candidate = CreateDispatchCandidate(
+            "Run QA validation and browser proof.",
+            ProcessStepKind.Review,
+            (ProcessArtifactKind.Evidence, "Regression evidence pack", true, "Must include browser proof and screenshots for UI surfaces."));
+        var run = candidate.GetType().GetProperty("Run")?.GetValue(candidate) as ProcessRun
+            ?? throw new InvalidOperationException("DispatchCandidate.Run was not available.");
+        var workspaceScope = WorkspaceScopeDescriptor.Organization("demo");
+
+        var projectedPath = resolveProjectedPath.Invoke(
+            null,
+            [candidate, workspaceScope, ".playwright-mcp/page-2026-05-22T14-59-45-865Z.png"]) as string;
+
+        Assert.Equal(
+            $"artifacts/scopes/organization/demo/process-runs/{run.Id:D}/browser/page-2026-05-22T14-59-45-865Z.png",
+            projectedPath);
+    }
+
+    [Fact]
+    public void ResolveCompletionStatus_blocks_completed_qa_when_required_browser_screenshot_artifact_is_missing()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveCompletionStatus = serviceType.GetMethod("ResolveCompletionStatus", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveCompletionStatus method was not found.");
+        var buildCompletionReason = serviceType.GetMethod("BuildCompletionReason", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildCompletionReason method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Run QA validation and browser proof for the delivered browser app.",
+            ProcessStepKind.Review,
+            [],
+            false,
+            [(ProcessArtifactKind.Evidence, "Regression evidence pack", true, "Must include browser proof, screenshots for UI surfaces, console messages, and unresolved risks.")],
+            [],
+            recordedArtifactTitles: ["Regression evidence pack"]);
+        var detail = CreateSuccessfulExecutionDetail(
+            StructuredOutcome(
+                ProcessStepOutcomeStatus.Completed,
+                "Quality accepted with browser evidence.",
+                evidenceRefs:
+                [
+                    ".playwright-mcp/page-2026-05-22T15-08-00-000Z.yml",
+                    ".playwright-mcp/console-2026-05-22T15-08-01-000Z.log"
+                ]),
+            BuildSerializedSessionState(Array.Empty<(string ToolName, object Result)>()));
+
+        var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail]);
+        var reason = buildCompletionReason.Invoke(null, [candidate, detail, "Run QA validation and browser proof"]) as string;
+
+        Assert.Equal(ProcessStepRunStatus.Blocked, status);
+        Assert.NotNull(reason);
+        Assert.Contains("screenshot evidence", reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("durable browser artifact", reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ResolveCompletionStatus_blocks_completed_qa_when_browser_console_contains_active_javascript_error()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveCompletionStatus = serviceType.GetMethod("ResolveCompletionStatus", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveCompletionStatus method was not found.");
+        var buildCompletionReason = serviceType.GetMethod("BuildCompletionReason", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildCompletionReason method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Run QA validation and browser proof for the delivered browser app.",
+            ProcessStepKind.Review,
+            [],
+            false,
+            [(ProcessArtifactKind.Evidence, "Regression evidence pack", true, "Must include browser proof, screenshots for UI surfaces, console messages, and unresolved risks.")],
+            [],
+            recordedArtifactTitles: ["Regression evidence pack"]);
+        var detail = CreateSuccessfulExecutionDetail(
+            StructuredOutcome(
+                ProcessStepOutcomeStatus.Completed,
+                "Quality accepted with browser evidence.",
+                evidenceRefs:
+                [
+                    ".playwright-mcp/page-2026-05-22T15-09-00-000Z.png",
+                    ".playwright-mcp/page-2026-05-22T15-09-01-000Z.yml",
+                    ".playwright-mcp/console-2026-05-22T15-09-02-000Z.log"
+                ]),
+            BuildSerializedSessionState(
+                ("browser_console_messages", CreateProviderNativeTextResult("TypeError: Cannot read properties of undefined (reading 'spawnPiece')"))));
+
+        var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail]);
+        var reason = buildCompletionReason.Invoke(null, [candidate, detail, "Run QA validation and browser proof"]) as string;
+
+        Assert.Equal(ProcessStepRunStatus.Blocked, status);
+        Assert.NotNull(reason);
+        Assert.Contains("browser console", reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("runtime errors", reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ResolveInvalidBrowserProofSummary_allows_classified_post_stop_disconnect_after_browser_evidence()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveInvalidBrowserProofSummary = serviceType.GetMethod("ResolveInvalidBrowserProofSummary", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveInvalidBrowserProofSummary method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Run QA validation and browser proof for the delivered browser app.",
+            ProcessStepKind.Review,
+            [],
+            false,
+            [(ProcessArtifactKind.Evidence, "Regression evidence pack", true, "Must include browser proof, screenshots for UI surfaces, console messages, and unresolved risks.")],
+            [],
+            recordedArtifactTitles: ["Regression evidence pack"]);
+        var detail = CreateSuccessfulExecutionDetail(
+            StructuredOutcome(
+                ProcessStepOutcomeStatus.Completed,
+                "Quality accepted with browser evidence.",
+                evidenceRefs:
+                [
+                    ".playwright-mcp/page-2026-05-22T15-10-00-000Z.png",
+                    ".playwright-mcp/page-2026-05-22T15-10-01-000Z.yml",
+                    ".playwright-mcp/console-2026-05-22T15-10-02-000Z.log"
+                ]),
+            BuildSerializedSessionState(
+                ("browser_console_messages", CreateProviderNativeTextResult("Post-stop cleanup: host stopped. WebSocket connection to ws://127.0.0.1 failed with ERR_CONNECTION_REFUSED after host stopped."))));
+
+        var summary = resolveInvalidBrowserProofSummary.Invoke(null, [candidate, detail]) as string;
+
+        Assert.Equal(string.Empty, summary);
+    }
+
+    [Fact]
+    public void ResolveCompletionStatus_blocks_interactive_browser_proof_without_representative_interaction_tool()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveCompletionStatus = serviceType.GetMethod("ResolveCompletionStatus", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveCompletionStatus method was not found.");
+        var buildCompletionReason = serviceType.GetMethod("BuildCompletionReason", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildCompletionReason method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Run QA validation and browser proof for an interactive canvas game. The step contract requires representative interaction before acceptance.",
+            ProcessStepKind.Review,
+            [],
+            false,
+            [(ProcessArtifactKind.Evidence, "Regression evidence pack", true, "Must include browser proof, screenshots for UI surfaces, console messages, and unresolved risks.")],
+            [],
+            recordedArtifactTitles: ["Regression evidence pack"]);
+        var detail = CreateSuccessfulExecutionDetail(
+            StructuredOutcome(
+                ProcessStepOutcomeStatus.Completed,
+                "Quality accepted after browser proof.",
+                evidenceRefs:
+                [
+                    ".playwright-mcp/page-2026-05-22T15-11-00-000Z.png",
+                    ".playwright-mcp/page-2026-05-22T15-11-01-000Z.yml",
+                    ".playwright-mcp/console-2026-05-22T15-11-02-000Z.log"
+                ]),
+            BuildSerializedSessionState(
+                ("browser_console_messages", CreateProviderNativeTextResult("No active browser console errors."))));
+
+        var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail]);
+        var reason = buildCompletionReason.Invoke(null, [candidate, detail, "Run QA validation and browser proof"]) as string;
+
+        Assert.Equal(ProcessStepRunStatus.Blocked, status);
+        Assert.NotNull(reason);
+        Assert.Contains("representative interaction", reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ResolveCompletionStatus_allows_interactive_browser_proof_with_evaluate_state_artifact()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveCompletionStatus = serviceType.GetMethod("ResolveCompletionStatus", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveCompletionStatus method was not found.");
+        var buildCompletionReason = serviceType.GetMethod("BuildCompletionReason", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildCompletionReason method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Run QA validation and browser proof for an interactive canvas game. The step contract requires representative interaction before acceptance.",
+            ProcessStepKind.Review,
+            [],
+            false,
+            [(ProcessArtifactKind.Evidence, "Regression evidence pack", true, "Must include browser proof, screenshots for UI surfaces, console messages, and unresolved risks.")],
+            [],
+            recordedArtifactTitles: ["Regression evidence pack"]);
+        var detail = CreateSuccessfulExecutionDetail(
+            StructuredOutcome(
+                ProcessStepOutcomeStatus.Completed,
+                "Quality accepted after browser proof and representative state interaction.",
+                evidenceRefs:
+                [
+                    ".playwright-mcp/page-2026-05-22T15-12-00-000Z.png",
+                    ".playwright-mcp/page-2026-05-22T15-12-01-000Z.yml",
+                    ".playwright-mcp/console-2026-05-22T15-12-02-000Z.log",
+                    ".playwright-mcp/state-2026-05-22T15-12-03-000Z.json"
+                ]),
+            BuildSerializedSessionState(
+                ("workspace_stat_path", (IReadOnlyDictionary<string, object?>)new Dictionary<string, object?>(), CreateProviderNativeTextResult("Artifact path verified.")),
+                ("workspace_read_file", (IReadOnlyDictionary<string, object?>)new Dictionary<string, object?>(), CreateProviderNativeTextResult("Artifact contents reviewed.")),
+                ("browser_take_screenshot", new Dictionary<string, object?> { ["filename"] = ".playwright-mcp/page-2026-05-22T15-12-00-000Z.png" }, CreateProviderNativeTextResult("Screenshot saved.")),
+                ("browser_snapshot", new Dictionary<string, object?> { ["filename"] = ".playwright-mcp/page-2026-05-22T15-12-01-000Z.yml" }, CreateProviderNativeTextResult("Snapshot saved.")),
+                ("browser_console_messages", new Dictionary<string, object?> { ["filename"] = ".playwright-mcp/console-2026-05-22T15-12-02-000Z.log" }, CreateProviderNativeTextResult("No active browser console errors.")),
+                ("browser_evaluate", new Dictionary<string, object?> { ["filename"] = ".playwright-mcp/state-2026-05-22T15-12-03-000Z.json" }, CreateProviderNativeTextResult("Representative key event dispatched and visible state changed."))));
+
+        var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail]);
+        var reason = buildCompletionReason.Invoke(null, [candidate, detail, "Run QA validation and browser proof"]) as string;
+
+        Assert.True(status == ProcessStepRunStatus.Completed, reason);
+    }
+
+    [Fact]
+    public void ResolveMissingRequiredArtifactSummary_rejects_declared_browser_artifact_without_matching_output()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveMissingRequiredArtifactSummary = serviceType.GetMethod("ResolveMissingRequiredArtifactSummary", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveMissingRequiredArtifactSummary method was not found.");
+        var candidate = CreateDispatchCandidate(
+            "Run QA validation and browser proof for the delivered browser app.",
+            ProcessStepKind.Review,
+            (ProcessArtifactKind.Evidence, "Browser screenshot artifact", true, "Create this artifact at artifacts/process-runs/run-001/browser/browser-proof.png using browser_take_screenshot."));
+        var detail = CreateSuccessfulExecutionDetail(
+            StructuredOutcome(ProcessStepOutcomeStatus.Completed, "Quality accepted without output evidence."),
+            BuildSerializedSessionState(Array.Empty<(string ToolName, object Result)>()));
+
+        var summary = resolveMissingRequiredArtifactSummary.Invoke(null, [candidate, detail, detail.Run.ResultSummary]) as string;
+
+        Assert.Contains("Browser screenshot artifact", summary, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ResolveMissingRequiredArtifactSummary_accepts_declared_browser_artifact_with_matching_output()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveMissingRequiredArtifactSummary = serviceType.GetMethod("ResolveMissingRequiredArtifactSummary", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveMissingRequiredArtifactSummary method was not found.");
+        var candidate = CreateDispatchCandidate(
+            "Run QA validation and browser proof for the delivered browser app.",
+            ProcessStepKind.Review,
+            (ProcessArtifactKind.Evidence, "Browser screenshot artifact", true, "Create this artifact at artifacts/process-runs/run-001/browser/browser-proof.png using browser_take_screenshot."));
+        var detail = CreateSuccessfulExecutionDetail(
+            StructuredOutcome(
+                ProcessStepOutcomeStatus.Completed,
+                "Quality accepted with screenshot output evidence.",
+                evidenceRefs: ["artifacts/process-runs/run-001/browser/browser-proof.png"]),
+            BuildSerializedSessionState(Array.Empty<(string ToolName, object Result)>()));
+
+        var summary = resolveMissingRequiredArtifactSummary.Invoke(null, [candidate, detail, detail.Run.ResultSummary]) as string;
+
+        Assert.Equal(string.Empty, summary);
+    }
+
+    [Fact]
     public void ResolveCompletionStatus_ignores_provider_native_browser_file_read_scope_miss_when_file_exists()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
@@ -7550,9 +7848,17 @@ Use only the project-structure mindmap requirements as scope. Create the request
             var runId = Guid.NewGuid();
             var agentId = Guid.NewGuid();
             var snapshotPath = $"artifacts/process-runs/{runId:D}/browser-snapshot.yml";
+            var screenshotPath = $"artifacts/process-runs/{runId:D}/browser-desktop.png";
+            var consolePath = $"artifacts/process-runs/{runId:D}/browser-console-error.log";
             var snapshotFullPath = Path.Combine(tempWorkspace, snapshotPath.Replace('/', Path.DirectorySeparatorChar));
             Directory.CreateDirectory(Path.GetDirectoryName(snapshotFullPath)!);
             File.WriteAllText(snapshotFullPath, "- text: Unit converter\n- text: Result 12.5 cm\n");
+            var screenshotFullPath = Path.Combine(tempWorkspace, screenshotPath.Replace('/', Path.DirectorySeparatorChar));
+            Directory.CreateDirectory(Path.GetDirectoryName(screenshotFullPath)!);
+            File.WriteAllBytes(screenshotFullPath, [137, 80, 78, 71]);
+            var consoleFullPath = Path.Combine(tempWorkspace, consolePath.Replace('/', Path.DirectorySeparatorChar));
+            Directory.CreateDirectory(Path.GetDirectoryName(consoleFullPath)!);
+            File.WriteAllText(consoleFullPath, "No active browser console errors.");
             var detail = new ExecutionRunDetail(
                 new ExecutionRunRecord(
                     runId,
@@ -7583,9 +7889,9 @@ Use only the project-structure mindmap requirements as scope. Create the request
                     []),
                 null,
                 [
-                    CreateExecutionLogToolInvocationWithFilename(runId, agentId, now, "browser_take_screenshot", $"artifacts/process-runs/{runId:D}/browser-desktop.png"),
+                    CreateExecutionLogToolInvocationWithFilename(runId, agentId, now, "browser_take_screenshot", screenshotPath),
                     CreateExecutionLogToolInvocationWithFilename(runId, agentId, now.AddSeconds(1), "browser_snapshot", snapshotPath),
-                    CreateExecutionLogToolInvocationWithFilename(runId, agentId, now.AddSeconds(2), "browser_console_messages", $"artifacts/process-runs/{runId:D}/browser-console-error.log")
+                    CreateExecutionLogToolInvocationWithFilename(runId, agentId, now.AddSeconds(2), "browser_console_messages", consolePath)
                 ],
                 [])
             {
@@ -9341,7 +9647,7 @@ Ancestor path to the target work node:
 
         var shouldRetryResult = shouldRetry.Invoke(
             null,
-            [candidate, detail, responseText, Array.Empty<string>(), 1, 3]);
+            [candidate, detail, responseText, Array.Empty<string>(), CreateCarriedImplementationProof(false, false), 1, 3]);
 
         Assert.IsType<bool>(shouldRetryResult);
         Assert.True((bool)shouldRetryResult);
@@ -9420,7 +9726,7 @@ Ancestor path to the target work node:
         var reason = buildCompletionReason.Invoke(null, [candidate, detail, "Validate generated web app"]) as string;
         var shouldRetryResult = shouldRetry.Invoke(
             null,
-            [candidate, detail, responseText, new[] { "browser_snapshot", "browser_take_screenshot" }, 1, 3]);
+            [candidate, detail, responseText, new[] { "browser_snapshot", "browser_take_screenshot" }, CreateCarriedImplementationProof(false, false), 1, 3]);
 
         Assert.Equal(ProcessStepRunStatus.Blocked, status);
         Assert.NotNull(reason);
@@ -9502,7 +9808,7 @@ Ancestor path to the target work node:
 
         var shouldRetryResult = shouldRetry.Invoke(
             null,
-            [candidate, detail, responseText, Array.Empty<string>(), 2, 5]);
+            [candidate, detail, responseText, Array.Empty<string>(), CreateCarriedImplementationProof(false, false), 2, 5]);
 
         Assert.IsType<bool>(shouldRetryResult);
         Assert.True((bool)shouldRetryResult);
@@ -9589,7 +9895,7 @@ Ancestor path to the target work node:
 
         var shouldRetryResult = shouldRetry.Invoke(
             null,
-            [candidate, detail, responseText, Array.Empty<string>(), 1, 5]);
+            [candidate, detail, responseText, Array.Empty<string>(), CreateCarriedImplementationProof(false, false), 1, 5]);
 
         Assert.IsType<bool>(shouldRetryResult);
         Assert.True((bool)shouldRetryResult);
@@ -9789,7 +10095,7 @@ Ancestor path to the target work node:
 
         var shouldRetryResult = shouldRetry.Invoke(
             null,
-            [candidate, detail, responseText, Array.Empty<string>(), 1, 3]);
+            [candidate, detail, responseText, Array.Empty<string>(), CreateCarriedImplementationProof(false, false), 1, 3]);
 
         Assert.IsType<bool>(shouldRetryResult);
         Assert.True((bool)shouldRetryResult);
@@ -10074,7 +10380,7 @@ Ancestor path to the target work node:
         var candidate = CreateDispatchCandidate(
             "Run QA validation and browser proof for the C# console app.",
             ProcessStepKind.Review,
-            (ProcessArtifactKind.Evidence, "Regression evidence pack", true, "Must name changed flows, browser proof, screenshots, and unresolved risks."));
+            (ProcessArtifactKind.Evidence, "Regression evidence pack", true, "Must name changed flows, runtime/API/browser evidence as applicable, screenshots for UI surfaces, and unresolved risks. When a visible browser workflow is in scope, include current-run process-visible browser artifacts under `artifacts/process-runs/<run-id>/browser/`: screenshot image, browser_snapshot or browser_evaluate state output, browser_console_messages output, actual URL or entrypoint, launch and cleanup receipts, and acceptance-state assertion."));
 
         var requiredToolNames = (IReadOnlyList<string>?)resolveRequiredToolNames.Invoke(null, [candidate]);
 
@@ -10092,7 +10398,7 @@ Ancestor path to the target work node:
         var candidate = CreateDispatchCandidate(
             "Re-run QA validation and runtime or browser proof after repair for the .NET minimal API service.",
             ProcessStepKind.Review,
-            (ProcessArtifactKind.Evidence, "Repaired regression evidence pack", true, "Must name repaired flows, assertion depth, runtime/API/browser evidence as applicable, screenshots for UI surfaces, and unresolved risks after the repair pass."));
+            (ProcessArtifactKind.Evidence, "Repaired regression evidence pack", true, "Must name repaired flows, assertion depth, runtime/API/browser evidence as applicable, screenshots for UI surfaces, and unresolved risks after the repair pass. When a visible browser workflow is in scope, include current-run process-visible browser artifacts under `artifacts/process-runs/<run-id>/browser/`: screenshot image, browser_snapshot or browser_evaluate state output, browser_console_messages output, actual URL or entrypoint, launch and cleanup receipts, and acceptance-state assertion."));
 
         var requiredToolNames = (IReadOnlyList<string>?)resolveRequiredToolNames.Invoke(null, [candidate]);
 
@@ -10112,7 +10418,7 @@ Ancestor path to the target work node:
             ProcessStepKind.Review,
             [],
             false,
-            [(ProcessArtifactKind.Evidence, "Repaired regression evidence pack", true, "Must name repaired flows, assertion depth, warning counts, executed-test counts when tests are expected, runtime/API/browser evidence as applicable, screenshots for UI surfaces, and unresolved risks after the repair pass.")],
+            [(ProcessArtifactKind.Evidence, "Repaired regression evidence pack", true, "Must name repaired flows, assertion depth, warning counts, executed-test counts when tests are expected, runtime/API/browser evidence as applicable, screenshots for UI surfaces, and unresolved risks after the repair pass. When a visible browser workflow is in scope, include current-run process-visible browser artifacts under `artifacts/process-runs/<run-id>/browser/`: screenshot image, browser_snapshot or browser_evaluate state output, browser_console_messages output, actual URL or entrypoint, launch and cleanup receipts, and acceptance-state assertion.")],
             [],
             triggerReason: "Project structure requires a static web page in C:\\programovani\\dotnet-demo\\output with no backend and client-local state.",
             stepTitle: "Re-run QA validation and runtime or browser proof after repair");
@@ -12332,7 +12638,7 @@ Ancestor path to the target work node:
 
         var shouldRetryResult = shouldRetry.Invoke(
             null,
-            [candidate, detail, responseText, new[] { "workspace_dotnet_build", "workspace_dotnet_test" }, 1, 5]);
+            [candidate, detail, responseText, new[] { "workspace_dotnet_build", "workspace_dotnet_test" }, CreateCarriedImplementationProof(false, false), 1, 5]);
 
         Assert.IsType<bool>(shouldRetryResult);
         Assert.False((bool)shouldRetryResult);
@@ -12372,6 +12678,7 @@ Ancestor path to the target work node:
                     "browser_take_screenshot",
                     "browser_console_messages"
                 },
+                CreateCarriedImplementationProof(false, false),
                 1,
                 3
             ]);
@@ -12518,7 +12825,7 @@ Ancestor path to the target work node:
 
         var shouldRetryResult = shouldRetry.Invoke(
             null,
-            [candidate, detail, responseText, Array.Empty<string>(), 1, 3]);
+            [candidate, detail, responseText, Array.Empty<string>(), CreateCarriedImplementationProof(false, false), 1, 3]);
 
         Assert.IsType<bool>(shouldRetryResult);
         Assert.True((bool)shouldRetryResult);

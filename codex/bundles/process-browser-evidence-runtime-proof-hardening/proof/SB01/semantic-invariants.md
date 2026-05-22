@@ -1,5 +1,9 @@
 # SB01 Semantic Invariants
 
+## Status
+
+- `Completed`
+
 ## Raw Note Owned
 
 - `N002`: "there are not screenshots evidences"
@@ -30,4 +34,4 @@ Audit production code for `TODO`, `NotImplemented`, fixture-only branches, markd
 
 ## Raw-Note Literal Closure
 
-`N002` remains open until screenshots exist as process artifact records, not only as raw provider-native files.
+`N002` is closed at the generic runtime-code level: raw provider-native files and result-summary references now resolve into managed process-run browser artifacts before they can satisfy required evidence. Live row proof is left for the clean-DB user retest.

@@ -711,7 +711,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var projectableResponseText = ResolveProjectableResponseArtifactText(responseText);
         if (TryExtractExpectedArtifactRelativePath(expectedArtifact.ValidationRequirementSummary, out var declaredRelativePath))
         {
-            return !string.IsNullOrWhiteSpace(ResolveProviderNativeBrowserToolName(declaredRelativePath)) ||
+            return HasProviderNativeBrowserOutputForDeclaredPath(detail, declaredRelativePath) ||
                    (IsUsableProjectedResponseArtifactContent(expectedArtifact, projectableResponseText) &&
                     IsResponseProjectableTextArtifact(declaredRelativePath));
         }
@@ -1171,6 +1171,42 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         return false;
+    }
+
+    private static bool HasProviderNativeBrowserOutputForDeclaredPath(
+        ExecutionRunDetail detail,
+        string declaredRelativePath)
+    {
+        var expectedToolName = ResolveProviderNativeBrowserToolName(declaredRelativePath);
+        if (string.IsNullOrWhiteSpace(expectedToolName))
+        {
+            return false;
+        }
+
+        var browserOutputsByToolName = ResolveSuccessfulBrowserToolOutputFiles(detail);
+        if (!browserOutputsByToolName.TryGetValue(expectedToolName, out var outputFiles))
+        {
+            return false;
+        }
+
+        var matchingOutputFiles = outputFiles
+            .Where(outputFile => MatchesExpectedBrowserOutputFile(declaredRelativePath, outputFile))
+            .ToList();
+        if (matchingOutputFiles.Count == 0)
+        {
+            return false;
+        }
+
+        var browserWorkingDirectory = ResolveProviderNativeBrowserWorkingDirectory(detail);
+        if (string.IsNullOrWhiteSpace(browserWorkingDirectory))
+        {
+            return true;
+        }
+
+        return matchingOutputFiles.Any(outputFile =>
+            TryResolveSafeBrowserOutputPath(browserWorkingDirectory, outputFile, out var fullPath) &&
+            File.Exists(fullPath) &&
+            new FileInfo(fullPath).Length > 0);
     }
 
     internal static bool WorkspaceWrittenFileMatchesExpectedArtifact(
@@ -1806,6 +1842,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             ".png" => "browser_take_screenshot",
             ".yml" or ".yaml" => "browser_snapshot",
             ".log" or ".txt" => "browser_console_messages",
+            ".json" => "browser_evaluate",
             _ => string.Empty
         };
     }

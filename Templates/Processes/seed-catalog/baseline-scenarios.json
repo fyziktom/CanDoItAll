@@ -175,9 +175,9 @@
         "Title": "Reference delivery regression evidence pack",
         "TrustStatus": "HumanApproved",
         "SensitivityLevel": "Internal",
-        "ProvenanceSummary": "Captured from targeted regression, browser proof, and acceptance checks for the reference delivery capability.",
+        "ProvenanceSummary": "Captured from targeted regression, process-visible browser proof, and acceptance checks for the reference delivery capability.",
         "AllowedFutureUsageSummary": "Reusable for release approval, support readiness, and audit.",
-        "ReviewSummary": "QA lead approved the evidence pack after reviewing changed-surface coverage."
+        "ReviewSummary": "QA lead approved the evidence pack after reviewing changed-surface coverage and current-run browser artifact handoff."
       },
       {
         "StepKey": "security-review",

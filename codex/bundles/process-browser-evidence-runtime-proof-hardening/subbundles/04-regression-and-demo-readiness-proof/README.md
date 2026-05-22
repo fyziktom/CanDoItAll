@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Partially completed`
 
 ## Objective
 
@@ -105,8 +105,7 @@ Prove the repaired generic process cannot repeat the current DB failure and prep
 
 ## Progression Gate
 
-- Final closure passes only when the clean-DB process run produces process-visible browser evidence and the execution report proves the original failure shape can no longer be accepted.
-- The execution report must cite `proof/SB04/manifest.md`, `proof/SB04/semantic-invariants.md`, browser analytics, SQL/API artifact-record proof, and final raw-note closure.
+- Code-level regression and clean development DB setup passed. Final live-process closure remains open until the user reruns the full workflow from the clean DB and verifies process-visible browser evidence records on that fresh run.
 
 ## Suggested Agent Prompt
 

@@ -1,5 +1,9 @@
 # SB02 Semantic Invariants
 
+## Status
+
+- `Completed`
+
 ## Raw Notes Owned
 
 - `N001`: "final app was not properly tested"
@@ -35,4 +39,4 @@ Audit for fixture-specific branching, product-name checks, status-only tests, an
 
 ## Raw-Note Literal Closure
 
-`N001`, `N003`, and `N004` remain open until tests prove the process catches shallow visual proof and active console defects.
+`N001`, `N003`, and `N004` are closed at the generic runtime-code level: tests prove missing screenshots, active console defects, and shallow interaction proof block QA completion.

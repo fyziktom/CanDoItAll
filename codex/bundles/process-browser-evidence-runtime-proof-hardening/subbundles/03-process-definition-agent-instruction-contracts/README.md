@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -92,8 +92,7 @@ Update generic software-delivery process definitions, work-brief generation, and
 
 ## Progression Gate
 
-- Do not start `SB04` until process definitions and prompts drive generic artifact-backed browser validation and anti-hardcoding proof is recorded.
-- The execution report must include prompt/definition test results and the anti-hardcoding audit transcript.
+- Passed. `bundle://proof/SB03/manifest.md`, `bundle://proof/SB03/semantic-invariants.md`, and `bundle://proof/SB03/evidence/anti-hardcoding-audit.txt` record the template, seed, prompt, non-UI, and anti-hardcoding proof.
 
 ## Suggested Agent Prompt
 

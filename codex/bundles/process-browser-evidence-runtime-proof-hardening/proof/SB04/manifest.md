@@ -2,20 +2,20 @@
 
 ## Status
 
-- `Required during execution`
+- `Partially completed`
 
 ## Required Artifacts
 
 | Artifact | Required path or rule | Status |
 | --- | --- | --- |
-| Regression command transcript | `proof/SB04/evidence/regression-tests.txt` | Pending |
-| Clean development DB setup transcript | `proof/SB04/evidence/clean-development-db-setup.txt` | Pending |
-| Fresh process run summary | `proof/SB04/evidence/fresh-process-run-summary.txt` | Pending |
-| Process artifact record query | `proof/SB04/evidence/browser-artifact-record-query.txt` | Pending |
-| Browser screenshot artifact | Scoped process artifact path from fresh run | Pending |
-| Browser console artifact | Scoped process artifact path from fresh run | Pending |
-| Browser snapshot or DOM/evaluate artifact | Scoped process artifact path from fresh run | Pending |
-| Red-team fake-proof audit | `proof/SB04/evidence/fake-proof-resistance.txt` | Pending |
+| Regression command transcript | `bundle://proof/SB04/evidence/regression-tests.txt` | Passed, 130 focused tests |
+| Clean development DB setup transcript | `bundle://proof/SB04/evidence/clean-development-db-setup.txt` | Passed, DB dropped and migrated |
+| Fresh process run summary | `bundle://proof/SB04/evidence/fresh-process-run-summary.txt` | Deferred to user-owned clean-DB retest |
+| Process artifact record query | `bundle://proof/SB04/evidence/browser-artifact-record-query.txt` | Deferred; DB intentionally empty |
+| Browser screenshot artifact | Scoped process artifact path from fresh run | Pending user retest |
+| Browser console artifact | Scoped process artifact path from fresh run | Pending user retest |
+| Browser snapshot or DOM/evaluate artifact | Scoped process artifact path from fresh run | Pending user retest |
+| Red-team fake-proof audit | `bundle://proof/SB04/evidence/fake-proof-resistance.txt` | Captured |
 
 ## Production Behavior Artifact Matrix
 
@@ -26,4 +26,4 @@
 
 ## Completion Rule
 
-Final closure cannot pass until this manifest cites existing artifacts from a fresh run and the execution report closes every raw note.
+Final live-process closure remains open until the user reruns the full workflow from the clean DB and confirms process-visible browser artifacts on a real run. Code-level regression and DB readiness proof are complete.

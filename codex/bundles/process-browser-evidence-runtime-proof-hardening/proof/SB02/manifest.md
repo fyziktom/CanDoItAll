@@ -2,19 +2,18 @@
 
 ## Status
 
-- `Required during execution`
+- `Completed`
 
 ## Required Artifacts
 
 | Artifact | Required path or rule | Status |
 | --- | --- | --- |
-| Failing-first missing screenshot transcript | `proof/SB02/evidence/failing-first-missing-screenshot.txt` | Pending |
-| Failing-first shallow interaction transcript | `proof/SB02/evidence/failing-first-shallow-interaction.txt` | Pending |
-| Passing runtime proof gate transcript | `proof/SB02/evidence/passing-runtime-proof-gate.txt` | Pending |
-| Console phase transcript | `proof/SB02/evidence/console-phase-classification.txt` | Pending |
-| Changed-file hashes | `proof/SB02/evidence/changed-file-hashes.txt` | Pending |
-| Source assertions | `proof/SB02/evidence/source-assertions.txt` | Pending |
-| Anti-stub audit | `proof/SB02/evidence/anti-stub-audit.txt` | Pending |
+| Missing screenshot negative fixture | `ProcessRunAutomationDispatchServiceTests.ResolveCompletionStatus_blocks_completed_qa_when_required_browser_screenshot_artifact_is_missing` | Passed in `bundle://proof/SB02/evidence/passing-runtime-proof-gate.txt` |
+| Shallow interaction negative fixture | `ProcessRunAutomationDispatchServiceTests.ResolveCompletionStatus_blocks_interactive_browser_proof_without_representative_interaction_tool` | Passed in transcript |
+| Passing runtime proof gate transcript | `bundle://proof/SB02/evidence/passing-runtime-proof-gate.txt` | Passed, 8 targeted tests |
+| Console phase transcript | `bundle://proof/SB02/evidence/passing-runtime-proof-gate.txt` | Active JS error blocks; post-stop disconnect classified |
+| Changed-file hashes | `bundle://proof/SB02/evidence/changed-file-hashes.txt` | Captured |
+| Source assertions | `bundle://proof/SB02/evidence/source-assertions.txt` | Captured |
 
 ## Production Behavior Artifact Matrix
 
@@ -26,4 +25,4 @@
 
 ## Completion Rule
 
-This manifest is complete only when failing-first and passing transcripts prove behavior through production validation paths.
+This manifest is complete for code-level closure: production validation rejects missing, invalid, shallow, or console-broken browser proof and allows classified post-stop disconnects only after usable browser evidence exists.

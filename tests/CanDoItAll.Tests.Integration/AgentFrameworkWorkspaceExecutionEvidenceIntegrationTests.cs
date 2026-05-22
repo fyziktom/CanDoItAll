@@ -153,6 +153,88 @@ public sealed class AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests
         Assert.Contains(receipts, item => string.Equals(item.ToolName, "browser_take_screenshot", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public async Task GetExecutionRunDetailAsync_projects_playwright_browser_calls_from_execution_logs_when_chat_history_is_empty()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var workspaceService = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var workspaceStore = Assert.IsAssignableFrom<ISandboxWorkspaceExecutionRunStore>(
+            scope.ServiceProvider.GetRequiredService<ISandboxWorkspaceStore>());
+
+        var agent = Assert.Single(
+            await workspaceService.ListAgentsAsync(includeTemplates: false),
+            item => string.Equals(item.Name, "Programming Workspace Analyst", StringComparison.Ordinal));
+
+        var now = DateTimeOffset.UtcNow;
+        var runId = Guid.NewGuid();
+        const string screenshotPath = "artifacts/process-runs/run-001/browser-proof.png";
+        await workspaceStore.SaveExecutionRunDetailAsync(
+            new ExecutionRunDetail(
+                new ExecutionRunRecord(
+                    Id: runId,
+                    AgentId: agent.Id,
+                    ChatSessionId: null,
+                    Title: "Playwright proof from logs",
+                    SourceKind: "manual",
+                    SourceId: "proof-logs-1",
+                    CorrelationId: "corr-logs-1",
+                    CausationId: string.Empty,
+                    RequestedBy: "codex",
+                    RequestedByKind: "system",
+                    MetadataJson: "{}",
+                    InputSummary: "Validate browser MCP",
+                    ResultSummary: "Completed",
+                    ProviderName: "OpenAI chat completions",
+                    Model: "gpt-4o-mini",
+                    State: ExecutionState.Completed,
+                    Outcome: RunOutcome.Succeeded,
+                    CreatedAtUtc: now,
+                    UpdatedAtUtc: now,
+                    StartedAtUtc: now,
+                    CompletedAtUtc: now.AddSeconds(5),
+                    RuntimeSessionKey: string.Empty,
+                    SerializedSessionStateJson: BuildEmptySerializedSessionState(),
+                    PendingApprovals: []),
+                null,
+                [
+                    CreateLogEntry(runId, agent.Id, now.AddSeconds(1), ExecutionState.WaitingOnTool, "Tool", "Invoking tool 'browser_navigate' with url=\"http://127.0.0.1:5502/\"."),
+                    CreateLogEntry(runId, agent.Id, now.AddSeconds(2), ExecutionState.WaitingOnTool, "Tool", $"Invoking tool 'browser_take_screenshot' with type=\"png\", filename=\"{screenshotPath}\", fullPage=\"False\"."),
+                    CreateLogEntry(runId, agent.Id, now.AddSeconds(3), ExecutionState.WaitingOnTool, "Tool", "Invoking tool 'browser_console_messages' with level=\"info\", all=\"True\"."),
+                    CreateLogEntry(runId, agent.Id, now.AddSeconds(4), ExecutionState.Completed, "Completed", "Execution run response persisted.")
+                ],
+                [])
+            {
+            ToolReceipts =
+            [
+                new ToolExecutionReceiptRecord(
+                    Id: Guid.NewGuid(),
+                    ExecutionRunId: runId,
+                    ToolFamily: "workspace-process",
+                    ToolName: "local_mcp_launch",
+                    RiskClass: "LocalExecution:Mcp",
+                    ApprovalMode: "NotRequired",
+                    IsolationGuarantee: "PolicyOnlyLocal",
+                    RequestSummary: "@playwright/mcp@latest, --headless, --caps, vision",
+                    WorkingDirectory: application.ActiveProfile.WorkspaceRootPath,
+                    ExitSummary: "Prepared",
+                    StartedAtUtc: now,
+                    CompletedAtUtc: now)
+            ]
+            },
+            CancellationToken.None);
+
+        var detail = await workspaceService.GetExecutionRunDetailAsync(runId);
+
+        Assert.Contains(detail.ToolReceipts, item => string.Equals(item.ToolName, "browser_navigate", StringComparison.Ordinal));
+        var screenshotReceipt = Assert.Single(
+            detail.ToolReceipts,
+            item => string.Equals(item.ToolName, "browser_take_screenshot", StringComparison.Ordinal));
+        Assert.Equal("mcp-server", screenshotReceipt.ToolFamily);
+        Assert.Contains(screenshotPath, screenshotReceipt.RequestSummary, StringComparison.Ordinal);
+        Assert.Contains(detail.ToolReceipts, item => string.Equals(item.ToolName, "browser_console_messages", StringComparison.Ordinal));
+    }
+
     private static ExecutionLogEntry CreateLogEntry(
         Guid executionRunId,
         Guid agentId,
@@ -253,6 +335,21 @@ public sealed class AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests
                                 contents = resultContents
                             }
                         }
+                    }
+                }
+            });
+    }
+
+    private static string BuildEmptySerializedSessionState()
+    {
+        return JsonSerializer.Serialize(
+            new
+            {
+                stateBag = new
+                {
+                    InMemoryChatHistoryProvider = new
+                    {
+                        messages = Array.Empty<object>()
                     }
                 }
             });

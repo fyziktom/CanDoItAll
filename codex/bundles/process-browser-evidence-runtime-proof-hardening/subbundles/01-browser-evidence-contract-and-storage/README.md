@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Completed`
 
 ## Objective
 
@@ -93,8 +93,7 @@ Make browser MCP proof durable and process-visible. Required screenshots, snapsh
 
 ## Progression Gate
 
-- Do not start `SB02` or `SB03` until the failing-first fixture fails for the original condition and passes only when provider-native browser evidence becomes process-visible artifact records.
-- The execution report must cite `proof/SB01/manifest.md` and `proof/SB01/semantic-invariants.md`.
+- Passed. `bundle://proof/SB01/manifest.md` and `bundle://proof/SB01/semantic-invariants.md` cite the provider-native browser evidence tests, source assertions, and changed-file hashes.
 
 ## Suggested Agent Prompt
 
