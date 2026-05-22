@@ -1,0 +1,41 @@
+# SB02 Test Transcript
+
+## Targeted Command
+
+Command:
+
+```powershell
+dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~ResolveMissingConcreteImplementationProofSummary_accepts_source_read_under_scoped_current_run_output_root|FullyQualifiedName~ResolveMissingRequiredArtifactSummary_rejects_dotnet_stdout_evidence_ref_as_browser_console_output|FullyQualifiedName~ShouldRetryIncompleteSuccessfulRun_does_not_retry_downstream_step_for_missing_upstream_artifact_block|FullyQualifiedName~ApplyTransitionConsequences_reactivates_blocked_dependent_after_upstream_artifact_materialization" --artifacts-path repo://artifacts/codex-test-artifacts
+```
+
+## Targeted Result
+
+ExitCode: 0
+
+```text
+Invariant IDs: INV-SB01-001, INV-SB01-002, INV-SB02-001, INV-SB02-002
+Passed: 4
+Failed: 0
+Skipped: 0
+Duration: 177 ms
+```
+
+## Full Dispatch Class Command
+
+Command:
+
+```powershell
+dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~ProcessRunAutomationDispatchServiceTests" --artifacts-path repo://artifacts/codex-test-artifacts
+```
+
+## Full Dispatch Class Result
+
+ExitCode: 0
+
+```text
+Invariant IDs: INV-SB01-001, INV-SB01-002, INV-SB02-001, INV-SB02-002
+Passed: 368
+Failed: 0
+Skipped: 0
+Duration: 8 s
+```

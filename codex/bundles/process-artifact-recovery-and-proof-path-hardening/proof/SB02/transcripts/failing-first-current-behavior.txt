@@ -1,0 +1,15 @@
+# SB02 Failing-First Current Behavior
+
+Command:
+
+```powershell
+Review existing missing-upstream-artifact tests and live run journal behavior
+```
+
+ExitCode: 1
+
+Observed behavior before repair:
+
+```text
+The process could block a downstream step for missing upstream artifact inputs, but it did not automatically request the producing source step to materialize the missing artifact and then reopen the downstream step.
+```

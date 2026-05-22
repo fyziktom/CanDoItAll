@@ -1847,6 +1847,34 @@ internal sealed partial class ProcessRunAutomationDispatchService
         };
     }
 
+    private static bool IsProviderNativeBrowserEvidenceReferencePath(string relativePath)
+    {
+        if (string.IsNullOrWhiteSpace(relativePath))
+        {
+            return false;
+        }
+
+        var normalizedPath = WorkspaceScopeDescriptor.NormalizeRelativePath(relativePath);
+        if (normalizedPath.StartsWith(".playwright-mcp/", StringComparison.OrdinalIgnoreCase))
+        {
+            return ResolveProviderNativeBrowserToolName(normalizedPath).Length > 0;
+        }
+
+        var comparablePath = NormalizeManagedRelativePathForComparison(normalizedPath);
+        return comparablePath.StartsWith("artifacts/process-runs/", StringComparison.OrdinalIgnoreCase) &&
+               IsManagedBrowserEvidenceReferencePath(comparablePath) &&
+               ResolveProviderNativeBrowserToolName(comparablePath).Length > 0;
+    }
+
+    private static bool IsManagedBrowserEvidenceReferencePath(string comparablePath)
+    {
+        var segments = comparablePath.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return segments.Length >= 5 &&
+               string.Equals(segments[0], "artifacts", StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(segments[1], "process-runs", StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(segments[3], "browser", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static bool MatchesExpectedBrowserOutputFile(string expectedRelativePath, string outputFileName)
     {
         var normalizedExpectedPath = WorkspaceScopeDescriptor.NormalizeRelativePath(expectedRelativePath);
@@ -2161,6 +2189,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
             sourceStepsById.TryGetValue(artifactExpectation.StepDefinitionId, out var sourceStepDefinition);
             stepRunsByDefinitionId.TryGetValue(artifactExpectation.StepDefinitionId, out var sourceStepRuns);
+            var sourceStepRun = sourceStepRuns?
+                .OrderByDescending(item => item.Sequence)
+                .FirstOrDefault();
             var sourceStepRunIds = sourceStepRuns?
                 .Select(item => item.Id)
                 .ToHashSet()
@@ -2183,6 +2214,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
             resolvedInputs.Add(new DispatchArtifactInput(
                 sourceStepDefinition?.Title ?? "Unknown upstream step",
                 artifactExpectation.Title,
+                artifactExpectation.Id,
+                artifactExpectation.StepDefinitionId,
+                sourceStepRun?.Id,
+                sourceStepRun?.ConcurrencyToken,
+                sourceStepRun?.Status,
+                sourceStepRun?.CurrentExecutorPartyId.HasValue == true,
                 matchingArtifacts));
         }
 
@@ -2286,6 +2323,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
             preparedInputs.Add(new DispatchArtifactInput(
                 artifactInput.SourceStepTitle,
                 artifactInput.ExpectedArtifactTitle,
+                artifactInput.ArtifactExpectationId,
+                artifactInput.SourceStepDefinitionId,
+                artifactInput.SourceStepRunId,
+                artifactInput.SourceStepRunConcurrencyToken,
+                artifactInput.SourceStepRunStatus,
+                artifactInput.SourceStepHasAgentExecutor,
                 preparedArtifacts));
         }
 
@@ -3657,8 +3700,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         var normalizedPath = WorkspaceScopeDescriptor.NormalizeRelativePath(artifact.RelativePath);
-        return normalizedPath.Contains("/process-runs/", StringComparison.OrdinalIgnoreCase) &&
-               ResolveProviderNativeBrowserToolName(normalizedPath).Length > 0;
+        return IsProviderNativeBrowserEvidenceReferencePath(normalizedPath);
     }
 
     private static string? TryDecodeTextArtifactContent(

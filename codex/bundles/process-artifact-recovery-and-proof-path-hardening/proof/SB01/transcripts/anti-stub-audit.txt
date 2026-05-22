@@ -1,0 +1,15 @@
+# SB01 Anti-Stub Audit
+
+Command:
+
+```powershell
+rg -n "Tetris|TetrisGame|tetromino|Blazor WASM" src/CanDoItAll.Modules.Processes
+```
+
+ExitCode: 0
+
+Result:
+
+```text
+No product-specific process runtime rule was added. Test names and fixture text may mention the live Tetris evidence shape, but production code remains generic.
+```

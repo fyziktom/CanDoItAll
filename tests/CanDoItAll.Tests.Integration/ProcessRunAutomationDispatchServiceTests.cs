@@ -7827,6 +7827,29 @@ Use only the project-structure mindmap requirements as scope. Create the request
     }
 
     [Fact]
+    public void ResolveMissingRequiredArtifactSummary_rejects_dotnet_stdout_evidence_ref_as_browser_console_output()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveMissingRequiredArtifactSummary = serviceType.GetMethod("ResolveMissingRequiredArtifactSummary", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveMissingRequiredArtifactSummary method was not found.");
+        var candidate = CreateDispatchCandidate(
+            "Run QA validation and browser proof for the delivered browser app.",
+            ProcessStepKind.Review,
+            (ProcessArtifactKind.Evidence, "Browser console artifact", true, "Create this artifact at artifacts/process-runs/run-001/browser/browser-console.log using browser_console_messages."));
+        var dotnetStdoutPath = "artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/20260522/20260522-193340659-dotnet-build/stdout.txt";
+        var detail = CreateSuccessfulExecutionDetail(
+            StructuredOutcome(
+                ProcessStepOutcomeStatus.Completed,
+                "Build stdout was captured, but no browser console output was produced.",
+                evidenceRefs: [dotnetStdoutPath]),
+            BuildSerializedSessionState(Array.Empty<(string ToolName, object Result)>()));
+
+        var summary = resolveMissingRequiredArtifactSummary.Invoke(null, [candidate, detail, detail.Run.ResultSummary]) as string;
+
+        Assert.Contains("Browser console artifact", summary, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void ResolveCompletionStatus_ignores_provider_native_browser_file_read_scope_miss_when_file_exists()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
@@ -10686,6 +10709,36 @@ Ancestor path to the target work node:
     }
 
     [Fact]
+    public void ResolveMissingConcreteImplementationProofSummary_accepts_source_read_under_scoped_current_run_output_root()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveMissingProof = serviceType.GetMethod("ResolveMissingConcreteImplementationProofSummary", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveMissingConcreteImplementationProofSummary method was not found.");
+        var candidate = CreateDispatchCandidate("Implement the Tetris game as a Blazor application and prove startup.");
+        var runId = Guid.NewGuid();
+        var sourcePath = $"output/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/{runId:D}/TetrisGame/Program.cs";
+        var projectPath = $"output/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/{runId:D}/TetrisGame/TetrisGame.csproj";
+        var now = DateTimeOffset.UtcNow;
+        var detail = CreateSuccessfulExecutionDetail(
+            StructuredOutcome(ProcessStepOutcomeStatus.Completed, "Implementation source was written, read back, built, and smoke-tested."),
+            BuildSerializedSessionState(
+                ("workspace_write_file", CreateProviderNativeTextResult("Source written.")),
+                ("workspace_read_file", CreateProviderNativeTextResult("Source reviewed.")),
+                ("workspace_dotnet_build", CreateProviderNativeTextResult("Build passed.")),
+                ("workspace_dotnet_run", CreateProviderNativeTextResult("Startup smoke passed."))),
+            [
+                CreateToolReceipt("workspace-file", "workspace_write_file", sourcePath, ".", "Succeeded", now),
+                CreateToolReceipt("workspace-file", "workspace_read_file", sourcePath, ".", "Succeeded", now.AddSeconds(1)),
+                CreateToolReceipt("workspace-process", "workspace_dotnet_build", $"build {projectPath}", ".", "Succeeded (exit 0)", now.AddSeconds(2)),
+                CreateToolReceipt("workspace-process", "workspace_dotnet_run", projectPath, ".", "Succeeded (exit 0)", now.AddSeconds(3))
+            ]);
+
+        var summary = resolveMissingProof.Invoke(null, [candidate, detail]) as string;
+
+        Assert.Equal(string.Empty, summary);
+    }
+
+    [Fact]
     public void ResolveRunnableDotNetHostProjectPaths_ignores_managed_workspace_working_directory_for_external_runs()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
@@ -12645,6 +12698,73 @@ Ancestor path to the target work node:
     }
 
     [Fact]
+    public void ApplyTransitionConsequences_reactivates_blocked_dependent_after_upstream_artifact_materialization()
+    {
+        var upstreamStepDefinitionId = Guid.NewGuid();
+        var downstreamStepDefinitionId = Guid.NewGuid();
+        var upstreamStepDefinition = new ProcessStepDefinition
+        {
+            Id = upstreamStepDefinitionId,
+            Title = "Implement bounded delivery change",
+            OrderIndex = 0
+        };
+        var downstreamStepDefinition = new ProcessStepDefinition
+        {
+            Id = downstreamStepDefinitionId,
+            Title = "Complete peer review and integration readiness",
+            OrderIndex = 1
+        };
+        var upstreamStepRun = new ProcessStepRun
+        {
+            StepDefinitionId = upstreamStepDefinitionId,
+            Title = upstreamStepDefinition.Title,
+            Status = ProcessStepRunStatus.Completed
+        };
+        var downstreamStepRun = new ProcessStepRun
+        {
+            StepDefinitionId = downstreamStepDefinitionId,
+            Title = downstreamStepDefinition.Title,
+            Status = ProcessStepRunStatus.Blocked,
+            BlockedReason = "Cannot dispatch 'Complete peer review and integration readiness' because required upstream artifacts are missing: upstream step 'Implement bounded delivery change' must provide required artifact 'Implementation change set'. Automation requested upstream artifact materialization from 'Implement bounded delivery change' before retrying this step."
+        };
+        var now = DateTimeOffset.UtcNow;
+        var stepDefinitionsById = new Dictionary<Guid, ProcessStepDefinition>
+        {
+            [upstreamStepDefinitionId] = upstreamStepDefinition,
+            [downstreamStepDefinitionId] = downstreamStepDefinition
+        };
+        var stepRunsByDefinitionId = new Dictionary<Guid, ProcessStepRun>
+        {
+            [upstreamStepDefinitionId] = upstreamStepRun,
+            [downstreamStepDefinitionId] = downstreamStepRun
+        };
+        var dependenciesByStepId = new Dictionary<Guid, List<ProcessStepDependencyDefinition>>
+        {
+            [downstreamStepDefinitionId] =
+            [
+                new ProcessStepDependencyDefinition
+                {
+                    StepDefinitionId = downstreamStepDefinitionId,
+                    DependsOnStepId = upstreamStepDefinitionId
+                }
+            ]
+        };
+
+        ProcessRuntimeProgressionPlanner.ApplyTransitionConsequences(
+            ProcessStepRunStatus.Completed,
+            upstreamStepDefinition,
+            stepDefinitionsById,
+            stepRunsByDefinitionId,
+            dependenciesByStepId,
+            now);
+
+        Assert.Equal(ProcessStepRunStatus.Ready, downstreamStepRun.Status);
+        Assert.Equal(now, downstreamStepRun.ReadyAtUtc);
+        Assert.Equal(string.Empty, downstreamStepRun.BlockedReason);
+        Assert.Equal("Reopened after upstream artifact materialization completed.", downstreamStepRun.DecisionSummary);
+    }
+
+    [Fact]
     public void ShouldRetryIncompleteSuccessfulRun_retries_javascript_browser_proof_blocked_before_launch_attempt()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
@@ -13666,6 +13786,12 @@ Ancestor path to the target work node:
                 artifactInputType,
                 definition.SourceStepTitle,
                 definition.ExpectedArtifactTitle,
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                null,
+                null,
+                null,
+                false,
                 artifactReferences)
                 ?? throw new InvalidOperationException("DispatchArtifactInput could not be constructed.");
             artifactInputs.SetValue(artifactInput, index);

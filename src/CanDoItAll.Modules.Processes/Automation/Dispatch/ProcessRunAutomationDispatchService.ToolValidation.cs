@@ -824,7 +824,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         foreach (var evidenceRef in ResolveBrowserEvidenceReferences(resultSummary))
         {
             var normalizedRef = WorkspaceScopeDescriptor.NormalizeRelativePath(evidenceRef);
-            if (!IsProviderNativeBrowserArtifactPath(normalizedRef))
+            if (!IsProviderNativeBrowserEvidenceReferencePath(normalizedRef))
             {
                 continue;
             }

@@ -74,6 +74,12 @@ internal sealed record SubprocessCapabilityGapStep(
     private sealed record DispatchArtifactInput(
         string SourceStepTitle,
         string ExpectedArtifactTitle,
+        Guid ArtifactExpectationId,
+        Guid SourceStepDefinitionId,
+        Guid? SourceStepRunId,
+        Guid? SourceStepRunConcurrencyToken,
+        ProcessStepRunStatus? SourceStepRunStatus,
+        bool SourceStepHasAgentExecutor,
         IReadOnlyList<DispatchArtifactReference> Artifacts);
 
     private sealed record DispatchArtifactReference(
