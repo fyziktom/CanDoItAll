@@ -177,7 +177,7 @@ public sealed partial class ProcessesService
                 assignmentMatchedSkillsByPartyId.TryGetValue(assignment.PartyId, out var matchedSkillSet);
                 var matchedSkillCount = matchedSkillSet?.Count ?? 0;
                 aiDirectoryByPartyId.TryGetValue(assignment.PartyId, out var linkedAiResource);
-                var requiresProvisioning = requiresTechnicalAgentBinding && !HasBoundTechnicalAgent(linkedAiResource);
+                var requiresProvisioning = requiresTechnicalAgentBinding && !HasRunnableTechnicalAgent(linkedAiResource);
                 var metadata = BuildLaunchProvisioningMetadata(
                     role,
                     requiredSkillIds,
@@ -228,10 +228,8 @@ public sealed partial class ProcessesService
                 aiMatchedSkillsByPartyId.TryGetValue(aiResource.PartyId, out var matchedSkillSet);
                 var matchedSkillCount = matchedSkillSet?.Count ?? 0;
                 var hasAllRequiredSkills = requiredSkillIds.Count == 0 || matchedSkillCount == requiredSkillIds.Count;
-                var isReadyBoundCandidate =
-                    aiResource.BindingStatus == AiResourceBindingStatus.Bound &&
-                    aiResource.TechnicalAgentId.HasValue &&
-                    hasAllRequiredSkills;
+                var requiresProvisioning = !HasRunnableTechnicalAgent(aiResource);
+                var isReadyBoundCandidate = !requiresProvisioning && hasAllRequiredSkills;
                 var isRecommended = !hasRecommendedCandidate && isReadyBoundCandidate;
 
                 if (isReadyBoundCandidate)
@@ -249,10 +247,10 @@ public sealed partial class ProcessesService
                     Score = ResolveAiResourceScore(aiResource, matchedSkillCount, requiredSkillIds.Count),
                     IsRecommended = isRecommended,
                     AllowsDirectMessaging = true,
-                    RequiresProvisioning = !aiResource.TechnicalAgentId.HasValue || aiResource.BindingStatus != AiResourceBindingStatus.Bound,
+                    RequiresProvisioning = requiresProvisioning,
                     RecommendationSummary = BuildAiResourceRecommendationSummary(aiResource, matchedSkillCount, requiredSkillIds.Count),
-                    AvailabilitySummary = string.IsNullOrWhiteSpace(aiResource.ProviderName)
-                        ? "AI resource is available in the directory."
+                    AvailabilitySummary = requiresProvisioning
+                        ? "AI resource is available in the directory, but a runnable provider profile must be assigned before execution."
                         : $"{aiResource.ProviderName} / {aiResource.DefaultModel}",
                     SourceRegistryKey = $"crmhr-ai-agent:{aiResource.PartyId:D}",
                     MetadataJson = BuildLaunchProvisioningMetadata(
@@ -315,7 +313,7 @@ public sealed partial class ProcessesService
             matchedSkillsByPartyId.TryGetValue(staffingCandidate.PartyId, out var matchedSkillSet);
             var matchedSkillCount = matchedSkillSet?.Count ?? 0;
             aiDirectoryByPartyId.TryGetValue(staffingCandidate.PartyId, out var staffingAiResource);
-            var requiresProvisioning = requiresTechnicalAgentBinding && !HasBoundTechnicalAgent(staffingAiResource);
+            var requiresProvisioning = requiresTechnicalAgentBinding && !HasRunnableTechnicalAgent(staffingAiResource);
             candidates.Add(new ProcessLaunchCandidate
             {
                 CandidateKind = ProcessLaunchCandidateKind.Workforce,
@@ -368,7 +366,7 @@ public sealed partial class ProcessesService
                 broaderMatchedSkillsByPartyId.TryGetValue(staffingCandidate.PartyId, out var matchedSkillSet);
                 var matchedSkillCount = matchedSkillSet?.Count ?? 0;
                 aiDirectoryByPartyId.TryGetValue(staffingCandidate.PartyId, out var broaderAiResource);
-                var requiresProvisioning = requiresTechnicalAgentBinding && !HasBoundTechnicalAgent(broaderAiResource);
+                var requiresProvisioning = requiresTechnicalAgentBinding && !HasRunnableTechnicalAgent(broaderAiResource);
                 candidates.Add(new ProcessLaunchCandidate
                 {
                     CandidateKind = ProcessLaunchCandidateKind.Workforce,
@@ -531,7 +529,11 @@ public sealed partial class ProcessesService
         int matchedSkillCount,
         int requiredSkillCount)
     {
-        var score = aiResource.BindingStatus == AiResourceBindingStatus.Bound ? 72m : 54m;
+        var score = HasRunnableTechnicalAgent(aiResource)
+            ? 72m
+            : aiResource.TechnicalAgentId.HasValue
+                ? 58m
+                : 54m;
         score += matchedSkillCount * 10m;
 
         if (requiredSkillCount > 0)

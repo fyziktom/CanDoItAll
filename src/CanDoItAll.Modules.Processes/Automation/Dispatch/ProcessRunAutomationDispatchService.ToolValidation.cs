@@ -95,7 +95,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
         IEnumerable<string> successfulToolNamesFromPriorAttempts,
         CarriedImplementationProof carriedImplementationProof)
     {
-        var requiredToolNames = ResolveRequiredToolNames(candidate);
+        var requiredToolNames = ResolveRequiredToolNames(candidate)
+            .Concat(ResolveMetadataRequiredToolNames(candidate, detail))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
         if (requiredToolNames.Count == 0)
         {
             return [];
@@ -144,6 +147,20 @@ internal sealed partial class ProcessRunAutomationDispatchService
                       CanSatisfyImplementationArtifactWriteWithRecordedArtifacts(candidate, detail)))
                 .ToList()
             : missing;
+    }
+
+    private static IReadOnlyList<string> ResolveMetadataRequiredToolNames(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail)
+    {
+        if (!ExecutionInvocationMetadata.ResolveProcessBrowserToolsAllowed(detail.Run) ||
+            !RequiresGovernedStepOutcome(candidate.StepRun) ||
+            IsDotNetSolutionSetupScaffoldMutationStep(candidate))
+        {
+            return [];
+        }
+
+        return ImplicitBrowserProofToolNames;
     }
 
     private static bool CanSatisfyMissingDotnetNewWithValidatedExistingScaffold(ExecutionRunDetail detail)
@@ -436,6 +453,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var invalidBrowserProofSummary = ResolveInvalidBrowserProofSummary(candidate, detail);
         var invalidQualityValidationProofSummary = ResolveInvalidQualityValidationProofSummary(candidate, detail, inspectionText);
         var missingRequiredArtifactSummary = ResolveMissingRequiredArtifactSummary(candidate, detail, inspectionText);
+        var downgradedProjectStructureRequirementSummary = ResolveDowngradedProjectStructureRequirementSummary(candidate, detail, inspectionText);
         var missingUpstreamArtifactInspectionSummary = ResolveMissingUpstreamArtifactInspectionSummary(candidate, detail);
         var outOfScopeExternalTargetReferenceSummary = ResolveOutOfScopeExternalTargetReferenceSummary(detail, inspectionText);
         var shallowSharedManagedArtifactReferenceSummary = ResolveShallowSharedManagedArtifactReferenceSummary(detail, inspectionText);
@@ -479,6 +497,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                   !string.IsNullOrWhiteSpace(invalidBrowserProofSummary) ||
                   !string.IsNullOrWhiteSpace(invalidQualityValidationProofSummary) ||
                   !string.IsNullOrWhiteSpace(missingRequiredArtifactSummary) ||
+                  !string.IsNullOrWhiteSpace(downgradedProjectStructureRequirementSummary) ||
                   !string.IsNullOrWhiteSpace(missingUpstreamArtifactInspectionSummary) ||
                   !string.IsNullOrWhiteSpace(outOfScopeExternalTargetReferenceSummary) ||
                   !string.IsNullOrWhiteSpace(shallowSharedManagedArtifactReferenceSummary)))
@@ -503,6 +522,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             !string.IsNullOrWhiteSpace(invalidBrowserProofSummary) ||
             !string.IsNullOrWhiteSpace(invalidQualityValidationProofSummary) ||
             !string.IsNullOrWhiteSpace(missingRequiredArtifactSummary) ||
+            !string.IsNullOrWhiteSpace(downgradedProjectStructureRequirementSummary) ||
             !string.IsNullOrWhiteSpace(missingUpstreamArtifactInspectionSummary) ||
             !string.IsNullOrWhiteSpace(outOfScopeExternalTargetReferenceSummary) ||
             !string.IsNullOrWhiteSpace(shallowSharedManagedArtifactReferenceSummary))

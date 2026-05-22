@@ -803,10 +803,16 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("small JavaScript interop", blazorDeveloper.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("package.json", javascriptDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("package manager", javascriptDeveloper.Instructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("For peer review and integration-readiness steps", javascriptDeveloper.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Do not satisfy a behavior defect by adding manifests", javascriptDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("browser_navigate", javascriptQa.Instructions, StringComparison.Ordinal);
         Assert.Contains("Do not submit Completed or Blocked for missing browser receipts from file inspection alone", javascriptQa.Instructions, StringComparison.Ordinal);
         Assert.Contains("External generated app folders are often not git repositories", javascriptQa.Instructions, StringComparison.Ordinal);
         Assert.Contains("npm.cmd", javascriptQa.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Do not pass a server implementation script itself to `workspace_pwsh_run_script`", javascriptQa.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Do not use `[System.Threading.Tasks.Task]::Run({ ... })` with scriptblocks", javascriptQa.Instructions, StringComparison.Ordinal);
+        Assert.Contains("use native absolute paths for redirect files", javascriptQa.Instructions, StringComparison.Ordinal);
+        Assert.Contains("do not put `$listener`, `$context`, `$request`, or `$file` variables inside a double-quoted `-Command` string", javascriptQa.Instructions, StringComparison.Ordinal);
         Assert.Contains("artifacts/business/<project-slug>/", businessStrategist.Instructions, StringComparison.Ordinal);
         Assert.Contains("business-plan.md", businessStrategist.Instructions, StringComparison.Ordinal);
         Assert.Contains("unit economics", financialStrategist.Instructions, StringComparison.OrdinalIgnoreCase);
@@ -970,6 +976,36 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         {
             AssertManagedSeedRefreshed(ReadAgentSnapshotFromCatalog(catalogPath, agentName));
         }
+
+        var javascriptQaInstructions = ReadAgentInstructionsFromCatalog(catalogPath, "JavaScript QA Review Lead");
+        var javascriptDeveloperInstructions = ReadAgentInstructionsFromCatalog(catalogPath, "JavaScript Application Developer");
+        var securityReviewerInstructions = ReadAgentInstructionsFromCatalog(catalogPath, "Security Reviewer");
+        var releaseManagerInstructions = ReadAgentInstructionsFromCatalog(catalogPath, "Release Readiness Manager");
+        Assert.Contains("For peer review and integration-readiness steps", javascriptDeveloperInstructions, StringComparison.Ordinal);
+        Assert.Contains("Do not satisfy a behavior defect by adding manifests", javascriptDeveloperInstructions, StringComparison.Ordinal);
+        Assert.Contains("single-quoted here-string", javascriptQaInstructions, StringComparison.Ordinal);
+        Assert.Contains("escape every literal `$`", javascriptQaInstructions, StringComparison.Ordinal);
+        Assert.Contains("must return after it records the reachable URL and process id", javascriptQaInstructions, StringComparison.Ordinal);
+        Assert.Contains("Do not pass a server implementation script itself to `workspace_pwsh_run_script`", javascriptQaInstructions, StringComparison.Ordinal);
+        Assert.Contains("never execute that child server script directly through `workspace_pwsh_run_script`", javascriptQaInstructions, StringComparison.Ordinal);
+        Assert.Contains("do not make missing `package.json` or missing automated tests release-blocking", javascriptQaInstructions, StringComparison.Ordinal);
+        Assert.Contains("do not call blocking stream reads", javascriptQaInstructions, StringComparison.Ordinal);
+        Assert.Contains("Multiple ambiguous overloads found for \"Run\"", javascriptQaInstructions, StringComparison.Ordinal);
+        Assert.Contains("Treat HTTP reachability as the startup proof", javascriptQaInstructions, StringComparison.Ordinal);
+        Assert.Contains("single-quoted here-string and launch it with `-File`", javascriptQaInstructions, StringComparison.Ordinal);
+        Assert.Contains("use `browser_evaluate`", javascriptQaInstructions, StringComparison.Ordinal);
+        Assert.Contains("replace it with `browser_evaluate` DOM or state proof", javascriptQaInstructions, StringComparison.Ordinal);
+        Assert.Contains("identify the shipped entrypoint first", javascriptQaInstructions, StringComparison.Ordinal);
+        Assert.Contains("Do not treat unreferenced source files, stale README claims, or a file manifest as proof of shipped behavior", javascriptQaInstructions, StringComparison.Ordinal);
+        Assert.Contains("Browser proof must exercise the actual loaded runtime", javascriptQaInstructions, StringComparison.Ordinal);
+        Assert.Contains("inspect the listed artifact paths directly with workspace tools", securityReviewerInstructions, StringComparison.Ordinal);
+        Assert.Contains("do not recapture fresh browser proof unless the current security step explicitly requires runtime or browser proof", securityReviewerInstructions, StringComparison.Ordinal);
+        Assert.Contains("Scale security controls to the declared release boundary", securityReviewerInstructions, StringComparison.Ordinal);
+        Assert.Contains("do not turn public hosting, CI integration, cross-browser support, artifact signing, or production telemetry into release blockers", securityReviewerInstructions, StringComparison.Ordinal);
+        Assert.Contains("QA evidence names the shipped entrypoint", releaseManagerInstructions, StringComparison.Ordinal);
+        Assert.Contains("unreferenced implementation files", releaseManagerInstructions, StringComparison.Ordinal);
+        Assert.Contains("Scale release approval and rollout to the declared release boundary", releaseManagerInstructions, StringComparison.Ordinal);
+        Assert.Contains("A static/package handoff can complete by confirming the approved artifacts are present in the target root", releaseManagerInstructions, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1278,6 +1314,16 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         return (
             agent.GetProperty("model").GetString() ?? string.Empty,
             agent.GetProperty("configurationJson").GetString() ?? string.Empty);
+    }
+
+    private static string ReadAgentInstructionsFromCatalog(string catalogPath, string agentName)
+    {
+        using var document = JsonDocument.Parse(File.ReadAllText(catalogPath));
+        var agent = document.RootElement.GetProperty("agents")
+            .EnumerateArray()
+            .Single(item => string.Equals(item.GetProperty("name").GetString(), agentName, StringComparison.Ordinal));
+
+        return agent.GetProperty("instructions").GetString() ?? string.Empty;
     }
 
     private static string ReadCapabilityConfigurationJsonFromCatalog(string catalogPath, string capabilityKey)

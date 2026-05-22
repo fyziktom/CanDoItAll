@@ -359,7 +359,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         trimmed = StripInlinePathAnnotations(trimmed);
         trimmed = Regex.Replace(
             trimmed,
-            @"(?i)(?:\.\s+|\s+)(?:Acceptance|Accepted|Architecture|Archetype|Deliverable|Escalation|Exact|Feature|Features|Requirement|Requirements|Required|Evidence|Validation|Validate|Tests?|Startup|Browser|Agents?|Use|The|This|Then|Next|No-go|Include|Includes)\b.*$",
+            @"(?i)(?:\.\s*(?:[-*]\s*)?|\s+(?:[-*]\s*)?)(?:Acceptance|Accepted|Architecture|Archetype|Backend|Deliverable|Escalation|Exact|Feature|Features|Hosting|Requirement|Requirements|Required|Evidence|Validation|Validate|Tests?|Startup|Browser|Agents?|Use|The|This|Then|Next|No-go|Include|Includes)\b.*$",
             string.Empty,
             RegexOptions.CultureInvariant);
         trimmed = Regex.Replace(
@@ -392,7 +392,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         return Regex.Replace(
                 value,
-                @"(?i)[\\/](?:r[\\/]?)?n\s*(?:[-*]\s*)?(?:Acceptance|Accepted|Alias|Aliases|All|App|Application|Architecture|Archetype|Code|Deliverable|Directory|Escalation|Exact|Feature|Features|Files?|Generated|Include|Includes|Mapped|Mapping|Node|No-go|Notes?|Output|Path|Product|Project|Requirement|Requirements|Required|Root|Source|Status|Workspace|Worksp|Evidence|Validation|Validate|Tests?|Startup|Browser|Agents?|Use|The|This|Then|Next)\b.*$",
+                @"(?i)[\\/](?:r[\\/]?)?n\s*(?:[-*]\s*)?(?:Acceptance|Accepted|Alias|Aliases|All|App|Application|Architecture|Archetype|Backend|Code|Deliverable|Directory|Escalation|Exact|Feature|Features|Files?|Generated|Hosting|Include|Includes|Mapped|Mapping|Node|No-go|Notes?|Output|Path|Product|Project|Requirement|Requirements|Required|Root|Source|Status|Workspace|Worksp|Evidence|Validation|Validate|Tests?|Startup|Browser|Agents?|Use|The|This|Then|Next)\b.*$",
                 string.Empty,
                 RegexOptions.CultureInvariant)
             .Trim();
@@ -407,7 +407,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         var stripped = Regex.Replace(
             value,
-            @"(?i)(?:;\s*(?:notes?|type|status|subtitle|metadata|source|project|node|mapped)\b.*$|\s+(?:Acceptance|Accepted|Architecture|Archetype|Deliverable|Escalation|Exact|Feature|Features|Requirement|Requirements|Required|Evidence|Validation|Validate|Tests?|Startup|Browser|Agents?|Use|The|This|Then|Next|No-go|Include|Includes)\b.*$|\s+\([a-z][a-z0-9_-]*:[^)]+\)?$|\s+\((?:maps?|mapped)\s+to\b.*$|\s+mapped\s+to\b.*$|\s+from\s+[^\\/]*$)",
+            @"(?i)(?:;\s*(?:notes?|type|status|subtitle|metadata|source|project|node|mapped)\b.*$|\s+(?:[-*]\s*)?(?:Acceptance|Accepted|Architecture|Archetype|Backend|Deliverable|Escalation|Exact|Feature|Features|Hosting|Requirement|Requirements|Required|Evidence|Validation|Validate|Tests?|Startup|Browser|Agents?|Use|The|This|Then|Next|No-go|Include|Includes)\b.*$|\s+\([a-z][a-z0-9_-]*:[^)]+\)?$|\s+\((?:maps?|mapped)\s+to\b.*$|\s+mapped\s+to\b.*$|\s+from\s+[^\\/]*$)",
             string.Empty,
             RegexOptions.CultureInvariant);
         stripped = Regex.Replace(
@@ -422,7 +422,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             RegexOptions.CultureInvariant);
         stripped = Regex.Replace(
             stripped,
-            @"(?i)\s+(?:[-*]\s*)?(?:Workspace\s+alias|Mapped\s+alias|Business-analysis|Business\s+analysis|All\s+generated|All\s+app(?:lication)?|Generated\s+app(?:lication)?|App(?:lication)?\s+source|App\s+project\s+path|Expected\s+project\s+source\s+path|Expected\s+base\s+URL|Run\s+command|Source\s+root|Source\s+belongs|Code\s+belongs|Files?\s+belong|Output\s+directory|Acceptance|Archetype|Deliverable|Exact|Include|Includes|No-go|Preservation\s+rule|Agents?\s+must|Use\s+only|Do\s+not|The\s+app|This\s+app)\b.*$",
+            @"(?i)\s+(?:[-*]\s*)?(?:Workspace\s+alias|Mapped\s+alias|Business-analysis|Business\s+analysis|All\s+generated|All\s+app(?:lication)?|Generated\s+app(?:lication)?|App(?:lication)?\s+source|App\s+project\s+path|Expected\s+project\s+source\s+path|Expected\s+base\s+URL|Run\s+command|Source\s+root|Source\s+belongs|Code\s+belongs|Files?\s+belong|Output\s+directory|Acceptance|Archetype|Backend|Deliverable|Exact|Hosting|Include|Includes|No-go|Preservation\s+rule|Agents?\s+must|Use\s+only|Do\s+not|The\s+app|This\s+app)\b.*$",
             string.Empty,
             RegexOptions.CultureInvariant);
         stripped = Regex.Replace(

@@ -115,6 +115,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             AddContextGap(errors, "process.step_outcome.context.invalid_browser_proof", ResolveInvalidBrowserProofSummary(candidate, detail));
             AddContextGap(errors, "process.step_outcome.context.invalid_quality_validation_proof", ResolveInvalidQualityValidationProofSummary(candidate, detail, inspectionText));
             AddContextGap(errors, "process.step_outcome.context.missing_required_artifact", ResolveMissingRequiredArtifactSummary(candidate, detail, inspectionText));
+            AddContextGap(errors, "process.step_outcome.context.downgraded_project_structure_requirement", ResolveDowngradedProjectStructureRequirementSummary(candidate, detail, inspectionText));
         }
 
         return errors.Count == 0

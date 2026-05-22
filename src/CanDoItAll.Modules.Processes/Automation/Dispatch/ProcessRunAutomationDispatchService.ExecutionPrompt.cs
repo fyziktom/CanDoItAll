@@ -36,9 +36,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var implementationMentionsTests = ImplementationContractMentionsTests(candidate);
         var implementationMentionsDotNet = ImplementationContractMentionsDotNet(candidate, projectStructureGroundingSummary);
         var implementationMentionsJavaScript = ImplementationContractMentionsJavaScript(candidate, projectStructureGroundingSummary);
+        var browserProofGroundingText = string.Join(
+            ' ',
+            projectStructureGroundingSummary,
+            artifactInspectionGroundingSummary);
+        var requiresConcreteBrowserProof = RequiresConcreteBrowserProof(candidate, browserProofGroundingText);
         var requiresConcreteProductProof = RequiresConcreteImplementationProof(candidate) ||
             RequiresConcreteImplementationReview(candidate) ||
-            RequiresConcreteBrowserProof(candidate);
+            requiresConcreteBrowserProof;
         ProcessProjectStructureContextFormatter.TryParse(candidate.Run.TriggerReason, out var projectStructureContext);
         var projectStructureProjectId = projectStructureContext?.ProjectId ?? candidate.Run.ProjectId;
         var hasProjectStructureExecutionContext = projectStructureContext is not null || !string.IsNullOrWhiteSpace(projectStructureGroundingSummary);
@@ -118,6 +123,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 ? $"- Use `project_structure_read` early in this step for {projectStructureReadTarget} so you inspect the live project graph instead of relying only on the selected node label."
                 : $"- The dispatcher already fetched a live project-structure snapshot for this run and included it below. Treat that grounding as a starting point, not a substitute for tool execution. You must still call `project_structure_read` early in this step for {projectStructureReadTarget} before you conclude.");
             builder.AppendLine("- Do not assume the selected task node contains every requirement. Carry forward only concrete stack choices, output directories, UI expectations, and acceptance notes explicitly attached to the selected work branch, ancestor nodes, included project-level planning context, upstream artifacts, or dependency links grounded for this run.");
+            builder.AppendLine("- Explicit project-structure requirements are source-of-truth constraints. Do not weaken them into optional items, exclusions, follow-up work, assumptions, or non-acceptance criteria unless the same project-structure source says they are optional or deferred.");
             builder.AppendLine("- If the project structure names a concrete output directory outside the managed workspace, do not silently relocate the deliverable. Use a controlled local execution path when necessary, and record the exact external target in the artifacts you write.");
             builder.AppendLine("- Workspace file and execution tools cannot use a raw absolute external path like `C:\\target\\app` directly. Convert it to the mapped alias `external-target/C/target/app` when you call workspace tools that read, write, inspect, validate, or launch files.");
             builder.AppendLine("- Only inspect or modify `external-target/...` paths that are explicitly named by this run's project-structure grounding, work brief, upstream step artifacts, or tool outputs from this run. Do not reuse remembered prior-example paths or external targets from prior runs.");
@@ -200,6 +206,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         builder.AppendLine("Assumption-forward execution rule:");
         builder.AppendLine("- When the run objective, project structure, work brief, upstream artifacts, or tool outputs identify a concrete deliverable and target boundary, proceed with bounded assumptions instead of stopping for optional preferences.");
         builder.AppendLine("- For intake, scope, planning, architecture, and implementation-preparation steps, missing preferences such as target date, stakeholder labels, branding, persistence choice, hosting choice, document format details, sample data, or rollout calendar are non-blocking unless the step contract makes that item mandatory for safety, legality, credentials, access, or an irreversible external action.");
+        builder.AppendLine("- Missing preferences are different from stated requirements. If project structure, upstream artifacts, or the run objective explicitly require persistence, hosting, controls, output location, validation, platform behavior, or another acceptance constraint, preserve it as required in the current artifact.");
         builder.AppendLine("- Record assumptions, exclusions, unresolved follow-up questions, and validation hooks in the required artifact. Use `Blocked` only when the core deliverable, writable target, mandatory upstream artifact, required authority, required credentials, or safe execution boundary is genuinely missing and cannot be inferred or deferred to a modeled review or repair step.");
         builder.AppendLine("- Do not return `Blocked` only because implementation details remain for a later implementation, QA, security, release, or repair step. Complete the current governed disposition when the current step can produce its required artifact or decision.");
         builder.AppendLine("- If this step itself is an escalation, no-go, scope-reset, replan, or unresolved-repair decision step, unresolved product defects are the decision payload. Write the required escalation/no-go record and return `Completed`; do not return `Blocked` merely because the product is not release-ready.");
@@ -210,7 +217,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         builder.AppendLine("Required output artifacts:");
         builder.AppendLine(BuildExpectedArtifactSummary(candidate, projectStructureGroundingSummary));
         builder.AppendLine();
-        var requiredToolNames = ResolveRequiredToolNames(candidate);
+        var requiredToolNames = ResolveRequiredToolNamesCore(candidate, browserProofGroundingText);
         if (requiredToolNames.Count > 0)
         {
             builder.AppendLine("Required tool execution checklist:");
@@ -224,9 +231,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
             builder.AppendLine();
         }
 
+        AppendBrowserProofBoundaryNote(
+            builder,
+            requiresConcreteBrowserProof,
+            browserProofGroundingText);
+
         AppendMandatoryBrowserProofPlan(
             builder,
             candidate,
+            requiresConcreteBrowserProof,
             implementationMentionsDotNet,
             implementationMentionsJavaScript,
             currentRunManagedArtifactRoot);
@@ -459,7 +472,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             builder.AppendLine("- When the implementation lives under a grounded external target, review the concrete deliverable in that target instead of blocking only because managed artifact folders do not contain product outputs.");
         }
 
-        if (RequiresConcreteBrowserProof(candidate))
+        if (requiresConcreteBrowserProof)
         {
             builder.AppendLine("- This step requires runnable browser proof or screenshots, not build-only or file-only evidence.");
             builder.AppendLine("- Before browser proof, inspect the concrete host, launch instructions, prior validation receipts, or reviewed artifacts so you derive the actual target and reachable URL from the implementation.");
@@ -473,6 +486,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 builder.AppendLine("- For JavaScript or TypeScript browser proof, start the app with the reviewed package script or launch path available to the assigned agent, preserve the actual URL and diagnostics, then stop any started process before finalizing.");
                 builder.AppendLine("- Do not use `workspace_dotnet_build`, `workspace_dotnet_test`, or `workspace_dotnet_run` for JavaScript or TypeScript deliverables unless the current-run requirements explicitly name .NET, C#, ASP.NET, Blazor, Razor, `.csproj`, or `.sln`.");
                 builder.AppendLine($"- If the available runner is `workspace_pwsh_run_script`, first create a helper script under `{currentRunManagedArtifactRoot}` with `workspace_write_file`, then inspect or stat that script before running it. Do not invoke a helper path that has not been created in this current run.");
+                builder.AppendLine("- If a PowerShell helper writes another PowerShell script, use a single-quoted here-string (`@' ... '@`) or escape every literal `$` in the nested script. Read the generated nested script before running it; malformed lines such as `param([string] = ...)`, `.Start()`, or `.OutputStream.Write(,...)` mean variable expansion corrupted the child script and must be repaired before rerun.");
+                builder.AppendLine("- If a PowerShell helper starts a package preview, static server, `HttpListener`, `python -m http.server`, or similar long-running browser host, launch that host as a background child process, wait for a reachable URL or startup log, write the URL and process id to durable evidence, then let the helper exit. Do not run the long-running server loop inside the `workspace_pwsh_run_script` process until the tool times out.");
+                builder.AppendLine("- For long-running browser hosts, do not call blocking stream reads such as `.ReadToEnd()`, `.ReadToEndAsync().Result`, `.WaitForExit()`, or equivalent waits on redirected stdout/stderr. Redirect output to files, inherit handles, or use nonblocking event handlers so the helper can return after recording URL and process id.");
                 builder.AppendLine("- A non-.NET helper script must convert an `external-target/<drive>/...` alias back to a native path before calling native commands such as `Resolve-Path`, `Test-Path`, `Set-Location`, `Start-Process`, `cmd.exe`, `node`, `npm`, `python`, or static-file launchers. Capture exit codes, stdout/stderr, the actual URL, and cleanup details in durable evidence.");
                 builder.AppendLine("- On Windows, package-manager launch helpers must invoke the real command shim, for example `npm.cmd run preview`, or use `cmd.exe /d /s /c \"npm run preview\"`. Do not use `Start-Process -FilePath 'npm'`; if a helper reports `%1 is not a valid Win32 application`, rewrite it to use `npm.cmd` or `cmd.exe` and rerun the launch.");
                 builder.AppendLine("- Never write helper code like `Resolve-Path 'external-target/C/...'`; native PowerShell resolves that relative to the managed artifact directory and will fail. Translate the alias to `C:\\...` first.");
@@ -489,9 +505,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
             builder.AppendLine("- Keep browser evidence bounded: call `browser_snapshot` with depth 2 and boxes false unless a specific contract requires depth 3 or 4. Call `browser_take_screenshot` with fullPage false or omit fullPage. Do not retry a policy-denied browser call with the same arguments.");
             builder.AppendLine("- When a browser tool accepts a `filename`, write it under the current-run managed artifact root or an exact required browser artifact path. The dispatcher prepares those raw MCP output directories before the run so browser screenshots, snapshots, and console logs can be persisted and imported.");
             builder.AppendLine("- Provider-native browser files are created by the browser MCP before managed scope aliasing. Review the browser tool result itself and cite the returned filename; do not block only because `workspace_read_file` cannot read a provider-native `artifacts/process-runs/...` browser file.");
+            builder.AppendLine("- If this is a static browser deliverable and the current step contract requires runtime or browser proof but does not explicitly require automated tests, a package manifest, or a nonzero test count, do not make missing `package.json` or missing automated tests release-blocking by itself. Record that as quality risk and validate with source inspection plus launch, console, screenshot or DOM, and representative interaction evidence.");
             builder.AppendLine("- After browser inspection, review the bounded snapshot, screenshot, or tool-returned content. If it shows placeholder starter content or lacks the requested workflow, return Blocked or repair instead of claiming proof.");
-            builder.AppendLine("- For interactive browser work, perform a representative user sequence and assert that visible state changes to the expected result.");
+            builder.AppendLine("- For interactive browser work, perform a representative user sequence and assert that visible state changes to the expected result. For canvas, game, custom-control, or keyboard-first surfaces, use `browser_evaluate` when ordinary browser click/fill helpers cannot express the workflow; dispatch representative keyboard or pointer events and inspect visible state, DOM text, or client-side storage.");
             builder.AppendLine("- If a screenshot call fails, retry once with viewport capture. If bounded snapshot, console diagnostics, and visible-state checks prove the workflow and no exact screenshot artifact is required, do not block solely on the screenshot failure.");
+            builder.AppendLine("- If `browser_snapshot` fails because of a tool-side selector, parsing, or accessibility-tree issue after navigation, screenshot, console diagnostics, and representative visible-state checks succeeded, replace it with `browser_evaluate` DOM or state proof and cite the snapshot failure. Do not block solely on the missing snapshot artifact unless the step explicitly requires that exact artifact.");
             builder.AppendLine("- If the app cannot be launched, the browser cannot be reached, bounded browser evidence cannot be captured, or the required UI flow is still missing, do not approve the proof.");
             builder.AppendLine("- When this step has an available branch outcome for repair, remediation, rework, changes required, or rejected validation, use status `Completed` with that exact BranchOutcomeKey for reproducible product defects or missing implemented behavior. Use `Blocked` only when missing inputs, denied tools, unavailable environment, or missing authority prevents you from making the governed quality disposition.");
             builder.AppendLine("- Do not reframe missing browser proof as a residual risk, deferred next step, or artifact-only note while still marking the step complete.");
@@ -527,6 +545,24 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         builder.Append(" Keep the response concise and mention what you completed.");
         return builder.ToString();
+    }
+
+    private static void AppendBrowserProofBoundaryNote(
+        StringBuilder builder,
+        bool requiresConcreteBrowserProof,
+        string? browserProofGroundingText)
+    {
+        if (requiresConcreteBrowserProof ||
+            !ContainsExplicitBrowserSurfaceSignal(browserProofGroundingText ?? string.Empty))
+        {
+            return;
+        }
+
+        builder.AppendLine("Browser proof boundary:");
+        builder.AppendLine("- The current project may have a browser-visible surface, but this step is not browser-proof gated. Do not launch the app, invoke browser tools, or return Blocked for missing browser receipts unless this step's own contract explicitly requires runtime or browser proof.");
+        builder.AppendLine("- If browser/runtime validation is needed later, record it as a downstream QA, release, or repair requirement instead of converting this step into that validation step.");
+        builder.AppendLine("- If upstream QA, release, or review artifacts include browser snapshots, screenshots, console logs, or regression evidence files, inspect those inherited artifact paths directly with workspace tools when the prompt lists them. Consuming inherited browser evidence is not the same as capturing fresh browser proof.");
+        builder.AppendLine();
     }
 
     private static bool LooksLikeExternalArtifactDestination(
@@ -632,11 +668,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
     private static void AppendMandatoryBrowserProofPlan(
         StringBuilder builder,
         DispatchCandidate candidate,
+        bool requiresConcreteBrowserProof,
         bool implementationMentionsDotNet,
         bool implementationMentionsJavaScript,
         string currentRunManagedArtifactRoot)
     {
-        if (!RequiresConcreteBrowserProof(candidate))
+        if (!requiresConcreteBrowserProof)
         {
             return;
         }
@@ -650,6 +687,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
         else if (implementationMentionsJavaScript)
         {
                 builder.AppendLine($"- Start or verify the reviewed JavaScript host first. If the only launch runner is `workspace_pwsh_run_script`, create a helper under `{currentRunManagedArtifactRoot}`, create its stdout/stderr directories, convert any `external-target/<drive>/...` alias to a native path inside the helper, invoke package scripts through the Windows shim such as `npm.cmd` or through `cmd.exe /d /s /c \"npm run <script>\"`, and capture the actual localhost URL plus cleanup details.");
+                builder.AppendLine("- If that helper writes another PowerShell script, use a single-quoted here-string (`@' ... '@`) or escape literal `$` characters, then read the generated nested script before executing it.");
+                builder.AppendLine("- The helper must not be the foreground web server. It must start any long-running static server or package preview as a background child process, wait until a URL is reachable, record the URL and process id, and exit so browser MCP tools can run next.");
+                builder.AppendLine("- Do not pass a server implementation script itself to `workspace_pwsh_run_script` when its main body constructs `HttpListener`, calls `GetContext`, runs `python -m http.server`, or contains a request loop. Execute only a bounded launcher script that starts that server as a child process and exits after reachability proof.");
+                builder.AppendLine("- Do not call blocking stream reads such as `.ReadToEnd()`, `.ReadToEndAsync().Result`, `.WaitForExit()`, or equivalent waits on redirected stdout/stderr for that long-running child process. Redirect output to files, inherit handles, or use nonblocking event handlers.");
+                builder.AppendLine("- In PowerShell launch helpers, prefer `Start-Process -FilePath <command> -ArgumentList <args> -WorkingDirectory <native-path> -RedirectStandardOutput <stdout-file> -RedirectStandardError <stderr-file> -PassThru` for long-running hosts. Do not use `[System.Threading.Tasks.Task]::Run({ ... })` with scriptblocks to copy redirected streams; PowerShell can throw an ambiguous overload binding error before the server starts.");
+                builder.AppendLine("- Use native absolute paths for stdout/stderr redirection. If `Start-Process -WorkingDirectory` points at the product root, relative redirect paths such as `artifacts/process-runs/...` will be resolved under the product root and become unreadable from workspace tools.");
+                builder.AppendLine("- Do not build child PowerShell server code as a double-quoted `-Command` string when that code contains variables such as `$listener`, `$context`, `$request`, or `$file`. Write a separate child `.ps1` file with a single-quoted here-string, read it back, then launch it with `-File`, or use a reviewed package/static server command instead.");
+                builder.AppendLine("- Treat HTTP reachability as the startup proof. Probe the recorded URL with a bounded `Invoke-WebRequest` loop before returning from the helper instead of relying only on stdout text from a long-running child process.");
         }
         else
         {
@@ -657,6 +702,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         builder.AppendLine("- After a reachable URL is known, call `browser_navigate` against that URL, exercise one representative user-visible interaction when the surface is interactive, then call `browser_snapshot` with depth 2 and boxes false, `browser_take_screenshot` with fullPage false or no fullPage argument, and `browser_console_messages` in this same attempt.");
+        builder.AppendLine("- If ordinary browser interaction tools cannot express the interaction, use `browser_evaluate` to dispatch representative keyboard or pointer events and read visible state, DOM text, or client-side storage.");
+        builder.AppendLine("- If the contract does not explicitly require automated tests, a package manifest, or nonzero test count, do not block static browser deliverable approval only because those artifacts are absent; use browser/runtime proof and record automation coverage as residual quality risk.");
+        builder.AppendLine("- If `browser_snapshot` fails for a tool-side selector, parsing, or accessibility-tree reason after other browser evidence proves the workflow, use `browser_evaluate` DOM or state proof as the replacement DOM evidence unless the exact snapshot artifact is explicitly required.");
         builder.AppendLine("- If launch fails before a URL exists, return Blocked with the exact launch command, logs, and repair target. If launch succeeds, do not return Blocked for missing browser receipts before attempting the browser tools.");
         builder.AppendLine();
     }

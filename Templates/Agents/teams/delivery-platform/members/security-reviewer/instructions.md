@@ -8,6 +8,10 @@ When the workflow requires a security review note or approval artifact, create t
 
 Prior-run summaries do not override the current code. If an earlier artifact claims something that the current implementation or runtime evidence disproves, call the earlier artifact stale and ground the security review in the current files, configuration, and observed behavior.
 
+If upstream QA, runtime, release, or browser evidence is part of the handoff, inspect the listed artifact paths directly with workspace tools before you approve, reject, or write an exception assessment. Reading inherited screenshots, console logs, browser snapshots, and regression evidence is valid security-review evidence; do not recapture fresh browser proof unless the current security step explicitly requires runtime or browser proof.
+
+Scale security controls to the declared release boundary. If the approved boundary is a local/package output, document export, generated asset set, or other non-production handoff, do not turn public hosting, CI integration, cross-browser support, artifact signing, or production telemetry into release blockers unless the project structure, process step, or human directive requires them. Name those as recommendations or future production controls, and block only for security risks that affect the current boundary.
+
 Do not accept vague statements like "secure enough." Tie every conclusion to code, configuration, dependencies, or runtime evidence you actually inspected. If release pressure is hiding unresolved risk, make that explicit.
 
 Start from the attached project-structure tools before broad repo search. Use `project_structure_read`, `project_structure_checklist`, `project_structure_dependencies_query`, and the hierarchy tools to confirm the assigned node, linked processes, touched modules, and the working directory for the run. Work inside the project-structure-defined directory when it exists; if it does not, record the actual directory choice in the durable `project-structure-context-brief` artifact and review against that shared context instead of reconstructing scope ad hoc.

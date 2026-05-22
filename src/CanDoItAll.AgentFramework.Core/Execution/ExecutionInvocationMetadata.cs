@@ -15,8 +15,11 @@ public static class ExecutionInvocationMetadata
     public const string ProcessCooperationSummaryMetadataKey = "agentProcessCooperationSummary";
     public const string ProcessBrowserToolsAllowedMetadataKey = "agentProcessBrowserToolsAllowed";
     public const string ProcessScaffoldToolOnlyMetadataKey = "agentProcessScaffoldToolOnly";
+    public const string ContextWorkspaceScopeMetadataKey = "agentContextWorkspaceScope";
     public const int DefaultGovernedRepairAttempts = 1;
     public const int MaxRepairAttempts = 2;
+    private const string ContextWorkspaceScopeKindPropertyName = "kind";
+    private const string ContextWorkspaceScopeKeyPropertyName = "key";
 
     public static string Build(
         string? metadataJson,
@@ -52,6 +55,24 @@ public static class ExecutionInvocationMetadata
         metadata[ProcessCooperationModeMetadataKey] = cooperationMetadata.CooperationMode.ToString();
         metadata[ProcessWorkspaceToolProfileMetadataKey] = AgentWorkspaceToolAccessProfiles.GetProfileKey(cooperationMetadata.WorkspaceToolProfile);
         metadata[ProcessCooperationSummaryMetadataKey] = cooperationMetadata.Summary.Trim();
+        return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
+    }
+
+    public static string ApplyContextWorkspaceScope(
+        string? metadataJson,
+        WorkspaceScopeDescriptor? scope)
+    {
+        var metadata = ParseObject(metadataJson);
+        if (scope is null || scope.IsDefaultSandbox)
+        {
+            return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
+        }
+
+        metadata[ContextWorkspaceScopeMetadataKey] = new JsonObject
+        {
+            [ContextWorkspaceScopeKindPropertyName] = scope.Kind.ToString(),
+            [ContextWorkspaceScopeKeyPropertyName] = scope.Key
+        };
         return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
     }
 
@@ -210,6 +231,15 @@ public static class ExecutionInvocationMetadata
                TryReadBoolean(run.MetadataJson, ProcessScaffoldToolOnlyMetadataKey) == true;
     }
 
+    public static WorkspaceScopeDescriptor? ResolveContextWorkspaceScope(ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        return IsTrustedGovernedProcessRun(run)
+            ? ResolveContextWorkspaceScope(run.MetadataJson)
+            : null;
+    }
+
     private static JsonObject ParseObject(string? metadataJson)
     {
         if (string.IsNullOrWhiteSpace(metadataJson))
@@ -345,6 +375,46 @@ public static class ExecutionInvocationMetadata
         catch (JsonException)
         {
             return [];
+        }
+    }
+
+    private static WorkspaceScopeDescriptor? ResolveContextWorkspaceScope(string? metadataJson)
+    {
+        if (string.IsNullOrWhiteSpace(metadataJson))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(metadataJson);
+            if (document.RootElement.ValueKind != JsonValueKind.Object ||
+                !document.RootElement.TryGetProperty(ContextWorkspaceScopeMetadataKey, out var scopeElement) ||
+                scopeElement.ValueKind != JsonValueKind.Object ||
+                !scopeElement.TryGetProperty(ContextWorkspaceScopeKindPropertyName, out var kindElement) ||
+                kindElement.ValueKind != JsonValueKind.String)
+            {
+                return null;
+            }
+
+            var kindValue = kindElement.GetString();
+            if (!Enum.TryParse<WorkspaceScopeKind>(kindValue, ignoreCase: true, out var kind))
+            {
+                return null;
+            }
+
+            var key = scopeElement.TryGetProperty(ContextWorkspaceScopeKeyPropertyName, out var keyElement) &&
+                      keyElement.ValueKind == JsonValueKind.String
+                ? keyElement.GetString()
+                : null;
+
+            return kind == WorkspaceScopeKind.Sandbox && string.IsNullOrWhiteSpace(key)
+                ? WorkspaceScopeDescriptor.Sandbox
+                : new WorkspaceScopeDescriptor(kind, key);
+        }
+        catch (Exception exception) when (exception is JsonException or ArgumentException)
+        {
+            return null;
         }
     }
 

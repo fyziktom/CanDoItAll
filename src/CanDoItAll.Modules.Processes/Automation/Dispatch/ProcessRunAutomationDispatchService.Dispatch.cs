@@ -1076,6 +1076,18 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
 
             var agentEditor = await workspaceService.GetAgentEditorAsync(technicalAgentSummary.TechnicalAgentId.Value, cancellationToken);
+            if (TryResolveProjectStructureAccessProjectId(run, out var projectStructureAccessProjectId) &&
+                ApplyProjectStructureReadAccess(agentEditor, projectStructureAccessProjectId))
+            {
+                await workspaceService.SaveAgentAsync(agentEditor, cancellationToken);
+                logger.LogInformation(
+                    "Granted project-structure read access for project {ProjectId} to technical agent {TechnicalAgentId} before dispatching process run {RunId}, step {StepRunId}.",
+                    projectStructureAccessProjectId,
+                    technicalAgentSummary.TechnicalAgentId.Value,
+                    run.Id,
+                    stepRun.Id);
+            }
+
             artifactInputsByStepDefinitionId.TryGetValue(stepRun.StepDefinitionId, out var configuredArtifactInputs);
             var availableBranchOutcomes = branchOutcomesByStepDefinitionId.TryGetValue(stepRun.StepDefinitionId, out var configuredBranchOutcomes)
                 ? configuredBranchOutcomes
@@ -1132,6 +1144,54 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         return null;
+    }
+
+    internal static bool ApplyProjectStructureReadAccess(AgentEditorModel agentEditor, Guid projectId)
+    {
+        ArgumentNullException.ThrowIfNull(agentEditor);
+
+        if (projectId == Guid.Empty)
+        {
+            return false;
+        }
+
+        var access = AgentProjectStructureAccessMetadata.Normalize(agentEditor.ProjectStructureAccess);
+        if (access.CanRead &&
+            (access.AllowAllProjects || access.AllowedProjectIds.Contains(projectId)))
+        {
+            agentEditor.ProjectStructureAccess = access;
+            return false;
+        }
+
+        access.CanRead = true;
+        if (!access.AllowAllProjects &&
+            !access.AllowedProjectIds.Contains(projectId))
+        {
+            access.AllowedProjectIds.Add(projectId);
+        }
+
+        agentEditor.ProjectStructureAccess = AgentProjectStructureAccessMetadata.Normalize(access);
+        return true;
+    }
+
+    private static bool TryResolveProjectStructureAccessProjectId(ProcessRun run, out Guid projectId)
+    {
+        if (ProcessProjectStructureContextFormatter.TryParse(run.TriggerReason, out var projectStructureContext) &&
+            projectStructureContext is not null &&
+            projectStructureContext.ProjectId != Guid.Empty)
+        {
+            projectId = projectStructureContext.ProjectId;
+            return true;
+        }
+
+        if (run.ProjectId.HasValue && run.ProjectId.Value != Guid.Empty)
+        {
+            projectId = run.ProjectId.Value;
+            return true;
+        }
+
+        projectId = Guid.Empty;
+        return false;
     }
 
     private static bool IsWorkflowDispatchAssignment(

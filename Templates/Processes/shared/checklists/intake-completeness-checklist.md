@@ -20,6 +20,7 @@ Scope, owner, desired outcome, constraints, and unresolved assumptions are expli
 - Desired business or operational outcome is stated in measurable language.
 - Scope boundary and non-goals are written down.
 - Known dependency, compliance, and timing constraints are listed.
+- Explicit project-structure requirements remain required unless the source says they are optional or deferred.
 - Any missing input is marked as unresolved rather than silently assumed.
 - Required review roles are identified proportionally to risk.
 

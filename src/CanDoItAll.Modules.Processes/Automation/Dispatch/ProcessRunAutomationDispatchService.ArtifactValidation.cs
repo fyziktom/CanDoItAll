@@ -126,6 +126,199 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return string.Empty;
     }
 
+    private static string ResolveDowngradedProjectStructureRequirementSummary(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        string? inspectionText) {
+        if (!ExpectsProjectStructureRequirementPreservation(candidate) ||
+            string.IsNullOrWhiteSpace(inspectionText)) {
+            return string.Empty;
+        }
+
+        var sourceLines = ResolveGroundedProjectStructureRequirementLines(detail.Run.InputSummary);
+        if (sourceLines.Count == 0) {
+            return string.Empty;
+        }
+
+        var weakeningStatements = SplitRequirementStatements(inspectionText)
+            .Where(ContainsRequirementWeakeningPhrase)
+            .ToList();
+        if (weakeningStatements.Count == 0) {
+            return string.Empty;
+        }
+
+        foreach (var sourceLine in sourceLines) {
+            var sourceTokens = TokenizeProjectStructureRequirementText(sourceLine).ToHashSet(StringComparer.Ordinal);
+            if (sourceTokens.Count < 2) {
+                continue;
+            }
+
+            foreach (var weakeningStatement in weakeningStatements) {
+                var weakenedTokens = TokenizeProjectStructureRequirementText(weakeningStatement).ToHashSet(StringComparer.Ordinal);
+                var sharedTokenCount = sourceTokens.Count(weakenedTokens.Contains);
+                if (sharedTokenCount < Math.Min(2, sourceTokens.Count)) {
+                    continue;
+                }
+
+                return $"the response downgrades a grounded project-structure requirement: {TrimForPrompt(sourceLine, 160)}";
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static bool ExpectsProjectStructureRequirementPreservation(DispatchCandidate candidate) {
+        var contractText = CollapsePromptWhitespace(string.Join(
+            ' ',
+            candidate.StepDefinition.InputContractSummary,
+            candidate.StepDefinition.OutputContractSummary,
+            candidate.StepDefinition.EvidenceContractSummary,
+            candidate.WorkBrief?.WorkBriefText,
+            candidate.WorkBrief?.ExpectedOutcome,
+            candidate.WorkBrief?.EvidenceExpectationSummary,
+            string.Join(' ', candidate.ExpectedArtifacts.Select(item => item.ValidationRequirementSummary))));
+        if (string.IsNullOrWhiteSpace(contractText)) {
+            return false;
+        }
+
+        var normalized = contractText.ToLowerInvariant();
+        return normalized.Contains("project-structure", StringComparison.Ordinal) &&
+               (normalized.Contains("downgrad", StringComparison.Ordinal) ||
+                normalized.Contains("dropped", StringComparison.Ordinal) ||
+                normalized.Contains("deferred", StringComparison.Ordinal) ||
+                normalized.Contains("preserve", StringComparison.Ordinal) ||
+                normalized.Contains("source of truth", StringComparison.Ordinal) ||
+                normalized.Contains("source-of-truth", StringComparison.Ordinal));
+    }
+
+    private static IReadOnlyList<string> ResolveGroundedProjectStructureRequirementLines(string? promptText) {
+        if (string.IsNullOrWhiteSpace(promptText)) {
+            return [];
+        }
+
+        var lines = promptText.Split(["\r\n", "\n"], StringSplitOptions.None);
+        var result = new List<string>();
+        var inGrounding = false;
+        foreach (var line in lines) {
+            var trimmed = line.Trim();
+            if (trimmed.Equals("Live project structure grounding:", StringComparison.OrdinalIgnoreCase)) {
+                inGrounding = true;
+                continue;
+            }
+
+            if (!inGrounding) {
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(trimmed)) {
+                break;
+            }
+
+            if (!trimmed.StartsWith("-", StringComparison.Ordinal)) {
+                continue;
+            }
+
+            var requirementLine = trimmed.TrimStart('-', ' ');
+            if (IsNonMandatoryProjectStructureSourceLine(requirementLine)) {
+                continue;
+            }
+
+            result.Add(requirementLine);
+        }
+
+        return result;
+    }
+
+    private static bool IsNonMandatoryProjectStructureSourceLine(string line) {
+        if (string.IsNullOrWhiteSpace(line)) {
+            return true;
+        }
+
+        var normalized = CollapsePromptWhitespace(line).ToLowerInvariant();
+        return normalized.Contains("optional", StringComparison.Ordinal) ||
+               normalized.Contains("not required", StringComparison.Ordinal) ||
+               normalized.Contains("not mandatory", StringComparison.Ordinal) ||
+               normalized.Contains("nice to have", StringComparison.Ordinal) ||
+               normalized.Contains("follow-up", StringComparison.Ordinal) ||
+               normalized.Contains("follow up", StringComparison.Ordinal) ||
+               normalized.Contains("later", StringComparison.Ordinal) ||
+               normalized.Contains("future", StringComparison.Ordinal) ||
+               normalized.Contains("out of scope", StringComparison.Ordinal) ||
+               normalized.Contains("excluded", StringComparison.Ordinal) ||
+               normalized.Contains("defer", StringComparison.Ordinal) ||
+               normalized.Contains("maybe", StringComparison.Ordinal) ||
+               normalized.Contains("if desired", StringComparison.Ordinal) ||
+               normalized.Contains("if needed", StringComparison.Ordinal) ||
+               normalized.Contains("as applicable", StringComparison.Ordinal) ||
+               normalized.StartsWith("no ", StringComparison.Ordinal) ||
+               normalized.Contains(" no backend", StringComparison.Ordinal) ||
+               normalized.Contains("without backend", StringComparison.Ordinal) ||
+               normalized.Contains("must not", StringComparison.Ordinal) ||
+               normalized.Contains("do not", StringComparison.Ordinal) ||
+               normalized.Contains("should not", StringComparison.Ordinal) ||
+               normalized.Contains("never ", StringComparison.Ordinal);
+    }
+
+    private static IReadOnlyList<string> SplitRequirementStatements(string? text) {
+        if (string.IsNullOrWhiteSpace(text)) {
+            return [];
+        }
+
+        return Regex
+            .Split(text, @"(?<=[.!?])\s+|\r?\n+")
+            .Select(statement => statement.Trim().TrimStart('-', '*', ' '))
+            .Where(statement => !string.IsNullOrWhiteSpace(statement))
+            .ToList();
+    }
+
+    private static bool ContainsRequirementWeakeningPhrase(string statement) {
+        if (string.IsNullOrWhiteSpace(statement)) {
+            return false;
+        }
+
+        var normalized = CollapsePromptWhitespace(statement).ToLowerInvariant();
+        if (normalized.Contains("not optional", StringComparison.Ordinal) ||
+            normalized.Contains("not deferred", StringComparison.Ordinal) ||
+            normalized.Contains("not excluded", StringComparison.Ordinal) ||
+            normalized.Contains("must not be optional", StringComparison.Ordinal) ||
+            normalized.Contains("must not be deferred", StringComparison.Ordinal)) {
+            return false;
+        }
+
+        return normalized.Contains("optional", StringComparison.Ordinal) ||
+               normalized.Contains("not required", StringComparison.Ordinal) ||
+               normalized.Contains("not needed", StringComparison.Ordinal) ||
+               normalized.Contains("not mandatory", StringComparison.Ordinal) ||
+               normalized.Contains("out of scope", StringComparison.Ordinal) ||
+               normalized.Contains("not in scope", StringComparison.Ordinal) ||
+               normalized.Contains("excluded from acceptance", StringComparison.Ordinal) ||
+               normalized.Contains("future enhancement", StringComparison.Ordinal) ||
+               normalized.Contains("follow-up work", StringComparison.Ordinal) ||
+               normalized.Contains("follow up work", StringComparison.Ordinal) ||
+               normalized.Contains("can be deferred", StringComparison.Ordinal) ||
+               normalized.Contains("may be deferred", StringComparison.Ordinal) ||
+               normalized.Contains("deferred to", StringComparison.Ordinal) ||
+               normalized.Contains("later phase", StringComparison.Ordinal) ||
+               normalized.Contains("nice to have", StringComparison.Ordinal);
+    }
+
+    private static IReadOnlyList<string> TokenizeProjectStructureRequirementText(string value) {
+        return TokenizeArtifactComparisonText(value)
+            .Select(NormalizeProjectStructureRequirementToken)
+            .Where(token => token.Length > 2)
+            .Where(token => !ArtifactTitleNoiseTokens.Contains(token))
+            .Where(token => !ArtifactContentNoiseTokens.Contains(token))
+            .Where(token => !ProjectStructureRequirementNoiseTokens.Contains(token))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+    }
+
+    private static string NormalizeProjectStructureRequirementToken(string token) {
+        return string.Equals(token, "locally", StringComparison.Ordinal)
+            ? "local"
+            : token;
+    }
+
     private static bool RequiresQualityValidationEvidence(DispatchCandidate candidate)
     {
         if (candidate.StepRun.StepKind is ProcessStepKind.Review or ProcessStepKind.Approval or ProcessStepKind.Delivery)
@@ -731,7 +924,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         if (segments.Length != 2 ||
             !IsManagedEvidenceRootSegment(segments[0]) ||
-            !IsLikelyProductSourceOrProjectFileName(segments[1]))
+            !IsLikelyProductDeliverableOrSourceFileName(segments[1]))
         {
             return false;
         }
@@ -764,6 +957,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
                string.Equals(extension, ".tsx", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(extension, ".jsx", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(extension, ".html", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsLikelyProductDeliverableOrSourceFileName(string fileName)
+    {
+        return IsImplementationDeliverableOrSourceExtension(Path.GetExtension(fileName));
     }
 
     private static bool IsAllowedExternalTargetReference(

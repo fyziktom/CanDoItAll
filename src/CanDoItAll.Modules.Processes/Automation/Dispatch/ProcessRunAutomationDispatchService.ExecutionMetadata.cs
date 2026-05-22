@@ -21,9 +21,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var allowedExternalTargetAliases = allowExternalTargetMutation
             ? resolvedExternalTargetAliases
             : [];
+        var browserProofGroundingText = string.Join(
+            ' ',
+            projectStructureGroundingSummary,
+            artifactInspectionGroundingSummary);
         var metadata = new Dictionary<string, object>(StringComparer.Ordinal)
         {
-            [ExecutionInvocationMetadata.ProcessBrowserToolsAllowedMetadataKey] = RequiresConcreteBrowserProof(candidate)
+            [ExecutionInvocationMetadata.ProcessBrowserToolsAllowedMetadataKey] = RequiresConcreteBrowserProof(candidate, browserProofGroundingText)
         };
         if (IsDotNetSolutionSetupScaffoldMutationStep(candidate))
         {
@@ -47,10 +51,25 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var baseMetadataJson = metadata.Count == 0
             ? null
             : JsonSerializer.Serialize(metadata, AgentOutputJson.SerializerOptions);
+        baseMetadataJson = ExecutionInvocationMetadata.ApplyContextWorkspaceScope(
+            baseMetadataJson,
+            ResolveContextWorkspaceScope(candidate));
         var cooperationMetadataJson = ExecutionInvocationMetadata.ApplyProcessCooperation(
             baseMetadataJson,
             candidate.CooperationMetadata);
         return ExecutionInvocationMetadata.Build(cooperationMetadataJson, processInvocationPolicy);
+    }
+
+    private static WorkspaceScopeDescriptor? ResolveContextWorkspaceScope(DispatchCandidate candidate)
+    {
+        ProcessProjectStructureContextFormatter.TryParse(candidate.Run.TriggerReason, out var projectStructureContext);
+        var projectId = projectStructureContext?.ProjectId is { } contextProjectId && contextProjectId != Guid.Empty
+            ? contextProjectId
+            : candidate.Run.ProjectId;
+
+        return projectId is { } resolvedProjectId && resolvedProjectId != Guid.Empty
+            ? WorkspaceScopeDescriptor.Project(resolvedProjectId.ToString("D"))
+            : null;
     }
 
     private static IReadOnlyList<string> ResolveReadOnlyExternalTargetAliases(

@@ -883,7 +883,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         if (string.Equals(toolName, "workspace_write_file", StringComparison.Ordinal) ||
             string.Equals(toolName, "workspace_append_file", StringComparison.Ordinal))
         {
-            return HasConcreteProductImplementationPath(candidate, receipt);
+            return RequiresCurrentAttemptProductMutation(candidate)
+                ? HasConcreteProductDeliverableOrSourcePath(receipt)
+                : HasConcreteProductImplementationPath(candidate, receipt);
         }
 
         return HasConcreteProductPath(receipt);

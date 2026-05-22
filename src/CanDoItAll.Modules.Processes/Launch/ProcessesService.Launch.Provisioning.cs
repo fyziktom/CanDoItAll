@@ -18,7 +18,6 @@ public sealed partial class ProcessesService
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await using var transaction = await BeginCoordinatedTransactionAsync(dbContext, cancellationToken);
 
         try
         {
@@ -113,7 +112,6 @@ public sealed partial class ProcessesService
                     provisioningRequest.ResultSummary = string.Join(" ", provisioningOutcome.Errors.Select(error => error.Message));
                     provisioningRequest.CompletedAtUtc = clock.GetUtcNow();
                     await dbContext.SaveChangesAsync(cancellationToken);
-                    await transaction.RollbackAsync(cancellationToken);
                     return Result.Failure(provisioningOutcome.Errors);
                 }
 
@@ -145,12 +143,10 @@ public sealed partial class ProcessesService
             plan.UpdatedAtUtc = clock.GetUtcNow();
 
             await dbContext.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
             return Result.Success();
         }
         catch (DbUpdateConcurrencyException)
         {
-            await transaction.RollbackAsync(cancellationToken);
             return Result.Failure(Error.Validation(
                 "Launch provisioning conflicted with another update. Reload and try again.",
                 "processes.launch.provisioning-conflict"));
@@ -240,6 +236,14 @@ public sealed partial class ProcessesService
                 "processes.launch.provisioning-party-invalid"));
         }
 
+        var provider = ResolveProvisioningProvider(technicalWorkspace);
+        if (provider is null)
+        {
+            return Result<LaunchProvisioningOutcome>.Failure(Error.Validation(
+                "Provisioning requires at least one enabled provider profile before a process AI resource can execute.",
+                "processes.launch.provisioning-provider-required"));
+        }
+
         var capabilityMetadata = metadata.RequiredSkillIds
             .Where(skillNames.ContainsKey)
             .Select(skillId => new AiCapabilityEditorModel
@@ -267,8 +271,10 @@ public sealed partial class ProcessesService
             new AiAgentProfileEditorModel
             {
                 PartyId = partyId.Value,
-                ProviderProfileId = technicalWorkspace.Profile.ProviderProfileId,
-                DefaultModel = technicalWorkspace.Profile.DefaultModel,
+                ProviderProfileId = provider.Id,
+                DefaultModel = string.IsNullOrWhiteSpace(technicalWorkspace.Profile.DefaultModel)
+                    ? provider.DefaultModel
+                    : technicalWorkspace.Profile.DefaultModel,
                 ExecutionMode = technicalWorkspace.Profile.ExecutionMode,
                 OwnerPartyId = ownerPartyId ?? technicalWorkspace.Profile.OwnerPartyId,
                 ValidationStatus = AiValidationStatus.Draft,
@@ -292,6 +298,13 @@ public sealed partial class ProcessesService
             return Result<LaunchProvisioningOutcome>.Failure(Error.Validation(
                 "Provisioning did not create a usable technical agent binding.",
                 "processes.launch.provisioning-binding-missing"));
+        }
+
+        if (!technicalWorkspace.Profile.ProviderProfileId.HasValue)
+        {
+            return Result<LaunchProvisioningOutcome>.Failure(Error.Validation(
+                "Provisioning created a technical AI resource, but no provider profile was assigned.",
+                "processes.launch.provisioning-provider-missing"));
         }
 
         var saveAssignmentResult = await projectPartyIntegrationBridge.SaveAssignmentAsync(
@@ -321,5 +334,24 @@ public sealed partial class ProcessesService
                 ownerPartyId.HasValue
                     ? $"Provisioned a runnable internal AI resource owned by {selectedCandidate.DisplayName} and attached it to the launch plan."
                     : "Provisioned technical AI resource and attached it to the launch plan."));
+    }
+
+    private static AiProviderOptionModel? ResolveProvisioningProvider(AiAgentWorkspaceModel technicalWorkspace)
+    {
+        if (technicalWorkspace.Profile.ProviderProfileId is Guid currentProviderProfileId)
+        {
+            var currentProvider = technicalWorkspace.ProviderOptions
+                .FirstOrDefault(item => item.Id == currentProviderProfileId);
+            if (currentProvider is not null && currentProvider.IsEnabled)
+            {
+                return currentProvider;
+            }
+        }
+
+        return technicalWorkspace.ProviderOptions
+            .Where(item => item.IsEnabled)
+            .OrderByDescending(item => !string.IsNullOrWhiteSpace(item.DefaultModel))
+            .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault();
     }
 }

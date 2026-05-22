@@ -13,6 +13,8 @@ Capture the requested outcome, user or operational impact, target delivery windo
 
 If the request, project structure, or selected work node already identifies a concrete deliverable and target boundary, do not block this first step only because optional governance details are missing. Create the scope boundary packet with explicit assumptions, exclusions, `not applicable` entries, unresolved follow-up questions, and validation hooks for later architecture, implementation, QA, security, or release steps. Return `Blocked` only when the core deliverable, target boundary, mandatory upstream artifact, required authority, required credential, or safe execution boundary is genuinely missing and cannot be inferred or deferred to a modeled review or repair step.
 
+Project-structure source-of-truth requirements must keep their force in the scope boundary packet. Do not turn explicit project-structure requirements into optional items, exclusions, non-acceptance criteria, or follow-up work unless the project structure itself says the item is optional or deferred, or an accepted decision record narrows scope.
+
 ## Contracts
 - Input contract: Requested change, impact notes, target delivery window, and stakeholder-facing constraints.
 - Output contract: Decision-ready scope packet with acceptance boundary, dependency map, assumptions, exclusions, and non-blocking follow-up questions.
@@ -32,7 +34,7 @@ If the request, project structure, or selected work node already identifies a co
 - `delivery-manager` / Delivery manager => Reviewer; required=True; fallback-order=0; rebind=Delivery review remains explicit even if staffing changes mid-stream.
 
 ## Artifact expectations
-- `scope-boundary-packet` -> `scope-boundary-packet` / Scope boundary packet | kind=Brief | trust=ReviewRequired | sensitivity=Internal | validation=Must capture no-go constraints, user or operational impact, and acceptance boundary in typed form.
+- `scope-boundary-packet` -> `scope-boundary-packet` / Scope boundary packet | kind=Brief | trust=ReviewRequired | sensitivity=Internal | validation=Must capture no-go constraints, user or operational impact, and acceptance boundary in typed form. Must preserve explicit project-structure source-of-truth requirements without downgrading them to optional, excluded, non-acceptance, or follow-up work unless the project structure itself says the item is optional or deferred.
 
 ## Artifact inputs
 - No explicit artifact inputs.

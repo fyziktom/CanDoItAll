@@ -1095,7 +1095,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             FinalizerMode: AgentFinalizerPolicies.ResolveMode(run, structuredOutput),
             RequireStructuredOutputValidation: ExecutionInvocationMetadata.ResolveRequireStructuredOutputValidation(run),
             MaxStructuredOutputRepairAttempts: ExecutionInvocationMetadata.ResolveMaxStructuredOutputRepairAttempts(run),
-            Handoff: handoffOptions);
+            Handoff: handoffOptions,
+            ContextWorkspaceScope: ExecutionInvocationMetadata.ResolveContextWorkspaceScope(run));
     }
 
     private async Task AppendProcessCooperationLogAsync(

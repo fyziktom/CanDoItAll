@@ -5,7 +5,7 @@
 **Kind:** Review
 
 ## Purpose
-Verify that the repair corrected the quality findings with runtime/API/browser validation as applicable and select an explicit disposition. Treat warnings and zero-test successful commands as unresolved quality defects unless explicitly accepted by the process.
+Verify that the repair corrected the quality findings with runtime/API/browser validation as applicable and select an explicit disposition. Treat warnings, zero-test successful commands, entrypoint/runtime mismatches, and stale or unreferenced artifact evidence as unresolved quality defects unless explicitly accepted by the process.
 
 ## Inputs
 - Original regression evidence and defect notes.
@@ -13,7 +13,7 @@ Verify that the repair corrected the quality findings with runtime/API/browser v
 - Reviewed implementation package.
 
 ## Outputs
-- Repaired warning-free validation, nonzero executed-test proof when tests are expected, and runtime/API/browser regression evidence pack as applicable.
+- Repaired warning-free validation, nonzero executed-test proof when tests are expected, shipped entrypoint/runtime consistency, stale or unreferenced artifact assessment, and runtime/API/browser regression evidence pack as applicable.
 - Branch outcome: `quality-accepted` or `repair-escalation`.
 
 ## Dependencies

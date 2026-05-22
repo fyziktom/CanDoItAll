@@ -23,6 +23,11 @@ namespace CanDoItAll.Modules.Processes;
 internal sealed partial class ProcessRunAutomationDispatchService
 {
     private static IReadOnlyList<string> ResolveRequiredToolNames(DispatchCandidate candidate)
+        => ResolveRequiredToolNamesCore(candidate, null);
+
+    private static IReadOnlyList<string> ResolveRequiredToolNamesCore(
+        DispatchCandidate candidate,
+        string? additionalGroundingText)
     {
         var requiredToolNames = new SortedSet<string>(StringComparer.Ordinal);
         var workBriefText = candidate.WorkBrief?.WorkBriefText;
@@ -38,7 +43,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
         }
 
-        foreach (var toolName in ResolveImplicitRequiredToolNames(candidate))
+        foreach (var toolName in ResolveImplicitRequiredToolNames(candidate, additionalGroundingText))
         {
             requiredToolNames.Add(toolName);
         }
@@ -46,7 +51,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return requiredToolNames.ToList();
     }
 
-    private static IReadOnlyList<string> ResolveImplicitRequiredToolNames(DispatchCandidate candidate)
+    private static IReadOnlyList<string> ResolveImplicitRequiredToolNames(
+        DispatchCandidate candidate,
+        string? additionalGroundingText)
     {
         var requiredToolNames = new List<string>();
         if (HasProjectStructureContext(candidate))
@@ -85,10 +92,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
         }
 
-        if (RequiresConcreteBrowserProof(candidate))
+        if (RequiresConcreteBrowserProof(candidate, additionalGroundingText))
         {
             requiredToolNames.AddRange(ImplicitBrowserProofToolNames);
-            if (ImplementationContractMentionsJavaScript(candidate))
+            if (ImplementationContractMentionsJavaScript(candidate, additionalGroundingText))
             {
                 requiredToolNames.Add("workspace_pwsh_run_script");
             }
@@ -192,6 +199,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool RequiresConcreteImplementationProof(DispatchCandidate candidate)
     {
+        if (IsDotNetSolutionSetupScaffoldMutationStep(candidate))
+        {
+            return false;
+        }
+
         return candidate.StepRun.StepKind == ProcessStepKind.Work &&
                (candidate.StepRun.Title.Contains("implement", StringComparison.OrdinalIgnoreCase) ||
                 candidate.ExpectedArtifacts.Any(item =>
@@ -276,7 +288,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return ProcessProjectStructureContextFormatter.TryParse(candidate.Run.TriggerReason, out _);
     }
 
-    private static bool RequiresConcreteBrowserProof(DispatchCandidate candidate)
+    private static bool RequiresConcreteBrowserProof(
+        DispatchCandidate candidate,
+        string? additionalGroundingText = null)
     {
         ArgumentNullException.ThrowIfNull(candidate);
 
@@ -296,54 +310,77 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         var triggerText = ProcessProjectStructureContextFormatter.RemoveSerializedContext(candidate.Run.TriggerReason);
-        var currentRunText = CollapsePromptWhitespace(string.Join(
+        var recoveryDirectiveText = CollapsePromptWhitespace(candidate.ManualRecoveryDirective);
+        var stepContractText = CollapsePromptWhitespace(string.Join(
             ' ',
-            triggerText,
+            candidate.StepRun.Title,
+            candidate.StepRun.CurrentExecutorName,
+            candidate.StepRun.RoleSnapshotSummary,
+            candidate.StepDefinition.Title,
+            candidate.StepDefinition.InputContractSummary,
+            candidate.StepDefinition.OutputContractSummary,
+            candidate.StepDefinition.EvidenceContractSummary,
             candidate.WorkBrief?.Title,
             candidate.WorkBrief?.WorkBriefText,
             candidate.WorkBrief?.ExpectedOutcome,
             candidate.WorkBrief?.EvidenceExpectationSummary,
             string.Join(' ', candidate.ExpectedArtifacts.Select(item => item.Title)),
             string.Join(' ', candidate.ExpectedArtifacts.Select(item => item.ValidationRequirementSummary))));
-        if (string.IsNullOrWhiteSpace(currentRunText))
+        var surfaceContextText = CollapsePromptWhitespace(string.Join(
+            ' ',
+            triggerText,
+            additionalGroundingText,
+            stepContractText,
+            string.Join(' ', candidate.ArtifactInputs.Select(item => item.SourceStepTitle)),
+            string.Join(' ', candidate.ArtifactInputs.Select(item => item.ExpectedArtifactTitle)),
+            string.Join(' ', candidate.ArtifactInputs.SelectMany(item => item.Artifacts).Select(item => item.Title)),
+            string.Join(' ', candidate.ArtifactInputs.SelectMany(item => item.Artifacts).Select(item => item.ArtifactKind)),
+            string.Join(' ', candidate.ArtifactInputs.SelectMany(item => item.Artifacts).Select(item => item.ManagedStoragePath)),
+            string.Join(' ', candidate.ArtifactInputs.SelectMany(item => item.Artifacts).Select(item => item.ReviewSummary)),
+            string.Join(' ', candidate.ArtifactInputs.SelectMany(item => item.Artifacts).Select(item => item.ProvenanceSummary))));
+        if (string.IsNullOrWhiteSpace(surfaceContextText))
         {
             return false;
         }
 
-        if (ContainsNonBrowserValidationTargetSignal(currentRunText))
+        if (ContainsNegatedBrowserProofInstruction(stepContractText) ||
+            ContainsNegatedBrowserProofInstruction(triggerText) ||
+            ContainsNegatedBrowserProofInstruction(recoveryDirectiveText))
         {
             return false;
         }
 
-        if (ContainsNegatedBrowserProofInstruction(currentRunText))
+        if (IsScreenshotReviewOrStorageConsumerStep(candidate, surfaceContextText))
         {
             return false;
         }
 
-        if (IsScreenshotReviewOrStorageConsumerStep(candidate, currentRunText))
+        if (IsScreenshotCleanupOrHandoffConsumerStep(candidate, surfaceContextText))
         {
             return false;
         }
 
-        if (IsScreenshotCleanupOrHandoffConsumerStep(candidate, currentRunText))
+        var browserSurfaceText = RemoveApplicabilityOnlyBrowserEvidencePhrases(surfaceContextText);
+        var hasBrowserSurfaceSignal = ContainsExplicitBrowserSurfaceSignal(browserSurfaceText) ||
+                                      ContainsExplicitBrowserSurfaceSignal(triggerText);
+        if (ContainsNonBrowserValidationTargetSignal(stepContractText) &&
+            !hasBrowserSurfaceSignal)
         {
             return false;
         }
 
-        var browserSurfaceText = RemoveApplicabilityOnlyBrowserEvidencePhrases(currentRunText);
-        var hasConcreteBrowserProofRequest = ContainsConcreteBrowserProofSignal(currentRunText) ||
-                                             ContainsConcreteBrowserProofSignal(triggerText);
+        var hasConcreteBrowserProofRequest = ContainsConcreteBrowserProofSignal(stepContractText);
         if (RequiresConcreteImplementationProof(candidate))
         {
             return hasConcreteBrowserProofRequest;
         }
 
-        if (!RequiresConcreteBrowserEvidenceStep(currentRunText))
+        if (!RequiresConcreteBrowserEvidenceStep(stepContractText))
         {
             return false;
         }
 
-        if (ContainsExplicitBrowserSurfaceSignal(browserSurfaceText))
+        if (hasBrowserSurfaceSignal)
         {
             return true;
         }
@@ -653,8 +690,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return false;
         }
 
-        return currentRunText.Contains("qa", StringComparison.OrdinalIgnoreCase) ||
-               currentRunText.Contains("validation", StringComparison.OrdinalIgnoreCase) ||
+        return currentRunText.Contains("validation", StringComparison.OrdinalIgnoreCase) ||
                currentRunText.Contains("browser proof", StringComparison.OrdinalIgnoreCase) ||
                currentRunText.Contains("runtime proof", StringComparison.OrdinalIgnoreCase) ||
                currentRunText.Contains("screenshot", StringComparison.OrdinalIgnoreCase);
@@ -668,8 +704,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         return value.Contains("browser app", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("web app", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("web application", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("web page", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("webpage", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("web site", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("website", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("static web", StringComparison.OrdinalIgnoreCase) ||
                value.Contains("browser-facing", StringComparison.OrdinalIgnoreCase) ||
                value.Contains("browser visible", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("browser-playable", StringComparison.OrdinalIgnoreCase) ||
                value.Contains("web ui", StringComparison.OrdinalIgnoreCase) ||
                value.Contains("frontend", StringComparison.OrdinalIgnoreCase) ||
                value.Contains("front-end", StringComparison.OrdinalIgnoreCase) ||
@@ -727,7 +771,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         return Regex.IsMatch(
                    value,
-                   @"\b(?:do\s+not|don't|must\s+not|should\s+not|never)\s+(?:use\s+)?(?:playwright|browser\s+tools?|browser\s+proof)\b",
+                   @"\b(?:do\s+not|don't|must\s+not|should\s+not|never)\s+(?:use\s+)?(?:playwright|browser\s+tools?|browser[-\s]+proof)\b",
+                   RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) ||
+               Regex.IsMatch(
+                   value,
+                   @"\b(?:does\s+not|doesn't|do\s+not|don't|is\s+not|isn't|are\s+not|aren't)\s+require\s+(?:mandatory\s+)?(?:browser[-\s]+proof|browser\s+proof\s+tools?|browser\s+tools?|browser\s+evidence|runtime\s+or\s+browser\s+proof)\b",
+                   RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) ||
+               Regex.IsMatch(
+                   value,
+                   @"\b(?:browser[-\s]+proof|browser\s+proof\s+tools?|browser\s+tools?|browser\s+evidence|browser_snapshot|browser_take_screenshot|browser_console_messages)\s+(?:is|are)\s+not\s+(?:required|mandatory|gating|a\s+gate|release[-\s]+blocking)\b",
                    RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) ||
                Regex.IsMatch(
                    value,

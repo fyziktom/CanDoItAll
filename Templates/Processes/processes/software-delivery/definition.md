@@ -71,10 +71,11 @@ No role or approval decision may be collapsed into an implicit chat or tribal ha
 - Outputs: Decision-ready scope packet with acceptance boundary, dependency map, assumptions, exclusions, and non-blocking follow-up questions.
 - Evidence: Intake notes, acceptance criteria, known exclusions, assumptions, and unresolved dependency register.
 - Assumption-forward rule: if the request, project structure, or selected work node already identifies a concrete deliverable and target boundary, do not block this first step only because optional governance details are missing. Record assumptions, exclusions, not-applicable entries, unresolved follow-up questions, and validation hooks for later modeled steps.
+- Source-of-truth rule: explicit project-structure requirements remain required in the scope boundary packet and must not be downgraded to optional, excluded, non-acceptance, or follow-up work unless the project structure itself says so or an accepted decision record narrows scope.
 - Decision rights: Product owner can refine the ask but cannot waive architecture, data, or release-governance requirements.
 - Exception policy: Escalate immediately when timeline pressure conflicts with data-safety or release constraints.
 - Artifact expectations:
-  - `scope-boundary-packet` => `scope-boundary-packet` / Scope boundary packet
+  - `scope-boundary-packet` => `scope-boundary-packet` / Scope boundary packet. Must preserve explicit project-structure requirements without downgrading them.
 - Checklists: intake-completeness-checklist
 - Prompts: prompt-intake-summarizer
 
@@ -92,14 +93,14 @@ No role or approval decision may be collapsed into an implicit chat or tribal ha
 - Validations: validate-architecture-boundaries
 - Prompts: prompt-architecture-review
 
-### 3. Run atomic implementation slice (`implementation`)
+### 3. Implement bounded delivery change (`implementation`)
 - Step kind: Work
 - Depends on: architecture-review
 - Inputs: Approved architecture path, scope packet, unresolved technical questions, and implementation-slice start criteria.
-- Outputs: Completed implementation slice with validation notes, blockers, and rollout checklist inputs visible from the parent process.
-- Evidence: Implementation journal, change set, validation outputs, migration steps, and touched-surface inventory.
+- Outputs: Reviewable implementation change set that satisfies the current project-structure source of truth, with blockers and rollout checklist inputs visible from the parent process.
+- Evidence: Changed or created deliverables, validation outputs, output-placement notes, migration steps when applicable, and touched-surface inventory.
 - Decision rights: Parent delivery manager owns sequencing and escalation, while the selected implementation role owns the concrete changes.
-- Exception policy: Do not complete the implementation step until the selected implementation role records a completed terminal disposition with validation evidence or explicit blockers.
+- Exception policy: Do not complete the implementation step if any explicit project-structure requirement is omitted, deferred, stack-switched, or unverifiable without an accepted decision record.
 - Artifact expectations:
   - `implementation-change-set` => `implementation-change-set` / Implementation change set
   - `migration-rollout-preparation-checklist` => `rollback-plan` / Migration and rollout preparation checklist
@@ -124,8 +125,8 @@ No role or approval decision may be collapsed into an implicit chat or tribal ha
 - Step kind: Review
 - Depends on: peer-review
 - Inputs: Peer-reviewed change set, changed-surface inventory, and release-scope assumptions.
-- Outputs: Targeted QA result with runtime/API/browser evidence as applicable, regressions, warning and executed-test counts, residual quality risk, and an explicit accepted or repair-required branch.
-- Evidence: Regression logs, warning-free validation output unless explicitly accepted, nonzero executed-test proof when tests are expected, runtime/API/browser proof as applicable, screenshots for UI surfaces, and defect notes.
+- Outputs: Targeted QA result with runtime/API/browser evidence as applicable, regressions, warning and executed-test counts, shipped entrypoint/runtime consistency, residual quality risk, and an explicit accepted or repair-required branch.
+- Evidence: Regression logs, warning-free validation output unless explicitly accepted, nonzero executed-test proof when tests are expected, shipped entrypoint plus referenced-runtime inspection, stale or unreferenced artifact assessment, runtime/API/browser proof as applicable, screenshots for UI surfaces, and defect notes.
 - Decision rights: QA lead selects an explicit quality disposition: accepted evidence may continue, while reproducible defects or proof gaps route to repair.
 - Exception policy: Do not let schedule pressure replace proof with verbal confidence.
 - Branch outcomes:
@@ -155,8 +156,8 @@ No role or approval decision may be collapsed into an implicit chat or tribal ha
 - Step kind: Review
 - Depends on: quality-repair
 - Inputs: Repair change set, original QA findings, and reviewed implementation package.
-- Outputs: Recheck result with warning-free validation, nonzero executed-test proof when tests are expected, runtime/API/browser evidence as applicable, regression evidence, and explicit quality disposition.
-- Evidence: Regression logs, warning-free validation output unless explicitly accepted, nonzero executed-test proof when tests are expected, runtime/API/browser proof as applicable, screenshots for UI surfaces, repair verification, and unresolved defects if any.
+- Outputs: Recheck result with warning-free validation, nonzero executed-test proof when tests are expected, shipped entrypoint/runtime consistency, runtime/API/browser evidence as applicable, regression evidence, and explicit quality disposition.
+- Evidence: Regression logs, warning-free validation output unless explicitly accepted, nonzero executed-test proof when tests are expected, shipped entrypoint plus referenced-runtime inspection, stale or unreferenced artifact assessment, runtime/API/browser proof as applicable, screenshots for UI surfaces, repair verification, and unresolved defects if any.
 - Decision rights: QA lead may accept the repaired evidence or escalate when repair remains insufficient.
 - Exception policy: Do not approve repaired work when the same failing flow, launch, or proof gap remains unresolved.
 - Branch outcomes:
@@ -173,10 +174,10 @@ No role or approval decision may be collapsed into an implicit chat or tribal ha
 - Step kind: Approval
 - Depends on: qa-validation / `quality-accepted`
 - Inputs: QA-accepted package, changed-surface inventory, and data-handling notes.
-- Outputs: Security outcome with explicit approval, block, or exception rationale.
-- Evidence: Security review notes, exception rationale, and approved controls.
-- Decision rights: Security reviewer owns the sign-off for sensitive-data and policy exceptions.
-- Exception policy: Block release when data-handling review capacity is missing or exception rationale is incomplete.
+- Outputs: Security outcome with explicit approval, block, or exception rationale tied to the declared release boundary.
+- Evidence: Security review notes, exception rationale, boundary-applicable controls, and future production controls when they are outside the current boundary.
+- Decision rights: Security reviewer owns the sign-off for sensitive-data and boundary-applicable policy exceptions.
+- Exception policy: Block release when current-boundary data-handling review capacity is missing, exception rationale is incomplete, or a security risk affects the approved handoff. Record out-of-boundary production controls as recommendations unless explicitly required.
 - Artifact expectations:
   - `security-exception-assessment` => `security-exception-assessment` / Security exception assessment
 - Artifact inputs:
@@ -191,10 +192,10 @@ No role or approval decision may be collapsed into an implicit chat or tribal ha
 - Step kind: Approval
 - Depends on: qa-recheck / `quality-accepted`
 - Inputs: QA-accepted repaired package, changed-surface inventory, repair notes, and data-handling notes.
-- Outputs: Security outcome with explicit approval, block, or exception rationale.
-- Evidence: Security review notes, exception rationale, and approved controls.
-- Decision rights: Security reviewer owns the sign-off for sensitive-data and policy exceptions.
-- Exception policy: Block release when repaired data-handling review capacity is missing or exception rationale is incomplete.
+- Outputs: Security outcome with explicit approval, block, or exception rationale tied to the declared release boundary.
+- Evidence: Security review notes, exception rationale, boundary-applicable controls, and future production controls when they are outside the current boundary.
+- Decision rights: Security reviewer owns the sign-off for sensitive-data and boundary-applicable policy exceptions.
+- Exception policy: Block release when repaired current-boundary data-handling review capacity is missing, exception rationale is incomplete, or a security risk affects the approved handoff. Record out-of-boundary production controls as recommendations unless explicitly required.
 - Artifact expectations:
   - `security-exception-assessment` => `security-exception-assessment` / Security exception assessment
 - Artifact inputs:
@@ -207,11 +208,11 @@ No role or approval decision may be collapsed into an implicit chat or tribal ha
 ### 10. Approve first-pass release readiness (`release-approval`)
 - Step kind: Approval
 - Depends on: implementation, architecture-review, qa-validation / `quality-accepted`, security-review
-- Inputs: QA evidence, security outcome, rollback plan, and support ownership.
-- Outputs: Approved or rejected release readiness with accountable rationale.
-- Evidence: Approval note, residual risk register, and rollback ownership record.
+- Inputs: QA evidence that names the shipped entrypoint and referenced runtime, security outcome, rollback or removal plan, support ownership, and declared release boundary.
+- Outputs: Approved or rejected release readiness with accountable rationale and boundary-applicable conditions only.
+- Evidence: Approval note, residual risk register, rollback or removal ownership record, declared-boundary confirmation, and confirmation that QA proof matches the actual shipped entrypoint rather than stale or unreferenced artifacts.
 - Decision rights: Delivery manager owns the decision and cannot waive missing proof or missing rollback readiness silently.
-- Exception policy: Reject release when security review, rollback ownership, or support readiness remains incomplete.
+- Exception policy: Reject release when security review, rollback/removal ownership, support readiness, or proof required by the declared release boundary remains incomplete. Do not reject solely for public deployment, CI, production telemetry, or broad-host controls that the boundary does not require.
 - Artifact expectations:
   - `release-approval-record` => `release-approval-record` / Release approval record
 - Artifact inputs:
@@ -223,13 +224,13 @@ No role or approval decision may be collapsed into an implicit chat or tribal ha
 ### 11. Execute first-pass controlled release rollout (`execute-release-rollout`)
 - Step kind: Delivery
 - Depends on: release-approval
-- Inputs: Approved release record, deployment package, rollback plan, and telemetry watch points.
-- Outputs: Executed rollout with explicit telemetry outcome, rollback status, and live-watch notes.
-- Evidence: Operator notes, telemetry checkpoints, and any rollback invocation or release halt.
-- Decision rights: Release manager may execute only inside the approved window and rollback-trigger boundaries.
-- Exception policy: Trigger halt or rollback immediately when telemetry, user impact, data impact, or operational constraints breach the approved threshold.
+- Inputs: Approved release record, delivery package or artifact root, rollback or removal plan, declared release boundary, and applicable watch points.
+- Outputs: Executed rollout, publish, export, or handoff with explicit boundary outcome, rollback/removal status, and watch notes where applicable.
+- Evidence: Operator notes, artifact placement or deployment receipt, applicable telemetry or smoke checkpoints, not-applicable entries for out-of-boundary production controls, and any rollback, removal, or release halt.
+- Decision rights: Release manager may execute only inside the approved boundary, window, and rollback-trigger limits.
+- Exception policy: Trigger halt, rollback, removal, or no-go immediately when applicable telemetry, artifact integrity, user impact, data impact, or operational constraints breach the approved threshold. Do not block for missing public deployment, CI, or production telemetry when the approved boundary is a package or output-folder handoff.
 - Artifact expectations:
-  - `deployment-watch-log` => `release-readiness-report` / Deployment and telemetry watch log
+  - `deployment-watch-log` => `release-readiness-report` / Deployment, handoff, and watch log
 - Artifact inputs:
   - from `release-approval` expectation `release-approval-record`
 
@@ -258,11 +259,11 @@ No role or approval decision may be collapsed into an implicit chat or tribal ha
 ### 14. Approve repaired release readiness (`release-approval-after-repair`)
 - Step kind: Approval
 - Depends on: implementation, architecture-review, qa-recheck / `quality-accepted`, security-review-after-repair
-- Inputs: Repaired QA evidence, post-repair security outcome, rollback plan, and support ownership.
-- Outputs: Approved or rejected repaired release readiness with accountable rationale.
-- Evidence: Approval note, residual risk register, and rollback ownership record.
+- Inputs: Repaired QA evidence that names the shipped entrypoint and referenced runtime, post-repair security outcome, rollback or removal plan, support ownership, and declared release boundary.
+- Outputs: Approved or rejected repaired release readiness with accountable rationale and boundary-applicable conditions only.
+- Evidence: Approval note, residual risk register, rollback or removal ownership record, declared-boundary confirmation, and confirmation that repaired QA proof matches the actual shipped entrypoint rather than stale or unreferenced artifacts.
 - Decision rights: Delivery manager owns the decision and cannot waive missing proof or missing rollback readiness silently.
-- Exception policy: Reject release when security review, rollback ownership, or support readiness remains incomplete.
+- Exception policy: Reject release when security review, rollback/removal ownership, support readiness, or proof required by the declared release boundary remains incomplete. Do not reject solely for public deployment, CI, production telemetry, or broad-host controls that the boundary does not require.
 - Artifact expectations:
   - `release-approval-record` => `release-approval-record` / Release approval record
 - Artifact inputs:
@@ -275,13 +276,13 @@ No role or approval decision may be collapsed into an implicit chat or tribal ha
 ### 15. Execute repaired controlled release rollout (`execute-release-rollout-after-repair`)
 - Step kind: Delivery
 - Depends on: release-approval-after-repair
-- Inputs: Approved repaired release record, deployment package, rollback plan, and telemetry watch points.
-- Outputs: Executed repaired rollout with explicit telemetry outcome, rollback status, and live-watch notes.
-- Evidence: Operator notes, telemetry checkpoints, and any rollback invocation or release halt.
-- Decision rights: Release manager may execute only inside the approved window and rollback-trigger boundaries.
-- Exception policy: Trigger halt or rollback immediately when telemetry, user impact, data impact, or operational constraints breach the approved threshold.
+- Inputs: Approved repaired release record, delivery package or artifact root, rollback or removal plan, declared release boundary, and applicable watch points.
+- Outputs: Executed repaired rollout, publish, export, or handoff with explicit boundary outcome, rollback/removal status, and watch notes where applicable.
+- Evidence: Operator notes, artifact placement or deployment receipt, applicable telemetry or smoke checkpoints, not-applicable entries for out-of-boundary production controls, and any rollback, removal, or release halt.
+- Decision rights: Release manager may execute only inside the approved boundary, window, and rollback-trigger limits.
+- Exception policy: Trigger halt, rollback, removal, or no-go immediately when applicable telemetry, artifact integrity, user impact, data impact, or operational constraints breach the approved threshold. Do not block for missing public deployment, CI, or production telemetry when the approved boundary is a package or output-folder handoff.
 - Artifact expectations:
-  - `deployment-watch-log` => `release-readiness-report` / Deployment and telemetry watch log
+  - `deployment-watch-log` => `release-readiness-report` / Deployment, handoff, and watch log
 - Artifact inputs:
   - from `release-approval-after-repair` expectation `release-approval-record`
 

@@ -99,6 +99,41 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
+    public void ApplyProjectStructureReadAccess_adds_project_scoped_read_access()
+    {
+        var projectId = Guid.NewGuid();
+        var agentEditor = new AgentEditorModel();
+
+        var changed = ProcessRunAutomationDispatchService.ApplyProjectStructureReadAccess(agentEditor, projectId);
+
+        Assert.True(changed);
+        Assert.True(agentEditor.ProjectStructureAccess.CanRead);
+        Assert.False(agentEditor.ProjectStructureAccess.CanWrite);
+        Assert.False(agentEditor.ProjectStructureAccess.AllowAllProjects);
+        Assert.Equal([projectId], agentEditor.ProjectStructureAccess.AllowedProjectIds);
+    }
+
+    [Fact]
+    public void ApplyProjectStructureReadAccess_preserves_existing_allow_all_scope()
+    {
+        var agentEditor = new AgentEditorModel
+        {
+            ProjectStructureAccess = new AgentProjectStructureAccessSettings
+            {
+                CanRead = true,
+                AllowAllProjects = true
+            }
+        };
+
+        var changed = ProcessRunAutomationDispatchService.ApplyProjectStructureReadAccess(agentEditor, Guid.NewGuid());
+
+        Assert.False(changed);
+        Assert.True(agentEditor.ProjectStructureAccess.CanRead);
+        Assert.True(agentEditor.ProjectStructureAccess.AllowAllProjects);
+        Assert.Empty(agentEditor.ProjectStructureAccess.AllowedProjectIds);
+    }
+
+    [Fact]
     public void ResolveBlockingAutomationExecutionRunId_returns_latest_fresh_active_automation_run()
     {
         var olderRun = CreateExecutionRun("process-automation-dispatch", ExecutionState.Preparing, null) with
@@ -412,6 +447,18 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
+    public void PruneAllowedExternalTargetAliasesForCurrentRun_strips_inline_hosting_sentence()
+    {
+        var aliases = ProcessRunAutomationDispatchService.PruneAllowedExternalTargetAliasesForCurrentRun(
+        [
+            "external-target/C/programovani/dotnet-demo/output. - Hosting target: ordinary static web hosting."
+        ]);
+
+        var alias = Assert.Single(aliases);
+        Assert.Equal("external-target/C/programovani/dotnet-demo/output", alias);
+    }
+
+    [Fact]
     public void PruneAllowedExternalTargetAliasesForCurrentRun_strips_escaped_newline_generated_source_sentence()
     {
         var aliases = ProcessRunAutomationDispatchService.PruneAllowedExternalTargetAliasesForCurrentRun(
@@ -527,6 +574,25 @@ public sealed class ProcessRunAutomationDispatchServiceTests
 
         Assert.True(mapped);
         Assert.Equal("external-target/C/programovani/dotnet/HarborShiftScheduler", arguments[1]);
+    }
+
+    [Fact]
+    public void TryMapAbsoluteExternalPathToAlias_strips_inline_hosting_sentence()
+    {
+        var method = typeof(ProcessRunAutomationDispatchService).GetMethod(
+            "TryMapAbsoluteExternalPathToAlias",
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("TryMapAbsoluteExternalPathToAlias method was not found.");
+        object?[] arguments =
+        [
+            @"C:\programovani\dotnet-demo\output. - Hosting target: ordinary static web hosting.",
+            string.Empty
+        ];
+
+        var mapped = (bool)method.Invoke(null, arguments)!;
+
+        Assert.True(mapped);
+        Assert.Equal("external-target/C/programovani/dotnet-demo/output", arguments[1]);
     }
 
     [Fact]
@@ -919,6 +985,76 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         Assert.DoesNotContain("workspace_dotnet_run", tools);
         Assert.DoesNotContain("browser_snapshot", tools);
         Assert.DoesNotContain("browser_take_screenshot", tools);
+    }
+
+    [Fact]
+    public void RequiresConcreteImplementationProof_exempts_dotnet_solution_setup_scaffold_step()
+    {
+        var requiresProof = InvokeRequiresConcreteImplementationProof(
+            new ProcessDefinition
+            {
+                Name = ".NET solution setup subprocess",
+                Slug = "dotnet-solution-setup"
+            },
+            new ProcessStepDefinition
+            {
+                Key = "create-dotnet-project",
+                Title = "Create solution and .NET app project",
+                StepKind = ProcessStepKind.Work
+            },
+            new ProcessStepRun
+            {
+                Title = "Create solution and .NET app project",
+                StepKind = ProcessStepKind.Work,
+                CurrentExecutorName = ".NET Application Developer"
+            },
+            new ProcessWorkBrief
+            {
+                Title = "Create solution and .NET app project",
+                WorkBriefText = "Create the requested solution skeleton. Build, test, runtime smoke, and browser proof belong to later validation steps.",
+                ExpectedOutcome = "Solution and app project are present.",
+                EvidenceExpectationSummary = "Solution skeleton change set"
+            },
+            [
+                (ProcessArtifactKind.Deliverable, "Solution skeleton change set", "Must include the .slnx or .sln solution file, requested .NET app project, selected template proof, and solution membership proof.")
+            ]);
+
+        Assert.False(requiresProof);
+    }
+
+    [Fact]
+    public void RequiresConcreteImplementationProof_keeps_generic_implementation_change_set_required()
+    {
+        var requiresProof = InvokeRequiresConcreteImplementationProof(
+            new ProcessDefinition
+            {
+                Name = "Software delivery",
+                Slug = "software-delivery"
+            },
+            new ProcessStepDefinition
+            {
+                Key = "implement-feature",
+                Title = "Implement feature",
+                StepKind = ProcessStepKind.Work
+            },
+            new ProcessStepRun
+            {
+                Title = "Implement feature",
+                StepKind = ProcessStepKind.Work,
+                CurrentExecutorName = "Application Developer"
+            },
+            new ProcessWorkBrief
+            {
+                Title = "Implement feature",
+                WorkBriefText = "Implement the requested product behavior and prove the changed files.",
+                ExpectedOutcome = "Implementation is complete.",
+                EvidenceExpectationSummary = "Implementation change set"
+            },
+            [
+                (ProcessArtifactKind.Deliverable, "Implementation change set", "Must include concrete changed product files and validation evidence.")
+            ]);
+
+        Assert.True(requiresProof);
     }
 
     [Fact]
@@ -1331,6 +1467,25 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
+    public void ResolveShallowSharedManagedArtifactReferenceSummary_ignores_deliverable_paths_under_grounded_output_leaf()
+    {
+        var method = typeof(ProcessRunAutomationDispatchService).GetMethod(
+            "ResolveShallowSharedManagedArtifactReferenceSummary",
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveShallowSharedManagedArtifactReferenceSummary method was not found.");
+        const string rootAlias = "external-target/C/programovani/dotnet-demo/output";
+        const string responseText = "Updated output/MIGRATION.md and output/README-validation.md in the grounded product root.";
+        var detail = CreateSuccessfulExecutionDetail(
+            responseText,
+            "{}",
+            serializedInvocationMetadataJson: BuildAllowedExternalTargetMetadata(rootAlias));
+
+        var summary = method.Invoke(null, [detail, responseText]) as string;
+
+        Assert.Equal(string.Empty, summary);
+    }
+
+    [Fact]
     public void ResolveRecoverableAutomationExecutionRunId_returns_latest_terminal_automation_run_for_in_progress_step()
     {
         var attemptStartedAtUtc = DateTimeOffset.UtcNow.AddMinutes(-10);
@@ -1401,6 +1556,24 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         var result = (IEnumerable)method.Invoke(null, [candidate])!;
 
         return result.Cast<string>().ToList();
+    }
+
+    private static bool InvokeRequiresConcreteImplementationProof(
+        ProcessDefinition definition,
+        ProcessStepDefinition stepDefinition,
+        ProcessStepRun stepRun,
+        ProcessWorkBrief workBrief,
+        (ProcessArtifactKind ArtifactKind, string Title, string ValidationRequirementSummary)[] expectedArtifactDefinitions,
+        string triggerReason = "Create a grounded .NET app from project structure.")
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var method = serviceType.GetMethod(
+            "RequiresConcreteImplementationProof",
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("RequiresConcreteImplementationProof method was not found.");
+        var candidate = CreateDispatchCandidate(definition, stepDefinition, stepRun, workBrief, expectedArtifactDefinitions, triggerReason);
+
+        return (bool)method.Invoke(null, [candidate])!;
     }
 
     private static object CreateDispatchCandidate(
@@ -2580,9 +2753,75 @@ public sealed class ProcessRunAutomationDispatchServiceTests
             prompt,
             StringComparison.Ordinal);
         Assert.Contains(
+            "Missing preferences are different from stated requirements.",
+            prompt,
+            StringComparison.Ordinal);
+        Assert.Contains(
             "Do not use status Blocked for ambiguity that can be handled by explicit assumptions",
             prompt,
             StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ResolveDowngradedProjectStructureRequirementSummary_flags_weakened_grounded_requirement()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveSummary = serviceType.GetMethod(
+                "ResolveDowngradedProjectStructureRequirementSummary",
+                BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveDowngradedProjectStructureRequirementSummary method was not found.");
+        var candidate = CreateDispatchCandidate(
+            "Clarify scope and release boundary from project-structure source of truth.",
+            ProcessStepKind.Start,
+            (ProcessArtifactKind.Brief,
+                "Scope boundary packet",
+                true,
+                "Must preserve explicit project-structure source-of-truth requirements without downgrading them to optional, excluded, non-acceptance, or follow-up work."));
+        const string prompt = """
+You are executing a CanDoItAll process step.
+
+Live project structure grounding:
+Requirements from project-level planning context:
+- Persistence: save the best score locally (note:persistence); type: ProjectBlock/note
+- Mobile app can be handled later if needed (note:mobile); type: ProjectBlock/note
+""";
+        const string response = "Persistence: local score storage is optional and not required for acceptance.";
+        var detail = CreateSuccessfulExecutionDetail(response, "{}", prompt: prompt);
+
+        var summary = Assert.IsType<string>(resolveSummary.Invoke(null, [candidate, detail, response]));
+
+        Assert.Contains("downgrades a grounded project-structure requirement", summary, StringComparison.Ordinal);
+        Assert.Contains("Persistence", summary, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ResolveDowngradedProjectStructureRequirementSummary_ignores_source_marked_as_deferred()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveSummary = serviceType.GetMethod(
+                "ResolveDowngradedProjectStructureRequirementSummary",
+                BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveDowngradedProjectStructureRequirementSummary method was not found.");
+        var candidate = CreateDispatchCandidate(
+            "Clarify scope and release boundary from project-structure source of truth.",
+            ProcessStepKind.Start,
+            (ProcessArtifactKind.Brief,
+                "Scope boundary packet",
+                true,
+                "Must preserve explicit project-structure source-of-truth requirements without downgrading them to optional, excluded, non-acceptance, or follow-up work."));
+        const string prompt = """
+You are executing a CanDoItAll process step.
+
+Live project structure grounding:
+Requirements from project-level planning context:
+- Mobile app can be handled later if needed (note:mobile); type: ProjectBlock/note
+""";
+        const string response = "Mobile app work is out of scope for this run.";
+        var detail = CreateSuccessfulExecutionDetail(response, "{}", prompt: prompt);
+
+        var summary = Assert.IsType<string>(resolveSummary.Invoke(null, [candidate, detail, response]));
+
+        Assert.Equal(string.Empty, summary);
     }
 
     [Fact]
@@ -3132,6 +3371,40 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
+    public void BuildProcessInvocationMetadataJson_sets_context_workspace_scope_from_project_structure_context()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var method = serviceType.GetMethod("BuildProcessInvocationMetadataJson", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildProcessInvocationMetadataJson method was not found.");
+        var projectId = Guid.Parse("ea4d3293-ad91-4939-a645-c8f2402a6400");
+        var candidate = CreateProjectStructureDispatchCandidate(
+            "Implement the requested app using the selected project-structure branch.",
+            new ProcessProjectStructureContext
+            {
+                ProjectId = projectId,
+                NodeId = "custom:basic-app",
+                NodeTitle = "Basic App",
+                ParentNodeId = "process-definition:4fdc77a9-6d8c-4b10-9efb-4be15732b1b0",
+                ParentNodeTitle = "Multi-team software delivery and release governance"
+            });
+
+        var metadataJson = method.Invoke(
+            null,
+            [
+                candidate,
+                new ExecutionInvocationPolicy(),
+                null,
+                null
+            ]) as string;
+
+        Assert.False(string.IsNullOrWhiteSpace(metadataJson));
+        using var document = JsonDocument.Parse(metadataJson);
+        var scope = document.RootElement.GetProperty(ExecutionInvocationMetadata.ContextWorkspaceScopeMetadataKey);
+        Assert.Equal(nameof(WorkspaceScopeKind.Project), scope.GetProperty("kind").GetString());
+        Assert.Equal(projectId.ToString("D"), scope.GetProperty("key").GetString());
+    }
+
+    [Fact]
     public void BuildProcessInvocationMetadataJson_keeps_delegated_change_execution_writable_even_with_safety_review_text()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
@@ -3361,6 +3634,207 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         Assert.False(string.IsNullOrWhiteSpace(metadataJson));
         using var document = JsonDocument.Parse(metadataJson);
         Assert.True(document.RootElement.GetProperty(ExecutionInvocationMetadata.ProcessBrowserToolsAllowedMetadataKey).GetBoolean());
+    }
+
+    [Fact]
+    public void BuildProcessInvocationMetadataJson_allows_browser_tools_for_static_web_qa_recheck()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var method = serviceType.GetMethod("BuildProcessInvocationMetadataJson", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildProcessInvocationMetadataJson method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Verify the repaired package from the source document and project structure. The deliverable is a JavaScript static web page with no backend.",
+            ProcessStepKind.Review,
+            [],
+            false,
+            [(ProcessArtifactKind.Evidence, "Repaired regression evidence pack", true, "Must name repaired flows, assertion depth, warning counts, executed-test counts when tests are expected, runtime/API/browser evidence as applicable, screenshots for UI surfaces, and unresolved risks after the repair pass.")],
+            [],
+            triggerReason: "Run launched from selected project-structure node.",
+            stepTitle: "Re-run QA validation and runtime or browser proof after repair",
+            processName: "Multi-team software delivery");
+        const string projectStructureGroundingSummary = """
+            Dispatcher fetched the live project structure and focused this prompt on the selected work branch.
+            Grounded external target paths from the selected project structure:
+            - `C:\programovani\dotnet-demo\output` mapped to `external-target/C/programovani/dotnet-demo/output` from Artifact destination folder (node-target)
+            Project-structure required artifact contract:
+            - Delivery shape: JavaScript static web page.
+            - Runtime: no backend; client-local state only.
+            """;
+
+        var metadataJson = method.Invoke(
+            null,
+            [
+                candidate,
+                new ExecutionInvocationPolicy(),
+                projectStructureGroundingSummary,
+                null
+            ]) as string;
+
+        Assert.False(string.IsNullOrWhiteSpace(metadataJson));
+        using var document = JsonDocument.Parse(metadataJson);
+        Assert.True(document.RootElement.GetProperty(ExecutionInvocationMetadata.ProcessBrowserToolsAllowedMetadataKey).GetBoolean());
+    }
+
+    [Fact]
+    public void BuildProcessInvocationMetadataJson_disables_browser_tools_for_peer_review_with_prior_browser_failure_recovery()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var method = serviceType.GetMethod("BuildProcessInvocationMetadataJson", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildProcessInvocationMetadataJson method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Inputs: implementation package, architecture decision record, and changed-surface inventory. Outputs: peer-reviewed change set with explicit residual risk and follow-up items.",
+            ProcessStepKind.Review,
+            [],
+            false,
+            [(ProcessArtifactKind.Evidence, "Peer review note", true, "Must capture accepted issues, rejected concerns, and explicit residual risk.")],
+            [
+                (
+                    "Implement bounded delivery change",
+                    "Implementation change set",
+                    [
+                        (
+                            "Implementation change set",
+                            "Deliverable",
+                            "artifacts/process-runs/run-1/03-implementation-change-set.md",
+                            "Static browser app delivered; downstream QA will capture browser proof.",
+                            "Created by implementation step."
+                        )
+                    ])
+            ],
+            triggerReason: "Project structure says the product is a static web page hosted from an external output directory.",
+            stepTitle: "Complete peer review and integration readiness",
+            outputContractSummary: "Peer review note",
+            manualRecoveryDirective: """
+                Manual rerun requested for step 'Complete peer review and integration readiness'.
+                Generic dispatcher repair: static-web project grounding identifies the deliverable surface, but peer review does not require browser-proof tools unless this step contract explicitly asks for browser/runtime proof.
+                Prior blocked reason: Mandatory browser proof and PowerShell run-script gating tools were not executed: unable to capture browser_snapshot, browser_take_screenshot, and browser_console_messages because no reachable hosted URL or environment run-script was provided in this run.
+                """);
+        const string projectStructureGroundingSummary = """
+            Dispatcher fetched the live project structure and focused this prompt on the selected work branch.
+            Grounded external target paths from the selected project structure:
+            - `C:\programovani\dotnet-demo\output` mapped to `external-target/C/programovani/dotnet-demo/output` from Artifact destination folder (node-target)
+            Project-structure required artifact contract:
+            - Delivery shape: JavaScript static web page.
+            - Runtime: no backend; client-local state only.
+            """;
+
+        var metadataJson = method.Invoke(
+            null,
+            [
+                candidate,
+                new ExecutionInvocationPolicy(),
+                projectStructureGroundingSummary,
+                null
+            ]) as string;
+
+        Assert.False(string.IsNullOrWhiteSpace(metadataJson));
+        using var document = JsonDocument.Parse(metadataJson);
+        Assert.False(document.RootElement.GetProperty(ExecutionInvocationMetadata.ProcessBrowserToolsAllowedMetadataKey).GetBoolean());
+    }
+
+    [Fact]
+    public void BuildProcessInvocationMetadataJson_disables_browser_tools_for_security_review_after_qa_browser_proof()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var method = serviceType.GetMethod("BuildProcessInvocationMetadataJson", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildProcessInvocationMetadataJson method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Review sensitive-data handling, secrets, boundary changes, and policy exceptions for the QA-accepted package.",
+            ProcessStepKind.Approval,
+            [],
+            false,
+            [(ProcessArtifactKind.Decision, "Security exception assessment", true, "Must capture controls, residual risk owner, and approval or block rationale.")],
+            [
+                (
+                    "Run QA validation and runtime or browser proof",
+                    "Regression evidence pack",
+                    [
+                        (
+                            "Regression evidence pack",
+                            "Evidence",
+                            "artifacts/process-runs/run-1/05-regression-evidence-pack.md",
+                            "Quality accepted with browser proof, screenshot, console messages, and residual risks recorded.",
+                            "Created by QA validation step."
+                        )
+                    ])
+            ],
+            triggerReason: "Project structure says the product is a static web page hosted from an external output directory.",
+            stepTitle: "Perform security and data-handling review",
+            outputContractSummary: "Security outcome with explicit approval, block, or exception rationale.");
+        const string projectStructureGroundingSummary = """
+            Dispatcher fetched the live project structure and focused this prompt on the selected work branch.
+            Project-structure required artifact contract:
+            - Delivery shape: JavaScript static web page.
+            - Runtime: no backend; client-local state only.
+            """;
+
+        var metadataJson = method.Invoke(
+            null,
+            [
+                candidate,
+                new ExecutionInvocationPolicy(),
+                projectStructureGroundingSummary,
+                null
+            ]) as string;
+
+        Assert.False(string.IsNullOrWhiteSpace(metadataJson));
+        using var document = JsonDocument.Parse(metadataJson);
+        Assert.False(document.RootElement.GetProperty(ExecutionInvocationMetadata.ProcessBrowserToolsAllowedMetadataKey).GetBoolean());
+    }
+
+    [Fact]
+    public void BuildExecutionPromptCore_guides_security_review_to_inspect_inherited_browser_evidence_without_fresh_browser_gate()
+    {
+        var buildExecutionPromptCore = typeof(ProcessRunAutomationDispatchService)
+            .GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .Single(method => method.Name == "BuildExecutionPromptCore" && method.GetParameters().Length == 4);
+        var candidate = CreateDispatchCandidateCore(
+            "Review sensitive-data handling, secrets, boundary changes, and policy exceptions for the QA-accepted package.",
+            ProcessStepKind.Approval,
+            [],
+            false,
+            [(ProcessArtifactKind.Decision, "Security exception assessment", true, "Must capture controls, residual risk owner, and approval or block rationale.")],
+            [
+                (
+                    "Run QA validation and runtime or browser proof",
+                    "Regression evidence pack",
+                    [
+                        (
+                            "Regression evidence pack",
+                            "Evidence",
+                            "artifacts/process-runs/run-1/05-regression-evidence-pack.md",
+                            "Quality accepted with browser proof, screenshot, console messages, and residual risks recorded.",
+                            "Created by QA validation step."
+                        )
+                    ])
+            ],
+            triggerReason: "Project structure says the product is a static web page hosted from an external output directory.",
+            stepTitle: "Perform security and data-handling review",
+            outputContractSummary: "Security outcome with explicit approval, block, or exception rationale.");
+        const string projectStructureGroundingSummary = """
+            Dispatcher fetched the live project structure and focused this prompt on the selected work branch.
+            Project-structure required artifact contract:
+            - Delivery shape: JavaScript static web page.
+            - Runtime: no backend; client-local state only.
+            """;
+
+        var prompt = buildExecutionPromptCore.Invoke(
+            null,
+            [
+                candidate,
+                null,
+                projectStructureGroundingSummary,
+                null
+            ]) as string;
+
+        Assert.NotNull(prompt);
+        Assert.Contains("Browser proof boundary:", prompt, StringComparison.Ordinal);
+        Assert.Contains("this step is not browser-proof gated", prompt, StringComparison.Ordinal);
+        Assert.Contains("inspect those inherited artifact paths directly with workspace tools", prompt, StringComparison.Ordinal);
+        Assert.Contains("artifacts/process-runs/run-1/05-regression-evidence-pack.md", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("Mandatory browser proof execution plan:", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("`browser_snapshot`", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("`browser_take_screenshot`", prompt, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -4954,6 +5428,63 @@ public sealed class ProcessRunAutomationDispatchServiceTests
                     "Succeeded: Created migration checklist.",
                     now.AddSeconds(4))
             ]);
+
+        var summary = resolveMissingRequiredArtifactSummary.Invoke(
+            null,
+            [candidate, detail, detail.Run.ResultSummary]) as string;
+
+        Assert.Equal(string.Empty, summary);
+    }
+
+    [Fact]
+    public void ResolveMissingRequiredArtifactSummary_accepts_repair_change_set_written_after_external_deliverable_mutation()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveMissingRequiredArtifactSummary = serviceType.GetMethod(
+            "ResolveMissingRequiredArtifactSummary",
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveMissingRequiredArtifactSummary method was not found.");
+        var candidate = CreateDispatchCandidateWithStepTitle(
+            "Repair validation findings",
+            "Repair validation findings for a JavaScript browser app after QA rejected placeholder validation.",
+            ProcessStepKind.Work,
+            [(ProcessArtifactKind.Deliverable, "Quality repair change set", true, "Must name repaired defects, changed files or deliverables, rerun validation, and unresolved risk.")]);
+        var rootAlias = "external-target/C/programovani/dotnet-demo/output";
+        var now = DateTimeOffset.UtcNow;
+        var detail = CreateSuccessfulExecutionDetail(
+            StructuredOutcome(ProcessStepOutcomeStatus.Completed, "Repair completed."),
+            null,
+            [
+                CreateToolReceipt(
+                    "workspace-file",
+                    "workspace_write_file",
+                    $"{rootAlias}/README-validation.md",
+                    ".",
+                    "Succeeded: Created validation README.",
+                    now),
+                CreateToolReceipt(
+                    "workspace-file",
+                    "workspace_write_file",
+                    $"{rootAlias}/MIGRATION.md",
+                    ".",
+                    "Succeeded: Created migration note.",
+                    now.AddSeconds(1)),
+                CreateToolReceipt(
+                    "workspace-file",
+                    "workspace_read_file",
+                    $"{rootAlias}/index.html",
+                    ".",
+                    "Succeeded: Inspected entrypoint.",
+                    now.AddSeconds(2)),
+                CreateToolReceipt(
+                    "workspace-file",
+                    "workspace_write_file",
+                    "artifacts/process-runs/run-001/06-quality-repair-change-set.md",
+                    ".",
+                    "Succeeded: Created quality repair change set.",
+                    now.AddSeconds(3))
+            ],
+            serializedInvocationMetadataJson: BuildAllowedExternalTargetMetadata(rootAlias));
 
         var summary = resolveMissingRequiredArtifactSummary.Invoke(
             null,
@@ -9358,6 +9889,102 @@ Ancestor path to the target work node:
     }
 
     [Fact]
+    public void ResolveRequiredToolNames_does_not_require_browser_tools_for_peer_review_with_static_web_grounding()
+    {
+        var resolveRequiredToolNamesCore = typeof(ProcessRunAutomationDispatchService)
+            .GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .Single(method => method.Name == "ResolveRequiredToolNamesCore");
+        var candidate = CreateDispatchCandidateCore(
+            "Inputs: architecture decision record and implementation change set. Outputs: peer review note with accepted issues, rejected concerns, residual risk, and integration readiness.",
+            ProcessStepKind.Review,
+            [],
+            false,
+            [(ProcessArtifactKind.Evidence, "Peer review note", true, "Must identify accepted issues, rejected concerns, residual risk, and integration readiness.")],
+            [
+                (
+                    "Implement bounded delivery change",
+                    "Implementation change set",
+                    [
+                        (
+                            "Implementation change set",
+                            "Deliverable",
+                            "artifacts/process-runs/run-1/03-implementation-change-set.md",
+                            "Static browser app delivered; downstream QA will capture browser proof.",
+                            "Created by implementation step."
+                        )
+                    ])
+            ],
+            triggerReason: "Project structure says the product is a static web page hosted from an external output directory.",
+            stepTitle: "Complete peer review and integration readiness",
+            outputContractSummary: "Peer review note",
+            manualRecoveryDirective: """
+                Manual rerun requested for step 'Complete peer review and integration readiness'.
+                Generic dispatcher repair: static-web project grounding identifies the deliverable surface, but peer review does not require browser-proof tools unless this step contract explicitly asks for browser/runtime proof.
+                Prior blocked reason: Mandatory browser proof and PowerShell run-script gating tools were not executed: unable to capture browser_snapshot, browser_take_screenshot, and browser_console_messages because no reachable hosted URL or environment run-script was provided in this run.
+                Minimal next actions:
+                - Repair only the delta described by this packet.
+                - Rerun invalidated proof tools.
+                """);
+
+        var requiredToolNames = (IReadOnlyList<string>?)resolveRequiredToolNamesCore.Invoke(
+            null,
+            [
+                candidate,
+                "Project-structure grounding: static web app, browser-playable surface, keyboard controls, local storage, and downstream runtime or browser proof."
+            ]);
+
+        Assert.NotNull(requiredToolNames);
+        Assert.DoesNotContain("browser_console_messages", requiredToolNames);
+        Assert.DoesNotContain("browser_snapshot", requiredToolNames);
+        Assert.DoesNotContain("browser_take_screenshot", requiredToolNames);
+        Assert.DoesNotContain("workspace_pwsh_run_script", requiredToolNames);
+    }
+
+    [Fact]
+    public void ResolveRequiredToolNames_does_not_require_browser_tools_for_security_review_of_qa_accepted_static_web_package()
+    {
+        var resolveRequiredToolNamesCore = typeof(ProcessRunAutomationDispatchService)
+            .GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .Single(method => method.Name == "ResolveRequiredToolNamesCore");
+        var candidate = CreateDispatchCandidateCore(
+            "Review sensitive-data handling, secrets, boundary changes, and policy exceptions for the QA-accepted package.",
+            ProcessStepKind.Approval,
+            [],
+            false,
+            [(ProcessArtifactKind.Decision, "Security exception assessment", true, "Must capture controls, residual risk owner, and approval or block rationale.")],
+            [
+                (
+                    "Run QA validation and runtime or browser proof",
+                    "Regression evidence pack",
+                    [
+                        (
+                            "Regression evidence pack",
+                            "Evidence",
+                            "artifacts/process-runs/run-1/05-regression-evidence-pack.md",
+                            "Quality accepted with browser proof, screenshot, console messages, and residual risks recorded.",
+                            "Created by QA validation step."
+                        )
+                    ])
+            ],
+            triggerReason: "Project structure says the product is a static web page hosted from an external output directory.",
+            stepTitle: "Perform security and data-handling review",
+            outputContractSummary: "Security outcome with explicit approval, block, or exception rationale.");
+
+        var requiredToolNames = (IReadOnlyList<string>?)resolveRequiredToolNamesCore.Invoke(
+            null,
+            [
+                candidate,
+                "Project-structure grounding: static web app, browser-playable surface, keyboard controls, local storage, and completed upstream QA browser proof."
+            ]);
+
+        Assert.NotNull(requiredToolNames);
+        Assert.DoesNotContain("browser_console_messages", requiredToolNames);
+        Assert.DoesNotContain("browser_snapshot", requiredToolNames);
+        Assert.DoesNotContain("browser_take_screenshot", requiredToolNames);
+        Assert.DoesNotContain("workspace_pwsh_run_script", requiredToolNames);
+    }
+
+    [Fact]
     public void BuildExecutionPrompt_guides_javascript_browser_proof_to_stack_appropriate_helper()
     {
         var buildExecutionPrompt = typeof(ProcessRunAutomationDispatchService).GetMethod("BuildExecutionPrompt", BindingFlags.NonPublic | BindingFlags.Static)
@@ -9379,6 +10006,64 @@ Ancestor path to the target work node:
         Assert.Contains("Never write helper code like `Resolve-Path 'external-target/C/...'`", prompt, StringComparison.Ordinal);
         Assert.Contains("workspace_pwsh_run_script", prompt, StringComparison.Ordinal);
         Assert.Contains("npm.cmd", prompt, StringComparison.Ordinal);
+        Assert.Contains("single-quoted here-string", prompt, StringComparison.Ordinal);
+        Assert.Contains("escape every literal `$`", prompt, StringComparison.Ordinal);
+        Assert.Contains("Do not run the long-running server loop inside the `workspace_pwsh_run_script` process until the tool times out.", prompt, StringComparison.Ordinal);
+        Assert.Contains("The helper must not be the foreground web server.", prompt, StringComparison.Ordinal);
+        Assert.Contains("Do not pass a server implementation script itself to `workspace_pwsh_run_script`", prompt, StringComparison.Ordinal);
+        Assert.Contains("Do not call blocking stream reads such as `.ReadToEnd()`", prompt, StringComparison.Ordinal);
+        Assert.Contains("Do not use `[System.Threading.Tasks.Task]::Run({ ... })` with scriptblocks", prompt, StringComparison.Ordinal);
+        Assert.Contains("Use native absolute paths for stdout/stderr redirection", prompt, StringComparison.Ordinal);
+        Assert.Contains("Do not build child PowerShell server code as a double-quoted `-Command` string", prompt, StringComparison.Ordinal);
+        Assert.Contains("Probe the recorded URL with a bounded `Invoke-WebRequest` loop", prompt, StringComparison.Ordinal);
+        Assert.Contains("do not make missing `package.json` or missing automated tests release-blocking", prompt, StringComparison.Ordinal);
+        Assert.Contains("use `browser_evaluate`", prompt, StringComparison.Ordinal);
+        Assert.Contains("replace it with `browser_evaluate` DOM or state proof", prompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BuildExecutionPromptCore_marks_peer_review_with_static_web_grounding_as_not_browser_gated()
+    {
+        var buildExecutionPromptCore = typeof(ProcessRunAutomationDispatchService)
+            .GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .Single(method => method.Name == "BuildExecutionPromptCore" && method.GetParameters().Length == 4);
+        var candidate = CreateDispatchCandidateCore(
+            "Inputs: implementation package, architecture decision record, and changed-surface inventory. Outputs: peer-reviewed change set with explicit residual risk and follow-up items.",
+            ProcessStepKind.Review,
+            [],
+            false,
+            [(ProcessArtifactKind.Evidence, "Peer review note", true, "Must capture accepted issues, rejected concerns, and explicit residual risk.")],
+            [],
+            triggerReason: "Project structure says the product is a static web page hosted from an external output directory.",
+            stepTitle: "Complete peer review and integration readiness",
+            outputContractSummary: "Peer review note",
+            manualRecoveryDirective: """
+                Manual rerun requested for step 'Complete peer review and integration readiness'.
+                Prior blocked reason: Mandatory browser proof and PowerShell run-script gating tools were not executed: unable to capture browser_snapshot, browser_take_screenshot, and browser_console_messages.
+                Browser proof is not required for this peer-review rerun unless the current step contract explicitly asks for runtime or browser proof.
+                """);
+        const string projectStructureGroundingSummary = """
+            Project-structure required artifact contract:
+            - Delivery shape: JavaScript static web page.
+            - Output root: C:\programovani\dotnet-demo\output mapped to external-target/C/programovani/dotnet-demo/output.
+            """;
+
+        var prompt = buildExecutionPromptCore.Invoke(
+            null,
+            [
+                candidate,
+                null,
+                projectStructureGroundingSummary,
+                null
+            ]) as string;
+
+        Assert.NotNull(prompt);
+        Assert.Contains("Browser proof boundary:", prompt, StringComparison.Ordinal);
+        Assert.Contains("this step is not browser-proof gated", prompt, StringComparison.Ordinal);
+        Assert.Contains("inspect those inherited artifact paths directly with workspace tools", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("Mandatory browser proof execution plan:", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("`browser_snapshot`", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("`browser_take_screenshot`", prompt, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -9415,6 +10100,30 @@ Ancestor path to the target work node:
         Assert.DoesNotContain("browser_console_messages", requiredToolNames);
         Assert.DoesNotContain("browser_snapshot", requiredToolNames);
         Assert.DoesNotContain("browser_take_screenshot", requiredToolNames);
+    }
+
+    [Fact]
+    public void ResolveRequiredToolNames_requires_browser_tools_for_static_web_recheck_with_document_context()
+    {
+        var resolveRequiredToolNames = typeof(ProcessRunAutomationDispatchService).GetMethod("ResolveRequiredToolNames", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveRequiredToolNames method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Verify the repaired package from the source document and project structure. The deliverable is a JavaScript static web page with no backend.",
+            ProcessStepKind.Review,
+            [],
+            false,
+            [(ProcessArtifactKind.Evidence, "Repaired regression evidence pack", true, "Must name repaired flows, assertion depth, warning counts, executed-test counts when tests are expected, runtime/API/browser evidence as applicable, screenshots for UI surfaces, and unresolved risks after the repair pass.")],
+            [],
+            triggerReason: "Project structure requires a static web page in C:\\programovani\\dotnet-demo\\output with no backend and client-local state.",
+            stepTitle: "Re-run QA validation and runtime or browser proof after repair");
+
+        var requiredToolNames = (IReadOnlyList<string>?)resolveRequiredToolNames.Invoke(null, [candidate]);
+
+        Assert.NotNull(requiredToolNames);
+        Assert.Contains("browser_console_messages", requiredToolNames);
+        Assert.Contains("browser_snapshot", requiredToolNames);
+        Assert.Contains("browser_take_screenshot", requiredToolNames);
+        Assert.Contains("workspace_pwsh_run_script", requiredToolNames);
     }
 
     [Fact]
@@ -9586,6 +10295,33 @@ Ancestor path to the target work node:
 
         Assert.NotNull(summary);
         Assert.Contains("source or project", summary, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ResolveMissingConcreteImplementationProofSummary_allows_repair_deliverable_mutation_after_source_read()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveMissingProof = serviceType.GetMethod("ResolveMissingConcreteImplementationProofSummary", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveMissingConcreteImplementationProofSummary method was not found.");
+        var candidate = CreateDispatchCandidate("Repair validation findings for the static web app and prepare it for browser proof.");
+        var rootAlias = "external-target/C/programovani/dotnet-demo/output";
+        var now = DateTimeOffset.UtcNow;
+        var detail = CreateSuccessfulExecutionDetail(
+            StructuredOutcome(ProcessStepOutcomeStatus.Completed, "Repair artifacts updated and source inspected."),
+            BuildSerializedSessionState(
+                ("workspace_write_file", CreateProviderNativeTextResult("Validation README updated.")),
+                ("workspace_write_file", CreateProviderNativeTextResult("Migration note updated.")),
+                ("workspace_read_file", CreateProviderNativeTextResult("Entrypoint source inspected."))),
+            [
+                CreateToolReceipt("workspace-file", "workspace_write_file", $"{rootAlias}/README-validation.md", ".", "Succeeded", now),
+                CreateToolReceipt("workspace-file", "workspace_write_file", $"{rootAlias}/MIGRATION.md", ".", "Succeeded", now.AddSeconds(1)),
+                CreateToolReceipt("workspace-file", "workspace_read_file", $"{rootAlias}/index.html", ".", "Succeeded", now.AddSeconds(2))
+            ],
+            serializedInvocationMetadataJson: BuildAllowedExternalTargetMetadata(rootAlias));
+
+        var summary = resolveMissingProof.Invoke(null, [candidate, detail]) as string;
+
+        Assert.Equal(string.Empty, summary);
     }
 
     [Fact]
@@ -12558,7 +13294,8 @@ Ancestor path to the target work node:
         string processName = "Software delivery",
         string outputContractSummary = "Buildable implementation",
         string processSlug = "",
-        string stepKey = "")
+        string stepKey = "",
+        string manualRecoveryDirective = "")
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
         var candidateType = serviceType.GetNestedType("DispatchCandidate", BindingFlags.NonPublic)
@@ -12687,7 +13424,7 @@ Ancestor path to the target work node:
                        new HashSet<string>(StringComparer.Ordinal),
                        null,
                        null,
-                       string.Empty,
+                       manualRecoveryDirective,
                        branchOutcomes,
                        requiresExplicitBranchOutcomeSelection,
                        new AgentProcessCooperationMetadata(
@@ -12702,7 +13439,8 @@ Ancestor path to the target work node:
         string responseText,
         string? serializedSessionStateJson,
         IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts = null,
-        string prompt = "Prompt")
+        string prompt = "Prompt",
+        string serializedInvocationMetadataJson = "{}")
     {
         var now = DateTimeOffset.UtcNow;
         return new ExecutionRunDetail(
@@ -12717,7 +13455,7 @@ Ancestor path to the target work node:
                 "run-start",
                 "process-automation-dispatch",
                 "system",
-                "{}",
+                serializedInvocationMetadataJson,
                 prompt,
                 responseText,
                 "OpenAI chat completions",

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Reflection;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 
@@ -255,6 +256,62 @@ public sealed class AgentFinalizerPolicyTests
             ExecutionInvocationMetadata.MaxRepairAttempts,
             root.GetProperty(ExecutionInvocationMetadata.MaxStructuredOutputRepairAttemptsMetadataKey).GetInt32());
         Assert.True(root.GetProperty(ExecutionInvocationMetadata.RequireStructuredOutputValidationMetadataKey).GetBoolean());
+    }
+
+    [Fact]
+    public void ExecutionInvocationMetadata_resolves_context_workspace_scope_for_trusted_process_run()
+    {
+        var projectId = Guid.Parse("90ad1937-b84e-41a6-8a90-4d09e88a552c");
+        var metadataJson = ExecutionInvocationMetadata.Build(
+            ExecutionInvocationMetadata.ApplyContextWorkspaceScope(
+                null,
+                WorkspaceScopeDescriptor.Project(projectId.ToString("D"))),
+            new ExecutionInvocationPolicy());
+        var run = CreateRun(metadataJson);
+
+        var scope = ExecutionInvocationMetadata.ResolveContextWorkspaceScope(run);
+
+        Assert.NotNull(scope);
+        Assert.Equal(WorkspaceScopeKind.Project, scope!.Kind);
+        Assert.Equal(projectId.ToString("D"), scope.Key);
+    }
+
+    [Fact]
+    public void ExecutionInvocationMetadata_ignores_context_workspace_scope_for_untrusted_run()
+    {
+        var metadataJson = ExecutionInvocationMetadata.ApplyContextWorkspaceScope(
+            null,
+            WorkspaceScopeDescriptor.Project("90ad1937-b84e-41a6-8a90-4d09e88a552c"));
+        var run = CreateRun(metadataJson) with
+        {
+            RequestedByKind = "user",
+            ProcessRunId = string.Empty,
+            ProcessStepId = string.Empty
+        };
+
+        var scope = ExecutionInvocationMetadata.ResolveContextWorkspaceScope(run);
+
+        Assert.Null(scope);
+    }
+
+    [Fact]
+    public void AgentFramework_runtime_options_include_context_workspace_scope_from_metadata()
+    {
+        var projectId = Guid.Parse("d3441d50-39c0-427a-976d-38f8c11e8312");
+        var metadataJson = ExecutionInvocationMetadata.ApplyContextWorkspaceScope(
+            null,
+            WorkspaceScopeDescriptor.Project(projectId.ToString("D")));
+        var run = CreateRun(metadataJson);
+        var method = typeof(AgentFrameworkWorkspaceExecutionService).GetMethod(
+            "CreateRuntimeExecutionOptions",
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("CreateRuntimeExecutionOptions method was not found.");
+
+        var options = Assert.IsType<AgentRuntimeExecutionOptions>(method.Invoke(null, [run, null, null]));
+
+        Assert.NotNull(options.ContextWorkspaceScope);
+        Assert.Equal(WorkspaceScopeKind.Project, options.ContextWorkspaceScope!.Kind);
+        Assert.Equal(projectId.ToString("D"), options.ContextWorkspaceScope.Key);
     }
 
     private static AgentFinalizerPolicy CreatePolicy()

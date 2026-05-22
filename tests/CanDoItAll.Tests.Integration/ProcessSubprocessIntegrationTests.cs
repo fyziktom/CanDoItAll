@@ -310,7 +310,7 @@ public sealed class ProcessSubprocessIntegrationTests
     }
 
     [Fact]
-    public async Task Default_templates_import_nested_subprocess_references_in_order()
+    public async Task Default_templates_import_nested_subprocess_references_and_generic_software_delivery_implementation()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -362,7 +362,20 @@ public sealed class ProcessSubprocessIntegrationTests
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         var sliceSubprocessStep = await LoadPublishedStepAsync(dbContext, sliceDefinitionId, "prepare-solution-skeleton");
         var sliceFeatureSubprocessStep = await LoadPublishedStepAsync(dbContext, sliceDefinitionId, "implement-code-change");
-        var softwareDeliverySubprocessStep = await LoadPublishedStepAsync(dbContext, softwareDeliveryDefinitionId, "implementation");
+        var softwareDeliveryFeatureIntakeStep = await LoadPublishedStepAsync(dbContext, softwareDeliveryDefinitionId, "feature-intake");
+        var softwareDeliveryImplementationStep = await LoadPublishedStepAsync(dbContext, softwareDeliveryDefinitionId, "implementation");
+        var softwareDeliveryQaStep = await LoadPublishedStepAsync(dbContext, softwareDeliveryDefinitionId, "qa-validation");
+        var softwareDeliveryReleaseApprovalStep = await LoadPublishedStepAsync(dbContext, softwareDeliveryDefinitionId, "release-approval");
+        var featureIntakeArtifact = await dbContext.Set<ProcessArtifactExpectation>()
+            .AsNoTracking()
+            .SingleAsync(item =>
+                item.StepDefinitionId == softwareDeliveryFeatureIntakeStep.Id &&
+                item.Title == "Scope boundary packet");
+        var qaEvidenceArtifact = await dbContext.Set<ProcessArtifactExpectation>()
+            .AsNoTracking()
+            .SingleAsync(item =>
+                item.StepDefinitionId == softwareDeliveryQaStep.Id &&
+                item.Title == "Regression evidence pack");
 
         Assert.Equal(ProcessStepKind.Subprocess, sliceSubprocessStep.StepKind);
         Assert.Equal(setupDefinitionId, sliceSubprocessStep.SubprocessDefinitionId);
@@ -370,9 +383,41 @@ public sealed class ProcessSubprocessIntegrationTests
         Assert.Equal(ProcessStepKind.Subprocess, sliceFeatureSubprocessStep.StepKind);
         Assert.Equal(featureImplementationDefinitionId, sliceFeatureSubprocessStep.SubprocessDefinitionId);
         Assert.Equal(".NET feature/function implementation subprocess", sliceFeatureSubprocessStep.SubprocessDefinitionSnapshotName);
-        Assert.Equal(ProcessStepKind.Subprocess, softwareDeliverySubprocessStep.StepKind);
-        Assert.Equal(sliceDefinitionId, softwareDeliverySubprocessStep.SubprocessDefinitionId);
-        Assert.Equal(".NET implementation slice with atomic validation", softwareDeliverySubprocessStep.SubprocessDefinitionSnapshotName);
+        Assert.Equal(ProcessStepKind.Work, softwareDeliveryImplementationStep.StepKind);
+        Assert.Null(softwareDeliveryImplementationStep.SubprocessDefinitionId);
+        Assert.Equal(string.Empty, softwareDeliveryImplementationStep.SubprocessDefinitionSnapshotName);
+        Assert.Contains(
+            "project-structure",
+            softwareDeliveryImplementationStep.Notes,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(
+            "output location",
+            softwareDeliveryImplementationStep.Notes,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(
+            "must not be downgraded",
+            softwareDeliveryFeatureIntakeStep.Notes,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(
+            "without downgrading",
+            featureIntakeArtifact.ValidationRequirementSummary,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(
+            "shipped entrypoint/runtime consistency",
+            softwareDeliveryQaStep.OutputContractSummary,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(
+            "referenced-runtime inspection",
+            softwareDeliveryQaStep.EvidenceContractSummary,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(
+            "stale/unreferenced artifact findings",
+            qaEvidenceArtifact.ValidationRequirementSummary,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(
+            "shipped entrypoint and referenced runtime",
+            softwareDeliveryReleaseApprovalStep.InputContractSummary,
+            StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
