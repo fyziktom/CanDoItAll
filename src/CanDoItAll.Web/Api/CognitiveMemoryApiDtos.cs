@@ -242,6 +242,8 @@ internal sealed class CognitiveMemoryPostgreSqlDatabaseProfileApiRequest
 
 internal sealed class CognitiveMemoryAutomationSettingsApiRequest
 {
+    public bool? IsEnabled { get; set; }
+
     public string? ScheduleMode { get; set; }
 
     public string NightlyLocalTime { get; set; } = "02:00";

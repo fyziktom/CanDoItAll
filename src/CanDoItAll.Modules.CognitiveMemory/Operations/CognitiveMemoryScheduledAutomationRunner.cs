@@ -18,6 +18,26 @@ public sealed class CognitiveMemoryScheduledAutomationRunner(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        var settings = await settingsService.GetAsync(cancellationToken);
+        var cycleId = NormalizeCycleId(request.CycleId);
+        if (!settings.IsEnabled)
+        {
+            return new CognitiveMemoryScheduledAutomationRunResult(
+                settings.ScheduleMode,
+                request.TriggerKind,
+                Executed: false,
+                SourceIngestionRuns: 0,
+                SourceItemsSeen: 0,
+                SourceItemsCreated: 0,
+                ConsolidationRuns: 0,
+                ConsolidationStatus: null,
+                [CognitiveMemoryRuntimeUsage.DisabledMessage],
+                cycleId,
+                CyclesExecuted: 0,
+                FinalCursor: null,
+                Cycles: []);
+        }
+
         var actorId = CognitiveMemoryGuard.EnsureText(request.ActorId, nameof(request.ActorId));
         var take = request.Take is > 0 and <= MaximumTake
             ? request.Take
@@ -25,8 +45,6 @@ public sealed class CognitiveMemoryScheduledAutomationRunner(
         var maxCycles = request.MaxCycles is > 0 and <= MaximumCycles
             ? request.MaxCycles
             : throw new ArgumentOutOfRangeException(nameof(request.MaxCycles), $"MaxCycles must be between 1 and {MaximumCycles}.");
-        var cycleId = NormalizeCycleId(request.CycleId);
-        var settings = await settingsService.GetAsync(cancellationToken);
         if (!ScheduleAllowsRun(settings.ScheduleMode, request.TriggerKind))
         {
             return new CognitiveMemoryScheduledAutomationRunResult(

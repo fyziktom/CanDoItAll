@@ -64,6 +64,7 @@ public readonly record struct CognitiveMemoryExecutionModelId
 }
 
 public sealed record CognitiveMemoryAutomationSettings(
+    bool IsEnabled,
     CognitiveMemoryAutomationScheduleMode ScheduleMode,
     string NightlyLocalTime,
     int IdleMinutes,
@@ -82,6 +83,7 @@ public sealed record CognitiveMemoryAutomationSettings(
         CognitiveMemoryModelExecutionProfileDefaults.OpenAiProfiles;
 
     public static CognitiveMemoryAutomationSettings Defaults(DateTimeOffset nowUtc) => new(
+        IsEnabled: true,
         CognitiveMemoryAutomationScheduleMode.ManualOnly,
         "02:00",
         30,
@@ -101,6 +103,7 @@ public sealed record CognitiveMemoryAutomationSettings(
 }
 
 public sealed record CognitiveMemoryAutomationSettingsUpdate(
+    bool IsEnabled,
     CognitiveMemoryAutomationScheduleMode ScheduleMode,
     string NightlyLocalTime,
     int IdleMinutes,
@@ -116,6 +119,34 @@ public sealed record CognitiveMemoryAutomationSettingsUpdate(
 {
     public IReadOnlyList<CognitiveMemoryModelExecutionProfile> ModelExecutionProfiles { get; init; } =
         CognitiveMemoryModelExecutionProfileDefaults.OpenAiProfiles;
+}
+
+public static class CognitiveMemoryRuntimeUsage
+{
+    public const string DisabledReason = "cognitive-memory-disabled";
+    public const string DisabledMessage = "Cognitive Memory is disabled by runtime settings.";
+    public const string TraceReasonKey = "reason";
+    public const string TraceIsEnabledKey = "isEnabled";
+    public const string TraceModelAccessModeKey = "modelAccessMode";
+    public const string TraceProviderProfileIdKey = "providerProfileId";
+
+    public static IReadOnlyDictionary<string, string> DisabledTraceMetadata(
+        CognitiveMemoryAutomationSettings settings,
+        Guid? providerProfileId = null)
+    {
+        var metadata = new Dictionary<string, string>
+        {
+            [TraceReasonKey] = DisabledReason,
+            [TraceIsEnabledKey] = bool.FalseString,
+            [TraceModelAccessModeKey] = settings.ModelAccessMode.ToString()
+        };
+        if (providerProfileId is { } id)
+        {
+            metadata[TraceProviderProfileIdKey] = id.ToString("D");
+        }
+
+        return metadata;
+    }
 }
 
 public sealed record CognitiveMemoryModelExecutionProfile(

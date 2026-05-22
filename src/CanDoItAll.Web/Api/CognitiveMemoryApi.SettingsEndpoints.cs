@@ -24,9 +24,13 @@ internal static partial class CognitiveMemoryApi
                 CognitiveMemoryAutomationSettingsApiRequest request,
                 ICognitiveMemoryAutomationSettingsService settingsService,
                 CancellationToken cancellationToken) =>
-            await ExecuteAsync(() => settingsService.SaveAsync(
-                BuildAutomationSettingsUpdate(request),
-                cancellationToken)))
+            await ExecuteAsync(async () =>
+            {
+                var currentSettings = await settingsService.GetAsync(cancellationToken);
+                return await settingsService.SaveAsync(
+                    BuildAutomationSettingsUpdate(request, currentSettings),
+                    cancellationToken);
+            }))
             .WithName(EndpointName("UpdateCognitiveMemorySettings", surface));
     }
 }

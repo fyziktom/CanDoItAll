@@ -275,6 +275,28 @@ public sealed class AgentContextContributionTests
     }
 
     [Fact]
+    public async Task Cognitive_memory_contributor_skips_before_project_scope_when_runtime_usage_is_disabled()
+    {
+        var projectId = Guid.Parse("bcbcbcbc-bcbc-bcbc-bcbc-bcbcbcbcbcbc");
+        var orchestrator = new RecordingRecallOrchestrator(projectId);
+        var contributor = new CognitiveMemoryAgentContextContributor(orchestrator, CreateSettingsService(isEnabled: false));
+
+        var result = await contributor.ContributeAsync(new AgentContextContributionRequest(
+            CreateAgent(),
+            CreateProviderProfile(),
+            [new AgentContextRequestMessage(AgentContextMessageRole.User, "What should the process remember?")],
+            new AgentContextContributionPolicy(
+                AgentContextExecutionMode.GovernedProcessAutomation,
+                SuppressApprovalRequirements: false,
+                WorkspaceScopeDescriptor.Organization("unit"))));
+
+        Assert.Equal(AgentContextContributionStatus.Skipped, result.Status);
+        Assert.Equal(CognitiveMemoryRuntimeUsage.DisabledReason, result.TraceMetadata["reason"]);
+        Assert.Empty(result.Messages);
+        Assert.Null(orchestrator.LastRequest);
+    }
+
+    [Fact]
     public async Task Cognitive_memory_contributor_skips_remote_provider_when_local_only()
     {
         var projectId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
@@ -491,8 +513,10 @@ public sealed class AgentContextContributionTests
     private static ICognitiveMemoryAutomationSettingsService CreateSettingsService(
         CognitiveMemoryModelAccessMode modelAccessMode = CognitiveMemoryModelAccessMode.AnyEnabledProvider,
         Guid? defaultProviderProfileId = null,
-        IReadOnlyList<Guid>? allowedProviderProfileIds = null)
+        IReadOnlyList<Guid>? allowedProviderProfileIds = null,
+        bool isEnabled = true)
         => new TestAutomationSettingsService(new CognitiveMemoryAutomationSettings(
+            isEnabled,
             CognitiveMemoryAutomationScheduleMode.ManualOnly,
             "02:00",
             30,
