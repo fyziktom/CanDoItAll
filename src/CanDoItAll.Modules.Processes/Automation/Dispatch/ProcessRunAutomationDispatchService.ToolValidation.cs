@@ -95,7 +95,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
         IEnumerable<string> successfulToolNamesFromPriorAttempts,
         CarriedImplementationProof carriedImplementationProof)
     {
-        var requiredToolNames = ResolveRequiredToolNames(candidate);
+        var requiredToolNames = ResolveRequiredToolNames(candidate)
+            .Concat(ResolveMetadataRequiredToolNames(candidate, detail))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
         if (requiredToolNames.Count == 0)
         {
             return [];
@@ -144,6 +147,21 @@ internal sealed partial class ProcessRunAutomationDispatchService
                       CanSatisfyImplementationArtifactWriteWithRecordedArtifacts(candidate, detail)))
                 .ToList()
             : missing;
+    }
+
+    private static IReadOnlyList<string> ResolveMetadataRequiredToolNames(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail)
+    {
+        if (!ExecutionInvocationMetadata.ResolveProcessBrowserToolsAllowed(detail.Run) ||
+            !RequiresGovernedStepOutcome(candidate.StepRun) ||
+            !RequiresConcreteBrowserProof(candidate) ||
+            IsDotNetSolutionSetupScaffoldMutationStep(candidate))
+        {
+            return [];
+        }
+
+        return ImplicitBrowserProofToolNames;
     }
 
     private static bool CanSatisfyMissingDotnetNewWithValidatedExistingScaffold(ExecutionRunDetail detail)
@@ -284,6 +302,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return missingRequiredTools.Any(toolName =>
             !ImplementationProofToolNames.Contains(toolName, StringComparer.Ordinal) &&
             !ConcreteProductMutationToolNames.Contains(toolName, StringComparer.Ordinal) &&
+            !toolName.StartsWith("project_structure_", StringComparison.Ordinal) &&
             !IsImplementationValidationToolName(toolName));
     }
 
@@ -384,6 +403,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
 
             if (contextValidation.IsValid &&
+                DeclaredBlockedOutcomeClaimsRequiredToolFailureWithoutReceipt(
+                    declaredOutcome,
+                    responseText,
+                    missingRequiredTools,
+                    detail))
+            {
+                return ProcessStepRunStatus.Failed;
+            }
+
+            if (contextValidation.IsValid &&
                 (unresolvedCriticalToolFailures.Count > 0 || missingRequiredTools.Count == 0))
             {
                 return declaredOutcome.Status;
@@ -436,6 +465,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var invalidBrowserProofSummary = ResolveInvalidBrowserProofSummary(candidate, detail);
         var invalidQualityValidationProofSummary = ResolveInvalidQualityValidationProofSummary(candidate, detail, inspectionText);
         var missingRequiredArtifactSummary = ResolveMissingRequiredArtifactSummary(candidate, detail, inspectionText);
+        var downgradedProjectStructureRequirementSummary = ResolveDowngradedProjectStructureRequirementSummary(candidate, detail, inspectionText);
         var missingUpstreamArtifactInspectionSummary = ResolveMissingUpstreamArtifactInspectionSummary(candidate, detail);
         var outOfScopeExternalTargetReferenceSummary = ResolveOutOfScopeExternalTargetReferenceSummary(detail, inspectionText);
         var shallowSharedManagedArtifactReferenceSummary = ResolveShallowSharedManagedArtifactReferenceSummary(detail, inspectionText);
@@ -479,6 +509,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                   !string.IsNullOrWhiteSpace(invalidBrowserProofSummary) ||
                   !string.IsNullOrWhiteSpace(invalidQualityValidationProofSummary) ||
                   !string.IsNullOrWhiteSpace(missingRequiredArtifactSummary) ||
+                  !string.IsNullOrWhiteSpace(downgradedProjectStructureRequirementSummary) ||
                   !string.IsNullOrWhiteSpace(missingUpstreamArtifactInspectionSummary) ||
                   !string.IsNullOrWhiteSpace(outOfScopeExternalTargetReferenceSummary) ||
                   !string.IsNullOrWhiteSpace(shallowSharedManagedArtifactReferenceSummary)))
@@ -503,6 +534,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             !string.IsNullOrWhiteSpace(invalidBrowserProofSummary) ||
             !string.IsNullOrWhiteSpace(invalidQualityValidationProofSummary) ||
             !string.IsNullOrWhiteSpace(missingRequiredArtifactSummary) ||
+            !string.IsNullOrWhiteSpace(downgradedProjectStructureRequirementSummary) ||
             !string.IsNullOrWhiteSpace(missingUpstreamArtifactInspectionSummary) ||
             !string.IsNullOrWhiteSpace(outOfScopeExternalTargetReferenceSummary) ||
             !string.IsNullOrWhiteSpace(shallowSharedManagedArtifactReferenceSummary))
@@ -629,6 +661,53 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return true;
     }
 
+    private static bool DeclaredBlockedOutcomeClaimsRequiredToolFailureWithoutReceipt(
+        DeclaredStepOutcome declaredOutcome,
+        string? responseText,
+        IReadOnlyList<string> missingRequiredTools,
+        ExecutionRunDetail detail)
+    {
+        if (declaredOutcome.Status != ProcessStepRunStatus.Blocked ||
+            missingRequiredTools.Count == 0 ||
+            HasFailedReceiptForRequiredTool(detail, missingRequiredTools))
+        {
+            return false;
+        }
+
+        var normalizedText = CollapsePromptWhitespace($"{declaredOutcome.Reason} {ResolveOutputInspectionText(responseText)}");
+        if (string.IsNullOrWhiteSpace(normalizedText))
+        {
+            return false;
+        }
+
+        return missingRequiredTools.Any(toolName =>
+            normalizedText.Contains(toolName, StringComparison.OrdinalIgnoreCase)) ||
+               (normalizedText.Contains("tool", StringComparison.OrdinalIgnoreCase) &&
+                (normalizedText.Contains("failed", StringComparison.OrdinalIgnoreCase) ||
+                 normalizedText.Contains("failure", StringComparison.OrdinalIgnoreCase) ||
+                 normalizedText.Contains("unavailable", StringComparison.OrdinalIgnoreCase) ||
+                 normalizedText.Contains("denied", StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private static bool HasFailedReceiptForRequiredTool(
+        ExecutionRunDetail detail,
+        IReadOnlyList<string> requiredToolNames)
+    {
+        if (requiredToolNames.Count == 0)
+        {
+            return false;
+        }
+
+        var required = requiredToolNames
+            .Select(NormalizeToolToken)
+            .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
+            .ToHashSet(StringComparer.Ordinal);
+
+        return detail.ToolReceipts.Any(receipt =>
+            required.Contains(NormalizeToolToken(receipt.ToolName)) &&
+            IsFailedToolReceipt(receipt));
+    }
+
     private static string BuildDeclaredStepOutcomeReason(string runTitle, string stepTitle, DeclaredStepOutcome declaredOutcome)
     {
         var trimmedReason = declaredOutcome.Reason.Trim();
@@ -716,6 +795,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
             AddBrowserOutputFiles(outputFilesByToolName, pair.Key, pair.Value);
         }
 
+        foreach (var pair in ResolveBrowserEvidenceReferenceOutputFiles(detail.Run.ResultSummary))
+        {
+            AddBrowserOutputFiles(outputFilesByToolName, pair.Key, pair.Value);
+        }
+
         return outputFilesByToolName.ToDictionary(
             pair => pair.Key,
             pair => (IReadOnlyList<string>)pair.Value
@@ -785,6 +869,88 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
                 .ToList(),
             StringComparer.Ordinal);
+    }
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<string>> ResolveBrowserEvidenceReferenceOutputFiles(string? resultSummary)
+    {
+        if (string.IsNullOrWhiteSpace(resultSummary))
+        {
+            return new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+        }
+
+        var outputFilesByToolName = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+        foreach (var evidenceRef in ResolveBrowserEvidenceReferences(resultSummary))
+        {
+            var normalizedRef = WorkspaceScopeDescriptor.NormalizeRelativePath(evidenceRef);
+            if (!IsProviderNativeBrowserEvidenceReferencePath(normalizedRef))
+            {
+                continue;
+            }
+
+            var toolName = ResolveProviderNativeBrowserToolName(normalizedRef);
+            if (string.IsNullOrWhiteSpace(toolName))
+            {
+                continue;
+            }
+
+            if (!outputFilesByToolName.TryGetValue(toolName, out var outputFiles))
+            {
+                outputFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                outputFilesByToolName[toolName] = outputFiles;
+            }
+
+            outputFiles.Add(normalizedRef);
+        }
+
+        return outputFilesByToolName.ToDictionary(
+            pair => pair.Key,
+            pair => (IReadOnlyList<string>)pair.Value
+                .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+                .ToList(),
+            StringComparer.Ordinal);
+    }
+
+    private static IReadOnlyList<string> ResolveBrowserEvidenceReferences(string resultSummary)
+    {
+        var references = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+        TryAddStructuredEvidenceReferences(resultSummary, references);
+
+        foreach (Match match in Regex.Matches(
+                     resultSummary,
+                     @"(?:\.playwright-mcp|artifacts[\\/](?:scopes[\\/][^\s`""',\]\)]+[\\/])?process-runs)[\\/][^\s`""',\]\)]+\.(?:png|jpe?g|yml|yaml|log|txt|json)",
+                     RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+        {
+            references.Add(match.Value.Trim().TrimEnd('.', ',', ';', ':'));
+        }
+
+        return references.ToList();
+    }
+
+    private static void TryAddStructuredEvidenceReferences(
+        string resultSummary,
+        ISet<string> references)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(resultSummary);
+            if (!document.RootElement.TryGetProperty("evidenceRefs", out var evidenceRefs) ||
+                evidenceRefs.ValueKind != JsonValueKind.Array)
+            {
+                return;
+            }
+
+            foreach (var item in evidenceRefs.EnumerateArray())
+            {
+                if (item.ValueKind == JsonValueKind.String &&
+                    !string.IsNullOrWhiteSpace(item.GetString()))
+                {
+                    references.Add(item.GetString()!.Trim());
+                }
+            }
+        }
+        catch (JsonException)
+        {
+        }
     }
 
     private static bool TryResolveExecutionLogFilenameArgument(string message, out string fileName)

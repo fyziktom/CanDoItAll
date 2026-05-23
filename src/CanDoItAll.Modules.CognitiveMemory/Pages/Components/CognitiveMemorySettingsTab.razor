@@ -10,6 +10,13 @@
                                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="Automatic sorting" />
                                 <h2 class="cognitive-memory-card-title">Schedule and consolidation triggers</h2>
                                 <Stack GapScale="LayoutGap.Medium" Class="mt-4">
+                                    <div class="cognitive-memory-checks">
+                                        <label>
+                                            <InputCheckbox @bind-Value="Page.isEnabled"
+                                                           data-testid="cognitive-memory-usage-enabled" />
+                                            <span>Use Cognitive Memory</span>
+                                        </label>
+                                    </div>
                                     <label class="cognitive-memory-field">
                                         <span>Mode</span>
                                         <InputSelect class="cda-input"

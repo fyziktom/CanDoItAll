@@ -18,6 +18,7 @@ public partial class CognitiveMemoryPage
         try
         {
             var settings = await AutomationSettingsService.GetAsync(CancellationToken.None);
+            isEnabled = settings.IsEnabled;
             automationScheduleMode = settings.ScheduleMode;
             nightlyLocalTime = settings.NightlyLocalTime;
             idleMinutes = settings.IdleMinutes;
@@ -72,6 +73,7 @@ public partial class CognitiveMemoryPage
         try
         {
             var settings = await AutomationSettingsService.SaveAsync(new CognitiveMemoryAutomationSettingsUpdate(
+                isEnabled,
                 automationScheduleMode,
                 nightlyLocalTime,
                 idleMinutes,
@@ -88,7 +90,7 @@ public partial class CognitiveMemoryPage
             defaultProviderProfileIdText = settings.DefaultProviderProfileId?.ToString("D") ?? string.Empty;
             defaultAgentIdText = settings.DefaultAgentId?.ToString("D") ?? string.Empty;
             modelAccessStatus = BuildModelAccessStatus(settings);
-            NotificationService.Success("Memory settings saved", $"{FormatLabel(settings.ScheduleMode)} / {FormatLabel(settings.ModelAccessMode)}");
+            NotificationService.Success("Memory settings saved", $"{(settings.IsEnabled ? "Enabled" : "Disabled")} / {FormatLabel(settings.ScheduleMode)} / {FormatLabel(settings.ModelAccessMode)}");
         }
         catch (Exception exception)
         {
@@ -376,13 +378,20 @@ public partial class CognitiveMemoryPage
     }
 
     internal static string BuildModelAccessStatus(CognitiveMemoryAutomationSettings settings)
-        => settings.ModelAccessMode switch
+    {
+        if (!settings.IsEnabled)
         {
-            CognitiveMemoryModelAccessMode.Disabled => "Cognitive Memory will not be injected into agent model calls.",
+            return "Cognitive Memory is disabled globally and will not be injected into agent, workflow, or automation calls.";
+        }
+
+        return settings.ModelAccessMode switch
+        {
+            CognitiveMemoryModelAccessMode.Disabled => "Cognitive Memory model access is disabled.",
             CognitiveMemoryModelAccessMode.LocalProvidersOnly => "Cognitive Memory context is limited to local providers.",
             CognitiveMemoryModelAccessMode.SelectedProvidersOnly => "Cognitive Memory context is limited to the selected provider allow-list.",
             _ => "Cognitive Memory context can be injected for any enabled provider."
         };
+    }
 
     internal Guid ResolveManualScopeId(MemorySourceKind sourceKind)
     {

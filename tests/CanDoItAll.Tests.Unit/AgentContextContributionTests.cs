@@ -159,6 +159,41 @@ public sealed class AgentContextContributionTests
     }
 
     [Fact]
+    public async Task Maf_runtime_uses_context_workspace_scope_override_for_contributors()
+    {
+        var projectId = Guid.Parse("29fbb9a8-8422-4b8b-89ed-9d515103b801");
+        WorkspaceScopeDescriptor? capturedScope = null;
+        var services = new ServiceCollection();
+        services.AddSingleton<IAgentContextContributor>(new TestContextContributor(
+            "scope.capture",
+            10,
+            request =>
+            {
+                capturedScope = request.Policy.WorkspaceScope;
+                return AgentContextContributionResult.Skipped();
+            }));
+        var runtime = new MafAgentRuntime(
+            Path.GetTempPath(),
+            services.BuildServiceProvider(),
+            WorkspaceScopeDescriptor.Organization("unit-org"));
+        var state = await InvokeCreateCapabilityStateCoreAsync(
+            runtime,
+            CreateAgent(),
+            CreateProviderProfile(),
+            WorkspaceScopeDescriptor.Project(projectId.ToString("D")),
+            []);
+        var contextProviders = Assert.IsAssignableFrom<IEnumerable<AIContextProvider>>(
+            state.GetType().GetProperty("ContextProviders", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state));
+        var provider = Assert.Single(contextProviders.OfType<MafAgentContextContributionProvider>());
+
+        await provider.ContributeAsync([new ChatMessage(ChatRole.User, "Summarize workflow input.")]);
+
+        Assert.NotNull(capturedScope);
+        Assert.Equal(WorkspaceScopeKind.Project, capturedScope!.Kind);
+        Assert.Equal(projectId.ToString("D"), capturedScope.Key);
+    }
+
+    [Fact]
     public async Task Maf_runtime_rejects_duplicate_contributor_ids()
     {
         var services = new ServiceCollection();
@@ -237,6 +272,28 @@ public sealed class AgentContextContributionTests
             "Which ClinicFlow instruction should be remembered for future product positioning, and what phrase must not be overgeneralized?",
             orchestrator.LastRequest?.Query);
         Assert.Contains("clinicflow-saas-s04.md#section-02-email-2-instruction", context, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Cognitive_memory_contributor_skips_before_project_scope_when_runtime_usage_is_disabled()
+    {
+        var projectId = Guid.Parse("bcbcbcbc-bcbc-bcbc-bcbc-bcbcbcbcbcbc");
+        var orchestrator = new RecordingRecallOrchestrator(projectId);
+        var contributor = new CognitiveMemoryAgentContextContributor(orchestrator, CreateSettingsService(isEnabled: false));
+
+        var result = await contributor.ContributeAsync(new AgentContextContributionRequest(
+            CreateAgent(),
+            CreateProviderProfile(),
+            [new AgentContextRequestMessage(AgentContextMessageRole.User, "What should the process remember?")],
+            new AgentContextContributionPolicy(
+                AgentContextExecutionMode.GovernedProcessAutomation,
+                SuppressApprovalRequirements: false,
+                WorkspaceScopeDescriptor.Organization("unit"))));
+
+        Assert.Equal(AgentContextContributionStatus.Skipped, result.Status);
+        Assert.Equal(CognitiveMemoryRuntimeUsage.DisabledReason, result.TraceMetadata["reason"]);
+        Assert.Empty(result.Messages);
+        Assert.Null(orchestrator.LastRequest);
     }
 
     [Fact]
@@ -366,6 +423,28 @@ public sealed class AgentContextContributionTests
         Assert.Contains("required memory outage", result.FailureMessage, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task Cognitive_memory_contributor_skips_empty_context_pack_for_process_automation()
+    {
+        var projectId = Guid.Parse("edededed-eded-eded-eded-edededededed");
+        var orchestrator = new EmptyRecallOrchestrator(projectId);
+        var contributor = new CognitiveMemoryAgentContextContributor(orchestrator, CreateSettingsService());
+
+        var result = await contributor.ContributeAsync(new AgentContextContributionRequest(
+            CreateAgent(),
+            CreateProviderProfile(),
+            [new AgentContextRequestMessage(AgentContextMessageRole.User, "Summarize the workflow payload.")],
+            new AgentContextContributionPolicy(
+                AgentContextExecutionMode.AutoApprovedNonInteractive,
+                SuppressApprovalRequirements: false,
+                WorkspaceScopeDescriptor.Project(projectId.ToString("D")))));
+
+        Assert.Equal(AgentContextContributionStatus.Skipped, result.Status);
+        Assert.Equal("empty-context-pack", result.TraceMetadata["reason"]);
+        Assert.NotNull(orchestrator.LastRequest);
+        Assert.Equal(projectId, orchestrator.LastRequest!.ProjectId);
+    }
+
     private static MafAgentContextContributionProvider CreateProvider(
         IAgentContextContributor contributor,
         IAgentContextContributionTraceSink? traceSink = null)
@@ -434,8 +513,10 @@ public sealed class AgentContextContributionTests
     private static ICognitiveMemoryAutomationSettingsService CreateSettingsService(
         CognitiveMemoryModelAccessMode modelAccessMode = CognitiveMemoryModelAccessMode.AnyEnabledProvider,
         Guid? defaultProviderProfileId = null,
-        IReadOnlyList<Guid>? allowedProviderProfileIds = null)
+        IReadOnlyList<Guid>? allowedProviderProfileIds = null,
+        bool isEnabled = true)
         => new TestAutomationSettingsService(new CognitiveMemoryAutomationSettings(
+            isEnabled,
             CognitiveMemoryAutomationScheduleMode.ManualOnly,
             "02:00",
             30,
@@ -480,6 +561,40 @@ public sealed class AgentContextContributionTests
 
         return task.GetType().GetProperty("Result", BindingFlags.Public | BindingFlags.Instance)?.GetValue(task)
                ?? throw new InvalidOperationException("CreateCapabilityStateAsync did not produce a result.");
+    }
+
+    private static async Task<object> InvokeCreateCapabilityStateCoreAsync(
+        MafAgentRuntime runtime,
+        AgentDefinition agent,
+        ProviderProfile provider,
+        WorkspaceScopeDescriptor contextWorkspaceScope,
+        List<string> progressMessages)
+    {
+        var method = typeof(MafAgentRuntime).GetMethod(
+                         "CreateCapabilityStateCoreAsync",
+                         BindingFlags.NonPublic | BindingFlags.Instance)
+                     ?? throw new InvalidOperationException("CreateCapabilityStateCoreAsync method was not found.");
+        var invocation = method.Invoke(
+            runtime,
+            [
+                agent,
+                provider,
+                Array.Empty<CapabilityCatalogItem>(),
+                Array.Empty<AgentMemoryRecord>(),
+                (Func<ExecutionState, string, string, Task>)((_, _, message) =>
+                {
+                    progressMessages.Add(message);
+                    return Task.CompletedTask;
+                }),
+                CancellationToken.None,
+                false,
+                contextWorkspaceScope
+            ]);
+        var task = Assert.IsAssignableFrom<Task>(invocation);
+        await task;
+
+        return task.GetType().GetProperty("Result", BindingFlags.Public | BindingFlags.Instance)?.GetValue(task)
+               ?? throw new InvalidOperationException("CreateCapabilityStateCoreAsync did not produce a result.");
     }
 
     private static AgentContextContributionTraceCollector ReadContextContributionTraceCollector(object state)
@@ -566,6 +681,35 @@ public sealed class AgentContextContributionTests
         {
             Assert.Equal(expectedProjectId, request.ProjectId);
             throw new InvalidOperationException("required memory outage");
+        }
+    }
+
+    private sealed class EmptyRecallOrchestrator(Guid expectedProjectId) : ICognitiveMemoryRecallOrchestrator
+    {
+        public CognitiveMemoryRecallRequest? LastRequest { get; private set; }
+
+        public ValueTask<CognitiveMemoryRecallResult> RecallAsync(
+            CognitiveMemoryRecallRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            Assert.Equal(expectedProjectId, request.ProjectId);
+            LastRequest = request;
+            var contextPack = new CognitiveMemoryRecallContextPack(
+                CognitiveMemoryRecallContextPackId.New(),
+                expectedProjectId,
+                WorkspaceFrameId: null,
+                "Recall context for empty project",
+                "No matching memory was available.",
+                [],
+                [],
+                [],
+                new Dictionary<string, string>());
+            return ValueTask.FromResult(new CognitiveMemoryRecallResult(
+                Guid.NewGuid(),
+                contextPack,
+                [],
+                [],
+                []));
         }
     }
 

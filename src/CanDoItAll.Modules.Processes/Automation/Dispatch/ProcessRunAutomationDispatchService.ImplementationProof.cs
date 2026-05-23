@@ -883,7 +883,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         if (string.Equals(toolName, "workspace_write_file", StringComparison.Ordinal) ||
             string.Equals(toolName, "workspace_append_file", StringComparison.Ordinal))
         {
-            return HasConcreteProductImplementationPath(candidate, receipt);
+            return RequiresCurrentAttemptProductMutation(candidate)
+                ? HasConcreteProductDeliverableOrSourcePath(receipt)
+                : HasConcreteProductImplementationPath(candidate, receipt);
         }
 
         return HasConcreteProductPath(receipt);
@@ -973,6 +975,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
         }
 
+        foreach (Match match in ManagedWorkspacePathRegex.Matches(requestSummary))
+        {
+            var candidatePath = WorkspaceScopeDescriptor.NormalizeRelativePath(match.Groups["path"].Value);
+            if (IsManagedProcessRunProductOutputPath(candidatePath))
+            {
+                paths.Add(candidatePath);
+            }
+        }
+
         return paths.ToList();
     }
 
@@ -1056,9 +1067,65 @@ internal sealed partial class ProcessRunAutomationDispatchService
                    !segments.Any(IsExternalTargetNonProductPathSegment);
         }
 
-        return segments.Length > 0 &&
-               !IsManagedRootSegment(segments[0]) &&
-               !segments.Any(IsNonProductPathSegment);
+        if (segments.Length == 0)
+        {
+            return false;
+        }
+
+        if (IsManagedRootSegment(segments[0]))
+        {
+            return IsManagedProcessRunProductOutputPath(segments);
+        }
+
+        return !segments.Any(IsNonProductPathSegment);
+    }
+
+    private static bool IsManagedProcessRunProductOutputPath(string path)
+    {
+        var normalized = WorkspaceScopeDescriptor.NormalizeRelativePath(path);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return false;
+        }
+
+        var segments = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return IsManagedProcessRunProductOutputPath(segments);
+    }
+
+    private static bool IsManagedProcessRunProductOutputPath(IReadOnlyList<string> segments)
+    {
+        if (segments.Count == 0 ||
+            !string.Equals(segments[0], "output", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var processRunsIndex = -1;
+        for (var index = 1; index < segments.Count; index++)
+        {
+            if (string.Equals(segments[index], "process-runs", StringComparison.OrdinalIgnoreCase))
+            {
+                processRunsIndex = index;
+                break;
+            }
+        }
+
+        if (processRunsIndex < 0 || segments.Count <= processRunsIndex + 2)
+        {
+            return false;
+        }
+
+        return segments
+            .Skip(processRunsIndex + 2)
+            .All(segment => !IsManagedProcessRunNonProductPathSegment(segment));
+    }
+
+    private static bool IsManagedProcessRunNonProductPathSegment(string segment)
+    {
+        return string.Equals(segment, "bin", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(segment, "obj", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(segment, ".git", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(segment, ".playwright-mcp", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool RequiresSourceOrProjectImplementationProof(DispatchCandidate candidate)

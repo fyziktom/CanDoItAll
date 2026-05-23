@@ -1,0 +1,17 @@
+# Scope Inventory
+
+| Area | Files | Notes |
+| --- | --- | --- |
+| Browser proof gating | `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.GovernedRules.cs` | Derives whether a process step requires concrete browser proof. Keep generic. |
+| Prompt construction | `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ExecutionPrompt.cs`, `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RecoveryDirective.cs` | Already instruct browser proof, but must align with durable artifact requirements and meaningful review. |
+| Artifact validation | `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ArtifactValidation.cs` | Expected path extraction, provider-native browser tool mapping, and missing proof summaries. |
+| Artifact projection | `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ArtifactProjection.cs` | Copies provider-native browser output into managed/scoped process artifacts. |
+| Browser proof inspection | `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.BrowserProof.cs` | Current snapshot checks catch starter/runtime errors but not detached or shallow proof. |
+| Tool validation and completion reasons | `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ToolValidation.cs`, `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.OutputValidation.cs`, `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs` | Must reject missing/invalid browser evidence before accepting QA/release readiness. |
+| Provider-native MCP execution detail | `repo://src/CanDoItAll.AgentFramework.Core/Execution/AgentFrameworkWorkspaceExecutionService.ProviderNativeMcp.cs` | Needs durable output discovery when chat history messages are empty. |
+| MCP wrapper | `repo://src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.Mcp.cs` | Mirrors screenshots when requested file exists; may need generalized output capture or filename-result handling. |
+| Tool policy | `repo://src/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs` | May constrain screenshot and browser tool arguments. Keep bounded evidence behavior. |
+| Process UI/read models | `repo://src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceRunDetailsLoader.cs` and related process components | May need to surface browser evidence and conformance observations. |
+| Process definitions/seeds | Search for `Multi-team software delivery and release governance`, `Regression evidence pack`, `runtime or browser proof` | Update seeded or synchronized definitions generically. Confirm exact files during execution because definitions may be database-seeded. |
+| Integration tests | `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`, `repo://tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs`, `repo://tests/CanDoItAll.Tests.Playwright` | Add failing-first and passing proof for evidence ledger behavior. |
+| Prior related bundle | `repo://codex/bundles/process-multiteam-tetris-demo-hardening` | Do not reopen unless execution finds overlapping stale changes; use as historical context only. |

@@ -36,6 +36,7 @@ public partial class ProjectStructurePage
     private bool IsReconnectMode => !string.IsNullOrWhiteSpace(reconnectNodeId);
     private bool IsDependencyMode => string.Equals(canvasToolMode, CanvasAuthoringMode.Dependency, StringComparison.Ordinal);
     private bool IsDeleteMode => string.Equals(canvasToolMode, CanvasAuthoringMode.Delete, StringComparison.Ordinal);
+    private ProjectStructureNode? MermaidViewerNode => HasMermaidViewer(mermaidPreviewNode) ? mermaidPreviewNode : null;
 
     private bool CanCreateTranscript(ProjectStructureNode? node)
         => node?.ObjectType == ProjectObjectType.Recording;
@@ -50,8 +51,7 @@ public partial class ProjectStructurePage
             return false;
         }
 
-        if (string.Equals(node.ObjectSubtype, "mermaid", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(node.ObjectSubtype, "mmd", StringComparison.OrdinalIgnoreCase))
+        if (HasMermaidObjectSubtype(node.ObjectSubtype))
         {
             return true;
         }
@@ -67,12 +67,28 @@ public partial class ProjectStructurePage
         }
 
         if (metadata.File?.FileSubtype == ProjectFileSubtype.Mermaid ||
-            metadata.File?.MermaidDiagramKind is not MermaidDiagramKind.Unknown)
+            HasMermaidFileExtension(metadata.File?.ExternalPath))
         {
             return true;
         }
 
-        return ProjectObjectMetadataSerializer.DetectMermaidDiagramKind(node.Notes) is not MermaidDiagramKind.Unknown;
+        return false;
+    }
+
+    private static bool HasMermaidObjectSubtype(string? objectSubtype)
+        => string.Equals(objectSubtype, "mermaid", StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(objectSubtype, "mmd", StringComparison.OrdinalIgnoreCase);
+
+    private static bool HasMermaidFileExtension(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return false;
+        }
+
+        var extension = Path.GetExtension(path);
+        return string.Equals(extension, ".mmd", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(extension, ".mermaid", StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task BeginReconnectAsync(string? nodeId = null)
@@ -561,7 +577,17 @@ public partial class ProjectStructurePage
     }
 
     private void OpenMermaidViewer(ProjectStructureNode node)
-        => mermaidPreviewNode = node;
+    {
+        if (!HasMermaidViewer(node))
+        {
+            mermaidPreviewNode = null;
+            OpenAttachmentPreview(node);
+            return;
+        }
+
+        previewNode = null;
+        mermaidPreviewNode = node;
+    }
 
     private void CloseMermaidViewer()
         => mermaidPreviewNode = null;

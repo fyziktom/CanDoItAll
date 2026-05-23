@@ -62,6 +62,7 @@ public partial class CognitiveMemoryPage
     internal bool isBusy;
     internal int uiRevision;
     internal CognitiveMemoryAutomationScheduleMode automationScheduleMode = CognitiveMemoryAutomationScheduleMode.ManualOnly;
+    internal bool isEnabled = true;
     internal string nightlyLocalTime = "02:00";
     internal int idleMinutes = 30;
     internal string scheduledLocalTimesText = string.Empty;

@@ -1,0 +1,28 @@
+{
+  "invariants": [
+    {
+      "Invariant ID": "SB01-INV01",
+      "Source raw note": "The workflow LLM node failed because Cognitive Memory context had no project scope.",
+      "Expected behavior": "Workflow JSON projectId is passed to MAF context contributors as project scope.",
+      "Disallowed shallow implementation": "Do not disable Cognitive Memory and do not catch all contributor failures.",
+      "Failing-first test": "Original log demonstrated missing project scope; no separate pre-patch test was retained.",
+      "Passing test": "MafWorkflowLlmComponentInvokerPassesProjectScopeFromWorkflowPayload",
+      "Changed source files": "repo://src/CanDoItAll.AgentFramework.Maf/Runtime/Workflows/MafWorkflowLlmComponentInvoker.cs; repo://src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.cs",
+      "Production assertions": "CreateExecutionOptions resolves projectId and CreateCapabilityStateCoreAsync receives the explicit context scope.",
+      "Red-team negative case": "Cognitive_memory_contributor_fails_process_automation_when_project_scope_is_missing",
+      "Downstream dependency check": "SB02 live Office365 workflow completed after this invariant was implemented."
+    },
+    {
+      "Invariant ID": "SB01-INV02",
+      "Source raw note": "A newly created project can have no Cognitive Memory context yet.",
+      "Expected behavior": "Empty context pack is reported as a skipped contribution with trace metadata.",
+      "Disallowed shallow implementation": "Do not treat actual recall exceptions as skipped.",
+      "Failing-first test": "Live run before this fix failed after Graph fetch with empty context pack.",
+      "Passing test": "Cognitive_memory_contributor_skips_empty_context_pack_for_process_automation",
+      "Changed source files": "repo://src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryMafIntegration.cs",
+      "Production assertions": "Only blank rendered context is skipped; InvalidOperationException still uses SkipOrFail.",
+      "Red-team negative case": "Cognitive_memory_contributor_fails_process_automation_when_required_memory_is_unavailable",
+      "Downstream dependency check": "SB02 live run produced the markdown asset instead of stopping at Cognitive Memory."
+    }
+  ]
+}

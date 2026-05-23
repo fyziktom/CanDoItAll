@@ -17,6 +17,7 @@ public sealed class CognitiveMemoryOperationalSettingsTests
         var service = new CognitiveMemoryAutomationSettingsService(fixture.Factory, fixture.Clock);
 
         var saved = await service.SaveAsync(new CognitiveMemoryAutomationSettingsUpdate(
+            IsEnabled: false,
             CognitiveMemoryAutomationScheduleMode.ScheduledMoments,
             "01:30",
             45,
@@ -39,6 +40,8 @@ public sealed class CognitiveMemoryOperationalSettingsTests
 
         var loaded = await service.GetAsync();
 
+        Assert.False(saved.IsEnabled);
+        Assert.False(loaded.IsEnabled);
         Assert.Equal(CognitiveMemoryAutomationScheduleMode.ScheduledMoments, saved.ScheduleMode);
         Assert.Equal("01:30", loaded.NightlyLocalTime);
         Assert.Equal(45, loaded.IdleMinutes);

@@ -459,7 +459,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             var allowedSummary = readableAliases.Length == 0
                 ? "no external-target roots are grounded for this run"
                 : $"current-run roots: {string.Join(", ", readableAliases)}";
-            var currentRunGuidance = BuildCurrentRunExternalTargetGuidance(readableAliases);
+            var currentRunGuidance = BuildCurrentRunExternalTargetGuidance(allowedAliases, readOnlyAliases);
             var scaffoldGuidance = BuildScaffoldParentGuidance(context, allowedAliases);
             return ToolInvocationPolicyDecision.Deny(
                 signature,
@@ -469,14 +469,21 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         return null;
     }
 
-    private static string BuildCurrentRunExternalTargetGuidance(IReadOnlyList<string> allowedAliases)
+    private static string BuildCurrentRunExternalTargetGuidance(
+        IReadOnlyList<string> writableAliases,
+        IReadOnlyList<string> readOnlyAliases)
     {
-        if (allowedAliases.Count == 0)
+        if (writableAliases.Count > 0)
         {
-            return " No external product root is grounded for this run, so abandon the denied external-target path instead of retrying it.";
+            return $" Current-run writable product root is '{writableAliases[0]}'. Abandon the denied external-target path and inspect or modify only that root, its children, or current-run managed artifact folders.";
         }
 
-        return $" Current-run product root is '{allowedAliases[0]}'. Abandon the denied external-target path and inspect or modify only that root, its children, or current-run managed artifact folders.";
+        if (readOnlyAliases.Count > 0)
+        {
+            return $" Current-run external-target roots are read-only; the first read-only root is '{readOnlyAliases[0]}'. Abandon the denied external-target path and use only grounded read-only roots or current-run managed artifact folders.";
+        }
+
+        return " No external product root is grounded for this run, so abandon the denied external-target path instead of retrying it.";
     }
 
     private static string BuildScaffoldParentGuidance(

@@ -341,6 +341,11 @@ public sealed partial class ProcessRuntimeReadQueryService
         ProcessArtifactExpectation expectation,
         ProcessArtifactExpectationSatisfactionStatus status)
     {
+        if (stepRun.Status == ProcessStepRunStatus.Skipped)
+        {
+            return "Artifact expectation was not required because this step was skipped.";
+        }
+
         if (!expectation.IsRequired)
         {
             return "Optional artifact expectation has not been recorded.";
@@ -437,13 +442,15 @@ public sealed partial class ProcessRuntimeReadQueryService
         IReadOnlyList<ProcessArtifactExpectationSatisfactionViewModel> artifactLedger,
         string manualRecoveryDirective)
     {
-        var missingArtifacts = artifactLedger
-            .Where(item => item.IsRequired)
-            .Where(item => item.Status is ProcessArtifactExpectationSatisfactionStatus.Missing or ProcessArtifactExpectationSatisfactionStatus.ProjectionFailed)
-            .Select(item => item.Title)
-            .Where(item => !string.IsNullOrWhiteSpace(item))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        var missingArtifacts = stepRun.Status == ProcessStepRunStatus.Skipped
+            ? new List<string>()
+            : artifactLedger
+                .Where(item => item.IsRequired)
+                .Where(item => item.Status is ProcessArtifactExpectationSatisfactionStatus.Missing or ProcessArtifactExpectationSatisfactionStatus.ProjectionFailed)
+                .Select(item => item.Title)
+                .Where(item => !string.IsNullOrWhiteSpace(item))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
         var recoveryClassification = ResolveInitialRecoveryClassification(stepRun, missingArtifacts, manualRecoveryDirective);
         return ProcessStepRunHealthViewModel.Empty with
         {

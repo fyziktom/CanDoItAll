@@ -316,6 +316,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ExecutionRunDetail detail,
         string? responseText,
         IReadOnlyList<string> missingRequiredTools,
+        CarriedImplementationProof carriedImplementationProof,
         int attemptNumber,
         int maxExecutionAttempts)
     {
@@ -348,9 +349,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         return attemptNumber < maxExecutionAttempts
                && run.State == ExecutionState.Completed
-               && run.PendingApprovals.Count == 0
-               && run.Outcome == RunOutcome.Succeeded
-                && ResolveIncompleteSuccessfulRunRetryReasons(candidate, detail, responseText, missingRequiredTools).Count > 0;
+                && run.PendingApprovals.Count == 0
+                && run.Outcome == RunOutcome.Succeeded
+                && ResolveIncompleteSuccessfulRunRetryReasons(
+                    candidate,
+                    detail,
+                    responseText,
+                    missingRequiredTools,
+                    carriedImplementationProof).Count > 0;
     }
 
     private static bool ShouldRetryRepairableImplementationBlockedOutcome(
@@ -479,7 +485,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
         DispatchCandidate candidate,
         ExecutionRunDetail detail,
         string? responseText,
-        IReadOnlyList<string> missingRequiredTools)
+        IReadOnlyList<string> missingRequiredTools,
+        CarriedImplementationProof carriedImplementationProof)
     {
         var reasons = new List<string>();
         if (missingRequiredTools.Count > 0)
@@ -507,11 +514,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var inspectionText = ResolveOutputInspectionText(responseText);
         AddRetryReason(reasons, "incomplete implementation", ResolveIncompleteImplementationSummary(candidate, inspectionText));
         AddRetryReason(reasons, "missing concrete proof", ResolveMissingConcreteProofSummary(candidate, inspectionText));
-        AddRetryReason(reasons, "missing concrete implementation proof", ResolveMissingConcreteImplementationProofSummary(candidate, detail));
+        AddRetryReason(
+            reasons,
+            "missing concrete implementation proof",
+            ResolveMissingConcreteImplementationProofSummaryWithCarryForward(candidate, detail, carriedImplementationProof));
         AddRetryReason(reasons, "missing runnable application proof", ResolveMissingRunnableApplicationProofSummary(candidate, detail));
         AddRetryReason(reasons, "invalid browser proof", ResolveInvalidBrowserProofSummary(candidate, detail));
         AddRetryReason(reasons, "invalid quality validation proof", ResolveInvalidQualityValidationProofSummary(candidate, detail, inspectionText));
         AddRetryReason(reasons, "missing required artifact", ResolveMissingRequiredArtifactSummary(candidate, detail, inspectionText));
+        AddRetryReason(reasons, "downgraded project-structure requirement", ResolveDowngradedProjectStructureRequirementSummary(candidate, detail, inspectionText));
         AddRetryReason(reasons, "missing upstream artifact inspection", ResolveMissingUpstreamArtifactInspectionSummary(candidate, detail));
         AddRetryReason(reasons, "stale or ungrounded product path reference", ResolveOutOfScopeExternalTargetReferenceSummary(detail, inspectionText));
         AddRetryReason(reasons, "shared managed artifact collision risk", ResolveShallowSharedManagedArtifactReferenceSummary(detail, inspectionText));
@@ -789,6 +800,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
             else if (declaredOutcome.Status != ProcessStepRunStatus.Completed)
             {
+                if (DeclaredBlockedOutcomeClaimsRequiredToolFailureWithoutReceipt(
+                    declaredOutcome,
+                    responseText,
+                    missingRequiredTools,
+                    detail))
+                {
+                    return $"AgentFramework run '{run.Title}' claimed '{stepTitle}' is blocked by a required tool failure, but no failed receipt for the required tool was recorded. Required tools: {string.Join(", ", missingRequiredTools)}.";
+                }
+
                 if (TryResolveRepairBranchCompletionFromBlockedOutcome(
                     candidate,
                     detail,
@@ -850,6 +870,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var invalidBrowserProofSummary = ResolveInvalidBrowserProofSummary(candidate, detail);
         var invalidQualityValidationProofSummary = ResolveInvalidQualityValidationProofSummary(candidate, detail, inspectionText);
         var missingRequiredArtifactSummary = ResolveMissingRequiredArtifactSummary(candidate, detail, inspectionText);
+        var downgradedProjectStructureRequirementSummary = ResolveDowngradedProjectStructureRequirementSummary(candidate, detail, inspectionText);
         var missingUpstreamArtifactInspectionSummary = ResolveMissingUpstreamArtifactInspectionSummary(candidate, detail);
         var outOfScopeExternalTargetReferenceSummary = ResolveOutOfScopeExternalTargetReferenceSummary(detail, inspectionText);
         var shallowSharedManagedArtifactReferenceSummary = ResolveShallowSharedManagedArtifactReferenceSummary(detail, inspectionText);
@@ -913,6 +934,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 !string.IsNullOrWhiteSpace(missingRequiredArtifactSummary))
             {
                 return $"AgentFramework run '{run.Title}' claimed '{stepTitle}' completed, but required artifacts still could not be recorded automatically: {missingRequiredArtifactSummary}";
+            }
+
+            if (declaredOutcome.Status == ProcessStepRunStatus.Completed &&
+                !string.IsNullOrWhiteSpace(downgradedProjectStructureRequirementSummary))
+            {
+                return $"AgentFramework run '{run.Title}' claimed '{stepTitle}' completed, but generated evidence weakened project-structure scope: {downgradedProjectStructureRequirementSummary}";
             }
 
             if (declaredOutcome.Status == ProcessStepRunStatus.Completed &&
@@ -980,6 +1007,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
         if (!string.IsNullOrWhiteSpace(missingRequiredArtifactSummary))
         {
             return $"AgentFramework run '{run.Title}' could not complete '{stepTitle}' because required artifacts still could not be recorded automatically: {missingRequiredArtifactSummary}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(downgradedProjectStructureRequirementSummary))
+        {
+            return $"AgentFramework run '{run.Title}' could not complete '{stepTitle}' because generated evidence weakened project-structure scope: {downgradedProjectStructureRequirementSummary}";
         }
 
         if (!string.IsNullOrWhiteSpace(missingUpstreamArtifactInspectionSummary))

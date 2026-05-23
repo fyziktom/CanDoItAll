@@ -1292,7 +1292,7 @@ public sealed partial class ProcessesService
 
         var aiDirectorySnapshot = await LoadLaunchAiDirectorySnapshotAsync(dbContext, cancellationToken);
         var aiDirectory = aiDirectorySnapshot.Directory
-            .Where(HasBoundTechnicalAgent)
+            .Where(HasRunnableTechnicalAgent)
             .OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
             .ToList();
         if (aiDirectory.Count == 0)
@@ -1368,13 +1368,19 @@ public sealed partial class ProcessesService
 
             var selectedCandidate = aiDirectory
                 .Select(aiResource => BuildDirectRunAiCandidate(aiResource, requiredSkillIds, aiMatchedSkillsByPartyId))
-                .OrderByDescending(candidate => ScoreCandidateForHrManager(
-                    role,
-                    candidate,
-                    requiredSkillIds,
-                    skillNamesById,
-                    aiFactsByPartyId,
-                    launchContext))
+                .Select(candidate =>
+                {
+                    candidate.Score = ScoreCandidateForHrManager(
+                        role,
+                        candidate,
+                        requiredSkillIds,
+                        skillNamesById,
+                        aiFactsByPartyId,
+                        launchContext);
+                    return candidate;
+                })
+                .Where(candidate => candidate.Score >= MinimumDirectAiCandidateScore)
+                .OrderByDescending(candidate => candidate.Score)
                 .ThenBy(candidate => candidate.DisplayName, StringComparer.OrdinalIgnoreCase)
                 .FirstOrDefault();
 
@@ -1406,7 +1412,7 @@ public sealed partial class ProcessesService
         if (aiResource is null)
         {
             logger.LogWarning(
-                "Process definition version {VersionId} has manager override {ManagerAgentOverrideId}, but no bound AI resource with that party or technical agent id was found for manager role {RoleId}.",
+                "Process definition version {VersionId} has manager override {ManagerAgentOverrideId}, but no runnable AI resource with that party or technical agent id was found for manager role {RoleId}.",
                 publishedVersion.Id,
                 overrideId,
                 role.Id);

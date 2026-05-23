@@ -5,7 +5,7 @@
   "summary": "Builds Blazor Web App and component-driven ASP.NET Core UI deliverables with BaseLib/component-library guidance, focused tests, startup proof, and browser evidence.",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
-  "model": "",
+  "model": "gpt-5.4-mini",
   "workload": "Programming",
   "chatHistoryMode": "FrameworkManaged",
   "temperature": 0.2,

@@ -10,16 +10,19 @@
   "RequiredInputs": [
     "Stakeholder notes.",
     "Delivery target or commercial context.",
-    "Known constraints and exclusions."
+    "Known constraints and exclusions.",
+    "Project-structure source-of-truth notes when available."
   ],
   "OutputSchema": [
     "Structured scope summary.",
     "Acceptance boundary.",
-    "Known exclusions and dependencies."
+    "Known exclusions and dependencies.",
+    "Explicit source-of-truth requirements preserved as required unless the source says they are optional or deferred."
   ],
   "RefusalConditions": [
     "Refuse when the request lacks an identifiable owner or objective.",
-    "Do not fabricate acceptance criteria or dates."
+    "Do not fabricate acceptance criteria or dates.",
+    "Do not downgrade explicit project-structure requirements to optional, excluded, non-acceptance, or follow-up work without an accepted scope decision."
   ],
   "DocPath": "shared/prompts/prompt-intake-summarizer.md"
 }

@@ -1,0 +1,5 @@
+{
+    "processKey":  "blazor-app-delivery",
+    "source":  "template-pack",
+    "note":  "Projected at runtime by ProcessTemplateProjectionService."
+}

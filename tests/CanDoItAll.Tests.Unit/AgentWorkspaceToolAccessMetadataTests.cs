@@ -48,6 +48,15 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
     }
 
     [Fact]
+    public void NormalizeExternalTargetAlias_strips_approved_product_root_annotation()
+    {
+        var alias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
+            "external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-170653 Approved product root for this run");
+
+        Assert.Equal("external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-170653", alias);
+    }
+
+    [Fact]
     public void IsExternalTargetAliasAllowed_accepts_root_and_children_but_rejects_siblings()
     {
         var allowedAliases = new[]

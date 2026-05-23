@@ -99,6 +99,41 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
+    public void ApplyProjectStructureReadAccess_adds_project_scoped_read_access()
+    {
+        var projectId = Guid.NewGuid();
+        var agentEditor = new AgentEditorModel();
+
+        var changed = ProcessRunAutomationDispatchService.ApplyProjectStructureReadAccess(agentEditor, projectId);
+
+        Assert.True(changed);
+        Assert.True(agentEditor.ProjectStructureAccess.CanRead);
+        Assert.False(agentEditor.ProjectStructureAccess.CanWrite);
+        Assert.False(agentEditor.ProjectStructureAccess.AllowAllProjects);
+        Assert.Equal([projectId], agentEditor.ProjectStructureAccess.AllowedProjectIds);
+    }
+
+    [Fact]
+    public void ApplyProjectStructureReadAccess_preserves_existing_allow_all_scope()
+    {
+        var agentEditor = new AgentEditorModel
+        {
+            ProjectStructureAccess = new AgentProjectStructureAccessSettings
+            {
+                CanRead = true,
+                AllowAllProjects = true
+            }
+        };
+
+        var changed = ProcessRunAutomationDispatchService.ApplyProjectStructureReadAccess(agentEditor, Guid.NewGuid());
+
+        Assert.False(changed);
+        Assert.True(agentEditor.ProjectStructureAccess.CanRead);
+        Assert.True(agentEditor.ProjectStructureAccess.AllowAllProjects);
+        Assert.Empty(agentEditor.ProjectStructureAccess.AllowedProjectIds);
+    }
+
+    [Fact]
     public void ResolveBlockingAutomationExecutionRunId_returns_latest_fresh_active_automation_run()
     {
         var olderRun = CreateExecutionRun("process-automation-dispatch", ExecutionState.Preparing, null) with
@@ -282,6 +317,27 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
+    public void TryResolveExternalTargetHintFromProjectStructureGrounding_trims_project_note_metadata_tail()
+    {
+        var method = typeof(ProcessRunAutomationDispatchService).GetMethod(
+            "TryResolveExternalTargetHintFromProjectStructureGrounding",
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("TryResolveExternalTargetHintFromProjectStructureGrounding method was not found.");
+        object?[] arguments =
+        [
+            "Requirements from project-level planning context:\n- output must be placed in C:\\programovani\\csharp\\workflow (note:output-path); type: ProjectBlock/note",
+            string.Empty,
+            string.Empty
+        ];
+
+        var resolved = (bool)method.Invoke(null, arguments)!;
+
+        Assert.True(resolved);
+        Assert.Equal("C:\\programovani\\csharp\\workflow", arguments[1]);
+        Assert.Equal("external-target/C/programovani/csharp/workflow", arguments[2]);
+    }
+
+    [Fact]
     public void TrySplitExternalTargetAliasForScaffold_returns_parent_alias_and_project_name()
     {
         var method = typeof(ProcessRunAutomationDispatchService).GetMethod(
@@ -351,6 +407,20 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
+    public void PruneAllowedExternalTargetAliasesForCurrentRun_keeps_product_root_when_descendant_product_path_exists()
+    {
+        var aliases = ProcessRunAutomationDispatchService.PruneAllowedExternalTargetAliasesForCurrentRun(
+        [
+            "external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-192839/product",
+            "external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-192839/product/tests/product"
+        ]);
+
+        Assert.Contains(
+            "external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-192839/product",
+            aliases);
+    }
+
+    [Fact]
     public void PruneAllowedExternalTargetAliasesForCurrentRun_removes_ambiguous_prefix_aliases()
     {
         var aliases = ProcessRunAutomationDispatchService.PruneAllowedExternalTargetAliasesForCurrentRun(
@@ -409,6 +479,30 @@ public sealed class ProcessRunAutomationDispatchServiceTests
 
         var alias = Assert.Single(aliases);
         Assert.Equal("external-target/C/programovani/dotnet/HarborShiftScheduler", alias);
+    }
+
+    [Fact]
+    public void PruneAllowedExternalTargetAliasesForCurrentRun_strips_inline_hosting_sentence()
+    {
+        var aliases = ProcessRunAutomationDispatchService.PruneAllowedExternalTargetAliasesForCurrentRun(
+        [
+            "external-target/C/programovani/dotnet-demo/output. - Hosting target: ordinary static web hosting."
+        ]);
+
+        var alias = Assert.Single(aliases);
+        Assert.Equal("external-target/C/programovani/dotnet-demo/output", alias);
+    }
+
+    [Fact]
+    public void PruneAllowedExternalTargetAliasesForCurrentRun_strips_approved_product_root_annotation()
+    {
+        var aliases = ProcessRunAutomationDispatchService.PruneAllowedExternalTargetAliasesForCurrentRun(
+        [
+            "external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-170653 Approved product root for this run"
+        ]);
+
+        var alias = Assert.Single(aliases);
+        Assert.Equal("external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-170653", alias);
     }
 
     [Fact]
@@ -527,6 +621,25 @@ public sealed class ProcessRunAutomationDispatchServiceTests
 
         Assert.True(mapped);
         Assert.Equal("external-target/C/programovani/dotnet/HarborShiftScheduler", arguments[1]);
+    }
+
+    [Fact]
+    public void TryMapAbsoluteExternalPathToAlias_strips_inline_hosting_sentence()
+    {
+        var method = typeof(ProcessRunAutomationDispatchService).GetMethod(
+            "TryMapAbsoluteExternalPathToAlias",
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("TryMapAbsoluteExternalPathToAlias method was not found.");
+        object?[] arguments =
+        [
+            @"C:\programovani\dotnet-demo\output. - Hosting target: ordinary static web hosting.",
+            string.Empty
+        ];
+
+        var mapped = (bool)method.Invoke(null, arguments)!;
+
+        Assert.True(mapped);
+        Assert.Equal("external-target/C/programovani/dotnet-demo/output", arguments[1]);
     }
 
     [Fact]
@@ -651,6 +764,21 @@ public sealed class ProcessRunAutomationDispatchServiceTests
             Product root: external-target/C/programovani/dotnet/ReadingTimeBudgeter.
             """,
             ["external-target/C/programovani/dotnet/ReadingTimeBudgeter"]);
+
+        Assert.Equal(string.Empty, summary);
+    }
+
+    [Fact]
+    public void ResolveOutOfScopeExternalTargetReferenceSummary_allows_documented_current_run_output_root()
+    {
+        var summary = ProcessRunAutomationDispatchService.ResolveOutOfScopeExternalTargetReferenceSummary(
+            """
+            Run boundary:
+            - Output root: C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-192839
+            - Product root: C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-192839\product
+            - Fresh screenshot file: artifacts/process-runs/run-001/tetris-revalidated-current.png
+            """,
+            ["external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-192839/product"]);
 
         Assert.Equal(string.Empty, summary);
     }
@@ -919,6 +1047,122 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         Assert.DoesNotContain("workspace_dotnet_run", tools);
         Assert.DoesNotContain("browser_snapshot", tools);
         Assert.DoesNotContain("browser_take_screenshot", tools);
+    }
+
+    [Fact]
+    public void ResolveRequiredToolNames_does_not_require_project_structure_writeback_for_applicable_intake_wording()
+    {
+        var tools = InvokeResolveRequiredToolNames(
+            new ProcessDefinition
+            {
+                Name = "Blazor app delivery",
+                Slug = "blazor-app-delivery"
+            },
+            new ProcessStepDefinition
+            {
+                Key = "resolve-blazor-delivery-contract",
+                Title = "Resolve Blazor delivery contract",
+                StepKind = ProcessStepKind.Review,
+                EvidenceContractSummary = "Capture process artifact paths and project-structure writeback references as applicable."
+            },
+            new ProcessStepRun
+            {
+                Title = "Resolve Blazor delivery contract",
+                StepKind = ProcessStepKind.Review,
+                CurrentExecutorName = "Blazor delivery manager"
+            },
+            new ProcessWorkBrief
+            {
+                Title = "Resolve Blazor delivery contract",
+                WorkBriefText = "Read the project structure context and produce the delivery contract. Include project-structure writeback references as applicable for later result-recording steps.",
+                ExpectedOutcome = "Delivery contract is ready for implementation.",
+                EvidenceExpectationSummary = "Delivery contract"
+            },
+            [
+                (ProcessArtifactKind.Brief, "Blazor delivery contract", "Must include target work item, selected app mode, product root, acceptance criteria, and evidence plan.")
+            ],
+            ProcessProjectStructureContextFormatter.AppendToTriggerReason(
+                "Deliver the generated application showcase.",
+                new ProcessProjectStructureContext
+                {
+                    ProjectId = Guid.NewGuid(),
+                    NodeId = "custom:basic-app",
+                    NodeTitle = "Basic App"
+                }));
+
+        Assert.Contains("project_structure_read", tools);
+        Assert.DoesNotContain("project_structure_node_create", tools);
+        Assert.DoesNotContain("project_structure_asset_create", tools);
+    }
+
+    [Fact]
+    public void RequiresConcreteImplementationProof_exempts_dotnet_solution_setup_scaffold_step()
+    {
+        var requiresProof = InvokeRequiresConcreteImplementationProof(
+            new ProcessDefinition
+            {
+                Name = ".NET solution setup subprocess",
+                Slug = "dotnet-solution-setup"
+            },
+            new ProcessStepDefinition
+            {
+                Key = "create-dotnet-project",
+                Title = "Create solution and .NET app project",
+                StepKind = ProcessStepKind.Work
+            },
+            new ProcessStepRun
+            {
+                Title = "Create solution and .NET app project",
+                StepKind = ProcessStepKind.Work,
+                CurrentExecutorName = ".NET Application Developer"
+            },
+            new ProcessWorkBrief
+            {
+                Title = "Create solution and .NET app project",
+                WorkBriefText = "Create the requested solution skeleton. Build, test, runtime smoke, and browser proof belong to later validation steps.",
+                ExpectedOutcome = "Solution and app project are present.",
+                EvidenceExpectationSummary = "Solution skeleton change set"
+            },
+            [
+                (ProcessArtifactKind.Deliverable, "Solution skeleton change set", "Must include the .slnx or .sln solution file, requested .NET app project, selected template proof, and solution membership proof.")
+            ]);
+
+        Assert.False(requiresProof);
+    }
+
+    [Fact]
+    public void RequiresConcreteImplementationProof_keeps_generic_implementation_change_set_required()
+    {
+        var requiresProof = InvokeRequiresConcreteImplementationProof(
+            new ProcessDefinition
+            {
+                Name = "Software delivery",
+                Slug = "software-delivery"
+            },
+            new ProcessStepDefinition
+            {
+                Key = "implement-feature",
+                Title = "Implement feature",
+                StepKind = ProcessStepKind.Work
+            },
+            new ProcessStepRun
+            {
+                Title = "Implement feature",
+                StepKind = ProcessStepKind.Work,
+                CurrentExecutorName = "Application Developer"
+            },
+            new ProcessWorkBrief
+            {
+                Title = "Implement feature",
+                WorkBriefText = "Implement the requested product behavior and prove the changed files.",
+                ExpectedOutcome = "Implementation is complete.",
+                EvidenceExpectationSummary = "Implementation change set"
+            },
+            [
+                (ProcessArtifactKind.Deliverable, "Implementation change set", "Must include concrete changed product files and validation evidence.")
+            ]);
+
+        Assert.True(requiresProof);
     }
 
     [Fact]
@@ -1331,6 +1575,25 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
+    public void ResolveShallowSharedManagedArtifactReferenceSummary_ignores_deliverable_paths_under_grounded_output_leaf()
+    {
+        var method = typeof(ProcessRunAutomationDispatchService).GetMethod(
+            "ResolveShallowSharedManagedArtifactReferenceSummary",
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveShallowSharedManagedArtifactReferenceSummary method was not found.");
+        const string rootAlias = "external-target/C/programovani/dotnet-demo/output";
+        const string responseText = "Updated output/MIGRATION.md and output/README-validation.md in the grounded product root.";
+        var detail = CreateSuccessfulExecutionDetail(
+            responseText,
+            "{}",
+            serializedInvocationMetadataJson: BuildAllowedExternalTargetMetadata(rootAlias));
+
+        var summary = method.Invoke(null, [detail, responseText]) as string;
+
+        Assert.Equal(string.Empty, summary);
+    }
+
+    [Fact]
     public void ResolveRecoverableAutomationExecutionRunId_returns_latest_terminal_automation_run_for_in_progress_step()
     {
         var attemptStartedAtUtc = DateTimeOffset.UtcNow.AddMinutes(-10);
@@ -1401,6 +1664,24 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         var result = (IEnumerable)method.Invoke(null, [candidate])!;
 
         return result.Cast<string>().ToList();
+    }
+
+    private static bool InvokeRequiresConcreteImplementationProof(
+        ProcessDefinition definition,
+        ProcessStepDefinition stepDefinition,
+        ProcessStepRun stepRun,
+        ProcessWorkBrief workBrief,
+        (ProcessArtifactKind ArtifactKind, string Title, string ValidationRequirementSummary)[] expectedArtifactDefinitions,
+        string triggerReason = "Create a grounded .NET app from project structure.")
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var method = serviceType.GetMethod(
+            "RequiresConcreteImplementationProof",
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("RequiresConcreteImplementationProof method was not found.");
+        var candidate = CreateDispatchCandidate(definition, stepDefinition, stepRun, workBrief, expectedArtifactDefinitions, triggerReason);
+
+        return (bool)method.Invoke(null, [candidate])!;
     }
 
     private static object CreateDispatchCandidate(
@@ -2580,9 +2861,75 @@ public sealed class ProcessRunAutomationDispatchServiceTests
             prompt,
             StringComparison.Ordinal);
         Assert.Contains(
+            "Missing preferences are different from stated requirements.",
+            prompt,
+            StringComparison.Ordinal);
+        Assert.Contains(
             "Do not use status Blocked for ambiguity that can be handled by explicit assumptions",
             prompt,
             StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ResolveDowngradedProjectStructureRequirementSummary_flags_weakened_grounded_requirement()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveSummary = serviceType.GetMethod(
+                "ResolveDowngradedProjectStructureRequirementSummary",
+                BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveDowngradedProjectStructureRequirementSummary method was not found.");
+        var candidate = CreateDispatchCandidate(
+            "Clarify scope and release boundary from project-structure source of truth.",
+            ProcessStepKind.Start,
+            (ProcessArtifactKind.Brief,
+                "Scope boundary packet",
+                true,
+                "Must preserve explicit project-structure source-of-truth requirements without downgrading them to optional, excluded, non-acceptance, or follow-up work."));
+        const string prompt = """
+You are executing a CanDoItAll process step.
+
+Live project structure grounding:
+Requirements from project-level planning context:
+- Persistence: save the best score locally (note:persistence); type: ProjectBlock/note
+- Mobile app can be handled later if needed (note:mobile); type: ProjectBlock/note
+""";
+        const string response = "Persistence: local score storage is optional and not required for acceptance.";
+        var detail = CreateSuccessfulExecutionDetail(response, "{}", prompt: prompt);
+
+        var summary = Assert.IsType<string>(resolveSummary.Invoke(null, [candidate, detail, response]));
+
+        Assert.Contains("downgrades a grounded project-structure requirement", summary, StringComparison.Ordinal);
+        Assert.Contains("Persistence", summary, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ResolveDowngradedProjectStructureRequirementSummary_ignores_source_marked_as_deferred()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveSummary = serviceType.GetMethod(
+                "ResolveDowngradedProjectStructureRequirementSummary",
+                BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveDowngradedProjectStructureRequirementSummary method was not found.");
+        var candidate = CreateDispatchCandidate(
+            "Clarify scope and release boundary from project-structure source of truth.",
+            ProcessStepKind.Start,
+            (ProcessArtifactKind.Brief,
+                "Scope boundary packet",
+                true,
+                "Must preserve explicit project-structure source-of-truth requirements without downgrading them to optional, excluded, non-acceptance, or follow-up work."));
+        const string prompt = """
+You are executing a CanDoItAll process step.
+
+Live project structure grounding:
+Requirements from project-level planning context:
+- Mobile app can be handled later if needed (note:mobile); type: ProjectBlock/note
+""";
+        const string response = "Mobile app work is out of scope for this run.";
+        var detail = CreateSuccessfulExecutionDetail(response, "{}", prompt: prompt);
+
+        var summary = Assert.IsType<string>(resolveSummary.Invoke(null, [candidate, detail, response]));
+
+        Assert.Equal(string.Empty, summary);
     }
 
     [Fact]
@@ -2918,6 +3265,113 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
+    public void BuildProjectStructureGroundingSummary_prioritizes_selected_run_instruction_product_root()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var groundingNodeType = serviceType.GetNestedType("ProjectStructureGroundingNodeData", BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("ProjectStructureGroundingNodeData type was not found.");
+        var nodes = Array.CreateInstance(groundingNodeType, 4);
+        var projectId = Guid.NewGuid();
+        nodes.SetValue(
+            CreateProjectStructureGroundingNode(
+                groundingNodeType,
+                $"project:{projectId:D}",
+                string.Empty,
+                "ProjectRoot",
+                string.Empty,
+                "TetrisGame",
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                "{}"),
+            0);
+        nodes.SetValue(
+            CreateProjectStructureGroundingNode(
+                groundingNodeType,
+                "custom:target",
+                $"project:{projectId:D}",
+                "WorkItem",
+                "implementation",
+                "Implement Blazor app",
+                string.Empty,
+                string.Empty,
+                "Previous run output: C:\\programovani\\dotnet-demo\\output\\codex-live-blazor-20260522-181000\\product",
+                "{}"),
+            1);
+        nodes.SetValue(
+            CreateProjectStructureGroundingNode(
+                groundingNodeType,
+                "custom:current-run",
+                "custom:target",
+                "Note",
+                "run-instructions",
+                "Codex live Blazor delivery run instructions 20260522-190813",
+                string.Empty,
+                string.Empty,
+                """
+                Approved output root: C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-190813
+                Approved product root: C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-190813\product
+                Approved agent evidence root: C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-190813\agent-evidence
+                Approved backup root: C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-190813\project-structure-backup
+                """,
+                "{}"),
+            2);
+        nodes.SetValue(
+            CreateProjectStructureGroundingNode(
+                groundingNodeType,
+                "custom:old-run",
+                "custom:target",
+                "Note",
+                "run-instructions",
+                "Old run instructions 20260522-181000",
+                string.Empty,
+                string.Empty,
+                "Approved product root: C:\\programovani\\dotnet-demo\\output\\codex-live-blazor-20260522-181000\\product",
+                "{}"),
+            3);
+        var method = serviceType
+            .GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .Single(candidate =>
+            {
+                if (candidate.Name != "BuildProjectStructureGroundingSummary")
+                {
+                    return false;
+                }
+
+                var parameters = candidate.GetParameters();
+                return parameters.Length == 3 &&
+                       parameters[0].ParameterType == typeof(string) &&
+                       parameters[2].ParameterType == typeof(ProcessProjectStructureContext);
+            });
+
+        var summary = method.Invoke(
+            null,
+            [
+                "TetrisGame",
+                nodes,
+                new ProcessProjectStructureContext
+                {
+                    ProjectId = projectId,
+                    NodeId = "custom:current-run",
+                    NodeTitle = "Codex live Blazor delivery run instructions 20260522-190813",
+                    ParentNodeId = "custom:target",
+                    ParentNodeTitle = "Implement Blazor app"
+                }
+            ]) as string;
+
+        Assert.NotNull(summary);
+        var currentProductIndex = summary.IndexOf(
+            "external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-190813/product",
+            StringComparison.Ordinal);
+        var oldProductIndex = summary.IndexOf(
+            "external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-181000/product",
+            StringComparison.Ordinal);
+
+        Assert.True(currentProductIndex >= 0);
+        Assert.True(oldProductIndex < 0 || currentProductIndex < oldProductIndex);
+    }
+
+    [Fact]
     public void BuildProjectStructureGroundingSummary_includes_required_artifact_contract_from_focus_node()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
@@ -3129,6 +3583,217 @@ public sealed class ProcessRunAutomationDispatchServiceTests
             .Select(item => item.GetString())
             .ToArray();
         Assert.Contains("external-target/C/programovani/dotnet/output", aliases);
+    }
+
+    [Fact]
+    public void BuildProcessInvocationMetadataJson_keeps_backup_and_evidence_roots_read_only_for_mutating_step()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var method = serviceType.GetMethod("BuildProcessInvocationMetadataJson", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildProcessInvocationMetadataJson method was not found.");
+        var candidate = CreateProjectStructureDispatchCandidate(
+            "Implement the requested app and prove build, tests, and startup smoke.",
+            new ProcessProjectStructureContext
+            {
+                ProjectId = Guid.NewGuid(),
+                NodeId = "custom:basic-app",
+                NodeTitle = "Basic App",
+                ParentNodeId = "process-definition:4fdc77a9-6d8c-4b10-9efb-4be15732b1b0",
+                ParentNodeTitle = "Blazor app delivery"
+            });
+        const string projectStructureGroundingSummary = """
+            Dispatcher fetched the live project structure for `TetrisGame` and focused this prompt on the selected work branch.
+            Grounded external target paths from the selected project structure:
+            - `C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-170653 Approved product root for this run` mapped to `external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-170653 Approved product root for this run` from run note (custom:run-note)
+            - `C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-170653\project-structure-backup` mapped to `external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-170653/project-structure-backup` from backup note (custom:backup-note)
+            - `C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-170653\agent-evidence` mapped to `external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-170653/agent-evidence` from evidence note (custom:evidence-note)
+            - `C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-170653\product` mapped to `external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-170653/product` from product root note (custom:product-note)
+            """;
+
+        var metadataJson = method.Invoke(
+            null,
+            [
+                candidate,
+                new ExecutionInvocationPolicy(),
+                projectStructureGroundingSummary,
+                null
+            ]) as string;
+
+        Assert.False(string.IsNullOrWhiteSpace(metadataJson));
+        using var document = JsonDocument.Parse(metadataJson);
+        var allowedAliases = document.RootElement
+            .GetProperty(ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey)
+            .EnumerateArray()
+            .Select(item => item.GetString())
+            .ToArray();
+        var readOnlyAliases = document.RootElement
+            .GetProperty(ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey)
+            .EnumerateArray()
+            .Select(item => item.GetString())
+            .ToArray();
+
+        var allowedAlias = Assert.Single(allowedAliases);
+        Assert.Equal("external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-170653/product", allowedAlias);
+        Assert.Contains("external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-170653/project-structure-backup", readOnlyAliases);
+        Assert.Contains("external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-170653/agent-evidence", readOnlyAliases);
+        Assert.DoesNotContain(readOnlyAliases, alias => string.Equals(alias, allowedAlias, StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void BuildProcessInvocationMetadataJson_prefers_current_run_product_root_over_stale_project_structure_products()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var method = serviceType.GetMethod("BuildProcessInvocationMetadataJson", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildProcessInvocationMetadataJson method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Implement the requested app and prove build, tests, and startup smoke.",
+            ProcessStepKind.Work,
+            [],
+            false,
+            [],
+            [],
+            triggerReason: "Deliver the generated application showcase.",
+            runName: "Codex live Blazor delivery 20260522-190813",
+            processName: "Blazor app delivery",
+            outputContractSummary: "Buildable Blazor implementation");
+        const string projectStructureGroundingSummary = """
+            Dispatcher fetched the live project structure for `TetrisGame` and focused this prompt on the selected work branch.
+            Grounded external target paths from the selected project structure:
+            - `C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-181000\product` mapped to `external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-181000/product` from old run note (custom:old-run)
+            - `C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-190813\project-structure-backup` mapped to `external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-190813/project-structure-backup` from current run instructions (custom:current-run)
+            """;
+        const string artifactInspectionGroundingSummary = """
+            Upstream artifact excerpt:
+            - Product root: `external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-190813/product`
+            - Output root: `C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-190813`
+            """;
+
+        var metadataJson = method.Invoke(
+            null,
+            [
+                candidate,
+                new ExecutionInvocationPolicy(),
+                projectStructureGroundingSummary,
+                artifactInspectionGroundingSummary
+            ]) as string;
+
+        Assert.False(string.IsNullOrWhiteSpace(metadataJson));
+        using var document = JsonDocument.Parse(metadataJson);
+        var allowedAliases = document.RootElement
+            .GetProperty(ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey)
+            .EnumerateArray()
+            .Select(item => item.GetString())
+            .ToArray();
+        var readOnlyAliases = document.RootElement
+            .GetProperty(ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey)
+            .EnumerateArray()
+            .Select(item => item.GetString())
+            .ToArray();
+
+        var allowedAlias = Assert.Single(allowedAliases);
+        Assert.Equal("external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-190813/product", allowedAlias);
+        Assert.Contains("external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-190813/project-structure-backup", readOnlyAliases);
+        Assert.DoesNotContain(
+            readOnlyAliases,
+            alias => string.Equals(
+                alias,
+                "external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-181000/product",
+                StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void BuildProcessInvocationMetadataJson_keeps_current_product_root_read_only_for_validation_when_descendant_product_path_exists()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var method = serviceType.GetMethod("BuildProcessInvocationMetadataJson", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildProcessInvocationMetadataJson method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Validate Blazor runtime and browser evidence. Inspect inherited source artifacts before accepting the implementation.",
+            ProcessStepKind.Review,
+            [],
+            false,
+            [(ProcessArtifactKind.Evidence, "Regression evidence pack", true, "Must include browser proof, console messages, screenshots, and inspected source artifact evidence.")],
+            [],
+            triggerReason: "Validate current Blazor run outputs under C:\\programovani\\dotnet-demo\\output\\codex-live-blazor-20260522-192839.",
+            stepTitle: "Validate Blazor runtime and browser evidence",
+            processName: "Blazor app delivery",
+            runName: "Codex live Blazor delivery 20260522-192839");
+        const string projectStructureGroundingSummary = """
+            Dispatcher fetched the live project structure for `TetrisGame` and focused this prompt on the selected work branch.
+            Grounded external target paths from the selected project structure:
+            - `C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-181000\product` mapped to `external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-181000/product` from old run note (custom:old-run)
+            - `C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-192839\project-structure-backup` mapped to `external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-192839/project-structure-backup` from current backup note (custom:backup-note)
+            """;
+        const string artifactInspectionGroundingSummary = """
+            Upstream artifact excerpt:
+            - Product root: `external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-192839/product`
+            - Test project root: `external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-192839/product/tests/product`
+            """;
+
+        var metadataJson = method.Invoke(
+            null,
+            [
+                candidate,
+                new ExecutionInvocationPolicy(),
+                projectStructureGroundingSummary,
+                artifactInspectionGroundingSummary
+            ]) as string;
+
+        Assert.False(string.IsNullOrWhiteSpace(metadataJson));
+        using var document = JsonDocument.Parse(metadataJson);
+        Assert.False(document.RootElement.TryGetProperty(ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey, out _));
+        var readOnlyAliases = document.RootElement
+            .GetProperty(ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey)
+            .EnumerateArray()
+            .Select(item => item.GetString())
+            .ToArray();
+
+        Assert.Contains(
+            "external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-192839/product",
+            readOnlyAliases);
+        Assert.Contains(
+            "external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-192839/product/tests/product",
+            readOnlyAliases);
+        Assert.DoesNotContain(
+            readOnlyAliases,
+            alias => string.Equals(
+                alias,
+                "external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-181000/product",
+                StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void BuildProcessInvocationMetadataJson_sets_context_workspace_scope_from_project_structure_context()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var method = serviceType.GetMethod("BuildProcessInvocationMetadataJson", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildProcessInvocationMetadataJson method was not found.");
+        var projectId = Guid.Parse("ea4d3293-ad91-4939-a645-c8f2402a6400");
+        var candidate = CreateProjectStructureDispatchCandidate(
+            "Implement the requested app using the selected project-structure branch.",
+            new ProcessProjectStructureContext
+            {
+                ProjectId = projectId,
+                NodeId = "custom:basic-app",
+                NodeTitle = "Basic App",
+                ParentNodeId = "process-definition:4fdc77a9-6d8c-4b10-9efb-4be15732b1b0",
+                ParentNodeTitle = "Multi-team software delivery and release governance"
+            });
+
+        var metadataJson = method.Invoke(
+            null,
+            [
+                candidate,
+                new ExecutionInvocationPolicy(),
+                null,
+                null
+            ]) as string;
+
+        Assert.False(string.IsNullOrWhiteSpace(metadataJson));
+        using var document = JsonDocument.Parse(metadataJson);
+        var scope = document.RootElement.GetProperty(ExecutionInvocationMetadata.ContextWorkspaceScopeMetadataKey);
+        Assert.Equal(nameof(WorkspaceScopeKind.Project), scope.GetProperty("kind").GetString());
+        Assert.Equal(projectId.ToString("D"), scope.GetProperty("key").GetString());
     }
 
     [Fact]
@@ -3361,6 +4026,207 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         Assert.False(string.IsNullOrWhiteSpace(metadataJson));
         using var document = JsonDocument.Parse(metadataJson);
         Assert.True(document.RootElement.GetProperty(ExecutionInvocationMetadata.ProcessBrowserToolsAllowedMetadataKey).GetBoolean());
+    }
+
+    [Fact]
+    public void BuildProcessInvocationMetadataJson_allows_browser_tools_for_static_web_qa_recheck()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var method = serviceType.GetMethod("BuildProcessInvocationMetadataJson", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildProcessInvocationMetadataJson method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Verify the repaired package from the source document and project structure. The deliverable is a JavaScript static web page with no backend.",
+            ProcessStepKind.Review,
+            [],
+            false,
+            [(ProcessArtifactKind.Evidence, "Repaired regression evidence pack", true, "Must name repaired flows, assertion depth, warning counts, executed-test counts when tests are expected, runtime/API/browser evidence as applicable, screenshots for UI surfaces, and unresolved risks after the repair pass.")],
+            [],
+            triggerReason: "Run launched from selected project-structure node.",
+            stepTitle: "Re-run QA validation and runtime or browser proof after repair",
+            processName: "Multi-team software delivery");
+        const string projectStructureGroundingSummary = """
+            Dispatcher fetched the live project structure and focused this prompt on the selected work branch.
+            Grounded external target paths from the selected project structure:
+            - `C:\programovani\dotnet-demo\output` mapped to `external-target/C/programovani/dotnet-demo/output` from Artifact destination folder (node-target)
+            Project-structure required artifact contract:
+            - Delivery shape: JavaScript static web page.
+            - Runtime: no backend; client-local state only.
+            """;
+
+        var metadataJson = method.Invoke(
+            null,
+            [
+                candidate,
+                new ExecutionInvocationPolicy(),
+                projectStructureGroundingSummary,
+                null
+            ]) as string;
+
+        Assert.False(string.IsNullOrWhiteSpace(metadataJson));
+        using var document = JsonDocument.Parse(metadataJson);
+        Assert.True(document.RootElement.GetProperty(ExecutionInvocationMetadata.ProcessBrowserToolsAllowedMetadataKey).GetBoolean());
+    }
+
+    [Fact]
+    public void BuildProcessInvocationMetadataJson_disables_browser_tools_for_peer_review_with_prior_browser_failure_recovery()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var method = serviceType.GetMethod("BuildProcessInvocationMetadataJson", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildProcessInvocationMetadataJson method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Inputs: implementation package, architecture decision record, and changed-surface inventory. Outputs: peer-reviewed change set with explicit residual risk and follow-up items.",
+            ProcessStepKind.Review,
+            [],
+            false,
+            [(ProcessArtifactKind.Evidence, "Peer review note", true, "Must capture accepted issues, rejected concerns, and explicit residual risk.")],
+            [
+                (
+                    "Implement bounded delivery change",
+                    "Implementation change set",
+                    [
+                        (
+                            "Implementation change set",
+                            "Deliverable",
+                            "artifacts/process-runs/run-1/03-implementation-change-set.md",
+                            "Static browser app delivered; downstream QA will capture browser proof.",
+                            "Created by implementation step."
+                        )
+                    ])
+            ],
+            triggerReason: "Project structure says the product is a static web page hosted from an external output directory.",
+            stepTitle: "Complete peer review and integration readiness",
+            outputContractSummary: "Peer review note",
+            manualRecoveryDirective: """
+                Manual rerun requested for step 'Complete peer review and integration readiness'.
+                Generic dispatcher repair: static-web project grounding identifies the deliverable surface, but peer review does not require browser-proof tools unless this step contract explicitly asks for browser/runtime proof.
+                Prior blocked reason: Mandatory browser proof and PowerShell run-script gating tools were not executed: unable to capture browser_snapshot, browser_take_screenshot, and browser_console_messages because no reachable hosted URL or environment run-script was provided in this run.
+                """);
+        const string projectStructureGroundingSummary = """
+            Dispatcher fetched the live project structure and focused this prompt on the selected work branch.
+            Grounded external target paths from the selected project structure:
+            - `C:\programovani\dotnet-demo\output` mapped to `external-target/C/programovani/dotnet-demo/output` from Artifact destination folder (node-target)
+            Project-structure required artifact contract:
+            - Delivery shape: JavaScript static web page.
+            - Runtime: no backend; client-local state only.
+            """;
+
+        var metadataJson = method.Invoke(
+            null,
+            [
+                candidate,
+                new ExecutionInvocationPolicy(),
+                projectStructureGroundingSummary,
+                null
+            ]) as string;
+
+        Assert.False(string.IsNullOrWhiteSpace(metadataJson));
+        using var document = JsonDocument.Parse(metadataJson);
+        Assert.False(document.RootElement.GetProperty(ExecutionInvocationMetadata.ProcessBrowserToolsAllowedMetadataKey).GetBoolean());
+    }
+
+    [Fact]
+    public void BuildProcessInvocationMetadataJson_disables_browser_tools_for_security_review_after_qa_browser_proof()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var method = serviceType.GetMethod("BuildProcessInvocationMetadataJson", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildProcessInvocationMetadataJson method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Review sensitive-data handling, secrets, boundary changes, and policy exceptions for the QA-accepted package.",
+            ProcessStepKind.Approval,
+            [],
+            false,
+            [(ProcessArtifactKind.Decision, "Security exception assessment", true, "Must capture controls, residual risk owner, and approval or block rationale.")],
+            [
+                (
+                    "Run QA validation and runtime or browser proof",
+                    "Regression evidence pack",
+                    [
+                        (
+                            "Regression evidence pack",
+                            "Evidence",
+                            "artifacts/process-runs/run-1/05-regression-evidence-pack.md",
+                            "Quality accepted with browser proof, screenshot, console messages, and residual risks recorded.",
+                            "Created by QA validation step."
+                        )
+                    ])
+            ],
+            triggerReason: "Project structure says the product is a static web page hosted from an external output directory.",
+            stepTitle: "Perform security and data-handling review",
+            outputContractSummary: "Security outcome with explicit approval, block, or exception rationale.");
+        const string projectStructureGroundingSummary = """
+            Dispatcher fetched the live project structure and focused this prompt on the selected work branch.
+            Project-structure required artifact contract:
+            - Delivery shape: JavaScript static web page.
+            - Runtime: no backend; client-local state only.
+            """;
+
+        var metadataJson = method.Invoke(
+            null,
+            [
+                candidate,
+                new ExecutionInvocationPolicy(),
+                projectStructureGroundingSummary,
+                null
+            ]) as string;
+
+        Assert.False(string.IsNullOrWhiteSpace(metadataJson));
+        using var document = JsonDocument.Parse(metadataJson);
+        Assert.False(document.RootElement.GetProperty(ExecutionInvocationMetadata.ProcessBrowserToolsAllowedMetadataKey).GetBoolean());
+    }
+
+    [Fact]
+    public void BuildExecutionPromptCore_guides_security_review_to_inspect_inherited_browser_evidence_without_fresh_browser_gate()
+    {
+        var buildExecutionPromptCore = typeof(ProcessRunAutomationDispatchService)
+            .GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .Single(method => method.Name == "BuildExecutionPromptCore" && method.GetParameters().Length == 4);
+        var candidate = CreateDispatchCandidateCore(
+            "Review sensitive-data handling, secrets, boundary changes, and policy exceptions for the QA-accepted package.",
+            ProcessStepKind.Approval,
+            [],
+            false,
+            [(ProcessArtifactKind.Decision, "Security exception assessment", true, "Must capture controls, residual risk owner, and approval or block rationale.")],
+            [
+                (
+                    "Run QA validation and runtime or browser proof",
+                    "Regression evidence pack",
+                    [
+                        (
+                            "Regression evidence pack",
+                            "Evidence",
+                            "artifacts/process-runs/run-1/05-regression-evidence-pack.md",
+                            "Quality accepted with browser proof, screenshot, console messages, and residual risks recorded.",
+                            "Created by QA validation step."
+                        )
+                    ])
+            ],
+            triggerReason: "Project structure says the product is a static web page hosted from an external output directory.",
+            stepTitle: "Perform security and data-handling review",
+            outputContractSummary: "Security outcome with explicit approval, block, or exception rationale.");
+        const string projectStructureGroundingSummary = """
+            Dispatcher fetched the live project structure and focused this prompt on the selected work branch.
+            Project-structure required artifact contract:
+            - Delivery shape: JavaScript static web page.
+            - Runtime: no backend; client-local state only.
+            """;
+
+        var prompt = buildExecutionPromptCore.Invoke(
+            null,
+            [
+                candidate,
+                null,
+                projectStructureGroundingSummary,
+                null
+            ]) as string;
+
+        Assert.NotNull(prompt);
+        Assert.Contains("Browser proof boundary:", prompt, StringComparison.Ordinal);
+        Assert.Contains("this step is not browser-proof gated", prompt, StringComparison.Ordinal);
+        Assert.Contains("inspect those inherited artifact paths directly with workspace tools", prompt, StringComparison.Ordinal);
+        Assert.Contains("artifacts/process-runs/run-1/05-regression-evidence-pack.md", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("Mandatory browser proof execution plan:", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("`browser_snapshot`", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("`browser_take_screenshot`", prompt, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -3828,6 +4694,57 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         Assert.Equal(ProcessStepRunStatus.Completed, status);
         Assert.NotNull(reason);
         Assert.Contains("QA accepted the implementation handoff", reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BuildRecoveryDirective_names_missing_inherited_artifact_inspections()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var buildRecoveryDirective = serviceType.GetMethod("BuildRecoveryDirective", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildRecoveryDirective method was not found.");
+        const string changeSetPath = "artifacts/process-runs/run-001/02-blazor-implementation-change-set.md";
+        const string sourcePath = "external-target/C/programovani/dotnet-demo/output/run-001/product/Domain/Tetris/Tetromino.cs";
+        var candidate = CreateReviewDispatchCandidateWithArtifactInputs(
+            "Validate runtime and browser evidence for the inherited Blazor implementation.",
+            (
+                "Build Blazor application",
+                "Blazor implementation change set",
+                [
+                    ("Blazor implementation change set", "Deliverable", changeSetPath, "Implementation artifact was produced.", "workspace"),
+                    ("Tetromino.cs", "Deliverable", sourcePath, "Source artifact was produced.", "external-target")
+                ]));
+        var responseText = StructuredOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "QA accepted the implementation handoff.",
+            evidenceRefs: [changeSetPath, sourcePath]);
+        var detail = CreateSuccessfulExecutionDetail(
+            responseText,
+            BuildSerializedSessionState(
+                (
+                    "workspace_stat_path",
+                    new Dictionary<string, object?> { ["path"] = changeSetPath },
+                    CreateProviderNativeTextResult("Path exists.")),
+                (
+                    "workspace_read_file",
+                    new Dictionary<string, object?> { ["path"] = changeSetPath },
+                    CreateProviderNativeTextResult("Read complete."))));
+
+        var directive = buildRecoveryDirective.Invoke(
+            null,
+            [
+                candidate,
+                detail,
+                responseText,
+                Array.Empty<string>(),
+                Array.Empty<ToolExecutionReceiptRecord>(),
+                1
+            ]) as string;
+
+        Assert.NotNull(directive);
+        Assert.Contains("Inherited upstream artifact inspection is incomplete", directive, StringComparison.Ordinal);
+        Assert.Contains("workspace_stat_path", directive, StringComparison.Ordinal);
+        Assert.Contains("workspace_read_file", directive, StringComparison.Ordinal);
+        Assert.Contains(sourcePath, directive, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -4963,6 +5880,63 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
+    public void ResolveMissingRequiredArtifactSummary_accepts_repair_change_set_written_after_external_deliverable_mutation()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveMissingRequiredArtifactSummary = serviceType.GetMethod(
+            "ResolveMissingRequiredArtifactSummary",
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveMissingRequiredArtifactSummary method was not found.");
+        var candidate = CreateDispatchCandidateWithStepTitle(
+            "Repair validation findings",
+            "Repair validation findings for a JavaScript browser app after QA rejected placeholder validation.",
+            ProcessStepKind.Work,
+            [(ProcessArtifactKind.Deliverable, "Quality repair change set", true, "Must name repaired defects, changed files or deliverables, rerun validation, and unresolved risk.")]);
+        var rootAlias = "external-target/C/programovani/dotnet-demo/output";
+        var now = DateTimeOffset.UtcNow;
+        var detail = CreateSuccessfulExecutionDetail(
+            StructuredOutcome(ProcessStepOutcomeStatus.Completed, "Repair completed."),
+            null,
+            [
+                CreateToolReceipt(
+                    "workspace-file",
+                    "workspace_write_file",
+                    $"{rootAlias}/README-validation.md",
+                    ".",
+                    "Succeeded: Created validation README.",
+                    now),
+                CreateToolReceipt(
+                    "workspace-file",
+                    "workspace_write_file",
+                    $"{rootAlias}/MIGRATION.md",
+                    ".",
+                    "Succeeded: Created migration note.",
+                    now.AddSeconds(1)),
+                CreateToolReceipt(
+                    "workspace-file",
+                    "workspace_read_file",
+                    $"{rootAlias}/index.html",
+                    ".",
+                    "Succeeded: Inspected entrypoint.",
+                    now.AddSeconds(2)),
+                CreateToolReceipt(
+                    "workspace-file",
+                    "workspace_write_file",
+                    "artifacts/process-runs/run-001/06-quality-repair-change-set.md",
+                    ".",
+                    "Succeeded: Created quality repair change set.",
+                    now.AddSeconds(3))
+            ],
+            serializedInvocationMetadataJson: BuildAllowedExternalTargetMetadata(rootAlias));
+
+        var summary = resolveMissingRequiredArtifactSummary.Invoke(
+            null,
+            [candidate, detail, detail.Run.ResultSummary]) as string;
+
+        Assert.Equal(string.Empty, summary);
+    }
+
+    [Fact]
     public void ResolveWorkspaceWrittenArtifactSourceRelativePaths_keeps_unscoped_managed_write_as_read_source()
     {
         var workspaceScope = WorkspaceScopeDescriptor.Organization("dc8abe5458cd4a8798ab5a14de6f846b");
@@ -5228,6 +6202,159 @@ File: artifacts/process-runs/run-001/03-inventory-page.png
         Assert.True(status == ProcessStepRunStatus.Failed, reason);
         Assert.NotNull(reason);
         Assert.Contains("project_structure_asset_create", reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ResolveCompletionStatusWithCarryForward_fails_project_structure_writeback_summary_without_node_tool()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveCompletionStatus = serviceType.GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .SingleOrDefault(method => string.Equals(method.Name, "ResolveCompletionStatusWithCarryForward", StringComparison.Ordinal) &&
+                                       method.GetParameters().Length == 4)
+            ?? throw new InvalidOperationException("ResolveCompletionStatusWithCarryForward method was not found.");
+        var buildCompletionReason = serviceType.GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .SingleOrDefault(method => string.Equals(method.Name, "BuildCompletionReasonWithCarryForward", StringComparison.Ordinal) &&
+                                       method.GetParameters().Length == 5)
+            ?? throw new InvalidOperationException("BuildCompletionReasonWithCarryForward method was not found.");
+        var candidate = CreateDispatchCandidateWithStepTitle(
+            "Record delivery results and evidence index",
+            """
+            Write a compact run evidence index and final verdict back into project structure through APIs/tools.
+            Must call project_structure_node_create before completing.
+            """,
+            ProcessStepKind.Review);
+        var responseText = StructuredOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "Run evidence index and project-structure writeback summary were prepared.",
+            summaryMarkdown: """
+## Project-structure result writeback summary
+Project id: 3569901c-dcc2-4f88-a08a-01801bfae9b9
+Target node id: custom:feature-node
+Created project-structure node id: custom:claimed-writeback-node
+
+## Run evidence index
+Build/test: passed
+Process artifacts: artifacts/process-runs/run-001/07-run-evidence-index.md
+""");
+        var now = DateTimeOffset.UtcNow;
+        var detail = new ExecutionRunDetail(
+            new ExecutionRunRecord(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                null,
+                "Record Blazor results",
+                "process-step",
+                "record-blazor-results",
+                "corr-record-results",
+                "step-transition:Completed",
+                "process-automation-dispatch",
+                "system",
+                "{}",
+                "Prompt",
+                responseText,
+                "OpenAI default",
+                "gpt-5.4-mini",
+                ExecutionState.Completed,
+                RunOutcome.Succeeded,
+                now,
+                now,
+                now,
+                now,
+                string.Empty,
+                null,
+                []),
+            null,
+            [],
+            []);
+        var priorSuccessfulTools = new[]
+        {
+            "project_structure_read",
+            "workspace_read_file",
+            "workspace_write_file"
+        };
+
+        var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail, priorSuccessfulTools, responseText]);
+        var reason = buildCompletionReason.Invoke(
+            null,
+            [candidate, detail, "Record delivery results and evidence index", priorSuccessfulTools, responseText]) as string;
+
+        Assert.True(status == ProcessStepRunStatus.Failed, reason);
+        Assert.NotNull(reason);
+        Assert.Contains("project_structure_node_create", reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ResolveCompletionStatusWithCarryForward_fails_blocked_required_tool_claim_without_failed_receipt()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveCompletionStatus = serviceType.GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .SingleOrDefault(method => string.Equals(method.Name, "ResolveCompletionStatusWithCarryForward", StringComparison.Ordinal) &&
+                                       method.GetParameters().Length == 4)
+            ?? throw new InvalidOperationException("ResolveCompletionStatusWithCarryForward method was not found.");
+        var buildCompletionReason = serviceType.GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .SingleOrDefault(method => string.Equals(method.Name, "BuildCompletionReasonWithCarryForward", StringComparison.Ordinal) &&
+                                       method.GetParameters().Length == 5)
+            ?? throw new InvalidOperationException("BuildCompletionReasonWithCarryForward method was not found.");
+        var candidate = CreateDispatchCandidateWithStepTitle(
+            "Record delivery results and evidence index",
+            """
+            Write the final verdict back into project structure through tools.
+            Must call project_structure_node_create before completing.
+            """,
+            ProcessStepKind.Review);
+        var responseText = StructuredOutcome(
+            ProcessStepOutcomeStatus.Blocked,
+            "project_structure_node_create failed or was unavailable.",
+            summaryMarkdown: """
+## Project-structure result writeback summary
+No node was created because project_structure_node_create failed or was unavailable.
+""");
+        var now = DateTimeOffset.UtcNow;
+        var detail = new ExecutionRunDetail(
+            new ExecutionRunRecord(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                null,
+                "Record Blazor results",
+                "process-step",
+                "record-blazor-results",
+                "corr-record-results",
+                "step-transition:Blocked",
+                "process-automation-dispatch",
+                "system",
+                "{}",
+                "Prompt",
+                responseText,
+                "OpenAI default",
+                "gpt-5.4-mini",
+                ExecutionState.Completed,
+                RunOutcome.Succeeded,
+                now,
+                now,
+                now,
+                now,
+                string.Empty,
+                null,
+                []),
+            null,
+            [],
+            []);
+        var priorSuccessfulTools = new[]
+        {
+            "project_structure_read",
+            "workspace_read_file",
+            "workspace_write_file"
+        };
+
+        var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail, priorSuccessfulTools, responseText]);
+        var reason = buildCompletionReason.Invoke(
+            null,
+            [candidate, detail, "Record delivery results and evidence index", priorSuccessfulTools, responseText]) as string;
+
+        Assert.True(status == ProcessStepRunStatus.Failed, reason);
+        Assert.NotNull(reason);
+        Assert.Contains("no failed receipt", reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("project_structure_node_create", reason, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -5563,7 +6690,7 @@ Use only the project-structure mindmap requirements as scope. Create the request
 
         var shouldRetryResult = shouldRetry.Invoke(
             null,
-            [candidate, detail, detail.Run.ResultSummary, new[] { "workspace_write_file", "workspace_dotnet_build" }, 1, 3]);
+            [candidate, detail, detail.Run.ResultSummary, new[] { "workspace_write_file", "workspace_dotnet_build" }, CreateCarriedImplementationProof(false, false), 1, 3]);
 
         Assert.IsType<bool>(shouldRetryResult);
         Assert.True((bool)shouldRetryResult);
@@ -5641,7 +6768,7 @@ Use only the project-structure mindmap requirements as scope. Create the request
 
         var shouldRetryResult = shouldRetry.Invoke(
             null,
-            [candidate, detail, detail.Run.ResultSummary, Array.Empty<string>(), 1, 3]);
+            [candidate, detail, detail.Run.ResultSummary, Array.Empty<string>(), CreateCarriedImplementationProof(false, false), 1, 3]);
 
         Assert.IsType<bool>(shouldRetryResult);
         Assert.True((bool)shouldRetryResult);
@@ -5737,7 +6864,7 @@ Use only the project-structure mindmap requirements as scope. Create the request
 
         var shouldRetryResult = shouldRetry.Invoke(
             null,
-            [candidate, detail, responseText, Array.Empty<string>(), 1, 3]);
+            [candidate, detail, responseText, Array.Empty<string>(), CreateCarriedImplementationProof(false, false), 1, 3]);
 
         Assert.IsType<bool>(shouldRetryResult);
         Assert.True((bool)shouldRetryResult);
@@ -5797,7 +6924,7 @@ Use only the project-structure mindmap requirements as scope. Create the request
 
         var shouldRetryResult = shouldRetry.Invoke(
             null,
-            [candidate, detail, responseText, Array.Empty<string>(), 1, 3]);
+            [candidate, detail, responseText, Array.Empty<string>(), CreateCarriedImplementationProof(false, false), 1, 3]);
 
         Assert.IsType<bool>(shouldRetryResult);
         Assert.True((bool)shouldRetryResult);
@@ -5865,6 +6992,7 @@ Use only the project-structure mindmap requirements as scope. Create the request
                 detail,
                 responseText,
                 missingBrowserProofTools,
+                CreateCarriedImplementationProof(false, false),
                 1,
                 3
             ]);
@@ -6041,7 +7169,7 @@ Use only the project-structure mindmap requirements as scope. Create the request
 
         var shouldRetryResult = shouldRetry.Invoke(
             null,
-            [candidate, detail, detail.Run.ResultSummary, new[] { "workspace_write_file", "workspace_dotnet_build" }, 3, 3]);
+            [candidate, detail, detail.Run.ResultSummary, new[] { "workspace_write_file", "workspace_dotnet_build" }, CreateCarriedImplementationProof(false, false), 3, 3]);
 
         Assert.IsType<bool>(shouldRetryResult);
         Assert.False((bool)shouldRetryResult);
@@ -6998,6 +8126,326 @@ Use only the project-structure mindmap requirements as scope. Create the request
     }
 
     [Fact]
+    public void ResolveSuccessfulBrowserToolOutputFiles_reads_playwright_mcp_outputs_from_structured_evidence_refs()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveBrowserOutputs = serviceType.GetMethod("ResolveSuccessfulBrowserToolOutputFiles", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveSuccessfulBrowserToolOutputFiles method was not found.");
+        var responseText = StructuredOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "Required browser evidence was captured.",
+            evidenceRefs:
+            [
+                ".playwright-mcp\\page-2026-05-22T14-59-45-865Z.png",
+                ".playwright-mcp\\page-2026-05-22T14-58-45-608Z.yml",
+                ".playwright-mcp\\console-2026-05-22T14-58-45-447Z.log",
+                ".playwright-mcp\\page-dom.json"
+            ]);
+        var detail = CreateSuccessfulExecutionDetail(
+            responseText,
+            BuildSerializedSessionState(Array.Empty<(string ToolName, object Result)>()));
+
+        var outputs = Assert.IsAssignableFrom<IReadOnlyDictionary<string, IReadOnlyList<string>>>(
+            resolveBrowserOutputs.Invoke(null, [detail]));
+
+        Assert.Contains(".playwright-mcp/page-2026-05-22T14-59-45-865Z.png", outputs["browser_take_screenshot"], StringComparer.OrdinalIgnoreCase);
+        Assert.Contains(".playwright-mcp/page-2026-05-22T14-58-45-608Z.yml", outputs["browser_snapshot"], StringComparer.OrdinalIgnoreCase);
+        Assert.Contains(".playwright-mcp/console-2026-05-22T14-58-45-447Z.log", outputs["browser_console_messages"], StringComparer.OrdinalIgnoreCase);
+        Assert.Contains(".playwright-mcp/page-dom.json", outputs["browser_evaluate"], StringComparer.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData(".playwright-mcp/page-2026-05-22T14-59-45-865Z.png", true)]
+    [InlineData(".playwright-mcp/page-2026-05-22T14-58-45-608Z.yml", true)]
+    [InlineData(".playwright-mcp/console-2026-05-22T14-58-45-447Z.log", true)]
+    [InlineData(".playwright-mcp/page-dom.json", true)]
+    [InlineData("artifacts/process-runs/run-001/browser-proof.png", true)]
+    [InlineData("output/process-runs/run-001/browser-proof.png", false)]
+    public void IsProviderNativeBrowserArtifactPath_accepts_managed_and_playwright_browser_outputs(
+        string relativePath,
+        bool expected)
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var isProviderNativeBrowserArtifactPath = serviceType.GetMethod("IsProviderNativeBrowserArtifactPath", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("IsProviderNativeBrowserArtifactPath method was not found.");
+
+        var result = (bool)(isProviderNativeBrowserArtifactPath.Invoke(null, [relativePath]) ?? !expected);
+
+        Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    public void ResolveProviderNativeBrowserProjectedRelativePath_places_playwright_mcp_outputs_under_current_run_browser_artifacts()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveProjectedPath = serviceType.GetMethod("ResolveProviderNativeBrowserProjectedRelativePath", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveProviderNativeBrowserProjectedRelativePath method was not found.");
+        var candidate = CreateDispatchCandidate(
+            "Run QA validation and browser proof.",
+            ProcessStepKind.Review,
+            (ProcessArtifactKind.Evidence, "Regression evidence pack", true, "Must include browser proof and screenshots for UI surfaces."));
+        var run = candidate.GetType().GetProperty("Run")?.GetValue(candidate) as ProcessRun
+            ?? throw new InvalidOperationException("DispatchCandidate.Run was not available.");
+        var workspaceScope = WorkspaceScopeDescriptor.Organization("demo");
+
+        var projectedPath = resolveProjectedPath.Invoke(
+            null,
+            [candidate, workspaceScope, ".playwright-mcp/page-2026-05-22T14-59-45-865Z.png"]) as string;
+
+        Assert.Equal(
+            $"artifacts/scopes/organization/demo/process-runs/{run.Id:D}/browser/page-2026-05-22T14-59-45-865Z.png",
+            projectedPath);
+    }
+
+    [Fact]
+    public void ResolveCompletionStatus_blocks_completed_qa_when_required_browser_screenshot_artifact_is_missing()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveCompletionStatus = serviceType.GetMethod("ResolveCompletionStatus", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveCompletionStatus method was not found.");
+        var buildCompletionReason = serviceType.GetMethod("BuildCompletionReason", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildCompletionReason method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Run QA validation and browser proof for the delivered browser app.",
+            ProcessStepKind.Review,
+            [],
+            false,
+            [(ProcessArtifactKind.Evidence, "Regression evidence pack", true, "Must include browser proof, screenshots for UI surfaces, console messages, and unresolved risks.")],
+            [],
+            recordedArtifactTitles: ["Regression evidence pack"]);
+        var detail = CreateSuccessfulExecutionDetail(
+            StructuredOutcome(
+                ProcessStepOutcomeStatus.Completed,
+                "Quality accepted with browser evidence.",
+                evidenceRefs:
+                [
+                    ".playwright-mcp/page-2026-05-22T15-08-00-000Z.yml",
+                    ".playwright-mcp/console-2026-05-22T15-08-01-000Z.log"
+                ]),
+            BuildSerializedSessionState(Array.Empty<(string ToolName, object Result)>()));
+
+        var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail]);
+        var reason = buildCompletionReason.Invoke(null, [candidate, detail, "Run QA validation and browser proof"]) as string;
+
+        Assert.Equal(ProcessStepRunStatus.Blocked, status);
+        Assert.NotNull(reason);
+        Assert.Contains("screenshot evidence", reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("durable browser artifact", reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ResolveCompletionStatus_blocks_completed_qa_when_browser_console_contains_active_javascript_error()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveCompletionStatus = serviceType.GetMethod("ResolveCompletionStatus", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveCompletionStatus method was not found.");
+        var buildCompletionReason = serviceType.GetMethod("BuildCompletionReason", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildCompletionReason method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Run QA validation and browser proof for the delivered browser app.",
+            ProcessStepKind.Review,
+            [],
+            false,
+            [(ProcessArtifactKind.Evidence, "Regression evidence pack", true, "Must include browser proof, screenshots for UI surfaces, console messages, and unresolved risks.")],
+            [],
+            recordedArtifactTitles: ["Regression evidence pack"]);
+        var detail = CreateSuccessfulExecutionDetail(
+            StructuredOutcome(
+                ProcessStepOutcomeStatus.Completed,
+                "Quality accepted with browser evidence.",
+                evidenceRefs:
+                [
+                    ".playwright-mcp/page-2026-05-22T15-09-00-000Z.png",
+                    ".playwright-mcp/page-2026-05-22T15-09-01-000Z.yml",
+                    ".playwright-mcp/console-2026-05-22T15-09-02-000Z.log"
+                ]),
+            BuildSerializedSessionState(
+                ("browser_console_messages", CreateProviderNativeTextResult("TypeError: Cannot read properties of undefined (reading 'spawnPiece')"))));
+
+        var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail]);
+        var reason = buildCompletionReason.Invoke(null, [candidate, detail, "Run QA validation and browser proof"]) as string;
+
+        Assert.Equal(ProcessStepRunStatus.Blocked, status);
+        Assert.NotNull(reason);
+        Assert.Contains("browser console", reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("runtime errors", reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ResolveInvalidBrowserProofSummary_allows_classified_post_stop_disconnect_after_browser_evidence()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveInvalidBrowserProofSummary = serviceType.GetMethod("ResolveInvalidBrowserProofSummary", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveInvalidBrowserProofSummary method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Run QA validation and browser proof for the delivered browser app.",
+            ProcessStepKind.Review,
+            [],
+            false,
+            [(ProcessArtifactKind.Evidence, "Regression evidence pack", true, "Must include browser proof, screenshots for UI surfaces, console messages, and unresolved risks.")],
+            [],
+            recordedArtifactTitles: ["Regression evidence pack"]);
+        var detail = CreateSuccessfulExecutionDetail(
+            StructuredOutcome(
+                ProcessStepOutcomeStatus.Completed,
+                "Quality accepted with browser evidence.",
+                evidenceRefs:
+                [
+                    ".playwright-mcp/page-2026-05-22T15-10-00-000Z.png",
+                    ".playwright-mcp/page-2026-05-22T15-10-01-000Z.yml",
+                    ".playwright-mcp/console-2026-05-22T15-10-02-000Z.log"
+                ]),
+            BuildSerializedSessionState(
+                ("browser_console_messages", CreateProviderNativeTextResult("Post-stop cleanup: host stopped. WebSocket connection to ws://127.0.0.1 failed with ERR_CONNECTION_REFUSED after host stopped."))));
+
+        var summary = resolveInvalidBrowserProofSummary.Invoke(null, [candidate, detail]) as string;
+
+        Assert.Equal(string.Empty, summary);
+    }
+
+    [Fact]
+    public void ResolveCompletionStatus_blocks_interactive_browser_proof_without_representative_interaction_tool()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveCompletionStatus = serviceType.GetMethod("ResolveCompletionStatus", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveCompletionStatus method was not found.");
+        var buildCompletionReason = serviceType.GetMethod("BuildCompletionReason", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildCompletionReason method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Run QA validation and browser proof for an interactive canvas game. The step contract requires representative interaction before acceptance.",
+            ProcessStepKind.Review,
+            [],
+            false,
+            [(ProcessArtifactKind.Evidence, "Regression evidence pack", true, "Must include browser proof, screenshots for UI surfaces, console messages, and unresolved risks.")],
+            [],
+            recordedArtifactTitles: ["Regression evidence pack"]);
+        var detail = CreateSuccessfulExecutionDetail(
+            StructuredOutcome(
+                ProcessStepOutcomeStatus.Completed,
+                "Quality accepted after browser proof.",
+                evidenceRefs:
+                [
+                    ".playwright-mcp/page-2026-05-22T15-11-00-000Z.png",
+                    ".playwright-mcp/page-2026-05-22T15-11-01-000Z.yml",
+                    ".playwright-mcp/console-2026-05-22T15-11-02-000Z.log"
+                ]),
+            BuildSerializedSessionState(
+                ("browser_console_messages", CreateProviderNativeTextResult("No active browser console errors."))));
+
+        var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail]);
+        var reason = buildCompletionReason.Invoke(null, [candidate, detail, "Run QA validation and browser proof"]) as string;
+
+        Assert.Equal(ProcessStepRunStatus.Blocked, status);
+        Assert.NotNull(reason);
+        Assert.Contains("representative interaction", reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ResolveCompletionStatus_allows_interactive_browser_proof_with_evaluate_state_artifact()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveCompletionStatus = serviceType.GetMethod("ResolveCompletionStatus", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveCompletionStatus method was not found.");
+        var buildCompletionReason = serviceType.GetMethod("BuildCompletionReason", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildCompletionReason method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Run QA validation and browser proof for an interactive canvas game. The step contract requires representative interaction before acceptance.",
+            ProcessStepKind.Review,
+            [],
+            false,
+            [(ProcessArtifactKind.Evidence, "Regression evidence pack", true, "Must include browser proof, screenshots for UI surfaces, console messages, and unresolved risks.")],
+            [],
+            recordedArtifactTitles: ["Regression evidence pack"]);
+        var detail = CreateSuccessfulExecutionDetail(
+            StructuredOutcome(
+                ProcessStepOutcomeStatus.Completed,
+                "Quality accepted after browser proof and representative state interaction.",
+                evidenceRefs:
+                [
+                    ".playwright-mcp/page-2026-05-22T15-12-00-000Z.png",
+                    ".playwright-mcp/page-2026-05-22T15-12-01-000Z.yml",
+                    ".playwright-mcp/console-2026-05-22T15-12-02-000Z.log",
+                    ".playwright-mcp/state-2026-05-22T15-12-03-000Z.json"
+                ]),
+            BuildSerializedSessionState(
+                ("workspace_stat_path", (IReadOnlyDictionary<string, object?>)new Dictionary<string, object?>(), CreateProviderNativeTextResult("Artifact path verified.")),
+                ("workspace_read_file", (IReadOnlyDictionary<string, object?>)new Dictionary<string, object?>(), CreateProviderNativeTextResult("Artifact contents reviewed.")),
+                ("browser_take_screenshot", new Dictionary<string, object?> { ["filename"] = ".playwright-mcp/page-2026-05-22T15-12-00-000Z.png" }, CreateProviderNativeTextResult("Screenshot saved.")),
+                ("browser_snapshot", new Dictionary<string, object?> { ["filename"] = ".playwright-mcp/page-2026-05-22T15-12-01-000Z.yml" }, CreateProviderNativeTextResult("Snapshot saved.")),
+                ("browser_console_messages", new Dictionary<string, object?> { ["filename"] = ".playwright-mcp/console-2026-05-22T15-12-02-000Z.log" }, CreateProviderNativeTextResult("No active browser console errors.")),
+                ("browser_evaluate", new Dictionary<string, object?> { ["filename"] = ".playwright-mcp/state-2026-05-22T15-12-03-000Z.json" }, CreateProviderNativeTextResult("Representative key event dispatched and visible state changed."))));
+
+        var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail]);
+        var reason = buildCompletionReason.Invoke(null, [candidate, detail, "Run QA validation and browser proof"]) as string;
+
+        Assert.True(status == ProcessStepRunStatus.Completed, reason);
+    }
+
+    [Fact]
+    public void ResolveMissingRequiredArtifactSummary_rejects_declared_browser_artifact_without_matching_output()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveMissingRequiredArtifactSummary = serviceType.GetMethod("ResolveMissingRequiredArtifactSummary", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveMissingRequiredArtifactSummary method was not found.");
+        var candidate = CreateDispatchCandidate(
+            "Run QA validation and browser proof for the delivered browser app.",
+            ProcessStepKind.Review,
+            (ProcessArtifactKind.Evidence, "Browser screenshot artifact", true, "Create this artifact at artifacts/process-runs/run-001/browser/browser-proof.png using browser_take_screenshot."));
+        var detail = CreateSuccessfulExecutionDetail(
+            StructuredOutcome(ProcessStepOutcomeStatus.Completed, "Quality accepted without output evidence."),
+            BuildSerializedSessionState(Array.Empty<(string ToolName, object Result)>()));
+
+        var summary = resolveMissingRequiredArtifactSummary.Invoke(null, [candidate, detail, detail.Run.ResultSummary]) as string;
+
+        Assert.Contains("Browser screenshot artifact", summary, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ResolveMissingRequiredArtifactSummary_accepts_declared_browser_artifact_with_matching_output()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveMissingRequiredArtifactSummary = serviceType.GetMethod("ResolveMissingRequiredArtifactSummary", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveMissingRequiredArtifactSummary method was not found.");
+        var candidate = CreateDispatchCandidate(
+            "Run QA validation and browser proof for the delivered browser app.",
+            ProcessStepKind.Review,
+            (ProcessArtifactKind.Evidence, "Browser screenshot artifact", true, "Create this artifact at artifacts/process-runs/run-001/browser/browser-proof.png using browser_take_screenshot."));
+        var detail = CreateSuccessfulExecutionDetail(
+            StructuredOutcome(
+                ProcessStepOutcomeStatus.Completed,
+                "Quality accepted with screenshot output evidence.",
+                evidenceRefs: ["artifacts/process-runs/run-001/browser/browser-proof.png"]),
+            BuildSerializedSessionState(Array.Empty<(string ToolName, object Result)>()));
+
+        var summary = resolveMissingRequiredArtifactSummary.Invoke(null, [candidate, detail, detail.Run.ResultSummary]) as string;
+
+        Assert.Equal(string.Empty, summary);
+    }
+
+    [Fact]
+    public void ResolveMissingRequiredArtifactSummary_rejects_dotnet_stdout_evidence_ref_as_browser_console_output()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveMissingRequiredArtifactSummary = serviceType.GetMethod("ResolveMissingRequiredArtifactSummary", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveMissingRequiredArtifactSummary method was not found.");
+        var candidate = CreateDispatchCandidate(
+            "Run QA validation and browser proof for the delivered browser app.",
+            ProcessStepKind.Review,
+            (ProcessArtifactKind.Evidence, "Browser console artifact", true, "Create this artifact at artifacts/process-runs/run-001/browser/browser-console.log using browser_console_messages."));
+        var dotnetStdoutPath = "artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/20260522/20260522-193340659-dotnet-build/stdout.txt";
+        var detail = CreateSuccessfulExecutionDetail(
+            StructuredOutcome(
+                ProcessStepOutcomeStatus.Completed,
+                "Build stdout was captured, but no browser console output was produced.",
+                evidenceRefs: [dotnetStdoutPath]),
+            BuildSerializedSessionState(Array.Empty<(string ToolName, object Result)>()));
+
+        var summary = resolveMissingRequiredArtifactSummary.Invoke(null, [candidate, detail, detail.Run.ResultSummary]) as string;
+
+        Assert.Contains("Browser console artifact", summary, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void ResolveCompletionStatus_ignores_provider_native_browser_file_read_scope_miss_when_file_exists()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
@@ -7019,9 +8467,17 @@ Use only the project-structure mindmap requirements as scope. Create the request
             var runId = Guid.NewGuid();
             var agentId = Guid.NewGuid();
             var snapshotPath = $"artifacts/process-runs/{runId:D}/browser-snapshot.yml";
+            var screenshotPath = $"artifacts/process-runs/{runId:D}/browser-desktop.png";
+            var consolePath = $"artifacts/process-runs/{runId:D}/browser-console-error.log";
             var snapshotFullPath = Path.Combine(tempWorkspace, snapshotPath.Replace('/', Path.DirectorySeparatorChar));
             Directory.CreateDirectory(Path.GetDirectoryName(snapshotFullPath)!);
             File.WriteAllText(snapshotFullPath, "- text: Unit converter\n- text: Result 12.5 cm\n");
+            var screenshotFullPath = Path.Combine(tempWorkspace, screenshotPath.Replace('/', Path.DirectorySeparatorChar));
+            Directory.CreateDirectory(Path.GetDirectoryName(screenshotFullPath)!);
+            File.WriteAllBytes(screenshotFullPath, [137, 80, 78, 71]);
+            var consoleFullPath = Path.Combine(tempWorkspace, consolePath.Replace('/', Path.DirectorySeparatorChar));
+            Directory.CreateDirectory(Path.GetDirectoryName(consoleFullPath)!);
+            File.WriteAllText(consoleFullPath, "No active browser console errors.");
             var detail = new ExecutionRunDetail(
                 new ExecutionRunRecord(
                     runId,
@@ -7052,9 +8508,9 @@ Use only the project-structure mindmap requirements as scope. Create the request
                     []),
                 null,
                 [
-                    CreateExecutionLogToolInvocationWithFilename(runId, agentId, now, "browser_take_screenshot", $"artifacts/process-runs/{runId:D}/browser-desktop.png"),
+                    CreateExecutionLogToolInvocationWithFilename(runId, agentId, now, "browser_take_screenshot", screenshotPath),
                     CreateExecutionLogToolInvocationWithFilename(runId, agentId, now.AddSeconds(1), "browser_snapshot", snapshotPath),
-                    CreateExecutionLogToolInvocationWithFilename(runId, agentId, now.AddSeconds(2), "browser_console_messages", $"artifacts/process-runs/{runId:D}/browser-console-error.log")
+                    CreateExecutionLogToolInvocationWithFilename(runId, agentId, now.AddSeconds(2), "browser_console_messages", consolePath)
                 ],
                 [])
             {
@@ -7471,6 +8927,7 @@ Use only the project-structure mindmap requirements as scope. Create the request
     [InlineData("App startup receipt", "Startup command, working directory, PID, port, and readiness proof.")]
     [InlineData("Single page screenshot handoff", "Cleanup receipt and final project asset reference.")]
     [InlineData("Browser navigation and console evidence", "Capture URL, route, browser console observations, and page readiness proof.")]
+    [InlineData("Repaired run evidence index", "Must include output root, run folder, app path, build/test outputs, final app URL/screenshot, console log, project-structure node/asset ids, approvals/blockers, and raw record pointers.")]
     public void CanProjectResponseTextArtifactWithoutDeclaredPath_allows_pathless_receipt_and_handoff_evidence(
         string title,
         string validationRequirementSummary)
@@ -8810,7 +10267,7 @@ Ancestor path to the target work node:
 
         var shouldRetryResult = shouldRetry.Invoke(
             null,
-            [candidate, detail, responseText, Array.Empty<string>(), 1, 3]);
+            [candidate, detail, responseText, Array.Empty<string>(), CreateCarriedImplementationProof(false, false), 1, 3]);
 
         Assert.IsType<bool>(shouldRetryResult);
         Assert.True((bool)shouldRetryResult);
@@ -8889,7 +10346,7 @@ Ancestor path to the target work node:
         var reason = buildCompletionReason.Invoke(null, [candidate, detail, "Validate generated web app"]) as string;
         var shouldRetryResult = shouldRetry.Invoke(
             null,
-            [candidate, detail, responseText, new[] { "browser_snapshot", "browser_take_screenshot" }, 1, 3]);
+            [candidate, detail, responseText, new[] { "browser_snapshot", "browser_take_screenshot" }, CreateCarriedImplementationProof(false, false), 1, 3]);
 
         Assert.Equal(ProcessStepRunStatus.Blocked, status);
         Assert.NotNull(reason);
@@ -8971,7 +10428,7 @@ Ancestor path to the target work node:
 
         var shouldRetryResult = shouldRetry.Invoke(
             null,
-            [candidate, detail, responseText, Array.Empty<string>(), 2, 5]);
+            [candidate, detail, responseText, Array.Empty<string>(), CreateCarriedImplementationProof(false, false), 2, 5]);
 
         Assert.IsType<bool>(shouldRetryResult);
         Assert.True((bool)shouldRetryResult);
@@ -9058,7 +10515,7 @@ Ancestor path to the target work node:
 
         var shouldRetryResult = shouldRetry.Invoke(
             null,
-            [candidate, detail, responseText, Array.Empty<string>(), 1, 5]);
+            [candidate, detail, responseText, Array.Empty<string>(), CreateCarriedImplementationProof(false, false), 1, 5]);
 
         Assert.IsType<bool>(shouldRetryResult);
         Assert.True((bool)shouldRetryResult);
@@ -9258,7 +10715,7 @@ Ancestor path to the target work node:
 
         var shouldRetryResult = shouldRetry.Invoke(
             null,
-            [candidate, detail, responseText, Array.Empty<string>(), 1, 3]);
+            [candidate, detail, responseText, Array.Empty<string>(), CreateCarriedImplementationProof(false, false), 1, 3]);
 
         Assert.IsType<bool>(shouldRetryResult);
         Assert.True((bool)shouldRetryResult);
@@ -9358,6 +10815,102 @@ Ancestor path to the target work node:
     }
 
     [Fact]
+    public void ResolveRequiredToolNames_does_not_require_browser_tools_for_peer_review_with_static_web_grounding()
+    {
+        var resolveRequiredToolNamesCore = typeof(ProcessRunAutomationDispatchService)
+            .GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .Single(method => method.Name == "ResolveRequiredToolNamesCore");
+        var candidate = CreateDispatchCandidateCore(
+            "Inputs: architecture decision record and implementation change set. Outputs: peer review note with accepted issues, rejected concerns, residual risk, and integration readiness.",
+            ProcessStepKind.Review,
+            [],
+            false,
+            [(ProcessArtifactKind.Evidence, "Peer review note", true, "Must identify accepted issues, rejected concerns, residual risk, and integration readiness.")],
+            [
+                (
+                    "Implement bounded delivery change",
+                    "Implementation change set",
+                    [
+                        (
+                            "Implementation change set",
+                            "Deliverable",
+                            "artifacts/process-runs/run-1/03-implementation-change-set.md",
+                            "Static browser app delivered; downstream QA will capture browser proof.",
+                            "Created by implementation step."
+                        )
+                    ])
+            ],
+            triggerReason: "Project structure says the product is a static web page hosted from an external output directory.",
+            stepTitle: "Complete peer review and integration readiness",
+            outputContractSummary: "Peer review note",
+            manualRecoveryDirective: """
+                Manual rerun requested for step 'Complete peer review and integration readiness'.
+                Generic dispatcher repair: static-web project grounding identifies the deliverable surface, but peer review does not require browser-proof tools unless this step contract explicitly asks for browser/runtime proof.
+                Prior blocked reason: Mandatory browser proof and PowerShell run-script gating tools were not executed: unable to capture browser_snapshot, browser_take_screenshot, and browser_console_messages because no reachable hosted URL or environment run-script was provided in this run.
+                Minimal next actions:
+                - Repair only the delta described by this packet.
+                - Rerun invalidated proof tools.
+                """);
+
+        var requiredToolNames = (IReadOnlyList<string>?)resolveRequiredToolNamesCore.Invoke(
+            null,
+            [
+                candidate,
+                "Project-structure grounding: static web app, browser-playable surface, keyboard controls, local storage, and downstream runtime or browser proof."
+            ]);
+
+        Assert.NotNull(requiredToolNames);
+        Assert.DoesNotContain("browser_console_messages", requiredToolNames);
+        Assert.DoesNotContain("browser_snapshot", requiredToolNames);
+        Assert.DoesNotContain("browser_take_screenshot", requiredToolNames);
+        Assert.DoesNotContain("workspace_pwsh_run_script", requiredToolNames);
+    }
+
+    [Fact]
+    public void ResolveRequiredToolNames_does_not_require_browser_tools_for_security_review_of_qa_accepted_static_web_package()
+    {
+        var resolveRequiredToolNamesCore = typeof(ProcessRunAutomationDispatchService)
+            .GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .Single(method => method.Name == "ResolveRequiredToolNamesCore");
+        var candidate = CreateDispatchCandidateCore(
+            "Review sensitive-data handling, secrets, boundary changes, and policy exceptions for the QA-accepted package.",
+            ProcessStepKind.Approval,
+            [],
+            false,
+            [(ProcessArtifactKind.Decision, "Security exception assessment", true, "Must capture controls, residual risk owner, and approval or block rationale.")],
+            [
+                (
+                    "Run QA validation and runtime or browser proof",
+                    "Regression evidence pack",
+                    [
+                        (
+                            "Regression evidence pack",
+                            "Evidence",
+                            "artifacts/process-runs/run-1/05-regression-evidence-pack.md",
+                            "Quality accepted with browser proof, screenshot, console messages, and residual risks recorded.",
+                            "Created by QA validation step."
+                        )
+                    ])
+            ],
+            triggerReason: "Project structure says the product is a static web page hosted from an external output directory.",
+            stepTitle: "Perform security and data-handling review",
+            outputContractSummary: "Security outcome with explicit approval, block, or exception rationale.");
+
+        var requiredToolNames = (IReadOnlyList<string>?)resolveRequiredToolNamesCore.Invoke(
+            null,
+            [
+                candidate,
+                "Project-structure grounding: static web app, browser-playable surface, keyboard controls, local storage, and completed upstream QA browser proof."
+            ]);
+
+        Assert.NotNull(requiredToolNames);
+        Assert.DoesNotContain("browser_console_messages", requiredToolNames);
+        Assert.DoesNotContain("browser_snapshot", requiredToolNames);
+        Assert.DoesNotContain("browser_take_screenshot", requiredToolNames);
+        Assert.DoesNotContain("workspace_pwsh_run_script", requiredToolNames);
+    }
+
+    [Fact]
     public void BuildExecutionPrompt_guides_javascript_browser_proof_to_stack_appropriate_helper()
     {
         var buildExecutionPrompt = typeof(ProcessRunAutomationDispatchService).GetMethod("BuildExecutionPrompt", BindingFlags.NonPublic | BindingFlags.Static)
@@ -9379,6 +10932,64 @@ Ancestor path to the target work node:
         Assert.Contains("Never write helper code like `Resolve-Path 'external-target/C/...'`", prompt, StringComparison.Ordinal);
         Assert.Contains("workspace_pwsh_run_script", prompt, StringComparison.Ordinal);
         Assert.Contains("npm.cmd", prompt, StringComparison.Ordinal);
+        Assert.Contains("single-quoted here-string", prompt, StringComparison.Ordinal);
+        Assert.Contains("escape every literal `$`", prompt, StringComparison.Ordinal);
+        Assert.Contains("Do not run the long-running server loop inside the `workspace_pwsh_run_script` process until the tool times out.", prompt, StringComparison.Ordinal);
+        Assert.Contains("The helper must not be the foreground web server.", prompt, StringComparison.Ordinal);
+        Assert.Contains("Do not pass a server implementation script itself to `workspace_pwsh_run_script`", prompt, StringComparison.Ordinal);
+        Assert.Contains("Do not call blocking stream reads such as `.ReadToEnd()`", prompt, StringComparison.Ordinal);
+        Assert.Contains("Do not use `[System.Threading.Tasks.Task]::Run({ ... })` with scriptblocks", prompt, StringComparison.Ordinal);
+        Assert.Contains("Use native absolute paths for stdout/stderr redirection", prompt, StringComparison.Ordinal);
+        Assert.Contains("Do not build child PowerShell server code as a double-quoted `-Command` string", prompt, StringComparison.Ordinal);
+        Assert.Contains("Probe the recorded URL with a bounded `Invoke-WebRequest` loop", prompt, StringComparison.Ordinal);
+        Assert.Contains("do not make missing `package.json` or missing automated tests release-blocking", prompt, StringComparison.Ordinal);
+        Assert.Contains("use `browser_evaluate`", prompt, StringComparison.Ordinal);
+        Assert.Contains("replace it with `browser_evaluate` DOM or state proof", prompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BuildExecutionPromptCore_marks_peer_review_with_static_web_grounding_as_not_browser_gated()
+    {
+        var buildExecutionPromptCore = typeof(ProcessRunAutomationDispatchService)
+            .GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .Single(method => method.Name == "BuildExecutionPromptCore" && method.GetParameters().Length == 4);
+        var candidate = CreateDispatchCandidateCore(
+            "Inputs: implementation package, architecture decision record, and changed-surface inventory. Outputs: peer-reviewed change set with explicit residual risk and follow-up items.",
+            ProcessStepKind.Review,
+            [],
+            false,
+            [(ProcessArtifactKind.Evidence, "Peer review note", true, "Must capture accepted issues, rejected concerns, and explicit residual risk.")],
+            [],
+            triggerReason: "Project structure says the product is a static web page hosted from an external output directory.",
+            stepTitle: "Complete peer review and integration readiness",
+            outputContractSummary: "Peer review note",
+            manualRecoveryDirective: """
+                Manual rerun requested for step 'Complete peer review and integration readiness'.
+                Prior blocked reason: Mandatory browser proof and PowerShell run-script gating tools were not executed: unable to capture browser_snapshot, browser_take_screenshot, and browser_console_messages.
+                Browser proof is not required for this peer-review rerun unless the current step contract explicitly asks for runtime or browser proof.
+                """);
+        const string projectStructureGroundingSummary = """
+            Project-structure required artifact contract:
+            - Delivery shape: JavaScript static web page.
+            - Output root: C:\programovani\dotnet-demo\output mapped to external-target/C/programovani/dotnet-demo/output.
+            """;
+
+        var prompt = buildExecutionPromptCore.Invoke(
+            null,
+            [
+                candidate,
+                null,
+                projectStructureGroundingSummary,
+                null
+            ]) as string;
+
+        Assert.NotNull(prompt);
+        Assert.Contains("Browser proof boundary:", prompt, StringComparison.Ordinal);
+        Assert.Contains("this step is not browser-proof gated", prompt, StringComparison.Ordinal);
+        Assert.Contains("inspect those inherited artifact paths directly with workspace tools", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("Mandatory browser proof execution plan:", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("`browser_snapshot`", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("`browser_take_screenshot`", prompt, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -9389,7 +11000,7 @@ Ancestor path to the target work node:
         var candidate = CreateDispatchCandidate(
             "Run QA validation and browser proof for the C# console app.",
             ProcessStepKind.Review,
-            (ProcessArtifactKind.Evidence, "Regression evidence pack", true, "Must name changed flows, browser proof, screenshots, and unresolved risks."));
+            (ProcessArtifactKind.Evidence, "Regression evidence pack", true, "Must name changed flows, runtime/API/browser evidence as applicable, screenshots for UI surfaces, and unresolved risks. When a visible browser workflow is in scope, include current-run process-visible browser artifacts under `artifacts/process-runs/<run-id>/browser/`: screenshot image, browser_snapshot or browser_evaluate state output, browser_console_messages output, actual URL or entrypoint, launch and cleanup receipts, and acceptance-state assertion."));
 
         var requiredToolNames = (IReadOnlyList<string>?)resolveRequiredToolNames.Invoke(null, [candidate]);
 
@@ -9407,7 +11018,7 @@ Ancestor path to the target work node:
         var candidate = CreateDispatchCandidate(
             "Re-run QA validation and runtime or browser proof after repair for the .NET minimal API service.",
             ProcessStepKind.Review,
-            (ProcessArtifactKind.Evidence, "Repaired regression evidence pack", true, "Must name repaired flows, assertion depth, runtime/API/browser evidence as applicable, screenshots for UI surfaces, and unresolved risks after the repair pass."));
+            (ProcessArtifactKind.Evidence, "Repaired regression evidence pack", true, "Must name repaired flows, assertion depth, runtime/API/browser evidence as applicable, screenshots for UI surfaces, and unresolved risks after the repair pass. When a visible browser workflow is in scope, include current-run process-visible browser artifacts under `artifacts/process-runs/<run-id>/browser/`: screenshot image, browser_snapshot or browser_evaluate state output, browser_console_messages output, actual URL or entrypoint, launch and cleanup receipts, and acceptance-state assertion."));
 
         var requiredToolNames = (IReadOnlyList<string>?)resolveRequiredToolNames.Invoke(null, [candidate]);
 
@@ -9415,6 +11026,30 @@ Ancestor path to the target work node:
         Assert.DoesNotContain("browser_console_messages", requiredToolNames);
         Assert.DoesNotContain("browser_snapshot", requiredToolNames);
         Assert.DoesNotContain("browser_take_screenshot", requiredToolNames);
+    }
+
+    [Fact]
+    public void ResolveRequiredToolNames_requires_browser_tools_for_static_web_recheck_with_document_context()
+    {
+        var resolveRequiredToolNames = typeof(ProcessRunAutomationDispatchService).GetMethod("ResolveRequiredToolNames", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveRequiredToolNames method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Verify the repaired package from the source document and project structure. The deliverable is a JavaScript static web page with no backend.",
+            ProcessStepKind.Review,
+            [],
+            false,
+            [(ProcessArtifactKind.Evidence, "Repaired regression evidence pack", true, "Must name repaired flows, assertion depth, warning counts, executed-test counts when tests are expected, runtime/API/browser evidence as applicable, screenshots for UI surfaces, and unresolved risks after the repair pass. When a visible browser workflow is in scope, include current-run process-visible browser artifacts under `artifacts/process-runs/<run-id>/browser/`: screenshot image, browser_snapshot or browser_evaluate state output, browser_console_messages output, actual URL or entrypoint, launch and cleanup receipts, and acceptance-state assertion.")],
+            [],
+            triggerReason: "Project structure requires a static web page in C:\\programovani\\dotnet-demo\\output with no backend and client-local state.",
+            stepTitle: "Re-run QA validation and runtime or browser proof after repair");
+
+        var requiredToolNames = (IReadOnlyList<string>?)resolveRequiredToolNames.Invoke(null, [candidate]);
+
+        Assert.NotNull(requiredToolNames);
+        Assert.Contains("browser_console_messages", requiredToolNames);
+        Assert.Contains("browser_snapshot", requiredToolNames);
+        Assert.Contains("browser_take_screenshot", requiredToolNames);
+        Assert.Contains("workspace_pwsh_run_script", requiredToolNames);
     }
 
     [Fact]
@@ -9589,6 +11224,33 @@ Ancestor path to the target work node:
     }
 
     [Fact]
+    public void ResolveMissingConcreteImplementationProofSummary_allows_repair_deliverable_mutation_after_source_read()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveMissingProof = serviceType.GetMethod("ResolveMissingConcreteImplementationProofSummary", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveMissingConcreteImplementationProofSummary method was not found.");
+        var candidate = CreateDispatchCandidate("Repair validation findings for the static web app and prepare it for browser proof.");
+        var rootAlias = "external-target/C/programovani/dotnet-demo/output";
+        var now = DateTimeOffset.UtcNow;
+        var detail = CreateSuccessfulExecutionDetail(
+            StructuredOutcome(ProcessStepOutcomeStatus.Completed, "Repair artifacts updated and source inspected."),
+            BuildSerializedSessionState(
+                ("workspace_write_file", CreateProviderNativeTextResult("Validation README updated.")),
+                ("workspace_write_file", CreateProviderNativeTextResult("Migration note updated.")),
+                ("workspace_read_file", CreateProviderNativeTextResult("Entrypoint source inspected."))),
+            [
+                CreateToolReceipt("workspace-file", "workspace_write_file", $"{rootAlias}/README-validation.md", ".", "Succeeded", now),
+                CreateToolReceipt("workspace-file", "workspace_write_file", $"{rootAlias}/MIGRATION.md", ".", "Succeeded", now.AddSeconds(1)),
+                CreateToolReceipt("workspace-file", "workspace_read_file", $"{rootAlias}/index.html", ".", "Succeeded", now.AddSeconds(2))
+            ],
+            serializedInvocationMetadataJson: BuildAllowedExternalTargetMetadata(rootAlias));
+
+        var summary = resolveMissingProof.Invoke(null, [candidate, detail]) as string;
+
+        Assert.Equal(string.Empty, summary);
+    }
+
+    [Fact]
     public void ResolveMissingConcreteImplementationProofSummary_accepts_source_read_under_external_output_root()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
@@ -9637,6 +11299,36 @@ Ancestor path to the target work node:
                 CreateToolReceipt("workspace-file", "workspace_read_file", sourcePath, ".", "Succeeded", now.AddSeconds(1))
             ]
         };
+
+        var summary = resolveMissingProof.Invoke(null, [candidate, detail]) as string;
+
+        Assert.Equal(string.Empty, summary);
+    }
+
+    [Fact]
+    public void ResolveMissingConcreteImplementationProofSummary_accepts_source_read_under_scoped_current_run_output_root()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveMissingProof = serviceType.GetMethod("ResolveMissingConcreteImplementationProofSummary", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveMissingConcreteImplementationProofSummary method was not found.");
+        var candidate = CreateDispatchCandidate("Implement the Tetris game as a Blazor application and prove startup.");
+        var runId = Guid.NewGuid();
+        var sourcePath = $"output/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/{runId:D}/TetrisGame/Program.cs";
+        var projectPath = $"output/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/{runId:D}/TetrisGame/TetrisGame.csproj";
+        var now = DateTimeOffset.UtcNow;
+        var detail = CreateSuccessfulExecutionDetail(
+            StructuredOutcome(ProcessStepOutcomeStatus.Completed, "Implementation source was written, read back, built, and smoke-tested."),
+            BuildSerializedSessionState(
+                ("workspace_write_file", CreateProviderNativeTextResult("Source written.")),
+                ("workspace_read_file", CreateProviderNativeTextResult("Source reviewed.")),
+                ("workspace_dotnet_build", CreateProviderNativeTextResult("Build passed.")),
+                ("workspace_dotnet_run", CreateProviderNativeTextResult("Startup smoke passed."))),
+            [
+                CreateToolReceipt("workspace-file", "workspace_write_file", sourcePath, ".", "Succeeded", now),
+                CreateToolReceipt("workspace-file", "workspace_read_file", sourcePath, ".", "Succeeded", now.AddSeconds(1)),
+                CreateToolReceipt("workspace-process", "workspace_dotnet_build", $"build {projectPath}", ".", "Succeeded (exit 0)", now.AddSeconds(2)),
+                CreateToolReceipt("workspace-process", "workspace_dotnet_run", projectPath, ".", "Succeeded (exit 0)", now.AddSeconds(3))
+            ]);
 
         var summary = resolveMissingProof.Invoke(null, [candidate, detail]) as string;
 
@@ -10708,6 +12400,246 @@ Ancestor path to the target work node:
     }
 
     [Fact]
+    public void BuildCompletionArtifactRecoveryDirective_focuses_on_missing_artifacts_without_full_step_rerun()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var buildRecoveryDirective = serviceType.GetMethod("BuildCompletionArtifactRecoveryDirective", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildCompletionArtifactRecoveryDirective method was not found.");
+        var outcomeType = serviceType.GetNestedType("DispatchExecutionOutcome", BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("DispatchExecutionOutcome type was not found.");
+        var candidate = CreateDispatchCandidate(
+            "Build the Blazor application and write implementation handoff artifacts.",
+            ProcessStepKind.Work,
+            (
+                ProcessArtifactKind.Evidence,
+                "Blazor implementation change set",
+                true,
+                "Create this artifact at artifacts/process-runs/run-1/02-blazor-implementation-change-set.md with changed files and validation proof."),
+            (
+                ProcessArtifactKind.Evidence,
+                "Implementation self-review summary",
+                true,
+                "Create this artifact at artifacts/process-runs/run-1/02-implementation-self-review-summary.md with risks and follow-up notes."));
+        var expectedArtifacts = candidate.GetType().GetProperty("ExpectedArtifacts")?.GetValue(candidate)
+            ?? throw new InvalidOperationException("DispatchCandidate.ExpectedArtifacts property was not found.");
+        var now = DateTimeOffset.UtcNow;
+        var responseText = StructuredOutcome(ProcessStepOutcomeStatus.Completed, "Implementation completed and validation passed.");
+        var detail = new ExecutionRunDetail(
+            new ExecutionRunRecord(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                null,
+                "Implementation completed",
+                "process-step",
+                "step-1",
+                "corr-1",
+                "run-start",
+                "process-automation-dispatch",
+                "system",
+                "{}",
+                "Prompt",
+                responseText,
+                "OpenAI chat completions",
+                "gpt-5.4-mini",
+                ExecutionState.Completed,
+                RunOutcome.Succeeded,
+                now,
+                now,
+                now,
+                now,
+                string.Empty,
+                BuildSerializedSessionState(
+                    ("workspace_dotnet_build", CreateProviderNativeTextResult("Build passed.")),
+                    ("workspace_dotnet_test", CreateProviderNativeTextResult("Tests passed."))),
+                []),
+            null,
+            [],
+            []);
+        var outcome = Activator.CreateInstance(
+                outcomeType,
+                detail,
+                responseText,
+                ProcessStepRunStatus.Completed,
+                "Implementation completed.",
+                Array.Empty<string>(),
+                1,
+                null)
+            ?? throw new InvalidOperationException("DispatchExecutionOutcome could not be constructed.");
+
+        var directive = buildRecoveryDirective.Invoke(null, [candidate, outcome, expectedArtifacts]) as string;
+
+        Assert.NotNull(directive);
+        Assert.Contains("Targeted completion-artifact recovery is required.", directive, StringComparison.Ordinal);
+        Assert.Contains("You are the process manager", directive, StringComparison.Ordinal);
+        Assert.Contains("previous step history", directive, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("left the process without required artifact record", directive, StringComparison.Ordinal);
+        Assert.Contains("Do not repeat broad implementation work", directive, StringComparison.Ordinal);
+        Assert.Contains("Do not delegate this back to the implementation executor", directive, StringComparison.Ordinal);
+        Assert.Contains("workspace_write_file", directive, StringComparison.Ordinal);
+        Assert.Contains("02-blazor-implementation-change-set.md", directive, StringComparison.Ordinal);
+        Assert.Contains("02-implementation-self-review-summary.md", directive, StringComparison.Ordinal);
+        Assert.Contains("ProcessStepOutcomeResult", directive, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ShouldAttemptManagerArtifactRecoveryForStrandedStep_requires_recoverable_inprogress_attempt_with_missing_artifacts()
+    {
+        var missingArtifact = CreateDispatchArtifactExpectation(
+            "Blazor implementation change set",
+            isRequired: true);
+        var recordedArtifact = CreateDispatchArtifactExpectation(
+            "Implementation self-review summary",
+            isRequired: true);
+        var recordedArtifactIds = new HashSet<Guid> { recordedArtifact.Id };
+        var recoveryExecutionRunId = Guid.NewGuid();
+
+        Assert.True(ProcessRunAutomationDispatchService.ShouldAttemptManagerArtifactRecoveryForStrandedStep(
+            ProcessStepRunStatus.InProgress,
+            recoveryExecutionRunId,
+            [missingArtifact, recordedArtifact],
+            recordedArtifactIds));
+        Assert.False(ProcessRunAutomationDispatchService.ShouldAttemptManagerArtifactRecoveryForStrandedStep(
+            ProcessStepRunStatus.Ready,
+            recoveryExecutionRunId,
+            [missingArtifact],
+            new HashSet<Guid>()));
+        Assert.False(ProcessRunAutomationDispatchService.ShouldAttemptManagerArtifactRecoveryForStrandedStep(
+            ProcessStepRunStatus.InProgress,
+            null,
+            [missingArtifact],
+            new HashSet<Guid>()));
+        Assert.False(ProcessRunAutomationDispatchService.ShouldAttemptManagerArtifactRecoveryForStrandedStep(
+            ProcessStepRunStatus.InProgress,
+            recoveryExecutionRunId,
+            [missingArtifact],
+            new HashSet<Guid> { missingArtifact.Id }));
+    }
+
+    [Fact]
+    public void ResolveArtifactRecoveryExecutionRunId_allows_prior_terminal_attempt_for_reopened_missing_artifact_step()
+    {
+        var missingArtifact = CreateDispatchArtifactExpectation(
+            "Blazor implementation change set",
+            isRequired: true);
+        var reopenedAtUtc = DateTimeOffset.UtcNow;
+        var priorTerminalRun = CreateExecutionRun(
+            "process-automation-dispatch",
+            ExecutionState.Failed,
+            RunOutcome.Cancelled) with
+        {
+            StartedAtUtc = reopenedAtUtc.AddMinutes(-20),
+            CompletedAtUtc = reopenedAtUtc.AddMinutes(-15),
+            UpdatedAtUtc = reopenedAtUtc.AddMinutes(-15)
+        };
+        var manualDebugRun = CreateExecutionRun(
+            "agent-run-debug",
+            ExecutionState.Completed,
+            RunOutcome.Succeeded) with
+        {
+            CompletedAtUtc = reopenedAtUtc
+        };
+
+        var result = ProcessRunAutomationDispatchService.ResolveArtifactRecoveryExecutionRunId(
+            new ProcessStepRun
+            {
+                Status = ProcessStepRunStatus.InProgress,
+                StartedAtUtc = reopenedAtUtc
+            },
+            [manualDebugRun, priorTerminalRun],
+            [missingArtifact],
+            new HashSet<Guid>());
+
+        Assert.Equal(priorTerminalRun.Id, result);
+    }
+
+    [Fact]
+    public void ResolveManagerArtifactRecoveryAgent_prefers_configured_run_manager_option()
+    {
+        var managerPartyId = Guid.NewGuid();
+        var managerTechnicalAgentId = Guid.NewGuid();
+        var run = new ProcessRun
+        {
+            ManagerAgentId = managerPartyId,
+            ManagerAgentName = "Default process manager"
+        };
+
+        var result = ProcessRunAutomationDispatchService.ResolveManagerArtifactRecoveryAgent(
+            run,
+            [
+                new ProcessManagerAgentOption(
+                    managerPartyId,
+                    managerTechnicalAgentId,
+                    "Default process manager",
+                    "OpenAI",
+                    "gpt-5.4-mini",
+                    "Bound process manager")
+            ],
+            []);
+
+        Assert.NotNull(result);
+        Assert.Equal(managerTechnicalAgentId, result.TechnicalAgentId);
+        Assert.Equal("run-manager-id", result.ResolutionSource);
+    }
+
+    [Fact]
+    public void ResolveManagerArtifactRecoveryAgent_uses_assigned_manager_before_ambiguous_fallback()
+    {
+        var assignedManagerPartyId = Guid.NewGuid();
+        var assignedManagerTechnicalAgentId = Guid.NewGuid();
+        var otherManagerPartyId = Guid.NewGuid();
+        var otherManagerTechnicalAgentId = Guid.NewGuid();
+        var run = new ProcessRun
+        {
+            ManagerAgentName = "Default process manager"
+        };
+
+        var result = ProcessRunAutomationDispatchService.ResolveManagerArtifactRecoveryAgent(
+            run,
+            [
+                CreateAssignment(assignedManagerPartyId, "Blazor delivery manager AI agent", "Blazor delivery manager"),
+                CreateAssignment(Guid.NewGuid(), "Blazor Application Developer", "Blazor implementation engineer")
+            ],
+            [
+                new ProcessManagerAgentOption(
+                    assignedManagerPartyId,
+                    assignedManagerTechnicalAgentId,
+                    "Blazor delivery manager AI agent",
+                    "OpenAI",
+                    "gpt-5-mini",
+                    "Projected from AgentFramework organization catalog."),
+                new ProcessManagerAgentOption(
+                    otherManagerPartyId,
+                    otherManagerTechnicalAgentId,
+                    "Delivery manager AI agent",
+                    "OpenAI",
+                    "gpt-5.4-mini",
+                    "Projected from AgentFramework organization catalog.")
+            ],
+            []);
+
+        Assert.NotNull(result);
+        Assert.Equal(assignedManagerTechnicalAgentId, result.TechnicalAgentId);
+        Assert.Equal("run-manager-assignment", result.ResolutionSource);
+    }
+
+    [Fact]
+    public void ResolveManagerArtifactRecoveryAgent_rejects_ambiguous_manager_like_fallback_agents()
+    {
+        var run = new ProcessRun();
+        var now = DateTimeOffset.UtcNow;
+
+        var result = ProcessRunAutomationDispatchService.ResolveManagerArtifactRecoveryAgent(
+            run,
+            [],
+            [
+                CreateAgentDefinition("Delivery Manager", "Process manager", now),
+                CreateAgentDefinition("Release Manager", "Process manager", now)
+            ]);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
     public void BuildRecoveryDirective_requires_process_step_outcome_for_governed_review_retry()
     {
         var buildRecoveryDirective = typeof(ProcessRunAutomationDispatchService).GetMethod("BuildRecoveryDirective", BindingFlags.NonPublic | BindingFlags.Static)
@@ -11596,10 +13528,77 @@ Ancestor path to the target work node:
 
         var shouldRetryResult = shouldRetry.Invoke(
             null,
-            [candidate, detail, responseText, new[] { "workspace_dotnet_build", "workspace_dotnet_test" }, 1, 5]);
+            [candidate, detail, responseText, new[] { "workspace_dotnet_build", "workspace_dotnet_test" }, CreateCarriedImplementationProof(false, false), 1, 5]);
 
         Assert.IsType<bool>(shouldRetryResult);
         Assert.False((bool)shouldRetryResult);
+    }
+
+    [Fact]
+    public void ApplyTransitionConsequences_reactivates_blocked_dependent_after_upstream_artifact_materialization()
+    {
+        var upstreamStepDefinitionId = Guid.NewGuid();
+        var downstreamStepDefinitionId = Guid.NewGuid();
+        var upstreamStepDefinition = new ProcessStepDefinition
+        {
+            Id = upstreamStepDefinitionId,
+            Title = "Implement bounded delivery change",
+            OrderIndex = 0
+        };
+        var downstreamStepDefinition = new ProcessStepDefinition
+        {
+            Id = downstreamStepDefinitionId,
+            Title = "Complete peer review and integration readiness",
+            OrderIndex = 1
+        };
+        var upstreamStepRun = new ProcessStepRun
+        {
+            StepDefinitionId = upstreamStepDefinitionId,
+            Title = upstreamStepDefinition.Title,
+            Status = ProcessStepRunStatus.Completed
+        };
+        var downstreamStepRun = new ProcessStepRun
+        {
+            StepDefinitionId = downstreamStepDefinitionId,
+            Title = downstreamStepDefinition.Title,
+            Status = ProcessStepRunStatus.Blocked,
+            BlockedReason = "Cannot dispatch 'Complete peer review and integration readiness' because required upstream artifacts are missing: upstream step 'Implement bounded delivery change' must provide required artifact 'Implementation change set'. Automation requested upstream artifact materialization from 'Implement bounded delivery change' before retrying this step."
+        };
+        var now = DateTimeOffset.UtcNow;
+        var stepDefinitionsById = new Dictionary<Guid, ProcessStepDefinition>
+        {
+            [upstreamStepDefinitionId] = upstreamStepDefinition,
+            [downstreamStepDefinitionId] = downstreamStepDefinition
+        };
+        var stepRunsByDefinitionId = new Dictionary<Guid, ProcessStepRun>
+        {
+            [upstreamStepDefinitionId] = upstreamStepRun,
+            [downstreamStepDefinitionId] = downstreamStepRun
+        };
+        var dependenciesByStepId = new Dictionary<Guid, List<ProcessStepDependencyDefinition>>
+        {
+            [downstreamStepDefinitionId] =
+            [
+                new ProcessStepDependencyDefinition
+                {
+                    StepDefinitionId = downstreamStepDefinitionId,
+                    DependsOnStepId = upstreamStepDefinitionId
+                }
+            ]
+        };
+
+        ProcessRuntimeProgressionPlanner.ApplyTransitionConsequences(
+            ProcessStepRunStatus.Completed,
+            upstreamStepDefinition,
+            stepDefinitionsById,
+            stepRunsByDefinitionId,
+            dependenciesByStepId,
+            now);
+
+        Assert.Equal(ProcessStepRunStatus.Ready, downstreamStepRun.Status);
+        Assert.Equal(now, downstreamStepRun.ReadyAtUtc);
+        Assert.Equal(string.Empty, downstreamStepRun.BlockedReason);
+        Assert.Equal("Reopened after upstream artifact materialization completed.", downstreamStepRun.DecisionSummary);
     }
 
     [Fact]
@@ -11636,6 +13635,7 @@ Ancestor path to the target work node:
                     "browser_take_screenshot",
                     "browser_console_messages"
                 },
+                CreateCarriedImplementationProof(false, false),
                 1,
                 3
             ]);
@@ -11782,7 +13782,7 @@ Ancestor path to the target work node:
 
         var shouldRetryResult = shouldRetry.Invoke(
             null,
-            [candidate, detail, responseText, Array.Empty<string>(), 1, 3]);
+            [candidate, detail, responseText, Array.Empty<string>(), CreateCarriedImplementationProof(false, false), 1, 3]);
 
         Assert.IsType<bool>(shouldRetryResult);
         Assert.True((bool)shouldRetryResult);
@@ -12545,6 +14545,75 @@ Ancestor path to the target work node:
             stepTitle: "QA validation");
     }
 
+    private static AgentDefinition CreateAgentDefinition(
+        string name,
+        string roleTitle,
+        DateTimeOffset updatedAtUtc)
+    {
+        return new AgentDefinition(
+            Guid.NewGuid(),
+            name,
+            roleTitle,
+            "Test manager agent.",
+            "Manage the process.",
+            AgentLifecycleStatus.Active,
+            ProviderProfileId: null,
+            "gpt-5.4-mini",
+            AgentWorkloadKind.General,
+            AgentChatHistoryMode.FrameworkManaged,
+            0.2d,
+            RequirePerServiceCallChatHistoryPersistence: false,
+            EnableBackgroundResponses: false,
+            "{}",
+            IsTemplate: false,
+            TemplateKey: string.Empty,
+            AgentPermissionsPolicy.Default,
+            Capabilities: [],
+            Tags: [],
+            CreatedAtUtc: updatedAtUtc,
+            UpdatedAtUtc: updatedAtUtc);
+    }
+
+    private static ProcessRunAutomationDispatchService.DispatchArtifactExpectation CreateDispatchArtifactExpectation(
+        string title,
+        bool isRequired)
+    {
+        return new ProcessRunAutomationDispatchService.DispatchArtifactExpectation(
+            Guid.NewGuid(),
+            ProcessArtifactKind.Evidence,
+            title,
+            isRequired,
+            ProcessArtifactTrustRequirement.ReviewRequired,
+            ProcessSensitivityLevel.Internal,
+            $"Create {title}.",
+            string.Empty);
+    }
+
+    private static ProcessRunAssignmentViewModel CreateAssignment(
+        Guid partyId,
+        string displayName,
+        string roleDisplayName)
+    {
+        return new ProcessRunAssignmentViewModel(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            StepDefinitionId: null,
+            PartyId: partyId,
+            WorkflowDefinitionId: null,
+            WorkflowVersionId: null,
+            DisplayName: displayName,
+            ExecutorKind: "AI agent",
+            BindingReason: "Projected from AgentFramework organization catalog.",
+            SourceRegistryKey: string.Empty,
+            SnapshotSummary: string.Empty,
+            IsFallback: false,
+            IsCapabilityGap: false,
+            AllowsDirectMessaging: true)
+        {
+            RoleDisplayName = roleDisplayName
+        };
+    }
+
     private static object CreateDispatchCandidateCore(
         string workBriefText,
         ProcessStepKind stepKind,
@@ -12558,7 +14627,9 @@ Ancestor path to the target work node:
         string processName = "Software delivery",
         string outputContractSummary = "Buildable implementation",
         string processSlug = "",
-        string stepKey = "")
+        string stepKey = "",
+        string manualRecoveryDirective = "",
+        string runName = "Showcase run")
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
         var candidateType = serviceType.GetNestedType("DispatchCandidate", BindingFlags.NonPublic)
@@ -12622,6 +14693,12 @@ Ancestor path to the target work node:
                 artifactInputType,
                 definition.SourceStepTitle,
                 definition.ExpectedArtifactTitle,
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                null,
+                null,
+                null,
+                false,
                 artifactReferences)
                 ?? throw new InvalidOperationException("DispatchArtifactInput could not be constructed.");
             artifactInputs.SetValue(artifactInput, index);
@@ -12646,7 +14723,7 @@ Ancestor path to the target work node:
                     [
                         new ProcessRun
                         {
-                            Name = "Showcase run",
+                            Name = runName,
                             TriggerReason = triggerReason
                         },
                        new ProcessDefinition
@@ -12687,7 +14764,7 @@ Ancestor path to the target work node:
                        new HashSet<string>(StringComparer.Ordinal),
                        null,
                        null,
-                       string.Empty,
+                       manualRecoveryDirective,
                        branchOutcomes,
                        requiresExplicitBranchOutcomeSelection,
                        new AgentProcessCooperationMetadata(
@@ -12702,7 +14779,8 @@ Ancestor path to the target work node:
         string responseText,
         string? serializedSessionStateJson,
         IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts = null,
-        string prompt = "Prompt")
+        string prompt = "Prompt",
+        string serializedInvocationMetadataJson = "{}")
     {
         var now = DateTimeOffset.UtcNow;
         return new ExecutionRunDetail(
@@ -12717,7 +14795,7 @@ Ancestor path to the target work node:
                 "run-start",
                 "process-automation-dispatch",
                 "system",
-                "{}",
+                serializedInvocationMetadataJson,
                 prompt,
                 responseText,
                 "OpenAI chat completions",

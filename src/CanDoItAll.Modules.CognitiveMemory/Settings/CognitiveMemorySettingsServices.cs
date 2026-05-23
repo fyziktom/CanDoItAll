@@ -51,6 +51,7 @@ public sealed class CognitiveMemoryAutomationSettingsService(
             dbContext.Add(record);
         }
 
+        record.IsEnabled = update.IsEnabled;
         record.ScheduleMode = update.ScheduleMode;
         record.NightlyLocalTime = NormalizeLocalTime(update.NightlyLocalTime, nameof(update.NightlyLocalTime));
         record.IdleMinutes = update.IdleMinutes;
@@ -74,6 +75,7 @@ public sealed class CognitiveMemoryAutomationSettingsService(
     private static CognitiveMemoryAutomationSettings Map(CognitiveMemoryAutomationSettingsRecord record)
     {
         return new CognitiveMemoryAutomationSettings(
+            record.IsEnabled,
             record.ScheduleMode,
             record.NightlyLocalTime,
             record.IdleMinutes,

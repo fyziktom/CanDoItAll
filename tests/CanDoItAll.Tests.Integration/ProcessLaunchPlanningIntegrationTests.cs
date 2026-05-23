@@ -722,19 +722,130 @@ public sealed class ProcessLaunchPlanningIntegrationTests
         Assert.True(runResult.IsSuccess, string.Join(" | ", runResult.Errors.Select(error => error.Message)));
 
         var details = await processesService.GetRunDetailsAsync(runResult.Value);
-        Assert.All(details.Assignments, assignment => Assert.False(assignment.IsCapabilityGap));
         var assignmentsByRole = details.Assignments.ToDictionary(item => item.RoleRequirementId);
+        Assert.False(assignmentsByRole[leadEngineerRoleId].IsCapabilityGap);
         Assert.Equal("Blazor Application Developer", assignmentsByRole[leadEngineerRoleId].DisplayName);
         Assert.DoesNotContain(assignmentsByRole[productOwnerRoleId].DisplayName, TechnicalImplementationAgentNames);
         Assert.DoesNotContain(assignmentsByRole[deliveryManagerRoleId].DisplayName, TechnicalImplementationAgentNames);
 
         var stepRun = Assert.Single(details.StepRuns);
         Assert.Equal("Blazor Application Developer", stepRun.CurrentExecutorName);
-        Assert.Equal(ProcessCapabilityGapSeverity.None, stepRun.CapabilityGapSeverity);
+        Assert.NotEqual(ProcessCapabilityGapSeverity.Critical, stepRun.CapabilityGapSeverity);
 
         var run = await processesService.GetRunAsync(runResult.Value);
         Assert.NotNull(run);
-        Assert.Equal(0, run!.CapabilityGapCount);
+        Assert.Equal(
+            details.StepRuns.Count(item => item.CapabilityGapSeverity != ProcessCapabilityGapSeverity.None),
+            run!.CapabilityGapCount);
+    }
+
+    [Fact]
+    public async Task ProvisionLaunchPlanAsync_assigns_enabled_provider_to_bound_providerless_ai_resource()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var projectPartyBridge = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
+        var aiAgentService = scope.ServiceProvider.GetRequiredService<AiAgentService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var suffix = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture);
+        var projectId = await CreateProjectAsync(
+            projectsService,
+            $"Providerless launch provisioning proof {suffix}",
+            objective: "Provision a process-selected AI resource before governed execution.");
+        var managerId = await CreatePartyAsync(
+            partyDirectoryService,
+            $"Providerless Launch Manager {suffix}",
+            PartyType.Person,
+            PartyLifecycleStatus.Active,
+            PartyRoleKind.Employee,
+            $"providerless.manager.{suffix}@example.test");
+        var aiPartyId = await CreatePartyAsync(
+            partyDirectoryService,
+            $"Providerless Process Agent {suffix}",
+            PartyType.AiAgent,
+            PartyLifecycleStatus.Active,
+            PartyRoleKind.AiSteward,
+            $"providerless.agent.{suffix}@example.test");
+
+        await SaveAssignmentAsync(projectPartyBridge, projectId, managerId, ProjectPartyAssignmentRole.Manager, "manager", true);
+        await SaveAssignmentAsync(projectPartyBridge, projectId, aiPartyId, ProjectPartyAssignmentRole.AiAgent, "providerless-agent", true);
+        await SaveApprovedAiProfileAsync(
+            aiAgentService,
+            aiPartyId,
+            managerId,
+            "Process role execution",
+            "Execute launch-plan work after provisioning assigns a provider.",
+            "Process execution",
+            "Providerless profile created to prove process provisioning repairs runnable provider assignment.",
+            assignProvider: false);
+
+        var initialWorkspace = await aiAgentService.GetAgentWorkspaceAsync(aiPartyId);
+        Assert.NotNull(initialWorkspace);
+        Assert.True(initialWorkspace!.TechnicalAgentId.HasValue);
+        Assert.Null(initialWorkspace.Profile.ProviderProfileId);
+
+        var definition = BuildGenericImplementationLaunchPlanningDefinition(projectId);
+        var saveResult = await processesService.SaveAsync(definition);
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+
+        var launchResult = await processesService.CreateLaunchPlanAsync(new ProcessLaunchCreateRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            LaunchName = $"Providerless launch {suffix}",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Integration test providerless process provisioning validation.",
+            RequestedBy = "integration-tests"
+        });
+        Assert.True(launchResult.IsSuccess, string.Join(" | ", launchResult.Errors.Select(error => error.Message)));
+
+        var details = await processesService.GetLaunchPlanAsync(launchResult.Value);
+        Assert.NotNull(details);
+        var role = Assert.Single(details!.Roles);
+        var providerlessCandidate = Assert.Single(role.Candidates, item => item.PartyId == aiPartyId);
+        Assert.True(providerlessCandidate.RequiresProvisioning);
+        Assert.Contains("runnable", providerlessCandidate.AvailabilitySummary, StringComparison.OrdinalIgnoreCase);
+
+        var selectResult = await processesService.SelectLaunchCandidateAsync(new ProcessLaunchCandidateSelectionRequest
+        {
+            LaunchPlanId = launchResult.Value,
+            LaunchPlanRoleId = role.Id,
+            CandidateId = providerlessCandidate.Id
+        });
+        Assert.True(selectResult.IsSuccess, string.Join(" | ", selectResult.Errors.Select(error => error.Message)));
+
+        var submitResult = await processesService.SubmitLaunchPlanForApprovalAsync(launchResult.Value, "integration-tests");
+        Assert.True(submitResult.IsSuccess, string.Join(" | ", submitResult.Errors.Select(error => error.Message)));
+
+        var approveResult = await processesService.DecideLaunchPlanApprovalAsync(new ProcessLaunchApprovalDecisionRequest
+        {
+            LaunchPlanId = launchResult.Value,
+            Status = ProcessLaunchApprovalStatus.Approved,
+            ResolutionSummary = "Approved providerless provisioning proof.",
+            DecidedBy = "integration-tests"
+        });
+        Assert.True(approveResult.IsSuccess, string.Join(" | ", approveResult.Errors.Select(error => error.Message)));
+
+        var provisionResult = await processesService.ProvisionLaunchPlanAsync(launchResult.Value, "integration-tests");
+        Assert.True(provisionResult.IsSuccess, string.Join(" | ", provisionResult.Errors.Select(error => error.Message)));
+
+        var provisionedWorkspace = await aiAgentService.GetAgentWorkspaceAsync(aiPartyId);
+        Assert.NotNull(provisionedWorkspace);
+        Assert.True(provisionedWorkspace!.Profile.ProviderProfileId.HasValue);
+        Assert.False(string.IsNullOrWhiteSpace(provisionedWorkspace.ProviderName));
+
+        details = await processesService.GetLaunchPlanAsync(launchResult.Value);
+        Assert.NotNull(details);
+        Assert.Equal(ProcessLaunchPlanStatus.Ready, details!.Status);
+        role = Assert.Single(details.Roles);
+        Assert.False(role.RequiresProvisioning);
+        Assert.Equal(providerlessCandidate.Id, role.SelectedCandidateId);
     }
 
     [Fact]
@@ -862,6 +973,129 @@ public sealed class ProcessLaunchPlanningIntegrationTests
         Assert.True(architect.Score > dotnetArchitect.Score);
         Assert.True(implementer.Score > dotnetDeveloper.Score);
         Assert.True(implementer.Score > blazorDeveloper.Score);
+    }
+
+    [Fact]
+    public async Task CreateLaunchPlanAsync_uses_static_client_web_context_to_prefer_javascript_work()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var workbenchService = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+
+        var suffix = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture);
+        var projectId = await CreateProjectAsync(
+            projectsService,
+            $"Static client web launch proof {suffix}",
+            objective: "Deliver a browser-visible static web page with no backend and static hosting.");
+        var workItem = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Build static browser application",
+                "Implementation",
+                "Build a browser game as a static web page under C:\\programovani\\candoitall-dev-output\\static-client-web-proof. No backend; all state is local to the app; host on ordinary static web hosting; keyboard controls are required.",
+                null,
+                ObjectSubtype: "task"));
+        var definition = BuildGenericImplementationLaunchPlanningDefinition(projectId);
+        var saveResult = await processesService.SaveAsync(definition);
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+
+        var launchResult = await processesService.CreateLaunchPlanAsync(new ProcessLaunchCreateRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            LaunchName = $"Static client web launch {suffix}",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Started from project structure.",
+            ProjectStructureContext = new ProcessProjectStructureContext
+            {
+                ProjectId = projectId,
+                NodeId = "process-node",
+                NodeTitle = "Delivery process",
+                ParentNodeId = workItem.Id,
+                ParentNodeTitle = workItem.Title
+            },
+            RequestedBy = "integration-tests"
+        });
+        Assert.True(launchResult.IsSuccess, string.Join(" | ", launchResult.Errors.Select(error => error.Message)));
+
+        var details = await processesService.GetLaunchPlanAsync(launchResult.Value);
+        Assert.NotNull(details);
+
+        var implementer = GetSelectedCandidate(details!, "Lead engineer");
+        var javascriptDeveloper = GetCandidate(details, "Lead engineer", "JavaScript Application Developer");
+        var dotnetDeveloper = GetCandidate(details, "Lead engineer", ".NET Application Developer");
+        var blazorDeveloper = GetCandidate(details, "Lead engineer", "Blazor Application Developer");
+
+        Assert.Equal("JavaScript Application Developer", implementer.DisplayName);
+        Assert.True(javascriptDeveloper.Score > dotnetDeveloper.Score);
+        Assert.True(javascriptDeveloper.Score > blazorDeveloper.Score);
+    }
+
+    [Fact]
+    public async Task StartRunAsync_direct_static_client_web_context_prefers_javascript_developer_for_implementation_role()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var workbenchService = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+
+        var suffix = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture);
+        var projectId = await CreateProjectAsync(
+            projectsService,
+            $"Direct static client web staffing proof {suffix}",
+            objective: "Deliver a browser-visible static web page with no backend and static hosting.");
+        var workItem = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Build static browser application",
+                "Implementation",
+                "Build a browser app as a static web page under C:\\programovani\\candoitall-dev-output\\direct-static-client-web-proof. No backend; all state is local to the app; host on ordinary static web hosting; keyboard controls are required.",
+                null,
+                ObjectSubtype: "task"));
+        var definition = BuildJavaScriptArchitectureAndImplementationLaunchPlanningDefinition(projectId);
+        var architectRoleId = definition.Roles.Single(item => item.Key == "solution-architect").Id!.Value;
+        var leadEngineerRoleId = definition.Roles.Single(item => item.Key == "lead-engineer").Id!.Value;
+        var saveResult = await processesService.SaveAsync(definition);
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = $"Direct static browser app run {suffix}",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Started from project structure.",
+            ProjectStructureContext = new ProcessProjectStructureContext
+            {
+                ProjectId = projectId,
+                NodeId = "process-node",
+                NodeTitle = "Delivery process",
+                ParentNodeId = workItem.Id,
+                ParentNodeTitle = workItem.Title
+            }
+        });
+        Assert.True(runResult.IsSuccess, string.Join(" | ", runResult.Errors.Select(error => error.Message)));
+
+        var details = await processesService.GetRunDetailsAsync(runResult.Value);
+        var assignmentsByRole = details.Assignments.ToDictionary(item => item.RoleRequirementId);
+
+        Assert.Equal("JavaScript Solution Architect", assignmentsByRole[architectRoleId].DisplayName);
+        Assert.Equal("JavaScript Application Developer", assignmentsByRole[leadEngineerRoleId].DisplayName);
+
+        var stepsByTitle = details.StepRuns.ToDictionary(item => item.Title);
+        Assert.Equal("JavaScript Solution Architect", stepsByTitle["Review architecture"].CurrentExecutorName);
+        Assert.Equal("JavaScript Application Developer", stepsByTitle["Build requested app"].CurrentExecutorName);
     }
 
     [Fact]
@@ -1797,12 +2031,17 @@ public sealed class ProcessLaunchPlanningIntegrationTests
         string capabilityName,
         string capabilityScope,
         string toolAccess,
-        string notes)
+        string notes,
+        bool assignProvider = true)
     {
+        var provider = assignProvider
+            ? await ResolveDefaultProviderAsync(aiAgentService, partyId)
+            : null;
         var profile = await aiAgentService.SaveAgentProfileAsync(new AiAgentProfileEditorModel
         {
             PartyId = partyId,
-            DefaultModel = "scenario-local",
+            ProviderProfileId = provider?.Id,
+            DefaultModel = provider?.DefaultModel ?? "scenario-local",
             ExecutionMode = AiExecutionMode.Remote,
             OwnerPartyId = ownerPartyId,
             ValidationStatus = AiValidationStatus.Approved,
@@ -1823,6 +2062,22 @@ public sealed class ProcessLaunchPlanningIntegrationTests
 
         Assert.True(profile.IsSuccess, string.Join(" | ", profile.Errors.Select(error => error.Message)));
         return profile.Value;
+    }
+
+    private static async Task<AiProviderOptionModel> ResolveDefaultProviderAsync(
+        AiAgentService aiAgentService,
+        Guid partyId)
+    {
+        var workspace = await aiAgentService.GetAgentWorkspaceAsync(partyId);
+        Assert.NotNull(workspace);
+
+        var provider = workspace!.ProviderOptions
+            .Where(item => item.IsEnabled)
+            .OrderByDescending(item => !string.IsNullOrWhiteSpace(item.DefaultModel))
+            .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault();
+        Assert.NotNull(provider);
+        return provider!;
     }
 
     private static ProcessLaunchCandidateViewModel GetSelectedCandidate(

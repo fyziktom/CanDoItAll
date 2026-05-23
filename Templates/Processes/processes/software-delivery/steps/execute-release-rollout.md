@@ -1,4 +1,4 @@
-# Execute controlled release rollout
+# Execute controlled release rollout or handoff
 
 **Process:** `software-delivery` / Multi-team software delivery and release governance  
 **Step key:** `execute-release-rollout`  
@@ -6,19 +6,19 @@
 **Target lead hours:** 4
 
 ## Summary
-Live execution and first-hour telemetry watch
+Boundary-scoped release execution and watch
 
 ## Notes
-Deploy the approved change inside the controlled release window while telemetry and rollback readiness remain actively managed.
+Deploy, publish, export, or hand off the approved deliverable inside the declared release boundary while rollback, removal, or recovery readiness remains explicit. Use live telemetry only when the boundary includes a live service or production host.
 
 ## Contracts
-- Input contract: Approved release record, deployment package, rollback plan, and telemetry watch points.
-- Output contract: Executed rollout with explicit telemetry outcome, rollback status, and live-watch notes.
-- Evidence contract: Operator notes, telemetry checkpoints, and any rollback invocation or release halt.
+- Input contract: Approved release record, delivery package or artifact root, rollback or removal plan, declared release boundary, and applicable watch points.
+- Output contract: Executed rollout, publish, export, or handoff with explicit boundary outcome, rollback/removal status, and watch notes where applicable.
+- Evidence contract: Operator notes, artifact placement or deployment receipt, applicable telemetry or smoke checkpoints, not-applicable entries for out-of-boundary production controls, and any rollback, removal, or release halt.
 
 ## Governance
-- Decision rights: Release manager may execute only inside the approved window and rollback-trigger boundaries.
-- Exception policy: Trigger halt or rollback immediately when telemetry, user impact, data impact, or operational constraints breach the approved threshold.
+- Decision rights: Release manager may execute only inside the approved boundary, window, and rollback-trigger limits.
+- Exception policy: Trigger halt, rollback, removal, or no-go immediately when applicable telemetry, artifact integrity, user impact, data impact, or operational constraints breach the approved threshold. Do not block for missing public deployment, CI, or production telemetry when the approved boundary is a package or output-folder handoff.
 - Requires approval: False
 - Requires decision record: False
 
@@ -31,7 +31,7 @@ Deploy the approved change inside the controlled release window while telemetry 
 - `delivery-manager` / Delivery manager => Reviewer; required=True; fallback-order=0; rebind=Governance owner reviews telemetry and escalation timing during the release window.
 
 ## Artifact expectations
-- `deployment-watch-log` -> `release-readiness-report` / Deployment and telemetry watch log | kind=Transcript | trust=ReviewRequired | sensitivity=Internal | validation=Must capture release timing, telemetry checkpoints, and any halt or rollback decision.
+- `deployment-watch-log` -> `release-readiness-report` / Deployment, handoff, and watch log | kind=Transcript | trust=ReviewRequired | sensitivity=Internal | validation=Must capture release timing, artifact placement or deployment receipt, applicable telemetry or smoke checkpoints, not-applicable out-of-boundary controls, and any halt, rollback, or removal decision.
 
 ## Artifact inputs
 - From step `release-approval` expectation `release-approval-record`

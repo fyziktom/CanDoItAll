@@ -1,0 +1,20 @@
+Command: Start rebuilt web app against candoitall_development, create verification project, attach Example: Office365 Category Email Summary To Project, and POST workflow/start
+ExitCode: 0
+
+Result: live workflow completed and created one asset id.
+
+Key output:
+- office365Connections: 1
+- workflowName: Example: Office365 Category Email Summary To Project
+- workflowId: 936ae095-8e8d-4814-89c7-2fcf36ff3148
+- workflowVersionId: bc811e08-f15f-447b-9d9f-aa00c48f618e
+- projectId: b6b5de5c-8658-4863-9367-53f7d96be5b9
+- workflowNodeId: custom:a25c66e96c5e44519ebbb8671f3910b0
+- runId: af39efd8-a113-4d7b-9364-6228ee14a70a
+- run result code: 4
+- createdNodeIds: custom:8b8e41be6b28400f8ac40672c3ccab6b
+- createdAssetIds: custom:8b8e41be6b28400f8ac40672c3ccab6b
+
+Invariant IDs:
+- SB02-INV01
+- SB02-INV02

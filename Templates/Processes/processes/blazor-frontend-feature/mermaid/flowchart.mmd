@@ -1,0 +1,8 @@
+﻿flowchart TD
+    A[Resolve Blazor contract] --> B[Implement Blazor change]
+    B --> C[Validate runtime and browser proof]
+    C -->|quality accepted| D[Record results]
+    C -->|repair required| E[Repair findings]
+    E --> F[Revalidate repair]
+    F -->|quality accepted| G[Record repaired results]
+    F -->|repair escalation| H[Escalate blocker]

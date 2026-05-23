@@ -29,6 +29,11 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         var successfulCalls = ResolveSuccessfulSessionToolCalls(detail.Run.SerializedSessionStateJson);
         if (successfulCalls.Count == 0)
         {
+            successfulCalls = ResolveSuccessfulExecutionLogToolCalls(detail.ExecutionLog);
+        }
+
+        if (successfulCalls.Count == 0)
+        {
             return detail;
         }
 
@@ -198,6 +203,80 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
         var toolName = message[startIndex..endIndex].Trim();
         return string.IsNullOrWhiteSpace(toolName) ? null : toolName;
+    }
+
+    private static IReadOnlyList<SuccessfulSessionToolCall> ResolveSuccessfulExecutionLogToolCalls(
+        IReadOnlyList<ExecutionLogEntry> executionLog)
+    {
+        if (executionLog.Count == 0)
+        {
+            return [];
+        }
+
+        var calls = new List<SuccessfulSessionToolCall>();
+        foreach (var entry in executionLog.OrderBy(item => item.CreatedAtUtc))
+        {
+            if (!string.Equals(entry.Phase, "Tool", StringComparison.OrdinalIgnoreCase) ||
+                entry.State == ExecutionState.Failed ||
+                ExtractToolNameFromLog(entry.Message) is not { } toolName ||
+                !toolName.StartsWith("browser_", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            calls.Add(
+                new SuccessfulSessionToolCall(
+                    CallId: entry.Id.ToString("N"),
+                    ToolName: toolName,
+                    RequestSummary: ExtractToolRequestSummaryFromLog(entry.Message),
+                    OutputFileName: TryResolveOutputFileNameFromLog(entry.Message)));
+        }
+
+        return calls;
+    }
+
+    private static string ExtractToolRequestSummaryFromLog(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return string.Empty;
+        }
+
+        var markerIndex = message.IndexOf(" with ", StringComparison.OrdinalIgnoreCase);
+        if (markerIndex < 0)
+        {
+            return string.Empty;
+        }
+
+        var summary = message[(markerIndex + " with ".Length)..].Trim();
+        return summary.TrimEnd('.');
+    }
+
+    private static string? TryResolveOutputFileNameFromLog(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return null;
+        }
+
+        const string marker = "filename=\"";
+        var startIndex = message.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        if (startIndex < 0)
+        {
+            return null;
+        }
+
+        startIndex += marker.Length;
+        var endIndex = message.IndexOf('"', startIndex);
+        if (endIndex <= startIndex)
+        {
+            return null;
+        }
+
+        var fileName = message[startIndex..endIndex].Trim();
+        return string.IsNullOrWhiteSpace(fileName)
+            ? null
+            : fileName;
     }
 
     private static IReadOnlyList<SuccessfulSessionToolCall> ResolveSuccessfulSessionToolCalls(

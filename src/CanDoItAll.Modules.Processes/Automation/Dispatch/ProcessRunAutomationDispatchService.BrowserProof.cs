@@ -36,13 +36,43 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return "the launch helper reported PowerShell errors on stderr despite a successful tool result";
         }
 
+        var outputsByToolName = ResolveSuccessfulBrowserToolOutputFiles(detail);
+        var missingEvidenceSummary = ResolveMissingRequiredBrowserEvidenceOutputSummary(candidate, outputsByToolName);
+        if (!string.IsNullOrWhiteSpace(missingEvidenceSummary))
+        {
+            return missingEvidenceSummary;
+        }
+
         var browserWorkingDirectory = ResolveProviderNativeBrowserWorkingDirectory(detail);
+        var invalidEvidenceFileSummary = ResolveInvalidRequiredBrowserEvidenceFileSummary(
+            candidate,
+            browserWorkingDirectory,
+            outputsByToolName);
+        if (!string.IsNullOrWhiteSpace(invalidEvidenceFileSummary))
+        {
+            return invalidEvidenceFileSummary;
+        }
+
+        var consoleEvidenceSummary = ResolveInvalidBrowserConsoleEvidenceSummary(
+            detail,
+            browserWorkingDirectory,
+            outputsByToolName);
+        if (!string.IsNullOrWhiteSpace(consoleEvidenceSummary))
+        {
+            return consoleEvidenceSummary;
+        }
+
+        var shallowInteractionSummary = ResolveShallowRepresentativeBrowserInteractionSummary(candidate, detail);
+        if (!string.IsNullOrWhiteSpace(shallowInteractionSummary))
+        {
+            return shallowInteractionSummary;
+        }
+
         if (string.IsNullOrWhiteSpace(browserWorkingDirectory))
         {
             return string.Empty;
         }
 
-        var outputsByToolName = ResolveSuccessfulBrowserToolOutputFiles(detail);
         if (!outputsByToolName.TryGetValue("browser_snapshot", out var snapshotFiles) ||
             snapshotFiles.Count == 0)
         {
@@ -68,6 +98,316 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         return string.Empty;
+    }
+
+    private static string ResolveMissingRequiredBrowserEvidenceOutputSummary(
+        DispatchCandidate candidate,
+        IReadOnlyDictionary<string, IReadOnlyList<string>> outputsByToolName)
+    {
+        if (RequiresBrowserScreenshotEvidenceArtifact(candidate) &&
+            !HasBrowserEvidenceOutput(outputsByToolName, "browser_take_screenshot"))
+        {
+            return "required browser screenshot evidence was not captured as a durable browser artifact";
+        }
+
+        if (RequiresBrowserStateEvidenceArtifact(candidate) &&
+            !HasBrowserEvidenceOutput(outputsByToolName, "browser_snapshot") &&
+            !HasBrowserEvidenceOutput(outputsByToolName, "browser_evaluate"))
+        {
+            return "required browser snapshot or DOM evidence was not captured as a durable browser artifact";
+        }
+
+        if (RequiresBrowserConsoleEvidenceArtifact(candidate) &&
+            !HasBrowserEvidenceOutput(outputsByToolName, "browser_console_messages"))
+        {
+            return "required browser console evidence was not captured as a durable browser artifact";
+        }
+
+        return string.Empty;
+    }
+
+    private static string ResolveInvalidRequiredBrowserEvidenceFileSummary(
+        DispatchCandidate candidate,
+        string? browserWorkingDirectory,
+        IReadOnlyDictionary<string, IReadOnlyList<string>> outputsByToolName)
+    {
+        if (string.IsNullOrWhiteSpace(browserWorkingDirectory))
+        {
+            return string.Empty;
+        }
+
+        if (RequiresBrowserScreenshotEvidenceArtifact(candidate) &&
+            !HasUsableBrowserEvidenceFile(browserWorkingDirectory, outputsByToolName, "browser_take_screenshot"))
+        {
+            return "required browser screenshot evidence file is missing, empty, or not an image";
+        }
+
+        if (RequiresBrowserStateEvidenceArtifact(candidate) &&
+            !HasUsableBrowserEvidenceFile(browserWorkingDirectory, outputsByToolName, "browser_snapshot") &&
+            !HasUsableBrowserEvidenceFile(browserWorkingDirectory, outputsByToolName, "browser_evaluate"))
+        {
+            return "required browser snapshot or DOM evidence file is missing, empty, or not a supported text artifact";
+        }
+
+        if (RequiresBrowserConsoleEvidenceArtifact(candidate) &&
+            !HasUsableBrowserEvidenceFile(browserWorkingDirectory, outputsByToolName, "browser_console_messages"))
+        {
+            return "required browser console evidence file is missing, empty, or not a supported text artifact";
+        }
+
+        return string.Empty;
+    }
+
+    private static string ResolveInvalidBrowserConsoleEvidenceSummary(
+        ExecutionRunDetail detail,
+        string? browserWorkingDirectory,
+        IReadOnlyDictionary<string, IReadOnlyList<string>> outputsByToolName)
+    {
+        foreach (var consoleText in ResolveBrowserConsoleEvidenceTexts(detail, browserWorkingDirectory, outputsByToolName))
+        {
+            if (ContainsActiveBrowserConsoleError(consoleText))
+            {
+                return "browser console evidence contains active JavaScript or runtime errors";
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static string ResolveShallowRepresentativeBrowserInteractionSummary(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail)
+    {
+        if (!RequiresRepresentativeBrowserInteractionProof(candidate) ||
+            HasRepresentativeBrowserInteractionProof(detail))
+        {
+            return string.Empty;
+        }
+
+        return "interactive browser proof did not execute a representative interaction tool required by the step contract";
+    }
+
+    private static bool RequiresBrowserScreenshotEvidenceArtifact(DispatchCandidate candidate)
+    {
+        return CandidateRequiredEvidenceTextContains(candidate, ContainsNaturalScreenshotArtifactSignal) ||
+               CandidateHasDeclaredBrowserEvidencePath(candidate, "browser_take_screenshot");
+    }
+
+    private static bool RequiresBrowserStateEvidenceArtifact(DispatchCandidate candidate)
+    {
+        return CandidateRequiredEvidenceTextContains(candidate, ContainsNaturalBrowserStateEvidenceSignal) ||
+               CandidateHasDeclaredBrowserEvidencePath(candidate, "browser_snapshot") ||
+               CandidateHasDeclaredBrowserEvidencePath(candidate, "browser_evaluate");
+    }
+
+    private static bool RequiresBrowserConsoleEvidenceArtifact(DispatchCandidate candidate)
+    {
+        return CandidateRequiredEvidenceTextContains(candidate, ContainsNaturalBrowserConsoleEvidenceSignal) ||
+               CandidateHasDeclaredBrowserEvidencePath(candidate, "browser_console_messages");
+    }
+
+    private static bool CandidateRequiredEvidenceTextContains(
+        DispatchCandidate candidate,
+        Func<string, bool> predicate)
+    {
+        return candidate.ExpectedArtifacts
+            .Where(item => item.IsRequired)
+            .Where(item => item.ArtifactKind == ProcessArtifactKind.Evidence)
+            .Select(item => $"{item.Title} {item.ValidationRequirementSummary}")
+            .Any(predicate);
+    }
+
+    private static bool CandidateHasDeclaredBrowserEvidencePath(
+        DispatchCandidate candidate,
+        string toolName)
+    {
+        return candidate.ExpectedArtifacts
+            .Where(item => item.IsRequired)
+            .Where(item => item.ArtifactKind == ProcessArtifactKind.Evidence)
+            .Select(item => item.ValidationRequirementSummary)
+            .Any(summary =>
+                TryExtractExpectedArtifactRelativePath(summary, out var declaredRelativePath) &&
+                string.Equals(ResolveProviderNativeBrowserToolName(declaredRelativePath), toolName, StringComparison.Ordinal));
+    }
+
+    private static bool ContainsNaturalScreenshotArtifactSignal(string text)
+    {
+        return Regex.IsMatch(
+            text,
+            @"(?<![A-Za-z0-9_])screen\s+shots?(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])screenshots?(?![A-Za-z0-9_])",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    }
+
+    private static bool ContainsNaturalBrowserStateEvidenceSignal(string text)
+    {
+        return Regex.IsMatch(
+            text,
+            @"(?<![A-Za-z0-9_])browser\s+(?:proof|evidence)(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])snapshot(?:s)?(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])DOM(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])visible\s+state(?![A-Za-z0-9_])",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    }
+
+    private static bool ContainsNaturalBrowserConsoleEvidenceSignal(string text)
+    {
+        return Regex.IsMatch(
+            text,
+            @"(?<![A-Za-z0-9_])(?:browser|javascript)\s+console(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])console\s+(?:messages?|logs?|diagnostics?)(?![A-Za-z0-9_])",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    }
+
+    private static bool HasBrowserEvidenceOutput(
+        IReadOnlyDictionary<string, IReadOnlyList<string>> outputsByToolName,
+        string toolName)
+    {
+        return outputsByToolName.TryGetValue(toolName, out var outputFiles) &&
+               outputFiles.Any(IsProviderNativeBrowserArtifactPath);
+    }
+
+    private static bool HasUsableBrowserEvidenceFile(
+        string browserWorkingDirectory,
+        IReadOnlyDictionary<string, IReadOnlyList<string>> outputsByToolName,
+        string toolName)
+    {
+        return outputsByToolName.TryGetValue(toolName, out var outputFiles) &&
+               outputFiles.Any(outputFile =>
+                   BrowserOutputFileMatchesToolType(toolName, outputFile) &&
+                   TryResolveSafeBrowserOutputPath(browserWorkingDirectory, outputFile, out var fullPath) &&
+                   File.Exists(fullPath) &&
+                   new FileInfo(fullPath).Length > 0);
+    }
+
+    private static bool BrowserOutputFileMatchesToolType(string toolName, string outputFile)
+    {
+        var extension = Path.GetExtension(outputFile).ToLowerInvariant();
+        return toolName switch
+        {
+            "browser_take_screenshot" => IsImageExtension(extension),
+            "browser_snapshot" => extension is ".yml" or ".yaml" or ".md" or ".txt",
+            "browser_console_messages" => extension is ".log" or ".txt" or ".json",
+            "browser_evaluate" => extension is ".json" or ".txt" or ".md",
+            _ => true
+        };
+    }
+
+    private static IReadOnlyList<string> ResolveBrowserConsoleEvidenceTexts(
+        ExecutionRunDetail detail,
+        string? browserWorkingDirectory,
+        IReadOnlyDictionary<string, IReadOnlyList<string>> outputsByToolName)
+    {
+        var texts = new List<string>();
+        texts.AddRange(ResolveSuccessfulSessionToolResultTexts(detail.Run.SerializedSessionStateJson)
+            .Where(item => string.Equals(item.ToolName, "browser_console_messages", StringComparison.Ordinal))
+            .Select(item => item.Text)
+            .Where(item => !string.IsNullOrWhiteSpace(item)));
+
+        if (!string.IsNullOrWhiteSpace(browserWorkingDirectory) &&
+            outputsByToolName.TryGetValue("browser_console_messages", out var consoleFiles))
+        {
+            foreach (var consoleFile in consoleFiles)
+            {
+                if (TryReadBrowserOutputText(browserWorkingDirectory, consoleFile, out var consoleText) &&
+                    !string.IsNullOrWhiteSpace(consoleText))
+                {
+                    texts.Add(consoleText);
+                }
+            }
+        }
+
+        return texts;
+    }
+
+    private static bool ContainsActiveBrowserConsoleError(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        var normalized = CollapsePromptWhitespace(text);
+        if (ContainsPostStopBrowserDisconnectOnly(normalized))
+        {
+            return false;
+        }
+
+        return ContainsBrowserConsoleErrorSignal(normalized);
+    }
+
+    private static bool ContainsPostStopBrowserDisconnectOnly(string normalizedText)
+    {
+        return ContainsBrowserDisconnectSignal(normalizedText) &&
+               ContainsPostStopBoundarySignal(normalizedText) &&
+               !ContainsNonDisconnectBrowserConsoleErrorSignal(normalizedText);
+    }
+
+    private static bool ContainsBrowserConsoleErrorSignal(string normalizedText)
+    {
+        return ContainsNonDisconnectBrowserConsoleErrorSignal(normalizedText) ||
+               ContainsBrowserDisconnectSignal(normalizedText);
+    }
+
+    private static bool ContainsNonDisconnectBrowserConsoleErrorSignal(string normalizedText)
+    {
+        return Regex.IsMatch(
+                   normalizedText,
+                   @"\b(?:TypeError|ReferenceError|SyntaxError|RangeError|EvalError|URIError)\b|(?:^|\s)(?:Unhandled|Uncaught)(?:\s+\w+)?\b|\bError:\s",
+                   RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) ||
+               normalizedText.Contains("[error]", StringComparison.OrdinalIgnoreCase) ||
+               normalizedText.Contains("blazor-error-ui", StringComparison.OrdinalIgnoreCase) ||
+               Regex.IsMatch(
+                   normalizedText,
+                   @"Failed to load resource:.*\b(?:4\d\d|5\d\d|ERR_[A-Z_]+)\b",
+                   RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    }
+
+    private static bool ContainsBrowserDisconnectSignal(string normalizedText)
+    {
+        return normalizedText.Contains("ERR_CONNECTION_REFUSED", StringComparison.OrdinalIgnoreCase) ||
+               normalizedText.Contains("WebSocket connection", StringComparison.OrdinalIgnoreCase) &&
+               normalizedText.Contains("failed", StringComparison.OrdinalIgnoreCase) ||
+               normalizedText.Contains("SignalR connection", StringComparison.OrdinalIgnoreCase) &&
+               normalizedText.Contains("disconnected", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool ContainsPostStopBoundarySignal(string normalizedText)
+    {
+        return normalizedText.Contains("post-stop", StringComparison.OrdinalIgnoreCase) ||
+               normalizedText.Contains("after stop", StringComparison.OrdinalIgnoreCase) ||
+               normalizedText.Contains("after host stop", StringComparison.OrdinalIgnoreCase) ||
+               normalizedText.Contains("host stopped", StringComparison.OrdinalIgnoreCase) ||
+               normalizedText.Contains("server stopped", StringComparison.OrdinalIgnoreCase) ||
+               normalizedText.Contains("stop command completed", StringComparison.OrdinalIgnoreCase) ||
+               normalizedText.Contains("browser host stopped", StringComparison.OrdinalIgnoreCase) ||
+               normalizedText.Contains("process stopped", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool RequiresRepresentativeBrowserInteractionProof(DispatchCandidate candidate)
+    {
+        var contractText = ResolveQualityValidationContractText(candidate);
+        if (string.IsNullOrWhiteSpace(contractText))
+        {
+            return false;
+        }
+
+        return Regex.IsMatch(
+            contractText,
+            @"(?<![A-Za-z0-9_])representative\s+(?:user\s+)?interaction(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])interactive(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])canvas(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])game(?:play)?(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])custom[-\s]+control(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])keyboard[-\s]+first(?![A-Za-z0-9_])",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    }
+
+    private static bool HasRepresentativeBrowserInteractionProof(ExecutionRunDetail detail)
+    {
+        return ResolveSuccessfulToolNames(detail)
+            .Any(IsRepresentativeBrowserInteractionToolName);
+    }
+
+    private static bool IsRepresentativeBrowserInteractionToolName(string toolName)
+    {
+        return toolName is "browser_click" or
+            "browser_fill_form" or
+            "browser_select_option" or
+            "browser_press_key" or
+            "browser_type" or
+            "browser_drag" or
+            "browser_evaluate";
     }
 
     private static bool ContainsSerializedPowerShellErrorRecord(string? serializedSessionStateJson)

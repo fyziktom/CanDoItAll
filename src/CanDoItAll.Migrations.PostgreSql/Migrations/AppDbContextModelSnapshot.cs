@@ -1291,6 +1291,11 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<int>("IdleMinutes")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("IsEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
                     b.Property<int>("ModelAccessMode")
                         .HasColumnType("integer");
 

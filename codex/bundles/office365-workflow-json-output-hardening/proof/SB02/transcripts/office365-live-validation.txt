@@ -1,0 +1,38 @@
+Command: Invoke-RestMethod POST /api/project-structure/projects/{projectId}/nodes/{nodeId}/workflow/start, then poll /api/workflows/runs/{runId}/detail
+ExitCode: 0
+
+# Office365 live workflow validation transcript
+TimestampUtc: 2026-05-23T13:18:37.6554958Z
+ProjectId: 13e02b22-b820-4c92-a6ea-35f50e5fa4b6
+WorkflowNodeId: custom:34c6d2f75f8f4bceb10520f8a621761c
+StartEndpoint: POST /api/project-structure/projects/13e02b22-b820-4c92-a6ea-35f50e5fa4b6/nodes/custom:34c6d2f75f8f4bceb10520f8a621761c/workflow/start
+
+## Start response
+RunId: fe41c9d6-d2ea-4127-b2c0-33a7ba9ab9bf
+State: 4
+Status: Completed
+Message: Workflow 'Example: Office365 Category Email Summary To Project' completed.
+Warnings: Workflow definition prefers DurableTask, but this host has not registered that runtime. Project Structure explicitly requested InProcess for this local start.
+
+## Poll 1
+State: 4
+UpdatedAtUtc: 05/23/2026 09:19:17
+Summary: Workflow 'Example: Office365 Category Email Summary To Project' completed.
+Event: kind=2; node=; message=ExecutorCompletedEvent(Executor = mark-office365-processed, Data: <payload omitted>
+Event: kind=4; node=; message=SuperStepCompletedEvent(Step = 4, Data: Microsoft.Agents.AI.Workflows.SuperStepCompletionInfo = Microsoft.Agents.AI.Workflows.SuperStepCompletionInfo)
+Event: kind=4; node=; message=SuperStepStartedEvent(Step = 5, Data: Microsoft.Agents.AI.Workflows.SuperStepStartInfo = Microsoft.Agents.AI.Workflows.SuperStepStartInfo)
+Event: kind=1; node=; message=ExecutorInvokedEvent(Executor = end, Data: <payload omitted>
+Event: kind=2; node=; message=ExecutorCompletedEvent(Executor = end, Data: <payload omitted>
+Event: kind=5; node=; message=WorkflowOutputEvent(Data: <payload omitted>
+Event: kind=4; node=; message=SuperStepCompletedEvent(Step = 5, Data: Microsoft.Agents.AI.Workflows.SuperStepCompletionInfo = Microsoft.Agents.AI.Workflows.SuperStepCompletionInfo)
+Event: kind=9; node=; message=Workflow 'Example: Office365 Category Email Summary To Project' completed.
+
+## Project workflow node status
+RunId: fe41c9d6-d2ea-4127-b2c0-33a7ba9ab9bf
+State: 4
+Status: Completed
+Message: Workflow 'Example: Office365 Category Email Summary To Project' completed.
+CreatedNodeIds: custom:f3e01be352bd476cba9a2c4ffcecaeb0
+CreatedAssetIds: custom:f3e01be352bd476cba9a2c4ffcecaeb0
+CreatedFilePaths: 
+

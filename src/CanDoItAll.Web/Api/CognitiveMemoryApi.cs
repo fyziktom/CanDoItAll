@@ -102,10 +102,12 @@ internal static partial class CognitiveMemoryApi
     }
 
     private static CognitiveMemoryAutomationSettingsUpdate BuildAutomationSettingsUpdate(
-        CognitiveMemoryAutomationSettingsApiRequest request)
+        CognitiveMemoryAutomationSettingsApiRequest request,
+        CognitiveMemoryAutomationSettings? currentSettings = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         return new CognitiveMemoryAutomationSettingsUpdate(
+            request.IsEnabled ?? currentSettings?.IsEnabled ?? true,
             ParseEnum(
                 request.ScheduleMode,
                 CognitiveMemoryAutomationScheduleMode.ManualOnly,

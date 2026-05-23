@@ -90,6 +90,51 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     return;
                 }
 
+                if (await TryRequestMissingUpstreamArtifactMaterializationAsync(candidate, cancellationToken))
+                {
+                    return;
+                }
+
+                var strandedArtifactRecoveryOutcome = await TryRecoverStrandedMissingCompletionArtifactsAsync(
+                    candidate,
+                    trigger,
+                    renewLeaseAsync,
+                    cancellationToken);
+                if (strandedArtifactRecoveryOutcome is not null)
+                {
+                    var recoveryStepRunSnapshot = await LoadStepRunTransitionSnapshotAsync(candidate.StepRun.Id, cancellationToken)
+                        ?? throw new InvalidOperationException($"Process step run {candidate.StepRun.Id} could not be reloaded after manager artifact recovery.");
+                    if (ShouldSkipAutomationCompletionTransition(recoveryStepRunSnapshot.Status, strandedArtifactRecoveryOutcome.CompletionStatus))
+                    {
+                        logger.LogInformation(
+                            "Skipping stale process manager artifact recovery transition for run {RunId}, step {StepRunId}. Current status is {CurrentStatus}, requested status is {RequestedStatus}.",
+                            candidate.Run.Id,
+                            candidate.StepRun.Id,
+                            recoveryStepRunSnapshot.Status,
+                            strandedArtifactRecoveryOutcome.CompletionStatus);
+                        return;
+                    }
+
+                    var recoveryTransitionResult = await TransitionStepAsync(
+                        new ProcessStepTransitionRequest
+                        {
+                            StepRunId = candidate.StepRun.Id,
+                            StepRunConcurrencyToken = recoveryStepRunSnapshot.ConcurrencyToken,
+                            TargetStatus = strandedArtifactRecoveryOutcome.CompletionStatus,
+                            Reason = strandedArtifactRecoveryOutcome.CompletionReason,
+                            SelectedBranchOutcomeId = strandedArtifactRecoveryOutcome.SelectedBranchOutcomeId,
+                            DecidedBy = AutomationActor,
+                            SuppressAutomationDispatch = strandedArtifactRecoveryOutcome.CompletionStatus != ProcessStepRunStatus.Completed
+                        },
+                        cancellationToken);
+                    if (recoveryTransitionResult.IsFailure)
+                    {
+                        throw new InvalidOperationException(string.Join(" | ", recoveryTransitionResult.Errors.Select(error => error.Message)));
+                    }
+
+                    return;
+                }
+
                 if (candidate.StepRun.Status != ProcessStepRunStatus.InProgress)
                 {
                     var startResult = await TransitionStepAsync(
@@ -181,6 +226,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
                             executionOutcome.Detail,
                             executionOutcome.ResponseText,
                             executionOutcome.CompletionStatus,
+                            cancellationToken);
+                        executionOutcome = await TryRecoverMissingCompletionArtifactsAsync(
+                            candidate,
+                            executionOutcome,
+                            trigger,
+                            renewLeaseAsync,
                             cancellationToken);
 
                         var completionResult = await TransitionStepAsync(
@@ -814,6 +865,132 @@ internal sealed partial class ProcessRunAutomationDispatchService
             candidate.StepRun.Id);
     }
 
+    private async Task<bool> TryRequestMissingUpstreamArtifactMaterializationAsync(
+        DispatchCandidate candidate,
+        CancellationToken cancellationToken)
+    {
+        var missingInputs = ResolveMissingUpstreamArtifactInputs(candidate);
+        if (missingInputs.Count == 0)
+        {
+            return false;
+        }
+
+        var materializationTarget = missingInputs.FirstOrDefault(IsRunnableUpstreamArtifactMaterializationTarget);
+        var blockReason = BuildMissingUpstreamArtifactMaterializationBlockReason(candidate, missingInputs, materializationTarget);
+        if (candidate.StepRun.Status != ProcessStepRunStatus.Blocked)
+        {
+            var snapshot = await LoadStepRunTransitionSnapshotAsync(candidate.StepRun.Id, cancellationToken);
+            if (snapshot is not null &&
+                snapshot.Status is ProcessStepRunStatus.Ready or ProcessStepRunStatus.WaitingApproval or ProcessStepRunStatus.InProgress)
+            {
+                var blockResult = await TransitionStepAsync(
+                    new ProcessStepTransitionRequest
+                    {
+                        StepRunId = candidate.StepRun.Id,
+                        StepRunConcurrencyToken = snapshot.ConcurrencyToken,
+                        TargetStatus = ProcessStepRunStatus.Blocked,
+                        Reason = blockReason,
+                        DecidedBy = AutomationActor,
+                        SuppressAutomationDispatch = true
+                    },
+                    cancellationToken);
+                if (blockResult.IsFailure)
+                {
+                    logger.LogWarning(
+                        "Could not block downstream step {StepRunId} before upstream artifact materialization for run {RunId}. Errors: {Errors}",
+                        candidate.StepRun.Id,
+                        candidate.Run.Id,
+                        string.Join(" | ", blockResult.Errors.Select(error => error.Message)));
+                    return true;
+                }
+            }
+        }
+
+        if (materializationTarget is null)
+        {
+            logger.LogWarning(
+                "Process run {RunId}, step {StepRunId} is missing required upstream artifacts, but no completed, blocked, or failed agent-owned source step is available for automatic materialization. Missing inputs: {MissingInputs}",
+                candidate.Run.Id,
+                candidate.StepRun.Id,
+                string.Join(" | ", missingInputs.Select(input => $"{input.SourceStepTitle}: {input.ExpectedArtifactTitle}")));
+            return true;
+        }
+
+        await using var scope = serviceScopeFactory.CreateAsyncScope();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var rerunResult = await processesService.RerunAgentStepAsync(
+            new ProcessAgentStepRerunRequest
+            {
+                StepRunId = materializationTarget.SourceStepRunId!.Value,
+                StepRunConcurrencyToken = materializationTarget.SourceStepRunConcurrencyToken,
+                OperatorReason = BuildUpstreamArtifactMaterializationDirective(candidate, missingInputs, materializationTarget)
+            },
+            cancellationToken);
+        if (rerunResult.IsFailure)
+        {
+            logger.LogWarning(
+                "Could not request upstream artifact materialization from step {SourceStepRunId} for run {RunId}, blocked downstream step {StepRunId}. Errors: {Errors}",
+                materializationTarget.SourceStepRunId,
+                candidate.Run.Id,
+                candidate.StepRun.Id,
+                string.Join(" | ", rerunResult.Errors.Select(error => error.Message)));
+            return true;
+        }
+
+        logger.LogInformation(
+            "Requested upstream artifact materialization from step {SourceStepRunId} for blocked downstream step {StepRunId} on process run {RunId}. Missing artifact: {ExpectedArtifactTitle}",
+            materializationTarget.SourceStepRunId,
+            candidate.StepRun.Id,
+            candidate.Run.Id,
+            materializationTarget.ExpectedArtifactTitle);
+        return true;
+    }
+
+    private static IReadOnlyList<DispatchArtifactInput> ResolveMissingUpstreamArtifactInputs(DispatchCandidate candidate)
+    {
+        return candidate.ArtifactInputs
+            .Where(input => input.Artifacts.Count == 0)
+            .ToList();
+    }
+
+    private static bool IsRunnableUpstreamArtifactMaterializationTarget(DispatchArtifactInput input)
+    {
+        return input.SourceStepRunId.HasValue &&
+               input.SourceStepRunConcurrencyToken.HasValue &&
+               input.SourceStepHasAgentExecutor &&
+               input.SourceStepRunStatus is ProcessStepRunStatus.Completed or ProcessStepRunStatus.Blocked or ProcessStepRunStatus.Failed;
+    }
+
+    private static string BuildMissingUpstreamArtifactMaterializationBlockReason(
+        DispatchCandidate candidate,
+        IReadOnlyList<DispatchArtifactInput> missingInputs,
+        DispatchArtifactInput? materializationTarget)
+    {
+        var missingSummary = string.Join(
+            "; ",
+            missingInputs
+                .Take(3)
+                .Select(input => $"upstream step '{input.SourceStepTitle}' must provide required artifact '{input.ExpectedArtifactTitle}'"));
+        var targetSummary = materializationTarget is null
+            ? "No eligible agent-owned upstream step is available for automatic materialization."
+            : $"Automation requested upstream artifact materialization from '{materializationTarget.SourceStepTitle}' before retrying this step.";
+        return $"Cannot dispatch '{candidate.StepRun.Title}' because required upstream artifacts are missing: {missingSummary}. {targetSummary}";
+    }
+
+    private static string BuildUpstreamArtifactMaterializationDirective(
+        DispatchCandidate candidate,
+        IReadOnlyList<DispatchArtifactInput> missingInputs,
+        DispatchArtifactInput materializationTarget)
+    {
+        var targetMissingInputs = missingInputs
+            .Where(input => input.SourceStepRunId == materializationTarget.SourceStepRunId)
+            .ToList();
+        var artifactTitles = targetMissingInputs.Count == 0
+            ? materializationTarget.ExpectedArtifactTitle
+            : string.Join(", ", targetMissingInputs.Select(input => input.ExpectedArtifactTitle).Distinct(StringComparer.OrdinalIgnoreCase));
+        return $"Automatic upstream artifact materialization requested. Downstream step '{candidate.StepRun.Title}' cannot proceed because required upstream artifact(s) are missing: {artifactTitles}. Use this step's existing records, artifacts, decisions, and prior execution context to create or repair only the missing required artifact(s). Do not redo unrelated work. When the artifact(s) are recorded, the downstream step will retry from its configured artifact inputs.";
+    }
+
     private async Task<DispatchCandidate?> LoadDispatchCandidateAsync(
         Guid processRunId,
         CancellationToken cancellationToken)
@@ -1076,6 +1253,18 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
 
             var agentEditor = await workspaceService.GetAgentEditorAsync(technicalAgentSummary.TechnicalAgentId.Value, cancellationToken);
+            if (TryResolveProjectStructureAccessProjectId(run, out var projectStructureAccessProjectId) &&
+                ApplyProjectStructureReadAccess(agentEditor, projectStructureAccessProjectId))
+            {
+                await workspaceService.SaveAgentAsync(agentEditor, cancellationToken);
+                logger.LogInformation(
+                    "Granted project-structure read access for project {ProjectId} to technical agent {TechnicalAgentId} before dispatching process run {RunId}, step {StepRunId}.",
+                    projectStructureAccessProjectId,
+                    technicalAgentSummary.TechnicalAgentId.Value,
+                    run.Id,
+                    stepRun.Id);
+            }
+
             artifactInputsByStepDefinitionId.TryGetValue(stepRun.StepDefinitionId, out var configuredArtifactInputs);
             var availableBranchOutcomes = branchOutcomesByStepDefinitionId.TryGetValue(stepRun.StepDefinitionId, out var configuredBranchOutcomes)
                 ? configuredBranchOutcomes
@@ -1095,6 +1284,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 .Where(item => item.StepRunId == stepRun.Id && item.ArtifactExpectationId.HasValue)
                 .Select(item => item.ArtifactExpectationId!.Value)
                 .ToHashSet();
+            recoveryExecutionRunId ??= ResolveArtifactRecoveryExecutionRunId(
+                stepRun,
+                executionRuns,
+                expectedArtifacts,
+                recordedArtifactExpectationIds);
             var preparedArtifactInputs = PrepareArtifactInputsForPrompt(
                 BuildResolvedArtifactInputs(
                     configuredArtifactInputs ?? [],
@@ -1132,6 +1326,54 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         return null;
+    }
+
+    internal static bool ApplyProjectStructureReadAccess(AgentEditorModel agentEditor, Guid projectId)
+    {
+        ArgumentNullException.ThrowIfNull(agentEditor);
+
+        if (projectId == Guid.Empty)
+        {
+            return false;
+        }
+
+        var access = AgentProjectStructureAccessMetadata.Normalize(agentEditor.ProjectStructureAccess);
+        if (access.CanRead &&
+            (access.AllowAllProjects || access.AllowedProjectIds.Contains(projectId)))
+        {
+            agentEditor.ProjectStructureAccess = access;
+            return false;
+        }
+
+        access.CanRead = true;
+        if (!access.AllowAllProjects &&
+            !access.AllowedProjectIds.Contains(projectId))
+        {
+            access.AllowedProjectIds.Add(projectId);
+        }
+
+        agentEditor.ProjectStructureAccess = AgentProjectStructureAccessMetadata.Normalize(access);
+        return true;
+    }
+
+    private static bool TryResolveProjectStructureAccessProjectId(ProcessRun run, out Guid projectId)
+    {
+        if (ProcessProjectStructureContextFormatter.TryParse(run.TriggerReason, out var projectStructureContext) &&
+            projectStructureContext is not null &&
+            projectStructureContext.ProjectId != Guid.Empty)
+        {
+            projectId = projectStructureContext.ProjectId;
+            return true;
+        }
+
+        if (run.ProjectId.HasValue && run.ProjectId.Value != Guid.Empty)
+        {
+            projectId = run.ProjectId.Value;
+            return true;
+        }
+
+        projectId = Guid.Empty;
+        return false;
     }
 
     private static bool IsWorkflowDispatchAssignment(

@@ -25,11 +25,36 @@ public sealed partial class MafAgentRuntime
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken,
         bool suppressApprovalRequirements = false)
+        => await CreateCapabilityStateCoreAsync(
+            agent,
+            provider,
+            capabilities,
+            memory,
+            progressCallback,
+            cancellationToken,
+            suppressApprovalRequirements,
+            workspaceScope);
+
+    private async Task<RuntimeCapabilityState> CreateCapabilityStateCoreAsync(
+        AgentDefinition agent,
+        ProviderProfile provider,
+        IReadOnlyList<CapabilityCatalogItem> capabilities,
+        IReadOnlyList<AgentMemoryRecord> memory,
+        Func<ExecutionState, string, string, Task> progressCallback,
+        CancellationToken cancellationToken,
+        bool suppressApprovalRequirements,
+        WorkspaceScopeDescriptor contextWorkspaceScope)
     {
         var composition = CreateCapabilityComposition(agent, capabilities);
 
         await AttachWorkspaceMemoryAsync(composition, memory, progressCallback);
-        await AttachContextContributorsAsync(composition, agent, provider, progressCallback, suppressApprovalRequirements);
+        await AttachContextContributorsAsync(
+            composition,
+            agent,
+            provider,
+            progressCallback,
+            suppressApprovalRequirements,
+            contextWorkspaceScope);
         await AttachSkillsAsync(composition, capabilities, progressCallback, suppressApprovalRequirements);
         await AttachConfiguredWorkspaceToolsAsync(composition, agent, progressCallback, suppressApprovalRequirements);
         await AttachInternalProjectStructureToolsAsync(composition, agent, progressCallback);
@@ -136,7 +161,8 @@ public sealed partial class MafAgentRuntime
         AgentDefinition agent,
         ProviderProfile provider,
         Func<ExecutionState, string, string, Task> progressCallback,
-        bool suppressApprovalRequirements)
+        bool suppressApprovalRequirements,
+        WorkspaceScopeDescriptor contextWorkspaceScope)
     {
         if (composition.ContextContributors.Count == 0)
         {
@@ -167,7 +193,7 @@ public sealed partial class MafAgentRuntime
         var policy = new AgentContextContributionPolicy(
             MapContextContributionExecutionMode(ResolveContextPolicyKind(agent, suppressApprovalRequirements)),
             suppressApprovalRequirements,
-            workspaceScope);
+            contextWorkspaceScope);
 
         foreach (var contributor in enabledContributors)
         {

@@ -1286,6 +1286,11 @@ namespace CanDoItAll.Migrations.Sqlite.Migrations
                     b.Property<int>("IdleMinutes")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("IsEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
+
                     b.Property<int>("ModelAccessMode")
                         .HasColumnType("INTEGER");
 

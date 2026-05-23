@@ -1021,18 +1021,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessStepRunStatus completionStatus,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(detail.Run.SerializedSessionStateJson))
-        {
-            return;
-        }
-
         var browserOutputsByToolName = ResolveSuccessfulBrowserToolOutputFiles(detail);
         if (browserOutputsByToolName.Count == 0)
         {
             return;
         }
 
-        var browserWorkingDirectory = ResolveProviderNativeBrowserWorkingDirectory(detail);
+        var browserWorkingDirectory = ResolveProviderNativeBrowserWorkingDirectory(detail) ?? workspaceRoot;
         if (string.IsNullOrWhiteSpace(browserWorkingDirectory))
         {
             return;
@@ -1214,7 +1209,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     continue;
                 }
 
-                var projectedRelativePath = ResolveScopedManagedRelativePath(workspaceScope, normalizedOutputPath);
+                var projectedRelativePath = ResolveProviderNativeBrowserProjectedRelativePath(
+                    candidate,
+                    workspaceScope,
+                    normalizedOutputPath);
                 var externalReferenceKey = BuildProviderNativeBrowserArtifactExternalReferenceKey(
                     detail.Run.Id,
                     projectedRelativePath);
@@ -1278,11 +1276,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
                         candidate,
                         detail.Run.InputSummary,
                         syntheticArtifact);
-                    if (matchedExpectation is not null &&
-                        candidate.RecordedArtifactExpectationIds.Contains(matchedExpectation.Id))
-                    {
-                        continue;
-                    }
+                    var recordExpectation = matchedExpectation is not null &&
+                                            !candidate.RecordedArtifactExpectationIds.Contains(matchedExpectation.Id)
+                        ? matchedExpectation
+                        : null;
 
                     var placement = await storagePlacementService.PlaceAsync(
                         new StoragePlacementRequest(
@@ -1300,17 +1297,17 @@ internal sealed partial class ProcessRunAutomationDispatchService
                         {
                             ProcessRunId = candidate.Run.Id,
                             StepRunId = candidate.StepRun.Id,
-                            ArtifactExpectationId = matchedExpectation?.Id,
-                            ArtifactKind = matchedExpectation?.ArtifactKind ?? ProcessArtifactKind.Evidence,
-                            Title = matchedExpectation?.Title ?? BuildArtifactTitle(syntheticArtifact),
-                            TrustStatus = matchedExpectation is null
+                            ArtifactExpectationId = recordExpectation?.Id,
+                            ArtifactKind = recordExpectation?.ArtifactKind ?? ProcessArtifactKind.Evidence,
+                            Title = recordExpectation?.Title ?? BuildProviderNativeBrowserArtifactTitle(syntheticArtifact),
+                            TrustStatus = recordExpectation is null
                                 ? ProcessArtifactTrustStatus.ReviewRequired
-                                : ResolveProjectedArtifactTrustStatus(matchedExpectation, completionStatus),
-                            SensitivityLevel = matchedExpectation?.SensitivityLevel ?? ProcessSensitivityLevel.Internal,
+                                : ResolveProjectedArtifactTrustStatus(recordExpectation, completionStatus),
+                            SensitivityLevel = recordExpectation?.SensitivityLevel ?? ProcessSensitivityLevel.Internal,
                             ProvenanceSummary = $"Projected from provider-native browser output '{normalizedOutputPath}' for AgentFramework execution run {detail.Run.Id:D}.",
-                            AllowedFutureUsageSummary = matchedExpectation is not null &&
-                                                        !string.IsNullOrWhiteSpace(matchedExpectation.AllowedFutureUsageSummary)
-                                ? matchedExpectation.AllowedFutureUsageSummary
+                            AllowedFutureUsageSummary = recordExpectation is not null &&
+                                                        !string.IsNullOrWhiteSpace(recordExpectation.AllowedFutureUsageSummary)
+                                ? recordExpectation.AllowedFutureUsageSummary
                                 : "Process evidence and audit review.",
                             ReviewSummary = syntheticArtifact.Summary,
                             ManagedStoragePath = placement.RelativePath,
@@ -1320,9 +1317,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     if (recordResult.IsSuccess)
                     {
                         candidate.ExternalReferenceKeys.Add(externalReferenceKey);
-                        if (matchedExpectation is not null)
+                        if (recordExpectation is not null)
                         {
-                            candidate.RecordedArtifactExpectationIds.Add(matchedExpectation.Id);
+                            candidate.RecordedArtifactExpectationIds.Add(recordExpectation.Id);
                         }
                     }
                     else
@@ -1348,6 +1345,50 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
     }
 
+    private static string ResolveProviderNativeBrowserProjectedRelativePath(
+        DispatchCandidate candidate,
+        WorkspaceScopeDescriptor workspaceScope,
+        string normalizedOutputPath)
+    {
+        if (IsManagedBrowserArtifactPath(normalizedOutputPath))
+        {
+            return ResolveScopedManagedRelativePath(workspaceScope, normalizedOutputPath);
+        }
+
+        var fileName = Path.GetFileName(normalizedOutputPath);
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            fileName = "browser-proof";
+        }
+
+        return ResolveScopedManagedRelativePath(
+            workspaceScope,
+            WorkspaceScopeDescriptor.NormalizeRelativePath(Path.Combine(
+                BuildCurrentRunManagedArtifactRoot(candidate),
+                "browser",
+                fileName)));
+    }
+
+    private static bool IsManagedBrowserArtifactPath(string relativePath)
+    {
+        var comparablePath = NormalizeManagedRelativePathForComparison(
+            WorkspaceScopeDescriptor.NormalizeRelativePath(relativePath));
+        return comparablePath.StartsWith("artifacts/process-runs/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string BuildProviderNativeBrowserArtifactTitle(ExecutionArtifactRecord artifact)
+    {
+        var normalizedToolName = NormalizeToolToken(artifact.ProducedBy);
+        return normalizedToolName switch
+        {
+            "browser_take_screenshot" => "Browser screenshot",
+            "browser_snapshot" => "Browser snapshot",
+            "browser_console_messages" => "Browser console log",
+            "browser_evaluate" => "Browser DOM or state proof",
+            _ => BuildArtifactTitle(artifact)
+        };
+    }
+
     private static bool IsProviderNativeBrowserArtifactPath(string relativePath)
     {
         if (string.IsNullOrWhiteSpace(relativePath))
@@ -1357,12 +1398,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         var normalizedPath = WorkspaceScopeDescriptor.NormalizeRelativePath(relativePath);
         var comparablePath = NormalizeManagedRelativePathForComparison(normalizedPath);
-        if (!comparablePath.StartsWith("artifacts/process-runs/", StringComparison.OrdinalIgnoreCase))
+        if (comparablePath.StartsWith("artifacts/process-runs/", StringComparison.OrdinalIgnoreCase))
         {
-            return false;
+            return ResolveProviderNativeBrowserToolName(comparablePath).Length > 0;
         }
 
-        return ResolveProviderNativeBrowserToolName(comparablePath).Length > 0;
+        return normalizedPath.StartsWith(".playwright-mcp/", StringComparison.OrdinalIgnoreCase) &&
+               ResolveProviderNativeBrowserToolName(normalizedPath).Length > 0;
     }
 
     private void EnsureProviderNativeBrowserOutputDirectories(DispatchCandidate candidate)

@@ -219,6 +219,35 @@ public sealed class CognitiveMemoryOperationalServicesTests
     }
 
     [Fact]
+    public async Task ScheduledAutomationRunner_SkipsBeforeDownstreamCallsWhenRuntimeUsageIsDisabled()
+    {
+        var settings = CognitiveMemoryAutomationSettings.Defaults(DateTimeOffset.UnixEpoch) with
+        {
+            IsEnabled = false,
+            ScheduleMode = CognitiveMemoryAutomationScheduleMode.Nightly
+        };
+        var ingestion = new RecordingSourceIngestionService();
+        var consolidation = new RecordingConsolidationEngine();
+        var runner = new CognitiveMemoryScheduledAutomationRunner(
+            new FixedAutomationSettingsService(settings),
+            ingestion,
+            consolidation,
+            new FixedClock());
+
+        var result = await runner.RunAsync(new CognitiveMemoryScheduledAutomationRunRequest(
+            ProjectId: Guid.NewGuid(),
+            CognitiveMemoryAutomationTriggerKind.Nightly,
+            ActorId: " ",
+            Take: 9999));
+
+        Assert.False(result.Executed);
+        Assert.Equal(CognitiveMemoryAutomationScheduleMode.Nightly, result.ScheduleMode);
+        Assert.Empty(ingestion.Requests);
+        Assert.Empty(consolidation.Requests);
+        Assert.Contains(CognitiveMemoryRuntimeUsage.DisabledMessage, result.Warnings);
+    }
+
+    [Fact]
     public async Task ScheduledAutomationRunner_RunsEnabledSourceIngestionAndConsolidation()
     {
         var settings = CognitiveMemoryAutomationSettings.Defaults(DateTimeOffset.UnixEpoch) with

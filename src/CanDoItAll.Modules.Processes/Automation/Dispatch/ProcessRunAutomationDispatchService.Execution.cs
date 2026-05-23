@@ -348,6 +348,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     detail,
                     responseText,
                     missingRequiredTools,
+                    carriedImplementationProof,
                     attemptNumber,
                     maxExecutionAttempts) ||
                 ShouldRetryRecoverableFailedRun(
@@ -368,7 +369,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 candidate,
                 detail,
                 responseText,
-                missingRequiredTools);
+                missingRequiredTools,
+                carriedImplementationProof);
 
             logger.LogWarning(
                 "AgentFramework run {ExecutionRunId} ended with unresolved execution work for process run {RunId}, step {StepRunId}. Retry reasons: {RetryReasons}. Missing tools: {MissingTools}. Critical failures: {CriticalFailures}. Retrying attempt {NextAttempt}/{MaxAttempts}.",

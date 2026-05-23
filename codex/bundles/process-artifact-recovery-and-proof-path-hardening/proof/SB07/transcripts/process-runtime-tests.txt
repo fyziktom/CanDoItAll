@@ -1,0 +1,11 @@
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~ProcessRunAutomationDispatchServiceTests|FullyQualifiedName~ProcessRuntimeOperatorReadModelTests|FullyQualifiedName~ProcessesServiceIntegrationTests" --no-restore -v minimal
+Exit Code: 0
+
+Result:
+Successful. Failed: 0, Passed: 441, Skipped: 0, Total: 441.
+
+Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~AgentToolInvocationPolicyTests|FullyQualifiedName~AgentWorkspaceToolAccessMetadataTests" --no-restore -v minimal
+Exit Code: 0
+
+Result:
+Successful. Failed: 0, Passed: 92, Skipped: 0, Total: 92.

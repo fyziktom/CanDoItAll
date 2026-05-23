@@ -9,16 +9,16 @@
 Go / no-go board decision
 
 ## Notes
-Approve or reject release using QA proof, security posture, rollback readiness, and support coverage.
+Approve or reject release using QA proof, shipped entrypoint/runtime consistency, security posture, rollback readiness, support coverage, and the declared release boundary. Conditions must apply to the approved boundary; out-of-boundary production hardening belongs in future recommendations unless explicitly required.
 
 ## Contracts
-- Input contract: QA evidence, security outcome, rollback plan, and support ownership.
-- Output contract: Approved or rejected release readiness with accountable rationale.
-- Evidence contract: Approval note, residual risk register, and rollback ownership record.
+- Input contract: QA evidence that names the shipped entrypoint and referenced runtime, security outcome, rollback or removal plan, support ownership, and declared release boundary.
+- Output contract: Approved or rejected release readiness with accountable rationale and boundary-applicable conditions only.
+- Evidence contract: Approval note, residual risk register, rollback or removal ownership record, declared-boundary confirmation, and confirmation that QA proof matches the actual shipped entrypoint rather than stale or unreferenced artifacts.
 
 ## Governance
 - Decision rights: Delivery manager owns the decision and cannot waive missing proof or missing rollback readiness silently.
-- Exception policy: Reject release when security review, rollback ownership, or support readiness remains incomplete.
+- Exception policy: Reject release when security review, rollback/removal ownership, support readiness, or proof required by the declared release boundary remains incomplete. Do not reject solely for public deployment, CI, production telemetry, or broad-host controls that the boundary does not require.
 - Requires approval: True
 - Requires decision record: True
 

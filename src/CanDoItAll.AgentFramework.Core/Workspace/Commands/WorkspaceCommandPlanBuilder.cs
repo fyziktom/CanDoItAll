@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using System.Text.RegularExpressions;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Core;
@@ -459,6 +460,8 @@ internal sealed class WorkspaceCommandPlanBuilder
             throw new InvalidOperationException($"PowerShell runner only accepts .ps1 files. '{scriptResolution.RelativePath}' does not use a .ps1 extension.");
         }
 
+        ValidatePowerShellRunScriptIsBounded(scriptResolution);
+
         var workingDirectoryRelative = ResolveScriptWorkingDirectory(workingDirectory, scriptResolution.FullPath, allowedExternalRoots: null, out var workingDirectoryPath);
         var resolvedOutputPaths = ResolveWorkspacePaths(outputPaths);
         var normalizedArguments = new List<string>
@@ -487,6 +490,47 @@ internal sealed class WorkspaceCommandPlanBuilder
             timeoutSeconds: timeoutSeconds,
             stdoutLimitCharacters: 128 * 1024,
             stderrLimitCharacters: 64 * 1024);
+    }
+
+    private static void ValidatePowerShellRunScriptIsBounded(WorkspacePathResolution scriptResolution)
+    {
+        var scriptText = File.ReadAllText(scriptResolution.FullPath);
+        if (!LooksLikeForegroundBrowserHost(scriptText) ||
+            LaunchesLongRunningHostAsChildProcess(scriptText))
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"PowerShell runner scripts must not run a foreground long-running browser host. '{scriptResolution.RelativePath}' appears to start a static HTTP server inline. Start the server as a background child process, record its URL and process id, and let the helper script exit before browser tools run.");
+    }
+
+    private static bool LooksLikeForegroundBrowserHost(string scriptText)
+    {
+        if (string.IsNullOrWhiteSpace(scriptText))
+        {
+            return false;
+        }
+
+        return ContainsRegex(scriptText, @"\bHttpListener\b") &&
+               (ContainsRegex(scriptText, @"\.GetContext(?:Async)?\s*\(") ||
+                ContainsRegex(scriptText, @"\bwhile\s*\(")) ||
+               ContainsRegex(scriptText, @"\bpython(?:\.exe)?\b[^\r\n;]*\s+-m\s+http\.server\b");
+    }
+
+    private static bool LaunchesLongRunningHostAsChildProcess(string scriptText)
+    {
+        return ContainsRegex(scriptText, @"\bStart-Process\b") ||
+               ContainsRegex(scriptText, @"\bStart-Job\b") ||
+               ContainsRegex(scriptText, @"\bStart-ThreadJob\b");
+    }
+
+    private static bool ContainsRegex(string text, string pattern)
+    {
+        return Regex.IsMatch(
+            text,
+            pattern,
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     }
 
     public WorkspaceCommandPlan BuildConvertDocumentWithMarkItDown(string sourcePath, string outputPath, int timeoutSeconds = 300)

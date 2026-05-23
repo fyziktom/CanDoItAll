@@ -345,7 +345,7 @@ public sealed partial class ProcessesService
             matchedSkillsByPartyId.TryGetValue(staffingCandidate.PartyId, out var matchedSkillSet);
             var matchedSkillCount = matchedSkillSet?.Count ?? 0;
             aiDirectoryByPartyId.TryGetValue(staffingCandidate.PartyId, out var staffingAiResource);
-            var requiresProvisioning = requiresTechnicalAgentBinding && !HasBoundTechnicalAgent(staffingAiResource);
+            var requiresProvisioning = requiresTechnicalAgentBinding && !HasRunnableTechnicalAgent(staffingAiResource);
             supplementalCandidates.Add(new ProcessLaunchCandidate
             {
                 LaunchPlanRoleId = role.Id,
@@ -394,7 +394,7 @@ public sealed partial class ProcessesService
                              item.Notes.Contains(searchText, StringComparison.OrdinalIgnoreCase)))
             {
                 aiDirectoryByPartyId.TryGetValue(assignment.PartyId, out var linkedAiResource);
-                var requiresProvisioning = requiresTechnicalAgentBinding && !HasBoundTechnicalAgent(linkedAiResource);
+                var requiresProvisioning = requiresTechnicalAgentBinding && !HasRunnableTechnicalAgent(linkedAiResource);
                 supplementalCandidates.Add(new ProcessLaunchCandidate
                 {
                     LaunchPlanRoleId = role.Id,
@@ -699,11 +699,13 @@ public sealed partial class ProcessesService
         var workMentionsDotNet = MentionsDotNetStack(workText);
         var workMentionsJavaScript = MentionsJavaScriptStack(workText);
         var selectedWorkIsNonBlazorDotNet = MentionsNonBlazorDotNetWork(workText);
+        var selectedWorkIsStaticClientWeb = MentionsStaticClientWebWork(workText);
         var selectedWorkIsJavaScript = ContextHasExclusiveStackSignal(
                                            additionalRoleContext,
                                            MentionsJavaScriptStack,
                                            MentionsBlazorStack,
                                            MentionsDotNetStack) ||
+                                       selectedWorkIsStaticClientWeb ||
                                        (MentionsJavaScriptStack(roleSpecificText) &&
                                         !MentionsBlazorStack(roleSpecificText) &&
                                         !MentionsDotNetStack(roleSpecificText));
@@ -894,6 +896,27 @@ public sealed partial class ProcessesService
                 RoleMentions(agentText, "implements"))
             {
                 score += 30m;
+            }
+
+            var agentLooksLikeImplementationOwner =
+                RoleMentions(aiFact.DisplayName, "developer") ||
+                RoleMentions(aiFact.RoleTitle, "developer") ||
+                RoleMentions(aiFact.TemplateKey, "developer") ||
+                RoleMentions(agentText, "application-developer") ||
+                RoleMentions(agentText, "implements");
+            var agentLooksLikeArchitectureOwner =
+                RoleMentions(aiFact.DisplayName, "architect") ||
+                RoleMentions(aiFact.RoleTitle, "architect") ||
+                RoleMentions(aiFact.TemplateKey, "architect") ||
+                RoleMentions(agentText, "architecture");
+            if (agentLooksLikeImplementationOwner)
+            {
+                score += 180m;
+            }
+
+            if (agentLooksLikeArchitectureOwner && !agentLooksLikeImplementationOwner)
+            {
+                score -= 220m;
             }
 
             if (workMentionsBlazor)
@@ -1445,6 +1468,25 @@ public sealed partial class ProcessesService
                    text,
                    @"\b(?:not|no|without)\s+(?:a\s+)?browser\s+ui\b",
                    RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    }
+
+    private static bool MentionsStaticClientWebWork(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        var hasWebSurface =
+            ContainsAffirmativeStackPattern(
+                text,
+                @"(?:^|[^a-z0-9])(?:web\s+page|website|web\s+site|browser\s+(?:app|application|game|ui)|frontend|front[-\s]+end|single[-\s]+page\s+(?:app|application)|spa|webhosting)(?:[^a-z0-9]|$)");
+        var hasStaticOrClientOnlyConstraint =
+            ContainsAffirmativeStackPattern(
+                text,
+                @"(?:^|[^a-z0-9])(?:static\s+(?:site|website|web\s+site|web\s+page|web\s+hosting|hosting|webhosting)|client[-\s]+side|local\s+storage|localstorage|no\s+backend|without\s+(?:a\s+)?backend|backend[-\s]+free)(?:[^a-z0-9]|$)");
+
+        return hasWebSurface && hasStaticOrClientOnlyConstraint;
     }
 
     private static bool ContainsNegatedStackToken(string text, string token)

@@ -1,0 +1,11 @@
+Command: dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~ProjectStructureAgentApi_llm_workflow_uses_project_scope_and_creates_markdown_asset_under_workflow_node" --logger "trx;LogFileName=workflow-scope-integration.trx"
+ExitCode: 0
+
+Result: Passed. Failed: 0, Passed: 1, Skipped: 0.
+
+Invariant IDs:
+- SB02-INV01
+- SB02-INV02
+
+Observed tests:
+- ProjectStructureAgentApi_llm_workflow_uses_project_scope_and_creates_markdown_asset_under_workflow_node

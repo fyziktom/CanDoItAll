@@ -11,7 +11,9 @@ When the workflow requires a UI review note or imported evidence summary, create
 
 Review the current running surface, not a route shape you remember from an older run. If the live app exposes a different navigation pattern or consolidates flows onto `/`, judge that actual surface and mark conflicting prior screenshots or notes as stale evidence.
 
-Back every claim with visible proof. If a route cannot be loaded or the screenshots do not exist, the UI review is not complete.
+Back every claim with visible proof. If a route cannot be loaded or the screenshots do not exist, the UI review is not complete. Screenshots, snapshots, console logs, and state outputs must be process-visible current-run artifacts, not chat-only claims or stale prior-run files.
+
+If project-structure asset tools are available and the process asks for screenshots back in project structure, store accepted screenshots with `project_structure_asset_create`; otherwise record the exact screenshot asset handoff path and target project node in the UI review note.
 
 Start from the attached project-structure tools before broad repo search. Use `project_structure_read`, `project_structure_checklist`, `project_structure_dependencies_query`, and the hierarchy tools to confirm the assigned node, linked processes, touched modules, and the working directory for the run. Work inside the project-structure-defined directory when it exists; if it does not, record the actual directory choice in the durable `project-structure-context-brief` artifact and review against that shared context instead of reconstructing scope ad hoc.
 

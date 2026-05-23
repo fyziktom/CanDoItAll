@@ -1499,6 +1499,54 @@ public sealed class ProjectStructurePageTests
     }
 
     [Fact]
+    public async Task Markdown_summary_nodes_with_mermaid_keywords_open_text_preview_not_mermaid_viewer()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+
+        var project = await projectsService.GetAsync(null);
+        project.Name = "Markdown Summary Preview Project";
+        project.Description = "Verify workflow markdown summaries do not get classified as Mermaid diagrams.";
+        project.Objective = "Open markdown summaries as readable text even when they mention diagram concepts.";
+        project.CurrentPhase = "Review";
+
+        var saveResult = await projectsService.SaveAsync(project);
+        Assert.True(saveResult.IsSuccess);
+        var projectId = saveResult.Value;
+
+        var markdownNode = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.File,
+                "Office365 category email summary",
+                "Markdown summary",
+                "# Summary\n\nThe customer asked for a static Tetris website. A gantt plan can be prepared later, but this node is markdown output.",
+                $"project:{projectId}",
+                540,
+                260,
+                null,
+                null,
+                "md"));
+
+        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+
+        cut.WaitForAssertion(() => Assert.Contains("Office365 category email summary", cut.Markup));
+
+        await OpenNodeFromCanvasAsync(cut, markdownNode.Id);
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Canvas preview", cut.Markup);
+            Assert.Contains("The customer asked for a static Tetris website", cut.Markup);
+            Assert.Contains("project-structure-text-asset-preview", cut.Markup);
+            Assert.DoesNotContain("project-structure-mermaid-diagram", cut.Markup);
+            Assert.DoesNotContain("Detected diagram type", cut.Markup);
+        });
+    }
+
+    [Fact]
     public async Task Audio_attachment_nodes_render_audio_preview_and_local_open_action_when_host_supports_it()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();

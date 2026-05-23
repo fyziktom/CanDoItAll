@@ -122,6 +122,41 @@ public sealed class WorkspaceCommandExecutionServiceTests
     }
 
     [Fact]
+    public async Task PowerShellRunScript_denies_foreground_static_server_script()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var scriptDirectory = Path.Combine(workspaceRoot, "scripts");
+        Directory.CreateDirectory(scriptDirectory);
+        var scriptPath = Path.Combine(scriptDirectory, "Serve-Static.ps1");
+        await File.WriteAllTextAsync(
+            scriptPath,
+            """
+            $listener = [System.Net.HttpListener]::new()
+            $listener.Prefixes.Add('http://localhost:8080/')
+            $listener.Start()
+            while ($true) {
+                $context = $listener.GetContext()
+                $context.Response.Close()
+            }
+            """);
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await service.PowerShellRunScript("scripts/Serve-Static.ps1");
+
+            Assert.False(result.Succeeded);
+            Assert.Contains("must not run a foreground long-running browser host", result.Message, StringComparison.Ordinal);
+            Assert.Null(processHost.LastRequest);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
     public async Task DotnetRun_http_smoke_uses_project_directory_and_returns_launch_evidence_targets()
     {
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");

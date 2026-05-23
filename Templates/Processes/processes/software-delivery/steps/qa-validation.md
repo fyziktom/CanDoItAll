@@ -9,12 +9,12 @@
 Regression, UX, runtime, and quality evidence
 
 ## Notes
-Execute targeted regression, runtime/API/browser proof as applicable, and defect triage against the reviewed implementation package. Treat validation warnings and zero-test successful commands as release-blocking proof gaps unless this process explicitly accepts them.
+Execute targeted regression, runtime/API/browser proof as applicable, and defect triage against the reviewed implementation package. Treat validation warnings, zero-test successful commands, entrypoint/runtime mismatches, and stale or unreferenced artifact evidence as release-blocking proof gaps unless this process explicitly accepts them. When project structure, scope, or implementation evidence identifies a visible browser workflow, capture current-run process-visible browser artifacts under `artifacts/process-runs/<run-id>/browser/` before selecting quality-accepted.
 
 ## Contracts
 - Input contract: Peer-reviewed change set, changed-surface inventory, release-scope assumptions, and direct inspection of inherited implementation artifact paths.
-- Output contract: Targeted QA result with runtime/API/browser evidence as applicable, regressions, warning and executed-test counts, and explicit residual quality risk.
-- Evidence contract: Regression logs, warning-free validation output unless explicitly accepted, nonzero executed-test proof when tests are expected, runtime/API/browser proof as applicable, screenshots for UI surfaces, defect notes, and stat/read evidence for the exact implementation artifacts under review.
+- Output contract: Targeted QA result with runtime/API/browser evidence as applicable, regressions, warning and executed-test counts, shipped entrypoint/runtime consistency, explicit residual quality risk, and browser-workflow artifacts when a visible browser workflow is in scope.
+- Evidence contract: Regression logs, warning-free validation output unless explicitly accepted, nonzero executed-test proof when tests are expected, runtime/API/browser proof as applicable, screenshots for UI surfaces, defect notes, shipped entrypoint plus referenced-runtime inspection, stale or unreferenced artifact assessment, stat/read evidence for the exact implementation artifacts under review, and current-run process-visible browser artifacts when a visible browser workflow is in scope. Browser-workflow evidence includes screenshot image, browser_snapshot or browser_evaluate state output, browser_console_messages output showing no active JavaScript/runtime errors, actual URL or entrypoint, launch and cleanup receipts, and an acceptance-state assertion mapped to the project-structure notes.
 
 ## Governance
 - Decision rights: QA lead may block release progression when evidence is too thin for the risk profile.
@@ -31,7 +31,7 @@ Execute targeted regression, runtime/API/browser proof as applicable, and defect
 - `lead-engineer` / Lead engineer => Reviewer; required=True; fallback-order=0; rebind=Implementation owner reviews failures and fixes before release approval.
 
 ## Artifact expectations
-- `regression-evidence-pack` -> `regression-evidence-pack` / Regression evidence pack | kind=Evidence | trust=ReviewRequired | sensitivity=Internal | validation=Must name changed flows, assertion depth, warning counts, executed-test counts when tests are expected, runtime/API/browser evidence as applicable, screenshots for UI surfaces, and unresolved risks.
+- `regression-evidence-pack` -> `regression-evidence-pack` / Regression evidence pack | kind=Evidence | trust=ReviewRequired | sensitivity=Internal | validation=Must name changed flows, assertion depth, warning counts, executed-test counts when tests are expected, shipped entrypoint and referenced runtime files or commands, runtime/API/browser evidence as applicable, screenshots for UI surfaces, stale/unreferenced artifact findings, and unresolved risks. When a visible browser workflow is in scope, missing, empty, detached, stale, or chat-only browser proof routes to `repair-required`.
 
 ## Artifact inputs
 - From step `implementation` expectation `implementation-change-set`

@@ -2,6 +2,9 @@ namespace CanDoItAll.Modules.Processes;
 
 internal static class ProcessRuntimeProgressionPlanner
 {
+    private const string MissingUpstreamArtifactsBlockMarker = "required upstream artifacts are missing";
+    private const string MissingRequiredArtifactInputMarker = "must provide required artifact";
+
     public static void ApplyTransitionConsequences(
         ProcessStepRunStatus targetStatus,
         ProcessStepDefinition currentStepDefinition,
@@ -48,6 +51,13 @@ internal static class ProcessRuntimeProgressionPlanner
                     AreAllDependenciesSatisfied(dependentStep, stepRunsByDefinitionId, stepDependenciesByStepId))
                 {
                     ActivatePendingStepRun(dependentStepRun, dependentStep, now);
+                }
+
+                if (dependentStepRun.Status == ProcessStepRunStatus.Blocked &&
+                    IsMissingUpstreamArtifactBlock(dependentStepRun.BlockedReason) &&
+                    AreAllDependenciesSatisfied(dependentStep, stepRunsByDefinitionId, stepDependenciesByStepId))
+                {
+                    ReactivateBlockedStepRunAfterUpstreamArtifactMaterialization(dependentStepRun, dependentStep, now);
                 }
             }
         }
@@ -113,6 +123,32 @@ internal static class ProcessRuntimeProgressionPlanner
             ? ProcessStepRunStatus.WaitingApproval
             : ProcessStepRunStatus.Ready;
         stepRun.ReadyAtUtc = now;
+    }
+
+    private static void ReactivateBlockedStepRunAfterUpstreamArtifactMaterialization(
+        ProcessStepRun stepRun,
+        ProcessStepDefinition stepDefinition,
+        DateTimeOffset now)
+    {
+        if (stepRun.Status != ProcessStepRunStatus.Blocked)
+        {
+            return;
+        }
+
+        stepRun.Status = stepDefinition.RequiresApproval || stepDefinition.StepKind == ProcessStepKind.Approval
+            ? ProcessStepRunStatus.WaitingApproval
+            : ProcessStepRunStatus.Ready;
+        stepRun.ReadyAtUtc = now;
+        stepRun.StartedAtUtc = null;
+        stepRun.BlockedReason = string.Empty;
+        stepRun.DecisionSummary = "Reopened after upstream artifact materialization completed.";
+    }
+
+    private static bool IsMissingUpstreamArtifactBlock(string blockedReason)
+    {
+        return !string.IsNullOrWhiteSpace(blockedReason) &&
+               blockedReason.Contains(MissingUpstreamArtifactsBlockMarker, StringComparison.OrdinalIgnoreCase) &&
+               blockedReason.Contains(MissingRequiredArtifactInputMarker, StringComparison.OrdinalIgnoreCase);
     }
 
     private static void CascadeSkipStepRun(

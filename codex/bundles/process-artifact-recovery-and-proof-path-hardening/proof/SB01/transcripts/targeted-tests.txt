@@ -1,0 +1,23 @@
+# SB01 Targeted Test Transcript
+
+## Command
+
+Command:
+
+```powershell
+dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~ResolveMissingConcreteImplementationProofSummary_accepts_source_read_under_scoped_current_run_output_root|FullyQualifiedName~ResolveMissingRequiredArtifactSummary_rejects_dotnet_stdout_evidence_ref_as_browser_console_output|FullyQualifiedName~ShouldRetryIncompleteSuccessfulRun_does_not_retry_downstream_step_for_missing_upstream_artifact_block|FullyQualifiedName~ApplyTransitionConsequences_reactivates_blocked_dependent_after_upstream_artifact_materialization" --artifacts-path repo://artifacts/codex-test-artifacts
+```
+
+## Result
+
+ExitCode: 0
+
+```text
+Invariant IDs: INV-SB01-001, INV-SB01-002, INV-SB02-001, INV-SB02-002
+Passed: 4
+Failed: 0
+Skipped: 0
+Duration: 177 ms
+```
+
+The first normal test attempt without `--artifacts-path` failed because the live `CanDoItAll.Web` process at PID `24892` locked `repo://src/CanDoItAll.Web/bin/Debug/net10.0/*.dll`. The isolated artifacts path was used to validate the code without stopping the user's live process.

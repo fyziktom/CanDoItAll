@@ -24,6 +24,12 @@ public sealed class CognitiveMemoryAgentContextContributor(
     {
         ArgumentNullException.ThrowIfNull(request);
         var settings = await settingsService.GetAsync(cancellationToken);
+        if (!settings.IsEnabled)
+        {
+            return AgentContextContributionResult.Skipped(
+                CognitiveMemoryRuntimeUsage.DisabledTraceMetadata(settings, request.Provider.Id));
+        }
+
         var accessDecision = CognitiveMemoryModelAccessPolicy.Evaluate(settings, request.Provider);
         if (!accessDecision.IsAllowed)
         {
@@ -85,10 +91,13 @@ public sealed class CognitiveMemoryAgentContextContributor(
             var contextText = RenderContextPackage(package);
             if (string.IsNullOrWhiteSpace(contextText))
             {
-                return SkipOrFail(request, "Cognitive Memory recall returned an empty context pack.", new Dictionary<string, string>
+                return AgentContextContributionResult.Skipped(new Dictionary<string, string>
                 {
                     ["reason"] = "empty-context-pack",
-                    ["traceId"] = result.TraceId.ToString("D")
+                    ["traceId"] = result.TraceId.ToString("D"),
+                    ["contextPackId"] = package.ContextPackId.Value.ToString("D"),
+                    ["modelAccessMode"] = settings.ModelAccessMode.ToString(),
+                    ["providerProfileId"] = request.Provider.Id.ToString("D")
                 });
             }
 
@@ -259,7 +268,8 @@ public sealed class CognitiveMemoryAgentContextContributor(
 }
 
 public sealed class CognitiveMemoryRecallWorkflowExecutor(
-    ICognitiveMemoryRecallOrchestrator recallOrchestrator) : IWorkflowExecutor
+    ICognitiveMemoryRecallOrchestrator recallOrchestrator,
+    ICognitiveMemoryAutomationSettingsService settingsService) : IWorkflowExecutor
 {
     public WorkflowExecutorDescriptor Descriptor { get; } = CognitiveMemoryWorkflowExecutorDescriptors.Recall;
 
@@ -268,6 +278,20 @@ public sealed class CognitiveMemoryRecallWorkflowExecutor(
         WorkflowNodeInput input,
         CancellationToken cancellationToken = default)
     {
+        var automationSettings = await settingsService.GetAsync(cancellationToken);
+        if (!automationSettings.IsEnabled)
+        {
+            return Result(context, new
+            {
+                skipped = true,
+                reason = CognitiveMemoryRuntimeUsage.DisabledReason,
+                title = "Cognitive Memory disabled",
+                summary = CognitiveMemoryRuntimeUsage.DisabledMessage,
+                warnings = new[] { CognitiveMemoryRuntimeUsage.DisabledMessage },
+                sections = Array.Empty<object>()
+            });
+        }
+
         var settings = DeserializeSettings<CognitiveMemoryRecallWorkflowExecutorSettings>(context.SettingsJson);
         var query = string.IsNullOrWhiteSpace(settings.Query)
             ? WorkflowInputText(input)
@@ -359,7 +383,8 @@ public sealed class CognitiveMemoryRecallWorkflowExecutor(
 }
 
 public sealed class CognitiveMemoryProbeWorkflowExecutor(
-    ICognitiveMemoryProbeService probeService) : IWorkflowExecutor
+    ICognitiveMemoryProbeService probeService,
+    ICognitiveMemoryAutomationSettingsService settingsService) : IWorkflowExecutor
 {
     public WorkflowExecutorDescriptor Descriptor { get; } = CognitiveMemoryWorkflowExecutorDescriptors.Probe;
 
@@ -368,6 +393,22 @@ public sealed class CognitiveMemoryProbeWorkflowExecutor(
         WorkflowNodeInput input,
         CancellationToken cancellationToken = default)
     {
+        var automationSettings = await settingsService.GetAsync(cancellationToken);
+        if (!automationSettings.IsEnabled)
+        {
+            return CognitiveMemoryRecallWorkflowExecutor.Result(context, new
+            {
+                skipped = true,
+                reason = CognitiveMemoryRuntimeUsage.DisabledReason,
+                sessionId = (Guid?)null,
+                turnId = (Guid?)null,
+                recallTraceId = (Guid?)null,
+                answerSummary = CognitiveMemoryRuntimeUsage.DisabledMessage,
+                warningCount = 1,
+                warnings = new[] { CognitiveMemoryRuntimeUsage.DisabledMessage }
+            });
+        }
+
         var settings = CognitiveMemoryRecallWorkflowExecutor.DeserializeSettings<CognitiveMemoryProbeWorkflowExecutorSettings>(context.SettingsJson);
         if (settings.ProjectId == Guid.Empty)
         {
@@ -406,7 +447,8 @@ public sealed class CognitiveMemoryProbeWorkflowExecutor(
 }
 
 public sealed class CognitiveMemoryLearningProposalWorkflowExecutor(
-    ICognitiveMemoryEpistemicDriveService epistemicDriveService) : IWorkflowExecutor
+    ICognitiveMemoryEpistemicDriveService epistemicDriveService,
+    ICognitiveMemoryAutomationSettingsService settingsService) : IWorkflowExecutor
 {
     public WorkflowExecutorDescriptor Descriptor { get; } = CognitiveMemoryWorkflowExecutorDescriptors.LearningProposal;
 
@@ -415,6 +457,19 @@ public sealed class CognitiveMemoryLearningProposalWorkflowExecutor(
         WorkflowNodeInput input,
         CancellationToken cancellationToken = default)
     {
+        var automationSettings = await settingsService.GetAsync(cancellationToken);
+        if (!automationSettings.IsEnabled)
+        {
+            return CognitiveMemoryRecallWorkflowExecutor.Result(context, new
+            {
+                skipped = true,
+                reason = CognitiveMemoryRuntimeUsage.DisabledReason,
+                proposalCount = 0,
+                proposals = Array.Empty<object>(),
+                warnings = new[] { CognitiveMemoryRuntimeUsage.DisabledMessage }
+            });
+        }
+
         _ = input;
         var settings = CognitiveMemoryRecallWorkflowExecutor.DeserializeSettings<CognitiveMemoryLearningWorkflowExecutorSettings>(context.SettingsJson);
         if (settings.ProjectId == Guid.Empty)

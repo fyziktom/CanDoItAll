@@ -335,7 +335,12 @@ public sealed record AgentRuntimeExecutionOptions(
     AgentFinalizerMode FinalizerMode,
     bool RequireStructuredOutputValidation,
     int MaxStructuredOutputRepairAttempts,
-    AgentRuntimeHandoffExecutionOptions? Handoff = null);
+    AgentRuntimeHandoffExecutionOptions? Handoff = null,
+    WorkspaceScopeDescriptor? ContextWorkspaceScope = null,
+    bool RequireJsonResponseFormat = false,
+    string ResponseFormatJsonSchema = "",
+    string ResponseFormatSchemaName = "",
+    string ResponseFormatSchemaDescription = "");
 
 public sealed record AgentRuntimeHandoffExecutionOptions(
     AgentHandoffSettings Settings,

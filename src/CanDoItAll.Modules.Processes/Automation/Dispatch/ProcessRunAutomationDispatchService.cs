@@ -187,6 +187,21 @@ internal sealed partial class ProcessRunAutomationDispatchService(
         "this",
         "with"
     };
+    private static readonly HashSet<string> ProjectStructureRequirementNoiseTokens = new(StringComparer.Ordinal)
+    {
+        "acceptance",
+        "constraint",
+        "criteria",
+        "from",
+        "grounded",
+        "project",
+        "projectblock",
+        "requirement",
+        "requirements",
+        "selected",
+        "structure",
+        "type"
+    };
     private sealed record PrefetchedProjectStructureGrounding(string PromptSummary, IReadOnlyList<string> SatisfiedToolNames)
     {
         public static PrefetchedProjectStructureGrounding Empty { get; } = new(string.Empty, []);
@@ -214,6 +229,7 @@ internal sealed partial class ProcessRunAutomationDispatchService(
         string AbsolutePath,
         string MappedAlias,
         string SourceNodeId,
-        string SourceNodeTitle);
+        string SourceNodeTitle,
+        int SourcePriority);
 
 }

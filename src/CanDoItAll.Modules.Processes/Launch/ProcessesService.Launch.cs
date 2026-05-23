@@ -14,6 +14,7 @@ public sealed partial class ProcessesService
     private static readonly JsonSerializerOptions LaunchJsonOptions = new(JsonSerializerDefaults.Web);
     private const string LaunchAgentTeamMatchMetadataPropertyName = "agentTeamMatch";
     private static readonly TimeSpan ProcessAiDirectoryProjectionSyncTimeout = TimeSpan.FromSeconds(3);
+    private const decimal MinimumDirectAiCandidateScore = 1m;
 
     public Task<Result<Guid>> ExecuteLaunchPlanAsync(
         ProcessLaunchExecutionRequest request,
@@ -87,6 +88,12 @@ public sealed partial class ProcessesService
         return aiResource is not null &&
                aiResource.TechnicalAgentId.HasValue &&
                aiResource.BindingStatus == AiResourceBindingStatus.Bound;
+    }
+
+    private static bool HasRunnableTechnicalAgent(AiAgentListItemModel? aiResource)
+    {
+        return HasBoundTechnicalAgent(aiResource) &&
+               !string.IsNullOrWhiteSpace(aiResource!.ProviderName);
     }
 
     private async Task SynchronizeAiDirectoryProjectionForProcessAsync(

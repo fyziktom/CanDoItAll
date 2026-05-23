@@ -136,7 +136,7 @@ public sealed partial class MafAgentRuntime(
             runtimeBuild.HasApprovalTools,
             continuationToken: null,
             forceOmitTemperature: forceOmitTemperature,
-            structuredOutput: runtimeOptions.StructuredOutput);
+            runtimeOptions);
         var inputMessages = CreatePromptInputMessages(agent, runtimeBuild.Provider, session, prompt);
 
         return await ExecuteRunAsync(
@@ -153,6 +153,7 @@ public sealed partial class MafAgentRuntime(
             cancellationToken,
             runtimeOptions.StructuredOutput,
             runtimeOptions.FinalizerMode,
+            runtimeOptions,
             forceOmitTemperature,
             runtimeBuild.SnapshotFinalizerInvocations,
             runtimeBuild.SnapshotToolInvocationTraces);
@@ -263,7 +264,7 @@ public sealed partial class MafAgentRuntime(
             runtimeBuild.HasApprovalTools,
             continuationToken: null,
             forceOmitTemperature: forceOmitTemperature,
-            structuredOutput: runtimeOptions.StructuredOutput);
+            runtimeOptions);
         var inputMessages = CreateApprovalInputMessages(session, approved);
 
         return await ExecuteRunAsync(
@@ -280,6 +281,7 @@ public sealed partial class MafAgentRuntime(
             cancellationToken,
             runtimeOptions.StructuredOutput,
             runtimeOptions.FinalizerMode,
+            runtimeOptions,
             forceOmitTemperature,
             runtimeBuild.SnapshotFinalizerInvocations,
             runtimeBuild.SnapshotToolInvocationTraces);
@@ -299,6 +301,7 @@ public sealed partial class MafAgentRuntime(
         CancellationToken cancellationToken,
         AgentStructuredOutputContract? structuredOutput,
         AgentFinalizerMode finalizerMode,
+        AgentRuntimeExecutionOptions runtimeOptions,
         bool forceOmitTemperature,
         Func<IReadOnlyList<AgentFinalizerInvocation>> snapshotFinalizerInvocations,
         Func<IReadOnlyList<AgentToolInvocationTrace>> snapshotToolInvocationTraces)
@@ -483,7 +486,7 @@ public sealed partial class MafAgentRuntime(
                 hasApprovalTools: false,
                 continuationToken: response.ContinuationToken,
                 forceOmitTemperature: forceOmitTemperature,
-                structuredOutput: structuredOutput);
+                runtimeOptions);
             inputMessages = [];
         }
     }
