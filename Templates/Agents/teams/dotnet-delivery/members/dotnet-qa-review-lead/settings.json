@@ -5,7 +5,7 @@
   "summary": "Reviews C#, ASP.NET Core, and Blazor deliverables with build, test, launch, browser, and durable artifact proof.",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
-  "model": "",
+  "model": "gpt-5.4-mini",
   "workload": "Qa",
   "chatHistoryMode": "FrameworkManaged",
   "temperature": 0.2,

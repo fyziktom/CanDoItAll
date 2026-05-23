@@ -99,19 +99,20 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return false;
         }
 
-        foreach (var candidatePath in EnumerateAbsoluteExternalPathCandidates(groundingSummary))
+        foreach (var candidatePath in EnumerateAbsoluteExternalPathCandidates(groundingSummary)
+                     .Select(candidatePath => TryNormalizeAbsoluteExternalPathCandidate(candidatePath, out var normalized)
+                         ? normalized
+                         : string.Empty)
+                     .Where(candidatePath => !string.IsNullOrWhiteSpace(candidatePath))
+                     .OrderByDescending(GetExternalTargetHintPriority)
+                     .ThenByDescending(candidatePath => candidatePath.Length))
         {
-            if (!TryNormalizeAbsoluteExternalPathCandidate(candidatePath, out var normalizedPath))
+            if (!TryMapAbsoluteExternalPathToAlias(candidatePath, out var alias))
             {
                 continue;
             }
 
-            if (!TryMapAbsoluteExternalPathToAlias(normalizedPath, out var alias))
-            {
-                continue;
-            }
-
-            absolutePath = normalizedPath;
+            absolutePath = candidatePath;
             mappedAlias = alias;
             return true;
         }
@@ -125,18 +126,63 @@ internal sealed partial class ProcessRunAutomationDispatchService
         string targetNodeId,
         string selectedProcessNodeId)
     {
+        var normalizedTargetNodeId = NormalizeProjectStructureNodeId(targetNodeId);
+        var normalizedSelectedProcessNodeId = NormalizeProjectStructureNodeId(selectedProcessNodeId);
         return ResolveProjectStructureGroundingFocusNodes(
                 nodesById,
                 nodesByParentId,
-                targetNodeId,
-                selectedProcessNodeId)
-            .SelectMany(ResolveExternalTargetHintsFromProjectStructureNode)
+                normalizedTargetNodeId,
+                normalizedSelectedProcessNodeId)
+            .SelectMany(node => ResolveExternalTargetHintsFromProjectStructureNode(
+                node,
+                GetProjectStructureExternalTargetSourcePriority(
+                    node,
+                    normalizedTargetNodeId,
+                    normalizedSelectedProcessNodeId)))
             .GroupBy(hint => hint.MappedAlias, StringComparer.OrdinalIgnoreCase)
-            .Select(group => group.First())
-            .OrderByDescending(hint => hint.MappedAlias.Length)
+            .Select(group => group
+                .OrderByDescending(hint => hint.SourcePriority)
+                .ThenByDescending(hint => GetExternalTargetHintPriority(hint.MappedAlias))
+                .ThenByDescending(hint => hint.MappedAlias.Length)
+                .First())
+            .OrderByDescending(hint => hint.SourcePriority)
+            .ThenByDescending(hint => GetExternalTargetHintPriority(hint.MappedAlias))
+            .ThenByDescending(hint => hint.MappedAlias.Length)
             .ThenBy(hint => hint.SourceNodeTitle, StringComparer.OrdinalIgnoreCase)
-            .Take(4)
+            .Take(12)
             .ToList();
+    }
+
+    private static int GetProjectStructureExternalTargetSourcePriority(
+        ProjectStructureGroundingNodeData node,
+        string targetNodeId,
+        string selectedProcessNodeId)
+    {
+        if (!string.IsNullOrWhiteSpace(selectedProcessNodeId) &&
+            string.Equals(node.Id, selectedProcessNodeId, StringComparison.Ordinal))
+        {
+            return 1000;
+        }
+
+        if (!string.IsNullOrWhiteSpace(targetNodeId) &&
+            string.Equals(node.Id, targetNodeId, StringComparison.Ordinal))
+        {
+            return 900;
+        }
+
+        if (!string.IsNullOrWhiteSpace(selectedProcessNodeId) &&
+            string.Equals(NormalizeProjectStructureNodeId(node.ParentId), selectedProcessNodeId, StringComparison.Ordinal))
+        {
+            return 850;
+        }
+
+        if (!string.IsNullOrWhiteSpace(targetNodeId) &&
+            string.Equals(NormalizeProjectStructureNodeId(node.ParentId), targetNodeId, StringComparison.Ordinal))
+        {
+            return 750;
+        }
+
+        return 0;
     }
 
     private static IReadOnlyList<ProjectStructureGroundingNodeData> ResolveProjectStructureGroundingFocusNodes(
@@ -260,6 +306,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static IReadOnlyList<ProjectStructureExternalTargetHint> ResolveExternalTargetHintsFromProjectStructureNode(
         ProjectStructureGroundingNodeData node)
+        => ResolveExternalTargetHintsFromProjectStructureNode(node, sourcePriority: 0);
+
+    private static IReadOnlyList<ProjectStructureExternalTargetHint> ResolveExternalTargetHintsFromProjectStructureNode(
+        ProjectStructureGroundingNodeData node,
+        int sourcePriority)
     {
         ArgumentNullException.ThrowIfNull(node);
 
@@ -292,7 +343,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 normalizedPath,
                 alias,
                 node.Id,
-                node.Title));
+                node.Title,
+                sourcePriority));
         }
 
         return hints;
@@ -392,7 +444,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         return Regex.Replace(
                 value,
-                @"(?i)[\\/](?:r[\\/]?)?n\s*(?:[-*]\s*)?(?:Acceptance|Accepted|Alias|Aliases|All|App|Application|Architecture|Archetype|Backend|Code|Deliverable|Directory|Escalation|Exact|Feature|Features|Files?|Generated|Hosting|Include|Includes|Mapped|Mapping|Node|No-go|Notes?|Output|Path|Product|Project|Requirement|Requirements|Required|Root|Source|Status|Workspace|Worksp|Evidence|Validation|Validate|Tests?|Startup|Browser|Agents?|Use|The|This|Then|Next)\b.*$",
+            @"(?i)[\\/](?:r[\\/]?)?n\s*(?:[-*]\s*)?(?:Acceptance|Accepted|Approved|Alias|Aliases|All|App|Application|Architecture|Archetype|Backend|Code|Deliverable|Directory|Escalation|Exact|Feature|Features|Files?|Generated|Hosting|Include|Includes|Mapped|Mapping|Node|No-go|Notes?|Output|Path|Product|Project|Requirement|Requirements|Required|Root|Source|Status|Workspace|Worksp|Evidence|Validation|Validate|Tests?|Startup|Browser|Agents?|Use|The|This|Then|Next)\b.*$",
                 string.Empty,
                 RegexOptions.CultureInvariant)
             .Trim();
@@ -407,7 +459,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         var stripped = Regex.Replace(
             value,
-            @"(?i)(?:;\s*(?:notes?|type|status|subtitle|metadata|source|project|node|mapped)\b.*$|\s+(?:[-*]\s*)?(?:Acceptance|Accepted|Architecture|Archetype|Backend|Deliverable|Escalation|Exact|Feature|Features|Hosting|Requirement|Requirements|Required|Evidence|Validation|Validate|Tests?|Startup|Browser|Agents?|Use|The|This|Then|Next|No-go|Include|Includes)\b.*$|\s+\([a-z][a-z0-9_-]*:[^)]+\)?$|\s+\((?:maps?|mapped)\s+to\b.*$|\s+mapped\s+to\b.*$|\s+from\s+[^\\/]*$)",
+            @"(?i)(?:;\s*(?:notes?|type|status|subtitle|metadata|source|project|node|mapped)\b.*$|\s+(?:[-*]\s*)?(?:Acceptance|Accepted|Approved|Architecture|Archetype|Backend|Deliverable|Escalation|Exact|Feature|Features|Hosting|Requirement|Requirements|Required|Evidence|Validation|Validate|Tests?|Startup|Browser|Agents?|Use|The|This|Then|Next|No-go|Include|Includes)\b.*$|\s+\([a-z][a-z0-9_-]*:[^)]+\)?$|\s+\((?:maps?|mapped)\s+to\b.*$|\s+mapped\s+to\b.*$|\s+from\s+[^\\/]*$)",
+            string.Empty,
+            RegexOptions.CultureInvariant);
+        stripped = Regex.Replace(
+            stripped,
+            @"(?i)\s+\([a-z][a-z0-9_-]*:[^)]+\)?$",
             string.Empty,
             RegexOptions.CultureInvariant);
         stripped = Regex.Replace(
@@ -422,7 +479,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             RegexOptions.CultureInvariant);
         stripped = Regex.Replace(
             stripped,
-            @"(?i)\s+(?:[-*]\s*)?(?:Workspace\s+alias|Mapped\s+alias|Business-analysis|Business\s+analysis|All\s+generated|All\s+app(?:lication)?|Generated\s+app(?:lication)?|App(?:lication)?\s+source|App\s+project\s+path|Expected\s+project\s+source\s+path|Expected\s+base\s+URL|Run\s+command|Source\s+root|Source\s+belongs|Code\s+belongs|Files?\s+belong|Output\s+directory|Acceptance|Archetype|Backend|Deliverable|Exact|Hosting|Include|Includes|No-go|Preservation\s+rule|Agents?\s+must|Use\s+only|Do\s+not|The\s+app|This\s+app)\b.*$",
+            @"(?i)\s+(?:[-*]\s*)?(?:Workspace\s+alias|Mapped\s+alias|Business-analysis|Business\s+analysis|All\s+generated|All\s+app(?:lication)?|Generated\s+app(?:lication)?|App(?:lication)?\s+source|App\s+project\s+path|Expected\s+project\s+source\s+path|Expected\s+base\s+URL|Run\s+command|Source\s+root|Source\s+belongs|Code\s+belongs|Files?\s+belong|Output\s+directory|Acceptance|Approved|Archetype|Backend|Deliverable|Exact|Hosting|Include|Includes|No-go|Preservation\s+rule|Agents?\s+must|Use\s+only|Do\s+not|The\s+app|This\s+app)\b.*$",
             string.Empty,
             RegexOptions.CultureInvariant);
         stripped = Regex.Replace(
@@ -441,6 +498,28 @@ internal sealed partial class ProcessRunAutomationDispatchService
             string.Empty,
             RegexOptions.CultureInvariant);
         return stripped.Trim();
+    }
+
+    private static int GetExternalTargetHintPriority(string path)
+    {
+        var alias = TryMapAbsoluteExternalPathToAlias(path, out var mappedAlias)
+            ? mappedAlias
+            : path.Replace('\\', '/');
+        if (IsNonProductExternalTargetAlias(alias))
+        {
+            return -100;
+        }
+
+        var leaf = alias.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .LastOrDefault() ?? string.Empty;
+        return leaf switch
+        {
+            "product" => 100,
+            "app" => 90,
+            "src" => 80,
+            "source" => 80,
+            _ => 10
+        };
     }
 
     private static bool TrySplitExternalTargetAliasForScaffold(

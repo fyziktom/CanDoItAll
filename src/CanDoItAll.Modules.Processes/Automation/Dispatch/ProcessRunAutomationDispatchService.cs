@@ -229,6 +229,7 @@ internal sealed partial class ProcessRunAutomationDispatchService(
         string AbsolutePath,
         string MappedAlias,
         string SourceNodeId,
-        string SourceNodeTitle);
+        string SourceNodeTitle,
+        int SourcePriority);
 
 }

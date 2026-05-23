@@ -781,6 +781,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             if (string.IsNullOrWhiteSpace(referencedAlias) ||
                 IsAllowedExternalTargetReference(referencedAlias, normalizedAllowedAliases) ||
                 IsDocumentedScaffoldParentReference(text, match.Index, referencedAlias, normalizedAllowedAliases) ||
+                IsDocumentedRunBoundaryParentReference(text, match.Index, referencedAlias, normalizedAllowedAliases) ||
                 IsProhibitedExternalTargetReference(text, match.Index))
             {
                 continue;
@@ -991,6 +992,31 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var context = text.Substring(start, length);
         return context.Contains("scaffold parent", StringComparison.OrdinalIgnoreCase) ||
                context.Contains("parentDirectory", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsDocumentedRunBoundaryParentReference(
+        string text,
+        int referenceIndex,
+        string referencedAlias,
+        IReadOnlyList<string> allowedAliases)
+    {
+        if (!allowedAliases.Any(allowedAlias =>
+                TryResolveExternalTargetParentAlias(allowedAlias, out var parentAlias) &&
+                string.Equals(referencedAlias, parentAlias, StringComparison.OrdinalIgnoreCase)))
+        {
+            return false;
+        }
+
+        var start = Math.Max(0, referenceIndex - 160);
+        var length = Math.Min(text.Length - start, 340);
+        var context = CollapsePromptWhitespace(text.Substring(start, length)).ToLowerInvariant();
+        return context.Contains("output root", StringComparison.Ordinal) ||
+               context.Contains("run folder", StringComparison.Ordinal) ||
+               context.Contains("run root", StringComparison.Ordinal) ||
+               context.Contains("run boundary", StringComparison.Ordinal) ||
+               context.Contains("approved run", StringComparison.Ordinal) ||
+               context.Contains("agent evidence root", StringComparison.Ordinal) ||
+               context.Contains("backup root", StringComparison.Ordinal);
     }
 
     private static bool IsProhibitedExternalTargetReference(string text, int referenceIndex)
@@ -3413,15 +3439,39 @@ internal sealed partial class ProcessRunAutomationDispatchService
         DispatchCandidate candidate,
         ExecutionRunDetail detail)
     {
-        if (!RequiresGovernedInspection(candidate.StepRun) || candidate.ArtifactInputs.Count == 0)
+        var missingInspectionPaths = ResolveMissingUpstreamArtifactInspectionPaths(candidate, detail);
+        if (missingInspectionPaths.StatPaths.Count == 0 && missingInspectionPaths.ReadPaths.Count == 0)
         {
             return string.Empty;
+        }
+
+        var parts = new List<string>();
+        if (missingInspectionPaths.StatPaths.Count > 0)
+        {
+            parts.Add($"workspace_stat_path missing for {FormatPromptPathList(missingInspectionPaths.StatPaths)}");
+        }
+
+        if (missingInspectionPaths.ReadPaths.Count > 0)
+        {
+            parts.Add($"workspace_read_file missing for {FormatPromptPathList(missingInspectionPaths.ReadPaths)}");
+        }
+
+        return "the review step did not directly inspect inherited upstream artifacts: " + string.Join("; ", parts);
+    }
+
+    private static GovernedInspectionPaths ResolveMissingUpstreamArtifactInspectionPaths(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail)
+    {
+        if (!RequiresGovernedInspection(candidate.StepRun) || candidate.ArtifactInputs.Count == 0)
+        {
+            return new GovernedInspectionPaths([], []);
         }
 
         var requiredInspectionPaths = ResolveArtifactInputInspectionPaths(candidate.ArtifactInputs);
         if (requiredInspectionPaths.StatPaths.Count == 0 && requiredInspectionPaths.ReadPaths.Count == 0)
         {
-            return string.Empty;
+            return new GovernedInspectionPaths([], []);
         }
 
         var successfulStatPaths = ResolveSuccessfulWorkspaceInspectionPaths(
@@ -3442,23 +3492,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
             .Where(path => !ContainsEquivalentManagedPath(successfulReadPaths, path))
             .Take(3)
             .ToList();
-        if (missingStatPaths.Count == 0 && missingReadPaths.Count == 0)
-        {
-            return string.Empty;
-        }
 
-        var parts = new List<string>();
-        if (missingStatPaths.Count > 0)
-        {
-            parts.Add($"workspace_stat_path missing for {FormatPromptPathList(missingStatPaths)}");
-        }
-
-        if (missingReadPaths.Count > 0)
-        {
-            parts.Add($"workspace_read_file missing for {FormatPromptPathList(missingReadPaths)}");
-        }
-
-        return "the review step did not directly inspect inherited upstream artifacts: " + string.Join("; ", parts);
+        return new GovernedInspectionPaths(missingStatPaths, missingReadPaths);
     }
 
     private static bool ContainsEquivalentManagedPath(IReadOnlySet<string> paths, string requiredPath)
@@ -3611,6 +3646,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var normalizedValidation = CollapsePromptWhitespace(expectedArtifact.ValidationRequirementSummary).ToLowerInvariant();
         return normalizedTitle.Contains("note", StringComparison.Ordinal) ||
                normalizedTitle.Contains("review", StringComparison.Ordinal) ||
+               normalizedTitle.Contains("evidence index", StringComparison.Ordinal) ||
+               normalizedTitle.Contains("result index", StringComparison.Ordinal) ||
                normalizedTitle.Contains("receipt", StringComparison.Ordinal) ||
                normalizedTitle.Contains("handoff", StringComparison.Ordinal) ||
                normalizedTitle.Contains("browser navigation", StringComparison.Ordinal) ||
@@ -3620,6 +3657,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
                normalizedTitle.Contains("decision record", StringComparison.Ordinal) ||
                normalizedTitle.Contains("handoff packet", StringComparison.Ordinal) ||
                normalizedTitle.Contains("regression", StringComparison.Ordinal) ||
+               normalizedValidation.Contains("evidence index", StringComparison.Ordinal) ||
+               normalizedValidation.Contains("raw record pointers", StringComparison.Ordinal) ||
                normalizedValidation.Contains("validation evidence", StringComparison.Ordinal) ||
                normalizedValidation.Contains("runtime/api/browser evidence", StringComparison.Ordinal) ||
                normalizedValidation.Contains("accepted issues", StringComparison.Ordinal) ||

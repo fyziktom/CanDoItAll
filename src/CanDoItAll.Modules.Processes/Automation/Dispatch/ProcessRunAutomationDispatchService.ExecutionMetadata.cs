@@ -13,13 +13,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
         string? projectStructureGroundingSummary,
         string? artifactInspectionGroundingSummary)
     {
-        var resolvedExternalTargetAliases = ResolveAllowedExternalTargetAliases(
+        var resolvedExternalTargetAliases = ResolveExternalTargetAliases(
             candidate,
             projectStructureGroundingSummary,
             artifactInspectionGroundingSummary);
         var allowExternalTargetMutation = AllowsExternalTargetMutation(candidate, projectStructureGroundingSummary);
         var allowedExternalTargetAliases = allowExternalTargetMutation
-            ? resolvedExternalTargetAliases
+            ? ResolveMutableExternalTargetAliases(candidate, resolvedExternalTargetAliases)
             : [];
         var browserProofGroundingText = string.Join(
             ' ',
@@ -42,6 +42,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var readOnlyExternalTargetAliases = ResolveReadOnlyExternalTargetAliases(
             candidate,
             resolvedExternalTargetAliases,
+            allowedExternalTargetAliases,
             allowExternalTargetMutation);
         if (readOnlyExternalTargetAliases.Count > 0)
         {
@@ -75,16 +76,26 @@ internal sealed partial class ProcessRunAutomationDispatchService
     private static IReadOnlyList<string> ResolveReadOnlyExternalTargetAliases(
         DispatchCandidate candidate,
         IReadOnlyList<string> resolvedExternalTargetAliases,
+        IReadOnlyList<string> allowedExternalTargetAliases,
         bool allowExternalTargetMutation)
     {
-        if (allowExternalTargetMutation ||
-            resolvedExternalTargetAliases.Count == 0 ||
-            !IsProductReadOnlyValidationStep(candidate))
+        if (resolvedExternalTargetAliases.Count == 0)
         {
             return [];
         }
 
-        return resolvedExternalTargetAliases;
+        var scopedExternalTargetAliases = PreferCurrentRunExternalTargetAliases(candidate, resolvedExternalTargetAliases);
+        if (allowExternalTargetMutation)
+        {
+            return scopedExternalTargetAliases
+                .Where(IsNonProductExternalTargetAlias)
+                .Where(alias => !IsAliasCoveredByAny(alias, allowedExternalTargetAliases))
+                .ToArray();
+        }
+
+        return IsProductReadOnlyValidationStep(candidate)
+            ? scopedExternalTargetAliases
+            : [];
     }
 
     private static bool AllowsExternalTargetMutation(
@@ -163,20 +174,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
                stepText.Contains("changes requested", StringComparison.Ordinal);
     }
 
-    private static IReadOnlyList<string> ResolveAllowedExternalTargetAliases(
+    private static IReadOnlyList<string> ResolveExternalTargetAliases(
         DispatchCandidate candidate,
         string? projectStructureGroundingSummary,
         string? artifactInspectionGroundingSummary)
     {
-        var groundedAliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        AddExternalTargetAliasesFromText(groundedAliases, candidate.Run.TriggerReason);
-        AddExternalTargetAliasesFromText(groundedAliases, projectStructureGroundingSummary);
-        if (groundedAliases.Count > 0)
-        {
-            return PruneAllowedExternalTargetAliasesForCurrentRun(groundedAliases);
-        }
-
         var aliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        AddExternalTargetAliasesFromText(aliases, candidate.Run.TriggerReason);
+        AddExternalTargetAliasesFromText(aliases, projectStructureGroundingSummary);
         foreach (var source in EnumerateCurrentRunExternalTargetSources(
             candidate,
             projectStructureGroundingSummary,
@@ -186,6 +191,102 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         return PruneAllowedExternalTargetAliasesForCurrentRun(aliases);
+    }
+
+    private static IReadOnlyList<string> ResolveMutableExternalTargetAliases(
+        DispatchCandidate candidate,
+        IReadOnlyList<string> aliases)
+    {
+        var mutableAliases = aliases
+            .Where(alias => !IsNonProductExternalTargetAlias(alias))
+            .ToList();
+        if (mutableAliases.Count == 0)
+        {
+            return [];
+        }
+
+        var preferredAliases = mutableAliases
+            .Where(IsPreferredProductExternalTargetAlias)
+            .ToList();
+        var candidateAliases = preferredAliases.Count > 0 ? preferredAliases : mutableAliases;
+        var currentRunTokens = ResolveCurrentRunExternalTargetAliasTokens(candidate);
+        if (currentRunTokens.Count > 0)
+        {
+            var currentRunAliases = candidateAliases
+                .Where(alias => currentRunTokens.Any(token => alias.Contains(token, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+            if (currentRunAliases.Count > 0)
+            {
+                candidateAliases = currentRunAliases;
+            }
+        }
+
+        return candidateAliases
+            .Where(alias => !candidateAliases.Any(other =>
+                !string.Equals(alias, other, StringComparison.OrdinalIgnoreCase) &&
+                IsExternalTargetAliasAncestor(alias, other) &&
+                !IsLikelyExternalTargetFileAlias(other)))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(alias => alias.Length)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<string> PreferCurrentRunExternalTargetAliases(
+        DispatchCandidate candidate,
+        IReadOnlyList<string> aliases)
+    {
+        var currentRunTokens = ResolveCurrentRunExternalTargetAliasTokens(candidate);
+        if (currentRunTokens.Count == 0)
+        {
+            return aliases;
+        }
+
+        var currentRunAliases = aliases
+            .Where(alias => currentRunTokens.Any(token => alias.Contains(token, StringComparison.OrdinalIgnoreCase)))
+            .ToArray();
+        return currentRunAliases.Length > 0
+            ? currentRunAliases
+            : aliases;
+    }
+
+    private static IReadOnlyList<string> ResolveCurrentRunExternalTargetAliasTokens(DispatchCandidate candidate)
+    {
+        var tokens = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        AddCurrentRunAliasTokens(tokens, candidate.Run.Name);
+        AddCurrentRunAliasTokens(tokens, candidate.Run.TriggerReason);
+        return tokens.ToArray();
+    }
+
+    private static void AddCurrentRunAliasTokens(HashSet<string> tokens, string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return;
+        }
+
+        foreach (Match match in Regex.Matches(
+                     text,
+                     @"(?<!\d)(?<token>\d{8}[-_]\d{4,6})(?!\d)",
+                     RegexOptions.CultureInvariant))
+        {
+            var token = match.Groups["token"].Value.Trim();
+            if (!string.IsNullOrWhiteSpace(token))
+            {
+                tokens.Add(token);
+            }
+        }
+
+        foreach (Match match in Regex.Matches(
+                     text,
+                     @"(?i)\b(?<token>[a-z][a-z0-9]+(?:[-_][a-z0-9]+){2,}[-_]\d{8}[-_]\d{4,6})\b",
+                     RegexOptions.CultureInvariant))
+        {
+            var token = match.Groups["token"].Value.Trim();
+            if (!string.IsNullOrWhiteSpace(token))
+            {
+                tokens.Add(token);
+            }
+        }
     }
 
     internal static IReadOnlyList<string> PruneAllowedExternalTargetAliasesForCurrentRun(IEnumerable<string> aliases)
@@ -204,7 +305,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
                             !normalizedAliases.Any(other =>
                                 !string.Equals(alias, other, StringComparison.OrdinalIgnoreCase) &&
                                 IsExternalTargetAliasAncestor(other, alias)))
-            .Where(alias => !normalizedAliases.Any(other =>
+            .Where(alias => IsPreferredProductExternalTargetAlias(alias) ||
+                            !normalizedAliases.Any(other =>
                 !string.Equals(alias, other, StringComparison.OrdinalIgnoreCase) &&
                 IsExternalTargetAliasAncestor(alias, other) &&
                 !IsLikelyExternalTargetFileAlias(other)))
@@ -213,6 +315,40 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 IsAmbiguousExternalTargetPrefixAlias(alias, other)))
             .OrderByDescending(alias => alias.Length)
             .ToArray();
+    }
+
+    private static bool IsAliasCoveredByAny(string alias, IReadOnlyCollection<string> roots)
+        => roots.Any(root =>
+            string.Equals(alias, root, StringComparison.OrdinalIgnoreCase) ||
+            alias.StartsWith(root + "/", StringComparison.OrdinalIgnoreCase));
+
+    private static bool IsPreferredProductExternalTargetAlias(string alias)
+    {
+        var leaf = alias.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .LastOrDefault();
+        return string.Equals(leaf, "product", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(leaf, "app", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(leaf, "source", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(leaf, "src", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsNonProductExternalTargetAlias(string alias)
+    {
+        if (string.IsNullOrWhiteSpace(alias))
+        {
+            return false;
+        }
+
+        var segments = alias.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return segments.Any(segment =>
+            string.Equals(segment, "project-structure-backup", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, "agent-evidence", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, "api-snapshots", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, "launch-plan", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, "observation", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, "process-definition", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, "process-definition-corrected", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, "project-structure-mutations", StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool IsExternalTargetAliasAncestor(string alias, string other)

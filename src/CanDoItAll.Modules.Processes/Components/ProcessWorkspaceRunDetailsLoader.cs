@@ -634,6 +634,7 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
         IReadOnlyList<ProcessOutboxRecordViewModel> outboxRecords)
     {
         var missingArtifactCount = stepRuns
+            .Where(item => item.Status != ProcessStepRunStatus.Skipped)
             .SelectMany(item => item.ArtifactExpectations)
             .Count(item => item.Status is ProcessArtifactExpectationSatisfactionStatus.Missing or ProcessArtifactExpectationSatisfactionStatus.ProjectionFailed);
         var deadLetteredOutboxCount = outboxRecords.Count(item => item.HealthStatus == ProcessOutboxHealthStatus.DeadLettered);

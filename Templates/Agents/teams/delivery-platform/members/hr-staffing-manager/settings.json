@@ -5,7 +5,7 @@
   "summary": "Matches governed process roles to actual project assignments, workforce records, and AI agents using factual fit instead of convenience or guesswork.",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
-  "model": "",
+  "model": "gpt-5.4-mini",
   "workload": "Management",
   "chatHistoryMode": "FrameworkManaged",
   "temperature": 0.2,

@@ -302,6 +302,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return missingRequiredTools.Any(toolName =>
             !ImplementationProofToolNames.Contains(toolName, StringComparer.Ordinal) &&
             !ConcreteProductMutationToolNames.Contains(toolName, StringComparer.Ordinal) &&
+            !toolName.StartsWith("project_structure_", StringComparison.Ordinal) &&
             !IsImplementationValidationToolName(toolName));
     }
 
@@ -399,6 +400,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     out _))
             {
                 return ProcessStepRunStatus.Completed;
+            }
+
+            if (contextValidation.IsValid &&
+                DeclaredBlockedOutcomeClaimsRequiredToolFailureWithoutReceipt(
+                    declaredOutcome,
+                    responseText,
+                    missingRequiredTools,
+                    detail))
+            {
+                return ProcessStepRunStatus.Failed;
             }
 
             if (contextValidation.IsValid &&
@@ -648,6 +659,53 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 parsedOutcome.BranchOutcomeTitle)
         };
         return true;
+    }
+
+    private static bool DeclaredBlockedOutcomeClaimsRequiredToolFailureWithoutReceipt(
+        DeclaredStepOutcome declaredOutcome,
+        string? responseText,
+        IReadOnlyList<string> missingRequiredTools,
+        ExecutionRunDetail detail)
+    {
+        if (declaredOutcome.Status != ProcessStepRunStatus.Blocked ||
+            missingRequiredTools.Count == 0 ||
+            HasFailedReceiptForRequiredTool(detail, missingRequiredTools))
+        {
+            return false;
+        }
+
+        var normalizedText = CollapsePromptWhitespace($"{declaredOutcome.Reason} {ResolveOutputInspectionText(responseText)}");
+        if (string.IsNullOrWhiteSpace(normalizedText))
+        {
+            return false;
+        }
+
+        return missingRequiredTools.Any(toolName =>
+            normalizedText.Contains(toolName, StringComparison.OrdinalIgnoreCase)) ||
+               (normalizedText.Contains("tool", StringComparison.OrdinalIgnoreCase) &&
+                (normalizedText.Contains("failed", StringComparison.OrdinalIgnoreCase) ||
+                 normalizedText.Contains("failure", StringComparison.OrdinalIgnoreCase) ||
+                 normalizedText.Contains("unavailable", StringComparison.OrdinalIgnoreCase) ||
+                 normalizedText.Contains("denied", StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private static bool HasFailedReceiptForRequiredTool(
+        ExecutionRunDetail detail,
+        IReadOnlyList<string> requiredToolNames)
+    {
+        if (requiredToolNames.Count == 0)
+        {
+            return false;
+        }
+
+        var required = requiredToolNames
+            .Select(NormalizeToolToken)
+            .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
+            .ToHashSet(StringComparer.Ordinal);
+
+        return detail.ToolReceipts.Any(receipt =>
+            required.Contains(NormalizeToolToken(receipt.ToolName)) &&
+            IsFailedToolReceipt(receipt));
     }
 
     private static string BuildDeclaredStepOutcomeReason(string runTitle, string stepTitle, DeclaredStepOutcome declaredOutcome)

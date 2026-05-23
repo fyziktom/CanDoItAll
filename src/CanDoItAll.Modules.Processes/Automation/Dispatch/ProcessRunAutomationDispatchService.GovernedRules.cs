@@ -106,6 +106,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
             requiredToolNames.Add("workspace_write_file");
         }
 
+        if (RequiresProjectStructureWriteback(candidate))
+        {
+            requiredToolNames.Add("project_structure_node_create");
+        }
+
         if (RequiresRuntimeCleanupCommand(candidate))
         {
             requiredToolNames.Add("workspace_pwsh_run_script");
@@ -280,6 +285,61 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
             return IsResponseProjectableTextArtifact(relativePath);
         });
+    }
+
+    private static bool RequiresProjectStructureWriteback(DispatchCandidate candidate)
+    {
+        var contractText = CollapsePromptWhitespace(string.Join(
+            ' ',
+            candidate.StepRun.Title,
+            candidate.StepDefinition.Title,
+            candidate.StepDefinition.InputContractSummary,
+            candidate.StepDefinition.OutputContractSummary,
+            candidate.StepDefinition.EvidenceContractSummary,
+            candidate.StepDefinition.ExceptionPolicySummary,
+            candidate.WorkBrief?.WorkBriefText,
+            candidate.WorkBrief?.ExpectedOutcome,
+            candidate.WorkBrief?.EvidenceExpectationSummary,
+            string.Join(' ', candidate.ExpectedArtifacts.Select(item => item.Title)),
+            string.Join(' ', candidate.ExpectedArtifacts.Select(item => item.ValidationRequirementSummary))));
+
+        if (string.IsNullOrWhiteSpace(contractText))
+        {
+            return false;
+        }
+
+        var normalized = contractText.ToLowerInvariant();
+        if (normalized.Contains("project_structure_node_create", StringComparison.Ordinal) ||
+            normalized.Contains("project_structure_node_update", StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        if (candidate.ExpectedArtifacts.Any(item =>
+                ContainsProjectStructureResultWritebackSignal(item.Title) ||
+                ContainsProjectStructureResultWritebackSignal(item.ValidationRequirementSummary)))
+        {
+            return true;
+        }
+
+        return candidate.StepRun.Title.Contains("record", StringComparison.OrdinalIgnoreCase) &&
+               normalized.Contains("project-structure", StringComparison.Ordinal) &&
+               (normalized.Contains("writeback", StringComparison.Ordinal) ||
+                normalized.Contains("write back", StringComparison.Ordinal));
+    }
+
+    private static bool ContainsProjectStructureResultWritebackSignal(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var normalized = value.ToLowerInvariant();
+        return normalized.Contains("project-structure", StringComparison.Ordinal) &&
+               normalized.Contains("result", StringComparison.Ordinal) &&
+               (normalized.Contains("writeback", StringComparison.Ordinal) ||
+                normalized.Contains("write back", StringComparison.Ordinal));
     }
 
     private static bool HasProjectStructureContext(DispatchCandidate candidate)

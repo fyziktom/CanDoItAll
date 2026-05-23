@@ -10,6 +10,8 @@ namespace CanDoItAll.Tests.Integration;
 
 public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
 {
+    private const string ExplicitDeliveryAgentModel = "gpt-5.4-mini";
+
     [Fact]
     public void Seed_catalog_loads_generic_reconciliation_skill_and_retires_stale_built_in_inline_skills()
     {
@@ -557,10 +559,10 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         AssertOpenAiBacked(uiReviewAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
         AssertOpenAiBacked(securityReviewerAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
         AssertOpenAiBacked(releaseManagerAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
-        AssertOpenAiBacked(dotnetArchitectAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
-        AssertOpenAiBacked(dotnetDeveloperAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
-        AssertOpenAiBacked(blazorDeveloperAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
-        AssertOpenAiBacked(dotnetQaAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertOpenAiBacked(dotnetArchitectAgent, openAiDefaultProvider.Id, ExplicitDeliveryAgentModel);
+        AssertOpenAiBacked(dotnetDeveloperAgent, openAiDefaultProvider.Id, ExplicitDeliveryAgentModel);
+        AssertOpenAiBacked(blazorDeveloperAgent, openAiDefaultProvider.Id, ExplicitDeliveryAgentModel);
+        AssertOpenAiBacked(dotnetQaAgent, openAiDefaultProvider.Id, ExplicitDeliveryAgentModel);
         AssertOpenAiBacked(javascriptArchitectAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
         AssertOpenAiBacked(javascriptDeveloperAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
         AssertOpenAiBacked(javascriptQaAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
@@ -1006,7 +1008,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
 
         foreach (var agentName in managedAgentNames)
         {
-            AssertManagedSeedRefreshed(ReadAgentSnapshotFromCatalog(catalogPath, agentName));
+            AssertManagedSeedRefreshed(agentName, ReadAgentSnapshotFromCatalog(catalogPath, agentName));
         }
 
         var javascriptQaInstructions = ReadAgentInstructionsFromCatalog(catalogPath, "JavaScript QA Review Lead");
@@ -1156,13 +1158,35 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
     {
         Assert.False(string.IsNullOrWhiteSpace(expectedModel));
         Assert.Equal(providerId, agent.ProviderProfileId);
-        Assert.Equal(string.Empty, agent.Model);
+        Assert.Equal(ResolveExpectedSeedModel(agent.Name, expectedModel), agent.Model);
     }
 
-    private static void AssertManagedSeedRefreshed((string Model, string ConfigurationJson) snapshot)
+    private static void AssertManagedSeedRefreshed(string agentName, (string Model, string ConfigurationJson) snapshot)
     {
-        Assert.Equal(string.Empty, snapshot.Model);
+        Assert.Equal(ResolveExpectedSeedModel(agentName, ManagedSeedProviderFallbacks.OpenAiDefaultModel), snapshot.Model);
         Assert.Contains(GetExpectedManagedSeedVersion(), snapshot.ConfigurationJson, StringComparison.Ordinal);
+    }
+
+    private static string ResolveExpectedSeedModel(string agentName, string expectedModel)
+    {
+        if (expectedModel != ManagedSeedProviderFallbacks.OpenAiDefaultModel)
+        {
+            return expectedModel;
+        }
+
+        return UsesExplicitDeliveryAgentModel(agentName)
+            ? ExplicitDeliveryAgentModel
+            : string.Empty;
+    }
+
+    private static bool UsesExplicitDeliveryAgentModel(string agentName)
+    {
+        return agentName is
+            "HR Staffing Manager" or
+            ".NET Solution Architect" or
+            ".NET Application Developer" or
+            "Blazor Application Developer" or
+            ".NET QA Review Lead";
     }
 
     private static string GetExpectedManagedSeedVersion()

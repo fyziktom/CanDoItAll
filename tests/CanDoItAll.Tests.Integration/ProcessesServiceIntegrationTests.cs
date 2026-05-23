@@ -2539,6 +2539,11 @@ public sealed class ProcessesServiceIntegrationTests
             process.RoleUsages.Any(usage =>
                 string.Equals(usage.RoleResourceKey, roleSeed.TemplateRoleKey, StringComparison.OrdinalIgnoreCase) &&
                 string.Equals(usage.Key, roleSeed.TemplateRoleKey, StringComparison.OrdinalIgnoreCase)));
+        var projectionRoleUsage = Assert.Single(
+            projectionRoleCase.RoleUsages,
+            usage =>
+                string.Equals(usage.RoleResourceKey, roleSeed.TemplateRoleKey, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(usage.Key, roleSeed.TemplateRoleKey, StringComparison.OrdinalIgnoreCase));
         var projectedRoleEnvelope = projectionService.GetProjectedEnvelope(projectionRoleCase.Key);
         var projectedRole = Assert.Single(
             projectedRoleEnvelope.Definition.Roles,
@@ -2546,22 +2551,29 @@ public sealed class ProcessesServiceIntegrationTests
 
         Assert.Equal(roleResource.Purpose, catalogRole.Purpose);
         Assert.Equal(roleResource.Purpose, libraryRole.Purpose);
-        Assert.Equal(roleResource.Purpose, projectedRole.Purpose);
+        Assert.Equal(FirstNonEmpty(projectionRoleUsage.Purpose, roleResource.Purpose), projectedRole.Purpose);
         Assert.Equal(roleResource.StaffingIntent, catalogRole.StaffingIntent);
         Assert.Equal(roleResource.StaffingIntent, libraryRole.StaffingIntent);
-        Assert.Equal(roleResource.StaffingIntent, projectedRole.StaffingIntent);
+        Assert.Equal(FirstNonEmpty(projectionRoleUsage.StaffingIntent, roleResource.StaffingIntent), projectedRole.StaffingIntent);
         Assert.Equal(catalogRole.PreferredExecutorKind, libraryRole.PreferredExecutorKind);
-        Assert.Equal(catalogRole.PreferredExecutorKind, projectedRole.PreferredExecutorKind);
+        Assert.Equal(FirstNonEmpty(projectionRoleUsage.PreferredExecutorKind, roleResource.PreferredExecutorKind), projectedRole.PreferredExecutorKind);
         Assert.Equal(catalogRole.PreferredProjectAssignmentRole, libraryRole.PreferredProjectAssignmentRole);
-        Assert.Equal(catalogRole.PreferredProjectAssignmentRole, projectedRole.PreferredProjectAssignmentRole);
+        Assert.Equal(
+            EnumValueParser.ParseNullable<ProjectPartyAssignmentRole>(
+                FirstNonEmpty(projectionRoleUsage.PreferredProjectAssignmentRole, roleResource.PreferredProjectAssignmentRole)),
+            projectedRole.PreferredProjectAssignmentRole);
         Assert.Equal(catalogRole.IsRequired, libraryRole.IsRequired);
-        Assert.Equal(catalogRole.IsRequired, projectedRole.IsRequired);
+        Assert.Equal(projectionRoleUsage.IsRequired, projectedRole.IsRequired);
         Assert.Equal(catalogRole.AllowsFallback, libraryRole.AllowsFallback);
-        Assert.Equal(catalogRole.AllowsFallback, projectedRole.AllowsFallback);
+        Assert.Equal(projectionRoleUsage.AllowsFallback, projectedRole.AllowsFallback);
         Assert.Equal(catalogRole.RequiresExplicitApproval, libraryRole.RequiresExplicitApproval);
-        Assert.Equal(catalogRole.RequiresExplicitApproval, projectedRole.RequiresExplicitApproval);
+        Assert.Equal(projectionRoleUsage.RequiresExplicitApproval, projectedRole.RequiresExplicitApproval);
         Assert.Equal(catalogRole.DefaultAllocationPercent, libraryRole.DefaultAllocationPercent);
-        Assert.Equal(catalogRole.DefaultAllocationPercent, projectedRole.DefaultAllocationPercent);
+        Assert.Equal(
+            projectionRoleUsage.DefaultAllocationPercent > 0
+                ? projectionRoleUsage.DefaultAllocationPercent
+                : roleResource.DefaultAllocationPercent,
+            projectedRole.DefaultAllocationPercent);
         Assert.Equal(catalogRole.RoleTemplateSourceKey, libraryRole.RoleTemplateSourceKey);
         Assert.Equal(catalogRole.RoleTemplateSourceKey, projectedRole.RoleTemplateSourceKey);
         Assert.Equal(catalogRole.RoleTemplateSnapshotName, libraryRole.RoleTemplateSnapshotName);
@@ -2635,6 +2647,7 @@ public sealed class ProcessesServiceIntegrationTests
         await using var scope = application.Services.CreateAsyncScope();
         var packLoader = scope.ServiceProvider.GetRequiredService<ProcessTemplatePackLoader>();
         var projectionService = scope.ServiceProvider.GetRequiredService<ProcessTemplateProjectionService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
 
         var pack = packLoader.Load();
         var projectedEnvelope = projectionService.GetProjectedEnvelope("software-delivery");
@@ -2679,6 +2692,111 @@ public sealed class ProcessesServiceIntegrationTests
         Assert.DoesNotContain("always capture browser", fullContract, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("browser proof is required for every", fullContract, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("browser artifacts are required for every", fullContract, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Blazor_process_templates_project_with_required_runtime_browser_and_writeback_contracts()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var packLoader = scope.ServiceProvider.GetRequiredService<ProcessTemplatePackLoader>();
+        var projectionService = scope.ServiceProvider.GetRequiredService<ProcessTemplateProjectionService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var pack = packLoader.Load();
+        string[] templateKeys =
+        [
+            "blazor-app-delivery",
+            "blazor-app-repair-fix",
+            "blazor-backend-feature",
+            "blazor-frontend-feature",
+            "blazor-fullstack-feature"
+        ];
+
+        foreach (var templateKey in templateKeys)
+        {
+            Assert.True(pack.Processes.ContainsKey(templateKey), $"Missing process template '{templateKey}'.");
+
+            var projectedEnvelope = projectionService.GetProjectedEnvelope(templateKey);
+            var qaStep = Assert.Single(
+                projectedEnvelope.Definition.Steps,
+                step => string.Equals(step.Key, "validate-blazor-runtime", StringComparison.OrdinalIgnoreCase));
+            var recordStep = Assert.Single(
+                projectedEnvelope.Definition.Steps,
+                step => string.Equals(step.Key, "record-blazor-results", StringComparison.OrdinalIgnoreCase));
+            _ = Assert.Single(
+                projectedEnvelope.Definition.Steps,
+                step => string.Equals(step.Key, "escalate-blazor-unresolved-repair", StringComparison.OrdinalIgnoreCase));
+
+            Assert.NotEmpty(projectedEnvelope.Definition.Roles);
+            Assert.Contains(
+                qaStep.ArtifactExpectations,
+                artifact => string.Equals(artifact.Title, "Blazor runtime evidence pack", StringComparison.Ordinal));
+            Assert.Contains(
+                recordStep.ArtifactExpectations,
+                artifact => string.Equals(artifact.Title, "Run evidence index", StringComparison.Ordinal));
+
+            var contract = BuildBlazorTemplateContract(projectedEnvelope);
+            Assert.Contains("Blazor SSR, WASM, or WASM PWA", contract, StringComparison.Ordinal);
+            Assert.Contains("dotnet restore", contract, StringComparison.Ordinal);
+            Assert.Contains("dotnet build", contract, StringComparison.Ordinal);
+            Assert.Contains("dotnet test", contract, StringComparison.Ordinal);
+            Assert.Contains("Playwright", contract, StringComparison.Ordinal);
+            Assert.Contains("screenshot", contract, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("browser_snapshot or browser_evaluate", contract, StringComparison.Ordinal);
+            Assert.Contains("browser_console_messages", contract, StringComparison.Ordinal);
+            Assert.Contains("no active JavaScript/runtime errors", contract, StringComparison.Ordinal);
+            Assert.Contains("cleanup receipt", contract, StringComparison.Ordinal);
+            Assert.Contains("project-structure evidence writeback", contract, StringComparison.Ordinal);
+            Assert.Contains("project_structure_asset_create", contract, StringComparison.Ordinal);
+            Assert.Contains("project_structure_node_create", contract, StringComparison.Ordinal);
+            Assert.Contains("do not select the Error branch as a completed outcome", contract, StringComparison.Ordinal);
+            Assert.Contains("run evidence index", contract, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Missing, blank, detached, stale, or chat-only screenshots are not acceptable", contract, StringComparison.Ordinal);
+
+            var importResult = await processesService.ImportAsync(projectedEnvelope);
+            Assert.True(importResult.IsSuccess, string.Join(" | ", importResult.Errors.Select(error => error.Message)));
+            var publishResult = await processesService.PublishAsync(importResult.Value);
+            Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+        }
+
+        static string BuildBlazorTemplateContract(ProcessImportExportEnvelope projectedEnvelope)
+        {
+            return string.Join(
+                Environment.NewLine,
+                projectedEnvelope.Definition.Summary,
+                projectedEnvelope.Definition.ValueStatement,
+                projectedEnvelope.Definition.InterfaceContractSummary,
+                projectedEnvelope.Definition.GovernanceNotes,
+                projectedEnvelope.Definition.GovernancePolicySummary,
+                string.Join(Environment.NewLine, projectedEnvelope.Definition.Roles.SelectMany(role => new[]
+                {
+                    role.DisplayName,
+                    role.Purpose,
+                    role.StaffingIntent
+                })),
+                string.Join(Environment.NewLine, projectedEnvelope.Definition.Steps.SelectMany(step => new[]
+                {
+                    step.Title,
+                    step.Subtitle,
+                    step.Notes,
+                    step.InputContractSummary,
+                    step.OutputContractSummary,
+                    step.EvidenceContractSummary,
+                    step.DecisionRightsSummary,
+                    step.ExceptionPolicySummary
+                })),
+                string.Join(
+                    Environment.NewLine,
+                    projectedEnvelope.Definition.Steps
+                        .SelectMany(step => step.ArtifactExpectations)
+                        .SelectMany(artifact => new[]
+                        {
+                            artifact.Title,
+                            artifact.AllowedFutureUsageSummary,
+                            artifact.ValidationRequirementSummary
+                        })));
+        }
     }
 
     [Fact]
@@ -4167,6 +4285,19 @@ public sealed class ProcessesServiceIntegrationTests
                artifact.RetentionDays <= 0 &&
                string.IsNullOrWhiteSpace(artifact.AllowedFutureUsageSummary) &&
                string.IsNullOrWhiteSpace(artifact.ValidationRequirementSummary);
+    }
+
+    private static string FirstNonEmpty(params string?[] values)
+    {
+        foreach (var value in values)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value.Trim();
+            }
+        }
+
+        return string.Empty;
     }
 
     private static List<ProcessStepDependencyEditorModel> CreateDependencies(params (Guid StepId, Guid? BranchOutcomeId)[] items)

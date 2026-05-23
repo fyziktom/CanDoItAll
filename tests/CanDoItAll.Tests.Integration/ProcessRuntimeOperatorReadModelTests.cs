@@ -138,6 +138,40 @@ public sealed class ProcessRuntimeOperatorReadModelTests {
     }
 
     [Fact]
+    public async Task Runtime_read_model_ignores_missing_artifact_obligations_for_skipped_steps()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var fixture = await CreateAgentRunFixtureAsync(scope.ServiceProvider, "Skipped missing artifact read model");
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var runDetailsLoader = scope.ServiceProvider.GetRequiredService<ProcessWorkspaceRunDetailsLoader>();
+        var stepRun = Assert.Single(await processesService.ListStepRunsAsync(fixture.RunId));
+
+        var skipResult = await processesService.TransitionStepAsync(
+            new ProcessStepTransitionRequest
+            {
+                StepRunId = stepRun.Id,
+                StepRunConcurrencyToken = stepRun.StepRunConcurrencyToken,
+                TargetStatus = ProcessStepRunStatus.Skipped,
+                Reason = "Skipped because the upstream branch did not require this lane.",
+                DecidedBy = "integration-tests"
+            });
+
+        Assert.True(skipResult.IsSuccess, string.Join(" | ", skipResult.Errors.Select(error => error.Message)));
+
+        var serviceDetails = await processesService.GetRunDetailsAsync(fixture.RunId);
+        var skippedServiceStep = Assert.Single(serviceDetails.StepRuns);
+        var loaderDetails = await runDetailsLoader.LoadAsync(fixture.RunId);
+        var skippedLoaderStep = Assert.Single(loaderDetails.StepRuns);
+
+        Assert.Equal(ProcessStepRunStatus.Skipped, skippedServiceStep.Status);
+        Assert.Equal(ProcessRecoveryClassification.None, skippedServiceStep.Health.RecoveryClassification);
+        Assert.DoesNotContain("Missing required artifacts", skippedServiceStep.Health.ActionableReason, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, loaderDetails.Health.MissingArtifactCount);
+        Assert.Equal(ProcessRecoveryClassification.None, skippedLoaderStep.Health.RecoveryClassification);
+    }
+
+    [Fact]
     public async Task Manual_agent_rerun_records_recovery_directive_and_dispatch_outbox_record()
     {
         await using var application = await TestApplication.CreateAsync();

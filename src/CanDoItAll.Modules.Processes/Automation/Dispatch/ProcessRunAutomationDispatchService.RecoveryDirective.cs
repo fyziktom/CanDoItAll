@@ -41,6 +41,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
             candidate,
             detail,
             ResolveOutputInspectionText(responseText));
+        var missingUpstreamArtifactInspectionPaths = ResolveMissingUpstreamArtifactInspectionPaths(candidate, detail);
+        var missingUpstreamArtifactInspectionSummary = ResolveMissingUpstreamArtifactInspectionSummary(candidate, detail);
         var implementationMentionsDotNet = ImplementationContractMentionsDotNet(candidate);
         var implementationMentionsJavaScript = ImplementationContractMentionsJavaScript(candidate);
         var outOfScopeExternalTargetReferenceSummary = ResolveOutOfScopeExternalTargetReferenceSummary(
@@ -104,6 +106,21 @@ internal sealed partial class ProcessRunAutomationDispatchService
         {
             builder.AppendLine($"Validation proof is invalid: {invalidQualityValidationProofSummary}.");
             builder.AppendLine("Rerun the concrete validation command after repair and record command output that proves a warning-free build and nonzero executed tests when tests are part of the acceptance contract.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(missingUpstreamArtifactInspectionSummary))
+        {
+            builder.AppendLine($"Inherited upstream artifact inspection is incomplete: {missingUpstreamArtifactInspectionSummary}.");
+            builder.AppendLine("This is a governed inspection receipt gap, not a product defect by itself. On this retry, inspect the exact inherited artifact paths before returning the final step outcome.");
+            if (missingUpstreamArtifactInspectionPaths.StatPaths.Count > 0)
+            {
+                builder.AppendLine($"Use workspace_stat_path on these exact inherited artifact paths now: {FormatPromptPathList(missingUpstreamArtifactInspectionPaths.StatPaths)}.");
+            }
+
+            if (missingUpstreamArtifactInspectionPaths.ReadPaths.Count > 0)
+            {
+                builder.AppendLine($"Use workspace_read_file on these exact inherited text artifact paths now: {FormatPromptPathList(missingUpstreamArtifactInspectionPaths.ReadPaths)}.");
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(outOfScopeExternalTargetReferenceSummary))

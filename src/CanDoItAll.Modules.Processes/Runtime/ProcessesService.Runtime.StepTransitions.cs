@@ -313,9 +313,18 @@ public sealed partial class ProcessesService
 
     private static bool IsTerminalRunStepRestart(ProcessStepTransitionRequest request, ProcessStepRun stepRun)
     {
+        if (request.TargetStatus != ProcessStepRunStatus.InProgress)
+        {
+            return false;
+        }
+
+        if (stepRun.Status is ProcessStepRunStatus.Blocked or ProcessStepRunStatus.Failed)
+        {
+            return true;
+        }
+
         return request.AllowCompletedAgentRerun &&
-            stepRun.Status is ProcessStepRunStatus.Blocked or ProcessStepRunStatus.Failed or ProcessStepRunStatus.Completed &&
-            request.TargetStatus == ProcessStepRunStatus.InProgress;
+            stepRun.Status == ProcessStepRunStatus.Completed;
     }
 
     private static bool IsTerminalRunStepTransitionAllowed(

@@ -236,6 +236,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return missingRequiredTools.Any(toolName =>
             !ImplementationProofToolNames.Contains(toolName, StringComparer.Ordinal) &&
             !ConcreteProductMutationToolNames.Contains(toolName, StringComparer.Ordinal) &&
+            !toolName.StartsWith("project_structure_", StringComparison.Ordinal) &&
             !IsImplementationValidationToolName(toolName) &&
             !IsBrowserLaunchOrProofToolName(toolName));
     }

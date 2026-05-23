@@ -1,0 +1,8 @@
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~AgentFrameworkWorkspaceSeedIntegrationTests" --no-restore -v minimal
+Exit Code: 0
+
+Result:
+Successful. Failed: 0, Passed: 23, Skipped: 0, Total: 23.
+
+Purpose:
+Validates that managed agent seed refresh preserves the explicit gpt-5.4-mini model for the relevant .NET/Blazor delivery agents instead of restoring blank provider-default model fields.

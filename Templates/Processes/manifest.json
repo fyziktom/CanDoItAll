@@ -50,6 +50,26 @@
       "RelativePath": "processes/software-delivery"
     },
     {
+      "Key": "blazor-app-delivery",
+      "RelativePath": "processes/blazor-app-delivery"
+    },
+    {
+      "Key": "blazor-app-repair-fix",
+      "RelativePath": "processes/blazor-app-repair-fix"
+    },
+    {
+      "Key": "blazor-backend-feature",
+      "RelativePath": "processes/blazor-backend-feature"
+    },
+    {
+      "Key": "blazor-frontend-feature",
+      "RelativePath": "processes/blazor-frontend-feature"
+    },
+    {
+      "Key": "blazor-fullstack-feature",
+      "RelativePath": "processes/blazor-fullstack-feature"
+    },
+    {
       "Key": "branching-code-review",
       "RelativePath": "processes/branching-code-review"
     },

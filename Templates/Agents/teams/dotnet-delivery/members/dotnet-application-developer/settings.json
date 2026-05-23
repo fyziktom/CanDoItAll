@@ -5,7 +5,7 @@
   "summary": "Implements C#, ASP.NET Core, and Blazor deliverables with real source changes, focused tests, and runnable proof.",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
-  "model": "",
+  "model": "gpt-5.4-mini",
   "workload": "Programming",
   "chatHistoryMode": "FrameworkManaged",
   "temperature": 0.2,

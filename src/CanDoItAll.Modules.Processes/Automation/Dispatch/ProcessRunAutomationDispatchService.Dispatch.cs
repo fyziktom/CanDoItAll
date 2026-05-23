@@ -187,6 +187,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
                             executionOutcome.ResponseText,
                             executionOutcome.CompletionStatus,
                             cancellationToken);
+                        executionOutcome = await TryRecoverMissingCompletionArtifactsAsync(
+                            candidate,
+                            executionOutcome,
+                            trigger,
+                            renewLeaseAsync,
+                            cancellationToken);
 
                         var completionResult = await TransitionStepAsync(
                             new ProcessStepTransitionRequest

@@ -317,6 +317,27 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
+    public void TryResolveExternalTargetHintFromProjectStructureGrounding_trims_project_note_metadata_tail()
+    {
+        var method = typeof(ProcessRunAutomationDispatchService).GetMethod(
+            "TryResolveExternalTargetHintFromProjectStructureGrounding",
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("TryResolveExternalTargetHintFromProjectStructureGrounding method was not found.");
+        object?[] arguments =
+        [
+            "Requirements from project-level planning context:\n- output must be placed in C:\\programovani\\csharp\\workflow (note:output-path); type: ProjectBlock/note",
+            string.Empty,
+            string.Empty
+        ];
+
+        var resolved = (bool)method.Invoke(null, arguments)!;
+
+        Assert.True(resolved);
+        Assert.Equal("C:\\programovani\\csharp\\workflow", arguments[1]);
+        Assert.Equal("external-target/C/programovani/csharp/workflow", arguments[2]);
+    }
+
+    [Fact]
     public void TrySplitExternalTargetAliasForScaffold_returns_parent_alias_and_project_name()
     {
         var method = typeof(ProcessRunAutomationDispatchService).GetMethod(
@@ -383,6 +404,20 @@ public sealed class ProcessRunAutomationDispatchServiceTests
 
         var alias = Assert.Single(aliases);
         Assert.Equal("external-target/C/programovani/dotnet/ReadingTimeBudgeter", alias);
+    }
+
+    [Fact]
+    public void PruneAllowedExternalTargetAliasesForCurrentRun_keeps_product_root_when_descendant_product_path_exists()
+    {
+        var aliases = ProcessRunAutomationDispatchService.PruneAllowedExternalTargetAliasesForCurrentRun(
+        [
+            "external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-192839/product",
+            "external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-192839/product/tests/product"
+        ]);
+
+        Assert.Contains(
+            "external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-192839/product",
+            aliases);
     }
 
     [Fact]
@@ -456,6 +491,18 @@ public sealed class ProcessRunAutomationDispatchServiceTests
 
         var alias = Assert.Single(aliases);
         Assert.Equal("external-target/C/programovani/dotnet-demo/output", alias);
+    }
+
+    [Fact]
+    public void PruneAllowedExternalTargetAliasesForCurrentRun_strips_approved_product_root_annotation()
+    {
+        var aliases = ProcessRunAutomationDispatchService.PruneAllowedExternalTargetAliasesForCurrentRun(
+        [
+            "external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-170653 Approved product root for this run"
+        ]);
+
+        var alias = Assert.Single(aliases);
+        Assert.Equal("external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-170653", alias);
     }
 
     [Fact]
@@ -717,6 +764,21 @@ public sealed class ProcessRunAutomationDispatchServiceTests
             Product root: external-target/C/programovani/dotnet/ReadingTimeBudgeter.
             """,
             ["external-target/C/programovani/dotnet/ReadingTimeBudgeter"]);
+
+        Assert.Equal(string.Empty, summary);
+    }
+
+    [Fact]
+    public void ResolveOutOfScopeExternalTargetReferenceSummary_allows_documented_current_run_output_root()
+    {
+        var summary = ProcessRunAutomationDispatchService.ResolveOutOfScopeExternalTargetReferenceSummary(
+            """
+            Run boundary:
+            - Output root: C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-192839
+            - Product root: C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-192839\product
+            - Fresh screenshot file: artifacts/process-runs/run-001/tetris-revalidated-current.png
+            """,
+            ["external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-192839/product"]);
 
         Assert.Equal(string.Empty, summary);
     }
@@ -985,6 +1047,52 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         Assert.DoesNotContain("workspace_dotnet_run", tools);
         Assert.DoesNotContain("browser_snapshot", tools);
         Assert.DoesNotContain("browser_take_screenshot", tools);
+    }
+
+    [Fact]
+    public void ResolveRequiredToolNames_does_not_require_project_structure_writeback_for_applicable_intake_wording()
+    {
+        var tools = InvokeResolveRequiredToolNames(
+            new ProcessDefinition
+            {
+                Name = "Blazor app delivery",
+                Slug = "blazor-app-delivery"
+            },
+            new ProcessStepDefinition
+            {
+                Key = "resolve-blazor-delivery-contract",
+                Title = "Resolve Blazor delivery contract",
+                StepKind = ProcessStepKind.Review,
+                EvidenceContractSummary = "Capture process artifact paths and project-structure writeback references as applicable."
+            },
+            new ProcessStepRun
+            {
+                Title = "Resolve Blazor delivery contract",
+                StepKind = ProcessStepKind.Review,
+                CurrentExecutorName = "Blazor delivery manager"
+            },
+            new ProcessWorkBrief
+            {
+                Title = "Resolve Blazor delivery contract",
+                WorkBriefText = "Read the project structure context and produce the delivery contract. Include project-structure writeback references as applicable for later result-recording steps.",
+                ExpectedOutcome = "Delivery contract is ready for implementation.",
+                EvidenceExpectationSummary = "Delivery contract"
+            },
+            [
+                (ProcessArtifactKind.Brief, "Blazor delivery contract", "Must include target work item, selected app mode, product root, acceptance criteria, and evidence plan.")
+            ],
+            ProcessProjectStructureContextFormatter.AppendToTriggerReason(
+                "Deliver the generated application showcase.",
+                new ProcessProjectStructureContext
+                {
+                    ProjectId = Guid.NewGuid(),
+                    NodeId = "custom:basic-app",
+                    NodeTitle = "Basic App"
+                }));
+
+        Assert.Contains("project_structure_read", tools);
+        Assert.DoesNotContain("project_structure_node_create", tools);
+        Assert.DoesNotContain("project_structure_asset_create", tools);
     }
 
     [Fact]
@@ -3157,6 +3265,113 @@ Requirements from project-level planning context:
     }
 
     [Fact]
+    public void BuildProjectStructureGroundingSummary_prioritizes_selected_run_instruction_product_root()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var groundingNodeType = serviceType.GetNestedType("ProjectStructureGroundingNodeData", BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("ProjectStructureGroundingNodeData type was not found.");
+        var nodes = Array.CreateInstance(groundingNodeType, 4);
+        var projectId = Guid.NewGuid();
+        nodes.SetValue(
+            CreateProjectStructureGroundingNode(
+                groundingNodeType,
+                $"project:{projectId:D}",
+                string.Empty,
+                "ProjectRoot",
+                string.Empty,
+                "TetrisGame",
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                "{}"),
+            0);
+        nodes.SetValue(
+            CreateProjectStructureGroundingNode(
+                groundingNodeType,
+                "custom:target",
+                $"project:{projectId:D}",
+                "WorkItem",
+                "implementation",
+                "Implement Blazor app",
+                string.Empty,
+                string.Empty,
+                "Previous run output: C:\\programovani\\dotnet-demo\\output\\codex-live-blazor-20260522-181000\\product",
+                "{}"),
+            1);
+        nodes.SetValue(
+            CreateProjectStructureGroundingNode(
+                groundingNodeType,
+                "custom:current-run",
+                "custom:target",
+                "Note",
+                "run-instructions",
+                "Codex live Blazor delivery run instructions 20260522-190813",
+                string.Empty,
+                string.Empty,
+                """
+                Approved output root: C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-190813
+                Approved product root: C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-190813\product
+                Approved agent evidence root: C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-190813\agent-evidence
+                Approved backup root: C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-190813\project-structure-backup
+                """,
+                "{}"),
+            2);
+        nodes.SetValue(
+            CreateProjectStructureGroundingNode(
+                groundingNodeType,
+                "custom:old-run",
+                "custom:target",
+                "Note",
+                "run-instructions",
+                "Old run instructions 20260522-181000",
+                string.Empty,
+                string.Empty,
+                "Approved product root: C:\\programovani\\dotnet-demo\\output\\codex-live-blazor-20260522-181000\\product",
+                "{}"),
+            3);
+        var method = serviceType
+            .GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .Single(candidate =>
+            {
+                if (candidate.Name != "BuildProjectStructureGroundingSummary")
+                {
+                    return false;
+                }
+
+                var parameters = candidate.GetParameters();
+                return parameters.Length == 3 &&
+                       parameters[0].ParameterType == typeof(string) &&
+                       parameters[2].ParameterType == typeof(ProcessProjectStructureContext);
+            });
+
+        var summary = method.Invoke(
+            null,
+            [
+                "TetrisGame",
+                nodes,
+                new ProcessProjectStructureContext
+                {
+                    ProjectId = projectId,
+                    NodeId = "custom:current-run",
+                    NodeTitle = "Codex live Blazor delivery run instructions 20260522-190813",
+                    ParentNodeId = "custom:target",
+                    ParentNodeTitle = "Implement Blazor app"
+                }
+            ]) as string;
+
+        Assert.NotNull(summary);
+        var currentProductIndex = summary.IndexOf(
+            "external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-190813/product",
+            StringComparison.Ordinal);
+        var oldProductIndex = summary.IndexOf(
+            "external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-181000/product",
+            StringComparison.Ordinal);
+
+        Assert.True(currentProductIndex >= 0);
+        Assert.True(oldProductIndex < 0 || currentProductIndex < oldProductIndex);
+    }
+
+    [Fact]
     public void BuildProjectStructureGroundingSummary_includes_required_artifact_contract_from_focus_node()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
@@ -3368,6 +3583,183 @@ Requirements from project-level planning context:
             .Select(item => item.GetString())
             .ToArray();
         Assert.Contains("external-target/C/programovani/dotnet/output", aliases);
+    }
+
+    [Fact]
+    public void BuildProcessInvocationMetadataJson_keeps_backup_and_evidence_roots_read_only_for_mutating_step()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var method = serviceType.GetMethod("BuildProcessInvocationMetadataJson", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildProcessInvocationMetadataJson method was not found.");
+        var candidate = CreateProjectStructureDispatchCandidate(
+            "Implement the requested app and prove build, tests, and startup smoke.",
+            new ProcessProjectStructureContext
+            {
+                ProjectId = Guid.NewGuid(),
+                NodeId = "custom:basic-app",
+                NodeTitle = "Basic App",
+                ParentNodeId = "process-definition:4fdc77a9-6d8c-4b10-9efb-4be15732b1b0",
+                ParentNodeTitle = "Blazor app delivery"
+            });
+        const string projectStructureGroundingSummary = """
+            Dispatcher fetched the live project structure for `TetrisGame` and focused this prompt on the selected work branch.
+            Grounded external target paths from the selected project structure:
+            - `C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-170653 Approved product root for this run` mapped to `external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-170653 Approved product root for this run` from run note (custom:run-note)
+            - `C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-170653\project-structure-backup` mapped to `external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-170653/project-structure-backup` from backup note (custom:backup-note)
+            - `C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-170653\agent-evidence` mapped to `external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-170653/agent-evidence` from evidence note (custom:evidence-note)
+            - `C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-170653\product` mapped to `external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-170653/product` from product root note (custom:product-note)
+            """;
+
+        var metadataJson = method.Invoke(
+            null,
+            [
+                candidate,
+                new ExecutionInvocationPolicy(),
+                projectStructureGroundingSummary,
+                null
+            ]) as string;
+
+        Assert.False(string.IsNullOrWhiteSpace(metadataJson));
+        using var document = JsonDocument.Parse(metadataJson);
+        var allowedAliases = document.RootElement
+            .GetProperty(ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey)
+            .EnumerateArray()
+            .Select(item => item.GetString())
+            .ToArray();
+        var readOnlyAliases = document.RootElement
+            .GetProperty(ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey)
+            .EnumerateArray()
+            .Select(item => item.GetString())
+            .ToArray();
+
+        var allowedAlias = Assert.Single(allowedAliases);
+        Assert.Equal("external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-170653/product", allowedAlias);
+        Assert.Contains("external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-170653/project-structure-backup", readOnlyAliases);
+        Assert.Contains("external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-170653/agent-evidence", readOnlyAliases);
+        Assert.DoesNotContain(readOnlyAliases, alias => string.Equals(alias, allowedAlias, StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void BuildProcessInvocationMetadataJson_prefers_current_run_product_root_over_stale_project_structure_products()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var method = serviceType.GetMethod("BuildProcessInvocationMetadataJson", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildProcessInvocationMetadataJson method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Implement the requested app and prove build, tests, and startup smoke.",
+            ProcessStepKind.Work,
+            [],
+            false,
+            [],
+            [],
+            triggerReason: "Deliver the generated application showcase.",
+            runName: "Codex live Blazor delivery 20260522-190813",
+            processName: "Blazor app delivery",
+            outputContractSummary: "Buildable Blazor implementation");
+        const string projectStructureGroundingSummary = """
+            Dispatcher fetched the live project structure for `TetrisGame` and focused this prompt on the selected work branch.
+            Grounded external target paths from the selected project structure:
+            - `C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-181000\product` mapped to `external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-181000/product` from old run note (custom:old-run)
+            - `C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-190813\project-structure-backup` mapped to `external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-190813/project-structure-backup` from current run instructions (custom:current-run)
+            """;
+        const string artifactInspectionGroundingSummary = """
+            Upstream artifact excerpt:
+            - Product root: `external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-190813/product`
+            - Output root: `C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-190813`
+            """;
+
+        var metadataJson = method.Invoke(
+            null,
+            [
+                candidate,
+                new ExecutionInvocationPolicy(),
+                projectStructureGroundingSummary,
+                artifactInspectionGroundingSummary
+            ]) as string;
+
+        Assert.False(string.IsNullOrWhiteSpace(metadataJson));
+        using var document = JsonDocument.Parse(metadataJson);
+        var allowedAliases = document.RootElement
+            .GetProperty(ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey)
+            .EnumerateArray()
+            .Select(item => item.GetString())
+            .ToArray();
+        var readOnlyAliases = document.RootElement
+            .GetProperty(ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey)
+            .EnumerateArray()
+            .Select(item => item.GetString())
+            .ToArray();
+
+        var allowedAlias = Assert.Single(allowedAliases);
+        Assert.Equal("external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-190813/product", allowedAlias);
+        Assert.Contains("external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-190813/project-structure-backup", readOnlyAliases);
+        Assert.DoesNotContain(
+            readOnlyAliases,
+            alias => string.Equals(
+                alias,
+                "external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-181000/product",
+                StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void BuildProcessInvocationMetadataJson_keeps_current_product_root_read_only_for_validation_when_descendant_product_path_exists()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var method = serviceType.GetMethod("BuildProcessInvocationMetadataJson", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildProcessInvocationMetadataJson method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Validate Blazor runtime and browser evidence. Inspect inherited source artifacts before accepting the implementation.",
+            ProcessStepKind.Review,
+            [],
+            false,
+            [(ProcessArtifactKind.Evidence, "Regression evidence pack", true, "Must include browser proof, console messages, screenshots, and inspected source artifact evidence.")],
+            [],
+            triggerReason: "Validate current Blazor run outputs under C:\\programovani\\dotnet-demo\\output\\codex-live-blazor-20260522-192839.",
+            stepTitle: "Validate Blazor runtime and browser evidence",
+            processName: "Blazor app delivery",
+            runName: "Codex live Blazor delivery 20260522-192839");
+        const string projectStructureGroundingSummary = """
+            Dispatcher fetched the live project structure for `TetrisGame` and focused this prompt on the selected work branch.
+            Grounded external target paths from the selected project structure:
+            - `C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-181000\product` mapped to `external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-181000/product` from old run note (custom:old-run)
+            - `C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-192839\project-structure-backup` mapped to `external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-192839/project-structure-backup` from current backup note (custom:backup-note)
+            """;
+        const string artifactInspectionGroundingSummary = """
+            Upstream artifact excerpt:
+            - Product root: `external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-192839/product`
+            - Test project root: `external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-192839/product/tests/product`
+            """;
+
+        var metadataJson = method.Invoke(
+            null,
+            [
+                candidate,
+                new ExecutionInvocationPolicy(),
+                projectStructureGroundingSummary,
+                artifactInspectionGroundingSummary
+            ]) as string;
+
+        Assert.False(string.IsNullOrWhiteSpace(metadataJson));
+        using var document = JsonDocument.Parse(metadataJson);
+        Assert.False(document.RootElement.TryGetProperty(ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey, out _));
+        var readOnlyAliases = document.RootElement
+            .GetProperty(ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey)
+            .EnumerateArray()
+            .Select(item => item.GetString())
+            .ToArray();
+
+        Assert.Contains(
+            "external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-192839/product",
+            readOnlyAliases);
+        Assert.Contains(
+            "external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-192839/product/tests/product",
+            readOnlyAliases);
+        Assert.DoesNotContain(
+            readOnlyAliases,
+            alias => string.Equals(
+                alias,
+                "external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-181000/product",
+                StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -4302,6 +4694,57 @@ Requirements from project-level planning context:
         Assert.Equal(ProcessStepRunStatus.Completed, status);
         Assert.NotNull(reason);
         Assert.Contains("QA accepted the implementation handoff", reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BuildRecoveryDirective_names_missing_inherited_artifact_inspections()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var buildRecoveryDirective = serviceType.GetMethod("BuildRecoveryDirective", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildRecoveryDirective method was not found.");
+        const string changeSetPath = "artifacts/process-runs/run-001/02-blazor-implementation-change-set.md";
+        const string sourcePath = "external-target/C/programovani/dotnet-demo/output/run-001/product/Domain/Tetris/Tetromino.cs";
+        var candidate = CreateReviewDispatchCandidateWithArtifactInputs(
+            "Validate runtime and browser evidence for the inherited Blazor implementation.",
+            (
+                "Build Blazor application",
+                "Blazor implementation change set",
+                [
+                    ("Blazor implementation change set", "Deliverable", changeSetPath, "Implementation artifact was produced.", "workspace"),
+                    ("Tetromino.cs", "Deliverable", sourcePath, "Source artifact was produced.", "external-target")
+                ]));
+        var responseText = StructuredOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "QA accepted the implementation handoff.",
+            evidenceRefs: [changeSetPath, sourcePath]);
+        var detail = CreateSuccessfulExecutionDetail(
+            responseText,
+            BuildSerializedSessionState(
+                (
+                    "workspace_stat_path",
+                    new Dictionary<string, object?> { ["path"] = changeSetPath },
+                    CreateProviderNativeTextResult("Path exists.")),
+                (
+                    "workspace_read_file",
+                    new Dictionary<string, object?> { ["path"] = changeSetPath },
+                    CreateProviderNativeTextResult("Read complete."))));
+
+        var directive = buildRecoveryDirective.Invoke(
+            null,
+            [
+                candidate,
+                detail,
+                responseText,
+                Array.Empty<string>(),
+                Array.Empty<ToolExecutionReceiptRecord>(),
+                1
+            ]) as string;
+
+        Assert.NotNull(directive);
+        Assert.Contains("Inherited upstream artifact inspection is incomplete", directive, StringComparison.Ordinal);
+        Assert.Contains("workspace_stat_path", directive, StringComparison.Ordinal);
+        Assert.Contains("workspace_read_file", directive, StringComparison.Ordinal);
+        Assert.Contains(sourcePath, directive, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -5759,6 +6202,159 @@ File: artifacts/process-runs/run-001/03-inventory-page.png
         Assert.True(status == ProcessStepRunStatus.Failed, reason);
         Assert.NotNull(reason);
         Assert.Contains("project_structure_asset_create", reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ResolveCompletionStatusWithCarryForward_fails_project_structure_writeback_summary_without_node_tool()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveCompletionStatus = serviceType.GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .SingleOrDefault(method => string.Equals(method.Name, "ResolveCompletionStatusWithCarryForward", StringComparison.Ordinal) &&
+                                       method.GetParameters().Length == 4)
+            ?? throw new InvalidOperationException("ResolveCompletionStatusWithCarryForward method was not found.");
+        var buildCompletionReason = serviceType.GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .SingleOrDefault(method => string.Equals(method.Name, "BuildCompletionReasonWithCarryForward", StringComparison.Ordinal) &&
+                                       method.GetParameters().Length == 5)
+            ?? throw new InvalidOperationException("BuildCompletionReasonWithCarryForward method was not found.");
+        var candidate = CreateDispatchCandidateWithStepTitle(
+            "Record delivery results and evidence index",
+            """
+            Write a compact run evidence index and final verdict back into project structure through APIs/tools.
+            Must call project_structure_node_create before completing.
+            """,
+            ProcessStepKind.Review);
+        var responseText = StructuredOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "Run evidence index and project-structure writeback summary were prepared.",
+            summaryMarkdown: """
+## Project-structure result writeback summary
+Project id: 3569901c-dcc2-4f88-a08a-01801bfae9b9
+Target node id: custom:feature-node
+Created project-structure node id: custom:claimed-writeback-node
+
+## Run evidence index
+Build/test: passed
+Process artifacts: artifacts/process-runs/run-001/07-run-evidence-index.md
+""");
+        var now = DateTimeOffset.UtcNow;
+        var detail = new ExecutionRunDetail(
+            new ExecutionRunRecord(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                null,
+                "Record Blazor results",
+                "process-step",
+                "record-blazor-results",
+                "corr-record-results",
+                "step-transition:Completed",
+                "process-automation-dispatch",
+                "system",
+                "{}",
+                "Prompt",
+                responseText,
+                "OpenAI default",
+                "gpt-5.4-mini",
+                ExecutionState.Completed,
+                RunOutcome.Succeeded,
+                now,
+                now,
+                now,
+                now,
+                string.Empty,
+                null,
+                []),
+            null,
+            [],
+            []);
+        var priorSuccessfulTools = new[]
+        {
+            "project_structure_read",
+            "workspace_read_file",
+            "workspace_write_file"
+        };
+
+        var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail, priorSuccessfulTools, responseText]);
+        var reason = buildCompletionReason.Invoke(
+            null,
+            [candidate, detail, "Record delivery results and evidence index", priorSuccessfulTools, responseText]) as string;
+
+        Assert.True(status == ProcessStepRunStatus.Failed, reason);
+        Assert.NotNull(reason);
+        Assert.Contains("project_structure_node_create", reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ResolveCompletionStatusWithCarryForward_fails_blocked_required_tool_claim_without_failed_receipt()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveCompletionStatus = serviceType.GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .SingleOrDefault(method => string.Equals(method.Name, "ResolveCompletionStatusWithCarryForward", StringComparison.Ordinal) &&
+                                       method.GetParameters().Length == 4)
+            ?? throw new InvalidOperationException("ResolveCompletionStatusWithCarryForward method was not found.");
+        var buildCompletionReason = serviceType.GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .SingleOrDefault(method => string.Equals(method.Name, "BuildCompletionReasonWithCarryForward", StringComparison.Ordinal) &&
+                                       method.GetParameters().Length == 5)
+            ?? throw new InvalidOperationException("BuildCompletionReasonWithCarryForward method was not found.");
+        var candidate = CreateDispatchCandidateWithStepTitle(
+            "Record delivery results and evidence index",
+            """
+            Write the final verdict back into project structure through tools.
+            Must call project_structure_node_create before completing.
+            """,
+            ProcessStepKind.Review);
+        var responseText = StructuredOutcome(
+            ProcessStepOutcomeStatus.Blocked,
+            "project_structure_node_create failed or was unavailable.",
+            summaryMarkdown: """
+## Project-structure result writeback summary
+No node was created because project_structure_node_create failed or was unavailable.
+""");
+        var now = DateTimeOffset.UtcNow;
+        var detail = new ExecutionRunDetail(
+            new ExecutionRunRecord(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                null,
+                "Record Blazor results",
+                "process-step",
+                "record-blazor-results",
+                "corr-record-results",
+                "step-transition:Blocked",
+                "process-automation-dispatch",
+                "system",
+                "{}",
+                "Prompt",
+                responseText,
+                "OpenAI default",
+                "gpt-5.4-mini",
+                ExecutionState.Completed,
+                RunOutcome.Succeeded,
+                now,
+                now,
+                now,
+                now,
+                string.Empty,
+                null,
+                []),
+            null,
+            [],
+            []);
+        var priorSuccessfulTools = new[]
+        {
+            "project_structure_read",
+            "workspace_read_file",
+            "workspace_write_file"
+        };
+
+        var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail, priorSuccessfulTools, responseText]);
+        var reason = buildCompletionReason.Invoke(
+            null,
+            [candidate, detail, "Record delivery results and evidence index", priorSuccessfulTools, responseText]) as string;
+
+        Assert.True(status == ProcessStepRunStatus.Failed, reason);
+        Assert.NotNull(reason);
+        Assert.Contains("no failed receipt", reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("project_structure_node_create", reason, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -8331,6 +8927,7 @@ Use only the project-structure mindmap requirements as scope. Create the request
     [InlineData("App startup receipt", "Startup command, working directory, PID, port, and readiness proof.")]
     [InlineData("Single page screenshot handoff", "Cleanup receipt and final project asset reference.")]
     [InlineData("Browser navigation and console evidence", "Capture URL, route, browser console observations, and page readiness proof.")]
+    [InlineData("Repaired run evidence index", "Must include output root, run folder, app path, build/test outputs, final app URL/screenshot, console log, project-structure node/asset ids, approvals/blockers, and raw record pointers.")]
     public void CanProjectResponseTextArtifactWithoutDeclaredPath_allows_pathless_receipt_and_handoff_evidence(
         string title,
         string validationRequirementSummary)
@@ -11803,6 +12400,85 @@ Ancestor path to the target work node:
     }
 
     [Fact]
+    public void BuildCompletionArtifactRecoveryDirective_focuses_on_missing_artifacts_without_full_step_rerun()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var buildRecoveryDirective = serviceType.GetMethod("BuildCompletionArtifactRecoveryDirective", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildCompletionArtifactRecoveryDirective method was not found.");
+        var outcomeType = serviceType.GetNestedType("DispatchExecutionOutcome", BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("DispatchExecutionOutcome type was not found.");
+        var candidate = CreateDispatchCandidate(
+            "Build the Blazor application and write implementation handoff artifacts.",
+            ProcessStepKind.Work,
+            (
+                ProcessArtifactKind.Evidence,
+                "Blazor implementation change set",
+                true,
+                "Create this artifact at artifacts/process-runs/run-1/02-blazor-implementation-change-set.md with changed files and validation proof."),
+            (
+                ProcessArtifactKind.Evidence,
+                "Implementation self-review summary",
+                true,
+                "Create this artifact at artifacts/process-runs/run-1/02-implementation-self-review-summary.md with risks and follow-up notes."));
+        var expectedArtifacts = candidate.GetType().GetProperty("ExpectedArtifacts")?.GetValue(candidate)
+            ?? throw new InvalidOperationException("DispatchCandidate.ExpectedArtifacts property was not found.");
+        var now = DateTimeOffset.UtcNow;
+        var responseText = StructuredOutcome(ProcessStepOutcomeStatus.Completed, "Implementation completed and validation passed.");
+        var detail = new ExecutionRunDetail(
+            new ExecutionRunRecord(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                null,
+                "Implementation completed",
+                "process-step",
+                "step-1",
+                "corr-1",
+                "run-start",
+                "process-automation-dispatch",
+                "system",
+                "{}",
+                "Prompt",
+                responseText,
+                "OpenAI chat completions",
+                "gpt-5.4-mini",
+                ExecutionState.Completed,
+                RunOutcome.Succeeded,
+                now,
+                now,
+                now,
+                now,
+                string.Empty,
+                BuildSerializedSessionState(
+                    ("workspace_dotnet_build", CreateProviderNativeTextResult("Build passed.")),
+                    ("workspace_dotnet_test", CreateProviderNativeTextResult("Tests passed."))),
+                []),
+            null,
+            [],
+            []);
+        var outcome = Activator.CreateInstance(
+                outcomeType,
+                detail,
+                responseText,
+                ProcessStepRunStatus.Completed,
+                "Implementation completed.",
+                Array.Empty<string>(),
+                1,
+                null)
+            ?? throw new InvalidOperationException("DispatchExecutionOutcome could not be constructed.");
+
+        var directive = buildRecoveryDirective.Invoke(null, [candidate, outcome, expectedArtifacts]) as string;
+
+        Assert.NotNull(directive);
+        Assert.Contains("Targeted completion-artifact recovery is required.", directive, StringComparison.Ordinal);
+        Assert.Contains("completed the step but the process still lacks required artifact record", directive, StringComparison.Ordinal);
+        Assert.Contains("Do not repeat broad implementation work", directive, StringComparison.Ordinal);
+        Assert.Contains("workspace_write_file", directive, StringComparison.Ordinal);
+        Assert.Contains("02-blazor-implementation-change-set.md", directive, StringComparison.Ordinal);
+        Assert.Contains("02-implementation-self-review-summary.md", directive, StringComparison.Ordinal);
+        Assert.Contains("ProcessStepOutcomeResult", directive, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void BuildRecoveryDirective_requires_process_step_outcome_for_governed_review_retry()
     {
         var buildRecoveryDirective = typeof(ProcessRunAutomationDispatchService).GetMethod("BuildRecoveryDirective", BindingFlags.NonPublic | BindingFlags.Static)
@@ -13722,7 +14398,8 @@ Ancestor path to the target work node:
         string outputContractSummary = "Buildable implementation",
         string processSlug = "",
         string stepKey = "",
-        string manualRecoveryDirective = "")
+        string manualRecoveryDirective = "",
+        string runName = "Showcase run")
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
         var candidateType = serviceType.GetNestedType("DispatchCandidate", BindingFlags.NonPublic)
@@ -13816,7 +14493,7 @@ Ancestor path to the target work node:
                     [
                         new ProcessRun
                         {
-                            Name = "Showcase run",
+                            Name = runName,
                             TriggerReason = triggerReason
                         },
                        new ProcessDefinition

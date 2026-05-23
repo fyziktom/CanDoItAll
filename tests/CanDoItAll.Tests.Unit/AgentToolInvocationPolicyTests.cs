@@ -168,8 +168,34 @@ public sealed class AgentToolInvocationPolicyTests
 
         Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
         Assert.Contains("current run", decision.Reason, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Current-run product root is 'external-target/C/programovani/dotnet/PocketMeetingCostPlanner'", decision.Reason, StringComparison.Ordinal);
+        Assert.Contains("Current-run writable product root is 'external-target/C/programovani/dotnet/PocketMeetingCostPlanner'", decision.Reason, StringComparison.Ordinal);
         Assert.Contains("Abandon the denied external-target path", decision.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_denial_guidance_prefers_writable_product_root_over_read_only_aliases()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        const string productRoot = "external-target/C/programovani/dotnet-demo/output/run/product";
+        const string backupRoot = "external-target/C/programovani/dotnet-demo/output/run/project-structure-backup";
+        var context = CreateContext(
+            "workspace_read_file",
+            ToolInvocationClassification.Read,
+            isKnownTool: true,
+            autoApprovalAllowed: false,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "external-target/C/programovani/dotnet-demo/output/old-run/product/App.razor"
+            },
+            allowedExternalTargetAliases: [productRoot],
+            readOnlyExternalTargetAliases: [backupRoot]);
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains($"Current-run writable product root is '{productRoot}'", decision.Reason, StringComparison.Ordinal);
+        Assert.DoesNotContain($"Current-run writable product root is '{backupRoot}'", decision.Reason, StringComparison.Ordinal);
     }
 
     [Fact]

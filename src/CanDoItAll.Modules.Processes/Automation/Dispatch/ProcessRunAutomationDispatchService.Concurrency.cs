@@ -800,6 +800,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
             else if (declaredOutcome.Status != ProcessStepRunStatus.Completed)
             {
+                if (DeclaredBlockedOutcomeClaimsRequiredToolFailureWithoutReceipt(
+                    declaredOutcome,
+                    responseText,
+                    missingRequiredTools,
+                    detail))
+                {
+                    return $"AgentFramework run '{run.Title}' claimed '{stepTitle}' is blocked by a required tool failure, but no failed receipt for the required tool was recorded. Required tools: {string.Join(", ", missingRequiredTools)}.";
+                }
+
                 if (TryResolveRepairBranchCompletionFromBlockedOutcome(
                     candidate,
                     detail,
