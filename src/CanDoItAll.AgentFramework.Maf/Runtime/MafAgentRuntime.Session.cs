@@ -233,7 +233,7 @@ public sealed partial class MafAgentRuntime
         bool hasApprovalTools,
         ResponseContinuationToken? continuationToken,
         bool forceOmitTemperature,
-        AgentStructuredOutputContract? structuredOutput)
+        AgentRuntimeExecutionOptions runtimeOptions)
     {
         var chatOptions = CreateModelCompatibleChatOptions(
             provider,
@@ -242,7 +242,7 @@ public sealed partial class MafAgentRuntime
             forceOmitTemperature,
             agent.ConfigurationJson);
         chatOptions.AllowMultipleToolCalls = !hasApprovalTools;
-        ApplyStructuredResponseFormat(chatOptions, structuredOutput);
+        ApplyResponseFormat(chatOptions, runtimeOptions);
 
         return new ChatClientAgentRunOptions(chatOptions)
         {
@@ -266,6 +266,37 @@ public sealed partial class MafAgentRuntime
             AgentOutputJson.SerializerOptions,
             string.IsNullOrWhiteSpace(structuredOutput.SchemaName) ? null : structuredOutput.SchemaName,
             string.IsNullOrWhiteSpace(structuredOutput.SchemaDescription) ? null : structuredOutput.SchemaDescription);
+    }
+
+    internal static void ApplyResponseFormat(
+        ChatOptions chatOptions,
+        AgentRuntimeExecutionOptions runtimeOptions)
+    {
+        ArgumentNullException.ThrowIfNull(chatOptions);
+        ArgumentNullException.ThrowIfNull(runtimeOptions);
+
+        if (runtimeOptions.StructuredOutput is not null)
+        {
+            ApplyStructuredResponseFormat(chatOptions, runtimeOptions.StructuredOutput);
+            return;
+        }
+
+        if (!runtimeOptions.RequireJsonResponseFormat)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(runtimeOptions.ResponseFormatJsonSchema))
+        {
+            chatOptions.ResponseFormat = ChatResponseFormat.Json;
+            return;
+        }
+
+        using var document = JsonDocument.Parse(runtimeOptions.ResponseFormatJsonSchema);
+        chatOptions.ResponseFormat = ChatResponseFormat.ForJsonSchema(
+            document.RootElement.Clone(),
+            string.IsNullOrWhiteSpace(runtimeOptions.ResponseFormatSchemaName) ? null : runtimeOptions.ResponseFormatSchemaName,
+            string.IsNullOrWhiteSpace(runtimeOptions.ResponseFormatSchemaDescription) ? null : runtimeOptions.ResponseFormatSchemaDescription);
     }
 
     private static bool ShouldRestoreSerializedSession(

@@ -45,10 +45,10 @@ public sealed class MafWorkflowLlmComponentInvoker(
             static (_, _, _) => Task.CompletedTask,
             cancellationToken,
             suppressApprovalRequirements: true,
-            executionOptions: CreateExecutionOptions(input));
+            executionOptions: CreateExecutionOptions(component, input));
 
         var payload = response.ResponseText.Trim();
-        if (component.ModelSettings.RequireJsonOutput || component.ResultShape.Kind == WorkflowValueShapeKind.Json)
+        if (RequiresJsonOutput(component))
         {
             ValidateJsonPayload(payload, node, component);
         }
@@ -156,15 +156,33 @@ public sealed class MafWorkflowLlmComponentInvoker(
            {input.PayloadJson}
            """;
 
-    private static AgentRuntimeExecutionOptions CreateExecutionOptions(WorkflowNodeInput input)
-        => new(
+    private static AgentRuntimeExecutionOptions CreateExecutionOptions(
+        LlmCallComponent component,
+        WorkflowNodeInput input)
+    {
+        var requiresJson = RequiresJsonOutput(component);
+        return new(
             StructuredOutput: null,
             FinalizerMode: AgentFinalizerMode.Disabled,
             RequireStructuredOutputValidation: true,
             MaxStructuredOutputRepairAttempts: 0,
             ContextWorkspaceScope: TryResolveProjectScope(input, out var projectScope)
                 ? projectScope
-                : null);
+                : null,
+            RequireJsonResponseFormat: requiresJson,
+            ResponseFormatJsonSchema: requiresJson ? ResolveResponseFormatJsonSchema(component) : string.Empty,
+            ResponseFormatSchemaName: requiresJson ? "workflow_llm_component_result" : string.Empty,
+            ResponseFormatSchemaDescription: requiresJson ? $"Workflow LLM component '{component.Name}' JSON result." : string.Empty);
+    }
+
+    private static bool RequiresJsonOutput(LlmCallComponent component)
+        => component.ModelSettings.RequireJsonOutput ||
+           component.ResultShape.Kind == WorkflowValueShapeKind.Json;
+
+    private static string ResolveResponseFormatJsonSchema(LlmCallComponent component)
+        => string.IsNullOrWhiteSpace(component.ModelSettings.ResponseFormatJsonSchema)
+            ? string.Empty
+            : component.ModelSettings.ResponseFormatJsonSchema.Trim();
 
     private static bool TryResolveProjectScope(
         WorkflowNodeInput input,

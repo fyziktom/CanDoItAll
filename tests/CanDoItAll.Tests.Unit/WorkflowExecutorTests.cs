@@ -17,6 +17,11 @@ public sealed class WorkflowExecutorTests
         "{}",
         "JSON object");
 
+    private static readonly WorkflowValueShape JsonPayloadShape = new(
+        WorkflowValueShapeKind.Json,
+        "{}",
+        "JSON payload");
+
     [Fact]
     public void CatalogListsBuiltInAndPlannedExecutors()
     {
@@ -742,6 +747,105 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
+    public async Task MafWorkflowLlmComponentInvokerRequestsJsonResponseFormatSchemaForJsonComponents()
+    {
+        const string schemaJson = """
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "markdown": { "type": "string" },
+                "projectId": { "type": "string" },
+                "nodeId": { "type": "string" }
+              },
+              "required": ["markdown", "projectId", "nodeId"]
+            }
+            """;
+        var runtime = new CapturingAgentRuntime(
+            """
+            {
+              "markdown": "# Summary",
+              "projectId": "ad8e7db7-4041-4fd7-a5f7-b5c6756f9a1f",
+              "nodeId": "workflow-node-1"
+            }
+            """);
+        var provider = CreateProviderProfile("gpt-5-mini");
+        var invoker = new MafWorkflowLlmComponentInvoker(
+            runtime,
+            new TestProviderProfileRegistry([provider]),
+            new ProviderProfileService());
+        var component = CreateLlmComponent(
+            JsonObjectShape,
+            JsonPayloadShape,
+            responseFormatJsonSchema: schemaJson);
+        var node = CreateLlmNode("summarize-office365", component.Id);
+        var definition = CreateDefinition([node], [], node.Id.Value);
+
+        await invoker.ExecuteAsync(
+            definition,
+            node,
+            component,
+            new WorkflowNodeInput("{}"));
+
+        var executionOptions = runtime.LastExecutionOptions;
+        Assert.NotNull(executionOptions);
+        Assert.True(executionOptions!.RequireJsonResponseFormat);
+        Assert.Equal(schemaJson.Trim(), executionOptions.ResponseFormatJsonSchema);
+        Assert.Equal("workflow_llm_component_result", executionOptions.ResponseFormatSchemaName);
+    }
+
+    [Fact]
+    public async Task MafWorkflowLlmComponentInvokerRequestsGenericJsonResponseFormatWhenSchemaIsMissing()
+    {
+        var runtime = new CapturingAgentRuntime("{\"ok\":true}");
+        var provider = CreateProviderProfile("gpt-5-mini");
+        var invoker = new MafWorkflowLlmComponentInvoker(
+            runtime,
+            new TestProviderProfileRegistry([provider]),
+            new ProviderProfileService());
+        var component = CreateLlmComponent(JsonObjectShape, JsonPayloadShape);
+        var node = CreateLlmNode("summarize-office365", component.Id);
+        var definition = CreateDefinition([node], [], node.Id.Value);
+
+        await invoker.ExecuteAsync(
+            definition,
+            node,
+            component,
+            new WorkflowNodeInput("{}"));
+
+        var executionOptions = runtime.LastExecutionOptions;
+        Assert.NotNull(executionOptions);
+        Assert.True(executionOptions!.RequireJsonResponseFormat);
+        Assert.Equal(string.Empty, executionOptions.ResponseFormatJsonSchema);
+    }
+
+    [Fact]
+    public async Task MafWorkflowLlmComponentInvokerRejectsInvalidJsonWithoutRepairingPayload()
+    {
+        var runtime = new CapturingAgentRuntime("{\"markdown\":\"ok\"} + invalid");
+        var provider = CreateProviderProfile("gpt-5-mini");
+        var invoker = new MafWorkflowLlmComponentInvoker(
+            runtime,
+            new TestProviderProfileRegistry([provider]),
+            new ProviderProfileService());
+        var component = CreateLlmComponent(JsonObjectShape, JsonPayloadShape);
+        var node = CreateLlmNode("summarize-office365", component.Id);
+        var definition = CreateDefinition([node], [], node.Id.Value);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => invoker.ExecuteAsync(
+            definition,
+            node,
+            component,
+            new WorkflowNodeInput("{}")).AsTask());
+
+        Assert.Contains("summarize-office365", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("invalid JSON", exception.Message, StringComparison.OrdinalIgnoreCase);
+        var executionOptions = runtime.LastExecutionOptions;
+        Assert.NotNull(executionOptions);
+        Assert.True(executionOptions!.RequireJsonResponseFormat);
+    }
+
+    [Fact]
     public async Task InvokerRetriesTransientExecutorFailure()
     {
         var executor = new RecordingWorkflowExecutor { FailuresBeforeSuccess = 1 };
@@ -1329,7 +1433,8 @@ public sealed class WorkflowExecutorTests
 
     private static LlmCallComponent CreateLlmComponent(
         WorkflowValueShape inputShape,
-        WorkflowValueShape resultShape)
+        WorkflowValueShape resultShape,
+        string responseFormatJsonSchema = "")
         => new(
             WorkflowComponentId.New(),
             "Project summarizer",
@@ -1340,7 +1445,7 @@ public sealed class WorkflowExecutorTests
                 Temperature: 0,
                 MaxOutputTokens: 400,
                 RequireJsonOutput: resultShape.Kind == WorkflowValueShapeKind.Json,
-                ResponseFormatJsonSchema: string.Empty),
+                ResponseFormatJsonSchema: responseFormatJsonSchema),
             "Summarize the workflow payload.",
             inputShape,
             resultShape,

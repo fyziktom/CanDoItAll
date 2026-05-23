@@ -1,0 +1,111 @@
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --artifacts-path .artifacts\dotnet-test-office365-json-integration --filter "FullyQualifiedName~ApplyResponseFormat_sets_workflow_json_schema_response_format|FullyQualifiedName~ApplyStructuredResponseFormat_sets_json_schema_response_format"
+ExitCode: 0
+
+  Zjišťují se projekty, které se mají obnovit...
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Components\CanDoItAll.Components.csproj (v 534 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Components.Charts\CanDoItAll.Components.Charts.csproj (v 683 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Persistence\CanDoItAll.AgentFramework.Persistence.csproj (v 662 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj (v 631 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Components.Mermaid\CanDoItAll.Components.Mermaid.csproj (v 642 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Components.BaseLib\CanDoItAll.Components.BaseLib.csproj (v 683 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Components.WebGlLib\CanDoItAll.Components.WebGlLib.csproj (v 639 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll.AgentFramework.SemanticCompletion\src\CanDoItAll.AgentFramework.SemanticCompletion.Driver\CanDoItAll.AgentFramework.SemanticCompletion.Driver.csproj (v 644 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj (v 685 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Activity\CanDoItAll.Modules.Activity.csproj (v 778 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Prompts\CanDoItAll.Modules.Prompts.csproj (v 658 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Voice\CanDoItAll.AgentFramework.Voice.csproj (v 6 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj (v 669 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj (v 2 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj (v 672 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Automation\CanDoItAll.Modules.Automation.csproj (v 735 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Modules.SchedulerPlanner\CanDoItAll.Modules.SchedulerPlanner.csproj (v 733 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj (v 721 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Factory\CanDoItAll.Modules.Factory.csproj (v 722 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj (v 790 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Tools.Documents\CanDoItAll.Tools.Documents.csproj (v 3 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Components.CanvasLib\CanDoItAll.Components.CanvasLib.csproj (v 4 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Security\CanDoItAll.Modules.Security.csproj (v 30 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Components.Common\CanDoItAll.Components.Common.csproj (v 2 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll.AgentFramework.Rag\src\CanDoItAll.AgentFramework.Rag.Driver\CanDoItAll.AgentFramework.Rag.Driver.csproj (v 3 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj (v 734 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj (v 2 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj (v 38 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\plugins\CanDoItAll.Plugin.Docker\CanDoItAll.Plugin.Docker.csproj (v 43 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\tools\CanDoItAll.Manager\CanDoItAll.Manager.csproj (v 6 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll.AgentFramework.Rag\src\CanDoItAll.AgentFramework.Rag.Qdrant\CanDoItAll.AgentFramework.Rag.Qdrant.csproj (v 58 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj (v 858 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\plugins\CanDoItAll.Plugin.Email\CanDoItAll.Plugin.Email.csproj (v 4 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Plugins.Abstractions\CanDoItAll.Plugins.Abstractions.csproj (v 24 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Hosting\CanDoItAll.AgentFramework.Hosting.csproj (v 98 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Validation\CanDoItAll.Modules.Validation.csproj (v 23 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj (v 99 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Composition\CanDoItAll.Composition.csproj (v 101 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Plugins\CanDoItAll.Modules.Plugins.csproj (v 12 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\plugins\CanDoItAll.Plugin.Gmail\CanDoItAll.Plugin.Gmail.csproj (v 33 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj (v 31 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj (v 125 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Components.OverlayLib\CanDoItAll.Components.OverlayLib.csproj (v 21 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Modules.TestLab\CanDoItAll.Modules.TestLab.csproj (v 26 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj (v 78 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\plugins\CanDoItAll.Plugin.Office365\CanDoItAll.Plugin.Office365.csproj (v 34 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj (v 39 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj (v 328 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Migrations.Sqlite\CanDoItAll.Migrations.Sqlite.csproj (v 205 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Web\CanDoItAll.Web.csproj (v 324 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Migrations.PostgreSql\CanDoItAll.Migrations.PostgreSql.csproj (v 166 ms).
+  CanDoItAll.SharedKernel -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.SharedKernel\debug\CanDoItAll.SharedKernel.dll
+  CanDoItAll.AgentFramework.Rag.Driver -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.AgentFramework.Rag.Driver\debug\CanDoItAll.AgentFramework.Rag.Driver.dll
+  CanDoItAll.Tools.Documents -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Tools.Documents\debug\CanDoItAll.Tools.Documents.dll
+  CanDoItAll.AgentFramework.SemanticCompletion.Driver -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.AgentFramework.SemanticCompletion.Driver\debug\CanDoItAll.AgentFramework.SemanticCompletion.Driver.dll
+  CanDoItAll.Components.Charts -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Components.Charts\debug\CanDoItAll.Components.Charts.dll
+  CanDoItAll.Components.Common -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Components.Common\debug\CanDoItAll.Components.Common.dll
+  CanDoItAll.AgentFramework.Rag.Qdrant -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.AgentFramework.Rag.Qdrant\debug\CanDoItAll.AgentFramework.Rag.Qdrant.dll
+  CanDoItAll.Components.Mermaid -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Components.Mermaid\debug\CanDoItAll.Components.Mermaid.dll
+  CanDoItAll.Infrastructure -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Infrastructure\debug\CanDoItAll.Infrastructure.dll
+  CanDoItAll.AgentFramework.Models -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.AgentFramework.Models\debug\CanDoItAll.AgentFramework.Models.dll
+  CanDoItAll.Components.BaseLib -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Components.BaseLib\debug\CanDoItAll.Components.BaseLib.dll
+  CanDoItAll.Modules.Security -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Modules.Security\debug\CanDoItAll.Modules.Security.dll
+  CanDoItAll.AgentFramework.Core -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.AgentFramework.Core\debug\CanDoItAll.AgentFramework.Core.dll
+  CanDoItAll.Plugins.Abstractions -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Plugins.Abstractions\debug\CanDoItAll.Plugins.Abstractions.dll
+  CanDoItAll.Manager -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Manager\debug\CanDoItAll.Manager.dll
+  CanDoItAll.Components.OverlayLib -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Components.OverlayLib\debug\CanDoItAll.Components.OverlayLib.dll
+  CanDoItAll.Modules.Collaboration -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Modules.Collaboration\debug\CanDoItAll.Modules.Collaboration.dll
+  CanDoItAll.Plugin.Email -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Plugin.Email\debug\CanDoItAll.Plugin.Email.dll
+  CanDoItAll.AgentFramework.Voice -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.AgentFramework.Voice\debug\CanDoItAll.AgentFramework.Voice.dll
+  CanDoItAll.AgentFramework.Persistence -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.AgentFramework.Persistence\debug\CanDoItAll.AgentFramework.Persistence.dll
+  CanDoItAll.Components.WebGlLib -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Components.WebGlLib\debug\CanDoItAll.Components.WebGlLib.dll
+  CanDoItAll.Modules.Projects -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Modules.Projects\debug\CanDoItAll.Modules.Projects.dll
+  CanDoItAll.Modules.Plugins -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Modules.Plugins\debug\CanDoItAll.Modules.Plugins.dll
+  CanDoItAll.Plugin.Docker -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Plugin.Docker\debug\CanDoItAll.Plugin.Docker.dll
+  CanDoItAll.Plugin.Gmail -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Plugin.Gmail\debug\CanDoItAll.Plugin.Gmail.dll
+  CanDoItAll.Components.CanvasLib -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Components.CanvasLib\debug\CanDoItAll.Components.CanvasLib.dll
+  CanDoItAll.Plugin.Office365 -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Plugin.Office365\debug\CanDoItAll.Plugin.Office365.dll
+  CanDoItAll.Modules.Activity -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Modules.Activity\debug\CanDoItAll.Modules.Activity.dll
+  CanDoItAll.Modules.Validation -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Modules.Validation\debug\CanDoItAll.Modules.Validation.dll
+  CanDoItAll.Modules.Workspace -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Modules.Workspace\debug\CanDoItAll.Modules.Workspace.dll
+  CanDoItAll.AgentFramework.Components -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.AgentFramework.Components\debug\CanDoItAll.AgentFramework.Components.dll
+  CanDoItAll.Components -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Components\debug\CanDoItAll.Components.dll
+  CanDoItAll.Modules.CognitiveMemory -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Modules.CognitiveMemory\debug\CanDoItAll.Modules.CognitiveMemory.dll
+  CanDoItAll.Modules.TestLab -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Modules.TestLab\debug\CanDoItAll.Modules.TestLab.dll
+  CanDoItAll.Modules.Resources -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Modules.Resources\debug\CanDoItAll.Modules.Resources.dll
+  CanDoItAll.Modules.Automation -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Modules.Automation\debug\CanDoItAll.Modules.Automation.dll
+  CanDoItAll.Modules.Prompts -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Modules.Prompts\debug\CanDoItAll.Modules.Prompts.dll
+  CanDoItAll.Modules.CrmHr -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Modules.CrmHr\debug\CanDoItAll.Modules.CrmHr.dll
+  CanDoItAll.Modules.Factory -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Modules.Factory\debug\CanDoItAll.Modules.Factory.dll
+  CanDoItAll.Modules.Processes -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Modules.Processes\debug\CanDoItAll.Modules.Processes.dll
+  CanDoItAll.Modules.SchedulerPlanner -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Modules.SchedulerPlanner\debug\CanDoItAll.Modules.SchedulerPlanner.dll
+  CanDoItAll.Modules.Workbench -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Modules.Workbench\debug\CanDoItAll.Modules.Workbench.dll
+  CanDoItAll.AgentFramework.Maf -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.AgentFramework.Maf\debug\CanDoItAll.AgentFramework.Maf.dll
+  CanDoItAll.AgentFramework.Hosting -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.AgentFramework.Hosting\debug\CanDoItAll.AgentFramework.Hosting.dll
+  CanDoItAll.Modules.AgentFramework -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Modules.AgentFramework\debug\CanDoItAll.Modules.AgentFramework.dll
+  CanDoItAll.Composition -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Composition\debug\CanDoItAll.Composition.dll
+  CanDoItAll.Migrations.PostgreSql -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Migrations.PostgreSql\debug\CanDoItAll.Migrations.PostgreSql.dll
+  CanDoItAll.Migrations.Sqlite -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Migrations.Sqlite\debug\CanDoItAll.Migrations.Sqlite.dll
+  CanDoItAll.Web -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Web\debug\CanDoItAll.Web.dll
+  CanDoItAll.Tests.Support -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Tests.Support\debug\CanDoItAll.Tests.Support.dll
+  CanDoItAll.Tests.Integration -> C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Tests.Integration\debug\CanDoItAll.Tests.Integration.dll
+Testovací běh pro C:\repositories\CanDoItAll\.artifacts\dotnet-test-office365-json-integration\bin\CanDoItAll.Tests.Integration\debug\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     2, Přeskočeno:     0, Celkem:     2, Doba trvání: 160 ms - CanDoItAll.Tests.Integration.dll (net10.0)
+

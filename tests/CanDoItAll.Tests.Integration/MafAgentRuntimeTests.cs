@@ -159,6 +159,41 @@ public sealed class MafAgentRuntimeTests
     }
 
     [Fact]
+    public void ApplyResponseFormat_sets_workflow_json_schema_response_format()
+    {
+        var applyMethod = typeof(MafAgentRuntime).GetMethod(
+                              "ApplyResponseFormat",
+                              BindingFlags.NonPublic | BindingFlags.Static)
+                          ?? throw new InvalidOperationException("ApplyResponseFormat method was not found.");
+        var chatOptions = new ChatOptions();
+        var executionOptions = new AgentRuntimeExecutionOptions(
+            StructuredOutput: null,
+            FinalizerMode: AgentFinalizerMode.Disabled,
+            RequireStructuredOutputValidation: true,
+            MaxStructuredOutputRepairAttempts: 0,
+            RequireJsonResponseFormat: true,
+            ResponseFormatJsonSchema:
+            """
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "markdown": { "type": "string" }
+              },
+              "required": ["markdown"]
+            }
+            """,
+            ResponseFormatSchemaName: "workflow_llm_component_result",
+            ResponseFormatSchemaDescription: "Workflow LLM JSON result.");
+
+        applyMethod.Invoke(null, [chatOptions, executionOptions]);
+
+        var responseFormat = Assert.IsType<ChatResponseFormatJson>(chatOptions.ResponseFormat);
+        Assert.Equal("workflow_llm_component_result", responseFormat.SchemaName);
+        Assert.NotNull(responseFormat.Schema);
+    }
+
+    [Fact]
     public void CreateFinalizerCapture_attaches_process_step_outcome_tool()
     {
         var createMethod = typeof(MafAgentRuntime).GetMethod(

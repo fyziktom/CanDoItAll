@@ -1,0 +1,14 @@
+Command: Invoke-WebRequest GET project hierarchy endpoints against local app port 5032
+ExitCode: 0
+
+# Project target discovery transcript
+TimestampUtc: 2026-05-23T13:16:33.3074503Z
+
+## GET /api/project-structure/projects/13e02b22-b820-4c92-a6ea-35f50e5fa4b6/hierarchy
+StatusCode: 200
+{"projectId":"13e02b22-b820-4c92-a6ea-35f50e5fa4b6","parentProjects":[],"childProjects":[]}
+
+## GET /api/projects/13e02b22-b820-4c92-a6ea-35f50e5fa4b6/hierarchy
+StatusCode: 200
+{"projectId":"13e02b22-b820-4c92-a6ea-35f50e5fa4b6","parentProjects":[],"childProjects":[]}
+

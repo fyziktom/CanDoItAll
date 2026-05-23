@@ -89,7 +89,7 @@ public sealed partial class MafAgentRuntime
             throw new InvalidOperationException(BuildReasoningEffortUnsupportedTransportMessage(effectiveProvider, model));
         }
 
-        EnsureStructuredOutputCapability(effectiveProvider, runtimeOptions.StructuredOutput);
+        EnsureStructuredOutputCapability(effectiveProvider, runtimeOptions);
         var finalizerCapture = CreateFinalizerCapture(runtimeOptions.StructuredOutput, runtimeOptions.FinalizerMode);
         var capabilityState = await CreateCapabilityStateCoreAsync(
             agent,
@@ -837,6 +837,35 @@ public sealed partial class MafAgentRuntime
 
         throw new InvalidOperationException(
             $"Provider '{provider.Name}' using transport '{provider.Transport}' cannot enforce structured output contract '{structuredOutput.ContractKey}'. Choose a structured-output capable OpenAI/Azure OpenAI provider or disable the machine-critical structured-output request.");
+    }
+
+    private static void EnsureStructuredOutputCapability(
+        ProviderProfile provider,
+        AgentRuntimeExecutionOptions runtimeOptions)
+    {
+        ArgumentNullException.ThrowIfNull(runtimeOptions);
+        if (runtimeOptions.StructuredOutput is not null)
+        {
+            EnsureStructuredOutputCapability(provider, runtimeOptions.StructuredOutput);
+            return;
+        }
+
+        if (!runtimeOptions.RequireJsonResponseFormat)
+        {
+            return;
+        }
+
+        var featureMatrix = ProviderFeatureService.ResolveFeatureMatrix(provider);
+        if (featureMatrix.SupportsStructuredOutput)
+        {
+            return;
+        }
+
+        var schemaName = string.IsNullOrWhiteSpace(runtimeOptions.ResponseFormatSchemaName)
+            ? "JSON"
+            : runtimeOptions.ResponseFormatSchemaName;
+        throw new InvalidOperationException(
+            $"Provider '{provider.Name}' using transport '{provider.Transport}' cannot enforce workflow JSON response format '{schemaName}'. Choose a structured-output capable OpenAI/Azure OpenAI provider or use a non-JSON workflow component.");
     }
 
     private static AgentRuntimeExecutionOptions NormalizeRuntimeExecutionOptions(
