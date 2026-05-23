@@ -12470,12 +12470,173 @@ Ancestor path to the target work node:
 
         Assert.NotNull(directive);
         Assert.Contains("Targeted completion-artifact recovery is required.", directive, StringComparison.Ordinal);
-        Assert.Contains("completed the step but the process still lacks required artifact record", directive, StringComparison.Ordinal);
+        Assert.Contains("You are the process manager", directive, StringComparison.Ordinal);
+        Assert.Contains("previous step history", directive, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("left the process without required artifact record", directive, StringComparison.Ordinal);
         Assert.Contains("Do not repeat broad implementation work", directive, StringComparison.Ordinal);
+        Assert.Contains("Do not delegate this back to the implementation executor", directive, StringComparison.Ordinal);
         Assert.Contains("workspace_write_file", directive, StringComparison.Ordinal);
         Assert.Contains("02-blazor-implementation-change-set.md", directive, StringComparison.Ordinal);
         Assert.Contains("02-implementation-self-review-summary.md", directive, StringComparison.Ordinal);
         Assert.Contains("ProcessStepOutcomeResult", directive, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ShouldAttemptManagerArtifactRecoveryForStrandedStep_requires_recoverable_inprogress_attempt_with_missing_artifacts()
+    {
+        var missingArtifact = CreateDispatchArtifactExpectation(
+            "Blazor implementation change set",
+            isRequired: true);
+        var recordedArtifact = CreateDispatchArtifactExpectation(
+            "Implementation self-review summary",
+            isRequired: true);
+        var recordedArtifactIds = new HashSet<Guid> { recordedArtifact.Id };
+        var recoveryExecutionRunId = Guid.NewGuid();
+
+        Assert.True(ProcessRunAutomationDispatchService.ShouldAttemptManagerArtifactRecoveryForStrandedStep(
+            ProcessStepRunStatus.InProgress,
+            recoveryExecutionRunId,
+            [missingArtifact, recordedArtifact],
+            recordedArtifactIds));
+        Assert.False(ProcessRunAutomationDispatchService.ShouldAttemptManagerArtifactRecoveryForStrandedStep(
+            ProcessStepRunStatus.Ready,
+            recoveryExecutionRunId,
+            [missingArtifact],
+            new HashSet<Guid>()));
+        Assert.False(ProcessRunAutomationDispatchService.ShouldAttemptManagerArtifactRecoveryForStrandedStep(
+            ProcessStepRunStatus.InProgress,
+            null,
+            [missingArtifact],
+            new HashSet<Guid>()));
+        Assert.False(ProcessRunAutomationDispatchService.ShouldAttemptManagerArtifactRecoveryForStrandedStep(
+            ProcessStepRunStatus.InProgress,
+            recoveryExecutionRunId,
+            [missingArtifact],
+            new HashSet<Guid> { missingArtifact.Id }));
+    }
+
+    [Fact]
+    public void ResolveArtifactRecoveryExecutionRunId_allows_prior_terminal_attempt_for_reopened_missing_artifact_step()
+    {
+        var missingArtifact = CreateDispatchArtifactExpectation(
+            "Blazor implementation change set",
+            isRequired: true);
+        var reopenedAtUtc = DateTimeOffset.UtcNow;
+        var priorTerminalRun = CreateExecutionRun(
+            "process-automation-dispatch",
+            ExecutionState.Failed,
+            RunOutcome.Cancelled) with
+        {
+            StartedAtUtc = reopenedAtUtc.AddMinutes(-20),
+            CompletedAtUtc = reopenedAtUtc.AddMinutes(-15),
+            UpdatedAtUtc = reopenedAtUtc.AddMinutes(-15)
+        };
+        var manualDebugRun = CreateExecutionRun(
+            "agent-run-debug",
+            ExecutionState.Completed,
+            RunOutcome.Succeeded) with
+        {
+            CompletedAtUtc = reopenedAtUtc
+        };
+
+        var result = ProcessRunAutomationDispatchService.ResolveArtifactRecoveryExecutionRunId(
+            new ProcessStepRun
+            {
+                Status = ProcessStepRunStatus.InProgress,
+                StartedAtUtc = reopenedAtUtc
+            },
+            [manualDebugRun, priorTerminalRun],
+            [missingArtifact],
+            new HashSet<Guid>());
+
+        Assert.Equal(priorTerminalRun.Id, result);
+    }
+
+    [Fact]
+    public void ResolveManagerArtifactRecoveryAgent_prefers_configured_run_manager_option()
+    {
+        var managerPartyId = Guid.NewGuid();
+        var managerTechnicalAgentId = Guid.NewGuid();
+        var run = new ProcessRun
+        {
+            ManagerAgentId = managerPartyId,
+            ManagerAgentName = "Default process manager"
+        };
+
+        var result = ProcessRunAutomationDispatchService.ResolveManagerArtifactRecoveryAgent(
+            run,
+            [
+                new ProcessManagerAgentOption(
+                    managerPartyId,
+                    managerTechnicalAgentId,
+                    "Default process manager",
+                    "OpenAI",
+                    "gpt-5.4-mini",
+                    "Bound process manager")
+            ],
+            []);
+
+        Assert.NotNull(result);
+        Assert.Equal(managerTechnicalAgentId, result.TechnicalAgentId);
+        Assert.Equal("run-manager-id", result.ResolutionSource);
+    }
+
+    [Fact]
+    public void ResolveManagerArtifactRecoveryAgent_uses_assigned_manager_before_ambiguous_fallback()
+    {
+        var assignedManagerPartyId = Guid.NewGuid();
+        var assignedManagerTechnicalAgentId = Guid.NewGuid();
+        var otherManagerPartyId = Guid.NewGuid();
+        var otherManagerTechnicalAgentId = Guid.NewGuid();
+        var run = new ProcessRun
+        {
+            ManagerAgentName = "Default process manager"
+        };
+
+        var result = ProcessRunAutomationDispatchService.ResolveManagerArtifactRecoveryAgent(
+            run,
+            [
+                CreateAssignment(assignedManagerPartyId, "Blazor delivery manager AI agent", "Blazor delivery manager"),
+                CreateAssignment(Guid.NewGuid(), "Blazor Application Developer", "Blazor implementation engineer")
+            ],
+            [
+                new ProcessManagerAgentOption(
+                    assignedManagerPartyId,
+                    assignedManagerTechnicalAgentId,
+                    "Blazor delivery manager AI agent",
+                    "OpenAI",
+                    "gpt-5-mini",
+                    "Projected from AgentFramework organization catalog."),
+                new ProcessManagerAgentOption(
+                    otherManagerPartyId,
+                    otherManagerTechnicalAgentId,
+                    "Delivery manager AI agent",
+                    "OpenAI",
+                    "gpt-5.4-mini",
+                    "Projected from AgentFramework organization catalog.")
+            ],
+            []);
+
+        Assert.NotNull(result);
+        Assert.Equal(assignedManagerTechnicalAgentId, result.TechnicalAgentId);
+        Assert.Equal("run-manager-assignment", result.ResolutionSource);
+    }
+
+    [Fact]
+    public void ResolveManagerArtifactRecoveryAgent_rejects_ambiguous_manager_like_fallback_agents()
+    {
+        var run = new ProcessRun();
+        var now = DateTimeOffset.UtcNow;
+
+        var result = ProcessRunAutomationDispatchService.ResolveManagerArtifactRecoveryAgent(
+            run,
+            [],
+            [
+                CreateAgentDefinition("Delivery Manager", "Process manager", now),
+                CreateAgentDefinition("Release Manager", "Process manager", now)
+            ]);
+
+        Assert.Null(result);
     }
 
     [Fact]
@@ -14382,6 +14543,75 @@ Ancestor path to the target work node:
             [],
             artifactInputDefinitions,
             stepTitle: "QA validation");
+    }
+
+    private static AgentDefinition CreateAgentDefinition(
+        string name,
+        string roleTitle,
+        DateTimeOffset updatedAtUtc)
+    {
+        return new AgentDefinition(
+            Guid.NewGuid(),
+            name,
+            roleTitle,
+            "Test manager agent.",
+            "Manage the process.",
+            AgentLifecycleStatus.Active,
+            ProviderProfileId: null,
+            "gpt-5.4-mini",
+            AgentWorkloadKind.General,
+            AgentChatHistoryMode.FrameworkManaged,
+            0.2d,
+            RequirePerServiceCallChatHistoryPersistence: false,
+            EnableBackgroundResponses: false,
+            "{}",
+            IsTemplate: false,
+            TemplateKey: string.Empty,
+            AgentPermissionsPolicy.Default,
+            Capabilities: [],
+            Tags: [],
+            CreatedAtUtc: updatedAtUtc,
+            UpdatedAtUtc: updatedAtUtc);
+    }
+
+    private static ProcessRunAutomationDispatchService.DispatchArtifactExpectation CreateDispatchArtifactExpectation(
+        string title,
+        bool isRequired)
+    {
+        return new ProcessRunAutomationDispatchService.DispatchArtifactExpectation(
+            Guid.NewGuid(),
+            ProcessArtifactKind.Evidence,
+            title,
+            isRequired,
+            ProcessArtifactTrustRequirement.ReviewRequired,
+            ProcessSensitivityLevel.Internal,
+            $"Create {title}.",
+            string.Empty);
+    }
+
+    private static ProcessRunAssignmentViewModel CreateAssignment(
+        Guid partyId,
+        string displayName,
+        string roleDisplayName)
+    {
+        return new ProcessRunAssignmentViewModel(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            StepDefinitionId: null,
+            PartyId: partyId,
+            WorkflowDefinitionId: null,
+            WorkflowVersionId: null,
+            DisplayName: displayName,
+            ExecutorKind: "AI agent",
+            BindingReason: "Projected from AgentFramework organization catalog.",
+            SourceRegistryKey: string.Empty,
+            SnapshotSummary: string.Empty,
+            IsFallback: false,
+            IsCapabilityGap: false,
+            AllowsDirectMessaging: true)
+        {
+            RoleDisplayName = roleDisplayName
+        };
     }
 
     private static object CreateDispatchCandidateCore(

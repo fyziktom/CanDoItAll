@@ -95,6 +95,46 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     return;
                 }
 
+                var strandedArtifactRecoveryOutcome = await TryRecoverStrandedMissingCompletionArtifactsAsync(
+                    candidate,
+                    trigger,
+                    renewLeaseAsync,
+                    cancellationToken);
+                if (strandedArtifactRecoveryOutcome is not null)
+                {
+                    var recoveryStepRunSnapshot = await LoadStepRunTransitionSnapshotAsync(candidate.StepRun.Id, cancellationToken)
+                        ?? throw new InvalidOperationException($"Process step run {candidate.StepRun.Id} could not be reloaded after manager artifact recovery.");
+                    if (ShouldSkipAutomationCompletionTransition(recoveryStepRunSnapshot.Status, strandedArtifactRecoveryOutcome.CompletionStatus))
+                    {
+                        logger.LogInformation(
+                            "Skipping stale process manager artifact recovery transition for run {RunId}, step {StepRunId}. Current status is {CurrentStatus}, requested status is {RequestedStatus}.",
+                            candidate.Run.Id,
+                            candidate.StepRun.Id,
+                            recoveryStepRunSnapshot.Status,
+                            strandedArtifactRecoveryOutcome.CompletionStatus);
+                        return;
+                    }
+
+                    var recoveryTransitionResult = await TransitionStepAsync(
+                        new ProcessStepTransitionRequest
+                        {
+                            StepRunId = candidate.StepRun.Id,
+                            StepRunConcurrencyToken = recoveryStepRunSnapshot.ConcurrencyToken,
+                            TargetStatus = strandedArtifactRecoveryOutcome.CompletionStatus,
+                            Reason = strandedArtifactRecoveryOutcome.CompletionReason,
+                            SelectedBranchOutcomeId = strandedArtifactRecoveryOutcome.SelectedBranchOutcomeId,
+                            DecidedBy = AutomationActor,
+                            SuppressAutomationDispatch = strandedArtifactRecoveryOutcome.CompletionStatus != ProcessStepRunStatus.Completed
+                        },
+                        cancellationToken);
+                    if (recoveryTransitionResult.IsFailure)
+                    {
+                        throw new InvalidOperationException(string.Join(" | ", recoveryTransitionResult.Errors.Select(error => error.Message)));
+                    }
+
+                    return;
+                }
+
                 if (candidate.StepRun.Status != ProcessStepRunStatus.InProgress)
                 {
                     var startResult = await TransitionStepAsync(
@@ -1244,6 +1284,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 .Where(item => item.StepRunId == stepRun.Id && item.ArtifactExpectationId.HasValue)
                 .Select(item => item.ArtifactExpectationId!.Value)
                 .ToHashSet();
+            recoveryExecutionRunId ??= ResolveArtifactRecoveryExecutionRunId(
+                stepRun,
+                executionRuns,
+                expectedArtifacts,
+                recordedArtifactExpectationIds);
             var preparedArtifactInputs = PrepareArtifactInputsForPrompt(
                 BuildResolvedArtifactInputs(
                     configuredArtifactInputs ?? [],
