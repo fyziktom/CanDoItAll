@@ -13,6 +13,8 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
     ICanDoItAllAgentWorkspaceFactory workspaceFactory,
     IClock clock) : IAiTechnicalAgentBridge
 {
+    private const string CrmHrRuntimeAgentTemplateKeyPrefix = "crmhr-ai-resource";
+
     public async Task SynchronizeDirectoryProjectionAsync(
         CancellationToken cancellationToken = default)
     {
@@ -598,6 +600,11 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
             editor.Tags = AgentFrameworkCrmHrMetadata.EnsurePartyTag(editor.Tags, model.PartyId)
                 .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 .ToList();
+            if (resolved.Agent is null)
+            {
+                editor.IsTemplate = false;
+                editor.TemplateKey = BuildRuntimeAgentTemplateKey(model.PartyId);
+            }
 
             var technicalAgentId = await workspaceService.SaveAgentAsync(editor, cancellationToken);
             var timestamp = clock.GetUtcNow();
@@ -632,6 +639,9 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
                 Error.Failure(exception.Message, "crmhr.ai-agent.agentframework-save-failed"));
         }
     }
+
+    private static string BuildRuntimeAgentTemplateKey(Guid partyId)
+        => $"{CrmHrRuntimeAgentTemplateKeyPrefix}-{partyId:N}";
 
     private async Task<AiResourceBinding?> LoadBindingAsync(
         Guid partyId,

@@ -103,6 +103,55 @@ public sealed class AiAgentProfileIntegrationTests
     }
 
     [Fact]
+    public async Task SaveAgentProfileAsync_uses_party_scoped_template_key_for_new_runtime_agent_when_name_matches_template()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var aiAgentService = scope.ServiceProvider.GetRequiredService<AiAgentService>();
+        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+
+        var suffix = Guid.NewGuid().ToString("N");
+        var sharedDisplayName = $"Blazor delivery manager AI agent {suffix}";
+        var templateEditor = await workspaceService.GetAgentEditorAsync();
+        templateEditor.Name = sharedDisplayName;
+        templateEditor.RoleTitle = "Delivery manager template";
+        templateEditor.Summary = "Reusable delivery manager template.";
+        templateEditor.Instructions = "Coordinate Blazor delivery from the template catalog.";
+        templateEditor.Status = AgentLifecycleStatus.Active;
+        templateEditor.IsTemplate = true;
+        templateEditor.TemplateKey = sharedDisplayName;
+        var templateAgentId = await workspaceService.SaveAgentAsync(templateEditor);
+
+        var partyId = await CreateAgentAsync(partyDirectoryService, sharedDisplayName);
+        var saveResult = await aiAgentService.SaveAgentProfileAsync(new AiAgentProfileEditorModel
+        {
+            PartyId = partyId,
+            ExecutionMode = AiExecutionMode.Remote,
+            ValidationStatus = AiValidationStatus.Draft,
+            Notes = "Runtime agent intentionally shares a display name with a template.",
+            LastChangedBy = "integration-tests"
+        });
+
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+
+        var workspace = await aiAgentService.GetAgentWorkspaceAsync(partyId);
+        Assert.NotNull(workspace);
+        Assert.True(workspace!.TechnicalAgentId.HasValue);
+
+        var agents = await workspaceService.ListAgentsAsync(includeTemplates: true);
+        var templateAgent = Assert.Single(agents, item => item.Id == templateAgentId);
+        var runtimeAgent = Assert.Single(agents, item => item.Id == workspace.TechnicalAgentId.Value);
+
+        Assert.True(templateAgent.IsTemplate);
+        Assert.False(runtimeAgent.IsTemplate);
+        Assert.Equal(sharedDisplayName, runtimeAgent.Name);
+        Assert.Equal($"crmhr-ai-resource-{partyId:N}", runtimeAgent.TemplateKey);
+        Assert.NotEqual(templateAgent.TemplateKey, runtimeAgent.TemplateKey);
+    }
+
+    [Fact]
     public async Task SaveAgentProfileAsync_rejects_non_person_owner()
     {
         await using var application = await TestApplication.CreateAsync();
