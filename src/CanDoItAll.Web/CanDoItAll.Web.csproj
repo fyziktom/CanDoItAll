@@ -36,9 +36,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="..\..\Templates\Processes\**\*"
-             Link="Templates\Processes\%(RecursiveDir)%(Filename)%(Extension)"
-             CopyToOutputDirectory="PreserveNewest"
+    <Content Include="..\..\Templates\**\*"
+             Link="Templates\%(RecursiveDir)%(Filename)%(Extension)"
              CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
