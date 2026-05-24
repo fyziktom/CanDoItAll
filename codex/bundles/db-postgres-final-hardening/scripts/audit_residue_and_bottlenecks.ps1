@@ -15,5 +15,16 @@ $patterns = @(
 
 foreach ($pattern in $patterns) {
     Write-Host "=== $pattern ==="
-    rg -n -i $pattern src tests CanDoItAll.slnx
+    $matches = rg -n -i $pattern src tests CanDoItAll.slnx
+    if ($LASTEXITCODE -eq 0) {
+        $matches
+        continue
+    }
+
+    if ($LASTEXITCODE -eq 1) {
+        Write-Host "(no matches)"
+        continue
+    }
+
+    throw "rg failed for pattern '$pattern' with exit code $LASTEXITCODE."
 }

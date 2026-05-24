@@ -31,7 +31,8 @@ public enum ConnectorCommandAuditEventKind
     AttemptFailed,
     Completed,
     DeadLettered,
-    Replayed
+    Replayed,
+    LeaseLost
 }
 
 public enum ConnectorCommandExecutionOutcome

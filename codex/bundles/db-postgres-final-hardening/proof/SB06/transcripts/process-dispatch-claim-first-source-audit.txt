@@ -1,0 +1,11 @@
+41:            var candidateHeaders = await LoadDispatchCandidateHeadersAsync(processRunId, cancellationToken);
+59:                    var dispatchClaim = await TryClaimStepDispatchAsync(
+77:                        candidate = await LoadDispatchCandidateAsync(processRunId, dispatchClaim.StepRunId, cancellationToken);
+116:                        var dispatchRenewLeaseAsync = CreateDispatchRenewLeaseCallback(dispatchClaim, renewLeaseAsync);
+191:                                var refreshedCandidate = await LoadDispatchCandidateAsync(processRunId, dispatchClaim.StepRunId, cancellationToken);
+463:    private async Task<ProcessStepDispatchClaim?> TryClaimStepDispatchAsync(
+511:    private Func<CancellationToken, Task> CreateDispatchRenewLeaseCallback(
+522:            if (!await RenewStepDispatchClaimAsync(dispatchClaim, token))
+529:    private async Task<bool> RenewStepDispatchClaimAsync(
+1256:    private async Task<IReadOnlyList<DispatchCandidateHeader>> LoadDispatchCandidateHeadersAsync(
+1290:    private async Task<DispatchCandidate?> LoadDispatchCandidateAsync(

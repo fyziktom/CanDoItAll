@@ -16,7 +16,10 @@ public sealed class RuntimeHostedWorkerPolicyIntegrationTests
         var options = new ProcessRuntimeOptions();
 
         Assert.Equal(ProcessRuntimeOptions.DefaultOutboxWorkerConcurrency, options.OutboxWorkerMaxConcurrency);
+        Assert.Equal(ProcessRuntimeOptions.DefaultOutboxWorkerConcurrency, options.OutboxBatchMaxParallelism);
+        Assert.Equal(20, options.OutboxBatchSize);
         Assert.True(options.OutboxWorkerMaxConcurrency > 1);
+        Assert.True(options.OutboxBatchMaxParallelism > 1);
         Assert.True(ProcessRuntimeOptions.MaximumOutboxWorkerConcurrency >= options.OutboxWorkerMaxConcurrency);
     }
 

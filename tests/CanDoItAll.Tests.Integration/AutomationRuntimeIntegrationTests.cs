@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Text.Json;
 using CanDoItAll.Infrastructure.BackgroundJobs;
 using CanDoItAll.Infrastructure.Persistence;
@@ -17,10 +18,11 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Quartz;
 using Quartz.Impl.Matchers;
+using Xunit.Abstractions;
 
 namespace CanDoItAll.Tests.Integration;
 
-public sealed class AutomationRuntimeIntegrationTests
+public sealed class AutomationRuntimeIntegrationTests(ITestOutputHelper output)
 {
     [Fact]
     public async Task AutomationWorkspaceService_aggregates_multiple_signal_sources_without_last_registration_wins()
@@ -803,6 +805,84 @@ public sealed class AutomationRuntimeIntegrationTests
         return await dispatcher.DispatchPendingAsync(take);
     }
 
+    private static async Task<TimeSpan> MeasureAutomationDispatchAsync(int maxParallelism)
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create($"automation-runtime-dispatch-benchmark-{maxParallelism}");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
+        var sink = new MessageSink();
+        await using var provider = await BuildProviderAsync(
+            profile,
+            services =>
+            {
+                services.AddSingleton(sink);
+                services.AddScoped<IAutomationMessageHandler, SlowSuccessfulOperationalHandler>();
+            },
+            new Dictionary<string, string?>
+            {
+                ["Automation:Runtime:MessageDispatchBatchSize"] = "4",
+                ["Automation:Runtime:MessageDispatchMaxParallelism"] = maxParallelism.ToString()
+            });
+
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var publisher = scope.ServiceProvider.GetRequiredService<IAutomationMessagePublisher>();
+            for (var index = 0; index < 4; index++)
+            {
+                await publisher.PublishAsync(new TestOperationalEnvelope($"automation-benchmark-{maxParallelism}-{index}"));
+            }
+        }
+
+        var stopwatch = Stopwatch.StartNew();
+        Assert.Equal(4, await DispatchPendingAsync(provider, 4));
+        stopwatch.Stop();
+        Assert.Equal(4, sink.Messages.Count);
+        return stopwatch.Elapsed;
+    }
+
+    private static async Task<TimeSpan> MeasureConnectorDispatchAsync(int maxParallelism)
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create($"automation-runtime-connector-benchmark-{maxParallelism}");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
+        var handler = new TestConnectorCommandHandler(TimeSpan.FromMilliseconds(100));
+        await using var provider = await BuildProviderAsync(
+            profile,
+            services =>
+            {
+                services.AddSingleton(handler);
+                services.AddSingleton<IConnectorCommandHandler>(serviceProvider => serviceProvider.GetRequiredService<TestConnectorCommandHandler>());
+            },
+            new Dictionary<string, string?>
+            {
+                ["Automation:Runtime:ConnectorOutboxBatchSize"] = "4",
+                ["Automation:Runtime:ConnectorOutboxMaxParallelism"] = maxParallelism.ToString()
+            });
+
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+            var outbox = scope.ServiceProvider.GetRequiredService<ConnectorOutboxService>();
+            var projectId = await CreateProjectAsync(projectsService, $"Connector benchmark {maxParallelism}");
+            for (var index = 0; index < 4; index++)
+            {
+                await outbox.EnqueueAsync(new ConnectorCommandEnqueueRequest(
+                    projectId,
+                    WebhookResourceConnectorPlugin.PluginKey,
+                    "deliver",
+                    $$"""{"endpointUrl":"https://example.com/hooks/benchmark/{{maxParallelism}}/{{index}}"}""",
+                    $"connector-benchmark-{maxParallelism}-{index}",
+                    "integration-tests"));
+            }
+        }
+
+        await using var processingScope = provider.CreateAsyncScope();
+        var processingOutbox = processingScope.ServiceProvider.GetRequiredService<ConnectorOutboxService>();
+        var stopwatch = Stopwatch.StartNew();
+        Assert.Equal(4, await processingOutbox.ProcessPendingAsync(4, TimeSpan.FromMinutes(1), maxParallelism));
+        stopwatch.Stop();
+        Assert.Equal(4, handler.Requests.Count);
+        return stopwatch.Elapsed;
+    }
+
     private static async Task ForceAllDeliveriesDueAsync(ServiceProvider provider)
     {
         await using var scope = provider.CreateAsyncScope();
@@ -819,6 +899,36 @@ public sealed class AutomationRuntimeIntegrationTests
             delivery.UpdatedAtUtc = now;
         }
 
+        await dbContext.SaveChangesAsync();
+    }
+
+    private static async Task StealAutomationDeliveryLockAsync(ServiceProvider provider, Guid envelopeId)
+    {
+        await using var scope = provider.CreateAsyncScope();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var now = DateTimeOffset.UtcNow;
+        var delivery = await dbContext.Set<AutomationEnvelopeDeliveryRecord>()
+            .SingleAsync(item => item.EnvelopeId == envelopeId);
+        delivery.State = AutomationDeliveryState.Running;
+        delivery.LockToken = Guid.NewGuid().ToString("N");
+        delivery.LockedAtUtc = now;
+        delivery.UpdatedAtUtc = now;
+        await dbContext.SaveChangesAsync();
+    }
+
+    private static async Task ExpireAutomationDeliveryLockAsync(ServiceProvider provider, Guid envelopeId)
+    {
+        await using var scope = provider.CreateAsyncScope();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var expiredAt = DateTimeOffset.UtcNow.AddMinutes(-10);
+        var delivery = await dbContext.Set<AutomationEnvelopeDeliveryRecord>()
+            .SingleAsync(item => item.EnvelopeId == envelopeId);
+        delivery.State = AutomationDeliveryState.Running;
+        delivery.AvailableAtUtc = expiredAt;
+        delivery.LockedAtUtc = expiredAt;
+        delivery.UpdatedAtUtc = expiredAt;
         await dbContext.SaveChangesAsync();
     }
 
@@ -1142,7 +1252,9 @@ public sealed class AutomationRuntimeIntegrationTests
             ["Automation:Runtime:ConnectorOutboxPollInterval"] = "00:00:00.456",
             ["Automation:Runtime:LegacyBackgroundQueuePollInterval"] = "00:00:00.789",
             ["Automation:Runtime:MessageDispatchBatchSize"] = "11",
+            ["Automation:Runtime:MessageDispatchMaxParallelism"] = "3",
             ["Automation:Runtime:ConnectorOutboxBatchSize"] = "17",
+            ["Automation:Runtime:ConnectorOutboxMaxParallelism"] = "5",
             ["Automation:Runtime:DeliveryLeaseDuration"] = "00:03:00",
             ["Automation:Runtime:ConnectorCommandLeaseDuration"] = "00:04:00",
             ["Automation:Runtime:WorkerFailureBackoff"] = "00:00:09",
@@ -1161,7 +1273,9 @@ public sealed class AutomationRuntimeIntegrationTests
         Assert.Equal(TimeSpan.FromMilliseconds(456), runtimeOptions.ConnectorOutboxPollInterval);
         Assert.Equal(TimeSpan.FromMilliseconds(789), runtimeOptions.LegacyBackgroundQueuePollInterval);
         Assert.Equal(11, runtimeOptions.MessageDispatchBatchSize);
+        Assert.Equal(3, runtimeOptions.MessageDispatchMaxParallelism);
         Assert.Equal(17, runtimeOptions.ConnectorOutboxBatchSize);
+        Assert.Equal(5, runtimeOptions.ConnectorOutboxMaxParallelism);
         Assert.Equal(TimeSpan.FromMinutes(3), runtimeOptions.DeliveryLeaseDuration);
         Assert.Equal(TimeSpan.FromMinutes(4), runtimeOptions.ConnectorCommandLeaseDuration);
         Assert.Equal(TimeSpan.FromSeconds(9), runtimeOptions.WorkerFailureBackoff);
@@ -1358,6 +1472,107 @@ public sealed class AutomationRuntimeIntegrationTests
         Assert.Equal(1, results.Sum());
         Assert.Single(sink.Messages);
         Assert.Single(attempts);
+    }
+
+    [Fact]
+    public async Task Stale_automation_delivery_worker_cannot_finalize_after_lock_is_stolen()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-stale-delivery-finalization");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
+        var sink = new MessageSink();
+        var handler = new ControlledSuccessfulOperationalHandler(sink);
+
+        await using var provider = await BuildProviderAsync(
+            profile,
+            services =>
+            {
+                services.AddSingleton(sink);
+                services.AddSingleton(handler);
+                services.AddScoped<IAutomationMessageHandler>(serviceProvider => serviceProvider.GetRequiredService<ControlledSuccessfulOperationalHandler>());
+            });
+
+        Guid envelopeId;
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var publisher = scope.ServiceProvider.GetRequiredService<IAutomationMessagePublisher>();
+            envelopeId = await publisher.PublishAsync(new TestOperationalEnvelope("stale-delivery"));
+        }
+
+        var firstDispatch = DispatchPendingAsync(provider, 1);
+        await handler.FirstHandleStarted.WaitAsync(TimeSpan.FromSeconds(5));
+
+        await StealAutomationDeliveryLockAsync(provider, envelopeId);
+
+        handler.Release();
+
+        Assert.Equal(0, await firstDispatch);
+
+        await using (var verificationScope = provider.CreateAsyncScope())
+        {
+            var dbContextFactory = verificationScope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+            var delivery = await dbContext.Set<AutomationEnvelopeDeliveryRecord>()
+                .SingleAsync(item => item.EnvelopeId == envelopeId);
+            var attempts = await dbContext.Set<AutomationDeliveryAttemptRecord>()
+                .Where(item => item.EnvelopeId == envelopeId)
+                .ToListAsync();
+            var eventKinds = await dbContext.Set<AutomationExecutionLogRecord>()
+                .Where(item => item.SourceId == delivery.Id.ToString("N"))
+                .Select(item => item.EventKind)
+                .ToListAsync();
+
+            Assert.Equal(AutomationDeliveryState.Running, delivery.State);
+            Assert.Equal(1, delivery.AttemptCount);
+            Assert.Empty(attempts);
+            Assert.Contains(AutomationExecutionLogKind.DeliveryLeaseLost, eventKinds);
+            Assert.DoesNotContain(AutomationExecutionLogKind.DeliveryCompleted, eventKinds);
+        }
+
+        await ExpireAutomationDeliveryLockAsync(provider, envelopeId);
+
+        Assert.Equal(1, await DispatchPendingAsync(provider, 1));
+
+        await using (var verificationScope = provider.CreateAsyncScope())
+        {
+            var dbContextFactory = verificationScope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+            var delivery = await dbContext.Set<AutomationEnvelopeDeliveryRecord>()
+                .SingleAsync(item => item.EnvelopeId == envelopeId);
+            var attempts = await dbContext.Set<AutomationDeliveryAttemptRecord>()
+                .Where(item => item.EnvelopeId == envelopeId)
+                .ToListAsync();
+            var eventKinds = await dbContext.Set<AutomationExecutionLogRecord>()
+                .Where(item => item.SourceId == delivery.Id.ToString("N"))
+                .Select(item => item.EventKind)
+                .ToListAsync();
+
+            Assert.Equal(AutomationDeliveryState.Completed, delivery.State);
+            Assert.Equal(2, delivery.AttemptCount);
+            Assert.Single(attempts);
+            Assert.Contains(AutomationExecutionLogKind.DeliveryCompleted, eventKinds);
+        }
+
+        Assert.Equal(2, sink.Messages.Count);
+    }
+
+    [Fact]
+    [Trait("Category", "Benchmark")]
+    public async Task Bounded_parallelism_diagnostic_records_connector_and_automation_timings()
+    {
+        var automationSingle = await MeasureAutomationDispatchAsync(1);
+        var automationParallel = await MeasureAutomationDispatchAsync(4);
+        var connectorSingle = await MeasureConnectorDispatchAsync(1);
+        var connectorParallel = await MeasureConnectorDispatchAsync(4);
+
+        output.WriteLine($"automation_dispatch_single_ms={automationSingle.TotalMilliseconds:F0}");
+        output.WriteLine($"automation_dispatch_parallel_ms={automationParallel.TotalMilliseconds:F0}");
+        output.WriteLine($"connector_outbox_single_ms={connectorSingle.TotalMilliseconds:F0}");
+        output.WriteLine($"connector_outbox_parallel_ms={connectorParallel.TotalMilliseconds:F0}");
+
+        Assert.True(automationSingle > TimeSpan.Zero);
+        Assert.True(automationParallel > TimeSpan.Zero);
+        Assert.True(connectorSingle > TimeSpan.Zero);
+        Assert.True(connectorParallel > TimeSpan.Zero);
     }
 
     [Fact]
@@ -1835,6 +2050,35 @@ public sealed class AutomationRuntimeIntegrationTests
         }
     }
 
+    private sealed class ControlledSuccessfulOperationalHandler(MessageSink sink) : AutomationMessageHandler<TestOperationalEnvelope>
+    {
+        private readonly TaskCompletionSource _firstHandleStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _releaseHandle = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task FirstHandleStarted => _firstHandleStarted.Task;
+
+        public void Release()
+        {
+            _releaseHandle.TrySetResult();
+        }
+
+        protected override async Task<AutomationMessageHandleResult> HandleAsync(
+            TestOperationalEnvelope envelope,
+            AutomationMessageContext context,
+            CancellationToken cancellationToken)
+        {
+            _firstHandleStarted.TrySetResult();
+            await _releaseHandle.Task.WaitAsync(cancellationToken);
+            sink.Messages.Enqueue(new MessageCapture(
+                HandlerKey,
+                envelope.Value,
+                context.EnvelopeId,
+                context.CorrelationId,
+                context.CausationId));
+            return AutomationMessageHandleResult.Completed();
+        }
+    }
+
     private sealed class FanOutPrimaryHandler(MessageSink sink) : SuccessfulOperationalHandlerBase(sink);
 
     private sealed class FanOutSecondaryHandler(MessageSink sink) : SuccessfulOperationalHandlerBase(sink);
@@ -2026,6 +2270,7 @@ public sealed class AutomationRuntimeIntegrationTests
     {
         private readonly Queue<ConnectorCommandExecutionResult> _results;
         private readonly TimeSpan _delay;
+        private readonly object _gate = new();
 
         public TestConnectorCommandHandler(params ConnectorCommandExecutionResult[] results)
             : this(TimeSpan.Zero, results)
@@ -2038,7 +2283,7 @@ public sealed class AutomationRuntimeIntegrationTests
             _results = new Queue<ConnectorCommandExecutionResult>(results);
         }
 
-        public List<ConnectorCommandExecutionRequest> Requests { get; } = [];
+        public ConcurrentQueue<ConnectorCommandExecutionRequest> Requests { get; } = new();
 
         public bool CanHandle(string connectorPluginKey, string commandKey)
         {
@@ -2050,7 +2295,7 @@ public sealed class AutomationRuntimeIntegrationTests
             ConnectorCommandExecutionRequest request,
             CancellationToken cancellationToken)
         {
-            Requests.Add(request);
+            Requests.Enqueue(request);
             return ExecuteAsyncCore(cancellationToken);
         }
 
@@ -2061,9 +2306,12 @@ public sealed class AutomationRuntimeIntegrationTests
                 await Task.Delay(_delay, cancellationToken);
             }
 
-            return _results.Count > 0
-                ? _results.Dequeue()
-                : ConnectorCommandExecutionResult.Completed("""{"delivery":"default"}""");
+            lock (_gate)
+            {
+                return _results.Count > 0
+                    ? _results.Dequeue()
+                    : ConnectorCommandExecutionResult.Completed("""{"delivery":"default"}""");
+            }
         }
     }
 

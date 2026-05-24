@@ -23,7 +23,9 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.AddOptions<ProcessTemplatePackOptions>()
             .BindConfiguration(ProcessTemplatePackOptions.SectionName);
         services.AddOptions<ProcessRuntimeOptions>()
-            .BindConfiguration(ProcessRuntimeOptions.SectionName);
+            .BindConfiguration(ProcessRuntimeOptions.SectionName)
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
         services.AddOptions<ProcessObservationCacheOptions>()
             .BindConfiguration(ProcessObservationCacheOptions.SectionName);
         services.AddScoped<ProcessesService>();

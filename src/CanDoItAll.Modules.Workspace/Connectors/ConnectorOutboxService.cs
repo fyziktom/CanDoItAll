@@ -3,13 +3,15 @@ using System.Data.Common;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Workspace;
 
 public sealed class ConnectorCommandProcessor(
     IDbContextFactory<AppDbContext> dbContextFactory,
     IClock clock,
-    IEnumerable<IConnectorCommandHandler> handlers)
+    IEnumerable<IConnectorCommandHandler> handlers,
+    ILogger<ConnectorCommandProcessor> logger)
 {
     private const int MaxAttempts = 3;
 
@@ -22,50 +24,52 @@ public sealed class ConnectorCommandProcessor(
         await ConnectorCommandSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         var now = clock.GetUtcNow();
         var command = await dbContext.Set<ConnectorCommandRecord>()
+            .AsNoTracking()
             .FirstOrDefaultAsync(item => item.Id == commandId, cancellationToken);
         if (command is null)
         {
             return null;
         }
 
-        if (!string.IsNullOrWhiteSpace(leaseToken))
+        if (string.IsNullOrWhiteSpace(leaseToken))
         {
-            if (!string.Equals(command.LeaseToken, leaseToken, StringComparison.Ordinal) ||
-                command.LeaseExpiresAtUtc is null ||
-                command.LeaseExpiresAtUtc <= now)
-            {
-                return null;
-            }
-        }
-        else if (command.LeaseExpiresAtUtc.HasValue && command.LeaseExpiresAtUtc.Value > now)
-        {
+            logger.LogWarning(
+                "Connector command {CommandId} processing was requested without a lease token; canonical state was not updated.",
+                commandId);
             return command.Status;
+        }
+
+        if (!string.Equals(command.LeaseToken, leaseToken, StringComparison.Ordinal) ||
+            command.LeaseExpiresAtUtc is null ||
+            command.LeaseExpiresAtUtc <= now)
+        {
+            return null;
         }
 
         if (command.Status is ConnectorCommandStatus.Completed or ConnectorCommandStatus.DeadLettered or ConnectorCommandStatus.Rejected)
         {
-            ReleaseLease(command);
-            await dbContext.SaveChangesAsync(cancellationToken);
+            await ReleaseClaimedLeaseAsync(dbContext, command.Id, leaseToken, now, cancellationToken);
             return command.Status;
         }
 
         if (command.ApprovalState == ConnectorCommandApprovalState.Pending)
         {
-            ReleaseLease(command);
-            await dbContext.SaveChangesAsync(cancellationToken);
+            await ReleaseClaimedLeaseAsync(dbContext, command.Id, leaseToken, now, cancellationToken);
             return command.Status;
         }
 
         if (command.NextAttemptAtUtc.HasValue && command.NextAttemptAtUtc.Value > now)
         {
-            ReleaseLease(command);
-            await dbContext.SaveChangesAsync(cancellationToken);
+            await ReleaseClaimedLeaseAsync(dbContext, command.Id, leaseToken, now, cancellationToken);
             return command.Status;
         }
 
         command.AttemptCount++;
-        command.LastAttemptAtUtc = now;
-        command.UpdatedAtUtc = now;
+        if (!await TryStartClaimedAttemptAsync(dbContext, command, leaseToken, now, cancellationToken))
+        {
+            return null;
+        }
+
         dbContext.Set<ConnectorCommandAuditRecord>().Add(new ConnectorCommandAuditRecord
         {
             ConnectorCommandId = command.Id,
@@ -79,130 +83,222 @@ public sealed class ConnectorCommandProcessor(
         await dbContext.SaveChangesAsync(cancellationToken);
 
         var handler = handlers.LastOrDefault(candidate => candidate.CanHandle(command.ConnectorPluginKey, command.CommandKey));
+        ConnectorCommandExecutionResult executionResult;
         if (handler is null)
         {
-            MarkDeadLettered(
-                dbContext,
-                command,
-                "No connector command handler is registered for the queued operation.",
-                now);
-            await dbContext.SaveChangesAsync(cancellationToken);
-            return command.Status;
+            executionResult = ConnectorCommandExecutionResult.PermanentFailure(
+                "No connector command handler is registered for the queued operation.");
         }
-
-        ConnectorCommandExecutionResult executionResult;
-        try
+        else
         {
-            executionResult = await handler.ExecuteAsync(
-                new ConnectorCommandExecutionRequest(
-                    command.Id,
-                    command.ProjectId,
-                    command.ConnectorPluginKey,
-                    command.CommandKey,
-                    command.PayloadJson,
-                    command.IdempotencyKey,
-                    command.AttemptCount),
-                cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            executionResult = ConnectorCommandExecutionResult.RetryableFailure(ex.Message);
+            try
+            {
+                executionResult = await handler.ExecuteAsync(
+                    new ConnectorCommandExecutionRequest(
+                        command.Id,
+                        command.ProjectId,
+                        command.ConnectorPluginKey,
+                        command.CommandKey,
+                        command.PayloadJson,
+                        command.IdempotencyKey,
+                        command.AttemptCount),
+                    cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                executionResult = ConnectorCommandExecutionResult.RetryableFailure(ex.Message);
+            }
         }
 
         now = clock.GetUtcNow();
-        switch (executionResult.Outcome)
+        var finalization = BuildFinalization(command, executionResult, now);
+        if (await TryFinalizeCommandAsync(dbContext, command, leaseToken, finalization, now, cancellationToken))
         {
-            case ConnectorCommandExecutionOutcome.Completed:
-                command.Status = ConnectorCommandStatus.Completed;
-                command.CompletedAtUtc = now;
-                command.NextAttemptAtUtc = null;
-                command.LastError = string.Empty;
-                command.ResultJson = NormalizeJson(executionResult.ResultJson);
-                ReleaseLease(command);
-                command.UpdatedAtUtc = now;
-                dbContext.Set<ConnectorCommandAuditRecord>().Add(new ConnectorCommandAuditRecord
-                {
-                    ConnectorCommandId = command.Id,
-                    ProjectId = command.ProjectId,
-                    EventKind = ConnectorCommandAuditEventKind.Completed,
-                    Actor = "system",
-                    Message = "Connector command completed successfully.",
-                    DetailsJson = command.ResultJson,
-                    CreatedAtUtc = now
-                });
-                break;
-            case ConnectorCommandExecutionOutcome.RetryableFailure:
-                if (command.AttemptCount >= MaxAttempts)
-                {
-                    MarkDeadLettered(
-                        dbContext,
-                        command,
-                        NormalizeError(executionResult.ErrorMessage, "Connector command exhausted all retry attempts."),
-                        now);
-                }
-                else
-                {
-                    command.Status = ConnectorCommandStatus.Pending;
-                    command.CompletedAtUtc = null;
-                    command.LastError = NormalizeError(executionResult.ErrorMessage, "Connector command failed and will be retried.");
-                    command.NextAttemptAtUtc = now.Add(ComputeBackoff(command.AttemptCount));
-                    ReleaseLease(command);
-                    command.UpdatedAtUtc = now;
-                    dbContext.Set<ConnectorCommandAuditRecord>().Add(new ConnectorCommandAuditRecord
-                    {
-                        ConnectorCommandId = command.Id,
-                        ProjectId = command.ProjectId,
-                        EventKind = ConnectorCommandAuditEventKind.AttemptFailed,
-                        Actor = "system",
-                        Message = "Connector command failed and was scheduled for retry.",
-                        DetailsJson = BuildFailureDetailsJson(command.LastError, command.NextAttemptAtUtc),
-                        CreatedAtUtc = now
-                    });
-                }
-                break;
-            case ConnectorCommandExecutionOutcome.PermanentFailure:
-                MarkDeadLettered(
-                    dbContext,
-                    command,
-                    NormalizeError(executionResult.ErrorMessage, "Connector command failed permanently."),
-                    now);
-                break;
-            default:
-                throw new InvalidOperationException($"Unsupported execution outcome '{executionResult.Outcome}'.");
+            return finalization.Status;
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return command.Status;
+        logger.LogWarning(
+            "Connector command {CommandId} lost lease token {LeaseToken} during finalization; canonical state was not updated.",
+            command.Id,
+            MaskLeaseToken(leaseToken));
+        await RecordLeaseLostAuditAsync(command, leaseToken, now, cancellationToken);
+        return null;
     }
 
-    private static void MarkDeadLettered(
+    private async Task<bool> TryStartClaimedAttemptAsync(
         AppDbContext dbContext,
         ConnectorCommandRecord command,
-        string errorMessage,
-        DateTimeOffset occurredAtUtc)
+        string leaseToken,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
     {
-        command.Status = ConnectorCommandStatus.DeadLettered;
-        command.CompletedAtUtc = null;
-        command.LastError = errorMessage;
-        command.NextAttemptAtUtc = null;
-        ReleaseLease(command);
-        command.UpdatedAtUtc = occurredAtUtc;
+        var updatedRows = await dbContext.Set<ConnectorCommandRecord>()
+            .Where(item => item.Id == command.Id)
+            .Where(item => item.Status == ConnectorCommandStatus.Pending)
+            .Where(item => item.ApprovalState != ConnectorCommandApprovalState.Pending)
+            .Where(item => item.NextAttemptAtUtc == null || item.NextAttemptAtUtc <= now)
+            .Where(item => item.LeaseToken == leaseToken)
+            .Where(item => item.LeaseExpiresAtUtc != null && item.LeaseExpiresAtUtc > now)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(item => item.AttemptCount, item => item.AttemptCount + 1)
+                    .SetProperty(item => item.LastAttemptAtUtc, now)
+                    .SetProperty(item => item.UpdatedAtUtc, now),
+                cancellationToken);
+        if (updatedRows > 0)
+        {
+            return true;
+        }
+
+        logger.LogWarning(
+            "Connector command {CommandId} lost lease token {LeaseToken} before the attempt could start.",
+            command.Id,
+            MaskLeaseToken(leaseToken));
+        return false;
+    }
+
+    private static async Task ReleaseClaimedLeaseAsync(
+        AppDbContext dbContext,
+        Guid commandId,
+        string leaseToken,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        await dbContext.Set<ConnectorCommandRecord>()
+            .Where(item => item.Id == commandId)
+            .Where(item => item.LeaseToken == leaseToken)
+            .Where(item => item.LeaseExpiresAtUtc != null && item.LeaseExpiresAtUtc > now)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(item => item.LeaseToken, string.Empty)
+                    .SetProperty(item => item.LeaseExpiresAtUtc, (DateTimeOffset?)null)
+                    .SetProperty(item => item.UpdatedAtUtc, now),
+                cancellationToken);
+    }
+
+    private static ConnectorCommandFinalization BuildFinalization(
+        ConnectorCommandRecord command,
+        ConnectorCommandExecutionResult executionResult,
+        DateTimeOffset now)
+    {
+        return executionResult.Outcome switch
+        {
+            ConnectorCommandExecutionOutcome.Completed => new ConnectorCommandFinalization(
+                ConnectorCommandStatus.Completed,
+                now,
+                null,
+                string.Empty,
+                NormalizeJson(executionResult.ResultJson),
+                ConnectorCommandAuditEventKind.Completed,
+                "Connector command completed successfully.",
+                NormalizeJson(executionResult.ResultJson)),
+            ConnectorCommandExecutionOutcome.RetryableFailure when command.AttemptCount >= MaxAttempts =>
+                BuildDeadLetteredFinalization(
+                    command.ResultJson,
+                    NormalizeError(executionResult.ErrorMessage, "Connector command exhausted all retry attempts.")),
+            ConnectorCommandExecutionOutcome.RetryableFailure => new ConnectorCommandFinalization(
+                ConnectorCommandStatus.Pending,
+                null,
+                now.Add(ComputeBackoff(command.AttemptCount)),
+                NormalizeError(executionResult.ErrorMessage, "Connector command failed and will be retried."),
+                command.ResultJson,
+                ConnectorCommandAuditEventKind.AttemptFailed,
+                "Connector command failed and was scheduled for retry.",
+                BuildFailureDetailsJson(
+                    NormalizeError(executionResult.ErrorMessage, "Connector command failed and will be retried."),
+                    now.Add(ComputeBackoff(command.AttemptCount)))),
+            ConnectorCommandExecutionOutcome.PermanentFailure =>
+                BuildDeadLetteredFinalization(
+                    command.ResultJson,
+                    NormalizeError(executionResult.ErrorMessage, "Connector command failed permanently.")),
+            _ => throw new InvalidOperationException($"Unsupported execution outcome '{executionResult.Outcome}'.")
+        };
+    }
+
+    private static ConnectorCommandFinalization BuildDeadLetteredFinalization(
+        string resultJson,
+        string errorMessage)
+    {
+        return new ConnectorCommandFinalization(
+            ConnectorCommandStatus.DeadLettered,
+            null,
+            null,
+            errorMessage,
+            resultJson,
+            ConnectorCommandAuditEventKind.DeadLettered,
+            "Connector command was moved to dead-letter state.",
+            BuildFailureDetailsJson(errorMessage, null));
+    }
+
+    private static async Task<bool> TryFinalizeCommandAsync(
+        AppDbContext dbContext,
+        ConnectorCommandRecord command,
+        string leaseToken,
+        ConnectorCommandFinalization finalization,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        var updatedRows = await dbContext.Set<ConnectorCommandRecord>()
+            .Where(item => item.Id == command.Id)
+            .Where(item => item.Status == ConnectorCommandStatus.Pending)
+            .Where(item => item.LeaseToken == leaseToken)
+            .Where(item => item.LeaseExpiresAtUtc != null && item.LeaseExpiresAtUtc > now)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(item => item.Status, finalization.Status)
+                    .SetProperty(item => item.CompletedAtUtc, finalization.CompletedAtUtc)
+                    .SetProperty(item => item.NextAttemptAtUtc, finalization.NextAttemptAtUtc)
+                    .SetProperty(item => item.LastError, finalization.LastError)
+                    .SetProperty(item => item.ResultJson, finalization.ResultJson)
+                    .SetProperty(item => item.LeaseToken, string.Empty)
+                    .SetProperty(item => item.LeaseExpiresAtUtc, (DateTimeOffset?)null)
+                    .SetProperty(item => item.UpdatedAtUtc, now),
+                cancellationToken);
+        if (updatedRows == 0)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            return false;
+        }
+
         dbContext.Set<ConnectorCommandAuditRecord>().Add(new ConnectorCommandAuditRecord
         {
             ConnectorCommandId = command.Id,
             ProjectId = command.ProjectId,
-            EventKind = ConnectorCommandAuditEventKind.DeadLettered,
+            EventKind = finalization.AuditEventKind,
             Actor = "system",
-            Message = "Connector command was moved to dead-letter state.",
-            DetailsJson = BuildFailureDetailsJson(errorMessage, null),
-            CreatedAtUtc = occurredAtUtc
+            Message = finalization.AuditMessage,
+            DetailsJson = finalization.AuditDetailsJson,
+            CreatedAtUtc = now
         });
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return true;
     }
 
-    private static void ReleaseLease(ConnectorCommandRecord command)
+    private async Task RecordLeaseLostAuditAsync(
+        ConnectorCommandRecord command,
+        string leaseToken,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
     {
-        command.LeaseToken = string.Empty;
-        command.LeaseExpiresAtUtc = null;
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ConnectorCommandSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        dbContext.Set<ConnectorCommandAuditRecord>().Add(new ConnectorCommandAuditRecord
+        {
+            ConnectorCommandId = command.Id,
+            ProjectId = command.ProjectId,
+            EventKind = ConnectorCommandAuditEventKind.LeaseLost,
+            Actor = "system",
+            Message = "Connector command lease was lost before canonical finalization.",
+            DetailsJson = $$"""{"leaseToken":"{{EscapeJson(MaskLeaseToken(leaseToken))}}"}""",
+            CreatedAtUtc = now
+        });
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private static TimeSpan ComputeBackoff(int attemptCount)
@@ -243,6 +339,29 @@ public sealed class ConnectorCommandProcessor(
             ? "{}"
             : value.Trim();
     }
+
+    private static string MaskLeaseToken(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "(empty)";
+        }
+
+        var normalized = value.Trim();
+        return normalized.Length <= 8
+            ? "***"
+            : $"{normalized[..4]}...{normalized[^4..]}";
+    }
+
+    private sealed record ConnectorCommandFinalization(
+        ConnectorCommandStatus Status,
+        DateTimeOffset? CompletedAtUtc,
+        DateTimeOffset? NextAttemptAtUtc,
+        string LastError,
+        string ResultJson,
+        ConnectorCommandAuditEventKind AuditEventKind,
+        string AuditMessage,
+        string AuditDetailsJson);
 }
 
 public sealed class ConnectorOutboxService(
@@ -430,8 +549,10 @@ public sealed class ConnectorOutboxService(
                 continue;
             }
 
-            await commandProcessor.ProcessAsync(commandId, leaseToken, cancellationToken);
-            processedCount++;
+            if (await commandProcessor.ProcessAsync(commandId, leaseToken, cancellationToken) is not null)
+            {
+                processedCount++;
+            }
         }
 
         return processedCount;

@@ -1,0 +1,36 @@
+--- bounded parallelism options and defaults ---
+src/CanDoItAll.Web/appsettings.json:14:      "MessageDispatchMaxParallelism": 4,
+src/CanDoItAll.Web/appsettings.json:16:      "ConnectorOutboxMaxParallelism": 4,
+src/CanDoItAll.Web/appsettings.json:35:      "OutboxBatchMaxParallelism": 2,
+src/CanDoItAll.Modules.Automation/Services/AutomationMessagingServices.cs:311:            options.Value.MessageDispatchMaxParallelism,
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:823:                ["Automation:Runtime:MessageDispatchMaxParallelism"] = maxParallelism.ToString()
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:857:                ["Automation:Runtime:ConnectorOutboxMaxParallelism"] = maxParallelism.ToString()
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:1255:            ["Automation:Runtime:MessageDispatchMaxParallelism"] = "3",
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:1257:            ["Automation:Runtime:ConnectorOutboxMaxParallelism"] = "5",
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:1276:        Assert.Equal(3, runtimeOptions.MessageDispatchMaxParallelism);
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:1278:        Assert.Equal(5, runtimeOptions.ConnectorOutboxMaxParallelism);
+src/CanDoItAll.Modules.Processes/Runtime/ProcessOutbox.cs:1160:        var configured = processRuntimeOptions.Value.OutboxBatchMaxParallelism > 0
+src/CanDoItAll.Modules.Processes/Runtime/ProcessOutbox.cs:1161:            ? processRuntimeOptions.Value.OutboxBatchMaxParallelism
+src/CanDoItAll.Modules.Processes/Runtime/ProcessOutbox.cs:1165:            : Math.Clamp(configured, 1, ProcessRuntimeOptions.MaximumOutboxWorkerConcurrency);
+tests/CanDoItAll.Tests.Integration/RuntimeHostedWorkerPolicyIntegrationTests.cs:19:        Assert.Equal(ProcessRuntimeOptions.DefaultOutboxWorkerConcurrency, options.OutboxBatchMaxParallelism);
+tests/CanDoItAll.Tests.Integration/RuntimeHostedWorkerPolicyIntegrationTests.cs:22:        Assert.True(options.OutboxBatchMaxParallelism > 1);
+tests/CanDoItAll.Tests.Integration/RuntimeHostedWorkerPolicyIntegrationTests.cs:23:        Assert.True(ProcessRuntimeOptions.MaximumOutboxWorkerConcurrency >= options.OutboxWorkerMaxConcurrency);
+src/CanDoItAll.Modules.Automation/Services/AutomationHostedServices.cs:70:                    options.Value.ConnectorOutboxMaxParallelism,
+src/CanDoItAll.Modules.Processes/Runtime/ProcessRuntimeOptions.cs:9:    public const int MaximumOutboxWorkerConcurrency = 8;
+src/CanDoItAll.Modules.Processes/Runtime/ProcessRuntimeOptions.cs:22:    [Range(1, MaximumOutboxWorkerConcurrency)]
+src/CanDoItAll.Modules.Processes/Runtime/ProcessRuntimeOptions.cs:23:    public int OutboxBatchMaxParallelism { get; set; } = DefaultOutboxWorkerConcurrency;
+src/CanDoItAll.Modules.Processes/Runtime/ProcessRuntimeOptions.cs:25:    [Range(1, MaximumOutboxWorkerConcurrency)]
+src/CanDoItAll.Modules.Automation/Runtime/AutomationRuntimeOptions.cs:11:    public const int MaximumMaxParallelism = 16;
+src/CanDoItAll.Modules.Automation/Runtime/AutomationRuntimeOptions.cs:22:    [Range(MinimumMaxParallelism, MaximumMaxParallelism)]
+src/CanDoItAll.Modules.Automation/Runtime/AutomationRuntimeOptions.cs:23:    public int MessageDispatchMaxParallelism { get; set; } = 4;
+src/CanDoItAll.Modules.Automation/Runtime/AutomationRuntimeOptions.cs:28:    [Range(MinimumMaxParallelism, MaximumMaxParallelism)]
+src/CanDoItAll.Modules.Automation/Runtime/AutomationRuntimeOptions.cs:29:    public int ConnectorOutboxMaxParallelism { get; set; } = 4;
+--- validation attributes ---
+src/CanDoItAll.Modules.Processes/Runtime/ProcessRuntimeOptions.cs:19:    [Range(MinimumOutboxBatchSize, MaximumOutboxBatchSize)]
+src/CanDoItAll.Modules.Processes/Runtime/ProcessRuntimeOptions.cs:22:    [Range(1, MaximumOutboxWorkerConcurrency)]
+src/CanDoItAll.Modules.Processes/Runtime/ProcessRuntimeOptions.cs:25:    [Range(1, MaximumOutboxWorkerConcurrency)]
+src/CanDoItAll.Modules.Automation/Runtime/AutomationRuntimeOptions.cs:19:    [Range(MinimumBatchSize, MaximumBatchSize)]
+src/CanDoItAll.Modules.Automation/Runtime/AutomationRuntimeOptions.cs:22:    [Range(MinimumMaxParallelism, MaximumMaxParallelism)]
+src/CanDoItAll.Modules.Automation/Runtime/AutomationRuntimeOptions.cs:25:    [Range(MinimumBatchSize, MaximumBatchSize)]
+src/CanDoItAll.Modules.Automation/Runtime/AutomationRuntimeOptions.cs:28:    [Range(MinimumMaxParallelism, MaximumMaxParallelism)]
+src/CanDoItAll.Modules.Automation/Runtime/AutomationRuntimeOptions.cs:48:    [Range(1, 65535)]

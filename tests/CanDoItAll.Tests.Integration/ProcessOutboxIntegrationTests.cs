@@ -411,6 +411,61 @@ public sealed class ProcessOutboxIntegrationTests
     }
 
     [Fact]
+    public async Task Automation_dispatch_stale_worker_cannot_finalize_after_lease_is_stolen()
+    {
+        await using var harness = await ProcessOutboxHarness.CreateAsync(trackAutomationDispatch: true);
+        await using var scope = harness.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var outboxService = scope.ServiceProvider.GetRequiredService<ProcessOutboxService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        harness.AutomationDispatch.HoldDispatch = true;
+
+        var projectId = await CreateProjectAsync(projectsService, "Process outbox stolen automation lease");
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Stolen automation dispatch lease",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Validate stale worker finalization guard"
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var firstDrain = outboxService.ProcessPendingAsync(1, TimeSpan.FromMinutes(1));
+        await harness.AutomationDispatch.FirstDispatchStarted.WaitAsync(TimeSpan.FromSeconds(5));
+
+        var automationDispatchRecord = Assert.Single(await ListAutomationDispatchRecordsAsync(dbContextFactory, runResult.Value));
+        await LeaseAutomationDispatchAsync(dbContextFactory, automationDispatchRecord.Id, DateTimeOffset.UtcNow.AddMinutes(30));
+
+        harness.AutomationDispatch.ReleaseDispatch();
+
+        Assert.Equal(0, await firstDrain);
+
+        automationDispatchRecord = Assert.Single(await ListAutomationDispatchRecordsAsync(dbContextFactory, runResult.Value));
+        Assert.Equal(ProcessOutboxRecordStatus.Pending, automationDispatchRecord.Status);
+        Assert.Equal(1, automationDispatchRecord.AttemptCount);
+        Assert.Null(automationDispatchRecord.CompletedAtUtc);
+        Assert.NotEqual(string.Empty, automationDispatchRecord.LeaseToken);
+
+        await ExpireAutomationDispatchLeaseAsync(dbContextFactory, automationDispatchRecord.Id);
+
+        Assert.Equal(1, await outboxService.ProcessPendingAsync(1, TimeSpan.FromMinutes(1)));
+
+        automationDispatchRecord = Assert.Single(await ListAutomationDispatchRecordsAsync(dbContextFactory, runResult.Value));
+        Assert.Equal(ProcessOutboxRecordStatus.Completed, automationDispatchRecord.Status);
+        Assert.Equal(2, automationDispatchRecord.AttemptCount);
+        Assert.Equal(2, harness.AutomationDispatch.CallCount);
+    }
+
+    [Fact]
     public async Task RecoverActiveRunsAsync_queues_dispatches_without_running_agents_inline()
     {
         await using var harness = await ProcessOutboxHarness.CreateAsync(trackAutomationDispatch: true);
@@ -627,6 +682,18 @@ public sealed class ProcessOutboxIntegrationTests
             .SingleAsync(item => item.Id == outboxId);
         record.LeaseToken = Guid.NewGuid().ToString("N");
         record.LeaseExpiresAtUtc = leaseExpiresAtUtc;
+        record.UpdatedAtUtc = DateTimeOffset.UtcNow;
+        await dbContext.SaveChangesAsync();
+    }
+
+    private static async Task ExpireAutomationDispatchLeaseAsync(
+        IDbContextFactory<AppDbContext> dbContextFactory,
+        Guid outboxId)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var record = await dbContext.Set<ProcessOutboxRecord>()
+            .SingleAsync(item => item.Id == outboxId);
+        record.LeaseExpiresAtUtc = DateTimeOffset.UtcNow.AddMinutes(-1);
         record.UpdatedAtUtc = DateTimeOffset.UtcNow;
         await dbContext.SaveChangesAsync();
     }

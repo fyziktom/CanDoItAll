@@ -363,8 +363,10 @@ public sealed class ProcessOutboxService(
                 continue;
             }
 
-            await ProcessClaimedAsync(recordId, leaseToken, cancellationToken);
-            processedCount++;
+            if (await ProcessClaimedAsync(recordId, leaseToken, cancellationToken) is not null)
+            {
+                processedCount++;
+            }
         }
 
         return processedCount;
@@ -506,6 +508,7 @@ public sealed class ProcessOutboxService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var now = clock.GetUtcNow();
         var record = await dbContext.Set<ProcessOutboxRecord>()
+            .AsNoTracking()
             .FirstOrDefaultAsync(item => item.Id == outboxId, cancellationToken);
         if (record is null)
         {
@@ -521,33 +524,47 @@ public sealed class ProcessOutboxService(
 
         if (record.Status is ProcessOutboxRecordStatus.Completed or ProcessOutboxRecordStatus.DeadLettered)
         {
-            ReleaseLease(record);
-            await dbContext.SaveChangesAsync(cancellationToken);
+            await ReleaseClaimedLeaseAsync(outboxId, leaseToken, now, cancellationToken);
             return record.Status;
         }
 
         if (record.NextAttemptAtUtc.HasValue && record.NextAttemptAtUtc.Value > now)
         {
-            ReleaseLease(record);
-            await dbContext.SaveChangesAsync(cancellationToken);
+            await ReleaseClaimedLeaseAsync(outboxId, leaseToken, now, cancellationToken);
             return record.Status;
         }
 
-        record.AttemptCount++;
+        var attemptCount = await TryStartClaimedAttemptAsync(
+            dbContext,
+            outboxId,
+            leaseToken,
+            now,
+            cancellationToken);
+        if (attemptCount is null)
+        {
+            return null;
+        }
+
+        record.AttemptCount = attemptCount.Value;
         record.LastAttemptAtUtc = now;
         record.UpdatedAtUtc = now;
-        await dbContext.SaveChangesAsync(cancellationToken);
 
         Exception? dispatchFailure = null;
+        var leaseRenewalMonitor = new ProcessOutboxLeaseRenewalMonitor();
         using var leaseRenewalCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var leaseRenewalTask = RenewLeaseUntilDispatchCompletesAsync(
             record.Id,
             record.LeaseToken,
             record.CommandKey,
+            leaseRenewalMonitor,
             leaseRenewalCancellation.Token);
         try
         {
             await DispatchAsync(record, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception exception)
         {
@@ -558,15 +575,27 @@ public sealed class ProcessOutboxService(
             await StopLeaseRenewalAsync(leaseRenewalCancellation, leaseRenewalTask);
         }
 
+        if (leaseRenewalMonitor.LeaseLost || dispatchFailure is ProcessOutboxLeaseLostException)
+        {
+            logger.LogWarning(
+                dispatchFailure ?? leaseRenewalMonitor.Failure,
+                "Process outbox record {OutboxId} lost lease token {LeaseToken} before finalization; canonical state was not updated.",
+                record.Id,
+                MaskLeaseToken(leaseToken));
+            return null;
+        }
+
         now = clock.GetUtcNow();
+        ProcessOutboxRecordStatus finalStatus;
+        DateTimeOffset? completedAtUtc;
+        DateTimeOffset? nextAttemptAtUtc;
+        string lastError;
         if (dispatchFailure is null)
         {
-            record.Status = ProcessOutboxRecordStatus.Completed;
-            record.CompletedAtUtc = now;
-            record.NextAttemptAtUtc = null;
-            record.LastError = string.Empty;
-            ReleaseLease(record);
-            record.UpdatedAtUtc = now;
+            finalStatus = ProcessOutboxRecordStatus.Completed;
+            completedAtUtc = now;
+            nextAttemptAtUtc = null;
+            lastError = string.Empty;
         }
         else if (record.AttemptCount >= MaxAttempts)
         {
@@ -574,12 +603,10 @@ public sealed class ProcessOutboxService(
                 dispatchFailure,
                 "Process outbox record {OutboxId} exhausted all retry attempts and moved to dead-letter.",
                 record.Id);
-            record.Status = ProcessOutboxRecordStatus.DeadLettered;
-            record.CompletedAtUtc = null;
-            record.NextAttemptAtUtc = null;
-            record.LastError = NormalizeError(dispatchFailure.Message, "Process side-effect dispatch exhausted all retry attempts.");
-            ReleaseLease(record);
-            record.UpdatedAtUtc = now;
+            finalStatus = ProcessOutboxRecordStatus.DeadLettered;
+            completedAtUtc = null;
+            nextAttemptAtUtc = null;
+            lastError = NormalizeError(dispatchFailure.Message, "Process side-effect dispatch exhausted all retry attempts.");
         }
         else
         {
@@ -588,16 +615,32 @@ public sealed class ProcessOutboxService(
                 "Process outbox record {OutboxId} failed attempt {AttemptCount} and will be retried.",
                 record.Id,
                 record.AttemptCount);
-            record.Status = ProcessOutboxRecordStatus.Pending;
-            record.CompletedAtUtc = null;
-            record.NextAttemptAtUtc = now.Add(ComputeBackoff(record.AttemptCount));
-            record.LastError = NormalizeError(dispatchFailure.Message, "Process side-effect dispatch failed and will be retried.");
-            ReleaseLease(record);
-            record.UpdatedAtUtc = now;
+            finalStatus = ProcessOutboxRecordStatus.Pending;
+            completedAtUtc = null;
+            nextAttemptAtUtc = now.Add(ComputeBackoff(record.AttemptCount));
+            lastError = NormalizeError(dispatchFailure.Message, "Process side-effect dispatch failed and will be retried.");
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return record.Status;
+        var finalized = await TryFinalizeClaimedRecordAsync(
+            dbContext,
+            record.Id,
+            leaseToken,
+            finalStatus,
+            completedAtUtc,
+            nextAttemptAtUtc,
+            lastError,
+            now,
+            cancellationToken);
+        if (!finalized)
+        {
+            logger.LogWarning(
+                "Process outbox record {OutboxId} lost lease token {LeaseToken} during finalization; canonical state was not updated.",
+                record.Id,
+                MaskLeaseToken(leaseToken));
+            return null;
+        }
+
+        return finalStatus;
     }
 
     private async Task DispatchAsync(ProcessOutboxRecord record, CancellationToken cancellationToken)
@@ -637,12 +680,37 @@ public sealed class ProcessOutboxService(
                 payload.AutomationDispatch.ProcessRunId,
                 payload.AutomationDispatch.StepRunId,
                 payload.AutomationDispatch.Trigger,
-                token => RenewClaimedLeaseAsync(record.Id, leaseToken, record.CommandKey, token),
+                token => RenewClaimedLeaseOrThrowAsync(record.Id, leaseToken, record.CommandKey, token),
                 cancellationToken);
         }
     }
 
-    private async Task RenewClaimedLeaseAsync(
+    private async Task RenewClaimedLeaseOrThrowAsync(
+        Guid outboxId,
+        string leaseToken,
+        string commandKey,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (await RenewClaimedLeaseAsync(outboxId, leaseToken, commandKey, cancellationToken))
+            {
+                return;
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            throw new ProcessOutboxLeaseLostException(outboxId, leaseToken, exception);
+        }
+
+        throw new ProcessOutboxLeaseLostException(outboxId, leaseToken);
+    }
+
+    private async Task<bool> RenewClaimedLeaseAsync(
         Guid outboxId,
         string leaseToken,
         string commandKey,
@@ -650,7 +718,7 @@ public sealed class ProcessOutboxService(
     {
         if (string.IsNullOrWhiteSpace(leaseToken))
         {
-            return;
+            return false;
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -660,6 +728,7 @@ public sealed class ProcessOutboxService(
             .Where(item => item.Id == outboxId)
             .Where(item => item.Status == ProcessOutboxRecordStatus.Pending)
             .Where(item => item.LeaseToken == leaseToken)
+            .Where(item => item.LeaseExpiresAtUtc != null && item.LeaseExpiresAtUtc > now)
             .ExecuteUpdateAsync(
                 setters => setters
                     .SetProperty(item => item.LeaseExpiresAtUtc, leaseExpiresAtUtc)
@@ -672,12 +741,15 @@ public sealed class ProcessOutboxService(
                 "Could not renew process outbox lease for record {OutboxId}; another worker may have claimed or completed it.",
                 outboxId);
         }
+
+        return updatedRows > 0;
     }
 
     private async Task RenewLeaseUntilDispatchCompletesAsync(
         Guid outboxId,
         string leaseToken,
         string commandKey,
+        ProcessOutboxLeaseRenewalMonitor leaseRenewalMonitor,
         CancellationToken cancellationToken)
     {
         while (!cancellationToken.IsCancellationRequested)
@@ -685,7 +757,11 @@ public sealed class ProcessOutboxService(
             try
             {
                 await Task.Delay(LeaseRenewalHeartbeatInterval, cancellationToken);
-                await RenewClaimedLeaseAsync(outboxId, leaseToken, commandKey, cancellationToken);
+                if (!await RenewClaimedLeaseAsync(outboxId, leaseToken, commandKey, cancellationToken))
+                {
+                    leaseRenewalMonitor.MarkLeaseLost();
+                    return;
+                }
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -693,10 +769,12 @@ public sealed class ProcessOutboxService(
             }
             catch (Exception exception)
             {
+                leaseRenewalMonitor.MarkLeaseLost(exception);
                 logger.LogWarning(
                     exception,
-                    "Could not heartbeat-renew process outbox lease for record {OutboxId}. The dispatch will continue and the next heartbeat will retry.",
+                    "Could not heartbeat-renew process outbox lease for record {OutboxId}; canonical finalization will be suppressed unless ownership is renewed by the active worker.",
                     outboxId);
+                return;
             }
         }
     }
@@ -713,6 +791,95 @@ public sealed class ProcessOutboxService(
         catch (OperationCanceledException)
         {
         }
+    }
+
+    private async Task<int?> TryStartClaimedAttemptAsync(
+        AppDbContext dbContext,
+        Guid outboxId,
+        string leaseToken,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        var updatedRows = await dbContext.Set<ProcessOutboxRecord>()
+            .Where(item => item.Id == outboxId)
+            .Where(item => item.Status == ProcessOutboxRecordStatus.Pending)
+            .Where(item => item.LeaseToken == leaseToken)
+            .Where(item => item.LeaseExpiresAtUtc != null && item.LeaseExpiresAtUtc > now)
+            .Where(item => item.NextAttemptAtUtc == null || item.NextAttemptAtUtc <= now)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(item => item.AttemptCount, item => item.AttemptCount + 1)
+                    .SetProperty(item => item.LastAttemptAtUtc, now)
+                    .SetProperty(item => item.UpdatedAtUtc, now),
+                cancellationToken);
+        if (updatedRows == 0)
+        {
+            logger.LogWarning(
+                "Process outbox record {OutboxId} lost lease token {LeaseToken} before the attempt could start.",
+                outboxId,
+                MaskLeaseToken(leaseToken));
+            return null;
+        }
+
+        return await dbContext.Set<ProcessOutboxRecord>()
+            .AsNoTracking()
+            .Where(item => item.Id == outboxId && item.LeaseToken == leaseToken)
+            .Select(item => (int?)item.AttemptCount)
+            .SingleOrDefaultAsync(cancellationToken);
+    }
+
+    private async Task ReleaseClaimedLeaseAsync(
+        Guid outboxId,
+        string leaseToken,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(leaseToken))
+        {
+            return;
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await dbContext.Set<ProcessOutboxRecord>()
+            .Where(item => item.Id == outboxId)
+            .Where(item => item.LeaseToken == leaseToken)
+            .Where(item => item.LeaseExpiresAtUtc != null && item.LeaseExpiresAtUtc > now)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(item => item.LeaseToken, string.Empty)
+                    .SetProperty(item => item.LeaseExpiresAtUtc, (DateTimeOffset?)null)
+                    .SetProperty(item => item.UpdatedAtUtc, now),
+                cancellationToken);
+    }
+
+    private async Task<bool> TryFinalizeClaimedRecordAsync(
+        AppDbContext dbContext,
+        Guid outboxId,
+        string leaseToken,
+        ProcessOutboxRecordStatus status,
+        DateTimeOffset? completedAtUtc,
+        DateTimeOffset? nextAttemptAtUtc,
+        string lastError,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        var updatedRows = await dbContext.Set<ProcessOutboxRecord>()
+            .Where(item => item.Id == outboxId)
+            .Where(item => item.Status == ProcessOutboxRecordStatus.Pending)
+            .Where(item => item.LeaseToken == leaseToken)
+            .Where(item => item.LeaseExpiresAtUtc != null && item.LeaseExpiresAtUtc > now)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(item => item.Status, status)
+                    .SetProperty(item => item.CompletedAtUtc, completedAtUtc)
+                    .SetProperty(item => item.NextAttemptAtUtc, nextAttemptAtUtc)
+                    .SetProperty(item => item.LastError, lastError)
+                    .SetProperty(item => item.LeaseToken, string.Empty)
+                    .SetProperty(item => item.LeaseExpiresAtUtc, (DateTimeOffset?)null)
+                    .SetProperty(item => item.UpdatedAtUtc, now),
+                cancellationToken);
+
+        return updatedRows > 0;
     }
 
     private async Task<string?> TryClaimRecordAsync(
@@ -792,8 +959,10 @@ public sealed class ProcessOutboxService(
                 {
                     foreach (var record in group)
                     {
-                        await ProcessClaimedAsync(record.Id, record.LeaseToken, cancellationToken);
-                        Interlocked.Increment(ref processedCount);
+                        if (await ProcessClaimedAsync(record.Id, record.LeaseToken, cancellationToken) is not null)
+                        {
+                            Interlocked.Increment(ref processedCount);
+                        }
                     }
                 }
                 finally
@@ -826,6 +995,32 @@ public sealed class ProcessOutboxService(
 
     private sealed record ClaimedProcessOutboxRecord(Guid Id, string LeaseToken, string PartitionKey);
 
+    private sealed class ProcessOutboxLeaseRenewalMonitor
+    {
+        public bool LeaseLost { get; private set; }
+
+        public Exception? Failure { get; private set; }
+
+        public void MarkLeaseLost(Exception? failure = null)
+        {
+            LeaseLost = true;
+            Failure = failure;
+        }
+    }
+
+    private sealed class ProcessOutboxLeaseLostException : Exception
+    {
+        public ProcessOutboxLeaseLostException(Guid outboxId, string leaseToken)
+            : base($"Process outbox record '{outboxId:D}' lost lease token '{ProcessOutboxService.MaskLeaseToken(leaseToken)}' before finalization.")
+        {
+        }
+
+        public ProcessOutboxLeaseLostException(Guid outboxId, string leaseToken, Exception innerException)
+            : base($"Process outbox record '{outboxId:D}' could not renew lease token '{ProcessOutboxService.MaskLeaseToken(leaseToken)}' before finalization.", innerException)
+        {
+        }
+    }
+
     internal static TimeSpan ResolveClaimLeaseDuration(string commandKey, TimeSpan requestedLeaseDuration)
     {
         if (string.Equals(commandKey, AutomationDispatchCommandKey, StringComparison.Ordinal) &&
@@ -835,12 +1030,6 @@ public sealed class ProcessOutboxService(
         }
 
         return requestedLeaseDuration;
-    }
-
-    private static void ReleaseLease(ProcessOutboxRecord record)
-    {
-        record.LeaseToken = string.Empty;
-        record.LeaseExpiresAtUtc = null;
     }
 
     private static TimeSpan ComputeBackoff(int attemptCount)
@@ -854,6 +1043,19 @@ public sealed class ProcessOutboxService(
         return string.IsNullOrWhiteSpace(value)
             ? fallback
             : value.Trim();
+    }
+
+    private static string MaskLeaseToken(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "(empty)";
+        }
+
+        var normalized = value.Trim();
+        return normalized.Length <= 8
+            ? "***"
+            : $"{normalized[..4]}...{normalized[^4..]}";
     }
 
     private static string BuildDefinitionRoute(Guid definitionId, Guid? projectId)

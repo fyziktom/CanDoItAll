@@ -65,7 +65,8 @@ public enum AutomationExecutionLogKind
     IngressAccepted,
     IngressMaterialized,
     BackgroundJobScheduled,
-    BackgroundJobQueued
+    BackgroundJobQueued,
+    DeliveryLeaseLost
 }
 
 public enum AutomationDeliveryAttemptOutcome
