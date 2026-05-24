@@ -58,7 +58,7 @@ public sealed class SettingsPageDataSourcesTests
             Assert.Contains("database-profile-test-connection", cut.Markup);
             Assert.Contains("database-profile-create-empty", cut.Markup);
             Assert.Contains("database-profile-activate", cut.Markup);
-            Assert.Contains("Activate after restart", cut.Markup);
+            Assert.Contains("Activate for restart", cut.Markup);
             Assert.Contains("database-profile-delete", cut.Markup);
         });
     }

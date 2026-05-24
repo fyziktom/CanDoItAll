@@ -69,6 +69,8 @@ public sealed class AppDbContextRuntimeSwitchTests
         Assert.NotEqual(initialProfile.Profile.Id, targetProfile.Profile.Id);
         Assert.True(switchResult.Value!.RequiresRestart);
         Assert.False(switchResult.Value.RuntimeChangedInProcess);
+        Assert.Equal(initialProfile.Profile.Id, switchResult.Value.RuntimeProfileId);
+        Assert.Equal(targetProfile.Profile.Id, switchResult.Value.PendingRestartProfileId);
         Assert.Contains("Restart", switchResult.Value.Message, StringComparison.OrdinalIgnoreCase);
 
         await using var switchedContext = await dbContextFactory.CreateDbContextAsync();

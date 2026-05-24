@@ -85,7 +85,7 @@ public static class InfrastructureServiceCollectionExtensions
             var canonicalRuntimeDatabase = serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>();
             AppDbContextOptionsConfigurator.Configure(optionsBuilder, canonicalRuntimeDatabase.Profile);
         });
-        services.AddSingleton<ISwitchableAppDbContextFactory, SwitchableAppDbContextFactory>();
+        services.AddSingleton<IProfileAppDbContextFactory, ProfileAppDbContextFactory>();
         services.AddSingleton<IWorkspacePathResolver, WorkspacePathResolver>();
         services.AddSingleton<IWorkspacePathAccessGuard, WorkspacePathAccessGuard>();
         services.AddSingleton<IStorageCatalogService, StorageCatalogService>();

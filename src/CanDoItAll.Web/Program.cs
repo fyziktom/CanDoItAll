@@ -125,12 +125,28 @@ if (app.Environment.IsDevelopment())
         });
     });
 
-    app.MapGet("/_dev/database/selection", (IDatabaseProfileRuntimeAccessor profileAccessor) =>
+    app.MapGet("/_dev/database/selection", async (
+        IDatabaseProfileRuntimeAccessor profileAccessor,
+        IDatabaseProfileService profileService) =>
     {
         var profile = profileAccessor.ResolveCurrentProfile();
+        var persistedSelection = await profileService.GetCurrentSelectionAsync();
+        var pendingRestartProfileId = !profile.Profile.Runtime.LockedByRuntimeOverride &&
+            persistedSelection.ActiveProfileId != profile.Profile.Id
+                ? persistedSelection.ActiveProfileId
+                : (Guid?)null;
         return Results.Ok(new
         {
             profile.Profile.Id,
+            RuntimeProfileId = profile.Profile.Id,
+            PendingRestartProfileId = pendingRestartProfileId,
+            HasPendingRestartActivation = pendingRestartProfileId.HasValue,
+            PendingRestartDisplayName = pendingRestartProfileId.HasValue
+                ? persistedSelection.DisplayName
+                : string.Empty,
+            PendingRestartDescriptor = pendingRestartProfileId.HasValue
+                ? persistedSelection.Descriptor
+                : string.Empty,
             profile.Profile.DisplayName,
             profile.Profile.ProviderKind,
             profile.Profile.SourceKind,
@@ -200,6 +216,8 @@ if (app.Environment.IsDevelopment())
             {
                 activation.Value!.Generation,
                 activation.Value.CurrentProfileId,
+                activation.Value.RuntimeProfileId,
+                activation.Value.PendingRestartProfileId,
                 activation.Value.RequiresRestart,
                 activation.Value.RuntimeChangedInProcess,
                 activation.Value.Message
@@ -236,6 +254,8 @@ if (app.Environment.IsDevelopment())
         {
             switchResult.Value.Generation,
             switchResult.Value.CurrentProfileId,
+            switchResult.Value.RuntimeProfileId,
+            switchResult.Value.PendingRestartProfileId,
             switchResult.Value.RequiresRestart,
             switchResult.Value.RuntimeChangedInProcess,
             switchResult.Value.Message,

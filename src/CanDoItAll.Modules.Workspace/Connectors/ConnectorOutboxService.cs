@@ -380,6 +380,7 @@ public sealed class ConnectorOutboxService(
     public async Task<int> ProcessPendingAsync(
         int take = 20,
         TimeSpan? leaseDuration = null,
+        int? maxParallelism = null,
         CancellationToken cancellationToken = default)
     {
         if (take <= 0)
@@ -402,12 +403,11 @@ public sealed class ConnectorOutboxService(
                 effectiveLeaseDuration,
                 cancellationToken);
 
-            foreach (var command in claimedCommands)
-            {
-                await commandProcessor.ProcessAsync(command.Id, command.LeaseToken, cancellationToken);
-            }
-
-            return claimedCommands.Count;
+            return await ProcessClaimedPostgreSqlBatchAsync(
+                claimedCommands,
+                take,
+                maxParallelism,
+                cancellationToken);
         }
 
         var commandIds = await dbContext.Set<ConnectorCommandRecord>()
@@ -473,7 +473,7 @@ public sealed class ConnectorOutboxService(
                     "UpdatedAtUtc" = @now
                 FROM due
                 WHERE c."Id" = due."Id"
-                RETURNING c."Id", c."LeaseToken";
+                RETURNING c."Id", c."LeaseToken", c."ProjectId", c."ConnectorPluginKey", c."CommandKey";
                 """;
             AddParameter(command, "@pendingStatus", (int)ConnectorCommandStatus.Pending);
             AddParameter(command, "@pendingApproval", (int)ConnectorCommandApprovalState.Pending);
@@ -486,7 +486,13 @@ public sealed class ConnectorOutboxService(
             await using var reader = await command.ExecuteReaderAsync(cancellationToken);
             while (await reader.ReadAsync(cancellationToken))
             {
-                claims.Add(new ClaimedConnectorCommand(reader.GetGuid(0), reader.GetString(1)));
+                claims.Add(new ClaimedConnectorCommand(
+                    reader.GetGuid(0),
+                    reader.GetString(1),
+                    BuildConnectorPartitionKey(
+                        reader.IsDBNull(2) ? null : reader.GetGuid(2),
+                        reader.GetString(3),
+                        reader.GetString(4))));
             }
 
             return claims;
@@ -722,7 +728,64 @@ public sealed class ConnectorOutboxService(
         command.Parameters.Add(parameter);
     }
 
-    private sealed record ClaimedConnectorCommand(Guid Id, string LeaseToken);
+    private async Task<int> ProcessClaimedPostgreSqlBatchAsync(
+        IReadOnlyList<ClaimedConnectorCommand> claimedCommands,
+        int take,
+        int? maxParallelism,
+        CancellationToken cancellationToken)
+    {
+        if (claimedCommands.Count == 0)
+        {
+            return 0;
+        }
+
+        var boundedParallelism = ResolveBatchParallelism(maxParallelism, take);
+        using var throttler = new SemaphoreSlim(boundedParallelism, boundedParallelism);
+        var processedCount = 0;
+        var tasks = claimedCommands
+            .GroupBy(command => command.PartitionKey, StringComparer.Ordinal)
+            .Select(async group =>
+            {
+                await throttler.WaitAsync(cancellationToken);
+                try
+                {
+                    foreach (var command in group)
+                    {
+                        if (await commandProcessor.ProcessAsync(command.Id, command.LeaseToken, cancellationToken) is not null)
+                        {
+                            Interlocked.Increment(ref processedCount);
+                        }
+                    }
+                }
+                finally
+                {
+                    throttler.Release();
+                }
+            })
+            .ToArray();
+
+        await Task.WhenAll(tasks);
+        return processedCount;
+    }
+
+    private static int ResolveBatchParallelism(int? maxParallelism, int take)
+    {
+        var requested = maxParallelism.GetValueOrDefault(1);
+        if (requested <= 0)
+        {
+            requested = 1;
+        }
+
+        return Math.Clamp(requested, 1, Math.Max(1, take));
+    }
+
+    private static string BuildConnectorPartitionKey(Guid? projectId, string connectorPluginKey, string commandKey)
+    {
+        var projectPartition = projectId?.ToString("N") ?? "global";
+        return $"{projectPartition}:{connectorPluginKey}:{commandKey}";
+    }
+
+    private sealed record ClaimedConnectorCommand(Guid Id, string LeaseToken, string PartitionKey);
 
     private async Task<ConnectorCommandStatus?> ProcessDirectAsync(
         Guid commandId,

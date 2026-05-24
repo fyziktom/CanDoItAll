@@ -16,25 +16,40 @@ internal static partial class CognitiveMemoryApi
         RouteGroupBuilder memory,
         CognitiveMemoryApiSurface surface)
     {
-        memory.MapGet("/status", (
+        memory.MapGet("/status", async (
                 IDatabaseProfileRuntimeAccessor profileAccessor,
+                IDatabaseProfileService profileService,
                 IOptions<CognitiveMemoryProjectionOptions> projectionOptions,
-                IWebHostEnvironment environment) =>
+                IWebHostEnvironment environment,
+                CancellationToken cancellationToken) =>
             {
                 var profile = profileAccessor.ResolveCurrentProfile();
+                var persistedSelection = await profileService.GetCurrentSelectionAsync(cancellationToken);
+                var selection = BuildDatabaseSelection(profile, persistedSelection);
                 return Results.Ok(CognitiveMemoryStatusApiResponse.From(
                     profile,
+                    selection,
                     BuildApiContract(surface),
                     projectionOptions.Value,
                     environment));
             })
             .WithName(EndpointName("GetCognitiveMemoryStatus", surface));
 
-        memory.MapGet("/database/selection", (
-                IDatabaseProfileRuntimeAccessor profileAccessor) =>
+        memory.MapGet("/database/selection", async (
+                IDatabaseProfileRuntimeAccessor profileAccessor,
+                IDatabaseProfileService profileService,
+                CancellationToken cancellationToken) =>
             {
-                var profile = profileAccessor.ResolveCurrentProfile();
-                return Results.Ok(CognitiveMemoryDatabaseProfileApiResponse.From(profile));
+                var runtimeProfile = profileAccessor.ResolveCurrentProfile();
+                var persistedSelection = await profileService.GetCurrentSelectionAsync(cancellationToken);
+                var selection = BuildDatabaseSelection(runtimeProfile, persistedSelection);
+                var pendingProfile = selection.PendingRestartProfileId.HasValue
+                    ? profileAccessor.ResolveProfile(selection.PendingRestartProfileId.Value)
+                    : null;
+                return Results.Ok(CognitiveMemoryDatabaseSelectionApiResponse.From(
+                    runtimeProfile,
+                    selection,
+                    pendingProfile));
             })
             .WithName(EndpointName("GetCognitiveMemoryDatabaseSelection", surface));
 
@@ -82,6 +97,8 @@ internal static partial class CognitiveMemoryApi
                 return new CognitiveMemoryDatabaseSwitchApiResponse(
                     switchResult.Value.PreviousProfileId,
                     switchResult.Value.CurrentProfileId,
+                    switchResult.Value.RuntimeProfileId,
+                    switchResult.Value.PendingRestartProfileId,
                     switchResult.Value.Generation,
                     switchResult.Value.ProcessId,
                     switchResult.Value.RequiresRestart,
@@ -121,5 +138,35 @@ internal static partial class CognitiveMemoryApi
             await ExecuteAsync(async () =>
                 await transferService.TransferAsync(request, cancellationToken)))
             .WithName(EndpointName("RunCognitiveMemoryDatabaseTransfer", surface));
+    }
+
+    private static DatabaseSelectionStateModel BuildDatabaseSelection(
+        ResolvedDatabaseProfile runtimeProfile,
+        DatabaseSelectionStateModel persistedSelection)
+    {
+        var selection = new DatabaseSelectionStateModel
+        {
+            ActiveProfileId = runtimeProfile.Profile.Id,
+            RuntimeProfileId = runtimeProfile.Profile.Id,
+            DisplayName = runtimeProfile.Profile.DisplayName,
+            ProviderKind = runtimeProfile.Profile.ProviderKind,
+            SourceKind = runtimeProfile.Profile.SourceKind,
+            ResolutionSource = runtimeProfile.ResolutionSource,
+            IsRuntimeLocked = runtimeProfile.Profile.Runtime.LockedByRuntimeOverride,
+            Fingerprint = runtimeProfile.Profile.Runtime.Fingerprint,
+            WorkspaceRoot = runtimeProfile.Profile.Storage.WorkspaceRoot,
+            Descriptor = CognitiveMemoryStatusApiResponse.BuildDescriptor(runtimeProfile.Profile)
+        };
+
+        if (!runtimeProfile.Profile.Runtime.LockedByRuntimeOverride &&
+            persistedSelection.ActiveProfileId != runtimeProfile.Profile.Id)
+        {
+            selection.PendingRestartProfileId = persistedSelection.ActiveProfileId;
+            selection.PendingRestartDisplayName = persistedSelection.DisplayName;
+            selection.PendingRestartDescriptor = persistedSelection.Descriptor;
+            selection.PendingRestartFingerprint = persistedSelection.Fingerprint;
+        }
+
+        return selection;
     }
 }

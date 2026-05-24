@@ -48,18 +48,21 @@ public sealed class ManagedFilesStorageIntegrationTests
     }
 
     [Fact]
-    public async Task ManagedFiles_endpoint_serves_the_active_profile_after_a_runtime_switch()
+    public async Task ManagedFiles_endpoint_keeps_serving_the_runtime_profile_after_pending_restart_activation()
     {
         await using var host = await ManagedFilesTestHost.CreateAsync();
         var betaProfileId = Guid.Empty;
+        string alphaWorkspaceRoot;
         string alphaPath;
-        string betaPath;
+        string postSwitchPath;
 
         await using (var alphaScope = host.App.Services.CreateAsyncScope())
         {
             var artifactStore = alphaScope.ServiceProvider.GetRequiredService<IManagedArtifactStore>();
+            var runtimeAccessor = alphaScope.ServiceProvider.GetRequiredService<IDatabaseProfileRuntimeAccessor>();
             var profileService = alphaScope.ServiceProvider.GetRequiredService<IDatabaseProfileService>();
 
+            alphaWorkspaceRoot = runtimeAccessor.ResolveCurrentProfile().Profile.Storage.WorkspaceRoot;
             alphaPath = await artifactStore.SaveTextAsync("switch-proof", "active.txt", "alpha-profile");
 
             var betaTestProfile = host.TestEnvironment.CreatePostgreSqlProfile("managed-files-beta");
@@ -87,20 +90,24 @@ public sealed class ManagedFilesStorageIntegrationTests
 
             var switchResult = await switchCoordinator.SwitchAsync(betaProfileId);
             Assert.True(switchResult.IsSuccess, string.Join(" ", switchResult.Errors.Select(error => error.Message)));
+            Assert.True(switchResult.Value!.RequiresRestart);
+            Assert.Equal(betaProfileId, switchResult.Value.PendingRestartProfileId);
+            Assert.NotEqual(betaProfileId, switchResult.Value.RuntimeProfileId);
         }
 
-        await using (var betaScope = host.App.Services.CreateAsyncScope())
+        await using (var postSwitchScope = host.App.Services.CreateAsyncScope())
         {
-            var artifactStore = betaScope.ServiceProvider.GetRequiredService<IManagedArtifactStore>();
-            betaPath = await artifactStore.SaveTextAsync("switch-proof", "active.txt", "beta-profile");
+            var artifactStore = postSwitchScope.ServiceProvider.GetRequiredService<IManagedArtifactStore>();
+            postSwitchPath = await artifactStore.SaveTextAsync("switch-proof", "runtime-after-switch.txt", "still-alpha-runtime");
         }
 
         var afterSwitchResponse = await host.Client.GetAsync("/managed-files/switch-proof/active.txt");
         afterSwitchResponse.EnsureSuccessStatusCode();
-        Assert.Equal("beta-profile", await afterSwitchResponse.Content.ReadAsStringAsync());
-        Assert.StartsWith(betaProfile.Profile.Storage.WorkspaceRoot, betaPath, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("alpha-profile", await afterSwitchResponse.Content.ReadAsStringAsync());
+        Assert.StartsWith(alphaWorkspaceRoot, postSwitchPath, StringComparison.OrdinalIgnoreCase);
+        Assert.False(postSwitchPath.StartsWith(betaProfile.Profile.Storage.WorkspaceRoot, StringComparison.OrdinalIgnoreCase));
         Assert.Equal("alpha-profile", await File.ReadAllTextAsync(alphaPath));
-        Assert.Equal("beta-profile", await File.ReadAllTextAsync(betaPath));
+        Assert.Equal("still-alpha-runtime", await File.ReadAllTextAsync(postSwitchPath));
     }
 
     [Fact]

@@ -188,8 +188,7 @@ public static class RuntimeHostServiceCollectionExtensions
 
 public sealed class AppDatabaseBootstrapper(
     IDatabaseProfileRuntimeAccessor profileAccessor,
-    ISwitchableAppDbContextFactory dbContextFactory,
-    IAgentProviderCredentialResolver providerCredentialResolver,
+    IProfileAppDbContextFactory dbContextFactory,
     ISecretVault secretVault,
     ILogger<AppDatabaseBootstrapper> logger) : IAppDatabaseBootstrapper
 {
@@ -569,9 +568,7 @@ public sealed class DatabaseSwitchCoordinator(
     IDatabaseProfileRuntimeAccessor profileAccessor,
     IDatabaseProfileService profileService,
     IDatabaseDriverRegistry driverRegistry,
-    IDatabaseRuntimeState runtimeState,
     IAppDatabaseBootstrapper bootstrapper,
-    IOptions<DatabaseOptions> databaseOptions,
     ILogger<DatabaseSwitchCoordinator> logger) : IDatabaseSwitchCoordinator
 {
     public async Task<Result<DatabaseSwitchResult>> SwitchAsync(Guid targetProfileId, CancellationToken cancellationToken = default)
@@ -585,13 +582,14 @@ public sealed class DatabaseSwitchCoordinator(
 
         if (currentProfile.Profile.Id == targetProfileId)
         {
-            var snapshot = runtimeState.GetSnapshot();
             return Result<DatabaseSwitchResult>.Success(new DatabaseSwitchResult(
                 currentProfile.Profile.Id,
                 currentProfile.Profile.Id,
-                snapshot.Generation,
+                0,
                 Environment.ProcessId)
             {
+                RuntimeProfileId = currentProfile.Profile.Id,
+                PendingRestartProfileId = null,
                 RequiresRestart = false,
                 RuntimeChangedInProcess = false,
                 Message = "The selected database profile is already the canonical runtime profile for this process."
@@ -621,19 +619,19 @@ public sealed class DatabaseSwitchCoordinator(
             }
 
             logger.LogInformation(
-                "Persisted database profile activation from {PreviousProfileId} to {CurrentProfileId}. RestartRequired={RestartRequired}. MaintenanceHotSwitchEnabled={MaintenanceHotSwitchEnabled}.",
+                "Persisted database profile activation from runtime profile {RuntimeProfileId} to pending restart profile {PendingRestartProfileId}. RestartRequired={RestartRequired}.",
                 currentProfile.Profile.Id,
                 targetProfile.Profile.Id,
-                true,
-                databaseOptions.Value.EnableMaintenanceHotSwitch);
+                true);
 
-            var snapshot = runtimeState.GetSnapshot();
             return Result<DatabaseSwitchResult>.Success(new DatabaseSwitchResult(
                 currentProfile.Profile.Id,
                 targetProfile.Profile.Id,
-                snapshot.Generation,
+                0,
                 Environment.ProcessId)
             {
+                RuntimeProfileId = currentProfile.Profile.Id,
+                PendingRestartProfileId = targetProfile.Profile.Id,
                 RequiresRestart = true,
                 RuntimeChangedInProcess = false,
                 Message = "Database profile activation was saved. Restart the process to make it the canonical runtime database."

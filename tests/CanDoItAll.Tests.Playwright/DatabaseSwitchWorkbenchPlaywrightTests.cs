@@ -51,10 +51,15 @@ public sealed class DatabaseSwitchWorkbenchPlaywrightTests
 
         Assert.True(switchResult.RequiresRestart);
         Assert.False(switchResult.RuntimeChangedInProcess);
+        Assert.Equal(alphaProfile.Id, switchResult.RuntimeProfileId);
+        Assert.Equal(betaProfile.Id, switchResult.PendingRestartProfileId);
         Assert.Contains("Restart", switchResult.Message, StringComparison.OrdinalIgnoreCase);
 
         var runtimeProfile = await host.GetCurrentProfileAsync();
         Assert.Equal(alphaProfile.Id, runtimeProfile.Id);
+        Assert.Equal(alphaProfile.Id, runtimeProfile.RuntimeProfileId);
+        Assert.Equal(betaProfile.Id, runtimeProfile.PendingRestartProfileId);
+        Assert.True(runtimeProfile.HasPendingRestartActivation);
         Assert.Contains($"/projects/{alphaProject.ProjectId:D}/structure", structurePage.Url, StringComparison.OrdinalIgnoreCase);
         Assert.EndsWith("/projects", new Uri(secondPage.Url).AbsolutePath, StringComparison.OrdinalIgnoreCase);
         Assert.False(await structurePage.Locator("#blazor-error-ui").IsVisibleAsync());
@@ -402,11 +407,21 @@ internal sealed class DevDatabaseProfile
     public string WorkspaceRoot { get; set; } = string.Empty;
 
     public string ConnectionString { get; set; } = string.Empty;
+
+    public Guid? RuntimeProfileId { get; set; }
+
+    public Guid? PendingRestartProfileId { get; set; }
+
+    public bool HasPendingRestartActivation { get; set; }
 }
 
 internal sealed class DevDatabaseSwitchResult
 {
     public Guid CurrentProfileId { get; set; }
+
+    public Guid? RuntimeProfileId { get; set; }
+
+    public Guid? PendingRestartProfileId { get; set; }
 
     public bool RequiresRestart { get; set; }
 

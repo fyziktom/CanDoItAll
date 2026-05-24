@@ -12,7 +12,11 @@ public sealed class AutomationRuntimeOptions
 
     public int MessageDispatchBatchSize { get; set; } = 20;
 
+    public int MessageDispatchMaxParallelism { get; set; } = 4;
+
     public int ConnectorOutboxBatchSize { get; set; } = 20;
+
+    public int ConnectorOutboxMaxParallelism { get; set; } = 4;
 
     public TimeSpan DeliveryLeaseDuration { get; set; } = TimeSpan.FromMinutes(2);
 

@@ -34,7 +34,7 @@ public sealed class DatabaseSwitchIntegrationTests
         var runtimeState = provider.GetRequiredService<IDatabaseRuntimeState>();
         var bootstrapper = provider.GetRequiredService<IAppDatabaseBootstrapper>();
         var dbContextFactory = provider.GetRequiredService<IDbContextFactory<AppDbContext>>();
-        var switchableFactory = provider.GetRequiredService<ISwitchableAppDbContextFactory>();
+        var profileFactory = provider.GetRequiredService<IProfileAppDbContextFactory>();
         var initialProfile = runtimeAccessor.ResolveProfile(initialSaveResult.Value);
         await bootstrapper.EnsureCurrentProfileReadyAsync();
 
@@ -61,7 +61,7 @@ public sealed class DatabaseSwitchIntegrationTests
         var targetProfile = runtimeAccessor.ResolveProfile(saveResult.Value);
         await bootstrapper.EnsureProfileReadyAsync(targetProfile);
 
-        await using (var targetContext = await switchableFactory.CreateDbContextForProfileAsync(targetProfile))
+        await using (var targetContext = await profileFactory.CreateDbContextForProfileAsync(targetProfile))
         {
             targetContext.Set<BackgroundJobRecord>().Add(new BackgroundJobRecord
             {
@@ -81,6 +81,8 @@ public sealed class DatabaseSwitchIntegrationTests
         Assert.Equal(processIdBeforeSwitch, firstSwitch.Value!.ProcessId);
         Assert.True(firstSwitch.Value.RequiresRestart);
         Assert.False(firstSwitch.Value.RuntimeChangedInProcess);
+        Assert.Equal(initialProfile.Profile.Id, firstSwitch.Value.RuntimeProfileId);
+        Assert.Equal(targetProfile.Profile.Id, firstSwitch.Value.PendingRestartProfileId);
 
         await using (var stillRunningContext = await dbContextFactory.CreateDbContextAsync())
         {
@@ -137,7 +139,7 @@ public sealed class DatabaseDriverBootstrapIntegrationTests
         var runtimeAccessor = provider.GetRequiredService<IDatabaseProfileRuntimeAccessor>();
         var driverRegistry = provider.GetRequiredService<IDatabaseDriverRegistry>();
         var bootstrapper = provider.GetRequiredService<IAppDatabaseBootstrapper>();
-        var switchableFactory = provider.GetRequiredService<ISwitchableAppDbContextFactory>();
+        var profileFactory = provider.GetRequiredService<IProfileAppDbContextFactory>();
 
         var saveResult = await profileService.SaveAsync(new DatabaseProfileEditorModel
         {
@@ -164,7 +166,7 @@ public sealed class DatabaseDriverBootstrapIntegrationTests
             await driver.EnsureDatabaseAsync(profile);
             await bootstrapper.EnsureProfileReadyAsync(profile);
 
-            await using var dbContext = await switchableFactory.CreateDbContextForProfileAsync(profile);
+            await using var dbContext = await profileFactory.CreateDbContextForProfileAsync(profile);
             Assert.True(await dbContext.Database.CanConnectAsync());
             Assert.Contains(
                 await dbContext.Database.GetAppliedMigrationsAsync(),
@@ -197,7 +199,7 @@ public sealed class DatabaseTransferIntegrationTests
         var runtimeAccessor = provider.GetRequiredService<IDatabaseProfileRuntimeAccessor>();
         var profileService = provider.GetRequiredService<IDatabaseProfileService>();
         var bootstrapper = provider.GetRequiredService<IAppDatabaseBootstrapper>();
-        var switchableFactory = provider.GetRequiredService<ISwitchableAppDbContextFactory>();
+        var profileFactory = provider.GetRequiredService<IProfileAppDbContextFactory>();
 
         var sourceTestProfile = testEnvironment.CreatePostgreSqlProfile("project-transfer-source");
         var sourceSaveResult = await profileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
@@ -254,7 +256,7 @@ public sealed class DatabaseTransferIntegrationTests
                 ]);
         }
 
-        await using (var sourceContext = await switchableFactory.CreateDbContextForProfileAsync(sourceProfile))
+        await using (var sourceContext = await profileFactory.CreateDbContextForProfileAsync(sourceProfile))
         {
             var seededNode = await sourceContext.Set<ProjectObjectRecord>()
                 .SingleAsync(item => item.ProjectId == sourceProjectId && item.Title == sourceNodeTitle);
@@ -287,7 +289,7 @@ public sealed class DatabaseTransferIntegrationTests
         var targetProfile = runtimeAccessor.ResolveProfile(targetSaveResult.Value);
         await bootstrapper.EnsureProfileReadyAsync(targetProfile);
 
-        await using (var targetContext = await switchableFactory.CreateDbContextForProfileAsync(targetProfile))
+        await using (var targetContext = await profileFactory.CreateDbContextForProfileAsync(targetProfile))
         {
             targetContext.Set<Project>().Add(new Project
             {
@@ -326,7 +328,7 @@ public sealed class DatabaseTransferIntegrationTests
         Assert.Equal("projects", itemResult.Key);
         Assert.True(itemResult.RecordsCopied >= 6);
 
-        await using (var targetContext = await switchableFactory.CreateDbContextForProfileAsync(targetProfile))
+        await using (var targetContext = await profileFactory.CreateDbContextForProfileAsync(targetProfile))
         {
             var projects = await targetContext.Set<Project>().ToListAsync();
             var transferredProject = Assert.Single(projects, item => item.Id == sourceProjectId);
@@ -354,7 +356,7 @@ public sealed class DatabaseTransferIntegrationTests
         var profileService = provider.GetRequiredService<IDatabaseProfileService>();
         var runtimeAccessor = provider.GetRequiredService<IDatabaseProfileRuntimeAccessor>();
         var bootstrapper = provider.GetRequiredService<IAppDatabaseBootstrapper>();
-        var switchableFactory = provider.GetRequiredService<ISwitchableAppDbContextFactory>();
+        var profileFactory = provider.GetRequiredService<IProfileAppDbContextFactory>();
         var now = DateTimeOffset.UtcNow;
         var projectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         var manifestId = Guid.Parse("10000000-0000-0000-0000-000000000001");
@@ -370,7 +372,7 @@ public sealed class DatabaseTransferIntegrationTests
 
         var sourceProfile = runtimeAccessor.ResolveProfile(sourceSaveResult.Value);
         await bootstrapper.EnsureProfileReadyAsync(sourceProfile);
-        await using (var sourceContext = await switchableFactory.CreateDbContextForProfileAsync(sourceProfile))
+        await using (var sourceContext = await profileFactory.CreateDbContextForProfileAsync(sourceProfile))
         {
             sourceContext.Add(new CognitiveMemorySourceManifestRecord
             {
@@ -482,7 +484,7 @@ public sealed class DatabaseTransferIntegrationTests
         Assert.Equal("cognitive-memory-source-truth", itemResult.Key);
         Assert.Equal(4, itemResult.RecordsCopied);
 
-        await using (var targetContext = await switchableFactory.CreateDbContextForProfileAsync(targetProfile))
+        await using (var targetContext = await profileFactory.CreateDbContextForProfileAsync(targetProfile))
         {
             var item = await targetContext.Set<CognitiveMemorySourceItemRecord>().SingleAsync(row => row.Id == sourceItemId);
             Assert.Equal("This source truth states that the deployment validation requires project structure transfer.", item.ContentText);
@@ -506,7 +508,7 @@ public sealed class DatabaseTransferIntegrationTests
         var runtimeAccessor = provider.GetRequiredService<IDatabaseProfileRuntimeAccessor>();
         var profileService = provider.GetRequiredService<IDatabaseProfileService>();
         var bootstrapper = provider.GetRequiredService<IAppDatabaseBootstrapper>();
-        var switchableFactory = provider.GetRequiredService<ISwitchableAppDbContextFactory>();
+        var profileFactory = provider.GetRequiredService<IProfileAppDbContextFactory>();
 
         var sourceTestProfile = testEnvironment.CreatePostgreSqlProfile("project-package-source");
         var sourceSaveResult = await profileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
@@ -556,7 +558,7 @@ public sealed class DatabaseTransferIntegrationTests
 
         var mediaRelativePath = $"managed-files/project-packages/{sourceProjectId:N}/alpha.txt";
         var mediaContent = "project package media";
-        await using (var sourceContext = await switchableFactory.CreateDbContextForProfileAsync(sourceProfile))
+        await using (var sourceContext = await profileFactory.CreateDbContextForProfileAsync(sourceProfile))
         {
             var seededNode = await sourceContext.Set<ProjectObjectRecord>()
                 .SingleAsync(item => item.ProjectId == sourceProjectId && item.Title == sourceNodeTitle);
@@ -627,7 +629,7 @@ public sealed class DatabaseTransferIntegrationTests
         Assert.Equal(exportResult.Manifest.TotalRecordCount, importResult.RecordsImported);
         Assert.Equal(1, importResult.StorageFilesImported);
 
-        await using (var targetContext = await switchableFactory.CreateDbContextForProfileAsync(targetProfile))
+        await using (var targetContext = await profileFactory.CreateDbContextForProfileAsync(targetProfile))
         {
             var transferredProject = await targetContext.Set<Project>()
                 .SingleAsync(item => item.Id == sourceProjectId);

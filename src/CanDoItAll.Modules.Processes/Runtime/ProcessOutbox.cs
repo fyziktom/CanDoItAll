@@ -305,6 +305,7 @@ public sealed class ProcessOutboxService(
         int take = DefaultBatchSize,
         TimeSpan? leaseDuration = null,
         DateTimeOffset? minimumAutomationDispatchCreatedAtUtc = null,
+        int? maxParallelism = null,
         CancellationToken cancellationToken = default)
     {
         if (take <= 0)
@@ -327,14 +328,11 @@ public sealed class ProcessOutboxService(
                 minimumAutomationDispatchCreatedAtUtc,
                 cancellationToken);
 
-            var processedRecords = 0;
-            foreach (var record in claimedRecords)
-            {
-                await ProcessClaimedAsync(record.Id, record.LeaseToken, cancellationToken);
-                processedRecords++;
-            }
-
-            return processedRecords;
+            return await ProcessClaimedPostgreSqlBatchAsync(
+                claimedRecords,
+                take,
+                maxParallelism,
+                cancellationToken);
         }
 
         var query = dbContext.Set<ProcessOutboxRecord>()
@@ -416,7 +414,7 @@ public sealed class ProcessOutboxService(
                     "UpdatedAtUtc" = @now
                 FROM due
                 WHERE o."Id" = due."Id"
-                RETURNING o."Id", o."LeaseToken";
+                RETURNING o."Id", o."LeaseToken", o."ProcessRunId", o."CommandKey";
                 """;
             AddParameter(command, "@pendingStatus", (int)ProcessOutboxRecordStatus.Pending);
             AddParameter(command, "@now", now);
@@ -432,7 +430,12 @@ public sealed class ProcessOutboxService(
             await using var reader = await command.ExecuteReaderAsync(cancellationToken);
             while (await reader.ReadAsync(cancellationToken))
             {
-                claims.Add(new ClaimedProcessOutboxRecord(reader.GetGuid(0), reader.GetString(1)));
+                claims.Add(new ClaimedProcessOutboxRecord(
+                    reader.GetGuid(0),
+                    reader.GetString(1),
+                    BuildOutboxPartitionKey(
+                        reader.IsDBNull(2) ? null : reader.GetGuid(2),
+                        reader.GetString(3))));
             }
 
             return claims;
@@ -766,7 +769,62 @@ public sealed class ProcessOutboxService(
         command.Parameters.Add(parameter);
     }
 
-    private sealed record ClaimedProcessOutboxRecord(Guid Id, string LeaseToken);
+    private async Task<int> ProcessClaimedPostgreSqlBatchAsync(
+        IReadOnlyList<ClaimedProcessOutboxRecord> claimedRecords,
+        int take,
+        int? maxParallelism,
+        CancellationToken cancellationToken)
+    {
+        if (claimedRecords.Count == 0)
+        {
+            return 0;
+        }
+
+        var boundedParallelism = ResolveBatchParallelism(maxParallelism, take);
+        using var throttler = new SemaphoreSlim(boundedParallelism, boundedParallelism);
+        var processedCount = 0;
+        var tasks = claimedRecords
+            .GroupBy(record => record.PartitionKey, StringComparer.Ordinal)
+            .Select(async group =>
+            {
+                await throttler.WaitAsync(cancellationToken);
+                try
+                {
+                    foreach (var record in group)
+                    {
+                        await ProcessClaimedAsync(record.Id, record.LeaseToken, cancellationToken);
+                        Interlocked.Increment(ref processedCount);
+                    }
+                }
+                finally
+                {
+                    throttler.Release();
+                }
+            })
+            .ToArray();
+
+        await Task.WhenAll(tasks);
+        return processedCount;
+    }
+
+    private static int ResolveBatchParallelism(int? maxParallelism, int take)
+    {
+        var requested = maxParallelism.GetValueOrDefault(1);
+        if (requested <= 0)
+        {
+            requested = 1;
+        }
+
+        return Math.Clamp(requested, 1, Math.Max(1, take));
+    }
+
+    private static string BuildOutboxPartitionKey(Guid? processRunId, string commandKey)
+    {
+        var runPartition = processRunId?.ToString("N") ?? "global";
+        return $"{runPartition}:{commandKey}";
+    }
+
+    private sealed record ClaimedProcessOutboxRecord(Guid Id, string LeaseToken, string PartitionKey);
 
     internal static TimeSpan ResolveClaimLeaseDuration(string commandKey, TimeSpan requestedLeaseDuration)
     {
@@ -847,7 +905,7 @@ public sealed class ProcessOutboxDrainWorker(
         {
             await ObserveCompletedDispatchesAsync(activeDispatches);
 
-            if (activeDispatches.Count < ResolveMaxConcurrentDispatches())
+            if (activeDispatches.Count == 0)
             {
                 activeDispatches.Add(ProcessPendingRecordAsync(stoppingToken));
             }
@@ -875,8 +933,9 @@ public sealed class ProcessOutboxDrainWorker(
                 ? (DateTimeOffset?)null
                 : runtimeSession.StartedAtUtc;
             return await outbox.ProcessPendingAsync(
-                take: 1,
+                take: ResolveBatchSize(),
                 minimumAutomationDispatchCreatedAtUtc: minimumAutomationDispatchCreatedAtUtc,
+                maxParallelism: ResolveMaxConcurrentDispatches(),
                 cancellationToken: stoppingToken);
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -896,10 +955,20 @@ public sealed class ProcessOutboxDrainWorker(
 
     private int ResolveMaxConcurrentDispatches()
     {
-        var configured = processRuntimeOptions.Value.OutboxWorkerMaxConcurrency;
+        var configured = processRuntimeOptions.Value.OutboxBatchMaxParallelism > 0
+            ? processRuntimeOptions.Value.OutboxBatchMaxParallelism
+            : processRuntimeOptions.Value.OutboxWorkerMaxConcurrency;
         return configured <= 0
             ? ProcessRuntimeOptions.DefaultOutboxWorkerConcurrency
             : Math.Clamp(configured, 1, ProcessRuntimeOptions.MaximumOutboxWorkerConcurrency);
+    }
+
+    private int ResolveBatchSize()
+    {
+        var configured = processRuntimeOptions.Value.OutboxBatchSize;
+        return configured <= 0
+            ? 1
+            : configured;
     }
 
     private static async Task ObserveCompletedDispatchesAsync(HashSet<Task<int>> activeDispatches)

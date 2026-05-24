@@ -6,7 +6,7 @@ namespace CanDoItAll.Infrastructure.ControlPlane;
 public sealed class DatabaseTransferService(
     IDatabaseProfileService profileService,
     IDatabaseProfileRuntimeAccessor profileAccessor,
-    ISwitchableAppDbContextFactory dbContextFactory,
+    IProfileAppDbContextFactory dbContextFactory,
     IEnumerable<IDatabaseTransferHandler> handlers) : IDatabaseTransferService
 {
     private readonly IReadOnlyList<IDatabaseTransferHandler> _handlers = handlers

@@ -22,16 +22,13 @@ public partial class MainLayout
     private DatabaseSelectionStateModel? databaseSelection;
     private DatabaseProfileEditorModel? currentDatabaseEditor;
     private Guid? selectedDatabaseProfileId;
-    private Guid? pendingCreatedDatabaseProfileId;
     private string pendingCreatedDatabaseName = string.Empty;
     private IReadOnlyList<DatabaseTransferSourceSummary> createdDatabaseTransferSources = [];
     private IReadOnlyList<DatabaseTransferItemPreview> createdDatabaseTransferItems = [];
     private readonly HashSet<string> createdDatabaseSelectedTransferItemKeys = new(StringComparer.OrdinalIgnoreCase);
-    private Guid? createdDatabaseTransferSourceProfileId;
     private bool databaseDialogOpen;
     private bool databaseDialogStartupMode;
     private bool databaseDialogBusy;
-    private bool createdDatabaseTransferBusy;
     private string? databaseProfileMessage;
     private long lastObservedDatabaseSwitchGeneration;
     private string? databaseSwitchAlert;
@@ -83,12 +80,17 @@ public partial class MainLayout
     private bool SelectedDialogProfileIsActive
         => selectedDatabaseProfileId.HasValue &&
            databaseSelection is not null &&
-           selectedDatabaseProfileId.Value == databaseSelection.ActiveProfileId;
+           selectedDatabaseProfileId.Value == databaseSelection.RuntimeProfileId;
+
+    private bool SelectedDialogProfileIsPendingRestart
+        => selectedDatabaseProfileId.HasValue &&
+           databaseSelection?.PendingRestartProfileId == selectedDatabaseProfileId.Value;
 
     private bool CanSwitchSelectedProfile
         => CanManageDatabases &&
            selectedDatabaseProfileId.HasValue &&
-           !SelectedDialogProfileIsActive;
+           !SelectedDialogProfileIsActive &&
+           !SelectedDialogProfileIsPendingRestart;
 
     private IReadOnlyList<ShellNavigationItem> NavigationItems => ShellNavigation.GetItems(collaborationUnreadCount, ShellNavigationContributors);
 

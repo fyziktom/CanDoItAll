@@ -2,7 +2,7 @@
 
 ## Status
 
-Prepared follow-up bundle for Codex execution.
+Executed by Codex on 2026-05-24 with documented validation caveats.
 
 ## Target repository and branch
 
@@ -78,3 +78,10 @@ Codex must produce an execution report that explicitly distinguishes:
 - Which validations failed or were quarantined.
 - Measured before/after throughput or at least deterministic concurrency stress proof.
 - Any canonicality risks still open.
+
+## Execution result
+
+- Final report: `proof/SB08/final-execution-report.md`
+- Benchmark/concurrency proof: `proof/SB08/benchmark-report.md`
+- Bundle validator transcript: `proof/SB08/transcripts/bundle-validator-completed.txt`
+- Main caveat: broad integration/component suites need a clean CI rerun after local PostgreSQL authentication and timeout constraints are resolved.

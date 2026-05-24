@@ -1,0 +1,352 @@
+src/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs:191:    IProfileAppDbContextFactory dbContextFactory,
+src/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs:228:        await using var dbContext = await dbContextFactory.CreateDbContextForProfileAsync(profile, cancellationToken);
+src/CanDoItAll.Infrastructure/BackgroundJobs/BackgroundJobs.cs:126:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Infrastructure/ControlPlane/DatabaseTransferService.cs:9:    IProfileAppDbContextFactory dbContextFactory,
+src/CanDoItAll.Infrastructure/ControlPlane/DatabaseTransferService.cs:63:        await using var sourceDbContext = await dbContextFactory.CreateDbContextForProfileAsync(sourceProfile, cancellationToken);
+src/CanDoItAll.Infrastructure/ControlPlane/DatabaseTransferService.cs:64:        await using var targetDbContext = await dbContextFactory.CreateDbContextForProfileAsync(targetProfile, cancellationToken);
+src/CanDoItAll.Infrastructure/ControlPlane/DatabaseTransferService.cs:127:        await using var sourceDbContext = await dbContextFactory.CreateDbContextForProfileAsync(sourceProfile, cancellationToken);
+src/CanDoItAll.Infrastructure/ControlPlane/DatabaseTransferService.cs:128:        await using var targetDbContext = await dbContextFactory.CreateDbContextForProfileAsync(targetProfile, cancellationToken);
+src/CanDoItAll.Infrastructure/DependencyInjection/InfrastructureServiceCollectionExtensions.cs:88:        services.AddSingleton<IProfileAppDbContextFactory, ProfileAppDbContextFactory>();
+src/CanDoItAll.Infrastructure/Persistence/SwitchableAppDbContextFactory.cs:14:public interface IProfileAppDbContextFactory
+src/CanDoItAll.Infrastructure/Persistence/SwitchableAppDbContextFactory.cs:16:    Task<AppDbContext> CreateDbContextForProfileAsync(
+src/CanDoItAll.Infrastructure/Persistence/SwitchableAppDbContextFactory.cs:83:public sealed class ProfileAppDbContextFactory : IProfileAppDbContextFactory
+src/CanDoItAll.Infrastructure/Persistence/SwitchableAppDbContextFactory.cs:85:    public Task<AppDbContext> CreateDbContextForProfileAsync(
+src/CanDoItAll.Infrastructure/Search/SearchIndexing.cs:85:public sealed class SearchIndexService(IDbContextFactory<AppDbContext> dbContextFactory, SharedKernel.IClock clock) : ISearchIndexService
+src/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogService.cs:8:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Activity/ActivityModels.cs:78:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.AgentFramework/Bridge/AgentFrameworkAiTechnicalAgentBridge.cs:12:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.AgentFramework/Catalog/AgentFrameworkOrganizationCatalogRepairService.cs:17:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor.cs:39:    public IDbContextFactory<AppDbContext> DbContextFactory { get; set; } = default!;
+src/CanDoItAll.Modules.AgentFramework/Persistence/PersistentWorkflowStores.cs:11:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.AgentFramework/Persistence/PersistentWorkflowStores.cs:664:public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> dbContextFactory) :
+src/CanDoItAll.Modules.AgentFramework/Persistence/WorkflowRuntimeEvidenceSourceProvider.cs:11:    IDbContextFactory<AppDbContext> dbContextFactory) : IWorkflowRuntimeEvidenceSourceProvider
+src/CanDoItAll.Modules.AgentFramework/Providers/WorkspaceBackedAgentProviderProfileRegistry.cs:16:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Automation/Services/AutomationIngressService.cs:8:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Automation/Services/AutomationMessagingServices.cs:32:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Automation/Services/AutomationMessagingServices.cs:159:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Automation/Services/AutomationMessagingServices.cs:705:    IDbContextFactory<AppDbContext> dbContextFactory) : IAutomationRuntimeInspectionService
+src/CanDoItAll.Modules.Automation/Services/AutomationTelemetryServices.cs:17:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Automation/Triggers/AutomationTriggering.cs:11:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Automation/Triggers/AutomationTriggering.cs:135:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Automation/Triggers/AutomationTriggering.cs:305:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryAdvancedServices.cs:11:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryAnswerGateService.cs:11:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryCalibrationHealthService.cs:11:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryCrossProjectMemoryService.cs:11:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryCuratorConversationService.cs:11:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryDistributedComputeCoordinator.cs:11:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryEpistemicDriveService.cs:11:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryProfessorAcceptedUseSignalEmitter.cs:9:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryProfessorAnchorService.cs:8:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryProfessorAssimilationEvaluator.cs:7:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryProfessorReviewService.cs:11:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemoryRecallOutcomeAcceptedEventHandler.cs:7:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemorySelfModelStore.cs:11:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CognitiveMemory/Advanced/CognitiveMemorySelfRegulationOrchestrator.cs:11:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CognitiveMemory/CognitiveMemoryModuleServiceCollectionExtensions.cs:85:            provider.GetRequiredService<IDbContextFactory<AppDbContext>>(),
+src/CanDoItAll.Modules.CognitiveMemory/Consolidation/CognitiveMemoryConsolidationServices.cs:11:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CognitiveMemory/Ingestion/CognitiveMemorySourceIngestionService.cs:12:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CognitiveMemory/Neuro/CognitiveMemoryMutationAuthority.cs:9:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CognitiveMemory/Operations/CognitiveMemoryProjectionRebuildService.cs:10:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CognitiveMemory/Operations/CognitiveMemoryRetentionCleanupService.cs:9:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CognitiveMemory/Procedural/CognitiveMemoryProcedureSkillService.cs:10:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryAggregateMemoryApplicator.cs:11:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryClusterPlanner.cs:12:    private readonly IDbContextFactory<AppDbContext> dbContextFactory;
+src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryClusterPlanner.cs:24:        IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryClusterPlanner.cs:36:        IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryDreamConsolidationService.cs:11:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryDreamValidator.cs:11:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryQualityDiagnosticsService.cs:11:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryRecallSynthesisService.cs:7:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CognitiveMemory/Quality/CognitiveMemoryReferenceResolver.cs:11:    IDbContextFactory<AppDbContext> dbContextFactory) : ICognitiveMemoryReferenceResolver
+src/CanDoItAll.Modules.CognitiveMemory/Recall/CognitiveMemoryRecallServices.cs:12:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CognitiveMemory/ReviewUi/CognitiveMemoryReviewUiService.cs:9:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CognitiveMemory/Settings/CognitiveMemorySettingsServices.cs:13:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CognitiveMemory/Settings/CognitiveMemorySettingsServices.cs:245:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CognitiveMemory/Signals/CognitiveMemorySignalServices.cs:9:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CognitiveMemory/TemporalReplay/CognitiveMemoryTemporalReplayServices.cs:11:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CognitiveMemory/Workspace/CognitiveMemoryWorkspaceServices.cs:9:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CognitiveMemory/Workspace/CognitiveMemoryWorkspaceServices.cs:476:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Collaboration/CollaborationService.cs:9:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CrmHr/Agents/AiTechnicalAgentBridge.cs:120:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CrmHr/Automation/CrmHrAutomationSignals.cs:8:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CrmHr/Recruiting/CrmHrRecruitingServices.cs:169:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CrmHr/Services/CrmHrServices.cs:666:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CrmHr/Services/CrmHrServices.cs:1089:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CrmHr/Services/CrmHrServices.cs:2654:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CrmHr/Services/CrmHrServices.cs:3852:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CrmHr/Services/CrmHrServices.cs:4564:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.CrmHr/Services/PartyDirectoryManagementService.cs:11:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Factory/PromptFactoryService.cs:28:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Plugins/Catalog/PluginCatalogServices.cs:29:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Plugins/Catalog/PluginLogServices.cs:13:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Plugins/Catalog/PluginPermissionServices.cs:10:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Plugins/Catalog/PluginPermissionServices.cs:135:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Plugins/OAuth/PluginOAuthService.cs:19:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.cs:34:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessWorkflowRunCoordinator.cs:12:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Processes/Automation/Recovery/ProcessRunRecoveryWorker.cs:13:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Processes/Runtime/ProcessOperatorControlPlane.cs:257:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Processes/Runtime/ProcessOutbox.cs:108:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Processes/Runtime/ProcessRuntimeEvidenceSourceProvider.cs:11:    IDbContextFactory<AppDbContext> dbContextFactory) : IProcessRuntimeEvidenceSourceProvider
+src/CanDoItAll.Modules.Processes/Runtime/ProcessRuntimeStateOverviewService.cs:57:public sealed class ProcessRuntimeStateOverviewService(IDbContextFactory<AppDbContext> dbContextFactory) {
+src/CanDoItAll.Modules.Processes/Services/ProcessesService.cs:13:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Projects/ProjectModels.cs:231:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Prompts/PromptModels.cs:217:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Resources/ResourceModels.cs:173:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.SchedulerPlanner/SchedulerPlannerService.cs:48:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.SchedulerPlanner/SchedulerPlannerService.cs:801:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Security/SecretRuntimeResolver.cs:86:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Security/SecurityModels.cs:131:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.TestLab/TestLabModels.cs:217:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Validation/ValidationModels.cs:189:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Workbench/CrossModule/ProjectCrossModuleMutationProcessor.cs:21:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Workbench/DatabaseTransfer/ProjectPackageService.cs:15:    IProfileAppDbContextFactory dbContextFactory,
+src/CanDoItAll.Modules.Workbench/DatabaseTransfer/ProjectPackageService.cs:35:            await using var dbContext = await dbContextFactory.CreateDbContextForProfileAsync(sourceProfile, cancellationToken);
+src/CanDoItAll.Modules.Workbench/DatabaseTransfer/ProjectPackageService.cs:123:                await using var targetDbContext = await dbContextFactory.CreateDbContextForProfileAsync(targetProfile, cancellationToken);
+src/CanDoItAll.Modules.Workbench/ProjectNodes/ProjectNodeScopeBridge.cs:14:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureAnalyticsService.cs:23:    IDbContextFactory<AppDbContext> dbContextFactory)
+src/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureLeaseService.cs:8:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureProjectionMaintenanceService.cs:16:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Workbench/ProjectStructure/WorkbenchProjectStructureSourceSnapshotProvider.cs:11:    IDbContextFactory<AppDbContext> dbContextFactory) : IProjectStructureSourceSnapshotProvider
+src/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchCommandService.cs:10:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchCrossModuleMutationService.cs:9:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchLifecycleService.cs:8:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchModels.cs:316:IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchRelationService.cs:10:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Workspace/Connectors/ConnectorOutboxService.cs:10:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Workspace/Connectors/ConnectorOutboxService.cs:249:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Workspace/Database/DatabaseProfileWorkspaceService.cs:16:    IProfileAppDbContextFactory dbContextFactory,
+src/CanDoItAll.Modules.Workspace/Database/DatabaseProfileWorkspaceService.cs:143:            await using var dbContext = await dbContextFactory.CreateDbContextForProfileAsync(profile, timeout.Token);
+src/CanDoItAll.Modules.Workspace/Models/WorkspaceModels.cs:141:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Modules.Workspace/Providers/ProviderRuntimeGateway.cs:16:    IDbContextFactory<AppDbContext> dbContextFactory,
+src/CanDoItAll.Web/Program.cs:349:        IDbContextFactory<AppDbContext> dbContextFactory) =>
+src/CanDoItAll.Web/Program.cs:788:        IDbContextFactory<AppDbContext> dbContextFactory) =>
+tests/CanDoItAll.Tests.Components/AiAgentsPageTests.cs:391:        var dbContextFactory = harness.Context.Services.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Components/CognitiveMemoryPageTests.cs:162:        var dbContextFactory = harness.Context.Services.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Components/CognitiveMemoryPageTests.cs:200:        var dbContextFactory = harness.Context.Services.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Components/ProjectStructurePageMoveTests.cs:208:        var factoryDescriptor = services.Last(descriptor => descriptor.ServiceType == typeof(IDbContextFactory<AppDbContext>));
+tests/CanDoItAll.Tests.Components/ProjectStructurePageMoveTests.cs:211:            typeof(IDbContextFactory<AppDbContext>),
+tests/CanDoItAll.Tests.Components/ProjectStructurePageMoveTests.cs:214:                var innerFactory = (IDbContextFactory<AppDbContext>)CreateService(serviceProvider, factoryDescriptor);
+tests/CanDoItAll.Tests.Components/ProjectStructurePageMoveTests.cs:242:        IDbContextFactory<AppDbContext> innerFactory,
+tests/CanDoItAll.Tests.Components/ProjectStructurePageMoveTests.cs:243:        SaveChangesCounter counter) : IDbContextFactory<AppDbContext>
+tests/CanDoItAll.Tests.Components/ProjectStructurePageSimpleMutationTests.cs:1155:        var factoryDescriptor = services.Last(descriptor => descriptor.ServiceType == typeof(IDbContextFactory<AppDbContext>));
+tests/CanDoItAll.Tests.Components/ProjectStructurePageSimpleMutationTests.cs:1158:            typeof(IDbContextFactory<AppDbContext>),
+tests/CanDoItAll.Tests.Components/ProjectStructurePageSimpleMutationTests.cs:1161:                var innerFactory = (IDbContextFactory<AppDbContext>)CreateService(serviceProvider, factoryDescriptor);
+tests/CanDoItAll.Tests.Components/ProjectStructurePageSimpleMutationTests.cs:1189:        IDbContextFactory<AppDbContext> innerFactory,
+tests/CanDoItAll.Tests.Components/ProjectStructurePageSimpleMutationTests.cs:1190:        DbContextCreateCounter counter) : IDbContextFactory<AppDbContext>
+tests/CanDoItAll.Tests.Components/ProjectStructurePageTests.cs:1611:        var dbContextFactory = harness.Context.Services.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/AiAgentProfileIntegrationTests.cs:27:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/AiAgentProfileIntegrationTests.cs:268:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/AiAgentProfileIntegrationTests.cs:436:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/AiAgentProfileIntegrationTests.cs:488:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/AiAgentProfileIntegrationTests.cs:555:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/AiAgentProfileIntegrationTests.cs:626:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:60:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:99:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:306:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:348:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:508:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:571:        var dbContextFactory = verificationScope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:632:        var dbContextFactory = verificationScope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:674:        var dbContextFactory = verificationScope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:809:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:835:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:848:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:859:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:876:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:923:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:958:        var dbContextFactory = verificationScope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:984:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:1036:        var dbContextFactory = verificationScope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:1122:        var dbContextFactory = verificationScope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:1238:        var dbContextFactory = verificationScope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:1272:        var dbContextFactory = verificationScope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:1310:        var dbContextFactory = verificationScope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:1352:        var dbContextFactory = verificationScope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:1532:            var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:1550:        var verificationFactory = verificationScope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:1683:        var dbContextFactory = verificationScope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:1740:        IDbContextFactory<AppDbContext> dbContextFactory,
+tests/CanDoItAll.Tests.Integration/CognitiveMemoryConsolidationPersistenceModelTests.cs:301:    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
+tests/CanDoItAll.Tests.Integration/CognitiveMemoryNeuroFoundationPersistenceModelTests.cs:171:    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
+tests/CanDoItAll.Tests.Integration/CognitiveMemoryProceduralPersistenceModelTests.cs:277:    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
+tests/CanDoItAll.Tests.Integration/CognitiveMemoryRecallPersistenceModelTests.cs:327:    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
+tests/CanDoItAll.Tests.Integration/CognitiveMemorySignalPersistenceModelTests.cs:239:    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
+tests/CanDoItAll.Tests.Integration/CognitiveMemorySourceIngestionPersistenceTests.cs:247:    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
+tests/CanDoItAll.Tests.Integration/CognitiveMemoryTemporalReplayPersistenceModelTests.cs:244:    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
+tests/CanDoItAll.Tests.Integration/CognitiveMemoryWorkspacePersistenceModelTests.cs:174:    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
+tests/CanDoItAll.Tests.Integration/ConnectorOutboxIntegrationTests.cs:24:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ConnectorOutboxIntegrationTests.cs:76:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ConnectorOutboxIntegrationTests.cs:170:        IDbContextFactory<AppDbContext> dbContextFactory,
+tests/CanDoItAll.Tests.Integration/ConnectorPluginIntegrationTests.cs:23:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/CrmHrAuditTrailIntegrationTests.cs:19:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/CrmHrAuditTrailIntegrationTests.cs:105:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/CrmHrSchemaIntegrationTests.cs:15:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/DatabaseMigrationIntegrationTests.cs:22:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/DatabaseMigrationIntegrationTests.cs:49:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/DatabaseRuntimeSwitchingIntegrationTests.cs:36:        var dbContextFactory = provider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/DatabaseRuntimeSwitchingIntegrationTests.cs:37:        var profileFactory = provider.GetRequiredService<IProfileAppDbContextFactory>();
+tests/CanDoItAll.Tests.Integration/DatabaseRuntimeSwitchingIntegrationTests.cs:64:        await using (var targetContext = await profileFactory.CreateDbContextForProfileAsync(targetProfile))
+tests/CanDoItAll.Tests.Integration/DatabaseRuntimeSwitchingIntegrationTests.cs:107:        var restartedDbContextFactory = restartedProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/DatabaseRuntimeSwitchingIntegrationTests.cs:142:        var profileFactory = provider.GetRequiredService<IProfileAppDbContextFactory>();
+tests/CanDoItAll.Tests.Integration/DatabaseRuntimeSwitchingIntegrationTests.cs:169:            await using var dbContext = await profileFactory.CreateDbContextForProfileAsync(profile);
+tests/CanDoItAll.Tests.Integration/DatabaseRuntimeSwitchingIntegrationTests.cs:202:        var profileFactory = provider.GetRequiredService<IProfileAppDbContextFactory>();
+tests/CanDoItAll.Tests.Integration/DatabaseRuntimeSwitchingIntegrationTests.cs:259:        await using (var sourceContext = await profileFactory.CreateDbContextForProfileAsync(sourceProfile))
+tests/CanDoItAll.Tests.Integration/DatabaseRuntimeSwitchingIntegrationTests.cs:292:        await using (var targetContext = await profileFactory.CreateDbContextForProfileAsync(targetProfile))
+tests/CanDoItAll.Tests.Integration/DatabaseRuntimeSwitchingIntegrationTests.cs:331:        await using (var targetContext = await profileFactory.CreateDbContextForProfileAsync(targetProfile))
+tests/CanDoItAll.Tests.Integration/DatabaseRuntimeSwitchingIntegrationTests.cs:359:        var profileFactory = provider.GetRequiredService<IProfileAppDbContextFactory>();
+tests/CanDoItAll.Tests.Integration/DatabaseRuntimeSwitchingIntegrationTests.cs:375:        await using (var sourceContext = await profileFactory.CreateDbContextForProfileAsync(sourceProfile))
+tests/CanDoItAll.Tests.Integration/DatabaseRuntimeSwitchingIntegrationTests.cs:487:        await using (var targetContext = await profileFactory.CreateDbContextForProfileAsync(targetProfile))
+tests/CanDoItAll.Tests.Integration/DatabaseRuntimeSwitchingIntegrationTests.cs:511:        var profileFactory = provider.GetRequiredService<IProfileAppDbContextFactory>();
+tests/CanDoItAll.Tests.Integration/DatabaseRuntimeSwitchingIntegrationTests.cs:561:        await using (var sourceContext = await profileFactory.CreateDbContextForProfileAsync(sourceProfile))
+tests/CanDoItAll.Tests.Integration/DatabaseRuntimeSwitchingIntegrationTests.cs:632:        await using (var targetContext = await profileFactory.CreateDbContextForProfileAsync(targetProfile))
+tests/CanDoItAll.Tests.Integration/PartyMergeIntegrationTests.cs:17:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/PluginCatalogIntegrationTests.cs:34:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/PluginCatalogIntegrationTests.cs:435:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/PluginCatalogIntegrationTests.cs:604:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/PluginCatalogIntegrationTests.cs:689:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessActiveRunSummaryPerformanceTests.cs:26:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessActiveRunSummaryPerformanceTests.cs:89:        IDbContextFactory<AppDbContext> dbContextFactory,
+tests/CanDoItAll.Tests.Integration/ProcessDeletionIntegrationTests.cs:17:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessImportMetadataIntegrationTests.cs:18:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessImportMetadataIntegrationTests.cs:56:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessMockAgentRuntimeIntegrationTests.cs:80:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessMockAgentRuntimeIntegrationTests.cs:172:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessMockAgentRuntimeIntegrationTests.cs:378:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessMockAgentRuntimeIntegrationTests.cs:704:        IDbContextFactory<AppDbContext> dbContextFactory,
+tests/CanDoItAll.Tests.Integration/ProcessMockAgentRuntimeIntegrationTests.cs:887:        IDbContextFactory<AppDbContext> dbContextFactory,
+tests/CanDoItAll.Tests.Integration/ProcessMockAgentRuntimeIntegrationTests.cs:900:        IDbContextFactory<AppDbContext> dbContextFactory,
+tests/CanDoItAll.Tests.Integration/ProcessMockAgentRuntimeIntegrationTests.cs:913:        IDbContextFactory<AppDbContext> dbContextFactory,
+tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs:24:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs:56:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs:91:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs:125:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs:168:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs:210:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs:255:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs:297:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs:355:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs:421:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs:464:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs:497:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs:560:        IDbContextFactory<AppDbContext> dbContextFactory,
+tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs:575:        IDbContextFactory<AppDbContext> dbContextFactory,
+tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs:599:        IDbContextFactory<AppDbContext> dbContextFactory,
+tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs:621:        IDbContextFactory<AppDbContext> dbContextFactory,
+tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs:635:        IDbContextFactory<AppDbContext> dbContextFactory,
+tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs:648:        IDbContextFactory<AppDbContext> dbContextFactory,
+tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs:745:        IDbContextFactory<AppDbContext> dbContextFactory,
+tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs:759:        IDbContextFactory<AppDbContext> dbContextFactory,
+tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs:774:    private static async Task ForceNextAttemptDueAsync(IDbContextFactory<AppDbContext> dbContextFactory, Guid outboxId)
+tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs:784:        IDbContextFactory<AppDbContext> dbContextFactory,
+tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs:799:        IDbContextFactory<AppDbContext> dbContextFactory,
+tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs:809:        IDbContextFactory<AppDbContext> dbContextFactory,
+tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs:818:    private static async Task<bool> DefinitionExistsAsync(IDbContextFactory<AppDbContext> dbContextFactory, Guid definitionId)
+tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs:825:    private static async Task<bool> HasPublishedVersionAsync(IDbContextFactory<AppDbContext> dbContextFactory, Guid definitionId)
+tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs:832:    private static async Task<bool> RunExistsAsync(IDbContextFactory<AppDbContext> dbContextFactory, Guid runId)
+tests/CanDoItAll.Tests.Integration/ProcessRuntimeOperatorReadModelTests.cs:287:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessRuntimeOperatorReadModelTests.cs:332:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessRuntimeOperatorReadModelTests.cs:443:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessRuntimeOperatorReadModelTests.cs:549:    private static async Task MarkRunFailedAsync(IDbContextFactory<AppDbContext> dbContextFactory, Guid runId)
+tests/CanDoItAll.Tests.Integration/ProcessSchemaIntegrationTests.cs:16:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessSchemaIntegrationTests.cs:34:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessSchemaIntegrationTests.cs:64:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessSchemaIntegrationTests.cs:105:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessSchemaIntegrationTests.cs:144:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessSchemaIntegrationTests.cs:192:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessSchemaIntegrationTests.cs:247:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessSchemaIntegrationTests.cs:292:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessSchemaIntegrationTests.cs:318:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessSchemaIntegrationTests.cs:345:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessSchemaIntegrationTests.cs:374:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessSchemaIntegrationTests.cs:433:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessSubprocessIntegrationTests.cs:23:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessSubprocessIntegrationTests.cs:231:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessSubprocessIntegrationTests.cs:320:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessSubprocessIntegrationTests.cs:431:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessSubprocessIntegrationTests.cs:484:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessSubprocessIntegrationTests.cs:534:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessSubprocessIntegrationTests.cs:663:        IDbContextFactory<AppDbContext> dbContextFactory,
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:152:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:215:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:517:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:614:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:689:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:770:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:860:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:911:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:948:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:981:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:1303:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:1465:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:1492:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:1527:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:2048:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:2364:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:2409:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:2471:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:4173:        var dbContextFactory = serviceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:4223:        IDbContextFactory<AppDbContext> dbContextFactory,
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:4240:        IDbContextFactory<AppDbContext> dbContextFactory,
+tests/CanDoItAll.Tests.Integration/ProjectWorkbenchProjectionMaintenanceIntegrationTests.cs:21:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProjectWorkbenchProjectionMaintenanceIntegrationTests.cs:77:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProjectWorkbenchProjectionMaintenanceIntegrationTests.cs:117:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProjectWorkbenchProjectionMaintenanceIntegrationTests.cs:207:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProjectWorkbenchProjectionMaintenanceIntegrationTests.cs:301:        var factoryDescriptor = services.Last(descriptor => descriptor.ServiceType == typeof(IDbContextFactory<AppDbContext>));
+tests/CanDoItAll.Tests.Integration/ProjectWorkbenchProjectionMaintenanceIntegrationTests.cs:304:            typeof(IDbContextFactory<AppDbContext>),
+tests/CanDoItAll.Tests.Integration/ProjectWorkbenchProjectionMaintenanceIntegrationTests.cs:307:                var innerFactory = (IDbContextFactory<AppDbContext>)CreateService(serviceProvider, factoryDescriptor);
+tests/CanDoItAll.Tests.Integration/ProjectWorkbenchProjectionMaintenanceIntegrationTests.cs:335:        IDbContextFactory<AppDbContext> innerFactory,
+tests/CanDoItAll.Tests.Integration/ProjectWorkbenchProjectionMaintenanceIntegrationTests.cs:336:        SaveChangesCounter counter) : IDbContextFactory<AppDbContext>
+tests/CanDoItAll.Tests.Integration/ProjectWorkbenchServiceIntegrationTests.cs:333:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProjectWorkbenchServiceIntegrationTests.cs:498:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProjectWorkbenchServiceIntegrationTests.cs:590:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProjectWorkbenchServiceIntegrationTests.cs:686:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProjectWorkbenchServiceIntegrationTests.cs:1023:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProjectWorkbenchServiceIntegrationTests.cs:1078:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProjectWorkbenchServiceIntegrationTests.cs:1148:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProjectWorkbenchServiceIntegrationTests.cs:1463:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProjectWorkbenchServiceIntegrationTests.cs:1661:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProjectWorkbenchServiceIntegrationTests.cs:1730:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProjectWorkbenchServiceIntegrationTests.cs:1821:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProjectWorkbenchServiceIntegrationTests.cs:2066:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProjectWorkbenchServiceIntegrationTests.cs:2156:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProjectWorkbenchServiceIntegrationTests.cs:2234:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProjectWorkbenchServiceIntegrationTests.cs:2347:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProjectWorkbenchServiceIntegrationTests.cs:2557:        var dbContextFactory = serviceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/ProjectWorkbenchServiceIntegrationTests.cs:2594:        IDbContextFactory<AppDbContext> dbContextFactory,
+tests/CanDoItAll.Tests.Integration/PromptFactoryServiceIntegrationTests.cs:22:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/PromptFactoryServiceIntegrationTests.cs:236:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/RuntimeEvidenceSourceIntegrationTests.cs:19:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/RuntimeEvidenceSourceIntegrationTests.cs:164:        IDbContextFactory<AppDbContext> dbContextFactory)
+tests/CanDoItAll.Tests.Integration/SchedulerPlannerIntegrationTests.cs:29:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/SchedulerPlannerIntegrationTests.cs:75:            var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/SchedulerPlannerIntegrationTests.cs:97:            var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/SchedulerPlannerIntegrationTests.cs:124:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/SchedulerPlannerIntegrationTests.cs:194:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/SchedulerPlannerIntegrationTests.cs:254:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/SchedulerPlannerIntegrationTests.cs:320:        IDbContextFactory<AppDbContext> dbContextFactory,
+tests/CanDoItAll.Tests.Integration/WorkbenchSourceSnapshotIntegrationTests.cs:21:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/WorkspaceProviderCapabilityIntegrationTests.cs:17:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Integration/WorkspaceProviderCapabilityIntegrationTests.cs:48:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Playwright/AgentFrameworkAuditProofTests.Seeding.cs:300:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Playwright/CognitiveMemoryReviewUiPlaywrightTests.cs:214:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Unit/CognitiveMemoryAdvancedServicesTests.cs:3531:    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
+tests/CanDoItAll.Tests.Unit/CognitiveMemoryConsolidationEngineTests.cs:491:    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
+tests/CanDoItAll.Tests.Unit/CognitiveMemoryOperationalServicesTests.cs:994:    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
+tests/CanDoItAll.Tests.Unit/CognitiveMemoryOperationalSettingsTests.cs:400:    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
+tests/CanDoItAll.Tests.Unit/CognitiveMemoryProcedureSkillMemoryTests.cs:304:    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
+tests/CanDoItAll.Tests.Unit/CognitiveMemoryQualityFoundationTests.cs:3463:    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
+tests/CanDoItAll.Tests.Unit/CognitiveMemoryRecallOrchestratorTests.cs:963:    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
+tests/CanDoItAll.Tests.Unit/CognitiveMemoryReviewUiServiceTests.cs:961:    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
+tests/CanDoItAll.Tests.Unit/CognitiveMemorySignalLedgerTests.cs:299:    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
+tests/CanDoItAll.Tests.Unit/CognitiveMemoryTemporalReplaySchedulerTests.cs:284:    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
+tests/CanDoItAll.Tests.Unit/CognitiveMemoryWorkspaceAttentionTests.cs:277:    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
+tests/CanDoItAll.Tests.Unit/DatabaseConfigurationTests.cs:32:        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Unit/DatabaseRuntimeSwitchingTests.cs:54:        var dbContextFactory = provider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+tests/CanDoItAll.Tests.Unit/ProjectWorkbenchServiceArchitectureTests.cs:24:                typeof(IDbContextFactory<AppDbContext>),
+tests/CanDoItAll.Tests.Unit/SecretRuntimeAuthorizationTests.cs:143:    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
+tests/CanDoItAll.Tests.Unit/SecretVaultTests.cs:256:        IDbContextFactory<AppDbContext> factory,
+tests/CanDoItAll.Tests.Unit/SecretVaultTests.cs:265:    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
+tests/CanDoItAll.Tests.Unit/StorageCatalogServiceTests.cs:112:    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
+ExitCode=0

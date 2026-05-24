@@ -27,13 +27,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ExecutionRunDetail detail,
         string responseText,
         ProcessStepRunStatus completionStatus,
+        ProcessStepDispatchClaim dispatchClaim,
         CancellationToken cancellationToken)
     {
+        await EnsureStepDispatchClaimHeldAsync(dispatchClaim, cancellationToken);
         var workspaceRoot = Path.GetFullPath(workspacePathResolver.ResolveWorkspaceRoot());
         var workspaceScope = WorkspaceScopeDescriptor.Organization(
             databaseProfileRuntimeAccessor.ResolveCurrentProfile().Profile.Id.ToString("N"));
         foreach (var artifact in detail.Artifacts)
         {
+            await EnsureStepDispatchClaimHeldAsync(dispatchClaim, cancellationToken);
             if (IsTransientExecutionArtifact(artifact))
             {
                 logger.LogDebug(
@@ -1486,6 +1489,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
         await using var scope = serviceScopeFactory.CreateAsyncScope();
         var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
         return await processesService.TransitionStepAsync(request, cancellationToken);
+    }
+
+    private async Task<Result> TransitionStepWithClaimAsync(
+        ProcessStepTransitionRequest request,
+        ProcessStepDispatchClaim dispatchClaim,
+        CancellationToken cancellationToken)
+    {
+        await EnsureStepDispatchClaimHeldAsync(dispatchClaim, cancellationToken);
+        return await TransitionStepAsync(request, cancellationToken);
     }
 
     private async Task<StepRunTransitionSnapshot?> LoadStepRunTransitionSnapshotAsync(

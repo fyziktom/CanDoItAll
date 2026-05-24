@@ -50,6 +50,12 @@
                         <p class="cda-eyebrow">Current runtime selection</p>
                         <p class="text-base font-semibold text-slate-950">@currentSelection.DisplayName</p>
                         <p class="text-sm leading-6 text-slate-600">@currentSelection.Descriptor</p>
+                        @if (currentSelection.HasPendingRestartActivation)
+                        {
+                            <p class="text-sm leading-6 text-amber-700">
+                                Pending restart: @currentSelection.PendingRestartDisplayName (@currentSelection.PendingRestartDescriptor)
+                            </p>
+                        }
                     </Stack>
 
                     <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
@@ -106,7 +112,12 @@
                             <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                                 @if (profile.IsActive)
                                 {
-                                    <StatusBadge Tone="success" Text="Active" />
+                                    <StatusBadge Tone="success" Text="Running now" />
+                                }
+
+                                @if (profile.IsPendingRestartActivation)
+                                {
+                                    <StatusBadge Tone="warning" Text="Pending restart" />
                                 }
 
                                 @if (profile.IsRuntimeLocked)
@@ -197,7 +208,11 @@
                             <StatusBadge Tone="neutral" Text="@DescribeSource(databaseProfileModel.SourceKind)" />
                             @if (databaseProfileModel.Id.HasValue && IsSelectedProfileActive)
                             {
-                                <StatusBadge Tone="success" Text="Active runtime profile" />
+                                <StatusBadge Tone="success" Text="Running now" />
+                            }
+                            @if (databaseProfileModel.Id.HasValue && IsSelectedProfilePendingRestart)
+                            {
+                                <StatusBadge Tone="warning" Text="Pending restart" />
                             }
                         </Cluster>
                     </FormSection>
@@ -319,9 +334,9 @@
                                     data-testid="database-profile-save" />
                             @if (databaseProfileModel.Id.HasValue)
                             {
-                                <Button Text="@(IsSelectedProfileActive ? "Active now" : "Activate after restart")"
+                                <Button Text="@ResolveActivationButtonText()"
                                         ButtonStyle="ButtonStyle.Warning"
-                                        Disabled="@(databaseBusy || IsDatabaseUiLocked || IsSelectedProfileActive)"
+                                        Disabled="@(databaseBusy || IsDatabaseUiLocked || IsSelectedProfileActive || IsSelectedProfilePendingRestart)"
                                         Click="ActivateProfileAsync"
                                         data-testid="database-profile-activate" />
                             }
@@ -563,7 +578,11 @@
     private bool IsSelectedProfileActive
         => databaseProfileModel.Id.HasValue &&
            currentSelection is not null &&
-           currentSelection.ActiveProfileId == databaseProfileModel.Id.Value;
+           currentSelection.RuntimeProfileId == databaseProfileModel.Id.Value;
+
+    private bool IsSelectedProfilePendingRestart
+        => databaseProfileModel.Id.HasValue &&
+           currentSelection?.PendingRestartProfileId == databaseProfileModel.Id.Value;
 
     private bool SupportsConnectionTest => databaseProfileModel.ProviderKind == DatabaseProviderKind.PostgreSql;
 
@@ -653,9 +672,9 @@
 
         if (preferCurrentSelection &&
             currentSelection is not null &&
-            databaseProfiles.Any(profile => profile.Id == currentSelection.ActiveProfileId))
+            databaseProfiles.Any(profile => profile.Id == currentSelection.RuntimeProfileId))
         {
-            databaseProfileModel = await DatabaseProfileWorkspaceService.GetProfileAsync(currentSelection.ActiveProfileId);
+            databaseProfileModel = await DatabaseProfileWorkspaceService.GetProfileAsync(currentSelection.RuntimeProfileId);
             await RefreshSelectedSchemaHealthAsync();
             return;
         }
@@ -835,10 +854,10 @@
     private Guid? ResolveDefaultTransferSource(Guid targetProfileId)
     {
         if (currentSelection is not null &&
-            currentSelection.ActiveProfileId != targetProfileId &&
-            transferSources.Any(source => source.ProfileId == currentSelection.ActiveProfileId))
+            currentSelection.RuntimeProfileId != targetProfileId &&
+            transferSources.Any(source => source.ProfileId == currentSelection.RuntimeProfileId))
         {
-            return currentSelection.ActiveProfileId;
+            return currentSelection.RuntimeProfileId;
         }
 
         return transferSources.FirstOrDefault()?.ProfileId;
@@ -1052,10 +1071,11 @@
             return;
         }
 
-        var activationMessage = string.IsNullOrWhiteSpace(result.Value.Message)
+        var switchResult = result.Value!;
+        var activationMessage = string.IsNullOrWhiteSpace(switchResult.Message)
             ? "Database profile activation was saved. Restart the process to make it the canonical runtime database."
-            : result.Value.Message;
-        SetDatabaseMessage(activationMessage, result.Value.RequiresRestart ? "warning" : "info");
+            : switchResult.Message;
+        SetDatabaseMessage(activationMessage, switchResult.RequiresRestart ? "warning" : "info");
     }
 
     private async Task DeleteProfileAsync()
@@ -1126,6 +1146,16 @@
         return schemaHealthByProfileId.TryGetValue(profileId, out var schemaHealth)
             ? schemaHealth
             : null;
+    }
+
+    private string ResolveActivationButtonText()
+    {
+        if (IsSelectedProfileActive)
+        {
+            return "Running now";
+        }
+
+        return IsSelectedProfilePendingRestart ? "Pending restart" : "Activate for restart";
     }
 
     private static string DescribeErrors(IReadOnlyList<Error> errors)

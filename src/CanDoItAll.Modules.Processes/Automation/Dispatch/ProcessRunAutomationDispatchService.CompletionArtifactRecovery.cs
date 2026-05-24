@@ -17,6 +17,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         DispatchCandidate candidate,
         DispatchExecutionOutcome executionOutcome,
         string trigger,
+        ProcessStepDispatchClaim dispatchClaim,
         Func<CancellationToken, Task>? renewLeaseAsync,
         CancellationToken cancellationToken)
     {
@@ -36,6 +37,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             executionOutcome,
             missingArtifacts,
             trigger,
+            dispatchClaim,
             renewLeaseAsync,
             cancellationToken);
     }
@@ -43,6 +45,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     private async Task<DispatchExecutionOutcome?> TryRecoverStrandedMissingCompletionArtifactsAsync(
         DispatchCandidate candidate,
         string trigger,
+        ProcessStepDispatchClaim dispatchClaim,
         Func<CancellationToken, Task>? renewLeaseAsync,
         CancellationToken cancellationToken)
     {
@@ -82,6 +85,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             syntheticOutcome,
             missingArtifacts,
             trigger,
+            dispatchClaim,
             renewLeaseAsync,
             cancellationToken);
     }
@@ -142,6 +146,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         DispatchExecutionOutcome executionOutcome,
         IReadOnlyList<DispatchArtifactExpectation> missingArtifacts,
         string trigger,
+        ProcessStepDispatchClaim dispatchClaim,
         Func<CancellationToken, Task>? renewLeaseAsync,
         CancellationToken cancellationToken)
     {
@@ -254,6 +259,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             recoveryOutcome.Detail,
             recoveryOutcome.ResponseText,
             recoveryOutcome.CompletionStatus,
+            dispatchClaim,
             cancellationToken);
 
         var remainingArtifacts = ResolveMissingRequiredCompletionArtifacts(candidate);

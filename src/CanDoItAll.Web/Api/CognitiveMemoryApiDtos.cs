@@ -10,6 +10,11 @@ namespace CanDoItAll.Web.Api;
 
 internal sealed record CognitiveMemoryStatusApiResponse(
     Guid ActiveProfileId,
+    Guid RuntimeProfileId,
+    Guid? PendingRestartProfileId,
+    string PendingRestartDisplayName,
+    string PendingRestartDescriptor,
+    bool HasPendingRestartActivation,
     string DisplayName,
     DatabaseProviderKind ProviderKind,
     string ProviderKindName,
@@ -28,6 +33,7 @@ internal sealed record CognitiveMemoryStatusApiResponse(
 {
     public static CognitiveMemoryStatusApiResponse From(
         ResolvedDatabaseProfile resolvedProfile,
+        DatabaseSelectionStateModel selection,
         CognitiveMemoryApiContractResponse contract,
         CognitiveMemoryProjectionOptions projectionOptions,
         IWebHostEnvironment environment)
@@ -35,6 +41,11 @@ internal sealed record CognitiveMemoryStatusApiResponse(
         var profile = resolvedProfile.Profile;
         return new CognitiveMemoryStatusApiResponse(
             profile.Id,
+            selection.RuntimeProfileId,
+            selection.PendingRestartProfileId,
+            selection.PendingRestartDisplayName,
+            selection.PendingRestartDescriptor,
+            selection.HasPendingRestartActivation,
             profile.DisplayName,
             profile.ProviderKind,
             profile.ProviderKind.ToString(),
@@ -176,6 +187,35 @@ internal sealed record CognitiveMemoryDatabaseProfileApiResponse(
     }
 }
 
+internal sealed record CognitiveMemoryDatabaseSelectionApiResponse(
+    Guid ActiveProfileId,
+    Guid RuntimeProfileId,
+    Guid? PendingRestartProfileId,
+    bool HasPendingRestartActivation,
+    string PendingRestartDisplayName,
+    string PendingRestartDescriptor,
+    CognitiveMemoryDatabaseProfileApiResponse RuntimeProfile,
+    CognitiveMemoryDatabaseProfileApiResponse? PendingRestartProfile)
+{
+    public static CognitiveMemoryDatabaseSelectionApiResponse From(
+        ResolvedDatabaseProfile runtimeProfile,
+        DatabaseSelectionStateModel selection,
+        ResolvedDatabaseProfile? pendingRestartProfile)
+    {
+        return new CognitiveMemoryDatabaseSelectionApiResponse(
+            selection.RuntimeProfileId,
+            selection.RuntimeProfileId,
+            selection.PendingRestartProfileId,
+            selection.HasPendingRestartActivation,
+            selection.PendingRestartDisplayName,
+            selection.PendingRestartDescriptor,
+            CognitiveMemoryDatabaseProfileApiResponse.From(runtimeProfile),
+            pendingRestartProfile is null
+                ? null
+                : CognitiveMemoryDatabaseProfileApiResponse.From(pendingRestartProfile));
+    }
+}
+
 internal sealed record CognitiveMemoryPostgreSqlDatabaseProfileApiResponse(
     CognitiveMemoryDatabaseProfileApiResponse Profile,
     CognitiveMemoryDatabaseSwitchSummaryApiResponse? Switch);
@@ -183,6 +223,8 @@ internal sealed record CognitiveMemoryPostgreSqlDatabaseProfileApiResponse(
 internal sealed record CognitiveMemoryDatabaseSwitchSummaryApiResponse(
     Guid PreviousProfileId,
     Guid CurrentProfileId,
+    Guid RuntimeProfileId,
+    Guid? PendingRestartProfileId,
     long Generation,
     int ProcessId,
     bool RequiresRestart,
@@ -194,6 +236,8 @@ internal sealed record CognitiveMemoryDatabaseSwitchSummaryApiResponse(
         return new CognitiveMemoryDatabaseSwitchSummaryApiResponse(
             result.PreviousProfileId,
             result.CurrentProfileId,
+            result.RuntimeProfileId,
+            result.PendingRestartProfileId,
             result.Generation,
             result.ProcessId,
             result.RequiresRestart,
@@ -205,6 +249,8 @@ internal sealed record CognitiveMemoryDatabaseSwitchSummaryApiResponse(
 internal sealed record CognitiveMemoryDatabaseSwitchApiResponse(
     Guid PreviousProfileId,
     Guid CurrentProfileId,
+    Guid RuntimeProfileId,
+    Guid? PendingRestartProfileId,
     long Generation,
     int ProcessId,
     bool RequiresRestart,

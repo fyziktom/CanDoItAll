@@ -183,16 +183,7 @@ public sealed class AutomationMessageDispatcher(
                 leaseCutoff,
                 cancellationToken);
 
-            var dispatchedCount = 0;
-            foreach (var delivery in claimedDeliveries)
-            {
-                if (await DispatchClaimedAsync(delivery.Id, delivery.LockToken, cancellationToken))
-                {
-                    dispatchedCount++;
-                }
-            }
-
-            return dispatchedCount;
+            return await DispatchClaimedPostgreSqlBatchAsync(claimedDeliveries, take, cancellationToken);
         }
 
         var dueDeliveryIds = await dbContext.Set<AutomationEnvelopeDeliveryRecord>()
@@ -267,7 +258,7 @@ public sealed class AutomationMessageDispatcher(
                     "LockToken" = concat(@tokenPrefix, replace(d."Id"::text, '-', ''))
                 FROM due
                 WHERE d."Id" = due."Id"
-                RETURNING d."Id", d."LockToken";
+                RETURNING d."Id", d."LockToken", d."EnvelopeId";
                 """;
             AddParameter(command, "@now", now);
             AddParameter(command, "@leaseCutoff", leaseCutoff);
@@ -281,7 +272,10 @@ public sealed class AutomationMessageDispatcher(
             await using var reader = await command.ExecuteReaderAsync(cancellationToken);
             while (await reader.ReadAsync(cancellationToken))
             {
-                claims.Add(new ClaimedAutomationDelivery(reader.GetGuid(0), reader.GetString(1)));
+                claims.Add(new ClaimedAutomationDelivery(
+                    reader.GetGuid(0),
+                    reader.GetString(1),
+                    reader.GetGuid(2)));
             }
 
             return claims;
@@ -303,7 +297,56 @@ public sealed class AutomationMessageDispatcher(
         command.Parameters.Add(parameter);
     }
 
-    private sealed record ClaimedAutomationDelivery(Guid Id, string LockToken);
+    private async Task<int> DispatchClaimedPostgreSqlBatchAsync(
+        IReadOnlyList<ClaimedAutomationDelivery> claimedDeliveries,
+        int take,
+        CancellationToken cancellationToken)
+    {
+        if (claimedDeliveries.Count == 0)
+        {
+            return 0;
+        }
+
+        var maxParallelism = ResolveBatchParallelism(
+            options.Value.MessageDispatchMaxParallelism,
+            take);
+        using var throttler = new SemaphoreSlim(maxParallelism, maxParallelism);
+        var dispatchedCount = 0;
+        var tasks = claimedDeliveries
+            .GroupBy(delivery => delivery.EnvelopeId)
+            .Select(async group =>
+            {
+                await throttler.WaitAsync(cancellationToken);
+                try
+                {
+                    foreach (var delivery in group)
+                    {
+                        if (await DispatchClaimedAsync(delivery.Id, delivery.LockToken, cancellationToken))
+                        {
+                            Interlocked.Increment(ref dispatchedCount);
+                        }
+                    }
+                }
+                finally
+                {
+                    throttler.Release();
+                }
+            })
+            .ToArray();
+
+        await Task.WhenAll(tasks);
+        return dispatchedCount;
+    }
+
+    private static int ResolveBatchParallelism(int configuredParallelism, int take)
+    {
+        var requested = configuredParallelism <= 0
+            ? 1
+            : configuredParallelism;
+        return Math.Clamp(requested, 1, Math.Max(1, take));
+    }
+
+    private sealed record ClaimedAutomationDelivery(Guid Id, string LockToken, Guid EnvelopeId);
 
     private async Task<bool> ClaimAndDispatchAsync(Guid deliveryId, CancellationToken cancellationToken)
     {

@@ -11,7 +11,7 @@ internal static class AppDbContextMigrationsAssemblyNames
     public const string PostgreSql = "CanDoItAll.Migrations.PostgreSql";
 }
 
-public interface ISwitchableAppDbContextFactory : IDbContextFactory<AppDbContext>
+public interface IProfileAppDbContextFactory
 {
     Task<AppDbContext> CreateDbContextForProfileAsync(
         ResolvedDatabaseProfile profile,
@@ -80,19 +80,8 @@ public static class AppDbContextOptionsConfigurator
     }
 }
 
-public sealed class SwitchableAppDbContextFactory(
-    IDbContextFactory<AppDbContext> canonicalFactory) : ISwitchableAppDbContextFactory
+public sealed class ProfileAppDbContextFactory : IProfileAppDbContextFactory
 {
-    public AppDbContext CreateDbContext()
-    {
-        return canonicalFactory.CreateDbContext();
-    }
-
-    public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
-    {
-        return canonicalFactory.CreateDbContextAsync(cancellationToken);
-    }
-
     public Task<AppDbContext> CreateDbContextForProfileAsync(
         ResolvedDatabaseProfile profile,
         CancellationToken cancellationToken = default)

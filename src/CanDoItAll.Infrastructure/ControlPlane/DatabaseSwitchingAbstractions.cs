@@ -8,6 +8,10 @@ public sealed record DatabaseSwitchResult(
     long Generation,
     int ProcessId)
 {
+    public Guid RuntimeProfileId { get; init; } = PreviousProfileId;
+
+    public Guid? PendingRestartProfileId { get; init; }
+
     public bool RequiresRestart { get; init; }
 
     public bool RuntimeChangedInProcess { get; init; }

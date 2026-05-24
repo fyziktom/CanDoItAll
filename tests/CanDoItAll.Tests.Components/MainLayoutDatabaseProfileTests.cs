@@ -71,7 +71,7 @@ public sealed class MainLayoutDatabaseProfileTests
         {
             Assert.Contains("database-switcher-dialog", cut.Markup);
             Assert.DoesNotContain("database-startup-create-managed", cut.Markup);
-            Assert.Contains("Already active", cut.Markup);
+            Assert.Contains("Running now", cut.Markup);
         });
     }
 

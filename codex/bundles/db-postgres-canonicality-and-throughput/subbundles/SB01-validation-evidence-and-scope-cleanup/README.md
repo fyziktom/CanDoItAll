@@ -2,7 +2,7 @@
 
 ## Status
 
-Prepared.
+Completed with SSH fetch caveat recorded in proof.
 
 ## Objective
 

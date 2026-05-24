@@ -13,7 +13,7 @@ public partial class MainLayout
         databaseProfiles = await DatabaseProfileWorkspaceService.ListProfilesAsync();
         databaseSelection = await DatabaseProfileWorkspaceService.GetCurrentSelectionAsync();
         currentDatabaseEditor = await DatabaseProfileWorkspaceService.GetCurrentEditorAsync();
-        selectedDatabaseProfileId ??= databaseSelection.ActiveProfileId;
+        selectedDatabaseProfileId ??= databaseSelection.RuntimeProfileId;
         if (databaseProfiles.Count > 0 &&
             !databaseProfiles.Any(profile => profile.Id == selectedDatabaseProfileId))
         {
@@ -42,7 +42,7 @@ public partial class MainLayout
     }
 
     private IReadOnlyList<DatabaseProfileSummary> RecentDatabaseProfiles => databaseProfiles
-        .Where(profile => databaseSelection is null || profile.Id != databaseSelection.ActiveProfileId)
+        .Where(profile => databaseSelection is null || profile.Id != databaseSelection.RuntimeProfileId)
         .OrderByDescending(profile => profile.LastUsedUtc ?? profile.CreatedUtc)
         .ThenBy(profile => profile.DisplayName, StringComparer.OrdinalIgnoreCase)
         .Take(2)
@@ -103,10 +103,16 @@ public partial class MainLayout
             return;
         }
 
-        databaseProfileMessage = string.IsNullOrWhiteSpace(result.Value.Message)
+        if (result.Value is not { } switchResult)
+        {
+            databaseProfileMessage = "Database profile activation completed without an activation result.";
+            return;
+        }
+
+        databaseProfileMessage = string.IsNullOrWhiteSpace(switchResult.Message)
             ? "Database profile activation was saved. Restart the process to make it the canonical runtime database."
-            : result.Value.Message;
-        if (result.Value.RequiresRestart)
+            : switchResult.Message;
+        if (switchResult.RequiresRestart)
         {
             databaseDialogOpen = true;
             databaseDialogStartupMode = false;

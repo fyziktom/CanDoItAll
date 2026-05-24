@@ -13,7 +13,7 @@ public sealed class DatabaseProfileWorkspaceService(
     IDatabaseTransferService transferService,
     IDatabaseDriverRegistry driverRegistry,
     IAppDatabaseBootstrapper bootstrapper,
-    ISwitchableAppDbContextFactory dbContextFactory,
+    IProfileAppDbContextFactory dbContextFactory,
     IDatabaseSwitchCoordinator switchCoordinator,
     ILogger<DatabaseProfileWorkspaceService> logger)
 {
@@ -22,6 +22,8 @@ public sealed class DatabaseProfileWorkspaceService(
     public async Task<IReadOnlyList<DatabaseProfileSummary>> ListProfilesAsync(CancellationToken cancellationToken = default)
     {
         var runtimeProfile = profileAccessor.ResolveCurrentProfile();
+        var pendingSelection = await profileService.GetCurrentSelectionAsync(cancellationToken);
+        var pendingProfileId = ResolvePendingRestartProfileId(runtimeProfile, pendingSelection);
         var profiles = await profileService.ListAsync(cancellationToken);
         return profiles
             .Where(profile => profile.ProviderKind == DatabaseProviderKind.PostgreSql &&
@@ -29,7 +31,8 @@ public sealed class DatabaseProfileWorkspaceService(
             .Select(profile => profile with
             {
                 IsActive = !runtimeProfile.Profile.Runtime.LockedByRuntimeOverride &&
-                    profile.Id == runtimeProfile.Profile.Id
+                    profile.Id == runtimeProfile.Profile.Id,
+                IsPendingRestartActivation = pendingProfileId == profile.Id
             })
             .ToList();
     }
@@ -39,10 +42,11 @@ public sealed class DatabaseProfileWorkspaceService(
         return profileService.GetEditorAsync(id, cancellationToken);
     }
 
-    public Task<DatabaseSelectionStateModel> GetCurrentSelectionAsync(CancellationToken cancellationToken = default)
+    public async Task<DatabaseSelectionStateModel> GetCurrentSelectionAsync(CancellationToken cancellationToken = default)
     {
         var runtimeProfile = profileAccessor.ResolveCurrentProfile();
-        return Task.FromResult(CreateSelection(runtimeProfile));
+        var pendingSelection = await profileService.GetCurrentSelectionAsync(cancellationToken);
+        return CreateSelection(runtimeProfile, pendingSelection);
     }
 
     public Task<IReadOnlyList<DatabaseTransferSourceSummary>> ListTransferSourcesAsync(
@@ -72,7 +76,7 @@ public sealed class DatabaseProfileWorkspaceService(
         var selection = await GetCurrentSelectionAsync(cancellationToken);
         if (!selection.IsRuntimeLocked)
         {
-            return await profileService.GetEditorAsync(selection.ActiveProfileId, cancellationToken);
+            return await profileService.GetEditorAsync(selection.RuntimeProfileId, cancellationToken);
         }
 
         var profile = profileAccessor.ResolveCurrentProfile();
@@ -305,11 +309,14 @@ public sealed class DatabaseProfileWorkspaceService(
         };
     }
 
-    private static DatabaseSelectionStateModel CreateSelection(ResolvedDatabaseProfile resolvedProfile)
+    private static DatabaseSelectionStateModel CreateSelection(
+        ResolvedDatabaseProfile resolvedProfile,
+        DatabaseSelectionStateModel? pendingSelection = null)
     {
-        return new DatabaseSelectionStateModel
+        var selection = new DatabaseSelectionStateModel
         {
             ActiveProfileId = resolvedProfile.Profile.Id,
+            RuntimeProfileId = resolvedProfile.Profile.Id,
             DisplayName = resolvedProfile.Profile.DisplayName,
             ProviderKind = resolvedProfile.Profile.ProviderKind,
             SourceKind = resolvedProfile.Profile.SourceKind,
@@ -319,6 +326,31 @@ public sealed class DatabaseProfileWorkspaceService(
             WorkspaceRoot = resolvedProfile.Profile.Storage.WorkspaceRoot,
             Descriptor = BuildDescriptor(resolvedProfile.Profile)
         };
+
+        if (pendingSelection is not null &&
+            ResolvePendingRestartProfileId(resolvedProfile, pendingSelection) is { } pendingProfileId)
+        {
+            selection.PendingRestartProfileId = pendingProfileId;
+            selection.PendingRestartDisplayName = pendingSelection.DisplayName;
+            selection.PendingRestartDescriptor = pendingSelection.Descriptor;
+            selection.PendingRestartFingerprint = pendingSelection.Fingerprint;
+        }
+
+        return selection;
+    }
+
+    private static Guid? ResolvePendingRestartProfileId(
+        ResolvedDatabaseProfile runtimeProfile,
+        DatabaseSelectionStateModel pendingSelection)
+    {
+        if (runtimeProfile.Profile.Runtime.LockedByRuntimeOverride)
+        {
+            return null;
+        }
+
+        return pendingSelection.ActiveProfileId == runtimeProfile.Profile.Id
+            ? null
+            : pendingSelection.ActiveProfileId;
     }
 
     private static string BuildDescriptor(DatabaseProfileRecord profile)

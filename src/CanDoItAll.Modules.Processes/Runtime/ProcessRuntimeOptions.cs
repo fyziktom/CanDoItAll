@@ -12,5 +12,9 @@ public sealed class ProcessRuntimeOptions
 
     public bool ResumePersistedAutomationDispatchesOnStartup { get; set; }
 
+    public int OutboxBatchSize { get; set; } = 20;
+
+    public int OutboxBatchMaxParallelism { get; set; } = DefaultOutboxWorkerConcurrency;
+
     public int OutboxWorkerMaxConcurrency { get; set; } = DefaultOutboxWorkerConcurrency;
 }

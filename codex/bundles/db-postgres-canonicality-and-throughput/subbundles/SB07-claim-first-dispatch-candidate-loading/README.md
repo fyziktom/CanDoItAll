@@ -2,7 +2,7 @@
 
 ## Status
 
-Prepared.
+Completed with elapsed-time telemetry and no query-count capture.
 
 ## Objective
 

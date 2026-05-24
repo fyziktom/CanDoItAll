@@ -67,6 +67,7 @@ public sealed class ConnectorOutboxDrainWorker(
                 return await outbox.ProcessPendingAsync(
                     options.Value.ConnectorOutboxBatchSize,
                     options.Value.ConnectorCommandLeaseDuration,
+                    options.Value.ConnectorOutboxMaxParallelism,
                     cancellationToken);
             },
             stoppingToken);

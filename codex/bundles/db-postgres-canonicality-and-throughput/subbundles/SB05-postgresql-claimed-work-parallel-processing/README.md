@@ -2,7 +2,7 @@
 
 ## Status
 
-Prepared.
+Completed with deterministic concurrency proof and no numeric benchmark.
 
 ## Objective
 

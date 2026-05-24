@@ -221,6 +221,7 @@ public sealed class DatabaseProfileControlPlaneService(
             return Task.FromResult(new DatabaseSelectionStateModel
             {
                 ActiveProfileId = resolvedProfile.Profile.Id,
+                RuntimeProfileId = resolvedProfile.Profile.Id,
                 DisplayName = resolvedProfile.Profile.DisplayName,
                 ProviderKind = resolvedProfile.Profile.ProviderKind,
                 SourceKind = resolvedProfile.Profile.SourceKind,

@@ -113,7 +113,10 @@ public sealed record DatabaseProfileSummary(
     bool IsActive,
     bool IsRuntimeLocked,
     DateTimeOffset CreatedUtc,
-    DateTimeOffset? LastUsedUtc);
+    DateTimeOffset? LastUsedUtc)
+{
+    public bool IsPendingRestartActivation { get; init; }
+}
 
 public enum DatabaseProfileSchemaStatus
 {
@@ -168,7 +171,15 @@ public sealed class DatabaseProfileEditorModel
 
 public sealed class DatabaseSelectionStateModel
 {
+    private Guid _runtimeProfileId;
+
     public Guid ActiveProfileId { get; set; }
+
+    public Guid RuntimeProfileId
+    {
+        get => _runtimeProfileId == Guid.Empty ? ActiveProfileId : _runtimeProfileId;
+        set => _runtimeProfileId = value;
+    }
 
     public string DisplayName { get; set; } = string.Empty;
 
@@ -185,6 +196,16 @@ public sealed class DatabaseSelectionStateModel
     public string WorkspaceRoot { get; set; } = string.Empty;
 
     public string Descriptor { get; set; } = string.Empty;
+
+    public Guid? PendingRestartProfileId { get; set; }
+
+    public string PendingRestartDisplayName { get; set; } = string.Empty;
+
+    public string PendingRestartDescriptor { get; set; } = string.Empty;
+
+    public string PendingRestartFingerprint { get; set; } = string.Empty;
+
+    public bool HasPendingRestartActivation => PendingRestartProfileId.HasValue;
 }
 
 public sealed record ResolvedDatabaseProfile(
