@@ -1,0 +1,17 @@
+{
+  "name": "candoitall-db-postgres-final-hardening-followup-bundle-v4",
+  "createdUtc": "2026-05-24T19:51:53Z",
+  "repo": "fyziktom/CanDoItAll",
+  "branch": "db-remove-sqlite",
+  "profile": "initiative",
+  "subbundles": [
+    "SB01-merge-evidence-and-residue-cleanup",
+    "SB02-conditional-finalization-for-leased-outbox-work",
+    "SB03-lease-loss-hardening-and-heartbeat-contracts",
+    "SB04-throughput-defaults-and-runtime-tuning",
+    "SB05-benchmark-and-query-count-proof",
+    "SB06-process-dispatch-claim-first-deep-proof",
+    "SB07-postgresql-canonicality-invariants-and-admin-boundaries",
+    "SB08-final-validation-and-merge-readiness"
+  ]
+}
