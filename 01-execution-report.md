@@ -8,7 +8,6 @@
 - `src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.cs`
 - `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Cooperation.cs`
 - `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.WebHostProof.cs`
-- `src/CanDoItAll.Mcp.Processes/CanDoItAll.Mcp.Processes.csproj`
 - `Templates/Processes/seed-catalog/baseline-scenarios.json`
 - `tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
 - `tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs`
@@ -23,7 +22,7 @@
 
 ## Validation
 
-- `dotnet restore CanDoItAll.slnx`: passed after fixing a `CanDoItAll.Mcp.Processes` package downgrade to `Microsoft.Extensions.*` `10.0.1`.
+- `dotnet restore CanDoItAll.slnx`: passed after dependency alignment.
 - `dotnet build CanDoItAll.slnx --no-restore -m:1`: passed.
 - `dotnet test tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-restore -m:1`: passed; 326 tests.
 - `dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-restore -m:1`: passed; 565 tests.

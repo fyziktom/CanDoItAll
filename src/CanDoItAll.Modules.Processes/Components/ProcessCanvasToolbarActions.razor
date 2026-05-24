@@ -63,7 +63,8 @@
             Click="ToggleAgentWindow" />
 
     <div class="@ResolveRecompositionMenuClass()"
-         data-testid="processes-canvas-recompose-menu">
+         data-testid="processes-canvas-recompose-menu"
+         @onmouseenter="OpenRecompositionMenuAsync">
         <Button Icon="account_tree"
                 aria-label="Recompose canvas"
                 title="@(IsRecompositionInProgress ? "Canvas recomposition is in progress" : "Recompose canvas: resolve collisions, add spacing, or choose a graph layout")"
@@ -278,6 +279,17 @@
         }
 
         recompositionMenuOpen = !recompositionMenuOpen;
+        return Task.CompletedTask;
+    }
+
+    private Task OpenRecompositionMenuAsync()
+    {
+        if (!CanRecomposeCanvas)
+        {
+            return Task.CompletedTask;
+        }
+
+        recompositionMenuOpen = true;
         return Task.CompletedTask;
     }
 

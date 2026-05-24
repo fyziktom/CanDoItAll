@@ -15,10 +15,10 @@ internal static class Program
         var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>()
             .CreateLogger("CanDoItAll.ScenarioSeeder");
         logger.LogInformation(
-            "Seeding scenario {ScenarioName} into profile root {ProfileRoot}. Database {DatabasePath}",
+            "Seeding scenario {ScenarioName} into profile root {ProfileRoot}. Workspace {WorkspaceRoot}",
             options.ScenarioName,
             options.ProfileRootPath,
-            options.DatabasePath);
+            options.WorkspaceRootPath);
 
         object result = !string.IsNullOrWhiteSpace(options.ActionName)
             ? await ExecuteActionAsync(scope.ServiceProvider, options)

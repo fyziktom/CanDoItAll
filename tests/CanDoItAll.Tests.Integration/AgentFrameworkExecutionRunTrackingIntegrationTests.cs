@@ -17,7 +17,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
     public async Task ExecuteRunAsync_refreshes_run_header_while_progress_logs_are_streaming()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-run-tracking");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
             profile,
             "CanDoItAll.Tests",
@@ -82,7 +82,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
     public async Task ContinueExecutionRunAsync_preserves_structured_output_contract_after_pending_approval()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-structured-output-continuation");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
             profile,
             "CanDoItAll.Tests",
@@ -146,7 +146,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
     public async Task ExecuteRunAsync_fails_governed_run_when_structured_output_is_invalid()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-invalid-structured-output");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
             profile,
             "CanDoItAll.Tests",
@@ -198,7 +198,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
     {
         var outcome = CreateCompletedOutcome("The finalizer and structured output agree.");
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-shadow-finalizer");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
             profile,
             "CanDoItAll.Tests",
@@ -247,7 +247,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
         const string longReason = "The required finalizer result is authoritative and intentionally long so the persisted execution result remains a parseable process-step outcome with all blocker, evidence, and next-action details preserved.";
         var outcome = CreateCompletedOutcome(longReason);
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-required-finalizer");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
             profile,
             "CanDoItAll.Tests",
@@ -298,7 +298,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
     {
         var outcome = CreateCompletedOutcome("The required finalizer cannot precede later validation.");
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-required-finalizer-sequence");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
             profile,
             "CanDoItAll.Tests",
@@ -359,7 +359,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
     {
         var outcome = CreateCompletedOutcome("The transcript must persist the authoritative finalizer output.");
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-required-finalizer-transcript");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
             profile,
             "CanDoItAll.Tests",
@@ -406,7 +406,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
     {
         var outcome = CreateCompletedOutcome("The wrapped structured output was repaired before persistence.");
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-output-repair");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
             profile,
             "CanDoItAll.Tests",
@@ -453,7 +453,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
     public async Task ExecuteRunAsync_required_finalizer_missing_prevents_completion()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-required-finalizer-missing");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
             profile,
             "CanDoItAll.Tests",

@@ -14,7 +14,7 @@ public sealed class BrowserStateStoreTests
     public async Task SaveAsync_uses_a_profile_scoped_storage_key_and_embeds_profile_metadata()
     {
         var profileId = Guid.NewGuid();
-        var profile = CreateProfile(profileId, "sqlite:managed:alpha");
+        var profile = CreateProfile(profileId, "postgres:localhost:5432:alpha:postgres");
         var jsRuntime = new TestJsRuntime();
         var sut = new BrowserWorkspaceStateStore(
             jsRuntime,
@@ -35,7 +35,7 @@ public sealed class BrowserStateStoreTests
     public async Task LoadAsync_returns_null_when_the_saved_profile_fingerprint_does_not_match_the_active_profile()
     {
         var profileId = Guid.NewGuid();
-        var profile = CreateProfile(profileId, "sqlite:managed:alpha");
+        var profile = CreateProfile(profileId, "postgres:localhost:5432:alpha:postgres");
         var jsRuntime = new TestJsRuntime
         {
             LoadedPayload = JsonSerializer.Serialize(new WorkbenchSessionSnapshot(
@@ -43,7 +43,7 @@ public sealed class BrowserStateStoreTests
                 "dashboard",
                 [],
                 ProfileId: profileId,
-                ProfileFingerprint: "sqlite:managed:beta"))
+                ProfileFingerprint: "postgres:localhost:5432:beta:postgres"))
         };
         var sut = new BrowserWorkspaceStateStore(
             jsRuntime,
@@ -62,12 +62,15 @@ public sealed class BrowserStateStoreTests
             new DatabaseProfileRecord
             {
                 Id = profileId,
-                DisplayName = "Managed profile",
-                ProviderKind = DatabaseProviderKind.Sqlite,
-                SourceKind = DatabaseProfileSourceKind.ManagedSqlite,
-                Sqlite = new SqliteDatabaseProfileConnection
+                DisplayName = "PostgreSQL profile",
+                ProviderKind = DatabaseProviderKind.PostgreSql,
+                SourceKind = DatabaseProfileSourceKind.PostgresConnection,
+                PostgreSql = new PostgreSqlDatabaseProfileConnection
                 {
-                    DatabasePath = @"C:\workspace\candoitall.db"
+                    Host = "localhost",
+                    Port = 5432,
+                    DatabaseName = "alpha",
+                    Username = "postgres"
                 },
                 Storage = new DatabaseProfileStorageDescriptor
                 {
@@ -79,7 +82,7 @@ public sealed class BrowserStateStoreTests
                 }
             },
             DatabaseProfileResolutionSource.PersistedActiveProfile,
-            "Data Source=C:\\workspace\\candoitall.db");
+            "Host=localhost;Port=5432;Database=alpha;Username=postgres");
     }
 
     private sealed class TestActiveDatabaseProfileResolver(ResolvedDatabaseProfile profile) : IActiveDatabaseProfileResolver

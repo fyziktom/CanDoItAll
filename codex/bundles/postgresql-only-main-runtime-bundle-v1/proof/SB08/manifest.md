@@ -1,29 +1,33 @@
-# Proof manifest - SB08
+# Proof Manifest - SB08
 
 ## Subbundle
 
 Consolidate PostgreSQL Migrations Into One Baseline
 
-## Changed files
+## Changed Files
 
-Fill during execution.
+Historical PostgreSQL migrations were replaced by `20260523211921_InitialPostgreSqlBaseline` plus the updated designer and model snapshot.
 
-## Commands run
+## Commands Run
 
-Fill during execution.
+- PostgreSQL migration inventory/model checks captured under `evidence/SB08`
+- Fresh PostgreSQL database migration proof captured under `evidence/SB08`
+- `dotnet test .\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --filter "Category!=Browser&Category!=LiveProcess" -v:minimal`
 
-## Evidence files
+## Evidence Files
 
-Fill during execution.
+- `evidence/SB08/postgresql-baseline-proof.log`
+- `evidence/SB08/postgresql-migration-inventory-after.log`
+- `evidence/SB08/postgresql-pending-model-check.log`
+- `evidence/SB04/integration-test-results-final-passed-2.log`
+- `evidence/manual-real-db-alignment.md`
 
 ## Result
 
-Fill during execution:
-
-- [ ] Passed
+- [x] Passed
 - [ ] Failed
 - [ ] Partially complete
 
 ## Notes
 
-Fill during execution.
+Real existing databases require operator-led backup and schema/history alignment; no automatic historical live migration is claimed.

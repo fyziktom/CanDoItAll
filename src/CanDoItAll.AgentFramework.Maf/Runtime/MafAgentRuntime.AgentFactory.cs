@@ -73,10 +73,7 @@ public sealed partial class MafAgentRuntime
 
         var toolInvocationTraceRecorder = new ToolInvocationTraceRecorder();
         var openAiCredentialOverride = ResolveOpenAiCredentialOverride(provider);
-        var managedSeedProvider = ManagedSeedProviderFallbacks.IsManagedSeedAgent(agent)
-            ? ManagedSeedProviderFallbacks.ApplyForManagedSqliteSeedProvider(provider, isManagedSqliteProfile: true)
-            : provider;
-        var effectiveProvider = ManagedSeedProviderFallbacks.Apply(agent, managedSeedProvider, openAiCredentialOverride);
+        var effectiveProvider = ManagedSeedProviderFallbacks.Apply(agent, provider, openAiCredentialOverride);
         PromoteResolvedProviderCredentialEnvironment(effectiveProvider);
         var model = ManagedSeedProviderFallbacks.ResolveModel(agent, effectiveProvider, openAiCredentialOverride);
         if (string.IsNullOrWhiteSpace(model))

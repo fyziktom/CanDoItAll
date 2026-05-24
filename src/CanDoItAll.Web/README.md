@@ -25,7 +25,6 @@ Project references:
 - `../CanDoItAll.SharedKernel/CanDoItAll.SharedKernel.csproj`
 - `../CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj`
 - `../CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj`
-- `../CanDoItAll.Migrations.Sqlite/CanDoItAll.Migrations.Sqlite.csproj`
 - `../CanDoItAll.Modules.Activity/CanDoItAll.Modules.Activity.csproj`
 - `../CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj`
 - `../CanDoItAll.Modules.Automation/CanDoItAll.Modules.Automation.csproj`

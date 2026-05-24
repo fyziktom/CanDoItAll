@@ -21,7 +21,7 @@ public sealed class SchedulerPlannerIntegrationTests
     public async Task SavePlanAsync_persists_plan_projects_calendar_events_and_writes_quartz_store()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("scheduler-planner-save");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         await using var provider = await BuildProviderAsync(profile);
 
         await using var scope = provider.CreateAsyncScope();
@@ -65,7 +65,7 @@ public sealed class SchedulerPlannerIntegrationTests
     public async Task Saved_plan_and_quartz_store_survive_provider_restart()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("scheduler-planner-restart");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         var planId = Guid.Empty;
 
         await using (var provider = await BuildProviderAsync(profile))
@@ -107,7 +107,7 @@ public sealed class SchedulerPlannerIntegrationTests
     public async Task Trigger_fire_handler_dispatches_once_for_the_same_dedupe_key()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("scheduler-planner-fire");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         var launcher = new RecordingSchedulerTargetLauncher();
         await using var provider = await BuildProviderAsync(
             profile,
@@ -177,7 +177,7 @@ public sealed class SchedulerPlannerIntegrationTests
     public async Task Target_launcher_starts_real_process_run()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("scheduler-planner-process-launch");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         await using var provider = await BuildProviderAsync(profile);
 
         await using var scope = provider.CreateAsyncScope();
@@ -201,7 +201,7 @@ public sealed class SchedulerPlannerIntegrationTests
     public async Task Target_launcher_starts_real_workflow_run()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("scheduler-planner-workflow-launch");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         await using var provider = await BuildProviderAsync(profile);
 
         await using var scope = provider.CreateAsyncScope();

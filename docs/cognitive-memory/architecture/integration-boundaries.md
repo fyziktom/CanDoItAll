@@ -42,8 +42,7 @@ MAF contribution now has an explicit policy boundary: governed process automatio
 
 Cognitive Memory is provider-aware:
 
-- SQLite migrations exist for local profile smoke work.
-- PostgreSQL migrations exist for multi-cycle validation and expected heavier agent/process workloads.
+- PostgreSQL migrations are the supported durable runtime path for local and multi-cycle validation.
 - In-memory providers are used by tests.
 
 PostgreSQL should be the default for realistic multi-cycle memory validation because source items, traces, candidates, review records, and agent/process activity can grow quickly.

@@ -30,7 +30,6 @@ Direct package references:
 - `Microsoft.EntityFrameworkCore (10.0.4)`
 - `Microsoft.EntityFrameworkCore.Design (10.0.4)`
 - `Microsoft.EntityFrameworkCore.InMemory (10.0.4)`
-- `Microsoft.EntityFrameworkCore.Sqlite (10.0.4)`
 - `Microsoft.Extensions.Diagnostics.HealthChecks (10.0.0)`
 - `Microsoft.Extensions.Options.ConfigurationExtensions (10.0.0)`
 - `Microsoft.Extensions.Options.DataAnnotations (10.0.0)`

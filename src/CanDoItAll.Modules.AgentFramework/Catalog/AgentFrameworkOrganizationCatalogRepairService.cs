@@ -41,7 +41,7 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
             .ToListAsync(cancellationToken);
         if (aiPartyIds.Count == 0)
         {
-            await RepairManagedSqliteSeedAgentAssignmentsAsync(currentWorkspace, cancellationToken);
+            await RepairManagedSeedAgentAssignmentsAsync(currentWorkspace, cancellationToken);
             return;
         }
 
@@ -51,14 +51,14 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
             .ToListAsync(cancellationToken);
         if (CurrentWorkspaceAlreadyOwnsProjectedAgents(currentAgents, aiPartyIds, boundBindings))
         {
-            await RepairManagedSqliteSeedAgentAssignmentsAsync(currentWorkspace, cancellationToken);
+            await RepairManagedSeedAgentAssignmentsAsync(currentWorkspace, cancellationToken);
             return;
         }
 
         var legacyScopeKeys = GetLegacyOrganizationScopeKeys();
         if (legacyScopeKeys.Count == 0)
         {
-            await RepairManagedSqliteSeedAgentAssignmentsAsync(currentWorkspace, cancellationToken);
+            await RepairManagedSeedAgentAssignmentsAsync(currentWorkspace, cancellationToken);
             return;
         }
 
@@ -126,10 +126,10 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
             }
         }
 
-        await RepairManagedSqliteSeedAgentAssignmentsAsync(currentWorkspace, cancellationToken);
+        await RepairManagedSeedAgentAssignmentsAsync(currentWorkspace, cancellationToken);
     }
 
-    private async Task RepairManagedSqliteSeedAgentAssignmentsAsync(
+    private async Task RepairManagedSeedAgentAssignmentsAsync(
         IAgentFrameworkWorkspaceService currentWorkspace,
         CancellationToken cancellationToken)
     {

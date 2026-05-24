@@ -118,7 +118,7 @@ public sealed class AgentRuntimeHardeningStaticRegressionTests
         Assert.Contains("ValidateProcessStepOutcomeContext", validationSource, StringComparison.Ordinal);
         Assert.Contains("process.step_outcome.context.branch_required", validationSource, StringComparison.Ordinal);
         Assert.Contains("process.step_outcome.context.evidence_refs_required", validationSource, StringComparison.Ordinal);
-        Assert.Contains("ValidateProcessStepOutcomeContext(", toolValidationSource, StringComparison.Ordinal);
+        Assert.Contains("ValidateProcessStepOutcomeContextWithCarryForward(", toolValidationSource, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -1,10 +1,10 @@
 using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.CognitiveMemory;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 
+using CanDoItAll.Tests.Support;
 namespace CanDoItAll.Tests.Integration;
 
 public sealed class CognitiveMemoryPersistenceModelTests
@@ -18,12 +18,9 @@ public sealed class CognitiveMemoryPersistenceModelTests
 
         AppDbContextModelRegistry.ConfigureAssemblies(ModuleAssemblies.All);
 
-        await using var connection = new SqliteConnection("Data Source=:memory:");
-        await connection.OpenAsync();
+        await using var database = PostgresTestDatabaseLease.Create("cognitivememorypersistencemodeltests");
 
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlite(connection)
-            .Options;
+        var options = database.CreateAppDbContextOptions();
 
         await using var dbContext = new AppDbContext(options);
         await dbContext.Database.EnsureCreatedAsync();

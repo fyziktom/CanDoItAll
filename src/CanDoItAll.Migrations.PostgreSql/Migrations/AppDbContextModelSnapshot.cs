@@ -5982,8 +5982,7 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.Property<string>("EligibilityReason")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                        .HasColumnType("TEXT");
 
                     b.Property<double>("GuardPenaltyScore")
                         .HasColumnType("double precision");
@@ -14039,8 +14038,7 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.Property<string>("Route")
                         .IsRequired()
-                        .HasMaxLength(800)
-                        .HasColumnType("character varying(800)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("StorageObjectReferenceJson")
                         .IsRequired()

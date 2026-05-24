@@ -41,8 +41,8 @@ public sealed class MainLayoutDatabaseProfileTests
         {
             Assert.Contains("database-startup-modal", cut.Markup);
             Assert.Contains("database-startup-continue", cut.Markup);
-            Assert.Contains("database-startup-create-managed", cut.Markup);
             Assert.Contains("database-startup-open-settings", cut.Markup);
+            Assert.DoesNotContain("database-startup-create-managed", cut.Markup);
             Assert.DoesNotContain("data-testid=\"layout-body\"", cut.Markup, StringComparison.Ordinal);
             Assert.Contains("Continue with the active database to load the workspace", cut.Markup);
         });
@@ -70,7 +70,7 @@ public sealed class MainLayoutDatabaseProfileTests
         cut.WaitForAssertion(() =>
         {
             Assert.Contains("database-switcher-dialog", cut.Markup);
-            Assert.Contains("database-startup-create-managed", cut.Markup);
+            Assert.DoesNotContain("database-startup-create-managed", cut.Markup);
             Assert.Contains("Already active", cut.Markup);
         });
     }
@@ -83,12 +83,10 @@ public sealed class MainLayoutDatabaseProfileTests
             .SetResult(true);
 
         var profileService = harness.Context.Services.GetRequiredService<IDatabaseProfileService>();
-        var saveResult = await profileService.SaveAsync(new DatabaseProfileEditorModel
-        {
-            DisplayName = "Stage-01",
-            ProviderKind = DatabaseProviderKind.Sqlite,
-            SourceKind = DatabaseProfileSourceKind.ManagedSqlite
-        });
+        var recentProfile = harness.TestEnvironment.CreatePostgreSqlProfile("stage-01");
+        var saveResult = await profileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
+            recentProfile,
+            "Stage-01"));
         Assert.True(saveResult.IsSuccess);
 
         var cut = harness.Context.RenderComponent<WebMainLayout>(parameters => parameters
@@ -162,7 +160,7 @@ public sealed class MainLayoutDatabaseProfileTests
     private static async Task<ComponentTestHarness> CreateUnlockedHarnessAsync()
     {
         var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-layout-tests");
-        var activeProfile = testEnvironment.CreateManagedSqliteProfile("bootstrap");
+        var activeProfile = testEnvironment.CreatePostgreSqlProfile("bootstrap");
 
         return await ComponentTestHarness.CreateAsync(options: new TestHarnessOptions
         {
@@ -181,12 +179,10 @@ public sealed class MainLayoutDatabaseProfileTests
     {
         var harness = await CreateUnlockedHarnessAsync();
         var profileService = harness.Context.Services.GetRequiredService<IDatabaseProfileService>();
-        var saveResult = await profileService.SaveAsync(new DatabaseProfileEditorModel
-        {
-            DisplayName = "Persisted active SQLite workspace",
-            ProviderKind = DatabaseProviderKind.Sqlite,
-            SourceKind = DatabaseProfileSourceKind.ManagedSqlite
-        });
+        var persistedProfile = harness.TestEnvironment.CreatePostgreSqlProfile("persisted-active");
+        var saveResult = await profileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
+            persistedProfile,
+            "Persisted active PostgreSQL workspace"));
         Assert.True(saveResult.IsSuccess);
 
         var activateResult = await profileService.ActivateAsync(saveResult.Value);
@@ -199,7 +195,7 @@ public sealed class MainLayoutDatabaseProfileTests
     private static async Task<ComponentTestHarness> CreateRuntimeOverrideHarnessAsync()
     {
         var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-layout-tests");
-        var activeProfile = testEnvironment.CreateManagedSqliteProfile("bootstrap");
+        var activeProfile = testEnvironment.CreatePostgreSqlProfile("bootstrap");
 
         var harness = await ComponentTestHarness.CreateAsync(options: new TestHarnessOptions
         {
@@ -211,14 +207,9 @@ public sealed class MainLayoutDatabaseProfileTests
             }
         });
         var profileService = harness.Context.Services.GetRequiredService<IDatabaseProfileService>();
-        var saveResult = await profileService.SaveAsync(new DatabaseProfileEditorModel
-        {
-            DisplayName = "Configured SQLite override",
-            ProviderKind = DatabaseProviderKind.Sqlite,
-            SourceKind = DatabaseProfileSourceKind.ExternalSqliteFile,
-            SqliteDatabasePath = activeProfile.DatabasePath,
-            WorkspaceRoot = activeProfile.WorkspaceRootPath
-        });
+        var saveResult = await profileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
+            activeProfile,
+            "Configured PostgreSQL override"));
         Assert.True(saveResult.IsSuccess);
         return harness;
     }

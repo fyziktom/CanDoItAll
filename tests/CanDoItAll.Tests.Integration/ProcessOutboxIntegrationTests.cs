@@ -832,7 +832,7 @@ public sealed class ProcessOutboxIntegrationTests
         public static async Task<ProcessOutboxHarness> CreateAsync(bool trackAutomationDispatch = false)
         {
             var testEnvironment = CanDoItAllTestEnvironment.Create("process-outbox-tests");
-            var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+            var profile = testEnvironment.CreatePostgreSqlProfile("primary");
             var failures = new SideEffectFailureState();
             var automationDispatch = new TrackingAutomationDispatchService();
             var services = await TestApplicationBootstrap.BuildServiceProviderAsync(

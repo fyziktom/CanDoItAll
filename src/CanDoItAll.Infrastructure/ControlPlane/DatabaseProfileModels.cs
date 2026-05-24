@@ -33,7 +33,7 @@ public enum DatabaseProfileResolutionSource
     PersistedActiveProfile,
     PersistedCatalogFallback,
     LegacyDiscovery,
-    AutoProvisionedManagedSqlite
+    AutoProvisionedPostgreSql
 }
 
 public sealed class DatabaseProfileRecord
@@ -42,9 +42,9 @@ public sealed class DatabaseProfileRecord
 
     public string DisplayName { get; set; } = string.Empty;
 
-    public DatabaseProviderKind ProviderKind { get; set; } = DatabaseProviderKind.Sqlite;
+    public DatabaseProviderKind ProviderKind { get; set; } = DatabaseProviderKind.PostgreSql;
 
-    public DatabaseProfileSourceKind SourceKind { get; set; } = DatabaseProfileSourceKind.ManagedSqlite;
+    public DatabaseProfileSourceKind SourceKind { get; set; } = DatabaseProfileSourceKind.PostgresConnection;
 
     public SqliteDatabaseProfileConnection? Sqlite { get; set; }
 
@@ -163,11 +163,11 @@ public sealed class DatabaseProfileEditorModel
 {
     public Guid? Id { get; set; }
 
-    public string DisplayName { get; set; } = "Managed SQLite workspace";
+    public string DisplayName { get; set; } = "PostgreSQL workspace";
 
-    public DatabaseProviderKind ProviderKind { get; set; } = DatabaseProviderKind.Sqlite;
+    public DatabaseProviderKind ProviderKind { get; set; } = DatabaseProviderKind.PostgreSql;
 
-    public DatabaseProfileSourceKind SourceKind { get; set; } = DatabaseProfileSourceKind.ManagedSqlite;
+    public DatabaseProfileSourceKind SourceKind { get; set; } = DatabaseProfileSourceKind.PostgresConnection;
 
     public string? SqliteDatabasePath { get; set; }
 

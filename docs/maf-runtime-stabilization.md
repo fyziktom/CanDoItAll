@@ -80,7 +80,7 @@ Structured output support is no longer tied only to Responses transport. Compati
 
 Workspace-backed provider persistence stores the selected `providerTransport` explicitly in provider metadata/settings. Provider mapping reads that transport first and falls back to legacy display-name inference only for older records that do not yet carry explicit transport metadata.
 
-Workspace provider UI defaults are resolved through `WorkspaceProviderCapabilityDefaults`. Ollama local and remote profiles default to `SupportsStructuredOutput = false`, and the workspace save path does not persist an editor-posted structured-output override for Ollama. Managed SQLite OpenAI chat-completions bootstrap profiles advertise structured output because the core feature matrix supports JSON-schema response format for OpenAI chat completions.
+Workspace provider UI defaults are resolved through `WorkspaceProviderCapabilityDefaults`. Ollama local and remote profiles default to `SupportsStructuredOutput = false`, and the workspace save path does not persist an editor-posted structured-output override for Ollama. Managed OpenAI bootstrap profiles advertise structured output through the Responses transport and the provider feature matrix.
 
 ## Typed output API evaluation
 

@@ -8,7 +8,6 @@ namespace CanDoItAll.Infrastructure.Persistence;
 
 internal static class AppDbContextMigrationsAssemblyNames
 {
-    public const string Sqlite = "CanDoItAll.Migrations.Sqlite";
     public const string PostgreSql = "CanDoItAll.Migrations.PostgreSql";
 }
 
@@ -45,21 +44,7 @@ public static class AppDbContextOptionsConfigurator
                 return;
 
             case DatabaseProviderKind.Sqlite:
-                var filePath = profile.ConnectionString
-                    .Replace("Data Source=", string.Empty, StringComparison.OrdinalIgnoreCase)
-                    .Trim();
-                var directory = Path.GetDirectoryName(filePath);
-                if (!string.IsNullOrWhiteSpace(directory))
-                {
-                    Directory.CreateDirectory(directory);
-                }
-
-                var sqliteConnectionString = SqliteWriteCoordination.NormalizeConnectionString(profile.ConnectionString);
-                optionsBuilder.AddInterceptors(SqliteWriteCoordination.ConnectionInterceptor);
-                optionsBuilder.UseSqlite(
-                    sqliteConnectionString,
-                    builder => builder.MigrationsAssembly(AppDbContextMigrationsAssemblyNames.Sqlite));
-                return;
+                throw new InvalidOperationException("SQLite is no longer supported as a main runtime database provider. Configure a PostgreSQL profile instead.");
 
             default:
                 throw new InvalidOperationException($"Unsupported provider '{profile.Profile.ProviderKind}'.");
@@ -94,18 +79,12 @@ public static class AppDbContextOptionsConfigurator
             return;
         }
 
-        var databasePath = Path.Combine(contentRootPath, ".artifacts", "workspace", "candoitall.db");
-        Directory.CreateDirectory(Path.GetDirectoryName(databasePath)!);
+        if (provider is "sqlite")
+        {
+            throw new InvalidOperationException("SQLite is no longer supported as a main runtime database provider. Set Database:Provider to PostgreSql.");
+        }
 
-        var sqliteConnectionString = string.IsNullOrWhiteSpace(databaseOptions.ConnectionString)
-            ? $"Data Source={databasePath}"
-            : databaseOptions.ConnectionString;
-        sqliteConnectionString = SqliteWriteCoordination.NormalizeConnectionString(sqliteConnectionString);
-
-        optionsBuilder.AddInterceptors(SqliteWriteCoordination.ConnectionInterceptor);
-        optionsBuilder.UseSqlite(
-            sqliteConnectionString,
-            builder => builder.MigrationsAssembly(AppDbContextMigrationsAssemblyNames.Sqlite));
+        throw new InvalidOperationException($"Unsupported database provider '{databaseOptions.Provider}'.");
     }
 }
 
@@ -160,7 +139,7 @@ public sealed class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbConte
     {
         return new DatabaseOptions
         {
-            Provider = Environment.GetEnvironmentVariable("CANDOITALL_DATABASE_PROVIDER") ?? "Sqlite",
+            Provider = Environment.GetEnvironmentVariable("CANDOITALL_DATABASE_PROVIDER") ?? "PostgreSql",
             ConnectionString = Environment.GetEnvironmentVariable("CANDOITALL_DATABASE_CONNECTION")
         };
     }

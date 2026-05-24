@@ -19,7 +19,6 @@ dotnet build tests/CanDoItAll.Tests.Support/CanDoItAll.Tests.Support.csproj
 Project references:
 
 - `../../src/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj`
-- `../../src/CanDoItAll.Migrations.Sqlite/CanDoItAll.Migrations.Sqlite.csproj`
 - `../../src/CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj`
 - `../../src/CanDoItAll.Modules.Activity/CanDoItAll.Modules.Activity.csproj`
 - `../../src/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj`
@@ -45,7 +44,6 @@ Framework references:
 
 Direct package references:
 
-- `Microsoft.Data.Sqlite (10.0.0)`
 - `Npgsql (10.0.0)`
 
 ## Architecture Notes

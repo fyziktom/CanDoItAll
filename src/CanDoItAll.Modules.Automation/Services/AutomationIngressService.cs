@@ -292,32 +292,17 @@ public sealed class PluginIngressInbox(
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var now = clock.GetUtcNow();
-        var claimedRows = dbContext.Database.IsSqlite()
-            ? await dbContext.Database.ExecuteSqlInterpolatedAsync($"""
-                                                                   UPDATE "Automation_PluginIngressEnvelopes"
-                                                                   SET "State" = {(int)PluginIngressState.Materializing},
-                                                                       "MaterializerKey" = {materializerKey},
-                                                                       "MaterializationSummary" = {string.Empty},
-                                                                       "LastError" = {string.Empty},
-                                                                       "UpdatedAtUtc" = {now}
-                                                                   WHERE "Id" = {envelopeId}
-                                                                     AND (
-                                                                           "State" = {(int)PluginIngressState.Accepted}
-                                                                           OR "State" = {(int)PluginIngressState.Failed}
-                                                                       )
-                                                                   """,
-                cancellationToken)
-            : await dbContext.Set<PluginIngressEnvelopeRecord>()
-                .Where(item => item.Id == envelopeId)
-                .Where(item =>
-                    item.State == PluginIngressState.Accepted ||
-                    item.State == PluginIngressState.Failed)
-                .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(item => item.State, PluginIngressState.Materializing)
-                    .SetProperty(item => item.MaterializerKey, materializerKey)
-                    .SetProperty(item => item.MaterializationSummary, string.Empty)
-                    .SetProperty(item => item.LastError, string.Empty)
-                    .SetProperty(item => item.UpdatedAtUtc, now), cancellationToken);
+        var claimedRows = await dbContext.Set<PluginIngressEnvelopeRecord>()
+            .Where(item => item.Id == envelopeId)
+            .Where(item =>
+                item.State == PluginIngressState.Accepted ||
+                item.State == PluginIngressState.Failed)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(item => item.State, PluginIngressState.Materializing)
+                .SetProperty(item => item.MaterializerKey, materializerKey)
+                .SetProperty(item => item.MaterializationSummary, string.Empty)
+                .SetProperty(item => item.LastError, string.Empty)
+                .SetProperty(item => item.UpdatedAtUtc, now), cancellationToken);
 
         return claimedRows > 0;
     }

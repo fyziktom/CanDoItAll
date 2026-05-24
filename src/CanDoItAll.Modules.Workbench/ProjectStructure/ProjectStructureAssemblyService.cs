@@ -135,13 +135,6 @@ public sealed class ProjectStructureAssemblyService(
     IEnumerable<IProjectStructureProjectionContributor> projectionContributors,
     IClock clock)
 {
-    private static readonly TimeSpan[] SqliteBusyRetryDelays =
-    [
-        TimeSpan.FromMilliseconds(40),
-        TimeSpan.FromMilliseconds(90),
-        TimeSpan.FromMilliseconds(180)
-    ];
-
     private readonly IReadOnlyList<IProjectStructureProjectionContributor> _projectionContributors = projectionContributors.ToList();
 
     public async Task<ProjectStructureAssemblySnapshot> LoadAsync(
@@ -304,26 +297,10 @@ public sealed class ProjectStructureAssemblyService(
         return updatedNodeIds;
     }
 
-    internal static bool IsSqliteBusy(Exception exception)
-        => SqliteWriteCoordination.IsBusy(exception);
-
-    private static async Task SaveChangesAsync(
+    private static Task SaveChangesAsync(
         AppDbContext dbContext,
         CancellationToken cancellationToken)
-    {
-        for (var attempt = 0; ; attempt++)
-        {
-            try
-            {
-                await dbContext.SaveChangesAsync(cancellationToken);
-                return;
-            }
-            catch (DbUpdateException ex) when (IsSqliteBusy(ex) && attempt < SqliteBusyRetryDelays.Length)
-            {
-                await Task.Delay(SqliteBusyRetryDelays[attempt], cancellationToken);
-            }
-        }
-    }
+        => dbContext.SaveChangesAsync(cancellationToken);
 
     private async Task<HashSet<string>> LoadProjectionNodeKeysAsync(
         AppDbContext dbContext,

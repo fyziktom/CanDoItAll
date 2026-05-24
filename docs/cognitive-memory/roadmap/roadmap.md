@@ -4,7 +4,7 @@
 
 | Area | True status | Notes |
 | --- | --- | --- |
-| Module foundation | Done | Module project, DI registration, EF configuration discovery, SQLite/PostgreSQL migrations. |
+| Module foundation | Done | Module project, DI registration, EF configuration discovery, PostgreSQL migrations. |
 | Source ingestion | P1 beta for core path | Workbench, process, workflow, file, and web-link ingestion paths exist with provenance and evidence records. External source ingestion now has centralized limits, extraction error context, URL secret-query rejection, and sensitive-content rejection. Live beta proof ingested a Markdown source through the public file endpoint. |
 | Score geometry | Done for alpha | Typed score spaces, evaluation traces, score components, and scalar projections exist. |
 | Neuro foundation | Alpha complete | Evidence anchors, claims, belief state, entity/context binding, mutation commands, and audit records exist. |

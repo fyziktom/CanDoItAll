@@ -11,8 +11,8 @@ public sealed class ProfileHarnessIntegrationTests
     public async Task Test_application_bootstraps_two_profiles_with_isolated_data_and_managed_files()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-profile-harness");
-        var alphaProfile = testEnvironment.CreateManagedSqliteProfile("alpha");
-        var betaProfile = testEnvironment.CreateManagedSqliteProfile("beta");
+        var alphaProfile = testEnvironment.CreatePostgreSqlProfile("alpha");
+        var betaProfile = testEnvironment.CreatePostgreSqlProfile("beta");
 
         await using var alphaApplication = await TestApplication.CreateAsync(new TestHarnessOptions
         {

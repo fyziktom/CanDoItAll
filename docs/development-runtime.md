@@ -58,6 +58,6 @@ docker compose up -d qdrant
 
 Use that reset only for local development data. It deletes the Qdrant collection storage.
 
-## SQLite Status
+## Main Runtime Database Status
 
-SQLite support still exists in code, migrations, and some tests, but it is not the default development runtime. It is probably going to be removed after more analysis because process automation is too slow on SQLite for realistic governed runs.
+The main CanDoItAll runtime is PostgreSQL-only. Legacy local profile catalog entries that reference SQLite are rejected with an explicit unsupported-provider message instead of being silently reactivated. Snapshot export and restore are deferred until they can be reintroduced as a portable package workflow outside the main AppDbContext provider contract.

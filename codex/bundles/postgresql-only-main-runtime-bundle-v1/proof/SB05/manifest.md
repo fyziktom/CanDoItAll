@@ -1,29 +1,29 @@
-# Proof manifest - SB05
+# Proof Manifest - SB05
 
 ## Subbundle
 
 Remove General SQLite-Era Runtime Limitations
 
-## Changed files
+## Changed Files
 
-Fill during execution.
+Module schema initializers, query paths, prompt library assets/generator, scenario seeder defaults, database documentation, and profile/service assumptions were updated to remove SQLite-era behavior and stale wording.
 
-## Commands run
+## Commands Run
 
-Fill during execution.
+- `dotnet build .\CanDoItAll.slnx -v:minimal`
+- `rg -n -i "sqlite|usesqlite|migrations\.sqlite|managedsqlite|externalsqlite|importedsqlite|sqlitewritecoordination|legacysqlitemigrationbootstrap|snapshotcache|ipfssnapshot" ...`
 
-## Evidence files
+## Evidence Files
 
-Fill during execution.
+- `evidence/SB04/build-final-after-audit-cleanup.log`
+- `evidence/SB09/sqlite-final-audit.log`
 
 ## Result
 
-Fill during execution:
-
-- [ ] Passed
+- [x] Passed
 - [ ] Failed
 - [ ] Partially complete
 
 ## Notes
 
-Fill during execution.
+Remaining broad SQLite mentions are explicit unsupported-legacy handling, compatibility enums/models for stale catalog deserialization, or tests that prove rejection.

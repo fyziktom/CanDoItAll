@@ -1411,7 +1411,7 @@ public sealed class MafAgentRuntimeTests
             wrapperType,
             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
             binder: null,
-            args: [innerFunction],
+            args: [innerFunction, Directory.GetCurrentDirectory(), WorkspaceScopeDescriptor.Sandbox],
             culture: null));
 
         var result = await wrapper.InvokeAsync(
@@ -1447,7 +1447,7 @@ public sealed class MafAgentRuntimeTests
             wrapperType,
             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
             binder: null,
-            args: [innerFunction],
+            args: [innerFunction, Directory.GetCurrentDirectory(), WorkspaceScopeDescriptor.Sandbox],
             culture: null));
 
         var result = await wrapper.InvokeAsync(

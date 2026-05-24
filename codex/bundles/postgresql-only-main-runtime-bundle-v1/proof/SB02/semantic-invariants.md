@@ -10,4 +10,6 @@
 
 ## Subbundle-specific invariants
 
-Fill during execution with concrete invariants and proof.
+- Empty catalogs auto-provision PostgreSQL profiles.
+- Persisted legacy SQLite profiles are not silently activated.
+- Runtime switching and workspace services resolve against the selected PostgreSQL profile.

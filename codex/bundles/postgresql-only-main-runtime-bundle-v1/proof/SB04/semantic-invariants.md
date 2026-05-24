@@ -10,4 +10,6 @@
 
 ## Subbundle-specific invariants
 
-Fill during execution with concrete invariants and proof.
+- Test support provisions PostgreSQL databases for integration/component database coverage.
+- In-memory providers are used only where the test is explicitly a pure unit test.
+- Former SQLite-specific tests now prove explicit rejection or PostgreSQL behavior.

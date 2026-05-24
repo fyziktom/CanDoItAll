@@ -1,11 +1,11 @@
 # SB04 Checklist - Convert Tests and Test Support Away From SQLite
 
-- [ ] Read this subbundle README.
-- [ ] Inspect current files before editing.
-- [ ] Make scoped changes only.
-- [ ] Run targeted grep audit.
-- [ ] Run build or targeted tests.
-- [ ] Write evidence logs.
-- [ ] Update proof manifest.
-- [ ] Update semantic invariants.
-- [ ] Record any unresolved risk.
+- [x] Read this subbundle README.
+- [x] Inspect current files before editing.
+- [x] Make scoped changes only.
+- [x] Run targeted grep audit.
+- [x] Run build or targeted tests.
+- [x] Write evidence logs.
+- [x] Update proof manifest.
+- [x] Update semantic invariants.
+- [x] Record any unresolved risk.

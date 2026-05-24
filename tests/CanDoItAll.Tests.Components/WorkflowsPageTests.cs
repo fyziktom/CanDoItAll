@@ -254,6 +254,7 @@ public sealed class WorkflowsPageTests
         {
             Assert.Contains(notificationService.Messages, message => message.Summary == "LLM component created");
         });
+        cut.WaitForElement("[data-testid='workflow-canvas-place-component']");
 
         cut.Find("[data-testid='workflow-canvas-place-component']").Click();
         cut.WaitForAssertion(() =>
@@ -344,6 +345,7 @@ public sealed class WorkflowsPageTests
         {
             Assert.Contains(notificationService.Messages, message => message.Summary == "LLM component created");
         });
+        cut.WaitForElement("[data-testid='workflow-canvas-place-component']");
         cut.Find("[data-testid='workflow-canvas-place-component']").Click();
         cut.WaitForElement("[data-testid='workflow-canvas-edit-edge']");
 

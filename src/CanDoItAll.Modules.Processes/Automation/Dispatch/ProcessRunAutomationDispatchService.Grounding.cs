@@ -400,14 +400,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
             try
             {
                 await using var command = connection.CreateCommand();
-                var isPostgreSql = IsPostgreSqlProvider(dbContext.Database.ProviderName);
-                command.CommandText = BuildCanonicalProjectStructureGroundingSql(isPostgreSql);
+                command.CommandText = BuildCanonicalProjectStructureGroundingSql();
 
                 var projectIdParameter = command.CreateParameter();
                 projectIdParameter.ParameterName = "@projectId";
-                projectIdParameter.Value = isPostgreSql
-                    ? projectId
-                    : projectId.ToString("D");
+                projectIdParameter.Value = projectId;
                 command.Parameters.Add(projectIdParameter);
 
                 var nodes = new List<ProjectStructureGroundingNodeData>();
@@ -452,16 +449,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
     }
 
-    private static bool IsPostgreSqlProvider(string? providerName)
+    private static string BuildCanonicalProjectStructureGroundingSql()
     {
-        return !string.IsNullOrWhiteSpace(providerName) &&
-               providerName.Contains("Npgsql", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string BuildCanonicalProjectStructureGroundingSql(bool isPostgreSql)
-    {
-        return isPostgreSql
-            ? """
+        return """
 SELECT
     "NodeKey",
     COALESCE("ParentNodeKey", ''),
@@ -475,22 +465,6 @@ SELECT
 FROM "Workbench_ProjectObjects"
 WHERE "ProjectId" = @projectId
   AND "IsSystemManaged" = FALSE
-ORDER BY "CreatedAtUtc", "Title";
-"""
-            : """
-SELECT
-    "NodeKey",
-    COALESCE("ParentNodeKey", ''),
-    "ObjectType",
-    COALESCE("ObjectSubtype", ''),
-    COALESCE("Title", ''),
-    COALESCE("Subtitle", ''),
-    COALESCE("Status", ''),
-    COALESCE("Notes", ''),
-    COALESCE("MetadataJson", '{}')
-FROM "Workbench_ProjectObjects"
-WHERE lower("ProjectId") = lower(@projectId)
-  AND "IsSystemManaged" = 0
 ORDER BY "CreatedAtUtc", "Title";
 """;
     }

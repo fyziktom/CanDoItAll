@@ -8,9 +8,18 @@ namespace CanDoItAll.Migrations.PostgreSql;
 
 public sealed class PostgreSqlAppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
 {
+    private const string ConnectionStringEnvironmentVariable = "CANDOITALL_MIGRATIONS_POSTGRES_CONNECTION";
+    private const string DefaultConnectionString = "Host=127.0.0.1;Database=candoitall_migrations;Username=postgres;Password=postgres";
+
     public AppDbContext CreateDbContext(string[] args)
     {
         AppDbContextModelRegistry.ConfigureAssemblies(ModuleAssemblies.All);
+
+        var connectionString = Environment.GetEnvironmentVariable(ConnectionStringEnvironmentVariable);
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            connectionString = DefaultConnectionString;
+        }
 
         var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
         AppDbContextOptionsConfigurator.Configure(
@@ -18,7 +27,7 @@ public sealed class PostgreSqlAppDbContextFactory : IDesignTimeDbContextFactory<
             new DatabaseOptions
             {
                 Provider = "PostgreSql",
-                ConnectionString = "Host=127.0.0.1;Database=candoitall_migrations;Username=postgres;Password=postgres"
+                ConnectionString = connectionString
             },
             Directory.GetCurrentDirectory());
 

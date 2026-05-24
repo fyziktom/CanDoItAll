@@ -10,4 +10,6 @@
 
 ## Subbundle-specific invariants
 
-Fill during execution with concrete invariants and proof.
+- PostgreSQL migrations are represented by one baseline migration and matching model snapshot.
+- Fresh PostgreSQL databases migrate from empty state through the baseline.
+- Real existing databases require manual backup and schema/history alignment.

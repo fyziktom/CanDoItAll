@@ -184,9 +184,8 @@ public sealed partial class CognitiveMemoryReviewUiService
         var orderedRecords = recordsQuery
             .OrderBy(record => record.ValidationState == CognitiveMemoryValidationState.NeedsHumanReview ? 0 : 1)
             .ThenByDescending(record => record.RiskLevel);
-        var records = await (UsesSqlite(dbContext)
-                ? orderedRecords.ThenBy(record => record.Id)
-                : orderedRecords.ThenByDescending(record => record.UpdatedAtUtc))
+        var records = await orderedRecords
+            .ThenByDescending(record => record.UpdatedAtUtc)
             .Skip(page.Skip)
             .Take(page.PageSize)
             .ToArrayAsync(cancellationToken);
@@ -255,9 +254,8 @@ public sealed partial class CognitiveMemoryReviewUiService
         var orderedReviewItems = reviewItemsQuery
             .OrderBy(item => item.Status == CognitiveMemoryReviewStatus.Pending ? 0 : 1)
             .ThenByDescending(item => item.RiskLevel);
-        var reviewItems = await (UsesSqlite(dbContext)
-                ? orderedReviewItems.ThenBy(item => item.Id)
-                : orderedReviewItems.ThenByDescending(item => item.CreatedAtUtc))
+        var reviewItems = await orderedReviewItems
+            .ThenByDescending(item => item.CreatedAtUtc)
             .Skip(page.Skip)
             .Take(page.PageSize)
             .ToArrayAsync(cancellationToken);

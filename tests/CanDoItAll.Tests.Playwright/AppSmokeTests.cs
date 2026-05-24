@@ -1350,7 +1350,7 @@ public sealed partial class AppSmokeTests
         ]);
 
         var dbOptions = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlite(fixture.DatabaseConnectionString)
+            .UseNpgsql(fixture.DatabaseConnectionString)
             .Options;
         await using var dbContext = new AppDbContext(dbOptions);
         var exportedRecord = await dbContext.Set<ProjectObjectRecord>()
@@ -1459,7 +1459,7 @@ public sealed partial class AppSmokeTests
         ]);
 
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlite(connectionString)
+            .UseNpgsql(connectionString)
             .Options;
 
         await using var dbContext = new AppDbContext(options);

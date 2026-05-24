@@ -6,6 +6,7 @@ using System.Net.Sockets;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
 using Microsoft.Playwright;
+using Npgsql;
 
 namespace CanDoItAll.Tests.Playwright;
 
@@ -39,7 +40,7 @@ public sealed class DatabaseSwitchWorkbenchPlaywrightTests
         await secondPage.GetByTestId("projects-new-button").WaitForAsync();
 
         var alphaProfile = await host.GetCurrentProfileAsync();
-        var betaProfile = await host.CreateManagedSqliteProfileAsync();
+        var betaProfile = await host.CreatePostgreSqlProfileAsync();
 
         Assert.Contains($"/projects/{alphaProject.ProjectId:D}/structure", structurePage.Url, StringComparison.OrdinalIgnoreCase);
 
@@ -89,6 +90,7 @@ internal sealed class DatabaseSwitchPlaywrightHost : IAsyncDisposable
     private readonly Task _stdoutPump;
     private readonly Task _stderrPump;
     private readonly FakeIpfsTestServer? _fakeIpfsServer;
+    private int _profileCounter;
 
     private DatabaseSwitchPlaywrightHost(
         string repoRoot,
@@ -182,12 +184,25 @@ internal sealed class DatabaseSwitchPlaywrightHost : IAsyncDisposable
         return response ?? throw new InvalidOperationException("The development selection endpoint returned no profile payload.");
     }
 
-    public async Task<DevDatabaseProfile> CreateManagedSqliteProfileAsync()
+    public async Task<DevDatabaseProfile> CreatePostgreSqlProfileAsync()
     {
-        using var response = await _client.PostAsync("/_dev/database/profiles/managed-sqlite", content: null);
+        var profile = TestEnvironment.CreatePostgreSqlProfile($"playwright-postgres-{Interlocked.Increment(ref _profileCounter)}");
+        var builder = new NpgsqlConnectionStringBuilder(profile.ConnectionString);
+        using var response = await _client.PostAsJsonAsync("/_dev/database/profiles/postgresql", new
+        {
+            DisplayName = $"PostgreSQL {profile.ProfileKey}",
+            Host = builder.Host,
+            Port = builder.Port,
+            DatabaseName = builder.Database,
+            Username = builder.Username,
+            Password = builder.Password,
+            AdminDatabaseName = builder.Database,
+            WorkspaceRoot = profile.WorkspaceRootPath,
+            Activate = true
+        });
         response.EnsureSuccessStatusCode();
         var payload = await response.Content.ReadFromJsonAsync<DevDatabaseProfile>();
-        return payload ?? throw new InvalidOperationException("The managed SQLite profile endpoint returned no payload.");
+        return payload ?? throw new InvalidOperationException("The PostgreSQL profile endpoint returned no payload.");
     }
 
     public async Task<DevProjectRoute> CreateProjectAsync(string projectName, string phase)

@@ -40,7 +40,7 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
 
         await using var host = await ProjectStructureAgentApiTestHost.CreateAsync(
             "workflow-scenario-harness",
-            testEnvironment => testEnvironment.CreateManagedSqliteProfile("scenario-harness"),
+            testEnvironment => testEnvironment.CreatePostgreSqlProfile("scenario-harness"),
             ConfigureGroundedWorkflowServices);
         var execution = await RunHarnessAsync(
             host,

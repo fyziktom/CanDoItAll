@@ -29,7 +29,13 @@ public sealed class DatabaseSwitchIntegrationTests
         var dbContextFactory = provider.GetRequiredService<IDbContextFactory<AppDbContext>>();
         var switchableFactory = provider.GetRequiredService<ISwitchableAppDbContextFactory>();
 
-        var initialProfile = runtimeAccessor.ResolveCurrentProfile();
+        var initialTestProfile = testEnvironment.CreatePostgreSqlProfile("runtime-switch-alpha");
+        var initialSaveResult = await profileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
+            initialTestProfile,
+            "PostgreSQL alpha"));
+        Assert.True(initialSaveResult.IsSuccess, string.Join(" ", initialSaveResult.Errors.Select(error => error.Message)));
+
+        var initialProfile = runtimeAccessor.ResolveProfile(initialSaveResult.Value);
         await bootstrapper.EnsureCurrentProfileReadyAsync();
 
         await using (var initialContext = await dbContextFactory.CreateDbContextAsync())
@@ -45,12 +51,10 @@ public sealed class DatabaseSwitchIntegrationTests
             await initialContext.SaveChangesAsync();
         }
 
-        var saveResult = await profileService.SaveAsync(new DatabaseProfileEditorModel
-        {
-            DisplayName = "Managed sqlite beta",
-            ProviderKind = DatabaseProviderKind.Sqlite,
-            SourceKind = DatabaseProfileSourceKind.ManagedSqlite
-        });
+        var targetTestProfile = testEnvironment.CreatePostgreSqlProfile("runtime-switch-beta");
+        var saveResult = await profileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
+            targetTestProfile,
+            "PostgreSQL beta"));
 
         Assert.True(saveResult.IsSuccess);
 
@@ -155,7 +159,7 @@ public sealed class DatabaseDriverBootstrapIntegrationTests
             Assert.True(await dbContext.Database.CanConnectAsync());
             Assert.Contains(
                 await dbContext.Database.GetAppliedMigrationsAsync(),
-                migrationId => migrationId.Contains("InitialCreate", StringComparison.Ordinal));
+                migrationId => migrationId.Contains("InitialPostgreSqlBaseline", StringComparison.Ordinal));
         }
         finally
         {
@@ -186,8 +190,14 @@ public sealed class DatabaseTransferIntegrationTests
         var bootstrapper = provider.GetRequiredService<IAppDatabaseBootstrapper>();
         var switchableFactory = provider.GetRequiredService<ISwitchableAppDbContextFactory>();
 
+        var sourceTestProfile = testEnvironment.CreatePostgreSqlProfile("project-transfer-source");
+        var sourceSaveResult = await profileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
+            sourceTestProfile,
+            "PostgreSQL project transfer source"));
+        Assert.True(sourceSaveResult.IsSuccess, DescribeErrors(sourceSaveResult.Errors));
+
+        var sourceProfile = runtimeAccessor.ResolveProfile(sourceSaveResult.Value);
         await bootstrapper.EnsureCurrentProfileReadyAsync();
-        var sourceProfile = runtimeAccessor.ResolveCurrentProfile();
 
         var sourceProjectName = $"Transferred Project {Guid.NewGuid():N}"[..32];
         var sourceNodeTitle = "Transfer note";
@@ -259,12 +269,10 @@ public sealed class DatabaseTransferIntegrationTests
             await sourceContext.SaveChangesAsync();
         }
 
-        var targetSaveResult = await profileService.SaveAsync(new DatabaseProfileEditorModel
-        {
-            DisplayName = "Managed sqlite project transfer target",
-            ProviderKind = DatabaseProviderKind.Sqlite,
-            SourceKind = DatabaseProfileSourceKind.ManagedSqlite
-        });
+        var targetTestProfile = testEnvironment.CreatePostgreSqlProfile("project-transfer-target");
+        var targetSaveResult = await profileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
+            targetTestProfile,
+            "PostgreSQL project transfer target"));
         Assert.True(targetSaveResult.IsSuccess, DescribeErrors(targetSaveResult.Errors));
 
         var targetProfile = runtimeAccessor.ResolveProfile(targetSaveResult.Value);
@@ -345,12 +353,10 @@ public sealed class DatabaseTransferIntegrationTests
         var evidenceAnchorId = Guid.Parse("10000000-0000-0000-0000-000000000003");
         var operationId = Guid.Parse("10000000-0000-0000-0000-000000000004");
 
-        var sourceSaveResult = await profileService.SaveAsync(new DatabaseProfileEditorModel
-        {
-            DisplayName = "Cognitive memory source truth transfer source",
-            ProviderKind = DatabaseProviderKind.Sqlite,
-            SourceKind = DatabaseProfileSourceKind.ManagedSqlite
-        });
+        var sourceTestProfile = testEnvironment.CreatePostgreSqlProfile("cognitive-memory-transfer-source");
+        var sourceSaveResult = await profileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
+            sourceTestProfile,
+            "Cognitive memory source truth transfer source"));
         Assert.True(sourceSaveResult.IsSuccess, DescribeErrors(sourceSaveResult.Errors));
 
         var sourceProfile = runtimeAccessor.ResolveProfile(sourceSaveResult.Value);
@@ -436,12 +442,10 @@ public sealed class DatabaseTransferIntegrationTests
             await sourceContext.SaveChangesAsync();
         }
 
-        var targetSaveResult = await profileService.SaveAsync(new DatabaseProfileEditorModel
-        {
-            DisplayName = "Cognitive memory source truth transfer target",
-            ProviderKind = DatabaseProviderKind.Sqlite,
-            SourceKind = DatabaseProfileSourceKind.ManagedSqlite
-        });
+        var targetTestProfile = testEnvironment.CreatePostgreSqlProfile("cognitive-memory-transfer-target");
+        var targetSaveResult = await profileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
+            targetTestProfile,
+            "Cognitive memory source truth transfer target"));
         Assert.True(targetSaveResult.IsSuccess, DescribeErrors(targetSaveResult.Errors));
 
         var targetProfile = runtimeAccessor.ResolveProfile(targetSaveResult.Value);
@@ -495,8 +499,14 @@ public sealed class DatabaseTransferIntegrationTests
         var bootstrapper = provider.GetRequiredService<IAppDatabaseBootstrapper>();
         var switchableFactory = provider.GetRequiredService<ISwitchableAppDbContextFactory>();
 
+        var sourceTestProfile = testEnvironment.CreatePostgreSqlProfile("project-package-source");
+        var sourceSaveResult = await profileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
+            sourceTestProfile,
+            "PostgreSQL project package source"));
+        Assert.True(sourceSaveResult.IsSuccess, DescribeErrors(sourceSaveResult.Errors));
+
+        var sourceProfile = runtimeAccessor.ResolveProfile(sourceSaveResult.Value);
         await bootstrapper.EnsureCurrentProfileReadyAsync();
-        var sourceProfile = runtimeAccessor.ResolveCurrentProfile();
 
         var sourceProjectName = $"Packaged Project {Guid.NewGuid():N}"[..29];
         var sourceNodeTitle = "Packaged note";
@@ -557,12 +567,10 @@ public sealed class DatabaseTransferIntegrationTests
         Directory.CreateDirectory(Path.GetDirectoryName(sourceMediaPath)!);
         await File.WriteAllTextAsync(sourceMediaPath, mediaContent);
 
-        var targetSaveResult = await profileService.SaveAsync(new DatabaseProfileEditorModel
-        {
-            DisplayName = "Managed sqlite project package target",
-            ProviderKind = DatabaseProviderKind.Sqlite,
-            SourceKind = DatabaseProfileSourceKind.ManagedSqlite
-        });
+        var targetTestProfile = testEnvironment.CreatePostgreSqlProfile("project-package-target");
+        var targetSaveResult = await profileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
+            targetTestProfile,
+            "PostgreSQL project package target"));
         Assert.True(targetSaveResult.IsSuccess, DescribeErrors(targetSaveResult.Errors));
 
         var targetProfile = runtimeAccessor.ResolveProfile(targetSaveResult.Value);
@@ -645,281 +653,66 @@ public sealed class DatabaseTransferIntegrationTests
 public sealed class DatabaseSnapshotIntegrationTests
 {
     [Fact]
-    public async Task CloneAsync_creates_snapshot_backed_profile_with_copied_data_and_files()
+    public async Task CloneAsync_returns_deferred_snapshot_error()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-snapshot-clone");
         await using var provider = DatabaseProfileControlPlaneIntegrationHost.BuildServiceProvider(testEnvironment);
 
-        var runtimeAccessor = provider.GetRequiredService<IDatabaseProfileRuntimeAccessor>();
-        var bootstrapper = provider.GetRequiredService<IAppDatabaseBootstrapper>();
+        var profileService = provider.GetRequiredService<IDatabaseProfileService>();
         var snapshotService = provider.GetRequiredService<IDatabaseSnapshotService>();
-        var switchCoordinator = provider.GetRequiredService<IDatabaseSwitchCoordinator>();
-
-        await bootstrapper.EnsureCurrentProfileReadyAsync();
-        var sourceProfile = runtimeAccessor.ResolveCurrentProfile();
-
-        TestProfileSeedResult sourceSeed;
-        await using (var sourceScope = provider.CreateAsyncScope())
-        {
-            sourceSeed = await TestProfileSeedHelper.SeedDistinctProjectAndManagedFileAsync(
-                sourceScope.ServiceProvider,
-                "Alpha");
-        }
+        var sourceTestProfile = testEnvironment.CreatePostgreSqlProfile("snapshot-clone-source");
+        var sourceSaveResult = await profileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
+            sourceTestProfile,
+            "PostgreSQL snapshot clone source"));
+        Assert.True(sourceSaveResult.IsSuccess, DescribeErrors(sourceSaveResult.Errors));
 
         var cloneResult = await snapshotService.CloneAsync(new DatabaseCloneRequest
         {
-            SourceProfileId = sourceProfile.Profile.Id,
+            SourceProfileId = sourceSaveResult.Value,
             DisplayName = "Alpha clone"
         });
 
-        Assert.True(cloneResult.IsSuccess, DescribeErrors(cloneResult.Errors));
-
-        var cloneProfile = runtimeAccessor.ResolveProfile(cloneResult.Value!.ProfileId);
-        Assert.Equal(DatabaseProfileSourceKind.SnapshotCache, cloneProfile.Profile.SourceKind);
-        Assert.Equal(sourceProfile.Profile.Id, cloneProfile.Profile.Clone.OriginProfileId);
-        Assert.Equal(cloneResult.Value.Manifest.SnapshotId, cloneProfile.Profile.Clone.OriginSnapshotId);
-        Assert.StartsWith(testEnvironment.ControlPlaneRootPath, cloneProfile.Profile.Storage.WorkspaceRoot, StringComparison.OrdinalIgnoreCase);
-        Assert.True(File.Exists(cloneResult.Value.PackagePath));
-
-        var switchToClone = await switchCoordinator.SwitchAsync(cloneProfile.Profile.Id);
-        Assert.True(switchToClone.IsSuccess, DescribeErrors(switchToClone.Errors));
-
-        TestProfileSeedResult cloneSeed;
-        await using (var cloneScope = provider.CreateAsyncScope())
-        {
-            var cloneProjects = await cloneScope.ServiceProvider.GetRequiredService<ProjectsService>().ListAsync();
-            Assert.Contains(cloneProjects, project => project.Name == sourceSeed.ProjectName);
-
-            var clonedFilePath = Path.Combine(cloneProfile.Profile.Storage.WorkspaceRoot, sourceSeed.ManagedFileRelativePath);
-            Assert.Equal(sourceSeed.ManagedFileContent, await File.ReadAllTextAsync(clonedFilePath));
-
-            cloneSeed = await TestProfileSeedHelper.SeedDistinctProjectAndManagedFileAsync(
-                cloneScope.ServiceProvider,
-                "Clone");
-        }
-
-        var switchBack = await switchCoordinator.SwitchAsync(sourceProfile.Profile.Id);
-        Assert.True(switchBack.IsSuccess, DescribeErrors(switchBack.Errors));
-
-        TestProfileSeedResult sourceOnlySeed;
-        await using (var sourceVerifyScope = provider.CreateAsyncScope())
-        {
-            var sourceProjects = await sourceVerifyScope.ServiceProvider.GetRequiredService<ProjectsService>().ListAsync();
-            Assert.Contains(sourceProjects, project => project.Name == sourceSeed.ProjectName);
-            Assert.DoesNotContain(sourceProjects, project => project.Name == cloneSeed.ProjectName);
-            Assert.False(File.Exists(Path.Combine(sourceProfile.Profile.Storage.WorkspaceRoot, cloneSeed.ManagedFileRelativePath)));
-
-            sourceOnlySeed = await TestProfileSeedHelper.SeedDistinctProjectAndManagedFileAsync(
-                sourceVerifyScope.ServiceProvider,
-                "Source");
-        }
-
-        var switchAgain = await switchCoordinator.SwitchAsync(cloneProfile.Profile.Id);
-        Assert.True(switchAgain.IsSuccess, DescribeErrors(switchAgain.Errors));
-
-        await using (var cloneVerifyScope = provider.CreateAsyncScope())
-        {
-            var cloneProjects = await cloneVerifyScope.ServiceProvider.GetRequiredService<ProjectsService>().ListAsync();
-            Assert.Contains(cloneProjects, project => project.Name == sourceSeed.ProjectName);
-            Assert.Contains(cloneProjects, project => project.Name == cloneSeed.ProjectName);
-            Assert.DoesNotContain(cloneProjects, project => project.Name == sourceOnlySeed.ProjectName);
-            Assert.False(File.Exists(Path.Combine(cloneProfile.Profile.Storage.WorkspaceRoot, sourceOnlySeed.ManagedFileRelativePath)));
-        }
+        Assert.True(cloneResult.IsFailure);
+        Assert.Contains(cloneResult.Errors, error => error.Message.Contains("snapshots are deferred", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
-    public async Task Local_snapshot_package_can_materialize_into_a_new_profile()
+    public async Task CreateSnapshotAsync_returns_deferred_snapshot_error()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-snapshot-local");
         await using var provider = DatabaseProfileControlPlaneIntegrationHost.BuildServiceProvider(testEnvironment);
 
-        var runtimeAccessor = provider.GetRequiredService<IDatabaseProfileRuntimeAccessor>();
-        var bootstrapper = provider.GetRequiredService<IAppDatabaseBootstrapper>();
+        var profileService = provider.GetRequiredService<IDatabaseProfileService>();
         var snapshotService = provider.GetRequiredService<IDatabaseSnapshotService>();
-        var switchCoordinator = provider.GetRequiredService<IDatabaseSwitchCoordinator>();
-
-        await bootstrapper.EnsureCurrentProfileReadyAsync();
-        var sourceProfile = runtimeAccessor.ResolveCurrentProfile();
-
-        TestProfileSeedResult sourceSeed;
-        await using (var sourceScope = provider.CreateAsyncScope())
-        {
-            sourceSeed = await TestProfileSeedHelper.SeedDistinctProjectAndManagedFileAsync(
-                sourceScope.ServiceProvider,
-                "Local");
-        }
+        var sourceTestProfile = testEnvironment.CreatePostgreSqlProfile("snapshot-local-source");
+        var sourceSaveResult = await profileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
+            sourceTestProfile,
+            "PostgreSQL local snapshot source"));
+        Assert.True(sourceSaveResult.IsSuccess, DescribeErrors(sourceSaveResult.Errors));
 
         var snapshotResult = await snapshotService.CreateSnapshotAsync(
-            sourceProfile.Profile.Id,
+            sourceSaveResult.Value,
             DatabaseSnapshotTransportKind.Local);
-        Assert.True(snapshotResult.IsSuccess, DescribeErrors(snapshotResult.Errors));
-        Assert.True(File.Exists(snapshotResult.Value!.PackagePath));
 
-        var materializeResult = await snapshotService.MaterializeSnapshotAsync(new DatabaseSnapshotMaterializationRequest
-        {
-            DisplayName = "Local snapshot restore",
-            PackagePath = snapshotResult.Value.PackagePath
-        });
-        Assert.True(materializeResult.IsSuccess, DescribeErrors(materializeResult.Errors));
-
-        var restoredProfile = runtimeAccessor.ResolveProfile(materializeResult.Value!.ProfileId);
-        Assert.Equal(DatabaseProfileSourceKind.SnapshotCache, restoredProfile.Profile.SourceKind);
-
-        var switchResult = await switchCoordinator.SwitchAsync(restoredProfile.Profile.Id);
-        Assert.True(switchResult.IsSuccess, DescribeErrors(switchResult.Errors));
-
-        await using var restoredScope = provider.CreateAsyncScope();
-        var restoredProjects = await restoredScope.ServiceProvider.GetRequiredService<ProjectsService>().ListAsync();
-        Assert.Contains(restoredProjects, project => project.Name == sourceSeed.ProjectName);
-        Assert.Equal(
-            sourceSeed.ManagedFileContent,
-            await File.ReadAllTextAsync(Path.Combine(restoredProfile.Profile.Storage.WorkspaceRoot, sourceSeed.ManagedFileRelativePath)));
+        Assert.True(snapshotResult.IsFailure);
+        Assert.Contains(snapshotResult.Errors, error => error.Message.Contains("snapshots are deferred", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
-    public async Task Ipfs_snapshot_transport_round_trips_through_the_fake_server()
+    public async Task MaterializeSnapshotAsync_returns_deferred_snapshot_error()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-snapshot-ipfs");
-        await using var server = await FakeIpfsTestServer.StartAsync();
-        await using var provider = DatabaseProfileControlPlaneIntegrationHost.BuildServiceProvider(
-            testEnvironment,
-            new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["ControlPlane:IpfsApiBaseUrl"] = server.ApiBaseUri.ToString()
-            });
-
-        var runtimeAccessor = provider.GetRequiredService<IDatabaseProfileRuntimeAccessor>();
-        var bootstrapper = provider.GetRequiredService<IAppDatabaseBootstrapper>();
+        await using var provider = DatabaseProfileControlPlaneIntegrationHost.BuildServiceProvider(testEnvironment);
         var snapshotService = provider.GetRequiredService<IDatabaseSnapshotService>();
-        var switchCoordinator = provider.GetRequiredService<IDatabaseSwitchCoordinator>();
-
-        await bootstrapper.EnsureCurrentProfileReadyAsync();
-        var sourceProfile = runtimeAccessor.ResolveCurrentProfile();
-
-        TestProfileSeedResult sourceSeed;
-        await using (var sourceScope = provider.CreateAsyncScope())
-        {
-            sourceSeed = await TestProfileSeedHelper.SeedDistinctProjectAndManagedFileAsync(
-                sourceScope.ServiceProvider,
-                "Ipfs");
-        }
-
-        var snapshotResult = await snapshotService.CreateSnapshotAsync(
-            sourceProfile.Profile.Id,
-            DatabaseSnapshotTransportKind.Ipfs);
-        Assert.True(snapshotResult.IsSuccess, DescribeErrors(snapshotResult.Errors));
-        Assert.False(string.IsNullOrWhiteSpace(snapshotResult.Value!.IpfsCid));
-        Assert.Contains(snapshotResult.Value.IpfsCid!, server.StoredCids);
-        Assert.Contains(snapshotResult.Value.IpfsCid!, server.PinnedCids);
 
         var materializeResult = await snapshotService.MaterializeSnapshotAsync(new DatabaseSnapshotMaterializationRequest
         {
-            DisplayName = "IPFS snapshot restore",
-            SnapshotCid = snapshotResult.Value.IpfsCid
-        });
-        Assert.True(materializeResult.IsSuccess, DescribeErrors(materializeResult.Errors));
-
-        var restoredProfile = runtimeAccessor.ResolveProfile(materializeResult.Value!.ProfileId);
-        Assert.Equal(DatabaseProfileSourceKind.IpfsSnapshot, restoredProfile.Profile.SourceKind);
-
-        var switchResult = await switchCoordinator.SwitchAsync(restoredProfile.Profile.Id);
-        Assert.True(switchResult.IsSuccess, DescribeErrors(switchResult.Errors));
-
-        await using var restoredScope = provider.CreateAsyncScope();
-        var restoredProjects = await restoredScope.ServiceProvider.GetRequiredService<ProjectsService>().ListAsync();
-        Assert.Contains(restoredProjects, project => project.Name == sourceSeed.ProjectName);
-        Assert.Equal(
-            sourceSeed.ManagedFileContent,
-            await File.ReadAllTextAsync(Path.Combine(restoredProfile.Profile.Storage.WorkspaceRoot, sourceSeed.ManagedFileRelativePath)));
-    }
-
-    [Fact]
-    public async Task PostgreSql_profile_can_be_cloned_into_a_snapshot_backed_sqlite_profile()
-    {
-        await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-snapshot-postgres");
-        var availability = await PostgresTestAvailability.EnsureAvailableAsync("C:\\repositories\\CanDoItAll");
-        Assert.True(availability.IsAvailable, availability.Message);
-
-        var baseBuilder = new NpgsqlConnectionStringBuilder(availability.ConnectionString);
-        var databaseName = $"candoitall_clone_{Guid.NewGuid():N}"[..29];
-
-        await using var provider = DatabaseProfileControlPlaneIntegrationHost.BuildServiceProvider(testEnvironment);
-        var profileService = provider.GetRequiredService<IDatabaseProfileService>();
-        var runtimeAccessor = provider.GetRequiredService<IDatabaseProfileRuntimeAccessor>();
-        var driverRegistry = provider.GetRequiredService<IDatabaseDriverRegistry>();
-        var bootstrapper = provider.GetRequiredService<IAppDatabaseBootstrapper>();
-        var switchCoordinator = provider.GetRequiredService<IDatabaseSwitchCoordinator>();
-        var snapshotService = provider.GetRequiredService<IDatabaseSnapshotService>();
-
-        var saveResult = await profileService.SaveAsync(new DatabaseProfileEditorModel
-        {
-            DisplayName = "Snapshot postgres source",
-            ProviderKind = DatabaseProviderKind.PostgreSql,
-            SourceKind = DatabaseProfileSourceKind.PostgresConnection,
-            PostgresHost = baseBuilder.Host ?? "127.0.0.1",
-            PostgresPort = baseBuilder.Port,
-            PostgresDatabaseName = databaseName,
-            PostgresUsername = baseBuilder.Username ?? "candoitall",
-            PostgresPassword = baseBuilder.Password ?? "candoitall",
-            PostgresAdminDatabaseName = baseBuilder.Database,
-            WorkspaceRoot = Path.Combine(testEnvironment.RootPath, "postgres-workspace")
+            DisplayName = "Deferred snapshot restore",
+            SnapshotCid = "bafy-test"
         });
 
-        Assert.True(saveResult.IsSuccess, DescribeErrors(saveResult.Errors));
-
-        var postgresProfile = runtimeAccessor.ResolveProfile(saveResult.Value);
-        var driver = driverRegistry.Resolve(DatabaseProviderKind.PostgreSql);
-
-        try
-        {
-            await driver.CreateEmptyAsync(postgresProfile);
-            await bootstrapper.EnsureProfileReadyAsync(postgresProfile);
-
-            var switchToPostgres = await switchCoordinator.SwitchAsync(postgresProfile.Profile.Id);
-            Assert.True(switchToPostgres.IsSuccess, DescribeErrors(switchToPostgres.Errors));
-
-            TestProfileSeedResult postgresSeed;
-            await using (var postgresScope = provider.CreateAsyncScope())
-            {
-                postgresSeed = await TestProfileSeedHelper.SeedDistinctProjectAndManagedFileAsync(
-                    postgresScope.ServiceProvider,
-                    "Postgres");
-            }
-
-            var cloneResult = await snapshotService.CloneAsync(new DatabaseCloneRequest
-            {
-                SourceProfileId = postgresProfile.Profile.Id,
-                DisplayName = "Postgres clone"
-            });
-            Assert.True(cloneResult.IsSuccess, DescribeErrors(cloneResult.Errors));
-
-            var cloneProfile = runtimeAccessor.ResolveProfile(cloneResult.Value!.ProfileId);
-            Assert.Equal(DatabaseProviderKind.Sqlite, cloneProfile.Profile.ProviderKind);
-            Assert.Equal(DatabaseProfileSourceKind.SnapshotCache, cloneProfile.Profile.SourceKind);
-
-            var switchToClone = await switchCoordinator.SwitchAsync(cloneProfile.Profile.Id);
-            Assert.True(switchToClone.IsSuccess, DescribeErrors(switchToClone.Errors));
-
-            await using var cloneScope = provider.CreateAsyncScope();
-            var cloneProjects = await cloneScope.ServiceProvider.GetRequiredService<ProjectsService>().ListAsync();
-            Assert.Contains(cloneProjects, project => project.Name == postgresSeed.ProjectName);
-            Assert.Equal(
-                postgresSeed.ManagedFileContent,
-                await File.ReadAllTextAsync(Path.Combine(cloneProfile.Profile.Storage.WorkspaceRoot, postgresSeed.ManagedFileRelativePath)));
-        }
-        finally
-        {
-            var adminBuilder = new NpgsqlConnectionStringBuilder(availability.ConnectionString)
-            {
-                Database = string.IsNullOrWhiteSpace(baseBuilder.Database) ? "postgres" : baseBuilder.Database
-            };
-
-            await using var adminConnection = new NpgsqlConnection(adminBuilder.ConnectionString);
-            await adminConnection.OpenAsync();
-            await using var dropCommand = adminConnection.CreateCommand();
-            dropCommand.CommandText = $"drop database if exists \"{databaseName}\" with (force);";
-            await dropCommand.ExecuteNonQueryAsync();
-        }
+        Assert.True(materializeResult.IsFailure);
+        Assert.Contains(materializeResult.Errors, error => error.Message.Contains("snapshots are deferred", StringComparison.OrdinalIgnoreCase));
     }
 
     private static string DescribeErrors(IReadOnlyList<CanDoItAll.SharedKernel.Error> errors)

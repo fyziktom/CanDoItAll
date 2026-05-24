@@ -488,10 +488,18 @@ public sealed class PluginPackageManifestStore(
         }
 
         return Directory.EnumerateDirectories(installedRootPath, "*", SearchOption.TopDirectoryOnly)
+            .Where(path => !IsTemporaryPackageRoot(path))
             .Select(path => new InstalledPluginPackageRoot(Path.GetFullPath(path), Path.Combine(Path.GetFullPath(path), ManifestFileName)))
             .Where(root => File.Exists(root.ManifestPath))
             .OrderBy(root => root.PackageRootPath, StringComparer.OrdinalIgnoreCase)
             .ToArray();
+    }
+
+    private static bool IsTemporaryPackageRoot(string path)
+    {
+        var directoryName = Path.GetFileName(Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        return directoryName.StartsWith(".", StringComparison.Ordinal) ||
+            directoryName.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase);
     }
 
     internal static IReadOnlyList<string> ResolveAssemblyPaths(

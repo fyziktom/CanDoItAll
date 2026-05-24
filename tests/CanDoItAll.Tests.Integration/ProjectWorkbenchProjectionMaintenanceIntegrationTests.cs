@@ -105,7 +105,7 @@ public sealed class ProjectWorkbenchProjectionMaintenanceIntegrationTests
     public async Task GetStructureAsync_does_not_write_when_legacy_marker_and_reference_fallback_is_used()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-tests");
-        var activeProfile = testEnvironment.CreateManagedSqliteProfile("projection-zero-write");
+        var activeProfile = testEnvironment.CreatePostgreSqlProfile("projection-zero-write");
         await using var services = await TestApplicationBootstrap.BuildServiceProviderAsync(
             activeProfile,
             "CanDoItAll.Tests",

@@ -2241,7 +2241,7 @@
     "name": "Stack: PostgreSQL",
     "blockKind": "Instruction",
     "summary": "Applies PostgreSQL-specific guidance for schema, queries, indexes, and migrations.",
-    "content": "## PostgreSQL Guidance\nFor PostgreSQL-backed work:\n- design schemas and indexes around actual query paths,\n- respect transaction and migration safety,\n- be explicit about JSON, array, text search, or extension usage,\n- confirm cross-environment behavior if the app also supports SQLite or in-memory testing.",
+    "content": "## PostgreSQL Guidance\nFor PostgreSQL-backed work:\n- design schemas and indexes around actual query paths,\n- respect transaction and migration safety,\n- be explicit about JSON, array, text search, or extension usage,\n- confirm cross-environment behavior when tests use in-memory stores.",
     "isRecommendedByDefault": false,
     "promptTypeRules": "architecture|plan|implementation|migration|performance|validation",
     "blueprintRules": "architecture-spec|implementation-plan|feature-implementation|performance-hardening|validation-audit",
@@ -2254,30 +2254,6 @@
     ],
     "stackTags": [
       "postgresql",
-      "database"
-    ],
-    "toolboxEligible": false,
-    "templateTokens": []
-  },
-  {
-    "id": "5a1a2019-fd4d-5853-bda5-80c66134331f",
-    "key": "stack-sqlite",
-    "name": "Stack: SQLite",
-    "blockKind": "Instruction",
-    "summary": "Applies SQLite-specific guidance for local, test, or offline data scenarios.",
-    "content": "## SQLite Guidance\nFor SQLite-backed work:\n- remember the differences from PostgreSQL in typing, concurrency, and feature support,\n- keep schema and query choices compatible with the intended runtime role,\n- use it deliberately for local, test, or offline scenarios rather than as a silent stand-in.",
-    "isRecommendedByDefault": false,
-    "promptTypeRules": "architecture|plan|implementation|migration|testing|validation",
-    "blueprintRules": "architecture-spec|implementation-plan|feature-implementation|validation-audit|test-strategy-and-automation",
-    "phaseRules": "architecture|planning|implementation|verification",
-    "group": "stack-profiles",
-    "tags": [
-      "database",
-      "offline",
-      "sqlite"
-    ],
-    "stackTags": [
-      "sqlite",
       "database"
     ],
     "toolboxEligible": false,
@@ -2377,8 +2353,8 @@
     "key": "toolbox-cross-db-compat-check",
     "name": "Toolbox: Cross-DB Compatibility Check",
     "blockKind": "Testing",
-    "summary": "Adds compatibility checks across PostgreSQL, SQLite, or other supported data stores.",
-    "content": "## Cross-Database Compatibility\nValidate this data-layer change across the supported database providers.\n\nAt minimum:\n- note which providers were tested,\n- identify provider-specific behavior or skipped coverage,\n- avoid assuming PostgreSQL and SQLite behave identically.",
+    "summary": "Adds compatibility checks across PostgreSQL and any non-persistent test stores.",
+    "content": "## Data Store Compatibility\nValidate this data-layer change across PostgreSQL and any non-persistent test stores.\n\nAt minimum:\n- note which stores were tested,\n- identify provider-specific behavior or skipped coverage,\n- avoid assuming in-memory tests prove PostgreSQL behavior.",
     "isRecommendedByDefault": false,
     "promptTypeRules": "implementation|migration|testing|validation",
     "blueprintRules": "feature-implementation|implementation-plan|test-strategy-and-automation|validation-audit",
@@ -2388,7 +2364,6 @@
       "compatibility",
       "database",
       "postgresql",
-      "sqlite",
       "toolbox"
     ],
     "stackTags": [],

@@ -37,7 +37,7 @@ internal sealed class TestApplication : IAsyncDisposable
 
         var ownsTestEnvironment = options?.TestEnvironment is null;
         var testEnvironment = options?.TestEnvironment ?? CanDoItAllTestEnvironment.Create("candoitall-tests");
-        var activeProfile = options?.ActiveProfile ?? testEnvironment.CreateManagedSqliteProfile("primary");
+        var activeProfile = options?.ActiveProfile ?? testEnvironment.CreatePostgreSqlProfile("primary");
         var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
             activeProfile,
             "CanDoItAll.Tests",

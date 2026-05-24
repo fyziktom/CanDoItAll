@@ -10,4 +10,6 @@
 
 ## Subbundle-specific invariants
 
-Fill during execution with concrete invariants and proof.
+- Process/workflow/outbox code relies on PostgreSQL-compatible SQL and EF translation.
+- Activity timeline queries order before projection so PostgreSQL can translate them.
+- Concurrent process assignment resolution preserves one row per run/role/step scope.

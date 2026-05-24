@@ -57,7 +57,6 @@ public sealed class TestDatabaseProfile
         {
             ["Database:Provider"] = Provider switch
             {
-                TestDatabaseProviderKind.Sqlite => "Sqlite",
                 TestDatabaseProviderKind.PostgreSql => "Postgres",
                 TestDatabaseProviderKind.InMemory => "InMemory",
                 _ => throw new InvalidOperationException($"Unsupported provider '{Provider}'.")

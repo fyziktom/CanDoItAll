@@ -47,7 +47,7 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
         }
 
         _testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-playwright");
-        _activeProfile = _testEnvironment.CreateManagedSqliteProfile("primary");
+        _activeProfile = _testEnvironment.CreatePostgreSqlProfile("primary");
 
         var processStartInfo = new ProcessStartInfo(
             "dotnet",

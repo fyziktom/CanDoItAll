@@ -315,37 +315,24 @@ public sealed class ProcessOutboxService(
         var effectiveLeaseDuration = leaseDuration is null || leaseDuration.Value <= TimeSpan.Zero
             ? DefaultLeaseDuration
             : leaseDuration.Value;
-        List<Guid> recordIds;
-        if (dbContext.Database.IsSqlite())
+        var query = dbContext.Set<ProcessOutboxRecord>()
+            .Where(item => item.Status == ProcessOutboxRecordStatus.Pending)
+            .Where(item => item.NextAttemptAtUtc == null || item.NextAttemptAtUtc <= now)
+            .Where(item => item.LeaseExpiresAtUtc == null || item.LeaseExpiresAtUtc <= now);
+        if (minimumAutomationDispatchCreatedAtUtc.HasValue)
         {
-            recordIds = await ListPendingRecordIdsForSqliteAsync(
-                dbContext,
-                now,
-                take,
-                minimumAutomationDispatchCreatedAtUtc,
-                cancellationToken);
+            var cutoff = minimumAutomationDispatchCreatedAtUtc.Value;
+            query = query.Where(item =>
+                item.CommandKey != AutomationDispatchCommandKey ||
+                item.CreatedAtUtc >= cutoff);
         }
-        else
-        {
-            var query = dbContext.Set<ProcessOutboxRecord>()
-                .Where(item => item.Status == ProcessOutboxRecordStatus.Pending)
-                .Where(item => item.NextAttemptAtUtc == null || item.NextAttemptAtUtc <= now)
-                .Where(item => item.LeaseExpiresAtUtc == null || item.LeaseExpiresAtUtc <= now);
-            if (minimumAutomationDispatchCreatedAtUtc.HasValue)
-            {
-                var cutoff = minimumAutomationDispatchCreatedAtUtc.Value;
-                query = query.Where(item =>
-                    item.CommandKey != AutomationDispatchCommandKey ||
-                    item.CreatedAtUtc >= cutoff);
-            }
 
-            recordIds = await query
-                .OrderBy(item => item.NextAttemptAtUtc ?? item.CreatedAtUtc)
-                .ThenBy(item => item.CreatedAtUtc)
-                .Take(take)
-                .Select(item => item.Id)
-                .ToListAsync(cancellationToken);
-        }
+        var recordIds = await query
+            .OrderBy(item => item.NextAttemptAtUtc ?? item.CreatedAtUtc)
+            .ThenBy(item => item.CreatedAtUtc)
+            .Take(take)
+            .Select(item => item.Id)
+            .ToListAsync(cancellationToken);
 
         var processedCount = 0;
         foreach (var recordId in recordIds)
@@ -570,23 +557,15 @@ public sealed class ProcessOutboxService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var now = clock.GetUtcNow();
         var leaseExpiresAtUtc = now.Add(ResolveClaimLeaseDuration(commandKey, DefaultLeaseDuration));
-        var updatedRows = dbContext.Database.IsSqlite()
-            ? await RenewClaimedLeaseForSqliteAsync(
-                dbContext,
-                outboxId,
-                leaseToken,
-                now,
-                leaseExpiresAtUtc,
-                cancellationToken)
-            : await dbContext.Set<ProcessOutboxRecord>()
-                .Where(item => item.Id == outboxId)
-                .Where(item => item.Status == ProcessOutboxRecordStatus.Pending)
-                .Where(item => item.LeaseToken == leaseToken)
-                .ExecuteUpdateAsync(
-                    setters => setters
-                        .SetProperty(item => item.LeaseExpiresAtUtc, leaseExpiresAtUtc)
-                        .SetProperty(item => item.UpdatedAtUtc, now),
-                    cancellationToken);
+        var updatedRows = await dbContext.Set<ProcessOutboxRecord>()
+            .Where(item => item.Id == outboxId)
+            .Where(item => item.Status == ProcessOutboxRecordStatus.Pending)
+            .Where(item => item.LeaseToken == leaseToken)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(item => item.LeaseExpiresAtUtc, leaseExpiresAtUtc)
+                    .SetProperty(item => item.UpdatedAtUtc, now),
+                cancellationToken);
 
         if (updatedRows == 0)
         {
@@ -657,25 +636,17 @@ public sealed class ProcessOutboxService(
         var claimLeaseDuration = ResolveClaimLeaseDuration(commandKey, leaseDuration);
         var leaseExpiresAtUtc = now.Add(claimLeaseDuration);
 
-        var updatedRows = dbContext.Database.IsSqlite()
-            ? await TryClaimRecordForSqliteAsync(
-                dbContext,
-                outboxId,
-                now,
-                leaseExpiresAtUtc,
-                leaseToken,
-                cancellationToken)
-            : await dbContext.Set<ProcessOutboxRecord>()
-                .Where(item => item.Id == outboxId)
-                .Where(item => item.Status == ProcessOutboxRecordStatus.Pending)
-                .Where(item => item.NextAttemptAtUtc == null || item.NextAttemptAtUtc <= now)
-                .Where(item => item.LeaseExpiresAtUtc == null || item.LeaseExpiresAtUtc <= now)
-                .ExecuteUpdateAsync(
-                    setters => setters
-                        .SetProperty(item => item.LeaseToken, leaseToken)
-                        .SetProperty(item => item.LeaseExpiresAtUtc, leaseExpiresAtUtc)
-                        .SetProperty(item => item.UpdatedAtUtc, now),
-                    cancellationToken);
+        var updatedRows = await dbContext.Set<ProcessOutboxRecord>()
+            .Where(item => item.Id == outboxId)
+            .Where(item => item.Status == ProcessOutboxRecordStatus.Pending)
+            .Where(item => item.NextAttemptAtUtc == null || item.NextAttemptAtUtc <= now)
+            .Where(item => item.LeaseExpiresAtUtc == null || item.LeaseExpiresAtUtc <= now)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(item => item.LeaseToken, leaseToken)
+                    .SetProperty(item => item.LeaseExpiresAtUtc, leaseExpiresAtUtc)
+                    .SetProperty(item => item.UpdatedAtUtc, now),
+                cancellationToken);
 
         if (updatedRows > 0 &&
             string.Equals(commandKey, AutomationDispatchCommandKey, StringComparison.Ordinal))
@@ -700,82 +671,6 @@ public sealed class ProcessOutboxService(
         }
 
         return requestedLeaseDuration;
-    }
-
-    private static Task<List<Guid>> ListPendingRecordIdsForSqliteAsync(
-        AppDbContext dbContext,
-        DateTimeOffset now,
-        int take,
-        DateTimeOffset? minimumAutomationDispatchCreatedAtUtc,
-        CancellationToken cancellationToken)
-    {
-        if (minimumAutomationDispatchCreatedAtUtc.HasValue)
-        {
-            return dbContext.Database
-                .SqlQuery<Guid>($"""
-                                 SELECT "Id" AS "Value"
-                                 FROM "Processes_Outbox"
-                                 WHERE "Status" = {(int)ProcessOutboxRecordStatus.Pending}
-                                   AND ("NextAttemptAtUtc" IS NULL OR "NextAttemptAtUtc" <= {now})
-                                   AND ("LeaseExpiresAtUtc" IS NULL OR "LeaseExpiresAtUtc" <= {now})
-                                   AND ("CommandKey" <> {AutomationDispatchCommandKey} OR "CreatedAtUtc" >= {minimumAutomationDispatchCreatedAtUtc.Value})
-                                 ORDER BY COALESCE("NextAttemptAtUtc", "CreatedAtUtc"), "CreatedAtUtc"
-                                 LIMIT {take}
-                                 """)
-                .ToListAsync(cancellationToken);
-        }
-
-        return dbContext.Database
-            .SqlQuery<Guid>($"""
-                             SELECT "Id" AS "Value"
-                             FROM "Processes_Outbox"
-                             WHERE "Status" = {(int)ProcessOutboxRecordStatus.Pending}
-                               AND ("NextAttemptAtUtc" IS NULL OR "NextAttemptAtUtc" <= {now})
-                               AND ("LeaseExpiresAtUtc" IS NULL OR "LeaseExpiresAtUtc" <= {now})
-                             ORDER BY COALESCE("NextAttemptAtUtc", "CreatedAtUtc"), "CreatedAtUtc"
-                             LIMIT {take}
-                             """)
-            .ToListAsync(cancellationToken);
-    }
-
-    private static Task<int> TryClaimRecordForSqliteAsync(
-        AppDbContext dbContext,
-        Guid outboxId,
-        DateTimeOffset now,
-        DateTimeOffset leaseExpiresAtUtc,
-        string leaseToken,
-        CancellationToken cancellationToken)
-    {
-        return dbContext.Database.ExecuteSqlInterpolatedAsync($"""
-                                                               UPDATE "Processes_Outbox"
-                                                               SET "LeaseToken" = {leaseToken},
-                                                                   "LeaseExpiresAtUtc" = {leaseExpiresAtUtc},
-                                                                   "UpdatedAtUtc" = {now}
-                                                               WHERE "Id" = {outboxId}
-                                                                 AND "Status" = {(int)ProcessOutboxRecordStatus.Pending}
-                                                                 AND ("NextAttemptAtUtc" IS NULL OR "NextAttemptAtUtc" <= {now})
-                                                                 AND ("LeaseExpiresAtUtc" IS NULL OR "LeaseExpiresAtUtc" <= {now})
-                                                               """,
-            cancellationToken);
-    }
-
-    private static Task<int> RenewClaimedLeaseForSqliteAsync(
-        AppDbContext dbContext,
-        Guid outboxId,
-        string leaseToken,
-        DateTimeOffset now,
-        DateTimeOffset leaseExpiresAtUtc,
-        CancellationToken cancellationToken)
-    {
-        return dbContext.Database.ExecuteSqlInterpolatedAsync($"""
-                                                               UPDATE "Processes_Outbox"
-                                                               SET "LeaseExpiresAtUtc" = {leaseExpiresAtUtc},
-                                                                   "UpdatedAtUtc" = {now}
-                                                               WHERE "Id" = {outboxId}
-                                                                 AND "Status" = {(int)ProcessOutboxRecordStatus.Pending}
-                                                                 AND "LeaseToken" = {leaseToken}
-                                                               """,
-            cancellationToken);
     }
 
     private static void ReleaseLease(ProcessOutboxRecord record)
@@ -882,15 +777,6 @@ public sealed class ProcessOutboxDrainWorker(
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
-            return 0;
-        }
-        catch (Exception exception) when (SqliteWriteCoordination.IsBusy(exception))
-        {
-            logger.LogWarning(
-                exception,
-                "ProcessOutboxDrainWorker hit transient SQLite contention. The worker will retry after {FailureBackoff}.",
-                FailureBackoff);
-            await Task.Delay(FailureBackoff, stoppingToken);
             return 0;
         }
         catch (Exception exception)

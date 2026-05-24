@@ -10,4 +10,6 @@
 
 ## Subbundle-specific invariants
 
-Fill during execution with concrete invariants and proof.
+- Final validation evidence covers build, unit tests, targeted component tests, full integration tests, browser smoke proof, and audits.
+- No proof artifact claims automatic SQLite data migration.
+- Documentation states PostgreSQL-only runtime behavior and residual manual alignment requirements.

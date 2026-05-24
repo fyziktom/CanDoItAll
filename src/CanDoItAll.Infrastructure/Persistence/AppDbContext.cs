@@ -34,7 +34,7 @@ public sealed class AppDbContext(
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
         StampApplicationManagedConcurrencyTokens();
-        return ExecuteSaveChangesWithCoordination(() => base.SaveChanges(acceptAllChangesOnSuccess));
+        return base.SaveChanges(acceptAllChangesOnSuccess);
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
@@ -45,9 +45,7 @@ public sealed class AppDbContext(
     public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
     {
         StampApplicationManagedConcurrencyTokens();
-        return ExecuteSaveChangesWithCoordinationAsync(
-            () => base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken),
-            cancellationToken);
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
     }
 
     public override async ValueTask DisposeAsync()
@@ -82,89 +80,4 @@ public sealed class AppDbContext(
         }
     }
 
-    private int ExecuteSaveChangesWithCoordination(Func<int> saveChanges)
-    {
-        ArgumentNullException.ThrowIfNull(saveChanges);
-
-        var writeGate = ResolveSqliteWriteGate();
-        if (writeGate is null)
-        {
-            return ExecuteSaveChangesWithRetry(saveChanges);
-        }
-
-        writeGate.Wait();
-        try
-        {
-            return ExecuteSaveChangesWithRetry(saveChanges);
-        }
-        finally
-        {
-            writeGate.Release();
-        }
-    }
-
-    private async Task<int> ExecuteSaveChangesWithCoordinationAsync(
-        Func<Task<int>> saveChanges,
-        CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(saveChanges);
-
-        var writeGate = ResolveSqliteWriteGate();
-        if (writeGate is null)
-        {
-            return await ExecuteSaveChangesWithRetryAsync(saveChanges, cancellationToken);
-        }
-
-        await writeGate.WaitAsync(cancellationToken);
-        try
-        {
-            return await ExecuteSaveChangesWithRetryAsync(saveChanges, cancellationToken);
-        }
-        finally
-        {
-            writeGate.Release();
-        }
-    }
-
-    private SemaphoreSlim? ResolveSqliteWriteGate()
-    {
-        if (!Database.IsSqlite())
-        {
-            return null;
-        }
-
-        return SqliteWriteCoordination.GetWriteGate(Database.GetConnectionString());
-    }
-
-    private static int ExecuteSaveChangesWithRetry(Func<int> saveChanges)
-    {
-        for (var attempt = 0; ; attempt++)
-        {
-            try
-            {
-                return saveChanges();
-            }
-            catch (Exception ex) when (SqliteWriteCoordination.IsBusy(ex) && attempt < SqliteWriteCoordination.RetryAttemptCount)
-            {
-                Thread.Sleep(SqliteWriteCoordination.GetRetryDelay(attempt));
-            }
-        }
-    }
-
-    private static async Task<int> ExecuteSaveChangesWithRetryAsync(
-        Func<Task<int>> saveChanges,
-        CancellationToken cancellationToken)
-    {
-        for (var attempt = 0; ; attempt++)
-        {
-            try
-            {
-                return await saveChanges();
-            }
-            catch (Exception ex) when (SqliteWriteCoordination.IsBusy(ex) && attempt < SqliteWriteCoordination.RetryAttemptCount)
-            {
-                await Task.Delay(SqliteWriteCoordination.GetRetryDelay(attempt), cancellationToken);
-            }
-        }
-    }
 }

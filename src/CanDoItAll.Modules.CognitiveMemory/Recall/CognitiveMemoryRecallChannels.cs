@@ -46,30 +46,10 @@ public sealed partial class CognitiveMemoryRecallOrchestrator
                     EF.Functions.Like(record.SummaryText.ToLower(), pattern) ||
                     EF.Functions.Like(record.CanonicalText.ToLower(), pattern) ||
                     EF.Functions.Like(record.TopicKey.ToLower(), pattern));
-            var termRecords = dbContext.Database.IsSqlite()
-                ? await termQuery
-                    .Select(record => new MemoryRecordSnapshot(
-                        record.Id,
-                        record.ProjectId,
-                        record.Kind,
-                        record.Title,
-                        record.SummaryText,
-                        record.CanonicalText,
-                        record.TopicKey,
-                        record.ValidationState,
-                        record.StabilityState,
-                        record.SourceEvidenceCount,
-                        record.EvidenceAnchorCount,
-                        record.PrimaryClaimId,
-                        record.PrimaryContextFrameId,
-                        record.AccessLevel,
-                        record.RiskLevel,
-                        record.UpdatedAtUtc))
-                    .ToListAsync(cancellationToken)
-                : await termQuery
-                    .OrderByDescending(record => record.UpdatedAtUtc)
-                    .Take(termScanLimit)
-                    .Select(record => new MemoryRecordSnapshot(
+            var termRecords = await termQuery
+                .OrderByDescending(record => record.UpdatedAtUtc)
+                .Take(termScanLimit)
+                .Select(record => new MemoryRecordSnapshot(
                     record.Id,
                     record.ProjectId,
                     record.Kind,
@@ -86,11 +66,7 @@ public sealed partial class CognitiveMemoryRecallOrchestrator
                     record.AccessLevel,
                     record.RiskLevel,
                     record.UpdatedAtUtc))
-                    .ToListAsync(cancellationToken);
-            termRecords = termRecords
-                .OrderByDescending(record => record.UpdatedAtUtc)
-                .Take(termScanLimit)
-                .ToList();
+                .ToListAsync(cancellationToken);
 
             foreach (var record in termRecords)
             {
@@ -118,30 +94,10 @@ public sealed partial class CognitiveMemoryRecallOrchestrator
             var existingRecordIds = candidateRecords.Keys.ToHashSet();
             var fallbackQuery = BuildRecordQuery(dbContext, request)
                 .Where(record => !existingRecordIds.Contains(record.Id));
-            var fallbackRecords = dbContext.Database.IsSqlite()
-                ? await fallbackQuery
-                    .Select(record => new MemoryRecordSnapshot(
-                        record.Id,
-                        record.ProjectId,
-                        record.Kind,
-                        record.Title,
-                        record.SummaryText,
-                        record.CanonicalText,
-                        record.TopicKey,
-                        record.ValidationState,
-                        record.StabilityState,
-                        record.SourceEvidenceCount,
-                        record.EvidenceAnchorCount,
-                        record.PrimaryClaimId,
-                        record.PrimaryContextFrameId,
-                        record.AccessLevel,
-                        record.RiskLevel,
-                        record.UpdatedAtUtc))
-                    .ToListAsync(cancellationToken)
-                : await fallbackQuery
-                    .OrderByDescending(record => record.UpdatedAtUtc)
-                    .Take(LexicalFallbackScanLimit)
-                    .Select(record => new MemoryRecordSnapshot(
+            var fallbackRecords = await fallbackQuery
+                .OrderByDescending(record => record.UpdatedAtUtc)
+                .Take(LexicalFallbackScanLimit)
+                .Select(record => new MemoryRecordSnapshot(
                     record.Id,
                     record.ProjectId,
                     record.Kind,
@@ -158,11 +114,7 @@ public sealed partial class CognitiveMemoryRecallOrchestrator
                     record.AccessLevel,
                     record.RiskLevel,
                     record.UpdatedAtUtc))
-                    .ToListAsync(cancellationToken);
-            fallbackRecords = fallbackRecords
-                .OrderByDescending(record => record.UpdatedAtUtc)
-                .Take(LexicalFallbackScanLimit)
-                .ToList();
+                .ToListAsync(cancellationToken);
             var fallbackMatches = fallbackRecords
                 .Select(record => new
                 {
@@ -237,31 +189,17 @@ public sealed partial class CognitiveMemoryRecallOrchestrator
                      EF.Functions.Like(item.ContentText.ToLower(), pattern) ||
                      EF.Functions.Like(item.SourceItemKey.ToLower(), pattern) ||
                      item.Locator != null && EF.Functions.Like(item.Locator.ToLower(), pattern)));
-            var matches = dbContext.Database.IsSqlite()
-                ? await sourceQuery
-                    .Select(item => new SourceTextItemSnapshot(
-                        item.Id,
-                        item.Title,
-                        item.ContentText,
-                        item.SourceItemKey,
-                        item.Locator,
-                        item.UpdatedAtUtc))
-                    .ToListAsync(cancellationToken)
-                : await sourceQuery
-                    .OrderByDescending(item => item.UpdatedAtUtc)
-                    .Take(termScanLimit)
-                    .Select(item => new SourceTextItemSnapshot(
+            var matches = await sourceQuery
+                .OrderByDescending(item => item.UpdatedAtUtc)
+                .Take(termScanLimit)
+                .Select(item => new SourceTextItemSnapshot(
                     item.Id,
                     item.Title,
                     item.ContentText,
                     item.SourceItemKey,
                     item.Locator,
                     item.UpdatedAtUtc))
-                    .ToListAsync(cancellationToken);
-            matches = matches
-                .OrderByDescending(item => item.UpdatedAtUtc)
-                .Take(termScanLimit)
-                .ToList();
+                .ToListAsync(cancellationToken);
 
             foreach (var match in matches)
             {

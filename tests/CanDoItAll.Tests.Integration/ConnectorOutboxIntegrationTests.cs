@@ -195,7 +195,7 @@ public sealed class ConnectorOutboxIntegrationTests
         public static async Task<ConnectorOutboxHarness> CreateAsync(TestConnectorCommandHandler handler)
         {
             var testEnvironment = CanDoItAllTestEnvironment.Create("connector-outbox-tests");
-            var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+            var profile = testEnvironment.CreatePostgreSqlProfile("primary");
             var services = await TestApplicationBootstrap.BuildServiceProviderAsync(
                 profile,
                 "CanDoItAll.Tests",

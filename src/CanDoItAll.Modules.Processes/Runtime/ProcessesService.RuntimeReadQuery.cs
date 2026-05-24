@@ -555,10 +555,7 @@ public sealed partial class ProcessRuntimeReadQueryService(
         IQueryable<ProcessRun> runsQuery,
         CancellationToken cancellationToken)
     {
-        var isSqlite = dbContext.Database.IsSqlite();
-        var orderedRunsQuery = isSqlite
-            ? runsQuery
-            : runsQuery.OrderByDescending(run => run.UpdatedAtUtc);
+        var orderedRunsQuery = runsQuery.OrderByDescending(run => run.UpdatedAtUtc);
         var projectedRunsQuery = orderedRunsQuery
             .Select(
                 run => new ProcessRunListProjection(
@@ -578,11 +575,7 @@ public sealed partial class ProcessRuntimeReadQueryService(
                     run.EstimatedCost,
                     run.ActualCost,
                     run.UpdatedAtUtc));
-        var runs = isSqlite
-            ? (await projectedRunsQuery.ToListAsync(cancellationToken))
-                .OrderByDescending(run => run.UpdatedAtUtc)
-                .ToList()
-            : await projectedRunsQuery.ToListAsync(cancellationToken);
+        var runs = await projectedRunsQuery.ToListAsync(cancellationToken);
         if (runs.Count == 0)
         {
             return [];

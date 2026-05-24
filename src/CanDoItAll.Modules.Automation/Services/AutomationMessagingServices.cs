@@ -172,21 +172,19 @@ public sealed class AutomationMessageDispatcher(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var now = clock.GetUtcNow();
         var leaseCutoff = now.Subtract(options.Value.DeliveryLeaseDuration);
-        var dueDeliveryIds = dbContext.Database.IsSqlite()
-            ? await ListDueDeliveryIdsForSqliteAsync(dbContext, now, leaseCutoff, take, cancellationToken)
-            : await dbContext.Set<AutomationEnvelopeDeliveryRecord>()
-                .Where(item => item.AvailableAtUtc <= now)
-                .Where(item =>
-                    item.State == AutomationDeliveryState.Pending ||
-                    item.State == AutomationDeliveryState.RetryScheduled ||
-                    (item.State == AutomationDeliveryState.Running &&
-                     item.LockedAtUtc != null &&
-                     item.LockedAtUtc <= leaseCutoff))
-                .OrderBy(item => item.AvailableAtUtc)
-                .ThenBy(item => item.CreatedAtUtc)
-                .Select(item => item.Id)
-                .Take(take)
-                .ToListAsync(cancellationToken);
+        var dueDeliveryIds = await dbContext.Set<AutomationEnvelopeDeliveryRecord>()
+            .Where(item => item.AvailableAtUtc <= now)
+            .Where(item =>
+                item.State == AutomationDeliveryState.Pending ||
+                item.State == AutomationDeliveryState.RetryScheduled ||
+                (item.State == AutomationDeliveryState.Running &&
+                 item.LockedAtUtc != null &&
+                 item.LockedAtUtc <= leaseCutoff))
+            .OrderBy(item => item.AvailableAtUtc)
+            .ThenBy(item => item.CreatedAtUtc)
+            .Select(item => item.Id)
+            .Take(take)
+            .ToListAsync(cancellationToken);
 
         var processedCount = 0;
         foreach (var deliveryId in dueDeliveryIds)
@@ -206,96 +204,29 @@ public sealed class AutomationMessageDispatcher(
         var now = clock.GetUtcNow();
         var lockToken = Guid.NewGuid().ToString("N");
         var leaseCutoff = now.Subtract(options.Value.DeliveryLeaseDuration);
-        var claimedCount = dbContext.Database.IsSqlite()
-            ? await TryClaimDeliveryForSqliteAsync(
-                dbContext,
-                deliveryId,
-                now,
-                leaseCutoff,
-                lockToken,
-                cancellationToken)
-            : await dbContext.Set<AutomationEnvelopeDeliveryRecord>()
-                .Where(item => item.Id == deliveryId)
-                .Where(item => item.AvailableAtUtc <= now)
-                .Where(item =>
-                    item.State == AutomationDeliveryState.Pending ||
-                    item.State == AutomationDeliveryState.RetryScheduled ||
-                    (item.State == AutomationDeliveryState.Running &&
-                     item.LockedAtUtc != null &&
-                     item.LockedAtUtc <= leaseCutoff))
-                .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(item => item.State, AutomationDeliveryState.Running)
-                    .SetProperty(item => item.AttemptCount, item => item.AttemptCount + 1)
-                    .SetProperty(item => item.LastAttemptAtUtc, now)
-                    .SetProperty(item => item.UpdatedAtUtc, now)
-                    .SetProperty(item => item.CompletedAtUtc, (DateTimeOffset?)null)
-                    .SetProperty(item => item.LockedAtUtc, now)
-                    .SetProperty(item => item.LockToken, lockToken), cancellationToken);
+        var claimedCount = await dbContext.Set<AutomationEnvelopeDeliveryRecord>()
+            .Where(item => item.Id == deliveryId)
+            .Where(item => item.AvailableAtUtc <= now)
+            .Where(item =>
+                item.State == AutomationDeliveryState.Pending ||
+                item.State == AutomationDeliveryState.RetryScheduled ||
+                (item.State == AutomationDeliveryState.Running &&
+                 item.LockedAtUtc != null &&
+                 item.LockedAtUtc <= leaseCutoff))
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(item => item.State, AutomationDeliveryState.Running)
+                .SetProperty(item => item.AttemptCount, item => item.AttemptCount + 1)
+                .SetProperty(item => item.LastAttemptAtUtc, now)
+                .SetProperty(item => item.UpdatedAtUtc, now)
+                .SetProperty(item => item.CompletedAtUtc, (DateTimeOffset?)null)
+                .SetProperty(item => item.LockedAtUtc, now)
+                .SetProperty(item => item.LockToken, lockToken), cancellationToken);
         if (claimedCount == 0)
         {
             return false;
         }
 
         return await DispatchClaimedAsync(deliveryId, lockToken, cancellationToken);
-    }
-
-    private static Task<List<Guid>> ListDueDeliveryIdsForSqliteAsync(
-        AppDbContext dbContext,
-        DateTimeOffset now,
-        DateTimeOffset leaseCutoff,
-        int take,
-        CancellationToken cancellationToken)
-    {
-        return dbContext.Database
-            .SqlQuery<Guid>($"""
-                             SELECT "Id" AS "Value"
-                             FROM "Automation_EnvelopeDeliveries"
-                             WHERE "AvailableAtUtc" <= {now}
-                               AND (
-                                     "State" = {(int)AutomationDeliveryState.Pending}
-                                     OR "State" = {(int)AutomationDeliveryState.RetryScheduled}
-                                     OR (
-                                         "State" = {(int)AutomationDeliveryState.Running}
-                                         AND "LockedAtUtc" IS NOT NULL
-                                         AND "LockedAtUtc" <= {leaseCutoff}
-                                     )
-                                 )
-                             ORDER BY "AvailableAtUtc", "CreatedAtUtc"
-                             LIMIT {take}
-                             """)
-            .ToListAsync(cancellationToken);
-    }
-
-    private static Task<int> TryClaimDeliveryForSqliteAsync(
-        AppDbContext dbContext,
-        Guid deliveryId,
-        DateTimeOffset now,
-        DateTimeOffset leaseCutoff,
-        string lockToken,
-        CancellationToken cancellationToken)
-    {
-        return dbContext.Database.ExecuteSqlInterpolatedAsync($"""
-                                                               UPDATE "Automation_EnvelopeDeliveries"
-                                                               SET "State" = {(int)AutomationDeliveryState.Running},
-                                                                   "AttemptCount" = "AttemptCount" + 1,
-                                                                   "LastAttemptAtUtc" = {now},
-                                                                   "UpdatedAtUtc" = {now},
-                                                                   "CompletedAtUtc" = NULL,
-                                                                   "LockedAtUtc" = {now},
-                                                                   "LockToken" = {lockToken}
-                                                               WHERE "Id" = {deliveryId}
-                                                                 AND "AvailableAtUtc" <= {now}
-                                                                 AND (
-                                                                       "State" = {(int)AutomationDeliveryState.Pending}
-                                                                       OR "State" = {(int)AutomationDeliveryState.RetryScheduled}
-                                                                       OR (
-                                                                           "State" = {(int)AutomationDeliveryState.Running}
-                                                                           AND "LockedAtUtc" IS NOT NULL
-                                                                           AND "LockedAtUtc" <= {leaseCutoff}
-                                                                       )
-                                                                   )
-                                                               """,
-            cancellationToken);
     }
 
     private async Task<bool> DispatchClaimedAsync(

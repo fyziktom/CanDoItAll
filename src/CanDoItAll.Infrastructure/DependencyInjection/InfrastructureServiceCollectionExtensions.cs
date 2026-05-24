@@ -77,7 +77,6 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<IDatabaseSwitchNotificationService, DatabaseSwitchNotificationService>();
         services.AddSingleton<IDatabaseRuntimeState, DatabaseRuntimeState>();
         services.AddSingleton<IDatabaseDriver, InMemoryDatabaseDriver>();
-        services.AddSingleton<IDatabaseDriver, SqliteDatabaseDriver>();
         services.AddSingleton<IDatabaseDriver, PostgreSqlDatabaseDriver>();
         services.AddSingleton<IDatabaseDriverRegistry, DatabaseDriverRegistry>();
         services.AddSingleton<ISwitchableAppDbContextFactory, SwitchableAppDbContextFactory>();

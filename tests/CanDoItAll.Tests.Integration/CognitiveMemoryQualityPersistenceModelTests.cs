@@ -2,10 +2,10 @@ using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.CognitiveMemory;
 using CanDoItAll.SharedKernel;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 
+using CanDoItAll.Tests.Support;
 namespace CanDoItAll.Tests.Integration;
 
 public sealed class CognitiveMemoryQualityPersistenceModelTests
@@ -82,19 +82,16 @@ public sealed class CognitiveMemoryQualityPersistenceModelTests
     private static async Task<QualityFixture> CreateFixtureAsync()
     {
         AppDbContextModelRegistry.ConfigureAssemblies(ModuleAssemblies.All);
-        var connection = new SqliteConnection("Data Source=:memory:");
-        await connection.OpenAsync();
+        var database = PostgresTestDatabaseLease.Create("cognitivememoryqualitypersistencemodeltests");
 
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlite(connection)
-            .Options;
+        var options = database.CreateAppDbContextOptions();
         var dbContext = new AppDbContext(options);
         await dbContext.Database.EnsureCreatedAsync();
-        return new QualityFixture(connection, dbContext);
+        return new QualityFixture(database, dbContext);
     }
 
     private sealed class QualityFixture(
-        SqliteConnection connection,
+        PostgresTestDatabaseLease database,
         AppDbContext dbContext) : IAsyncDisposable
     {
         public AppDbContext DbContext { get; } = dbContext;
@@ -102,7 +99,7 @@ public sealed class CognitiveMemoryQualityPersistenceModelTests
         public async ValueTask DisposeAsync()
         {
             await DbContext.DisposeAsync();
-            await connection.DisposeAsync();
+            await database.DisposeAsync();
         }
     }
 }

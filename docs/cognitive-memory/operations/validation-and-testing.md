@@ -27,7 +27,7 @@ dotnet build CanDoItAll.slnx --no-restore -m:1 --verbosity:minimal
 | Layer | Coverage today |
 | --- | --- |
 | Unit | Foundation guards, source ingestion, score geometry, signal ledger, taxonomy, recall, consolidation, review UI service, operator audit including retention cleanup run audit, operational settings, retention cleanup, procedure memory, temporal replay, workspace attention, advanced services, module registration, projection adapters, provider failure paths. |
-| Integration | SQLite/PostgreSQL persistence model coverage for foundation, source ingestion, score geometry, signals, taxonomy, recall, consolidation, temporal replay, workspace, procedural, neuro foundation, advanced records. |
+| Integration | PostgreSQL persistence model coverage for foundation, source ingestion, score geometry, signals, taxonomy, recall, consolidation, temporal replay, workspace, procedural, neuro foundation, advanced records. |
 | Component | Cognitive Memory page coverage. |
 | Playwright | Review UI browser proof. |
 

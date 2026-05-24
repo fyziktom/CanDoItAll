@@ -108,12 +108,11 @@ The API currently maps 35 routes per surface under legacy `/api/cognitive-memory
 
 ## Persistence Surface
 
-The module currently has 109 entity record classes. Provider-specific migrations exist for both SQLite and PostgreSQL:
+The module currently has 109 entity record classes. PostgreSQL migrations are the main runtime schema path:
 
-- SQLite migrations: 15 Cognitive Memory migrations.
 - PostgreSQL migrations: 15 Cognitive Memory migrations.
 
-This confirms the implementation is durable and provider-aware. The schema is beta-covered for the core source/consolidation/projection/recall path, while advanced control surfaces still need P2/P3 stabilization before being treated as a public external contract.
+This confirms the implementation is durable on the PostgreSQL runtime path. The schema is beta-covered for the core source/consolidation/projection/recall path, while advanced control surfaces still need P2/P3 stabilization before being treated as a public external contract.
 
 ## Test Surface
 

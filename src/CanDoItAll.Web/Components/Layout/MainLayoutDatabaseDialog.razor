@@ -8,7 +8,7 @@
         Title="Database profiles"
         Eyebrow="@(IsStartupMode ? "Startup" : "Runtime")"
         Subtitle="@(IsStartupMode
-            ? "Continue with the resolved runtime database, switch to another saved profile, or create a fresh managed SQLite workspace."
+            ? "Continue with the resolved runtime database or switch to another saved PostgreSQL profile."
             : "Review the active runtime database and switch profiles without leaving the shell.")"
         Size="ModalSize.Wide"
         TestId="@(IsStartupMode ? "database-startup-modal" : "database-switcher-dialog")"
@@ -98,72 +98,10 @@
                 </div>
             }
 
-            @if (PendingCreatedDatabaseProfileId.HasValue)
-            {
-                <div class="rounded-[1.5rem] border border-sky-200 bg-sky-50/80 p-4"
-                     data-testid="database-startup-transfer-prompt">
-                    <Stack GapScale="LayoutGap.Medium">
-                        <Stack GapScale="LayoutGap.Tiny">
-                            <p class="cda-eyebrow">New database baseline settings</p>
-                            <p class="text-base font-semibold text-slate-950">@PendingCreatedDatabaseName</p>
-                            <p class="text-sm leading-6 text-slate-600">Choose the settings groups to copy before this managed SQLite profile becomes active.</p>
-                        </Stack>
-
-                        <div>
-                            <label class="cda-field-label">Copy settings from</label>
-                            <select class="cda-input"
-                                    value="@CreatedDatabaseTransferSourceProfileId?.ToString()"
-                                    disabled="@(CreatedDatabaseTransferBusy || CreatedDatabaseTransferSources.Count == 0)"
-                                    @onchange="ChangeCreatedDatabaseTransferSourceAsync"
-                                    data-testid="database-startup-transfer-source">
-                                <option value="">Select source database</option>
-                                @foreach (var source in CreatedDatabaseTransferSources)
-                                {
-                                    <option value="@source.ProfileId">@source.DisplayName (@DescribeDatabaseSource(source.SourceKind))</option>
-                                }
-                            </select>
-                        </div>
-
-                        @if (CreatedDatabaseTransferItems.Count > 0)
-                        {
-                            <Grid Gap="LayoutGap.Small" ColumnsMd="2" data-testid="database-startup-transfer-items">
-                                @foreach (var item in CreatedDatabaseTransferItems)
-                                {
-                                    <label class="rounded-[1rem] border border-slate-200 bg-white px-3 py-3"
-                                           data-testid="@($"database-startup-transfer-item-{item.Descriptor.Key}")">
-                                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.NoWrap" AlignItems="AlignItems.Start">
-                                            <input type="checkbox"
-                                                   class="mt-1 h-4 w-4 rounded border-slate-300"
-                                                   checked="@CreatedDatabaseSelectedTransferItemKeys.Contains(item.Descriptor.Key)"
-                                                   disabled="@(CreatedDatabaseTransferBusy || !item.IsAvailable)"
-                                                   @onchange="@(() => ToggleCreatedDatabaseTransferItem.InvokeAsync(item.Descriptor.Key))" />
-                                            <Stack GapScale="LayoutGap.Tiny" Class="min-w-0">
-                                                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                                                    <span class="font-semibold text-slate-950">@item.Descriptor.Label</span>
-                                                    @if (item.Descriptor.IsSensitive)
-                                                    {
-                                                        <StatusBadge Tone="warning" Text="Encrypted" />
-                                                    }
-                                                </Cluster>
-                                                <p class="text-sm leading-6 text-slate-600">@item.Summary</p>
-                                            </Stack>
-                                        </Cluster>
-                                    </label>
-                                }
-                            </Grid>
-                        }
-                        else if (!CreatedDatabaseTransferBusy)
-                        {
-                            <p class="text-sm leading-6 text-slate-600">Select a source database to preview transferable settings.</p>
-                        }
-                    </Stack>
-                </div>
-            }
-
             @if (DatabaseProfiles.Count == 0)
             {
                 <EmptyState Eyebrow="No saved profiles"
-                            Title="Create the first managed SQLite workspace"
+                            Title="Create the first PostgreSQL profile"
                             Description="Saved profiles appear here after they are persisted through the control plane or the Data Sources settings tab." />
             }
             else
@@ -234,36 +172,13 @@
                         data-testid="database-startup-open-settings" />
             </Cluster>
 
-            @if (PendingCreatedDatabaseProfileId.HasValue)
-            {
-                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                    <Button Text="Skip transfer"
-                            ButtonStyle="ButtonStyle.Light"
-                            Disabled="@(DatabaseDialogBusy || CreatedDatabaseTransferBusy)"
-                            Click="SkipCreatedDatabaseTransfer"
-                            data-testid="database-startup-transfer-skip" />
-                    <Button Text="Transfer and activate"
-                            ButtonStyle="ButtonStyle.Info"
-                            Disabled="@(DatabaseDialogBusy || CreatedDatabaseTransferBusy || CreatedDatabaseSelectedTransferItemKeys.Count == 0)"
-                            Click="TransferCreatedDatabaseSettings"
-                            data-testid="database-startup-transfer-apply" />
-                </Cluster>
-            }
-            else
-            {
-                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                    <Button Text="Create managed SQLite"
-                            ButtonStyle="ButtonStyle.Info"
-                            Disabled="@(DatabaseDialogBusy || !CanManageDatabases)"
-                            Click="CreateManagedSqlite"
-                            data-testid="database-startup-create-managed" />
-                    <Button Text="@(SelectedDialogProfileIsActive ? "Already active" : "Switch selected")"
-                            ButtonStyle="ButtonStyle.Warning"
-                            Disabled="@(DatabaseDialogBusy || !CanSwitchSelectedProfile)"
-                            Click="SwitchDatabaseProfile"
-                            data-testid="database-startup-switch" />
-                </Cluster>
-            }
+            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                <Button Text="@(SelectedDialogProfileIsActive ? "Already active" : "Switch selected")"
+                        ButtonStyle="ButtonStyle.Warning"
+                        Disabled="@(DatabaseDialogBusy || !CanSwitchSelectedProfile)"
+                        Click="SwitchDatabaseProfile"
+                        data-testid="database-startup-switch" />
+            </Cluster>
         </Split>
     </Footer>
 </Dialog>
@@ -292,27 +207,6 @@
 
     [Parameter]
     public bool DatabaseDialogBusy { get; set; }
-
-    [Parameter]
-    public Guid? PendingCreatedDatabaseProfileId { get; set; }
-
-    [Parameter]
-    public string PendingCreatedDatabaseName { get; set; } = string.Empty;
-
-    [Parameter]
-    public IReadOnlyList<DatabaseTransferSourceSummary> CreatedDatabaseTransferSources { get; set; } = [];
-
-    [Parameter]
-    public Guid? CreatedDatabaseTransferSourceProfileId { get; set; }
-
-    [Parameter]
-    public IReadOnlyList<DatabaseTransferItemPreview> CreatedDatabaseTransferItems { get; set; } = [];
-
-    [Parameter]
-    public IReadOnlySet<string> CreatedDatabaseSelectedTransferItemKeys { get; set; } = new HashSet<string>();
-
-    [Parameter]
-    public bool CreatedDatabaseTransferBusy { get; set; }
 
     [Parameter]
     public bool CanManageDatabases { get; set; }
@@ -345,28 +239,5 @@
     public EventCallback OpenDatabaseSettings { get; set; }
 
     [Parameter]
-    public EventCallback CreateManagedSqlite { get; set; }
-
-    [Parameter]
     public EventCallback SwitchDatabaseProfile { get; set; }
-
-    [Parameter]
-    public EventCallback<Guid> CreatedDatabaseTransferSourceChanged { get; set; }
-
-    [Parameter]
-    public EventCallback<string> ToggleCreatedDatabaseTransferItem { get; set; }
-
-    [Parameter]
-    public EventCallback TransferCreatedDatabaseSettings { get; set; }
-
-    [Parameter]
-    public EventCallback SkipCreatedDatabaseTransfer { get; set; }
-
-    private async Task ChangeCreatedDatabaseTransferSourceAsync(ChangeEventArgs args)
-    {
-        if (Guid.TryParse(args.Value?.ToString(), out var sourceProfileId))
-        {
-            await CreatedDatabaseTransferSourceChanged.InvokeAsync(sourceProfileId);
-        }
-    }
 }

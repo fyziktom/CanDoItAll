@@ -10,4 +10,6 @@
 
 ## Subbundle-specific invariants
 
-Fill during execution with concrete invariants and proof.
+- Runtime code no longer branches around SQLite write, schema, or query limitations.
+- Stale tooling and prompt-library generator text do not reintroduce SQLite guidance.
+- Remaining SQLite strings are legacy unsupported-state handling or rejection tests.

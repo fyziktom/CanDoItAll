@@ -19,7 +19,7 @@ public sealed class UnknownConnectorManifestIntegrationTests
     public async Task Unknown_connector_manifest_fields_round_trip_without_page_specific_code()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-tests");
-        var activeProfile = testEnvironment.CreateManagedSqliteProfile("unknown-connector-roundtrip");
+        var activeProfile = testEnvironment.CreatePostgreSqlProfile("unknown-connector-roundtrip");
         await using var services = await TestApplicationBootstrap.BuildServiceProviderAsync(
             activeProfile,
             "CanDoItAll.Tests",

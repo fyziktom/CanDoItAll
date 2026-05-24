@@ -47,7 +47,7 @@ public sealed class MainLayoutCollaborationTests
     private static async Task<ComponentTestHarness> CreateHarnessAsync()
     {
         var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-layout-collaboration-tests");
-        var activeProfile = testEnvironment.CreateManagedSqliteProfile("bootstrap");
+        var activeProfile = testEnvironment.CreatePostgreSqlProfile("bootstrap");
 
         return await ComponentTestHarness.CreateAsync(options: new TestHarnessOptions
         {

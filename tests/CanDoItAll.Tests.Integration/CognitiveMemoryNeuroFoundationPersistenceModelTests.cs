@@ -2,10 +2,10 @@ using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.CognitiveMemory;
 using CanDoItAll.SharedKernel;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 
+using CanDoItAll.Tests.Support;
 namespace CanDoItAll.Tests.Integration;
 
 public sealed class CognitiveMemoryNeuroFoundationPersistenceModelTests
@@ -15,12 +15,9 @@ public sealed class CognitiveMemoryNeuroFoundationPersistenceModelTests
     {
         AppDbContextModelRegistry.ConfigureAssemblies(ModuleAssemblies.All);
 
-        await using var connection = new SqliteConnection("Data Source=:memory:");
-        await connection.OpenAsync();
+        await using var database = PostgresTestDatabaseLease.Create("cognitivememoryneurofoundationpersistencemodeltests");
 
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlite(connection)
-            .Options;
+        var options = database.CreateAppDbContextOptions();
 
         await using var dbContext = new AppDbContext(options);
         await dbContext.Database.EnsureCreatedAsync();
@@ -107,21 +104,18 @@ public sealed class CognitiveMemoryNeuroFoundationPersistenceModelTests
         }
     }
 
-    private static async Task<(SqliteConnection Connection, CognitiveMemoryMutationAuthority Authority, TestDbContextFactory Factory)> CreateMutationAuthorityAsync()
+    private static async Task<(PostgresTestDatabaseLease Database, CognitiveMemoryMutationAuthority Authority, TestDbContextFactory Factory)> CreateMutationAuthorityAsync()
     {
         AppDbContextModelRegistry.ConfigureAssemblies(ModuleAssemblies.All);
 
-        var connection = new SqliteConnection("Data Source=:memory:");
-        await connection.OpenAsync();
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlite(connection)
-            .Options;
+        var database = PostgresTestDatabaseLease.Create("cognitivememoryneurofoundationmutationtests");
+        var options = database.CreateAppDbContextOptions();
         var factory = new TestDbContextFactory(options);
 
         await using var dbContext = await factory.CreateDbContextAsync();
         await dbContext.Database.EnsureCreatedAsync();
 
-        return (connection, new CognitiveMemoryMutationAuthority(factory, new FixedClock()), factory);
+        return (database, new CognitiveMemoryMutationAuthority(factory, new FixedClock()), factory);
     }
 
     private static void AssertEntityTable<TEntity>(IReadOnlyList<IEntityType> entityTypes, string tableName)

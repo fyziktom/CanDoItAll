@@ -10,4 +10,6 @@
 
 ## Subbundle-specific invariants
 
-Fill during execution with concrete invariants and proof.
+- UI paths create PostgreSQL profiles only.
+- Legacy SQLite profiles remain visible only as unsupported states for operator cleanup.
+- Removed snapshot/SQLite controls do not leave active hidden actions behind.

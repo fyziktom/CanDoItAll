@@ -1,47 +1,48 @@
-# Execution report template
+# Execution Report
 
 ## Summary
 
-Fill after executing the bundle.
+Implemented the PostgreSQL-only main runtime bundle. SQLite runtime provider/package/project usage was removed; legacy SQLite catalog entries now fail explicitly; PostgreSQL migrations are consolidated to a single baseline; tests and support harnesses use PostgreSQL or explicit in-memory test providers.
 
-## Subbundle status
+## Subbundle Status
 
 | Subbundle | Status | Evidence |
 |---|---|---|
-| SB01 | Pending | |
-| SB02 | Pending | |
-| SB03 | Pending | |
-| SB04 | Pending | |
-| SB05 | Pending | |
-| SB06 | Pending | |
-| SB07 | Pending | |
-| SB08 | Pending | |
-| SB09 | Pending | |
+| SB01 | Passed | `evidence/SB04/test-audit.log`, `evidence/SB09/sqlite-package-audit.log` |
+| SB02 | Passed | `evidence/SB04/integration-test-results-final-passed-2.log` |
+| SB03 | Passed | `evidence/SB04/component-database-profile-settings-final.log` |
+| SB04 | Passed | `evidence/SB04/unit-test-results-final-passed-3.log`, `evidence/SB04/component-targeted-final-passed-2.log`, `evidence/SB04/integration-test-results-final-passed-2.log` |
+| SB05 | Passed | `evidence/SB04/build-final-after-audit-cleanup.log`, `evidence/SB09/sqlite-final-audit.log` |
+| SB06 | Passed | `evidence/SB04/integration-failed-set-recheck-passed.log` |
+| SB07 | Passed | `evidence/SB04/component-database-profile-settings-final.log`, `evidence/manual-real-db-alignment.md` |
+| SB08 | Passed | `evidence/SB08/postgresql-baseline-proof.log`, `evidence/manual-real-db-alignment.md` |
+| SB09 | Passed | `evidence/SB04/build-final-after-audit-cleanup.log`, `evidence/SB09/sqlite-final-audit.log`, `evidence/SB09/browser-proof.md` |
 
-## Final claims
+## Final Claims
 
-- [ ] SQLite removed from main runtime.
-- [ ] PostgreSQL is the only persistent runtime provider.
-- [ ] CanDoItAll.IPFS was not modified.
-- [ ] SQLite UI removed.
-- [ ] SQLite tests removed/converted.
-- [ ] Snapshot flows removed/deferred.
-- [ ] PostgreSQL migrations consolidated.
-- [ ] Fresh PostgreSQL DB validated.
-- [ ] Real DB manual alignment guidance written.
+- SQLite removed from main runtime: passed.
+- PostgreSQL is the only persistent runtime provider: passed.
+- CanDoItAll.IPFS was not modified: passed.
+- SQLite UI removed or converted to unsupported legacy display: passed.
+- SQLite tests removed, converted, or rewritten as explicit rejection tests: passed.
+- Snapshot flows removed/deferred: passed.
+- PostgreSQL migrations consolidated: passed.
+- Fresh PostgreSQL DB validated: passed.
+- Browser smoke against isolated PostgreSQL runtime: passed.
+- Real DB manual alignment guidance written: passed.
 
-## Build/test proof
+## Build And Test Proof
 
-Fill during execution.
+- `dotnet build .\CanDoItAll.slnx -v:minimal`: passed, see `evidence/SB04/build-final-after-audit-cleanup.log`.
+- `dotnet test .\tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build -v:minimal`: passed, see `evidence/SB04/unit-test-results-final-passed-3.log`.
+- `dotnet test .\tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --no-build --filter <database profile/settings>`: passed, see `evidence/SB04/component-database-profile-settings-final.log`.
+- `dotnet test .\tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --no-build --filter <32 previous failures>`: passed, see `evidence/SB04/component-targeted-final-passed-2.log`.
+- `dotnet test .\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --filter "Category!=Browser&Category!=LiveProcess" -v:minimal`: passed, see `evidence/SB04/integration-test-results-final-passed-2.log`.
 
-## Browser proof
+## Migration Proof
 
-Fill during execution.
+The active PostgreSQL migration set is a single baseline migration named `20260523211921_InitialPostgreSqlBaseline`. Fresh database proof and migration inventory are under `evidence/SB08`.
 
-## Migration proof
+## Remaining Risks
 
-Fill during execution.
-
-## Remaining risks
-
-Fill during execution.
+Existing real databases still need operator-led backup and alignment. This bundle intentionally does not provide an automatic SQLite-to-PostgreSQL data migration or a live historical PostgreSQL schema rewrite.

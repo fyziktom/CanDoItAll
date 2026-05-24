@@ -1,5 +1,5 @@
 using System.Text;
-using Microsoft.Data.Sqlite;
+using Npgsql;
 using Microsoft.Playwright;
 
 namespace CanDoItAll.Tests.Playwright;
@@ -239,34 +239,34 @@ public sealed partial class AgentFrameworkAuditProofTests
 
         try
         {
-            using var connection = new SqliteConnection(connectionString);
+            using var connection = new NpgsqlConnection(connectionString);
             connection.Open();
 
             using var command = connection.CreateCommand();
             command.CommandText =
                 """
                 SELECT
-                    plan.Name,
-                    plan.Status,
-                    plan.SubmittedAtUtc,
-                    plan.ApprovedAtUtc,
-                    plan.ExecutedAtUtc,
+                    plan."Name",
+                    plan."Status",
+                    plan."SubmittedAtUtc",
+                    plan."ApprovedAtUtc",
+                    plan."ExecutedAtUtc",
                     (
                         SELECT COUNT(*)
-                        FROM ProcessLaunchApprovalRecords approval
-                        WHERE approval.LaunchPlanId = plan.Id
+                        FROM "ProcessLaunchApprovalRecords" approval
+                        WHERE approval."LaunchPlanId" = plan."Id"
                     ) AS ApprovalCount,
                     (
                         SELECT COUNT(*)
-                        FROM CollaborationThreadRecords thread
-                        WHERE thread.ContextId = plan.Id
+                        FROM "CollaborationThreadRecords" thread
+                        WHERE thread."ContextId" = plan."Id"
                     ) AS ThreadCount
-                FROM ProcessLaunchPlans plan
-                WHERE plan.Name = $name
-                ORDER BY plan.UpdatedAtUtc DESC
+                FROM "ProcessLaunchPlans" plan
+                WHERE plan."Name" = @name
+                ORDER BY plan."UpdatedAtUtc" DESC
                 LIMIT 1;
                 """;
-            command.Parameters.AddWithValue("$name", launchName);
+            command.Parameters.AddWithValue("name", launchName);
 
             using var reader = command.ExecuteReader();
             if (!reader.Read())
@@ -274,11 +274,11 @@ public sealed partial class AgentFrameworkAuditProofTests
                 return $"Database snapshot: no launch plan found for '{launchName}'. Connection={connectionString}";
             }
 
-            var submittedAt = reader.IsDBNull(2) ? "<null>" : reader.GetString(2);
-            var approvedAt = reader.IsDBNull(3) ? "<null>" : reader.GetString(3);
-            var executedAt = reader.IsDBNull(4) ? "<null>" : reader.GetString(4);
+            var submittedAt = reader.IsDBNull(2) ? "<null>" : reader.GetValue(2)?.ToString();
+            var approvedAt = reader.IsDBNull(3) ? "<null>" : reader.GetValue(3)?.ToString();
+            var executedAt = reader.IsDBNull(4) ? "<null>" : reader.GetValue(4)?.ToString();
             return
-                $"Database snapshot: status={reader.GetString(1)}; submittedAt={submittedAt}; approvedAt={approvedAt}; executedAt={executedAt}; approvals={reader.GetInt32(5)}; threads={reader.GetInt32(6)}; connection={connectionString}";
+                $"Database snapshot: status={reader.GetString(1)}; submittedAt={submittedAt}; approvedAt={approvedAt}; executedAt={executedAt}; approvals={Convert.ToInt64(reader.GetValue(5))}; threads={Convert.ToInt64(reader.GetValue(6))}; connection={connectionString}";
         }
         catch (Exception exception)
         {

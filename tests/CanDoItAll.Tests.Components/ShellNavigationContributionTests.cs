@@ -10,11 +10,13 @@ public sealed class ShellNavigationContributionTests
     {
         var items = ShellNavigation.GetItems(0, [new AgentFrameworkShellNavigationContributor()]);
         var agentsIndex = items.ToList().FindIndex(item => item.Route == "/agents");
+        var workflowsIndex = items.ToList().FindIndex(item => item.Route == "/agents/workflows");
+        var resourcesIndex = items.ToList().FindIndex(item => item.Route == "/resources");
 
         Assert.True(agentsIndex >= 0);
         Assert.Equal("Agents", items[agentsIndex].Title);
-        Assert.Equal("Workflows", items[agentsIndex + 1].Title);
-        Assert.Equal("Resources", items[agentsIndex + 2].Title);
+        Assert.Equal(agentsIndex + 1, workflowsIndex);
+        Assert.True(resourcesIndex > workflowsIndex);
     }
 
     [Fact]

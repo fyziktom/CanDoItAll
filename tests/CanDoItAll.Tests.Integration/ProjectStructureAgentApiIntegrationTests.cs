@@ -526,7 +526,7 @@ public sealed class ProjectStructureAgentApiIntegrationTests
         var runtime = new ProjectScopedWorkflowAgentRuntime();
         await using var host = await ProjectStructureAgentApiTestHost.CreateAsync(
             "workflow-llm-project-scope",
-            testEnvironment => testEnvironment.CreateManagedSqliteProfile("workflow-llm-project-scope"),
+            testEnvironment => testEnvironment.CreatePostgreSqlProfile("workflow-llm-project-scope"),
             services =>
             {
                 services.AddSingleton<IAgentRuntime>(runtime);

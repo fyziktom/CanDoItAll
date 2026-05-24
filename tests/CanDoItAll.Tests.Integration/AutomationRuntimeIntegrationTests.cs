@@ -26,7 +26,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task AutomationWorkspaceService_aggregates_multiple_signal_sources_without_last_registration_wins()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-signals");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         await using var provider = await BuildProviderAsync(
             profile,
             services =>
@@ -51,7 +51,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Operational_messages_do_not_materialize_workbench_nodes_by_default()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-operational-default");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         await using var provider = await BuildProviderAsync(profile);
         var envelopeType = AutomationEnvelopeTypeNames.For<TestOperationalEnvelope>();
 
@@ -85,7 +85,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Explicit_materializer_can_turn_an_execution_result_into_a_domain_artifact()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-materializer");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         await using var provider = await BuildProviderAsync(
             profile,
             services =>
@@ -123,7 +123,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Concurrent_materialize_calls_only_run_the_materializer_once()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-concurrent-materialize");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         var materializer = new CountingMaterializer(TimeSpan.FromMilliseconds(150));
 
         await using var provider = await BuildProviderAsync(
@@ -163,7 +163,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Already_materialized_envelope_returns_existing_snapshot_without_reinvoking_plugin_code()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-reread-materialize");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         var materializer = new CountingMaterializer(TimeSpan.Zero);
 
         await using var provider = await BuildProviderAsync(
@@ -199,7 +199,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Automation_trigger_definition_round_trips_with_cron_timezone_and_misfire_policy()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-trigger-roundtrip");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         await using var provider = await BuildProviderAsync(profile);
         await using var scope = provider.CreateAsyncScope();
         var registry = scope.ServiceProvider.GetRequiredService<IAutomationTriggerRegistry>();
@@ -236,7 +236,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Quartz_scheduler_bridge_rehydrates_canonical_triggers_on_startup()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-quartz-rehydrate");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         var triggerId = Guid.NewGuid();
 
         await using (var provider = await BuildProviderAsync(profile))
@@ -271,7 +271,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Quartz_trigger_fire_publishes_durable_work_instead_of_running_plugin_logic_inline()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-trigger-fire");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         var sink = new MessageSink();
         var triggerId = Guid.NewGuid();
 
@@ -313,7 +313,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Once_like_trigger_is_retired_after_first_fire()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-retire-once-like");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         var sink = new MessageSink();
         var triggerId = Guid.NewGuid();
 
@@ -359,7 +359,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task One_shot_trigger_is_not_rehydrated_after_it_has_already_fired()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-no-rehydrate-once");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         var firstSink = new MessageSink();
         var triggerId = Guid.NewGuid();
 
@@ -413,7 +413,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Trigger_registry_save_returns_reloaded_next_fire_time_after_quartz_projection()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-trigger-save-reload");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         await using var provider = await BuildProviderAsync(profile);
         await using var scope = provider.CreateAsyncScope();
         var registry = scope.ServiceProvider.GetRequiredService<IAutomationTriggerRegistry>();
@@ -545,7 +545,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Internal_message_dispatch_retries_then_dead_letters_failed_handlers_idempotently()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-dead-letter");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         await using var provider = await BuildProviderAsync(
             profile,
             services =>
@@ -593,7 +593,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Internal_message_publish_fans_out_to_multiple_subscribers()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-fanout");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         var sink = new MessageSink();
 
         await using var provider = await BuildProviderAsync(
@@ -642,7 +642,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Internal_message_delivery_survives_restart_boundary()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-restart");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         var sink = new MessageSink();
         Guid envelopeId;
 
@@ -685,7 +685,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Connector_outbox_pending_commands_are_processed_by_a_hosted_worker()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-outbox-worker");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         var handler = new TestConnectorCommandHandler(
             ConnectorCommandExecutionResult.Completed("""{"delivery":"worker"}"""));
 
@@ -729,7 +729,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Queued_background_work_is_consumed_by_a_runtime_worker()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-background-worker");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         var sink = new MessageSink();
 
         await using var provider = await BuildProviderAsync(
@@ -762,7 +762,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Due_triggers_are_dispatched_without_manual_invocation()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-due-trigger");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         var sink = new MessageSink();
         var triggerId = Guid.NewGuid();
 
@@ -868,7 +868,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Plugin_ingress_inbox_deduplicates_external_envelopes()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-ingress-dedup");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         await using var provider = await BuildProviderAsync(profile);
 
         await using var scope = provider.CreateAsyncScope();
@@ -895,7 +895,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Plugin_ingress_cursor_progress_is_persisted_across_runs()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-ingress-cursor");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
 
         await using (var firstProvider = await BuildProviderAsync(profile))
         {
@@ -915,7 +915,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Plugin_ingress_cursor_save_trims_keys_before_lookup()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-ingress-cursor-trim");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         await using var provider = await BuildProviderAsync(profile);
 
         await using var scope = provider.CreateAsyncScope();
@@ -940,7 +940,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Concurrent_first_cursor_save_reuses_the_same_cursor_row()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-ingress-cursor-concurrent");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         await using var provider = await BuildProviderAsync(profile);
 
         await RunConcurrentlyAsync(
@@ -969,7 +969,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Ingress_envelope_can_remain_unmaterialized_until_explicit_handler_runs()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-ingress-explicit");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
 
         await using var provider = await BuildProviderAsync(
             profile,
@@ -1005,7 +1005,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Execution_telemetry_preserves_correlation_and_causation_across_dispatch()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-telemetry");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
 
         await using var provider = await BuildProviderAsync(
             profile,
@@ -1055,7 +1055,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Dead_letter_items_are_visible_to_operators()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-operator-dead-letter");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
 
         await using var provider = await BuildProviderAsync(
             profile,
@@ -1089,7 +1089,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Core_runtime_still_functions_when_mqtt_bridge_is_disabled()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-mqtt-disabled");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         var sink = new MessageSink();
 
         await using var provider = await BuildProviderAsync(
@@ -1135,7 +1135,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Automation_runtime_options_bind_from_configuration()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-options-config");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         var overrides = new Dictionary<string, string?>
         {
             ["Automation:Runtime:MessagePollInterval"] = "00:00:00.123",
@@ -1176,7 +1176,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Automation_mqtt_bridge_reads_production_configuration_without_test_only_overrides()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-mqtt-config-bridge");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         var logSink = new TestLoggerSink();
 
         await using var provider = await BuildProviderAsync(
@@ -1220,7 +1220,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Concurrent_message_publish_with_same_dedupe_key_returns_single_envelope()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-publish-concurrency");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         await using var provider = await BuildProviderAsync(profile);
 
         var envelopeIds = await RunConcurrentlyAsync(
@@ -1251,7 +1251,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Concurrent_ingress_accept_with_same_external_message_returns_single_envelope()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-ingress-concurrency");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         await using var provider = await BuildProviderAsync(profile);
 
         var results = await RunConcurrentlyAsync(
@@ -1281,7 +1281,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Concurrent_connector_enqueue_with_same_idempotency_key_returns_single_command()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-outbox-concurrency");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         await using var provider = await BuildProviderAsync(profile);
 
         Guid projectId;
@@ -1326,7 +1326,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Parallel_dispatchers_do_not_process_the_same_delivery_twice()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-parallel-dispatchers");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         var sink = new MessageSink();
 
         await using var provider = await BuildProviderAsync(
@@ -1364,7 +1364,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Parallel_connector_outbox_workers_do_not_process_the_same_command_twice()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-parallel-outbox-workers");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         var handler = new TestConnectorCommandHandler(
             TimeSpan.FromMilliseconds(100),
             ConnectorCommandExecutionResult.Completed("""{"delivery":"parallel"}"""));
@@ -1413,7 +1413,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Direct_process_async_claims_a_lease_before_execution()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-direct-process-lease");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         var handler = new TestConnectorCommandHandler(
             TimeSpan.FromMilliseconds(150),
             ConnectorCommandExecutionResult.Completed("""{"delivery":"direct"}"""));
@@ -1460,7 +1460,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Concurrent_direct_process_calls_do_not_execute_the_same_command_twice()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-concurrent-direct-process");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         var handler = new TestConnectorCommandHandler(
             TimeSpan.FromMilliseconds(150),
             ConnectorCommandExecutionResult.Completed("""{"delivery":"direct-parallel"}"""));
@@ -1509,7 +1509,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Abandoned_delivery_lease_can_be_reclaimed()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-reclaim-lease");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         var sink = new MessageSink();
 
         await using var provider = await BuildProviderAsync(
@@ -1563,7 +1563,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Automation_message_pump_worker_continues_after_transient_dispatch_failure()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-worker-dispatch-failure");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         var sink = new MessageSink();
         var clockState = new ArmedThrowOnceClockState();
 
@@ -1602,7 +1602,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Connector_outbox_worker_continues_after_transient_processing_failure()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-worker-outbox-failure");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         var handler = new TestConnectorCommandHandler(ConnectorCommandExecutionResult.Completed("""{"delivery":"worker"}"""));
         var clockState = new ArmedThrowOnceClockState();
 
@@ -1649,7 +1649,7 @@ public sealed class AutomationRuntimeIntegrationTests
     public async Task Legacy_background_queue_items_are_forwarded_to_durable_runtime_when_legacy_mode_is_enabled()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("automation-runtime-legacy-queue-forward");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         var sink = new MessageSink();
         var correlationId = Guid.NewGuid();
 

@@ -3,42 +3,26 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
+using static CanDoItAll.Tests.Unit.DatabaseRuntimeSwitchingTestProfiles;
 
 namespace CanDoItAll.Tests.Unit;
 
 public sealed class DatabaseDriverTests
 {
     [Fact]
-    public async Task Sqlite_driver_create_empty_database_creates_the_database_file()
+    public async Task Resolve_throws_when_sqlite_driver_is_requested()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("runtime-sqlite-driver");
         await using var provider = DatabaseProfileControlPlaneTestHost.BuildServiceProvider(
             testEnvironment,
             includeDatabaseOverride: true);
 
-        var profileService = provider.GetRequiredService<IDatabaseProfileService>();
-        var runtimeAccessor = provider.GetRequiredService<IDatabaseProfileRuntimeAccessor>();
         var driverRegistry = provider.GetRequiredService<IDatabaseDriverRegistry>();
 
-        var saveResult = await profileService.SaveAsync(new DatabaseProfileEditorModel
-        {
-            DisplayName = "Managed sqlite driver target",
-            ProviderKind = DatabaseProviderKind.Sqlite,
-            SourceKind = DatabaseProfileSourceKind.ManagedSqlite
-        });
+        var ex = Assert.Throws<InvalidOperationException>(() => driverRegistry.Resolve(DatabaseProviderKind.Sqlite));
 
-        Assert.True(saveResult.IsSuccess);
-
-        var resolvedProfile = runtimeAccessor.ResolveProfile(saveResult.Value);
-        var databasePath = resolvedProfile.Profile.Sqlite!.DatabasePath;
-        if (File.Exists(databasePath))
-        {
-            File.Delete(databasePath);
-        }
-
-        await driverRegistry.Resolve(DatabaseProviderKind.Sqlite).CreateEmptyAsync(resolvedProfile);
-
-        Assert.True(File.Exists(databasePath));
+        Assert.Contains("No database driver is registered", ex.Message, StringComparison.Ordinal);
     }
 }
 
@@ -55,12 +39,10 @@ public sealed class DatabaseSwitchCoordinatorTests
         var profileService = provider.GetRequiredService<IDatabaseProfileService>();
         var switchCoordinator = provider.GetRequiredService<IDatabaseSwitchCoordinator>();
 
-        var saveResult = await profileService.SaveAsync(new DatabaseProfileEditorModel
-        {
-            DisplayName = "Switch target",
-            ProviderKind = DatabaseProviderKind.Sqlite,
-            SourceKind = DatabaseProfileSourceKind.ManagedSqlite
-        });
+        var saveResult = await profileService.SaveAsync(CreatePostgreSqlEditorForDatabase(
+            "Switch target",
+            "runtime_override_switch",
+            Path.Combine(testEnvironment.RootPath, "switch-target-workspace")));
 
         Assert.True(saveResult.IsSuccess);
 
@@ -87,25 +69,21 @@ public sealed class AppDbContextRuntimeSwitchTests
         var profileService = provider.GetRequiredService<IDatabaseProfileService>();
         var switchCoordinator = provider.GetRequiredService<IDatabaseSwitchCoordinator>();
         var runtimeState = provider.GetRequiredService<IDatabaseRuntimeState>();
-        var bootstrapper = provider.GetRequiredService<IAppDatabaseBootstrapper>();
         var dbContextFactory = provider.GetRequiredService<IDbContextFactory<AppDbContext>>();
 
         var initialProfile = runtimeAccessor.ResolveCurrentProfile();
-        await bootstrapper.EnsureCurrentProfileReadyAsync();
-
-        var saveResult = await profileService.SaveAsync(new DatabaseProfileEditorModel
-        {
-            DisplayName = "Managed sqlite switch target",
-            ProviderKind = DatabaseProviderKind.Sqlite,
-            SourceKind = DatabaseProfileSourceKind.ManagedSqlite
-        });
+        await using var targetDatabase = PostgresTestDatabaseLease.Create("runtime-context-switch");
+        var saveResult = await profileService.SaveAsync(CreatePostgreSqlEditor(
+            "PostgreSQL switch target",
+            targetDatabase.ConnectionString,
+            Path.Combine(testEnvironment.RootPath, "switch-target-workspace")));
 
         Assert.True(saveResult.IsSuccess);
 
         var targetProfile = runtimeAccessor.ResolveProfile(saveResult.Value);
         var switchResult = await switchCoordinator.SwitchAsync(saveResult.Value);
 
-        Assert.True(switchResult.IsSuccess);
+        Assert.True(switchResult.IsSuccess, string.Join("; ", switchResult.Errors.Select(error => error.Message)));
         Assert.NotEqual(initialProfile.Profile.Id, targetProfile.Profile.Id);
 
         await using var switchedContext = await dbContextFactory.CreateDbContextAsync();
@@ -118,63 +96,67 @@ public sealed class AppDbContextRuntimeSwitchTests
     }
 }
 
-public sealed class SqliteMigrationLockRecoveryTests
+public sealed class UnsupportedLegacySqliteProfileTests
 {
     [Fact]
-    public async Task EnsureCurrentProfileReadyAsync_clears_a_stale_sqlite_migration_lock()
+    public async Task SaveAsync_rejects_sqlite_profiles()
     {
-        await using var testEnvironment = CanDoItAllTestEnvironment.Create("runtime-stale-sqlite-migration-lock");
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("runtime-sqlite-profile-rejected");
         await using var provider = DatabaseProfileControlPlaneTestHost.BuildServiceProvider(
             testEnvironment,
-            includeDatabaseOverride: false);
+            includeDatabaseOverride: true);
 
-        var bootstrapper = provider.GetRequiredService<IAppDatabaseBootstrapper>();
-        var dbContextFactory = provider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var profileService = provider.GetRequiredService<IDatabaseProfileService>();
 
-        await bootstrapper.EnsureCurrentProfileReadyAsync();
-
-        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        var saveResult = await profileService.SaveAsync(new DatabaseProfileEditorModel
         {
-            await dbContext.Database.ExecuteSqlRawAsync(
-                """
-                INSERT OR REPLACE INTO "__EFMigrationsLock" ("Id", "Timestamp")
-                VALUES (1, {0});
-                """,
-                (DateTimeOffset.UtcNow - TimeSpan.FromMinutes(10)).ToString("O"));
-        }
+            DisplayName = "Legacy SQLite",
+            ProviderKind = DatabaseProviderKind.Sqlite,
+            SourceKind = DatabaseProfileSourceKind.ManagedSqlite
+        });
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        await bootstrapper.EnsureCurrentProfileReadyAsync(cts.Token);
+        Assert.True(saveResult.IsFailure);
+        Assert.Contains(saveResult.Errors, error => error.Message.Contains("SQLite database profiles are no longer supported", StringComparison.Ordinal));
+    }
+}
 
-        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+internal static class DatabaseRuntimeSwitchingTestProfiles
+{
+    public static DatabaseProfileEditorModel CreatePostgreSqlEditorForDatabase(
+        string displayName,
+        string databaseName,
+        string workspaceRoot)
+    {
+        var builder = new NpgsqlConnectionStringBuilder
         {
-            var lockRowCount = await CountRowsAsync(dbContext, "__EFMigrationsLock");
-            Assert.Equal(0, lockRowCount);
-        }
+            Host = "127.0.0.1",
+            Port = 5432,
+            Database = databaseName,
+            Username = "postgres",
+            Password = "postgres"
+        };
+
+        return CreatePostgreSqlEditor(displayName, builder.ConnectionString, workspaceRoot);
     }
 
-    private static async Task<long> CountRowsAsync(AppDbContext dbContext, string tableName)
+    public static DatabaseProfileEditorModel CreatePostgreSqlEditor(
+        string displayName,
+        string connectionString,
+        string workspaceRoot)
     {
-        var connection = dbContext.Database.GetDbConnection();
-        var shouldCloseConnection = connection.State != System.Data.ConnectionState.Open;
-        if (shouldCloseConnection)
+        var builder = new NpgsqlConnectionStringBuilder(connectionString);
+        return new DatabaseProfileEditorModel
         {
-            await connection.OpenAsync();
-        }
-
-        try
-        {
-            await using var command = connection.CreateCommand();
-            command.CommandText = $"""SELECT COUNT(*) FROM "{tableName.Replace("\"", "\"\"", StringComparison.Ordinal)}";""";
-            var result = await command.ExecuteScalarAsync();
-            return Convert.ToInt64(result);
-        }
-        finally
-        {
-            if (shouldCloseConnection)
-            {
-                await connection.CloseAsync();
-            }
-        }
+            DisplayName = displayName,
+            ProviderKind = DatabaseProviderKind.PostgreSql,
+            SourceKind = DatabaseProfileSourceKind.PostgresConnection,
+            PostgresHost = builder.Host ?? "127.0.0.1",
+            PostgresPort = builder.Port,
+            PostgresDatabaseName = builder.Database ?? "candoitall",
+            PostgresUsername = builder.Username ?? "postgres",
+            PostgresPassword = builder.Password ?? string.Empty,
+            PostgresAdminDatabaseName = builder.Database,
+            WorkspaceRoot = workspaceRoot
+        };
     }
 }

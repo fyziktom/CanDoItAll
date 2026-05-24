@@ -271,7 +271,7 @@ public sealed class ProjectPartyAssignmentFlowTests
             "playwright-seed",
             environmentRoot,
             profileRoot,
-            TestDatabaseProviderKind.Sqlite,
+            TestDatabaseProviderKind.PostgreSql,
             fixture.DatabaseConnectionString,
             workspaceRoot,
             Path.Combine(profileRoot, "manager-artifacts"));

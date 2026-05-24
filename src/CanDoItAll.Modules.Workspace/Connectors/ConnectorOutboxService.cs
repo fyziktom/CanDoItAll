@@ -391,18 +391,16 @@ public sealed class ConnectorOutboxService(
         var effectiveLeaseDuration = leaseDuration is null || leaseDuration.Value <= TimeSpan.Zero
             ? DefaultLeaseDuration
             : leaseDuration.Value;
-        var commandIds = dbContext.Database.IsSqlite()
-            ? await ListPendingCommandIdsForSqliteAsync(dbContext, now, take, cancellationToken)
-            : await dbContext.Set<ConnectorCommandRecord>()
-                .Where(item => item.Status == ConnectorCommandStatus.Pending)
-                .Where(item => item.ApprovalState != ConnectorCommandApprovalState.Pending)
-                .Where(item => item.NextAttemptAtUtc == null || item.NextAttemptAtUtc <= now)
-                .Where(item => item.LeaseExpiresAtUtc == null || item.LeaseExpiresAtUtc <= now)
-                .OrderBy(item => item.NextAttemptAtUtc ?? item.CreatedAtUtc)
-                .ThenBy(item => item.CreatedAtUtc)
-                .Take(take)
-                .Select(item => item.Id)
-                .ToListAsync(cancellationToken);
+        var commandIds = await dbContext.Set<ConnectorCommandRecord>()
+            .Where(item => item.Status == ConnectorCommandStatus.Pending)
+            .Where(item => item.ApprovalState != ConnectorCommandApprovalState.Pending)
+            .Where(item => item.NextAttemptAtUtc == null || item.NextAttemptAtUtc <= now)
+            .Where(item => item.LeaseExpiresAtUtc == null || item.LeaseExpiresAtUtc <= now)
+            .OrderBy(item => item.NextAttemptAtUtc ?? item.CreatedAtUtc)
+            .ThenBy(item => item.CreatedAtUtc)
+            .Take(take)
+            .Select(item => item.Id)
+            .ToListAsync(cancellationToken);
 
         var processedCount = 0;
         foreach (var commandId in commandIds)
@@ -618,24 +616,16 @@ public sealed class ConnectorOutboxService(
         var now = clock.GetUtcNow();
         var leaseToken = Guid.NewGuid().ToString("N");
         var leaseExpiresAtUtc = now.Add(leaseDuration);
-        var updatedRows = dbContext.Database.IsSqlite()
-            ? await TryClaimCommandForSqliteAsync(
-                dbContext,
-                commandId,
-                now,
-                leaseExpiresAtUtc,
-                leaseToken,
-                cancellationToken)
-            : await dbContext.Set<ConnectorCommandRecord>()
-                .Where(item => item.Id == commandId)
-                .Where(item => item.Status == ConnectorCommandStatus.Pending)
-                .Where(item => item.ApprovalState != ConnectorCommandApprovalState.Pending)
-                .Where(item => item.NextAttemptAtUtc == null || item.NextAttemptAtUtc <= now)
-                .Where(item => item.LeaseExpiresAtUtc == null || item.LeaseExpiresAtUtc <= now)
-                .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(item => item.LeaseToken, leaseToken)
-                    .SetProperty(item => item.LeaseExpiresAtUtc, leaseExpiresAtUtc)
-                    .SetProperty(item => item.UpdatedAtUtc, now), cancellationToken);
+        var updatedRows = await dbContext.Set<ConnectorCommandRecord>()
+            .Where(item => item.Id == commandId)
+            .Where(item => item.Status == ConnectorCommandStatus.Pending)
+            .Where(item => item.ApprovalState != ConnectorCommandApprovalState.Pending)
+            .Where(item => item.NextAttemptAtUtc == null || item.NextAttemptAtUtc <= now)
+            .Where(item => item.LeaseExpiresAtUtc == null || item.LeaseExpiresAtUtc <= now)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(item => item.LeaseToken, leaseToken)
+                .SetProperty(item => item.LeaseExpiresAtUtc, leaseExpiresAtUtc)
+                .SetProperty(item => item.UpdatedAtUtc, now), cancellationToken);
 
         return updatedRows == 0
             ? null
@@ -698,45 +688,4 @@ public sealed class ConnectorOutboxService(
             existing.ApprovalState);
     }
 
-    private static Task<List<Guid>> ListPendingCommandIdsForSqliteAsync(
-        AppDbContext dbContext,
-        DateTimeOffset now,
-        int take,
-        CancellationToken cancellationToken)
-    {
-        return dbContext.Database
-            .SqlQuery<Guid>($"""
-                             SELECT "Id" AS "Value"
-                             FROM "Workspace_ConnectorCommands"
-                             WHERE "Status" = {(int)ConnectorCommandStatus.Pending}
-                               AND "ApprovalState" <> {(int)ConnectorCommandApprovalState.Pending}
-                               AND ("NextAttemptAtUtc" IS NULL OR "NextAttemptAtUtc" <= {now})
-                               AND ("LeaseExpiresAtUtc" IS NULL OR "LeaseExpiresAtUtc" <= {now})
-                             ORDER BY COALESCE("NextAttemptAtUtc", "CreatedAtUtc"), "CreatedAtUtc"
-                             LIMIT {take}
-                             """)
-            .ToListAsync(cancellationToken);
-    }
-
-    private static Task<int> TryClaimCommandForSqliteAsync(
-        AppDbContext dbContext,
-        Guid commandId,
-        DateTimeOffset now,
-        DateTimeOffset leaseExpiresAtUtc,
-        string leaseToken,
-        CancellationToken cancellationToken)
-    {
-        return dbContext.Database.ExecuteSqlInterpolatedAsync($"""
-                                                               UPDATE "Workspace_ConnectorCommands"
-                                                               SET "LeaseToken" = {leaseToken},
-                                                                   "LeaseExpiresAtUtc" = {leaseExpiresAtUtc},
-                                                                   "UpdatedAtUtc" = {now}
-                                                               WHERE "Id" = {commandId}
-                                                                 AND "Status" = {(int)ConnectorCommandStatus.Pending}
-                                                                 AND "ApprovalState" <> {(int)ConnectorCommandApprovalState.Pending}
-                                                                 AND ("NextAttemptAtUtc" IS NULL OR "NextAttemptAtUtc" <= {now})
-                                                                 AND ("LeaseExpiresAtUtc" IS NULL OR "LeaseExpiresAtUtc" <= {now})
-                                                               """,
-            cancellationToken);
-    }
 }

@@ -5,7 +5,6 @@ using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Tests.Support;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using System.Collections;
 using System.Reflection;
@@ -213,22 +212,68 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
-    public async Task LoadLatestManualRecoveryDirective_filters_started_at_with_sqlite()
+    public async Task LoadLatestManualRecoveryDirective_filters_started_at_with_postgresql()
     {
         AppDbContextModelRegistry.ConfigureAssemblies(TestApplicationBootstrap.ModuleAssemblies);
-        await using var connection = new SqliteConnection("Data Source=:memory:;Foreign Keys=False");
-        await connection.OpenAsync();
+        await using var database = PostgresTestDatabaseLease.Create("processrunautomationdispatchservicetests");
 
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlite(connection)
-            .Options;
+        var options = database.CreateAppDbContextOptions();
         await using var dbContext = new AppDbContext(options);
         await dbContext.Database.EnsureCreatedAsync();
 
         var runId = Guid.NewGuid();
         var stepRunId = Guid.NewGuid();
+        var definitionId = Guid.NewGuid();
+        var definitionVersionId = Guid.NewGuid();
+        var stepDefinitionId = Guid.NewGuid();
         var stepStartedAtUtc = DateTimeOffset.Parse("2026-04-27T12:00:00+00:00");
 
+        await dbContext.Set<ProcessDefinition>().AddAsync(new ProcessDefinition
+        {
+            Id = definitionId,
+            Name = "Recovery directive test",
+            Slug = $"recovery-directive-{Guid.NewGuid():N}",
+            CreatedAtUtc = stepStartedAtUtc,
+            UpdatedAtUtc = stepStartedAtUtc
+        });
+        await dbContext.Set<ProcessDefinitionVersion>().AddAsync(new ProcessDefinitionVersion
+        {
+            Id = definitionVersionId,
+            ProcessDefinitionId = definitionId,
+            Status = ProcessVersionStatus.Published,
+            CreatedAtUtc = stepStartedAtUtc,
+            UpdatedAtUtc = stepStartedAtUtc,
+            PublishedAtUtc = stepStartedAtUtc,
+            PublishedBy = "integration-tests"
+        });
+        await dbContext.Set<ProcessStepDefinition>().AddAsync(new ProcessStepDefinition
+        {
+            Id = stepDefinitionId,
+            ProcessDefinitionVersionId = definitionVersionId,
+            Key = "recovery-directive-step",
+            Title = "Recovery directive step"
+        });
+        await dbContext.Set<ProcessRun>().AddAsync(new ProcessRun
+        {
+            Id = runId,
+            ProcessDefinitionId = definitionId,
+            ProcessDefinitionVersionId = definitionVersionId,
+            Name = "Recovery directive run",
+            Status = ProcessRunStatus.Active,
+            TriggerReason = "Integration test",
+            CreatedAtUtc = stepStartedAtUtc,
+            UpdatedAtUtc = stepStartedAtUtc,
+            StartedAtUtc = stepStartedAtUtc
+        });
+        await dbContext.Set<ProcessStepRun>().AddAsync(new ProcessStepRun
+        {
+            Id = stepRunId,
+            ProcessRunId = runId,
+            StepDefinitionId = stepDefinitionId,
+            Title = "Recovery directive step",
+            Status = ProcessStepRunStatus.InProgress,
+            StartedAtUtc = stepStartedAtUtc
+        });
         dbContext.Set<ProcessJournalEntry>().AddRange(
             new ProcessJournalEntry
             {
@@ -275,24 +320,13 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     [Fact]
     public void BuildCanonicalProjectStructureGroundingSql_uses_postgresql_safe_identifiers_and_values()
     {
-        var sql = InvokeBuildCanonicalProjectStructureGroundingSql(isPostgreSql: true);
+        var sql = InvokeBuildCanonicalProjectStructureGroundingSql();
 
         Assert.Contains("FROM \"Workbench_ProjectObjects\"", sql, StringComparison.Ordinal);
         Assert.Contains("\"ProjectId\" = @projectId", sql, StringComparison.Ordinal);
         Assert.Contains("\"IsSystemManaged\" = FALSE", sql, StringComparison.Ordinal);
         Assert.DoesNotContain("$projectId", sql, StringComparison.Ordinal);
         Assert.DoesNotContain("= 0", sql, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void BuildCanonicalProjectStructureGroundingSql_uses_sqlite_safe_parameter_name()
-    {
-        var sql = InvokeBuildCanonicalProjectStructureGroundingSql(isPostgreSql: false);
-
-        Assert.Contains("FROM \"Workbench_ProjectObjects\"", sql, StringComparison.Ordinal);
-        Assert.Contains("lower(\"ProjectId\") = lower(@projectId)", sql, StringComparison.Ordinal);
-        Assert.Contains("\"IsSystemManaged\" = 0", sql, StringComparison.Ordinal);
-        Assert.DoesNotContain("$projectId", sql, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -803,7 +837,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         var summary = ProcessRunAutomationDispatchService.ResolveOutOfScopeExternalTargetReferenceSummary(
             """
             Architecture context:
-            - C:\Users\lucys\AppData\Local\CanDoItAll\control-plane\database-profiles\managed-sqlite\workspace\project-structure-context-brief\architecture-decision-record.md
+            - C:\Users\lucys\AppData\Local\CanDoItAll\control-plane\database-profiles\postgresql\workspace\project-structure-context-brief\architecture-decision-record.md
             Product root:
             - external-target/C/programovani/dotnet/ReadingTimeBudgeter
             """,
@@ -1619,14 +1653,14 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         Assert.Equal(latestRun.Id, recoverableRunId);
     }
 
-    private static string InvokeBuildCanonicalProjectStructureGroundingSql(bool isPostgreSql)
+    private static string InvokeBuildCanonicalProjectStructureGroundingSql()
     {
         var method = typeof(ProcessRunAutomationDispatchService).GetMethod(
             "BuildCanonicalProjectStructureGroundingSql",
             BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("BuildCanonicalProjectStructureGroundingSql method was not found.");
 
-        return (string)method.Invoke(null, [isPostgreSql])!;
+        return (string)method.Invoke(null, [])!;
     }
 
     private static AgentWorkspaceToolProfileKind InvokeResolveWorkspaceToolProfile(
@@ -11348,7 +11382,7 @@ Ancestor path to the target work node:
             "CanDoItAll",
             "control-plane",
             "database-profiles",
-            "managed-sqlite",
+            "postgresql",
             "profile",
             "workspace");
         var staleProjectRoot = Path.Combine(

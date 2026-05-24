@@ -15,7 +15,7 @@ public sealed class AgentFrameworkExecutionRecoveryIntegrationTests
     public async Task Startup_recovery_marks_non_resumable_execution_runs_as_cancelled()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-execution-recovery");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
             profile,
             "CanDoItAll.Tests",
@@ -146,7 +146,7 @@ public sealed class AgentFrameworkExecutionRecoveryIntegrationTests
     public async Task Startup_recovery_skips_execution_runs_created_after_recovery_worker_started()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-execution-recovery-fresh-run");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
             profile,
             "CanDoItAll.Tests",

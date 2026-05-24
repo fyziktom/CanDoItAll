@@ -3,6 +3,7 @@ using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using static CanDoItAll.Tests.Unit.DatabaseRuntimeSwitchingTestProfiles;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -80,20 +81,13 @@ public sealed class DatabaseProfileOverrideTests
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("control-plane-override");
 
-        var persistedDatabasePath = Path.Combine(testEnvironment.RootPath, "persisted", "workspace", "persisted.db");
-        Directory.CreateDirectory(Path.GetDirectoryName(persistedDatabasePath)!);
-
         await using (var persistedProvider = DatabaseProfileControlPlaneTestHost.BuildServiceProvider(testEnvironment, includeDatabaseOverride: true))
         {
             var service = persistedProvider.GetRequiredService<IDatabaseProfileService>();
-            var saveResult = await service.SaveAsync(new DatabaseProfileEditorModel
-            {
-                DisplayName = "Persisted sqlite",
-                ProviderKind = DatabaseProviderKind.Sqlite,
-                SourceKind = DatabaseProfileSourceKind.ExternalSqliteFile,
-                SqliteDatabasePath = persistedDatabasePath,
-                WorkspaceRoot = Path.GetDirectoryName(persistedDatabasePath)!
-            });
+            var saveResult = await service.SaveAsync(CreatePostgreSqlEditorForDatabase(
+                "Persisted PostgreSQL",
+                "persisted_postgres",
+                Path.Combine(testEnvironment.RootPath, "persisted", "workspace")));
 
             Assert.True(saveResult.IsSuccess);
             await service.ActivateAsync(saveResult.Value);
@@ -126,58 +120,27 @@ public sealed class DatabaseProfileOverrideTests
         Assert.Equal(DatabaseProfileResolutionSource.ExplicitOverride, selection.ResolutionSource);
         Assert.Single(summaries);
         Assert.False(summaries[0].IsActive);
-        Assert.Equal(DatabaseProviderKind.Sqlite, summaries[0].ProviderKind);
+        Assert.Equal(DatabaseProviderKind.PostgreSql, summaries[0].ProviderKind);
     }
 
     [Fact]
-    public async Task ResolveCurrentProfile_reuses_the_persisted_sqlite_profile_identity_when_the_override_targets_the_same_database_file()
+    public async Task ResolveCurrentProfile_rejects_sqlite_database_override()
     {
-        await using var testEnvironment = CanDoItAllTestEnvironment.Create("control-plane-sqlite-override-match");
-
-        Guid persistedProfileId;
-        DatabaseProfileEditorModel persistedEditor;
-        await using (var persistedProvider = DatabaseProfileControlPlaneTestHost.BuildServiceProvider(testEnvironment, includeDatabaseOverride: false))
-        {
-            var service = persistedProvider.GetRequiredService<IDatabaseProfileService>();
-            var saveResult = await service.SaveAsync(new DatabaseProfileEditorModel
-            {
-                DisplayName = "Managed profile for override match",
-                ProviderKind = DatabaseProviderKind.Sqlite,
-                SourceKind = DatabaseProfileSourceKind.ManagedSqlite
-            });
-
-            Assert.True(saveResult.IsSuccess);
-            persistedProfileId = saveResult.Value;
-            persistedEditor = await service.GetEditorAsync(saveResult.Value);
-        }
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("control-plane-sqlite-override-rejected");
 
         var overrideWorkspaceRoot = Path.Combine(testEnvironment.RootPath, "wrong-override-workspace");
-        await using var overrideProvider = DatabaseProfileControlPlaneTestHost.BuildServiceProvider(
-            testEnvironment,
-            includeDatabaseOverride: true,
-            additionalValues: new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["Database:Provider"] = "Sqlite",
-                ["Database:ConnectionString"] = $"Data Source={persistedEditor.SqliteDatabasePath}",
-                ["Storage:WorkspaceRoot"] = overrideWorkspaceRoot
-            });
+        var ex = Assert.Throws<InvalidOperationException>(() => DatabaseProfileControlPlaneTestHost.BuildServiceProvider(
+                testEnvironment,
+                includeDatabaseOverride: true,
+                additionalValues: new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["Database:Provider"] = "Sqlite",
+                    ["Database:ConnectionString"] = "Data Source=C:\\legacy\\candoitall.db",
+                    ["Storage:WorkspaceRoot"] = overrideWorkspaceRoot
+                }));
 
-        var resolver = overrideProvider.GetRequiredService<IActiveDatabaseProfileResolver>();
-        var workspaceResolver = overrideProvider.GetRequiredService<IWorkspacePathResolver>();
-        var controlPlaneService = overrideProvider.GetRequiredService<IDatabaseProfileService>();
-
-        var resolvedProfile = resolver.ResolveCurrentProfile();
-        var selection = await controlPlaneService.GetCurrentSelectionAsync();
-
-        Assert.Equal(DatabaseProfileResolutionSource.ExplicitOverride, resolvedProfile.ResolutionSource);
-        Assert.True(resolvedProfile.Profile.Runtime.LockedByRuntimeOverride);
-        Assert.Equal(persistedProfileId, resolvedProfile.Profile.Id);
-        Assert.Equal(DatabaseProfileSourceKind.ManagedSqlite, resolvedProfile.Profile.SourceKind);
-        Assert.Equal(persistedEditor.SqliteDatabasePath, resolvedProfile.Profile.Sqlite!.DatabasePath);
-        Assert.Equal(persistedEditor.WorkspaceRoot, resolvedProfile.Profile.Storage.WorkspaceRoot);
-        Assert.Equal(persistedEditor.WorkspaceRoot, workspaceResolver.ResolveWorkspaceRoot());
-        Assert.Equal(persistedProfileId, selection.ActiveProfileId);
-        Assert.Equal(DatabaseProfileResolutionSource.ExplicitOverride, selection.ResolutionSource);
+        Assert.Contains("sqlite", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("no longer supported", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -273,12 +236,10 @@ public sealed class DatabaseProfileOverrideTests
             includeDatabaseOverride: false))
         {
             var service = provider.GetRequiredService<IDatabaseProfileService>();
-            var saveResult = await service.SaveAsync(new DatabaseProfileEditorModel
-            {
-                DisplayName = "Managed profile",
-                ProviderKind = DatabaseProviderKind.Sqlite,
-                SourceKind = DatabaseProfileSourceKind.ManagedSqlite
-            });
+            var saveResult = await service.SaveAsync(CreatePostgreSqlEditorForDatabase(
+                "Managed PostgreSQL profile",
+                "startup_control_plane",
+                Path.Combine(testEnvironment.RootPath, "startup-postgres-workspace")));
 
             Assert.True(saveResult.IsSuccess);
             Assert.True((await service.ActivateAsync(saveResult.Value)).IsSuccess);
@@ -308,7 +269,7 @@ public sealed class DatabaseProfileOverrideTests
 public sealed class SnapshotBackedProfileCatalogTests
 {
     [Fact]
-    public async Task SaveAsync_auto_assigns_snapshot_cache_paths_for_snapshot_backed_profiles()
+    public async Task SaveAsync_rejects_snapshot_cache_profiles()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("control-plane-snapshot-cache");
         await using var provider = DatabaseProfileControlPlaneTestHost.BuildServiceProvider(
@@ -325,15 +286,8 @@ public sealed class SnapshotBackedProfileCatalogTests
             OriginSnapshotId = Guid.NewGuid()
         });
 
-        Assert.True(saveResult.IsSuccess);
-
-        var editor = await service.GetEditorAsync(saveResult.Value);
-        Assert.False(string.IsNullOrWhiteSpace(editor.SqliteDatabasePath));
-        Assert.StartsWith(testEnvironment.ControlPlaneRootPath, editor.SqliteDatabasePath, StringComparison.OrdinalIgnoreCase);
-        Assert.StartsWith(testEnvironment.ControlPlaneRootPath, editor.WorkspaceRoot, StringComparison.OrdinalIgnoreCase);
-
-        var summary = Assert.Single(await service.ListAsync());
-        Assert.StartsWith("sqlite:snapshot:", summary.Fingerprint, StringComparison.OrdinalIgnoreCase);
+        Assert.True(saveResult.IsFailure);
+        Assert.Contains(saveResult.Errors, error => error.Message.Contains("SQLite database profiles are no longer supported", StringComparison.Ordinal));
     }
 }
 

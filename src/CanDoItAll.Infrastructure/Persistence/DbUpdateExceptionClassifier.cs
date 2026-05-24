@@ -1,4 +1,3 @@
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -12,7 +11,6 @@ public static class DbUpdateExceptionClassifier
 
         return exception.InnerException switch
         {
-            SqliteException sqliteException => sqliteException.SqliteErrorCode == 19,
             PostgresException postgresException => postgresException.SqlState == PostgresErrorCodes.UniqueViolation,
             _ => false
         };

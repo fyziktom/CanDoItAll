@@ -26,7 +26,16 @@ public sealed class AgentFrameworkRuntimeSwitchingIntegrationTests
         var workspaceService = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
         var aiAgentService = scope.ServiceProvider.GetRequiredService<AiAgentService>();
 
-        await bootstrapper.EnsureCurrentProfileReadyAsync();
+        var primaryProfile = testEnvironment.CreatePostgreSqlProfile("agentframework-primary");
+        var primarySaveResult = await profileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
+            primaryProfile,
+            "PostgreSQL primary switch source"));
+        Assert.True(primarySaveResult.IsSuccess, string.Join(" ", primarySaveResult.Errors.Select(error => error.Message)));
+
+        var primaryResolvedProfile = runtimeAccessor.ResolveProfile(primarySaveResult.Value);
+        await bootstrapper.EnsureProfileReadyAsync(primaryResolvedProfile);
+        var primarySwitchResult = await switchCoordinator.SwitchAsync(primaryResolvedProfile.Profile.Id);
+        Assert.True(primarySwitchResult.IsSuccess, string.Join(" ", primarySwitchResult.Errors.Select(error => error.Message)));
 
         var primaryEditor = await workspaceService.GetAgentEditorAsync();
         primaryEditor.Name = "Primary Switch Agent";
@@ -39,12 +48,10 @@ public sealed class AgentFrameworkRuntimeSwitchingIntegrationTests
 
         var primaryAgentId = await workspaceService.SaveAgentAsync(primaryEditor);
 
-        var saveResult = await profileService.SaveAsync(new DatabaseProfileEditorModel
-        {
-            DisplayName = "Managed sqlite switch target",
-            ProviderKind = DatabaseProviderKind.Sqlite,
-            SourceKind = DatabaseProfileSourceKind.ManagedSqlite
-        });
+        var targetTestProfile = testEnvironment.CreatePostgreSqlProfile("agentframework-target");
+        var saveResult = await profileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
+            targetTestProfile,
+            "PostgreSQL switch target"));
 
         Assert.True(saveResult.IsSuccess);
 

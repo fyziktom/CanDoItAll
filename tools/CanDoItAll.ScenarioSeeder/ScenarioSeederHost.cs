@@ -14,7 +14,12 @@ namespace CanDoItAll.ScenarioSeeder;
 
 internal sealed class ScenarioSeederOptions
 {
-    private const string DefaultManagedProfileRoot = @"C:\Users\lucys\AppData\Local\CanDoItAll\control-plane\database-profiles\managed-sqlite\fe8c1138e1b541cc97a32dbead3a2394";
+    private static readonly string DefaultProfileRoot = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "CanDoItAll",
+        "control-plane",
+        "database-profiles",
+        "postgresql-local");
     public const string DefaultScenario = "agentframework-integration-simulation";
 
     public required string RepositoryRootPath { get; init; }
@@ -23,13 +28,9 @@ internal sealed class ScenarioSeederOptions
 
     public required string ProfileRootPath { get; init; }
 
-    public required string DatabasePath { get; init; }
-
     public required string WorkspaceRootPath { get; init; }
 
     public required string ManagerArtifactsRootPath { get; init; }
-
-    public required string ConnectionString { get; init; }
 
     public string ActionName { get; init; } = string.Empty;
 
@@ -40,7 +41,7 @@ internal sealed class ScenarioSeederOptions
     public static ScenarioSeederOptions Parse(string[] args, string currentDirectory)
     {
         var repositoryRootPath = currentDirectory;
-        var profileRootPath = DefaultManagedProfileRoot;
+        var profileRootPath = DefaultProfileRoot;
         var scenarioName = DefaultScenario;
         var actionName = string.Empty;
         Guid? runId = null;
@@ -71,7 +72,6 @@ internal sealed class ScenarioSeederOptions
             }
         }
 
-        var databasePath = Path.Combine(profileRootPath, "db", "candoitall.db");
         var workspaceRootPath = Path.Combine(profileRootPath, "workspace");
         var managerArtifactsRootPath = Path.Combine(profileRootPath, "manager-artifacts");
 
@@ -82,10 +82,8 @@ internal sealed class ScenarioSeederOptions
                 ? DefaultScenario
                 : scenarioName.Trim(),
             ProfileRootPath = Path.GetFullPath(profileRootPath),
-            DatabasePath = Path.GetFullPath(databasePath),
             WorkspaceRootPath = Path.GetFullPath(workspaceRootPath),
             ManagerArtifactsRootPath = Path.GetFullPath(managerArtifactsRootPath),
-            ConnectionString = $"Data Source={Path.GetFullPath(databasePath)}",
             ActionName = actionName.Trim(),
             RunId = runId,
             StepSequence = stepSequence
@@ -219,7 +217,6 @@ internal static class ScenarioSeederHost
     private static void EnsureDirectories(ScenarioSeederOptions options)
     {
         Directory.CreateDirectory(options.ProfileRootPath);
-        Directory.CreateDirectory(Path.GetDirectoryName(options.DatabasePath)!);
         Directory.CreateDirectory(options.WorkspaceRootPath);
         Directory.CreateDirectory(Path.Combine(options.WorkspaceRootPath, "managed-files"));
         Directory.CreateDirectory(Path.Combine(options.WorkspaceRootPath, "exports"));

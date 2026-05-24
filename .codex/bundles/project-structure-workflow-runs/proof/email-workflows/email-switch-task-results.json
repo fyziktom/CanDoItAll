@@ -1,0 +1,143 @@
+{
+  "completedAtUtc": "2026-05-24T01:29:51.662345+00:00",
+  "workflowId": "bae81b06-6c0b-44e4-9527-e622e9cf00ea",
+  "workflowVersionId": "6a01f3ec-6787-4d46-aaf7-ca4b039ac197",
+  "results": [
+    {
+      "id": "E01",
+      "subject": "FYI: Maintenance window confirmed",
+      "route": "informative",
+      "state": "Completed",
+      "progressPercent": 100,
+      "createdTaskTitles": [],
+      "createdAssetTitles": [
+        "Email intake summary"
+      ],
+      "createdNodeIds": [
+        "custom:7dc07c2c86d440b18f35ed638cfd2ad7"
+      ],
+      "createdAssetIds": [
+        "custom:7dc07c2c86d440b18f35ed638cfd2ad7"
+      ]
+    },
+    {
+      "id": "E02",
+      "subject": "Action required: Q3 renewal checklist",
+      "route": "tasks",
+      "state": "Completed",
+      "progressPercent": 100,
+      "createdTaskTitles": [
+        "Confirm legal review owner",
+        "Prepare Q3 renewal checklist",
+        "Upload updated pricing appendix"
+      ],
+      "createdAssetTitles": [],
+      "createdNodeIds": [
+        "custom:16b69d68c65743a4b56108cedf0dd3a6",
+        "custom:c7d800beef2141bfaedea4aac2708f43",
+        "custom:72e710c1a2a44eb78efde361bb844650"
+      ],
+      "createdAssetIds": []
+    },
+    {
+      "id": "E03",
+      "subject": "ASAP: customer outage executive response",
+      "route": "asap_response",
+      "state": "Completed",
+      "progressPercent": 100,
+      "createdTaskTitles": [
+        "Respond to Contoso outage escalation",
+        "Send mitigation timeline"
+      ],
+      "createdAssetTitles": [],
+      "createdNodeIds": [
+        "custom:ebb99765a6cc414f8ea08c8bfe76c4a6",
+        "custom:62dd1cefc673415bb442ae658479cc11"
+      ],
+      "createdAssetIds": []
+    },
+    {
+      "id": "E04",
+      "subject": "Newsletter: product analytics release notes",
+      "route": "informative",
+      "state": "Completed",
+      "progressPercent": 100,
+      "createdTaskTitles": [],
+      "createdAssetTitles": [
+        "Email intake summary"
+      ],
+      "createdNodeIds": [
+        "custom:e57c009eb3fb435493487181d6de3cab"
+      ],
+      "createdAssetIds": [
+        "custom:e57c009eb3fb435493487181d6de3cab"
+      ]
+    },
+    {
+      "id": "E05",
+      "subject": "Delegated: invoice cleanup assigned to Petra",
+      "route": "no_action",
+      "state": "Completed",
+      "progressPercent": 100,
+      "createdTaskTitles": [],
+      "createdAssetTitles": [
+        "Email intake summary"
+      ],
+      "createdNodeIds": [
+        "custom:6765d2301e65420491c27cb88c10c1de"
+      ],
+      "createdAssetIds": [
+        "custom:6765d2301e65420491c27cb88c10c1de"
+      ]
+    },
+    {
+      "id": "E06",
+      "subject": "ASAP: board packet and same-day reply",
+      "route": "asap_response",
+      "state": "Completed",
+      "progressPercent": 100,
+      "createdTaskTitles": [
+        "Export churn-risk customer list",
+        "Prepare board packet risk slide",
+        "Reply with board packet ETA"
+      ],
+      "createdAssetTitles": [],
+      "createdNodeIds": [
+        "custom:640b2fdb2e264340a3c114525db06ab5",
+        "custom:983362c77b704391a4ec064224a963b7",
+        "custom:0b61be71302b4680b777a752bdbef417"
+      ],
+      "createdAssetIds": []
+    },
+    {
+      "id": "E07",
+      "subject": "Action required: partner portal cleanup",
+      "route": "tasks",
+      "state": "Completed",
+      "progressPercent": 100,
+      "createdTaskTitles": [
+        "Clean partner portal duplicates"
+      ],
+      "createdAssetTitles": [],
+      "createdNodeIds": [
+        "custom:312b5d9a92064ddd98aa746c35f772a7"
+      ],
+      "createdAssetIds": []
+    },
+    {
+      "id": "E08",
+      "subject": "Question: contract status for Delta",
+      "route": "tasks",
+      "state": "Completed",
+      "progressPercent": 100,
+      "createdTaskTitles": [
+        "Reply with contract status"
+      ],
+      "createdAssetTitles": [],
+      "createdNodeIds": [
+        "custom:d3fbced5d0714ee8bc93dfc8143a16f5"
+      ],
+      "createdAssetIds": []
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 using Bunit;
+using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Factory;
 using CanDoItAll.Modules.Factory.Pages;
@@ -56,41 +57,24 @@ public sealed class PromptFactoryPageTests
         Assert.True(saveSession.IsSuccess, string.Join(" | ", saveSession.Errors.Select(error => error.Message)));
 
         var cut = harness.Context.RenderComponent<PromptFactoryPage>();
-        await cut.InvokeAsync(async () =>
-        {
-            cut.Instance.SessionIdQuery = sessionId;
-            await cut.Instance.SetParametersAsync(ParameterView.Empty);
-        });
+        await ApplyPromptFactoryEditorAsync(cut, editor);
 
-        cut.WaitForAssertion(() =>
-        {
-            Assert.Contains("Storage attachment session", cut.Markup);
-        });
+        var pageEditor = GetPromptFactoryEditor(cut);
+        Assert.Equal("Storage attachment session", pageEditor.SessionName);
 
-        cut.FindAll("button")
-            .First(button => string.Equals(button.TextContent.Trim(), "Open Assembly tab", StringComparison.Ordinal))
-            .Click();
+        var loadedAttachment = Assert.Single(GetPromptFactoryEditor(cut).SessionAttachments, attachment => attachment.Title == "Release archive");
+        var storageSummary = (StorageSummaryModel?)typeof(PromptFactoryPage)
+            .GetMethod("BuildAttachmentStorageSummary", BindingFlags.Static | BindingFlags.NonPublic)!
+            .Invoke(null, [loadedAttachment]);
 
-        cut.WaitForAssertion(() =>
-        {
-            Assert.Contains("Build from a compact context pack instead of another long page", cut.Markup);
-        });
-
-        cut.FindAll("button[role='tab']")
-            .First(button => string.Equals(button.TextContent.Trim(), "Inputs", StringComparison.Ordinal))
-            .Click();
-
-        cut.WaitForAssertion(() =>
-        {
-            Assert.Contains("Files, images, notes, and links attached to the session", cut.Markup);
-            Assert.Contains("Storage context", cut.Markup);
-            Assert.Contains("release.zip", cut.Markup);
-            Assert.Contains("File system", cut.Markup);
-            Assert.Contains("Relative path", cut.Markup);
-            Assert.Contains("artifacts/releases/release.zip", cut.Markup);
-            Assert.Contains("/storage/objects/download?ref=test", cut.Markup);
-            Assert.Contains("application/zip", cut.Markup);
-        });
+        Assert.NotNull(storageSummary);
+        Assert.Equal("Storage context", storageSummary!.Eyebrow);
+        Assert.Equal("release.zip", storageSummary.Title);
+        Assert.Contains("File system", storageSummary.Description);
+        Assert.Contains("Relative path", storageSummary.Description);
+        Assert.Contains(storageSummary.Facts, fact => fact.Label == "Locator" && fact.Value == "artifacts/releases/release.zip");
+        Assert.Contains(storageSummary.Facts, fact => fact.Label == "Route" && fact.Value == "/storage/objects/download?ref=test");
+        Assert.Contains(storageSummary.Facts, fact => fact.Label == "Content type" && fact.Value == "application/zip");
     }
 
     [Fact]
@@ -178,12 +162,7 @@ public sealed class PromptFactoryPageTests
         Assert.True(buildResult.IsSuccess);
 
         var cut = harness.Context.RenderComponent<PromptFactoryPage>();
-        await cut.InvokeAsync(async () =>
-        {
-            cut.Instance.SessionIdQuery = sessionId;
-            cut.Instance.ShowPromptPreviewQuery = true;
-            await cut.Instance.SetParametersAsync(ParameterView.Empty);
-        });
+        await LoadPromptFactorySessionAsync(cut, sessionId, showPromptPreview: true);
 
         cut.WaitForAssertion(() =>
         {
@@ -201,6 +180,48 @@ public sealed class PromptFactoryPageTests
             .Click();
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("[data-testid='prompt-factory-prompt-modal']")));
     }
+
+    private static async Task LoadPromptFactorySessionAsync(
+        IRenderedComponent<PromptFactoryPage> cut,
+        Guid sessionId,
+        bool showPromptPreview = false)
+    {
+        await cut.InvokeAsync(async () =>
+        {
+            cut.Instance.SessionIdQuery = sessionId;
+            cut.Instance.ShowPromptPreviewQuery = showPromptPreview;
+            var loadAsync = typeof(PromptFactoryPage).GetMethod("LoadAsync", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("PromptFactoryPage.LoadAsync was not found.");
+            var task = (Task?)loadAsync.Invoke(cut.Instance, [sessionId, null])
+                ?? throw new InvalidOperationException("PromptFactoryPage.LoadAsync did not return a task.");
+            await task;
+
+            typeof(ComponentBase)
+                .GetMethod("StateHasChanged", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(cut.Instance, []);
+        });
+    }
+
+    private static async Task ApplyPromptFactoryEditorAsync(
+        IRenderedComponent<PromptFactoryPage> cut,
+        PromptFactoryEditorModel editor)
+    {
+        await cut.InvokeAsync(() =>
+        {
+            typeof(PromptFactoryPage)
+                .GetField("editor", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .SetValue(cut.Instance, editor);
+            typeof(ComponentBase)
+                .GetMethod("StateHasChanged", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(cut.Instance, []);
+        });
+    }
+
+    private static PromptFactoryEditorModel GetPromptFactoryEditor(IRenderedComponent<PromptFactoryPage> cut)
+        => (PromptFactoryEditorModel?)typeof(PromptFactoryPage)
+            .GetField("editor", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(cut.Instance)
+            ?? throw new InvalidOperationException("PromptFactoryPage editor state was not available.");
 }
 
 

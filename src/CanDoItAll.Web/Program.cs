@@ -140,37 +140,6 @@ if (app.Environment.IsDevelopment())
         });
     });
 
-    app.MapPost("/_dev/database/profiles/managed-sqlite", async (
-        IDatabaseProfileService profileService,
-        IDatabaseProfileRuntimeAccessor profileAccessor,
-        IAppDatabaseBootstrapper bootstrapper) =>
-    {
-        var saveResult = await profileService.SaveAsync(new CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileEditorModel
-        {
-            DisplayName = $"Managed sqlite {Guid.NewGuid():N}"[..22],
-            ProviderKind = DatabaseProviderKind.Sqlite,
-            SourceKind = DatabaseProfileSourceKind.ManagedSqlite
-        });
-        if (saveResult.IsFailure)
-        {
-            return Results.BadRequest(saveResult.Errors.Select(error => error.Message).ToArray());
-        }
-
-        var profile = profileAccessor.ResolveProfile(saveResult.Value);
-        await bootstrapper.EnsureProfileReadyAsync(profile);
-
-        return Results.Ok(new
-        {
-            profile.Profile.Id,
-            profile.Profile.DisplayName,
-            profile.Profile.ProviderKind,
-            profile.Profile.SourceKind,
-            profile.Profile.Runtime.Fingerprint,
-            profile.Profile.Storage.WorkspaceRoot,
-            profile.ConnectionString
-        });
-    });
-
     app.MapPost("/_dev/database/profiles/postgresql", async (
         PostgreSqlDevDatabaseProfileRequest request,
         IDatabaseProfileService profileService,

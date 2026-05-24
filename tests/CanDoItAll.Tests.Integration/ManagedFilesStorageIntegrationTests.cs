@@ -18,8 +18,8 @@ public sealed class ManagedFilesStorageIntegrationTests
     public async Task Storage_keeps_managed_files_isolated_between_profiles()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("managed-files-storage");
-        var alphaProfile = testEnvironment.CreateManagedSqliteProfile("alpha");
-        var betaProfile = testEnvironment.CreateManagedSqliteProfile("beta");
+        var alphaProfile = testEnvironment.CreatePostgreSqlProfile("alpha");
+        var betaProfile = testEnvironment.CreatePostgreSqlProfile("beta");
 
         await using var alphaApplication = await TestApplication.CreateAsync(new TestHarnessOptions
         {
@@ -62,12 +62,10 @@ public sealed class ManagedFilesStorageIntegrationTests
 
             alphaPath = await artifactStore.SaveTextAsync("switch-proof", "active.txt", "alpha-profile");
 
-            var saveResult = await profileService.SaveAsync(new DatabaseProfileEditorModel
-            {
-                DisplayName = "Managed sqlite beta",
-                ProviderKind = DatabaseProviderKind.Sqlite,
-                SourceKind = DatabaseProfileSourceKind.ManagedSqlite
-            });
+            var betaTestProfile = host.TestEnvironment.CreatePostgreSqlProfile("managed-files-beta");
+            var saveResult = await profileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
+                betaTestProfile,
+                "PostgreSQL beta"));
 
             Assert.True(saveResult.IsSuccess, string.Join(" ", saveResult.Errors.Select(error => error.Message)));
             betaProfileId = saveResult.Value;
@@ -242,6 +240,19 @@ internal sealed class ManagedFilesTestHost : IAsyncDisposable
         var app = builder.Build();
         app.Urls.Add("http://127.0.0.1:0");
         app.MapCanDoItAllManagedFiles();
+
+        var primaryProfile = testEnvironment.CreatePostgreSqlProfile("managed-files-primary");
+        await using (var setupScope = app.Services.CreateAsyncScope())
+        {
+            var profileService = setupScope.ServiceProvider.GetRequiredService<IDatabaseProfileService>();
+            var saveResult = await profileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
+                primaryProfile,
+                "PostgreSQL primary"));
+            if (saveResult.IsFailure)
+            {
+                throw new InvalidOperationException(string.Join(" ", saveResult.Errors.Select(error => error.Message)));
+            }
+        }
 
         await TestApplicationBootstrap.InitializeSchemaAsync(app.Services, TestSchemaBootstrapModules.Full);
         await app.StartAsync();

@@ -1127,13 +1127,6 @@ else
             await TryAdoptMovedNodesIntoBordersAsync(new CanvasWorkbenchNodesMovedEventArgs(committedPositions));
             await InvokeAsync(StateHasChanged);
         }
-        catch (DbUpdateException ex) when (ProjectStructureAssemblyService.IsSqliteBusy(ex))
-        {
-            workflowFeedback = "The structure move could not be saved because the active SQLite workspace is busy. The canvas was reloaded; retry the move after the current write finishes.";
-            workflowFeedbackTone = "warn";
-            await ReloadSurfaceAsync();
-            await InvokeAsync(StateHasChanged);
-        }
         finally
         {
             nodeMoveCommitGate.Release();

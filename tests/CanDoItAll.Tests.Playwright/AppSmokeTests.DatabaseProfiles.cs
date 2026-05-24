@@ -11,7 +11,7 @@ public sealed partial class AppSmokeTests
     {
         await using var host = await DatabaseSwitchPlaywrightHost.CreateAsync();
         var initialProfile = await host.GetCurrentProfileAsync();
-        var secondProfile = await host.CreateManagedSqliteProfileAsync();
+        var secondProfile = await host.CreatePostgreSqlProfileAsync();
 
         await using var browser = await host.Playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
         {
@@ -97,13 +97,12 @@ public sealed partial class AppSmokeTests
 
         var startupDialog = page.GetByTestId("database-startup-modal");
         await startupDialog.WaitForAsync();
-        Assert.Contains("Configured SQLite override", await startupDialog.TextContentAsync() ?? string.Empty, StringComparison.Ordinal);
-        Assert.True(await page.GetByTestId("database-startup-create-managed").IsDisabledAsync());
+        Assert.Contains("Configured PostgreSQL override", await startupDialog.TextContentAsync() ?? string.Empty, StringComparison.Ordinal);
         Assert.True(await page.GetByTestId("database-startup-switch").IsDisabledAsync());
 
         await page.GetByTestId("database-startup-continue").ClickAsync();
         await page.GetByTestId("database-data-sources-locked-message").WaitForAsync();
-        Assert.True(await page.GetByTestId("database-profile-new-managed").IsDisabledAsync());
+        Assert.True(await page.GetByTestId("database-profile-new-postgres").IsDisabledAsync());
         Assert.True(await page.GetByTestId("database-profile-save").IsDisabledAsync());
 
         await SaveDatabaseEvidenceAsync(page, GetRepoRoot(), "db-switch-responsive-followup.png");
@@ -111,11 +110,9 @@ public sealed partial class AppSmokeTests
     }
 
     [Fact]
-    public async Task Clone_activate_and_cross_tab_switch_flow_render_cleanly()
+    public async Task Deferred_snapshot_actions_render_cleanly()
     {
         await using var host = await DatabaseSwitchPlaywrightHost.CreateAsync();
-        var sourceProfile = await host.GetCurrentProfileAsync();
-        var sourceSeed = await host.SeedCurrentProfileAsync("Browser Alpha");
 
         await using var browser = await host.Playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
         {
@@ -135,47 +132,18 @@ public sealed partial class AppSmokeTests
         Assert.NotNull(response);
         Assert.True(response!.Ok, $"Expected /settings?tab=data-sources to return 2xx, got {(int)response.Status}.");
         await DismissStartupModalAsync(settingsPage);
-        await settingsPage.GetByTestId("database-snapshot-source-summary").WaitForAsync();
-
-        var projectsPage = await context.NewPageAsync();
-        response = await projectsPage.GotoAsync($"{host.BaseUrl}/projects");
-        Assert.NotNull(response);
-        Assert.True(response!.Ok, $"Expected /projects to return 2xx, got {(int)response.Status}.");
-        await DismissStartupModalAsync(projectsPage);
-        await projectsPage.GetByTestId("projects-new-button").WaitForAsync();
-        await WaitForBodyTextAsync(projectsPage, sourceSeed.ProjectName);
-
-        await settingsPage.GetByTestId("database-clone-name").FillAsync("Browser Alpha Clone");
-        await settingsPage.GetByTestId("database-clone-create").ClickAsync();
-        await WaitForBodyTextAsync(settingsPage, "Browser Alpha Clone");
-        await SaveDatabaseEvidenceAsync(settingsPage, host.RepoRoot, "db-switch-clone-flow-desktop.png");
-
-        await Task.WhenAll(
-            settingsPage.GetByTestId("database-switch-alert").WaitForAsync(),
-            projectsPage.GetByTestId("database-switch-alert").WaitForAsync(),
-            settingsPage.GetByTestId("database-profile-activate").ClickAsync());
-
-        var cloneSeed = await host.SeedCurrentProfileAsync("Browser Clone");
-        await projectsPage.ReloadAsync();
-        await WaitForBodyTextAsync(projectsPage, cloneSeed.ProjectName);
-
-        await host.SwitchAsync(sourceProfile.Id);
-
-        await projectsPage.ReloadAsync();
-        await WaitForBodyTextAsync(projectsPage, sourceSeed.ProjectName);
-        Assert.DoesNotContain(cloneSeed.ProjectName, await projectsPage.TextContentAsync("body") ?? string.Empty, StringComparison.Ordinal);
-        await SaveDatabaseEvidenceAsync(projectsPage, host.RepoRoot, "db-switch-cross-tab-desktop.png");
+        await settingsPage.GetByTestId("database-snapshot-deferred").WaitForAsync();
+        Assert.Equal(0, await settingsPage.GetByTestId("database-clone-create").CountAsync());
+        await SaveDatabaseEvidenceAsync(settingsPage, host.RepoRoot, "db-switch-snapshot-deferred-desktop.png");
 
         Assert.False(await settingsPage.Locator("#blazor-error-ui").IsVisibleAsync());
-        Assert.False(await projectsPage.Locator("#blazor-error-ui").IsVisibleAsync());
     }
 
     [Fact]
-    public async Task Snapshot_local_and_ipfs_flow_render_cleanly()
+    public async Task Deferred_snapshot_actions_remain_clear_in_responsive_layout()
     {
         await using var host = await DatabaseSwitchPlaywrightHost.CreateAsync(enableIpfs: true);
         Assert.NotNull(host.FakeIpfsServer);
-        await host.SeedCurrentProfileAsync("Browser Snapshot");
 
         await using var browser = await host.Playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
         {
@@ -195,23 +163,8 @@ public sealed partial class AppSmokeTests
         Assert.NotNull(response);
         Assert.True(response!.Ok, $"Expected /settings?tab=data-sources to return 2xx, got {(int)response.Status}.");
         await DismissStartupModalAsync(page);
-        await page.GetByTestId("database-snapshot-source-summary").WaitForAsync();
-
-        await page.GetByTestId("database-snapshot-local-create").ClickAsync();
-        await page.GetByTestId("database-snapshot-latest").WaitForAsync();
-        var packagePath = await page.GetByTestId("database-snapshot-package-path").InputValueAsync();
-        Assert.False(string.IsNullOrWhiteSpace(packagePath));
-
-        await page.GetByTestId("database-snapshot-ipfs-create").ClickAsync();
-        var cid = await WaitForNonEmptyInputAsync(page.GetByTestId("database-snapshot-cid"));
-        Assert.False(string.IsNullOrWhiteSpace(cid));
-        Assert.Contains(cid, host.FakeIpfsServer!.StoredCids);
-        Assert.Contains(cid, host.FakeIpfsServer.PinnedCids);
-
-        await page.GetByTestId("database-snapshot-profile-name").FillAsync("Browser IPFS Restore");
-        await page.GetByTestId("database-snapshot-ipfs-restore").ClickAsync();
-        await WaitForBodyTextAsync(page, "Browser IPFS Restore");
-        await SaveDatabaseEvidenceAsync(page, host.RepoRoot, "db-switch-snapshot-ipfs-desktop.png");
+        await page.GetByTestId("database-snapshot-deferred").WaitForAsync();
+        await SaveDatabaseEvidenceAsync(page, host.RepoRoot, "db-switch-snapshot-deferred-ipfs-desktop.png");
 
         await page.SetViewportSizeAsync(1100, 900);
         await SaveDatabaseEvidenceAsync(page, host.RepoRoot, "db-switch-final-responsive.png");

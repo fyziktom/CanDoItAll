@@ -103,25 +103,6 @@ public static class ManagedSeedProviderFallbacks
         };
     }
 
-    public static ProviderProfile ApplyForManagedSqliteSeedProvider(
-        ProviderProfile provider,
-        bool isManagedSqliteProfile)
-    {
-        ArgumentNullException.ThrowIfNull(provider);
-
-        if (!isManagedSqliteProfile)
-        {
-            return provider;
-        }
-
-        if (IsFallbackProvider(provider))
-        {
-            return CreateOpenAiDefaultProvider(provider);
-        }
-
-        return provider;
-    }
-
     public static ProviderProfile ResolvePreferredProvider(
         AgentDefinition agent,
         ProviderProfile? registryProvider,
@@ -228,8 +209,7 @@ public static class ManagedSeedProviderFallbacks
     private static bool IsGeneratedManagedSeedFallbackProvider(ProviderProfile provider)
     {
         return provider.ConfigurationJson.Contains("\"fallback\"", StringComparison.OrdinalIgnoreCase) ||
-               provider.Notes.Contains("managed-seed fallback", StringComparison.OrdinalIgnoreCase) ||
-               provider.Notes.Contains("managed SQLite fallback provider", StringComparison.OrdinalIgnoreCase);
+               provider.Notes.Contains("managed-seed fallback", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsOpenAiProvider(ProviderProfile provider)

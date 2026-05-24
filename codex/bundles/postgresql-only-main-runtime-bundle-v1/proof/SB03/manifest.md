@@ -1,29 +1,29 @@
-# Proof manifest - SB03
+# Proof Manifest - SB03
 
 ## Subbundle
 
 Remove SQLite UI and Dev Endpoints
 
-## Changed files
+## Changed Files
 
-Fill during execution.
+Database settings UI, main layout database dialogs, database profile labels/details, and development profile endpoints were updated to expose PostgreSQL creation and legacy SQLite unsupported states only.
 
-## Commands run
+## Commands Run
 
-Fill during execution.
+- `dotnet test .\tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --no-build --filter "FullyQualifiedName~SettingsPageDataSourcesTests|FullyQualifiedName~MainLayoutDatabaseProfileTests" -v:minimal`
+- `dotnet test .\tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --no-build --filter <32 previous failures> -v:minimal`
 
-## Evidence files
+## Evidence Files
 
-Fill during execution.
+- `evidence/SB04/component-database-profile-settings-final.log`
+- `evidence/SB04/component-targeted-final-passed-2.log`
 
 ## Result
 
-Fill during execution:
-
-- [ ] Passed
+- [x] Passed
 - [ ] Failed
 - [ ] Partially complete
 
 ## Notes
 
-Fill during execution.
+Snapshot and SQLite creation actions are no longer offered as active runtime UI paths.

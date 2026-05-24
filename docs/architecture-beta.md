@@ -65,7 +65,7 @@ Person(agentClient, "AI coding agent", "Uses HTTP APIs, repo skills, selected MC
 System(canDoItAll, "CanDoItAll", ".NET 10 Blazor Web App with modular runtime, process automation, AgentFramework execution, local control plane, HTTP APIs, and selected MCP adapters.")
 System_Ext(provider, "AI providers", "OpenAI, Azure OpenAI, Ollama, or compatible provider profiles selected by AgentFramework.")
 System_Ext(localTools, "Browser, API, and local MCP tools", "Optional local tools attached to agents for browser, workspace, API, and sidecar operations.")
-System_Ext(fileSystem, "Local filesystem", "Control plane, managed SQLite profiles, file sandbox workspaces, managed artifacts, and selected MCP install artifacts.")
+System_Ext(fileSystem, "Local filesystem", "Control plane, PostgreSQL profile metadata, file sandbox workspaces, managed artifacts, and selected MCP install artifacts.")
 
 Rel(user, canDoItAll, "Uses through Blazor Server UI")
 Rel(agentClient, canDoItAll, "Uses HTTP APIs, repo skills, and selected MCP adapters")
@@ -90,7 +90,7 @@ System_Boundary(system, "CanDoItAll") {
     Container(agentFramework, "CanDoItAll.AgentFramework.*", ".NET libraries", "Agent catalog, file sandbox workspace, provider registry, MAF runtime integration, tools, MCP capabilities, execution runs, and artifacts.")
     Container(components, "CanDoItAll.Components.*", "Razor class libraries", "Base UI primitives, canvas controls, overlay windows, WebGL workbench experiments, and facade/sandbox projects.")
     Container(mcpServers, "CanDoItAll.Mcp.*", ".NET console MCP servers", "Selected agent-facing sidecars for components, code analytics, dotnet watch, Mermaid, SSH ops, and local runtime helpers.")
-    ContainerDb(appDb, "AppDbContext profile", "SQLite, PostgreSQL, or in-memory", "Application state for modules and runtime records.")
+    ContainerDb(appDb, "AppDbContext profile", "PostgreSQL", "Application state for modules and runtime records.")
     ContainerDb(controlPlane, "Control-plane files", "JSON and protected local files", "Database profiles, active profile metadata, DataProtection keys, and profile storage roots.")
     ContainerDb(workspaceFiles, "Agent workspace files", "JSON and artifacts", "Organization-scoped AgentFramework catalog, chats, execution slices, outputs, receipts, and artifacts.")
 }
@@ -207,7 +207,7 @@ sequenceDiagram
     Host->>Host: Map managed files, development endpoints, Razor components, and health checks
     Host->>Readiness: MarkStarting(environment, urls)
     Host->>Db: EnsureCurrentProfileReadyAsync()
-    Db->>Db: Ensure database exists or apply EF migrations and managed SQLite bootstrap data
+    Db->>Db: Ensure PostgreSQL database exists and apply EF migrations
     Host->>Readiness: MarkReady(environment, urls)
 ```
 
@@ -337,7 +337,7 @@ Tool approval is modeled in execution state. Process automation passes `AutoAppr
 
 CanDoItAll uses two different persistence concepts:
 
-- Application database profiles store module data through `AppDbContext`. The active provider can be SQLite, PostgreSQL, or in-memory for tests. Runtime database switching is mediated by profile services, a switchable DbContext factory, and `DatabaseSwitchCoordinator`. Governed process-agent automation is expected to run on PostgreSQL when `Processes:Runtime:RequirePostgreSqlForAgentAutomation` is enabled; the guard prevents slow SQLite-backed multi-agent runs.
+- Application database profiles store module data through `AppDbContext`. The main runtime provider is PostgreSQL-only; in-memory remains limited to explicit test/runtime override scenarios. Runtime database switching is mediated by profile services, a switchable DbContext factory, and `DatabaseSwitchCoordinator`. Legacy SQLite catalog entries are rejected with a clear unsupported-provider message.
 - Control-plane and workspace files live outside the selected application database. The control plane stores profile metadata and DataProtection keys. AgentFramework file sandbox stores organization-scoped catalog, chats, execution runs, artifacts, receipts, and output files under the active profile workspace root.
 
 This separation lets the selected app database change without losing machine-level profile metadata or AgentFramework file workspace shape.

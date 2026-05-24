@@ -59,7 +59,7 @@ public sealed class DatabaseConfigurationTests
     }
 
     [Fact]
-    public void AppDbContextFactory_UsesSqliteMigrationsAssembly_WhenConfiguredViaEnvironment()
+    public void AppDbContextFactory_RejectsSqlite_WhenConfiguredViaEnvironment()
     {
         const string providerVariable = "CANDOITALL_DATABASE_PROVIDER";
         const string connectionVariable = "CANDOITALL_DATABASE_CONNECTION";
@@ -71,10 +71,9 @@ public sealed class DatabaseConfigurationTests
             Environment.SetEnvironmentVariable(providerVariable, "Sqlite");
             Environment.SetEnvironmentVariable(connectionVariable, "Data Source=:memory:");
 
-            using var context = new AppDbContextFactory().CreateDbContext([]);
-            Assert.Equal(
-                "CanDoItAll.Migrations.Sqlite",
-                GetRelationalOptions(context).MigrationsAssembly);
+            var ex = Assert.Throws<InvalidOperationException>(() => new AppDbContextFactory().CreateDbContext([]));
+
+            Assert.Contains("SQLite is no longer supported", ex.Message, StringComparison.Ordinal);
         }
         finally
         {

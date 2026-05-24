@@ -5,7 +5,7 @@ namespace CanDoItAll.Infrastructure.Configuration;
 public sealed class DatabaseOptions
 {
     [Required]
-    public string Provider { get; set; } = "Sqlite";
+    public string Provider { get; set; } = "PostgreSql";
 
     public string? ConnectionString { get; set; }
 }
