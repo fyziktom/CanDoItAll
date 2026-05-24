@@ -359,7 +359,7 @@ public sealed class LegacyDatabaseProfileCatalogQuarantineTests
 
 internal static class LegacyCatalogTestData
 {
-    public static string RetiredProviderName() => string.Concat("Sql", "ite");
+    public static string RetiredProviderName() => "Sqlite";
 
     public static string CatalogPath(CanDoItAllTestEnvironment testEnvironment)
         => Path.Combine(testEnvironment.ControlPlaneRootPath, "database-profiles", "catalog.json");

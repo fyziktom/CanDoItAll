@@ -1,3 +1,5 @@
+using System.Data;
+using System.Data.Common;
 using System.Text.Json;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Search;
@@ -315,6 +317,26 @@ public sealed class ProcessOutboxService(
         var effectiveLeaseDuration = leaseDuration is null || leaseDuration.Value <= TimeSpan.Zero
             ? DefaultLeaseDuration
             : leaseDuration.Value;
+        if (dbContext.Database.IsNpgsql())
+        {
+            var claimedRecords = await ClaimPendingRecordsPostgreSqlAsync(
+                dbContext,
+                take,
+                now,
+                effectiveLeaseDuration,
+                minimumAutomationDispatchCreatedAtUtc,
+                cancellationToken);
+
+            var processedRecords = 0;
+            foreach (var record in claimedRecords)
+            {
+                await ProcessClaimedAsync(record.Id, record.LeaseToken, cancellationToken);
+                processedRecords++;
+            }
+
+            return processedRecords;
+        }
+
         var query = dbContext.Set<ProcessOutboxRecord>()
             .Where(item => item.Status == ProcessOutboxRecordStatus.Pending)
             .Where(item => item.NextAttemptAtUtc == null || item.NextAttemptAtUtc <= now)
@@ -348,6 +370,80 @@ public sealed class ProcessOutboxService(
         }
 
         return processedCount;
+    }
+
+    private static async Task<IReadOnlyList<ClaimedProcessOutboxRecord>> ClaimPendingRecordsPostgreSqlAsync(
+        AppDbContext dbContext,
+        int take,
+        DateTimeOffset now,
+        TimeSpan leaseDuration,
+        DateTimeOffset? minimumAutomationDispatchCreatedAtUtc,
+        CancellationToken cancellationToken)
+    {
+        var connection = dbContext.Database.GetDbConnection();
+        var shouldCloseConnection = connection.State != ConnectionState.Open;
+        if (shouldCloseConnection)
+        {
+            await connection.OpenAsync(cancellationToken);
+        }
+
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText =
+                """
+                WITH due AS (
+                    SELECT o."Id"
+                    FROM "Processes_Outbox" AS o
+                    WHERE o."Status" = @pendingStatus
+                      AND (o."NextAttemptAtUtc" IS NULL OR o."NextAttemptAtUtc" <= @now)
+                      AND (o."LeaseExpiresAtUtc" IS NULL OR o."LeaseExpiresAtUtc" <= @now)
+                      AND (
+                          @hasMinimumAutomationCreatedAtUtc = FALSE
+                          OR o."CommandKey" <> @automationCommandKey
+                          OR o."CreatedAtUtc" >= @minimumAutomationCreatedAtUtc
+                      )
+                    ORDER BY COALESCE(o."NextAttemptAtUtc", o."CreatedAtUtc"), o."CreatedAtUtc"
+                    FOR UPDATE SKIP LOCKED
+                    LIMIT @take
+                )
+                UPDATE "Processes_Outbox" AS o
+                SET "LeaseToken" = concat(@tokenPrefix, replace(o."Id"::text, '-', '')),
+                    "LeaseExpiresAtUtc" = CASE
+                        WHEN o."CommandKey" = @automationCommandKey THEN @automationLeaseExpiresAtUtc
+                        ELSE @leaseExpiresAtUtc
+                    END,
+                    "UpdatedAtUtc" = @now
+                FROM due
+                WHERE o."Id" = due."Id"
+                RETURNING o."Id", o."LeaseToken";
+                """;
+            AddParameter(command, "@pendingStatus", (int)ProcessOutboxRecordStatus.Pending);
+            AddParameter(command, "@now", now);
+            AddParameter(command, "@take", take);
+            AddParameter(command, "@tokenPrefix", $"{Guid.NewGuid():N}:");
+            AddParameter(command, "@automationCommandKey", AutomationDispatchCommandKey);
+            AddParameter(command, "@hasMinimumAutomationCreatedAtUtc", minimumAutomationDispatchCreatedAtUtc.HasValue);
+            AddParameter(command, "@minimumAutomationCreatedAtUtc", minimumAutomationDispatchCreatedAtUtc ?? now);
+            AddParameter(command, "@leaseExpiresAtUtc", now.Add(leaseDuration));
+            AddParameter(command, "@automationLeaseExpiresAtUtc", now.Add(ResolveClaimLeaseDuration(AutomationDispatchCommandKey, leaseDuration)));
+
+            var claims = new List<ClaimedProcessOutboxRecord>();
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                claims.Add(new ClaimedProcessOutboxRecord(reader.GetGuid(0), reader.GetString(1)));
+            }
+
+            return claims;
+        }
+        finally
+        {
+            if (shouldCloseConnection)
+            {
+                await connection.CloseAsync();
+            }
+        }
     }
 
     private async Task<Guid> EnqueueAsync(
@@ -661,6 +757,16 @@ public sealed class ProcessOutboxService(
             ? null
             : leaseToken;
     }
+
+    private static void AddParameter(DbCommand command, string name, object value)
+    {
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = name;
+        parameter.Value = value;
+        command.Parameters.Add(parameter);
+    }
+
+    private sealed record ClaimedProcessOutboxRecord(Guid Id, string LeaseToken);
 
     internal static TimeSpan ResolveClaimLeaseDuration(string commandKey, TimeSpan requestedLeaseDuration)
     {

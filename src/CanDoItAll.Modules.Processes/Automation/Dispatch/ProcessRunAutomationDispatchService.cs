@@ -65,6 +65,8 @@ internal sealed partial class ProcessRunAutomationDispatchService(
     private const string ProcessMockBranchApproved = "approved";
     private static readonly TimeSpan FreshInProgressRecoveryGracePeriod = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan StaleAutomationExecutionRunTimeout = TimeSpan.FromMinutes(10);
+    private static readonly TimeSpan StepDispatchClaimLeaseDuration = TimeSpan.FromMinutes(30);
+    private static readonly string AutomationDispatcherInstanceId = $"{Environment.MachineName}:{Environment.ProcessId}:{Guid.NewGuid():N}";
     private static readonly ConcurrentDictionary<Guid, SemaphoreSlim> StepDispatchGuards = [];
     private static readonly Regex RequiredToolNameRegex = new(
         @"\b(?:workspace|browser|project_structure|image_generation)_[a-z0-9_]+\b",

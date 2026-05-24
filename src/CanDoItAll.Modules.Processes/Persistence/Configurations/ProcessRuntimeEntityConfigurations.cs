@@ -67,12 +67,15 @@ internal sealed class ProcessStepRunConfiguration : IEntityTypeConfiguration<Pro
         builder.Property(step => step.InputQualitySummary).HasColumnType("TEXT");
         builder.Property(step => step.SelectedBranchOutcomeTitle).HasMaxLength(200);
         builder.Property(step => step.CapabilityGapSeverity).HasConversion<string>().HasMaxLength(48);
+        builder.Property(step => step.AutomationDispatchClaimToken).HasMaxLength(100);
+        builder.Property(step => step.AutomationDispatchClaimedBy).HasMaxLength(160);
         builder.Property(step => step.ConcurrencyToken).IsConcurrencyToken();
         builder.HasIndex(step => new { step.ProcessRunId, step.Sequence }).IsUnique();
         builder.HasIndex(step => new { step.ProcessRunId, step.StepDefinitionId })
             .IsUnique()
             .HasDatabaseName(ProcessPersistenceConstraintNames.StepRunPerDefinitionUniqueIndex);
         builder.HasIndex(step => new { step.ProcessRunId, step.Status });
+        builder.HasIndex(step => new { step.ProcessRunId, step.AutomationDispatchLeaseExpiresAtUtc });
         builder.HasIndex(step => step.StepDefinitionId);
         builder.HasIndex(step => step.SelectedBranchOutcomeId);
         builder.HasOne<ProcessRun>()

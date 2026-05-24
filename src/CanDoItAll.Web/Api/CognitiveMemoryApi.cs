@@ -93,7 +93,6 @@ internal static partial class CognitiveMemoryApi
             }
 
             switchResponse = CognitiveMemoryDatabaseSwitchSummaryApiResponse.From(switchResult.Value!);
-            profile = profileAccessor.ResolveCurrentProfile();
         }
 
         return new CognitiveMemoryPostgreSqlDatabaseProfileApiResponse(

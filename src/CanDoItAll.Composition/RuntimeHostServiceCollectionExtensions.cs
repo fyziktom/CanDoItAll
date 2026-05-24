@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -30,6 +31,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -569,10 +571,9 @@ public sealed class DatabaseSwitchCoordinator(
     IDatabaseDriverRegistry driverRegistry,
     IDatabaseRuntimeState runtimeState,
     IAppDatabaseBootstrapper bootstrapper,
+    IOptions<DatabaseOptions> databaseOptions,
     ILogger<DatabaseSwitchCoordinator> logger) : IDatabaseSwitchCoordinator
 {
-    private static readonly TimeSpan DrainTimeout = TimeSpan.FromSeconds(15);
-
     public async Task<Result<DatabaseSwitchResult>> SwitchAsync(Guid targetProfileId, CancellationToken cancellationToken = default)
     {
         var currentProfile = profileAccessor.ResolveCurrentProfile();
@@ -589,7 +590,12 @@ public sealed class DatabaseSwitchCoordinator(
                 currentProfile.Profile.Id,
                 currentProfile.Profile.Id,
                 snapshot.Generation,
-                Environment.ProcessId));
+                Environment.ProcessId)
+            {
+                RequiresRestart = false,
+                RuntimeChangedInProcess = false,
+                Message = "The selected database profile is already the canonical runtime profile for this process."
+            });
         }
 
         ResolvedDatabaseProfile targetProfile;
@@ -602,11 +608,8 @@ public sealed class DatabaseSwitchCoordinator(
             return Result<DatabaseSwitchResult>.Failure(Error.Failure(ex.Message));
         }
 
-        await using var switchSession = await runtimeState.BeginSwitchAsync(cancellationToken);
-
         try
         {
-            await switchSession.WaitForDrainAsync(DrainTimeout, cancellationToken);
             await driverRegistry.Resolve(targetProfile.Profile.ProviderKind)
                 .EnsureDatabaseAsync(targetProfile, cancellationToken);
             await bootstrapper.EnsureProfileReadyAsync(targetProfile, cancellationToken);
@@ -617,40 +620,35 @@ public sealed class DatabaseSwitchCoordinator(
                 return Result<DatabaseSwitchResult>.Failure(activationResult.Errors);
             }
 
-            var notification = switchSession.Complete(targetProfile);
             logger.LogInformation(
-                "Switched active database from {PreviousProfileId} to {CurrentProfileId} at generation {Generation}.",
+                "Persisted database profile activation from {PreviousProfileId} to {CurrentProfileId}. RestartRequired={RestartRequired}. MaintenanceHotSwitchEnabled={MaintenanceHotSwitchEnabled}.",
                 currentProfile.Profile.Id,
                 targetProfile.Profile.Id,
-                notification.Generation);
+                true,
+                databaseOptions.Value.EnableMaintenanceHotSwitch);
 
+            var snapshot = runtimeState.GetSnapshot();
             return Result<DatabaseSwitchResult>.Success(new DatabaseSwitchResult(
                 currentProfile.Profile.Id,
                 targetProfile.Profile.Id,
-                notification.Generation,
-                Environment.ProcessId));
-        }
-        catch (TimeoutException ex)
-        {
-            logger.LogWarning(
-                ex,
-                "Database switch from {PreviousProfileId} to {TargetProfileId} timed out while waiting for active contexts to drain.",
-                currentProfile.Profile.Id,
-                targetProfileId);
-
-            return Result<DatabaseSwitchResult>.Failure(
-                Error.Failure("Database switch timed out while waiting for active operations to finish."));
+                snapshot.Generation,
+                Environment.ProcessId)
+            {
+                RequiresRestart = true,
+                RuntimeChangedInProcess = false,
+                Message = "Database profile activation was saved. Restart the process to make it the canonical runtime database."
+            });
         }
         catch (Exception ex)
         {
             logger.LogError(
                 ex,
-                "Database switch from {PreviousProfileId} to {TargetProfileId} failed.",
+                "Database activation from {PreviousProfileId} to {TargetProfileId} failed.",
                 currentProfile.Profile.Id,
                 targetProfileId);
 
             return Result<DatabaseSwitchResult>.Failure(
-                Error.Failure($"Database switch failed: {ex.Message}"));
+                Error.Failure($"Database activation failed: {ex.Message}"));
         }
     }
 }

@@ -199,7 +199,10 @@ if (app.Environment.IsDevelopment())
             switchResult = new
             {
                 activation.Value!.Generation,
-                activation.Value.CurrentProfileId
+                activation.Value.CurrentProfileId,
+                activation.Value.RequiresRestart,
+                activation.Value.RuntimeChangedInProcess,
+                activation.Value.Message
             };
         }
 
@@ -227,15 +230,30 @@ if (app.Environment.IsDevelopment())
             return Results.BadRequest(switchResult.Errors.Select(error => error.Message).ToArray());
         }
 
-        var profile = profileAccessor.ResolveCurrentProfile();
+        var runtimeProfile = profileAccessor.ResolveCurrentProfile();
+        var activatedProfile = profileAccessor.ResolveProfile(switchResult.Value!.CurrentProfileId);
         return Results.Ok(new
         {
-            switchResult.Value!.Generation,
+            switchResult.Value.Generation,
             switchResult.Value.CurrentProfileId,
-            profile.Profile.DisplayName,
-            profile.Profile.Runtime.Fingerprint,
-            profile.Profile.Storage.WorkspaceRoot,
-            profile.ConnectionString
+            switchResult.Value.RequiresRestart,
+            switchResult.Value.RuntimeChangedInProcess,
+            switchResult.Value.Message,
+            ActivatedProfile = new
+            {
+                activatedProfile.Profile.Id,
+                activatedProfile.Profile.DisplayName,
+                activatedProfile.Profile.Runtime.Fingerprint,
+                activatedProfile.Profile.Storage.WorkspaceRoot
+            },
+            RuntimeProfile = new
+            {
+                runtimeProfile.Profile.Id,
+                runtimeProfile.Profile.DisplayName,
+                runtimeProfile.Profile.Runtime.Fingerprint,
+                runtimeProfile.Profile.Storage.WorkspaceRoot,
+                runtimeProfile.ConnectionString
+            }
         });
     });
 

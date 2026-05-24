@@ -2,7 +2,14 @@
 
 ## Status
 
-Prepared for Codex execution on `fyziktom/CanDoItAll`, branch `db-remove-sqlite`.
+Implemented on `fyziktom/CanDoItAll`, branch `db-remove-sqlite`, with documented external validation blockers.
+
+Final closure state:
+
+- Source changes for SB02-SB07 are implemented.
+- Build, unit tests, targeted component tests, focused PostgreSQL integration tests, Playwright Data Sources proof, EF model drift proof, residue audit, source assertions, and anti-stub audit are captured under `proof/`.
+- `git fetch origin` is blocked on this machine by SSH public key authentication; local `development` ancestry is proven.
+- The broad non-quarantined integration command timed out after local PostgreSQL default-user authentication failures in unrelated integration setup; the changed runtime/profile/outbox/process surfaces passed the focused integration sweep.
 
 ## Objective
 
@@ -60,3 +67,10 @@ Use repository-local bundle skills and execute subbundles in order. Do not imple
 - Do not modify `CanDoItAll.IPFS`.
 - Do not remove canonicality guards without durable PostgreSQL replacement proof.
 - Do not make hidden string concatenation the way to pass residue audits.
+
+## Final Proof Index
+
+- Execution report: `reviews/01-execution-report.md`
+- Final proof manifest: `proof/SB08-final-validation-benchmark-gate/manifest.md`
+- Changed-file hash inventory: `proof/SB08-final-validation-benchmark-gate/changed-file-hashes.tsv`
+- Bundle validator: `scripts/validate_bundle.py`

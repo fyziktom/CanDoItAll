@@ -229,6 +229,16 @@ public sealed class ProcessStepRun : IHasConcurrencyToken {
 
     public ProcessCapabilityGapSeverity CapabilityGapSeverity { get; set; } = ProcessCapabilityGapSeverity.None;
 
+    public string AutomationDispatchClaimToken { get; set; } = string.Empty;
+
+    public string AutomationDispatchClaimedBy { get; set; } = string.Empty;
+
+    public DateTimeOffset? AutomationDispatchClaimedAtUtc { get; set; }
+
+    public DateTimeOffset? AutomationDispatchLeaseExpiresAtUtc { get; set; }
+
+    public int AutomationDispatchAttemptCount { get; set; }
+
     public Guid ConcurrencyToken { get; set; } = Guid.NewGuid();
 }
 

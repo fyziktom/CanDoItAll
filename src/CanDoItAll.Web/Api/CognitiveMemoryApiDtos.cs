@@ -184,7 +184,10 @@ internal sealed record CognitiveMemoryDatabaseSwitchSummaryApiResponse(
     Guid PreviousProfileId,
     Guid CurrentProfileId,
     long Generation,
-    int ProcessId)
+    int ProcessId,
+    bool RequiresRestart,
+    bool RuntimeChangedInProcess,
+    string Message)
 {
     public static CognitiveMemoryDatabaseSwitchSummaryApiResponse From(DatabaseSwitchResult result)
     {
@@ -192,7 +195,10 @@ internal sealed record CognitiveMemoryDatabaseSwitchSummaryApiResponse(
             result.PreviousProfileId,
             result.CurrentProfileId,
             result.Generation,
-            result.ProcessId);
+            result.ProcessId,
+            result.RequiresRestart,
+            result.RuntimeChangedInProcess,
+            result.Message);
     }
 }
 
@@ -201,7 +207,11 @@ internal sealed record CognitiveMemoryDatabaseSwitchApiResponse(
     Guid CurrentProfileId,
     long Generation,
     int ProcessId,
-    CognitiveMemoryDatabaseProfileApiResponse Profile);
+    bool RequiresRestart,
+    bool RuntimeChangedInProcess,
+    string Message,
+    CognitiveMemoryDatabaseProfileApiResponse ActivatedProfile,
+    CognitiveMemoryDatabaseProfileApiResponse RuntimeProfile);
 
 internal sealed class CognitiveMemorySnapshotApiQuery
 {

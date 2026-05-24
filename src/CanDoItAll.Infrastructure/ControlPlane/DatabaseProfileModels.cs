@@ -16,7 +16,6 @@ public enum DatabaseProfileSourceKind
 
 public enum DatabaseProfileStorageMode
 {
-    ManagedPerProfile,
     ExternalWorkspaceRoot,
     Ephemeral
 }
@@ -26,7 +25,6 @@ public enum DatabaseProfileResolutionSource
     ExplicitOverride,
     PersistedActiveProfile,
     PersistedCatalogFallback,
-    LegacyDiscovery,
     AutoProvisionedPostgreSql
 }
 
@@ -75,7 +73,7 @@ public sealed class InMemoryDatabaseProfileConnection
 
 public sealed class DatabaseProfileStorageDescriptor
 {
-    public DatabaseProfileStorageMode Mode { get; set; } = DatabaseProfileStorageMode.ManagedPerProfile;
+    public DatabaseProfileStorageMode Mode { get; set; } = DatabaseProfileStorageMode.ExternalWorkspaceRoot;
 
     public string WorkspaceRoot { get; set; } = string.Empty;
 }
@@ -209,6 +207,13 @@ public interface IActiveDatabaseProfileResolver
 public interface IDatabaseProfileRuntimeAccessor : IActiveDatabaseProfileResolver
 {
     ResolvedDatabaseProfile ResolveProfile(Guid profileId);
+}
+
+public interface ICanonicalRuntimeDatabase
+{
+    ResolvedDatabaseProfile Profile { get; }
+
+    long Generation { get; }
 }
 
 public interface IDatabaseProfileService

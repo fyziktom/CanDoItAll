@@ -19,9 +19,19 @@ public sealed class DatabaseProfileWorkspaceService(
 {
     private static readonly TimeSpan SchemaHealthTimeout = TimeSpan.FromSeconds(5);
 
-    public Task<IReadOnlyList<DatabaseProfileSummary>> ListProfilesAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<DatabaseProfileSummary>> ListProfilesAsync(CancellationToken cancellationToken = default)
     {
-        return profileService.ListAsync(cancellationToken);
+        var runtimeProfile = profileAccessor.ResolveCurrentProfile();
+        var profiles = await profileService.ListAsync(cancellationToken);
+        return profiles
+            .Where(profile => profile.ProviderKind == DatabaseProviderKind.PostgreSql &&
+                profile.SourceKind == DatabaseProfileSourceKind.PostgresConnection)
+            .Select(profile => profile with
+            {
+                IsActive = !runtimeProfile.Profile.Runtime.LockedByRuntimeOverride &&
+                    profile.Id == runtimeProfile.Profile.Id
+            })
+            .ToList();
     }
 
     public Task<DatabaseProfileEditorModel> GetProfileAsync(Guid? id = null, CancellationToken cancellationToken = default)
@@ -31,7 +41,8 @@ public sealed class DatabaseProfileWorkspaceService(
 
     public Task<DatabaseSelectionStateModel> GetCurrentSelectionAsync(CancellationToken cancellationToken = default)
     {
-        return profileService.GetCurrentSelectionAsync(cancellationToken);
+        var runtimeProfile = profileAccessor.ResolveCurrentProfile();
+        return Task.FromResult(CreateSelection(runtimeProfile));
     }
 
     public Task<IReadOnlyList<DatabaseTransferSourceSummary>> ListTransferSourcesAsync(
@@ -58,7 +69,7 @@ public sealed class DatabaseProfileWorkspaceService(
 
     public async Task<DatabaseProfileEditorModel> GetCurrentEditorAsync(CancellationToken cancellationToken = default)
     {
-        var selection = await profileService.GetCurrentSelectionAsync(cancellationToken);
+        var selection = await GetCurrentSelectionAsync(cancellationToken);
         if (!selection.IsRuntimeLocked)
         {
             return await profileService.GetEditorAsync(selection.ActiveProfileId, cancellationToken);
@@ -291,6 +302,34 @@ public sealed class DatabaseProfileWorkspaceService(
             PostgresAdminDatabaseName = profile.PostgreSql?.AdminDatabaseName,
             PostgresTrustServerCertificate = profile.PostgreSql?.TrustServerCertificate ?? false,
             IsRuntimeLocked = profile.Runtime.LockedByRuntimeOverride
+        };
+    }
+
+    private static DatabaseSelectionStateModel CreateSelection(ResolvedDatabaseProfile resolvedProfile)
+    {
+        return new DatabaseSelectionStateModel
+        {
+            ActiveProfileId = resolvedProfile.Profile.Id,
+            DisplayName = resolvedProfile.Profile.DisplayName,
+            ProviderKind = resolvedProfile.Profile.ProviderKind,
+            SourceKind = resolvedProfile.Profile.SourceKind,
+            ResolutionSource = resolvedProfile.ResolutionSource,
+            IsRuntimeLocked = resolvedProfile.Profile.Runtime.LockedByRuntimeOverride,
+            Fingerprint = resolvedProfile.Profile.Runtime.Fingerprint,
+            WorkspaceRoot = resolvedProfile.Profile.Storage.WorkspaceRoot,
+            Descriptor = BuildDescriptor(resolvedProfile.Profile)
+        };
+    }
+
+    private static string BuildDescriptor(DatabaseProfileRecord profile)
+    {
+        return profile.ProviderKind switch
+        {
+            DatabaseProviderKind.PostgreSql => profile.PostgreSql is null
+                ? string.Empty
+                : $"{profile.PostgreSql.Host}:{profile.PostgreSql.Port}/{profile.PostgreSql.DatabaseName}",
+            DatabaseProviderKind.InMemory => profile.InMemory?.DatabaseName ?? string.Empty,
+            _ => string.Empty
         };
     }
 

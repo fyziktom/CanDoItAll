@@ -40,7 +40,7 @@ public sealed class DatabaseSwitchCoordinatorTests
 public sealed class AppDbContextRuntimeSwitchTests
 {
     [Fact]
-    public async Task CreateDbContextAsync_uses_the_new_active_profile_after_a_switch()
+    public async Task CreateDbContextAsync_keeps_canonical_profile_until_restart_after_activation()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("runtime-context-switch");
         await using var provider = DatabaseProfileControlPlaneTestHost.BuildServiceProvider(
@@ -67,14 +67,20 @@ public sealed class AppDbContextRuntimeSwitchTests
 
         Assert.True(switchResult.IsSuccess, string.Join("; ", switchResult.Errors.Select(error => error.Message)));
         Assert.NotEqual(initialProfile.Profile.Id, targetProfile.Profile.Id);
+        Assert.True(switchResult.Value!.RequiresRestart);
+        Assert.False(switchResult.Value.RuntimeChangedInProcess);
+        Assert.Contains("Restart", switchResult.Value.Message, StringComparison.OrdinalIgnoreCase);
 
         await using var switchedContext = await dbContextFactory.CreateDbContextAsync();
-        Assert.Equal(targetProfile.ConnectionString, switchedContext.Database.GetConnectionString());
-        Assert.NotEqual(initialProfile.ConnectionString, switchedContext.Database.GetConnectionString());
+        Assert.Equal(initialProfile.ConnectionString, switchedContext.Database.GetConnectionString());
+        Assert.NotEqual(targetProfile.ConnectionString, switchedContext.Database.GetConnectionString());
 
         var runtimeSnapshot = runtimeState.GetSnapshot();
-        Assert.Equal(targetProfile.Profile.Id, runtimeSnapshot.ActiveProfileId);
+        Assert.Equal(initialProfile.Profile.Id, runtimeSnapshot.ActiveProfileId);
         Assert.Equal(switchResult.Value!.Generation, runtimeSnapshot.Generation);
+
+        var persistedSelection = await profileService.GetCurrentSelectionAsync();
+        Assert.Equal(targetProfile.Profile.Id, persistedSelection.ActiveProfileId);
     }
 }
 

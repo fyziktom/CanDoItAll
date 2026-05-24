@@ -1,3 +1,5 @@
+using System.Data;
+using System.Data.Common;
 using System.Text.Json;
 using CanDoItAll.Infrastructure.BackgroundJobs;
 using CanDoItAll.Infrastructure.Persistence;
@@ -172,6 +174,27 @@ public sealed class AutomationMessageDispatcher(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var now = clock.GetUtcNow();
         var leaseCutoff = now.Subtract(options.Value.DeliveryLeaseDuration);
+        if (dbContext.Database.IsNpgsql())
+        {
+            var claimedDeliveries = await ClaimDueDeliveriesPostgreSqlAsync(
+                dbContext,
+                take,
+                now,
+                leaseCutoff,
+                cancellationToken);
+
+            var dispatchedCount = 0;
+            foreach (var delivery in claimedDeliveries)
+            {
+                if (await DispatchClaimedAsync(delivery.Id, delivery.LockToken, cancellationToken))
+                {
+                    dispatchedCount++;
+                }
+            }
+
+            return dispatchedCount;
+        }
+
         var dueDeliveryIds = await dbContext.Set<AutomationEnvelopeDeliveryRecord>()
             .Where(item => item.AvailableAtUtc <= now)
             .Where(item =>
@@ -197,6 +220,90 @@ public sealed class AutomationMessageDispatcher(
 
         return processedCount;
     }
+
+    private static async Task<IReadOnlyList<ClaimedAutomationDelivery>> ClaimDueDeliveriesPostgreSqlAsync(
+        AppDbContext dbContext,
+        int take,
+        DateTimeOffset now,
+        DateTimeOffset leaseCutoff,
+        CancellationToken cancellationToken)
+    {
+        var connection = dbContext.Database.GetDbConnection();
+        var shouldCloseConnection = connection.State != ConnectionState.Open;
+        if (shouldCloseConnection)
+        {
+            await connection.OpenAsync(cancellationToken);
+        }
+
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText =
+                """
+                WITH due AS (
+                    SELECT d."Id"
+                    FROM "Automation_EnvelopeDeliveries" AS d
+                    WHERE d."AvailableAtUtc" <= @now
+                      AND (
+                          d."State" = @pendingState
+                          OR d."State" = @retryScheduledState
+                          OR (
+                              d."State" = @runningState
+                              AND d."LockedAtUtc" IS NOT NULL
+                              AND d."LockedAtUtc" <= @leaseCutoff
+                          )
+                      )
+                    ORDER BY d."AvailableAtUtc", d."CreatedAtUtc"
+                    FOR UPDATE SKIP LOCKED
+                    LIMIT @take
+                )
+                UPDATE "Automation_EnvelopeDeliveries" AS d
+                SET "State" = @runningState,
+                    "AttemptCount" = d."AttemptCount" + 1,
+                    "LastAttemptAtUtc" = @now,
+                    "UpdatedAtUtc" = @now,
+                    "CompletedAtUtc" = NULL,
+                    "LockedAtUtc" = @now,
+                    "LockToken" = concat(@tokenPrefix, replace(d."Id"::text, '-', ''))
+                FROM due
+                WHERE d."Id" = due."Id"
+                RETURNING d."Id", d."LockToken";
+                """;
+            AddParameter(command, "@now", now);
+            AddParameter(command, "@leaseCutoff", leaseCutoff);
+            AddParameter(command, "@pendingState", (int)AutomationDeliveryState.Pending);
+            AddParameter(command, "@retryScheduledState", (int)AutomationDeliveryState.RetryScheduled);
+            AddParameter(command, "@runningState", (int)AutomationDeliveryState.Running);
+            AddParameter(command, "@take", take);
+            AddParameter(command, "@tokenPrefix", $"{Guid.NewGuid():N}:");
+
+            var claims = new List<ClaimedAutomationDelivery>();
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                claims.Add(new ClaimedAutomationDelivery(reader.GetGuid(0), reader.GetString(1)));
+            }
+
+            return claims;
+        }
+        finally
+        {
+            if (shouldCloseConnection)
+            {
+                await connection.CloseAsync();
+            }
+        }
+    }
+
+    private static void AddParameter(DbCommand command, string name, object value)
+    {
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = name;
+        parameter.Value = value;
+        command.Parameters.Add(parameter);
+    }
+
+    private sealed record ClaimedAutomationDelivery(Guid Id, string LockToken);
 
     private async Task<bool> ClaimAndDispatchAsync(Guid deliveryId, CancellationToken cancellationToken)
     {

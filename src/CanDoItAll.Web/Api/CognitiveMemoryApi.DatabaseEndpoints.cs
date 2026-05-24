@@ -77,13 +77,18 @@ internal static partial class CognitiveMemoryApi
                     throw new InvalidOperationException(BuildErrorMessage(switchResult.Errors));
                 }
 
-                var profile = profileAccessor.ResolveCurrentProfile();
+                var runtimeProfile = profileAccessor.ResolveCurrentProfile();
+                var activatedProfile = profileAccessor.ResolveProfile(switchResult.Value!.CurrentProfileId);
                 return new CognitiveMemoryDatabaseSwitchApiResponse(
-                    switchResult.Value!.PreviousProfileId,
+                    switchResult.Value.PreviousProfileId,
                     switchResult.Value.CurrentProfileId,
                     switchResult.Value.Generation,
                     switchResult.Value.ProcessId,
-                    CognitiveMemoryDatabaseProfileApiResponse.From(profile));
+                    switchResult.Value.RequiresRestart,
+                    switchResult.Value.RuntimeChangedInProcess,
+                    switchResult.Value.Message,
+                    CognitiveMemoryDatabaseProfileApiResponse.From(activatedProfile),
+                    CognitiveMemoryDatabaseProfileApiResponse.From(runtimeProfile));
             }))
             .WithName(EndpointName("SwitchCognitiveMemoryDatabaseProfile", surface));
 

@@ -11,15 +11,21 @@ internal static class LegacyDatabaseProfileCatalogQuarantine
     private const string ProviderKindPropertyName = "providerKind";
     private const string SourceKindPropertyName = "sourceKind";
     private const string IdPropertyName = "id";
-    private static readonly string RetiredProviderName = "Sql" + "ite";
-    private static readonly string RetiredConnectionPropertyName = RetiredProviderName.ToLowerInvariant();
+    public const string RetiredProviderName = "Sqlite";
+    public const string RetiredConnectionPropertyName = "sqlite";
+    public const string RetiredManagedSourceName = "ManagedSqlite";
+    public const string RetiredExternalFileSourceName = "ExternalSqliteFile";
+    public const string RetiredImportedSourceName = "ImportedSqlite";
+    public const string RetiredSnapshotCacheSourceName = "SnapshotCache";
+    public const string RetiredIpfsSnapshotSourceName = "IpfsSnapshot";
+
     private static readonly IReadOnlySet<string> RetiredSourceNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
-        "Managed" + RetiredProviderName,
-        "External" + RetiredProviderName + "File",
-        "Imported" + RetiredProviderName,
-        "Snapshot" + "Cache",
-        "Ipfs" + "Snapshot"
+        RetiredManagedSourceName,
+        RetiredExternalFileSourceName,
+        RetiredImportedSourceName,
+        RetiredSnapshotCacheSourceName,
+        RetiredIpfsSnapshotSourceName
     };
     private static readonly IReadOnlySet<int> RetiredSourceValues = new HashSet<int>
     {

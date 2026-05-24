@@ -3,8 +3,11 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Json;
 using System.Net.Sockets;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Playwright;
 using Npgsql;
 
@@ -14,7 +17,7 @@ namespace CanDoItAll.Tests.Playwright;
 public sealed class DatabaseSwitchWorkbenchPlaywrightTests
 {
     [Fact]
-    public async Task Switch_reloads_stale_artifact_routes_and_isolates_workbench_storage_per_profile()
+    public async Task Switch_activation_requires_restart_and_keeps_running_routes_on_current_profile()
     {
         await using var host = await DatabaseSwitchPlaywrightHost.CreateAsync();
         await using var browser = await host.Playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
@@ -44,15 +47,15 @@ public sealed class DatabaseSwitchWorkbenchPlaywrightTests
 
         Assert.Contains($"/projects/{alphaProject.ProjectId:D}/structure", structurePage.Url, StringComparison.OrdinalIgnoreCase);
 
-        await host.SwitchAsync(betaProfile.Id);
+        var switchResult = await host.SwitchAsync(betaProfile.Id);
 
-        await structurePage.WaitForURLAsync("**/projects", new() { Timeout = 20_000 });
-        await secondPage.WaitForURLAsync("**/projects", new() { Timeout = 20_000 });
-        await structurePage.GetByTestId("database-switch-alert").WaitForAsync();
-        await secondPage.GetByTestId("database-switch-alert").WaitForAsync();
+        Assert.True(switchResult.RequiresRestart);
+        Assert.False(switchResult.RuntimeChangedInProcess);
+        Assert.Contains("Restart", switchResult.Message, StringComparison.OrdinalIgnoreCase);
 
-        Assert.DoesNotContain("/structure", structurePage.Url, StringComparison.OrdinalIgnoreCase);
-        Assert.EndsWith("/projects", new Uri(structurePage.Url).AbsolutePath, StringComparison.OrdinalIgnoreCase);
+        var runtimeProfile = await host.GetCurrentProfileAsync();
+        Assert.Equal(alphaProfile.Id, runtimeProfile.Id);
+        Assert.Contains($"/projects/{alphaProject.ProjectId:D}/structure", structurePage.Url, StringComparison.OrdinalIgnoreCase);
         Assert.EndsWith("/projects", new Uri(secondPage.Url).AbsolutePath, StringComparison.OrdinalIgnoreCase);
         Assert.False(await structurePage.Locator("#blazor-error-ui").IsVisibleAsync());
         Assert.False(await secondPage.Locator("#blazor-error-ui").IsVisibleAsync());
@@ -61,7 +64,7 @@ public sealed class DatabaseSwitchWorkbenchPlaywrightTests
             "() => Object.keys(window.localStorage).filter(key => key.startsWith('candoitall.workbench.session:'))");
 
         Assert.Contains(storageKeys, key => key.EndsWith(alphaProfile.Id.ToString("N"), StringComparison.OrdinalIgnoreCase));
-        Assert.Contains(storageKeys, key => key.EndsWith(betaProfile.Id.ToString("N"), StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(storageKeys, key => key.EndsWith(betaProfile.Id.ToString("N"), StringComparison.OrdinalIgnoreCase));
 
         await SaveEvidenceAsync(structurePage, host.RepoRoot, "db-switch-stale-artifact-recovery-desktop.png");
         await SaveEvidenceAsync(secondPage, host.RepoRoot, "db-switch-cross-tab-desktop.png");
@@ -101,7 +104,8 @@ internal sealed class DatabaseSwitchPlaywrightHost : IAsyncDisposable
         HttpClient client,
         Process process,
         Task stdoutPump,
-        Task stderrPump)
+        Task stderrPump,
+        ConcurrentQueue<string> logs)
     {
         RepoRoot = repoRoot;
         BaseUrl = baseUrl;
@@ -112,6 +116,7 @@ internal sealed class DatabaseSwitchPlaywrightHost : IAsyncDisposable
         _process = process;
         _stdoutPump = stdoutPump;
         _stderrPump = stderrPump;
+        _logs = logs;
     }
 
     public string RepoRoot { get; }
@@ -129,7 +134,10 @@ internal sealed class DatabaseSwitchPlaywrightHost : IAsyncDisposable
         var repoRoot = PlaywrightTestHostPaths.RepositoryRoot;
         var baseUrl = ResolveBaseUrl();
         var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-playwright-switch");
+        var activeProfile = testEnvironment.CreatePostgreSqlProfile("primary");
+        await PersistActiveProfileAsync(testEnvironment, activeProfile);
         var fakeIpfsServer = enableIpfs ? await FakeIpfsTestServer.StartAsync() : null;
+        var logs = new ConcurrentQueue<string>();
         var processStartInfo = new ProcessStartInfo(
             "dotnet",
             PlaywrightTestHostPaths.BuildDotnetRunArguments("src/CanDoItAll.Web", baseUrl))
@@ -143,14 +151,14 @@ internal sealed class DatabaseSwitchPlaywrightHost : IAsyncDisposable
 
         processStartInfo.Environment["ASPNETCORE_ENVIRONMENT"] = "Development";
         processStartInfo.Environment["DOTNET_ENVIRONMENT"] = "Development";
-        processStartInfo.Environment["ControlPlane__RootPath"] = testEnvironment.ControlPlaneRootPath;
-        processStartInfo.Environment["Storage__ManagedFilesFolder"] = "managed-files";
-        processStartInfo.Environment["Storage__ExportsFolder"] = "exports";
-        processStartInfo.Environment["Storage__EvidenceFolder"] = "evidence";
-        processStartInfo.Environment["Storage__ManagerArtifactsFolder"] = Path.Combine(testEnvironment.RootPath, "manager-artifacts");
-        processStartInfo.Environment["Workbench__BrowserStorageKey"] = "candoitall.workbench.session";
-        processStartInfo.Environment["DevelopmentManager__TuningModeEnabled"] = "false";
-        processStartInfo.Environment[LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey] = LocalRuntimeHostedWorkerPolicy.McpToolHostLaneKind;
+        foreach (var pair in CreateHostConfigurationValues(testEnvironment))
+        {
+            if (pair.Value is not null)
+            {
+                processStartInfo.Environment[pair.Key.Replace(":", "__", StringComparison.Ordinal)] = pair.Value;
+            }
+        }
+
         if (fakeIpfsServer is not null)
         {
             processStartInfo.Environment["ControlPlane__IpfsApiBaseUrl"] = fakeIpfsServer.ApiBaseUri.ToString();
@@ -158,11 +166,11 @@ internal sealed class DatabaseSwitchPlaywrightHost : IAsyncDisposable
 
         var process = Process.Start(processStartInfo)
             ?? throw new InvalidOperationException("Failed to start CanDoItAll.Web for runtime-switch Playwright tests.");
-        var stdoutPump = PumpAsync(process.StandardOutput, static (queue, line) => queue.Enqueue(line));
-        var stderrPump = PumpAsync(process.StandardError, static (queue, line) => queue.Enqueue(line));
+        var stdoutPump = PumpAsync(process.StandardOutput, logs);
+        var stderrPump = PumpAsync(process.StandardError, logs);
 
         using var readinessClient = CreateClient(baseUrl);
-        await WaitForRuntimeReadyAsync(baseUrl, readinessClient, process, stdoutPump, stderrPump);
+        await WaitForRuntimeReadyAsync(baseUrl, readinessClient, process, stdoutPump, stderrPump, logs);
 
         var playwright = await Microsoft.Playwright.Playwright.CreateAsync();
         var client = CreateClient(baseUrl);
@@ -175,7 +183,8 @@ internal sealed class DatabaseSwitchPlaywrightHost : IAsyncDisposable
             client,
             process,
             stdoutPump,
-            stderrPump);
+            stderrPump,
+            logs);
     }
 
     public async Task<DevDatabaseProfile> GetCurrentProfileAsync()
@@ -198,9 +207,15 @@ internal sealed class DatabaseSwitchPlaywrightHost : IAsyncDisposable
             Password = builder.Password,
             AdminDatabaseName = builder.Database,
             WorkspaceRoot = profile.WorkspaceRootPath,
-            Activate = true
+            Activate = false
         });
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorBody = await response.Content.ReadAsStringAsync();
+            throw new InvalidOperationException(
+                $"The development PostgreSQL profile endpoint returned {(int)response.StatusCode} ({response.ReasonPhrase}). Body: {errorBody}");
+        }
+
         var payload = await response.Content.ReadFromJsonAsync<DevDatabaseProfile>();
         return payload ?? throw new InvalidOperationException("The PostgreSQL profile endpoint returned no payload.");
     }
@@ -225,10 +240,12 @@ internal sealed class DatabaseSwitchPlaywrightHost : IAsyncDisposable
         return payload ?? throw new InvalidOperationException("The profile seed endpoint returned no payload.");
     }
 
-    public async Task SwitchAsync(Guid profileId)
+    public async Task<DevDatabaseSwitchResult> SwitchAsync(Guid profileId)
     {
         using var response = await _client.PostAsync($"/_dev/database/switch/{profileId:D}", content: null);
         response.EnsureSuccessStatusCode();
+        var payload = await response.Content.ReadFromJsonAsync<DevDatabaseSwitchResult>();
+        return payload ?? throw new InvalidOperationException("The development switch endpoint returned no payload.");
     }
 
     public async ValueTask DisposeAsync()
@@ -256,7 +273,8 @@ internal sealed class DatabaseSwitchPlaywrightHost : IAsyncDisposable
         HttpClient client,
         Process process,
         Task stdoutPump,
-        Task stderrPump)
+        Task stderrPump,
+        ConcurrentQueue<string> logs)
     {
         var timeoutAt = DateTimeOffset.UtcNow.AddSeconds(45);
         while (DateTimeOffset.UtcNow < timeoutAt)
@@ -265,7 +283,8 @@ internal sealed class DatabaseSwitchPlaywrightHost : IAsyncDisposable
             {
                 await stdoutPump;
                 await stderrPump;
-                throw new InvalidOperationException("The web app exited before becoming ready.");
+                throw new InvalidOperationException(
+                    $"The web app exited before becoming ready.{Environment.NewLine}{CreateLogSnapshot(logs)}");
             }
 
             try
@@ -283,7 +302,8 @@ internal sealed class DatabaseSwitchPlaywrightHost : IAsyncDisposable
             await Task.Delay(250);
         }
 
-        throw new TimeoutException("Timed out waiting for the runtime-switch Playwright host to become ready.");
+        throw new TimeoutException(
+            $"Timed out waiting for the runtime-switch Playwright host to become ready.{Environment.NewLine}{CreateLogSnapshot(logs)}");
     }
 
     private static HttpClient CreateClient(string baseUrl)
@@ -291,21 +311,76 @@ internal sealed class DatabaseSwitchPlaywrightHost : IAsyncDisposable
         return new HttpClient
         {
             BaseAddress = new Uri(baseUrl),
-            Timeout = TimeSpan.FromSeconds(5)
+            Timeout = TimeSpan.FromSeconds(30)
         };
     }
 
-    private static Task PumpAsync(StreamReader reader, Action<ConcurrentQueue<string>, string> onLine)
+    private static async Task PersistActiveProfileAsync(CanDoItAllTestEnvironment testEnvironment, TestDatabaseProfile activeProfile)
     {
-        var lines = new ConcurrentQueue<string>();
-        return Task.Run(async () =>
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(CreateHostConfigurationValues(testEnvironment))
+            .Build();
+
+        var services = new ServiceCollection();
+        TestApplicationBootstrap.ConfigureDefaultServices(
+            services,
+            configuration,
+            testEnvironment.CreateHostEnvironment("CanDoItAll.Tests.Playwright"));
+
+        await using var provider = services.BuildServiceProvider(new ServiceProviderOptions
+        {
+            ValidateOnBuild = true,
+            ValidateScopes = true
+        });
+
+        var profileService = provider.GetRequiredService<IDatabaseProfileService>();
+        var saveResult = await profileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
+            activeProfile,
+            "PostgreSQL primary"));
+        if (saveResult.IsFailure)
+        {
+            throw new InvalidOperationException(
+                $"Failed to save the initial Playwright database profile. {string.Join(" ", saveResult.Errors.Select(error => error.Message))}");
+        }
+
+        var activateResult = await profileService.ActivateAsync(saveResult.Value);
+        if (activateResult.IsFailure)
+        {
+            throw new InvalidOperationException(
+                $"Failed to activate the initial Playwright database profile. {string.Join(" ", activateResult.Errors.Select(error => error.Message))}");
+        }
+    }
+
+    private static IReadOnlyDictionary<string, string?> CreateHostConfigurationValues(CanDoItAllTestEnvironment testEnvironment)
+        => new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Database:Provider"] = string.Empty,
+            ["Database:ConnectionString"] = string.Empty,
+            ["ControlPlane:RootPath"] = testEnvironment.ControlPlaneRootPath,
+            ["Storage:ManagedFilesFolder"] = "managed-files",
+            ["Storage:ExportsFolder"] = "exports",
+            ["Storage:EvidenceFolder"] = "evidence",
+            ["Storage:ManagerArtifactsFolder"] = Path.Combine(testEnvironment.RootPath, "manager-artifacts"),
+            ["Workbench:MaxWarmTabs"] = "3",
+            ["Workbench:SleepAfterMinutes"] = "15",
+            ["Workbench:BrowserStorageKey"] = "candoitall.workbench.session",
+            ["DevelopmentManager:TuningModeEnabled"] = "false",
+            ["DevelopmentManager:ReviewBeforeSend"] = "true",
+            ["DevelopmentManager:ManagerBaseUrl"] = "http://127.0.0.1:6407",
+            [LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey] = LocalRuntimeHostedWorkerPolicy.McpToolHostLaneKind
+        };
+
+    private static Task PumpAsync(StreamReader reader, ConcurrentQueue<string> logs)
+        => Task.Run(async () =>
         {
             while (await reader.ReadLineAsync() is { } line)
             {
-                onLine(lines, line);
+                logs.Enqueue(line);
             }
         });
-    }
+
+    private static string CreateLogSnapshot(ConcurrentQueue<string> logs)
+        => string.Join(Environment.NewLine, logs.Reverse().Take(200).Reverse());
 
     private static string ResolveBaseUrl()
     {
@@ -327,6 +402,17 @@ internal sealed class DevDatabaseProfile
     public string WorkspaceRoot { get; set; } = string.Empty;
 
     public string ConnectionString { get; set; } = string.Empty;
+}
+
+internal sealed class DevDatabaseSwitchResult
+{
+    public Guid CurrentProfileId { get; set; }
+
+    public bool RequiresRestart { get; set; }
+
+    public bool RuntimeChangedInProcess { get; set; }
+
+    public string Message { get; set; } = string.Empty;
 }
 
 internal sealed class DevProjectRoute

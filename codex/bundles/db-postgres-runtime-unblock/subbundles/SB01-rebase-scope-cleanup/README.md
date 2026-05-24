@@ -2,7 +2,7 @@
 
 ## Status
 
-Prepared.
+Completed with documented external validation blocker.
 
 ## Objective
 

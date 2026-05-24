@@ -159,7 +159,7 @@ internal static partial class CognitiveMemoryApi
         new("GET", "/database/selection", "GetCognitiveMemoryDatabaseSelection", "Database", "Returns active database profile details."),
         new("GET", "/database/profiles", "ListCognitiveMemoryDatabaseProfiles", "Database", "Lists configured database profiles."),
         new("POST", "/database/profiles/postgresql", "CreateCognitiveMemoryPostgreSqlDatabaseProfile", "Database", "Creates and optionally activates a PostgreSQL profile."),
-        new("POST", "/database/switch/{profileId}", "SwitchCognitiveMemoryDatabaseProfile", "Database", "Switches the active database profile."),
+        new("POST", "/database/switch/{profileId}", "SwitchCognitiveMemoryDatabaseProfile", "Database", "Saves the next-start database profile activation."),
         new("GET", "/database/transfer/sources/{targetProfileId}", "ListCognitiveMemoryDatabaseTransferSources", "Database", "Lists source profiles available for a database transfer."),
         new("GET", "/database/transfer/preview", "PreviewCognitiveMemoryDatabaseTransfer", "Database", "Previews transferable data groups between database profiles."),
         new("POST", "/database/transfer", "RunCognitiveMemoryDatabaseTransfer", "Database", "Transfers selected data groups between database profiles."),

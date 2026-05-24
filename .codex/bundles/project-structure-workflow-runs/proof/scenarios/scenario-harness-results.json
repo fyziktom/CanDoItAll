@@ -1,5 +1,5 @@
 {
-  "completedAtUtc": "2026-05-24T01:08:56.1520661+00:00",
+  "completedAtUtc": "2026-05-24T15:37:50.5519581+00:00",
   "databaseProvider": "PostgreSql",
   "databaseProfileKey": "scenario-harness",
   "providerPlan": "InProcess deterministic workflow definitions; provider-specific runs are owned by subbundle 07.",
@@ -8,16 +8,16 @@
       "id": "S01",
       "title": "Mouser order XLS/PDF reconciliation",
       "workflowName": "Scenario Harness: S01 Mouser order XLS/PDF reconciliation",
-      "runId": "8016fbd6-3949-4901-9e1b-a568780469a1",
+      "runId": "67298eff-a33d-4378-9db1-5986f82fb582",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:b77bc375919b4497b046352216c0ec46"
+        "custom:7e348dc98e014fe18faa824908420851"
       ],
       "createdAssetIds": [
-        "custom:b77bc375919b4497b046352216c0ec46"
+        "custom:7e348dc98e014fe18faa824908420851"
       ],
       "createdFilePaths": [],
       "validations": [
@@ -31,16 +31,16 @@
       "id": "S02",
       "title": "Mouser order purchasing summary",
       "workflowName": "Scenario Harness: S02 Mouser order purchasing summary",
-      "runId": "df1dd34f-a672-41bc-9519-d63a20d95529",
+      "runId": "173671c9-0559-449a-a2ec-4062398919da",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:d09acd1a6d5646a387f83047e72611df"
+        "custom:6feb1fc955af47e3861137525aa77f76"
       ],
       "createdAssetIds": [
-        "custom:d09acd1a6d5646a387f83047e72611df"
+        "custom:6feb1fc955af47e3861137525aa77f76"
       ],
       "createdFilePaths": [],
       "validations": [
@@ -53,16 +53,16 @@
       "id": "S03",
       "title": "SEAMARK folder x-ray device summary",
       "workflowName": "Scenario Harness: S03 SEAMARK folder x-ray device summary",
-      "runId": "a4a34814-677c-46b4-84c9-afe84ee794ad",
+      "runId": "41c69d69-c65b-4382-8834-ebce4bf617d8",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:93e23090861d4c638eceae260f0cf07e"
+        "custom:32d8ccea38984ebab8c0fa3c4fdf3fb0"
       ],
       "createdAssetIds": [
-        "custom:93e23090861d4c638eceae260f0cf07e"
+        "custom:32d8ccea38984ebab8c0fa3c4fdf3fb0"
       ],
       "createdFilePaths": [],
       "validations": [
@@ -76,16 +76,16 @@
       "id": "S04",
       "title": "SEAMARK price list extraction",
       "workflowName": "Scenario Harness: S04 SEAMARK price list extraction",
-      "runId": "718cd750-0875-4f41-8067-4d8b29406ad7",
+      "runId": "09d0849f-941d-416f-9b37-1263e0cec489",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:b5e8e7dcf3644300ac8a40d4a060620e"
+        "custom:4909f930d34641fa999e3540e2fa4d8a"
       ],
       "createdAssetIds": [
-        "custom:b5e8e7dcf3644300ac8a40d4a060620e"
+        "custom:4909f930d34641fa999e3540e2fa4d8a"
       ],
       "createdFilePaths": [],
       "validations": [
@@ -98,16 +98,16 @@
       "id": "S05",
       "title": "SEAMARK model comparison",
       "workflowName": "Scenario Harness: S05 SEAMARK model comparison",
-      "runId": "5ec36f00-9613-49df-b9eb-c69854f2f80a",
+      "runId": "d3586ef8-2451-4080-810d-37011a074097",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:0d4a0e28c54d4aa4804ca21f1e09cd86"
+        "custom:732176a6769e421bafc8f022f5db9993"
       ],
       "createdAssetIds": [
-        "custom:0d4a0e28c54d4aa4804ca21f1e09cd86"
+        "custom:732176a6769e421bafc8f022f5db9993"
       ],
       "createdFilePaths": [],
       "validations": [
@@ -121,16 +121,16 @@
       "id": "S06",
       "title": "IoTFactory financial plan review",
       "workflowName": "Scenario Harness: S06 IoTFactory financial plan review",
-      "runId": "65de465f-0fcd-4bdd-8b0a-7329122f4fa5",
+      "runId": "01a19ba6-a876-49e9-84a4-86d73f017863",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:7eb205576c76447ab5e88fb1cbc42876"
+        "custom:1cbbff2e001a48d88a143e94034f6544"
       ],
       "createdAssetIds": [
-        "custom:7eb205576c76447ab5e88fb1cbc42876"
+        "custom:1cbbff2e001a48d88a143e94034f6544"
       ],
       "createdFilePaths": [],
       "validations": [
@@ -143,16 +143,16 @@
       "id": "S07",
       "title": "Business plan markdown review",
       "workflowName": "Scenario Harness: S07 Business plan markdown review",
-      "runId": "a3a72936-f322-42f0-8ab9-1162eb5cd5fc",
+      "runId": "18f8b6cc-008c-466c-bb87-74f70c77b426",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:233cadc2663e491087ed70150449d68d"
+        "custom:ce6155ca3c454fe28ca511852a1eabeb"
       ],
       "createdAssetIds": [
-        "custom:233cadc2663e491087ed70150449d68d"
+        "custom:ce6155ca3c454fe28ca511852a1eabeb"
       ],
       "createdFilePaths": [],
       "validations": [
@@ -165,16 +165,16 @@
       "id": "S08",
       "title": "Customer email task extraction",
       "workflowName": "Scenario Harness: S08 Customer email task extraction",
-      "runId": "259b587c-8293-4686-bc8a-c337c2f36d1b",
+      "runId": "b2b4d009-424b-4021-8f83-27b78cdfd408",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:c681888d3b4b4555b27de1fce11045e4"
+        "custom:8c12a2cdd9a540cca36dc8217a17ecd9"
       ],
       "createdAssetIds": [
-        "custom:c681888d3b4b4555b27de1fce11045e4"
+        "custom:8c12a2cdd9a540cca36dc8217a17ecd9"
       ],
       "createdFilePaths": [],
       "validations": [
@@ -187,16 +187,16 @@
       "id": "S09",
       "title": "Vendor renewal risk",
       "workflowName": "Scenario Harness: S09 Vendor renewal risk",
-      "runId": "e656619a-7959-4f53-84e0-1ec7866d20f4",
+      "runId": "b6fcd813-186c-4bf0-b281-fb8609c933cc",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:e1cd99f5b97d4da7b9dda08ea5cb1961"
+        "custom:3cb3d3d26272495c94a919f4ecdaaf20"
       ],
       "createdAssetIds": [
-        "custom:e1cd99f5b97d4da7b9dda08ea5cb1961"
+        "custom:3cb3d3d26272495c94a919f4ecdaaf20"
       ],
       "createdFilePaths": [],
       "validations": [
@@ -209,16 +209,16 @@
       "id": "S10",
       "title": "Support SLA escalation",
       "workflowName": "Scenario Harness: S10 Support SLA escalation",
-      "runId": "d237ef3e-fefd-4c52-885d-b796ae77e102",
+      "runId": "70bc7560-9dc6-4ca3-b514-33541a2429c1",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:d00b58f560a141ed91311727c670c5aa"
+        "custom:7900d110d62c4932abbf03a3d405a7a4"
       ],
       "createdAssetIds": [
-        "custom:d00b58f560a141ed91311727c670c5aa"
+        "custom:7900d110d62c4932abbf03a3d405a7a4"
       ],
       "createdFilePaths": [],
       "validations": [
@@ -231,16 +231,16 @@
       "id": "S11",
       "title": "Meeting notes action extraction",
       "workflowName": "Scenario Harness: S11 Meeting notes action extraction",
-      "runId": "8fc9d1e0-880c-4768-8471-fa82515ce3e5",
+      "runId": "19de1f59-ab89-422f-941c-cf3da8edf388",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:b828f42c57c84da8b059d80f9d900730"
+        "custom:4b12c478de694cb7b6c4d84f80c40f8c"
       ],
       "createdAssetIds": [
-        "custom:b828f42c57c84da8b059d80f9d900730"
+        "custom:4b12c478de694cb7b6c4d84f80c40f8c"
       ],
       "createdFilePaths": [],
       "validations": [
@@ -253,16 +253,16 @@
       "id": "S12",
       "title": "Release readiness gate",
       "workflowName": "Scenario Harness: S12 Release readiness gate",
-      "runId": "34f3dff2-a42c-4f3d-a60d-bac271aae888",
+      "runId": "c863a065-3e84-43ff-97af-c1d60b77fb71",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:b3db737de9c7415fb1e5e24f296e1660"
+        "custom:90d605c8120e4397a38cc083a055956a"
       ],
       "createdAssetIds": [
-        "custom:b3db737de9c7415fb1e5e24f296e1660"
+        "custom:90d605c8120e4397a38cc083a055956a"
       ],
       "createdFilePaths": [],
       "validations": [
@@ -275,16 +275,16 @@
       "id": "S13",
       "title": "Vendor risk routing",
       "workflowName": "Scenario Harness: S13 Vendor risk routing",
-      "runId": "0f24cd56-5e57-4a0e-b042-4ac15c310b86",
+      "runId": "1cf71c8e-93f4-462b-b286-aafce0b63328",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:18db0a77e48c44f8af20a9b20084a560"
+        "custom:df8d0e7b5b9841eda290a53f618abdfd"
       ],
       "createdAssetIds": [
-        "custom:18db0a77e48c44f8af20a9b20084a560"
+        "custom:df8d0e7b5b9841eda290a53f618abdfd"
       ],
       "createdFilePaths": [],
       "validations": [
@@ -297,16 +297,16 @@
       "id": "S14",
       "title": "Sales lead qualification",
       "workflowName": "Scenario Harness: S14 Sales lead qualification",
-      "runId": "a1158711-0a5b-46ab-9647-04d766d4ca13",
+      "runId": "5034525f-e2d4-4448-8e3f-2f4132b7c4ac",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:1afa9c402dcc496cacfd710c5027513d"
+        "custom:eab782a8654641f0a3f3f041b38aaf11"
       ],
       "createdAssetIds": [
-        "custom:1afa9c402dcc496cacfd710c5027513d"
+        "custom:eab782a8654641f0a3f3f041b38aaf11"
       ],
       "createdFilePaths": [],
       "validations": [
@@ -319,16 +319,16 @@
       "id": "S15",
       "title": "Incident response fan-out",
       "workflowName": "Scenario Harness: S15 Incident response fan-out",
-      "runId": "c889e2e8-cf8e-428b-ba7c-e848e80ec903",
+      "runId": "c2055dac-6a3e-4758-a19b-9d851c283b78",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:a971f8411bf74e109422277dd20381d9"
+        "custom:723dc5029cb946d9a4def98a7a18fc13"
       ],
       "createdAssetIds": [
-        "custom:a971f8411bf74e109422277dd20381d9"
+        "custom:723dc5029cb946d9a4def98a7a18fc13"
       ],
       "createdFilePaths": [],
       "validations": [
@@ -341,16 +341,16 @@
       "id": "S16",
       "title": "Folder intake summary",
       "workflowName": "Scenario Harness: S16 Folder intake summary",
-      "runId": "a60e0ff6-cd11-4636-9f6d-67c05c6cc0b7",
+      "runId": "28e83bb2-6280-40b2-a79a-9bcb88eaae3f",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:f7d647ebc800421197871483b88737ff"
+        "custom:ddbbc3cc45634d3a8d3812b2bd2ad4bd"
       ],
       "createdAssetIds": [
-        "custom:f7d647ebc800421197871483b88737ff"
+        "custom:ddbbc3cc45634d3a8d3812b2bd2ad4bd"
       ],
       "createdFilePaths": [],
       "validations": [
@@ -363,16 +363,16 @@
       "id": "S17",
       "title": "File-save workflow",
       "workflowName": "Scenario Harness: S17 File-save workflow",
-      "runId": "7dd0beaa-cdd6-44f3-95bd-38ec25ede29f",
+      "runId": "5aa91363-9da2-4270-92be-0066a859b870",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 6,
       "stepCount": 6,
       "createdNodeIds": [
-        "custom:d801588526c0486da36015930873c078"
+        "custom:ee334e7ad5f44a189153966bef1dfe9a"
       ],
       "createdAssetIds": [
-        "custom:d801588526c0486da36015930873c078"
+        "custom:ee334e7ad5f44a189153966bef1dfe9a"
       ],
       "createdFilePaths": [
         "samples/workflows/scenario-harness/S17-file-save-result.md"
@@ -387,16 +387,16 @@
       "id": "S18",
       "title": "Project subtree summary",
       "workflowName": "Scenario Harness: S18 Project subtree summary",
-      "runId": "17d42cf3-9f43-459a-9964-8376ebbe8f31",
+      "runId": "99554820-7934-4d27-aa6e-dd0a4245aba9",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:befaf929728149ac9f465c57fd1aaeff"
+        "custom:cf5bd222d08840e08b39f0ef88316635"
       ],
       "createdAssetIds": [
-        "custom:befaf929728149ac9f465c57fd1aaeff"
+        "custom:cf5bd222d08840e08b39f0ef88316635"
       ],
       "createdFilePaths": [],
       "validations": [
@@ -409,16 +409,16 @@
       "id": "S19",
       "title": "Prompt session cleanup plan",
       "workflowName": "Scenario Harness: S19 Prompt session cleanup plan",
-      "runId": "9812c9a9-88b1-4463-9a8a-61c744dfeed6",
+      "runId": "f4b13256-e951-4d50-b693-63e017c6a8b4",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:ad34454eea164007999b4e2a79227db6"
+        "custom:9e4184bfa5af4737ab2c8b1d182482cc"
       ],
       "createdAssetIds": [
-        "custom:ad34454eea164007999b4e2a79227db6"
+        "custom:9e4184bfa5af4737ab2c8b1d182482cc"
       ],
       "createdFilePaths": [],
       "validations": [
@@ -431,16 +431,16 @@
       "id": "S20",
       "title": "Compliance checklist extraction",
       "workflowName": "Scenario Harness: S20 Compliance checklist extraction",
-      "runId": "6024e31e-9bc1-4348-86b5-b0da89940dbc",
+      "runId": "9f0e145e-212d-4467-86f7-7d0d83f878b0",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:709ce1edb7b841c68d53680cf7d4d196"
+        "custom:395aeb8f8c894ea4a8a663fdafa91adb"
       ],
       "createdAssetIds": [
-        "custom:709ce1edb7b841c68d53680cf7d4d196"
+        "custom:395aeb8f8c894ea4a8a663fdafa91adb"
       ],
       "createdFilePaths": [],
       "validations": [

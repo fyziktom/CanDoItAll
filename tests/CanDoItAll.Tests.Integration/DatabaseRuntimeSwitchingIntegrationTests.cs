@@ -16,25 +16,25 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class DatabaseSwitchIntegrationTests
 {
     [Fact]
-    public async Task SwitchAsync_changes_active_data_source_without_restarting_the_process()
+    public async Task SwitchAsync_saves_activation_for_next_start_without_changing_running_context()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-runtime-switch");
         await using var provider = DatabaseProfileControlPlaneIntegrationHost.BuildServiceProvider(testEnvironment);
 
-        var runtimeAccessor = provider.GetRequiredService<IDatabaseProfileRuntimeAccessor>();
         var profileService = provider.GetRequiredService<IDatabaseProfileService>();
-        var switchCoordinator = provider.GetRequiredService<IDatabaseSwitchCoordinator>();
-        var runtimeState = provider.GetRequiredService<IDatabaseRuntimeState>();
-        var bootstrapper = provider.GetRequiredService<IAppDatabaseBootstrapper>();
-        var dbContextFactory = provider.GetRequiredService<IDbContextFactory<AppDbContext>>();
-        var switchableFactory = provider.GetRequiredService<ISwitchableAppDbContextFactory>();
-
         var initialTestProfile = testEnvironment.CreatePostgreSqlProfile("runtime-switch-alpha");
         var initialSaveResult = await profileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
             initialTestProfile,
             "PostgreSQL alpha"));
         Assert.True(initialSaveResult.IsSuccess, string.Join(" ", initialSaveResult.Errors.Select(error => error.Message)));
+        Assert.True((await profileService.ActivateAsync(initialSaveResult.Value)).IsSuccess);
 
+        var runtimeAccessor = provider.GetRequiredService<IDatabaseProfileRuntimeAccessor>();
+        var switchCoordinator = provider.GetRequiredService<IDatabaseSwitchCoordinator>();
+        var runtimeState = provider.GetRequiredService<IDatabaseRuntimeState>();
+        var bootstrapper = provider.GetRequiredService<IAppDatabaseBootstrapper>();
+        var dbContextFactory = provider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var switchableFactory = provider.GetRequiredService<ISwitchableAppDbContextFactory>();
         var initialProfile = runtimeAccessor.ResolveProfile(initialSaveResult.Value);
         await bootstrapper.EnsureCurrentProfileReadyAsync();
 
@@ -79,25 +79,12 @@ public sealed class DatabaseSwitchIntegrationTests
 
         Assert.True(firstSwitch.IsSuccess);
         Assert.Equal(processIdBeforeSwitch, firstSwitch.Value!.ProcessId);
+        Assert.True(firstSwitch.Value.RequiresRestart);
+        Assert.False(firstSwitch.Value.RuntimeChangedInProcess);
 
-        await using (var switchedContext = await dbContextFactory.CreateDbContextAsync())
+        await using (var stillRunningContext = await dbContextFactory.CreateDbContextAsync())
         {
-            var descriptions = await switchedContext.Set<BackgroundJobRecord>()
-                .OrderBy(job => job.Description)
-                .Select(job => job.Description)
-                .ToListAsync();
-
-            Assert.Equal(["beta profile job"], descriptions);
-        }
-
-        var switchBack = await switchCoordinator.SwitchAsync(initialProfile.Profile.Id);
-
-        Assert.True(switchBack.IsSuccess);
-        Assert.Equal(processIdBeforeSwitch, switchBack.Value!.ProcessId);
-
-        await using (var restoredContext = await dbContextFactory.CreateDbContextAsync())
-        {
-            var descriptions = await restoredContext.Set<BackgroundJobRecord>()
+            var descriptions = await stillRunningContext.Set<BackgroundJobRecord>()
                 .OrderBy(job => job.Description)
                 .Select(job => job.Description)
                 .ToListAsync();
@@ -105,9 +92,31 @@ public sealed class DatabaseSwitchIntegrationTests
             Assert.Equal(["alpha profile job"], descriptions);
         }
 
+        var persistedSelection = await profileService.GetCurrentSelectionAsync();
+        Assert.Equal(targetProfile.Profile.Id, persistedSelection.ActiveProfileId);
+
         var runtimeSnapshot = runtimeState.GetSnapshot();
         Assert.Equal(initialProfile.Profile.Id, runtimeSnapshot.ActiveProfileId);
-        Assert.True(runtimeSnapshot.Generation >= 2);
+        Assert.Equal(0, runtimeSnapshot.Generation);
+
+        await using var restartedProvider = DatabaseProfileControlPlaneIntegrationHost.BuildServiceProvider(testEnvironment);
+        var restartedRuntimeAccessor = restartedProvider.GetRequiredService<IDatabaseProfileRuntimeAccessor>();
+        var restartedBootstrapper = restartedProvider.GetRequiredService<IAppDatabaseBootstrapper>();
+        var restartedDbContextFactory = restartedProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var restartedProfile = restartedRuntimeAccessor.ResolveCurrentProfile();
+        Assert.Equal(targetProfile.Profile.Id, restartedProfile.Profile.Id);
+        await restartedBootstrapper.EnsureCurrentProfileReadyAsync();
+
+        await using (var restartedContext = await restartedDbContextFactory.CreateDbContextAsync())
+        {
+            var descriptions = await restartedContext.Set<BackgroundJobRecord>()
+                .OrderBy(job => job.Description)
+                .Select(job => job.Description)
+                .ToListAsync();
+
+            Assert.Equal(["beta profile job"], descriptions);
+        }
     }
 }
 

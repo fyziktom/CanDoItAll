@@ -75,6 +75,15 @@
             </div>
         }
 
+        @if (!string.IsNullOrWhiteSpace(databaseMessage))
+        {
+            <Alert AlertStyle="@ResolveMessageAlertStyle(databaseMessageTone)"
+                   Variant="Variant.Outlined"
+                   data-testid="database-profile-operation-message">
+                @databaseMessage
+            </Alert>
+        }
+
         @if (FilteredProfiles.Count == 0)
         {
             <EmptyState Eyebrow="No saved profiles"
@@ -310,7 +319,7 @@
                                     data-testid="database-profile-save" />
                             @if (databaseProfileModel.Id.HasValue)
                             {
-                                <Button Text="@(IsSelectedProfileActive ? "Active now" : "Activate")"
+                                <Button Text="@(IsSelectedProfileActive ? "Active now" : "Activate after restart")"
                                         ButtonStyle="ButtonStyle.Warning"
                                         Disabled="@(databaseBusy || IsDatabaseUiLocked || IsSelectedProfileActive)"
                                         Click="ActivateProfileAsync"
@@ -1043,7 +1052,10 @@
             return;
         }
 
-        SetDatabaseMessage("Database activation requested. The shell will reload a safe route for the new runtime profile.", "info");
+        var activationMessage = string.IsNullOrWhiteSpace(result.Value.Message)
+            ? "Database profile activation was saved. Restart the process to make it the canonical runtime database."
+            : result.Value.Message;
+        SetDatabaseMessage(activationMessage, result.Value.RequiresRestart ? "warning" : "info");
     }
 
     private async Task DeleteProfileAsync()
@@ -1153,6 +1165,17 @@
         };
     }
 
+    private static AlertStyle ResolveMessageAlertStyle(string tone)
+    {
+        return tone switch
+        {
+            "success" => AlertStyle.Success,
+            "warning" => AlertStyle.Warning,
+            "danger" => AlertStyle.Danger,
+            _ => AlertStyle.Info
+        };
+    }
+
     private static bool HasSchemaDetails(DatabaseProfileSchemaHealth schemaHealth)
     {
         return schemaHealth.PendingMigrations.Count > 0 || schemaHealth.SchemaIssues.Count > 0;
@@ -1211,7 +1234,6 @@
             DatabaseProfileResolutionSource.ExplicitOverride => "Explicit startup override",
             DatabaseProfileResolutionSource.PersistedActiveProfile => "Last active profile",
             DatabaseProfileResolutionSource.PersistedCatalogFallback => "Persisted catalog fallback",
-            DatabaseProfileResolutionSource.LegacyDiscovery => "Legacy discovery",
             DatabaseProfileResolutionSource.AutoProvisionedPostgreSql => "Auto-provisioned PostgreSQL",
             _ => resolutionSource.ToString()
         };

@@ -21,12 +21,39 @@ $retiredPatterns = @(
     "SqliteDatabasePath",
     "Database\.IsSqlite\("
 )
+$allowedRetiredResidue = @{
+    "ManagedSqlite" = @("src\CanDoItAll.Infrastructure\ControlPlane\LegacyDatabaseProfileCatalogQuarantine.cs")
+    "ExternalSqliteFile" = @("src\CanDoItAll.Infrastructure\ControlPlane\LegacyDatabaseProfileCatalogQuarantine.cs")
+    "ImportedSqlite" = @("src\CanDoItAll.Infrastructure\ControlPlane\LegacyDatabaseProfileCatalogQuarantine.cs")
+    "SnapshotCache" = @("src\CanDoItAll.Infrastructure\ControlPlane\LegacyDatabaseProfileCatalogQuarantine.cs")
+    "IpfsSnapshot" = @("src\CanDoItAll.Infrastructure\ControlPlane\LegacyDatabaseProfileCatalogQuarantine.cs")
+}
+
+function Test-AllowedRetiredResidue {
+    param(
+        [string]$Pattern,
+        [string]$MatchLine
+    )
+
+    if (-not $allowedRetiredResidue.ContainsKey($Pattern)) {
+        return $false
+    }
+
+    foreach ($allowedPath in $allowedRetiredResidue[$Pattern]) {
+        if ($MatchLine.StartsWith($allowedPath, [StringComparison]::OrdinalIgnoreCase)) {
+            return $true
+        }
+    }
+
+    return $false
+}
 
 Write-Host "Scanning retired provider residue..."
 foreach ($pattern in $retiredPatterns) {
     $matches = rg -n --hidden --glob "!bin/**" --glob "!obj/**" --glob "!codex/bundles/**" --glob "!.codex/**" $pattern $runtimePaths 2>$null
-    if ($matches) {
-        Write-Host $matches
+    $unexpectedMatches = @($matches | Where-Object { -not (Test-AllowedRetiredResidue -Pattern $pattern -MatchLine $_) })
+    if ($unexpectedMatches) {
+        Write-Host $unexpectedMatches
         throw "Retired provider residue found for pattern: $pattern"
     }
 }

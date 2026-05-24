@@ -44,6 +44,7 @@ public sealed class DatabaseProfileControlPlaneService(
             var currentSelection = ResolveCurrentProfileLocked(logSelection: false);
             var summaries = ReadCatalogLocked()
                 .Profiles
+                .Where(IsPersistedRuntimeProfile)
                 .OrderBy(profile => profile.DisplayName, StringComparer.OrdinalIgnoreCase)
                 .Select(profile => CreateSummary(
                     profile,
@@ -63,7 +64,7 @@ public sealed class DatabaseProfileControlPlaneService(
                 return Task.FromResult(CreateDefaultEditor());
             }
 
-            var profile = ReadCatalogLocked().Profiles.FirstOrDefault(item => item.Id == id.Value);
+            var profile = ReadCatalogLocked().Profiles.FirstOrDefault(item => item.Id == id.Value && IsPersistedRuntimeProfile(item));
             if (profile is null)
             {
                 return Task.FromResult(CreateDefaultEditor());
@@ -113,10 +114,7 @@ public sealed class DatabaseProfileControlPlaneService(
                 break;
 
             case DatabaseProviderKind.InMemory:
-                if (model.SourceKind != DatabaseProfileSourceKind.InMemory)
-                {
-                    errors.Add(Error.Validation("In-memory profiles must use the InMemory source kind."));
-                }
+                errors.Add(Error.Validation("In-memory database profiles are only allowed through explicit runtime overrides and test harness configuration."));
                 break;
 
             default:
@@ -170,7 +168,7 @@ public sealed class DatabaseProfileControlPlaneService(
         lock (_sync)
         {
             var document = ReadCatalogLocked();
-            var profile = document.Profiles.FirstOrDefault(item => item.Id == id);
+            var profile = document.Profiles.FirstOrDefault(item => item.Id == id && IsPersistedRuntimeProfile(item));
             if (profile is null)
             {
                 return Task.FromResult(Result.Failure(Error.Validation("Database profile not found.")));
@@ -196,7 +194,7 @@ public sealed class DatabaseProfileControlPlaneService(
         lock (_sync)
         {
             var document = ReadCatalogLocked();
-            var profile = document.Profiles.FirstOrDefault(item => item.Id == id);
+            var profile = document.Profiles.FirstOrDefault(item => item.Id == id && IsPersistedRuntimeProfile(item));
             if (profile is null)
             {
                 return Task.FromResult(Result.Failure(Error.Validation("Database profile not found.")));
@@ -254,7 +252,7 @@ public sealed class DatabaseProfileControlPlaneService(
             }
 
             var document = ReadCatalogLocked();
-            var profile = document.Profiles.FirstOrDefault(item => item.Id == profileId)
+            var profile = document.Profiles.FirstOrDefault(item => item.Id == profileId && IsPersistedRuntimeProfile(item))
                 ?? throw new InvalidOperationException($"Database profile '{profileId}' was not found.");
 
             var activeProfileId = ReadActiveProfileStateLocked().ActiveProfileId;
@@ -279,7 +277,10 @@ public sealed class DatabaseProfileControlPlaneService(
         }
 
         var document = ReadCatalogLocked();
-        if (document.Profiles.Count == 0)
+        var persistedRuntimeProfiles = document.Profiles
+            .Where(IsPersistedRuntimeProfile)
+            .ToList();
+        if (persistedRuntimeProfiles.Count == 0)
         {
             var seededProfile = CreateDefaultPostgreSqlProfileLocked();
             document.Profiles.Add(seededProfile);
@@ -306,12 +307,12 @@ public sealed class DatabaseProfileControlPlaneService(
 
         if (activeState.ActiveProfileId.HasValue)
         {
-            activeProfile = document.Profiles.FirstOrDefault(item => item.Id == activeState.ActiveProfileId.Value);
+            activeProfile = persistedRuntimeProfiles.FirstOrDefault(item => item.Id == activeState.ActiveProfileId.Value);
         }
 
         if (activeProfile is null)
         {
-            activeProfile = document.Profiles
+            activeProfile = persistedRuntimeProfiles
                 .OrderByDescending(item => item.Audit.LastSuccessfulOpenUtc ?? item.Audit.LastUsedUtc ?? item.Audit.CreatedUtc)
                 .ThenBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
                 .First();
@@ -755,6 +756,12 @@ public sealed class DatabaseProfileControlPlaneService(
                 => $"inmemory:{profile.InMemory?.DatabaseName.Trim().ToLowerInvariant()}",
             _ => throw new InvalidOperationException($"Unsupported provider '{profile.ProviderKind}'.")
         };
+    }
+
+    private static bool IsPersistedRuntimeProfile(DatabaseProfileRecord profile)
+    {
+        return profile.ProviderKind == DatabaseProviderKind.PostgreSql &&
+            profile.SourceKind == DatabaseProfileSourceKind.PostgresConnection;
     }
 
     private void LogSelectionLocked(ResolvedDatabaseProfile resolvedProfile)

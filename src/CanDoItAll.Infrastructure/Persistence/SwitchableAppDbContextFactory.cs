@@ -81,29 +81,16 @@ public static class AppDbContextOptionsConfigurator
 }
 
 public sealed class SwitchableAppDbContextFactory(
-    IDatabaseProfileRuntimeAccessor profileAccessor,
-    IDatabaseRuntimeState runtimeState) : ISwitchableAppDbContextFactory
+    IDbContextFactory<AppDbContext> canonicalFactory) : ISwitchableAppDbContextFactory
 {
     public AppDbContext CreateDbContext()
     {
-        return CreateDbContextAsync().GetAwaiter().GetResult();
+        return canonicalFactory.CreateDbContext();
     }
 
-    public async Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
+    public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
     {
-        var lease = await runtimeState.AcquireContextLeaseAsync(cancellationToken);
-
-        try
-        {
-            var profile = profileAccessor.ResolveCurrentProfile();
-            runtimeState.MarkCurrentProfile(profile);
-            return new AppDbContext(AppDbContextOptionsConfigurator.CreateOptions(profile), lease);
-        }
-        catch
-        {
-            lease.Dispose();
-            throw;
-        }
+        return canonicalFactory.CreateDbContextAsync(cancellationToken);
     }
 
     public Task<AppDbContext> CreateDbContextForProfileAsync(

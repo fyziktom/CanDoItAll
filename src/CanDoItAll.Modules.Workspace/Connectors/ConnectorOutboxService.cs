@@ -1,3 +1,5 @@
+using System.Data;
+using System.Data.Common;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -391,6 +393,23 @@ public sealed class ConnectorOutboxService(
         var effectiveLeaseDuration = leaseDuration is null || leaseDuration.Value <= TimeSpan.Zero
             ? DefaultLeaseDuration
             : leaseDuration.Value;
+        if (dbContext.Database.IsNpgsql())
+        {
+            var claimedCommands = await ClaimPendingCommandsPostgreSqlAsync(
+                dbContext,
+                take,
+                now,
+                effectiveLeaseDuration,
+                cancellationToken);
+
+            foreach (var command in claimedCommands)
+            {
+                await commandProcessor.ProcessAsync(command.Id, command.LeaseToken, cancellationToken);
+            }
+
+            return claimedCommands.Count;
+        }
+
         var commandIds = await dbContext.Set<ConnectorCommandRecord>()
             .Where(item => item.Status == ConnectorCommandStatus.Pending)
             .Where(item => item.ApprovalState != ConnectorCommandApprovalState.Pending)
@@ -416,6 +435,69 @@ public sealed class ConnectorOutboxService(
         }
 
         return processedCount;
+    }
+
+    private static async Task<IReadOnlyList<ClaimedConnectorCommand>> ClaimPendingCommandsPostgreSqlAsync(
+        AppDbContext dbContext,
+        int take,
+        DateTimeOffset now,
+        TimeSpan leaseDuration,
+        CancellationToken cancellationToken)
+    {
+        var connection = dbContext.Database.GetDbConnection();
+        var shouldCloseConnection = connection.State != ConnectionState.Open;
+        if (shouldCloseConnection)
+        {
+            await connection.OpenAsync(cancellationToken);
+        }
+
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText =
+                """
+                WITH due AS (
+                    SELECT c."Id"
+                    FROM "Workspace_ConnectorCommands" AS c
+                    WHERE c."Status" = @pendingStatus
+                      AND c."ApprovalState" <> @pendingApproval
+                      AND (c."NextAttemptAtUtc" IS NULL OR c."NextAttemptAtUtc" <= @now)
+                      AND (c."LeaseExpiresAtUtc" IS NULL OR c."LeaseExpiresAtUtc" <= @now)
+                    ORDER BY COALESCE(c."NextAttemptAtUtc", c."CreatedAtUtc"), c."CreatedAtUtc"
+                    FOR UPDATE SKIP LOCKED
+                    LIMIT @take
+                )
+                UPDATE "Workspace_ConnectorCommands" AS c
+                SET "LeaseToken" = concat(@tokenPrefix, replace(c."Id"::text, '-', '')),
+                    "LeaseExpiresAtUtc" = @leaseExpiresAtUtc,
+                    "UpdatedAtUtc" = @now
+                FROM due
+                WHERE c."Id" = due."Id"
+                RETURNING c."Id", c."LeaseToken";
+                """;
+            AddParameter(command, "@pendingStatus", (int)ConnectorCommandStatus.Pending);
+            AddParameter(command, "@pendingApproval", (int)ConnectorCommandApprovalState.Pending);
+            AddParameter(command, "@now", now);
+            AddParameter(command, "@leaseExpiresAtUtc", now.Add(leaseDuration));
+            AddParameter(command, "@take", take);
+            AddParameter(command, "@tokenPrefix", $"{Guid.NewGuid():N}:");
+
+            var claims = new List<ClaimedConnectorCommand>();
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                claims.Add(new ClaimedConnectorCommand(reader.GetGuid(0), reader.GetString(1)));
+            }
+
+            return claims;
+        }
+        finally
+        {
+            if (shouldCloseConnection)
+            {
+                await connection.CloseAsync();
+            }
+        }
     }
 
     public async Task<bool> ApproveAsync(
@@ -631,6 +713,16 @@ public sealed class ConnectorOutboxService(
             ? null
             : leaseToken;
     }
+
+    private static void AddParameter(DbCommand command, string name, object value)
+    {
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = name;
+        parameter.Value = value;
+        command.Parameters.Add(parameter);
+    }
+
+    private sealed record ClaimedConnectorCommand(Guid Id, string LeaseToken);
 
     private async Task<ConnectorCommandStatus?> ProcessDirectAsync(
         Guid commandId,

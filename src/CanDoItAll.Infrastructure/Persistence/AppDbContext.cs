@@ -2,11 +2,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Infrastructure.Persistence;
 
-public sealed class AppDbContext(
-    DbContextOptions<AppDbContext> options,
-    IDisposable? runtimeLease = null) : DbContext(options)
+public sealed class AppDbContext : DbContext
 {
-    private IDisposable? _runtimeLease = runtimeLease;
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+    {
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -18,12 +18,6 @@ public sealed class AppDbContext(
         }
 
         base.OnModelCreating(modelBuilder);
-    }
-
-    public override void Dispose()
-    {
-        base.Dispose();
-        ReleaseRuntimeLease();
     }
 
     public override int SaveChanges()
@@ -46,17 +40,6 @@ public sealed class AppDbContext(
     {
         StampApplicationManagedConcurrencyTokens();
         return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
-    }
-
-    public override async ValueTask DisposeAsync()
-    {
-        await base.DisposeAsync();
-        ReleaseRuntimeLease();
-    }
-
-    private void ReleaseRuntimeLease()
-    {
-        Interlocked.Exchange(ref _runtimeLease, null)?.Dispose();
     }
 
     private void StampApplicationManagedConcurrencyTokens()

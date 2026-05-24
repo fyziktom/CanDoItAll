@@ -38,7 +38,6 @@ public partial class MainLayout
         return selection?.ResolutionSource is
             DatabaseProfileResolutionSource.ExplicitOverride or
             DatabaseProfileResolutionSource.PersistedCatalogFallback or
-            DatabaseProfileResolutionSource.LegacyDiscovery or
             DatabaseProfileResolutionSource.AutoProvisionedPostgreSql;
     }
 
@@ -104,6 +103,16 @@ public partial class MainLayout
             return;
         }
 
+        databaseProfileMessage = string.IsNullOrWhiteSpace(result.Value.Message)
+            ? "Database profile activation was saved. Restart the process to make it the canonical runtime database."
+            : result.Value.Message;
+        if (result.Value.RequiresRestart)
+        {
+            databaseDialogOpen = true;
+            databaseDialogStartupMode = false;
+            return;
+        }
+
         await DismissStartupPromptIfNeededAsync();
         databaseDialogOpen = false;
         databaseDialogStartupMode = false;
@@ -144,8 +153,9 @@ public partial class MainLayout
 
     private string ResolveDatabaseMessageClass()
     {
-        var toneClass = databaseProfileMessage?.StartsWith("Database activation requested", StringComparison.OrdinalIgnoreCase) == true
-            ? "border-sky-200 bg-sky-50 text-sky-950"
+        var toneClass = databaseProfileMessage?.Contains("Restart", StringComparison.OrdinalIgnoreCase) == true ||
+            databaseProfileMessage?.Contains("activation was saved", StringComparison.OrdinalIgnoreCase) == true
+            ? "border-amber-300 bg-amber-50 text-amber-950"
             : "border-rose-200 bg-rose-50 text-rose-950";
         return $"rounded-[1.35rem] border px-4 py-3 text-sm leading-6 {toneClass}";
     }
@@ -182,7 +192,6 @@ public partial class MainLayout
             DatabaseProfileResolutionSource.ExplicitOverride => "Explicit startup override",
             DatabaseProfileResolutionSource.PersistedActiveProfile => "Last active profile",
             DatabaseProfileResolutionSource.PersistedCatalogFallback => "Persisted catalog fallback",
-            DatabaseProfileResolutionSource.LegacyDiscovery => "Legacy discovery",
             DatabaseProfileResolutionSource.AutoProvisionedPostgreSql => "Auto-provisioned PostgreSQL",
             _ => resolutionSource.ToString()
         };
@@ -254,7 +263,7 @@ public partial class MainLayout
                 $"User: {details.User}",
                 $"Source: {DescribeDatabaseSource(selection.SourceKind)}",
                 $"Resolution: {DescribeResolutionSource(selection.ResolutionSource)}",
-                $"Runtime: {(selection.IsRuntimeLocked ? "Config locked" : "Switchable")}"
+                $"Runtime: {(selection.IsRuntimeLocked ? "Config locked" : "Restart required for profile changes")}"
             ]);
     }
 
