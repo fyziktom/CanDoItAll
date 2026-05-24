@@ -43,3 +43,69 @@ Write:
 
 - Branch is focused and reviewable.
 - No stale report claims unrelated work as current work.
+
+## Status
+
+- Completed
+
+## Objective
+
+Keep the branch focused by removing unrelated generated artifacts and documenting retained bundle evidence.
+
+## Covered Inputs
+
+- `bundle://requirements/01-followup-requirements.md`
+
+## Prerequisites
+
+- SB01 through SB06 implementation completed.
+
+## Exact Source References
+
+- `bundle://reviews/01-execution-report.md`
+
+## Deliverables
+
+- Worktree status review.
+- Unrelated generated proof artifacts restored.
+- Execution report updated with retained evidence and residual risks.
+
+## Dependency Impact
+
+- Final validation consumes the cleaned worktree and execution report.
+
+## Validation Depth
+
+- `git status --short`, `git diff --check`, and build.
+
+## Implementation Steps
+
+- Review changed files.
+- Restore unrelated generated artifacts.
+- Update execution report and proof manifests.
+
+## Do Not Do
+
+- Do not revert unrelated user-authored work unless explicitly requested.
+
+## Acceptance Checklist
+
+- Remaining changes are explained by this bundle.
+- Generated unrelated project-structure proof files are not part of the diff.
+- Build still passes.
+
+## Proof Required
+
+- `bundle://proof/SB07/manifest.md`
+
+## Browser Validation Logging
+
+- Browser proof remains under SB02/SB08.
+
+## Progression Gate
+
+- Clean worktree review must complete before SB08 final gate.
+
+## Suggested Agent Prompt
+
+Implement SB07, then run the cleanup proof commands in `proof/SB07/manifest.md`.

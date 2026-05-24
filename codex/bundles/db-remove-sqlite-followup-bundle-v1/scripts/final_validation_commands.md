@@ -11,5 +11,5 @@ dotnet test .\tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-buil
 dotnet test .\tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --no-build -v:minimal
 dotnet test .\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --filter "Category!=Browser&Category!=LiveProcess" -v:minimal
 
-.\codex\bundles\postgresql-only-main-runtime-followup-v1\scripts\sqlite_residue_audit.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\codex\bundles\db-remove-sqlite-followup-bundle-v1\scripts\sqlite_residue_audit.ps1
 ```

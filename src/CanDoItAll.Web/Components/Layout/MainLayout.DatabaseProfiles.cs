@@ -159,7 +159,6 @@ public partial class MainLayout
     {
         return providerKind switch
         {
-            DatabaseProviderKind.Sqlite => "Unsupported legacy SQLite",
             DatabaseProviderKind.PostgreSql => "PostgreSQL",
             DatabaseProviderKind.InMemory => "In-memory",
             _ => providerKind.ToString()
@@ -170,12 +169,7 @@ public partial class MainLayout
     {
         return sourceKind switch
         {
-            DatabaseProfileSourceKind.ManagedSqlite => "Unsupported legacy managed SQLite",
-            DatabaseProfileSourceKind.ExternalSqliteFile => "Unsupported legacy SQLite file",
-            DatabaseProfileSourceKind.ImportedSqlite => "Unsupported legacy imported SQLite",
             DatabaseProfileSourceKind.PostgresConnection => "PostgreSQL connection",
-            DatabaseProfileSourceKind.SnapshotCache => "Snapshot cache",
-            DatabaseProfileSourceKind.IpfsSnapshot => "IPFS snapshot",
             DatabaseProfileSourceKind.InMemory => "In-memory",
             _ => sourceKind.ToString()
         };
@@ -208,7 +202,6 @@ public partial class MainLayout
 
         return selection.ProviderKind switch
         {
-            DatabaseProviderKind.Sqlite => "Unsupported legacy SQLite profile",
             DatabaseProviderKind.PostgreSql => selection.Descriptor,
             DatabaseProviderKind.InMemory => selection.Descriptor,
             _ => DescribeDatabaseProvider(selection.ProviderKind)
@@ -230,10 +223,6 @@ public partial class MainLayout
                 MaskHostName(editor?.PostgresHost),
                 MaskIdentifier(editor?.PostgresDatabaseName),
                 string.IsNullOrWhiteSpace(editor?.PostgresUsername) ? "Unavailable" : editor.PostgresUsername.Trim()),
-            DatabaseProviderKind.Sqlite => new DatabaseFlyoutDetails(
-                "Unsupported legacy provider",
-                "Migration required",
-                "Create PostgreSQL profile"),
             DatabaseProviderKind.InMemory => new DatabaseFlyoutDetails(
                 "Process memory",
                 BuildSafeDatabaseDescriptor(selection),

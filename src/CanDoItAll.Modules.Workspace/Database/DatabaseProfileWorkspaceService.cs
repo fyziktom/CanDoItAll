@@ -10,7 +10,6 @@ namespace CanDoItAll.Modules.Workspace;
 public sealed class DatabaseProfileWorkspaceService(
     IDatabaseProfileService profileService,
     IDatabaseProfileRuntimeAccessor profileAccessor,
-    IDatabaseSnapshotService snapshotService,
     IDatabaseTransferService transferService,
     IDatabaseDriverRegistry driverRegistry,
     IAppDatabaseBootstrapper bootstrapper,
@@ -274,35 +273,6 @@ public sealed class DatabaseProfileWorkspaceService(
         }
     }
 
-    public Task<Result<DatabaseSnapshotExportResult>> CreateSnapshotAsync(
-        Guid sourceProfileId,
-        DatabaseSnapshotTransportKind transportKind,
-        CancellationToken cancellationToken = default)
-    {
-        return snapshotService.CreateSnapshotAsync(sourceProfileId, transportKind, cancellationToken);
-    }
-
-    public Task<Result<DatabaseSnapshotMaterializationResult>> CloneAsync(
-        Guid sourceProfileId,
-        string displayName,
-        DatabaseSnapshotTransportKind transportKind = DatabaseSnapshotTransportKind.Local,
-        CancellationToken cancellationToken = default)
-    {
-        return snapshotService.CloneAsync(new DatabaseCloneRequest
-        {
-            SourceProfileId = sourceProfileId,
-            DisplayName = displayName,
-            TransportKind = transportKind
-        }, cancellationToken);
-    }
-
-    public Task<Result<DatabaseSnapshotMaterializationResult>> MaterializeSnapshotAsync(
-        DatabaseSnapshotMaterializationRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        return snapshotService.MaterializeSnapshotAsync(request, cancellationToken);
-    }
-
     private static DatabaseProfileEditorModel CreateEditor(DatabaseProfileRecord profile)
     {
         return new DatabaseProfileEditorModel
@@ -311,7 +281,7 @@ public sealed class DatabaseProfileWorkspaceService(
             DisplayName = profile.DisplayName,
             ProviderKind = profile.ProviderKind,
             SourceKind = profile.SourceKind,
-            SqliteDatabasePath = profile.Sqlite?.DatabasePath,
+            InMemoryDatabaseName = profile.InMemory?.DatabaseName,
             WorkspaceRoot = profile.Storage.WorkspaceRoot,
             PostgresHost = profile.PostgreSql?.Host ?? "localhost",
             PostgresPort = profile.PostgreSql?.Port ?? 5432,
@@ -320,8 +290,6 @@ public sealed class DatabaseProfileWorkspaceService(
             PostgresPassword = string.Empty,
             PostgresAdminDatabaseName = profile.PostgreSql?.AdminDatabaseName,
             PostgresTrustServerCertificate = profile.PostgreSql?.TrustServerCertificate ?? false,
-            OriginProfileId = profile.Clone.OriginProfileId,
-            OriginSnapshotId = profile.Clone.OriginSnapshotId,
             IsRuntimeLocked = profile.Runtime.LockedByRuntimeOverride
         };
     }

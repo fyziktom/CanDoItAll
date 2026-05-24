@@ -51,3 +51,70 @@ Write:
 
 - Durable process/workflow execution is safer and more parallel on PostgreSQL.
 - Tests would fail on double-claim/double-dispatch regressions.
+
+## Status
+
+- Completed
+
+## Objective
+
+Audit and tune durable runtime concurrency now that persisted runtime execution targets PostgreSQL.
+
+## Covered Inputs
+
+- `bundle://requirements/01-followup-requirements.md`
+
+## Prerequisites
+
+- SB05 PostgreSQL baseline proof completed.
+
+## Exact Source References
+
+- `repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessRuntimeOptions.cs`
+- `repo://tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs`
+
+## Deliverables
+
+- Typed worker concurrency defaults and clamp constants.
+- Negative concurrency regression tests.
+- Audit note that existing durable claims already use atomic EF update/lease/idempotency patterns.
+
+## Dependency Impact
+
+- Process outbox worker configuration and scheduler/planner durable dispatch tests are affected.
+
+## Validation Depth
+
+- Non-quarantined integration suite and targeted runtime concurrency slices.
+
+## Implementation Steps
+
+- Audit durable dispatch paths.
+- Raise process outbox concurrency safely.
+- Add process and scheduler concurrency tests.
+
+## Do Not Do
+
+- Do not replace existing safe EF atomic claims with raw SQL unless EF cannot express the claim primitive.
+
+## Acceptance Checklist
+
+- Default process outbox concurrency is greater than one and bounded.
+- Duplicate dispatch tests pass.
+- Non-quarantined integration tests pass.
+
+## Proof Required
+
+- `bundle://proof/SB06/manifest.md`
+
+## Browser Validation Logging
+
+- No browser route is required for this subbundle.
+
+## Progression Gate
+
+- Integration proof must pass before cleanup/final validation.
+
+## Suggested Agent Prompt
+
+Implement SB06, then run the runtime integration proof commands in `proof/SB06/manifest.md`.

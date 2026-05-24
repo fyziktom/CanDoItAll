@@ -43,9 +43,6 @@ public static class AppDbContextOptionsConfigurator
                     builder => builder.MigrationsAssembly(AppDbContextMigrationsAssemblyNames.PostgreSql));
                 return;
 
-            case DatabaseProviderKind.Sqlite:
-                throw new InvalidOperationException("SQLite is no longer supported as a main runtime database provider. Configure a PostgreSQL profile instead.");
-
             default:
                 throw new InvalidOperationException($"Unsupported provider '{profile.Profile.ProviderKind}'.");
         }
@@ -77,11 +74,6 @@ public static class AppDbContextOptionsConfigurator
                 connectionString,
                 builder => builder.MigrationsAssembly(AppDbContextMigrationsAssemblyNames.PostgreSql));
             return;
-        }
-
-        if (provider is "sqlite")
-        {
-            throw new InvalidOperationException("SQLite is no longer supported as a main runtime database provider. Set Database:Provider to PostgreSql.");
         }
 
         throw new InvalidOperationException($"Unsupported database provider '{databaseOptions.Provider}'.");

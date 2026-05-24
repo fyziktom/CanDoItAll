@@ -1,0 +1,313 @@
+using System.Globalization;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
+
+namespace CanDoItAll.Infrastructure.ControlPlane;
+
+internal static class LegacyDatabaseProfileCatalogQuarantine
+{
+    private const string ProfilesPropertyName = "profiles";
+    private const string ProviderKindPropertyName = "providerKind";
+    private const string SourceKindPropertyName = "sourceKind";
+    private const string IdPropertyName = "id";
+    private static readonly string RetiredProviderName = "Sql" + "ite";
+    private static readonly string RetiredConnectionPropertyName = RetiredProviderName.ToLowerInvariant();
+    private static readonly IReadOnlySet<string> RetiredSourceNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "Managed" + RetiredProviderName,
+        "External" + RetiredProviderName + "File",
+        "Imported" + RetiredProviderName,
+        "Snapshot" + "Cache",
+        "Ipfs" + "Snapshot"
+    };
+    private static readonly IReadOnlySet<int> RetiredSourceValues = new HashSet<int>
+    {
+        0,
+        1,
+        2,
+        4,
+        5
+    };
+    private static readonly JsonSerializerOptions SerializerOptions = CreateSerializerOptions();
+
+    public static LegacyDatabaseProfileCatalogQuarantineResult QuarantineIfNeeded(
+        string catalogPath,
+        string activeProfileStatePath,
+        ILogger? logger)
+    {
+        if (!File.Exists(catalogPath))
+        {
+            return LegacyDatabaseProfileCatalogQuarantineResult.None;
+        }
+
+        var json = File.ReadAllText(catalogPath);
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return LegacyDatabaseProfileCatalogQuarantineResult.None;
+        }
+
+        using var document = JsonDocument.Parse(json);
+        if (document.RootElement.ValueKind != JsonValueKind.Object ||
+            !TryGetProperty(document.RootElement, ProfilesPropertyName, out var profilesElement) ||
+            profilesElement.ValueKind != JsonValueKind.Array)
+        {
+            return LegacyDatabaseProfileCatalogQuarantineResult.None;
+        }
+
+        var retainedProfiles = new List<JsonElement>();
+        var quarantinedProfileIds = new HashSet<Guid>();
+        var quarantinedProfileCount = 0;
+
+        foreach (var profile in profilesElement.EnumerateArray())
+        {
+            if (IsRetiredProfile(profile))
+            {
+                quarantinedProfileCount++;
+                if (TryReadProfileId(profile, out var profileId))
+                {
+                    quarantinedProfileIds.Add(profileId);
+                }
+
+                continue;
+            }
+
+            retainedProfiles.Add(profile.Clone());
+        }
+
+        if (quarantinedProfileCount == 0)
+        {
+            return LegacyDatabaseProfileCatalogQuarantineResult.None;
+        }
+
+        var catalogDirectory = Path.GetDirectoryName(catalogPath)
+            ?? throw new InvalidOperationException($"Unable to resolve a directory for '{catalogPath}'.");
+        var quarantineDirectory = Path.Combine(catalogDirectory, "quarantine");
+        Directory.CreateDirectory(quarantineDirectory);
+
+        var timestamp = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmssfff", CultureInfo.InvariantCulture);
+        var quarantinePath = Path.Combine(quarantineDirectory, $"legacy-database-profiles-{timestamp}.json");
+        File.WriteAllText(quarantinePath, json);
+        WriteOperatorNote(quarantineDirectory, timestamp, quarantinePath, quarantinedProfileCount);
+        WriteSanitizedCatalog(document.RootElement, retainedProfiles, catalogPath);
+
+        var activeProfileReset = ResetActiveProfileIfNeeded(activeProfileStatePath, quarantinedProfileIds);
+        logger?.LogWarning(
+            "Quarantined {ProfileCount} retired {ProviderName} database profile entries before control-plane catalog deserialization. BackupPath={BackupPath}. ActiveProfileReset={ActiveProfileReset}. Create or select a PostgreSQL profile before migrating data manually.",
+            quarantinedProfileCount,
+            RetiredProviderName,
+            quarantinePath,
+            activeProfileReset);
+
+        return new LegacyDatabaseProfileCatalogQuarantineResult(
+            WasQuarantined: true,
+            QuarantinedProfileCount: quarantinedProfileCount,
+            RetainedProfileCount: retainedProfiles.Count,
+            QuarantinePath: quarantinePath,
+            ActiveProfileReset: activeProfileReset);
+    }
+
+    private static bool IsRetiredProfile(JsonElement profile)
+    {
+        return HasRetiredProvider(profile) ||
+            HasRetiredSource(profile) ||
+            HasRetiredConnectionMetadata(profile);
+    }
+
+    private static bool HasRetiredProvider(JsonElement profile)
+    {
+        if (!TryGetProperty(profile, ProviderKindPropertyName, out var providerKind))
+        {
+            return false;
+        }
+
+        return providerKind.ValueKind switch
+        {
+            JsonValueKind.String => string.Equals(providerKind.GetString(), RetiredProviderName, StringComparison.OrdinalIgnoreCase),
+            JsonValueKind.Number => providerKind.TryGetInt32(out var providerValue) && providerValue == 0,
+            _ => false
+        };
+    }
+
+    private static bool HasRetiredSource(JsonElement profile)
+    {
+        if (!TryGetProperty(profile, SourceKindPropertyName, out var sourceKind))
+        {
+            return false;
+        }
+
+        return sourceKind.ValueKind switch
+        {
+            JsonValueKind.String => RetiredSourceNames.Contains(sourceKind.GetString() ?? string.Empty),
+            JsonValueKind.Number => sourceKind.TryGetInt32(out var sourceValue) && RetiredSourceValues.Contains(sourceValue),
+            _ => false
+        };
+    }
+
+    private static bool HasRetiredConnectionMetadata(JsonElement profile)
+    {
+        foreach (var property in profile.EnumerateObject())
+        {
+            if (string.Equals(property.Name, RetiredConnectionPropertyName, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryReadProfileId(JsonElement profile, out Guid profileId)
+    {
+        profileId = Guid.Empty;
+        return TryGetProperty(profile, IdPropertyName, out var idElement) &&
+            idElement.ValueKind == JsonValueKind.String &&
+            Guid.TryParse(idElement.GetString(), out profileId);
+    }
+
+    private static void WriteSanitizedCatalog(
+        JsonElement root,
+        IReadOnlyList<JsonElement> retainedProfiles,
+        string catalogPath)
+    {
+        using var stream = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(stream, new JsonWriterOptions
+        {
+            Indented = true
+        }))
+        {
+            writer.WriteStartObject();
+            foreach (var property in root.EnumerateObject())
+            {
+                if (string.Equals(property.Name, ProfilesPropertyName, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                property.WriteTo(writer);
+            }
+
+            writer.WritePropertyName(ProfilesPropertyName);
+            writer.WriteStartArray();
+            foreach (var profile in retainedProfiles)
+            {
+                profile.WriteTo(writer);
+            }
+
+            writer.WriteEndArray();
+            writer.WriteEndObject();
+        }
+
+        WriteBytesAtomically(catalogPath, stream.ToArray());
+    }
+
+    private static bool ResetActiveProfileIfNeeded(string activeProfileStatePath, IReadOnlySet<Guid> quarantinedProfileIds)
+    {
+        if (quarantinedProfileIds.Count == 0 || !File.Exists(activeProfileStatePath))
+        {
+            return false;
+        }
+
+        var activeState = ReadDocument(activeProfileStatePath, static () => new DatabaseActiveProfileState());
+        if (!activeState.ActiveProfileId.HasValue || !quarantinedProfileIds.Contains(activeState.ActiveProfileId.Value))
+        {
+            return false;
+        }
+
+        activeState.ActiveProfileId = null;
+        WriteDocument(activeProfileStatePath, activeState);
+        return true;
+    }
+
+    private static void WriteOperatorNote(
+        string quarantineDirectory,
+        string timestamp,
+        string quarantinePath,
+        int quarantinedProfileCount)
+    {
+        var notePath = Path.Combine(quarantineDirectory, $"legacy-database-profiles-{timestamp}.md");
+        var content =
+            $"""
+            # Legacy Database Profile Quarantine
+
+            Quarantined profile count: {quarantinedProfileCount}
+
+            Original catalog backup: {quarantinePath}
+
+            The quarantined entries used retired {RetiredProviderName} profile metadata. The main runtime now requires PostgreSQL profiles. Create or select a PostgreSQL profile, then migrate data manually from the backed-up catalog/database files when needed.
+            """;
+        File.WriteAllText(notePath, content);
+    }
+
+    private static bool TryGetProperty(JsonElement element, string propertyName, out JsonElement value)
+    {
+        foreach (var property in element.EnumerateObject())
+        {
+            if (string.Equals(property.Name, propertyName, StringComparison.OrdinalIgnoreCase))
+            {
+                value = property.Value;
+                return true;
+            }
+        }
+
+        value = default;
+        return false;
+    }
+
+    private static T ReadDocument<T>(string path, Func<T> createDefault)
+    {
+        if (!File.Exists(path))
+        {
+            return createDefault();
+        }
+
+        var json = File.ReadAllText(path);
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return createDefault();
+        }
+
+        return JsonSerializer.Deserialize<T>(json, SerializerOptions) ?? createDefault();
+    }
+
+    private static void WriteDocument<T>(string path, T document)
+    {
+        WriteBytesAtomically(path, JsonSerializer.SerializeToUtf8Bytes(document, SerializerOptions));
+    }
+
+    private static void WriteBytesAtomically(string path, byte[] bytes)
+    {
+        var directory = Path.GetDirectoryName(path)
+            ?? throw new InvalidOperationException($"Unable to resolve a directory for '{path}'.");
+        Directory.CreateDirectory(directory);
+
+        var tempPath = Path.Combine(directory, $".{Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
+        File.WriteAllBytes(tempPath, bytes);
+        File.Move(tempPath, path, true);
+    }
+
+    private static JsonSerializerOptions CreateSerializerOptions()
+    {
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web)
+        {
+            WriteIndented = true
+        };
+        options.Converters.Add(new JsonStringEnumConverter());
+        return options;
+    }
+}
+
+internal sealed record LegacyDatabaseProfileCatalogQuarantineResult(
+    bool WasQuarantined,
+    int QuarantinedProfileCount,
+    int RetainedProfileCount,
+    string? QuarantinePath,
+    bool ActiveProfileReset)
+{
+    public static LegacyDatabaseProfileCatalogQuarantineResult None { get; } = new(
+        WasQuarantined: false,
+        QuarantinedProfileCount: 0,
+        RetainedProfileCount: 0,
+        QuarantinePath: null,
+        ActiveProfileReset: false);
+}

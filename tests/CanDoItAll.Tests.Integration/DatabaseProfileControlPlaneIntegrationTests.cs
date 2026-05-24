@@ -38,14 +38,14 @@ public sealed class ControlPlaneDatabaseProfileIntegrationTests
 public sealed class LegacyDatabaseProfileIntegrationTests
 {
     [Fact]
-    public async Task ResolveCurrentProfile_ignores_legacy_sqlite_workspace_when_the_catalog_is_empty()
+    public async Task ResolveCurrentProfile_ignores_legacy_local_workspace_when_the_catalog_is_empty()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-control-plane-legacy");
         var legacyWorkspaceRoot = Path.Combine(testEnvironment.RootPath, ".artifacts", "workspace");
         var legacyDatabasePath = Path.Combine(legacyWorkspaceRoot, "candoitall.db");
 
         Directory.CreateDirectory(legacyWorkspaceRoot);
-        await File.WriteAllTextAsync(legacyDatabasePath, "legacy sqlite placeholder");
+        await File.WriteAllTextAsync(legacyDatabasePath, "legacy local database placeholder");
 
         await using var provider = DatabaseProfileControlPlaneIntegrationHost.BuildServiceProvider(testEnvironment);
 

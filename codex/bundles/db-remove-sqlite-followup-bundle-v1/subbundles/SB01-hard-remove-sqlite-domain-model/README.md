@@ -48,3 +48,70 @@ Write:
 - No SQLite enum value exists in runtime model.
 - Old SQLite catalog JSON cannot crash startup.
 - Legacy entries are not silently lost; they are backed up/quarantined.
+
+## Status
+
+- Completed
+
+## Objective
+
+Remove retired provider/source values from the typed runtime database model and quarantine legacy catalog JSON before typed deserialization.
+
+## Covered Inputs
+
+- `bundle://requirements/01-followup-requirements.md`
+
+## Prerequisites
+
+- Repository builds after model changes.
+
+## Exact Source References
+
+- `repo://src/CanDoItAll.Infrastructure/ControlPlane/DatabaseProfileModels.cs`
+- `repo://src/CanDoItAll.Infrastructure/ControlPlane/LegacyDatabaseProfileCatalogQuarantine.cs`
+
+## Deliverables
+
+- Runtime model cleanup.
+- Legacy catalog quarantine.
+- Unit coverage for retained and quarantined catalogs.
+
+## Dependency Impact
+
+- Control-plane, startup resolver, workspace service, and Data Sources UI consume the reduced provider model.
+
+## Validation Depth
+
+- Unit tests, build, and residue audit.
+
+## Implementation Steps
+
+- Remove retired typed values and branches.
+- Add raw JSON quarantine before typed catalog reads.
+- Update tests around profile resolution.
+
+## Do Not Do
+
+- Do not silently keep legacy runtime support behind typed provider values.
+
+## Acceptance Checklist
+
+- Runtime model has no retired provider enum value.
+- Legacy catalog JSON is backed up and quarantined.
+- Active selection is reset when it references a quarantined profile.
+
+## Proof Required
+
+- `bundle://proof/SB01/manifest.md`
+
+## Browser Validation Logging
+
+- No browser route is required for this subbundle.
+
+## Progression Gate
+
+- Build and unit proof must pass before SB02/SB04 closure.
+
+## Suggested Agent Prompt
+
+Implement SB01, then run the unit and residue proof commands in `proof/SB01/manifest.md`.

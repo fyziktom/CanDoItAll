@@ -72,7 +72,6 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<IDatabaseProfileService>(serviceProvider => serviceProvider.GetRequiredService<DatabaseProfileControlPlaneService>());
         services.AddSingleton<IActiveDatabaseProfileResolver>(serviceProvider => serviceProvider.GetRequiredService<DatabaseProfileControlPlaneService>());
         services.AddSingleton<IDatabaseProfileRuntimeAccessor>(serviceProvider => serviceProvider.GetRequiredService<DatabaseProfileControlPlaneService>());
-        services.AddSingleton<IDatabaseSnapshotService, DatabaseSnapshotService>();
         services.AddScoped<IDatabaseTransferService, DatabaseTransferService>();
         services.AddSingleton<IDatabaseSwitchNotificationService, DatabaseSwitchNotificationService>();
         services.AddSingleton<IDatabaseRuntimeState, DatabaseRuntimeState>();

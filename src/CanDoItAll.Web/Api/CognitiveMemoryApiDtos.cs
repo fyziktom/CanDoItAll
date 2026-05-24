@@ -58,8 +58,6 @@ internal sealed record CognitiveMemoryStatusApiResponse(
         {
             DatabaseProviderKind.PostgreSql when profile.PostgreSql is not null =>
                 $"{profile.PostgreSql.Host}:{profile.PostgreSql.Port}/{profile.PostgreSql.DatabaseName}",
-            DatabaseProviderKind.Sqlite =>
-                "Unsupported legacy SQLite profile",
             DatabaseProviderKind.InMemory when profile.InMemory is not null =>
                 profile.InMemory.DatabaseName,
             _ => profile.ProviderKind.ToString()
@@ -87,7 +85,6 @@ internal sealed record CognitiveMemoryDatabaseRuntimeDiagnosticsApiResponse(
             profile.ProviderKind switch
             {
                 DatabaseProviderKind.PostgreSql => profile.PostgreSql?.DatabaseName,
-                DatabaseProviderKind.Sqlite => "Unsupported legacy SQLite profile",
                 DatabaseProviderKind.InMemory => profile.InMemory?.DatabaseName,
                 _ => null
             });

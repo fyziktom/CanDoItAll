@@ -39,3 +39,70 @@ Write:
 
 - Snapshot support is not part of runtime database profile model.
 - No SQLite-backed or provider-backed snapshot materialization path remains.
+
+## Status
+
+- Completed
+
+## Objective
+
+Remove deferred database snapshot service/model/runtime surface from the active application.
+
+## Covered Inputs
+
+- `bundle://requirements/01-followup-requirements.md`
+
+## Prerequisites
+
+- SB01 provider source cleanup completed.
+
+## Exact Source References
+
+- `repo://src/CanDoItAll.Modules.Workspace/Database/DatabaseProfileWorkspaceService.cs`
+- `repo://src/CanDoItAll.Infrastructure/DependencyInjection/InfrastructureServiceCollectionExtensions.cs`
+
+## Deliverables
+
+- Snapshot service/model deletion.
+- DI cleanup.
+- Workspace and UI references removed.
+
+## Dependency Impact
+
+- Data Sources and workspace profile services no longer expose snapshot operations.
+
+## Validation Depth
+
+- Build and residue audit.
+
+## Implementation Steps
+
+- Audit snapshot references.
+- Remove unused runtime service/models and DI.
+- Verify no runtime/UI snapshot controls remain.
+
+## Do Not Do
+
+- Do not retain dormant snapshot runtime types as active profile model concepts.
+
+## Acceptance Checklist
+
+- Snapshot service is not registered.
+- Snapshot source kinds are not in the database profile model.
+- Data Sources renders no snapshot action controls.
+
+## Proof Required
+
+- `bundle://proof/SB03/manifest.md`
+
+## Browser Validation Logging
+
+- Snapshot absence is also covered by SB02/SB08 browser evidence.
+
+## Progression Gate
+
+- Build must pass after snapshot runtime removal.
+
+## Suggested Agent Prompt
+
+Implement SB03, then run the build and residue proof commands in `proof/SB03/manifest.md`.

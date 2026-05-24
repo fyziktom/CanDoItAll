@@ -2,16 +2,18 @@
 
 ## Status
 
-Pending.
+Complete.
 
 ## Commands
 
-- TBD by Codex.
+- `dotnet build .\CanDoItAll.slnx -m:1 -v:minimal`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\codex\bundles\db-remove-sqlite-followup-bundle-v1\scripts\sqlite_residue_audit.ps1`
 
 ## Evidence files
 
-- `evidence/SB03/...`
+- `evidence/SB03/dotnet-build-final.log`
+- `evidence/SB03/sqlite-residue-audit.log`
 
 ## Notes
 
-Record exact command, working directory, branch, commit SHA, and result.
+`IDatabaseSnapshotService`, the snapshot runtime models/service implementation, DI registration, workspace orchestration methods, and the Data Sources snapshot-deferred UI section were removed. Snapshot/provider source kinds were also removed from the database profile model.

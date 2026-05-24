@@ -104,21 +104,20 @@ public sealed partial class AppSmokeTests
         await page.GetByTestId("database-data-sources-locked-message").WaitForAsync();
         Assert.True(await page.GetByTestId("database-profile-new-postgres").IsDisabledAsync());
         Assert.True(await page.GetByTestId("database-profile-save").IsDisabledAsync());
+        Assert.Equal(0, await page.GetByTestId("database-snapshot-deferred").CountAsync());
+        Assert.Equal(0, await page.GetByTestId("database-clone-create").CountAsync());
+
+        var bodyText = await page.TextContentAsync("body") ?? string.Empty;
+        Assert.DoesNotContain(string.Concat("Sql", "ite"), bodyText, StringComparison.OrdinalIgnoreCase);
 
         await SaveDatabaseEvidenceAsync(page, GetRepoRoot(), "db-switch-responsive-followup.png");
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
     }
 
     [Fact]
-    public async Task Deferred_snapshot_actions_render_cleanly()
+    public async Task Snapshot_actions_are_not_rendered_on_data_sources_page()
     {
-        await using var host = await DatabaseSwitchPlaywrightHost.CreateAsync();
-
-        await using var browser = await host.Playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
-        {
-            Headless = true
-        });
-        await using var context = await browser.NewContextAsync(new BrowserNewContextOptions
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize
             {
@@ -128,28 +127,22 @@ public sealed partial class AppSmokeTests
         });
 
         var settingsPage = await context.NewPageAsync();
-        var response = await settingsPage.GotoAsync($"{host.BaseUrl}/settings?tab=data-sources");
+        var response = await settingsPage.GotoAsync($"{fixture.BaseUrl}/settings?tab=data-sources");
         Assert.NotNull(response);
         Assert.True(response!.Ok, $"Expected /settings?tab=data-sources to return 2xx, got {(int)response.Status}.");
         await DismissStartupModalAsync(settingsPage);
-        await settingsPage.GetByTestId("database-snapshot-deferred").WaitForAsync();
+        await settingsPage.GetByTestId("database-data-sources-summary").WaitForAsync();
+        Assert.Equal(0, await settingsPage.GetByTestId("database-snapshot-deferred").CountAsync());
         Assert.Equal(0, await settingsPage.GetByTestId("database-clone-create").CountAsync());
-        await SaveDatabaseEvidenceAsync(settingsPage, host.RepoRoot, "db-switch-snapshot-deferred-desktop.png");
+        await SaveDatabaseEvidenceAsync(settingsPage, GetRepoRoot(), "db-switch-no-snapshot-actions-desktop.png");
 
         Assert.False(await settingsPage.Locator("#blazor-error-ui").IsVisibleAsync());
     }
 
     [Fact]
-    public async Task Deferred_snapshot_actions_remain_clear_in_responsive_layout()
+    public async Task Snapshot_actions_remain_absent_in_responsive_layout()
     {
-        await using var host = await DatabaseSwitchPlaywrightHost.CreateAsync(enableIpfs: true);
-        Assert.NotNull(host.FakeIpfsServer);
-
-        await using var browser = await host.Playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
-        {
-            Headless = true
-        });
-        await using var context = await browser.NewContextAsync(new BrowserNewContextOptions
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize
             {
@@ -159,15 +152,19 @@ public sealed partial class AppSmokeTests
         });
 
         var page = await context.NewPageAsync();
-        var response = await page.GotoAsync($"{host.BaseUrl}/settings?tab=data-sources");
+        var response = await page.GotoAsync($"{fixture.BaseUrl}/settings?tab=data-sources");
         Assert.NotNull(response);
         Assert.True(response!.Ok, $"Expected /settings?tab=data-sources to return 2xx, got {(int)response.Status}.");
         await DismissStartupModalAsync(page);
-        await page.GetByTestId("database-snapshot-deferred").WaitForAsync();
-        await SaveDatabaseEvidenceAsync(page, host.RepoRoot, "db-switch-snapshot-deferred-ipfs-desktop.png");
+        await page.GetByTestId("database-data-sources-summary").WaitForAsync();
+        Assert.Equal(0, await page.GetByTestId("database-snapshot-deferred").CountAsync());
+        Assert.Equal(0, await page.GetByTestId("database-clone-create").CountAsync());
+        await SaveDatabaseEvidenceAsync(page, GetRepoRoot(), "db-switch-no-snapshot-actions-responsive-desktop.png");
 
         await page.SetViewportSizeAsync(1100, 900);
-        await SaveDatabaseEvidenceAsync(page, host.RepoRoot, "db-switch-final-responsive.png");
+        Assert.Equal(0, await page.GetByTestId("database-snapshot-deferred").CountAsync());
+        Assert.Equal(0, await page.GetByTestId("database-clone-create").CountAsync());
+        await SaveDatabaseEvidenceAsync(page, GetRepoRoot(), "db-switch-no-snapshot-actions-responsive.png");
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
     }
 

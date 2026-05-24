@@ -193,16 +193,7 @@
                         </Cluster>
                     </FormSection>
 
-                    @if (databaseProfileModel.ProviderKind == DatabaseProviderKind.Sqlite)
-                    {
-                        <FormSection Title="Unsupported legacy profile"
-                                     Description="This saved profile uses the retired SQLite provider and cannot be edited or activated. Create a PostgreSQL profile and migrate data manually.">
-                            <Alert AlertStyle="AlertStyle.Warning" Variant="Variant.Outlined">
-                                Legacy SQLite profiles remain visible only so operators can identify and remove stale catalog entries.
-                            </Alert>
-                        </FormSection>
-                    }
-                    else if (databaseProfileModel.ProviderKind == DatabaseProviderKind.PostgreSql)
+                    @if (databaseProfileModel.ProviderKind == DatabaseProviderKind.PostgreSql)
                     {
                         <FormSection Title="PostgreSQL connection"
                                      Description="Save the profile first, then use Test connection to verify the target database or Create empty to provision it before activation.">
@@ -265,24 +256,12 @@
                     else
                     {
                         <FormSection Title="In-memory runtime"
-                                     Description="In-memory profiles are primarily useful for test harnesses and explicit runtime overrides.">
-                            <div>
-                                <label class="cda-field-label">Database name</label>
-                                <InputText @bind-Value="databaseProfileModel.SqliteDatabasePath"
-                                           class="cda-input"
-                                           data-testid="database-profile-inmemory-name" />
-                            </div>
+                                     Description="This runtime is available only for explicit overrides and test harnesses. Persisted data source management stays PostgreSQL-focused.">
+                            <Alert AlertStyle="AlertStyle.Info" Variant="Variant.Outlined">
+                                The current runtime does not expose editable persisted connection settings in this panel.
+                            </Alert>
                         </FormSection>
                     }
-
-                    <FormSection Title="Snapshots deferred"
-                                 Description="Snapshot export and restore are paused after the PostgreSQL-only runtime conversion. Future snapshots must be implemented as a portable export/import workflow, not as a main runtime database provider.">
-                        <Alert AlertStyle="AlertStyle.Info"
-                               Variant="Variant.Outlined"
-                               data-testid="database-snapshot-deferred">
-                            Database clone, local snapshot, and IPFS snapshot actions are disabled until a PostgreSQL-native portable package workflow is introduced.
-                        </Alert>
-                    </FormSection>
 
                     @if (!databaseProfileModel.Id.HasValue)
                     {
@@ -1209,7 +1188,6 @@
     {
         return providerKind switch
         {
-            DatabaseProviderKind.Sqlite => "Unsupported legacy SQLite",
             DatabaseProviderKind.PostgreSql => "PostgreSQL",
             DatabaseProviderKind.InMemory => "In-memory",
             _ => providerKind.ToString()
@@ -1220,12 +1198,7 @@
     {
         return sourceKind switch
         {
-            DatabaseProfileSourceKind.ManagedSqlite => "Unsupported legacy managed SQLite",
-            DatabaseProfileSourceKind.ExternalSqliteFile => "Unsupported legacy SQLite file",
-            DatabaseProfileSourceKind.ImportedSqlite => "Unsupported legacy imported SQLite",
             DatabaseProfileSourceKind.PostgresConnection => "PostgreSQL connection",
-            DatabaseProfileSourceKind.SnapshotCache => "Snapshot cache",
-            DatabaseProfileSourceKind.IpfsSnapshot => "IPFS snapshot",
             DatabaseProfileSourceKind.InMemory => "In-memory",
             _ => sourceKind.ToString()
         };
@@ -1248,12 +1221,6 @@
     {
         return model.ProviderKind switch
         {
-            DatabaseProviderKind.Sqlite when model.SourceKind == DatabaseProfileSourceKind.ManagedSqlite
-                => "This legacy managed SQLite profile is no longer supported. Create a PostgreSQL profile and migrate data manually.",
-            DatabaseProviderKind.Sqlite when model.SourceKind is DatabaseProfileSourceKind.SnapshotCache or DatabaseProfileSourceKind.IpfsSnapshot
-                => "This legacy snapshot-backed profile is no longer supported. Future snapshots must be implemented outside the main runtime provider contract.",
-            DatabaseProviderKind.Sqlite
-                => "This legacy SQLite profile is no longer supported. Create a PostgreSQL profile and migrate data manually.",
             DatabaseProviderKind.PostgreSql
                 => "PostgreSQL profiles carry the connection metadata needed to test, create, and activate a runtime database safely.",
             DatabaseProviderKind.InMemory

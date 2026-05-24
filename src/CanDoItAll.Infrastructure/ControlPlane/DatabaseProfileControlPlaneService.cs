@@ -37,12 +37,6 @@ public sealed class DatabaseProfileControlPlaneService(
     private readonly object _sync = new();
     private string? _lastLoggedSelectionKey;
 
-    private static InvalidOperationException CreateUnsupportedLegacySqliteProfileException(DatabaseProfileRecord profile)
-    {
-        return new InvalidOperationException(
-            $"Database profile '{profile.DisplayName}' ({profile.Id:D}) uses legacy SQLite storage, which is no longer supported by the main runtime. Create a PostgreSQL profile and migrate the data manually before selecting this profile.");
-    }
-
     public Task<IReadOnlyList<DatabaseProfileSummary>> ListAsync(CancellationToken cancellationToken = default)
     {
         lock (_sync)
@@ -91,10 +85,6 @@ public sealed class DatabaseProfileControlPlaneService(
 
         switch (model.ProviderKind)
         {
-            case DatabaseProviderKind.Sqlite:
-                errors.Add(Error.Validation("SQLite database profiles are no longer supported. Create a PostgreSQL profile and migrate data manually."));
-                break;
-
             case DatabaseProviderKind.PostgreSql:
                 if (model.SourceKind != DatabaseProfileSourceKind.PostgresConnection)
                 {
@@ -210,11 +200,6 @@ public sealed class DatabaseProfileControlPlaneService(
             if (profile is null)
             {
                 return Task.FromResult(Result.Failure(Error.Validation("Database profile not found.")));
-            }
-
-            if (profile.ProviderKind == DatabaseProviderKind.Sqlite)
-            {
-                return Task.FromResult(Result.Failure(Error.Validation("SQLite database profiles are no longer supported. Create a PostgreSQL profile and migrate data manually.")));
             }
 
             profile.Audit.LastUsedUtc = clock.GetUtcNow();
@@ -499,11 +484,6 @@ public sealed class DatabaseProfileControlPlaneService(
             ProviderKind = model.ProviderKind,
             SourceKind = NormalizeSourceKind(model.ProviderKind, model.SourceKind),
             Storage = new DatabaseProfileStorageDescriptor(),
-            Clone = new DatabaseProfileCloneMetadata
-            {
-                OriginProfileId = model.OriginProfileId,
-                OriginSnapshotId = model.OriginSnapshotId
-            },
             Audit = new DatabaseProfileAuditMetadata
             {
                 CreatedUtc = existing?.Audit.CreatedUtc ?? now,
@@ -515,9 +495,6 @@ public sealed class DatabaseProfileControlPlaneService(
 
         switch (profile.ProviderKind)
         {
-            case DatabaseProviderKind.Sqlite:
-                throw new InvalidOperationException("SQLite database profiles are no longer supported. Create a PostgreSQL profile and migrate data manually.");
-
             case DatabaseProviderKind.PostgreSql:
                 profile.PostgreSql = new PostgreSqlDatabaseProfileConnection
                 {
@@ -543,9 +520,9 @@ public sealed class DatabaseProfileControlPlaneService(
             case DatabaseProviderKind.InMemory:
                 profile.InMemory = new InMemoryDatabaseProfileConnection
                 {
-                    DatabaseName = string.IsNullOrWhiteSpace(model.SqliteDatabasePath)
+                    DatabaseName = string.IsNullOrWhiteSpace(model.InMemoryDatabaseName)
                         ? existing?.InMemory?.DatabaseName ?? "candoitall"
-                        : model.SqliteDatabasePath.Trim()
+                        : model.InMemoryDatabaseName.Trim()
                 };
                 profile.Storage = new DatabaseProfileStorageDescriptor
                 {
@@ -581,7 +558,6 @@ public sealed class DatabaseProfileControlPlaneService(
     {
         var connectionString = profile.ProviderKind switch
         {
-            DatabaseProviderKind.Sqlite => throw CreateUnsupportedLegacySqliteProfileException(profile),
             DatabaseProviderKind.PostgreSql => BuildPostgreSqlConnectionString(profile),
             DatabaseProviderKind.InMemory => profile.InMemory?.DatabaseName ?? throw new InvalidOperationException("In-memory profile is missing a database name."),
             _ => throw new InvalidOperationException($"Unsupported provider '{profile.ProviderKind}'.")
@@ -643,8 +619,6 @@ public sealed class DatabaseProfileControlPlaneService(
                 : secretProtector.Unprotect(profile.PostgreSql.EncryptedPassword),
             PostgresAdminDatabaseName = profile.PostgreSql?.AdminDatabaseName,
             PostgresTrustServerCertificate = profile.PostgreSql?.TrustServerCertificate ?? false,
-            OriginProfileId = profile.Clone.OriginProfileId,
-            OriginSnapshotId = profile.Clone.OriginSnapshotId,
             IsRuntimeLocked = profile.Runtime.LockedByRuntimeOverride
         };
     }
@@ -739,7 +713,6 @@ public sealed class DatabaseProfileControlPlaneService(
         {
             return configuredProvider.Trim().ToLowerInvariant() switch
             {
-                "sqlite" => throw new InvalidOperationException("Database provider 'sqlite' is no longer supported by the main runtime. Configure 'postgresql' and provide a PostgreSQL connection string."),
                 "postgres" or "postgresql" => DatabaseProviderKind.PostgreSql,
                 "inmemory" or "memory" => DatabaseProviderKind.InMemory,
                 _ => throw new InvalidOperationException($"Unsupported database provider '{configuredProvider}'.")
@@ -754,7 +727,7 @@ public sealed class DatabaseProfileControlPlaneService(
 
         if (!string.IsNullOrWhiteSpace(configuredConnection))
         {
-            throw new InvalidOperationException("Database connection string does not look like a PostgreSQL connection string. SQLite connection strings are no longer supported by the main runtime.");
+            throw new InvalidOperationException("Database connection string does not look like a PostgreSQL connection string.");
         }
 
         return DatabaseProviderKind.PostgreSql;
@@ -764,7 +737,6 @@ public sealed class DatabaseProfileControlPlaneService(
     {
         return profile.ProviderKind switch
         {
-            DatabaseProviderKind.Sqlite => "Unsupported legacy SQLite profile",
             DatabaseProviderKind.PostgreSql => profile.PostgreSql is null
                 ? string.Empty
                 : $"{profile.PostgreSql.Host}:{profile.PostgreSql.Port}/{profile.PostgreSql.DatabaseName}",
@@ -777,7 +749,6 @@ public sealed class DatabaseProfileControlPlaneService(
     {
         return profile.ProviderKind switch
         {
-            DatabaseProviderKind.Sqlite => throw CreateUnsupportedLegacySqliteProfileException(profile),
             DatabaseProviderKind.PostgreSql
                 => $"postgres:{profile.PostgreSql?.Host.Trim().ToLowerInvariant()}:{profile.PostgreSql?.Port}:{profile.PostgreSql?.DatabaseName.Trim().ToLowerInvariant()}:{profile.PostgreSql?.Username.Trim().ToLowerInvariant()}",
             DatabaseProviderKind.InMemory
@@ -810,6 +781,11 @@ public sealed class DatabaseProfileControlPlaneService(
 
     private DatabaseProfileCatalogDocument ReadCatalogLocked()
     {
+        LegacyDatabaseProfileCatalogQuarantine.QuarantineIfNeeded(
+            controlPlanePathResolver.ResolveCatalogFilePath(),
+            controlPlanePathResolver.ResolveActiveProfileStateFilePath(),
+            logger);
+
         return ReadDocument(
             controlPlanePathResolver.ResolveCatalogFilePath(),
             static () => new DatabaseProfileCatalogDocument());

@@ -230,11 +230,11 @@ public sealed partial class AgentFrameworkAuditProofTests
             }");
     }
 
-    private static string ReadLaunchPlanDatabaseSnapshot(string? connectionString, string launchName)
+    private static string ReadLaunchPlanDatabaseState(string? connectionString, string launchName)
     {
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            return "Database snapshot: <no connection string>";
+            return "Database state: <no connection string>";
         }
 
         try

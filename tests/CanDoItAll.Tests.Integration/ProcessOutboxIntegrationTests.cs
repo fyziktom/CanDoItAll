@@ -200,6 +200,51 @@ public sealed class ProcessOutboxIntegrationTests
     }
 
     [Fact]
+    public async Task Parallel_ProcessPendingAsync_calls_do_not_dispatch_same_automation_record_twice()
+    {
+        await using var harness = await ProcessOutboxHarness.CreateAsync(trackAutomationDispatch: true);
+        await using var scope = harness.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var outboxService = scope.ServiceProvider.GetRequiredService<ProcessOutboxService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        harness.AutomationDispatch.HoldDispatch = true;
+
+        var projectId = await CreateProjectAsync(projectsService, "Process outbox parallel automation claim");
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Parallel automation dispatch claim",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Validate concurrent process outbox claim"
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var firstDrain = outboxService.ProcessPendingAsync(1, TimeSpan.FromMinutes(1));
+        await harness.AutomationDispatch.FirstDispatchStarted.WaitAsync(TimeSpan.FromSeconds(5));
+        var secondDrain = outboxService.ProcessPendingAsync(1, TimeSpan.FromMinutes(1));
+
+        Assert.Equal(0, await secondDrain);
+        Assert.Equal(1, harness.AutomationDispatch.CallCount);
+
+        harness.AutomationDispatch.ReleaseDispatch();
+
+        Assert.Equal(1, await firstDrain);
+        var automationDispatchRecord = Assert.Single(await ListAutomationDispatchRecordsAsync(dbContextFactory, runResult.Value));
+        Assert.Equal(ProcessOutboxRecordStatus.Completed, automationDispatchRecord.Status);
+        Assert.Equal(1, automationDispatchRecord.AttemptCount);
+        Assert.Equal(1, harness.AutomationDispatch.CallCount);
+    }
+
+    [Fact]
     public async Task ProcessPendingAsync_can_skip_persisted_automation_dispatches_created_before_runtime_start()
     {
         await using var harness = await ProcessOutboxHarness.CreateAsync(trackAutomationDispatch: true);

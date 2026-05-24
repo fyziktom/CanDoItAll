@@ -8,24 +8,6 @@ using static CanDoItAll.Tests.Unit.DatabaseRuntimeSwitchingTestProfiles;
 
 namespace CanDoItAll.Tests.Unit;
 
-public sealed class DatabaseDriverTests
-{
-    [Fact]
-    public async Task Resolve_throws_when_sqlite_driver_is_requested()
-    {
-        await using var testEnvironment = CanDoItAllTestEnvironment.Create("runtime-sqlite-driver");
-        await using var provider = DatabaseProfileControlPlaneTestHost.BuildServiceProvider(
-            testEnvironment,
-            includeDatabaseOverride: true);
-
-        var driverRegistry = provider.GetRequiredService<IDatabaseDriverRegistry>();
-
-        var ex = Assert.Throws<InvalidOperationException>(() => driverRegistry.Resolve(DatabaseProviderKind.Sqlite));
-
-        Assert.Contains("No database driver is registered", ex.Message, StringComparison.Ordinal);
-    }
-}
-
 public sealed class DatabaseSwitchCoordinatorTests
 {
     [Fact]
@@ -93,30 +75,6 @@ public sealed class AppDbContextRuntimeSwitchTests
         var runtimeSnapshot = runtimeState.GetSnapshot();
         Assert.Equal(targetProfile.Profile.Id, runtimeSnapshot.ActiveProfileId);
         Assert.Equal(switchResult.Value!.Generation, runtimeSnapshot.Generation);
-    }
-}
-
-public sealed class UnsupportedLegacySqliteProfileTests
-{
-    [Fact]
-    public async Task SaveAsync_rejects_sqlite_profiles()
-    {
-        await using var testEnvironment = CanDoItAllTestEnvironment.Create("runtime-sqlite-profile-rejected");
-        await using var provider = DatabaseProfileControlPlaneTestHost.BuildServiceProvider(
-            testEnvironment,
-            includeDatabaseOverride: true);
-
-        var profileService = provider.GetRequiredService<IDatabaseProfileService>();
-
-        var saveResult = await profileService.SaveAsync(new DatabaseProfileEditorModel
-        {
-            DisplayName = "Legacy SQLite",
-            ProviderKind = DatabaseProviderKind.Sqlite,
-            SourceKind = DatabaseProfileSourceKind.ManagedSqlite
-        });
-
-        Assert.True(saveResult.IsFailure);
-        Assert.Contains(saveResult.Errors, error => error.Message.Contains("SQLite database profiles are no longer supported", StringComparison.Ordinal));
     }
 }
 

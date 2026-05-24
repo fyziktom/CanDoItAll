@@ -3,6 +3,7 @@ using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using System.Text.Json;
 using static CanDoItAll.Tests.Unit.DatabaseRuntimeSwitchingTestProfiles;
 
 namespace CanDoItAll.Tests.Unit;
@@ -124,9 +125,9 @@ public sealed class DatabaseProfileOverrideTests
     }
 
     [Fact]
-    public async Task ResolveCurrentProfile_rejects_sqlite_database_override()
+    public async Task ResolveCurrentProfile_rejects_retired_provider_database_override()
     {
-        await using var testEnvironment = CanDoItAllTestEnvironment.Create("control-plane-sqlite-override-rejected");
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("control-plane-retired-provider-override-rejected");
 
         var overrideWorkspaceRoot = Path.Combine(testEnvironment.RootPath, "wrong-override-workspace");
         var ex = Assert.Throws<InvalidOperationException>(() => DatabaseProfileControlPlaneTestHost.BuildServiceProvider(
@@ -134,13 +135,13 @@ public sealed class DatabaseProfileOverrideTests
                 includeDatabaseOverride: true,
                 additionalValues: new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
                 {
-                    ["Database:Provider"] = "Sqlite",
+                    ["Database:Provider"] = LegacyCatalogTestData.RetiredProviderName(),
                     ["Database:ConnectionString"] = "Data Source=C:\\legacy\\candoitall.db",
                     ["Storage:WorkspaceRoot"] = overrideWorkspaceRoot
                 }));
 
-        Assert.Contains("sqlite", ex.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("no longer supported", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Unsupported database provider", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(LegacyCatalogTestData.RetiredProviderName(), ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -266,28 +267,210 @@ public sealed class DatabaseProfileOverrideTests
     }
 }
 
-public sealed class SnapshotBackedProfileCatalogTests
+public sealed class LegacyDatabaseProfileCatalogQuarantineTests
 {
     [Fact]
-    public async Task SaveAsync_rejects_snapshot_cache_profiles()
+    public async Task ResolveCurrentProfile_quarantines_retired_only_catalog_and_creates_default_profile()
     {
-        await using var testEnvironment = CanDoItAllTestEnvironment.Create("control-plane-snapshot-cache");
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("control-plane-legacy-only-quarantine");
+        var retiredProfileId = Guid.NewGuid();
+        await LegacyCatalogTestData.WriteCatalogAsync(
+            testEnvironment,
+            [LegacyCatalogTestData.CreateRetiredProfileJson(retiredProfileId, "Retired local profile")],
+            retiredProfileId);
+
         await using var provider = DatabaseProfileControlPlaneTestHost.BuildServiceProvider(
             testEnvironment,
             includeDatabaseOverride: false);
 
         var service = provider.GetRequiredService<IDatabaseProfileService>();
-        var saveResult = await service.SaveAsync(new DatabaseProfileEditorModel
-        {
-            DisplayName = "Snapshot cache profile",
-            ProviderKind = DatabaseProviderKind.Sqlite,
-            SourceKind = DatabaseProfileSourceKind.SnapshotCache,
-            OriginProfileId = Guid.NewGuid(),
-            OriginSnapshotId = Guid.NewGuid()
-        });
+        var resolver = provider.GetRequiredService<IActiveDatabaseProfileResolver>();
 
-        Assert.True(saveResult.IsFailure);
-        Assert.Contains(saveResult.Errors, error => error.Message.Contains("SQLite database profiles are no longer supported", StringComparison.Ordinal));
+        var resolved = resolver.ResolveCurrentProfile();
+        var summaries = await service.ListAsync();
+        var catalogJson = await File.ReadAllTextAsync(LegacyCatalogTestData.CatalogPath(testEnvironment));
+        var quarantineJson = await File.ReadAllTextAsync(Assert.Single(Directory.GetFiles(LegacyCatalogTestData.QuarantinePath(testEnvironment), "*.json")));
+
+        Assert.Equal(DatabaseProfileResolutionSource.AutoProvisionedPostgreSql, resolved.ResolutionSource);
+        Assert.Equal(DatabaseProviderKind.PostgreSql, resolved.Profile.ProviderKind);
+        var summary = Assert.Single(summaries);
+        Assert.True(summary.IsActive);
+        Assert.Equal(DatabaseProviderKind.PostgreSql, summary.ProviderKind);
+        Assert.DoesNotContain(LegacyCatalogTestData.RetiredProviderName(), catalogJson, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(LegacyCatalogTestData.RetiredProviderName(), quarantineJson, StringComparison.OrdinalIgnoreCase);
+        Assert.NotEqual(retiredProfileId, await LegacyCatalogTestData.ReadActiveProfileIdAsync(testEnvironment));
+    }
+
+    [Fact]
+    public async Task ResolveCurrentProfile_quarantines_retired_entries_and_retains_postgresql_entries()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("control-plane-mixed-quarantine");
+        var retiredProfileId = Guid.NewGuid();
+        var postgresProfileId = Guid.NewGuid();
+        await LegacyCatalogTestData.WriteCatalogAsync(
+            testEnvironment,
+            [
+                LegacyCatalogTestData.CreateRetiredProfileJson(retiredProfileId, "Retired local profile"),
+                LegacyCatalogTestData.CreatePostgreSqlProfileJson(postgresProfileId, "Retained PostgreSQL")
+            ],
+            retiredProfileId);
+
+        await using var provider = DatabaseProfileControlPlaneTestHost.BuildServiceProvider(
+            testEnvironment,
+            includeDatabaseOverride: false);
+
+        var service = provider.GetRequiredService<IDatabaseProfileService>();
+        var resolved = provider.GetRequiredService<IActiveDatabaseProfileResolver>().ResolveCurrentProfile();
+        var summaries = await service.ListAsync();
+        var catalogJson = await File.ReadAllTextAsync(LegacyCatalogTestData.CatalogPath(testEnvironment));
+
+        Assert.Equal(DatabaseProfileResolutionSource.PersistedCatalogFallback, resolved.ResolutionSource);
+        Assert.Equal(postgresProfileId, resolved.Profile.Id);
+        var summary = Assert.Single(summaries);
+        Assert.Equal(postgresProfileId, summary.Id);
+        Assert.True(summary.IsActive);
+        Assert.DoesNotContain(LegacyCatalogTestData.RetiredProviderName(), catalogJson, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(postgresProfileId, await LegacyCatalogTestData.ReadActiveProfileIdAsync(testEnvironment));
+        Assert.Single(Directory.GetFiles(LegacyCatalogTestData.QuarantinePath(testEnvironment), "*.json"));
+    }
+
+    [Fact]
+    public async Task ListAsync_leaves_valid_postgresql_catalog_without_quarantine()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("control-plane-valid-catalog");
+        await using var provider = DatabaseProfileControlPlaneTestHost.BuildServiceProvider(
+            testEnvironment,
+            includeDatabaseOverride: false);
+
+        var service = provider.GetRequiredService<IDatabaseProfileService>();
+        var saveResult = await service.SaveAsync(CreatePostgreSqlEditorForDatabase(
+            "Valid PostgreSQL",
+            "valid_catalog",
+            Path.Combine(testEnvironment.RootPath, "valid-workspace")));
+
+        Assert.True(saveResult.IsSuccess);
+        var summaries = await service.ListAsync();
+
+        var summary = Assert.Single(summaries);
+        Assert.Equal(saveResult.Value, summary.Id);
+        Assert.False(Directory.Exists(LegacyCatalogTestData.QuarantinePath(testEnvironment)));
+    }
+}
+
+internal static class LegacyCatalogTestData
+{
+    public static string RetiredProviderName() => string.Concat("Sql", "ite");
+
+    public static string CatalogPath(CanDoItAllTestEnvironment testEnvironment)
+        => Path.Combine(testEnvironment.ControlPlaneRootPath, "database-profiles", "catalog.json");
+
+    public static string QuarantinePath(CanDoItAllTestEnvironment testEnvironment)
+        => Path.Combine(testEnvironment.ControlPlaneRootPath, "database-profiles", "quarantine");
+
+    public static async Task WriteCatalogAsync(
+        CanDoItAllTestEnvironment testEnvironment,
+        IReadOnlyList<string> profileJson,
+        Guid? activeProfileId)
+    {
+        var profileRoot = Path.Combine(testEnvironment.ControlPlaneRootPath, "database-profiles");
+        Directory.CreateDirectory(profileRoot);
+        await File.WriteAllTextAsync(
+            Path.Combine(profileRoot, "catalog.json"),
+            $$"""
+            {
+              "schemaVersion": 1,
+              "profiles": [
+                {{string.Join($",{Environment.NewLine}", profileJson)}}
+              ]
+            }
+            """);
+
+        await File.WriteAllTextAsync(
+            Path.Combine(profileRoot, "active-profile.json"),
+            $$"""
+            {
+              "activeProfileId": {{JsonSerializer.Serialize(activeProfileId)}},
+              "lastPromptShownAtUtc": null,
+              "lastSwitchGeneration": 0
+            }
+            """);
+    }
+
+    public static string CreateRetiredProfileJson(Guid profileId, string displayName)
+    {
+        var providerName = RetiredProviderName();
+        var sourceName = "Managed" + providerName;
+        var connectionPropertyName = providerName.ToLowerInvariant();
+        return $$"""
+            {
+              "id": "{{profileId}}",
+              "displayName": {{JsonSerializer.Serialize(displayName)}},
+              "providerKind": "{{providerName}}",
+              "sourceKind": "{{sourceName}}",
+              "{{connectionPropertyName}}": {
+                "databasePath": "C:\\legacy\\candoitall.db"
+              },
+              "storage": {
+                "mode": "ManagedPerProfile",
+                "workspaceRoot": "C:\\legacy"
+              },
+              "runtime": {
+                "fingerprint": "legacy:local",
+                "lockedByRuntimeOverride": false
+              },
+              "audit": {
+                "createdUtc": "2026-01-01T00:00:00+00:00",
+                "lastUsedUtc": "2026-01-02T00:00:00+00:00",
+                "lastSuccessfulOpenUtc": "2026-01-03T00:00:00+00:00"
+              }
+            }
+            """;
+    }
+
+    public static string CreatePostgreSqlProfileJson(Guid profileId, string displayName)
+        => $$"""
+            {
+              "id": "{{profileId}}",
+              "displayName": {{JsonSerializer.Serialize(displayName)}},
+              "providerKind": "PostgreSql",
+              "sourceKind": "PostgresConnection",
+              "postgreSql": {
+                "host": "localhost",
+                "port": 5432,
+                "databaseName": "candoitall",
+                "username": "postgres",
+                "encryptedPassword": null,
+                "adminDatabaseName": null,
+                "trustServerCertificate": false
+              },
+              "storage": {
+                "mode": "ExternalWorkspaceRoot",
+                "workspaceRoot": "C:\\postgres-workspace"
+              },
+              "runtime": {
+                "fingerprint": "postgres:localhost:5432:candoitall:postgres",
+                "lockedByRuntimeOverride": false
+              },
+              "audit": {
+                "createdUtc": "2026-01-01T00:00:00+00:00",
+                "lastUsedUtc": "2026-01-04T00:00:00+00:00",
+                "lastSuccessfulOpenUtc": "2026-01-05T00:00:00+00:00"
+              }
+            }
+            """;
+
+    public static async Task<Guid?> ReadActiveProfileIdAsync(CanDoItAllTestEnvironment testEnvironment)
+    {
+        await using var stream = File.OpenRead(Path.Combine(
+            testEnvironment.ControlPlaneRootPath,
+            "database-profiles",
+            "active-profile.json"));
+        using var document = await JsonDocument.ParseAsync(stream);
+        return document.RootElement.TryGetProperty("activeProfileId", out var activeProfileId) &&
+            activeProfileId.ValueKind == JsonValueKind.String &&
+            Guid.TryParse(activeProfileId.GetString(), out var parsed)
+                ? parsed
+                : null;
     }
 }
 

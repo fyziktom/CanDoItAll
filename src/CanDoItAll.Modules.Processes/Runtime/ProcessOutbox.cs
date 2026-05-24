@@ -719,8 +719,6 @@ public sealed class ProcessOutboxDrainWorker(
 {
     private static readonly TimeSpan IdleDelay = TimeSpan.FromMilliseconds(200);
     private static readonly TimeSpan FailureBackoff = TimeSpan.FromSeconds(2);
-    private const int DefaultMaxConcurrentDispatches = 1;
-    private const int UpperMaxConcurrentDispatches = 8;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -794,8 +792,8 @@ public sealed class ProcessOutboxDrainWorker(
     {
         var configured = processRuntimeOptions.Value.OutboxWorkerMaxConcurrency;
         return configured <= 0
-            ? DefaultMaxConcurrentDispatches
-            : Math.Clamp(configured, 1, UpperMaxConcurrentDispatches);
+            ? ProcessRuntimeOptions.DefaultOutboxWorkerConcurrency
+            : Math.Clamp(configured, 1, ProcessRuntimeOptions.MaximumOutboxWorkerConcurrency);
     }
 
     private static async Task ObserveCompletedDispatchesAsync(HashSet<Task<int>> activeDispatches)

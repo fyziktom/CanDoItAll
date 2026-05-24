@@ -50,3 +50,70 @@ Write:
 - All gates pass.
 - Final report clearly states any allowed residue.
 - Branch is ready for human review/merge.
+
+## Status
+
+- Completed
+
+## Objective
+
+Run final validation and record merge-gate evidence for the PostgreSQL-only runtime follow-up.
+
+## Covered Inputs
+
+- `bundle://requirements/01-followup-requirements.md`
+
+## Prerequisites
+
+- SB01 through SB07 completed.
+
+## Exact Source References
+
+- `bundle://proof/SB08/manifest.md`
+- `bundle://reviews/01-execution-report.md`
+
+## Deliverables
+
+- Restore/build/unit/component/integration/browser/residue proof.
+- Final execution report.
+- Residual risk notes.
+
+## Dependency Impact
+
+- Confirms all upstream subbundle work remains coherent after cleanup.
+
+## Validation Depth
+
+- Full final command set with focused component/browser slices and non-quarantined integration tests.
+
+## Implementation Steps
+
+- Run final validation commands.
+- Capture evidence logs.
+- Update proof manifests and execution report.
+
+## Do Not Do
+
+- Do not claim unrelated failing tests are fixed by this bundle.
+
+## Acceptance Checklist
+
+- Restore, build, unit, in-scope component, integration, browser, residue, and diff-check gates pass.
+- Residual risks are documented.
+- Proof manifests are no longer placeholders.
+
+## Proof Required
+
+- `bundle://proof/SB08/manifest.md`
+
+## Browser Validation Logging
+
+- Playwright evidence is recorded under `bundle://evidence/SB08`.
+
+## Progression Gate
+
+- Human review can start after final proof and residual-risk review.
+
+## Suggested Agent Prompt
+
+Implement SB08, then run the final validation command set and update `reviews/01-execution-report.md`.

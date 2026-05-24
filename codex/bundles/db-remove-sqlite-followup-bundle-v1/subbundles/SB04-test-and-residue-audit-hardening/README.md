@@ -39,3 +39,70 @@ Write:
 
 - Residue audit fails if SQLite appears in runtime code/tests.
 - Tests prove old catalogs are handled safely.
+
+## Status
+
+- Completed
+
+## Objective
+
+Make retired-provider residue hard to reintroduce in runtime source, tests, and the solution file.
+
+## Covered Inputs
+
+- `bundle://requirements/01-followup-requirements.md`
+
+## Prerequisites
+
+- SB01 through SB03 cleanup completed.
+
+## Exact Source References
+
+- `bundle://scripts/sqlite_residue_audit.ps1`
+- `repo://tests/CanDoItAll.Tests.Unit/DatabaseProfileControlPlaneTests.cs`
+
+## Deliverables
+
+- Windows-safe residue audit script.
+- Unit and component regression tests.
+- Generic unsupported-provider test coverage.
+
+## Dependency Impact
+
+- The audit protects main runtime, tests, and solution metadata from residue regressions.
+
+## Validation Depth
+
+- Residue command, unit tests, and Data Sources component tests.
+
+## Implementation Steps
+
+- Fix audit script scope/globbing.
+- Add quarantine and unsupported-provider tests.
+- Update UI tests to assert absence of retired-provider controls.
+
+## Do Not Do
+
+- Do not keep stringly typed provider branches as compatibility paths.
+
+## Acceptance Checklist
+
+- Residue audit exits successfully with no matches.
+- Unit tests pass.
+- Data Sources component tests pass.
+
+## Proof Required
+
+- `bundle://proof/SB04/manifest.md`
+
+## Browser Validation Logging
+
+- Browser absence checks are covered by SB02/SB08 proof.
+
+## Progression Gate
+
+- Audit and focused tests must pass before final validation.
+
+## Suggested Agent Prompt
+
+Implement SB04, then run the residue, unit, and component proof commands in `proof/SB04/manifest.md`.

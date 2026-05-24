@@ -4,7 +4,7 @@ using CanDoItAll.Tests.Support;
 
 namespace CanDoItAll.Tests.Unit;
 
-public sealed class FakeIpfsSnapshotServerTests
+public sealed class FakeIpfsServerTests
 {
     [Fact]
     public async Task Fake_server_accepts_add_pin_and_download_flows()

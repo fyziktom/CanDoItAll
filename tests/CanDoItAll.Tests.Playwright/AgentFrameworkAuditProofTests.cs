@@ -316,12 +316,12 @@ public sealed partial class AgentFrameworkAuditProofTests
         {
             var domClickCount = await ReadDomClickProbeAsync(page, "launch-submit");
             var reconnectState = await ReadReconnectStateAsync(page);
-            var databaseSnapshot = ReadLaunchPlanDatabaseSnapshot(fixture.DatabaseConnectionString, launchName);
+            var databaseState = ReadLaunchPlanDatabaseState(fixture.DatabaseConnectionString, launchName);
             var browserDiagnosticsSnapshot = browserDiagnostics.Count == 0
                 ? "<none>"
                 : string.Join(Environment.NewLine, browserDiagnostics);
             throw new TimeoutException(
-                $"{exception.Message}{Environment.NewLine}DOM click probe: {domClickCount}{Environment.NewLine}Reconnect state: {reconnectState}{Environment.NewLine}{databaseSnapshot}{Environment.NewLine}Browser diagnostics:{Environment.NewLine}{browserDiagnosticsSnapshot}{Environment.NewLine}App log snapshot:{Environment.NewLine}{fixture.GetLogSnapshot()}",
+                $"{exception.Message}{Environment.NewLine}DOM click probe: {domClickCount}{Environment.NewLine}Reconnect state: {reconnectState}{Environment.NewLine}{databaseState}{Environment.NewLine}Browser diagnostics:{Environment.NewLine}{browserDiagnosticsSnapshot}{Environment.NewLine}App log snapshot:{Environment.NewLine}{fixture.GetLogSnapshot()}",
                 exception);
         }
         await WaitForTestIdWithRefreshAsync(page, "processes-launch-approval-record", refreshTestId: null, attempts: 3, timeoutMsPerAttempt: 15_000);

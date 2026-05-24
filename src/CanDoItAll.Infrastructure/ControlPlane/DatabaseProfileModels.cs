@@ -4,20 +4,14 @@ namespace CanDoItAll.Infrastructure.ControlPlane;
 
 public enum DatabaseProviderKind
 {
-    Sqlite,
-    PostgreSql,
-    InMemory
+    PostgreSql = 1,
+    InMemory = 2
 }
 
 public enum DatabaseProfileSourceKind
 {
-    ManagedSqlite,
-    ExternalSqliteFile,
-    ImportedSqlite,
-    PostgresConnection,
-    SnapshotCache,
-    IpfsSnapshot,
-    InMemory
+    PostgresConnection = 3,
+    InMemory = 6
 }
 
 public enum DatabaseProfileStorageMode
@@ -46,24 +40,15 @@ public sealed class DatabaseProfileRecord
 
     public DatabaseProfileSourceKind SourceKind { get; set; } = DatabaseProfileSourceKind.PostgresConnection;
 
-    public SqliteDatabaseProfileConnection? Sqlite { get; set; }
-
     public PostgreSqlDatabaseProfileConnection? PostgreSql { get; set; }
 
     public InMemoryDatabaseProfileConnection? InMemory { get; set; }
 
     public DatabaseProfileStorageDescriptor Storage { get; set; } = new();
 
-    public DatabaseProfileCloneMetadata Clone { get; set; } = new();
-
     public DatabaseProfileRuntimeMetadata Runtime { get; set; } = new();
 
     public DatabaseProfileAuditMetadata Audit { get; set; } = new();
-}
-
-public sealed class SqliteDatabaseProfileConnection
-{
-    public string DatabasePath { get; set; } = string.Empty;
 }
 
 public sealed class PostgreSqlDatabaseProfileConnection
@@ -93,13 +78,6 @@ public sealed class DatabaseProfileStorageDescriptor
     public DatabaseProfileStorageMode Mode { get; set; } = DatabaseProfileStorageMode.ManagedPerProfile;
 
     public string WorkspaceRoot { get; set; } = string.Empty;
-}
-
-public sealed class DatabaseProfileCloneMetadata
-{
-    public Guid? OriginProfileId { get; set; }
-
-    public Guid? OriginSnapshotId { get; set; }
 }
 
 public sealed class DatabaseProfileRuntimeMetadata
@@ -169,7 +147,7 @@ public sealed class DatabaseProfileEditorModel
 
     public DatabaseProfileSourceKind SourceKind { get; set; } = DatabaseProfileSourceKind.PostgresConnection;
 
-    public string? SqliteDatabasePath { get; set; }
+    public string? InMemoryDatabaseName { get; set; }
 
     public string? WorkspaceRoot { get; set; }
 
@@ -186,10 +164,6 @@ public sealed class DatabaseProfileEditorModel
     public string? PostgresAdminDatabaseName { get; set; }
 
     public bool PostgresTrustServerCertificate { get; set; }
-
-    public Guid? OriginProfileId { get; set; }
-
-    public Guid? OriginSnapshotId { get; set; }
 
     public bool IsRuntimeLocked { get; set; }
 }
@@ -252,20 +226,4 @@ public interface IDatabaseProfileService
     Task<Result> ActivateAsync(Guid id, CancellationToken cancellationToken = default);
 
     Task<DatabaseSelectionStateModel> GetCurrentSelectionAsync(CancellationToken cancellationToken = default);
-}
-
-public interface IDatabaseSnapshotService
-{
-    Task<Result<DatabaseSnapshotExportResult>> CreateSnapshotAsync(
-        Guid sourceProfileId,
-        DatabaseSnapshotTransportKind transportKind,
-        CancellationToken cancellationToken = default);
-
-    Task<Result<DatabaseSnapshotMaterializationResult>> CloneAsync(
-        DatabaseCloneRequest request,
-        CancellationToken cancellationToken = default);
-
-    Task<Result<DatabaseSnapshotMaterializationResult>> MaterializeSnapshotAsync(
-        DatabaseSnapshotMaterializationRequest request,
-        CancellationToken cancellationToken = default);
 }

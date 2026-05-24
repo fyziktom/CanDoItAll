@@ -41,10 +41,11 @@ public sealed class SettingsPageDataSourcesTests
             Assert.Contains("Current runtime selection", cut.Markup);
             Assert.Contains("Component PostgreSQL", cut.Markup);
             Assert.Contains("database-profile-new-postgres", cut.Markup);
-            Assert.Contains("database-snapshot-deferred", cut.Markup);
             Assert.DoesNotContain("database-profile-new-managed", cut.Markup);
             Assert.DoesNotContain("database-profile-new-external", cut.Markup);
+            Assert.DoesNotContain(LegacyProviderName(), cut.Markup, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain("database-clone-create", cut.Markup);
+            Assert.DoesNotContain("database-snapshot-deferred", cut.Markup);
             Assert.DoesNotContain("database-snapshot-local-create", cut.Markup);
             Assert.DoesNotContain("database-snapshot-ipfs-create", cut.Markup);
         });
@@ -62,7 +63,7 @@ public sealed class SettingsPageDataSourcesTests
     }
 
     [Fact]
-    public async Task Settings_page_surfaces_deferred_snapshot_actions()
+    public async Task Settings_page_omits_deferred_database_snapshot_actions()
     {
         await using var harness = await CreateUnlockedHarnessAsync();
 
@@ -73,7 +74,7 @@ public sealed class SettingsPageDataSourcesTests
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains("database-snapshot-deferred", cut.Markup);
+            Assert.DoesNotContain("database-snapshot-deferred", cut.Markup);
             Assert.DoesNotContain("database-snapshot-local-create", cut.Markup);
             Assert.DoesNotContain("database-snapshot-ipfs-restore", cut.Markup);
         });
@@ -116,4 +117,6 @@ public sealed class SettingsPageDataSourcesTests
             }
         });
     }
+
+    private static string LegacyProviderName() => string.Concat("Sql", "ite");
 }

@@ -50,6 +50,11 @@ public static class DatabaseProfileStartupConnectionResolver
             return CreateDefaultPostgreSqlStartupOptions();
         }
 
+        LegacyDatabaseProfileCatalogQuarantine.QuarantineIfNeeded(
+            catalogPath,
+            Path.Combine(databaseProfilesRoot, "active-profile.json"),
+            logger: null);
+
         var catalog = ReadDocument(
             catalogPath,
             static () => new DatabaseProfileCatalogDocument());
@@ -94,17 +99,10 @@ public static class DatabaseProfileStartupConnectionResolver
     {
         return profile.ProviderKind switch
         {
-            DatabaseProviderKind.Sqlite => throw CreateUnsupportedLegacySqliteProfileException(profile),
             DatabaseProviderKind.PostgreSql => BuildPostgreSqlConnectionString(profile, controlPlaneRoot),
             DatabaseProviderKind.InMemory => profile.InMemory?.DatabaseName ?? throw new InvalidOperationException("In-memory profile is missing a database name."),
             _ => throw new InvalidOperationException($"Unsupported provider '{profile.ProviderKind}'.")
         };
-    }
-
-    private static InvalidOperationException CreateUnsupportedLegacySqliteProfileException(DatabaseProfileRecord profile)
-    {
-        return new InvalidOperationException(
-            $"Database profile '{profile.DisplayName}' ({profile.Id:D}) uses legacy SQLite storage, which is no longer supported by the main runtime. Create a PostgreSQL profile and migrate the data manually before selecting this profile.");
     }
 
     private static string BuildPostgreSqlConnectionString(DatabaseProfileRecord profile, string controlPlaneRoot)
@@ -193,7 +191,6 @@ public static class DatabaseProfileStartupConnectionResolver
         {
             return configuredProvider.Trim().ToLowerInvariant() switch
             {
-                "sqlite" => throw new InvalidOperationException("Database provider 'sqlite' is no longer supported by the main runtime. Configure 'postgresql' and provide a PostgreSQL connection string."),
                 "postgres" or "postgresql" => DatabaseProviderKind.PostgreSql,
                 "inmemory" or "memory" => DatabaseProviderKind.InMemory,
                 _ => throw new InvalidOperationException($"Unsupported database provider '{configuredProvider}'.")
@@ -208,7 +205,7 @@ public static class DatabaseProfileStartupConnectionResolver
 
         if (!string.IsNullOrWhiteSpace(configuredConnection))
         {
-            throw new InvalidOperationException("Database connection string does not look like a PostgreSQL connection string. SQLite connection strings are no longer supported by the main runtime.");
+            throw new InvalidOperationException("Database connection string does not look like a PostgreSQL connection string.");
         }
 
         return DatabaseProviderKind.PostgreSql;

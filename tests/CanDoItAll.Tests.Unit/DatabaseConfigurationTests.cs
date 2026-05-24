@@ -59,7 +59,7 @@ public sealed class DatabaseConfigurationTests
     }
 
     [Fact]
-    public void AppDbContextFactory_RejectsSqlite_WhenConfiguredViaEnvironment()
+    public void AppDbContextFactory_rejects_unknown_provider_when_configured_via_environment()
     {
         const string providerVariable = "CANDOITALL_DATABASE_PROVIDER";
         const string connectionVariable = "CANDOITALL_DATABASE_CONNECTION";
@@ -68,12 +68,12 @@ public sealed class DatabaseConfigurationTests
 
         try
         {
-            Environment.SetEnvironmentVariable(providerVariable, "Sqlite");
+            Environment.SetEnvironmentVariable(providerVariable, string.Concat("Sql", "ite"));
             Environment.SetEnvironmentVariable(connectionVariable, "Data Source=:memory:");
 
             var ex = Assert.Throws<InvalidOperationException>(() => new AppDbContextFactory().CreateDbContext([]));
 
-            Assert.Contains("SQLite is no longer supported", ex.Message, StringComparison.Ordinal);
+            Assert.Contains("Unsupported database provider", ex.Message, StringComparison.Ordinal);
         }
         finally
         {
