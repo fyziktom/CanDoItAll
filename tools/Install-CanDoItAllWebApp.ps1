@@ -56,6 +56,55 @@ function Remove-DirectoryRobust {
     }
 }
 
+function Copy-DirectoryContents {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$SourceDirectory,
+        [Parameter(Mandatory = $true)]
+        [string]$DestinationDirectory
+    )
+
+    if (-not (Test-Path -LiteralPath $SourceDirectory -PathType Container)) {
+        throw "Directory '$SourceDirectory' was not found."
+    }
+
+    $sourceRoot = Resolve-AbsolutePath $SourceDirectory
+    $separator = [string][System.IO.Path]::DirectorySeparatorChar
+    if (-not $sourceRoot.EndsWith($separator, [System.StringComparison]::Ordinal)) {
+        $sourceRoot += $separator
+    }
+
+    New-Item -ItemType Directory -Force -Path $DestinationDirectory | Out-Null
+
+    Get-ChildItem -LiteralPath $SourceDirectory -Recurse -File -Force | ForEach-Object {
+        $relativePath = $_.FullName.Substring($sourceRoot.Length)
+        $destinationPath = Join-Path $DestinationDirectory $relativePath
+        $destinationParent = Split-Path -Parent $destinationPath
+        New-Item -ItemType Directory -Force -Path $destinationParent | Out-Null
+        Copy-Item -LiteralPath $_.FullName -Destination $destinationPath -Force
+    }
+}
+
+function Assert-RequiredTemplatePacks {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$TemplatesRoot
+    )
+
+    $requiredFiles = @(
+        "Agents\manifest.json",
+        "Processes\manifest.json",
+        "Workflows\manifest.yaml"
+    )
+
+    foreach ($requiredFile in $requiredFiles) {
+        $path = Join-Path $TemplatesRoot $requiredFile
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+            throw "Required template pack file '$path' was not found."
+        }
+    }
+}
+
 function Invoke-CheckedCommand {
     param(
         [Parameter(Mandatory = $true)]
@@ -500,6 +549,7 @@ $RepoRoot = Resolve-AbsolutePath $RepoRoot
 $InstallRoot = Resolve-AbsolutePath $InstallRoot
 $ShortcutPath = Resolve-AbsolutePath $ShortcutPath
 $projectPath = Resolve-AbsolutePath (Join-Path $RepoRoot "src\CanDoItAll.Web\CanDoItAll.Web.csproj")
+$sourceTemplatesRoot = Resolve-AbsolutePath (Join-Path $RepoRoot "Templates")
 $appRoot = Join-Path $InstallRoot "app"
 $runtimeRoot = Join-Path $InstallRoot "runtime"
 $pidFilePath = Join-Path $runtimeRoot "server.pid"
@@ -514,6 +564,8 @@ $shortcutTarget = (Get-Command powershell -CommandType Application).Source
 if (-not (Test-Path -LiteralPath $projectPath)) {
     throw "Could not find CanDoItAll.Web project at '$projectPath'."
 }
+
+Assert-RequiredTemplatePacks -TemplatesRoot $sourceTemplatesRoot
 
 Write-Status "Preparing install folders under $InstallRoot"
 New-Item -ItemType Directory -Force -Path $InstallRoot | Out-Null
@@ -550,9 +602,14 @@ if (-not (Test-Path -LiteralPath $publishedExePath)) {
     throw "Publish completed, but the Windows app host was not found at '$publishedExePath'."
 }
 
+Write-Status "Copying repository templates"
+Copy-DirectoryContents -SourceDirectory $sourceTemplatesRoot -DestinationDirectory (Join-Path $publishRoot "Templates")
+Assert-RequiredTemplatePacks -TemplatesRoot (Join-Path $publishRoot "Templates")
+
 Write-Status "Replacing installed app files"
 Remove-DirectoryRobust -Path $appRoot
 Move-Item -LiteralPath $publishRoot -Destination $appRoot
+Assert-RequiredTemplatePacks -TemplatesRoot (Join-Path $appRoot "Templates")
 
 $launcherContent = Get-LauncherScriptContent -BindHost $BindHost -Port $Port
 Set-Content -LiteralPath $launcherPath -Value $launcherContent -Encoding UTF8
