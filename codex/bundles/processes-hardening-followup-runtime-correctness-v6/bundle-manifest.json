@@ -1,0 +1,25 @@
+{
+  "name": "processes-hardening-followup-runtime-correctness-v6",
+  "version": "1.0.0",
+  "preparedAtUtc": "2026-05-25T00:00:00Z",
+  "reviewedBranch": "processes-hardening",
+  "reviewedHead": "c66ae4d4dcfc10623fad9f9c926bedf8932917a3",
+  "subbundles": [
+    "01-alias-ledger-overlap-and-readonly-autopromotion",
+    "02-projection-identity-hash-and-artifact-dedupe",
+    "03-unified-completion-artifact-validation",
+    "04-refactor-checkpoint-a-metadata-contract-grounding",
+    "05-typed-block-cause-propagation",
+    "06-script-side-effect-manifest-and-post-audit",
+    "07-refactor-checkpoint-b-tool-policy-and-artifact-validator",
+    "08-storage-service-backed-artifact-content-reader",
+    "09-explicit-workflow-subprocess-output-mapping",
+    "10-recovery-router-and-actionable-lifecycle",
+    "11-refactor-checkpoint-c-recovery-health-services",
+    "12-contract-strictness-lint-gates-and-template-migration",
+    "13-process-health-invariant-dashboard-and-diagnostics",
+    "14-generic-scenario-harness-and-final-red-team-closure"
+  ],
+  "requiresPostgreSqlOnly": true,
+  "requiresRefactoringCheckpoints": true
+}
