@@ -1,2 +1,0 @@
-development is an ancestor of HEAD.
-ExitCode=0

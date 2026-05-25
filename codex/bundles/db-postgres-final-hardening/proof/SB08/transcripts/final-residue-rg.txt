@@ -1,7 +1,0 @@
-tests\CanDoItAll.Tests.Unit\DatabaseProfileControlPlaneTests.cs:362:    public static string RetiredProviderName() => "Sqlite";
-tests\CanDoItAll.Tests.Components\SettingsPageDataSourcesTests.cs:122:    private static string LegacyProviderName() => "Sqlite";
-src\CanDoItAll.Infrastructure\ControlPlane\LegacyDatabaseProfileCatalogQuarantine.cs:14:    public const string RetiredProviderName = "Sqlite";
-src\CanDoItAll.Infrastructure\ControlPlane\LegacyDatabaseProfileCatalogQuarantine.cs:15:    public const string RetiredConnectionPropertyName = "sqlite";
-src\CanDoItAll.Infrastructure\ControlPlane\LegacyDatabaseProfileCatalogQuarantine.cs:16:    public const string RetiredManagedSourceName = "ManagedSqlite";
-src\CanDoItAll.Infrastructure\ControlPlane\LegacyDatabaseProfileCatalogQuarantine.cs:17:    public const string RetiredExternalFileSourceName = "ExternalSqliteFile";
-src\CanDoItAll.Infrastructure\ControlPlane\LegacyDatabaseProfileCatalogQuarantine.cs:18:    public const string RetiredImportedSourceName = "ImportedSqlite";

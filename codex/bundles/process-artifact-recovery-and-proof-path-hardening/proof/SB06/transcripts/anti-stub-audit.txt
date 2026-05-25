@@ -1,5 +1,0 @@
-Command: Inspect live-run observation records for manual generated-app edits or chat-only operator notes.
-Exit Code: 0
-Invariant IDs: SB06-I001
-
-No generated product app file was edited by Codex. Operator observations were recorded through the process manager directive API and summarized in bundle proof.

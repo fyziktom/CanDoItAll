@@ -1,6 +1,0 @@
-Command: rg -n "TODO|NotImplemented|throw new NotImplementedException" src\CanDoItAll.Modules.CognitiveMemory\Advanced src\CanDoItAll.Modules.CognitiveMemory\Quality tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs tests\CanDoItAll.Tests.Unit\CognitiveMemoryQualityFoundationTests.cs
-ExitCode: 1
-Output:
-No TODO, NotImplemented, or throw new NotImplementedException markers were found in changed cognitive-memory production or test files.
-No stubs found for SB03-RED-CORPUS-01, SB04-CZECH-DIACRITIC-01, SB05-ACCEPTED-USE-01, SB06-EMBEDDING-CLUSTER-01, SB07-DOMAIN-PROVENANCE-01, SB08-RECALL-LINEAGE-01, SB09-ARCHITECTURE-OPTIONS-01, or SB10-END-TO-END-01.
-

@@ -1,8 +1,0 @@
-Command: git diff --unified=0 -- src/CanDoItAll.AgentFramework.Models/Conversations/ConversationModels.cs src/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.cs src/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.Session.cs src/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.AgentFactory.cs src/CanDoItAll.AgentFramework.Maf/Runtime/Workflows/MafWorkflowLlmComponentInvoker.cs | Select-String -Pattern "TODO|NotImplemented|extract|repair|fallback|code fence"
-ExitCode: 0
-
-No matches in changed production diff.
-Invariant ID covered: INV-SB01-001
-Invariant ID covered: INV-SB01-002
-Invariant ID covered: INV-SB01-003
-Invariant ID covered: INV-SB01-004

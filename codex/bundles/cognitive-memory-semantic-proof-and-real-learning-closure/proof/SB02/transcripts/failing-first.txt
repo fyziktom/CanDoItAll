@@ -1,6 +1,0 @@
-Command: python codex/skills/bundles/candoitall-bundle-preparation/scripts/validate_bundle.py codex/skills/bundles/candoitall-bundle-preparation/tests/fixtures/artifact-proof-machine-specific-paths --stage completed
-ExitCode: 1
-Output:
-PortableProof.RejectsMachineSpecificArtifactPaths rejected machine-specific proof paths and missing portable repo:// or bundle:// artifact citations.
-SB02-PORTABLE-PROOF-01
-

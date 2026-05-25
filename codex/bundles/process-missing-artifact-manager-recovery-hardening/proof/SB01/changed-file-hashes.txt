@@ -1,3 +1,0 @@
-564BD9CF96EE9C304B0E9E6F2C86A066D701F8090B994E0EA7C6F5765B249EDD  repo://src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.CompletionArtifactRecovery.cs
-6CA1CF94238A7EC42B61B223D8AA1DC7D88DD8BE2BA9268A4CC808EAF0899841  repo://src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs
-58F71243197DC496867BF5ED0168C730181B0AAEA8C2ABD52CE8B2E7E6D5A81A  repo://tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs

@@ -1,5 +1,0 @@
-Command: rg -n "gpt-5.4-mini|Cognitive Memory|workspace|project-structure" Templates\Agents tests\CanDoItAll.Tests.Integration\AgentFrameworkWorkspaceSeedIntegrationTests.cs
-Exit Code: 0
-Invariant IDs: SB04-I001
-
-No fake agent readiness, direct database mutation, or process-specific shortcut was added. Readiness is proven by managed agent template seed files, seed integration tests, and runtime API evidence.

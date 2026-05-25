@@ -1,8 +1,0 @@
-Command: rg -n -S 'TODO|NotImplemented|NotImplementedException|fixture-specific|hard-coded success|fake proof' <changed files>
-Invariant: MCP-INSTALL-TEMPLATE-FREE
-Expectation: changed files contain no stub, TODO, fixture-only, or fake-proof markers
-ExitCode: 0
---- Output ---
-Anti-stub audit command: rg -n -S 'TODO|NotImplemented|NotImplementedException|fixture-specific|hard-coded success|fake proof' <changed files>
-RESULT: PASS - no TODO, NotImplemented, fixture-specific, hard-coded success, or fake-proof markers found in changed files.
-

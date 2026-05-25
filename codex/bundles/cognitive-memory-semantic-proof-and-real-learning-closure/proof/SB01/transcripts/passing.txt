@@ -1,6 +1,0 @@
-Command: python codex/skills/bundles/candoitall-bundle-preparation/scripts/validate_bundle.py codex/skills/bundles/candoitall-bundle-preparation/tests/fixtures/capability-proof-complete --stage completed
-ExitCode: 0
-Output:
-CapabilityProof.ValidatesSourceBackedCapabilityClaims passed for source-backed Czech/diacritic and embedding-backed capability proof.
-SB01-CLAIM-TO-CODE-01
-

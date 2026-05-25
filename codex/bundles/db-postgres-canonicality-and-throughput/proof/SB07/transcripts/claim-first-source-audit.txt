@@ -1,8 +1,0 @@
-src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs:39:            var candidateHeaders = await LoadDispatchCandidateHeadersAsync(processRunId, cancellationToken);
-src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs:52:                    var dispatchClaim = await TryClaimStepDispatchAsync(
-src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs:69:                        candidate = await LoadDispatchCandidateAsync(processRunId, dispatchClaim.StepRunId, cancellationToken);
-src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs:177:                                var refreshedCandidate = await LoadDispatchCandidateAsync(processRunId, dispatchClaim.StepRunId, cancellationToken);
-src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs:446:    private async Task<ProcessStepDispatchClaim?> TryClaimStepDispatchAsync(
-src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs:485:            "Claimed process automation dispatch for run {RunId}, step {StepRunId}. Trigger={Trigger}. LeaseExpiresAtUtc={LeaseExpiresAtUtc}.",
-src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs:1239:    private async Task<IReadOnlyList<DispatchCandidateHeader>> LoadDispatchCandidateHeadersAsync(
-ExitCode=0

@@ -1,5 +1,0 @@
-Command: python codex\bundles\db-postgres-canonicality-and-throughput\scripts\validate_bundle.py
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: completed-bundle-validator
-Bundle validation passed.
-ExitCode: 0
