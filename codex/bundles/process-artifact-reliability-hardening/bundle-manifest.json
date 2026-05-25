@@ -1,0 +1,18 @@
+{
+  "name": "process-artifact-reliability-hardening",
+  "profile": "initiative",
+  "preparedAt": "2026-05-25",
+  "repository": "fyziktom/CanDoItAll",
+  "branch": "development",
+  "reviewedCommit": "62dfbdd68bc84cd74f852f3e40a5f42a2183174c",
+  "databaseScope": "PostgreSQL-only",
+  "status": "prepared",
+  "subbundles": [
+    "01-process-owned-step-completion-finalizer",
+    "02-artifact-contract-validation-and-diagnostics",
+    "03-evidence-bound-manager-recovery",
+    "04-projection-provenance-and-placeholder-safety",
+    "05-retry-blocking-and-stranded-step-hardening",
+    "06-postgresql-only-validation-and-red-team-suite"
+  ]
+}
