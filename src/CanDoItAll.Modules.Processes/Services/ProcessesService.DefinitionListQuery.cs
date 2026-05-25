@@ -96,28 +96,39 @@ public sealed class ProcessDefinitionListQueryService : IProcessDefinitionListQu
                 .Select(group => new ProcessVersionCountProjection(group.Key, group.Count()))
                 .ToDictionaryAsync(item => item.ProcessDefinitionVersionId, item => item.Count, cancellationToken);
 
-        var runs = await dbContext.Set<ProcessRun>()
+        var scopedRunsQuery = dbContext.Set<ProcessRun>()
             .AsNoTracking()
-            .Where(item => definitionIds.Contains(item.ProcessDefinitionId))
-            .Select(item => new ProcessDefinitionRunProjection(item.Id, item.ProcessDefinitionId, item.Status))
-            .ToListAsync(cancellationToken);
-        var runsByDefinitionId = runs
+            .Where(item => definitionIds.Contains(item.ProcessDefinitionId));
+        if (projectId.HasValue)
+        {
+            scopedRunsQuery = scopedRunsQuery.Where(item => item.ProjectId == projectId.Value);
+        }
+
+        var activeRunCountByDefinitionId = await scopedRunsQuery
+            .Where(item => item.Status == ProcessRunStatus.Active)
             .GroupBy(item => item.ProcessDefinitionId)
-            .ToDictionary(group => group.Key, group => group.ToList());
-        var runIds = runs.Select(item => item.Id).ToList();
-        var capabilityGapAssignmentsByRunId = runIds.Count == 0
-            ? new Dictionary<Guid, List<Guid>>()
-            : (await dbContext.Set<ProcessRunAssignment>()
-                    .AsNoTracking()
-                    .Where(item => runIds.Contains(item.ProcessRunId) && item.IsCapabilityGap)
-                    .Select(item => new ProcessCapabilityGapProjection(item.ProcessRunId, item.RoleRequirementId))
-                    .ToListAsync(cancellationToken))
-                .GroupBy(item => item.ProcessRunId)
-                .ToDictionary(
-                    group => group.Key,
-                    group => group
-                        .Select(item => item.RoleRequirementId)
-                        .ToList());
+            .Select(group => new ProcessDefinitionRunCountProjection(group.Key, group.Count()))
+            .ToDictionaryAsync(item => item.ProcessDefinitionId, item => item.Count, cancellationToken);
+        var summaryRoleIds = roleIdsByVersionId.Values
+            .SelectMany(item => item)
+            .Distinct()
+            .ToList();
+        var capabilityGapCountByDefinitionId = summaryRoleIds.Count == 0
+            ? new Dictionary<Guid, int>()
+            : await dbContext.Set<ProcessRunAssignment>()
+                .AsNoTracking()
+                .Where(item => item.IsCapabilityGap && summaryRoleIds.Contains(item.RoleRequirementId))
+                .Join(
+                    scopedRunsQuery,
+                    assignment => assignment.ProcessRunId,
+                    run => run.Id,
+                    (_, run) => new
+                    {
+                        run.ProcessDefinitionId
+                    })
+                .GroupBy(item => item.ProcessDefinitionId)
+                .Select(group => new ProcessDefinitionRunCountProjection(group.Key, group.Count()))
+                .ToDictionaryAsync(item => item.ProcessDefinitionId, item => item.Count, cancellationToken);
 
         var projectIds = definitions
             .Where(item => item.ProjectId.HasValue)
@@ -141,13 +152,10 @@ public sealed class ProcessDefinitionListQueryService : IProcessDefinitionListQu
                                   roleIdsByVersionId.TryGetValue(summaryVersionId.Value, out var resolvedRoleIds)
                         ? resolvedRoleIds
                         : [];
-                    var definitionRuns = runsByDefinitionId.GetValueOrDefault(definition.Id) ?? [];
+                    var activeRunCount = activeRunCountByDefinitionId.GetValueOrDefault(definition.Id);
                     var capabilityGapCount = roleIds.Count == 0
                         ? 0
-                        : definitionRuns.Sum(
-                            run => capabilityGapAssignmentsByRunId.TryGetValue(run.Id, out var gapRoleIds)
-                                ? gapRoleIds.Count(roleIds.Contains)
-                                : 0);
+                        : capabilityGapCountByDefinitionId.GetValueOrDefault(definition.Id);
 
                     return new ProcessDefinitionListItem(
                         definition.Id,
@@ -160,8 +168,7 @@ public sealed class ProcessDefinitionListQueryService : IProcessDefinitionListQu
                         summaryVersionId.HasValue && stepCountByVersionId.TryGetValue(summaryVersionId.Value, out var stepCount)
                             ? stepCount
                             : 0,
-                        definitionRuns.Count(
-                            run => run.Status == ProcessRunStatus.Active),
+                        activeRunCount,
                         capabilityGapCount,
                         definition.Summary,
                         definition.ValueStatement,
@@ -193,7 +200,5 @@ public sealed class ProcessDefinitionListQueryService : IProcessDefinitionListQu
 
     private sealed record ProcessVersionCountProjection(Guid ProcessDefinitionVersionId, int Count);
 
-    private sealed record ProcessDefinitionRunProjection(Guid Id, Guid ProcessDefinitionId, ProcessRunStatus Status);
-
-    private sealed record ProcessCapabilityGapProjection(Guid ProcessRunId, Guid RoleRequirementId);
+    private sealed record ProcessDefinitionRunCountProjection(Guid ProcessDefinitionId, int Count);
 }

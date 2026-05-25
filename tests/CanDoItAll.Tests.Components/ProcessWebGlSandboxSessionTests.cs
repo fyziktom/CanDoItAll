@@ -100,10 +100,14 @@ public sealed class ProcessWebGlSandboxSessionTests
         var updatedSurface = session.BuildSurface();
 
         Assert.Contains(updatedSurface.Edges, edge =>
-            string.Equals(edge.SourceAnchorId, candidate.SourceAnchorId, StringComparison.Ordinal) &&
-            string.Equals(edge.TargetAnchorId, candidate.TargetAnchorId, StringComparison.Ordinal));
+            string.Equals(edge.SourceNodeId, candidate.SourceNodeId, StringComparison.Ordinal) &&
+            string.Equals(edge.TargetNodeId, candidate.TargetNodeId, StringComparison.Ordinal) &&
+            string.Equals(edge.SourcePortId, candidate.SourcePortId, StringComparison.Ordinal) &&
+            string.Equals(edge.TargetPortId, candidate.TargetPortId, StringComparison.Ordinal));
         Assert.DoesNotContain(updatedSurface.Edges, edge =>
-            string.Equals(edge.SourceAnchorId, candidate.SourceAnchorId, StringComparison.Ordinal) &&
+            string.Equals(edge.SourceNodeId, candidate.SourceNodeId, StringComparison.Ordinal) &&
+            string.Equals(edge.TargetNodeId, candidate.TargetNodeId, StringComparison.Ordinal) &&
+            string.Equals(edge.SourcePortId, candidate.SourcePortId, StringComparison.Ordinal) &&
             string.Equals(edge.TargetAnchorId, candidate.AlternateTargetAnchorId, StringComparison.Ordinal));
         Assert.Equal("Created connection", session.CommandLog[0].Title);
     }
@@ -379,6 +383,11 @@ public sealed class ProcessWebGlSandboxSessionTests
 
             foreach (var sourceAnchor in sourceOutputs.Skip(1))
             {
+                if (string.Equals(NormalizeAnchorCategory(sourceAnchor.CategoryKey), "artifact", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
                 foreach (var targetNode in surface.Nodes)
                 {
                     if (string.Equals(targetNode.Id, sourceNode.Id, StringComparison.Ordinal))
@@ -397,7 +406,15 @@ public sealed class ProcessWebGlSandboxSessionTests
                     var alternateTarget = targetInputs[0];
                     foreach (var targetAnchor in targetInputs)
                     {
+                        if (string.Equals(NormalizeAnchorCategory(targetAnchor.CategoryKey), "artifact", StringComparison.Ordinal))
+                        {
+                            continue;
+                        }
+
                         if (!AreAnchorCategoriesCompatible(sourceAnchor, targetAnchor) ||
+                            surface.Edges.Any(edge =>
+                                string.Equals(edge.SourceNodeId, sourceNode.Id, StringComparison.Ordinal) &&
+                                string.Equals(edge.TargetNodeId, targetNode.Id, StringComparison.Ordinal)) ||
                             surface.Edges.Any(edge =>
                                 string.Equals(edge.SourceAnchorId, sourceAnchor.Id, StringComparison.Ordinal) &&
                                 string.Equals(edge.TargetAnchorId, targetAnchor.Id, StringComparison.Ordinal)))

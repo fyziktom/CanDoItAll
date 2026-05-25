@@ -10,19 +10,31 @@ namespace CanDoItAll.Modules.Workspace;
 public sealed class DatabaseProfileWorkspaceService(
     IDatabaseProfileService profileService,
     IDatabaseProfileRuntimeAccessor profileAccessor,
-    IDatabaseSnapshotService snapshotService,
     IDatabaseTransferService transferService,
     IDatabaseDriverRegistry driverRegistry,
     IAppDatabaseBootstrapper bootstrapper,
-    ISwitchableAppDbContextFactory dbContextFactory,
+    IProfileAppDbContextFactory dbContextFactory,
     IDatabaseSwitchCoordinator switchCoordinator,
     ILogger<DatabaseProfileWorkspaceService> logger)
 {
     private static readonly TimeSpan SchemaHealthTimeout = TimeSpan.FromSeconds(5);
 
-    public Task<IReadOnlyList<DatabaseProfileSummary>> ListProfilesAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<DatabaseProfileSummary>> ListProfilesAsync(CancellationToken cancellationToken = default)
     {
-        return profileService.ListAsync(cancellationToken);
+        var runtimeProfile = profileAccessor.ResolveCurrentProfile();
+        var pendingSelection = await profileService.GetCurrentSelectionAsync(cancellationToken);
+        var pendingProfileId = ResolvePendingRestartProfileId(runtimeProfile, pendingSelection);
+        var profiles = await profileService.ListAsync(cancellationToken);
+        return profiles
+            .Where(profile => profile.ProviderKind == DatabaseProviderKind.PostgreSql &&
+                profile.SourceKind == DatabaseProfileSourceKind.PostgresConnection)
+            .Select(profile => profile with
+            {
+                IsActive = !runtimeProfile.Profile.Runtime.LockedByRuntimeOverride &&
+                    profile.Id == runtimeProfile.Profile.Id,
+                IsPendingRestartActivation = pendingProfileId == profile.Id
+            })
+            .ToList();
     }
 
     public Task<DatabaseProfileEditorModel> GetProfileAsync(Guid? id = null, CancellationToken cancellationToken = default)
@@ -30,9 +42,11 @@ public sealed class DatabaseProfileWorkspaceService(
         return profileService.GetEditorAsync(id, cancellationToken);
     }
 
-    public Task<DatabaseSelectionStateModel> GetCurrentSelectionAsync(CancellationToken cancellationToken = default)
+    public async Task<DatabaseSelectionStateModel> GetCurrentSelectionAsync(CancellationToken cancellationToken = default)
     {
-        return profileService.GetCurrentSelectionAsync(cancellationToken);
+        var runtimeProfile = profileAccessor.ResolveCurrentProfile();
+        var pendingSelection = await profileService.GetCurrentSelectionAsync(cancellationToken);
+        return CreateSelection(runtimeProfile, pendingSelection);
     }
 
     public Task<IReadOnlyList<DatabaseTransferSourceSummary>> ListTransferSourcesAsync(
@@ -59,10 +73,10 @@ public sealed class DatabaseProfileWorkspaceService(
 
     public async Task<DatabaseProfileEditorModel> GetCurrentEditorAsync(CancellationToken cancellationToken = default)
     {
-        var selection = await profileService.GetCurrentSelectionAsync(cancellationToken);
+        var selection = await GetCurrentSelectionAsync(cancellationToken);
         if (!selection.IsRuntimeLocked)
         {
-            return await profileService.GetEditorAsync(selection.ActiveProfileId, cancellationToken);
+            return await profileService.GetEditorAsync(selection.RuntimeProfileId, cancellationToken);
         }
 
         var profile = profileAccessor.ResolveCurrentProfile();
@@ -109,7 +123,7 @@ public sealed class DatabaseProfileWorkspaceService(
         }
 
         var canApplySchema = !profile.Profile.Runtime.LockedByRuntimeOverride &&
-            profile.Profile.ProviderKind is DatabaseProviderKind.Sqlite or DatabaseProviderKind.PostgreSql;
+            profile.Profile.ProviderKind == DatabaseProviderKind.PostgreSql;
 
         if (profile.Profile.ProviderKind == DatabaseProviderKind.InMemory)
         {
@@ -119,18 +133,6 @@ public sealed class DatabaseProfileWorkspaceService(
                 "In-memory data sources do not require relational migrations.",
                 [],
                 canApplySchema: false);
-        }
-
-        if (profile.Profile.ProviderKind == DatabaseProviderKind.Sqlite &&
-            !string.IsNullOrWhiteSpace(profile.Profile.Sqlite?.DatabasePath) &&
-            !File.Exists(profile.Profile.Sqlite.DatabasePath))
-        {
-            return CreateSchemaHealth(
-                id,
-                DatabaseProfileSchemaStatus.NeedsMigration,
-                "The SQLite database file has not been created yet. Apply the current schema before activation or transfer.",
-                [],
-                canApplySchema);
         }
 
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -286,67 +288,6 @@ public sealed class DatabaseProfileWorkspaceService(
         }
     }
 
-    public async Task<Result<Guid>> CreateManagedSqliteAndActivateAsync(
-        string? displayName = null,
-        CancellationToken cancellationToken = default)
-    {
-        var saveResult = await profileService.SaveAsync(new DatabaseProfileEditorModel
-        {
-            DisplayName = string.IsNullOrWhiteSpace(displayName)
-                ? "Managed SQLite workspace"
-                : displayName.Trim(),
-            ProviderKind = DatabaseProviderKind.Sqlite,
-            SourceKind = DatabaseProfileSourceKind.ManagedSqlite
-        }, cancellationToken);
-        if (saveResult.IsFailure)
-        {
-            return saveResult;
-        }
-
-        var createResult = await CreateEmptyAsync(saveResult.Value, cancellationToken);
-        if (createResult.IsFailure)
-        {
-            return Result<Guid>.Failure(createResult.Errors);
-        }
-
-        var switchResult = await switchCoordinator.SwitchAsync(saveResult.Value, cancellationToken);
-        if (switchResult.IsFailure)
-        {
-            return Result<Guid>.Failure(switchResult.Errors);
-        }
-
-        return Result<Guid>.Success(saveResult.Value);
-    }
-
-    public Task<Result<DatabaseSnapshotExportResult>> CreateSnapshotAsync(
-        Guid sourceProfileId,
-        DatabaseSnapshotTransportKind transportKind,
-        CancellationToken cancellationToken = default)
-    {
-        return snapshotService.CreateSnapshotAsync(sourceProfileId, transportKind, cancellationToken);
-    }
-
-    public Task<Result<DatabaseSnapshotMaterializationResult>> CloneAsync(
-        Guid sourceProfileId,
-        string displayName,
-        DatabaseSnapshotTransportKind transportKind = DatabaseSnapshotTransportKind.Local,
-        CancellationToken cancellationToken = default)
-    {
-        return snapshotService.CloneAsync(new DatabaseCloneRequest
-        {
-            SourceProfileId = sourceProfileId,
-            DisplayName = displayName,
-            TransportKind = transportKind
-        }, cancellationToken);
-    }
-
-    public Task<Result<DatabaseSnapshotMaterializationResult>> MaterializeSnapshotAsync(
-        DatabaseSnapshotMaterializationRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        return snapshotService.MaterializeSnapshotAsync(request, cancellationToken);
-    }
-
     private static DatabaseProfileEditorModel CreateEditor(DatabaseProfileRecord profile)
     {
         return new DatabaseProfileEditorModel
@@ -355,7 +296,7 @@ public sealed class DatabaseProfileWorkspaceService(
             DisplayName = profile.DisplayName,
             ProviderKind = profile.ProviderKind,
             SourceKind = profile.SourceKind,
-            SqliteDatabasePath = profile.Sqlite?.DatabasePath ?? profile.InMemory?.DatabaseName,
+            InMemoryDatabaseName = profile.InMemory?.DatabaseName,
             WorkspaceRoot = profile.Storage.WorkspaceRoot,
             PostgresHost = profile.PostgreSql?.Host ?? "localhost",
             PostgresPort = profile.PostgreSql?.Port ?? 5432,
@@ -364,9 +305,63 @@ public sealed class DatabaseProfileWorkspaceService(
             PostgresPassword = string.Empty,
             PostgresAdminDatabaseName = profile.PostgreSql?.AdminDatabaseName,
             PostgresTrustServerCertificate = profile.PostgreSql?.TrustServerCertificate ?? false,
-            OriginProfileId = profile.Clone.OriginProfileId,
-            OriginSnapshotId = profile.Clone.OriginSnapshotId,
             IsRuntimeLocked = profile.Runtime.LockedByRuntimeOverride
+        };
+    }
+
+    private static DatabaseSelectionStateModel CreateSelection(
+        ResolvedDatabaseProfile resolvedProfile,
+        DatabaseSelectionStateModel? pendingSelection = null)
+    {
+        var selection = new DatabaseSelectionStateModel
+        {
+            ActiveProfileId = resolvedProfile.Profile.Id,
+            RuntimeProfileId = resolvedProfile.Profile.Id,
+            DisplayName = resolvedProfile.Profile.DisplayName,
+            ProviderKind = resolvedProfile.Profile.ProviderKind,
+            SourceKind = resolvedProfile.Profile.SourceKind,
+            ResolutionSource = resolvedProfile.ResolutionSource,
+            IsRuntimeLocked = resolvedProfile.Profile.Runtime.LockedByRuntimeOverride,
+            Fingerprint = resolvedProfile.Profile.Runtime.Fingerprint,
+            WorkspaceRoot = resolvedProfile.Profile.Storage.WorkspaceRoot,
+            Descriptor = BuildDescriptor(resolvedProfile.Profile)
+        };
+
+        if (pendingSelection is not null &&
+            ResolvePendingRestartProfileId(resolvedProfile, pendingSelection) is { } pendingProfileId)
+        {
+            selection.PendingRestartProfileId = pendingProfileId;
+            selection.PendingRestartDisplayName = pendingSelection.DisplayName;
+            selection.PendingRestartDescriptor = pendingSelection.Descriptor;
+            selection.PendingRestartFingerprint = pendingSelection.Fingerprint;
+        }
+
+        return selection;
+    }
+
+    private static Guid? ResolvePendingRestartProfileId(
+        ResolvedDatabaseProfile runtimeProfile,
+        DatabaseSelectionStateModel pendingSelection)
+    {
+        if (runtimeProfile.Profile.Runtime.LockedByRuntimeOverride)
+        {
+            return null;
+        }
+
+        return pendingSelection.ActiveProfileId == runtimeProfile.Profile.Id
+            ? null
+            : pendingSelection.ActiveProfileId;
+    }
+
+    private static string BuildDescriptor(DatabaseProfileRecord profile)
+    {
+        return profile.ProviderKind switch
+        {
+            DatabaseProviderKind.PostgreSql => profile.PostgreSql is null
+                ? string.Empty
+                : $"{profile.PostgreSql.Host}:{profile.PostgreSql.Port}/{profile.PostgreSql.DatabaseName}",
+            DatabaseProviderKind.InMemory => profile.InMemory?.DatabaseName ?? string.Empty,
+            _ => string.Empty
         };
     }
 
@@ -398,11 +393,9 @@ public sealed class DatabaseProfileWorkspaceService(
             return [];
         }
 
-        var actualSchema = dbContext.Database.IsSqlite()
-            ? await ReadSqliteSchemaAsync(dbContext, expectedSchema.Keys, cancellationToken)
-            : dbContext.Database.IsNpgsql()
-                ? await ReadPostgreSqlSchemaAsync(dbContext, expectedSchema.Keys, cancellationToken)
-                : [];
+        var actualSchema = dbContext.Database.IsNpgsql()
+            ? await ReadPostgreSqlSchemaAsync(dbContext, expectedSchema.Keys, cancellationToken)
+            : [];
 
         if (actualSchema.Count == 0)
         {
@@ -463,89 +456,6 @@ public sealed class DatabaseProfileWorkspaceService(
         }
 
         return expectedSchema;
-    }
-
-    private static async Task<Dictionary<SchemaTable, HashSet<string>>> ReadSqliteSchemaAsync(
-        AppDbContext dbContext,
-        IEnumerable<SchemaTable> expectedTables,
-        CancellationToken cancellationToken)
-    {
-        var schema = new Dictionary<SchemaTable, HashSet<string>>();
-        var connection = dbContext.Database.GetDbConnection();
-        var shouldCloseConnection = connection.State != System.Data.ConnectionState.Open;
-        if (shouldCloseConnection)
-        {
-            await connection.OpenAsync(cancellationToken);
-        }
-
-        try
-        {
-            var existingTables = await ReadSqliteTableNamesAsync(connection, cancellationToken);
-            foreach (var table in expectedTables)
-            {
-                if (!existingTables.Contains(table.Name))
-                {
-                    continue;
-                }
-
-                schema[table] = await ReadSqliteColumnsAsync(connection, table.Name, cancellationToken);
-            }
-
-            return schema;
-        }
-        finally
-        {
-            if (shouldCloseConnection)
-            {
-                await connection.CloseAsync();
-            }
-        }
-    }
-
-    private static async Task<HashSet<string>> ReadSqliteTableNamesAsync(
-        System.Data.Common.DbConnection connection,
-        CancellationToken cancellationToken)
-    {
-        await using var command = connection.CreateCommand();
-        command.CommandText =
-            """
-            SELECT "name"
-            FROM "sqlite_master"
-            WHERE "type" = 'table';
-            """;
-
-        var tableNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
-        {
-            if (!reader.IsDBNull(0))
-            {
-                tableNames.Add(reader.GetString(0));
-            }
-        }
-
-        return tableNames;
-    }
-
-    private static async Task<HashSet<string>> ReadSqliteColumnsAsync(
-        System.Data.Common.DbConnection connection,
-        string tableName,
-        CancellationToken cancellationToken)
-    {
-        await using var command = connection.CreateCommand();
-        command.CommandText = $"""PRAGMA table_info("{tableName.Replace("\"", "\"\"", StringComparison.Ordinal)}");""";
-
-        var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
-        {
-            if (!reader.IsDBNull(1))
-            {
-                columns.Add(reader.GetString(1));
-            }
-        }
-
-        return columns;
     }
 
     private static async Task<Dictionary<SchemaTable, HashSet<string>>> ReadPostgreSqlSchemaAsync(

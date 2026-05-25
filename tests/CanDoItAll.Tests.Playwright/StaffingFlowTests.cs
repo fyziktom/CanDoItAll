@@ -193,7 +193,7 @@ public sealed class StaffingFlowTests
             "playwright-seed",
             environmentRoot,
             profileRoot,
-            TestDatabaseProviderKind.Sqlite,
+            TestDatabaseProviderKind.PostgreSql,
             fixture.DatabaseConnectionString,
             workspaceRoot,
             Path.Combine(profileRoot, "manager-artifacts"));

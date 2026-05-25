@@ -517,7 +517,7 @@ public sealed class ProcessSubprocessIntegrationTests
             roles,
             role =>
             {
-                Assert.Equal("person-or-agent", role.PreferredExecutorKind);
+                Assert.Equal(ProcessExecutorKindNames.AiAgent, role.PreferredExecutorKind);
                 Assert.True(role.AllowsFallback, role.Key);
             });
     }

@@ -21,7 +21,7 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
 {
     private const string OpenAiApiKeyEnvironmentVariable = "OPENAI_API_KEY";
     private const string OpenAiChatCompletionsProviderName = "OpenAI chat completions";
-    private static readonly Guid ManagedSqliteRemoteOllamaProviderId = Guid.Parse("12E4C814-E822-0B58-9B9F-52577D7B374E");
+    private static readonly Guid RuntimeFallbackOllamaProviderId = Guid.Parse("12E4C814-E822-0B58-9B9F-52577D7B374E");
 
     public async Task<IReadOnlyList<AgentFrameworkProviderProfile>> ListProvidersAsync(
         CancellationToken cancellationToken = default)
@@ -33,7 +33,6 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
 
         var mappedProviders = providers
             .Select(MapToAgentFrameworkProvider)
-            .Select(ApplyManagedSqliteFallbackIfNeeded)
             .ToList();
         await UpsertCatalogProvidersAsync(mappedProviders, cancellationToken);
 
@@ -44,9 +43,9 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         Guid providerId,
         CancellationToken cancellationToken = default)
     {
-        if (providerId == ManagedSqliteRemoteOllamaProviderId)
+        if (providerId == RuntimeFallbackOllamaProviderId)
         {
-            return CreateManagedSqliteRemoteOllamaProvider();
+            return CreateRuntimeFallbackOllamaProvider();
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -61,7 +60,7 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         var mappedProvider = MapToAgentFrameworkProvider(provider);
         await UpsertCatalogProvidersAsync([mappedProvider], cancellationToken);
 
-        return ApplyManagedSqliteFallbackIfNeeded(mappedProvider);
+        return mappedProvider;
     }
 
     public async Task<AgentFrameworkProviderProfileEditorModel> GetProviderEditorAsync(
@@ -243,7 +242,6 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
 
         var mergedProviders = catalog.Providers
             .Concat(providers)
-            .Select(ApplyManagedSqliteFallbackIfNeeded)
             .GroupBy(item => item.Id)
             .Select(group => group.Last())
             .GroupBy(CreateProviderListIdentity)
@@ -258,7 +256,7 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
                 item.Kind == AgentFrameworkProviderKind.Ollama &&
                 string.Equals(item.Name, ManagedSeedProviderFallbacks.FallbackProviderName, StringComparison.OrdinalIgnoreCase)))
         {
-            mergedProviders.Add(CreateManagedSqliteRemoteOllamaProvider());
+            mergedProviders.Add(CreateRuntimeFallbackOllamaProvider());
             mergedProviders = mergedProviders
                 .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
                 .ToList();
@@ -273,9 +271,7 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
     {
         var catalog = await store.LoadCatalogAsync(cancellationToken);
         var provider = catalog.Providers.FirstOrDefault(item => item.Id == providerId);
-        return provider is null
-            ? null
-            : ApplyManagedSqliteFallbackIfNeeded(provider);
+        return provider;
     }
 
     private AgentFrameworkProviderProfile MapToAgentFrameworkProvider(
@@ -362,22 +358,10 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
             provider.Name.Trim().ToUpperInvariant());
     }
 
-    private AgentFrameworkProviderProfile ApplyManagedSqliteFallbackIfNeeded(
-        AgentFrameworkProviderProfile provider)
-    {
-        var isManagedSqliteProfile = IsManagedSqliteProfile();
-        return ManagedSeedProviderFallbacks.ApplyForManagedSqliteSeedProvider(provider, isManagedSqliteProfile);
-    }
-
-    private bool IsManagedSqliteProfile()
-    {
-        return profileAccessor.ResolveCurrentProfile().Profile.SourceKind == DatabaseProfileSourceKind.ManagedSqlite;
-    }
-
-    private static AgentFrameworkProviderProfile CreateManagedSqliteRemoteOllamaProvider()
+    private static AgentFrameworkProviderProfile CreateRuntimeFallbackOllamaProvider()
     {
         return new AgentFrameworkProviderProfile(
-            ManagedSqliteRemoteOllamaProviderId,
+            RuntimeFallbackOllamaProviderId,
             ManagedSeedProviderFallbacks.FallbackProviderName,
             AgentFrameworkProviderKind.Ollama,
             ManagedSeedProviderFallbacks.FallbackBaseUrl,
@@ -392,10 +376,10 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
             System.Text.Json.JsonSerializer.Serialize(new
             {
                 history = "framework-managed",
-                fallback = "managed-sqlite-remote-ollama",
+                fallback = "runtime-remote-ollama",
                 timeoutSeconds = ManagedSeedProviderFallbacks.FallbackTimeoutSeconds
             }),
-            "Remote Ollama fallback provider kept available alongside managed SQLite OpenAI seed agents.",
+            "Remote Ollama fallback provider kept available for seeded agents.",
             "Not checked",
             null,
             [

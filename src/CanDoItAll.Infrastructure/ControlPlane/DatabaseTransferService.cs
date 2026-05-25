@@ -6,7 +6,7 @@ namespace CanDoItAll.Infrastructure.ControlPlane;
 public sealed class DatabaseTransferService(
     IDatabaseProfileService profileService,
     IDatabaseProfileRuntimeAccessor profileAccessor,
-    ISwitchableAppDbContextFactory dbContextFactory,
+    IProfileAppDbContextFactory dbContextFactory,
     IEnumerable<IDatabaseTransferHandler> handlers) : IDatabaseTransferService
 {
     private readonly IReadOnlyList<IDatabaseTransferHandler> _handlers = handlers
@@ -18,10 +18,14 @@ public sealed class DatabaseTransferService(
         Guid targetProfileId,
         CancellationToken cancellationToken = default)
     {
+        var runtimeProfile = profileAccessor.ResolveCurrentProfile();
         var profiles = await profileService.ListAsync(cancellationToken);
         return profiles
             .Where(profile => profile.Id != targetProfileId)
-            .OrderByDescending(profile => profile.IsActive)
+            .Where(profile => profile.ProviderKind == DatabaseProviderKind.PostgreSql &&
+                profile.SourceKind == DatabaseProfileSourceKind.PostgresConnection)
+            .OrderByDescending(profile => !runtimeProfile.Profile.Runtime.LockedByRuntimeOverride &&
+                profile.Id == runtimeProfile.Profile.Id)
             .ThenBy(profile => profile.DisplayName, StringComparer.OrdinalIgnoreCase)
             .Select(profile => new DatabaseTransferSourceSummary(
                 profile.Id,
@@ -29,7 +33,8 @@ public sealed class DatabaseTransferService(
                 profile.ProviderKind,
                 profile.SourceKind,
                 profile.Descriptor,
-                profile.IsActive,
+                !runtimeProfile.Profile.Runtime.LockedByRuntimeOverride &&
+                    profile.Id == runtimeProfile.Profile.Id,
                 profile.IsRuntimeLocked))
             .ToList();
     }

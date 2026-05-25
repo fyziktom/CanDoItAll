@@ -67,6 +67,7 @@ public sealed class ConnectorOutboxDrainWorker(
                 return await outbox.ProcessPendingAsync(
                     options.Value.ConnectorOutboxBatchSize,
                     options.Value.ConnectorCommandLeaseDuration,
+                    options.Value.ConnectorOutboxMaxParallelism,
                     cancellationToken);
             },
             stoppingToken);
@@ -163,22 +164,6 @@ internal static class HostedWorkerLoop
             }
             catch (Exception ex)
             {
-                if (SqliteWriteCoordination.IsBusy(ex))
-                {
-                    logger.LogWarning(
-                        ex,
-                        "{WorkerName} hit transient SQLite contention. The worker will retry after {FailureBackoff}.",
-                        workerName,
-                        failureBackoff);
-
-                    if (failureBackoff > TimeSpan.Zero)
-                    {
-                        await Task.Delay(failureBackoff, stoppingToken);
-                    }
-
-                    continue;
-                }
-
                 logger.LogError(
                     ex,
                     "{WorkerName} iteration failed. The worker will retry after {FailureBackoff}.",

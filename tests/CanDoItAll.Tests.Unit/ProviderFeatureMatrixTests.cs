@@ -139,16 +139,16 @@ public sealed class ProviderFeatureMatrixTests
     }
 
     [Fact]
-    public void Managed_sqlite_bootstrap_provider_matches_chat_completions_structured_output_support()
+    public void Runtime_bootstrap_provider_uses_managed_openai_responses_defaults()
     {
         var source = ReadRepositoryFile(
             "src",
             "CanDoItAll.Composition",
             "RuntimeHostServiceCollectionExtensions.cs");
 
-        Assert.Contains("Name = ManagedSqliteOpenAiProviderName", source, StringComparison.Ordinal);
+        Assert.Contains("ManagedSeedProviderFallbacks.OpenAiDefaultProviderName", source, StringComparison.Ordinal);
         Assert.Contains("SupportsStructuredOutput = true", source, StringComparison.Ordinal);
-        Assert.Contains("ProviderTransportKind.ChatCompletions", source, StringComparison.Ordinal);
+        Assert.Contains("ProviderTransportKind.Responses", source, StringComparison.Ordinal);
         Assert.DoesNotContain("provider.SupportsStructuredOutput = false", source, StringComparison.Ordinal);
     }
 

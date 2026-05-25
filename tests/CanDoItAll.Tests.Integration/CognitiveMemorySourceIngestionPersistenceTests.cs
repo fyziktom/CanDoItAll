@@ -4,11 +4,11 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.CognitiveMemory;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support.CognitiveMemory;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.Logging.Abstractions;
 
+using CanDoItAll.Tests.Support;
 namespace CanDoItAll.Tests.Integration;
 
 public sealed class CognitiveMemorySourceIngestionPersistenceTests
@@ -212,12 +212,9 @@ public sealed class CognitiveMemorySourceIngestionPersistenceTests
     private static async Task<SourceIngestionFixture> CreateFixtureAsync()
     {
         AppDbContextModelRegistry.ConfigureAssemblies(ModuleAssemblies.All);
-        var connection = new SqliteConnection("Data Source=:memory:");
-        await connection.OpenAsync();
+        var database = PostgresTestDatabaseLease.Create("cognitivememorysourceingestionpersistencetests");
 
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlite(connection)
-            .Options;
+        var options = database.CreateAppDbContextOptions();
         var factory = new TestDbContextFactory(options);
         var dbContext = await factory.CreateDbContextAsync();
         await dbContext.Database.EnsureCreatedAsync();
@@ -233,7 +230,7 @@ public sealed class CognitiveMemorySourceIngestionPersistenceTests
             new FixedClock(),
             NullLogger<CognitiveMemorySourceIngestionService>.Instance);
 
-        return new SourceIngestionFixture(connection, dbContext, projectProvider, service);
+        return new SourceIngestionFixture(database, dbContext, projectProvider, service);
     }
 
     private static void AssertEntityTable<TEntity>(IReadOnlyList<IEntityType> entityTypes, string tableName)
@@ -256,7 +253,7 @@ public sealed class CognitiveMemorySourceIngestionPersistenceTests
     }
 
     private sealed class SourceIngestionFixture(
-        SqliteConnection connection,
+        PostgresTestDatabaseLease database,
         AppDbContext dbContext,
         FakeProjectStructureSourceSnapshotProvider projectProvider,
         CognitiveMemorySourceIngestionService service) : IAsyncDisposable
@@ -270,7 +267,7 @@ public sealed class CognitiveMemorySourceIngestionPersistenceTests
         public async ValueTask DisposeAsync()
         {
             await DbContext.DisposeAsync();
-            await connection.DisposeAsync();
+            await database.DisposeAsync();
         }
     }
 }

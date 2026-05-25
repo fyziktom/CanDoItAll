@@ -453,7 +453,7 @@
     "id": "4d7b1da3-63fa-5486-b84d-fa0eb3af4eb7",
     "key": "data-layer-change-crossdb",
     "name": "Data-Layer Change with Cross-DB Proof",
-    "summary": "Flow for EF Core, PostgreSQL, SQLite, and migration-heavy work.",
+    "summary": "Flow for EF Core, PostgreSQL, and migration-heavy work.",
     "blockIdsJson": "[\n  \"67c3d515-1309-582f-bdf4-602c3527be0f\",\n  \"2bbf946e-ca78-5522-a682-34fe62cb3b12\",\n  \"7092f49d-41dc-58a5-9695-10894cc84bbc\",\n  \"84fb18f6-cf4f-5d1e-a408-800607952f6b\",\n  \"dcbbe6ad-6260-5d8e-82bd-04e1f8aad5d3\",\n  \"2af89b95-ad7f-589c-bd37-d6db39794f5c\",\n  \"c2f937fc-c72d-5364-ae73-78fede0ff23a\",\n  \"4f35eb31-c88d-5beb-9599-d04d08a3cfbc\",\n  \"cf0d99d6-96d0-54ca-b216-287c26ca6477\",\n  \"b942715a-a9ec-55e8-b97e-1143dcda1314\",\n  \"b7b0fbcc-096a-5d48-b069-b717c9e27005\"\n]",
     "promptTypeRules": "architecture|plan|implementation|migration|testing|validation",
     "blockKeys": [

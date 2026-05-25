@@ -23,7 +23,18 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.AddOptions<ProcessTemplatePackOptions>()
             .BindConfiguration(ProcessTemplatePackOptions.SectionName);
         services.AddOptions<ProcessRuntimeOptions>()
-            .BindConfiguration(ProcessRuntimeOptions.SectionName);
+            .BindConfiguration(ProcessRuntimeOptions.SectionName)
+            .ValidateDataAnnotations()
+            .Validate(
+                options => options.StepDispatchClaimLeaseDuration > TimeSpan.Zero,
+                "Processes:Runtime:StepDispatchClaimLeaseDuration must be positive.")
+            .Validate(
+                options => options.StepDispatchHeartbeatInterval > TimeSpan.Zero,
+                "Processes:Runtime:StepDispatchHeartbeatInterval must be positive.")
+            .Validate(
+                options => options.StepDispatchHeartbeatInterval < options.StepDispatchClaimLeaseDuration,
+                "Processes:Runtime:StepDispatchHeartbeatInterval must be shorter than StepDispatchClaimLeaseDuration.")
+            .ValidateOnStart();
         services.AddOptions<ProcessObservationCacheOptions>()
             .BindConfiguration(ProcessObservationCacheOptions.SectionName);
         services.AddScoped<ProcessesService>();

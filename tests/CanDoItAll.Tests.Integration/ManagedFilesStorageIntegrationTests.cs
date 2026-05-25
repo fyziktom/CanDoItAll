@@ -18,8 +18,8 @@ public sealed class ManagedFilesStorageIntegrationTests
     public async Task Storage_keeps_managed_files_isolated_between_profiles()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("managed-files-storage");
-        var alphaProfile = testEnvironment.CreateManagedSqliteProfile("alpha");
-        var betaProfile = testEnvironment.CreateManagedSqliteProfile("beta");
+        var alphaProfile = testEnvironment.CreatePostgreSqlProfile("alpha");
+        var betaProfile = testEnvironment.CreatePostgreSqlProfile("beta");
 
         await using var alphaApplication = await TestApplication.CreateAsync(new TestHarnessOptions
         {
@@ -48,26 +48,27 @@ public sealed class ManagedFilesStorageIntegrationTests
     }
 
     [Fact]
-    public async Task ManagedFiles_endpoint_serves_the_active_profile_after_a_runtime_switch()
+    public async Task ManagedFiles_endpoint_keeps_serving_the_runtime_profile_after_pending_restart_activation()
     {
         await using var host = await ManagedFilesTestHost.CreateAsync();
         var betaProfileId = Guid.Empty;
+        string alphaWorkspaceRoot;
         string alphaPath;
-        string betaPath;
+        string postSwitchPath;
 
         await using (var alphaScope = host.App.Services.CreateAsyncScope())
         {
             var artifactStore = alphaScope.ServiceProvider.GetRequiredService<IManagedArtifactStore>();
+            var runtimeAccessor = alphaScope.ServiceProvider.GetRequiredService<IDatabaseProfileRuntimeAccessor>();
             var profileService = alphaScope.ServiceProvider.GetRequiredService<IDatabaseProfileService>();
 
+            alphaWorkspaceRoot = runtimeAccessor.ResolveCurrentProfile().Profile.Storage.WorkspaceRoot;
             alphaPath = await artifactStore.SaveTextAsync("switch-proof", "active.txt", "alpha-profile");
 
-            var saveResult = await profileService.SaveAsync(new DatabaseProfileEditorModel
-            {
-                DisplayName = "Managed sqlite beta",
-                ProviderKind = DatabaseProviderKind.Sqlite,
-                SourceKind = DatabaseProfileSourceKind.ManagedSqlite
-            });
+            var betaTestProfile = host.TestEnvironment.CreatePostgreSqlProfile("managed-files-beta");
+            var saveResult = await profileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
+                betaTestProfile,
+                "PostgreSQL beta"));
 
             Assert.True(saveResult.IsSuccess, string.Join(" ", saveResult.Errors.Select(error => error.Message)));
             betaProfileId = saveResult.Value;
@@ -89,20 +90,24 @@ public sealed class ManagedFilesStorageIntegrationTests
 
             var switchResult = await switchCoordinator.SwitchAsync(betaProfileId);
             Assert.True(switchResult.IsSuccess, string.Join(" ", switchResult.Errors.Select(error => error.Message)));
+            Assert.True(switchResult.Value!.RequiresRestart);
+            Assert.Equal(betaProfileId, switchResult.Value.PendingRestartProfileId);
+            Assert.NotEqual(betaProfileId, switchResult.Value.RuntimeProfileId);
         }
 
-        await using (var betaScope = host.App.Services.CreateAsyncScope())
+        await using (var postSwitchScope = host.App.Services.CreateAsyncScope())
         {
-            var artifactStore = betaScope.ServiceProvider.GetRequiredService<IManagedArtifactStore>();
-            betaPath = await artifactStore.SaveTextAsync("switch-proof", "active.txt", "beta-profile");
+            var artifactStore = postSwitchScope.ServiceProvider.GetRequiredService<IManagedArtifactStore>();
+            postSwitchPath = await artifactStore.SaveTextAsync("switch-proof", "runtime-after-switch.txt", "still-alpha-runtime");
         }
 
         var afterSwitchResponse = await host.Client.GetAsync("/managed-files/switch-proof/active.txt");
         afterSwitchResponse.EnsureSuccessStatusCode();
-        Assert.Equal("beta-profile", await afterSwitchResponse.Content.ReadAsStringAsync());
-        Assert.StartsWith(betaProfile.Profile.Storage.WorkspaceRoot, betaPath, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("alpha-profile", await afterSwitchResponse.Content.ReadAsStringAsync());
+        Assert.StartsWith(alphaWorkspaceRoot, postSwitchPath, StringComparison.OrdinalIgnoreCase);
+        Assert.False(postSwitchPath.StartsWith(betaProfile.Profile.Storage.WorkspaceRoot, StringComparison.OrdinalIgnoreCase));
         Assert.Equal("alpha-profile", await File.ReadAllTextAsync(alphaPath));
-        Assert.Equal("beta-profile", await File.ReadAllTextAsync(betaPath));
+        Assert.Equal("still-alpha-runtime", await File.ReadAllTextAsync(postSwitchPath));
     }
 
     [Fact]
@@ -242,6 +247,19 @@ internal sealed class ManagedFilesTestHost : IAsyncDisposable
         var app = builder.Build();
         app.Urls.Add("http://127.0.0.1:0");
         app.MapCanDoItAllManagedFiles();
+
+        var primaryProfile = testEnvironment.CreatePostgreSqlProfile("managed-files-primary");
+        await using (var setupScope = app.Services.CreateAsyncScope())
+        {
+            var profileService = setupScope.ServiceProvider.GetRequiredService<IDatabaseProfileService>();
+            var saveResult = await profileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
+                primaryProfile,
+                "PostgreSQL primary"));
+            if (saveResult.IsFailure)
+            {
+                throw new InvalidOperationException(string.Join(" ", saveResult.Errors.Select(error => error.Message)));
+            }
+        }
 
         await TestApplicationBootstrap.InitializeSchemaAsync(app.Services, TestSchemaBootstrapModules.Full);
         await app.StartAsync();

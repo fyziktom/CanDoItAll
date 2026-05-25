@@ -1,0 +1,55 @@
+src/CanDoItAll.Modules.Automation/Runtime/AutomationRuntimeContracts.cs:13:    Guid EnvelopeId,
+src/CanDoItAll.Modules.Automation/Runtime/AutomationRuntimeContracts.cs:203:    Guid EnvelopeId,
+src/CanDoItAll.Modules.Automation/Runtime/AutomationRuntimeContracts.cs:275:    Guid EnvelopeId,
+src/CanDoItAll.Modules.Automation/Runtime/AutomationRuntimeModels.cs:119:    public Guid EnvelopeId { get; set; }
+src/CanDoItAll.Modules.Automation/Runtime/AutomationRuntimeModels.cs:147:            item.EnvelopeId,
+src/CanDoItAll.Modules.Automation/Runtime/AutomationRuntimeModels.cs:158:            .HasForeignKey(item => item.EnvelopeId)
+src/CanDoItAll.Modules.Automation/Runtime/AutomationRuntimeModels.cs:166:    public Guid EnvelopeId { get; set; }
+src/CanDoItAll.Modules.Automation/Runtime/AutomationRuntimeModels.cs:350:    public Guid EnvelopeId { get; set; }
+src/CanDoItAll.Modules.Automation/Runtime/AutomationRuntimeOptions.cs:15:    public int MessageDispatchMaxParallelism { get; set; } = 4;
+src/CanDoItAll.Modules.Automation/Runtime/AutomationRuntimeOptions.cs:19:    public int ConnectorOutboxMaxParallelism { get; set; } = 4;
+src/CanDoItAll.Modules.Automation/Services/AutomationHostedServices.cs:70:                    options.Value.ConnectorOutboxMaxParallelism,
+src/CanDoItAll.Modules.Automation/Services/AutomationIngressService.cs:61:            var existingId = await TryFindExistingEnvelopeIdAsync(
+src/CanDoItAll.Modules.Automation/Services/AutomationIngressService.cs:378:    private async Task<Guid?> TryFindExistingEnvelopeIdAsync(
+src/CanDoItAll.Modules.Automation/Services/AutomationMessagingServices.cs:94:                    EnvelopeId = record.Id,
+src/CanDoItAll.Modules.Automation/Services/AutomationMessagingServices.cs:112:            var existingId = await TryFindExistingEnvelopeIdAsync(envelopeType, dedupeKey, cancellationToken);
+src/CanDoItAll.Modules.Automation/Services/AutomationMessagingServices.cs:145:    private async Task<Guid?> TryFindExistingEnvelopeIdAsync(
+src/CanDoItAll.Modules.Automation/Services/AutomationMessagingServices.cs:261:                RETURNING d."Id", d."LockToken", d."EnvelopeId";
+src/CanDoItAll.Modules.Automation/Services/AutomationMessagingServices.cs:311:            options.Value.MessageDispatchMaxParallelism,
+src/CanDoItAll.Modules.Automation/Services/AutomationMessagingServices.cs:316:            .GroupBy(delivery => delivery.EnvelopeId)
+src/CanDoItAll.Modules.Automation/Services/AutomationMessagingServices.cs:349:    private sealed record ClaimedAutomationDelivery(Guid Id, string LockToken, Guid EnvelopeId);
+src/CanDoItAll.Modules.Automation/Services/AutomationMessagingServices.cs:404:            .FirstAsync(item => item.Id == delivery.EnvelopeId, cancellationToken);
+src/CanDoItAll.Modules.Automation/Services/AutomationMessagingServices.cs:456:            EnvelopeId = envelope.Id,
+src/CanDoItAll.Modules.Automation/Services/AutomationMessagingServices.cs:525:                    EnvelopeId = envelope.Id,
+src/CanDoItAll.Modules.Automation/Services/AutomationMessagingServices.cs:568:            .Where(item => item.EnvelopeId == envelope.Id)
+src/CanDoItAll.Modules.Automation/Services/AutomationMessagingServices.cs:714:                item.EnvelopeId,
+src/CanDoItAll.Modules.Processes/Runtime/ProcessOutbox.cs:436:                    BuildOutboxPartitionKey(
+src/CanDoItAll.Modules.Processes/Runtime/ProcessOutbox.cs:787:            .GroupBy(record => record.PartitionKey, StringComparer.Ordinal)
+src/CanDoItAll.Modules.Processes/Runtime/ProcessOutbox.cs:821:    private static string BuildOutboxPartitionKey(Guid? processRunId, string commandKey)
+src/CanDoItAll.Modules.Processes/Runtime/ProcessOutbox.cs:827:    private sealed record ClaimedProcessOutboxRecord(Guid Id, string LeaseToken, string PartitionKey);
+src/CanDoItAll.Modules.Processes/Runtime/ProcessOutbox.cs:958:        var configured = processRuntimeOptions.Value.OutboxBatchMaxParallelism > 0
+src/CanDoItAll.Modules.Processes/Runtime/ProcessOutbox.cs:959:            ? processRuntimeOptions.Value.OutboxBatchMaxParallelism
+src/CanDoItAll.Modules.Processes/Runtime/ProcessRuntimeOptions.cs:17:    public int OutboxBatchMaxParallelism { get; set; } = DefaultOutboxWorkerConcurrency;
+src/CanDoItAll.Modules.Workspace/Connectors/ConnectorOutboxService.cs:492:                    BuildConnectorPartitionKey(
+src/CanDoItAll.Modules.Workspace/Connectors/ConnectorOutboxService.cs:746:            .GroupBy(command => command.PartitionKey, StringComparer.Ordinal)
+src/CanDoItAll.Modules.Workspace/Connectors/ConnectorOutboxService.cs:782:    private static string BuildConnectorPartitionKey(Guid? projectId, string connectorPluginKey, string commandKey)
+src/CanDoItAll.Modules.Workspace/Connectors/ConnectorOutboxService.cs:788:    private sealed record ClaimedConnectorCommand(Guid Id, string LeaseToken, string PartitionKey);
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:113:        var envelope = await inbox.MaterializeAsync(acceptResult.EnvelopeId, ProjectNodeIngressMaterializer.Key);
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:145:                """{"mode":"count"}"""))).EnvelopeId;
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:186:                """{"mode":"count"}"""))).EnvelopeId;
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:574:            .SingleAsync(item => item.EnvelopeId == envelopeId);
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:576:            .Where(item => item.EnvelopeId == envelopeId)
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:580:            .Where(item => item.EnvelopeId == envelopeId)
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:635:            .Where(item => item.EnvelopeId == envelopeId)
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:890:        Assert.Equal(first.EnvelopeId, second.EnvelopeId);
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:994:        var snapshot = await inbox.GetAsync(accepted.EnvelopeId);
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:1043:            .Where(item => item.EnvelopeId == envelopeId)
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:1083:            item.EnvelopeId == envelopeId &&
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:1275:        Assert.Single(results.Select(item => item.EnvelopeId).Distinct());
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:1355:            .Where(item => item.EnvelopeId == envelopeId)
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:1535:                .SingleAsync(item => item.EnvelopeId == envelopeId);
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:1553:            .SingleAsync(item => item.EnvelopeId == envelopeId);
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:1718:        Guid EnvelopeId,
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:1811:                context.EnvelopeId,
+tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs:1831:                context.EnvelopeId,
+ExitCode=0

@@ -11,6 +11,19 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class RuntimeHostedWorkerPolicyIntegrationTests
 {
     [Fact]
+    public void ProcessRuntimeOptions_DefaultsToConcurrentPostgreSqlOutboxWorkers()
+    {
+        var options = new ProcessRuntimeOptions();
+
+        Assert.Equal(ProcessRuntimeOptions.DefaultOutboxWorkerConcurrency, options.OutboxWorkerMaxConcurrency);
+        Assert.Equal(ProcessRuntimeOptions.DefaultOutboxWorkerConcurrency, options.OutboxBatchMaxParallelism);
+        Assert.Equal(20, options.OutboxBatchSize);
+        Assert.True(options.OutboxWorkerMaxConcurrency > 1);
+        Assert.True(options.OutboxBatchMaxParallelism > 1);
+        Assert.True(ProcessRuntimeOptions.MaximumOutboxWorkerConcurrency >= options.OutboxWorkerMaxConcurrency);
+    }
+
+    [Fact]
     public void AddCanDoItAllRuntimeModules_SuppressesBackgroundWorkers_ForPublishedActiveLane()
     {
         var services = new ServiceCollection();

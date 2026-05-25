@@ -312,7 +312,7 @@
     "purpose": "These are auto-applied or manually inserted based on the selected stack.",
     "uiMode": "stack-auto",
     "order": 11,
-    "componentCount": 14,
+    "componentCount": 13,
     "componentNames": [
       "Stack: .NET Solution",
       "Stack: Arduino Firmware",
@@ -326,7 +326,6 @@
       "Stack: PHP Web App",
       "Stack: Playwright MCP",
       "Stack: PostgreSQL",
-      "Stack: SQLite",
       "Stack: Tailwind CSS"
     ],
     "componentKeys": [
@@ -342,7 +341,6 @@
       "stack-php-webapp",
       "stack-playwright-mcp",
       "stack-postgresql",
-      "stack-sqlite",
       "stack-tailwind-css"
     ]
   },

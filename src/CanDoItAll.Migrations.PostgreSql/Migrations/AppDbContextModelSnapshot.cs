@@ -5982,8 +5982,7 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.Property<string>("EligibilityReason")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                        .HasColumnType("TEXT");
 
                     b.Property<double>("GuardPenaltyScore")
                         .HasColumnType("double precision");
@@ -12833,6 +12832,25 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<int>("AutomationDispatchAttemptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("AutomationDispatchClaimToken")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset?>("AutomationDispatchClaimedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("AutomationDispatchClaimedBy")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<DateTimeOffset?>("AutomationDispatchLeaseExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<int>("BlockedMinutes")
                         .HasColumnType("integer");
 
@@ -12932,6 +12950,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.HasIndex("SelectedBranchOutcomeId");
 
                     b.HasIndex("StepDefinitionId");
+
+                    b.HasIndex("ProcessRunId", "AutomationDispatchLeaseExpiresAtUtc");
 
                     b.HasIndex("ProcessRunId", "Sequence")
                         .IsUnique();
@@ -14039,8 +14059,7 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.Property<string>("Route")
                         .IsRequired()
-                        .HasMaxLength(800)
-                        .HasColumnType("character varying(800)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("StorageObjectReferenceJson")
                         .IsRequired()

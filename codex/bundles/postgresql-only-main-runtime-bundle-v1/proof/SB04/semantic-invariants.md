@@ -1,0 +1,15 @@
+# Semantic invariants - SB04
+
+## Invariants to preserve
+
+- Main application behavior unrelated to SQLite removal remains intact.
+- CanDoItAll.IPFS remains untouched.
+- No hidden SQLite runtime provider remains.
+- PostgreSQL behavior is not weakened.
+- Tests are not weakened to `InMemory` unless the test is explicitly a pure unit test.
+
+## Subbundle-specific invariants
+
+- Test support provisions PostgreSQL databases for integration/component database coverage.
+- In-memory providers are used only where the test is explicitly a pure unit test.
+- Former SQLite-specific tests now prove explicit rejection or PostgreSQL behavior.

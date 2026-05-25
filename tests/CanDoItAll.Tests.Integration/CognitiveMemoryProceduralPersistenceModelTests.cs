@@ -2,11 +2,11 @@ using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.CognitiveMemory;
 using CanDoItAll.SharedKernel;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.Logging.Abstractions;
 
+using CanDoItAll.Tests.Support;
 namespace CanDoItAll.Tests.Integration;
 
 public sealed class CognitiveMemoryProceduralPersistenceModelTests
@@ -215,15 +215,12 @@ public sealed class CognitiveMemoryProceduralPersistenceModelTests
     private static async Task<ProceduralFixture> CreateFixtureAsync()
     {
         AppDbContextModelRegistry.ConfigureAssemblies(ModuleAssemblies.All);
-        var connection = new SqliteConnection("Data Source=:memory:");
-        await connection.OpenAsync();
+        var database = PostgresTestDatabaseLease.Create("cognitivememoryproceduralpersistencemodeltests");
 
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlite(connection)
-            .Options;
+        var options = database.CreateAppDbContextOptions();
         var dbContext = new AppDbContext(options);
         await dbContext.Database.EnsureCreatedAsync();
-        return new ProceduralFixture(connection, new TestDbContextFactory(options), dbContext, new FixedClock());
+        return new ProceduralFixture(database, new TestDbContextFactory(options), dbContext, new FixedClock());
     }
 
     private static void AssertEntityTable<TEntity>(IReadOnlyList<IEntityType> entityTypes, string tableName)
@@ -286,7 +283,7 @@ public sealed class CognitiveMemoryProceduralPersistenceModelTests
     }
 
     private sealed class ProceduralFixture(
-        SqliteConnection connection,
+        PostgresTestDatabaseLease database,
         TestDbContextFactory factory,
         AppDbContext dbContext,
         FixedClock clock) : IAsyncDisposable
@@ -300,7 +297,7 @@ public sealed class CognitiveMemoryProceduralPersistenceModelTests
         public async ValueTask DisposeAsync()
         {
             await DbContext.DisposeAsync();
-            await connection.DisposeAsync();
+            await database.DisposeAsync();
         }
     }
 }

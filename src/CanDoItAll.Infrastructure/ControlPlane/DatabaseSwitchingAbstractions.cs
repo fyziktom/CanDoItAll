@@ -6,7 +6,18 @@ public sealed record DatabaseSwitchResult(
     Guid PreviousProfileId,
     Guid CurrentProfileId,
     long Generation,
-    int ProcessId);
+    int ProcessId)
+{
+    public Guid RuntimeProfileId { get; init; } = PreviousProfileId;
+
+    public Guid? PendingRestartProfileId { get; init; }
+
+    public bool RequiresRestart { get; init; }
+
+    public bool RuntimeChangedInProcess { get; init; }
+
+    public string Message { get; init; } = string.Empty;
+}
 
 public interface IAppDatabaseBootstrapper
 {

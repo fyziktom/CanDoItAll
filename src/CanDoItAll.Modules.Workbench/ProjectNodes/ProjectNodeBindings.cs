@@ -42,7 +42,7 @@ internal sealed class ProjectNodeBindingRecordConfiguration : IEntityTypeConfigu
     {
         builder.ToTable("Workbench_ProjectNodeBindings");
         builder.HasKey(item => item.Id);
-        builder.Property(item => item.Route).HasMaxLength(800);
+        builder.Property(item => item.Route).HasColumnType("TEXT");
         builder.Property(item => item.ExternalArtifactKind).HasMaxLength(120);
         builder.Property(item => item.MediaRelativePath).HasMaxLength(800);
         builder.Property(item => item.MediaContentType).HasMaxLength(160);

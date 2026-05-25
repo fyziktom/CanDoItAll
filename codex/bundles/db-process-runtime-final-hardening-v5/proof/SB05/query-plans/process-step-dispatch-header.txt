@@ -1,0 +1,11 @@
+Limit  (cost=0.28..11.97 rows=64 width=29) (actual time=0.015..0.036 rows=64 loops=1)
+  Buffers: shared hit=4
+  ->  Index Scan using "IX_Processes_StepRuns_ProcessRunId_Sequence" on "Processes_StepRuns" s  (cost=0.28..610.60 rows=3341 width=29) (actual time=0.014..0.032 rows=64 loops=1)
+        Index Cond: ("ProcessRunId" = '10000000-0000-0000-0000-000000000005'::uuid)
+        Filter: ((("AutomationDispatchLeaseExpiresAtUtc" IS NULL) OR ("AutomationDispatchLeaseExpiresAtUtc" <= now())) AND ((("Status")::text = 'Ready'::text) OR (("Status")::text = 'WaitingApproval'::text) OR (("Status")::text = 'InProgress'::text)))
+        Rows Removed by Filter: 17
+        Buffers: shared hit=4
+Planning:
+  Buffers: shared hit=71
+Planning Time: 0.453 ms
+Execution Time: 0.058 ms

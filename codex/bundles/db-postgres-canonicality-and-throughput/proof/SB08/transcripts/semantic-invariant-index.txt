@@ -1,0 +1,9 @@
+Command: write invariant ID to proof artifact map after implementation validation
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: semantic-invariant-index-current-proof
+SB02-I2 runtime/pending split: bundle://proof/SB02/transcripts/playwright-runtime-pending-switch-rerun.txt; bundle://proof/SB02/transcripts/unit-runtime-switch-tests.txt; bundle://proof/SB08/transcripts/main-layout-component-tests-rerun.txt
+SB03-I7 restart-first/no hot-switch drain: bundle://proof/SB03/transcripts/residue-and-switch-audit-final.txt; bundle://proof/SB08/transcripts/full-solution-build-final-clean.txt
+SB06-I4 claim token owns mutation: bundle://proof/SB06/transcripts/dispatch-claim-source-audit.txt; bundle://proof/SB08/transcripts/focused-integration-tests.txt
+SB07-I4 claim-first dispatch loading: bundle://proof/SB07/transcripts/claim-first-source-audit.txt; bundle://proof/SB07/transcripts/process-dispatch-telemetry-build.txt
+SB05-I5 bounded parallel claimed work: bundle://proof/SB05/transcripts/bounded-parallelism-source-audit.txt; bundle://proof/SB08/transcripts/focused-integration-tests.txt
+ExitCode: 0

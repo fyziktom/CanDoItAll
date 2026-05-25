@@ -1,0 +1,18 @@
+{
+  "name": "candoitall-db-remove-sqlite-followup-bundle-v1",
+  "targetRepository": "fyziktom/CanDoItAll",
+  "targetBranch": "db-remove-sqlite",
+  "baseBranch": "development",
+  "createdUtc": "2026-05-24T10:47:14Z",
+  "subbundles": [
+    "SB01-hard-remove-sqlite-domain-model",
+    "SB02-clean-data-sources-ui",
+    "SB03-remove-snapshot-runtime-stubs",
+    "SB04-test-and-residue-audit-hardening",
+    "SB05-postgresql-baseline-drift-proof",
+    "SB06-postgresql-runtime-workflow-tuning",
+    "SB07-unrelated-change-and-evidence-cleanup",
+    "SB08-final-validation-and-merge-gate"
+  ],
+  "status": "prepared"
+}

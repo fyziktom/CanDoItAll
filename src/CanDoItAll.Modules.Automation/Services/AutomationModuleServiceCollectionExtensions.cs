@@ -19,7 +19,27 @@ public static class AutomationModuleServiceCollectionExtensions
             configuration["LaneKind"]);
 
         services.AddOptions<AutomationRuntimeOptions>()
-            .BindConfiguration(AutomationRuntimeOptions.SectionName);
+            .BindConfiguration(AutomationRuntimeOptions.SectionName)
+            .ValidateDataAnnotations()
+            .Validate(
+                options => options.MessagePollInterval > TimeSpan.Zero,
+                "Automation runtime message poll interval must be positive.")
+            .Validate(
+                options => options.ConnectorOutboxPollInterval > TimeSpan.Zero,
+                "Automation runtime connector outbox poll interval must be positive.")
+            .Validate(
+                options => options.LegacyBackgroundQueuePollInterval > TimeSpan.Zero,
+                "Automation runtime legacy background queue poll interval must be positive.")
+            .Validate(
+                options => options.DeliveryLeaseDuration > TimeSpan.Zero,
+                "Automation runtime delivery lease duration must be positive.")
+            .Validate(
+                options => options.ConnectorCommandLeaseDuration > TimeSpan.Zero,
+                "Automation runtime connector command lease duration must be positive.")
+            .Validate(
+                options => options.WorkerFailureBackoff > TimeSpan.Zero,
+                "Automation runtime worker failure backoff must be positive.")
+            .ValidateOnStart();
         services.AddQuartz(options =>
         {
             options.SchedulerId = "CanDoItAll.Automation";

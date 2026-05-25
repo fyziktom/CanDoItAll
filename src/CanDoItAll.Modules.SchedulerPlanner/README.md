@@ -37,7 +37,7 @@ Direct package references:
 
 ## Architecture Notes
 
-Scheduler Planner should coordinate existing process and workflow runtimes; it should not duplicate process launch logic or workflow execution semantics. Persistence is split between `SchedulerPlanner_Plans` and `SchedulerPlanner_Runs`, with schema initializer support for SQLite and PostgreSQL.
+Scheduler Planner should coordinate existing process and workflow runtimes; it should not duplicate process launch logic or workflow execution semantics. Persistence is split between `SchedulerPlanner_Plans` and `SchedulerPlanner_Runs`, with PostgreSQL EF migrations owning runtime schema.
 
 Automation trigger handling is explicit through `SchedulerPlannerTriggerFireHandler`. Keep dedupe keys and run-state transitions predictable so repeated trigger delivery does not launch duplicate work.
 

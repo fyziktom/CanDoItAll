@@ -40,13 +40,14 @@ public sealed class SettingsPageDataSourcesTests
         {
             Assert.Contains("Current runtime selection", cut.Markup);
             Assert.Contains("Component PostgreSQL", cut.Markup);
-            Assert.Contains("database-profile-new-managed", cut.Markup);
-            Assert.Contains("database-profile-new-external", cut.Markup);
             Assert.Contains("database-profile-new-postgres", cut.Markup);
-            Assert.Contains("database-snapshot-source-summary", cut.Markup);
-            Assert.Contains("database-clone-create", cut.Markup);
-            Assert.Contains("database-snapshot-local-create", cut.Markup);
-            Assert.Contains("database-snapshot-ipfs-create", cut.Markup);
+            Assert.DoesNotContain("database-profile-new-managed", cut.Markup);
+            Assert.DoesNotContain("database-profile-new-external", cut.Markup);
+            Assert.DoesNotContain(LegacyProviderName(), cut.Markup, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("database-clone-create", cut.Markup);
+            Assert.DoesNotContain("database-snapshot-deferred", cut.Markup);
+            Assert.DoesNotContain("database-snapshot-local-create", cut.Markup);
+            Assert.DoesNotContain("database-snapshot-ipfs-create", cut.Markup);
         });
 
         cut.Find("[data-testid='database-profile-row-" + postgresSave.Value.ToString("N") + "']").Click();
@@ -57,41 +58,26 @@ public sealed class SettingsPageDataSourcesTests
             Assert.Contains("database-profile-test-connection", cut.Markup);
             Assert.Contains("database-profile-create-empty", cut.Markup);
             Assert.Contains("database-profile-activate", cut.Markup);
+            Assert.Contains("Activate for restart", cut.Markup);
             Assert.Contains("database-profile-delete", cut.Markup);
         });
     }
 
     [Fact]
-    public async Task Transfer_dialog_blocks_preview_and_offers_schema_apply_for_outdated_target()
+    public async Task Settings_page_omits_deferred_database_snapshot_actions()
     {
         await using var harness = await CreateUnlockedHarnessAsync();
-        var databaseProfiles = harness.Context.Services.GetRequiredService<DatabaseProfileWorkspaceService>();
-        var databasePath = Path.Combine(harness.RootPath, "external", "transfer-target.db");
-        Directory.CreateDirectory(Path.GetDirectoryName(databasePath)!);
-
-        var targetSave = await databaseProfiles.SaveProfileAsync(new DatabaseProfileEditorModel
-        {
-            DisplayName = "Transfer target SQLite",
-            ProviderKind = DatabaseProviderKind.Sqlite,
-            SourceKind = DatabaseProfileSourceKind.ExternalSqliteFile,
-            SqliteDatabasePath = databasePath,
-            WorkspaceRoot = Path.GetDirectoryName(databasePath)
-        });
-        Assert.True(targetSave.IsSuccess);
 
         harness.Context.Services.GetRequiredService<NavigationManager>()
             .NavigateTo("http://localhost/settings?tab=data-sources");
 
         var cut = harness.Context.RenderComponent<SettingsPage>();
-        cut.Find("[data-testid='database-profile-row-" + targetSave.Value.ToString("N") + "']").Click();
-        cut.WaitForElement("[data-testid='database-profile-transfer-settings']").Click();
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains("database-transfer-target-schema-alert", cut.Markup);
-            Assert.Contains("database-transfer-target-apply-schema", cut.Markup);
-            Assert.DoesNotContain("database-transfer-items", cut.Markup);
-            Assert.DoesNotContain("No settings groups are available", cut.Markup);
+            Assert.DoesNotContain("database-snapshot-deferred", cut.Markup);
+            Assert.DoesNotContain("database-snapshot-local-create", cut.Markup);
+            Assert.DoesNotContain("database-snapshot-ipfs-restore", cut.Markup);
         });
     }
 
@@ -108,17 +94,17 @@ public sealed class SettingsPageDataSourcesTests
         cut.WaitForAssertion(() =>
         {
             Assert.Contains("database-data-sources-locked-message", cut.Markup);
-            Assert.Contains("Configured SQLite override", cut.Markup);
+            Assert.Contains("Configured PostgreSQL override", cut.Markup);
         });
 
-        Assert.True(cut.Find("[data-testid='database-profile-new-managed']").HasAttribute("disabled"));
+        Assert.True(cut.Find("[data-testid='database-profile-new-postgres']").HasAttribute("disabled"));
         Assert.True(cut.Find("[data-testid='database-profile-save']").HasAttribute("disabled"));
     }
 
     private static async Task<ComponentTestHarness> CreateUnlockedHarnessAsync()
     {
         var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-settings-tests");
-        var activeProfile = testEnvironment.CreateManagedSqliteProfile("bootstrap");
+        var activeProfile = testEnvironment.CreatePostgreSqlProfile("bootstrap");
 
         return await ComponentTestHarness.CreateAsync(options: new TestHarnessOptions
         {
@@ -132,4 +118,6 @@ public sealed class SettingsPageDataSourcesTests
             }
         });
     }
+
+    private static string LegacyProviderName() => "Sqlite";
 }

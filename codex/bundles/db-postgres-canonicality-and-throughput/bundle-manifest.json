@@ -1,0 +1,23 @@
+{
+  "name": "candoitall-db-postgres-canonicality-and-throughput-followup-bundle-v3",
+  "profile": "initiative",
+  "targetRepository": "fyziktom/CanDoItAll",
+  "targetBranch": "db-remove-sqlite",
+  "createdUtc": "2026-05-24T16:34:04Z",
+  "subbundles": [
+    "SB01-validation-evidence-and-scope-cleanup",
+    "SB02-canonical-runtime-vs-pending-activation-contract",
+    "SB03-remove-dead-hot-switching-and-drain-state",
+    "SB04-maintenance-profile-context-factory-boundaries",
+    "SB05-postgresql-claimed-work-parallel-processing",
+    "SB06-process-dispatch-claim-token-canonicality",
+    "SB07-claim-first-dispatch-candidate-loading",
+    "SB08-final-validation-benchmark-and-merge-gate"
+  ],
+  "criticalSubbundles": [
+    "SB02-canonical-runtime-vs-pending-activation-contract",
+    "SB03-remove-dead-hot-switching-and-drain-state",
+    "SB06-process-dispatch-claim-token-canonicality",
+    "SB07-claim-first-dispatch-candidate-loading"
+  ]
+}

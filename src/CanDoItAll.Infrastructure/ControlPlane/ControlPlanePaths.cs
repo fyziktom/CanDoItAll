@@ -16,26 +16,6 @@ public interface IControlPlanePathResolver
     string ResolveActiveProfileStateFilePath();
 
     string ResolveDataProtectionKeysPath();
-
-    string ResolveManagedSqliteRootPath();
-
-    string ResolveManagedSqliteProfileRootPath(Guid profileId);
-
-    string ResolveManagedSqliteDatabasePath(Guid profileId);
-
-    string ResolveManagedSqliteWorkspaceRootPath(Guid profileId);
-
-    string ResolveSnapshotsRootPath();
-
-    string ResolveSnapshotPackagePath(Guid snapshotId);
-
-    string ResolveSnapshotCacheRootPath();
-
-    string ResolveSnapshotCacheProfileRootPath(Guid profileId);
-
-    string ResolveSnapshotCacheDatabasePath(Guid profileId);
-
-    string ResolveSnapshotCacheWorkspaceRootPath(Guid profileId);
 }
 
 public static class ControlPlanePathDefaults
@@ -99,71 +79,4 @@ public sealed class ControlPlanePathResolver(
         return path;
     }
 
-    public string ResolveManagedSqliteRootPath()
-    {
-        var path = Path.Combine(ResolveDatabaseProfilesRootPath(), "managed-sqlite");
-        Directory.CreateDirectory(path);
-        return path;
-    }
-
-    public string ResolveManagedSqliteProfileRootPath(Guid profileId)
-    {
-        var path = Path.Combine(ResolveManagedSqliteRootPath(), profileId.ToString("N"));
-        Directory.CreateDirectory(path);
-        return path;
-    }
-
-    public string ResolveManagedSqliteDatabasePath(Guid profileId)
-    {
-        var databaseRoot = Path.Combine(ResolveManagedSqliteProfileRootPath(profileId), "db");
-        Directory.CreateDirectory(databaseRoot);
-        return Path.Combine(databaseRoot, "candoitall.db");
-    }
-
-    public string ResolveManagedSqliteWorkspaceRootPath(Guid profileId)
-    {
-        var path = Path.Combine(ResolveManagedSqliteProfileRootPath(profileId), "workspace");
-        Directory.CreateDirectory(path);
-        return path;
-    }
-
-    public string ResolveSnapshotsRootPath()
-    {
-        var path = Path.Combine(ResolveRootPath(), "snapshots");
-        Directory.CreateDirectory(path);
-        return path;
-    }
-
-    public string ResolveSnapshotPackagePath(Guid snapshotId)
-    {
-        return Path.Combine(ResolveSnapshotsRootPath(), $"{snapshotId:N}.cda-snapshot.zip");
-    }
-
-    public string ResolveSnapshotCacheRootPath()
-    {
-        var path = Path.Combine(ResolveRootPath(), "snapshot-cache");
-        Directory.CreateDirectory(path);
-        return path;
-    }
-
-    public string ResolveSnapshotCacheProfileRootPath(Guid profileId)
-    {
-        var path = Path.Combine(ResolveSnapshotCacheRootPath(), profileId.ToString("N"));
-        Directory.CreateDirectory(path);
-        return path;
-    }
-
-    public string ResolveSnapshotCacheDatabasePath(Guid profileId)
-    {
-        var databaseRoot = Path.Combine(ResolveSnapshotCacheProfileRootPath(profileId), "db");
-        Directory.CreateDirectory(databaseRoot);
-        return Path.Combine(databaseRoot, "candoitall.db");
-    }
-
-    public string ResolveSnapshotCacheWorkspaceRootPath(Guid profileId)
-    {
-        var path = Path.Combine(ResolveSnapshotCacheProfileRootPath(profileId), "workspace");
-        Directory.CreateDirectory(path);
-        return path;
-    }
 }

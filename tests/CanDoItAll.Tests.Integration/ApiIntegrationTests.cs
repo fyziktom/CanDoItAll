@@ -410,7 +410,7 @@ internal sealed class ApiTestHost : IAsyncDisposable
         Action<IServiceCollection>? configureServices = null)
     {
         var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-api-tests");
-        var activeProfile = testEnvironment.CreateManagedSqliteProfile("api-host");
+        var activeProfile = testEnvironment.CreatePostgreSqlProfile("api-host");
         var configurationOverrides = new Dictionary<string, string?>
         {
             ["DevelopmentManager:TuningModeEnabled"] = "false",

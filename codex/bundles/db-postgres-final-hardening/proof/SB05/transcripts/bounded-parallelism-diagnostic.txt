@@ -1,0 +1,21 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.8)
+[xUnit.net 00:00:00.74]   Discovering: CanDoItAll.Tests.Integration
+[xUnit.net 00:00:00.90]   Discovered:  CanDoItAll.Tests.Integration
+[xUnit.net 00:00:00.93]   Starting:    CanDoItAll.Tests.Integration
+[xUnit.net 00:00:32.63]   Finished:    CanDoItAll.Tests.Integration
+  Úspěšné CanDoItAll.Tests.Integration.AutomationRuntimeIntegrationTests.Bounded_parallelism_diagnostic_records_connector_and_automation_timings [31 s]
+  Zprávy standardního výstupu:
+ automation_dispatch_single_ms=746
+ automation_dispatch_parallel_ms=205
+ connector_outbox_single_ms=534
+ connector_outbox_parallel_ms=495
+
+
+
+Testovací běh byl úspěšný.
+Celkový počet testů: 1
+     Úspěšné: 1
+ Celkový čas: 33,7553 Sekundy

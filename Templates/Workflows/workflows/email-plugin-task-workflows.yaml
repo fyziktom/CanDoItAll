@@ -82,19 +82,23 @@ workflows:
         - { source: start, target: download-gmail }
         - { source: download-gmail, target: extract-gmail-tasks }
         - { source: extract-gmail-tasks, target: email-task-switch }
-        - source: email-task-switch
+        - id: email-route-to-create-gmail-task-nodes-tasks
+          source: email-task-switch
           target: create-gmail-task-nodes
           kind: Conditional
           routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: tasks, expectedValueKind: String, label: Tasks }
-        - source: email-task-switch
+        - id: email-route-to-create-gmail-task-nodes-asap-response
+          source: email-task-switch
           target: create-gmail-task-nodes
           kind: Conditional
           routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: asap_response, expectedValueKind: String, label: ASAP response }
-        - source: email-task-switch
+        - id: email-route-to-store-gmail-no-task-summary-informative
+          source: email-task-switch
           target: store-gmail-no-task-summary
           kind: Conditional
           routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: informative, expectedValueKind: String, label: Informative }
-        - source: email-task-switch
+        - id: email-route-to-store-gmail-no-task-summary-default
+          source: email-task-switch
           target: store-gmail-no-task-summary
           kind: Conditional
           routing: { kind: SwitchDefault, label: DEFAULT }
@@ -185,19 +189,23 @@ workflows:
         - { source: start, target: download-office365 }
         - { source: download-office365, target: extract-office365-tasks }
         - { source: extract-office365-tasks, target: email-task-switch }
-        - source: email-task-switch
+        - id: email-route-to-create-office365-task-nodes-tasks
+          source: email-task-switch
           target: create-office365-task-nodes
           kind: Conditional
           routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: tasks, expectedValueKind: String, label: Tasks }
-        - source: email-task-switch
+        - id: email-route-to-create-office365-task-nodes-asap-response
+          source: email-task-switch
           target: create-office365-task-nodes
           kind: Conditional
           routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: asap_response, expectedValueKind: String, label: ASAP response }
-        - source: email-task-switch
+        - id: email-route-to-store-office365-no-task-summary-informative
+          source: email-task-switch
           target: store-office365-no-task-summary
           kind: Conditional
           routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: informative, expectedValueKind: String, label: Informative }
-        - source: email-task-switch
+        - id: email-route-to-store-office365-no-task-summary-default
+          source: email-task-switch
           target: store-office365-no-task-summary
           kind: Conditional
           routing: { kind: SwitchDefault, label: DEFAULT }

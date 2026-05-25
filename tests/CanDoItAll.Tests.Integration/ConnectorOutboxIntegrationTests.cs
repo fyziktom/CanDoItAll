@@ -152,6 +152,63 @@ public sealed class ConnectorOutboxIntegrationTests
         Assert.Single(handler.Requests);
     }
 
+    [Fact]
+    public async Task Stale_connector_worker_cannot_finalize_after_lease_is_stolen()
+    {
+        var handler = new TestConnectorCommandHandler(
+            ConnectorCommandExecutionResult.Completed("""{"delivery":"stale"}"""))
+        {
+            HoldExecution = true
+        };
+
+        await using var harness = await ConnectorOutboxHarness.CreateAsync(handler);
+        await using var scope = harness.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var outbox = scope.ServiceProvider.GetRequiredService<ConnectorOutboxService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projects, "Connector outbox stolen lease");
+        var enqueue = await outbox.EnqueueAsync(new ConnectorCommandEnqueueRequest(
+            projectId,
+            WebhookResourceConnectorPlugin.PluginKey,
+            "deliver",
+            """{"endpointUrl":"https://example.com/hooks/stale"}""",
+            "idem-webhook-stale-001",
+            "integration-tests"));
+
+        var firstDrain = outbox.ProcessPendingAsync(1, TimeSpan.FromMinutes(1));
+        await handler.ExecutionStarted.WaitAsync(TimeSpan.FromSeconds(5));
+
+        await StealConnectorLeaseAsync(dbContextFactory, enqueue.CommandId, DateTimeOffset.UtcNow.AddMinutes(30));
+
+        handler.ReleaseExecution();
+
+        Assert.Equal(0, await firstDrain);
+
+        var staleSnapshot = await outbox.GetAsync(enqueue.CommandId);
+        Assert.NotNull(staleSnapshot);
+        Assert.Equal(ConnectorCommandStatus.Pending, staleSnapshot!.Status);
+        Assert.Equal(1, staleSnapshot.AttemptCount);
+        Assert.Null(staleSnapshot.CompletedAtUtc);
+
+        var staleAudit = await outbox.ListAuditAsync(enqueue.CommandId);
+        Assert.Contains(staleAudit, entry => entry.EventKind == ConnectorCommandAuditEventKind.LeaseLost);
+        Assert.DoesNotContain(staleAudit, entry => entry.EventKind == ConnectorCommandAuditEventKind.Completed);
+
+        await ExpireConnectorLeaseAsync(dbContextFactory, enqueue.CommandId);
+
+        Assert.Equal(1, await outbox.ProcessPendingAsync(1, TimeSpan.FromMinutes(1)));
+
+        var completedSnapshot = await outbox.GetAsync(enqueue.CommandId);
+        Assert.NotNull(completedSnapshot);
+        Assert.Equal(ConnectorCommandStatus.Completed, completedSnapshot!.Status);
+        Assert.Equal(2, completedSnapshot.AttemptCount);
+        Assert.Equal(2, handler.Requests.Count);
+
+        var completedAudit = await outbox.ListAuditAsync(enqueue.CommandId);
+        Assert.Single(completedAudit, entry => entry.EventKind == ConnectorCommandAuditEventKind.Completed);
+    }
+
     private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)
     {
         var result = await projectsService.SaveAsync(new ProjectEditorModel
@@ -178,6 +235,34 @@ public sealed class ConnectorOutboxIntegrationTests
         await dbContext.SaveChangesAsync();
     }
 
+    private static async Task StealConnectorLeaseAsync(
+        IDbContextFactory<AppDbContext> dbContextFactory,
+        Guid commandId,
+        DateTimeOffset leaseExpiresAtUtc)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        await ConnectorCommandSchemaInitializer.EnsureAsync(dbContext);
+        var command = await dbContext.Set<ConnectorCommandRecord>()
+            .SingleAsync(item => item.Id == commandId);
+        command.LeaseToken = Guid.NewGuid().ToString("N");
+        command.LeaseExpiresAtUtc = leaseExpiresAtUtc;
+        command.UpdatedAtUtc = DateTimeOffset.UtcNow;
+        await dbContext.SaveChangesAsync();
+    }
+
+    private static async Task ExpireConnectorLeaseAsync(
+        IDbContextFactory<AppDbContext> dbContextFactory,
+        Guid commandId)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        await ConnectorCommandSchemaInitializer.EnsureAsync(dbContext);
+        var command = await dbContext.Set<ConnectorCommandRecord>()
+            .SingleAsync(item => item.Id == commandId);
+        command.LeaseExpiresAtUtc = DateTimeOffset.UtcNow.AddMinutes(-1);
+        command.UpdatedAtUtc = DateTimeOffset.UtcNow;
+        await dbContext.SaveChangesAsync();
+    }
+
     private sealed class ConnectorOutboxHarness : IAsyncDisposable
     {
         private ConnectorOutboxHarness(
@@ -195,7 +280,7 @@ public sealed class ConnectorOutboxIntegrationTests
         public static async Task<ConnectorOutboxHarness> CreateAsync(TestConnectorCommandHandler handler)
         {
             var testEnvironment = CanDoItAllTestEnvironment.Create("connector-outbox-tests");
-            var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+            var profile = testEnvironment.CreatePostgreSqlProfile("primary");
             var services = await TestApplicationBootstrap.BuildServiceProviderAsync(
                 profile,
                 "CanDoItAll.Tests",
@@ -218,6 +303,8 @@ public sealed class ConnectorOutboxIntegrationTests
     private sealed class TestConnectorCommandHandler : IConnectorCommandHandler
     {
         private readonly Queue<ConnectorCommandExecutionResult> _results;
+        private readonly TaskCompletionSource _executionStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _releaseExecution = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public TestConnectorCommandHandler(params ConnectorCommandExecutionResult[] results)
         {
@@ -226,21 +313,35 @@ public sealed class ConnectorOutboxIntegrationTests
 
         public List<ConnectorCommandExecutionRequest> Requests { get; } = [];
 
+        public bool HoldExecution { get; set; }
+
+        public Task ExecutionStarted => _executionStarted.Task;
+
+        public void ReleaseExecution()
+        {
+            _releaseExecution.TrySetResult();
+        }
+
         public bool CanHandle(string connectorPluginKey, string commandKey)
         {
             return string.Equals(connectorPluginKey, WebhookResourceConnectorPlugin.PluginKey, StringComparison.OrdinalIgnoreCase) &&
                    string.Equals(commandKey, "deliver", StringComparison.OrdinalIgnoreCase);
         }
 
-        public Task<ConnectorCommandExecutionResult> ExecuteAsync(
+        public async Task<ConnectorCommandExecutionResult> ExecuteAsync(
             ConnectorCommandExecutionRequest request,
             CancellationToken cancellationToken)
         {
             Requests.Add(request);
-            return Task.FromResult(
-                _results.Count > 0
-                    ? _results.Dequeue()
-                    : ConnectorCommandExecutionResult.Completed("""{"delivery":"default"}"""));
+            _executionStarted.TrySetResult();
+            if (HoldExecution)
+            {
+                await _releaseExecution.Task.WaitAsync(cancellationToken);
+            }
+
+            return _results.Count > 0
+                ? _results.Dequeue()
+                : ConnectorCommandExecutionResult.Completed("""{"delivery":"default"}""");
         }
     }
 }

@@ -27,7 +27,6 @@
     <Project Path="src/CanDoItAll.Mcp.Mermaid/CanDoItAll.Mcp.Mermaid.csproj" />
     <Project Path="src/CanDoItAll.Mcp.SshOps/CanDoItAll.Mcp.SshOps.csproj" />
     <Project Path="src/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj" />
-    <Project Path="src/CanDoItAll.Migrations.Sqlite/CanDoItAll.Migrations.Sqlite.csproj" />
     <Project Path="src/CanDoItAll.Modules.Activity/CanDoItAll.Modules.Activity.csproj" />
     <Project Path="src/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj" />
     <Project Path="src/CanDoItAll.Modules.Automation/CanDoItAll.Modules.Automation.csproj" />

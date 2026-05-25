@@ -1,4 +1,3 @@
-using Microsoft.Data.Sqlite;
 using Npgsql;
 
 namespace CanDoItAll.Infrastructure.ControlPlane;
@@ -43,34 +42,6 @@ public sealed class InMemoryDatabaseDriver : IDatabaseDriver
 
     public Task CreateEmptyAsync(ResolvedDatabaseProfile profile, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
-}
-
-public sealed class SqliteDatabaseDriver : IDatabaseDriver
-{
-    public DatabaseProviderKind ProviderKind => DatabaseProviderKind.Sqlite;
-
-    public Task EnsureDatabaseAsync(ResolvedDatabaseProfile profile, CancellationToken cancellationToken = default)
-    {
-        var databasePath = profile.Profile.Sqlite?.DatabasePath
-            ?? throw new InvalidOperationException("SQLite profile is missing a database path.");
-
-        var directory = Path.GetDirectoryName(databasePath);
-        if (!string.IsNullOrWhiteSpace(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
-
-        return Task.CompletedTask;
-    }
-
-    public async Task CreateEmptyAsync(ResolvedDatabaseProfile profile, CancellationToken cancellationToken = default)
-    {
-        await EnsureDatabaseAsync(profile, cancellationToken);
-
-        await using var connection = new SqliteConnection(profile.ConnectionString);
-        await connection.OpenAsync(cancellationToken);
-        await connection.CloseAsync();
-    }
 }
 
 public sealed class PostgreSqlDatabaseDriver : IDatabaseDriver

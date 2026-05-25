@@ -64,7 +64,7 @@ Result: passed. 20 tests passed. This covered finalizer tool attachment and JSON
 
 `dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --configuration Release --no-restore --filter ProviderFeatureMatrixTests`
 
-Result: passed. 6 tests passed, including the managed SQLite OpenAI chat-completions structured-output source guard.
+Result: passed. 6 tests passed, including the managed OpenAI Responses structured-output source guard.
 
 `git diff --check`
 

@@ -402,13 +402,6 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             agent,
             registryProvider,
             catalogShadowProvider);
-        if (ManagedSeedProviderFallbacks.IsManagedSeedAgent(agent))
-        {
-            preferredProvider = ManagedSeedProviderFallbacks.ApplyForManagedSqliteSeedProvider(
-                preferredProvider,
-                isManagedSqliteProfile: true);
-        }
-
         return ApplyCredentialAwareManagedSeedFallback(agent, preferredProvider);
     }
 

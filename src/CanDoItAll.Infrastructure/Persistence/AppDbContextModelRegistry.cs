@@ -24,9 +24,14 @@ public static class AppDbContextModelRegistry
     {
         lock (Gate)
         {
-            _assemblies = assemblies
+            var configuredAssemblies = assemblies
                 .Distinct()
                 .Where(ContainsEntityTypeConfiguration)
+                .ToArray();
+            _assemblies = _assemblies
+                .Concat(configuredAssemblies)
+                .Distinct()
+                .OrderBy(assembly => assembly.FullName, StringComparer.Ordinal)
                 .ToArray();
         }
     }

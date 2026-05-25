@@ -31,11 +31,10 @@ public partial class ProcessWorkspace
         selectedCanvasNodeId = null;
         ResetDefinitionCanvasState();
         ResetRuntimeCanvasState();
+        ResetAnalyticsPaneData();
         editor = await ProcessesService.GetEditorAsync(null, ProjectId);
         detailTab = DetailTabDefinition;
         ClearRuntimePaneData();
-        improvements = [];
-        analytics = await ProcessesService.GetAnalyticsAsync(null, ProjectId);
         CloseCanvasEditor();
         canvasActionDialog = null;
         RefreshCanvasSurface();
@@ -209,8 +208,9 @@ public partial class ProcessWorkspace
         SetMessage("Process definition imported.");
     }
 
-    private void AddRole()
+    private async Task AddRole()
     {
+        await EnsureWorkflowOptionsLoadedAsync();
         OpenRoleDialog(
             new ProcessRoleEditorModel
             {
@@ -223,8 +223,9 @@ public partial class ProcessWorkspace
             isNew: true);
     }
 
-    private void OpenRoleDetails(ProcessRoleEditorModel role)
+    private async Task OpenRoleDetails(ProcessRoleEditorModel role)
     {
+        await EnsureWorkflowOptionsLoadedAsync();
         OpenRoleDialog(CloneRole(role), role, isNew: false);
     }
 
@@ -563,13 +564,22 @@ public partial class ProcessWorkspace
     private async Task HandleDetailTabChanged(int index)
     {
         detailTab = ResolveDetailTabKey(index);
-        if (string.Equals(detailTab, DetailTabRuns, StringComparison.Ordinal) ||
-            string.Equals(detailTab, DetailTabAnalytics, StringComparison.Ordinal))
+        if (string.Equals(detailTab, DetailTabRuns, StringComparison.Ordinal))
         {
             await LoadRuntimePaneDataAsync();
         }
+        else if (string.Equals(detailTab, DetailTabAnalytics, StringComparison.Ordinal))
+        {
+            await LoadRuntimePaneDataAsync();
+        }
+        else if (string.Equals(detailTab, DetailTabSteps, StringComparison.Ordinal))
+        {
+            await EnsureWorkflowOptionsLoadedAsync();
+            ClearRunDetails();
+        }
         else if (string.Equals(detailTab, DetailTabManagerChat, StringComparison.Ordinal))
         {
+            await EnsureManagerAgentOptionsLoadedAsync();
             ClearRunDetails();
             await LoadManagerChatAsync();
         }

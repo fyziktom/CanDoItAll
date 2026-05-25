@@ -21,7 +21,7 @@ public sealed class PromptLibraryPackLoaderTests
         var pack = new PromptLibraryPackLoader().Load();
 
         Assert.Equal(12, pack.Groups.Count);
-        Assert.Equal(112, pack.Components.Count);
+        Assert.Equal(111, pack.Components.Count);
         Assert.Equal(10, pack.Flows.Count);
         Assert.Equal(13, pack.Blueprints.Count);
         Assert.Contains(pack.Components, item => item.Key == "role-architecture-lead");

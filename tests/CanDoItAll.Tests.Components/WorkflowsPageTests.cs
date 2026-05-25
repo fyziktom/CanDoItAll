@@ -77,6 +77,38 @@ public sealed class WorkflowsPageTests
     }
 
     [Fact]
+    public async Task Workflows_page_defers_component_library_until_component_sections_need_it()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync(RegisterCountingWorkflowComponentLibrary);
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var counter = harness.Context.Services.GetRequiredService<WorkflowComponentLibraryCallCounter>();
+
+        navigation.NavigateTo("/agents/workflows");
+        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+
+        cut.WaitForElement("[data-testid='workflows-create-starter']");
+        cut.WaitForElement("[data-testid='workflows-tabs']");
+
+        Assert.Equal(0, counter.ListComponentsCount);
+        Assert.Equal(0, counter.ListProviderOptionsCount);
+
+        cut.Find("[data-testid='workflows-tab-editor']").Click();
+
+        cut.WaitForElement("[data-testid='workflow-canvas-editor']");
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(1, counter.ListComponentsCount);
+            Assert.Equal(1, counter.ListProviderOptionsCount);
+        });
+
+        cut.Find("[data-testid='workflows-tab-templates']").Click();
+
+        cut.WaitForElement("[data-testid='workflows-components']");
+        Assert.Equal(1, counter.ListComponentsCount);
+        Assert.Equal(1, counter.ListProviderOptionsCount);
+    }
+
+    [Fact]
     public async Task Workflow_canvas_places_llm_component_validates_runs_and_saves_definition()
     {
         await using var harness = await ComponentTestHarness.CreateAsync(RegisterDeterministicWorkflowLlmInvoker);
@@ -254,6 +286,7 @@ public sealed class WorkflowsPageTests
         {
             Assert.Contains(notificationService.Messages, message => message.Summary == "LLM component created");
         });
+        cut.WaitForElement("[data-testid='workflow-canvas-place-component']");
 
         cut.Find("[data-testid='workflow-canvas-place-component']").Click();
         cut.WaitForAssertion(() =>
@@ -344,6 +377,7 @@ public sealed class WorkflowsPageTests
         {
             Assert.Contains(notificationService.Messages, message => message.Summary == "LLM component created");
         });
+        cut.WaitForElement("[data-testid='workflow-canvas-place-component']");
         cut.Find("[data-testid='workflow-canvas-place-component']").Click();
         cut.WaitForElement("[data-testid='workflow-canvas-edit-edge']");
 
@@ -651,6 +685,15 @@ public sealed class WorkflowsPageTests
         services.AddScoped<IWorkflowLlmComponentInvoker, DeterministicWorkflowLlmComponentInvoker>();
     }
 
+    private static void RegisterCountingWorkflowComponentLibrary(IServiceCollection services)
+    {
+        services.AddSingleton<WorkflowComponentLibraryCallCounter>();
+        services.RemoveAll<IWorkflowComponentLibraryService>();
+        services.AddScoped<IWorkflowComponentLibraryService>(serviceProvider => new CountingWorkflowComponentLibraryService(
+            serviceProvider.GetRequiredService<PersistentWorkflowCatalogService>(),
+            serviceProvider.GetRequiredService<WorkflowComponentLibraryCallCounter>()));
+    }
+
     private static IElement FindButtonByTitle(IRenderedFragment cut, string title)
         => cut.FindAll("button")
             .First(button => button.GetAttribute("title")?.Contains(title, StringComparison.Ordinal) == true);
@@ -832,6 +875,58 @@ public sealed class WorkflowsPageTests
                 $"Workflow LLM test output: {input.PayloadJson}",
                 component.ResultShape));
         }
+    }
+
+    private sealed class WorkflowComponentLibraryCallCounter
+    {
+        private int listComponentsCount;
+        private int listProviderOptionsCount;
+
+        public int ListComponentsCount => listComponentsCount;
+
+        public int ListProviderOptionsCount => listProviderOptionsCount;
+
+        public void IncrementListComponents()
+        {
+            Interlocked.Increment(ref listComponentsCount);
+        }
+
+        public void IncrementListProviderOptions()
+        {
+            Interlocked.Increment(ref listProviderOptionsCount);
+        }
+    }
+
+    private sealed class CountingWorkflowComponentLibraryService(
+        IWorkflowComponentLibraryService inner,
+        WorkflowComponentLibraryCallCounter counter) : IWorkflowComponentLibraryService
+    {
+        public async Task<IReadOnlyList<WorkflowProviderOption>> ListProviderOptionsAsync(CancellationToken cancellationToken = default)
+        {
+            counter.IncrementListProviderOptions();
+            return await inner.ListProviderOptionsAsync(cancellationToken);
+        }
+
+        public async Task<IReadOnlyList<LlmCallComponent>> ListComponentsAsync(CancellationToken cancellationToken = default)
+        {
+            counter.IncrementListComponents();
+            return await inner.ListComponentsAsync(cancellationToken);
+        }
+
+        public Task<LlmCallComponent?> GetComponentAsync(
+            WorkflowComponentId componentId,
+            CancellationToken cancellationToken = default)
+            => inner.GetComponentAsync(componentId, cancellationToken);
+
+        public Task<LlmCallComponent> SaveComponentAsync(
+            LlmCallComponentSaveRequest request,
+            CancellationToken cancellationToken = default)
+            => inner.SaveComponentAsync(request, cancellationToken);
+
+        public Task DeleteComponentAsync(
+            WorkflowComponentId componentId,
+            CancellationToken cancellationToken = default)
+            => inner.DeleteComponentAsync(componentId, cancellationToken);
     }
 
     private sealed class CapturingWorkflowTestRunner : IWorkflowTestRunner

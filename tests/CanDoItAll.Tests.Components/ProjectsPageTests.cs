@@ -52,6 +52,7 @@ public sealed class ProjectsPageTests
         var projectId = await CreateProjectAsync(projectsService, "Explained Project");
 
         var cut = harness.Context.RenderComponent<ProjectsPage>();
+        cut.WaitForAssertion(() => Assert.Contains("Explained Project", cut.Markup));
         var projectCard = cut.FindAll("[data-testid='project-card']")
             .Single(card => card.TextContent.Contains("Explained Project", StringComparison.Ordinal));
 
@@ -108,6 +109,7 @@ public sealed class ProjectsPageTests
         Assert.True((await projectsService.AddSubprojectAsync(childProjectId, grandchildProjectId)).IsSuccess);
 
         var cut = harness.Context.RenderComponent<ProjectsPage>();
+        cut.WaitForAssertion(() => Assert.Contains("Root project", cut.Markup));
 
         var parentCard = cut.FindAll("[data-testid='project-card']")
             .Single(card => card.TextContent.Contains("Root project", StringComparison.Ordinal));
@@ -164,6 +166,7 @@ public sealed class ProjectsPageTests
         await workbenchService.LinkObjectsAsync(projectId, implementationTask.Id, prerequisiteNote.Id, ProjectObjectLinkKind.DependsOn);
 
         var cut = harness.Context.RenderComponent<ProjectsPage>();
+        cut.WaitForAssertion(() => Assert.Contains("Gantt preview project", cut.Markup));
         var projectCard = cut.FindAll("[data-testid='project-card']")
             .Single(card => card.TextContent.Contains("Gantt preview project", StringComparison.Ordinal));
 

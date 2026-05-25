@@ -145,8 +145,10 @@ public sealed class ActivityService(
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var boundedTake = Math.Clamp(take, 1, 100);
-        var query = dbContext.Set<ActivityEntry>()
+        return await dbContext.Set<ActivityEntry>()
             .AsNoTracking()
+            .OrderByDescending(entry => entry.CreatedAtUtc)
+            .Take(boundedTake)
             .Select(entry => new ActivityTimelineItem(
                 entry.Id,
                 entry.Category,
@@ -155,19 +157,7 @@ public sealed class ActivityService(
                 entry.Description,
                 entry.Route,
                 entry.CreatedAtUtc,
-                entry.Actor));
-
-        if (dbContext.Database.IsSqlite())
-        {
-            return (await query.ToListAsync(cancellationToken))
-                .OrderByDescending(entry => entry.CreatedAtUtc)
-                .Take(boundedTake)
-                .ToList();
-        }
-
-        return await query
-            .OrderByDescending(entry => entry.CreatedAtUtc)
-            .Take(boundedTake)
+                entry.Actor))
             .ToListAsync(cancellationToken);
     }
 

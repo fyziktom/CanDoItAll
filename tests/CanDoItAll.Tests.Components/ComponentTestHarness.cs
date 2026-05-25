@@ -1,5 +1,6 @@
 using Bunit;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Web.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using CanDoItAll.Tests.Support;
@@ -42,7 +43,7 @@ internal sealed class ComponentTestHarness : IAsyncDisposable
 
         var ownsTestEnvironment = options?.TestEnvironment is null;
         var testEnvironment = options?.TestEnvironment ?? CanDoItAllTestEnvironment.Create("candoitall-component-tests");
-        var activeProfile = options?.ActiveProfile ?? testEnvironment.CreateManagedSqliteProfile("primary");
+        var activeProfile = options?.ActiveProfile ?? testEnvironment.CreatePostgreSqlProfile("primary");
 
         var context = new TestContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -55,6 +56,20 @@ internal sealed class ComponentTestHarness : IAsyncDisposable
         context.Services.AddScoped<TuningCoordinator>();
         context.Services.AddHttpClient<DevelopmentManagerClient>();
         configureServices?.Invoke(context.Services);
+
+        if (string.IsNullOrWhiteSpace(configuration["Database:Provider"]) &&
+            string.IsNullOrWhiteSpace(configuration["Database:ConnectionString"]))
+        {
+            await using var setupScope = context.Services.CreateAsyncScope();
+            var profileService = setupScope.ServiceProvider.GetRequiredService<IDatabaseProfileService>();
+            var saveResult = await profileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
+                activeProfile,
+                "PostgreSQL bootstrap"));
+            if (saveResult.IsFailure)
+            {
+                throw new InvalidOperationException(string.Join(" ", saveResult.Errors.Select(error => error.Message)));
+            }
+        }
 
         await TestApplicationBootstrap.InitializeSchemaAsync(
             context.Services,

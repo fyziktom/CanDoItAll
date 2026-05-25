@@ -2,9 +2,9 @@ using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.CognitiveMemory;
 using CanDoItAll.SharedKernel;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
+using CanDoItAll.Tests.Support;
 namespace CanDoItAll.Tests.Unit;
 
 public sealed class CognitiveMemoryQualityFoundationTests
@@ -3422,15 +3422,12 @@ public sealed class CognitiveMemoryQualityFoundationTests
     private static async Task<QualityFixture> CreateFixtureAsync()
     {
         AppDbContextModelRegistry.ConfigureAssemblies(ModuleAssemblies.All);
-        var connection = new SqliteConnection("Data Source=:memory:");
-        await connection.OpenAsync();
+        var database = PostgresTestDatabaseLease.Create("cognitivememoryqualityfoundationtests");
 
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlite(connection)
-            .Options;
+        var options = database.CreateAppDbContextOptions();
         var dbContext = new AppDbContext(options);
         await dbContext.Database.EnsureCreatedAsync();
-        return new QualityFixture(connection, new TestDbContextFactory(options), dbContext, new FixedClock());
+        return new QualityFixture(database, new TestDbContextFactory(options), dbContext, new FixedClock());
     }
 
     private sealed record SeededMemory(
@@ -3472,7 +3469,7 @@ public sealed class CognitiveMemoryQualityFoundationTests
     }
 
     private sealed class QualityFixture(
-        SqliteConnection connection,
+        PostgresTestDatabaseLease database,
         TestDbContextFactory factory,
         AppDbContext dbContext,
         FixedClock clock) : IAsyncDisposable
@@ -3486,7 +3483,7 @@ public sealed class CognitiveMemoryQualityFoundationTests
         public async ValueTask DisposeAsync()
         {
             await DbContext.DisposeAsync();
-            await connection.DisposeAsync();
+            await database.DisposeAsync();
         }
     }
 }

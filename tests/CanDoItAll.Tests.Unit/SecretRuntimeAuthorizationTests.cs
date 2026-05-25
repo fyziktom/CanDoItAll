@@ -3,6 +3,7 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -123,8 +124,12 @@ public sealed class SecretRuntimeAuthorizationTests
     private static TestDbContextFactory CreateDbContextFactory()
     {
         AppDbContextModelRegistry.ConfigureAssemblies([typeof(SecretRecord).Assembly]);
+        var internalServiceProvider = new ServiceCollection()
+            .AddEntityFrameworkInMemoryDatabase()
+            .BuildServiceProvider();
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase($"secret-runtime-authorization-{Guid.NewGuid():N}")
+            .UseInternalServiceProvider(internalServiceProvider)
             .Options;
 
         return new TestDbContextFactory(options);

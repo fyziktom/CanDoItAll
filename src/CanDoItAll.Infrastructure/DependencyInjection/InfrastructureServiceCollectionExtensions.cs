@@ -70,18 +70,22 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<IControlPlaneSecretProtector, ControlPlaneSecretProtector>();
         services.AddSingleton<DatabaseProfileControlPlaneService>();
         services.AddSingleton<IDatabaseProfileService>(serviceProvider => serviceProvider.GetRequiredService<DatabaseProfileControlPlaneService>());
-        services.AddSingleton<IActiveDatabaseProfileResolver>(serviceProvider => serviceProvider.GetRequiredService<DatabaseProfileControlPlaneService>());
-        services.AddSingleton<IDatabaseProfileRuntimeAccessor>(serviceProvider => serviceProvider.GetRequiredService<DatabaseProfileControlPlaneService>());
-        services.AddSingleton<IDatabaseSnapshotService, DatabaseSnapshotService>();
         services.AddScoped<IDatabaseTransferService, DatabaseTransferService>();
         services.AddSingleton<IDatabaseSwitchNotificationService, DatabaseSwitchNotificationService>();
         services.AddSingleton<IDatabaseRuntimeState, DatabaseRuntimeState>();
+        services.AddSingleton<ICanonicalRuntimeDatabase, CanonicalRuntimeDatabase>();
+        services.AddSingleton<CanonicalDatabaseProfileRuntimeAccessor>();
+        services.AddSingleton<IActiveDatabaseProfileResolver>(serviceProvider => serviceProvider.GetRequiredService<CanonicalDatabaseProfileRuntimeAccessor>());
+        services.AddSingleton<IDatabaseProfileRuntimeAccessor>(serviceProvider => serviceProvider.GetRequiredService<CanonicalDatabaseProfileRuntimeAccessor>());
         services.AddSingleton<IDatabaseDriver, InMemoryDatabaseDriver>();
-        services.AddSingleton<IDatabaseDriver, SqliteDatabaseDriver>();
         services.AddSingleton<IDatabaseDriver, PostgreSqlDatabaseDriver>();
         services.AddSingleton<IDatabaseDriverRegistry, DatabaseDriverRegistry>();
-        services.AddSingleton<ISwitchableAppDbContextFactory, SwitchableAppDbContextFactory>();
-        services.AddSingleton<IDbContextFactory<AppDbContext>>(serviceProvider => serviceProvider.GetRequiredService<ISwitchableAppDbContextFactory>());
+        services.AddPooledDbContextFactory<AppDbContext>((serviceProvider, optionsBuilder) =>
+        {
+            var canonicalRuntimeDatabase = serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>();
+            AppDbContextOptionsConfigurator.Configure(optionsBuilder, canonicalRuntimeDatabase.Profile);
+        });
+        services.AddSingleton<IProfileAppDbContextFactory, ProfileAppDbContextFactory>();
         services.AddSingleton<IWorkspacePathResolver, WorkspacePathResolver>();
         services.AddSingleton<IWorkspacePathAccessGuard, WorkspacePathAccessGuard>();
         services.AddSingleton<IStorageCatalogService, StorageCatalogService>();

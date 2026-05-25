@@ -1,0 +1,11 @@
+git@github.com: Permission denied (publickey).
+fatal: Could not read from remote repository.
+
+Please make sure you have the correct access rights
+and the repository exists.
+fetch ExitCode: 128
+branch: db-remove-sqlite
+HEAD: 843b54ee83b630a173c2ef7d3eb94eab37c92f60
+development: f62a29461044739e947e715aa020f6ffc2b36216
+origin/development: f62a29461044739e947e715aa020f6ffc2b36216
+origin/development ancestor of HEAD ExitCode: 0

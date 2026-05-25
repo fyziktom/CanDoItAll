@@ -292,10 +292,12 @@ public sealed class ProjectStructurePageTests
 
         var cut = harness.Context.RenderComponent<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
+        _ = WaitForCanvasWorkbench(cut);
 
         cut.WaitForAssertion(() =>
         {
             Assert.DoesNotContain("project-structure-validation-window", cut.Markup, StringComparison.Ordinal);
+            Assert.Contains("Health", cut.Markup);
         });
 
         FindButtonByLabel(cut, "Health").Click();
@@ -844,11 +846,7 @@ public sealed class ProjectStructurePageTests
 
         var cut = harness.Context.RenderComponent<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, currentProjectId));
-
-        cut.WaitForAssertion(() =>
-        {
-            Assert.Contains("Current project structure", cut.Markup);
-        });
+        _ = WaitForCanvasWorkbench(cut);
 
         await InvokeCanvasContextActionAsync(cut, BuildProjectRootNodeKey(currentProjectId), "project:add-subproject");
 
@@ -1727,7 +1725,7 @@ public sealed class ProjectStructurePageTests
 
         var cut = harness.Context.RenderComponent<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
-        var canvasWorkbench = cut.FindComponent<CanvasWorkbench>();
+        var canvasWorkbench = WaitForCanvasWorkbench(cut);
         var baselineSurface = await workbenchService.GetStructureAsync(projectId);
         var baselineState = CanvasWorkbenchUiState.Parse(baselineSurface.ViewStateJson);
 
@@ -1755,7 +1753,7 @@ public sealed class ProjectStructurePageTests
         Assert.Equal(baselineState.PanX, persistedState.PanX, 3);
         Assert.Equal(baselineState.PanY, persistedState.PanY, 3);
         Assert.Equal(baselineState.ShowMinimap, persistedState.ShowMinimap);
-        Assert.Empty(cut.FindComponent<CanvasWorkbench>().Instance.Surface.UiState.ManualPositions);
+        Assert.Empty(WaitForCanvasWorkbench(cut).Instance.Surface.UiState.ManualPositions);
     }
 
     [Fact]
@@ -1771,7 +1769,7 @@ public sealed class ProjectStructurePageTests
 
         var cut = harness.Context.RenderComponent<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
-        var canvasWorkbench = cut.FindComponent<CanvasWorkbench>();
+        var canvasWorkbench = WaitForCanvasWorkbench(cut);
 
         var stateChange = new CanvasWorkbenchUiState
         {
@@ -1817,7 +1815,7 @@ public sealed class ProjectStructurePageTests
         Assert.Equal([rootNodeId], persistedState.SelectedNodeIds);
         Assert.False(persistedState.ShowMinimap);
 
-        var renderedState = cut.FindComponent<CanvasWorkbench>().Instance.Surface.UiState;
+        var renderedState = WaitForCanvasWorkbench(cut).Instance.Surface.UiState;
         Assert.Empty(renderedState.ManualPositions);
         Assert.Equal(1.25, renderedState.Zoom, 3);
         Assert.Equal(240, renderedState.PanX, 3);
@@ -2086,7 +2084,7 @@ public sealed class ProjectStructurePageTests
 
         var cut = harness.Context.RenderComponent<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
-        var canvasWorkbench = cut.FindComponent<CanvasWorkbench>();
+        var canvasWorkbench = WaitForCanvasWorkbench(cut);
 
         await cut.InvokeAsync(() => canvasWorkbench.Instance.OnCreateAction(JsonSerializer.Serialize(
             new CanvasWorkbenchCreateActionRequest(
@@ -2642,7 +2640,7 @@ public sealed class ProjectStructurePageTests
     }
 
     private static Task OpenNodeFromCanvasAsync(IRenderedComponent<ProjectStructurePage> cut, string nodeId)
-        => cut.InvokeAsync(() => cut.FindComponent<CanvasWorkbench>().Instance.OnNodeOpened(nodeId));
+        => cut.InvokeAsync(() => WaitForCanvasWorkbench(cut).Instance.OnNodeOpened(nodeId));
 
     private static IElement FindButtonByLabel(
         IRenderedFragment cut,
@@ -2654,8 +2652,15 @@ public sealed class ProjectStructurePageTests
                 || (button.GetAttribute("title")?.Contains(label, StringComparison.Ordinal) ?? false)
                 || (button.GetAttribute("aria-label")?.Contains(label, StringComparison.Ordinal) ?? false));
 
+    private static IRenderedComponent<CanvasWorkbench> WaitForCanvasWorkbench(IRenderedFragment cut)
+    {
+        IRenderedComponent<CanvasWorkbench>? canvasWorkbench = null;
+        cut.WaitForAssertion(() => canvasWorkbench = cut.FindComponent<CanvasWorkbench>());
+        return canvasWorkbench ?? throw new InvalidOperationException("Canvas workbench did not render.");
+    }
+
     private static Task InvokeCanvasContextActionAsync(IRenderedComponent<ProjectStructurePage> cut, string nodeId, string actionId)
-        => cut.InvokeAsync(() => cut.FindComponent<CanvasWorkbench>().Instance.OnContextAction(nodeId, actionId, 0, 0));
+        => cut.InvokeAsync(() => WaitForCanvasWorkbench(cut).Instance.OnContextAction(nodeId, actionId, 0, 0));
 
     private static IReadOnlyList<(string Value, string Label)> ReadHierarchyProjectOptions(IRenderedComponent<ProjectStructurePage> cut)
         => cut.FindAll("[data-testid='project-structure-hierarchy-project-select'] option")

@@ -4,25 +4,18 @@ namespace CanDoItAll.Infrastructure.ControlPlane;
 
 public enum DatabaseProviderKind
 {
-    Sqlite,
-    PostgreSql,
-    InMemory
+    PostgreSql = 1,
+    InMemory = 2
 }
 
 public enum DatabaseProfileSourceKind
 {
-    ManagedSqlite,
-    ExternalSqliteFile,
-    ImportedSqlite,
-    PostgresConnection,
-    SnapshotCache,
-    IpfsSnapshot,
-    InMemory
+    PostgresConnection = 3,
+    InMemory = 6
 }
 
 public enum DatabaseProfileStorageMode
 {
-    ManagedPerProfile,
     ExternalWorkspaceRoot,
     Ephemeral
 }
@@ -32,8 +25,7 @@ public enum DatabaseProfileResolutionSource
     ExplicitOverride,
     PersistedActiveProfile,
     PersistedCatalogFallback,
-    LegacyDiscovery,
-    AutoProvisionedManagedSqlite
+    AutoProvisionedPostgreSql
 }
 
 public sealed class DatabaseProfileRecord
@@ -42,11 +34,9 @@ public sealed class DatabaseProfileRecord
 
     public string DisplayName { get; set; } = string.Empty;
 
-    public DatabaseProviderKind ProviderKind { get; set; } = DatabaseProviderKind.Sqlite;
+    public DatabaseProviderKind ProviderKind { get; set; } = DatabaseProviderKind.PostgreSql;
 
-    public DatabaseProfileSourceKind SourceKind { get; set; } = DatabaseProfileSourceKind.ManagedSqlite;
-
-    public SqliteDatabaseProfileConnection? Sqlite { get; set; }
+    public DatabaseProfileSourceKind SourceKind { get; set; } = DatabaseProfileSourceKind.PostgresConnection;
 
     public PostgreSqlDatabaseProfileConnection? PostgreSql { get; set; }
 
@@ -54,16 +44,9 @@ public sealed class DatabaseProfileRecord
 
     public DatabaseProfileStorageDescriptor Storage { get; set; } = new();
 
-    public DatabaseProfileCloneMetadata Clone { get; set; } = new();
-
     public DatabaseProfileRuntimeMetadata Runtime { get; set; } = new();
 
     public DatabaseProfileAuditMetadata Audit { get; set; } = new();
-}
-
-public sealed class SqliteDatabaseProfileConnection
-{
-    public string DatabasePath { get; set; } = string.Empty;
 }
 
 public sealed class PostgreSqlDatabaseProfileConnection
@@ -90,16 +73,9 @@ public sealed class InMemoryDatabaseProfileConnection
 
 public sealed class DatabaseProfileStorageDescriptor
 {
-    public DatabaseProfileStorageMode Mode { get; set; } = DatabaseProfileStorageMode.ManagedPerProfile;
+    public DatabaseProfileStorageMode Mode { get; set; } = DatabaseProfileStorageMode.ExternalWorkspaceRoot;
 
     public string WorkspaceRoot { get; set; } = string.Empty;
-}
-
-public sealed class DatabaseProfileCloneMetadata
-{
-    public Guid? OriginProfileId { get; set; }
-
-    public Guid? OriginSnapshotId { get; set; }
 }
 
 public sealed class DatabaseProfileRuntimeMetadata
@@ -137,7 +113,10 @@ public sealed record DatabaseProfileSummary(
     bool IsActive,
     bool IsRuntimeLocked,
     DateTimeOffset CreatedUtc,
-    DateTimeOffset? LastUsedUtc);
+    DateTimeOffset? LastUsedUtc)
+{
+    public bool IsPendingRestartActivation { get; init; }
+}
 
 public enum DatabaseProfileSchemaStatus
 {
@@ -163,13 +142,13 @@ public sealed class DatabaseProfileEditorModel
 {
     public Guid? Id { get; set; }
 
-    public string DisplayName { get; set; } = "Managed SQLite workspace";
+    public string DisplayName { get; set; } = "PostgreSQL workspace";
 
-    public DatabaseProviderKind ProviderKind { get; set; } = DatabaseProviderKind.Sqlite;
+    public DatabaseProviderKind ProviderKind { get; set; } = DatabaseProviderKind.PostgreSql;
 
-    public DatabaseProfileSourceKind SourceKind { get; set; } = DatabaseProfileSourceKind.ManagedSqlite;
+    public DatabaseProfileSourceKind SourceKind { get; set; } = DatabaseProfileSourceKind.PostgresConnection;
 
-    public string? SqliteDatabasePath { get; set; }
+    public string? InMemoryDatabaseName { get; set; }
 
     public string? WorkspaceRoot { get; set; }
 
@@ -187,16 +166,20 @@ public sealed class DatabaseProfileEditorModel
 
     public bool PostgresTrustServerCertificate { get; set; }
 
-    public Guid? OriginProfileId { get; set; }
-
-    public Guid? OriginSnapshotId { get; set; }
-
     public bool IsRuntimeLocked { get; set; }
 }
 
 public sealed class DatabaseSelectionStateModel
 {
+    private Guid _runtimeProfileId;
+
     public Guid ActiveProfileId { get; set; }
+
+    public Guid RuntimeProfileId
+    {
+        get => _runtimeProfileId == Guid.Empty ? ActiveProfileId : _runtimeProfileId;
+        set => _runtimeProfileId = value;
+    }
 
     public string DisplayName { get; set; } = string.Empty;
 
@@ -213,6 +196,16 @@ public sealed class DatabaseSelectionStateModel
     public string WorkspaceRoot { get; set; } = string.Empty;
 
     public string Descriptor { get; set; } = string.Empty;
+
+    public Guid? PendingRestartProfileId { get; set; }
+
+    public string PendingRestartDisplayName { get; set; } = string.Empty;
+
+    public string PendingRestartDescriptor { get; set; } = string.Empty;
+
+    public string PendingRestartFingerprint { get; set; } = string.Empty;
+
+    public bool HasPendingRestartActivation => PendingRestartProfileId.HasValue;
 }
 
 public sealed record ResolvedDatabaseProfile(
@@ -237,6 +230,13 @@ public interface IDatabaseProfileRuntimeAccessor : IActiveDatabaseProfileResolve
     ResolvedDatabaseProfile ResolveProfile(Guid profileId);
 }
 
+public interface ICanonicalRuntimeDatabase
+{
+    ResolvedDatabaseProfile Profile { get; }
+
+    long Generation { get; }
+}
+
 public interface IDatabaseProfileService
 {
     Task<IReadOnlyList<DatabaseProfileSummary>> ListAsync(CancellationToken cancellationToken = default);
@@ -252,20 +252,4 @@ public interface IDatabaseProfileService
     Task<Result> ActivateAsync(Guid id, CancellationToken cancellationToken = default);
 
     Task<DatabaseSelectionStateModel> GetCurrentSelectionAsync(CancellationToken cancellationToken = default);
-}
-
-public interface IDatabaseSnapshotService
-{
-    Task<Result<DatabaseSnapshotExportResult>> CreateSnapshotAsync(
-        Guid sourceProfileId,
-        DatabaseSnapshotTransportKind transportKind,
-        CancellationToken cancellationToken = default);
-
-    Task<Result<DatabaseSnapshotMaterializationResult>> CloneAsync(
-        DatabaseCloneRequest request,
-        CancellationToken cancellationToken = default);
-
-    Task<Result<DatabaseSnapshotMaterializationResult>> MaterializeSnapshotAsync(
-        DatabaseSnapshotMaterializationRequest request,
-        CancellationToken cancellationToken = default);
 }

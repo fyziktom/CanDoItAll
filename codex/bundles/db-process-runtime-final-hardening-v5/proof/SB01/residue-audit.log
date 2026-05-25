@@ -1,0 +1,164 @@
+Command: powershell -NoProfile -ExecutionPolicy Bypass -File codex/bundles/db-process-runtime-final-hardening-v5/scripts/audit_process_db_canonicality.ps1
+WorkingDirectory: C:\repositories\CanDoItAll
+Started: 2026-05-24T19:20:04.0776528-04:00
+
+== SQLite runtime residue ==
+== SQLite runtime residue ==
+src\CanDoItAll.Infrastructure\ControlPlane\LegacyDatabaseProfileCatalogQuarantine.cs:16:    public const string RetiredManagedSourceName = "ManagedSqlite";
+src\CanDoItAll.Infrastructure\ControlPlane\LegacyDatabaseProfileCatalogQuarantine.cs:17:    public const string RetiredExternalFileSourceName = "ExternalSqliteFile";
+src\CanDoItAll.Infrastructure\ControlPlane\LegacyDatabaseProfileCatalogQuarantine.cs:18:    public const string RetiredImportedSourceName = "ImportedSqlite";
+src\CanDoItAll.Infrastructure\ControlPlane\LegacyDatabaseProfileCatalogQuarantine.cs:19:    public const string RetiredSnapshotCacheSourceName = "SnapshotCache";
+src\CanDoItAll.Infrastructure\ControlPlane\LegacyDatabaseProfileCatalogQuarantine.cs:20:    public const string RetiredIpfsSnapshotSourceName = "IpfsSnapshot";
+src\CanDoItAll.Infrastructure\ControlPlane\LegacyDatabaseProfileCatalogQuarantine.cs:27:        RetiredSnapshotCacheSourceName,
+src\CanDoItAll.Infrastructure\ControlPlane\LegacyDatabaseProfileCatalogQuarantine.cs:28:        RetiredIpfsSnapshotSourceName
+== Process lease release patterns ==
+src/CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:460:        if (!await TryFinalizeClaimedDeliveryAsync(
+src/CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:518:    private async Task<bool> TryFinalizeClaimedDeliveryAsync(
+src/CanDoItAll.Modules.Processes\Automation\Recovery\ProcessRunRecoveryWorker.cs:61:            var releasedLeaseCount = await ReleaseStrandedAutomationDispatchLeasesAsync(
+src/CanDoItAll.Modules.Processes\Automation\Recovery\ProcessRunRecoveryWorker.cs:65:            if (releasedLeaseCount > 0)
+src/CanDoItAll.Modules.Processes\Automation\Recovery\ProcessRunRecoveryWorker.cs:68:                    "Released {ReleasedLeaseCount} stranded process automation dispatch lease(s) during runtime recovery startup scan.",
+src/CanDoItAll.Modules.Processes\Automation\Recovery\ProcessRunRecoveryWorker.cs:69:                    releasedLeaseCount);
+src/CanDoItAll.Modules.Processes\Automation\Recovery\ProcessRunRecoveryWorker.cs:169:    private async Task<int> ReleaseStrandedAutomationDispatchLeasesAsync(
+src/CanDoItAll.Modules.Processes\Automation\Recovery\ProcessRunRecoveryWorker.cs:194:            record.LeaseToken = string.Empty;
+src/CanDoItAll.Modules.Processes\Automation\Recovery\ProcessRunRecoveryWorker.cs:195:            record.LeaseExpiresAtUtc = null;
+src/CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:51:            await ReleaseClaimedLeaseAsync(dbContext, command.Id, leaseToken, now, cancellationToken);
+src/CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:57:            await ReleaseClaimedLeaseAsync(dbContext, command.Id, leaseToken, now, cancellationToken);
+src/CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:63:            await ReleaseClaimedLeaseAsync(dbContext, command.Id, leaseToken, now, cancellationToken);
+src/CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:119:        if (await TryFinalizeCommandAsync(dbContext, command, leaseToken, finalization, now, cancellationToken))
+src/CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:164:    private static async Task ReleaseClaimedLeaseAsync(
+src/CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:237:    private static async Task<bool> TryFinalizeCommandAsync(
+src/CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:686:        command.LeaseToken = string.Empty;
+src/CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:687:        command.LeaseExpiresAtUtc = null;
+src/CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:762:        command.LeaseToken = string.Empty;
+src/CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:763:        command.LeaseExpiresAtUtc = null;
+src/CanDoItAll.Modules.Workspace\Storage\WorkspaceService.Storage.cs:455:            StorageUsagePurpose.ReleasePackage => "Workspace default for publish-ready release packages.",
+src/CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs:63:    private const string ProcessMockReleaseManagerRoleKey = "release-manager";
+src/CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:3085:            (ProcessMockReleaseManagerRoleKey, _) => ("07-release-notes.md", "release notes qa approval rollout evidence"),
+src/CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ExecutionPrompt.cs:534:        builder.AppendLine("- For an escalation/no-go/replan step with no downstream release branch, `Completed` means the escalation decision was recorded, not that the product became release-ready.");
+src/CanDoItAll.Modules.Processes\Canvas\ProcessCanvasTemplateCatalog.cs:20:    public const string CreateStepReleaseApproval = "process-step.release-approval";
+src/CanDoItAll.Modules.Processes\Canvas\WebGl\ProcessWebGlSceneAdapter.cs:17:        new("release-readiness-and-deployment", "Complex", "Release control path with rehearsal, cutover, and deployment verification.")
+src/CanDoItAll.Modules.Processes\Canvas\WebGl\ProcessWebGlSceneAdapter.cs:334:            "release-readiness-and-deployment" => "Release readiness and deployment concept",
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:527:            await ReleaseClaimedLeaseAsync(outboxId, leaseToken, now, cancellationToken);
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:533:            await ReleaseClaimedLeaseAsync(outboxId, leaseToken, now, cancellationToken);
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:624:        var finalized = await TryFinalizeClaimedRecordAsync(
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:831:    private async Task ReleaseClaimedLeaseAsync(
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:855:    private async Task<bool> TryFinalizeClaimedRecordAsync(
+== PostgreSQL claim patterns ==
+src/CanDoItAll.Modules.Automation\Services\AutomationIngressService.cs:300:            .ExecuteUpdateAsync(setters => setters
+src/CanDoItAll.Modules.Automation\Runtime\AutomationRuntimeModels.cs:132:    public string LockToken { get; set; } = string.Empty;
+src/CanDoItAll.Modules.Automation\Runtime\AutomationRuntimeModels.cs:133:    public DateTimeOffset? LockedAtUtc { get; set; }
+src/CanDoItAll.Modules.Automation\Runtime\AutomationRuntimeModels.cs:145:        builder.Property(item => item.LockToken).HasMaxLength(100);
+src/CanDoItAll.Modules.Automation\Runtime\AutomationRuntimeModels.cs:155:            item.LockedAtUtc
+src/CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:195:                 item.LockedAtUtc != null &&
+src/CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:196:                 item.LockedAtUtc <= leaseCutoff))
+src/CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:243:                              AND d."LockedAtUtc" IS NOT NULL
+src/CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:244:                              AND d."LockedAtUtc" <= @leaseCutoff
+src/CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:248:                    FOR UPDATE SKIP LOCKED
+src/CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:257:                    "LockedAtUtc" = @now,
+src/CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:258:                    "LockToken" = concat(@tokenPrefix, replace(d."Id"::text, '-', ''))
+src/CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:261:                RETURNING d."Id", d."LockToken", d."EnvelopeId";
+src/CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:324:                        if (await DispatchClaimedAsync(delivery.Id, delivery.LockToken, cancellationToken))
+src/CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:349:    private sealed record ClaimedAutomationDelivery(Guid Id, string LockToken, Guid EnvelopeId);
+src/CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:355:        var lockToken = Guid.NewGuid().ToString("N");
+src/CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:364:                 item.LockedAtUtc != null &&
+src/CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:365:                 item.LockedAtUtc <= leaseCutoff))
+src/CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:366:            .ExecuteUpdateAsync(setters => setters
+src/CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:372:                .SetProperty(item => item.LockedAtUtc, now)
+src/CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:373:                .SetProperty(item => item.LockToken, lockToken), cancellationToken);
+src/CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:379:        return await DispatchClaimedAsync(deliveryId, lockToken, cancellationToken);
+src/CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:384:        string lockToken,
+src/CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:391:                item => item.Id == deliveryId && item.LockToken == lockToken,
+src/CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:401:            delivery.LockedAtUtc is null ||
+src/CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:402:            delivery.LockedAtUtc <= leaseCutoff)
+src/CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:464:                lockToken,
+src/CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:522:        string lockToken,
+src/CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:532:            .Where(item => item.LockToken == lockToken)
+src/CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:533:            .Where(item => item.LockedAtUtc != null && item.LockedAtUtc > leaseCutoff)
+src/CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:534:            .ExecuteUpdateAsync(
+src/CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:540:                    .SetProperty(item => item.LockToken, string.Empty)
+src/CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:541:                    .SetProperty(item => item.LockedAtUtc, (DateTimeOffset?)null)
+src/CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:43:            command.LeaseExpiresAtUtc is null ||
+src/CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:44:            command.LeaseExpiresAtUtc <= now)
+src/CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:145:            .Where(item => item.LeaseExpiresAtUtc != null && item.LeaseExpiresAtUtc > now)
+src/CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:146:            .ExecuteUpdateAsync(
+src/CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:174:            .Where(item => item.LeaseExpiresAtUtc != null && item.LeaseExpiresAtUtc > now)
+src/CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:175:            .ExecuteUpdateAsync(
+src/CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:178:                    .SetProperty(item => item.LeaseExpiresAtUtc, (DateTimeOffset?)null)
+src/CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:250:            .Where(item => item.LeaseExpiresAtUtc != null && item.LeaseExpiresAtUtc > now)
+src/CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:251:            .ExecuteUpdateAsync(
+src/CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:259:                    .SetProperty(item => item.LeaseExpiresAtUtc, (DateTimeOffset?)null)
+src/CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:536:            .Where(item => item.LeaseExpiresAtUtc == null || item.LeaseExpiresAtUtc <= now)
+src/CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:586:                      AND (c."LeaseExpiresAtUtc" IS NULL OR c."LeaseExpiresAtUtc" <= @now)
+src/CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:588:                    FOR UPDATE SKIP LOCKED
+src/CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:593:                    "LeaseExpiresAtUtc" = @leaseExpiresAtUtc,
+src/CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:602:            AddParameter(command, "@leaseExpiresAtUtc", now.Add(leaseDuration));
+src/CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:687:        command.LeaseExpiresAtUtc = null;
+src/CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:763:        command.LeaseExpiresAtUtc = null;
+src/CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:827:        var leaseExpiresAtUtc = now.Add(leaseDuration);
+src/CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:833:            .Where(item => item.LeaseExpiresAtUtc == null || item.LeaseExpiresAtUtc <= now)
+src/CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:834:            .ExecuteUpdateAsync(setters => setters
+src/CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:836:                .SetProperty(item => item.LeaseExpiresAtUtc, leaseExpiresAtUtc)
+src/CanDoItAll.Modules.Processes\Automation\Recovery\ProcessRunRecoveryWorker.cs:189:                item.LeaseExpiresAtUtc.HasValue &&
+src/CanDoItAll.Modules.Processes\Automation\Recovery\ProcessRunRecoveryWorker.cs:190:                item.LeaseExpiresAtUtc.Value > now)
+src/CanDoItAll.Modules.Processes\Automation\Recovery\ProcessRunRecoveryWorker.cs:195:            record.LeaseExpiresAtUtc = null;
+src/CanDoItAll.Modules.Workspace\Connectors\ConnectorCommands.cs:62:    public DateTimeOffset? LeaseExpiresAtUtc { get; set; }
+src/CanDoItAll.Modules.Workspace\Connectors\ConnectorCommands.cs:94:            item.LeaseExpiresAtUtc
+src/CanDoItAll.Modules.Processes\Services\ProcessesService.Publication.cs:188:            .ExecuteUpdateAsync(
+src/CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:472:        var leaseExpiresAtUtc = now.Add(StepDispatchClaimLeaseDuration);
+src/CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:482:                item.AutomationDispatchLeaseExpiresAtUtc == null ||
+src/CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:483:                item.AutomationDispatchLeaseExpiresAtUtc <= now)
+src/CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:484:            .ExecuteUpdateAsync(
+src/CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:489:                    .SetProperty(item => item.AutomationDispatchLeaseExpiresAtUtc, leaseExpiresAtUtc)
+src/CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:502:            "Claimed process automation dispatch for run {RunId}, step {StepRunId}. Trigger={Trigger}. LeaseExpiresAtUtc={LeaseExpiresAtUtc}.",
+src/CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:506:            leaseExpiresAtUtc);
+src/CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:534:        var leaseExpiresAtUtc = now.Add(StepDispatchClaimLeaseDuration);
+src/CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:539:            .Where(item => item.AutomationDispatchLeaseExpiresAtUtc > now)
+src/CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:540:            .ExecuteUpdateAsync(
+src/CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:542:                    .SetProperty(item => item.AutomationDispatchLeaseExpiresAtUtc, leaseExpiresAtUtc),
+src/CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:577:            .Where(item => item.AutomationDispatchLeaseExpiresAtUtc > now)
+src/CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:591:                .ExecuteUpdateAsync(
+src/CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:596:                        .SetProperty(item => item.AutomationDispatchLeaseExpiresAtUtc, (DateTimeOffset?)null),
+src/CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:1279:                item.AutomationDispatchLeaseExpiresAtUtc == null ||
+src/CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:1280:                item.AutomationDispatchLeaseExpiresAtUtc <= now)
+src/CanDoItAll.Modules.Processes\Persistence\Entities\ProcessRuntimeModels.cs:238:    public DateTimeOffset? AutomationDispatchLeaseExpiresAtUtc { get; set; }
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:51:    public DateTimeOffset? LeaseExpiresAtUtc { get; set; }
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:72:            item.LeaseExpiresAtUtc
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:341:            .Where(item => item.LeaseExpiresAtUtc == null || item.LeaseExpiresAtUtc <= now);
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:400:                      AND (o."LeaseExpiresAtUtc" IS NULL OR o."LeaseExpiresAtUtc" <= @now)
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:407:                    FOR UPDATE SKIP LOCKED
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:412:                    "LeaseExpiresAtUtc" = CASE
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:413:                        WHEN o."CommandKey" = @automationCommandKey THEN @automationLeaseExpiresAtUtc
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:414:                        ELSE @leaseExpiresAtUtc
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:428:            AddParameter(command, "@leaseExpiresAtUtc", now.Add(leaseDuration));
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:429:            AddParameter(command, "@automationLeaseExpiresAtUtc", now.Add(ResolveClaimLeaseDuration(AutomationDispatchCommandKey, leaseDuration)));
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:519:            record.LeaseExpiresAtUtc is null ||
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:520:            record.LeaseExpiresAtUtc <= now)
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:726:        var leaseExpiresAtUtc = now.Add(ResolveClaimLeaseDuration(commandKey, DefaultLeaseDuration));
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:731:            .Where(item => item.LeaseExpiresAtUtc != null && item.LeaseExpiresAtUtc > now)
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:732:            .ExecuteUpdateAsync(
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:734:                    .SetProperty(item => item.LeaseExpiresAtUtc, leaseExpiresAtUtc)
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:807:            .Where(item => item.LeaseExpiresAtUtc != null && item.LeaseExpiresAtUtc > now)
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:809:            .ExecuteUpdateAsync(
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:846:            .Where(item => item.LeaseExpiresAtUtc != null && item.LeaseExpiresAtUtc > now)
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:847:            .ExecuteUpdateAsync(
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:850:                    .SetProperty(item => item.LeaseExpiresAtUtc, (DateTimeOffset?)null)
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:870:            .Where(item => item.LeaseExpiresAtUtc != null && item.LeaseExpiresAtUtc > now)
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:871:            .ExecuteUpdateAsync(
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:878:                    .SetProperty(item => item.LeaseExpiresAtUtc, (DateTimeOffset?)null)
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:903:        var leaseExpiresAtUtc = now.Add(claimLeaseDuration);
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:909:            .Where(item => item.LeaseExpiresAtUtc == null || item.LeaseExpiresAtUtc <= now)
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:910:            .ExecuteUpdateAsync(
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:913:                    .SetProperty(item => item.LeaseExpiresAtUtc, leaseExpiresAtUtc)
+src/CanDoItAll.Modules.Processes\Persistence\Configurations\ProcessRuntimeEntityConfigurations.cs:78:        builder.HasIndex(step => new { step.ProcessRunId, step.AutomationDispatchLeaseExpiresAtUtc });
+src/CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:138:            record.LeaseExpiresAtUtc,
+src/CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:147:        return ResolveOutboxHealth(record.Status, record.LeaseExpiresAtUtc, record.NextAttemptAtUtc, now);
+src/CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:152:        DateTimeOffset? leaseExpiresAtUtc,
+src/CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:160:            _ when leaseExpiresAtUtc.HasValue && leaseExpiresAtUtc.Value > now => ProcessOutboxHealthStatus.Leased,
+src/CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:849:        DateTimeOffset? LeaseExpiresAtUtc,
+src/CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.cs:450:                item.LeaseExpiresAtUtc,
+src/CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.cs:460:                        .Select(item => ResolveOutboxHealth(item.Status, item.LeaseExpiresAtUtc, item.NextAttemptAtUtc, now))
+src/CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:125:    DateTimeOffset? LeaseExpiresAtUtc,
+src/CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunsExecutionSection.razor:49:                                @if (outboxRecord.LeaseExpiresAtUtc.HasValue)
+src/CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunsExecutionSection.razor:52:                                                 Text="@($"lease {outboxRecord.LeaseExpiresAtUtc.Value.ToLocalTime():g}")" />
+
+ExitCode: 0

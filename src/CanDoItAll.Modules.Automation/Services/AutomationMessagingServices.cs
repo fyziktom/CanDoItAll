@@ -1,5 +1,9 @@
+using System.Data;
+using System.Data.Common;
+using System.Diagnostics;
 using System.Text.Json;
 using CanDoItAll.Infrastructure.BackgroundJobs;
+using CanDoItAll.Infrastructure.Diagnostics;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -58,6 +62,7 @@ public sealed class AutomationMessagePublisher(
                     cancellationToken);
             if (existing is not null)
             {
+                RuntimeClaimMetrics.RecordDuplicateSuppression("automation-envelope");
                 return existing.Id;
             }
         }
@@ -110,6 +115,7 @@ public sealed class AutomationMessagePublisher(
             var existingId = await TryFindExistingEnvelopeIdAsync(envelopeType, dedupeKey, cancellationToken);
             if (existingId.HasValue)
             {
+                RuntimeClaimMetrics.RecordDuplicateSuppression("automation-envelope");
                 return existingId.Value;
             }
 
@@ -170,23 +176,42 @@ public sealed class AutomationMessageDispatcher(
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var batchStopwatch = Stopwatch.StartNew();
         var now = clock.GetUtcNow();
         var leaseCutoff = now.Subtract(options.Value.DeliveryLeaseDuration);
-        var dueDeliveryIds = dbContext.Database.IsSqlite()
-            ? await ListDueDeliveryIdsForSqliteAsync(dbContext, now, leaseCutoff, take, cancellationToken)
-            : await dbContext.Set<AutomationEnvelopeDeliveryRecord>()
-                .Where(item => item.AvailableAtUtc <= now)
-                .Where(item =>
-                    item.State == AutomationDeliveryState.Pending ||
-                    item.State == AutomationDeliveryState.RetryScheduled ||
-                    (item.State == AutomationDeliveryState.Running &&
-                     item.LockedAtUtc != null &&
-                     item.LockedAtUtc <= leaseCutoff))
-                .OrderBy(item => item.AvailableAtUtc)
-                .ThenBy(item => item.CreatedAtUtc)
-                .Select(item => item.Id)
-                .Take(take)
-                .ToListAsync(cancellationToken);
+        if (dbContext.Database.IsNpgsql())
+        {
+            var claimedDeliveries = await ClaimDueDeliveriesPostgreSqlAsync(
+                dbContext,
+                take,
+                now,
+                leaseCutoff,
+                cancellationToken);
+
+            var dispatchedCount = await DispatchClaimedPostgreSqlBatchAsync(claimedDeliveries, take, cancellationToken);
+            RuntimeClaimMetrics.RecordBatch(
+                "automation-delivery",
+                claimedDeliveries.Count,
+                dispatchedCount,
+                take,
+                ResolveBatchParallelism(options.Value.MessageDispatchMaxParallelism, take),
+                batchStopwatch.Elapsed);
+            return dispatchedCount;
+        }
+
+        var dueDeliveryIds = await dbContext.Set<AutomationEnvelopeDeliveryRecord>()
+            .Where(item => item.AvailableAtUtc <= now)
+            .Where(item =>
+                item.State == AutomationDeliveryState.Pending ||
+                item.State == AutomationDeliveryState.RetryScheduled ||
+                (item.State == AutomationDeliveryState.Running &&
+                 item.LockedAtUtc != null &&
+                 item.LockedAtUtc <= leaseCutoff))
+            .OrderBy(item => item.AvailableAtUtc)
+            .ThenBy(item => item.CreatedAtUtc)
+            .Select(item => item.Id)
+            .Take(take)
+            .ToListAsync(cancellationToken);
 
         var processedCount = 0;
         foreach (var deliveryId in dueDeliveryIds)
@@ -197,8 +222,151 @@ public sealed class AutomationMessageDispatcher(
             }
         }
 
+        RuntimeClaimMetrics.RecordBatch(
+            "automation-delivery",
+            dueDeliveryIds.Count,
+            processedCount,
+            take,
+            1,
+            batchStopwatch.Elapsed);
         return processedCount;
     }
+
+    private static async Task<IReadOnlyList<ClaimedAutomationDelivery>> ClaimDueDeliveriesPostgreSqlAsync(
+        AppDbContext dbContext,
+        int take,
+        DateTimeOffset now,
+        DateTimeOffset leaseCutoff,
+        CancellationToken cancellationToken)
+    {
+        var connection = dbContext.Database.GetDbConnection();
+        var shouldCloseConnection = connection.State != ConnectionState.Open;
+        if (shouldCloseConnection)
+        {
+            await connection.OpenAsync(cancellationToken);
+        }
+
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText =
+                """
+                WITH due AS (
+                    SELECT d."Id"
+                    FROM "Automation_EnvelopeDeliveries" AS d
+                    WHERE d."AvailableAtUtc" <= @now
+                      AND (
+                          d."State" = @pendingState
+                          OR d."State" = @retryScheduledState
+                          OR (
+                              d."State" = @runningState
+                              AND d."LockedAtUtc" IS NOT NULL
+                              AND d."LockedAtUtc" <= @leaseCutoff
+                          )
+                      )
+                    ORDER BY d."AvailableAtUtc", d."CreatedAtUtc"
+                    FOR UPDATE SKIP LOCKED
+                    LIMIT @take
+                )
+                UPDATE "Automation_EnvelopeDeliveries" AS d
+                SET "State" = @runningState,
+                    "AttemptCount" = d."AttemptCount" + 1,
+                    "LastAttemptAtUtc" = @now,
+                    "UpdatedAtUtc" = @now,
+                    "CompletedAtUtc" = NULL,
+                    "LockedAtUtc" = @now,
+                    "LockToken" = concat(@tokenPrefix, replace(d."Id"::text, '-', ''))
+                FROM due
+                WHERE d."Id" = due."Id"
+                RETURNING d."Id", d."LockToken", d."EnvelopeId";
+                """;
+            AddParameter(command, "@now", now);
+            AddParameter(command, "@leaseCutoff", leaseCutoff);
+            AddParameter(command, "@pendingState", (int)AutomationDeliveryState.Pending);
+            AddParameter(command, "@retryScheduledState", (int)AutomationDeliveryState.RetryScheduled);
+            AddParameter(command, "@runningState", (int)AutomationDeliveryState.Running);
+            AddParameter(command, "@take", take);
+            AddParameter(command, "@tokenPrefix", $"{Guid.NewGuid():N}:");
+
+            var claims = new List<ClaimedAutomationDelivery>();
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                claims.Add(new ClaimedAutomationDelivery(
+                    reader.GetGuid(0),
+                    reader.GetString(1),
+                    reader.GetGuid(2)));
+            }
+
+            return claims;
+        }
+        finally
+        {
+            if (shouldCloseConnection)
+            {
+                await connection.CloseAsync();
+            }
+        }
+    }
+
+    private static void AddParameter(DbCommand command, string name, object value)
+    {
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = name;
+        parameter.Value = value;
+        command.Parameters.Add(parameter);
+    }
+
+    private async Task<int> DispatchClaimedPostgreSqlBatchAsync(
+        IReadOnlyList<ClaimedAutomationDelivery> claimedDeliveries,
+        int take,
+        CancellationToken cancellationToken)
+    {
+        if (claimedDeliveries.Count == 0)
+        {
+            return 0;
+        }
+
+        var maxParallelism = ResolveBatchParallelism(
+            options.Value.MessageDispatchMaxParallelism,
+            take);
+        using var throttler = new SemaphoreSlim(maxParallelism, maxParallelism);
+        var dispatchedCount = 0;
+        var tasks = claimedDeliveries
+            .GroupBy(delivery => delivery.EnvelopeId)
+            .Select(async group =>
+            {
+                await throttler.WaitAsync(cancellationToken);
+                try
+                {
+                    foreach (var delivery in group)
+                    {
+                        if (await DispatchClaimedAsync(delivery.Id, delivery.LockToken, cancellationToken))
+                        {
+                            Interlocked.Increment(ref dispatchedCount);
+                        }
+                    }
+                }
+                finally
+                {
+                    throttler.Release();
+                }
+            })
+            .ToArray();
+
+        await Task.WhenAll(tasks);
+        return dispatchedCount;
+    }
+
+    private static int ResolveBatchParallelism(int configuredParallelism, int take)
+    {
+        var requested = configuredParallelism <= 0
+            ? 1
+            : configuredParallelism;
+        return Math.Clamp(requested, 1, Math.Max(1, take));
+    }
+
+    private sealed record ClaimedAutomationDelivery(Guid Id, string LockToken, Guid EnvelopeId);
 
     private async Task<bool> ClaimAndDispatchAsync(Guid deliveryId, CancellationToken cancellationToken)
     {
@@ -206,96 +374,29 @@ public sealed class AutomationMessageDispatcher(
         var now = clock.GetUtcNow();
         var lockToken = Guid.NewGuid().ToString("N");
         var leaseCutoff = now.Subtract(options.Value.DeliveryLeaseDuration);
-        var claimedCount = dbContext.Database.IsSqlite()
-            ? await TryClaimDeliveryForSqliteAsync(
-                dbContext,
-                deliveryId,
-                now,
-                leaseCutoff,
-                lockToken,
-                cancellationToken)
-            : await dbContext.Set<AutomationEnvelopeDeliveryRecord>()
-                .Where(item => item.Id == deliveryId)
-                .Where(item => item.AvailableAtUtc <= now)
-                .Where(item =>
-                    item.State == AutomationDeliveryState.Pending ||
-                    item.State == AutomationDeliveryState.RetryScheduled ||
-                    (item.State == AutomationDeliveryState.Running &&
-                     item.LockedAtUtc != null &&
-                     item.LockedAtUtc <= leaseCutoff))
-                .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(item => item.State, AutomationDeliveryState.Running)
-                    .SetProperty(item => item.AttemptCount, item => item.AttemptCount + 1)
-                    .SetProperty(item => item.LastAttemptAtUtc, now)
-                    .SetProperty(item => item.UpdatedAtUtc, now)
-                    .SetProperty(item => item.CompletedAtUtc, (DateTimeOffset?)null)
-                    .SetProperty(item => item.LockedAtUtc, now)
-                    .SetProperty(item => item.LockToken, lockToken), cancellationToken);
+        var claimedCount = await dbContext.Set<AutomationEnvelopeDeliveryRecord>()
+            .Where(item => item.Id == deliveryId)
+            .Where(item => item.AvailableAtUtc <= now)
+            .Where(item =>
+                item.State == AutomationDeliveryState.Pending ||
+                item.State == AutomationDeliveryState.RetryScheduled ||
+                (item.State == AutomationDeliveryState.Running &&
+                 item.LockedAtUtc != null &&
+                 item.LockedAtUtc <= leaseCutoff))
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(item => item.State, AutomationDeliveryState.Running)
+                .SetProperty(item => item.AttemptCount, item => item.AttemptCount + 1)
+                .SetProperty(item => item.LastAttemptAtUtc, now)
+                .SetProperty(item => item.UpdatedAtUtc, now)
+                .SetProperty(item => item.CompletedAtUtc, (DateTimeOffset?)null)
+                .SetProperty(item => item.LockedAtUtc, now)
+                .SetProperty(item => item.LockToken, lockToken), cancellationToken);
         if (claimedCount == 0)
         {
             return false;
         }
 
         return await DispatchClaimedAsync(deliveryId, lockToken, cancellationToken);
-    }
-
-    private static Task<List<Guid>> ListDueDeliveryIdsForSqliteAsync(
-        AppDbContext dbContext,
-        DateTimeOffset now,
-        DateTimeOffset leaseCutoff,
-        int take,
-        CancellationToken cancellationToken)
-    {
-        return dbContext.Database
-            .SqlQuery<Guid>($"""
-                             SELECT "Id" AS "Value"
-                             FROM "Automation_EnvelopeDeliveries"
-                             WHERE "AvailableAtUtc" <= {now}
-                               AND (
-                                     "State" = {(int)AutomationDeliveryState.Pending}
-                                     OR "State" = {(int)AutomationDeliveryState.RetryScheduled}
-                                     OR (
-                                         "State" = {(int)AutomationDeliveryState.Running}
-                                         AND "LockedAtUtc" IS NOT NULL
-                                         AND "LockedAtUtc" <= {leaseCutoff}
-                                     )
-                                 )
-                             ORDER BY "AvailableAtUtc", "CreatedAtUtc"
-                             LIMIT {take}
-                             """)
-            .ToListAsync(cancellationToken);
-    }
-
-    private static Task<int> TryClaimDeliveryForSqliteAsync(
-        AppDbContext dbContext,
-        Guid deliveryId,
-        DateTimeOffset now,
-        DateTimeOffset leaseCutoff,
-        string lockToken,
-        CancellationToken cancellationToken)
-    {
-        return dbContext.Database.ExecuteSqlInterpolatedAsync($"""
-                                                               UPDATE "Automation_EnvelopeDeliveries"
-                                                               SET "State" = {(int)AutomationDeliveryState.Running},
-                                                                   "AttemptCount" = "AttemptCount" + 1,
-                                                                   "LastAttemptAtUtc" = {now},
-                                                                   "UpdatedAtUtc" = {now},
-                                                                   "CompletedAtUtc" = NULL,
-                                                                   "LockedAtUtc" = {now},
-                                                                   "LockToken" = {lockToken}
-                                                               WHERE "Id" = {deliveryId}
-                                                                 AND "AvailableAtUtc" <= {now}
-                                                                 AND (
-                                                                       "State" = {(int)AutomationDeliveryState.Pending}
-                                                                       OR "State" = {(int)AutomationDeliveryState.RetryScheduled}
-                                                                       OR (
-                                                                           "State" = {(int)AutomationDeliveryState.Running}
-                                                                           AND "LockedAtUtc" IS NOT NULL
-                                                                           AND "LockedAtUtc" <= {leaseCutoff}
-                                                                       )
-                                                                   )
-                                                               """,
-            cancellationToken);
     }
 
     private async Task<bool> DispatchClaimedAsync(
@@ -305,6 +406,7 @@ public sealed class AutomationMessageDispatcher(
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var delivery = await dbContext.Set<AutomationEnvelopeDeliveryRecord>()
+            .AsNoTracking()
             .FirstOrDefaultAsync(
                 item => item.Id == deliveryId && item.LockToken == lockToken,
                 cancellationToken);
@@ -314,17 +416,17 @@ public sealed class AutomationMessageDispatcher(
         }
 
         var now = clock.GetUtcNow();
-        if (delivery.State != AutomationDeliveryState.Running)
+        var leaseCutoff = now.Subtract(options.Value.DeliveryLeaseDuration);
+        if (delivery.State != AutomationDeliveryState.Running ||
+            delivery.LockedAtUtc is null ||
+            delivery.LockedAtUtc <= leaseCutoff)
         {
             return false;
         }
 
         var envelope = await dbContext.Set<AutomationEnvelopeRecord>()
+            .AsNoTracking()
             .FirstAsync(item => item.Id == delivery.EnvelopeId, cancellationToken);
-
-        envelope.AttemptCount = Math.Max(envelope.AttemptCount, delivery.AttemptCount);
-        envelope.UpdatedAtUtc = now;
-        await dbContext.SaveChangesAsync(cancellationToken);
 
         var context = new AutomationMessageContext(
             envelope.Id,
@@ -364,118 +466,220 @@ public sealed class AutomationMessageDispatcher(
                 handleResult = await handler.HandleAsync(envelope.PayloadJson, context, cancellationToken);
             }
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             handleResult = AutomationMessageHandleResult.RetryScheduled(ex.Message);
         }
 
         now = clock.GetUtcNow();
+        var finalization = BuildDeliveryFinalization(delivery, handleResult, now);
+        if (!await TryFinalizeClaimedDeliveryAsync(
+                dbContext,
+                envelope,
+                delivery,
+                lockToken,
+                finalization,
+                now,
+                cancellationToken))
+        {
+            await telemetryPublisher.PublishAsync(new AutomationTelemetryEvent(
+                AutomationExecutionLogKind.DeliveryLeaseLost,
+                "automation-envelope-delivery",
+                delivery.Id.ToString("N"),
+                envelope.CorrelationId,
+                envelope.CausationId,
+                $"Delivery lease was lost before finalizing {delivery.HandlerKey}.",
+                JsonSerializer.Serialize(new
+                {
+                    envelopeId = envelope.Id,
+                    delivery.HandlerKey,
+                    delivery.AttemptCount
+                }, SerializerOptions)), cancellationToken);
+            return false;
+        }
+
+        await PublishFinalDeliveryTelemetryAsync(envelope, delivery, finalization, cancellationToken);
+        return true;
+    }
+
+    private AutomationDeliveryFinalization BuildDeliveryFinalization(
+        AutomationEnvelopeDeliveryRecord delivery,
+        AutomationMessageHandleResult handleResult,
+        DateTimeOffset now)
+    {
+        return handleResult.Outcome switch
+        {
+            AutomationDeliveryAttemptOutcome.Completed => new AutomationDeliveryFinalization(
+                AutomationDeliveryState.Completed,
+                AutomationDeliveryAttemptOutcome.Completed,
+                delivery.AvailableAtUtc,
+                now,
+                string.Empty),
+            AutomationDeliveryAttemptOutcome.RetryScheduled when delivery.AttemptCount < delivery.MaxAttempts =>
+                new AutomationDeliveryFinalization(
+                    AutomationDeliveryState.RetryScheduled,
+                    AutomationDeliveryAttemptOutcome.RetryScheduled,
+                    now.Add(ComputeBackoff(delivery.AttemptCount)),
+                    null,
+                    NormalizeError(handleResult.ErrorMessage)),
+            _ => new AutomationDeliveryFinalization(
+                AutomationDeliveryState.DeadLettered,
+                AutomationDeliveryAttemptOutcome.DeadLettered,
+                delivery.AvailableAtUtc,
+                now,
+                NormalizeError(handleResult.ErrorMessage))
+        };
+    }
+
+    private async Task<bool> TryFinalizeClaimedDeliveryAsync(
+        AppDbContext dbContext,
+        AutomationEnvelopeRecord envelope,
+        AutomationEnvelopeDeliveryRecord delivery,
+        string lockToken,
+        AutomationDeliveryFinalization finalization,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        var leaseCutoff = now.Subtract(options.Value.DeliveryLeaseDuration);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        var updatedRows = await dbContext.Set<AutomationEnvelopeDeliveryRecord>()
+            .Where(item => item.Id == delivery.Id)
+            .Where(item => item.State == AutomationDeliveryState.Running)
+            .Where(item => item.LockToken == lockToken)
+            .Where(item => item.LockedAtUtc != null && item.LockedAtUtc > leaseCutoff)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(item => item.State, finalization.State)
+                    .SetProperty(item => item.CompletedAtUtc, finalization.CompletedAtUtc)
+                    .SetProperty(item => item.LastError, finalization.LastError)
+                    .SetProperty(item => item.AvailableAtUtc, finalization.AvailableAtUtc)
+                    .SetProperty(item => item.LockToken, string.Empty)
+                    .SetProperty(item => item.LockedAtUtc, (DateTimeOffset?)null)
+                    .SetProperty(item => item.UpdatedAtUtc, now),
+                cancellationToken);
+        if (updatedRows == 0)
+        {
+            RuntimeClaimMetrics.RecordStaleFinalization("automation-delivery");
+            await transaction.RollbackAsync(cancellationToken);
+            return false;
+        }
+
         dbContext.Set<AutomationDeliveryAttemptRecord>().Add(new AutomationDeliveryAttemptRecord
         {
             EnvelopeId = envelope.Id,
             DeliveryId = delivery.Id,
             HandlerKey = delivery.HandlerKey,
             AttemptNumber = delivery.AttemptCount,
-            Outcome = handleResult.Outcome,
+            Outcome = finalization.AttemptOutcome,
             CorrelationId = envelope.CorrelationId,
             CausationId = envelope.CausationId,
-            ErrorMessage = NormalizeError(handleResult.ErrorMessage),
+            ErrorMessage = finalization.LastError,
             StartedAtUtc = delivery.LastAttemptAtUtc ?? now,
             CompletedAtUtc = now
         });
 
-        switch (handleResult.Outcome)
+        if (finalization.State == AutomationDeliveryState.DeadLettered)
         {
-            case AutomationDeliveryAttemptOutcome.Completed:
-                delivery.State = AutomationDeliveryState.Completed;
-                delivery.CompletedAtUtc = now;
-                delivery.LastError = string.Empty;
-                delivery.LockToken = string.Empty;
-                delivery.LockedAtUtc = null;
-                delivery.UpdatedAtUtc = now;
-                await telemetryPublisher.PublishAsync(new AutomationTelemetryEvent(
-                    AutomationExecutionLogKind.DeliveryCompleted,
-                    "automation-envelope-delivery",
-                    delivery.Id.ToString("N"),
-                    envelope.CorrelationId,
-                    envelope.CausationId,
-                    $"Completed delivery for {delivery.HandlerKey}.",
-                    JsonSerializer.Serialize(new
-                    {
-                        envelopeId = envelope.Id,
-                        delivery.HandlerKey,
-                        delivery.AttemptCount
-                    }, SerializerOptions)), cancellationToken);
-                break;
-
-            case AutomationDeliveryAttemptOutcome.RetryScheduled when delivery.AttemptCount < delivery.MaxAttempts:
-                delivery.State = AutomationDeliveryState.RetryScheduled;
-                delivery.LastError = NormalizeError(handleResult.ErrorMessage);
-                delivery.AvailableAtUtc = now.Add(ComputeBackoff(delivery.AttemptCount));
-                delivery.LockToken = string.Empty;
-                delivery.LockedAtUtc = null;
-                delivery.UpdatedAtUtc = now;
-                await telemetryPublisher.PublishAsync(new AutomationTelemetryEvent(
-                    AutomationExecutionLogKind.DeliveryRetryScheduled,
-                    "automation-envelope-delivery",
-                    delivery.Id.ToString("N"),
-                    envelope.CorrelationId,
-                    envelope.CausationId,
-                    $"Scheduled retry for {delivery.HandlerKey}.",
-                    JsonSerializer.Serialize(new
-                    {
-                        envelopeId = envelope.Id,
-                        delivery.HandlerKey,
-                        delivery.AttemptCount,
-                        delivery.AvailableAtUtc,
-                        delivery.LastError
-                    }, SerializerOptions)), cancellationToken);
-                break;
-
-            default:
-                delivery.State = AutomationDeliveryState.DeadLettered;
-                delivery.CompletedAtUtc = now;
-                delivery.LastError = NormalizeError(handleResult.ErrorMessage);
-                delivery.LockToken = string.Empty;
-                delivery.LockedAtUtc = null;
-                delivery.UpdatedAtUtc = now;
-                dbContext.Set<AutomationDeadLetterRecord>().Add(new AutomationDeadLetterRecord
-                {
-                    EnvelopeId = envelope.Id,
-                    DeliveryId = delivery.Id,
-                    EnvelopeType = envelope.EnvelopeType,
-                    HandlerKey = delivery.HandlerKey,
-                    PayloadJson = envelope.PayloadJson,
-                    ErrorMessage = delivery.LastError,
-                    AttemptCount = delivery.AttemptCount,
-                    DedupeKey = envelope.DedupeKey,
-                    CorrelationId = envelope.CorrelationId,
-                    CausationId = envelope.CausationId,
-                    CreatedAtUtc = envelope.CreatedAtUtc,
-                    DeadLetteredAtUtc = now
-                });
-                await telemetryPublisher.PublishAsync(new AutomationTelemetryEvent(
-                    AutomationExecutionLogKind.DeliveryDeadLettered,
-                    "automation-envelope-delivery",
-                    delivery.Id.ToString("N"),
-                    envelope.CorrelationId,
-                    envelope.CausationId,
-                    $"Moved delivery for {delivery.HandlerKey} to dead-letter state.",
-                    JsonSerializer.Serialize(new
-                    {
-                        envelopeId = envelope.Id,
-                        delivery.HandlerKey,
-                        delivery.AttemptCount,
-                        delivery.LastError
-                    }, SerializerOptions)), cancellationToken);
-                break;
+            dbContext.Set<AutomationDeadLetterRecord>().Add(new AutomationDeadLetterRecord
+            {
+                EnvelopeId = envelope.Id,
+                DeliveryId = delivery.Id,
+                EnvelopeType = envelope.EnvelopeType,
+                HandlerKey = delivery.HandlerKey,
+                PayloadJson = envelope.PayloadJson,
+                ErrorMessage = finalization.LastError,
+                AttemptCount = delivery.AttemptCount,
+                DedupeKey = envelope.DedupeKey,
+                CorrelationId = envelope.CorrelationId,
+                CausationId = envelope.CausationId,
+                CreatedAtUtc = envelope.CreatedAtUtc,
+                DeadLetteredAtUtc = now
+            });
         }
 
+        var trackedEnvelope = await dbContext.Set<AutomationEnvelopeRecord>()
+            .FirstAsync(item => item.Id == envelope.Id, cancellationToken);
+        trackedEnvelope.AttemptCount = Math.Max(trackedEnvelope.AttemptCount, delivery.AttemptCount);
+        trackedEnvelope.UpdatedAtUtc = now;
+        await UpdateEnvelopeAggregateStateAsync(dbContext, trackedEnvelope, now, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await UpdateEnvelopeAggregateStateAsync(dbContext, envelope, now, cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return true;
     }
+
+    private async Task PublishFinalDeliveryTelemetryAsync(
+        AutomationEnvelopeRecord envelope,
+        AutomationEnvelopeDeliveryRecord delivery,
+        AutomationDeliveryFinalization finalization,
+        CancellationToken cancellationToken)
+    {
+        var eventKind = finalization.State switch
+        {
+            AutomationDeliveryState.Completed => AutomationExecutionLogKind.DeliveryCompleted,
+            AutomationDeliveryState.RetryScheduled => AutomationExecutionLogKind.DeliveryRetryScheduled,
+            AutomationDeliveryState.DeadLettered => AutomationExecutionLogKind.DeliveryDeadLettered,
+            _ => throw new InvalidOperationException($"Unsupported finalized delivery state '{finalization.State}'.")
+        };
+        var message = finalization.State switch
+        {
+            AutomationDeliveryState.Completed => $"Completed delivery for {delivery.HandlerKey}.",
+            AutomationDeliveryState.RetryScheduled => $"Scheduled retry for {delivery.HandlerKey}.",
+            AutomationDeliveryState.DeadLettered => $"Moved delivery for {delivery.HandlerKey} to dead-letter state.",
+            _ => throw new InvalidOperationException($"Unsupported finalized delivery state '{finalization.State}'.")
+        };
+
+        await telemetryPublisher.PublishAsync(new AutomationTelemetryEvent(
+            eventKind,
+            "automation-envelope-delivery",
+            delivery.Id.ToString("N"),
+            envelope.CorrelationId,
+            envelope.CausationId,
+            message,
+            BuildDeliveryTelemetryDetailsJson(envelope, delivery, finalization)), cancellationToken);
+    }
+
+    private static string BuildDeliveryTelemetryDetailsJson(
+        AutomationEnvelopeRecord envelope,
+        AutomationEnvelopeDeliveryRecord delivery,
+        AutomationDeliveryFinalization finalization)
+    {
+        return finalization.State switch
+        {
+            AutomationDeliveryState.Completed => JsonSerializer.Serialize(new
+            {
+                envelopeId = envelope.Id,
+                delivery.HandlerKey,
+                delivery.AttemptCount
+            }, SerializerOptions),
+            AutomationDeliveryState.RetryScheduled => JsonSerializer.Serialize(new
+            {
+                envelopeId = envelope.Id,
+                delivery.HandlerKey,
+                delivery.AttemptCount,
+                availableAtUtc = finalization.AvailableAtUtc,
+                lastError = finalization.LastError
+            }, SerializerOptions),
+            AutomationDeliveryState.DeadLettered => JsonSerializer.Serialize(new
+            {
+                envelopeId = envelope.Id,
+                delivery.HandlerKey,
+                delivery.AttemptCount,
+                lastError = finalization.LastError
+            }, SerializerOptions),
+            _ => throw new InvalidOperationException($"Unsupported finalized delivery state '{finalization.State}'.")
+        };
+    }
+
+    private sealed record AutomationDeliveryFinalization(
+        AutomationDeliveryState State,
+        AutomationDeliveryAttemptOutcome AttemptOutcome,
+        DateTimeOffset AvailableAtUtc,
+        DateTimeOffset? CompletedAtUtc,
+        string LastError);
 
     private static async Task UpdateEnvelopeAggregateStateAsync(
         AppDbContext dbContext,

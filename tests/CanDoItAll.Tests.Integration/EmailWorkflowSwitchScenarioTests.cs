@@ -24,7 +24,7 @@ public sealed class EmailWorkflowSwitchScenarioTests
     public async Task Email_workflow_uses_switch_and_creates_project_structure_task_nodes()
         => await RunEmailWorkflowSwitchValidationAsync(
             "email-workflow-switch",
-            testEnvironment => testEnvironment.CreateManagedSqliteProfile("email-workflow-switch"),
+            testEnvironment => testEnvironment.CreatePostgreSqlProfile("email-workflow-switch"),
             "email-switch-task-results.json");
 
     [Fact]

@@ -2,7 +2,6 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Tests.Unit;
@@ -62,16 +61,11 @@ public sealed class StorageCatalogServiceTests
     {
         AppDbContextModelRegistry.ConfigureAssemblies(TestApplicationBootstrap.ModuleAssemblies);
         var workspaceRoot = TestFileSystem.CreateTemporaryRoot("storage-catalog");
-        var databaseName = $"storage-catalog-{Guid.NewGuid():N}";
-        var connectionString = $"Data Source={databaseName};Mode=Memory;Cache=Shared";
+        await using var database = PostgresTestDatabaseLease.Create("storage-catalog-concurrent");
 
         try
         {
-            await using var keeperConnection = new SqliteConnection(connectionString);
-            await keeperConnection.OpenAsync();
-            var options = new DbContextOptionsBuilder<AppDbContext>()
-                .UseSqlite(connectionString)
-                .Options;
+            var options = database.CreateAppDbContextOptions();
             await using (var dbContext = new AppDbContext(options))
             {
                 await dbContext.Database.EnsureCreatedAsync();

@@ -65,18 +65,11 @@ public sealed class CognitiveMemorySignalLedger(
             ? signalQuery
             : signalQuery.Where(signal => signal.AccessLevel <= query.PolicyContext.AccessLevel);
 
-        var filtered = dbContext.Database.IsSqlite()
-            ? await signalQuery.ToListAsync(cancellationToken)
-            : await signalQuery
-                .OrderByDescending(signal => signal.ObservedAtUtc)
-                .ThenBy(signal => signal.Id)
-                .Take(query.Page.Take)
-                .ToListAsync(cancellationToken);
-        filtered = filtered
+        var filtered = await signalQuery
             .OrderByDescending(signal => signal.ObservedAtUtc)
             .ThenBy(signal => signal.Id)
             .Take(query.Page.Take)
-            .ToList();
+            .ToListAsync(cancellationToken);
 
         return new CognitiveMemorySignalQueryResult(filtered);
     }

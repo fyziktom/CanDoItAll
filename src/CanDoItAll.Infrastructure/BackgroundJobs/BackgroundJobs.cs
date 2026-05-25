@@ -195,15 +195,10 @@ public sealed class BackgroundJobTracker(
                 job.UpdatedAtUtc
             });
 
-        var records = dbContext.Database.IsSqlite()
-            ? (await query.ToListAsync(cancellationToken))
-                .OrderByDescending(job => job.UpdatedAtUtc)
-                .Take(50)
-                .ToList()
-            : await query
-                .OrderByDescending(job => job.UpdatedAtUtc)
-                .Take(50)
-                .ToListAsync(cancellationToken);
+        var records = await query
+            .OrderByDescending(job => job.UpdatedAtUtc)
+            .Take(50)
+            .ToListAsync(cancellationToken);
 
         return records
             .Select(job => new BackgroundJobSummary(

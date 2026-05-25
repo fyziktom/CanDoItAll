@@ -12,7 +12,7 @@ namespace CanDoItAll.Modules.Workbench;
 public sealed class ProjectPackageService(
     IDatabaseProfileRuntimeAccessor profileAccessor,
     IAppDatabaseBootstrapper bootstrapper,
-    ISwitchableAppDbContextFactory dbContextFactory,
+    IProfileAppDbContextFactory dbContextFactory,
     IControlPlanePathResolver controlPlanePathResolver,
     IClock clock,
     ILogger<ProjectPackageService> logger) : IProjectPackageService

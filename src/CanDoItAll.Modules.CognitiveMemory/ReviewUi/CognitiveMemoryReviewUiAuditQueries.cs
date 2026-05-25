@@ -43,13 +43,7 @@ public sealed partial class CognitiveMemoryReviewUiService
 
         var orderedCommands = commandsQuery
             .OrderByDescending(command => command.RequiresHumanReview)
-            .ThenBy(command => command.Id);
-        if (!UsesSqlite(dbContext))
-        {
-            orderedCommands = commandsQuery
-                .OrderByDescending(command => command.RequiresHumanReview)
-                .ThenByDescending(command => command.UpdatedAtUtc);
-        }
+            .ThenByDescending(command => command.UpdatedAtUtc);
 
         var commands = await orderedCommands
             .Take(limit)
@@ -83,13 +77,9 @@ public sealed partial class CognitiveMemoryReviewUiService
             eventsQuery = eventsQuery.Where(item => item.ProjectId == projectId);
         }
 
-        var orderedEvents = UsesSqlite(dbContext)
-            ? eventsQuery
-                .OrderByDescending(item => item.Sequence)
-                .ThenBy(item => item.Id)
-            : eventsQuery
-                .OrderByDescending(item => item.CreatedAtUtc)
-                .ThenByDescending(item => item.Sequence);
+        var orderedEvents = eventsQuery
+            .OrderByDescending(item => item.CreatedAtUtc)
+            .ThenByDescending(item => item.Sequence);
         var events = await orderedEvents
             .Take(limit)
             .ToArrayAsync(cancellationToken);
@@ -122,13 +112,7 @@ public sealed partial class CognitiveMemoryReviewUiService
 
         var orderedClaims = claimsQuery
             .OrderByDescending(claim => claim.ValidationState != CognitiveMemoryValidationState.Approved)
-            .ThenBy(claim => claim.Id);
-        if (!UsesSqlite(dbContext))
-        {
-            orderedClaims = claimsQuery
-                .OrderByDescending(claim => claim.ValidationState != CognitiveMemoryValidationState.Approved)
-                .ThenByDescending(claim => claim.UpdatedAtUtc);
-        }
+            .ThenByDescending(claim => claim.UpdatedAtUtc);
 
         var claims = await orderedClaims
             .Take(limit)
@@ -162,13 +146,7 @@ public sealed partial class CognitiveMemoryReviewUiService
 
         var orderedAnchors = anchorsQuery
             .OrderByDescending(anchor => anchor.RedactionState != CognitiveMemoryRedactionState.Safe)
-            .ThenBy(anchor => anchor.Id);
-        if (!UsesSqlite(dbContext))
-        {
-            orderedAnchors = anchorsQuery
-                .OrderByDescending(anchor => anchor.RedactionState != CognitiveMemoryRedactionState.Safe)
-                .ThenByDescending(anchor => anchor.CreatedAtUtc);
-        }
+            .ThenByDescending(anchor => anchor.CreatedAtUtc);
 
         var anchors = await orderedAnchors
             .Take(limit)
@@ -205,13 +183,7 @@ public sealed partial class CognitiveMemoryReviewUiService
 
         var orderedProjections = projectionsQuery
             .OrderByDescending(projection => projection.Status == CognitiveMemoryProjectionStatus.Failed)
-            .ThenBy(projection => projection.Id);
-        if (!UsesSqlite(dbContext))
-        {
-            orderedProjections = projectionsQuery
-                .OrderByDescending(projection => projection.Status == CognitiveMemoryProjectionStatus.Failed)
-                .ThenByDescending(projection => projection.UpdatedAtUtc);
-        }
+            .ThenByDescending(projection => projection.UpdatedAtUtc);
 
         var projections = await orderedProjections
             .Take(limit)
@@ -244,9 +216,7 @@ public sealed partial class CognitiveMemoryReviewUiService
             runsQuery = runsQuery.Where(run => run.ProjectId == projectId);
         }
 
-        var orderedRuns = UsesSqlite(dbContext)
-            ? runsQuery.OrderBy(run => run.Id)
-            : runsQuery.OrderByDescending(run => run.CompletedAtUtc ?? run.StartedAtUtc);
+        var orderedRuns = runsQuery.OrderByDescending(run => run.CompletedAtUtc ?? run.StartedAtUtc);
         var runs = await orderedRuns
             .Take(limit)
             .ToArrayAsync(cancellationToken);

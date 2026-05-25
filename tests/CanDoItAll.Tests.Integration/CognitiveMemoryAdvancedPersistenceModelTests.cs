@@ -1,10 +1,10 @@
 using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.CognitiveMemory;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 
+using CanDoItAll.Tests.Support;
 namespace CanDoItAll.Tests.Integration;
 
 public sealed class CognitiveMemoryAdvancedPersistenceModelTests
@@ -50,15 +50,12 @@ public sealed class CognitiveMemoryAdvancedPersistenceModelTests
     private static async Task<AdvancedFixture> CreateFixtureAsync()
     {
         AppDbContextModelRegistry.ConfigureAssemblies(ModuleAssemblies.All);
-        var connection = new SqliteConnection("Data Source=:memory:");
-        await connection.OpenAsync();
+        var database = PostgresTestDatabaseLease.Create("cognitivememoryadvancedpersistencemodeltests");
 
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlite(connection)
-            .Options;
+        var options = database.CreateAppDbContextOptions();
         var dbContext = new AppDbContext(options);
         await dbContext.Database.EnsureCreatedAsync();
-        return new AdvancedFixture(connection, dbContext);
+        return new AdvancedFixture(database, dbContext);
     }
 
     private static void AssertEntityTable<TEntity>(IReadOnlyList<IEntityType> entityTypes, string tableName)
@@ -144,7 +141,7 @@ public sealed class CognitiveMemoryAdvancedPersistenceModelTests
     }
 
     private sealed class AdvancedFixture(
-        SqliteConnection connection,
+        PostgresTestDatabaseLease database,
         AppDbContext dbContext) : IAsyncDisposable
     {
         public AppDbContext DbContext { get; } = dbContext;
@@ -152,7 +149,7 @@ public sealed class CognitiveMemoryAdvancedPersistenceModelTests
         public async ValueTask DisposeAsync()
         {
             await DbContext.DisposeAsync();
-            await connection.DisposeAsync();
+            await database.DisposeAsync();
         }
     }
 }

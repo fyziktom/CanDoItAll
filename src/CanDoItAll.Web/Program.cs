@@ -3,6 +3,7 @@ using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.Charts;
 using CanDoItAll.Components.Mermaid.Infrastructure;
 using CanDoItAll.Composition;
+using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.DependencyInjection;
 using CanDoItAll.Infrastructure.Persistence;
@@ -40,6 +41,13 @@ using System.Diagnostics;
 var builder = WebApplication.CreateBuilder(args);
 var detailedErrorsEnabled = builder.Configuration.GetValue<bool?>("DetailedErrors") ?? builder.Environment.IsDevelopment();
 var promptAttachmentMessageLimitBytes = 8 * 1024 * 1024;
+var databaseOptions = builder.Configuration.GetSection("Database").Get<DatabaseOptions>() ?? new DatabaseOptions();
+
+if (!databaseOptions.EnableEntityFrameworkConsoleLogging)
+{
+    builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning);
+    builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Infrastructure", LogLevel.Warning);
+}
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents(options => options.DetailedErrors = detailedErrorsEnabled)
@@ -125,43 +133,28 @@ if (app.Environment.IsDevelopment())
         });
     });
 
-    app.MapGet("/_dev/database/selection", (IDatabaseProfileRuntimeAccessor profileAccessor) =>
+    app.MapGet("/_dev/database/selection", async (
+        IDatabaseProfileRuntimeAccessor profileAccessor,
+        IDatabaseProfileService profileService) =>
     {
         var profile = profileAccessor.ResolveCurrentProfile();
+        var persistedSelection = await profileService.GetCurrentSelectionAsync();
+        var pendingRestartProfileId = !profile.Profile.Runtime.LockedByRuntimeOverride &&
+            persistedSelection.ActiveProfileId != profile.Profile.Id
+                ? persistedSelection.ActiveProfileId
+                : (Guid?)null;
         return Results.Ok(new
         {
             profile.Profile.Id,
-            profile.Profile.DisplayName,
-            profile.Profile.ProviderKind,
-            profile.Profile.SourceKind,
-            profile.Profile.Runtime.Fingerprint,
-            profile.Profile.Storage.WorkspaceRoot,
-            profile.ConnectionString
-        });
-    });
-
-    app.MapPost("/_dev/database/profiles/managed-sqlite", async (
-        IDatabaseProfileService profileService,
-        IDatabaseProfileRuntimeAccessor profileAccessor,
-        IAppDatabaseBootstrapper bootstrapper) =>
-    {
-        var saveResult = await profileService.SaveAsync(new CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileEditorModel
-        {
-            DisplayName = $"Managed sqlite {Guid.NewGuid():N}"[..22],
-            ProviderKind = DatabaseProviderKind.Sqlite,
-            SourceKind = DatabaseProfileSourceKind.ManagedSqlite
-        });
-        if (saveResult.IsFailure)
-        {
-            return Results.BadRequest(saveResult.Errors.Select(error => error.Message).ToArray());
-        }
-
-        var profile = profileAccessor.ResolveProfile(saveResult.Value);
-        await bootstrapper.EnsureProfileReadyAsync(profile);
-
-        return Results.Ok(new
-        {
-            profile.Profile.Id,
+            RuntimeProfileId = profile.Profile.Id,
+            PendingRestartProfileId = pendingRestartProfileId,
+            HasPendingRestartActivation = pendingRestartProfileId.HasValue,
+            PendingRestartDisplayName = pendingRestartProfileId.HasValue
+                ? persistedSelection.DisplayName
+                : string.Empty,
+            PendingRestartDescriptor = pendingRestartProfileId.HasValue
+                ? persistedSelection.Descriptor
+                : string.Empty,
             profile.Profile.DisplayName,
             profile.Profile.ProviderKind,
             profile.Profile.SourceKind,
@@ -230,7 +223,12 @@ if (app.Environment.IsDevelopment())
             switchResult = new
             {
                 activation.Value!.Generation,
-                activation.Value.CurrentProfileId
+                activation.Value.CurrentProfileId,
+                activation.Value.RuntimeProfileId,
+                activation.Value.PendingRestartProfileId,
+                activation.Value.RequiresRestart,
+                activation.Value.RuntimeChangedInProcess,
+                activation.Value.Message
             };
         }
 
@@ -258,15 +256,32 @@ if (app.Environment.IsDevelopment())
             return Results.BadRequest(switchResult.Errors.Select(error => error.Message).ToArray());
         }
 
-        var profile = profileAccessor.ResolveCurrentProfile();
+        var runtimeProfile = profileAccessor.ResolveCurrentProfile();
+        var activatedProfile = profileAccessor.ResolveProfile(switchResult.Value!.CurrentProfileId);
         return Results.Ok(new
         {
-            switchResult.Value!.Generation,
+            switchResult.Value.Generation,
             switchResult.Value.CurrentProfileId,
-            profile.Profile.DisplayName,
-            profile.Profile.Runtime.Fingerprint,
-            profile.Profile.Storage.WorkspaceRoot,
-            profile.ConnectionString
+            switchResult.Value.RuntimeProfileId,
+            switchResult.Value.PendingRestartProfileId,
+            switchResult.Value.RequiresRestart,
+            switchResult.Value.RuntimeChangedInProcess,
+            switchResult.Value.Message,
+            ActivatedProfile = new
+            {
+                activatedProfile.Profile.Id,
+                activatedProfile.Profile.DisplayName,
+                activatedProfile.Profile.Runtime.Fingerprint,
+                activatedProfile.Profile.Storage.WorkspaceRoot
+            },
+            RuntimeProfile = new
+            {
+                runtimeProfile.Profile.Id,
+                runtimeProfile.Profile.DisplayName,
+                runtimeProfile.Profile.Runtime.Fingerprint,
+                runtimeProfile.Profile.Storage.WorkspaceRoot,
+                runtimeProfile.ConnectionString
+            }
         });
     });
 

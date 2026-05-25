@@ -1,4 +1,5 @@
 using Bunit;
+using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.Processes;
 using Microsoft.AspNetCore.Components;
 
@@ -9,7 +10,7 @@ public sealed class ProcessCanvasSelectionPanelTests
     [Fact]
     public void Definition_selection_exposes_branch_actions_and_routed_step_tools()
     {
-        using var context = new TestContext();
+        using var context = CreateContext();
         var receiver = new object();
         var routedOutcomeId = Guid.NewGuid();
         var definitionStep = new ProcessStepEditorModel
@@ -72,7 +73,7 @@ public sealed class ProcessCanvasSelectionPanelTests
     [Fact]
     public void Definition_role_selection_exposes_edit_role_action()
     {
-        using var context = new TestContext();
+        using var context = CreateContext();
         var receiver = new object();
         var roleEdits = 0;
         var definitionRole = new ProcessRoleEditorModel
@@ -100,7 +101,7 @@ public sealed class ProcessCanvasSelectionPanelTests
     [Fact]
     public void Runtime_actions_disable_invalid_transitions_for_ready_steps()
     {
-        using var context = new TestContext();
+        using var context = CreateContext();
         var runtimeStep = new ProcessStepRunViewModel(
             Guid.NewGuid(),
             Guid.NewGuid(),
@@ -140,7 +141,7 @@ public sealed class ProcessCanvasSelectionPanelTests
     [Fact]
     public void Runtime_actions_allow_restarting_failed_steps()
     {
-        using var context = new TestContext();
+        using var context = CreateContext();
         var runtimeStep = new ProcessStepRunViewModel(
             Guid.NewGuid(),
             Guid.NewGuid(),
@@ -178,7 +179,7 @@ public sealed class ProcessCanvasSelectionPanelTests
     [Fact]
     public void Runtime_selection_shows_health_artifact_obligations_and_rerun_action()
     {
-        using var context = new TestContext();
+        using var context = CreateContext();
         var receiver = new object();
         var rerunCount = 0;
         var stepRunId = Guid.NewGuid();
@@ -243,5 +244,12 @@ public sealed class ProcessCanvasSelectionPanelTests
         cut.Find("[data-testid='processes-canvas-selection-rerun-agent-step']").Click();
 
         Assert.Equal(1, rerunCount);
+    }
+
+    private static TestContext CreateContext()
+    {
+        var context = new TestContext();
+        context.Services.AddCanDoItAllBaseLib();
+        return context;
     }
 }

@@ -305,6 +305,12 @@ public sealed partial class ProcessesService
             "processes.assignment-unique-conflict");
     }
 
+    private static Error CreateAssignmentConcurrencyConflictError() {
+        return Error.Validation(
+            "Process assignment changed before the resolution completed. Reload the run and try again.",
+            "processes.assignment-concurrency-conflict");
+    }
+
     private static Error CreateStepTransitionConflictError() {
         return Error.Validation(
             "Process step changed before the transition completed. Reload the run and try again.",

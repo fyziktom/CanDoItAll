@@ -23,9 +23,8 @@ public sealed partial class CognitiveMemoryReviewUiService
         var page = ResolvePage(query, CognitiveMemoryReviewUiCollectionKind.ProbeSessions);
         var orderedSessions = sessionsQuery
             .OrderByDescending(session => session.Status == CognitiveMemoryProbeSessionStatus.Active);
-        return await (UsesSqlite(dbContext)
-                ? orderedSessions.ThenBy(session => session.Id)
-                : orderedSessions.ThenByDescending(session => session.UpdatedAtUtc))
+        return await orderedSessions
+            .ThenByDescending(session => session.UpdatedAtUtc)
             .Skip(page.Skip)
             .Take(page.PageSize)
             .Select(session => new CognitiveMemoryProbeSessionView(
@@ -55,9 +54,8 @@ public sealed partial class CognitiveMemoryReviewUiService
         var page = ResolvePage(query, CognitiveMemoryReviewUiCollectionKind.SelfRegulationAssessments);
         var orderedAssessments = assessmentsQuery
             .OrderByDescending(assessment => assessment.State != CognitiveMemorySelfRegulationStateKind.Calibrated);
-        return await (UsesSqlite(dbContext)
-                ? orderedAssessments.ThenBy(assessment => assessment.Id)
-                : orderedAssessments.ThenByDescending(assessment => assessment.CreatedAtUtc))
+        return await orderedAssessments
+            .ThenByDescending(assessment => assessment.CreatedAtUtc)
             .Skip(page.Skip)
             .Take(page.PageSize)
             .Select(assessment => new CognitiveMemorySelfRegulationView(
@@ -90,9 +88,8 @@ public sealed partial class CognitiveMemoryReviewUiService
         var page = ResolvePage(query, CognitiveMemoryReviewUiCollectionKind.AnswerGateDecisions);
         var orderedDecisions = decisionsQuery
             .OrderByDescending(decision => decision.DecisionKind != CognitiveMemoryAnswerGateDecisionKind.Answer);
-        return await (UsesSqlite(dbContext)
-                ? orderedDecisions.ThenBy(decision => decision.Id)
-                : orderedDecisions.ThenByDescending(decision => decision.CreatedAtUtc))
+        return await orderedDecisions
+            .ThenByDescending(decision => decision.CreatedAtUtc)
             .Skip(page.Skip)
             .Take(page.PageSize)
             .Select(decision => new CognitiveMemoryAnswerGateView(
@@ -124,9 +121,8 @@ public sealed partial class CognitiveMemoryReviewUiService
         var page = ResolvePage(query, CognitiveMemoryReviewUiCollectionKind.ProfessorReviews);
         var orderedReviews = reviewsQuery
             .OrderByDescending(review => review.Status == CognitiveMemoryProfessorReviewStatus.Requested);
-        return await (UsesSqlite(dbContext)
-                ? orderedReviews.ThenBy(review => review.Id)
-                : orderedReviews.ThenByDescending(review => review.CreatedAtUtc))
+        return await orderedReviews
+            .ThenByDescending(review => review.CreatedAtUtc)
             .Skip(page.Skip)
             .Take(page.PageSize)
             .Select(review => new CognitiveMemoryProfessorReviewView(
@@ -160,9 +156,8 @@ public sealed partial class CognitiveMemoryReviewUiService
         var orderedProposals = proposalsQuery
             .OrderBy(proposal => proposal.Status == CognitiveMemoryLearningProposalStatus.PendingApproval ? 0 : 1)
             .ThenByDescending(proposal => proposal.DisplayPriorityProjection);
-        return await (UsesSqlite(dbContext)
-                ? orderedProposals.ThenBy(proposal => proposal.Id)
-                : orderedProposals.ThenByDescending(proposal => proposal.CreatedAtUtc))
+        return await orderedProposals
+            .ThenByDescending(proposal => proposal.CreatedAtUtc)
             .Skip(page.Skip)
             .Take(page.PageSize)
             .Select(proposal => new CognitiveMemoryLearningProposalView(
@@ -193,9 +188,8 @@ public sealed partial class CognitiveMemoryReviewUiService
         var page = ResolvePage(query, CognitiveMemoryReviewUiCollectionKind.CrossProjectPromotions);
         var orderedCandidates = candidatesQuery
             .OrderBy(candidate => candidate.Status == CognitiveMemoryCrossProjectPromotionStatus.PendingReview ? 0 : 1);
-        return await (UsesSqlite(dbContext)
-                ? orderedCandidates.ThenBy(candidate => candidate.Id)
-                : orderedCandidates.ThenByDescending(candidate => candidate.CreatedAtUtc))
+        return await orderedCandidates
+            .ThenByDescending(candidate => candidate.CreatedAtUtc)
             .Skip(page.Skip)
             .Take(page.PageSize)
             .Select(candidate => new CognitiveMemoryCrossProjectPromotionView(
@@ -227,9 +221,8 @@ public sealed partial class CognitiveMemoryReviewUiService
         var orderedJobs = jobsQuery
             .OrderByDescending(job => job.State == CognitiveMemoryDistributedJobState.Rejected ||
                                       job.State == CognitiveMemoryDistributedJobState.Expired);
-        return await (UsesSqlite(dbContext)
-                ? orderedJobs.ThenBy(job => job.Id)
-                : orderedJobs.ThenByDescending(job => job.UpdatedAtUtc))
+        return await orderedJobs
+            .ThenByDescending(job => job.UpdatedAtUtc)
             .Skip(page.Skip)
             .Take(page.PageSize)
             .Select(job => new CognitiveMemoryDistributedJobView(

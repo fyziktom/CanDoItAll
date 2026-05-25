@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -30,6 +31,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using System.Data;
+using System.Data.Common;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -186,8 +191,7 @@ public static class RuntimeHostServiceCollectionExtensions
 
 public sealed class AppDatabaseBootstrapper(
     IDatabaseProfileRuntimeAccessor profileAccessor,
-    ISwitchableAppDbContextFactory dbContextFactory,
-    IAgentProviderCredentialResolver providerCredentialResolver,
+    IProfileAppDbContextFactory dbContextFactory,
     ISecretVault secretVault,
     ILogger<AppDatabaseBootstrapper> logger) : IAppDatabaseBootstrapper
 {
@@ -199,34 +203,40 @@ public sealed class AppDatabaseBootstrapper(
     private static readonly Guid ManagedDeliveryManagerRoleId = Guid.Parse("2D9DF6AC-8B49-43EA-960E-8B912A758296");
     private static readonly Guid ManagedProductOwnerProfileId = Guid.Parse("61C29FAE-C560-4C2D-993E-BE842FD635FB");
     private static readonly Guid ManagedDeliveryManagerProfileId = Guid.Parse("E0EBEC09-C37B-4F42-9FA4-1B2DDAC20572");
-    private const string ManagedSqliteOpenAiDefaultProviderName = "OpenAI default";
-    private const string ManagedSqliteOpenAiChatCompletionsProviderName = "OpenAI chat completions";
-    private static readonly Guid ManagedSqliteOpenAiProviderId = Guid.Parse("2DB76580-21A4-B156-81A7-68DC0EE7513C");
-    private static readonly Guid ManagedSqliteRemoteOllamaProviderId = Guid.Parse("12E4C814-E822-0B58-9B9F-52577D7B374E");
-    private static readonly IReadOnlySet<string> ManagedSqliteOpenAiProviderNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-    {
-        ManagedSqliteOpenAiDefaultProviderName,
-        ManagedSqliteOpenAiChatCompletionsProviderName
-    };
-    private static readonly IReadOnlyList<string> ManagedSqliteOpenAiSuggestedModels =
-    [
-        ManagedSeedProviderFallbacks.OpenAiDefaultModel,
-        "gpt-5.4-mini",
-        "gpt-4.1-mini",
-        "gpt-4o-mini",
-        "gpt-4.1"
-    ];
-
-    private const string ManagedSqliteBootstrapActor = "managed-sqlite-bootstrap";
-    private const string ManagedSqliteSeedMarker = "managedSeedVersion";
-    private const string ManagedSqliteOpenAiProviderName = ManagedSeedProviderFallbacks.OpenAiDefaultProviderName;
-    private const string ManagedSqliteOpenAiBaseUrl = "https://api.openai.com/v1";
-    private const string ManagedSqliteOpenAiApiKeyEnvironmentVariable = "OPENAI_API_KEY";
-    private const string ManagedSqliteOpenAiModel = ManagedSeedProviderFallbacks.OpenAiDefaultModel;
-    private const string ManagedSqliteProviderSchemaVersion = "1.0";
-    private const int ManagedSqliteOpenAiTimeoutSeconds = 600;
+    private static readonly Guid RuntimeBootstrapOpenAiProviderId = Guid.Parse("2DB76580-21A4-B156-81A7-68DC0EE7513C");
+    private const string RuntimeBootstrapOpenAiProviderName = ManagedSeedProviderFallbacks.OpenAiDefaultProviderName;
+    private const string RuntimeBootstrapOpenAiBaseUrl = "https://api.openai.com/v1";
+    private const string RuntimeBootstrapOpenAiApiKeyEnvironmentVariable = "OPENAI_API_KEY";
+    private const string RuntimeBootstrapOpenAiModel = ManagedSeedProviderFallbacks.OpenAiDefaultModel;
+    private const string RuntimeBootstrapProviderSchemaVersion = "1.0";
+    private const int RuntimeBootstrapOpenAiTimeoutSeconds = 600;
     private static readonly Guid DefaultOpenAiApiKeySecretId = Guid.Parse("86F781F1-1E76-4B45-9F1A-42B8CF13D8C7");
     private const string DefaultOpenAiApiKeySecretName = "OpenAI API key";
+    private const string InitialPostgreSqlBaselineMigrationId = "20260523211921_InitialPostgreSqlBaseline";
+    private const string ProcessStepAutomationDispatchClaimsMigrationId = "20260524144716_ProcessStepAutomationDispatchClaims";
+    private const string ProcessClaimHotPathIndexesMigrationId = "20260524183000_ProcessClaimHotPathIndexes";
+    private const string StepDispatchClaimIndexName = "IX_Processes_StepRuns_ProcessRunId_AutomationDispatchLeaseExpi~";
+    private static readonly string[] BaselineSentinelTables =
+    [
+        "Activity_Entries",
+        "Projects_Projects",
+        "Processes_Outbox",
+        "Workspace_ProviderProfiles"
+    ];
+    private static readonly string[] ProcessStepDispatchClaimColumns =
+    [
+        "AutomationDispatchAttemptCount",
+        "AutomationDispatchClaimToken",
+        "AutomationDispatchClaimedAtUtc",
+        "AutomationDispatchClaimedBy",
+        "AutomationDispatchLeaseExpiresAtUtc"
+    ];
+    private static readonly string[] ProcessClaimHotPathIndexNames =
+    [
+        "IX_Processes_Outbox_PendingClaimOrder",
+        "IX_Automation_EnvelopeDeliveries_DueClaimOrder",
+        "IX_Workspace_ConnectorCommands_PendingClaimOrder"
+    ];
 
     public Task EnsureCurrentProfileReadyAsync(CancellationToken cancellationToken = default)
     {
@@ -256,16 +266,9 @@ public sealed class AppDatabaseBootstrapper(
         }
 
         logger.LogInformation(
-            "Preparing legacy SQLite compatibility for profile {ProfileId}.",
-            profile.Profile.Id);
-        await CanDoItAllDatabaseMigrationBootstrap.PrepareLegacySqliteAsync(dbContext, logger, cancellationToken);
-        logger.LogInformation(
-            "Releasing stale SQLite EF migration locks for profile {ProfileId}.",
-            profile.Profile.Id);
-        await CanDoItAllDatabaseMigrationBootstrap.ReleaseStaleSqliteMigrationLockAsync(dbContext, logger, cancellationToken);
-        logger.LogInformation(
             "Applying EF migrations for profile {ProfileId}.",
             profile.Profile.Id);
+        await AdoptExistingPostgreSqlSchemaIfNeededAsync(profile, dbContext, cancellationToken);
         await dbContext.Database.MigrateAsync(cancellationToken);
         logger.LogInformation(
             "Ensuring CRM/HR schema for profile {ProfileId}.",
@@ -284,10 +287,6 @@ public sealed class AppDatabaseBootstrapper(
             profile.Profile.Id);
         await SchedulerPlannerSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         logger.LogInformation(
-            "Ensuring managed SQLite staffing bootstrap for profile {ProfileId}.",
-            profile.Profile.Id);
-        await EnsureManagedSqliteStaffingBootstrapAsync(profile, dbContext, cancellationToken);
-        logger.LogInformation(
             "Ensuring agent provider bootstrap for profile {ProfileId}.",
             profile.Profile.Id);
         await EnsureAgentProviderBootstrapAsync(profile, dbContext, cancellationToken);
@@ -296,206 +295,281 @@ public sealed class AppDatabaseBootstrapper(
             profile.Profile.Id);
     }
 
-    private async Task EnsureManagedSqliteStaffingBootstrapAsync(
+    private async Task AdoptExistingPostgreSqlSchemaIfNeededAsync(
         ResolvedDatabaseProfile profile,
         AppDbContext dbContext,
+        CancellationToken cancellationToken) {
+        if (profile.Profile.ProviderKind != DatabaseProviderKind.PostgreSql) {
+            return;
+        }
+
+        var appliedMigrations = (await dbContext.Database.GetAppliedMigrationsAsync(cancellationToken))
+            .ToHashSet(StringComparer.Ordinal);
+
+        if (!appliedMigrations.Contains(InitialPostgreSqlBaselineMigrationId)) {
+            var existingSentinelTables = new List<string>();
+            foreach (var tableName in BaselineSentinelTables) {
+                if (await PostgreSqlTableExistsAsync(dbContext, tableName, cancellationToken)) {
+                    existingSentinelTables.Add(tableName);
+                }
+            }
+
+            if (existingSentinelTables.Count > 0) {
+                if (existingSentinelTables.Count != BaselineSentinelTables.Length) {
+                    throw new InvalidOperationException(
+                        $"PostgreSQL profile '{profile.Profile.DisplayName}' has a partial CanDoItAll schema without EF migration history. Existing sentinel tables: {string.Join(", ", existingSentinelTables)}. Refusing to adopt the merged baseline automatically.");
+                }
+
+                logger.LogWarning(
+                    "PostgreSQL profile {ProfileId} has existing CanDoItAll tables but no recorded initial EF migration. Recording merged baseline migration {MigrationId} before applying pending migrations.",
+                    profile.Profile.Id,
+                    InitialPostgreSqlBaselineMigrationId);
+
+                await EnsurePostgreSqlMigrationHistoryTableAsync(dbContext, cancellationToken);
+                await MarkPostgreSqlMigrationAppliedAsync(dbContext, InitialPostgreSqlBaselineMigrationId, cancellationToken);
+                appliedMigrations.Add(InitialPostgreSqlBaselineMigrationId);
+            }
+        }
+
+        if (!appliedMigrations.Contains(InitialPostgreSqlBaselineMigrationId)) {
+            return;
+        }
+
+        if (!appliedMigrations.Contains(ProcessStepAutomationDispatchClaimsMigrationId) &&
+            await PostgreSqlTableExistsAsync(dbContext, "Processes_StepRuns", cancellationToken) &&
+            await PostgreSqlColumnsExistAsync(dbContext, "Processes_StepRuns", ProcessStepDispatchClaimColumns, cancellationToken)) {
+            logger.LogWarning(
+                "PostgreSQL profile {ProfileId} already contains process dispatch claim columns without migration {MigrationId}. Recording the migration and ensuring its index exists.",
+                profile.Profile.Id,
+                ProcessStepAutomationDispatchClaimsMigrationId);
+
+            await EnsurePostgreSqlMigrationHistoryTableAsync(dbContext, cancellationToken);
+            await EnsureProcessStepDispatchClaimIndexAsync(dbContext, cancellationToken);
+            await MarkPostgreSqlMigrationAppliedAsync(dbContext, ProcessStepAutomationDispatchClaimsMigrationId, cancellationToken);
+            appliedMigrations.Add(ProcessStepAutomationDispatchClaimsMigrationId);
+        }
+
+        if (!appliedMigrations.Contains(ProcessClaimHotPathIndexesMigrationId) &&
+            await AnyPostgreSqlIndexExistsAsync(dbContext, ProcessClaimHotPathIndexNames, cancellationToken)) {
+            logger.LogWarning(
+                "PostgreSQL profile {ProfileId} already contains one or more process claim hot-path indexes without migration {MigrationId}. Ensuring all indexes exist and recording the migration.",
+                profile.Profile.Id,
+                ProcessClaimHotPathIndexesMigrationId);
+
+            await EnsurePostgreSqlMigrationHistoryTableAsync(dbContext, cancellationToken);
+            await EnsureProcessClaimHotPathIndexesAsync(dbContext, cancellationToken);
+            await MarkPostgreSqlMigrationAppliedAsync(dbContext, ProcessClaimHotPathIndexesMigrationId, cancellationToken);
+        }
+    }
+
+    private static async Task<bool> PostgreSqlTableExistsAsync(
+        AppDbContext dbContext,
+        string tableName,
+        CancellationToken cancellationToken) {
+        var result = await ExecutePostgreSqlScalarAsync(
+            dbContext,
+            """
+            SELECT EXISTS (
+                SELECT 1
+                FROM information_schema.tables
+                WHERE table_schema = current_schema()
+                  AND table_name = @tableName
+            );
+            """,
+            cancellationToken,
+            ("@tableName", tableName));
+
+        return result is true;
+    }
+
+    private static async Task<bool> PostgreSqlColumnsExistAsync(
+        AppDbContext dbContext,
+        string tableName,
+        IReadOnlyCollection<string> columnNames,
+        CancellationToken cancellationToken) {
+        foreach (var columnName in columnNames) {
+            var result = await ExecutePostgreSqlScalarAsync(
+                dbContext,
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM information_schema.columns
+                    WHERE table_schema = current_schema()
+                      AND table_name = @tableName
+                      AND column_name = @columnName
+                );
+                """,
+                cancellationToken,
+                ("@tableName", tableName),
+                ("@columnName", columnName));
+
+            if (result is not true) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static async Task<bool> AnyPostgreSqlIndexExistsAsync(
+        AppDbContext dbContext,
+        IReadOnlyCollection<string> indexNames,
+        CancellationToken cancellationToken) {
+        foreach (var indexName in indexNames) {
+            var result = await ExecutePostgreSqlScalarAsync(
+                dbContext,
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM pg_indexes
+                    WHERE schemaname = current_schema()
+                      AND indexname = @indexName
+                );
+                """,
+                cancellationToken,
+                ("@indexName", indexName));
+
+            if (result is true) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static Task EnsurePostgreSqlMigrationHistoryTableAsync(
+        AppDbContext dbContext,
         CancellationToken cancellationToken)
-    {
-        if (profile.Profile.SourceKind != DatabaseProfileSourceKind.ManagedSqlite)
-        {
-            return;
+        => ExecutePostgreSqlNonQueryAsync(
+            dbContext,
+            """
+            CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" (
+                "MigrationId" character varying(150) NOT NULL,
+                "ProductVersion" character varying(32) NOT NULL,
+                CONSTRAINT "PK___EFMigrationsHistory" PRIMARY KEY ("MigrationId")
+            );
+            """,
+            cancellationToken);
+
+    private static Task MarkPostgreSqlMigrationAppliedAsync(
+        AppDbContext dbContext,
+        string migrationId,
+        CancellationToken cancellationToken)
+        => ExecutePostgreSqlNonQueryAsync(
+            dbContext,
+            """
+            INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+            VALUES (@migrationId, @productVersion)
+            ON CONFLICT ("MigrationId") DO NOTHING;
+            """,
+            cancellationToken,
+            ("@migrationId", migrationId),
+            ("@productVersion", ResolveEfCoreProductVersion()));
+
+    private static Task EnsureProcessStepDispatchClaimIndexAsync(
+        AppDbContext dbContext,
+        CancellationToken cancellationToken)
+        => ExecutePostgreSqlNonQueryAsync(
+            dbContext,
+            $"""
+            CREATE INDEX IF NOT EXISTS "{StepDispatchClaimIndexName}"
+            ON "Processes_StepRuns" ("ProcessRunId", "AutomationDispatchLeaseExpiresAtUtc");
+            """,
+            cancellationToken);
+
+    private static Task EnsureProcessClaimHotPathIndexesAsync(
+        AppDbContext dbContext,
+        CancellationToken cancellationToken)
+        => ExecutePostgreSqlNonQueryAsync(
+            dbContext,
+            """
+            CREATE INDEX IF NOT EXISTS "IX_Processes_Outbox_PendingClaimOrder"
+            ON "Processes_Outbox" ((COALESCE("NextAttemptAtUtc", "CreatedAtUtc")), "CreatedAtUtc")
+            INCLUDE ("Id", "CommandKey", "ProcessRunId", "LeaseExpiresAtUtc")
+            WHERE "Status" = 0;
+
+            CREATE INDEX IF NOT EXISTS "IX_Automation_EnvelopeDeliveries_DueClaimOrder"
+            ON "Automation_EnvelopeDeliveries" ("AvailableAtUtc", "CreatedAtUtc")
+            INCLUDE ("Id", "EnvelopeId", "State", "LockedAtUtc")
+            WHERE "State" IN (0, 1, 2);
+
+            CREATE INDEX IF NOT EXISTS "IX_Workspace_ConnectorCommands_PendingClaimOrder"
+            ON "Workspace_ConnectorCommands" ((COALESCE("NextAttemptAtUtc", "CreatedAtUtc")), "CreatedAtUtc")
+            INCLUDE ("Id", "ProjectId", "ConnectorPluginKey", "CommandKey", "LeaseExpiresAtUtc")
+            WHERE "Status" = 0 AND "ApprovalState" <> 1;
+            """,
+            cancellationToken);
+
+    private static string ResolveEfCoreProductVersion() {
+        var informationalVersion = typeof(DbContext).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            ?.InformationalVersion;
+
+        if (!string.IsNullOrWhiteSpace(informationalVersion)) {
+            return informationalVersion.Split('+', 2)[0];
         }
 
-        var timestamp = DateTimeOffset.UtcNow;
-        var parties = await dbContext.Set<Party>()
-            .Where(item =>
-                item.Id == ManagedDeliveryUnitPartyId ||
-                item.Id == ManagedProductOwnerPartyId ||
-                item.Id == ManagedDeliveryManagerPartyId)
-            .ToDictionaryAsync(item => item.Id, cancellationToken);
-        var roles = await dbContext.Set<PartyRoleAssignment>()
-            .Where(item =>
-                item.Id == ManagedDeliveryUnitRoleId ||
-                item.Id == ManagedProductOwnerRoleId ||
-                item.Id == ManagedDeliveryManagerRoleId)
-            .ToDictionaryAsync(item => item.Id, cancellationToken);
-        var profiles = await dbContext.Set<WorkforceProfile>()
-            .Where(item =>
-                item.Id == ManagedProductOwnerProfileId ||
-                item.Id == ManagedDeliveryManagerProfileId)
-            .ToDictionaryAsync(item => item.Id, cancellationToken);
-        var changed = false;
+        return typeof(DbContext).Assembly.GetName().Version?.ToString(3) ?? "10.0.0";
+    }
 
-        if (!parties.ContainsKey(ManagedDeliveryUnitPartyId))
-        {
-            dbContext.Set<Party>().Add(new Party
-            {
-                Id = ManagedDeliveryUnitPartyId,
-                PartyType = PartyType.OrganizationUnit,
-                LifecycleStatus = PartyLifecycleStatus.Active,
-                DisplayName = "Managed Demo Delivery Leadership",
-                LegalName = "Managed Demo Delivery Leadership",
-                PreferredName = "Managed Demo Delivery Leadership",
-                ExternalCode = "managed-sqlite-demo-delivery-unit",
-                Summary = "Bootstrap delivery unit for managed SQLite staffing and process-start review flows.",
-                Notes = "Created automatically so process launch review has factual CRM-HR delivery coverage in managed SQLite profiles.",
-                TagsJson = "[\"managed-sqlite\",\"demo\",\"delivery-unit\"]",
-                Region = "Remote",
-                CountryCode = "US",
-                TimeZone = "America/La_Paz",
-                ExtendedDataJson = "{}",
-                LastChangedBy = "managed-sqlite-bootstrap",
-                CreatedAtUtc = timestamp,
-                UpdatedAtUtc = timestamp
-            });
-            changed = true;
+    private static async Task<object?> ExecutePostgreSqlScalarAsync(
+        AppDbContext dbContext,
+        string commandText,
+        CancellationToken cancellationToken,
+        params (string Name, object? Value)[] parameters) {
+        var connection = dbContext.Database.GetDbConnection();
+        var shouldClose = connection.State != ConnectionState.Open;
+        if (shouldClose) {
+            await connection.OpenAsync(cancellationToken);
         }
 
-        if (!parties.ContainsKey(ManagedProductOwnerPartyId))
-        {
-            dbContext.Set<Party>().Add(new Party
-            {
-                Id = ManagedProductOwnerPartyId,
-                PartyType = PartyType.Person,
-                LifecycleStatus = PartyLifecycleStatus.Active,
-                DisplayName = "Parker Product",
-                LegalName = "Parker Product",
-                PreferredName = "Parker",
-                ExternalCode = "managed-sqlite-demo-product-owner",
-                Summary = "Managed SQLite bootstrap product owner used for staffing suggestions and process-launch validation.",
-                Notes = "Created automatically so product-owner process roles can be matched from CRM-HR without guesswork.",
-                TagsJson = "[\"managed-sqlite\",\"demo\",\"product-owner\"]",
-                Region = "Remote",
-                CountryCode = "US",
-                TimeZone = "America/La_Paz",
-                ExtendedDataJson = "{}",
-                LastChangedBy = "managed-sqlite-bootstrap",
-                CreatedAtUtc = timestamp,
-                UpdatedAtUtc = timestamp
-            });
-            changed = true;
+        try {
+            await using var command = CreateCommand(connection, commandText, parameters);
+            return await command.ExecuteScalarAsync(cancellationToken);
+        }
+        finally {
+            if (shouldClose) {
+                await connection.CloseAsync();
+            }
+        }
+    }
+
+    private static async Task ExecutePostgreSqlNonQueryAsync(
+        AppDbContext dbContext,
+        string commandText,
+        CancellationToken cancellationToken,
+        params (string Name, object? Value)[] parameters) {
+        var connection = dbContext.Database.GetDbConnection();
+        var shouldClose = connection.State != ConnectionState.Open;
+        if (shouldClose) {
+            await connection.OpenAsync(cancellationToken);
         }
 
-        if (!parties.ContainsKey(ManagedDeliveryManagerPartyId))
-        {
-            dbContext.Set<Party>().Add(new Party
-            {
-                Id = ManagedDeliveryManagerPartyId,
-                PartyType = PartyType.Person,
-                LifecycleStatus = PartyLifecycleStatus.Active,
-                DisplayName = "Devon Delivery",
-                LegalName = "Devon Delivery",
-                PreferredName = "Devon",
-                ExternalCode = "managed-sqlite-demo-delivery-manager",
-                Summary = "Managed SQLite bootstrap delivery manager used for staffing suggestions and process-launch validation.",
-                Notes = "Created automatically so delivery-manager process roles can be matched from CRM-HR without guesswork.",
-                TagsJson = "[\"managed-sqlite\",\"demo\",\"delivery-manager\"]",
-                Region = "Remote",
-                CountryCode = "US",
-                TimeZone = "America/La_Paz",
-                ExtendedDataJson = "{}",
-                LastChangedBy = "managed-sqlite-bootstrap",
-                CreatedAtUtc = timestamp,
-                UpdatedAtUtc = timestamp
-            });
-            changed = true;
+        try {
+            await using var command = CreateCommand(connection, commandText, parameters);
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+        finally {
+            if (shouldClose) {
+                await connection.CloseAsync();
+            }
+        }
+    }
+
+    private static DbCommand CreateCommand(
+        DbConnection connection,
+        string commandText,
+        params (string Name, object? Value)[] parameters) {
+        var command = connection.CreateCommand();
+        command.CommandText = commandText;
+        foreach (var (name, value) in parameters) {
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = name;
+            parameter.Value = value ?? DBNull.Value;
+            command.Parameters.Add(parameter);
         }
 
-        if (!roles.ContainsKey(ManagedDeliveryUnitRoleId))
-        {
-            dbContext.Set<PartyRoleAssignment>().Add(new PartyRoleAssignment
-            {
-                Id = ManagedDeliveryUnitRoleId,
-                PartyId = ManagedDeliveryUnitPartyId,
-                RoleKind = PartyRoleKind.DeliveryUnit,
-                Title = "Delivery leadership",
-                IsPrimary = true,
-                Notes = "Managed SQLite bootstrap delivery unit role."
-            });
-            changed = true;
-        }
-
-        if (!roles.ContainsKey(ManagedProductOwnerRoleId))
-        {
-            dbContext.Set<PartyRoleAssignment>().Add(new PartyRoleAssignment
-            {
-                Id = ManagedProductOwnerRoleId,
-                PartyId = ManagedProductOwnerPartyId,
-                RoleKind = PartyRoleKind.Employee,
-                Title = "Product owner",
-                IsPrimary = true,
-                Notes = "Managed SQLite bootstrap workforce role."
-            });
-            changed = true;
-        }
-
-        if (!roles.ContainsKey(ManagedDeliveryManagerRoleId))
-        {
-            dbContext.Set<PartyRoleAssignment>().Add(new PartyRoleAssignment
-            {
-                Id = ManagedDeliveryManagerRoleId,
-                PartyId = ManagedDeliveryManagerPartyId,
-                RoleKind = PartyRoleKind.Employee,
-                Title = "Delivery manager",
-                IsPrimary = true,
-                Notes = "Managed SQLite bootstrap workforce role."
-            });
-            changed = true;
-        }
-
-        if (!profiles.ContainsKey(ManagedProductOwnerProfileId))
-        {
-            dbContext.Set<WorkforceProfile>().Add(new WorkforceProfile
-            {
-                Id = ManagedProductOwnerProfileId,
-                PartyId = ManagedProductOwnerPartyId,
-                WorkforceKind = WorkforceKind.Employee,
-                EmployeeCode = "MS-PO-001",
-                JobTitle = "Product owner",
-                Discipline = "Product management",
-                Seniority = "Lead",
-                HomeUnitPartyId = ManagedDeliveryUnitPartyId,
-                Location = "Remote",
-                TimeZone = "America/La_Paz",
-                CapacityHoursPerWeek = 40m,
-                Status = "Active",
-                ExtendedDataJson = "{}",
-                Notes = "Managed SQLite bootstrap workforce record for process-start staffing review."
-            });
-            changed = true;
-        }
-
-        if (!profiles.ContainsKey(ManagedDeliveryManagerProfileId))
-        {
-            dbContext.Set<WorkforceProfile>().Add(new WorkforceProfile
-            {
-                Id = ManagedDeliveryManagerProfileId,
-                PartyId = ManagedDeliveryManagerPartyId,
-                WorkforceKind = WorkforceKind.Employee,
-                EmployeeCode = "MS-DM-001",
-                JobTitle = "Delivery manager",
-                Discipline = "Program delivery",
-                Seniority = "Lead",
-                HomeUnitPartyId = ManagedDeliveryUnitPartyId,
-                Location = "Remote",
-                TimeZone = "America/La_Paz",
-                CapacityHoursPerWeek = 40m,
-                Status = "Active",
-                ExtendedDataJson = "{}",
-                Notes = "Managed SQLite bootstrap workforce record for process-start staffing review."
-            });
-            changed = true;
-        }
-
-        if (!changed)
-        {
-            return;
-        }
-
-        await dbContext.SaveChangesAsync(cancellationToken);
-        logger.LogInformation(
-            "Seeded managed SQLite staffing bootstrap data for profile {ProfileId}.",
-            profile.Profile.Id);
+        return command;
     }
 
     private async Task EnsureAgentProviderBootstrapAsync(
@@ -505,27 +579,26 @@ public sealed class AppDatabaseBootstrapper(
     {
         var timestamp = DateTimeOffset.UtcNow;
         var changed = false;
-        var isManagedSqliteProfile = profile.Profile.SourceKind == DatabaseProfileSourceKind.ManagedSqlite;
         var openAiSecretId = await EnsureDefaultOpenAiSecretAsync(dbContext, cancellationToken);
         var openAiProvider = await dbContext.Set<CanDoItAll.Modules.Workspace.ProviderProfile>()
-            .SingleOrDefaultAsync(item => item.Id == ManagedSqliteOpenAiProviderId, cancellationToken)
+            .SingleOrDefaultAsync(item => item.Id == RuntimeBootstrapOpenAiProviderId, cancellationToken)
             ?? await dbContext.Set<CanDoItAll.Modules.Workspace.ProviderProfile>()
-                .Where(item => item.Name == ManagedSqliteOpenAiProviderName)
+                .Where(item => item.Name == RuntimeBootstrapOpenAiProviderName)
                 .OrderBy(item => item.Id)
                 .FirstOrDefaultAsync(cancellationToken);
         if (openAiProvider is null)
         {
             openAiProvider = new CanDoItAll.Modules.Workspace.ProviderProfile
             {
-                Id = ManagedSqliteOpenAiProviderId,
-                Name = ManagedSqliteOpenAiProviderName,
+                Id = RuntimeBootstrapOpenAiProviderId,
+                Name = RuntimeBootstrapOpenAiProviderName,
                 ProviderKind = CanDoItAll.Modules.Workspace.ProviderKind.OpenAi,
                 ConnectorPluginKey = OpenAiProviderAdapter.PluginKey,
-                ConfigSchemaVersion = ManagedSqliteProviderSchemaVersion,
-                BaseUrl = ManagedSqliteOpenAiBaseUrl,
+                ConfigSchemaVersion = RuntimeBootstrapProviderSchemaVersion,
+                BaseUrl = RuntimeBootstrapOpenAiBaseUrl,
                 ApiKeySecretId = openAiSecretId,
-                DefaultModel = ManagedSqliteOpenAiModel,
-                TimeoutSeconds = ManagedSqliteOpenAiTimeoutSeconds,
+                DefaultModel = RuntimeBootstrapOpenAiModel,
+                TimeoutSeconds = RuntimeBootstrapOpenAiTimeoutSeconds,
                 IsEnabled = true,
                 SupportsStreaming = true,
                 SupportsToolCalling = true,
@@ -541,12 +614,12 @@ public sealed class AppDatabaseBootstrapper(
                     {
                         reasoningEffort = ManagedSeedProviderFallbacks.DefaultReasoningEffort
                     },
-                    apiKeyEnvironmentVariable = ManagedSqliteOpenAiApiKeyEnvironmentVariable,
+                    apiKeyEnvironmentVariable = RuntimeBootstrapOpenAiApiKeyEnvironmentVariable,
                     connectorPluginKey = OpenAiProviderAdapter.PluginKey,
-                    configSchemaVersion = ManagedSqliteProviderSchemaVersion,
+                    configSchemaVersion = RuntimeBootstrapProviderSchemaVersion,
                     secretRecordId = openAiSecretId?.ToString("D"),
                     providerTransport = nameof(ProviderTransportKind.Responses),
-                    timeoutSeconds = ManagedSqliteOpenAiTimeoutSeconds
+                    timeoutSeconds = RuntimeBootstrapOpenAiTimeoutSeconds
                 })
             };
             dbContext.Set<CanDoItAll.Modules.Workspace.ProviderProfile>().Add(openAiProvider);
@@ -554,7 +627,7 @@ public sealed class AppDatabaseBootstrapper(
         }
         else
         {
-            changed |= UpdateManagedSqliteOpenAiProvider(openAiProvider);
+            changed |= UpdateRuntimeBootstrapOpenAiProvider(openAiProvider);
         }
 
         if (openAiSecretId.HasValue && openAiProvider.ApiKeySecretId != openAiSecretId.Value)
@@ -563,7 +636,7 @@ public sealed class AppDatabaseBootstrapper(
             changed = true;
         }
 
-        changed |= UpdateManagedSqliteOpenAiProviderConfigurationJson(openAiProvider);
+        changed |= UpdateRuntimeBootstrapOpenAiProviderConfigurationJson(openAiProvider);
 
         var settings = await dbContext.Set<WorkspaceSettings>()
             .FirstOrDefaultAsync(cancellationToken);
@@ -571,15 +644,15 @@ public sealed class AppDatabaseBootstrapper(
         {
             dbContext.Set<WorkspaceSettings>().Add(new WorkspaceSettings
             {
-                DefaultProviderProfileId = ManagedSqliteOpenAiProviderId,
+                DefaultProviderProfileId = RuntimeBootstrapOpenAiProviderId,
                 WorkspaceName = "CanDoItAll",
                 DefaultPromptOutputFormat = "Markdown",
-                Notes = "Managed SQLite bootstrap default provider.",
+                Notes = "Runtime bootstrap default provider.",
                 UpdatedAtUtc = timestamp
             });
             changed = true;
         }
-        else if (ShouldReplaceDefaultProvider(settings.DefaultProviderProfileId, openAiProvider.Id, isManagedSqliteProfile, dbContext))
+        else if (ShouldReplaceDefaultProvider(settings.DefaultProviderProfileId, openAiProvider.Id, dbContext))
         {
             settings.DefaultProviderProfileId = openAiProvider.Id;
             settings.UpdatedAtUtc = timestamp;
@@ -593,78 +666,13 @@ public sealed class AppDatabaseBootstrapper(
                 "Seeded OpenAI provider bootstrap for profile {ProfileId}.",
                 profile.Profile.Id);
         }
-
-        if (!isManagedSqliteProfile)
-        {
-            return;
-        }
-
-        var workspaceRoot = profile.Profile.Storage.WorkspaceRoot;
-        if (string.IsNullOrWhiteSpace(workspaceRoot))
-        {
-            return;
-        }
-
-        var store = new FileSandboxWorkspaceStore(
-            workspaceRoot,
-            WorkspaceScopeDescriptor.Organization(profile.Profile.Id.ToString("N")));
-        var catalogChanged = false;
-        await store.UpdateCatalogAsync(catalog =>
-        {
-            var openAiCatalogProvider = CreateManagedSqliteOpenAiCatalogProvider();
-            var remoteOllamaCatalogProvider = catalog.Providers.FirstOrDefault(provider =>
-                provider.Id != ManagedSqliteOpenAiProviderId &&
-                provider.Kind == CanDoItAll.AgentFramework.Models.ProviderKind.Ollama &&
-                string.Equals(provider.Name, ManagedSeedProviderFallbacks.FallbackProviderName, StringComparison.OrdinalIgnoreCase)) ?? CreateManagedSqliteRemoteOllamaCatalogProvider();
-            var providerIdsToRedirect = catalog.Providers
-                .Where(item => ManagedSqliteOpenAiProviderNames.Contains(item.Name))
-                .Select(item => item.Id)
-                .Append(ManagedSqliteOpenAiProviderId)
-                .ToHashSet();
-
-            var updatedProviders = catalog.Providers
-                .Where(item => item.Id != ManagedSqliteOpenAiProviderId)
-                .Where(item => item.Id != remoteOllamaCatalogProvider.Id)
-                .Append(openAiCatalogProvider)
-                .Append(remoteOllamaCatalogProvider)
-                .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
-                .ToList();
-            var updatedAgents = catalog.Agents
-                .Select(agent => ShouldRedirectManagedSqliteAgent(agent, providerIdsToRedirect)
-                    ? agent with
-                    {
-                        ProviderProfileId = ManagedSqliteOpenAiProviderId,
-                        Model = ManagedSqliteOpenAiModel,
-                        UpdatedAtUtc = timestamp
-                    }
-                    : agent)
-                .ToList();
-
-            catalogChanged =
-                !updatedProviders.SequenceEqual(catalog.Providers) ||
-                !updatedAgents.SequenceEqual(catalog.Agents);
-            return catalogChanged
-                ? catalog with
-                {
-                    Providers = updatedProviders,
-                    Agents = updatedAgents
-                }
-                : catalog;
-        }, cancellationToken);
-
-        if (catalogChanged)
-        {
-            logger.LogInformation(
-                "Remapped managed SQLite seeded agents to OpenAI for profile {ProfileId}.",
-                profile.Profile.Id);
-        }
     }
 
     private async Task<Guid?> EnsureDefaultOpenAiSecretAsync(
         AppDbContext dbContext,
         CancellationToken cancellationToken)
     {
-        var configuredKey = Environment.GetEnvironmentVariable(ManagedSqliteOpenAiApiKeyEnvironmentVariable);
+        var configuredKey = Environment.GetEnvironmentVariable(RuntimeBootstrapOpenAiApiKeyEnvironmentVariable);
         var existingSecret = await dbContext.Set<SecretRecord>()
             .Where(item => item.Id == DefaultOpenAiApiKeySecretId || item.Name == DefaultOpenAiApiKeySecretName)
             .OrderBy(item => item.Id == DefaultOpenAiApiKeySecretId ? 0 : 1)
@@ -696,7 +704,7 @@ public sealed class AppDatabaseBootstrapper(
         var metadataJson = JsonSerializer.Serialize(new
         {
             source = "environment",
-            environmentVariable = ManagedSqliteOpenAiApiKeyEnvironmentVariable,
+            environmentVariable = RuntimeBootstrapOpenAiApiKeyEnvironmentVariable,
             managedBy = "runtime-bootstrap"
         });
         var metadataChanged =
@@ -717,7 +725,7 @@ public sealed class AppDatabaseBootstrapper(
         existingSecret.Kind = SecretKind.ApiKey;
         existingSecret.Scope = "workspace";
         existingSecret.MetadataJson = metadataJson;
-        existingSecret.RotationNote = $"Synchronized from {ManagedSqliteOpenAiApiKeyEnvironmentVariable}.";
+        existingSecret.RotationNote = $"Synchronized from {RuntimeBootstrapOpenAiApiKeyEnvironmentVariable}.";
         existingSecret.EncryptedPayload = SecretVaultRecordReference.Create(newVaultKey);
         existingSecret.UpdatedAtUtc = timestamp;
 
@@ -734,7 +742,6 @@ public sealed class AppDatabaseBootstrapper(
     private static bool ShouldReplaceDefaultProvider(
         Guid? currentDefaultProviderId,
         Guid openAiProviderId,
-        bool isManagedSqliteProfile,
         AppDbContext dbContext)
     {
         if (currentDefaultProviderId == openAiProviderId)
@@ -742,7 +749,7 @@ public sealed class AppDatabaseBootstrapper(
             return false;
         }
 
-        if (isManagedSqliteProfile || !currentDefaultProviderId.HasValue)
+        if (!currentDefaultProviderId.HasValue)
         {
             return true;
         }
@@ -751,12 +758,12 @@ public sealed class AppDatabaseBootstrapper(
             .Any(item => item.Id == currentDefaultProviderId.Value);
     }
 
-    private static bool UpdateManagedSqliteOpenAiProvider(CanDoItAll.Modules.Workspace.ProviderProfile provider)
+    private static bool UpdateRuntimeBootstrapOpenAiProvider(CanDoItAll.Modules.Workspace.ProviderProfile provider)
     {
         var changed = false;
-        if (!string.Equals(provider.Name, ManagedSqliteOpenAiProviderName, StringComparison.Ordinal))
+        if (!string.Equals(provider.Name, RuntimeBootstrapOpenAiProviderName, StringComparison.Ordinal))
         {
-            provider.Name = ManagedSqliteOpenAiProviderName;
+            provider.Name = RuntimeBootstrapOpenAiProviderName;
             changed = true;
         }
 
@@ -772,27 +779,27 @@ public sealed class AppDatabaseBootstrapper(
             changed = true;
         }
 
-        if (!string.Equals(provider.ConfigSchemaVersion, ManagedSqliteProviderSchemaVersion, StringComparison.Ordinal))
+        if (!string.Equals(provider.ConfigSchemaVersion, RuntimeBootstrapProviderSchemaVersion, StringComparison.Ordinal))
         {
-            provider.ConfigSchemaVersion = ManagedSqliteProviderSchemaVersion;
+            provider.ConfigSchemaVersion = RuntimeBootstrapProviderSchemaVersion;
             changed = true;
         }
 
-        if (!string.Equals(provider.BaseUrl, ManagedSqliteOpenAiBaseUrl, StringComparison.Ordinal))
+        if (!string.Equals(provider.BaseUrl, RuntimeBootstrapOpenAiBaseUrl, StringComparison.Ordinal))
         {
-            provider.BaseUrl = ManagedSqliteOpenAiBaseUrl;
+            provider.BaseUrl = RuntimeBootstrapOpenAiBaseUrl;
             changed = true;
         }
 
-        if (!string.Equals(provider.DefaultModel, ManagedSqliteOpenAiModel, StringComparison.Ordinal))
+        if (!string.Equals(provider.DefaultModel, RuntimeBootstrapOpenAiModel, StringComparison.Ordinal))
         {
-            provider.DefaultModel = ManagedSqliteOpenAiModel;
+            provider.DefaultModel = RuntimeBootstrapOpenAiModel;
             changed = true;
         }
 
-        if (provider.TimeoutSeconds != ManagedSqliteOpenAiTimeoutSeconds)
+        if (provider.TimeoutSeconds != RuntimeBootstrapOpenAiTimeoutSeconds)
         {
-            provider.TimeoutSeconds = ManagedSqliteOpenAiTimeoutSeconds;
+            provider.TimeoutSeconds = RuntimeBootstrapOpenAiTimeoutSeconds;
             changed = true;
         }
 
@@ -835,7 +842,7 @@ public sealed class AppDatabaseBootstrapper(
         return changed;
     }
 
-    private static bool UpdateManagedSqliteOpenAiProviderConfigurationJson(CanDoItAll.Modules.Workspace.ProviderProfile provider)
+    private static bool UpdateRuntimeBootstrapOpenAiProviderConfigurationJson(CanDoItAll.Modules.Workspace.ProviderProfile provider)
     {
         var expectedExtraSettingsJson = JsonSerializer.Serialize(new
         {
@@ -845,12 +852,12 @@ public sealed class AppDatabaseBootstrapper(
             {
                 reasoningEffort = ManagedSeedProviderFallbacks.DefaultReasoningEffort
             },
-            apiKeyEnvironmentVariable = ManagedSqliteOpenAiApiKeyEnvironmentVariable,
+            apiKeyEnvironmentVariable = RuntimeBootstrapOpenAiApiKeyEnvironmentVariable,
             connectorPluginKey = OpenAiProviderAdapter.PluginKey,
-            configSchemaVersion = ManagedSqliteProviderSchemaVersion,
+            configSchemaVersion = RuntimeBootstrapProviderSchemaVersion,
             secretRecordId = provider.ApiKeySecretId?.ToString("D"),
             providerTransport = nameof(ProviderTransportKind.Responses),
-            timeoutSeconds = ManagedSqliteOpenAiTimeoutSeconds
+            timeoutSeconds = RuntimeBootstrapOpenAiTimeoutSeconds
         });
         if (string.Equals(provider.ExtraSettingsJson, expectedExtraSettingsJson, StringComparison.Ordinal))
         {
@@ -861,183 +868,15 @@ public sealed class AppDatabaseBootstrapper(
         return true;
     }
 
-    private static CanDoItAll.AgentFramework.Models.ProviderProfile CreateManagedSqliteOpenAiCatalogProvider()
-    {
-        return new CanDoItAll.AgentFramework.Models.ProviderProfile(
-            ManagedSqliteOpenAiProviderId,
-            ManagedSqliteOpenAiProviderName,
-            CanDoItAll.AgentFramework.Models.ProviderKind.OpenAi,
-            ManagedSqliteOpenAiBaseUrl,
-            ManagedSqliteOpenAiApiKeyEnvironmentVariable,
-            ManagedSqliteOpenAiModel,
-            ProviderTransportKind.Responses,
-            true,
-            true,
-            true,
-            false,
-            true,
-            ManagedSeedProviderFallbacks.EnsureDefaultReasoningConfigurationJson(
-                JsonSerializer.Serialize(new { history = "service-managed", timeoutSeconds = ManagedSqliteOpenAiTimeoutSeconds })),
-            "Managed SQLite OpenAI Responses provider for seeded delivery agents.",
-            "OpenAI active",
-            null,
-            ManagedSqliteOpenAiSuggestedModels);
-    }
-
-    private static CanDoItAll.AgentFramework.Models.ProviderProfile CreateManagedSqliteRemoteOllamaCatalogProvider()
-    {
-        return new CanDoItAll.AgentFramework.Models.ProviderProfile(
-            ManagedSqliteRemoteOllamaProviderId,
-            ManagedSeedProviderFallbacks.FallbackProviderName,
-            CanDoItAll.AgentFramework.Models.ProviderKind.Ollama,
-            ManagedSeedProviderFallbacks.FallbackBaseUrl,
-            string.Empty,
-            ManagedSeedProviderFallbacks.FallbackModel,
-            ProviderTransportKind.ChatCompletions,
-            true,
-            true,
-            true,
-            true,
-            false,
-            JsonSerializer.Serialize(new
-            {
-                history = "framework-managed",
-                fallback = "managed-sqlite-remote-ollama",
-                timeoutSeconds = ManagedSeedProviderFallbacks.FallbackTimeoutSeconds
-            }),
-            "Remote Ollama fallback provider kept available alongside managed SQLite OpenAI seed agents.",
-            "Not checked",
-            null,
-            [
-                ManagedSeedProviderFallbacks.FallbackModel,
-                "qwen3.5:9b",
-                "gemma3-12b-128k:latest",
-                "deepseek-r1:8b-32k",
-                "phi4-16k"
-            ]);
-    }
-
-    private async Task<bool> HasManagedSqliteOpenAiCredentialAsync(
-        AppDbContext dbContext,
-        CancellationToken cancellationToken)
-    {
-        var configuredOpenAiProviders = await dbContext.Set<CanDoItAll.Modules.Workspace.ProviderProfile>()
-            .Where(item =>
-                item.Name == ManagedSqliteOpenAiDefaultProviderName ||
-                item.Name == ManagedSqliteOpenAiChatCompletionsProviderName)
-            .ToListAsync(cancellationToken);
-
-        if (configuredOpenAiProviders.Count == 0)
-        {
-            return providerCredentialResolver.Resolve(CreateManagedSqliteBootstrapOpenAiProvider()).IsResolved;
-        }
-
-        return configuredOpenAiProviders
-            .Select(MapManagedSqliteBootstrapProvider)
-            .Any(provider => providerCredentialResolver.Resolve(provider).IsResolved);
-    }
-
-    private static CanDoItAll.AgentFramework.Models.ProviderProfile CreateManagedSqliteBootstrapOpenAiProvider()
-    {
-        return new CanDoItAll.AgentFramework.Models.ProviderProfile(
-            Guid.Empty,
-            ManagedSqliteOpenAiDefaultProviderName,
-            CanDoItAll.AgentFramework.Models.ProviderKind.OpenAi,
-            "https://api.openai.com/v1",
-            "OPENAI_API_KEY",
-            ManagedSeedProviderFallbacks.OpenAiDefaultModel,
-            ProviderTransportKind.Responses,
-            true,
-            true,
-            true,
-            false,
-            true,
-            ManagedSeedProviderFallbacks.EnsureDefaultReasoningConfigurationJson(JsonSerializer.Serialize(new { history = "service-managed" })),
-            "Managed SQLite bootstrap credential probe.",
-            "Not checked",
-            null,
-            ManagedSqliteOpenAiSuggestedModels);
-    }
-
-    private static CanDoItAll.AgentFramework.Models.ProviderProfile MapManagedSqliteBootstrapProvider(
-        CanDoItAll.Modules.Workspace.ProviderProfile provider)
-    {
-        var mappedKind = provider.ConnectorPluginKey switch
-        {
-            ScenarioHarnessProviderAdapter.PluginKey => CanDoItAll.AgentFramework.Models.ProviderKind.OpenAi,
-            OpenAiProviderAdapter.PluginKey => CanDoItAll.AgentFramework.Models.ProviderKind.OpenAi,
-            _ => CanDoItAll.AgentFramework.Models.ProviderKind.Ollama
-        };
-        var mappedTransport = provider.ConnectorPluginKey switch
-        {
-            ScenarioHarnessProviderAdapter.PluginKey => ProviderTransportKind.Responses,
-            OpenAiProviderAdapter.PluginKey => ProviderTransportKind.Responses,
-            _ => ProviderTransportKind.ChatCompletions
-        };
-
-        return new CanDoItAll.AgentFramework.Models.ProviderProfile(
-            provider.Id,
-            provider.Name,
-            mappedKind,
-            provider.BaseUrl,
-            provider.ApiKeySecretId.HasValue
-                ? $"secret:{provider.ApiKeySecretId.Value:D}"
-                : "OPENAI_API_KEY",
-            provider.DefaultModel,
-            mappedTransport,
-            provider.IsEnabled,
-            provider.SupportsStreaming,
-            provider.SupportsToolCalling,
-            mappedKind == CanDoItAll.AgentFramework.Models.ProviderKind.Ollama,
-            mappedKind == CanDoItAll.AgentFramework.Models.ProviderKind.OpenAi,
-            BuildManagedSqliteBootstrapProviderConfigurationJson(provider),
-            "Managed SQLite bootstrap credential probe.",
-            provider.LastHealthStatus ?? "Not checked",
-            provider.LastHealthCheckAtUtc,
-            string.IsNullOrWhiteSpace(provider.DefaultModel) ? [] : [provider.DefaultModel]);
-    }
-
-    private static string BuildManagedSqliteBootstrapProviderConfigurationJson(
-        CanDoItAll.Modules.Workspace.ProviderProfile provider)
-    {
-        var configuration = string.IsNullOrWhiteSpace(provider.ExtraSettingsJson)
-            ? new JsonObject()
-            : JsonNode.Parse(provider.ExtraSettingsJson)?.AsObject() ?? new JsonObject();
-        configuration["connectorPluginKey"] = provider.ConnectorPluginKey;
-        configuration["configSchemaVersion"] = provider.ConfigSchemaVersion;
-        configuration["timeoutSeconds"] = provider.TimeoutSeconds;
-        if (provider.ApiKeySecretId.HasValue)
-        {
-            configuration["secretRecordId"] = provider.ApiKeySecretId.Value.ToString("D");
-        }
-        else
-        {
-            configuration.Remove("secretRecordId");
-        }
-
-        return configuration.ToJsonString();
-    }
-
-    private static bool ShouldRedirectManagedSqliteAgent(
-        AgentDefinition agent,
-        IReadOnlySet<Guid> providerIdsToRedirect)
-    {
-        return agent.ProviderProfileId.HasValue &&
-               providerIdsToRedirect.Contains(agent.ProviderProfileId.Value) &&
-               agent.ConfigurationJson.Contains(ManagedSqliteSeedMarker, StringComparison.OrdinalIgnoreCase);
-    }
 }
 
 public sealed class DatabaseSwitchCoordinator(
     IDatabaseProfileRuntimeAccessor profileAccessor,
     IDatabaseProfileService profileService,
     IDatabaseDriverRegistry driverRegistry,
-    IDatabaseRuntimeState runtimeState,
     IAppDatabaseBootstrapper bootstrapper,
     ILogger<DatabaseSwitchCoordinator> logger) : IDatabaseSwitchCoordinator
 {
-    private static readonly TimeSpan DrainTimeout = TimeSpan.FromSeconds(15);
-
     public async Task<Result<DatabaseSwitchResult>> SwitchAsync(Guid targetProfileId, CancellationToken cancellationToken = default)
     {
         var currentProfile = profileAccessor.ResolveCurrentProfile();
@@ -1049,12 +888,18 @@ public sealed class DatabaseSwitchCoordinator(
 
         if (currentProfile.Profile.Id == targetProfileId)
         {
-            var snapshot = runtimeState.GetSnapshot();
             return Result<DatabaseSwitchResult>.Success(new DatabaseSwitchResult(
                 currentProfile.Profile.Id,
                 currentProfile.Profile.Id,
-                snapshot.Generation,
-                Environment.ProcessId));
+                0,
+                Environment.ProcessId)
+            {
+                RuntimeProfileId = currentProfile.Profile.Id,
+                PendingRestartProfileId = null,
+                RequiresRestart = false,
+                RuntimeChangedInProcess = false,
+                Message = "The selected database profile is already the canonical runtime profile for this process."
+            });
         }
 
         ResolvedDatabaseProfile targetProfile;
@@ -1067,11 +912,8 @@ public sealed class DatabaseSwitchCoordinator(
             return Result<DatabaseSwitchResult>.Failure(Error.Failure(ex.Message));
         }
 
-        await using var switchSession = await runtimeState.BeginSwitchAsync(cancellationToken);
-
         try
         {
-            await switchSession.WaitForDrainAsync(DrainTimeout, cancellationToken);
             await driverRegistry.Resolve(targetProfile.Profile.ProviderKind)
                 .EnsureDatabaseAsync(targetProfile, cancellationToken);
             await bootstrapper.EnsureProfileReadyAsync(targetProfile, cancellationToken);
@@ -1082,40 +924,35 @@ public sealed class DatabaseSwitchCoordinator(
                 return Result<DatabaseSwitchResult>.Failure(activationResult.Errors);
             }
 
-            var notification = switchSession.Complete(targetProfile);
             logger.LogInformation(
-                "Switched active database from {PreviousProfileId} to {CurrentProfileId} at generation {Generation}.",
+                "Persisted database profile activation from runtime profile {RuntimeProfileId} to pending restart profile {PendingRestartProfileId}. RestartRequired={RestartRequired}.",
                 currentProfile.Profile.Id,
                 targetProfile.Profile.Id,
-                notification.Generation);
+                true);
 
             return Result<DatabaseSwitchResult>.Success(new DatabaseSwitchResult(
                 currentProfile.Profile.Id,
                 targetProfile.Profile.Id,
-                notification.Generation,
-                Environment.ProcessId));
-        }
-        catch (TimeoutException ex)
-        {
-            logger.LogWarning(
-                ex,
-                "Database switch from {PreviousProfileId} to {TargetProfileId} timed out while waiting for active contexts to drain.",
-                currentProfile.Profile.Id,
-                targetProfileId);
-
-            return Result<DatabaseSwitchResult>.Failure(
-                Error.Failure("Database switch timed out while waiting for active operations to finish."));
+                0,
+                Environment.ProcessId)
+            {
+                RuntimeProfileId = currentProfile.Profile.Id,
+                PendingRestartProfileId = targetProfile.Profile.Id,
+                RequiresRestart = true,
+                RuntimeChangedInProcess = false,
+                Message = "Database profile activation was saved. Restart the process to make it the canonical runtime database."
+            });
         }
         catch (Exception ex)
         {
             logger.LogError(
                 ex,
-                "Database switch from {PreviousProfileId} to {TargetProfileId} failed.",
+                "Database activation from {PreviousProfileId} to {TargetProfileId} failed.",
                 currentProfile.Profile.Id,
                 targetProfileId);
 
             return Result<DatabaseSwitchResult>.Failure(
-                Error.Failure($"Database switch failed: {ex.Message}"));
+                Error.Failure($"Database activation failed: {ex.Message}"));
         }
     }
 }

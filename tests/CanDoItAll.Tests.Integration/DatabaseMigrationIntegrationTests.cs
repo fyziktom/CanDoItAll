@@ -1,10 +1,5 @@
-using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
-using CanDoItAll.Modules.Factory;
-using CanDoItAll.Modules.Projects;
-using CanDoItAll.Modules.Workbench;
-using CanDoItAll.Modules.Workspace;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,145 +9,85 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class MigrationBootstrapIntegrationTests
 {
     [Fact]
-    public async Task Bootstrap_migrates_a_new_managed_sqlite_database()
+    public async Task Bootstrap_migrates_a_new_postgresql_database()
     {
-        await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-sqlite-migrations");
-        await using var provider = DatabaseProfileControlPlaneIntegrationHost.BuildServiceProvider(testEnvironment);
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-postgres-migrations");
+        var activeProfile = testEnvironment.CreatePostgreSqlProfile("migration-primary");
+        await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
+            activeProfile,
+            "CanDoItAll.Tests.Integration",
+            TestSchemaBootstrapModules.Full);
 
-        var bootstrapper = provider.GetRequiredService<IAppDatabaseBootstrapper>();
-        var runtimeAccessor = provider.GetRequiredService<IDatabaseProfileRuntimeAccessor>();
-        var dbContextFactory = provider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        await using var scope = provider.CreateAsyncScope();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var resolver = scope.ServiceProvider.GetRequiredService<IActiveDatabaseProfileResolver>();
 
-        var profile = runtimeAccessor.ResolveCurrentProfile();
-        await bootstrapper.EnsureCurrentProfileReadyAsync();
+        var profile = resolver.ResolveCurrentProfile();
 
-        Assert.True(File.Exists(profile.Profile.Sqlite!.DatabasePath));
+        Assert.Equal(DatabaseProviderKind.PostgreSql, profile.Profile.ProviderKind);
+        Assert.Equal(activeProfile.ConnectionString, profile.ConnectionString);
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        Assert.True(await dbContext.Database.CanConnectAsync());
         Assert.Contains(
             await dbContext.Database.GetAppliedMigrationsAsync(),
-            migrationId => migrationId.Contains("InitialCreate", StringComparison.Ordinal));
+            migrationId => migrationId.Contains("InitialPostgreSqlBaseline", StringComparison.Ordinal));
     }
 
     [Fact]
-    public async Task Legacy_sqlite_database_is_baselined_and_preserves_existing_data()
+    public async Task Bootstrap_is_idempotent_for_postgresql_profiles()
     {
-        await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-legacy-sqlite-migration");
-        var legacyWorkspaceRoot = Path.Combine(testEnvironment.RootPath, ".artifacts", "workspace");
-        var legacyDatabasePath = Path.Combine(legacyWorkspaceRoot, "candoitall.db");
-        await CreateLegacyDatabaseAsync(legacyDatabasePath);
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-postgres-migration-idempotent");
+        var activeProfile = testEnvironment.CreatePostgreSqlProfile("migration-idempotent");
+        await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
+            activeProfile,
+            "CanDoItAll.Tests.Integration",
+            TestSchemaBootstrapModules.Full);
 
-        await using var provider = DatabaseProfileControlPlaneIntegrationHost.BuildServiceProvider(testEnvironment);
-        var runtimeAccessor = provider.GetRequiredService<IDatabaseProfileRuntimeAccessor>();
-        var bootstrapper = provider.GetRequiredService<IAppDatabaseBootstrapper>();
-        var dbContextFactory = provider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        await using var scope = provider.CreateAsyncScope();
+        var bootstrapper = scope.ServiceProvider.GetRequiredService<IAppDatabaseBootstrapper>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
 
-        var resolvedProfile = runtimeAccessor.ResolveCurrentProfile();
-        Assert.Equal(DatabaseProfileResolutionSource.LegacyDiscovery, resolvedProfile.ResolutionSource);
-        Assert.Equal(legacyDatabasePath, resolvedProfile.Profile.Sqlite!.DatabasePath);
-
+        await bootstrapper.EnsureCurrentProfileReadyAsync();
         await bootstrapper.EnsureCurrentProfileReadyAsync();
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-        var project = await dbContext.Set<Project>().SingleAsync();
-
-        Assert.Equal("Legacy project", project.Name);
-        Assert.Contains(
-            await dbContext.Database.GetAppliedMigrationsAsync(),
-            migrationId => migrationId.Contains("InitialCreate", StringComparison.Ordinal));
+        Assert.True(await dbContext.Database.CanConnectAsync());
     }
 
     [Fact]
-    public async Task Bootstrap_clears_a_stale_sqlite_migration_lock_before_running_migrations()
+    public async Task Bootstrap_adopts_existing_postgresql_schema_without_migration_history()
     {
-        await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-stale-sqlite-migration-lock");
-        await using var provider = DatabaseProfileControlPlaneIntegrationHost.BuildServiceProvider(testEnvironment);
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-postgres-existing-schema");
+        var activeProfile = testEnvironment.CreatePostgreSqlProfile("migration-existing-schema");
 
-        var bootstrapper = provider.GetRequiredService<IAppDatabaseBootstrapper>();
-        var dbContextFactory = provider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var services = new ServiceCollection();
+        var environment = new TestHostEnvironment(activeProfile.EnvironmentRootPath, "CanDoItAll.Tests.Integration");
+        var configuration = TestApplicationBootstrap.BuildConfiguration(activeProfile);
+        TestApplicationBootstrap.ConfigureDefaultServices(services, configuration, environment);
 
-        await bootstrapper.EnsureCurrentProfileReadyAsync();
-
-        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        await using var provider = services.BuildServiceProvider(new ServiceProviderOptions
         {
-            await dbContext.Database.ExecuteSqlRawAsync(
-                """
-                INSERT OR REPLACE INTO "__EFMigrationsLock" ("Id", "Timestamp")
-                VALUES (1, {0});
-                """,
-                (DateTimeOffset.UtcNow - TimeSpan.FromMinutes(10)).ToString("O"));
-        }
-
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        await bootstrapper.EnsureCurrentProfileReadyAsync(cts.Token);
-
-        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
-        {
-            var lockRowCount = await CountRowsAsync(dbContext, "__EFMigrationsLock");
-            Assert.Equal(0, lockRowCount);
-        }
-    }
-
-    private static async Task CreateLegacyDatabaseAsync(string databasePath)
-    {
-        Directory.CreateDirectory(Path.GetDirectoryName(databasePath)!);
-
-        AppDbContextModelRegistry.ConfigureAssemblies(TestApplicationBootstrap.ModuleAssemblies);
-
-        var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
-        AppDbContextOptionsConfigurator.Configure(
-            optionsBuilder,
-            new DatabaseOptions
-            {
-                Provider = "Sqlite",
-                ConnectionString = $"Data Source={databasePath}"
-            },
-            Path.GetDirectoryName(databasePath)!);
-
-        await using var dbContext = new AppDbContext(optionsBuilder.Options);
-        await dbContext.Database.EnsureCreatedAsync();
-        await ProjectsSchemaInitializer.EnsureAsync(dbContext);
-        await PromptFactorySchemaInitializer.EnsureAsync(dbContext);
-        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext);
-        await ProjectStructureAgentSchemaInitializer.EnsureAsync(dbContext);
-
-        dbContext.Set<Project>().Add(new Project
-        {
-            Name = "Legacy project",
-            Slug = "legacy-project",
-            Description = "Database created before migrations",
-            Objective = "Preserve existing project data",
-            Status = ProjectStatus.Active,
-            CurrentPhase = "Migration",
-            CreatedAtUtc = DateTimeOffset.UtcNow,
-            UpdatedAtUtc = DateTimeOffset.UtcNow
+            ValidateOnBuild = true,
+            ValidateScopes = true
         });
 
-        await dbContext.SaveChangesAsync();
-    }
-
-    private static async Task<long> CountRowsAsync(AppDbContext dbContext, string tableName)
-    {
-        var connection = dbContext.Database.GetDbConnection();
-        var shouldCloseConnection = connection.State != System.Data.ConnectionState.Open;
-        if (shouldCloseConnection)
+        await using var scope = provider.CreateAsyncScope();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        await using (var existingSchemaContext = await dbContextFactory.CreateDbContextAsync())
         {
-            await connection.OpenAsync();
+            await existingSchemaContext.Database.EnsureCreatedAsync();
+            Assert.Empty(await existingSchemaContext.Database.GetAppliedMigrationsAsync());
         }
 
-        try
-        {
-            await using var command = connection.CreateCommand();
-            command.CommandText = $"""SELECT COUNT(*) FROM "{tableName.Replace("\"", "\"\"", StringComparison.Ordinal)}";""";
-            var result = await command.ExecuteScalarAsync();
-            return Convert.ToInt64(result);
-        }
-        finally
-        {
-            if (shouldCloseConnection)
-            {
-                await connection.CloseAsync();
-            }
-        }
+        var bootstrapper = scope.ServiceProvider.GetRequiredService<IAppDatabaseBootstrapper>();
+        await bootstrapper.EnsureCurrentProfileReadyAsync();
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var appliedMigrations = await dbContext.Database.GetAppliedMigrationsAsync();
+        Assert.Contains("20260523211921_InitialPostgreSqlBaseline", appliedMigrations);
+        Assert.Contains("20260524144716_ProcessStepAutomationDispatchClaims", appliedMigrations);
+        Assert.Contains("20260524183000_ProcessClaimHotPathIndexes", appliedMigrations);
+        Assert.True(await dbContext.Database.CanConnectAsync());
     }
 }

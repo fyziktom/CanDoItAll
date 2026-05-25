@@ -47,15 +47,20 @@ public static class DatabaseProfileStartupConnectionResolver
         var catalogPath = Path.Combine(databaseProfilesRoot, "catalog.json");
         if (!File.Exists(catalogPath))
         {
-            return null;
+            return CreateDefaultPostgreSqlStartupOptions();
         }
+
+        LegacyDatabaseProfileCatalogQuarantine.QuarantineIfNeeded(
+            catalogPath,
+            Path.Combine(databaseProfilesRoot, "active-profile.json"),
+            logger: null);
 
         var catalog = ReadDocument(
             catalogPath,
             static () => new DatabaseProfileCatalogDocument());
         if (catalog.Profiles.Count == 0)
         {
-            return null;
+            return CreateDefaultPostgreSqlStartupOptions();
         }
 
         var activeState = ReadDocument(
@@ -81,11 +86,19 @@ public static class DatabaseProfileStartupConnectionResolver
             activeProfile.Id);
     }
 
+    private static DatabaseStartupConnectionOptions CreateDefaultPostgreSqlStartupOptions()
+    {
+        return new DatabaseStartupConnectionOptions(
+            DatabaseProviderKind.PostgreSql,
+            "Host=localhost;Database=candoitall;Username=postgres;Password=postgres",
+            DatabaseProfileResolutionSource.AutoProvisionedPostgreSql,
+            ProfileId: null);
+    }
+
     private static string? BuildConnectionString(DatabaseProfileRecord profile, string controlPlaneRoot)
     {
         return profile.ProviderKind switch
         {
-            DatabaseProviderKind.Sqlite => $"Data Source={profile.Sqlite?.DatabasePath ?? throw new InvalidOperationException("SQLite profile is missing a database path.")}",
             DatabaseProviderKind.PostgreSql => BuildPostgreSqlConnectionString(profile, controlPlaneRoot),
             DatabaseProviderKind.InMemory => profile.InMemory?.DatabaseName ?? throw new InvalidOperationException("In-memory profile is missing a database name."),
             _ => throw new InvalidOperationException($"Unsupported provider '{profile.ProviderKind}'.")
@@ -178,7 +191,6 @@ public static class DatabaseProfileStartupConnectionResolver
         {
             return configuredProvider.Trim().ToLowerInvariant() switch
             {
-                "sqlite" => DatabaseProviderKind.Sqlite,
                 "postgres" or "postgresql" => DatabaseProviderKind.PostgreSql,
                 "inmemory" or "memory" => DatabaseProviderKind.InMemory,
                 _ => throw new InvalidOperationException($"Unsupported database provider '{configuredProvider}'.")
@@ -191,7 +203,12 @@ public static class DatabaseProfileStartupConnectionResolver
             return DatabaseProviderKind.PostgreSql;
         }
 
-        return DatabaseProviderKind.Sqlite;
+        if (!string.IsNullOrWhiteSpace(configuredConnection))
+        {
+            throw new InvalidOperationException("Database connection string does not look like a PostgreSQL connection string.");
+        }
+
+        return DatabaseProviderKind.PostgreSql;
     }
 
     private static JsonSerializerOptions CreateSerializerOptions()

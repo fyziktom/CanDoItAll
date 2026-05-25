@@ -24,7 +24,7 @@ public sealed class CrmHrSchemaIntegrationTests
 
         Assert.Contains(
             appliedMigrations,
-            migrationId => migrationId.Contains("AddCrmHrFoundation", StringComparison.Ordinal));
+            migrationId => migrationId.Contains("InitialPostgreSqlBaseline", StringComparison.Ordinal));
         Assert.Empty(parties);
         Assert.Contains(
             lookupOptions,

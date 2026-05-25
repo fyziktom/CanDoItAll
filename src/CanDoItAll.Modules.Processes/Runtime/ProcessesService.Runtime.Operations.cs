@@ -2,6 +2,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -11,6 +12,7 @@ public sealed partial class ProcessesService
 {
     private const int MaxProcessArtifactTitleLength = 200;
     private const int MaxProcessArtifactExternalReferenceKeyLength = 200;
+    private const string NpgsqlProviderName = "Npgsql.EntityFrameworkCore.PostgreSQL";
 
     public async Task<Result> ResolveAssignmentAsync(ProcessAssignmentResolutionRequest request, CancellationToken cancellationToken = default)
     {
@@ -27,8 +29,10 @@ public sealed partial class ProcessesService
             return Result.Failure(Error.Validation("Process run was not found.", "processes.assignment.run-not-found"));
         }
 
-        for (var attempt = 0; attempt < 2; attempt++)
+        const int maxAssignmentResolutionAttempts = 3;
+        for (var attempt = 0; attempt < maxAssignmentResolutionAttempts; attempt++)
         {
+            await using var transaction = await BeginAssignmentResolutionTransactionAsync(dbContext, request, cancellationToken);
             var assignment = await dbContext.Set<ProcessRunAssignment>()
                 .SingleOrDefaultAsync(
                     item => item.ProcessRunId == request.ProcessRunId &&
@@ -98,9 +102,22 @@ public sealed partial class ProcessesService
             try
             {
                 await dbContext.SaveChangesAsync(cancellationToken);
+                if (transaction is not null)
+                {
+                    await transaction.CommitAsync(cancellationToken);
+                }
+
                 return Result.Success();
             }
-            catch (DbUpdateException exception) when (createdAssignment && attempt == 0 && IsRunAssignmentUniqueConflict(exception))
+            catch (DbUpdateConcurrencyException) when (attempt + 1 < maxAssignmentResolutionAttempts)
+            {
+                dbContext.ChangeTracker.Clear();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return Result.Failure(CreateAssignmentConcurrencyConflictError());
+            }
+            catch (DbUpdateException exception) when (createdAssignment && attempt + 1 < maxAssignmentResolutionAttempts && IsRunAssignmentUniqueConflict(exception))
             {
                 dbContext.ChangeTracker.Clear();
             }
@@ -111,6 +128,24 @@ public sealed partial class ProcessesService
         }
 
         return Result.Failure(CreateAssignmentUniqueConflictError());
+    }
+
+    private static async Task<IDbContextTransaction?> BeginAssignmentResolutionTransactionAsync(
+        AppDbContext dbContext,
+        ProcessAssignmentResolutionRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!string.Equals(dbContext.Database.ProviderName, NpgsqlProviderName, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        var lockKey = $"{request.ProcessRunId:D}:{request.RoleRequirementId:D}:{request.StepDefinitionId?.ToString("D") ?? "run"}";
+        await dbContext.Database.ExecuteSqlInterpolatedAsync(
+            $"SELECT pg_advisory_xact_lock(hashtextextended({lockKey}, 0))",
+            cancellationToken);
+        return transaction;
     }
 
     private static async Task RefreshAffectedStepExecutorSnapshotsAsync(

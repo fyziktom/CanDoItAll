@@ -27,7 +27,7 @@ public sealed class PluginCatalogIntegrationTests
     {
         var descriptor = CreatePluginDescriptor();
         await using var environment = CanDoItAllTestEnvironment.Create("plugin-catalog-tests");
-        var profile = environment.CreateManagedSqliteProfile("plugins");
+        var profile = environment.CreatePostgreSqlProfile("plugins");
         await using var services = await BuildServiceProviderAsync(profile, [descriptor]);
         await using var scope = services.CreateAsyncScope();
         var catalog = scope.ServiceProvider.GetRequiredService<PluginCatalogService>();
@@ -62,7 +62,7 @@ public sealed class PluginCatalogIntegrationTests
     {
         var descriptor = CreatePluginDescriptor();
         await using var environment = CanDoItAllTestEnvironment.Create("plugin-installation-tests");
-        var profile = environment.CreateManagedSqliteProfile("plugins");
+        var profile = environment.CreatePostgreSqlProfile("plugins");
 
         await using (var services = await BuildServiceProviderAsync(profile, [descriptor]))
         await using (var scope = services.CreateAsyncScope())
@@ -126,7 +126,7 @@ public sealed class PluginCatalogIntegrationTests
     public async Task Plugin_package_catalog_installs_package_and_exposes_descriptor_without_recompilation()
     {
         await using var environment = CanDoItAllTestEnvironment.Create("plugin-package-catalog-tests");
-        var profile = environment.CreateManagedSqliteProfile("plugins");
+        var profile = environment.CreatePostgreSqlProfile("plugins");
         var packagePaths = CreatePackagePathOverrides(environment.RootPath);
         Directory.CreateDirectory(packagePaths.CatalogRootPath);
         var manifest = CreatePackageManifest(
@@ -165,7 +165,7 @@ public sealed class PluginCatalogIntegrationTests
     public async Task Plugin_package_upload_installs_package_and_marks_restart_required()
     {
         await using var environment = CanDoItAllTestEnvironment.Create("plugin-package-upload-tests");
-        var profile = environment.CreateManagedSqliteProfile("plugins");
+        var profile = environment.CreatePostgreSqlProfile("plugins");
         var packagePaths = CreatePackagePathOverrides(environment.RootPath);
         var manifest = CreatePackageManifest(
             pluginId: "integration.runtime.upload",
@@ -195,7 +195,7 @@ public sealed class PluginCatalogIntegrationTests
     public async Task Plugin_package_upload_rejects_path_traversal_entries()
     {
         await using var environment = CanDoItAllTestEnvironment.Create("plugin-package-traversal-tests");
-        var profile = environment.CreateManagedSqliteProfile("plugins");
+        var profile = environment.CreatePostgreSqlProfile("plugins");
         var packagePaths = CreatePackagePathOverrides(environment.RootPath);
         var manifest = CreatePackageManifest(
             pluginId: "integration.runtime.traversal",
@@ -226,7 +226,7 @@ public sealed class PluginCatalogIntegrationTests
     public async Task Plugin_package_upload_rejects_unsafe_icon_path()
     {
         await using var environment = CanDoItAllTestEnvironment.Create("plugin-package-icon-path-tests");
-        var profile = environment.CreateManagedSqliteProfile("plugins");
+        var profile = environment.CreatePostgreSqlProfile("plugins");
         var packagePaths = CreatePackagePathOverrides(environment.RootPath);
         var manifest = CreatePackageManifest(
             pluginId: "integration.runtime.unsafe-icon",
@@ -253,7 +253,7 @@ public sealed class PluginCatalogIntegrationTests
     public async Task Installed_package_discovery_ignores_nested_manifests()
     {
         await using var environment = CanDoItAllTestEnvironment.Create("plugin-package-direct-root-tests");
-        var profile = environment.CreateManagedSqliteProfile("plugins");
+        var profile = environment.CreatePostgreSqlProfile("plugins");
         var packagePaths = CreatePackagePathOverrides(environment.RootPath);
         var manifest = CreatePackageManifest(
             pluginId: "integration.direct.root",
@@ -287,7 +287,7 @@ public sealed class PluginCatalogIntegrationTests
     public async Task Runtime_package_assembly_registers_executor_without_bundled_descriptor()
     {
         await using var environment = CanDoItAllTestEnvironment.Create("plugin-package-assembly-tests");
-        var profile = environment.CreateManagedSqliteProfile("plugins");
+        var profile = environment.CreatePostgreSqlProfile("plugins");
         var packagePaths = CreatePackagePathOverrides(environment.RootPath);
         var assemblyName = Path.GetFileName(Assembly.GetExecutingAssembly().Location);
         var manifest = new PluginPackageManifest
@@ -356,7 +356,7 @@ public sealed class PluginCatalogIntegrationTests
     public async Task Plugin_logs_persist_installation_runtime_and_redact_sensitive_values()
     {
         await using var environment = CanDoItAllTestEnvironment.Create("plugin-log-tests");
-        var profile = environment.CreateManagedSqliteProfile("plugins");
+        var profile = environment.CreatePostgreSqlProfile("plugins");
         await using var services = await BuildServiceProviderAsync(profile, []);
         await using var scope = services.CreateAsyncScope();
         var logStore = scope.ServiceProvider.GetRequiredService<PluginLogStore>();
@@ -399,7 +399,7 @@ public sealed class PluginCatalogIntegrationTests
     public async Task Plugin_runtime_restart_request_stops_host_lifetime()
     {
         await using var environment = CanDoItAllTestEnvironment.Create("plugin-runtime-restart-tests");
-        var profile = environment.CreateManagedSqliteProfile("plugins");
+        var profile = environment.CreatePostgreSqlProfile("plugins");
         await using var services = await BuildServiceProviderAsync(profile, []);
         var restartService = services.GetRequiredService<PluginRuntimeRestartService>();
         var lifetime = services.GetRequiredService<TestHostApplicationLifetime>();
@@ -725,7 +725,7 @@ public sealed class PluginCatalogIntegrationTests
             Capabilities = PluginCapabilityKind.WorkflowExecutor | PluginCapabilityKind.HostCommand
         };
         await using var environment = CanDoItAllTestEnvironment.Create("plugin-grant-tests");
-        var profile = environment.CreateManagedSqliteProfile("plugins");
+        var profile = environment.CreatePostgreSqlProfile("plugins");
         await using var services = await BuildServiceProviderAsync(profile, [descriptor]);
         await using var scope = services.CreateAsyncScope();
         var catalog = scope.ServiceProvider.GetRequiredService<PluginCatalogService>();
@@ -773,7 +773,7 @@ public sealed class PluginCatalogIntegrationTests
     public async Task Docker_runtime_package_install_activates_settings_and_workflow_executor_after_restart()
     {
         await using var environment = CanDoItAllTestEnvironment.Create("docker-runtime-package-tests");
-        var profile = environment.CreateManagedSqliteProfile("plugins");
+        var profile = environment.CreatePostgreSqlProfile("plugins");
         var packagePaths = CreatePackagePathOverrides(environment.RootPath);
         Directory.CreateDirectory(packagePaths.CatalogRootPath);
         var manifest = CreateDockerPackageManifest();

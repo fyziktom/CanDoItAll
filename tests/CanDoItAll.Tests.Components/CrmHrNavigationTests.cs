@@ -10,7 +10,7 @@ public sealed class CrmHrNavigationTests
         var item = Assert.Single(ShellNavigation.Items, candidate => candidate.Route == "/crm-hr");
 
         Assert.Equal("CRM / HR", item.Title);
-        Assert.Equal("CH", item.Icon);
+        Assert.Equal("groups", item.Icon);
     }
 
     [Theory]

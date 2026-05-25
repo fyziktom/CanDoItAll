@@ -1,0 +1,8 @@
+Command=rg -n "TODO|NotImplemented|throw new NotImplementedException|fixture-specific|test-only|stub" <changed production files>
+WorkingDirectory=
+C:\repositories\CanDoItAll
+StartUtc=
+2026-05-24T15:59:40.2710855Z
+No matches found in changed production files.
+RgExitCode=1
+ExitCode=0

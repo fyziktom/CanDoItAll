@@ -1,0 +1,151 @@
+--- dispatch order ---
+        }
+
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            var candidateHeaderLoadStarted = Stopwatch.GetTimestamp();
+            var candidateHeaders = await LoadDispatchCandidateHeadersAsync(processRunId, cancellationToken);
+            logger.LogDebug(
+                "Loaded {CandidateCount} dispatch candidate headers for process run {ProcessRunId} in {ElapsedMilliseconds} ms.",
+                candidateHeaders.Count,
+                processRunId,
+                GetElapsedMilliseconds(candidateHeaderLoadStarted));
+            if (candidateHeaders.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var candidateHeader in candidateHeaders)
+            {
+                var dispatchGuard = StepDispatchGuards.GetOrAdd(candidateHeader.StepRunId, static _ => new SemaphoreSlim(1, 1));
+                await dispatchGuard.WaitAsync(cancellationToken);
+                var dispatchGuardHeld = true;
+                try
+                {
+                    var dispatchClaim = await TryClaimStepDispatchAsync(
+                        processRunId,
+                        candidateHeader.StepRunId,
+                        trigger,
+                        triggerStepRunId,
+                        cancellationToken);
+                    if (dispatchClaim is null)
+                    {
+                        continue;
+                    }
+
+                    dispatchGuard.Release();
+                    dispatchGuardHeld = false;
+
+                    DispatchCandidate? candidate = null;
+                    try
+                    {
+                        var candidateHydrationStarted = Stopwatch.GetTimestamp();
+                        candidate = await LoadDispatchCandidateAsync(processRunId, dispatchClaim.StepRunId, cancellationToken);
+                        logger.LogDebug(
+                            "Hydrated claimed dispatch candidate for process run {ProcessRunId}, step {StepRunId}. CandidateFound={CandidateFound} ElapsedMilliseconds={ElapsedMilliseconds}.",
+                            processRunId,
+                            dispatchClaim.StepRunId,
+                            candidate is not null,
+                            GetElapsedMilliseconds(candidateHydrationStarted));
+                        if (candidate is null)
+                        {
+                            continue;
+                        }
+
+                        if (ShouldSkipFreshAutomationDispatch(
+                            candidate.StepRun.Status,
+--- claim update ---
+            cancellationToken);
+        if (transitionResult.IsFailure)
+        {
+            throw new InvalidOperationException(string.Join(" | ", transitionResult.Errors.Select(error => error.Message)));
+        }
+    }
+
+    private async Task<ProcessStepDispatchClaim?> TryClaimStepDispatchAsync(
+        Guid processRunId,
+        Guid stepRunId,
+        string trigger,
+        Guid? triggerStepRunId,
+        CancellationToken cancellationToken)
+    {
+        var now = clock.GetUtcNow();
+        var claimToken = Guid.NewGuid().ToString("N");
+        var leaseExpiresAtUtc = now.Add(StepDispatchClaimLeaseDuration);
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var updatedRows = await dbContext.Set<ProcessStepRun>()
+            .Where(item => item.Id == stepRunId)
+            .Where(item => item.ProcessRunId == processRunId)
+            .Where(item =>
+                item.Status == ProcessStepRunStatus.Ready ||
+                item.Status == ProcessStepRunStatus.WaitingApproval ||
+                item.Status == ProcessStepRunStatus.InProgress)
+            .Where(item =>
+                item.AutomationDispatchLeaseExpiresAtUtc == null ||
+                item.AutomationDispatchLeaseExpiresAtUtc <= now)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(item => item.AutomationDispatchClaimToken, claimToken)
+                    .SetProperty(item => item.AutomationDispatchClaimedBy, AutomationDispatcherInstanceId)
+                    .SetProperty(item => item.AutomationDispatchClaimedAtUtc, now)
+                    .SetProperty(item => item.AutomationDispatchLeaseExpiresAtUtc, leaseExpiresAtUtc)
+                    .SetProperty(item => item.AutomationDispatchAttemptCount, item => item.AutomationDispatchAttemptCount + 1),
+                cancellationToken);
+        if (updatedRows == 0)
+        {
+            logger.LogInformation(
+                "Process automation dispatch for run {RunId}, step {StepRunId} was skipped because another worker holds the durable dispatch claim or the step is no longer dispatchable.",
+                processRunId,
+                stepRunId);
+            return null;
+        }
+
+        logger.LogInformation(
+            "Claimed process automation dispatch for run {RunId}, step {StepRunId}. Trigger={Trigger}. LeaseExpiresAtUtc={LeaseExpiresAtUtc}.",
+            processRunId,
+            stepRunId,
+            NormalizeTrigger(trigger, triggerStepRunId),
+            leaseExpiresAtUtc);
+
+        return new ProcessStepDispatchClaim(stepRunId, claimToken);
+    }
+
+--- renewal callback ---
+    }
+
+    private Func<CancellationToken, Task> CreateDispatchRenewLeaseCallback(
+        ProcessStepDispatchClaim dispatchClaim,
+        Func<CancellationToken, Task>? renewOuterLeaseAsync)
+    {
+        return async token =>
+        {
+            if (renewOuterLeaseAsync is not null)
+            {
+                await renewOuterLeaseAsync(token);
+            }
+
+            if (!await RenewStepDispatchClaimAsync(dispatchClaim, token))
+            {
+                throw new ProcessDispatchClaimLostException(dispatchClaim.StepRunId);
+            }
+        };
+    }
+
+    private async Task<bool> RenewStepDispatchClaimAsync(
+        ProcessStepDispatchClaim dispatchClaim,
+        CancellationToken cancellationToken)
+    {
+        var now = clock.GetUtcNow();
+        var leaseExpiresAtUtc = now.Add(StepDispatchClaimLeaseDuration);
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var updatedRows = await dbContext.Set<ProcessStepRun>()
+            .Where(item => item.Id == dispatchClaim.StepRunId)
+            .Where(item => item.AutomationDispatchClaimToken == dispatchClaim.ClaimToken)
+            .Where(item => item.AutomationDispatchLeaseExpiresAtUtc > now)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(item => item.AutomationDispatchLeaseExpiresAtUtc, leaseExpiresAtUtc),
+                cancellationToken);
+        if (updatedRows == 0)
+        {
+            logger.LogWarning(

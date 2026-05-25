@@ -10,6 +10,11 @@ namespace CanDoItAll.Web.Api;
 
 internal sealed record CognitiveMemoryStatusApiResponse(
     Guid ActiveProfileId,
+    Guid RuntimeProfileId,
+    Guid? PendingRestartProfileId,
+    string PendingRestartDisplayName,
+    string PendingRestartDescriptor,
+    bool HasPendingRestartActivation,
     string DisplayName,
     DatabaseProviderKind ProviderKind,
     string ProviderKindName,
@@ -28,6 +33,7 @@ internal sealed record CognitiveMemoryStatusApiResponse(
 {
     public static CognitiveMemoryStatusApiResponse From(
         ResolvedDatabaseProfile resolvedProfile,
+        DatabaseSelectionStateModel selection,
         CognitiveMemoryApiContractResponse contract,
         CognitiveMemoryProjectionOptions projectionOptions,
         IWebHostEnvironment environment)
@@ -35,6 +41,11 @@ internal sealed record CognitiveMemoryStatusApiResponse(
         var profile = resolvedProfile.Profile;
         return new CognitiveMemoryStatusApiResponse(
             profile.Id,
+            selection.RuntimeProfileId,
+            selection.PendingRestartProfileId,
+            selection.PendingRestartDisplayName,
+            selection.PendingRestartDescriptor,
+            selection.HasPendingRestartActivation,
             profile.DisplayName,
             profile.ProviderKind,
             profile.ProviderKind.ToString(),
@@ -58,8 +69,6 @@ internal sealed record CognitiveMemoryStatusApiResponse(
         {
             DatabaseProviderKind.PostgreSql when profile.PostgreSql is not null =>
                 $"{profile.PostgreSql.Host}:{profile.PostgreSql.Port}/{profile.PostgreSql.DatabaseName}",
-            DatabaseProviderKind.Sqlite when profile.Sqlite is not null =>
-                profile.Sqlite.DatabasePath,
             DatabaseProviderKind.InMemory when profile.InMemory is not null =>
                 profile.InMemory.DatabaseName,
             _ => profile.ProviderKind.ToString()
@@ -87,9 +96,6 @@ internal sealed record CognitiveMemoryDatabaseRuntimeDiagnosticsApiResponse(
             profile.ProviderKind switch
             {
                 DatabaseProviderKind.PostgreSql => profile.PostgreSql?.DatabaseName,
-                DatabaseProviderKind.Sqlite => string.IsNullOrWhiteSpace(profile.Sqlite?.DatabasePath)
-                    ? null
-                    : Path.GetFileNameWithoutExtension(profile.Sqlite.DatabasePath),
                 DatabaseProviderKind.InMemory => profile.InMemory?.DatabaseName,
                 _ => null
             });
@@ -181,6 +187,35 @@ internal sealed record CognitiveMemoryDatabaseProfileApiResponse(
     }
 }
 
+internal sealed record CognitiveMemoryDatabaseSelectionApiResponse(
+    Guid ActiveProfileId,
+    Guid RuntimeProfileId,
+    Guid? PendingRestartProfileId,
+    bool HasPendingRestartActivation,
+    string PendingRestartDisplayName,
+    string PendingRestartDescriptor,
+    CognitiveMemoryDatabaseProfileApiResponse RuntimeProfile,
+    CognitiveMemoryDatabaseProfileApiResponse? PendingRestartProfile)
+{
+    public static CognitiveMemoryDatabaseSelectionApiResponse From(
+        ResolvedDatabaseProfile runtimeProfile,
+        DatabaseSelectionStateModel selection,
+        ResolvedDatabaseProfile? pendingRestartProfile)
+    {
+        return new CognitiveMemoryDatabaseSelectionApiResponse(
+            selection.RuntimeProfileId,
+            selection.RuntimeProfileId,
+            selection.PendingRestartProfileId,
+            selection.HasPendingRestartActivation,
+            selection.PendingRestartDisplayName,
+            selection.PendingRestartDescriptor,
+            CognitiveMemoryDatabaseProfileApiResponse.From(runtimeProfile),
+            pendingRestartProfile is null
+                ? null
+                : CognitiveMemoryDatabaseProfileApiResponse.From(pendingRestartProfile));
+    }
+}
+
 internal sealed record CognitiveMemoryPostgreSqlDatabaseProfileApiResponse(
     CognitiveMemoryDatabaseProfileApiResponse Profile,
     CognitiveMemoryDatabaseSwitchSummaryApiResponse? Switch);
@@ -188,25 +223,41 @@ internal sealed record CognitiveMemoryPostgreSqlDatabaseProfileApiResponse(
 internal sealed record CognitiveMemoryDatabaseSwitchSummaryApiResponse(
     Guid PreviousProfileId,
     Guid CurrentProfileId,
+    Guid RuntimeProfileId,
+    Guid? PendingRestartProfileId,
     long Generation,
-    int ProcessId)
+    int ProcessId,
+    bool RequiresRestart,
+    bool RuntimeChangedInProcess,
+    string Message)
 {
     public static CognitiveMemoryDatabaseSwitchSummaryApiResponse From(DatabaseSwitchResult result)
     {
         return new CognitiveMemoryDatabaseSwitchSummaryApiResponse(
             result.PreviousProfileId,
             result.CurrentProfileId,
+            result.RuntimeProfileId,
+            result.PendingRestartProfileId,
             result.Generation,
-            result.ProcessId);
+            result.ProcessId,
+            result.RequiresRestart,
+            result.RuntimeChangedInProcess,
+            result.Message);
     }
 }
 
 internal sealed record CognitiveMemoryDatabaseSwitchApiResponse(
     Guid PreviousProfileId,
     Guid CurrentProfileId,
+    Guid RuntimeProfileId,
+    Guid? PendingRestartProfileId,
     long Generation,
     int ProcessId,
-    CognitiveMemoryDatabaseProfileApiResponse Profile);
+    bool RequiresRestart,
+    bool RuntimeChangedInProcess,
+    string Message,
+    CognitiveMemoryDatabaseProfileApiResponse ActivatedProfile,
+    CognitiveMemoryDatabaseProfileApiResponse RuntimeProfile);
 
 internal sealed class CognitiveMemorySnapshotApiQuery
 {

@@ -8,11 +8,10 @@ namespace CanDoItAll.Infrastructure.Persistence;
 
 internal static class AppDbContextMigrationsAssemblyNames
 {
-    public const string Sqlite = "CanDoItAll.Migrations.Sqlite";
     public const string PostgreSql = "CanDoItAll.Migrations.PostgreSql";
 }
 
-public interface ISwitchableAppDbContextFactory : IDbContextFactory<AppDbContext>
+public interface IProfileAppDbContextFactory
 {
     Task<AppDbContext> CreateDbContextForProfileAsync(
         ResolvedDatabaseProfile profile,
@@ -42,23 +41,6 @@ public static class AppDbContextOptionsConfigurator
                 optionsBuilder.UseNpgsql(
                     profile.ConnectionString,
                     builder => builder.MigrationsAssembly(AppDbContextMigrationsAssemblyNames.PostgreSql));
-                return;
-
-            case DatabaseProviderKind.Sqlite:
-                var filePath = profile.ConnectionString
-                    .Replace("Data Source=", string.Empty, StringComparison.OrdinalIgnoreCase)
-                    .Trim();
-                var directory = Path.GetDirectoryName(filePath);
-                if (!string.IsNullOrWhiteSpace(directory))
-                {
-                    Directory.CreateDirectory(directory);
-                }
-
-                var sqliteConnectionString = SqliteWriteCoordination.NormalizeConnectionString(profile.ConnectionString);
-                optionsBuilder.AddInterceptors(SqliteWriteCoordination.ConnectionInterceptor);
-                optionsBuilder.UseSqlite(
-                    sqliteConnectionString,
-                    builder => builder.MigrationsAssembly(AppDbContextMigrationsAssemblyNames.Sqlite));
                 return;
 
             default:
@@ -94,47 +76,12 @@ public static class AppDbContextOptionsConfigurator
             return;
         }
 
-        var databasePath = Path.Combine(contentRootPath, ".artifacts", "workspace", "candoitall.db");
-        Directory.CreateDirectory(Path.GetDirectoryName(databasePath)!);
-
-        var sqliteConnectionString = string.IsNullOrWhiteSpace(databaseOptions.ConnectionString)
-            ? $"Data Source={databasePath}"
-            : databaseOptions.ConnectionString;
-        sqliteConnectionString = SqliteWriteCoordination.NormalizeConnectionString(sqliteConnectionString);
-
-        optionsBuilder.AddInterceptors(SqliteWriteCoordination.ConnectionInterceptor);
-        optionsBuilder.UseSqlite(
-            sqliteConnectionString,
-            builder => builder.MigrationsAssembly(AppDbContextMigrationsAssemblyNames.Sqlite));
+        throw new InvalidOperationException($"Unsupported database provider '{databaseOptions.Provider}'.");
     }
 }
 
-public sealed class SwitchableAppDbContextFactory(
-    IDatabaseProfileRuntimeAccessor profileAccessor,
-    IDatabaseRuntimeState runtimeState) : ISwitchableAppDbContextFactory
+public sealed class ProfileAppDbContextFactory : IProfileAppDbContextFactory
 {
-    public AppDbContext CreateDbContext()
-    {
-        return CreateDbContextAsync().GetAwaiter().GetResult();
-    }
-
-    public async Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
-    {
-        var lease = await runtimeState.AcquireContextLeaseAsync(cancellationToken);
-
-        try
-        {
-            var profile = profileAccessor.ResolveCurrentProfile();
-            runtimeState.MarkCurrentProfile(profile);
-            return new AppDbContext(AppDbContextOptionsConfigurator.CreateOptions(profile), lease);
-        }
-        catch
-        {
-            lease.Dispose();
-            throw;
-        }
-    }
-
     public Task<AppDbContext> CreateDbContextForProfileAsync(
         ResolvedDatabaseProfile profile,
         CancellationToken cancellationToken = default)
@@ -160,7 +107,7 @@ public sealed class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbConte
     {
         return new DatabaseOptions
         {
-            Provider = Environment.GetEnvironmentVariable("CANDOITALL_DATABASE_PROVIDER") ?? "Sqlite",
+            Provider = Environment.GetEnvironmentVariable("CANDOITALL_DATABASE_PROVIDER") ?? "PostgreSql",
             ConnectionString = Environment.GetEnvironmentVariable("CANDOITALL_DATABASE_CONNECTION")
         };
     }

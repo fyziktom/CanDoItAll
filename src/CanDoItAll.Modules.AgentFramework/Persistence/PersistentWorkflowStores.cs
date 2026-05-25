@@ -25,15 +25,10 @@ public sealed class PersistentWorkflowCatalogService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var query = dbContext.Set<WorkflowDefinitionRecord>()
             .AsNoTracking();
-        var orderedRecords = dbContext.Database.IsSqlite()
-            ? (await query.ToListAsync(cancellationToken))
-                .OrderByDescending(item => item.UpdatedAtUtc)
-                .ThenByDescending(item => item.CreatedAtUtc)
-                .ToList()
-            : await query
-                .OrderByDescending(item => item.UpdatedAtUtc)
-                .ThenByDescending(item => item.CreatedAtUtc)
-                .ToListAsync(cancellationToken);
+        var orderedRecords = await query
+            .OrderByDescending(item => item.UpdatedAtUtc)
+            .ThenByDescending(item => item.CreatedAtUtc)
+            .ToListAsync(cancellationToken);
         var records = orderedRecords
             .GroupBy(item => item.WorkflowId)
             .Select(group => group.First())
@@ -79,15 +74,10 @@ public sealed class PersistentWorkflowCatalogService(
         var currentQuery = dbContext.Set<WorkflowDefinitionRecord>()
             .AsNoTracking()
             .Where(item => item.WorkflowId == workflowId.Value);
-        var current = dbContext.Database.IsSqlite()
-            ? (await currentQuery.ToListAsync(cancellationToken))
-                .OrderByDescending(item => item.UpdatedAtUtc)
-                .ThenByDescending(item => item.CreatedAtUtc)
-                .FirstOrDefault()
-            : await currentQuery
-                .OrderByDescending(item => item.UpdatedAtUtc)
-                .ThenByDescending(item => item.CreatedAtUtc)
-                .FirstOrDefaultAsync(cancellationToken);
+        var current = await currentQuery
+            .OrderByDescending(item => item.UpdatedAtUtc)
+            .ThenByDescending(item => item.CreatedAtUtc)
+            .FirstOrDefaultAsync(cancellationToken);
         if (request.ExpectedVersionId is { } expectedVersionId &&
             current is not null &&
             current.VersionId != expectedVersionId.Value)
@@ -427,15 +417,10 @@ public sealed class PersistentWorkflowCatalogService(
             .Where(item => item.WorkflowId == workflowId.Value);
         var record = versionId.HasValue
             ? await query.SingleOrDefaultAsync(item => item.VersionId == versionId.Value.Value, cancellationToken)
-            : dbContext.Database.IsSqlite()
-                ? (await query.ToListAsync(cancellationToken))
-                    .OrderByDescending(item => item.UpdatedAtUtc)
-                    .ThenByDescending(item => item.CreatedAtUtc)
-                    .FirstOrDefault()
-                : await query
-                    .OrderByDescending(item => item.UpdatedAtUtc)
-                    .ThenByDescending(item => item.CreatedAtUtc)
-                    .FirstOrDefaultAsync(cancellationToken);
+            : await query
+                .OrderByDescending(item => item.UpdatedAtUtc)
+                .ThenByDescending(item => item.CreatedAtUtc)
+                .FirstOrDefaultAsync(cancellationToken);
 
         return record is null
             ? null
@@ -731,13 +716,9 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
             query = query.Where(item => item.WorkflowId == workflowId.Value.Value);
         }
 
-        var records = dbContext.Database.IsSqlite()
-            ? (await query.ToListAsync(cancellationToken))
-                .OrderByDescending(item => item.UpdatedAtUtc)
-                .ToList()
-            : await query
-                .OrderByDescending(item => item.UpdatedAtUtc)
-                .ToListAsync(cancellationToken);
+        var records = await query
+            .OrderByDescending(item => item.UpdatedAtUtc)
+            .ToListAsync(cancellationToken);
 
         return records
             .Select(item => item.ToSnapshot())
@@ -777,9 +758,7 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
         }
 
         var totalCount = await query.CountAsync(cancellationToken);
-        var orderedQuery = dbContext.Database.IsSqlite()
-            ? query.OrderByDescending(item => item.RunId)
-            : query.OrderByDescending(item => item.UpdatedAtUtc).ThenByDescending(item => item.RunId);
+        var orderedQuery = query.OrderByDescending(item => item.UpdatedAtUtc).ThenByDescending(item => item.RunId);
         var records = await orderedQuery
             .Skip(pageIndex * pageSize)
             .Take(pageSize)
@@ -824,13 +803,9 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
         var query = dbContext.Set<WorkflowEventRecordEntity>()
             .AsNoTracking()
             .Where(item => item.RunId == runId.Value);
-        var records = dbContext.Database.IsSqlite()
-            ? (await query.ToListAsync(cancellationToken))
-                .OrderBy(item => item.CreatedAtUtc)
-                .ToList()
-            : await query
-                .OrderBy(item => item.CreatedAtUtc)
-                .ToListAsync(cancellationToken);
+        var records = await query
+            .OrderBy(item => item.CreatedAtUtc)
+            .ToListAsync(cancellationToken);
 
         return records
             .Select(item => item.ToEvent())
@@ -850,9 +825,7 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
             .AsNoTracking()
             .Where(item => item.RunId == request.RunId.Value);
         var totalCount = await query.CountAsync(cancellationToken);
-        var orderedQuery = dbContext.Database.IsSqlite()
-            ? query.OrderBy(item => item.Id)
-            : query.OrderBy(item => item.CreatedAtUtc).ThenBy(item => item.Id);
+        var orderedQuery = query.OrderBy(item => item.CreatedAtUtc).ThenBy(item => item.Id);
         var records = await orderedQuery
             .Skip(pageIndex * pageSize)
             .Take(pageSize)
@@ -892,13 +865,9 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
         var query = dbContext.Set<WorkflowExternalRequestRecordEntity>()
             .AsNoTracking()
             .Where(item => item.RunId == runId.Value && item.RespondedAtUtc == null);
-        var records = dbContext.Database.IsSqlite()
-            ? (await query.ToListAsync(cancellationToken))
-                .OrderBy(item => item.CreatedAtUtc)
-                .ToList()
-            : await query
-                .OrderBy(item => item.CreatedAtUtc)
-                .ToListAsync(cancellationToken);
+        var records = await query
+            .OrderBy(item => item.CreatedAtUtc)
+            .ToListAsync(cancellationToken);
 
         return records
             .Select(item => item.ToRequest())
@@ -958,13 +927,9 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
         var query = dbContext.Set<WorkflowArtifactRecordEntity>()
             .AsNoTracking()
             .Where(item => item.RunId == runId.Value);
-        var records = dbContext.Database.IsSqlite()
-            ? (await query.ToListAsync(cancellationToken))
-                .OrderBy(item => item.CreatedAtUtc)
-                .ToList()
-            : await query
-                .OrderBy(item => item.CreatedAtUtc)
-                .ToListAsync(cancellationToken);
+        var records = await query
+            .OrderBy(item => item.CreatedAtUtc)
+            .ToListAsync(cancellationToken);
 
         return records
             .Select(item => item.ToArtifact())

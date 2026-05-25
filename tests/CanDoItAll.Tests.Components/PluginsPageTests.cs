@@ -115,7 +115,7 @@ public sealed class PluginsPageTests
     public async Task Plugins_page_installs_catalog_package_and_requests_restart()
     {
         await using var environment = CanDoItAllTestEnvironment.Create("plugins-page-package-tests");
-        var profile = environment.CreateManagedSqliteProfile("primary");
+        var profile = environment.CreatePostgreSqlProfile("primary");
         var packagePaths = CreatePackagePathOverrides(environment.RootPath);
         Directory.CreateDirectory(packagePaths.CatalogRootPath);
         var manifest = CreatePackageManifest();
@@ -139,6 +139,7 @@ public sealed class PluginsPageTests
         Assert.DoesNotContain("plugin-package-upload", cut.Markup, StringComparison.Ordinal);
         cut.Find("[data-testid='plugin-packages-open']").Click();
         cut.WaitForElement("[data-testid='plugin-package-upload']");
+        cut.WaitForElement("[data-testid='plugin-package-install-page-runtime-package']");
         cut.Find("[data-testid='plugin-package-install-page-runtime-package']").Click();
 
         cut.WaitForAssertion(() =>

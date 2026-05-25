@@ -41,7 +41,6 @@ Direct package references:
 
 - `bunit.web (1.40.0)`
 - `coverlet.collector (6.0.4)`
-- `Microsoft.Data.Sqlite (10.0.0)`
 - `Microsoft.NET.Test.Sdk (17.14.1)`
 - `xunit (2.9.3)`
 - `xunit.runner.visualstudio (3.1.4)`

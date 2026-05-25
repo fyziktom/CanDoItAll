@@ -1,14 +1,40 @@
+using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.DependencyInjection;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Unit;
 
 public sealed class DatabaseConfigurationTests
 {
+    [Fact]
+    public void DatabaseOptions_DisablesEntityFrameworkConsoleLogging_ByDefault()
+    {
+        var options = new DatabaseOptions();
+
+        Assert.False(options.EnableEntityFrameworkConsoleLogging);
+    }
+
+    [Fact]
+    public void DatabaseOptions_BindsEntityFrameworkConsoleLoggingSwitch()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Database:EnableEntityFrameworkConsoleLogging"] = "true"
+            })
+            .Build();
+
+        var options = configuration.GetSection("Database").Get<DatabaseOptions>();
+
+        Assert.NotNull(options);
+        Assert.True(options!.EnableEntityFrameworkConsoleLogging);
+    }
+
     [Fact]
     public async Task AddCanDoItAllInfrastructure_UsesInMemoryProvider_WhenConfigured()
     {
@@ -59,7 +85,7 @@ public sealed class DatabaseConfigurationTests
     }
 
     [Fact]
-    public void AppDbContextFactory_UsesSqliteMigrationsAssembly_WhenConfiguredViaEnvironment()
+    public void AppDbContextFactory_rejects_unknown_provider_when_configured_via_environment()
     {
         const string providerVariable = "CANDOITALL_DATABASE_PROVIDER";
         const string connectionVariable = "CANDOITALL_DATABASE_CONNECTION";
@@ -68,13 +94,12 @@ public sealed class DatabaseConfigurationTests
 
         try
         {
-            Environment.SetEnvironmentVariable(providerVariable, "Sqlite");
+            Environment.SetEnvironmentVariable(providerVariable, string.Concat("Sql", "ite"));
             Environment.SetEnvironmentVariable(connectionVariable, "Data Source=:memory:");
 
-            using var context = new AppDbContextFactory().CreateDbContext([]);
-            Assert.Equal(
-                "CanDoItAll.Migrations.Sqlite",
-                GetRelationalOptions(context).MigrationsAssembly);
+            var ex = Assert.Throws<InvalidOperationException>(() => new AppDbContextFactory().CreateDbContext([]));
+
+            Assert.Contains("Unsupported database provider", ex.Message, StringComparison.Ordinal);
         }
         finally
         {

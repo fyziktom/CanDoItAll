@@ -1,0 +1,51 @@
+Changed file SHA-256 hashes
+Generated: 2026-05-24T18:39:19.8248691-04:00
+
+| File | Before | After |
+|---|---|---|
+| codex/bundles/db-postgres-final-hardening/scripts/audit_residue_and_bottlenecks.ps1 | 4a9bad441c2a425acd7bef7ad37e4bfde0cd728eafeda5d205da9ca99d8c110a | c7ac1690ecc48bd92ebe56263f4a0abb145defdb2b3a5e5b28ba915015c8a077 |
+| codex/bundles/db-postgres-final-hardening/scripts/validate_bundle.py | (new) | cc4c8766f03c59eda995e12d630a515c4a72aee9f83e99cb5a589c9e0acfb61f |
+| codex/bundles/db-postgres-final-hardening/subbundles/SB01-merge-evidence-and-residue-cleanup/README.md | d689959c38aa4c1856ec37220e437d73cf651e4bd953a23b219dd2eff8818873 | b031634ca2b790991b8431182ebfbcb59d90adde9e901d1d55afa40e660645b3 |
+| codex/bundles/db-postgres-final-hardening/subbundles/SB02-conditional-finalization-for-leased-outbox-work/README.md | 3de823702a93cd678b0ca72fdfe7ffe7b0a1e27ba557944c6f7c417bee9fa7ea | fa7d43287f2e84ac5bc3c115507b1fe16a7c7ea274d9d225e7ade5ce986a2642 |
+| codex/bundles/db-postgres-final-hardening/subbundles/SB03-lease-loss-hardening-and-heartbeat-contracts/README.md | 2f2dffbf7ea3bee80a1db193343cab49e9e424612229c3a0471f1bbea661ba22 | 3f9ff9a95ce0d13cc34e361c97e7aff6b36f8d218d1ed937cd932240d3420e94 |
+| codex/bundles/db-postgres-final-hardening/subbundles/SB04-throughput-defaults-and-runtime-tuning/README.md | a7862502540091696b38119bf279985a34ec97870f041e1c082ffcb9a9002440 | 5fb53d213533cf68fff7dd74e8d02f3844c1bb0c6a9a5c0627b938f6eae44cf2 |
+| codex/bundles/db-postgres-final-hardening/subbundles/SB05-benchmark-and-query-count-proof/README.md | aceeca25acdd28fa6fd612e52a2b68d1e5aa91a97bb6186679d5e4ff7c8fbc4c | e2bd6796ab484835ecf8a7dec0494a7b3da14f6413ffaee860e9d7bee908603b |
+| codex/bundles/db-postgres-final-hardening/subbundles/SB06-process-dispatch-claim-first-deep-proof/README.md | ada798346ea62b803352c0036c47803263f1e777d34c05c05aecc87b9f4bdae3 | 6210ea4aa99752b1b8705524f152ff25aec7319c0fa89bd59ae73cc80b6cec77 |
+| codex/bundles/db-postgres-final-hardening/subbundles/SB07-postgresql-canonicality-invariants-and-admin-boundaries/README.md | 6a68a3e2bceaaaadf34dc712b2e277e04d539a5679f663e4eadd68ec97e3d94b | 6ff645c77512d5c278c2760bc3f05e829501a348569886665fc635be092ed411 |
+| codex/bundles/db-postgres-final-hardening/subbundles/SB08-final-validation-and-merge-readiness/README.md | 7093cc6098e1bb2a736e5375c880239171149f66332a67eadcdcdda9b99ee6cf | da43a22a4379c8fa98770de411e8f2e0bdfa8a03092ce1883703c384b3d6d7e6 |
+| codex/bundles/db-postgres-final-hardening/proof/SB01/manifest.md | 304be5fae9a7b5e412e16cbec7efdacf0f20aefb48ad560a4a5d9affb42fc31f | 64acaf327f9744ce4129bdb7c3c913b2a76644aaa2a9b7e13e377fd9a620da0c |
+| codex/bundles/db-postgres-final-hardening/proof/SB01/semantic-invariants.md | 95f530c3912122dc56994ced2b551232df5d2b322a3b0e58a7d87b2775f6c569 | dc5c3982c31a5221116432ba6262d1b10448e91d5e149ae5d52725d0cff792e3 |
+| codex/bundles/db-postgres-final-hardening/proof/SB02/manifest.md | f753214436570a98eef5e67d045b3033d8c9e8e7cc051894fd30578ff460f02d | 512a4f5b1302fb2348cd20c0571ad1592a0ca1fda9024a55a8a0aaa0bbb98ac2 |
+| codex/bundles/db-postgres-final-hardening/proof/SB02/semantic-invariants.md | e8714722fc0ff665af4f97bdafc0bb616962de418a5f88bdbb2df327c034e40d | 1084a10c9f4d41b7bd79cf6a61a3181f831841d5011451ac3b12ccd0f28e5c20 |
+| codex/bundles/db-postgres-final-hardening/proof/SB03/manifest.md | 8fac95d20ec6bdcad2b222f69704014d5c04fab5be4d04394b9c9d589e236c9a | c69facdf8bbc6b879246b04a8cb0b1128891c506c19f31c35ca9c816aee31d3a |
+| codex/bundles/db-postgres-final-hardening/proof/SB03/semantic-invariants.md | c3b511066c899bd1469ecf684c1db3a918871078a7e4669a7f7d491e036bc9ae | d1f2ccbe87345bcda231f69571f5814e36c9b666e7c3fbfd66a512d4a14d36dd |
+| codex/bundles/db-postgres-final-hardening/proof/SB04/manifest.md | a9f747052cf3faf87ba29dad787ee4ffd18a6f66d837e5ceb2a8aa3554b5086f | 1bc736131d1d549d4a1ca2d16dd909e9413af1432b95637568e3db04787c388b |
+| codex/bundles/db-postgres-final-hardening/proof/SB04/semantic-invariants.md | df98f3cbcb10f7f8b65a4cfd43004c73b6d917ce2856bcd61b8c08fbf158923c | 224b12b763d7c5c72ff96666c8e2b390322c04ad05083a8e948ab43782a2db97 |
+| codex/bundles/db-postgres-final-hardening/proof/SB05/manifest.md | d7265cf29d03c1ecabcb766a72779009a723c342dbc8a71db40c7418f7f46983 | 1269f4bb1eefa7f2bea1a0d0df5d3ff1695547464cd239823aaf5593af813cf1 |
+| codex/bundles/db-postgres-final-hardening/proof/SB05/semantic-invariants.md | 59b548df6a9f751a5e8b9e8c6da5f8b25c8674c36598b4ae997eba178b63059b | 691a5c62bd3a593753961a617598f8420894e4d84aea9d5e505758257be4c9bc |
+| codex/bundles/db-postgres-final-hardening/proof/SB05/benchmark-report.md | (new) | 522f48252df5b8383083a8b8ceaaa23e28d88a45eff405d329e9dbf38361604d |
+| codex/bundles/db-postgres-final-hardening/proof/SB06/manifest.md | 562df0d28132544047db59ce1b3325e3bff67f274a4c63826696f2450c41f38b | 4dd3aa61e200433207906715714391196d29f3cd8e4a84a4d00b444965802b47 |
+| codex/bundles/db-postgres-final-hardening/proof/SB06/semantic-invariants.md | a9597a236a99debc37f92ee4f186fc4f4da2aa2d131bae70b68b1730aeaf8617 | fc0df5c6e7169cc916bba817275109b858a2fdef51d5533ada9aa3b81a3e2c34 |
+| codex/bundles/db-postgres-final-hardening/proof/SB07/manifest.md | 1a7a2dd725650453e1dae2477a085d295573e147eb3cb1045eb5c136cdd4ca45 | 29cce6a99dd2a8d902329317e2b981ecee1114fe59cac2bc6ebfa3c9cb97ca28 |
+| codex/bundles/db-postgres-final-hardening/proof/SB07/semantic-invariants.md | 52f00743aecc3a5d125504ac0203f30d7fb4bf9bc51a4073c4efa8cf85fb58fc | 531dd42cc82312d3c8fa93dc212669acdc916c40c6be35f81ec74297edb0bb2f |
+| codex/bundles/db-postgres-final-hardening/proof/SB08/manifest.md | d227ca9887caae7996e8a60d29eb5a79fd18071813d5bb7eeb6d44750939b70c | 4f6d90ecae437d590c9553d365a0566987444730c00b6ae7fe92d20e5e64fb54 |
+| codex/bundles/db-postgres-final-hardening/proof/SB08/semantic-invariants.md | 0c1c1d84ffde9bcde21ea9302cb1ce2d87a4c3203f0aebc93b126c21731f93f4 | 9a566e0d74afb517183cb56f203eebdff99888aac8c89506f981b21322069d9b |
+| codex/bundles/db-postgres-final-hardening/proof/SB08/final-execution-report.md | (new) | 1f25b4335de269c310f4acff9c6a186058709ee8e9e12ca7a7333cf365e37487 |
+| codex/bundles/db-postgres-final-hardening/reviews/01-execution-report.md | (new) | 2883792fa225421b3f1da8d036004b4fe24e5c229e4b07ec4c99128fef9211d0 |
+| docs/README.md | 0bd96f9bb292f4e99a3a9c0778be3539c8adf304ca54702168548b3046b8584a | 2a3574c191af5ab995b6ce88ca0a217afa73097e93556e865fbe135c0d509aa9 |
+| docs/postgresql-runtime-canonicality.md | (new) | a91ad48f071892194727b018896f5b160067bed4482d43a4778473329635ad2a |
+| src/CanDoItAll.Modules.Automation/Runtime/AutomationRuntimeModels.cs | d98a305af1ea95588d560260291cc777d77894446f1901ccfe8ef8b3042e161e | 0966d8586cb36e6b47c32efb1acaa7764ed4ff1d71275ba42578c673426e3869 |
+| src/CanDoItAll.Modules.Automation/Runtime/AutomationRuntimeOptions.cs | f9b01c6ebc2b9157b8af21661788a2f419b5c8bd3bd5b599f67529cb96c78642 | 9877c3f24114fbee037528f7cb9abf1c8df772645934750a2ab96e93c1bab7c4 |
+| src/CanDoItAll.Modules.Automation/Services/AutomationMessagingServices.cs | 8e4d53869dd13d3614d40134e2d5fcb6ecfab3b0d084fe522035e77126098a7f | 34b846283871d2e6642d531ff1396e1ae6076ef278b62115f3dd772131705613 |
+| src/CanDoItAll.Modules.Automation/Services/AutomationModuleServiceCollectionExtensions.cs | ad43da320ee4dcb7a8dbaa2fb452d626e8abaca4add34ffd155a82a8ef167e68 | 5428269e489b1515e3e94fda70a2b204f803bbe2f1cacabfef131fc006099264 |
+| src/CanDoItAll.Modules.Processes/Runtime/ProcessOutbox.cs | 93c7c62255228554e09e8baaf4c95da7cd412fe69deecb971aa8ea2e4ad2aaaf | 70822c6ca647ce5bf03632d387b013e9c2a9b589273543055c6645774ebc2fea |
+| src/CanDoItAll.Modules.Processes/Runtime/ProcessRuntimeOptions.cs | 86f34f4e90fc1c5b1039d6fb8a817f24cf337da40c5ff91b9453b0caa4e5b127 | fe00330249492885e31ebe68f418f47d4f7db71a4fb838199ef17676601de715 |
+| src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs | 16d8990b9cc3e87b9669d589c17ea49e6443c57d3b98edb2143bdc7839c079e6 | 8127103d57f2994441de4bdb141b81efded5d8637c8a34a60b42a9296cd61d0c |
+| src/CanDoItAll.Modules.Workspace/Connectors/ConnectorCommands.cs | aff333d33fbfc655394beba7d794ae29eb0cea10aed80924d2a0f621a0343bae | 8058df18eb68f51fc1a5bf45bef0f5d804e3f08d53480f210db223dab5860d3d |
+| src/CanDoItAll.Modules.Workspace/Connectors/ConnectorOutboxService.cs | 7f06171c429ba4238e9e22cf41edfbabebc3ea5735e1794378f3b33e2a908241 | f13b1f939dfd675c2cab272104a872f937c606c905743d224ecbd9484fd175c7 |
+| src/CanDoItAll.Web/appsettings.json | 135a1d2ecc1509d35622ef3a7e545e879259a05544d0b80946de880bd2f10287 | 1494487b912fd2ff2d8aafa6e0a21f16873446bf37980a719f45170df91ae1ed |
+| tests/CanDoItAll.Tests.Integration/AutomationRuntimeIntegrationTests.cs | bcca55ed8217eb1c3883f375e67bccac4a6ffa8eaabc37d1509ef232579d7d5f | 2112a368843e7eb7c33da153a1cedf2235d5629294f67498d23fc4cdbf53db9c |
+| tests/CanDoItAll.Tests.Integration/ConnectorOutboxIntegrationTests.cs | 59c0765582dfc9d4af8d9789d359fba0b4d05cafba2a6966e6fe21cf8448a4c5 | b2046b21ad4b0105cc996c3593f770071cc5a461dcb087bc77809ddb43e7aaf9 |
+| tests/CanDoItAll.Tests.Integration/ProcessOutboxIntegrationTests.cs | b0ad29cc37ef114160faab15c6ab105455175177032da4f0a4657e150f7af89b | 493c31b327adea77275b3a2cc52e9c097a0567cd73d9a62acf4905f4a3f8b04b |
+| tests/CanDoItAll.Tests.Integration/RuntimeHostedWorkerPolicyIntegrationTests.cs | 2cc339cd46a6468595352e9f4cb41e652f64672c97fdee5e6439f01926572b42 | 420f56b59e10a5c42822fd3888d785e8f729af3ad2e232356d07a8006dfacec1 |
+| tests/CanDoItAll.Tests.Unit/DatabaseCanonicalityArchitectureTests.cs | (new) | 452751fb9bdc7b0288b1a7a6b5dcc05a4182469d8ccd90f3a86f40004f187b49 |

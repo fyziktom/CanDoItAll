@@ -322,7 +322,7 @@ public sealed class ProjectStructureMermaidPlaywrightTests(PlaywrightAppFixture 
             "playwright-mermaid",
             PlaywrightTestHostPaths.RepositoryRoot,
             profileRoot,
-            TestDatabaseProviderKind.Sqlite,
+            TestDatabaseProviderKind.PostgreSql,
             connectionString,
             workspaceRoot,
             Path.Combine(profileRoot, "manager-artifacts"));

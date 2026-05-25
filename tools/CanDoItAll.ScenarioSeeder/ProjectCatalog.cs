@@ -64,8 +64,8 @@ internal static class ProjectCatalog
             new ProjectOptionEditorModel
             {
                 Category = ProjectOptionCategory.Database,
-                OptionName = "Managed SQLite profile with PostgreSQL migration parity",
-                Notes = "Simulation is seeded into the active managed profile for realistic evaluation."
+                OptionName = "PostgreSQL runtime profile",
+                Notes = "Simulation is seeded into the active PostgreSQL profile for realistic evaluation."
             },
             new ProjectOptionEditorModel
             {

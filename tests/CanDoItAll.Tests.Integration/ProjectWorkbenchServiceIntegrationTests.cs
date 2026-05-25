@@ -19,7 +19,7 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class ProjectWorkbenchServiceIntegrationTests
 {
     [Fact]
-    public async Task GetStructureAsync_builds_a_structure_surface_for_sqlite_projects()
+    public async Task GetStructureAsync_builds_a_structure_surface_for_postgresql_projects()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -30,7 +30,7 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         {
             Name = "Workbench Structure Validation",
             Description = "Structure projection smoke test.",
-            Objective = "Ensure structure surfaces load from SQLite.",
+            Objective = "Ensure structure surfaces load from PostgreSQL.",
             CurrentPhase = "Discovery",
             Phases =
             [
@@ -56,7 +56,7 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
     }
 
     [Fact]
-    public async Task GetCalendarAsync_returns_phase_events_for_sqlite_projects()
+    public async Task GetCalendarAsync_returns_phase_events_for_postgresql_projects()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -67,7 +67,7 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         {
             Name = "Workbench Calendar Validation",
             Description = "Calendar projection smoke test.",
-            Objective = "Ensure calendar surfaces load from SQLite.",
+            Objective = "Ensure calendar surfaces load from PostgreSQL.",
             CurrentPhase = "Execution",
             Phases =
             [
@@ -634,14 +634,13 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
     }
 
     [Fact]
-    public async Task MoveObjectsAsync_retries_when_sqlite_workspace_is_temporarily_busy()
+    public async Task MoveObjectsAsync_persists_resource_node_positions()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
         var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
         var resourcesService = scope.ServiceProvider.GetRequiredService<ResourcesService>();
         var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
-        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
 
         var projectId = await CreateProjectAsync(projects, "Workbench Busy Retry");
         var resourceResult = await resourcesService.SaveAsync(new ResourceEditorModel
@@ -666,98 +665,15 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         var movedX = resourceNode.X + 160d;
         var movedY = resourceNode.Y + 80d;
 
-        await using var lockContext = await dbContextFactory.CreateDbContextAsync();
-        await lockContext.Database.OpenConnectionAsync();
-
-        var transactionOpen = false;
-        try
-        {
-            await using var beginCommand = lockContext.Database.GetDbConnection().CreateCommand();
-            beginCommand.CommandText = "BEGIN IMMEDIATE TRANSACTION;";
-            await beginCommand.ExecuteNonQueryAsync();
-            transactionOpen = true;
-
-            var moveTask = workbench.MoveObjectsAsync(
-                projectId,
-                [new ProjectNodeMoveRequest(resourceNode.Id, movedX, movedY)]);
-
-            await Task.Delay(110);
-
-            await using var commitCommand = lockContext.Database.GetDbConnection().CreateCommand();
-            commitCommand.CommandText = "COMMIT;";
-            await commitCommand.ExecuteNonQueryAsync();
-            transactionOpen = false;
-
-            var movedNodeIds = await moveTask;
-            Assert.Contains(resourceNode.Id, movedNodeIds);
-        }
-        finally
-        {
-            if (transactionOpen)
-            {
-                await using var rollbackCommand = lockContext.Database.GetDbConnection().CreateCommand();
-                rollbackCommand.CommandText = "ROLLBACK;";
-                await rollbackCommand.ExecuteNonQueryAsync();
-            }
-        }
+        var movedNodeIds = await workbench.MoveObjectsAsync(
+            projectId,
+            [new ProjectNodeMoveRequest(resourceNode.Id, movedX, movedY)]);
+        Assert.Contains(resourceNode.Id, movedNodeIds);
 
         var updatedSurface = await workbench.GetStructureAsync(projectId);
         var updatedNode = Assert.Single(updatedSurface.Nodes, node => node.Id == resourceNode.Id);
         Assert.Equal(movedX, updatedNode.X);
         Assert.Equal(movedY, updatedNode.Y);
-    }
-
-    [Fact]
-    public async Task GetStructureAsync_recreates_missing_workbench_tables_for_existing_sqlite_databases()
-    {
-        await using var application = await TestApplication.CreateAsync();
-        await using var scope = application.Services.CreateAsyncScope();
-        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
-        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
-        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
-
-        var saveResult = await projects.SaveAsync(new ProjectEditorModel
-        {
-            Name = "Workbench Schema Repair",
-            Description = "Rebuild missing workbench tables in-place.",
-            Objective = "Keep existing SQLite data usable after adding workbench persistence.",
-            CurrentPhase = "Recovery"
-        });
-
-        Assert.True(saveResult.IsSuccess);
-
-        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
-        {
-            await dbContext.Database.ExecuteSqlRawAsync("""DROP TABLE IF EXISTS "Workbench_ProjectObjectLinks";""");
-            await dbContext.Database.ExecuteSqlRawAsync("""DROP TABLE IF EXISTS "Workbench_ProjectObjects";""");
-            await dbContext.Database.ExecuteSqlRawAsync("""DROP TABLE IF EXISTS "Workbench_ProjectNodeBindings";""");
-            await dbContext.Database.ExecuteSqlRawAsync("""DROP TABLE IF EXISTS "Workbench_ProjectNodeReferences";""");
-            await dbContext.Database.ExecuteSqlRawAsync("""DROP TABLE IF EXISTS "Workbench_ProjectProjectionLayouts";""");
-            await dbContext.Database.ExecuteSqlRawAsync("""DROP TABLE IF EXISTS "Workbench_ViewStates";""");
-        }
-
-        var surface = await workbench.GetStructureAsync(saveResult.Value);
-
-        Assert.Equal("Workbench Schema Repair", surface.ProjectName);
-        Assert.Contains(surface.Nodes, node => node.ObjectType == ProjectObjectType.ProjectRoot);
-
-        await using var verificationContext = await dbContextFactory.CreateDbContextAsync();
-        var tableNames = await verificationContext.Database
-            .SqlQueryRaw<string>(
-                """
-                SELECT "name"
-                FROM "sqlite_master"
-                WHERE "type" = 'table'
-                  AND "name" IN ('Workbench_ProjectObjects', 'Workbench_ProjectObjectLinks', 'Workbench_ProjectNodeBindings', 'Workbench_ProjectNodeReferences', 'Workbench_ProjectProjectionLayouts', 'Workbench_ViewStates');
-                """)
-            .ToListAsync();
-
-        Assert.Contains("Workbench_ProjectObjects", tableNames);
-        Assert.Contains("Workbench_ProjectObjectLinks", tableNames);
-        Assert.Contains("Workbench_ProjectNodeBindings", tableNames);
-        Assert.Contains("Workbench_ProjectNodeReferences", tableNames);
-        Assert.Contains("Workbench_ProjectProjectionLayouts", tableNames);
-        Assert.Contains("Workbench_ViewStates", tableNames);
     }
 
     [Fact]

@@ -3,13 +3,13 @@
 ## Inventory Reconciliation
 
 Verification pass 1:
-- README count: 112 components, 10 flows, 13 blueprints.
-- JSON count: 112 component records, 10 flow-template records, 13 blueprint records.
-- Group catalog sum: 8 + 8 + 8 + 10 + 10 + 8 + 8 + 8 + 12 + 8 + 14 + 10 = 112.
+- README count: 111 components, 10 flows, 13 blueprints.
+- JSON count: 111 component records, 10 flow-template records, 13 blueprint records.
+- Group catalog sum: 8 + 8 + 8 + 10 + 10 + 8 + 8 + 8 + 12 + 8 + 13 + 10 = 111.
 
 Verification pass 2:
-- UI library counts must match 112 components, 10 flows, 13 blueprints.
-- Screenshot artifact counts must match 112 component additions, 10 flow additions, 13 blueprint additions.
+- UI library counts must match 111 components, 10 flows, 13 blueprints.
+- Screenshot artifact counts must match 111 component additions, 10 flow additions, 13 blueprint additions.
 
 ## Implementation Checklist
 
@@ -227,7 +227,6 @@ Experience and Embedded:
 - Stack: PHP Web App
 - Stack: Playwright MCP
 - Stack: PostgreSQL
-- Stack: SQLite
 - Stack: Tailwind CSS
 
 ### Toolbox Snippets (10)

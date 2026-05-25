@@ -1,0 +1,58 @@
+Command=rg -n "ICanonicalRuntimeDatabase|AddPooledDbContextFactory|CreateDbContextForProfileAsync|RequiresRestart|EnableMaintenanceHotSwitch|FOR UPDATE SKIP LOCKED|AutomationDispatchClaimToken|AutomationDispatchLeaseExpiresAtUtc|IsPersistedRuntimeProfile|RetiredProviderName" <changed production files> WorkingDirectory=C:\repositories\CanDoItAll StartUtc=2026-05-24T15:59:56.2372735Z
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:402:                item.AutomationDispatchLeaseExpiresAtUtc == null ||
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:403:                item.AutomationDispatchLeaseExpiresAtUtc <= now)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:406:                    .SetProperty(item => item.AutomationDispatchClaimToken, claimToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:409:                    .SetProperty(item => item.AutomationDispatchLeaseExpiresAtUtc, leaseExpiresAtUtc)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:455:            .Where(item => item.AutomationDispatchClaimToken == dispatchClaim.ClaimToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:458:                    .SetProperty(item => item.AutomationDispatchLeaseExpiresAtUtc, leaseExpiresAtUtc),
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:477:                .Where(item => item.AutomationDispatchClaimToken == dispatchClaim.ClaimToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:480:                        .SetProperty(item => item.AutomationDispatchClaimToken, string.Empty)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:483:                        .SetProperty(item => item.AutomationDispatchLeaseExpiresAtUtc, (DateTimeOffset?)null),
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:1148:            .Where(item => item.AutomationDispatchLeaseExpiresAtUtc == null ||
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:1149:                item.AutomationDispatchLeaseExpiresAtUtc <= now)
+src\CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:257:                    FOR UPDATE SKIP LOCKED
+src\CanDoItAll.Infrastructure\DependencyInjection\InfrastructureServiceCollectionExtensions.cs:76:        services.AddSingleton<ICanonicalRuntimeDatabase, CanonicalRuntimeDatabase>();
+src\CanDoItAll.Infrastructure\DependencyInjection\InfrastructureServiceCollectionExtensions.cs:83:        services.AddPooledDbContextFactory<AppDbContext>((serviceProvider, optionsBuilder) =>
+src\CanDoItAll.Infrastructure\DependencyInjection\InfrastructureServiceCollectionExtensions.cs:85:            var canonicalRuntimeDatabase = serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>();
+src\CanDoItAll.Web\Program.cs:203:                activation.Value.RequiresRestart,
+src\CanDoItAll.Web\Program.cs:239:            switchResult.Value.RequiresRestart,
+src\CanDoItAll.Infrastructure\Persistence\SwitchableAppDbContextFactory.cs:16:    Task<AppDbContext> CreateDbContextForProfileAsync(
+src\CanDoItAll.Infrastructure\Persistence\SwitchableAppDbContextFactory.cs:96:    public Task<AppDbContext> CreateDbContextForProfileAsync(
+src\CanDoItAll.Infrastructure\ControlPlane\CanonicalRuntimeDatabase.cs:6:public sealed class CanonicalRuntimeDatabase : ICanonicalRuntimeDatabase
+src\CanDoItAll.Infrastructure\ControlPlane\CanonicalRuntimeDatabase.cs:42:    ICanonicalRuntimeDatabase canonicalRuntimeDatabase,
+src\CanDoItAll.Web\Components\Layout\MainLayout.DatabaseProfiles.cs:109:        if (result.Value.RequiresRestart)
+src\CanDoItAll.Infrastructure\ControlPlane\LegacyDatabaseProfileCatalogQuarantine.cs:14:    public const string RetiredProviderName = "Sqlite";
+src\CanDoItAll.Infrastructure\ControlPlane\LegacyDatabaseProfileCatalogQuarantine.cs:104:            RetiredProviderName,
+src\CanDoItAll.Infrastructure\ControlPlane\LegacyDatabaseProfileCatalogQuarantine.cs:132:            JsonValueKind.String => string.Equals(providerKind.GetString(), RetiredProviderName, StringComparison.OrdinalIgnoreCase),
+src\CanDoItAll.Infrastructure\ControlPlane\LegacyDatabaseProfileCatalogQuarantine.cs:243:            The quarantined entries used retired {RetiredProviderName} profile metadata. The main runtime now requires PostgreSQL profiles. Create or select a PostgreSQL profile, then migrate data manually from the backed-up catalog/database files when needed.
+src\CanDoItAll.Web\Api\CognitiveMemoryApi.DatabaseEndpoints.cs:87:                    switchResult.Value.RequiresRestart,
+src\CanDoItAll.Web\Api\CognitiveMemoryApiDtos.cs:188:    bool RequiresRestart,
+src\CanDoItAll.Web\Api\CognitiveMemoryApiDtos.cs:199:            result.RequiresRestart,
+src\CanDoItAll.Web\Api\CognitiveMemoryApiDtos.cs:210:    bool RequiresRestart,
+src\CanDoItAll.Modules.Workspace\Database\DatabaseProfileWorkspaceService.cs:139:            await using var dbContext = await dbContextFactory.CreateDbContextForProfileAsync(profile, timeout.Token);
+src\CanDoItAll.Infrastructure\ControlPlane\DatabaseSwitchingAbstractions.cs:11:    public bool RequiresRestart { get; init; }
+src\CanDoItAll.Modules.Processes\Persistence\Entities\ProcessRuntimeModels.cs:232:    public string AutomationDispatchClaimToken { get; set; } = string.Empty;
+src\CanDoItAll.Modules.Processes\Persistence\Entities\ProcessRuntimeModels.cs:238:    public DateTimeOffset? AutomationDispatchLeaseExpiresAtUtc { get; set; }
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:407:                    FOR UPDATE SKIP LOCKED
+src\CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:467:                    FOR UPDATE SKIP LOCKED
+src\CanDoItAll.Modules.Workspace\Pages\Components\DatabaseSourcesSettingsPanel.razor:1058:        SetDatabaseMessage(activationMessage, result.Value.RequiresRestart ? "warning" : "info");
+src\CanDoItAll.Infrastructure\ControlPlane\DatabaseProfileControlPlaneService.cs:47:                .Where(IsPersistedRuntimeProfile)
+src\CanDoItAll.Infrastructure\ControlPlane\DatabaseProfileControlPlaneService.cs:67:            var profile = ReadCatalogLocked().Profiles.FirstOrDefault(item => item.Id == id.Value && IsPersistedRuntimeProfile(item));
+src\CanDoItAll.Infrastructure\ControlPlane\DatabaseProfileControlPlaneService.cs:171:            var profile = document.Profiles.FirstOrDefault(item => item.Id == id && IsPersistedRuntimeProfile(item));
+src\CanDoItAll.Infrastructure\ControlPlane\DatabaseProfileControlPlaneService.cs:197:            var profile = document.Profiles.FirstOrDefault(item => item.Id == id && IsPersistedRuntimeProfile(item));
+src\CanDoItAll.Infrastructure\ControlPlane\DatabaseProfileControlPlaneService.cs:255:            var profile = document.Profiles.FirstOrDefault(item => item.Id == profileId && IsPersistedRuntimeProfile(item))
+src\CanDoItAll.Infrastructure\ControlPlane\DatabaseProfileControlPlaneService.cs:281:            .Where(IsPersistedRuntimeProfile)
+src\CanDoItAll.Infrastructure\ControlPlane\DatabaseProfileControlPlaneService.cs:761:    private static bool IsPersistedRuntimeProfile(DatabaseProfileRecord profile)
+src\CanDoItAll.Modules.Processes\Persistence\Configurations\ProcessRuntimeEntityConfigurations.cs:70:        builder.Property(step => step.AutomationDispatchClaimToken).HasMaxLength(100);
+src\CanDoItAll.Modules.Processes\Persistence\Configurations\ProcessRuntimeEntityConfigurations.cs:78:        builder.HasIndex(step => new { step.ProcessRunId, step.AutomationDispatchLeaseExpiresAtUtc });
+src\CanDoItAll.Infrastructure\ControlPlane\DatabaseProfileModels.cs:212:public interface ICanonicalRuntimeDatabase
+src\CanDoItAll.Infrastructure\Configuration\AppOptions.cs:11:    public bool EnableMaintenanceHotSwitch { get; set; }
+src\CanDoItAll.Infrastructure\ControlPlane\DatabaseTransferService.cs:63:        await using var sourceDbContext = await dbContextFactory.CreateDbContextForProfileAsync(sourceProfile, cancellationToken);
+src\CanDoItAll.Infrastructure\ControlPlane\DatabaseTransferService.cs:64:        await using var targetDbContext = await dbContextFactory.CreateDbContextForProfileAsync(targetProfile, cancellationToken);
+src\CanDoItAll.Infrastructure\ControlPlane\DatabaseTransferService.cs:127:        await using var sourceDbContext = await dbContextFactory.CreateDbContextForProfileAsync(sourceProfile, cancellationToken);
+src\CanDoItAll.Infrastructure\ControlPlane\DatabaseTransferService.cs:128:        await using var targetDbContext = await dbContextFactory.CreateDbContextForProfileAsync(targetProfile, cancellationToken);
+src\CanDoItAll.Composition\RuntimeHostServiceCollectionExtensions.cs:228:        await using var dbContext = await dbContextFactory.CreateDbContextForProfileAsync(profile, cancellationToken);
+src\CanDoItAll.Composition\RuntimeHostServiceCollectionExtensions.cs:595:                RequiresRestart = false,
+src\CanDoItAll.Composition\RuntimeHostServiceCollectionExtensions.cs:628:                databaseOptions.Value.EnableMaintenanceHotSwitch);
+src\CanDoItAll.Composition\RuntimeHostServiceCollectionExtensions.cs:637:                RequiresRestart = true,
+ExitCode=0

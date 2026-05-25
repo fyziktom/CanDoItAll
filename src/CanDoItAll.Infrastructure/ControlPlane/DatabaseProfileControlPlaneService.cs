@@ -44,6 +44,7 @@ public sealed class DatabaseProfileControlPlaneService(
             var currentSelection = ResolveCurrentProfileLocked(logSelection: false);
             var summaries = ReadCatalogLocked()
                 .Profiles
+                .Where(IsPersistedRuntimeProfile)
                 .OrderBy(profile => profile.DisplayName, StringComparer.OrdinalIgnoreCase)
                 .Select(profile => CreateSummary(
                     profile,
@@ -63,7 +64,7 @@ public sealed class DatabaseProfileControlPlaneService(
                 return Task.FromResult(CreateDefaultEditor());
             }
 
-            var profile = ReadCatalogLocked().Profiles.FirstOrDefault(item => item.Id == id.Value);
+            var profile = ReadCatalogLocked().Profiles.FirstOrDefault(item => item.Id == id.Value && IsPersistedRuntimeProfile(item));
             if (profile is null)
             {
                 return Task.FromResult(CreateDefaultEditor());
@@ -85,19 +86,6 @@ public sealed class DatabaseProfileControlPlaneService(
 
         switch (model.ProviderKind)
         {
-            case DatabaseProviderKind.Sqlite:
-                if (model.SourceKind is DatabaseProfileSourceKind.PostgresConnection or DatabaseProfileSourceKind.InMemory)
-                {
-                    errors.Add(Error.Validation("SQLite profiles must use a SQLite-compatible source kind."));
-                }
-
-                if (model.SourceKind is not DatabaseProfileSourceKind.ManagedSqlite and not DatabaseProfileSourceKind.SnapshotCache and not DatabaseProfileSourceKind.IpfsSnapshot &&
-                    string.IsNullOrWhiteSpace(model.SqliteDatabasePath))
-                {
-                    errors.Add(Error.Validation("SQLite profiles require a database path unless they are managed profiles."));
-                }
-                break;
-
             case DatabaseProviderKind.PostgreSql:
                 if (model.SourceKind != DatabaseProfileSourceKind.PostgresConnection)
                 {
@@ -126,10 +114,7 @@ public sealed class DatabaseProfileControlPlaneService(
                 break;
 
             case DatabaseProviderKind.InMemory:
-                if (model.SourceKind != DatabaseProfileSourceKind.InMemory)
-                {
-                    errors.Add(Error.Validation("In-memory profiles must use the InMemory source kind."));
-                }
+                errors.Add(Error.Validation("In-memory database profiles are only allowed through explicit runtime overrides and test harness configuration."));
                 break;
 
             default:
@@ -183,7 +168,7 @@ public sealed class DatabaseProfileControlPlaneService(
         lock (_sync)
         {
             var document = ReadCatalogLocked();
-            var profile = document.Profiles.FirstOrDefault(item => item.Id == id);
+            var profile = document.Profiles.FirstOrDefault(item => item.Id == id && IsPersistedRuntimeProfile(item));
             if (profile is null)
             {
                 return Task.FromResult(Result.Failure(Error.Validation("Database profile not found.")));
@@ -209,7 +194,7 @@ public sealed class DatabaseProfileControlPlaneService(
         lock (_sync)
         {
             var document = ReadCatalogLocked();
-            var profile = document.Profiles.FirstOrDefault(item => item.Id == id);
+            var profile = document.Profiles.FirstOrDefault(item => item.Id == id && IsPersistedRuntimeProfile(item));
             if (profile is null)
             {
                 return Task.FromResult(Result.Failure(Error.Validation("Database profile not found.")));
@@ -236,6 +221,7 @@ public sealed class DatabaseProfileControlPlaneService(
             return Task.FromResult(new DatabaseSelectionStateModel
             {
                 ActiveProfileId = resolvedProfile.Profile.Id,
+                RuntimeProfileId = resolvedProfile.Profile.Id,
                 DisplayName = resolvedProfile.Profile.DisplayName,
                 ProviderKind = resolvedProfile.Profile.ProviderKind,
                 SourceKind = resolvedProfile.Profile.SourceKind,
@@ -267,7 +253,7 @@ public sealed class DatabaseProfileControlPlaneService(
             }
 
             var document = ReadCatalogLocked();
-            var profile = document.Profiles.FirstOrDefault(item => item.Id == profileId)
+            var profile = document.Profiles.FirstOrDefault(item => item.Id == profileId && IsPersistedRuntimeProfile(item))
                 ?? throw new InvalidOperationException($"Database profile '{profileId}' was not found.");
 
             var activeProfileId = ReadActiveProfileStateLocked().ActiveProfileId;
@@ -292,9 +278,12 @@ public sealed class DatabaseProfileControlPlaneService(
         }
 
         var document = ReadCatalogLocked();
-        if (document.Profiles.Count == 0)
+        var persistedRuntimeProfiles = document.Profiles
+            .Where(IsPersistedRuntimeProfile)
+            .ToList();
+        if (persistedRuntimeProfiles.Count == 0)
         {
-            var seededProfile = TryCreateLegacyProfileLocked() ?? CreateManagedSqliteProfileLocked();
+            var seededProfile = CreateDefaultPostgreSqlProfileLocked();
             document.Profiles.Add(seededProfile);
             WriteCatalogLocked(document);
 
@@ -302,11 +291,9 @@ public sealed class DatabaseProfileControlPlaneService(
             newState.ActiveProfileId = seededProfile.Id;
             WriteActiveProfileStateLocked(newState);
 
-            var resolutionSource = seededProfile.SourceKind == DatabaseProfileSourceKind.ManagedSqlite
-                ? DatabaseProfileResolutionSource.AutoProvisionedManagedSqlite
-                : DatabaseProfileResolutionSource.LegacyDiscovery;
-
-            var resolvedSeed = BuildResolvedProfile(seededProfile, resolutionSource);
+            var resolvedSeed = BuildResolvedProfile(
+                seededProfile,
+                DatabaseProfileResolutionSource.AutoProvisionedPostgreSql);
             if (logSelection)
             {
                 LogSelectionLocked(resolvedSeed);
@@ -321,12 +308,12 @@ public sealed class DatabaseProfileControlPlaneService(
 
         if (activeState.ActiveProfileId.HasValue)
         {
-            activeProfile = document.Profiles.FirstOrDefault(item => item.Id == activeState.ActiveProfileId.Value);
+            activeProfile = persistedRuntimeProfiles.FirstOrDefault(item => item.Id == activeState.ActiveProfileId.Value);
         }
 
         if (activeProfile is null)
         {
-            activeProfile = document.Profiles
+            activeProfile = persistedRuntimeProfiles
                 .OrderByDescending(item => item.Audit.LastSuccessfulOpenUtc ?? item.Audit.LastUsedUtc ?? item.Audit.CreatedUtc)
                 .ThenBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
                 .First();
@@ -357,85 +344,13 @@ public sealed class DatabaseProfileControlPlaneService(
         var providerKind = ParseProviderKind(configuredProvider, configuredConnection);
         var workspaceRoot = ResolveOverrideWorkspaceRoot(providerKind, configuredConnection);
         var now = clock.GetUtcNow();
-        if (providerKind == DatabaseProviderKind.Sqlite &&
-            TryResolveCatalogBackedSqliteOverrideLocked(configuredConnection) is { } catalogBackedOverride)
-        {
-            return catalogBackedOverride;
-        }
 
         return providerKind switch
         {
-            DatabaseProviderKind.Sqlite => BuildSqliteOverrideProfile(configuredConnection, workspaceRoot, now),
             DatabaseProviderKind.PostgreSql => BuildPostgreSqlOverrideProfile(configuredConnection, workspaceRoot, now),
             DatabaseProviderKind.InMemory => BuildInMemoryOverrideProfile(configuredConnection, workspaceRoot, now),
             _ => throw new InvalidOperationException($"Unsupported database provider '{providerKind}'.")
         };
-    }
-
-    private ResolvedDatabaseProfile? TryResolveCatalogBackedSqliteOverrideLocked(string? configuredConnection)
-    {
-        var databasePath = TryExtractSqliteDatabasePath(configuredConnection);
-        if (string.IsNullOrWhiteSpace(databasePath))
-        {
-            return null;
-        }
-
-        var normalizedDatabasePath = Path.GetFullPath(databasePath);
-        var document = ReadCatalogLocked();
-        var matchedProfile = document.Profiles.FirstOrDefault(item =>
-            item.ProviderKind == DatabaseProviderKind.Sqlite &&
-            !string.IsNullOrWhiteSpace(item.Sqlite?.DatabasePath) &&
-            string.Equals(
-                Path.GetFullPath(item.Sqlite!.DatabasePath),
-                normalizedDatabasePath,
-                StringComparison.OrdinalIgnoreCase));
-        if (matchedProfile is null)
-        {
-            return null;
-        }
-
-        return BuildResolvedProfile(
-            CloneProfileForRuntimeOverride(matchedProfile),
-            DatabaseProfileResolutionSource.ExplicitOverride);
-    }
-
-    private ResolvedDatabaseProfile BuildSqliteOverrideProfile(string? configuredConnection, string workspaceRoot, DateTimeOffset now)
-    {
-        var databasePath = TryExtractSqliteDatabasePath(configuredConnection);
-        if (string.IsNullOrWhiteSpace(databasePath))
-        {
-            databasePath = Path.Combine(workspaceRoot, "candoitall.db");
-        }
-
-        databasePath = Path.GetFullPath(databasePath);
-        var profile = new DatabaseProfileRecord
-        {
-            Id = CreateDeterministicGuid($"sqlite-override:{databasePath}"),
-            DisplayName = "Configured SQLite override",
-            ProviderKind = DatabaseProviderKind.Sqlite,
-            SourceKind = DatabaseProfileSourceKind.ExternalSqliteFile,
-            Sqlite = new SqliteDatabaseProfileConnection
-            {
-                DatabasePath = databasePath
-            },
-            Storage = new DatabaseProfileStorageDescriptor
-            {
-                Mode = DatabaseProfileStorageMode.ExternalWorkspaceRoot,
-                WorkspaceRoot = workspaceRoot
-            },
-            Runtime = new DatabaseProfileRuntimeMetadata
-            {
-                LockedByRuntimeOverride = true
-            },
-            Audit = new DatabaseProfileAuditMetadata
-            {
-                CreatedUtc = now,
-                LastUsedUtc = now
-            }
-        };
-
-        profile.Runtime.Fingerprint = BuildFingerprint(profile);
-        return BuildResolvedProfile(profile, DatabaseProfileResolutionSource.ExplicitOverride);
     }
 
     private ResolvedDatabaseProfile BuildPostgreSqlOverrideProfile(string? configuredConnection, string workspaceRoot, DateTimeOffset now)
@@ -522,133 +437,37 @@ public sealed class DatabaseProfileControlPlaneService(
         return BuildResolvedProfile(profile, DatabaseProfileResolutionSource.ExplicitOverride);
     }
 
-    private static DatabaseProfileRecord CloneProfileForRuntimeOverride(DatabaseProfileRecord profile)
-    {
-        return new DatabaseProfileRecord
-        {
-            Id = profile.Id,
-            DisplayName = profile.DisplayName,
-            ProviderKind = profile.ProviderKind,
-            SourceKind = profile.SourceKind,
-            Sqlite = profile.Sqlite is null
-                ? null
-                : new SqliteDatabaseProfileConnection
-                {
-                    DatabasePath = profile.Sqlite.DatabasePath
-                },
-            PostgreSql = profile.PostgreSql is null
-                ? null
-                : new PostgreSqlDatabaseProfileConnection
-                {
-                    Host = profile.PostgreSql.Host,
-                    Port = profile.PostgreSql.Port,
-                    DatabaseName = profile.PostgreSql.DatabaseName,
-                    Username = profile.PostgreSql.Username,
-                    EncryptedPassword = profile.PostgreSql.EncryptedPassword,
-                    AdminDatabaseName = profile.PostgreSql.AdminDatabaseName,
-                    TrustServerCertificate = profile.PostgreSql.TrustServerCertificate
-                },
-            InMemory = profile.InMemory is null
-                ? null
-                : new InMemoryDatabaseProfileConnection
-                {
-                    DatabaseName = profile.InMemory.DatabaseName
-                },
-            Storage = new DatabaseProfileStorageDescriptor
-            {
-                Mode = profile.Storage.Mode,
-                WorkspaceRoot = profile.Storage.WorkspaceRoot
-            },
-            Clone = new DatabaseProfileCloneMetadata
-            {
-                OriginProfileId = profile.Clone.OriginProfileId,
-                OriginSnapshotId = profile.Clone.OriginSnapshotId
-            },
-            Runtime = new DatabaseProfileRuntimeMetadata
-            {
-                Fingerprint = profile.Runtime.Fingerprint,
-                LockedByRuntimeOverride = true
-            },
-            Audit = new DatabaseProfileAuditMetadata
-            {
-                CreatedUtc = profile.Audit.CreatedUtc,
-                LastUsedUtc = profile.Audit.LastUsedUtc,
-                LastSuccessfulOpenUtc = profile.Audit.LastSuccessfulOpenUtc
-            }
-        };
-    }
-
-    private DatabaseProfileRecord? TryCreateLegacyProfileLocked()
-    {
-        var workspaceRoot = ResolveDefaultWorkspaceRoot();
-        var databasePath = Path.Combine(workspaceRoot, "candoitall.db");
-        if (!File.Exists(databasePath))
-        {
-            return null;
-        }
-
-        logger.LogInformation(
-            "Discovered legacy SQLite workspace database at {DatabasePath}.",
-            databasePath);
-
-        var now = clock.GetUtcNow();
-        var profile = new DatabaseProfileRecord
-        {
-            DisplayName = "Legacy SQLite workspace",
-            ProviderKind = DatabaseProviderKind.Sqlite,
-            SourceKind = DatabaseProfileSourceKind.ExternalSqliteFile,
-            Sqlite = new SqliteDatabaseProfileConnection
-            {
-                DatabasePath = databasePath
-            },
-            Storage = new DatabaseProfileStorageDescriptor
-            {
-                Mode = DatabaseProfileStorageMode.ExternalWorkspaceRoot,
-                WorkspaceRoot = workspaceRoot
-            },
-            Audit = new DatabaseProfileAuditMetadata
-            {
-                CreatedUtc = now,
-                LastUsedUtc = now,
-                LastSuccessfulOpenUtc = now
-            }
-        };
-
-        profile.Runtime.Fingerprint = BuildFingerprint(profile);
-        return profile;
-    }
-
-    private DatabaseProfileRecord CreateManagedSqliteProfileLocked()
+    private DatabaseProfileRecord CreateDefaultPostgreSqlProfileLocked()
     {
         var profileId = Guid.NewGuid();
-        var databasePath = controlPlanePathResolver.ResolveManagedSqliteDatabasePath(profileId);
-        var workspaceRoot = controlPlanePathResolver.ResolveManagedSqliteWorkspaceRootPath(profileId);
         var now = clock.GetUtcNow();
 
         logger.LogInformation(
-            "Provisioning managed SQLite database profile at {DatabasePath}.",
-            databasePath);
+            "Provisioning default PostgreSQL database profile for the main runtime.");
 
         var profile = new DatabaseProfileRecord
         {
             Id = profileId,
-            DisplayName = "Managed SQLite workspace",
-            ProviderKind = DatabaseProviderKind.Sqlite,
-            SourceKind = DatabaseProfileSourceKind.ManagedSqlite,
-            Sqlite = new SqliteDatabaseProfileConnection
+            DisplayName = "Local PostgreSQL",
+            ProviderKind = DatabaseProviderKind.PostgreSql,
+            SourceKind = DatabaseProfileSourceKind.PostgresConnection,
+            PostgreSql = new PostgreSqlDatabaseProfileConnection
             {
-                DatabasePath = databasePath
+                Host = "localhost",
+                Port = 5432,
+                DatabaseName = "candoitall",
+                Username = "postgres",
+                EncryptedPassword = secretProtector.Protect("postgres")
             },
             Storage = new DatabaseProfileStorageDescriptor
             {
-                Mode = DatabaseProfileStorageMode.ManagedPerProfile,
-                WorkspaceRoot = workspaceRoot
+                Mode = DatabaseProfileStorageMode.ExternalWorkspaceRoot,
+                WorkspaceRoot = ResolveDefaultWorkspaceRoot()
             },
             Audit = new DatabaseProfileAuditMetadata
             {
                 CreatedUtc = now,
-                LastUsedUtc = now,
-                LastSuccessfulOpenUtc = now
+                LastUsedUtc = now
             }
         };
 
@@ -667,11 +486,6 @@ public sealed class DatabaseProfileControlPlaneService(
             ProviderKind = model.ProviderKind,
             SourceKind = NormalizeSourceKind(model.ProviderKind, model.SourceKind),
             Storage = new DatabaseProfileStorageDescriptor(),
-            Clone = new DatabaseProfileCloneMetadata
-            {
-                OriginProfileId = model.OriginProfileId,
-                OriginSnapshotId = model.OriginSnapshotId
-            },
             Audit = new DatabaseProfileAuditMetadata
             {
                 CreatedUtc = existing?.Audit.CreatedUtc ?? now,
@@ -683,21 +497,6 @@ public sealed class DatabaseProfileControlPlaneService(
 
         switch (profile.ProviderKind)
         {
-            case DatabaseProviderKind.Sqlite:
-                var sqlitePath = ResolveSqliteDatabasePath(profile, model, existing);
-                profile.Sqlite = new SqliteDatabaseProfileConnection
-                {
-                    DatabasePath = sqlitePath
-                };
-                profile.Storage = new DatabaseProfileStorageDescriptor
-                {
-                    Mode = profile.SourceKind == DatabaseProfileSourceKind.ManagedSqlite
-                        ? DatabaseProfileStorageMode.ManagedPerProfile
-                        : DatabaseProfileStorageMode.ExternalWorkspaceRoot,
-                    WorkspaceRoot = ResolveWorkspaceRootForProfile(profile, model, existing, sqlitePath)
-                };
-                break;
-
             case DatabaseProviderKind.PostgreSql:
                 profile.PostgreSql = new PostgreSqlDatabaseProfileConnection
                 {
@@ -716,21 +515,21 @@ public sealed class DatabaseProfileControlPlaneService(
                 profile.Storage = new DatabaseProfileStorageDescriptor
                 {
                     Mode = DatabaseProfileStorageMode.ExternalWorkspaceRoot,
-                    WorkspaceRoot = ResolveWorkspaceRootForProfile(profile, model, existing, sqliteDatabasePath: null)
+                    WorkspaceRoot = ResolveWorkspaceRootForProfile(profile, model, existing)
                 };
                 break;
 
             case DatabaseProviderKind.InMemory:
                 profile.InMemory = new InMemoryDatabaseProfileConnection
                 {
-                    DatabaseName = string.IsNullOrWhiteSpace(model.SqliteDatabasePath)
+                    DatabaseName = string.IsNullOrWhiteSpace(model.InMemoryDatabaseName)
                         ? existing?.InMemory?.DatabaseName ?? "candoitall"
-                        : model.SqliteDatabasePath.Trim()
+                        : model.InMemoryDatabaseName.Trim()
                 };
                 profile.Storage = new DatabaseProfileStorageDescriptor
                 {
                     Mode = DatabaseProfileStorageMode.Ephemeral,
-                    WorkspaceRoot = ResolveWorkspaceRootForProfile(profile, model, existing, sqliteDatabasePath: null)
+                    WorkspaceRoot = ResolveWorkspaceRootForProfile(profile, model, existing)
                 };
                 break;
         }
@@ -739,70 +538,11 @@ public sealed class DatabaseProfileControlPlaneService(
         return profile;
     }
 
-    private string ResolveSqliteDatabasePath(
+    private string ResolveWorkspaceRootForProfile(
         DatabaseProfileRecord profile,
         DatabaseProfileEditorModel model,
         DatabaseProfileRecord? existing)
     {
-        if (profile.SourceKind == DatabaseProfileSourceKind.ManagedSqlite)
-        {
-            if (!string.IsNullOrWhiteSpace(existing?.Sqlite?.DatabasePath))
-            {
-                return Path.GetFullPath(existing.Sqlite.DatabasePath);
-            }
-
-            return controlPlanePathResolver.ResolveManagedSqliteDatabasePath(profile.Id);
-        }
-
-        if (profile.SourceKind is DatabaseProfileSourceKind.SnapshotCache or DatabaseProfileSourceKind.IpfsSnapshot)
-        {
-            if (!string.IsNullOrWhiteSpace(existing?.Sqlite?.DatabasePath))
-            {
-                return Path.GetFullPath(existing.Sqlite.DatabasePath);
-            }
-
-            return controlPlanePathResolver.ResolveSnapshotCacheDatabasePath(profile.Id);
-        }
-
-        if (!string.IsNullOrWhiteSpace(model.SqliteDatabasePath))
-        {
-            return ControlPlanePathDefaults.ResolveConfiguredPath(hostEnvironment.ContentRootPath, model.SqliteDatabasePath);
-        }
-
-        if (!string.IsNullOrWhiteSpace(existing?.Sqlite?.DatabasePath))
-        {
-            return Path.GetFullPath(existing.Sqlite.DatabasePath);
-        }
-
-        throw new InvalidOperationException("SQLite profiles require a database path.");
-    }
-
-    private string ResolveWorkspaceRootForProfile(
-        DatabaseProfileRecord profile,
-        DatabaseProfileEditorModel model,
-        DatabaseProfileRecord? existing,
-        string? sqliteDatabasePath)
-    {
-        if (profile.SourceKind == DatabaseProfileSourceKind.ManagedSqlite)
-        {
-            if (!string.IsNullOrWhiteSpace(existing?.Storage.WorkspaceRoot))
-            {
-                return Path.GetFullPath(existing.Storage.WorkspaceRoot);
-            }
-
-            return controlPlanePathResolver.ResolveManagedSqliteWorkspaceRootPath(profile.Id);
-        }
-
-        if (profile.SourceKind is DatabaseProfileSourceKind.SnapshotCache or DatabaseProfileSourceKind.IpfsSnapshot)
-        {
-            if (!string.IsNullOrWhiteSpace(existing?.Storage.WorkspaceRoot))
-            {
-                return Path.GetFullPath(existing.Storage.WorkspaceRoot);
-            }
-
-            return controlPlanePathResolver.ResolveSnapshotCacheWorkspaceRootPath(profile.Id);
-        }
-
         if (!string.IsNullOrWhiteSpace(model.WorkspaceRoot))
         {
             return ControlPlanePathDefaults.ResolveConfiguredPath(hostEnvironment.ContentRootPath, model.WorkspaceRoot);
@@ -813,12 +553,6 @@ public sealed class DatabaseProfileControlPlaneService(
             return Path.GetFullPath(existing.Storage.WorkspaceRoot);
         }
 
-        if (!string.IsNullOrWhiteSpace(sqliteDatabasePath))
-        {
-            return Path.GetDirectoryName(sqliteDatabasePath)
-                ?? throw new InvalidOperationException($"Unable to resolve a workspace root from '{sqliteDatabasePath}'.");
-        }
-
         return ResolveDefaultWorkspaceRoot();
     }
 
@@ -826,7 +560,6 @@ public sealed class DatabaseProfileControlPlaneService(
     {
         var connectionString = profile.ProviderKind switch
         {
-            DatabaseProviderKind.Sqlite => $"Data Source={profile.Sqlite?.DatabasePath ?? throw new InvalidOperationException("SQLite profile is missing a database path.")}",
             DatabaseProviderKind.PostgreSql => BuildPostgreSqlConnectionString(profile),
             DatabaseProviderKind.InMemory => profile.InMemory?.DatabaseName ?? throw new InvalidOperationException("In-memory profile is missing a database name."),
             _ => throw new InvalidOperationException($"Unsupported provider '{profile.ProviderKind}'.")
@@ -878,7 +611,6 @@ public sealed class DatabaseProfileControlPlaneService(
             DisplayName = profile.DisplayName,
             ProviderKind = profile.ProviderKind,
             SourceKind = profile.SourceKind,
-            SqliteDatabasePath = profile.Sqlite?.DatabasePath,
             WorkspaceRoot = profile.Storage.WorkspaceRoot,
             PostgresHost = profile.PostgreSql?.Host ?? "localhost",
             PostgresPort = profile.PostgreSql?.Port ?? 5432,
@@ -889,8 +621,6 @@ public sealed class DatabaseProfileControlPlaneService(
                 : secretProtector.Unprotect(profile.PostgreSql.EncryptedPassword),
             PostgresAdminDatabaseName = profile.PostgreSql?.AdminDatabaseName,
             PostgresTrustServerCertificate = profile.PostgreSql?.TrustServerCertificate ?? false,
-            OriginProfileId = profile.Clone.OriginProfileId,
-            OriginSnapshotId = profile.Clone.OriginSnapshotId,
             IsRuntimeLocked = profile.Runtime.LockedByRuntimeOverride
         };
     }
@@ -899,9 +629,9 @@ public sealed class DatabaseProfileControlPlaneService(
     {
         return new DatabaseProfileEditorModel
         {
-            DisplayName = "Managed SQLite workspace",
-            ProviderKind = DatabaseProviderKind.Sqlite,
-            SourceKind = DatabaseProfileSourceKind.ManagedSqlite
+            DisplayName = "PostgreSQL workspace",
+            ProviderKind = DatabaseProviderKind.PostgreSql,
+            SourceKind = DatabaseProfileSourceKind.PostgresConnection
         };
     }
 
@@ -913,19 +643,7 @@ public sealed class DatabaseProfileControlPlaneService(
             return ControlPlanePathDefaults.ResolveConfiguredPath(hostEnvironment.ContentRootPath, configuredWorkspaceRoot);
         }
 
-        if (providerKind == DatabaseProviderKind.Sqlite)
-        {
-            var sqlitePath = TryExtractSqliteDatabasePath(configuredConnection);
-            if (!string.IsNullOrWhiteSpace(sqlitePath))
-            {
-                return Path.GetDirectoryName(Path.GetFullPath(sqlitePath))
-                    ?? throw new InvalidOperationException($"Unable to resolve a workspace root from '{sqlitePath}'.");
-            }
-        }
-
-        return providerKind == DatabaseProviderKind.Sqlite
-            ? ResolveDefaultWorkspaceRoot()
-            : ResolveRuntimeOverrideWorkspaceRoot(providerKind, configuredConnection);
+        return ResolveRuntimeOverrideWorkspaceRoot(providerKind, configuredConnection);
     }
 
     private string ResolveDefaultWorkspaceRoot()
@@ -951,7 +669,6 @@ public sealed class DatabaseProfileControlPlaneService(
         {
             DatabaseProviderKind.PostgreSql => BuildPostgreSqlOverrideWorkspaceFingerprint(configuredConnection),
             DatabaseProviderKind.InMemory => $"inmemory:{(string.IsNullOrWhiteSpace(configuredConnection) ? "candoitall" : configuredConnection.Trim().ToLowerInvariant())}",
-            DatabaseProviderKind.Sqlite => $"sqlite:{Path.GetFullPath(TryExtractSqliteDatabasePath(configuredConnection) ?? string.Empty).Replace('\\', '/').ToLowerInvariant()}",
             _ => providerKind.ToString()
         };
     }
@@ -976,7 +693,6 @@ public sealed class DatabaseProfileControlPlaneService(
 
         return providerKind switch
         {
-            DatabaseProviderKind.Sqlite => "SQLite profile",
             DatabaseProviderKind.PostgreSql => "PostgreSQL profile",
             DatabaseProviderKind.InMemory => "In-memory profile",
             _ => "Database profile"
@@ -987,7 +703,6 @@ public sealed class DatabaseProfileControlPlaneService(
     {
         return providerKind switch
         {
-            DatabaseProviderKind.Sqlite => sourceKind,
             DatabaseProviderKind.PostgreSql => DatabaseProfileSourceKind.PostgresConnection,
             DatabaseProviderKind.InMemory => DatabaseProfileSourceKind.InMemory,
             _ => sourceKind
@@ -1000,7 +715,6 @@ public sealed class DatabaseProfileControlPlaneService(
         {
             return configuredProvider.Trim().ToLowerInvariant() switch
             {
-                "sqlite" => DatabaseProviderKind.Sqlite,
                 "postgres" or "postgresql" => DatabaseProviderKind.PostgreSql,
                 "inmemory" or "memory" => DatabaseProviderKind.InMemory,
                 _ => throw new InvalidOperationException($"Unsupported database provider '{configuredProvider}'.")
@@ -1013,14 +727,18 @@ public sealed class DatabaseProfileControlPlaneService(
             return DatabaseProviderKind.PostgreSql;
         }
 
-        return DatabaseProviderKind.Sqlite;
+        if (!string.IsNullOrWhiteSpace(configuredConnection))
+        {
+            throw new InvalidOperationException("Database connection string does not look like a PostgreSQL connection string.");
+        }
+
+        return DatabaseProviderKind.PostgreSql;
     }
 
     private static string BuildDescriptor(DatabaseProfileRecord profile)
     {
         return profile.ProviderKind switch
         {
-            DatabaseProviderKind.Sqlite => profile.Sqlite?.DatabasePath ?? string.Empty,
             DatabaseProviderKind.PostgreSql => profile.PostgreSql is null
                 ? string.Empty
                 : $"{profile.PostgreSql.Host}:{profile.PostgreSql.Port}/{profile.PostgreSql.DatabaseName}",
@@ -1033,14 +751,6 @@ public sealed class DatabaseProfileControlPlaneService(
     {
         return profile.ProviderKind switch
         {
-            DatabaseProviderKind.Sqlite when profile.SourceKind == DatabaseProfileSourceKind.ManagedSqlite
-                => $"sqlite:managed:{profile.Id:N}",
-            DatabaseProviderKind.Sqlite when profile.SourceKind == DatabaseProfileSourceKind.SnapshotCache
-                => $"sqlite:snapshot:{profile.Id:N}",
-            DatabaseProviderKind.Sqlite when profile.SourceKind == DatabaseProfileSourceKind.IpfsSnapshot
-                => $"sqlite:ipfs:{profile.Id:N}",
-            DatabaseProviderKind.Sqlite
-                => $"sqlite:file:{Path.GetFullPath(profile.Sqlite?.DatabasePath ?? string.Empty).Replace('\\', '/').ToLowerInvariant()}",
             DatabaseProviderKind.PostgreSql
                 => $"postgres:{profile.PostgreSql?.Host.Trim().ToLowerInvariant()}:{profile.PostgreSql?.Port}:{profile.PostgreSql?.DatabaseName.Trim().ToLowerInvariant()}:{profile.PostgreSql?.Username.Trim().ToLowerInvariant()}",
             DatabaseProviderKind.InMemory
@@ -1049,33 +759,10 @@ public sealed class DatabaseProfileControlPlaneService(
         };
     }
 
-    private static string? TryExtractSqliteDatabasePath(string? connectionString)
+    private static bool IsPersistedRuntimeProfile(DatabaseProfileRecord profile)
     {
-        if (string.IsNullOrWhiteSpace(connectionString))
-        {
-            return null;
-        }
-
-        foreach (var segment in connectionString.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-        {
-            var separatorIndex = segment.IndexOf('=');
-            if (separatorIndex <= 0)
-            {
-                continue;
-            }
-
-            var key = segment[..separatorIndex].Trim();
-            if (!key.Equals("Data Source", StringComparison.OrdinalIgnoreCase) &&
-                !key.Equals("Filename", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            var value = segment[(separatorIndex + 1)..].Trim();
-            return string.IsNullOrWhiteSpace(value) ? null : value;
-        }
-
-        return null;
+        return profile.ProviderKind == DatabaseProviderKind.PostgreSql &&
+            profile.SourceKind == DatabaseProfileSourceKind.PostgresConnection;
     }
 
     private void LogSelectionLocked(ResolvedDatabaseProfile resolvedProfile)
@@ -1102,6 +789,11 @@ public sealed class DatabaseProfileControlPlaneService(
 
     private DatabaseProfileCatalogDocument ReadCatalogLocked()
     {
+        LegacyDatabaseProfileCatalogQuarantine.QuarantineIfNeeded(
+            controlPlanePathResolver.ResolveCatalogFilePath(),
+            controlPlanePathResolver.ResolveActiveProfileStateFilePath(),
+            logger);
+
         return ReadDocument(
             controlPlanePathResolver.ResolveCatalogFilePath(),
             static () => new DatabaseProfileCatalogDocument());

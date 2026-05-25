@@ -175,9 +175,6 @@ public sealed partial class CognitiveMemoryReviewUiService(
         return new CognitiveMemoryReviewUiPageWindow(pageIndex, pageSize);
     }
 
-    private static bool UsesSqlite(AppDbContext dbContext)
-        => dbContext.Database.ProviderName?.Contains("Sqlite", StringComparison.OrdinalIgnoreCase) == true;
-
     private static int CountFor(
         CognitiveMemoryReviewUiQuery query,
         CognitiveMemoryReviewUiSummary summary,

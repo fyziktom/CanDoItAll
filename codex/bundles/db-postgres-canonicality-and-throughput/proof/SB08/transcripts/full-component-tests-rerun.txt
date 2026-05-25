@@ -1,0 +1,33 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:01:39.70]     CanDoItAll.Tests.Components.MainLayoutDatabaseProfileTests.Main_layout_reopens_database_switcher_from_shell_utility [FAIL]
+  Neúspěšné CanDoItAll.Tests.Components.MainLayoutDatabaseProfileTests.Main_layout_reopens_database_switcher_from_shell_utility [34 s]
+  Chybová zpráva:
+   Bunit.Extensions.WaitForHelpers.WaitForFailedException : The assertion did not pass within the timeout period.
+
+If this test does not fail consistently, the reason may be that
+the wait timeout is too short, and the runtime did not have enough
+time to complete the necessary number of renders of the component under test.
+This can happen on highly utilized or slower hardware, for example.
+
+To determine if this is the cause, compare the check and render count(s) below
+and see if they match what is expected. If they do not,
+consider increasing the timeout, either at the individual
+method call level, e.g. WaitForElement("div", TimeSpan.FromSeconds(15)),
+or via the static TestContext.DefaultWaitTimeout property.
+
+Check count: 1.
+Component render count: 2.
+Total render count across all components: 3.
+---- Assert.Contains() Failure: Sub-string not found
+String:    "<div class="cda-shell-root"><div class="c"···
+Not found: "Already active"
+  Trasování zásobníku:
+     at Bunit.RenderedFragmentWaitForHelperExtensions.WaitForAssertion(IRenderedFragmentBase renderedFragment, Action assertion, Nullable`1 timeout) in /_/src/bunit.core/Extensions/WaitForHelpers/RenderedFragmentWaitForHelperExtensions.cs:line 75
+   at CanDoItAll.Tests.Components.MainLayoutDatabaseProfileTests.Main_layout_reopens_database_switcher_from_shell_utility() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\MainLayoutDatabaseProfileTests.cs:line 70
+   at CanDoItAll.Tests.Components.MainLayoutDatabaseProfileTests.Main_layout_reopens_database_switcher_from_shell_utility() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\MainLayoutDatabaseProfileTests.cs:line 70
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at CanDoItAll.Tests.Components.MainLayoutDatabaseProfileTests.<>c__DisplayClass2_0.<Main_layout_reopens_database_switcher_from_shell_utility>b__2() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\MainLayoutDatabaseProfileTests.cs:line 74
+   at Bunit.Extensions.WaitForHelpers.WaitForAssertionHelper.<>c__DisplayClass6_0.<.ctor>b__0() in /_/src/bunit.core/Extensions/WaitForHelpers/WaitForAssertionHelper.cs:line 34
+   at Bunit.Extensions.WaitForHelpers.WaitForHelper`1.OnAfterRender(Object sender, EventArgs args) in /_/src/bunit.core/Extensions/WaitForHelpers/WaitForHelper.cs:line 172

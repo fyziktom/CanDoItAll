@@ -26,9 +26,8 @@ public sealed partial class CognitiveMemoryReviewUiService
             .OrderBy(cluster => cluster.Readiness == CognitiveMemoryQualityClusterReadiness.NeedsHumanReview ? 0 : 1)
             .ThenBy(cluster => cluster.Readiness == CognitiveMemoryQualityClusterReadiness.Contradictory ? 0 : 1)
             .ThenByDescending(cluster => cluster.RiskLevel);
-        return await (UsesSqlite(dbContext)
-                ? orderedClusters.ThenBy(cluster => cluster.Id)
-                : orderedClusters.ThenByDescending(cluster => cluster.UpdatedAtUtc))
+        return await orderedClusters
+            .ThenByDescending(cluster => cluster.UpdatedAtUtc)
             .Skip(page.Skip)
             .Take(page.PageSize)
             .Select(cluster => new CognitiveMemoryQualityClusterView(
@@ -68,9 +67,8 @@ public sealed partial class CognitiveMemoryReviewUiService
             .OrderBy(cluster => cluster.Readiness == CognitiveMemoryQualityClusterReadiness.NeedsHumanReview ? 0 : 1)
             .ThenBy(cluster => cluster.Readiness == CognitiveMemoryQualityClusterReadiness.Contradictory ? 0 : 1)
             .ThenByDescending(cluster => cluster.RiskLevel);
-        var clusters = await (UsesSqlite(dbContext)
-                ? clustersQuery.ThenBy(cluster => cluster.Id)
-                : clustersQuery.ThenByDescending(cluster => cluster.UpdatedAtUtc))
+        var clusters = await clustersQuery
+            .ThenByDescending(cluster => cluster.UpdatedAtUtc)
             .Skip(page.Skip)
             .Take(page.PageSize)
             .ToArrayAsync(cancellationToken);
@@ -238,9 +236,8 @@ public sealed partial class CognitiveMemoryReviewUiService
         var orderedRuns = runsQuery
             .OrderBy(run => run.Status == CognitiveMemoryRunStatus.Failed ? 0 : 1)
             .ThenBy(run => run.Status == CognitiveMemoryRunStatus.Running ? 0 : 1);
-        return await (UsesSqlite(dbContext)
-                ? orderedRuns.ThenBy(run => run.Id)
-                : orderedRuns.ThenByDescending(run => run.StartedAtUtc))
+        return await orderedRuns
+            .ThenByDescending(run => run.StartedAtUtc)
             .Skip(page.Skip)
             .Take(page.PageSize)
             .Select(run => new CognitiveMemoryDreamRunView(
@@ -280,9 +277,8 @@ public sealed partial class CognitiveMemoryReviewUiService
             .OrderBy(candidate => candidate.Status == CognitiveMemoryDreamAggregateCandidateStatus.NeedsHumanReview ? 0 : 1)
             .ThenBy(candidate => candidate.Status == CognitiveMemoryDreamAggregateCandidateStatus.Proposed ? 0 : 1)
             .ThenByDescending(candidate => candidate.RiskLevel);
-        return await (UsesSqlite(dbContext)
-                ? orderedCandidates.ThenBy(candidate => candidate.Id)
-                : orderedCandidates.ThenByDescending(candidate => candidate.UpdatedAtUtc))
+        return await orderedCandidates
+            .ThenByDescending(candidate => candidate.UpdatedAtUtc)
             .Skip(page.Skip)
             .Take(page.PageSize)
             .Select(candidate => new CognitiveMemoryAggregateCandidateView(
@@ -319,9 +315,8 @@ public sealed partial class CognitiveMemoryReviewUiService
         }
 
         var page = ResolvePage(query, CognitiveMemoryReviewUiCollectionKind.SynthesizedRecalls);
-        return await (UsesSqlite(dbContext)
-                ? recallsQuery.OrderBy(recall => recall.Id)
-                : recallsQuery.OrderByDescending(recall => recall.CreatedAtUtc))
+        return await recallsQuery
+            .OrderByDescending(recall => recall.CreatedAtUtc)
             .Skip(page.Skip)
             .Take(page.PageSize)
             .Select(recall => new CognitiveMemorySynthesizedRecallView(

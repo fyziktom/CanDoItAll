@@ -12,18 +12,6 @@
                          Count="@($"{FilteredProfiles.Count} profile(s)")">
             <Actions>
                 <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                    <Button Text="Managed SQLite"
-                            ButtonStyle="ButtonStyle.Light"
-                            Size="ButtonSize.Small"
-                            Disabled="@IsDatabaseUiLocked"
-                            Click="ResetManagedSqliteProfileAsync"
-                            data-testid="database-profile-new-managed" />
-                    <Button Text="Open SQLite"
-                            ButtonStyle="ButtonStyle.Light"
-                            Size="ButtonSize.Small"
-                            Disabled="@IsDatabaseUiLocked"
-                            Click="ResetExternalSqliteProfileAsync"
-                            data-testid="database-profile-new-external" />
                     <Button Text="PostgreSQL"
                             ButtonStyle="ButtonStyle.Light"
                             Size="ButtonSize.Small"
@@ -62,6 +50,12 @@
                         <p class="cda-eyebrow">Current runtime selection</p>
                         <p class="text-base font-semibold text-slate-950">@currentSelection.DisplayName</p>
                         <p class="text-sm leading-6 text-slate-600">@currentSelection.Descriptor</p>
+                        @if (currentSelection.HasPendingRestartActivation)
+                        {
+                            <p class="text-sm leading-6 text-amber-700">
+                                Pending restart: @currentSelection.PendingRestartDisplayName (@currentSelection.PendingRestartDescriptor)
+                            </p>
+                        }
                     </Stack>
 
                     <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
@@ -87,11 +81,20 @@
             </div>
         }
 
+        @if (!string.IsNullOrWhiteSpace(databaseMessage))
+        {
+            <Alert AlertStyle="@ResolveMessageAlertStyle(databaseMessageTone)"
+                   Variant="Variant.Outlined"
+                   data-testid="database-profile-operation-message">
+                @databaseMessage
+            </Alert>
+        }
+
         @if (FilteredProfiles.Count == 0)
         {
             <EmptyState Eyebrow="No saved profiles"
-                        Title="Start with a managed SQLite profile"
-                        Description="Create a managed SQLite profile for local work or save an external SQLite/PostgreSQL profile for later activation." />
+                        Title="Start with a PostgreSQL profile"
+                        Description="Save a PostgreSQL profile for runtime activation." />
         }
         else
         {
@@ -109,7 +112,12 @@
                             <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                                 @if (profile.IsActive)
                                 {
-                                    <StatusBadge Tone="success" Text="Active" />
+                                    <StatusBadge Tone="success" Text="Running now" />
+                                }
+
+                                @if (profile.IsPendingRestartActivation)
+                                {
+                                    <StatusBadge Tone="warning" Text="Pending restart" />
                                 }
 
                                 @if (profile.IsRuntimeLocked)
@@ -178,7 +186,7 @@
                     }
 
                     <FormSection Title="Profile identity"
-                                 Description="Choose a clear name first. Managed SQLite keeps storage under the control plane, while external SQLite and PostgreSQL expect explicit workspace roots.">
+                                 Description="Choose a clear name and workspace root for this PostgreSQL runtime profile.">
                         <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                             <div>
                                 <label class="cda-field-label">Profile name</label>
@@ -191,7 +199,6 @@
                                 <label class="cda-field-label">Workspace root</label>
                                 <InputText @bind-Value="databaseProfileModel.WorkspaceRoot"
                                            class="cda-input"
-                                           disabled="@(databaseProfileModel.SourceKind == DatabaseProfileSourceKind.ManagedSqlite)"
                                            data-testid="database-profile-workspace-root" />
                             </div>
                         </Grid>
@@ -201,55 +208,16 @@
                             <StatusBadge Tone="neutral" Text="@DescribeSource(databaseProfileModel.SourceKind)" />
                             @if (databaseProfileModel.Id.HasValue && IsSelectedProfileActive)
                             {
-                                <StatusBadge Tone="success" Text="Active runtime profile" />
+                                <StatusBadge Tone="success" Text="Running now" />
+                            }
+                            @if (databaseProfileModel.Id.HasValue && IsSelectedProfilePendingRestart)
+                            {
+                                <StatusBadge Tone="warning" Text="Pending restart" />
                             }
                         </Cluster>
                     </FormSection>
 
-                    @if (databaseProfileModel.ProviderKind == DatabaseProviderKind.Sqlite)
-                    {
-                        <FormSection Title="SQLite source"
-                                     Description="Managed SQLite profiles get a control-plane-owned database path. External files keep the workspace root explicit, and snapshot-backed profiles materialize into a local working copy under the control plane.">
-                            @if (databaseProfileModel.SourceKind == DatabaseProfileSourceKind.ManagedSqlite)
-                            {
-                                <div class="rounded-[1.25rem] border border-sky-200 bg-sky-50 px-4 py-3 text-sm leading-6 text-sky-950"
-                                     data-testid="database-profile-managed-sqlite-info">
-                                    Managed SQLite creates the database file under the control plane after you save the profile and use Create empty.
-                                </div>
-                            }
-                            else if (databaseProfileModel.SourceKind is DatabaseProfileSourceKind.ExternalSqliteFile or DatabaseProfileSourceKind.ImportedSqlite)
-                            {
-                                <div>
-                                    <label class="cda-field-label">SQLite file path</label>
-                                    <InputText @bind-Value="databaseProfileModel.SqliteDatabasePath"
-                                               class="cda-input"
-                                               data-testid="database-profile-sqlite-path" />
-                                </div>
-                            }
-                            else if (databaseProfileModel.SourceKind is DatabaseProfileSourceKind.SnapshotCache or DatabaseProfileSourceKind.IpfsSnapshot)
-                            {
-                                <div class="rounded-[1.25rem] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-950"
-                                     data-testid="database-profile-snapshot-info">
-                                    Snapshot-backed profiles keep their SQLite working copy and storage roots under the control plane so clone/import results can diverge safely from the source.
-                                </div>
-
-                                <div>
-                                    <label class="cda-field-label">Materialized SQLite path</label>
-                                    <InputText @bind-Value="databaseProfileModel.SqliteDatabasePath"
-                                               class="cda-input"
-                                               disabled="true"
-                                               data-testid="database-profile-snapshot-path" />
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="rounded-[1.25rem] border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950">
-                                    This SQLite source kind is not editable from the settings form.
-                                </div>
-                            }
-                        </FormSection>
-                    }
-                    else if (databaseProfileModel.ProviderKind == DatabaseProviderKind.PostgreSql)
+                    @if (databaseProfileModel.ProviderKind == DatabaseProviderKind.PostgreSql)
                     {
                         <FormSection Title="PostgreSQL connection"
                                      Description="Save the profile first, then use Test connection to verify the target database or Create empty to provision it before activation.">
@@ -312,128 +280,12 @@
                     else
                     {
                         <FormSection Title="In-memory runtime"
-                                     Description="In-memory profiles are primarily useful for test harnesses and explicit runtime overrides.">
-                            <div>
-                                <label class="cda-field-label">Database name</label>
-                                <InputText @bind-Value="databaseProfileModel.SqliteDatabasePath"
-                                           class="cda-input"
-                                           data-testid="database-profile-inmemory-name" />
-                            </div>
+                                     Description="This runtime is available only for explicit overrides and test harnesses. Persisted data source management stays PostgreSQL-focused.">
+                            <Alert AlertStyle="AlertStyle.Info" Variant="Variant.Outlined">
+                                The current runtime does not expose editable persisted connection settings in this panel.
+                            </Alert>
                         </FormSection>
                     }
-
-                    <FormSection Title="Clone and snapshots"
-                                 Description="These actions always use the active runtime profile as the source and include managed files, exports, and evidence. Clone/import creates a new local working copy that can diverge safely after activation.">
-                        <Stack GapScale="LayoutGap.Large">
-                            @if (currentSelection is not null)
-                            {
-                                <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-3"
-                                     data-testid="database-snapshot-source-summary">
-                                    <Split Breakpoint="LayoutBreakpoint.None"
-                                           Gap="LayoutGap.Medium"
-                                           AlignItems="AlignItems.Start"
-                                           JustifyContent="JustifyContent.SpaceBetween"
-                                           Wrap="FlexWrap.Wrap">
-                                        <Stack GapScale="LayoutGap.Tiny" Class="min-w-0">
-                                            <p class="cda-eyebrow">Snapshot source</p>
-                                            <p class="text-base font-semibold text-slate-950">@currentSelection.DisplayName</p>
-                                            <p class="text-sm leading-6 text-slate-600">@currentSelection.Descriptor</p>
-                                        </Stack>
-
-                                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                                            <StatusBadge Tone="info" Text="@DescribeProvider(currentSelection.ProviderKind)" />
-                                            <StatusBadge Tone="neutral" Text="@DescribeSource(currentSelection.SourceKind)" />
-                                        </Cluster>
-                                    </Split>
-                                </div>
-
-                                <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                                    <div>
-                                        <label class="cda-field-label">Clone profile name</label>
-                                        <InputText @bind-Value="cloneDisplayName"
-                                                   class="cda-input"
-                                                   data-testid="database-clone-name" />
-                                    </div>
-
-                                    <div>
-                                        <label class="cda-field-label">Materialized profile name</label>
-                                        <InputText @bind-Value="snapshotProfileName"
-                                                   class="cda-input"
-                                                   data-testid="database-snapshot-profile-name" />
-                                    </div>
-                                </Grid>
-
-                                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                                    <Button Text="Create clone"
-                                            ButtonStyle="ButtonStyle.Info"
-                                            Type="button"
-                                            Disabled="@(databaseBusy || IsDatabaseUiLocked || string.IsNullOrWhiteSpace(cloneDisplayName))"
-                                            Click="CreateCloneAsync"
-                                            data-testid="database-clone-create" />
-                                    <Button Text="Save local snapshot"
-                                            ButtonStyle="ButtonStyle.Light"
-                                            Type="button"
-                                            Disabled="@(databaseBusy || IsDatabaseUiLocked)"
-                                            Click="CreateLocalSnapshotAsync"
-                                            data-testid="database-snapshot-local-create" />
-                                    <Button Text="Publish to IPFS"
-                                            ButtonStyle="ButtonStyle.Light"
-                                            Type="button"
-                                            Disabled="@(databaseBusy || IsDatabaseUiLocked)"
-                                            Click="CreateIpfsSnapshotAsync"
-                                            data-testid="database-snapshot-ipfs-create" />
-                                </Cluster>
-
-                                <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                                    <div>
-                                        <label class="cda-field-label">Local snapshot package</label>
-                                        <InputText @bind-Value="snapshotPackagePath"
-                                                   class="cda-input"
-                                                   placeholder="C:\path\to\snapshot.cda-snapshot.zip"
-                                                   data-testid="database-snapshot-package-path" />
-                                    </div>
-
-                                    <div>
-                                        <label class="cda-field-label">IPFS CID</label>
-                                        <InputText @bind-Value="snapshotCid"
-                                                   class="cda-input"
-                                                   placeholder="bafy..."
-                                                   data-testid="database-snapshot-cid" />
-                                    </div>
-                                </Grid>
-
-                                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                                    <Button Text="Restore local snapshot"
-                                            ButtonStyle="ButtonStyle.Info"
-                                            Type="button"
-                                            Disabled="@(databaseBusy || IsDatabaseUiLocked || string.IsNullOrWhiteSpace(snapshotProfileName) || string.IsNullOrWhiteSpace(snapshotPackagePath))"
-                                            Click="RestoreLocalSnapshotAsync"
-                                            data-testid="database-snapshot-local-restore" />
-                                    <Button Text="Restore IPFS snapshot"
-                                            ButtonStyle="ButtonStyle.Info"
-                                            Type="button"
-                                            Disabled="@(databaseBusy || IsDatabaseUiLocked || string.IsNullOrWhiteSpace(snapshotProfileName) || string.IsNullOrWhiteSpace(snapshotCid))"
-                                            Click="RestoreIpfsSnapshotAsync"
-                                            data-testid="database-snapshot-ipfs-restore" />
-                                </Cluster>
-
-                                @if (!string.IsNullOrWhiteSpace(latestSnapshotPackagePath) || !string.IsNullOrWhiteSpace(latestSnapshotCid))
-                                {
-                                    <div class="rounded-[1.25rem] border border-sky-200 bg-sky-50 px-4 py-3 text-sm leading-6 text-sky-950"
-                                         data-testid="database-snapshot-latest">
-                                        @if (!string.IsNullOrWhiteSpace(latestSnapshotPackagePath))
-                                        {
-                                            <p>Latest package: @latestSnapshotPackagePath</p>
-                                        }
-                                        @if (!string.IsNullOrWhiteSpace(latestSnapshotCid))
-                                        {
-                                            <p>Latest IPFS CID: @latestSnapshotCid</p>
-                                        }
-                                    </div>
-                                }
-                            }
-                        </Stack>
-                    </FormSection>
 
                     @if (!databaseProfileModel.Id.HasValue)
                     {
@@ -482,9 +334,9 @@
                                     data-testid="database-profile-save" />
                             @if (databaseProfileModel.Id.HasValue)
                             {
-                                <Button Text="@(IsSelectedProfileActive ? "Active now" : "Activate")"
+                                <Button Text="@ResolveActivationButtonText()"
                                         ButtonStyle="ButtonStyle.Warning"
-                                        Disabled="@(databaseBusy || IsDatabaseUiLocked || IsSelectedProfileActive)"
+                                        Disabled="@(databaseBusy || IsDatabaseUiLocked || IsSelectedProfileActive || IsSelectedProfilePendingRestart)"
                                         Click="ActivateProfileAsync"
                                         data-testid="database-profile-activate" />
                             }
@@ -700,7 +552,7 @@
 </Dialog>
 
 @code {
-    private DatabaseProfileEditorModel databaseProfileModel = NewManagedSqliteProfile();
+    private DatabaseProfileEditorModel databaseProfileModel = NewPostgreSqlProfile();
     private IReadOnlyList<DatabaseProfileSummary> databaseProfiles = [];
     private DatabaseSelectionStateModel? currentSelection;
     private IReadOnlyList<DatabaseTransferSourceSummary> transferSources = [];
@@ -708,12 +560,6 @@
     private readonly HashSet<string> selectedTransferItemKeys = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<Guid, DatabaseProfileSchemaHealth> schemaHealthByProfileId = [];
     private string profileSearch = string.Empty;
-    private string cloneDisplayName = string.Empty;
-    private string snapshotProfileName = string.Empty;
-    private string snapshotPackagePath = string.Empty;
-    private string snapshotCid = string.Empty;
-    private string? latestSnapshotPackagePath;
-    private string? latestSnapshotCid;
     private string? databaseMessage;
     private string databaseMessageTone = "neutral";
     private string? transferMessage;
@@ -732,14 +578,16 @@
     private bool IsSelectedProfileActive
         => databaseProfileModel.Id.HasValue &&
            currentSelection is not null &&
-           currentSelection.ActiveProfileId == databaseProfileModel.Id.Value;
+           currentSelection.RuntimeProfileId == databaseProfileModel.Id.Value;
+
+    private bool IsSelectedProfilePendingRestart
+        => databaseProfileModel.Id.HasValue &&
+           currentSelection?.PendingRestartProfileId == databaseProfileModel.Id.Value;
 
     private bool SupportsConnectionTest => databaseProfileModel.ProviderKind == DatabaseProviderKind.PostgreSql;
 
     private bool SupportsCreateEmpty
-        => databaseProfileModel.ProviderKind == DatabaseProviderKind.PostgreSql ||
-           (databaseProfileModel.ProviderKind == DatabaseProviderKind.Sqlite &&
-            databaseProfileModel.SourceKind is DatabaseProfileSourceKind.ManagedSqlite or DatabaseProfileSourceKind.ExternalSqliteFile or DatabaseProfileSourceKind.ImportedSqlite);
+        => databaseProfileModel.ProviderKind == DatabaseProviderKind.PostgreSql;
 
     private DatabaseProfileSchemaHealth? SelectedSchemaHealth
         => databaseProfileModel.Id.HasValue &&
@@ -807,7 +655,6 @@
     {
         databaseProfiles = await DatabaseProfileWorkspaceService.ListProfilesAsync();
         currentSelection = await DatabaseProfileWorkspaceService.GetCurrentSelectionAsync();
-        RefreshSnapshotDrafts();
 
         if (selectedProfileId.HasValue)
         {
@@ -825,9 +672,9 @@
 
         if (preferCurrentSelection &&
             currentSelection is not null &&
-            databaseProfiles.Any(profile => profile.Id == currentSelection.ActiveProfileId))
+            databaseProfiles.Any(profile => profile.Id == currentSelection.RuntimeProfileId))
         {
-            databaseProfileModel = await DatabaseProfileWorkspaceService.GetProfileAsync(currentSelection.ActiveProfileId);
+            databaseProfileModel = await DatabaseProfileWorkspaceService.GetProfileAsync(currentSelection.RuntimeProfileId);
             await RefreshSelectedSchemaHealthAsync();
             return;
         }
@@ -840,7 +687,7 @@
             return;
         }
 
-        databaseProfileModel = NewManagedSqliteProfile(currentSelection);
+        databaseProfileModel = NewPostgreSqlProfile(currentSelection);
     }
 
     private async Task EditProfileAsync(Guid id)
@@ -848,20 +695,6 @@
         databaseMessage = null;
         databaseProfileModel = await DatabaseProfileWorkspaceService.GetProfileAsync(id);
         await RefreshSelectedSchemaHealthAsync();
-    }
-
-    private Task ResetManagedSqliteProfileAsync()
-    {
-        databaseMessage = null;
-        databaseProfileModel = NewManagedSqliteProfile(currentSelection);
-        return Task.CompletedTask;
-    }
-
-    private Task ResetExternalSqliteProfileAsync()
-    {
-        databaseMessage = null;
-        databaseProfileModel = NewExternalSqliteProfile(currentSelection);
-        return Task.CompletedTask;
     }
 
     private Task ResetPostgreSqlProfileAsync()
@@ -881,13 +714,9 @@
 
         databaseProfileModel = databaseProfileModel.ProviderKind switch
         {
-            DatabaseProviderKind.Sqlite when databaseProfileModel.SourceKind == DatabaseProfileSourceKind.ManagedSqlite
-                => NewManagedSqliteProfile(currentSelection),
-            DatabaseProviderKind.Sqlite
-                => NewExternalSqliteProfile(currentSelection),
             DatabaseProviderKind.PostgreSql
                 => NewPostgreSqlProfile(currentSelection),
-            _ => NewManagedSqliteProfile(currentSelection)
+            _ => NewPostgreSqlProfile(currentSelection)
         };
         return Task.CompletedTask;
     }
@@ -1025,10 +854,10 @@
     private Guid? ResolveDefaultTransferSource(Guid targetProfileId)
     {
         if (currentSelection is not null &&
-            currentSelection.ActiveProfileId != targetProfileId &&
-            transferSources.Any(source => source.ProfileId == currentSelection.ActiveProfileId))
+            currentSelection.RuntimeProfileId != targetProfileId &&
+            transferSources.Any(source => source.ProfileId == currentSelection.RuntimeProfileId))
         {
-            return currentSelection.ActiveProfileId;
+            return currentSelection.RuntimeProfileId;
         }
 
         return transferSources.FirstOrDefault()?.ProfileId;
@@ -1216,127 +1045,6 @@
         return Task.CompletedTask;
     }
 
-    private async Task CreateCloneAsync()
-    {
-        if (currentSelection is null)
-        {
-            SetDatabaseMessage("An active runtime profile is required before you can create a clone.", "warning");
-            return;
-        }
-
-        databaseBusy = true;
-        var result = await DatabaseProfileWorkspaceService.CloneAsync(
-            currentSelection.ActiveProfileId,
-            cloneDisplayName,
-            DatabaseSnapshotTransportKind.Local);
-        databaseBusy = false;
-        if (result.IsFailure)
-        {
-            SetDatabaseMessage(DescribeErrors(result.Errors), "danger");
-            return;
-        }
-
-        latestSnapshotPackagePath = result.Value!.PackagePath;
-        snapshotPackagePath = result.Value.PackagePath;
-        await ReloadAsync(result.Value.ProfileId);
-        SetDatabaseMessage("Clone profile created from the active runtime snapshot. Activate it when you are ready to branch.", "success");
-    }
-
-    private async Task CreateLocalSnapshotAsync()
-    {
-        if (currentSelection is null)
-        {
-            SetDatabaseMessage("An active runtime profile is required before you can save a snapshot.", "warning");
-            return;
-        }
-
-        databaseBusy = true;
-        var result = await DatabaseProfileWorkspaceService.CreateSnapshotAsync(
-            currentSelection.ActiveProfileId,
-            DatabaseSnapshotTransportKind.Local);
-        databaseBusy = false;
-        if (result.IsFailure)
-        {
-            SetDatabaseMessage(DescribeErrors(result.Errors), "danger");
-            return;
-        }
-
-        latestSnapshotPackagePath = result.Value!.PackagePath;
-        snapshotPackagePath = result.Value.PackagePath;
-        SetDatabaseMessage($"Local snapshot saved to {result.Value.PackagePath}.", "success");
-    }
-
-    private async Task CreateIpfsSnapshotAsync()
-    {
-        if (currentSelection is null)
-        {
-            SetDatabaseMessage("An active runtime profile is required before you can publish a snapshot.", "warning");
-            return;
-        }
-
-        databaseBusy = true;
-        var result = await DatabaseProfileWorkspaceService.CreateSnapshotAsync(
-            currentSelection.ActiveProfileId,
-            DatabaseSnapshotTransportKind.Ipfs);
-        databaseBusy = false;
-        if (result.IsFailure)
-        {
-            SetDatabaseMessage(DescribeErrors(result.Errors), "danger");
-            return;
-        }
-
-        latestSnapshotPackagePath = result.Value!.PackagePath;
-        latestSnapshotCid = result.Value.IpfsCid;
-        snapshotPackagePath = result.Value.PackagePath;
-        snapshotCid = result.Value.IpfsCid ?? string.Empty;
-        SetDatabaseMessage(
-            string.IsNullOrWhiteSpace(result.Value.IpfsCid)
-                ? "IPFS snapshot was created but no CID was returned."
-                : $"Snapshot published to IPFS as {result.Value.IpfsCid}.",
-            string.IsNullOrWhiteSpace(result.Value.IpfsCid) ? "warning" : "success");
-    }
-
-    private async Task RestoreLocalSnapshotAsync()
-    {
-        databaseBusy = true;
-        var result = await DatabaseProfileWorkspaceService.MaterializeSnapshotAsync(new DatabaseSnapshotMaterializationRequest
-        {
-            DisplayName = snapshotProfileName,
-            PackagePath = snapshotPackagePath
-        });
-        databaseBusy = false;
-        if (result.IsFailure)
-        {
-            SetDatabaseMessage(DescribeErrors(result.Errors), "danger");
-            return;
-        }
-
-        latestSnapshotPackagePath = result.Value!.PackagePath;
-        await ReloadAsync(result.Value.ProfileId);
-        SetDatabaseMessage("Snapshot restored into a new local working-copy profile. Activate it to switch the runtime.", "success");
-    }
-
-    private async Task RestoreIpfsSnapshotAsync()
-    {
-        databaseBusy = true;
-        var result = await DatabaseProfileWorkspaceService.MaterializeSnapshotAsync(new DatabaseSnapshotMaterializationRequest
-        {
-            DisplayName = snapshotProfileName,
-            SnapshotCid = snapshotCid
-        });
-        databaseBusy = false;
-        if (result.IsFailure)
-        {
-            SetDatabaseMessage(DescribeErrors(result.Errors), "danger");
-            return;
-        }
-
-        latestSnapshotPackagePath = result.Value!.PackagePath;
-        latestSnapshotCid = result.Value.IpfsCid;
-        await ReloadAsync(result.Value.ProfileId);
-        SetDatabaseMessage("IPFS snapshot restored into a new local working-copy profile. Activate it to switch the runtime.", "success");
-    }
-
     private async Task ActivateProfileAsync()
     {
         if (!databaseProfileModel.Id.HasValue)
@@ -1363,7 +1071,11 @@
             return;
         }
 
-        SetDatabaseMessage("Database activation requested. The shell will reload a safe route for the new runtime profile.", "info");
+        var switchResult = result.Value!;
+        var activationMessage = string.IsNullOrWhiteSpace(switchResult.Message)
+            ? "Database profile activation was saved. Restart the process to make it the canonical runtime database."
+            : switchResult.Message;
+        SetDatabaseMessage(activationMessage, switchResult.RequiresRestart ? "warning" : "info");
     }
 
     private async Task DeleteProfileAsync()
@@ -1436,15 +1148,14 @@
             : null;
     }
 
-    private void RefreshSnapshotDrafts()
+    private string ResolveActivationButtonText()
     {
-        cloneDisplayName = currentSelection is null
-            ? "Snapshot clone"
-            : $"{currentSelection.DisplayName} clone";
+        if (IsSelectedProfileActive)
+        {
+            return "Running now";
+        }
 
-        snapshotProfileName = currentSelection is null
-            ? "Snapshot working copy"
-            : $"{currentSelection.DisplayName} working copy";
+        return IsSelectedProfilePendingRestart ? "Pending restart" : "Activate for restart";
     }
 
     private static string DescribeErrors(IReadOnlyList<Error> errors)
@@ -1484,6 +1195,17 @@
         };
     }
 
+    private static AlertStyle ResolveMessageAlertStyle(string tone)
+    {
+        return tone switch
+        {
+            "success" => AlertStyle.Success,
+            "warning" => AlertStyle.Warning,
+            "danger" => AlertStyle.Danger,
+            _ => AlertStyle.Info
+        };
+    }
+
     private static bool HasSchemaDetails(DatabaseProfileSchemaHealth schemaHealth)
     {
         return schemaHealth.PendingMigrations.Count > 0 || schemaHealth.SchemaIssues.Count > 0;
@@ -1519,7 +1241,6 @@
     {
         return providerKind switch
         {
-            DatabaseProviderKind.Sqlite => "SQLite",
             DatabaseProviderKind.PostgreSql => "PostgreSQL",
             DatabaseProviderKind.InMemory => "In-memory",
             _ => providerKind.ToString()
@@ -1530,12 +1251,7 @@
     {
         return sourceKind switch
         {
-            DatabaseProfileSourceKind.ManagedSqlite => "Managed SQLite",
-            DatabaseProfileSourceKind.ExternalSqliteFile => "External SQLite file",
-            DatabaseProfileSourceKind.ImportedSqlite => "Imported SQLite file",
             DatabaseProfileSourceKind.PostgresConnection => "PostgreSQL connection",
-            DatabaseProfileSourceKind.SnapshotCache => "Snapshot cache",
-            DatabaseProfileSourceKind.IpfsSnapshot => "IPFS snapshot",
             DatabaseProfileSourceKind.InMemory => "In-memory",
             _ => sourceKind.ToString()
         };
@@ -1548,8 +1264,7 @@
             DatabaseProfileResolutionSource.ExplicitOverride => "Explicit startup override",
             DatabaseProfileResolutionSource.PersistedActiveProfile => "Last active profile",
             DatabaseProfileResolutionSource.PersistedCatalogFallback => "Persisted catalog fallback",
-            DatabaseProfileResolutionSource.LegacyDiscovery => "Legacy discovery",
-            DatabaseProfileResolutionSource.AutoProvisionedManagedSqlite => "Auto-provisioned managed SQLite",
+            DatabaseProfileResolutionSource.AutoProvisionedPostgreSql => "Auto-provisioned PostgreSQL",
             _ => resolutionSource.ToString()
         };
     }
@@ -1558,12 +1273,6 @@
     {
         return model.ProviderKind switch
         {
-            DatabaseProviderKind.Sqlite when model.SourceKind == DatabaseProfileSourceKind.ManagedSqlite
-                => "Managed SQLite keeps both the database file and workspace root under the control plane for predictable local switching.",
-            DatabaseProviderKind.Sqlite when model.SourceKind is DatabaseProfileSourceKind.SnapshotCache or DatabaseProfileSourceKind.IpfsSnapshot
-                => "Snapshot-backed profiles materialize into a local control-plane working copy so branch-style edits and managed files can diverge safely from the source snapshot.",
-            DatabaseProviderKind.Sqlite
-                => "External or imported SQLite profiles point at an existing file path and keep the workspace root explicit.",
             DatabaseProviderKind.PostgreSql
                 => "PostgreSQL profiles carry the connection metadata needed to test, create, and activate a runtime database safely.",
             DatabaseProviderKind.InMemory
@@ -1575,28 +1284,6 @@
     private static string FormatTimestamp(DateTimeOffset value)
     {
         return value.LocalDateTime.ToString("g");
-    }
-
-    private static DatabaseProfileEditorModel NewManagedSqliteProfile(DatabaseSelectionStateModel? selection = null)
-    {
-        return new DatabaseProfileEditorModel
-        {
-            DisplayName = "Managed SQLite workspace",
-            ProviderKind = DatabaseProviderKind.Sqlite,
-            SourceKind = DatabaseProfileSourceKind.ManagedSqlite,
-            WorkspaceRoot = selection?.WorkspaceRoot
-        };
-    }
-
-    private static DatabaseProfileEditorModel NewExternalSqliteProfile(DatabaseSelectionStateModel? selection = null)
-    {
-        return new DatabaseProfileEditorModel
-        {
-            DisplayName = "External SQLite workspace",
-            ProviderKind = DatabaseProviderKind.Sqlite,
-            SourceKind = DatabaseProfileSourceKind.ExternalSqliteFile,
-            WorkspaceRoot = selection?.WorkspaceRoot
-        };
     }
 
     private static DatabaseProfileEditorModel NewPostgreSqlProfile(DatabaseSelectionStateModel? selection = null)

@@ -36,7 +36,7 @@ The durable schema, module registration, versioned API aliases, contract/example
 
 ## Architectural Summary
 
-Cognitive Memory is a product module, not an MCP server and not a private MAF provider. `CanDoItAll.Web` hosts the Blazor route and Minimal API. `CanDoItAll.Composition` registers the module and Qdrant RAG driver when configured. `AppDbContext` stores durable memory state through provider-specific SQLite and PostgreSQL migrations. RAG/Qdrant and SemanticCompletion are adapter-backed projection and semantic utilities, not canonical truth.
+Cognitive Memory is a product module, not an MCP server and not a private MAF provider. `CanDoItAll.Web` hosts the Blazor route and Minimal API. `CanDoItAll.Composition` registers the module and Qdrant RAG driver when configured. `AppDbContext` stores durable memory state through PostgreSQL migrations. RAG/Qdrant and SemanticCompletion are adapter-backed projection and semantic utilities, not canonical truth.
 
 The safe mental model is:
 

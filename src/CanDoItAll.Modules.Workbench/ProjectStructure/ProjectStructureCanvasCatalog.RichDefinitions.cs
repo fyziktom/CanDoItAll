@@ -77,8 +77,7 @@ internal static partial class ProjectStructureCanvasCatalog
     [
         Option("postgresql", "PostgreSQL"),
         Option("sqlServer", "SQL Server"),
-        Option("mysql", "MySQL"),
-        Option("sqlite", "SQLite")
+        Option("mysql", "MySQL")
     ];
 
     private static readonly IReadOnlyList<CanvasWorkbenchInputOption> AiReferenceOptions =

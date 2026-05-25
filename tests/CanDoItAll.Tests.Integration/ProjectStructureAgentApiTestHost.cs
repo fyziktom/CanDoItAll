@@ -42,7 +42,7 @@ internal sealed class ProjectStructureAgentApiTestHost : IAsyncDisposable
     public static async Task<ProjectStructureAgentApiTestHost> CreateAsync()
         => await CreateAsync(
             "candoitall-api-tests",
-            testEnvironment => testEnvironment.CreateManagedSqliteProfile("api-host"));
+            testEnvironment => testEnvironment.CreatePostgreSqlProfile("api-host"));
 
     public static async Task<ProjectStructureAgentApiTestHost> CreateAsync(
         string testEnvironmentKey,

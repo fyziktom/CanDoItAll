@@ -1,0 +1,35 @@
+tests\CanDoItAll.Tests.Integration\PostgreSqlRuntimeThroughputBenchmarkTests.cs:16:public sealed class PostgreSqlRuntimeThroughputBenchmarkTests {
+tests\CanDoItAll.Tests.Integration\PostgreSqlRuntimeThroughputBenchmarkTests.cs:17:    private const string RunVariable = "CANDOITALL_RUN_SB06_BENCHMARK";
+tests\CanDoItAll.Tests.Integration\PostgreSqlRuntimeThroughputBenchmarkTests.cs:18:    private const string OutputVariable = "CANDOITALL_SB06_BENCHMARK_OUTPUT";
+tests\CanDoItAll.Tests.Integration\PostgreSqlRuntimeThroughputBenchmarkTests.cs:69:            RuntimeClaimMetrics.RecordBatch(
+tests\CanDoItAll.Tests.Integration\PostgreSqlRuntimeThroughputBenchmarkTests.cs:78:                RuntimeClaimMetrics.RecordStaleFinalization(result.Workload);
+tests\CanDoItAll.Tests.Integration\PostgreSqlRuntimeThroughputBenchmarkTests.cs:101:        Assert.Contains(RuntimeClaimMetrics.ClaimedRecordsInstrumentName, metricProbe.Instruments);
+tests\CanDoItAll.Tests.Integration\PostgreSqlRuntimeThroughputBenchmarkTests.cs:102:        Assert.Contains(RuntimeClaimMetrics.ProcessedRecordsInstrumentName, metricProbe.Instruments);
+tests\CanDoItAll.Tests.Integration\PostgreSqlRuntimeThroughputBenchmarkTests.cs:103:        Assert.Contains(RuntimeClaimMetrics.BatchDurationInstrumentName, metricProbe.Instruments);
+tests\CanDoItAll.Tests.Integration\PostgreSqlRuntimeThroughputBenchmarkTests.cs:104:        Assert.Contains(RuntimeClaimMetrics.StaleFinalizationsInstrumentName, metricProbe.Instruments);
+tests\CanDoItAll.Tests.Integration\PostgreSqlRuntimeThroughputBenchmarkTests.cs:105:        Assert.Contains(RuntimeClaimMetrics.DuplicateSuppressionsInstrumentName, metricProbe.Instruments);
+tests\CanDoItAll.Tests.Integration\PostgreSqlRuntimeThroughputBenchmarkTests.cs:800:                if (!string.Equals(instrument.Meter.Name, RuntimeClaimMetrics.MeterName, StringComparison.Ordinal)) {
+tests\CanDoItAll.Tests.Integration\PostgreSqlRuntimeThroughputBenchmarkTests.cs:808:                if (string.Equals(instrument.Name, RuntimeClaimMetrics.DuplicateSuppressionsInstrumentName, StringComparison.Ordinal)) {
+tests\CanDoItAll.Tests.Integration\PostgreSqlRuntimeThroughputBenchmarkTests.cs:812:                if (string.Equals(instrument.Name, RuntimeClaimMetrics.StaleFinalizationsInstrumentName, StringComparison.Ordinal)) {
+src\CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:266:            RuntimeClaimMetrics.RecordStaleFinalization("connector-command");
+src\CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:406:            RuntimeClaimMetrics.RecordDuplicateSuppression("connector-command");
+src\CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:535:            RuntimeClaimMetrics.RecordBatch(
+src\CanDoItAll.Modules.Workspace\Connectors\ConnectorOutboxService.cs:571:        RuntimeClaimMetrics.RecordBatch(
+src\CanDoItAll.Infrastructure\Diagnostics\RuntimeClaimMetrics.cs:6:public static class RuntimeClaimMetrics {
+src\CanDoItAll.Infrastructure\Diagnostics\RuntimeClaimMetrics.cs:8:    public const string ClaimedRecordsInstrumentName = "candoitall.runtime.claimed_records";
+src\CanDoItAll.Infrastructure\Diagnostics\RuntimeClaimMetrics.cs:9:    public const string ProcessedRecordsInstrumentName = "candoitall.runtime.processed_records";
+src\CanDoItAll.Infrastructure\Diagnostics\RuntimeClaimMetrics.cs:10:    public const string StaleFinalizationsInstrumentName = "candoitall.runtime.stale_finalizations";
+src\CanDoItAll.Infrastructure\Diagnostics\RuntimeClaimMetrics.cs:11:    public const string DuplicateSuppressionsInstrumentName = "candoitall.runtime.duplicate_suppressions";
+src\CanDoItAll.Infrastructure\Diagnostics\RuntimeClaimMetrics.cs:12:    public const string BatchDurationInstrumentName = "candoitall.runtime.batch_duration";
+src\CanDoItAll.Infrastructure\Diagnostics\RuntimeClaimMetrics.cs:36:    public static void RecordBatch(
+src\CanDoItAll.Infrastructure\Diagnostics\RuntimeClaimMetrics.cs:49:    public static void RecordStaleFinalization(string workload) {
+src\CanDoItAll.Infrastructure\Diagnostics\RuntimeClaimMetrics.cs:53:    public static void RecordDuplicateSuppression(string workload) {
+src\CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:65:                RuntimeClaimMetrics.RecordDuplicateSuppression("automation-envelope");
+src\CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:118:                RuntimeClaimMetrics.RecordDuplicateSuppression("automation-envelope");
+src\CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:192:            RuntimeClaimMetrics.RecordBatch(
+src\CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:225:        RuntimeClaimMetrics.RecordBatch(
+src\CanDoItAll.Modules.Automation\Services\AutomationMessagingServices.cs:566:            RuntimeClaimMetrics.RecordStaleFinalization("automation-delivery");
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:273:            RuntimeClaimMetrics.RecordDuplicateSuppression("process-outbox-automation-dispatch");
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:456:            RuntimeClaimMetrics.RecordBatch(
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:500:        RuntimeClaimMetrics.RecordBatch(
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:771:            RuntimeClaimMetrics.RecordStaleFinalization("process-outbox");

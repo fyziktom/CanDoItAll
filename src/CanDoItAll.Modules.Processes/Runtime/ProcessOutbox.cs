@@ -1,4 +1,8 @@
+using System.Data;
+using System.Data.Common;
+using System.Diagnostics;
 using System.Text.Json;
+using CanDoItAll.Infrastructure.Diagnostics;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Search;
 using CanDoItAll.SharedKernel;
@@ -136,29 +140,30 @@ public sealed class ProcessOutboxService(
             definition.Id,
             null,
             "save-definition",
-             new ProcessOutboxPayload(
-                 new SearchDocumentInput(
-                     "process-definition",
-                     definition.Id.ToString(),
-                     "Processes",
+            new ProcessOutboxPayload(
+                new SearchDocumentInput(
+                    "process-definition",
+                    definition.Id.ToString(),
+                    "Processes",
                     definition.Name,
                     definition.Summary,
                     $"{definition.ValueStatement}\nCustomer: {definition.CustomerName}\nOwner: {definition.OwnerName}\nVersion: {workingVersion.VersionNumber}",
                     route,
-                     definition.ProjectId),
-                 null,
-                 new ActivityWriteRequest(
-                     "processes",
+                    definition.ProjectId),
+                null,
+                new ActivityWriteRequest(
+                    "processes",
                     isNew ? "create-definition" : "update-definition",
                     isNew ? "Created process definition" : "Updated process definition",
                     definition.Name,
                     definition.ProjectId,
                     "process-definition",
-                     definition.Id,
-                     route,
-                     "process-management"),
-                 null),
-             cancellationToken);
+                    definition.Id,
+                    route,
+                    Actor: "process-management",
+                    IdempotencyKey: BuildDefinitionSaveActivityIdempotencyKey(definition.Id, workingVersion.Id, isNew)),
+                null),
+            cancellationToken);
     }
 
     public Task<Guid> EnqueueDefinitionPublishAsync(
@@ -177,21 +182,22 @@ public sealed class ProcessOutboxService(
             definition.Id,
             null,
             "publish-definition",
-             new ProcessOutboxPayload(
-                 null,
-                 null,
-                 new ActivityWriteRequest(
+            new ProcessOutboxPayload(
+                null,
+                null,
+                new ActivityWriteRequest(
                     "processes",
                     "publish-definition",
                     "Published process definition",
                     $"{definition.Name} v{publishedVersion.VersionNumber} is now immutable for runtime use.",
-                     definition.ProjectId,
-                     "process-definition",
-                     definition.Id,
-                     BuildDefinitionRoute(definition.Id, definition.ProjectId),
-                     "process-management"),
-                 null),
-             cancellationToken);
+                    definition.ProjectId,
+                    "process-definition",
+                    definition.Id,
+                    BuildDefinitionRoute(definition.Id, definition.ProjectId),
+                    Actor: "process-management",
+                    IdempotencyKey: BuildDefinitionPublishActivityIdempotencyKey(definition.Id, publishedVersion.Id)),
+                null),
+            cancellationToken);
     }
 
     public Task<Guid> EnqueueDefinitionDeleteAsync(
@@ -242,12 +248,13 @@ public sealed class ProcessOutboxService(
                     "process-run",
                     run.Id,
                     BuildRunRoute(run),
-                    "process-management"),
+                    Actor: "process-management",
+                    IdempotencyKey: BuildRunStartActivityIdempotencyKey(run.Id)),
                 null),
             cancellationToken);
     }
 
-    public Task<Guid> EnqueueAutomationDispatchAsync(
+    public async Task<Guid> EnqueueAutomationDispatchAsync(
         AppDbContext dbContext,
         Guid? projectId,
         Guid definitionId,
@@ -257,8 +264,17 @@ public sealed class ProcessOutboxService(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(dbContext);
+        var normalizedTrigger = NormalizeAutomationDispatchTrigger(trigger);
+        var existingOutboxId =
+            FindTrackedPendingAutomationDispatch(dbContext, definitionId, runId, stepRunId, normalizedTrigger) ??
+            await FindPendingAutomationDispatchAsync(dbContext, definitionId, runId, stepRunId, normalizedTrigger, cancellationToken);
+        if (existingOutboxId.HasValue)
+        {
+            RuntimeClaimMetrics.RecordDuplicateSuppression("process-outbox-automation-dispatch");
+            return existingOutboxId.Value;
+        }
 
-        return EnqueueAsync(
+        return await EnqueueAsync(
             dbContext,
             projectId,
             definitionId,
@@ -271,10 +287,115 @@ public sealed class ProcessOutboxService(
                 new ProcessOutboxAutomationDispatchRequest(
                     runId,
                     stepRunId,
-                    string.IsNullOrWhiteSpace(trigger)
-                        ? "process-runtime"
-                        : trigger.Trim())),
+                    normalizedTrigger)),
             cancellationToken);
+    }
+
+    private static string BuildDefinitionSaveActivityIdempotencyKey(Guid definitionId, Guid versionId, bool isNew)
+        => $"process-outbox:definition:{definitionId:N}:version:{versionId:N}:{(isNew ? "create" : "update")}:activity";
+
+    private static string BuildDefinitionPublishActivityIdempotencyKey(Guid definitionId, Guid versionId)
+        => $"process-outbox:definition:{definitionId:N}:version:{versionId:N}:publish:activity";
+
+    private static string BuildRunStartActivityIdempotencyKey(Guid runId)
+        => $"process-outbox:run:{runId:N}:start:activity";
+
+    private static string NormalizeAutomationDispatchTrigger(string trigger)
+        => string.IsNullOrWhiteSpace(trigger)
+            ? "process-runtime"
+            : trigger.Trim();
+
+    private static Guid? FindTrackedPendingAutomationDispatch(
+        AppDbContext dbContext,
+        Guid definitionId,
+        Guid runId,
+        Guid? stepRunId,
+        string trigger)
+    {
+        foreach (var entry in dbContext.ChangeTracker.Entries<ProcessOutboxRecord>())
+        {
+            if (entry.State == EntityState.Deleted ||
+                !IsMatchingPendingAutomationDispatch(entry.Entity, definitionId, runId, stepRunId, trigger))
+            {
+                continue;
+            }
+
+            return entry.Entity.Id;
+        }
+
+        return null;
+    }
+
+    private static async Task<Guid?> FindPendingAutomationDispatchAsync(
+        AppDbContext dbContext,
+        Guid definitionId,
+        Guid runId,
+        Guid? stepRunId,
+        string trigger,
+        CancellationToken cancellationToken)
+    {
+        var records = await dbContext.Set<ProcessOutboxRecord>()
+            .AsNoTracking()
+            .Where(item =>
+                item.ProcessDefinitionId == definitionId &&
+                item.ProcessRunId == runId &&
+                item.CommandKey == AutomationDispatchCommandKey &&
+                item.Status == ProcessOutboxRecordStatus.Pending)
+            .Select(item => new
+            {
+                item.Id,
+                item.PayloadJson
+            })
+            .ToListAsync(cancellationToken);
+
+        foreach (var record in records)
+        {
+            if (TryReadAutomationDispatch(record.PayloadJson, out var automationDispatch) &&
+                automationDispatch.StepRunId == stepRunId &&
+                string.Equals(automationDispatch.Trigger, trigger, StringComparison.Ordinal))
+            {
+                return record.Id;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool IsMatchingPendingAutomationDispatch(
+        ProcessOutboxRecord record,
+        Guid definitionId,
+        Guid runId,
+        Guid? stepRunId,
+        string trigger)
+    {
+        return record.ProcessDefinitionId == definitionId &&
+            record.ProcessRunId == runId &&
+            record.CommandKey == AutomationDispatchCommandKey &&
+            record.Status == ProcessOutboxRecordStatus.Pending &&
+            TryReadAutomationDispatch(record.PayloadJson, out var automationDispatch) &&
+            automationDispatch.StepRunId == stepRunId &&
+            string.Equals(automationDispatch.Trigger, trigger, StringComparison.Ordinal);
+    }
+
+    private static bool TryReadAutomationDispatch(
+        string payloadJson,
+        out ProcessOutboxAutomationDispatchRequest automationDispatch)
+    {
+        try
+        {
+            var payload = JsonSerializer.Deserialize<ProcessOutboxPayload>(payloadJson, PayloadSerializerOptions);
+            if (payload?.AutomationDispatch is not null)
+            {
+                automationDispatch = payload.AutomationDispatch;
+                return true;
+            }
+        }
+        catch (JsonException)
+        {
+        }
+
+        automationDispatch = new ProcessOutboxAutomationDispatchRequest(Guid.Empty, null, string.Empty);
+        return false;
     }
 
     public async Task<ProcessOutboxRecordStatus?> ProcessAsync(
@@ -303,6 +424,7 @@ public sealed class ProcessOutboxService(
         int take = DefaultBatchSize,
         TimeSpan? leaseDuration = null,
         DateTimeOffset? minimumAutomationDispatchCreatedAtUtc = null,
+        int? maxParallelism = null,
         CancellationToken cancellationToken = default)
     {
         if (take <= 0)
@@ -311,41 +433,54 @@ public sealed class ProcessOutboxService(
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var batchStopwatch = Stopwatch.StartNew();
         var now = clock.GetUtcNow();
         var effectiveLeaseDuration = leaseDuration is null || leaseDuration.Value <= TimeSpan.Zero
             ? DefaultLeaseDuration
             : leaseDuration.Value;
-        List<Guid> recordIds;
-        if (dbContext.Database.IsSqlite())
+        if (dbContext.Database.IsNpgsql())
         {
-            recordIds = await ListPendingRecordIdsForSqliteAsync(
+            var claimedRecords = await ClaimPendingRecordsPostgreSqlAsync(
                 dbContext,
-                now,
                 take,
+                now,
+                effectiveLeaseDuration,
                 minimumAutomationDispatchCreatedAtUtc,
                 cancellationToken);
-        }
-        else
-        {
-            var query = dbContext.Set<ProcessOutboxRecord>()
-                .Where(item => item.Status == ProcessOutboxRecordStatus.Pending)
-                .Where(item => item.NextAttemptAtUtc == null || item.NextAttemptAtUtc <= now)
-                .Where(item => item.LeaseExpiresAtUtc == null || item.LeaseExpiresAtUtc <= now);
-            if (minimumAutomationDispatchCreatedAtUtc.HasValue)
-            {
-                var cutoff = minimumAutomationDispatchCreatedAtUtc.Value;
-                query = query.Where(item =>
-                    item.CommandKey != AutomationDispatchCommandKey ||
-                    item.CreatedAtUtc >= cutoff);
-            }
 
-            recordIds = await query
-                .OrderBy(item => item.NextAttemptAtUtc ?? item.CreatedAtUtc)
-                .ThenBy(item => item.CreatedAtUtc)
-                .Take(take)
-                .Select(item => item.Id)
-                .ToListAsync(cancellationToken);
+            var processedPostgreSqlCount = await ProcessClaimedPostgreSqlBatchAsync(
+                claimedRecords,
+                take,
+                maxParallelism,
+                cancellationToken);
+            RuntimeClaimMetrics.RecordBatch(
+                "process-outbox",
+                claimedRecords.Count,
+                processedPostgreSqlCount,
+                take,
+                ResolveBatchParallelism(maxParallelism, take),
+                batchStopwatch.Elapsed);
+            return processedPostgreSqlCount;
         }
+
+        var query = dbContext.Set<ProcessOutboxRecord>()
+            .Where(item => item.Status == ProcessOutboxRecordStatus.Pending)
+            .Where(item => item.NextAttemptAtUtc == null || item.NextAttemptAtUtc <= now)
+            .Where(item => item.LeaseExpiresAtUtc == null || item.LeaseExpiresAtUtc <= now);
+        if (minimumAutomationDispatchCreatedAtUtc.HasValue)
+        {
+            var cutoff = minimumAutomationDispatchCreatedAtUtc.Value;
+            query = query.Where(item =>
+                item.CommandKey != AutomationDispatchCommandKey ||
+                item.CreatedAtUtc >= cutoff);
+        }
+
+        var recordIds = await query
+            .OrderBy(item => item.NextAttemptAtUtc ?? item.CreatedAtUtc)
+            .ThenBy(item => item.CreatedAtUtc)
+            .Take(take)
+            .Select(item => item.Id)
+            .ToListAsync(cancellationToken);
 
         var processedCount = 0;
         foreach (var recordId in recordIds)
@@ -356,11 +491,99 @@ public sealed class ProcessOutboxService(
                 continue;
             }
 
-            await ProcessClaimedAsync(recordId, leaseToken, cancellationToken);
-            processedCount++;
+            if (await ProcessClaimedAsync(recordId, leaseToken, cancellationToken) is not null)
+            {
+                processedCount++;
+            }
         }
 
+        RuntimeClaimMetrics.RecordBatch(
+            "process-outbox",
+            recordIds.Count,
+            processedCount,
+            take,
+            1,
+            batchStopwatch.Elapsed);
         return processedCount;
+    }
+
+    private static async Task<IReadOnlyList<ClaimedProcessOutboxRecord>> ClaimPendingRecordsPostgreSqlAsync(
+        AppDbContext dbContext,
+        int take,
+        DateTimeOffset now,
+        TimeSpan leaseDuration,
+        DateTimeOffset? minimumAutomationDispatchCreatedAtUtc,
+        CancellationToken cancellationToken)
+    {
+        var connection = dbContext.Database.GetDbConnection();
+        var shouldCloseConnection = connection.State != ConnectionState.Open;
+        if (shouldCloseConnection)
+        {
+            await connection.OpenAsync(cancellationToken);
+        }
+
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText =
+                """
+                WITH due AS (
+                    SELECT o."Id"
+                    FROM "Processes_Outbox" AS o
+                    WHERE o."Status" = @pendingStatus
+                      AND (o."NextAttemptAtUtc" IS NULL OR o."NextAttemptAtUtc" <= @now)
+                      AND (o."LeaseExpiresAtUtc" IS NULL OR o."LeaseExpiresAtUtc" <= @now)
+                      AND (
+                          @hasMinimumAutomationCreatedAtUtc = FALSE
+                          OR o."CommandKey" <> @automationCommandKey
+                          OR o."CreatedAtUtc" >= @minimumAutomationCreatedAtUtc
+                      )
+                    ORDER BY COALESCE(o."NextAttemptAtUtc", o."CreatedAtUtc"), o."CreatedAtUtc"
+                    FOR UPDATE SKIP LOCKED
+                    LIMIT @take
+                )
+                UPDATE "Processes_Outbox" AS o
+                SET "LeaseToken" = concat(@tokenPrefix, replace(o."Id"::text, '-', '')),
+                    "LeaseExpiresAtUtc" = CASE
+                        WHEN o."CommandKey" = @automationCommandKey THEN @automationLeaseExpiresAtUtc
+                        ELSE @leaseExpiresAtUtc
+                    END,
+                    "UpdatedAtUtc" = @now
+                FROM due
+                WHERE o."Id" = due."Id"
+                RETURNING o."Id", o."LeaseToken", o."ProcessRunId", o."CommandKey";
+                """;
+            AddParameter(command, "@pendingStatus", (int)ProcessOutboxRecordStatus.Pending);
+            AddParameter(command, "@now", now);
+            AddParameter(command, "@take", take);
+            AddParameter(command, "@tokenPrefix", $"{Guid.NewGuid():N}:");
+            AddParameter(command, "@automationCommandKey", AutomationDispatchCommandKey);
+            AddParameter(command, "@hasMinimumAutomationCreatedAtUtc", minimumAutomationDispatchCreatedAtUtc.HasValue);
+            AddParameter(command, "@minimumAutomationCreatedAtUtc", minimumAutomationDispatchCreatedAtUtc ?? now);
+            AddParameter(command, "@leaseExpiresAtUtc", now.Add(leaseDuration));
+            AddParameter(command, "@automationLeaseExpiresAtUtc", now.Add(ResolveClaimLeaseDuration(AutomationDispatchCommandKey, leaseDuration)));
+
+            var claims = new List<ClaimedProcessOutboxRecord>();
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                claims.Add(new ClaimedProcessOutboxRecord(
+                    reader.GetGuid(0),
+                    reader.GetString(1),
+                    BuildOutboxPartitionKey(
+                        reader.IsDBNull(2) ? null : reader.GetGuid(2),
+                        reader.GetString(3))));
+            }
+
+            return claims;
+        }
+        finally
+        {
+            if (shouldCloseConnection)
+            {
+                await connection.CloseAsync();
+            }
+        }
     }
 
     private async Task<Guid> EnqueueAsync(
@@ -420,6 +643,7 @@ public sealed class ProcessOutboxService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var now = clock.GetUtcNow();
         var record = await dbContext.Set<ProcessOutboxRecord>()
+            .AsNoTracking()
             .FirstOrDefaultAsync(item => item.Id == outboxId, cancellationToken);
         if (record is null)
         {
@@ -435,33 +659,47 @@ public sealed class ProcessOutboxService(
 
         if (record.Status is ProcessOutboxRecordStatus.Completed or ProcessOutboxRecordStatus.DeadLettered)
         {
-            ReleaseLease(record);
-            await dbContext.SaveChangesAsync(cancellationToken);
+            await ReleaseClaimedLeaseAsync(outboxId, leaseToken, now, cancellationToken);
             return record.Status;
         }
 
         if (record.NextAttemptAtUtc.HasValue && record.NextAttemptAtUtc.Value > now)
         {
-            ReleaseLease(record);
-            await dbContext.SaveChangesAsync(cancellationToken);
+            await ReleaseClaimedLeaseAsync(outboxId, leaseToken, now, cancellationToken);
             return record.Status;
         }
 
-        record.AttemptCount++;
+        var attemptCount = await TryStartClaimedAttemptAsync(
+            dbContext,
+            outboxId,
+            leaseToken,
+            now,
+            cancellationToken);
+        if (attemptCount is null)
+        {
+            return null;
+        }
+
+        record.AttemptCount = attemptCount.Value;
         record.LastAttemptAtUtc = now;
         record.UpdatedAtUtc = now;
-        await dbContext.SaveChangesAsync(cancellationToken);
 
         Exception? dispatchFailure = null;
+        var leaseRenewalMonitor = new ProcessOutboxLeaseRenewalMonitor();
         using var leaseRenewalCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var leaseRenewalTask = RenewLeaseUntilDispatchCompletesAsync(
             record.Id,
             record.LeaseToken,
             record.CommandKey,
+            leaseRenewalMonitor,
             leaseRenewalCancellation.Token);
         try
         {
             await DispatchAsync(record, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception exception)
         {
@@ -472,15 +710,27 @@ public sealed class ProcessOutboxService(
             await StopLeaseRenewalAsync(leaseRenewalCancellation, leaseRenewalTask);
         }
 
+        if (leaseRenewalMonitor.LeaseLost || dispatchFailure is ProcessOutboxLeaseLostException)
+        {
+            logger.LogWarning(
+                dispatchFailure ?? leaseRenewalMonitor.Failure,
+                "Process outbox record {OutboxId} lost lease token {LeaseToken} before finalization; canonical state was not updated.",
+                record.Id,
+                MaskLeaseToken(leaseToken));
+            return null;
+        }
+
         now = clock.GetUtcNow();
+        ProcessOutboxRecordStatus finalStatus;
+        DateTimeOffset? completedAtUtc;
+        DateTimeOffset? nextAttemptAtUtc;
+        string lastError;
         if (dispatchFailure is null)
         {
-            record.Status = ProcessOutboxRecordStatus.Completed;
-            record.CompletedAtUtc = now;
-            record.NextAttemptAtUtc = null;
-            record.LastError = string.Empty;
-            ReleaseLease(record);
-            record.UpdatedAtUtc = now;
+            finalStatus = ProcessOutboxRecordStatus.Completed;
+            completedAtUtc = now;
+            nextAttemptAtUtc = null;
+            lastError = string.Empty;
         }
         else if (record.AttemptCount >= MaxAttempts)
         {
@@ -488,12 +738,10 @@ public sealed class ProcessOutboxService(
                 dispatchFailure,
                 "Process outbox record {OutboxId} exhausted all retry attempts and moved to dead-letter.",
                 record.Id);
-            record.Status = ProcessOutboxRecordStatus.DeadLettered;
-            record.CompletedAtUtc = null;
-            record.NextAttemptAtUtc = null;
-            record.LastError = NormalizeError(dispatchFailure.Message, "Process side-effect dispatch exhausted all retry attempts.");
-            ReleaseLease(record);
-            record.UpdatedAtUtc = now;
+            finalStatus = ProcessOutboxRecordStatus.DeadLettered;
+            completedAtUtc = null;
+            nextAttemptAtUtc = null;
+            lastError = NormalizeError(dispatchFailure.Message, "Process side-effect dispatch exhausted all retry attempts.");
         }
         else
         {
@@ -502,16 +750,33 @@ public sealed class ProcessOutboxService(
                 "Process outbox record {OutboxId} failed attempt {AttemptCount} and will be retried.",
                 record.Id,
                 record.AttemptCount);
-            record.Status = ProcessOutboxRecordStatus.Pending;
-            record.CompletedAtUtc = null;
-            record.NextAttemptAtUtc = now.Add(ComputeBackoff(record.AttemptCount));
-            record.LastError = NormalizeError(dispatchFailure.Message, "Process side-effect dispatch failed and will be retried.");
-            ReleaseLease(record);
-            record.UpdatedAtUtc = now;
+            finalStatus = ProcessOutboxRecordStatus.Pending;
+            completedAtUtc = null;
+            nextAttemptAtUtc = now.Add(ComputeBackoff(record.AttemptCount));
+            lastError = NormalizeError(dispatchFailure.Message, "Process side-effect dispatch failed and will be retried.");
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return record.Status;
+        var finalized = await TryFinalizeClaimedRecordAsync(
+            dbContext,
+            record.Id,
+            leaseToken,
+            finalStatus,
+            completedAtUtc,
+            nextAttemptAtUtc,
+            lastError,
+            now,
+            cancellationToken);
+        if (!finalized)
+        {
+            RuntimeClaimMetrics.RecordStaleFinalization("process-outbox");
+            logger.LogWarning(
+                "Process outbox record {OutboxId} lost lease token {LeaseToken} during finalization; canonical state was not updated.",
+                record.Id,
+                MaskLeaseToken(leaseToken));
+            return null;
+        }
+
+        return finalStatus;
     }
 
     private async Task DispatchAsync(ProcessOutboxRecord record, CancellationToken cancellationToken)
@@ -551,12 +816,37 @@ public sealed class ProcessOutboxService(
                 payload.AutomationDispatch.ProcessRunId,
                 payload.AutomationDispatch.StepRunId,
                 payload.AutomationDispatch.Trigger,
-                token => RenewClaimedLeaseAsync(record.Id, leaseToken, record.CommandKey, token),
+                token => RenewClaimedLeaseOrThrowAsync(record.Id, leaseToken, record.CommandKey, token),
                 cancellationToken);
         }
     }
 
-    private async Task RenewClaimedLeaseAsync(
+    private async Task RenewClaimedLeaseOrThrowAsync(
+        Guid outboxId,
+        string leaseToken,
+        string commandKey,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (await RenewClaimedLeaseAsync(outboxId, leaseToken, commandKey, cancellationToken))
+            {
+                return;
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            throw new ProcessOutboxLeaseLostException(outboxId, leaseToken, exception);
+        }
+
+        throw new ProcessOutboxLeaseLostException(outboxId, leaseToken);
+    }
+
+    private async Task<bool> RenewClaimedLeaseAsync(
         Guid outboxId,
         string leaseToken,
         string commandKey,
@@ -564,29 +854,22 @@ public sealed class ProcessOutboxService(
     {
         if (string.IsNullOrWhiteSpace(leaseToken))
         {
-            return;
+            return false;
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var now = clock.GetUtcNow();
         var leaseExpiresAtUtc = now.Add(ResolveClaimLeaseDuration(commandKey, DefaultLeaseDuration));
-        var updatedRows = dbContext.Database.IsSqlite()
-            ? await RenewClaimedLeaseForSqliteAsync(
-                dbContext,
-                outboxId,
-                leaseToken,
-                now,
-                leaseExpiresAtUtc,
-                cancellationToken)
-            : await dbContext.Set<ProcessOutboxRecord>()
-                .Where(item => item.Id == outboxId)
-                .Where(item => item.Status == ProcessOutboxRecordStatus.Pending)
-                .Where(item => item.LeaseToken == leaseToken)
-                .ExecuteUpdateAsync(
-                    setters => setters
-                        .SetProperty(item => item.LeaseExpiresAtUtc, leaseExpiresAtUtc)
-                        .SetProperty(item => item.UpdatedAtUtc, now),
-                    cancellationToken);
+        var updatedRows = await dbContext.Set<ProcessOutboxRecord>()
+            .Where(item => item.Id == outboxId)
+            .Where(item => item.Status == ProcessOutboxRecordStatus.Pending)
+            .Where(item => item.LeaseToken == leaseToken)
+            .Where(item => item.LeaseExpiresAtUtc != null && item.LeaseExpiresAtUtc > now)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(item => item.LeaseExpiresAtUtc, leaseExpiresAtUtc)
+                    .SetProperty(item => item.UpdatedAtUtc, now),
+                cancellationToken);
 
         if (updatedRows == 0)
         {
@@ -594,12 +877,15 @@ public sealed class ProcessOutboxService(
                 "Could not renew process outbox lease for record {OutboxId}; another worker may have claimed or completed it.",
                 outboxId);
         }
+
+        return updatedRows > 0;
     }
 
     private async Task RenewLeaseUntilDispatchCompletesAsync(
         Guid outboxId,
         string leaseToken,
         string commandKey,
+        ProcessOutboxLeaseRenewalMonitor leaseRenewalMonitor,
         CancellationToken cancellationToken)
     {
         while (!cancellationToken.IsCancellationRequested)
@@ -607,7 +893,11 @@ public sealed class ProcessOutboxService(
             try
             {
                 await Task.Delay(LeaseRenewalHeartbeatInterval, cancellationToken);
-                await RenewClaimedLeaseAsync(outboxId, leaseToken, commandKey, cancellationToken);
+                if (!await RenewClaimedLeaseAsync(outboxId, leaseToken, commandKey, cancellationToken))
+                {
+                    leaseRenewalMonitor.MarkLeaseLost();
+                    return;
+                }
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -615,10 +905,12 @@ public sealed class ProcessOutboxService(
             }
             catch (Exception exception)
             {
+                leaseRenewalMonitor.MarkLeaseLost(exception);
                 logger.LogWarning(
                     exception,
-                    "Could not heartbeat-renew process outbox lease for record {OutboxId}. The dispatch will continue and the next heartbeat will retry.",
+                    "Could not heartbeat-renew process outbox lease for record {OutboxId}; canonical finalization will be suppressed unless ownership is renewed by the active worker.",
                     outboxId);
+                return;
             }
         }
     }
@@ -635,6 +927,95 @@ public sealed class ProcessOutboxService(
         catch (OperationCanceledException)
         {
         }
+    }
+
+    private async Task<int?> TryStartClaimedAttemptAsync(
+        AppDbContext dbContext,
+        Guid outboxId,
+        string leaseToken,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        var updatedRows = await dbContext.Set<ProcessOutboxRecord>()
+            .Where(item => item.Id == outboxId)
+            .Where(item => item.Status == ProcessOutboxRecordStatus.Pending)
+            .Where(item => item.LeaseToken == leaseToken)
+            .Where(item => item.LeaseExpiresAtUtc != null && item.LeaseExpiresAtUtc > now)
+            .Where(item => item.NextAttemptAtUtc == null || item.NextAttemptAtUtc <= now)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(item => item.AttemptCount, item => item.AttemptCount + 1)
+                    .SetProperty(item => item.LastAttemptAtUtc, now)
+                    .SetProperty(item => item.UpdatedAtUtc, now),
+                cancellationToken);
+        if (updatedRows == 0)
+        {
+            logger.LogWarning(
+                "Process outbox record {OutboxId} lost lease token {LeaseToken} before the attempt could start.",
+                outboxId,
+                MaskLeaseToken(leaseToken));
+            return null;
+        }
+
+        return await dbContext.Set<ProcessOutboxRecord>()
+            .AsNoTracking()
+            .Where(item => item.Id == outboxId && item.LeaseToken == leaseToken)
+            .Select(item => (int?)item.AttemptCount)
+            .SingleOrDefaultAsync(cancellationToken);
+    }
+
+    private async Task ReleaseClaimedLeaseAsync(
+        Guid outboxId,
+        string leaseToken,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(leaseToken))
+        {
+            return;
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await dbContext.Set<ProcessOutboxRecord>()
+            .Where(item => item.Id == outboxId)
+            .Where(item => item.LeaseToken == leaseToken)
+            .Where(item => item.LeaseExpiresAtUtc != null && item.LeaseExpiresAtUtc > now)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(item => item.LeaseToken, string.Empty)
+                    .SetProperty(item => item.LeaseExpiresAtUtc, (DateTimeOffset?)null)
+                    .SetProperty(item => item.UpdatedAtUtc, now),
+                cancellationToken);
+    }
+
+    private async Task<bool> TryFinalizeClaimedRecordAsync(
+        AppDbContext dbContext,
+        Guid outboxId,
+        string leaseToken,
+        ProcessOutboxRecordStatus status,
+        DateTimeOffset? completedAtUtc,
+        DateTimeOffset? nextAttemptAtUtc,
+        string lastError,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        var updatedRows = await dbContext.Set<ProcessOutboxRecord>()
+            .Where(item => item.Id == outboxId)
+            .Where(item => item.Status == ProcessOutboxRecordStatus.Pending)
+            .Where(item => item.LeaseToken == leaseToken)
+            .Where(item => item.LeaseExpiresAtUtc != null && item.LeaseExpiresAtUtc > now)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(item => item.Status, status)
+                    .SetProperty(item => item.CompletedAtUtc, completedAtUtc)
+                    .SetProperty(item => item.NextAttemptAtUtc, nextAttemptAtUtc)
+                    .SetProperty(item => item.LastError, lastError)
+                    .SetProperty(item => item.LeaseToken, string.Empty)
+                    .SetProperty(item => item.LeaseExpiresAtUtc, (DateTimeOffset?)null)
+                    .SetProperty(item => item.UpdatedAtUtc, now),
+                cancellationToken);
+
+        return updatedRows > 0;
     }
 
     private async Task<string?> TryClaimRecordAsync(
@@ -657,25 +1038,17 @@ public sealed class ProcessOutboxService(
         var claimLeaseDuration = ResolveClaimLeaseDuration(commandKey, leaseDuration);
         var leaseExpiresAtUtc = now.Add(claimLeaseDuration);
 
-        var updatedRows = dbContext.Database.IsSqlite()
-            ? await TryClaimRecordForSqliteAsync(
-                dbContext,
-                outboxId,
-                now,
-                leaseExpiresAtUtc,
-                leaseToken,
-                cancellationToken)
-            : await dbContext.Set<ProcessOutboxRecord>()
-                .Where(item => item.Id == outboxId)
-                .Where(item => item.Status == ProcessOutboxRecordStatus.Pending)
-                .Where(item => item.NextAttemptAtUtc == null || item.NextAttemptAtUtc <= now)
-                .Where(item => item.LeaseExpiresAtUtc == null || item.LeaseExpiresAtUtc <= now)
-                .ExecuteUpdateAsync(
-                    setters => setters
-                        .SetProperty(item => item.LeaseToken, leaseToken)
-                        .SetProperty(item => item.LeaseExpiresAtUtc, leaseExpiresAtUtc)
-                        .SetProperty(item => item.UpdatedAtUtc, now),
-                    cancellationToken);
+        var updatedRows = await dbContext.Set<ProcessOutboxRecord>()
+            .Where(item => item.Id == outboxId)
+            .Where(item => item.Status == ProcessOutboxRecordStatus.Pending)
+            .Where(item => item.NextAttemptAtUtc == null || item.NextAttemptAtUtc <= now)
+            .Where(item => item.LeaseExpiresAtUtc == null || item.LeaseExpiresAtUtc <= now)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(item => item.LeaseToken, leaseToken)
+                    .SetProperty(item => item.LeaseExpiresAtUtc, leaseExpiresAtUtc)
+                    .SetProperty(item => item.UpdatedAtUtc, now),
+                cancellationToken);
 
         if (updatedRows > 0 &&
             string.Equals(commandKey, AutomationDispatchCommandKey, StringComparison.Ordinal))
@@ -691,6 +1064,99 @@ public sealed class ProcessOutboxService(
             : leaseToken;
     }
 
+    private static void AddParameter(DbCommand command, string name, object value)
+    {
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = name;
+        parameter.Value = value;
+        command.Parameters.Add(parameter);
+    }
+
+    private async Task<int> ProcessClaimedPostgreSqlBatchAsync(
+        IReadOnlyList<ClaimedProcessOutboxRecord> claimedRecords,
+        int take,
+        int? maxParallelism,
+        CancellationToken cancellationToken)
+    {
+        if (claimedRecords.Count == 0)
+        {
+            return 0;
+        }
+
+        var boundedParallelism = ResolveBatchParallelism(maxParallelism, take);
+        using var throttler = new SemaphoreSlim(boundedParallelism, boundedParallelism);
+        var processedCount = 0;
+        var tasks = claimedRecords
+            .GroupBy(record => record.PartitionKey, StringComparer.Ordinal)
+            .Select(async group =>
+            {
+                await throttler.WaitAsync(cancellationToken);
+                try
+                {
+                    foreach (var record in group)
+                    {
+                        if (await ProcessClaimedAsync(record.Id, record.LeaseToken, cancellationToken) is not null)
+                        {
+                            Interlocked.Increment(ref processedCount);
+                        }
+                    }
+                }
+                finally
+                {
+                    throttler.Release();
+                }
+            })
+            .ToArray();
+
+        await Task.WhenAll(tasks);
+        return processedCount;
+    }
+
+    private static int ResolveBatchParallelism(int? maxParallelism, int take)
+    {
+        var requested = maxParallelism.GetValueOrDefault(1);
+        if (requested <= 0)
+        {
+            requested = 1;
+        }
+
+        return Math.Clamp(requested, 1, Math.Max(1, take));
+    }
+
+    private static string BuildOutboxPartitionKey(Guid? processRunId, string commandKey)
+    {
+        var runPartition = processRunId?.ToString("N") ?? "global";
+        return $"{runPartition}:{commandKey}";
+    }
+
+    private sealed record ClaimedProcessOutboxRecord(Guid Id, string LeaseToken, string PartitionKey);
+
+    private sealed class ProcessOutboxLeaseRenewalMonitor
+    {
+        public bool LeaseLost { get; private set; }
+
+        public Exception? Failure { get; private set; }
+
+        public void MarkLeaseLost(Exception? failure = null)
+        {
+            LeaseLost = true;
+            Failure = failure;
+        }
+    }
+
+    private sealed class ProcessOutboxLeaseLostException : Exception
+    {
+        public ProcessOutboxLeaseLostException(Guid outboxId, string leaseToken)
+            : base($"Process outbox record '{outboxId:D}' lost lease token '{ProcessOutboxService.MaskLeaseToken(leaseToken)}' before finalization.")
+        {
+        }
+
+        public ProcessOutboxLeaseLostException(Guid outboxId, string leaseToken, Exception innerException)
+            : base($"Process outbox record '{outboxId:D}' could not renew lease token '{ProcessOutboxService.MaskLeaseToken(leaseToken)}' before finalization.", innerException)
+        {
+        }
+    }
+
     internal static TimeSpan ResolveClaimLeaseDuration(string commandKey, TimeSpan requestedLeaseDuration)
     {
         if (string.Equals(commandKey, AutomationDispatchCommandKey, StringComparison.Ordinal) &&
@@ -700,88 +1166,6 @@ public sealed class ProcessOutboxService(
         }
 
         return requestedLeaseDuration;
-    }
-
-    private static Task<List<Guid>> ListPendingRecordIdsForSqliteAsync(
-        AppDbContext dbContext,
-        DateTimeOffset now,
-        int take,
-        DateTimeOffset? minimumAutomationDispatchCreatedAtUtc,
-        CancellationToken cancellationToken)
-    {
-        if (minimumAutomationDispatchCreatedAtUtc.HasValue)
-        {
-            return dbContext.Database
-                .SqlQuery<Guid>($"""
-                                 SELECT "Id" AS "Value"
-                                 FROM "Processes_Outbox"
-                                 WHERE "Status" = {(int)ProcessOutboxRecordStatus.Pending}
-                                   AND ("NextAttemptAtUtc" IS NULL OR "NextAttemptAtUtc" <= {now})
-                                   AND ("LeaseExpiresAtUtc" IS NULL OR "LeaseExpiresAtUtc" <= {now})
-                                   AND ("CommandKey" <> {AutomationDispatchCommandKey} OR "CreatedAtUtc" >= {minimumAutomationDispatchCreatedAtUtc.Value})
-                                 ORDER BY COALESCE("NextAttemptAtUtc", "CreatedAtUtc"), "CreatedAtUtc"
-                                 LIMIT {take}
-                                 """)
-                .ToListAsync(cancellationToken);
-        }
-
-        return dbContext.Database
-            .SqlQuery<Guid>($"""
-                             SELECT "Id" AS "Value"
-                             FROM "Processes_Outbox"
-                             WHERE "Status" = {(int)ProcessOutboxRecordStatus.Pending}
-                               AND ("NextAttemptAtUtc" IS NULL OR "NextAttemptAtUtc" <= {now})
-                               AND ("LeaseExpiresAtUtc" IS NULL OR "LeaseExpiresAtUtc" <= {now})
-                             ORDER BY COALESCE("NextAttemptAtUtc", "CreatedAtUtc"), "CreatedAtUtc"
-                             LIMIT {take}
-                             """)
-            .ToListAsync(cancellationToken);
-    }
-
-    private static Task<int> TryClaimRecordForSqliteAsync(
-        AppDbContext dbContext,
-        Guid outboxId,
-        DateTimeOffset now,
-        DateTimeOffset leaseExpiresAtUtc,
-        string leaseToken,
-        CancellationToken cancellationToken)
-    {
-        return dbContext.Database.ExecuteSqlInterpolatedAsync($"""
-                                                               UPDATE "Processes_Outbox"
-                                                               SET "LeaseToken" = {leaseToken},
-                                                                   "LeaseExpiresAtUtc" = {leaseExpiresAtUtc},
-                                                                   "UpdatedAtUtc" = {now}
-                                                               WHERE "Id" = {outboxId}
-                                                                 AND "Status" = {(int)ProcessOutboxRecordStatus.Pending}
-                                                                 AND ("NextAttemptAtUtc" IS NULL OR "NextAttemptAtUtc" <= {now})
-                                                                 AND ("LeaseExpiresAtUtc" IS NULL OR "LeaseExpiresAtUtc" <= {now})
-                                                               """,
-            cancellationToken);
-    }
-
-    private static Task<int> RenewClaimedLeaseForSqliteAsync(
-        AppDbContext dbContext,
-        Guid outboxId,
-        string leaseToken,
-        DateTimeOffset now,
-        DateTimeOffset leaseExpiresAtUtc,
-        CancellationToken cancellationToken)
-    {
-        return dbContext.Database.ExecuteSqlInterpolatedAsync($"""
-                                                               UPDATE "Processes_Outbox"
-                                                               SET "LeaseExpiresAtUtc" = {leaseExpiresAtUtc},
-                                                                   "UpdatedAtUtc" = {now}
-                                                               WHERE "Id" = {outboxId}
-                                                                 AND "Status" = {(int)ProcessOutboxRecordStatus.Pending}
-                                                                 AND "LeaseToken" = {leaseToken}
-                                                               """,
-            cancellationToken);
-    }
-
-    private static void ReleaseLease(ProcessOutboxRecord record)
-    {
-        record.LeaseToken = string.Empty;
-        record.LeaseExpiresAtUtc = null;
     }
 
     private static TimeSpan ComputeBackoff(int attemptCount)
@@ -795,6 +1179,19 @@ public sealed class ProcessOutboxService(
         return string.IsNullOrWhiteSpace(value)
             ? fallback
             : value.Trim();
+    }
+
+    private static string MaskLeaseToken(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "(empty)";
+        }
+
+        var normalized = value.Trim();
+        return normalized.Length <= 8
+            ? "***"
+            : $"{normalized[..4]}...{normalized[^4..]}";
     }
 
     private static string BuildDefinitionRoute(Guid definitionId, Guid? projectId)
@@ -824,8 +1221,6 @@ public sealed class ProcessOutboxDrainWorker(
 {
     private static readonly TimeSpan IdleDelay = TimeSpan.FromMilliseconds(200);
     private static readonly TimeSpan FailureBackoff = TimeSpan.FromSeconds(2);
-    private const int DefaultMaxConcurrentDispatches = 1;
-    private const int UpperMaxConcurrentDispatches = 8;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -848,7 +1243,7 @@ public sealed class ProcessOutboxDrainWorker(
         {
             await ObserveCompletedDispatchesAsync(activeDispatches);
 
-            if (activeDispatches.Count < ResolveMaxConcurrentDispatches())
+            if (activeDispatches.Count == 0)
             {
                 activeDispatches.Add(ProcessPendingRecordAsync(stoppingToken));
             }
@@ -876,21 +1271,13 @@ public sealed class ProcessOutboxDrainWorker(
                 ? (DateTimeOffset?)null
                 : runtimeSession.StartedAtUtc;
             return await outbox.ProcessPendingAsync(
-                take: 1,
+                take: ResolveBatchSize(),
                 minimumAutomationDispatchCreatedAtUtc: minimumAutomationDispatchCreatedAtUtc,
+                maxParallelism: ResolveMaxConcurrentDispatches(),
                 cancellationToken: stoppingToken);
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
-            return 0;
-        }
-        catch (Exception exception) when (SqliteWriteCoordination.IsBusy(exception))
-        {
-            logger.LogWarning(
-                exception,
-                "ProcessOutboxDrainWorker hit transient SQLite contention. The worker will retry after {FailureBackoff}.",
-                FailureBackoff);
-            await Task.Delay(FailureBackoff, stoppingToken);
             return 0;
         }
         catch (Exception exception)
@@ -906,10 +1293,20 @@ public sealed class ProcessOutboxDrainWorker(
 
     private int ResolveMaxConcurrentDispatches()
     {
-        var configured = processRuntimeOptions.Value.OutboxWorkerMaxConcurrency;
+        var configured = processRuntimeOptions.Value.OutboxBatchMaxParallelism > 0
+            ? processRuntimeOptions.Value.OutboxBatchMaxParallelism
+            : processRuntimeOptions.Value.OutboxWorkerMaxConcurrency;
         return configured <= 0
-            ? DefaultMaxConcurrentDispatches
-            : Math.Clamp(configured, 1, UpperMaxConcurrentDispatches);
+            ? ProcessRuntimeOptions.DefaultOutboxWorkerConcurrency
+            : Math.Clamp(configured, 1, ProcessRuntimeOptions.MaximumOutboxWorkerConcurrency);
+    }
+
+    private int ResolveBatchSize()
+    {
+        var configured = processRuntimeOptions.Value.OutboxBatchSize;
+        return configured <= 0
+            ? 1
+            : configured;
     }
 
     private static async Task ObserveCompletedDispatchesAsync(HashSet<Task<int>> activeDispatches)

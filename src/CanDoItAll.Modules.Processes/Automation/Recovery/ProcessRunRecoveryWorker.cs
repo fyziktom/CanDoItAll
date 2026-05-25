@@ -20,10 +20,10 @@ internal sealed class ProcessRunRecoveryService(
     private const string RecoveryTrigger = "runtime-recovery-scan";
 
     public Task<int> RecoverActiveRunsAsync(CancellationToken cancellationToken = default)
-        => RecoverActiveRunsAsync(reclaimStrandedAutomationDispatchLeases: false, cancellationToken);
+        => RecoverActiveRunsAsync(reclaimExpiredAutomationDispatchLeases: false, cancellationToken);
 
     public async Task<int> RecoverActiveRunsAsync(
-        bool reclaimStrandedAutomationDispatchLeases,
+        bool reclaimExpiredAutomationDispatchLeases,
         CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -56,16 +56,16 @@ internal sealed class ProcessRunRecoveryService(
             return 0;
         }
 
-        if (reclaimStrandedAutomationDispatchLeases)
+        if (reclaimExpiredAutomationDispatchLeases)
         {
-            var releasedLeaseCount = await ReleaseStrandedAutomationDispatchLeasesAsync(
+            var releasedLeaseCount = await ReleaseExpiredAutomationDispatchLeasesAsync(
                 dbContext,
                 candidates.Select(candidate => candidate.RunId).ToArray(),
                 cancellationToken);
             if (releasedLeaseCount > 0)
             {
                 logger.LogWarning(
-                    "Released {ReleasedLeaseCount} stranded process automation dispatch lease(s) during runtime recovery startup scan.",
+                    "Released {ReleasedLeaseCount} expired process automation dispatch lease(s) during runtime recovery startup scan.",
                     releasedLeaseCount);
             }
         }
@@ -166,7 +166,7 @@ internal sealed class ProcessRunRecoveryService(
                 cancellationToken);
     }
 
-    private async Task<int> ReleaseStrandedAutomationDispatchLeasesAsync(
+    private async Task<int> ReleaseExpiredAutomationDispatchLeasesAsync(
         AppDbContext dbContext,
         IReadOnlyCollection<Guid> runIds,
         CancellationToken cancellationToken)
@@ -187,7 +187,7 @@ internal sealed class ProcessRunRecoveryService(
                 item.ProcessRunId.HasValue &&
                 runIdSet.Contains(item.ProcessRunId.Value) &&
                 item.LeaseExpiresAtUtc.HasValue &&
-                item.LeaseExpiresAtUtc.Value > now)
+                item.LeaseExpiresAtUtc.Value <= now)
             .ToList();
         foreach (var record in records)
         {
@@ -243,7 +243,7 @@ public sealed class ProcessRunRecoveryWorker(
 {
     private static readonly TimeSpan IdleDelay = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan FailureBackoff = TimeSpan.FromSeconds(2);
-    private bool startupLeaseRecoveryCompleted;
+    private bool startupExpiredLeaseRecoveryCompleted;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -253,11 +253,11 @@ public sealed class ProcessRunRecoveryWorker(
             {
                 await using var scope = scopeFactory.CreateAsyncScope();
                 var recoveryService = scope.ServiceProvider.GetRequiredService<ProcessRunRecoveryService>();
-                var reclaimStrandedAutomationDispatchLeases = !startupLeaseRecoveryCompleted;
+                var reclaimExpiredAutomationDispatchLeases = !startupExpiredLeaseRecoveryCompleted;
                 var dispatchedCount = await recoveryService.RecoverActiveRunsAsync(
-                    reclaimStrandedAutomationDispatchLeases,
+                    reclaimExpiredAutomationDispatchLeases,
                     stoppingToken);
-                startupLeaseRecoveryCompleted = true;
+                startupExpiredLeaseRecoveryCompleted = true;
                 startupGate.MarkStartupRecoveryCompleted();
                 if (dispatchedCount == 0)
                 {

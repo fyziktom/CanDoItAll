@@ -1,9 +1,6 @@
 using CanDoItAll.Infrastructure.ControlPlane;
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Tests.Support;
-using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -12,7 +9,7 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class ControlPlaneDatabaseProfileIntegrationTests
 {
     [Fact]
-    public async Task ResolveCurrentProfile_auto_provisions_managed_sqlite_profile_under_the_control_plane_root()
+    public async Task ResolveCurrentProfile_auto_provisions_postgresql_profile_with_default_workspace()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-control-plane-managed");
         await using var provider = DatabaseProfileControlPlaneIntegrationHost.BuildServiceProvider(testEnvironment);
@@ -20,26 +17,18 @@ public sealed class ControlPlaneDatabaseProfileIntegrationTests
         var resolver = provider.GetRequiredService<IActiveDatabaseProfileResolver>();
         var workspaceResolver = provider.GetRequiredService<IWorkspacePathResolver>();
         var profileService = provider.GetRequiredService<IDatabaseProfileService>();
-        var bootstrapper = provider.GetRequiredService<IAppDatabaseBootstrapper>();
 
         var resolvedProfile = resolver.ResolveCurrentProfile();
         var selection = await profileService.GetCurrentSelectionAsync();
 
-        Assert.Equal(DatabaseProfileResolutionSource.AutoProvisionedManagedSqlite, resolvedProfile.ResolutionSource);
-        Assert.Equal(DatabaseProviderKind.Sqlite, resolvedProfile.Profile.ProviderKind);
-        Assert.Equal(DatabaseProfileSourceKind.ManagedSqlite, resolvedProfile.Profile.SourceKind);
-        Assert.StartsWith(testEnvironment.ControlPlaneRootPath, resolvedProfile.Profile.Sqlite!.DatabasePath, StringComparison.OrdinalIgnoreCase);
-        Assert.StartsWith(testEnvironment.ControlPlaneRootPath, resolvedProfile.Profile.Storage.WorkspaceRoot, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(DatabaseProfileResolutionSource.AutoProvisionedPostgreSql, resolvedProfile.ResolutionSource);
+        Assert.Equal(DatabaseProviderKind.PostgreSql, resolvedProfile.Profile.ProviderKind);
+        Assert.Equal(DatabaseProfileSourceKind.PostgresConnection, resolvedProfile.Profile.SourceKind);
+        Assert.NotNull(resolvedProfile.Profile.PostgreSql);
+        Assert.StartsWith(Path.Combine(testEnvironment.RootPath, ".artifacts", "workspace"), resolvedProfile.Profile.Storage.WorkspaceRoot, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(resolvedProfile.Profile.Storage.WorkspaceRoot, workspaceResolver.ResolveWorkspaceRoot());
         Assert.Equal(DatabaseProfileResolutionSource.PersistedActiveProfile, selection.ResolutionSource);
 
-        await bootstrapper.EnsureCurrentProfileReadyAsync();
-
-        var dbContextFactory = provider.GetRequiredService<IDbContextFactory<AppDbContext>>();
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-
-        Assert.True(File.Exists(resolvedProfile.Profile.Sqlite.DatabasePath));
-        Assert.NotEmpty(await dbContext.Database.GetAppliedMigrationsAsync());
         var summaries = await profileService.ListAsync();
         Assert.Single(summaries);
         Assert.True(summaries[0].IsActive);
@@ -49,45 +38,35 @@ public sealed class ControlPlaneDatabaseProfileIntegrationTests
 public sealed class LegacyDatabaseProfileIntegrationTests
 {
     [Fact]
-    public async Task ResolveCurrentProfile_discovers_the_legacy_workspace_when_the_catalog_is_empty()
+    public async Task ResolveCurrentProfile_ignores_legacy_local_workspace_when_the_catalog_is_empty()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-control-plane-legacy");
         var legacyWorkspaceRoot = Path.Combine(testEnvironment.RootPath, ".artifacts", "workspace");
         var legacyDatabasePath = Path.Combine(legacyWorkspaceRoot, "candoitall.db");
 
         Directory.CreateDirectory(legacyWorkspaceRoot);
-        await using (var connection = new SqliteConnection($"Data Source={legacyDatabasePath}"))
-        {
-            await connection.OpenAsync();
-        }
+        await File.WriteAllTextAsync(legacyDatabasePath, "legacy local database placeholder");
 
         await using var provider = DatabaseProfileControlPlaneIntegrationHost.BuildServiceProvider(testEnvironment);
 
         var resolver = provider.GetRequiredService<IActiveDatabaseProfileResolver>();
         var workspaceResolver = provider.GetRequiredService<IWorkspacePathResolver>();
         var profileService = provider.GetRequiredService<IDatabaseProfileService>();
-        var bootstrapper = provider.GetRequiredService<IAppDatabaseBootstrapper>();
 
         var resolvedProfile = resolver.ResolveCurrentProfile();
         var selection = await profileService.GetCurrentSelectionAsync();
 
-        Assert.Equal(DatabaseProfileResolutionSource.LegacyDiscovery, resolvedProfile.ResolutionSource);
-        Assert.Equal(DatabaseProfileSourceKind.ExternalSqliteFile, resolvedProfile.Profile.SourceKind);
-        Assert.Equal(legacyDatabasePath, resolvedProfile.Profile.Sqlite!.DatabasePath);
-        Assert.Equal(legacyWorkspaceRoot, resolvedProfile.Profile.Storage.WorkspaceRoot);
-        Assert.Equal(legacyWorkspaceRoot, workspaceResolver.ResolveWorkspaceRoot());
+        Assert.Equal(DatabaseProfileResolutionSource.AutoProvisionedPostgreSql, resolvedProfile.ResolutionSource);
+        Assert.Equal(DatabaseProviderKind.PostgreSql, resolvedProfile.Profile.ProviderKind);
+        Assert.Equal(DatabaseProfileSourceKind.PostgresConnection, resolvedProfile.Profile.SourceKind);
+        Assert.NotNull(resolvedProfile.Profile.PostgreSql);
+        Assert.DoesNotContain("candoitall.db", resolvedProfile.ConnectionString, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(resolvedProfile.Profile.Storage.WorkspaceRoot, workspaceResolver.ResolveWorkspaceRoot());
         Assert.Equal(DatabaseProfileResolutionSource.PersistedActiveProfile, selection.ResolutionSource);
-
-        await bootstrapper.EnsureCurrentProfileReadyAsync();
-
-        var dbContextFactory = provider.GetRequiredService<IDbContextFactory<AppDbContext>>();
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-
-        Assert.NotEmpty(await dbContext.Database.GetAppliedMigrationsAsync());
         var summaries = await profileService.ListAsync();
         var summary = Assert.Single(summaries);
         Assert.True(summary.IsActive);
-        Assert.Equal(DatabaseProviderKind.Sqlite, summary.ProviderKind);
+        Assert.Equal(DatabaseProviderKind.PostgreSql, summary.ProviderKind);
     }
 }
 

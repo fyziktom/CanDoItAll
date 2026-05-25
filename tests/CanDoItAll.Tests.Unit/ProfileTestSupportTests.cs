@@ -5,21 +5,21 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class ProfileTestSupportTests
 {
     [Fact]
-    public async Task Managed_sqlite_profiles_create_isolated_database_and_storage_roots()
+    public async Task PostgreSql_profiles_create_isolated_database_and_storage_roots()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-profile-tests");
-        var alphaProfile = testEnvironment.CreateManagedSqliteProfile("alpha");
-        var betaProfile = testEnvironment.CreateManagedSqliteProfile("beta");
+        var alphaProfile = testEnvironment.CreatePostgreSqlProfile("alpha");
+        var betaProfile = testEnvironment.CreatePostgreSqlProfile("beta");
 
-        Assert.NotEqual(alphaProfile.DatabasePath, betaProfile.DatabasePath);
+        Assert.NotEqual(alphaProfile.ConnectionString, betaProfile.ConnectionString);
         Assert.NotEqual(alphaProfile.WorkspaceRootPath, betaProfile.WorkspaceRootPath);
         Assert.NotEqual(alphaProfile.ManagerArtifactsRootPath, betaProfile.ManagerArtifactsRootPath);
         Assert.StartsWith(testEnvironment.RootPath, alphaProfile.ProfileRootPath, StringComparison.OrdinalIgnoreCase);
         Assert.StartsWith(testEnvironment.RootPath, betaProfile.ProfileRootPath, StringComparison.OrdinalIgnoreCase);
         Assert.True(Path.IsPathFullyQualified(alphaProfile.WorkspaceRootPath));
         Assert.True(Path.IsPathFullyQualified(betaProfile.WorkspaceRootPath));
-        Assert.True(Directory.Exists(Path.GetDirectoryName(alphaProfile.DatabasePath!)!));
-        Assert.True(Directory.Exists(Path.GetDirectoryName(betaProfile.DatabasePath!)!));
+        Assert.Equal(TestDatabaseProviderKind.PostgreSql, alphaProfile.Provider);
+        Assert.Equal(TestDatabaseProviderKind.PostgreSql, betaProfile.Provider);
     }
 
     [Fact]

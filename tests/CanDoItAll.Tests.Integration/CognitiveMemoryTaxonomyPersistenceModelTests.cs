@@ -3,10 +3,10 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.CognitiveMemory;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support.CognitiveMemory;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 
+using CanDoItAll.Tests.Support;
 namespace CanDoItAll.Tests.Integration;
 
 public sealed class CognitiveMemoryTaxonomyPersistenceModelTests
@@ -248,15 +248,12 @@ public sealed class CognitiveMemoryTaxonomyPersistenceModelTests
     private static async Task<TaxonomyFixture> CreateFixtureAsync()
     {
         AppDbContextModelRegistry.ConfigureAssemblies(ModuleAssemblies.All);
-        var connection = new SqliteConnection("Data Source=:memory:");
-        await connection.OpenAsync();
+        var database = PostgresTestDatabaseLease.Create("cognitivememorytaxonomypersistencemodeltests");
 
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlite(connection)
-            .Options;
+        var options = database.CreateAppDbContextOptions();
         var dbContext = new AppDbContext(options);
         await dbContext.Database.EnsureCreatedAsync();
-        return new TaxonomyFixture(connection, dbContext);
+        return new TaxonomyFixture(database, dbContext);
     }
 
     private static void AssertEntityTable<TEntity>(IReadOnlyList<IEntityType> entityTypes, string tableName)
@@ -343,7 +340,7 @@ public sealed class CognitiveMemoryTaxonomyPersistenceModelTests
     }
 
     private sealed class TaxonomyFixture(
-        SqliteConnection connection,
+        PostgresTestDatabaseLease database,
         AppDbContext dbContext) : IAsyncDisposable
     {
         public AppDbContext DbContext { get; } = dbContext;
@@ -351,7 +348,7 @@ public sealed class CognitiveMemoryTaxonomyPersistenceModelTests
         public async ValueTask DisposeAsync()
         {
             await DbContext.DisposeAsync();
-            await connection.DisposeAsync();
+            await database.DisposeAsync();
         }
     }
 }

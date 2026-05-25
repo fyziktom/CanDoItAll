@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Data.Common;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
@@ -21,7 +22,7 @@ public sealed class SchedulerPlannerIntegrationTests
     public async Task SavePlanAsync_persists_plan_projects_calendar_events_and_writes_quartz_store()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("scheduler-planner-save");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         await using var provider = await BuildProviderAsync(profile);
 
         await using var scope = provider.CreateAsyncScope();
@@ -65,7 +66,7 @@ public sealed class SchedulerPlannerIntegrationTests
     public async Task Saved_plan_and_quartz_store_survive_provider_restart()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("scheduler-planner-restart");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         var planId = Guid.Empty;
 
         await using (var provider = await BuildProviderAsync(profile))
@@ -107,7 +108,7 @@ public sealed class SchedulerPlannerIntegrationTests
     public async Task Trigger_fire_handler_dispatches_once_for_the_same_dedupe_key()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("scheduler-planner-fire");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         var launcher = new RecordingSchedulerTargetLauncher();
         await using var provider = await BuildProviderAsync(
             profile,
@@ -174,10 +175,79 @@ public sealed class SchedulerPlannerIntegrationTests
     }
 
     [Fact]
+    public async Task Concurrent_trigger_fire_handlers_do_not_double_launch_the_same_dedupe_key()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("scheduler-planner-fire-concurrent");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
+        var launcher = new RecordingSchedulerTargetLauncher();
+        await using var provider = await BuildProviderAsync(
+            profile,
+            services =>
+            {
+                services.RemoveAll<ISchedulerTargetLauncher>();
+                services.AddSingleton(launcher);
+                services.AddScoped<ISchedulerTargetLauncher>(serviceProvider =>
+                    serviceProvider.GetRequiredService<RecordingSchedulerTargetLauncher>());
+            });
+
+        await using var scope = provider.CreateAsyncScope();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var planner = scope.ServiceProvider.GetRequiredService<ISchedulerPlannerService>();
+        var targetId = await SeedProcessTargetAsync(dbContextFactory, "Concurrent deduped scheduled process");
+        var planSummary = await planner.SavePlanAsync(new SchedulerPlanEditorModel
+        {
+            Name = "Concurrent deduped process launch",
+            TargetKind = SchedulerPlanTargetKind.Process,
+            TargetId = targetId,
+            CronExpression = "0 0/5 * * * ?",
+            TimeZoneId = "UTC",
+            MisfirePolicy = AutomationTriggerMisfirePolicy.FireOnceNow,
+            InputJson = "{}",
+            IsEnabled = true
+        });
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var plan = await dbContext.Set<SchedulerPlan>().SingleAsync(item => item.Id == planSummary.Id);
+        var trigger = await dbContext.Set<AutomationTriggerRecord>().SingleAsync(item => item.Id == plan.AutomationTriggerId);
+        var firedAtUtc = new DateTimeOffset(2026, 5, 12, 9, 15, 0, TimeSpan.Zero);
+        var requestJson = JsonSerializer.Serialize(
+            new AutomationTriggerFireRequest(
+                trigger.Id,
+                trigger.TriggerKey,
+                trigger.OwnerKey,
+                trigger.OwnerKind,
+                trigger.PayloadJson,
+                firedAtUtc),
+            JsonOptions);
+        var handler = scope.ServiceProvider.GetServices<IAutomationMessageHandler>()
+            .Single(item => item is SchedulerPlannerTriggerFireHandler);
+        var context = new AutomationMessageContext(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            AutomationEnvelopeTypeNames.For<AutomationTriggerFireRequest>(),
+            Guid.NewGuid(),
+            null,
+            "scheduler-planner-concurrent-dedupe-key",
+            firedAtUtc);
+
+        var results = await Task.WhenAll(
+            handler.HandleAsync(requestJson, context, CancellationToken.None),
+            handler.HandleAsync(requestJson, context, CancellationToken.None));
+
+        await using var verificationContext = await dbContextFactory.CreateDbContextAsync();
+        var run = await verificationContext.Set<SchedulerPlanRun>().SingleAsync(item => item.PlanId == plan.Id);
+
+        Assert.Contains(results, result => result.Outcome == AutomationDeliveryAttemptOutcome.Completed);
+        Assert.Single(launcher.Calls);
+        Assert.Equal(SchedulerPlanRunDispatchStatus.Dispatched, run.Status);
+        Assert.Equal(1, run.AttemptCount);
+    }
+
+    [Fact]
     public async Task Target_launcher_starts_real_process_run()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("scheduler-planner-process-launch");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         await using var provider = await BuildProviderAsync(profile);
 
         await using var scope = provider.CreateAsyncScope();
@@ -201,7 +271,7 @@ public sealed class SchedulerPlannerIntegrationTests
     public async Task Target_launcher_starts_real_workflow_run()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("scheduler-planner-workflow-launch");
-        var profile = testEnvironment.CreateManagedSqliteProfile("primary");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
         await using var provider = await BuildProviderAsync(profile);
 
         await using var scope = provider.CreateAsyncScope();
@@ -396,14 +466,14 @@ public sealed class SchedulerPlannerIntegrationTests
 
     private sealed class RecordingSchedulerTargetLauncher : ISchedulerTargetLauncher
     {
-        public List<(Guid PlanId, DateTimeOffset FiredAtUtc)> Calls { get; } = [];
+        public ConcurrentQueue<(Guid PlanId, DateTimeOffset FiredAtUtc)> Calls { get; } = [];
 
         public Task<SchedulerTargetLaunchResult> LaunchAsync(
             SchedulerPlan plan,
             DateTimeOffset firedAtUtc,
             CancellationToken cancellationToken = default)
         {
-            Calls.Add((plan.Id, firedAtUtc));
+            Calls.Enqueue((plan.Id, firedAtUtc));
             return Task.FromResult(new SchedulerTargetLaunchResult(
                 plan.TargetKind,
                 Guid.Parse("11111111-1111-1111-1111-111111111111"),
