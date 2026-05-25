@@ -491,6 +491,8 @@ public sealed partial class MafAgentRuntime
                 ApplicationApprovalAvailable: false,
                 ProcessScaffoldToolOnly: auditScope?.ProcessScaffoldToolOnly == true,
                 ProcessAllowsProductMutation: auditScope?.ProcessAllowsProductMutation != false,
+                ProcessStepAllowedOperations: auditScope?.ProcessStepAllowedOperations ?? [],
+                ProcessStepTargetScope: auditScope?.ProcessStepTargetScope ?? string.Empty,
                 InspectedScriptContent: scriptInspection.Content,
                 ScriptInspectionFailure: scriptInspection.FailureMessage);
             var policyDecision = await toolPolicy.EvaluateAsync(policyContext, cancellationToken);

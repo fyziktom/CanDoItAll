@@ -11313,6 +11313,11 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ProjectionIdentityHash")
+                        .IsRequired()
+                        .HasMaxLength(95)
+                        .HasColumnType("character varying(95)");
+
                     b.Property<string>("ReviewSummary")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -11340,6 +11345,10 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.HasIndex("ArtifactExpectationId");
 
                     b.HasIndex("ProcessRunId");
+
+                    b.HasIndex("ProcessRunId", "ProjectionIdentityHash")
+                        .IsUnique()
+                        .HasFilter("\"ProjectionIdentityHash\" <> ''");
 
                     b.HasIndex("StepRunId");
 
@@ -12870,6 +12879,11 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("BlockReasonCode")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
                     b.Property<string>("CapabilityGapSeverity")
                         .IsRequired()
                         .HasMaxLength(48)
@@ -12909,6 +12923,10 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("RefusalReason")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RecoveryOptionsJson")
                         .IsRequired()
                         .HasColumnType("TEXT");
 

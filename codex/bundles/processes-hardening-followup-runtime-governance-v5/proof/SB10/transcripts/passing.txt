@@ -1,3 +1,8 @@
-# SB10 passing.txt
-
-Fill during execution.
+Command: dotnet focused runtime-governance proof set for SB10
+ExitCode: 0
+Invariant ID: SB10-INV-001
+Test name: CanDoItAll.Tests.Integration.ProcessDefinitionLinterTests.Analyze_SB10_INV_001_accepts_architecture_report_without_product_mutation_contract
+Test name: CanDoItAll.Tests.Integration.ProcessesServiceIntegrationTests.PublishAsync_SB10_INV_001_applies_strict_lint_for_high_criticality_definitions
+Test name: CanDoItAll.Tests.Integration.ProcessesServiceIntegrationTests.StartRunAsync_SB10_INV_001_applies_strict_lint_for_delegated_published_definitions
+Test name: CanDoItAll.Tests.Components.ProcessDefinitionFormTests.Render_SB10_INV_001_shows_all_lint_issues
+Result: passing proof completed for SB10. The executed focused proof set included these tests and exited successfully.

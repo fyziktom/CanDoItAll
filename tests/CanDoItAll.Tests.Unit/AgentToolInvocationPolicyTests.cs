@@ -1366,6 +1366,105 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
+    public async Task EvaluateAsync_SB02_INV_001_denies_validation_without_run_validation_operation()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            "workspace_dotnet_test",
+            ToolInvocationClassification.Validation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            processAllowsProductMutation: false,
+            processStepAllowedOperations:
+            [
+                "ReadProcessContext",
+                "WriteManagedProcessArtifacts"
+            ],
+            processStepTargetScope: "ManagedProcessArtifactsOnly");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("RunValidation", decision.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_SB02_INV_002_allows_validation_when_run_validation_operation_is_allowed()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            "workspace_dotnet_test",
+            ToolInvocationClassification.Validation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            processAllowsProductMutation: false,
+            processStepAllowedOperations:
+            [
+                "ReadProcessContext",
+                "RunValidation",
+                "CaptureRuntimeProof"
+            ],
+            processStepTargetScope: "ExternalProductTargetReadOnly");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_SB02_INV_003_denies_runtime_launch_without_launch_runtime_operation()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            "workspace_dotnet_run",
+            ToolInvocationClassification.Validation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            processAllowsProductMutation: false,
+            processStepAllowedOperations:
+            [
+                "ReadProcessContext",
+                "RunValidation"
+            ],
+            processStepTargetScope: "ExternalProductTargetReadOnly");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("LaunchRuntime", decision.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_SB02_INV_004_allows_artifact_only_write_under_current_run_artifacts()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            "workspace_write_file",
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            processAllowsProductMutation: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "artifacts/process-runs/process-run-001/evidence/report.md"
+            },
+            processStepAllowedOperations:
+            [
+                "ReadProcessContext",
+                "WriteManagedProcessArtifacts"
+            ],
+            processStepTargetScope: "ManagedProcessArtifactsOnly");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
     public async Task EvaluateAsync_denies_full_page_governed_browser_screenshot()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
@@ -1435,6 +1534,8 @@ public sealed class AgentToolInvocationPolicyTests
         IReadOnlyList<string>? readOnlyExternalTargetAliases = null,
         bool processScaffoldToolOnly = false,
         bool processAllowsProductMutation = true,
+        IReadOnlyList<string>? processStepAllowedOperations = null,
+        string processStepTargetScope = "",
         string inspectedScriptContent = "",
         string scriptInspectionFailure = "")
     {
@@ -1457,6 +1558,8 @@ public sealed class AgentToolInvocationPolicyTests
             ApplicationApprovalAvailable: applicationApprovalAvailable,
             ProcessScaffoldToolOnly: processScaffoldToolOnly,
             ProcessAllowsProductMutation: processAllowsProductMutation,
+            ProcessStepAllowedOperations: processStepAllowedOperations,
+            ProcessStepTargetScope: processStepTargetScope,
             InspectedScriptContent: inspectedScriptContent,
             ScriptInspectionFailure: scriptInspectionFailure);
     }

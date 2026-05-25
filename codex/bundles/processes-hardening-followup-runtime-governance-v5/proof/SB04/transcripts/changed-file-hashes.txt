@@ -1,3 +1,6 @@
-# SB04 changed-file-hashes.txt
-
-Fill during execution.
+Command: Get-FileHash -Algorithm SHA256 changed files for SB04
+ExitCode: 0
+Invariant ID: SB04-INV-001
+- `f21cdf047934c3e7467912db584c05b42d677bb2d522753e98af06330ed1bd33`  `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.cs`
+- `566e1d25ab55b1518ba558b9e3335a7acb5605e4f0d1486ef63fbc369407894a`  `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs`
+- `723a55dcba4d78b63c9ea24f6d820e95ce6694a86bfd30d75f0b18b893bc6af8`  `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`

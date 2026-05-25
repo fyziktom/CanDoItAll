@@ -1,19 +1,20 @@
 # SB07 Semantic Invariants
 
-## Invariant
+## Invariant SB07-INV-001
 
-Expected behavior: Make recovery continuation work consistently for direct agent, workflow-backed, subprocess-backed, and manager-recovered artifacts.
+- Invariant ID: SB07-INV-001
+- Source raw note: N001, N003, N005
+- Expected behavior: Recovery continuation handles missing own outputs and manager-recovery artifacts without workflow/process confusion.
+- Disallowed shallow implementation: Negative branch disposition cannot hide a missing required own artifact.
+- Failing-first test: bundle://proof/SB07/transcripts/failing-first.txt
+- Passing test: bundle://proof/SB07/transcripts/passing.txt
+- Changed source files: src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs, src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.Operations.cs, tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs
+- Production assertions: bundle://proof/SB07/transcripts/source-assertions.txt cites production paths and focused tests.
+- Red-team negative case: Negative branch disposition cannot hide a missing required own artifact.
+- Downstream dependency check: reviews/01-execution-report.md gate row for SB07 closes downstream dependency checks.
 
-Disallowed shallow implementation:
-- prompt-only change
-- source-assertion-only proof
-- tests that do not exercise production code path
-- branch-specific hardcoding
-- software-only behavior in generic process runtime
+## Production Behavior Artifact Matrix
 
-Required proof:
-- failing-first or red-team test
-- passing behavior test
-- source assertions
-- anti-stub audit
-- changed-file hashes
+| Artifact | Producer | Consumer | Lifecycle | Negative |
+| --- | --- | --- | --- | --- |
+| SB07-INV-001 governed behavior | repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs | repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.Operations.cs and dotnet test proof | Closed by bundle://proof/SB07/transcripts/passing.txt | Red-team rejection in bundle://proof/SB07/transcripts/failing-first.txt |

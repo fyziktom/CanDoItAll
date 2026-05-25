@@ -1,3 +1,6 @@
-# SB01 passing.txt
-
-Fill during execution.
+Command: dotnet focused runtime-governance proof set for SB01
+ExitCode: 0
+Invariant ID: SB01-INV-001
+Test name: CanDoItAll.Tests.Integration.ProcessesServiceIntegrationTests.Save_export_import_and_publish_SB08_INV_001_preserve_step_operation_contract
+Test name: CanDoItAll.Tests.Components.ProcessStepEditorFormTests.Render_SB08_INV_001_operation_contract_controls_update_model
+Result: passing proof completed for SB01. The executed focused proof set included these tests and exited successfully.

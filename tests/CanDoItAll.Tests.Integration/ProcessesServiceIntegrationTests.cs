@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.CrmHr;
@@ -14,6 +15,8 @@ namespace CanDoItAll.Tests.Integration;
 
 public sealed class ProcessesServiceIntegrationTests
 {
+    private static readonly JsonSerializerOptions StringEnumJsonOptions = CreateStringEnumJsonOptions();
+
     [Fact]
     public async Task StartRunAsync_prefills_project_role_binding_and_persists_runtime_signals()
     {
@@ -761,6 +764,85 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
+    public async Task RecordArtifactAsync_SB05_INV_001_dedupes_by_projection_identity_hash_before_display_key()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Projection identity artifact project");
+        var managerRoleId = Guid.NewGuid();
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, managerRoleId));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Projection identity validation",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Verify typed artifact lineage identity."
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var firstStep = Assert.Single(await processesService.ListStepRunsAsync(runResult.Value), item => item.Sequence == 0);
+        var workflowRunId = Guid.NewGuid();
+        var workflowArtifactId = Guid.NewGuid();
+        var lineage = new ProcessArtifactProjectionLineage
+        {
+            SourceKind = ProcessArtifactProjectionSourceKind.WorkflowArtifact,
+            WorkflowRunId = workflowRunId,
+            WorkflowArtifactId = workflowArtifactId,
+            ContentHash = "sha256:abcdef"
+        };
+
+        var firstRecordResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            StepRunId = firstStep.Id,
+            ArtifactKind = ProcessArtifactKind.Deliverable,
+            Title = "Workflow mapped deliverable",
+            ManagedStoragePath = "artifacts/workflow/mapped-deliverable.md",
+            ExternalReferenceKey = $"display-key:{Guid.NewGuid():N}",
+            ProjectionLineage = lineage
+        });
+
+        Assert.True(firstRecordResult.IsSuccess, string.Join(" | ", firstRecordResult.Errors.Select(error => error.Message)));
+
+        var duplicateRecordResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            StepRunId = firstStep.Id,
+            ArtifactKind = ProcessArtifactKind.Deliverable,
+            Title = "Workflow mapped deliverable duplicate",
+            ManagedStoragePath = "artifacts/workflow/mapped-deliverable-copy.md",
+            ExternalReferenceKey = $"different-display-key:{Guid.NewGuid():N}",
+            ProjectionLineage = new ProcessArtifactProjectionLineage
+            {
+                SourceKind = ProcessArtifactProjectionSourceKind.WorkflowArtifact,
+                WorkflowRunId = workflowRunId,
+                WorkflowArtifactId = workflowArtifactId,
+                ContentHash = "sha256:abcdef"
+            }
+        });
+
+        Assert.True(duplicateRecordResult.IsSuccess, string.Join(" | ", duplicateRecordResult.Errors.Select(error => error.Message)));
+        Assert.Equal(firstRecordResult.Value, duplicateRecordResult.Value);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var persistedArtifact = Assert.Single(await dbContext.Set<ProcessArtifactRecord>()
+            .Where(item => item.ProcessRunId == runResult.Value)
+            .ToListAsync());
+        Assert.StartsWith("sha256:", persistedArtifact.ProjectionIdentityHash, StringComparison.Ordinal);
+        Assert.Contains(persistedArtifact.ProjectionIdentityHash, persistedArtifact.ProjectionLineageJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task RecordArtifactAsync_SB01_INV_001_reactivates_blocked_downstream_with_tracked_materialized_artifact()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -796,6 +878,8 @@ public sealed class ProcessesServiceIntegrationTests
             var downstream = await dbContext.Set<ProcessStepRun>().SingleAsync(item => item.Id == downstreamStep.Id);
             downstream.Status = ProcessStepRunStatus.Blocked;
             downstream.BlockedReason = "Cannot dispatch 'Review materialized artifact' because required upstream artifacts are missing: upstream step 'Produce materialized artifact' must provide required artifact 'Materialized evidence'. Automation requested upstream artifact materialization from 'Produce materialized artifact' before retrying this step.";
+            downstream.BlockReasonCode = ProcessStepBlockReasonCode.MissingUpstreamArtifact;
+            downstream.RecoveryOptionsJson = "[\"WaitForArtifactMaterialization\"]";
             downstream.DecisionSummary = "Waiting for upstream materialized artifact.";
 
             var run = await dbContext.Set<ProcessRun>().SingleAsync(item => item.Id == runId);
@@ -827,6 +911,8 @@ public sealed class ProcessesServiceIntegrationTests
         var reactivatedStep = await assertionContext.Set<ProcessStepRun>().SingleAsync(item => item.Id == downstreamStep.Id);
         Assert.Equal(ProcessStepRunStatus.Ready, reactivatedStep.Status);
         Assert.Equal(string.Empty, reactivatedStep.BlockedReason);
+        Assert.Equal(ProcessStepBlockReasonCode.None, reactivatedStep.BlockReasonCode);
+        Assert.Equal("[]", reactivatedStep.RecoveryOptionsJson);
         Assert.Equal("Reopened after upstream artifact materialization completed.", reactivatedStep.DecisionSummary);
 
         var recordedArtifact = await assertionContext.Set<ProcessArtifactRecord>().SingleAsync(item => item.Id == recordResult.Value);
@@ -930,6 +1016,55 @@ public sealed class ProcessesServiceIntegrationTests
         Assert.True(persistedStep.TouchMinutes >= 5);
         Assert.Equal(ProcessRunStatus.Active, persistedRun.Status);
         Assert.Null(persistedRun.CompletedAtUtc);
+    }
+
+    [Fact]
+    public async Task TransitionStepAsync_SB09_INV_001_persists_typed_policy_denial_block_state()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Typed policy denial block project");
+        var managerRoleId = Guid.NewGuid();
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, managerRoleId));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Typed policy denial validation",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Verify blocked state is typed."
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var firstStep = Assert.Single(await processesService.ListStepRunsAsync(runResult.Value), item => item.Sequence == 0);
+        var transitionResult = await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = firstStep.Id,
+            TargetStatus = ProcessStepRunStatus.Blocked,
+            Reason = "Tool policy denied external-target/C/legacy/source because the governed step is not authorized to mutate that external path.",
+            DecidedBy = "integration-tests",
+            SuppressAutomationDispatch = true
+        });
+
+        Assert.True(transitionResult.IsSuccess, string.Join(" | ", transitionResult.Errors.Select(error => error.Message)));
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var persistedStep = await dbContext.Set<ProcessStepRun>().SingleAsync(item => item.Id == firstStep.Id);
+        Assert.Equal(ProcessStepBlockReasonCode.PolicyDeniedExternalPath, persistedStep.BlockReasonCode);
+        var recoveryOptions = JsonSerializer.Deserialize<List<ProcessStepRecoveryOption>>(
+            persistedStep.RecoveryOptionsJson,
+            StringEnumJsonOptions) ?? [];
+        Assert.Contains(ProcessStepRecoveryOption.HumanEscalation, recoveryOptions);
+        Assert.Contains(ProcessStepRecoveryOption.ReworkContinuation, recoveryOptions);
     }
 
     [Fact]
@@ -4689,6 +4824,13 @@ public sealed class ProcessesServiceIntegrationTests
 
         Assert.True(result.IsSuccess);
         return result.Value;
+    }
+
+    private static JsonSerializerOptions CreateStringEnumJsonOptions()
+    {
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        options.Converters.Add(new JsonStringEnumConverter());
+        return options;
     }
 
     private sealed record DirectMessagingRunFixture(

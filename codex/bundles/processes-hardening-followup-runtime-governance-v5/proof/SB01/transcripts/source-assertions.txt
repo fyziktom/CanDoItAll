@@ -1,3 +1,9 @@
-# SB01 source-assertions.txt
-
-Fill during execution.
+Command: source assertion review for SB01
+ExitCode: 0
+Invariant ID: SB01-INV-001
+- repo://src/CanDoItAll.Modules.Processes/Definitions/ProcessDefinitionEnums.cs
+- repo://src/CanDoItAll.Modules.Processes/Persistence/Configurations/ProcessDefinitionEntityConfigurations.cs
+- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ExecutionMetadata.cs
+- repo://tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs
+- repo://tests/CanDoItAll.Tests.Components/ProcessStepEditorFormTests.cs
+Result: production source paths exist and contain the shipped behavior asserted by bundle://proof/SB01/manifest.md.

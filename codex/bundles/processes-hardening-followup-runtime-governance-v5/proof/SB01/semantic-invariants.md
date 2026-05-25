@@ -1,19 +1,20 @@
 # SB01 Semantic Invariants
 
-## Invariant
+## Invariant SB01-INV-001
 
-Expected behavior: Add first-class persisted operation-contract fields to process step definitions, editor models, import/export, templates, and UI.
+- Invariant ID: SB01-INV-001
+- Source raw note: N004, N005
+- Expected behavior: Persisted step operation contracts survive editor, import/export, publish, and dispatch metadata.
+- Disallowed shallow implementation: Text-only contract inference or editor-only state cannot satisfy the invariant.
+- Failing-first test: bundle://proof/SB01/transcripts/failing-first.txt
+- Passing test: bundle://proof/SB01/transcripts/passing.txt
+- Changed source files: src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ExecutionMetadata.cs, tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs
+- Production assertions: bundle://proof/SB01/transcripts/source-assertions.txt cites production paths and focused tests.
+- Red-team negative case: Text-only contract inference or editor-only state cannot satisfy the invariant.
+- Downstream dependency check: reviews/01-execution-report.md gate row for SB01 closes downstream dependency checks.
 
-Disallowed shallow implementation:
-- prompt-only change
-- source-assertion-only proof
-- tests that do not exercise production code path
-- branch-specific hardcoding
-- software-only behavior in generic process runtime
+## Production Behavior Artifact Matrix
 
-Required proof:
-- failing-first or red-team test
-- passing behavior test
-- source assertions
-- anti-stub audit
-- changed-file hashes
+| Artifact | Producer | Consumer | Lifecycle | Negative |
+| --- | --- | --- | --- | --- |
+| SB01-INV-001 governed behavior | repo://src/CanDoItAll.Modules.Processes/Definitions/ProcessDefinitionEnums.cs | repo://src/CanDoItAll.Modules.Processes/Persistence/Configurations/ProcessDefinitionEntityConfigurations.cs and dotnet test proof | Closed by bundle://proof/SB01/transcripts/passing.txt | Red-team rejection in bundle://proof/SB01/transcripts/failing-first.txt |

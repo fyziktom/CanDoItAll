@@ -69,6 +69,35 @@ public enum ProcessStepTargetScope
     ExternalActionControlled
 }
 
+public enum ProcessStepBlockReasonCode
+{
+    None,
+    MissingUpstreamArtifact,
+    PolicyDeniedExternalPath,
+    ToolUnavailable,
+    MissingCredential,
+    ValidationFailed,
+    NoProgress,
+    RuntimeInvariantViolation,
+    CapabilityGap,
+    ArtifactContractUnsatisfied,
+    AgentExecutionFailed,
+    ManualRerun,
+    Unknown
+}
+
+public enum ProcessStepRecoveryOption
+{
+    WaitForArtifactMaterialization,
+    RecoverArtifactsOnly,
+    RetryAgent,
+    FreshAgentSession,
+    ReworkContinuation,
+    HumanEscalation,
+    RepairImplementation,
+    RerunValidation
+}
+
 public enum ProcessResponsibilityKind
 {
     Responsible,

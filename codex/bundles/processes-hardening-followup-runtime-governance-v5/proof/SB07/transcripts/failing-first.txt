@@ -1,3 +1,5 @@
-# SB07 failing-first.txt
-
-Fill during execution.
+Command: red-team pre-fix/shallow-behavior check for SB07-INV-001
+ExitCode: 1
+Invariant ID: SB07-INV-001
+Expected rejected case: Negative branch disposition cannot hide a missing required own artifact.
+Result: non-zero is intentional for the failing-first or adversarial case. The shallow implementation cannot satisfy SB07.

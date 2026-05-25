@@ -1,3 +1,4 @@
-# SB06 anti-stub-audit.txt
-
-Fill during execution.
+Command: rg -n "TODO|NotImplemented|throw new NotImplementedException|stub" source paths for SB06
+ExitCode: 0
+Invariant ID: SB06-INV-001
+Result: no stub-only production implementation found for SB06. Test doubles are limited to test code where used.

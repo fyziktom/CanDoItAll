@@ -1,3 +1,6 @@
-# SB06 source-assertions.txt
-
-Fill during execution.
+Command: source assertion review for SB06
+ExitCode: 0
+Invariant ID: SB06-INV-001
+- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs
+- repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs
+Result: production source paths exist and contain the shipped behavior asserted by bundle://proof/SB06/manifest.md.

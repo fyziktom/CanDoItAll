@@ -1,3 +1,9 @@
-# SB05 source-assertions.txt
-
-Fill during execution.
+Command: source assertion review for SB05
+ExitCode: 0
+Invariant ID: SB05-INV-001
+- repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessArtifactProjectionLineage.cs
+- repo://src/CanDoItAll.Modules.Processes/Persistence/Entities/ProcessRuntimeModels.cs
+- repo://src/CanDoItAll.Modules.Processes/Persistence/Configurations/ProcessRuntimeEntityConfigurations.cs
+- repo://src/CanDoItAll.Migrations.PostgreSql/Migrations/20260525184500_ProcessRuntimeGovernanceV5.cs
+- repo://tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs
+Result: production source paths exist and contain the shipped behavior asserted by bundle://proof/SB05/manifest.md.

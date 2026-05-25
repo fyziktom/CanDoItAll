@@ -203,6 +203,10 @@ public sealed class ProcessStepRun : IHasConcurrencyToken {
 
     public string BlockedReason { get; set; } = string.Empty;
 
+    public ProcessStepBlockReasonCode BlockReasonCode { get; set; } = ProcessStepBlockReasonCode.None;
+
+    public string RecoveryOptionsJson { get; set; } = "[]";
+
     public string RefusalReason { get; set; } = string.Empty;
 
     public string ExceptionSummary { get; set; } = string.Empty;
@@ -352,6 +356,8 @@ public sealed class ProcessArtifactRecord {
     public string ExternalReferenceKey { get; set; } = string.Empty;
 
     public string ProjectionLineageJson { get; set; } = string.Empty;
+
+    public string ProjectionIdentityHash { get; set; } = string.Empty;
 
     public DateTimeOffset CreatedAtUtc { get; set; }
 }

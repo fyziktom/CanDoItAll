@@ -235,6 +235,22 @@ public sealed partial class ProcessesService
         var externalReferenceKey = BoundProcessArtifactText(
             request.ExternalReferenceKey.Trim(),
             MaxProcessArtifactExternalReferenceKeyLength);
+        var projectionLineage = ProcessArtifactProjectionLineageJson.Normalize(request.ProjectionLineage);
+        var projectionIdentityHash = projectionLineage?.ProjectionIdentityHash ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(projectionIdentityHash))
+        {
+            var existingArtifactId = await dbContext.Set<ProcessArtifactRecord>()
+                .Where(item =>
+                    item.ProcessRunId == request.ProcessRunId &&
+                    item.ProjectionIdentityHash == projectionIdentityHash)
+                .Select(item => (Guid?)item.Id)
+                .FirstOrDefaultAsync(cancellationToken);
+            if (existingArtifactId.HasValue)
+            {
+                return Result<Guid>.Success(existingArtifactId.Value);
+            }
+        }
+
         if (!string.IsNullOrWhiteSpace(externalReferenceKey))
         {
             var existingArtifactId = await dbContext.Set<ProcessArtifactRecord>()
@@ -311,7 +327,8 @@ public sealed partial class ProcessesService
             ReviewSummary = request.ReviewSummary.Trim(),
             ManagedStoragePath = request.ManagedStoragePath.Trim(),
             ExternalReferenceKey = externalReferenceKey,
-            ProjectionLineageJson = ProcessArtifactProjectionLineageJson.Serialize(request.ProjectionLineage),
+            ProjectionLineageJson = ProcessArtifactProjectionLineageJson.Serialize(projectionLineage),
+            ProjectionIdentityHash = projectionIdentityHash,
             CreatedAtUtc = clock.GetUtcNow()
         };
         await dbContext.Set<ProcessArtifactRecord>().AddAsync(artifact, cancellationToken);
@@ -367,7 +384,7 @@ public sealed partial class ProcessesService
                 stepRun.Status == ProcessStepRunStatus.Blocked)
             .ToListAsync(cancellationToken);
         blockedStepRuns = blockedStepRuns
-            .Where(stepRun => ProcessRuntimeProgressionPlanner.IsMissingUpstreamArtifactBlock(stepRun.BlockedReason))
+            .Where(ProcessStepRunBlockState.IsMissingUpstreamArtifactBlock)
             .ToList();
         if (blockedStepRuns.Count == 0)
         {

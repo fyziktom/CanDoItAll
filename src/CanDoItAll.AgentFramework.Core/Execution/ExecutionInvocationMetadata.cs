@@ -19,6 +19,7 @@ public static class ExecutionInvocationMetadata
     public const string ProcessStepAllowedOperationsMetadataKey = "agentProcessStepAllowedOperations";
     public const string ProcessStepTargetScopeMetadataKey = "agentProcessStepTargetScope";
     public const string ProcessStepAllowsProductMutationMetadataKey = "agentProcessStepAllowsProductMutation";
+    public const string ProcessGroundedTargetAliasLedgerMetadataKey = "agentProcessGroundedTargetAliasLedger";
     public const string ContextWorkspaceScopeMetadataKey = "agentContextWorkspaceScope";
     public const int DefaultGovernedRepairAttempts = 1;
     public const int MaxRepairAttempts = 2;
@@ -249,6 +250,32 @@ public static class ExecutionInvocationMetadata
         return ResolveProcessAllowsProductMutation(ParseObject(run.MetadataJson));
     }
 
+    public static IReadOnlyList<string> ResolveProcessStepAllowedOperations(ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        if (!IsTrustedGovernedProcessRun(run))
+        {
+            return [];
+        }
+
+        return ResolveStringArray(run.MetadataJson, ProcessStepAllowedOperationsMetadataKey)
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Select(item => item.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    public static string ResolveProcessStepTargetScope(ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        return IsTrustedGovernedProcessRun(run)
+            ? TryReadString(run.MetadataJson, ProcessStepTargetScopeMetadataKey)
+            : string.Empty;
+    }
+
     public static WorkspaceScopeDescriptor? ResolveContextWorkspaceScope(ExecutionRunRecord run)
     {
         ArgumentNullException.ThrowIfNull(run);
@@ -427,6 +454,40 @@ public static class ExecutionInvocationMetadata
                 .Where(item => !string.IsNullOrWhiteSpace(item))
                 .Cast<string>()
                 .Where(item => item.StartsWith("external-target/", StringComparison.OrdinalIgnoreCase))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
+
+    private static IReadOnlyList<string> ResolveStringArray(
+        string? metadataJson,
+        string metadataKey)
+    {
+        if (string.IsNullOrWhiteSpace(metadataJson))
+        {
+            return [];
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(metadataJson);
+            if (document.RootElement.ValueKind != JsonValueKind.Object ||
+                !document.RootElement.TryGetProperty(metadataKey, out var value) ||
+                value.ValueKind != JsonValueKind.Array)
+            {
+                return [];
+            }
+
+            return value
+                .EnumerateArray()
+                .Where(item => item.ValueKind == JsonValueKind.String)
+                .Select(item => item.GetString()?.Trim())
+                .Where(item => !string.IsNullOrWhiteSpace(item))
+                .Cast<string>()
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
         }

@@ -1,3 +1,8 @@
-# SB06 passing.txt
-
-Fill during execution.
+Command: dotnet focused runtime-governance proof set for SB06
+ExitCode: 0
+Invariant ID: SB06-INV-001
+Test name: CanDoItAll.Tests.Integration.ProcessRunAutomationDispatchServiceTests.WorkflowArtifactProjectionMapping_SB06_INV_001_uses_explicit_output_id_when_same_kind_names_conflict
+Test name: CanDoItAll.Tests.Integration.ProcessRunAutomationDispatchServiceTests.WorkflowArtifactProjectionMapping_SB06_INV_001_blocks_same_kind_heuristic_without_explicit_output_id
+Test name: CanDoItAll.Tests.Integration.ProcessRunAutomationDispatchServiceTests.SubprocessArtifactProjectionMapping_SB06_INV_001_uses_child_expectation_id_when_same_kind_titles_conflict
+Test name: CanDoItAll.Tests.Integration.ProcessRunAutomationDispatchServiceTests.SubprocessArtifactProjectionMapping_SB06_INV_001_blocks_same_kind_heuristic_without_child_mapping
+Result: passing proof completed for SB06. The executed focused proof set included these tests and exited successfully.

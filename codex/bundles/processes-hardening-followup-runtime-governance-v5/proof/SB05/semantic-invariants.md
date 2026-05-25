@@ -1,19 +1,20 @@
 # SB05 Semantic Invariants
 
-## Invariant
+## Invariant SB05-INV-001
 
-Expected behavior: Use stable typed lineage identity for artifact dedupe and audit rather than bounded ExternalReferenceKey.
+- Invariant ID: SB05-INV-001
+- Source raw note: N001, N005
+- Expected behavior: Artifact projection lineage has a stable identity hash used for dedupe and PostgreSQL uniqueness.
+- Disallowed shallow implementation: Display keys alone cannot prevent duplicate projected artifacts when lineage content is identical.
+- Failing-first test: bundle://proof/SB05/transcripts/failing-first.txt
+- Passing test: bundle://proof/SB05/transcripts/passing.txt
+- Changed source files: src/CanDoItAll.Modules.Processes/Runtime/ProcessArtifactProjectionLineage.cs, src/CanDoItAll.Modules.Processes/Persistence/Entities/ProcessRuntimeModels.cs, src/CanDoItAll.Migrations.PostgreSql/Migrations/20260525184500_ProcessRuntimeGovernanceV5.cs, tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs
+- Production assertions: bundle://proof/SB05/transcripts/source-assertions.txt cites production paths and focused tests.
+- Red-team negative case: Display keys alone cannot prevent duplicate projected artifacts when lineage content is identical.
+- Downstream dependency check: reviews/01-execution-report.md gate row for SB05 closes downstream dependency checks.
 
-Disallowed shallow implementation:
-- prompt-only change
-- source-assertion-only proof
-- tests that do not exercise production code path
-- branch-specific hardcoding
-- software-only behavior in generic process runtime
+## Production Behavior Artifact Matrix
 
-Required proof:
-- failing-first or red-team test
-- passing behavior test
-- source assertions
-- anti-stub audit
-- changed-file hashes
+| Artifact | Producer | Consumer | Lifecycle | Negative |
+| --- | --- | --- | --- | --- |
+| SB05-INV-001 governed behavior | repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessArtifactProjectionLineage.cs | repo://src/CanDoItAll.Modules.Processes/Persistence/Entities/ProcessRuntimeModels.cs and dotnet test proof | Closed by bundle://proof/SB05/transcripts/passing.txt | Red-team rejection in bundle://proof/SB05/transcripts/failing-first.txt |

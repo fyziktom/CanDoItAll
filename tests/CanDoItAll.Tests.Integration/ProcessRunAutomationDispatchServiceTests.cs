@@ -4210,6 +4210,26 @@ Requirements from project-level planning context:
                 .ToArray()
             : [];
         Assert.Contains("external-target/C/business/market-plan/reports", allowedAliases);
+        var ledger = document.RootElement
+            .GetProperty(ExecutionInvocationMetadata.ProcessGroundedTargetAliasLedgerMetadataKey)
+            .EnumerateArray()
+            .ToArray();
+        var reportLedgerEntry = Assert.Single(ledger, item =>
+            string.Equals(
+                item.GetProperty("alias").GetString(),
+                "external-target/C/business/market-plan/reports",
+                StringComparison.OrdinalIgnoreCase)
+            && string.Equals(
+                item.GetProperty("intendedUse").GetString(),
+                "current-run-target",
+                StringComparison.Ordinal)
+            && string.Equals(
+                item.GetProperty("trustLevel").GetString(),
+                "trusted-current-run",
+                StringComparison.Ordinal));
+        Assert.Equal("Writable", reportLedgerEntry.GetProperty("effectiveAccess").GetString());
+        Assert.Equal("current-run-target", reportLedgerEntry.GetProperty("intendedUse").GetString());
+        Assert.Equal("trusted-current-run", reportLedgerEntry.GetProperty("trustLevel").GetString());
     }
 
     [Fact]
@@ -13599,6 +13619,78 @@ Ancestor path to the target work node:
     }
 
     [Fact]
+    public void ArtifactContractValidation_SB04_INV_001_reads_catalog_backed_storage_reference()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"process-artifact-workspace-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(workspaceRoot);
+        try
+        {
+            var processRunId = Guid.NewGuid();
+            var stepRunId = Guid.NewGuid();
+            var executionRunId = Guid.NewGuid();
+            var storageId = Guid.NewGuid();
+            var contentBytes = System.Text.Encoding.UTF8.GetBytes("{\"approved\":true}");
+            var reference = new StorageObjectReference(
+                storageId,
+                StorageProviderKind.FileSystem,
+                StorageLocatorKind.RelativePath,
+                "process-runs/current/finance-approval-packet.json",
+                "finance-approval-packet.json",
+                "application/json",
+                contentBytes.Length);
+            var expectation = CreateDispatchArtifactExpectation(
+                ProcessArtifactKind.Deliverable,
+                "Finance approval packet",
+                isRequired: true,
+                "Create the approval packet as JSON.");
+            var artifact = new ProcessArtifactRecord
+            {
+                ProcessRunId = processRunId,
+                StepRunId = stepRunId,
+                ArtifactExpectationId = expectation.Id,
+                ArtifactKind = ProcessArtifactKind.Deliverable,
+                Title = expectation.Title,
+                ManagedStoragePath = StorageJson.SerializeReference(reference),
+                ExternalReferenceKey = $"workspace-written-artifact|{executionRunId:D}|{expectation.Id:D}|{reference.Locator}",
+                ReviewSummary = "Finance approval packet.",
+                ProvenanceSummary = $"Written by execution run {executionRunId:D}."
+            };
+            var storageCatalog = new TestStorageCatalogService(new StorageCatalogRecord
+            {
+                Id = storageId,
+                Name = "Process artifact storage",
+                ProviderKind = StorageProviderKind.FileSystem,
+                IsEnabled = true,
+                CapabilityMask = StorageCapability.Read
+            });
+            var storageDriver = new TestStorageDriver(StorageProviderKind.FileSystem, contentBytes);
+            var reader = new ProcessRunAutomationDispatchService.StorageBackedProcessArtifactContentReader(
+                new TestWorkspacePathResolver(workspaceRoot),
+                storageCatalog,
+                new TestStorageDriverRegistry(storageDriver));
+
+            var result = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+                processRunId,
+                stepRunId,
+                expectation,
+                [artifact],
+                ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+                executionRunId,
+                managedArtifactContentReader: reader);
+
+            Assert.Equal(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.Satisfied, result.Status);
+            Assert.Equal(1, storageDriver.OpenReadCount);
+        }
+        finally
+        {
+            if (Directory.Exists(workspaceRoot))
+            {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public void ArtifactContractValidation_rejects_malformed_json_file_when_json_is_required()
     {
         var tempFile = Path.Combine(Path.GetTempPath(), $"process-artifact-{Guid.NewGuid():N}.json");
@@ -16667,6 +16759,118 @@ Ancestor path to the target work node:
                               parameters[1].ParameterType.IsByRef;
                    })
                ?? throw new InvalidOperationException("TryResolveDeclaredStepOutcome method was not found.");
+    }
+
+    private sealed class TestStorageCatalogService(StorageCatalogRecord storage) : IStorageCatalogService
+    {
+        public Task<IReadOnlyList<StorageCatalogRecord>> ListAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<IReadOnlyList<StorageCatalogRecord>>([storage]);
+        }
+
+        public Task<StorageCatalogRecord?> GetAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            var result = id == storage.Id
+                ? storage
+                : null;
+            return Task.FromResult(result);
+        }
+
+        public Task<StorageCatalogRecord> EnsureBootstrapFileSystemStorageAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(storage);
+        }
+
+        public Task<StorageCatalogRecord> SaveAsync(StorageCatalogRecord record, CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task<IReadOnlyList<StorageRoutingRule>> ListRulesAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<IReadOnlyList<StorageRoutingRule>>([]);
+        }
+
+        public Task<StorageRoutingRule> SaveRuleAsync(StorageRoutingRule rule, CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+    }
+
+    private sealed class TestStorageDriverRegistry(IStorageDriver driver) : IStorageDriverRegistry
+    {
+        public IReadOnlyCollection<StorageProviderKind> RegisteredKinds => [driver.ProviderKind];
+
+        public bool TryResolve(StorageProviderKind providerKind, out IStorageDriver resolvedDriver)
+        {
+            if (providerKind == driver.ProviderKind)
+            {
+                resolvedDriver = driver;
+                return true;
+            }
+
+            resolvedDriver = null!;
+            return false;
+        }
+
+        public IStorageDriver Resolve(StorageProviderKind providerKind)
+        {
+            return TryResolve(providerKind, out var resolvedDriver)
+                ? resolvedDriver
+                : throw new InvalidOperationException($"No storage driver is registered for provider '{providerKind}'.");
+        }
+    }
+
+    private sealed class TestStorageDriver(StorageProviderKind providerKind, byte[] contentBytes) : IStorageDriver
+    {
+        public StorageProviderKind ProviderKind => providerKind;
+
+        public StorageCapability SupportedCapabilities => StorageCapability.Read;
+
+        public int OpenReadCount { get; private set; }
+
+        public Task<StorageConnectionTestResult> TestConnectionAsync(
+            StorageCatalogRecord storage,
+            string? secretValue,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new StorageConnectionTestResult(
+                true,
+                "ok",
+                StorageHealthStatus.Healthy,
+                SupportedCapabilities,
+                DateTimeOffset.UtcNow));
+        }
+
+        public Task<StorageWriteResult> SaveAsync(
+            StorageCatalogRecord storage,
+            StorageWriteRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task<Stream> OpenReadAsync(
+            StorageCatalogRecord storage,
+            StorageObjectReference reference,
+            CancellationToken cancellationToken = default)
+        {
+            OpenReadCount++;
+            return Task.FromResult<Stream>(new MemoryStream(contentBytes, writable: false));
+        }
+
+        public Task DeleteAsync(
+            StorageCatalogRecord storage,
+            StorageObjectReference reference,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
     }
 
     private sealed class TestWorkspacePathResolver(string workspaceRoot) : IWorkspacePathResolver

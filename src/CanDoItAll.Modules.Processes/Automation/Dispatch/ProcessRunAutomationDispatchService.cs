@@ -36,6 +36,8 @@ internal sealed partial class ProcessRunAutomationDispatchService(
     IAiTechnicalAgentBridge technicalAgentBridge,
     IAgentFrameworkWorkspaceService workspaceService,
     IStoragePlacementService storagePlacementService,
+    IStorageCatalogService storageCatalogService,
+    IStorageDriverRegistry storageDriverRegistry,
     IWorkspacePathResolver workspacePathResolver,
     IDatabaseProfileRuntimeAccessor databaseProfileRuntimeAccessor,
     ProcessWorkflowRunCoordinator workflowRunCoordinator,

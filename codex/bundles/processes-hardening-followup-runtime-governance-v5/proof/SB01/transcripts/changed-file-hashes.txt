@@ -1,3 +1,5 @@
-# SB01 changed-file-hashes.txt
-
-Fill during execution.
+Command: Get-FileHash -Algorithm SHA256 changed files for SB01
+ExitCode: 0
+Invariant ID: SB01-INV-001
+- `a4a1e05e97e01ea81b3f7a4b4ea9dc1355b158e02bb4791dad58131597a869ad`  `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ExecutionMetadata.cs`
+- `3083277fccf897fb6a73f49bef706d3584fd0250164f245b831a0309f01fccc6`  `repo://tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs`

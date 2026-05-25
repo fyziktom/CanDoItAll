@@ -135,6 +135,7 @@ internal static class ProcessRuntimeProgressionPlanner
         stepRun.ReadyAtUtc = now;
         stepRun.StartedAtUtc = null;
         stepRun.BlockedReason = string.Empty;
+        ProcessStepRunBlockState.Clear(stepRun);
         stepRun.DecisionSummary = "Reopened after upstream artifact materialization completed.";
     }
 

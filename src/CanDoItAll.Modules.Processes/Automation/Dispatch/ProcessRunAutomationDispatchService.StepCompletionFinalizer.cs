@@ -219,6 +219,93 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
     }
 
+    internal sealed class StorageBackedProcessArtifactContentReader(
+        IWorkspacePathResolver workspacePathResolver,
+        IStorageCatalogService storageCatalogService,
+        IStorageDriverRegistry storageDriverRegistry) : IProcessArtifactContentReader
+    {
+        private readonly WorkspaceProcessArtifactContentReader workspaceReader = new(workspacePathResolver);
+
+        public ProcessArtifactContentReadResult Read(string managedStoragePath)
+        {
+            if (!StorageJson.TryParseReference(managedStoragePath, out var reference) || reference is null)
+            {
+                return workspaceReader.Read(managedStoragePath);
+            }
+
+            if (!reference.StorageId.HasValue)
+            {
+                return workspaceReader.Read(reference.Locator);
+            }
+
+            try
+            {
+                return ReadStorageReferenceAsync(managedStoragePath, reference).GetAwaiter().GetResult();
+            }
+            catch (Exception exception) when (exception is InvalidOperationException or IOException or UnauthorizedAccessException)
+            {
+                return ProcessArtifactContentReadResult.Failure(
+                    managedStoragePath,
+                    reference.Locator,
+                    string.IsNullOrWhiteSpace(reference.ContentType) ? "application/octet-stream" : reference.ContentType,
+                    reference.ContentLength ?? 0,
+                    $"Managed storage object could not be read: {exception.Message}");
+            }
+        }
+
+        private async Task<ProcessArtifactContentReadResult> ReadStorageReferenceAsync(
+            string managedStoragePath,
+            StorageObjectReference reference)
+        {
+            var storage = await storageCatalogService.GetAsync(reference.StorageId!.Value, CancellationToken.None);
+            if (storage is null)
+            {
+                return ProcessArtifactContentReadResult.Failure(
+                    managedStoragePath,
+                    reference.Locator,
+                    reference.ContentType,
+                    reference.ContentLength ?? 0,
+                    $"Storage catalog record '{reference.StorageId.Value:D}' was not found.");
+            }
+
+            var driver = storageDriverRegistry.Resolve(storage.ProviderKind);
+            await using var stream = await driver.OpenReadAsync(storage, reference, CancellationToken.None);
+            if (stream.CanSeek && stream.Length > MaxProcessArtifactValidationContentBytes)
+            {
+                return ProcessArtifactContentReadResult.Failure(
+                    managedStoragePath,
+                    reference.Locator,
+                    reference.ContentType,
+                    stream.Length,
+                    $"Managed artifact content is {stream.Length} bytes, exceeding the validation limit of {MaxProcessArtifactValidationContentBytes} bytes.");
+            }
+
+            using var memory = new MemoryStream();
+            await stream.CopyToAsync(memory, CancellationToken.None);
+            if (memory.Length > MaxProcessArtifactValidationContentBytes)
+            {
+                return ProcessArtifactContentReadResult.Failure(
+                    managedStoragePath,
+                    reference.Locator,
+                    reference.ContentType,
+                    memory.Length,
+                    $"Managed artifact content is {memory.Length} bytes, exceeding the validation limit of {MaxProcessArtifactValidationContentBytes} bytes.");
+            }
+
+            var contentBytes = memory.ToArray();
+            var contentType = string.IsNullOrWhiteSpace(reference.ContentType)
+                ? GuessContentTypeFromPath(reference.Locator)
+                : reference.ContentType;
+            var textContent = TryDecodeManagedArtifactTextContent(contentType, reference.Locator, contentBytes);
+            return ProcessArtifactContentReadResult.Success(
+                managedStoragePath,
+                reference.Locator,
+                contentType,
+                contentBytes,
+                textContent);
+        }
+    }
+
     private const int MaxProcessArtifactValidationContentBytes = 1024 * 1024;
     private static readonly UTF8Encoding StrictUtf8Encoding = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
 
@@ -245,6 +332,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
         Guid? SelectedBranchOutcomeId,
         Guid StepRunConcurrencyToken,
         IReadOnlyList<ProcessArtifactExpectationValidationResult> ArtifactValidationResults);
+
+    private sealed record RuntimeInvariantViolation(
+        ProcessConformanceSeverity Severity,
+        string Code,
+        string Observation,
+        string DeviationReason);
 
     private sealed record ProcessArtifactValidationDiagnosticPayload(
         Guid ProcessRunId,
@@ -380,6 +473,20 @@ internal sealed partial class ProcessRunAutomationDispatchService
             RefreshCandidateArtifactSatisfaction(candidate, validationResults);
         }
 
+        var invariantViolations = await PersistRuntimeInvariantAuditAsync(
+            context,
+            completionStatus,
+            validationResults,
+            cancellationToken);
+        var severeInvariant = invariantViolations.FirstOrDefault(violation =>
+            violation.Severity is ProcessConformanceSeverity.High or ProcessConformanceSeverity.Critical);
+        if (completionStatus == ProcessStepRunStatus.Completed && severeInvariant is not null)
+        {
+            completionStatus = ProcessStepRunStatus.Blocked;
+            completionReason = $"Runtime invariant violation: {severeInvariant.Observation}";
+            selectedBranchOutcomeId = null;
+        }
+
         return new ProcessStepCompletionFinalizerResult(
             completionStatus,
             completionReason,
@@ -441,7 +548,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
             .OrderByDescending(item => item.CreatedAtUtc)
             .ToListAsync(cancellationToken);
 
-        var managedArtifactContentReader = new WorkspaceProcessArtifactContentReader(workspacePathResolver);
+        var managedArtifactContentReader = new StorageBackedProcessArtifactContentReader(
+            workspacePathResolver,
+            storageCatalogService,
+            storageDriverRegistry);
         var results = candidate.ExpectedArtifacts
             .Where(expectation => expectation.IsRequired)
             .Select(expectation => ValidateArtifactExpectationForRecordedArtifacts(
@@ -472,6 +582,113 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         RefreshCandidateArtifactSatisfaction(candidate, results);
         return results;
+    }
+
+    private async Task<IReadOnlyList<RuntimeInvariantViolation>> PersistRuntimeInvariantAuditAsync(
+        ProcessStepCompletionFinalizerContext context,
+        ProcessStepRunStatus completionStatus,
+        IReadOnlyList<ProcessArtifactExpectationValidationResult> validationResults,
+        CancellationToken cancellationToken)
+    {
+        var violations = new List<RuntimeInvariantViolation>();
+        var candidate = context.Candidate;
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var artifacts = await dbContext.Set<ProcessArtifactRecord>()
+            .AsNoTracking()
+            .Where(item => item.ProcessRunId == candidate.Run.Id && item.StepRunId == candidate.StepRun.Id)
+            .ToListAsync(cancellationToken);
+
+        if (context.ExecutionDetail is not null &&
+            !ExecutionInvocationMetadata.ResolveProcessAllowsProductMutation(context.ExecutionDetail.Run) &&
+            context.ExecutionDetail.ToolReceipts.Any(IsConcreteProductMutationReceipt))
+        {
+            violations.Add(new RuntimeInvariantViolation(
+                ProcessConformanceSeverity.Critical,
+                "product-mutation-without-operation",
+                "A non-mutating governed step recorded a product mutation tool receipt.",
+                "Tool receipts must match the persisted operation contract."));
+        }
+
+        foreach (var artifact in artifacts)
+        {
+            if (IsWrongRootArtifact(artifact))
+            {
+                violations.Add(new RuntimeInvariantViolation(
+                    ProcessConformanceSeverity.High,
+                    "wrong-root-artifact",
+                    $"Artifact '{artifact.Title}' points at '{artifact.ManagedStoragePath}', which is outside the current-run managed artifact boundary.",
+                    "Evidence and deliverables must be recorded from current-run managed storage or an explicitly allowed external artifact destination."));
+            }
+
+            if (RequiresProjectionLineage(artifact) &&
+                string.IsNullOrWhiteSpace(artifact.ProjectionIdentityHash))
+            {
+                violations.Add(new RuntimeInvariantViolation(
+                    ProcessConformanceSeverity.High,
+                    "missing-projection-lineage",
+                    $"Artifact '{artifact.Title}' is missing projection identity lineage.",
+                    "Evidence and deliverable artifact records need typed source lineage for dedupe and recovery audit."));
+            }
+        }
+
+        foreach (var unsatisfiedResult in validationResults.Where(result => !result.IsSatisfied))
+        {
+            violations.Add(new RuntimeInvariantViolation(
+                ProcessConformanceSeverity.Moderate,
+                "artifact-validation-unsatisfied",
+                $"Artifact expectation '{unsatisfiedResult.ExpectationTitle}' was not satisfied: {unsatisfiedResult.Diagnostic}",
+                unsatisfiedResult.SuggestedAction));
+        }
+
+        if (violations.Count == 0)
+        {
+            return [];
+        }
+
+        foreach (var violation in violations)
+        {
+            await dbContext.Set<ProcessConformanceObservation>().AddAsync(
+                new ProcessConformanceObservation
+                {
+                    ProcessRunId = candidate.Run.Id,
+                    StepRunId = candidate.StepRun.Id,
+                    Severity = violation.Severity,
+                    Category = "runtime-invariant",
+                    Observation = violation.Observation,
+                    DeviationReason = violation.DeviationReason,
+                    IsSafeNonAction = false,
+                    ContainsSensitiveAssessment = false,
+                    CreatedAtUtc = clock.GetUtcNow()
+                },
+                cancellationToken);
+            await dbContext.Set<ProcessJournalEntry>().AddAsync(
+                new ProcessJournalEntry
+                {
+                    ProcessRunId = candidate.Run.Id,
+                    StepRunId = candidate.StepRun.Id,
+                    EventType = ProcessRuntimeEventTypes.RuntimeInvariantViolationRecorded,
+                    Title = "Runtime invariant violation recorded",
+                    Description = violation.Observation,
+                    CorrelationId = $"{candidate.StepRun.Id:D}:{violation.Code}",
+                    OperatingMode = candidate.Run.OperatingMode,
+                    PolicyVersion = $"definition-version:{candidate.Run.ProcessDefinitionVersionId:D}",
+                    EnvironmentMode = candidate.Run.OperatingMode.ToString(),
+                    ReplayContextJson = JsonSerializer.Serialize(new
+                    {
+                        RunId = candidate.Run.Id,
+                        StepRunId = candidate.StepRun.Id,
+                        CompletionStatus = completionStatus.ToString(),
+                        violation.Code,
+                        Severity = violation.Severity.ToString(),
+                        violation.DeviationReason
+                    }),
+                    OccurredAtUtc = clock.GetUtcNow()
+                },
+                cancellationToken);
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return violations;
     }
 
     internal static ProcessArtifactExpectationValidationResult ValidateArtifactExpectationForRecordedArtifacts(
@@ -1360,7 +1577,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     {
         diagnostic = string.Empty;
         var contractText = CollapsePromptWhitespace(string.Join(' ', expectation.Title, expectation.ValidationRequirementSummary)).ToLowerInvariant();
-        var extension = Path.GetExtension(artifact.ManagedStoragePath).ToLowerInvariant();
+        var extension = ResolveManagedArtifactExtension(artifact.ManagedStoragePath);
         var requiresStoredContent = managedArtifactContentReader is not null && RequiresManagedEvidencePath(mode, producerKind);
         ProcessArtifactContentReadResult? content = null;
         var contentRead = false;
@@ -1457,6 +1674,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         return true;
+    }
+
+    private static string ResolveManagedArtifactExtension(string managedStoragePath)
+    {
+        if (StorageJson.TryParseReference(managedStoragePath, out var reference) && reference is not null)
+        {
+            return Path.GetExtension(reference.Locator).ToLowerInvariant();
+        }
+
+        return Path.GetExtension(managedStoragePath).ToLowerInvariant();
     }
 
     private static bool ContainsPlaceholderArtifactSignal(
@@ -1594,6 +1821,71 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         return true;
+    }
+
+    private static bool IsConcreteProductMutationReceipt(ToolExecutionReceiptRecord receipt)
+    {
+        if (!ConcreteProductMutationToolNames.Contains(receipt.ToolName))
+        {
+            return false;
+        }
+
+        var summary = CollapsePromptWhitespace(string.Join(' ', receipt.RequestSummary, receipt.WorkingDirectory));
+        if (summary.Contains("external-target/", StringComparison.OrdinalIgnoreCase))
+        {
+            return !summary.Contains("/artifact", StringComparison.OrdinalIgnoreCase) &&
+                   !summary.Contains("/artifacts", StringComparison.OrdinalIgnoreCase) &&
+                   !summary.Contains("/evidence", StringComparison.OrdinalIgnoreCase) &&
+                   !summary.Contains("/output", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return summary.Contains("/src/", StringComparison.OrdinalIgnoreCase) ||
+               summary.Contains("\\src\\", StringComparison.OrdinalIgnoreCase) ||
+               summary.Contains("/tests/", StringComparison.OrdinalIgnoreCase) ||
+               summary.Contains("\\tests\\", StringComparison.OrdinalIgnoreCase) ||
+               summary.Contains(" output/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsWrongRootArtifact(ProcessArtifactRecord artifact)
+    {
+        if (string.IsNullOrWhiteSpace(artifact.ManagedStoragePath))
+        {
+            return false;
+        }
+
+        var normalizedPath = artifact.ManagedStoragePath.Replace('\\', '/').Trim().TrimStart('/');
+        if (StorageJson.TryParseReference(normalizedPath, out _))
+        {
+            return false;
+        }
+
+        if (normalizedPath.StartsWith("external-target/", StringComparison.OrdinalIgnoreCase))
+        {
+            var normalizedAlias = NormalizeExternalTargetAlias(normalizedPath);
+            return !IsExternalArtifactDestinationAlias(normalizedAlias);
+        }
+
+        return normalizedPath.StartsWith("src/", StringComparison.OrdinalIgnoreCase) ||
+               normalizedPath.StartsWith("tests/", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(normalizedPath, "output", StringComparison.OrdinalIgnoreCase) ||
+               normalizedPath.StartsWith("output/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool RequiresProjectionLineage(ProcessArtifactRecord artifact)
+    {
+        return artifact.ArtifactKind is ProcessArtifactKind.Evidence or ProcessArtifactKind.Deliverable;
+    }
+
+    private static bool IsExternalArtifactDestinationAlias(string normalizedAlias)
+    {
+        var segments = normalizedAlias.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return segments.Any(segment =>
+            string.Equals(segment, "artifact", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, "artifacts", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, "evidence", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, "output", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, "report", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, "reports", StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool HasReadableTextArtifactContent(

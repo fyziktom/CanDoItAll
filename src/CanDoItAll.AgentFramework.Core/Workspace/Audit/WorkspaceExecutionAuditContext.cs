@@ -32,7 +32,9 @@ public static class WorkspaceExecutionAuditContext
             ExecutionInvocationMetadata.ResolveProcessWorkspaceToolProfile(run),
             ExecutionInvocationMetadata.ResolveProcessBrowserToolsAllowed(run),
             ExecutionInvocationMetadata.ResolveProcessScaffoldToolOnly(run),
-            ExecutionInvocationMetadata.ResolveProcessAllowsProductMutation(run));
+            ExecutionInvocationMetadata.ResolveProcessAllowsProductMutation(run),
+            ExecutionInvocationMetadata.ResolveProcessStepAllowedOperations(run),
+            ExecutionInvocationMetadata.ResolveProcessStepTargetScope(run));
         return new Scope(previous);
     }
 
@@ -55,7 +57,9 @@ public static class WorkspaceExecutionAuditContext
         AgentWorkspaceToolProfileKind? WorkspaceToolProfileOverride,
         bool ProcessBrowserToolsAllowed,
         bool ProcessScaffoldToolOnly,
-        bool ProcessAllowsProductMutation);
+        bool ProcessAllowsProductMutation,
+        IReadOnlyList<string> ProcessStepAllowedOperations,
+        string ProcessStepTargetScope);
 
     private sealed class Scope(WorkspaceExecutionAuditScopeState? previous) : IDisposable
     {

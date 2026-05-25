@@ -1,19 +1,20 @@
 # SB03 Semantic Invariants
 
-## Invariant
+## Invariant SB03-INV-001
 
-Expected behavior: Replace broad text-scraped external alias grants with a typed grounded-target ledger.
+- Invariant ID: SB03-INV-001
+- Source raw note: N004, N005
+- Expected behavior: External target aliases are grounded through typed trusted sources with intended use and trust level.
+- Disallowed shallow implementation: Free-text prompt aliases cannot become writable process targets without trusted current-run grounding.
+- Failing-first test: bundle://proof/SB03/transcripts/failing-first.txt
+- Passing test: bundle://proof/SB03/transcripts/passing.txt
+- Changed source files: src/CanDoItAll.AgentFramework.Core/Execution/ExecutionInvocationMetadata.cs, src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ExecutionMetadata.cs, tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs
+- Production assertions: bundle://proof/SB03/transcripts/source-assertions.txt cites production paths and focused tests.
+- Red-team negative case: Free-text prompt aliases cannot become writable process targets without trusted current-run grounding.
+- Downstream dependency check: reviews/01-execution-report.md gate row for SB03 closes downstream dependency checks.
 
-Disallowed shallow implementation:
-- prompt-only change
-- source-assertion-only proof
-- tests that do not exercise production code path
-- branch-specific hardcoding
-- software-only behavior in generic process runtime
+## Production Behavior Artifact Matrix
 
-Required proof:
-- failing-first or red-team test
-- passing behavior test
-- source assertions
-- anti-stub audit
-- changed-file hashes
+| Artifact | Producer | Consumer | Lifecycle | Negative |
+| --- | --- | --- | --- | --- |
+| SB03-INV-001 governed behavior | repo://src/CanDoItAll.AgentFramework.Core/Execution/ExecutionInvocationMetadata.cs | repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ExecutionMetadata.cs and dotnet test proof | Closed by bundle://proof/SB03/transcripts/passing.txt | Red-team rejection in bundle://proof/SB03/transcripts/failing-first.txt |

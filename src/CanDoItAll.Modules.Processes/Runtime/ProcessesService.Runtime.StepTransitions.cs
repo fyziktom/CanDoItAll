@@ -493,6 +493,7 @@ public sealed partial class ProcessesService
         {
             stepRun.CompletedAtUtc = null;
             stepRun.BlockedReason = string.Empty;
+            ProcessStepRunBlockState.Clear(stepRun);
             stepRun.RefusalReason = string.Empty;
             stepRun.ExceptionSummary = string.Empty;
             if (previousStatus is ProcessStepRunStatus.Ready or ProcessStepRunStatus.WaitingApproval &&
@@ -512,6 +513,7 @@ public sealed partial class ProcessesService
         if (request.TargetStatus == ProcessStepRunStatus.Blocked)
         {
             stepRun.BlockedReason = trimmedReason;
+            ProcessStepRunBlockState.Apply(stepRun, trimmedReason);
             stepRun.BlockedMinutes = Math.Max(stepRun.BlockedMinutes, 15);
         }
 
@@ -524,7 +526,13 @@ public sealed partial class ProcessesService
         if (request.TargetStatus == ProcessStepRunStatus.Failed)
         {
             stepRun.ExceptionSummary = trimmedReason;
+            ProcessStepRunBlockState.Apply(stepRun, trimmedReason);
             stepRun.ReworkCount += 1;
+        }
+
+        if (request.TargetStatus is ProcessStepRunStatus.Completed or ProcessStepRunStatus.Skipped or ProcessStepRunStatus.Refused)
+        {
+            ProcessStepRunBlockState.Clear(stepRun);
         }
 
         if (selectedBranchOutcome is not null)

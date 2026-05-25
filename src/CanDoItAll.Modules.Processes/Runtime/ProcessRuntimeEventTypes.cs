@@ -11,6 +11,7 @@ internal static class ProcessRuntimeEventTypes
     public const string WorkflowRunStarted = "workflow-run-started";
     public const string WorkflowRunObserved = "workflow-run-observed";
     public const string ArtifactValidationDiagnostic = "artifact-validation-diagnostic";
+    public const string RuntimeInvariantViolationRecorded = "runtime-invariant-violation-recorded";
     public const string MissingUpstreamArtifactMaterializationRequested = "missing-upstream-artifact-materialization-requested";
     public const string MissingUpstreamArtifactMaterializationResolved = "missing-upstream-artifact-materialization-resolved";
     public const string NoProgressRetryObserved = "no-progress-retry-observed";

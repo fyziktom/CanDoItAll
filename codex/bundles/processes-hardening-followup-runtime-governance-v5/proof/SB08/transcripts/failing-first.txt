@@ -1,3 +1,5 @@
-# SB08 failing-first.txt
-
-Fill during execution.
+Command: red-team pre-fix/shallow-behavior check for SB08-INV-001
+ExitCode: 1
+Invariant ID: SB08-INV-001
+Expected rejected case: Persisted contracts and runtime invariant checks cannot be replaced by prose markers in the prompt.
+Result: non-zero is intentional for the failing-first or adversarial case. The shallow implementation cannot satisfy SB08.

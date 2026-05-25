@@ -54,7 +54,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
     private sealed record ProcessTargetGroundingRecord(
         string Alias,
         ProcessTargetGroundingSourceKind SourceKind,
-        ProcessTargetGroundingAuthority Authority);
+        ProcessTargetGroundingAuthority Authority,
+        string IntendedUse,
+        string TrustLevel,
+        decimal Confidence,
+        string Scope);
 
     private const string ProjectStructureCurrentRunMarker = "current-run";
     private static readonly string[] StaleProjectStructureGroundingMarkers =
@@ -96,7 +100,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
             [ExecutionInvocationMetadata.ProcessStepExecutionBoundaryMetadataKey] = executionBoundary.Boundary.ToString(),
             [ExecutionInvocationMetadata.ProcessStepAllowedOperationsMetadataKey] = operationContract.AllowedOperations.Select(item => item.ToString()).ToArray(),
             [ExecutionInvocationMetadata.ProcessStepTargetScopeMetadataKey] = operationContract.TargetScope.ToString(),
-            [ExecutionInvocationMetadata.ProcessStepAllowsProductMutationMetadataKey] = operationContract.AllowsProductMutation
+            [ExecutionInvocationMetadata.ProcessStepAllowsProductMutationMetadataKey] = operationContract.AllowsProductMutation,
+            [ExecutionInvocationMetadata.ProcessGroundedTargetAliasLedgerMetadataKey] = BuildGroundedTargetAliasLedger(
+                targetGroundings,
+                allowedExternalTargetAliases)
         };
         if (IsDotNetSolutionSetupScaffoldMutationStep(candidate))
         {
@@ -1024,8 +1031,97 @@ internal sealed partial class ProcessRunAutomationDispatchService
     {
         foreach (var alias in ExtractExternalTargetAliasesFromText(text))
         {
-            groundings.Add(new ProcessTargetGroundingRecord(alias, sourceKind, authority));
+            groundings.Add(new ProcessTargetGroundingRecord(
+                alias,
+                sourceKind,
+                authority,
+                ResolveGroundingIntendedUse(sourceKind, authority),
+                ResolveGroundingTrustLevel(sourceKind, authority),
+                ResolveGroundingConfidence(sourceKind, authority),
+                ResolveGroundingScope(alias)));
         }
+    }
+
+    private static IReadOnlyList<object> BuildGroundedTargetAliasLedger(
+        IReadOnlyList<ProcessTargetGroundingRecord> targetGroundings,
+        IReadOnlyList<string> writableAliases)
+    {
+        var writableAliasSet = writableAliases.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return targetGroundings
+            .OrderBy(grounding => grounding.Alias, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(grounding => grounding.SourceKind.ToString(), StringComparer.OrdinalIgnoreCase)
+            .ThenBy(grounding => grounding.Authority.ToString(), StringComparer.OrdinalIgnoreCase)
+            .Select(grounding => new
+            {
+                alias = grounding.Alias,
+                sourceKind = grounding.SourceKind.ToString(),
+                authority = grounding.Authority.ToString(),
+                effectiveAccess = writableAliasSet.Any(root => IsAliasCoveredByAny(grounding.Alias, [root]))
+                    ? ProcessTargetGroundingAuthority.Writable.ToString()
+                    : ProcessTargetGroundingAuthority.ReadOnly.ToString(),
+                intendedUse = grounding.IntendedUse,
+                trustLevel = grounding.TrustLevel,
+                confidence = grounding.Confidence,
+                scope = grounding.Scope
+            })
+            .ToArray();
+    }
+
+    private static string ResolveGroundingIntendedUse(
+        ProcessTargetGroundingSourceKind sourceKind,
+        ProcessTargetGroundingAuthority authority)
+    {
+        if (authority == ProcessTargetGroundingAuthority.Writable &&
+            sourceKind is ProcessTargetGroundingSourceKind.LaunchPlan
+                or ProcessTargetGroundingSourceKind.ProjectStructureCurrentRun
+                or ProcessTargetGroundingSourceKind.ExplicitStepContract)
+        {
+            return "current-run-target";
+        }
+
+        return sourceKind is ProcessTargetGroundingSourceKind.UpstreamArtifact
+            or ProcessTargetGroundingSourceKind.UpstreamArtifactProvenance
+                ? "read-context"
+                : "grounding-context";
+    }
+
+    private static string ResolveGroundingTrustLevel(
+        ProcessTargetGroundingSourceKind sourceKind,
+        ProcessTargetGroundingAuthority authority)
+    {
+        return (sourceKind, authority) switch
+        {
+            (ProcessTargetGroundingSourceKind.LaunchPlan, ProcessTargetGroundingAuthority.Writable) => "trusted-launch",
+            (ProcessTargetGroundingSourceKind.ProjectStructureCurrentRun, ProcessTargetGroundingAuthority.Writable) => "trusted-current-run",
+            (ProcessTargetGroundingSourceKind.ExplicitStepContract, ProcessTargetGroundingAuthority.Writable) => "trusted-step-contract",
+            (ProcessTargetGroundingSourceKind.UpstreamArtifact, _) => "untrusted-read-context",
+            (ProcessTargetGroundingSourceKind.UpstreamArtifactProvenance, _) => "untrusted-read-context",
+            _ => "text-derived-read-context"
+        };
+    }
+
+    private static decimal ResolveGroundingConfidence(
+        ProcessTargetGroundingSourceKind sourceKind,
+        ProcessTargetGroundingAuthority authority)
+    {
+        return (sourceKind, authority) switch
+        {
+            (ProcessTargetGroundingSourceKind.ProjectStructureCurrentRun, ProcessTargetGroundingAuthority.Writable) => 0.95m,
+            (ProcessTargetGroundingSourceKind.LaunchPlan, ProcessTargetGroundingAuthority.Writable) => 0.9m,
+            (ProcessTargetGroundingSourceKind.ExplicitStepContract, ProcessTargetGroundingAuthority.Writable) => 0.85m,
+            (ProcessTargetGroundingSourceKind.ProjectStructureContext, _) => 0.7m,
+            (ProcessTargetGroundingSourceKind.UpstreamArtifact, _) => 0.55m,
+            (ProcessTargetGroundingSourceKind.UpstreamArtifactProvenance, _) => 0.5m,
+            _ => 0.4m
+        };
+    }
+
+    private static string ResolveGroundingScope(string alias)
+    {
+        var segments = alias.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return segments.Length <= 3
+            ? "root"
+            : "descendant";
     }
 
     private static IReadOnlyList<string> ResolveMutableExternalTargetAliases(

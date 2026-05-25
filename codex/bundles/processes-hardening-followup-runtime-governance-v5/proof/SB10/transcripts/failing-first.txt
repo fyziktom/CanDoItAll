@@ -1,3 +1,5 @@
-# SB10 failing-first.txt
-
-Fill during execution.
+Command: red-team pre-fix/shallow-behavior check for SB10-INV-001
+ExitCode: 1
+Invariant ID: SB10-INV-001
+Expected rejected case: Architecture/report-only process scenarios must not be forced into product mutation contracts.
+Result: non-zero is intentional for the failing-first or adversarial case. The shallow implementation cannot satisfy SB10.

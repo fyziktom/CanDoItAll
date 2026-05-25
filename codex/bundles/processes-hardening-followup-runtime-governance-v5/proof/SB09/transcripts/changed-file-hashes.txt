@@ -1,3 +1,7 @@
-# SB09 changed-file-hashes.txt
-
-Fill during execution.
+Command: Get-FileHash -Algorithm SHA256 changed files for SB09
+ExitCode: 0
+Invariant ID: SB09-INV-001
+- `f844f8bf82a96bfc20284193c5268a70dc2d388e52dbaa436f67f11fb7b31af7`  `repo://src/CanDoItAll.Modules.Processes/Definitions/ProcessDefinitionEnums.cs`
+- `926b21a71524403b9ea93415f847195c33c7b26b63915289c5d410d2151ca69d`  `repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessStepRunBlockState.cs`
+- `e728b9e4529cb6dd853e6eb3a619c02d9b1f9079f99e30e7744f49e1f3bee524`  `repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.StepTransitions.cs`
+- `3083277fccf897fb6a73f49bef706d3584fd0250164f245b831a0309f01fccc6`  `repo://tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs`

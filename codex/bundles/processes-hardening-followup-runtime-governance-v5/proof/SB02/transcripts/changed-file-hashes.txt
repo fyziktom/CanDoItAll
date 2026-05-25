@@ -1,3 +1,6 @@
-# SB02 changed-file-hashes.txt
-
-Fill during execution.
+Command: Get-FileHash -Algorithm SHA256 changed files for SB02
+ExitCode: 0
+Invariant ID: SB02-INV-001
+- `2ab3f2d6e98713abfc4968c15b5633839d5f49fe4788731295476f78a0218f93`  `repo://src/CanDoItAll.AgentFramework.Core/Execution/ExecutionInvocationMetadata.cs`
+- `eee2ae3e819c25763041a59a0df4a73acfd43850ade942cc004c893a6a1841e2`  `repo://src/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs`
+- `834d86d0959e3672f7b21ebed2b33f3bdb0a99f3b233d3dab3821eada9651f43`  `repo://tests/CanDoItAll.Tests.Unit/AgentToolInvocationPolicyTests.cs`
