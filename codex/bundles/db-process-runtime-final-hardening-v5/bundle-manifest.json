@@ -1,0 +1,24 @@
+{
+  "name": "db-process-runtime-final-hardening-followup-bundle-v5",
+  "createdUtc": "2026-05-24T23:06:24.090806Z",
+  "targetRepo": "fyziktom/CanDoItAll",
+  "targetBranch": "db-remove-sqlite",
+  "baseBranch": "development",
+  "subbundles": [
+    "SB01-validation-evidence-and-merge-scope",
+    "SB02-startup-recovery-lease-reclaim-canonicality",
+    "SB03-long-running-process-dispatch-heartbeat",
+    "SB04-process-outbox-idempotency-and-side-effect-canonicality",
+    "SB05-postgresql-process-db-indexes-and-claim-query-plan",
+    "SB06-throughput-benchmark-and-runtime-metrics",
+    "SB07-process-db-red-team-tests",
+    "SB08-final-merge-readiness"
+  ],
+  "criticalSubbundles": [
+    "SB02",
+    "SB03",
+    "SB04",
+    "SB07"
+  ],
+  "focus": "process database canonicality and PostgreSQL throughput after SQLite removal"
+}

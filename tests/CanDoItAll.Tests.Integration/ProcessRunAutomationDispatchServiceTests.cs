@@ -212,6 +212,59 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
+    public async Task ProcessDispatchLeaseHeartbeat_renews_outer_and_step_claims_during_long_work()
+    {
+        var simulatedLeaseDuration = TimeSpan.FromMilliseconds(60);
+        var stepRenewals = 0;
+        var outerRenewals = 0;
+
+        await using var heartbeat = ProcessDispatchLeaseHeartbeat.Start(
+            Guid.NewGuid(),
+            TimeSpan.FromMilliseconds(10),
+            token =>
+            {
+                token.ThrowIfCancellationRequested();
+                Interlocked.Increment(ref outerRenewals);
+                Interlocked.Increment(ref stepRenewals);
+                return Task.CompletedTask;
+            },
+            CancellationToken.None);
+
+        await Task.Delay(
+            TimeSpan.FromMilliseconds(simulatedLeaseDuration.TotalMilliseconds * 3),
+            heartbeat.DispatchCancellationToken);
+
+        heartbeat.ThrowIfClaimLost();
+        Assert.True(stepRenewals >= 3, $"Expected at least 3 renewals, got {stepRenewals}.");
+        Assert.Equal(stepRenewals, outerRenewals);
+    }
+
+    [Fact]
+    public async Task ProcessDispatchLeaseHeartbeat_cancels_dispatch_when_renewal_fails()
+    {
+        var stepRunId = Guid.NewGuid();
+        var attempts = 0;
+
+        await using var heartbeat = ProcessDispatchLeaseHeartbeat.Start(
+            stepRunId,
+            TimeSpan.FromMilliseconds(10),
+            _ =>
+            {
+                Interlocked.Increment(ref attempts);
+                throw new InvalidOperationException("lease renewal rejected");
+            },
+            CancellationToken.None);
+
+        await WaitForHeartbeatLossAsync(heartbeat);
+
+        Assert.True(heartbeat.DispatchCancellationToken.IsCancellationRequested);
+        Assert.True(attempts >= 1);
+        var exception = Assert.Throws<ProcessDispatchClaimLostException>(heartbeat.ThrowIfClaimLost);
+        Assert.Equal(stepRunId, exception.StepRunId);
+        Assert.IsType<InvalidOperationException>(exception.InnerException);
+    }
+
+    [Fact]
     public async Task LoadLatestManualRecoveryDirective_filters_started_at_with_postgresql()
     {
         AppDbContextModelRegistry.ConfigureAssemblies(TestApplicationBootstrap.ModuleAssemblies);
@@ -315,6 +368,17 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         var directive = await directiveTask;
 
         Assert.Equal("new", directive);
+    }
+
+    private static async Task WaitForHeartbeatLossAsync(ProcessDispatchLeaseHeartbeat heartbeat)
+    {
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(3);
+        while (!heartbeat.ClaimLost && DateTimeOffset.UtcNow < deadline)
+        {
+            await Task.Delay(10);
+        }
+
+        Assert.True(heartbeat.ClaimLost);
     }
 
     [Fact]

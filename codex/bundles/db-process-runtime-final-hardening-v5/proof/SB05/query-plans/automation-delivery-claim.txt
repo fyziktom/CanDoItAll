@@ -1,0 +1,22 @@
+Update on "Automation_EnvelopeDeliveries" d  (cost=14.92..456.07 rows=64 width=304) (actual time=0.087..0.659 rows=64 loops=1)
+  Buffers: shared hit=1222 dirtied=3 written=3
+  CTE due
+    ->  Limit  (cost=0.41..14.63 rows=64 width=38) (actual time=0.023..0.059 rows=64 loops=1)
+          Buffers: shared hit=70
+          ->  LockRows  (cost=0.41..2961.14 rows=13329 width=38) (actual time=0.022..0.055 rows=64 loops=1)
+                Buffers: shared hit=70
+                ->  Index Scan using "IX_Automation_EnvelopeDeliveries_DueClaimOrder" on "Automation_EnvelopeDeliveries" d_1  (cost=0.41..2827.85 rows=13329 width=38) (actual time=0.016..0.031 rows=64 loops=1)
+                      Index Cond: ("AvailableAtUtc" <= now())
+                      Filter: (("State" = 0) OR ("State" = 2) OR (("State" = 1) AND ("LockedAtUtc" IS NOT NULL) AND ("LockedAtUtc" <= (now() - '00:02:00'::interval))))
+                      Buffers: shared hit=6
+  ->  Nested Loop  (cost=0.29..441.44 rows=64 width=304) (actual time=0.039..0.155 rows=64 loops=1)
+        Buffers: shared hit=262
+        ->  CTE Scan on due  (cost=0.00..1.28 rows=64 width=56) (actual time=0.028..0.084 rows=64 loops=1)
+              Buffers: shared hit=70
+        ->  Index Scan using "PK_Automation_EnvelopeDeliveries" on "Automation_EnvelopeDeliveries" d  (cost=0.29..6.87 rows=1 width=26) (actual time=0.001..0.001 rows=1 loops=64)
+              Index Cond: ("Id" = due."Id")
+              Buffers: shared hit=192
+Planning:
+  Buffers: shared hit=56
+Planning Time: 0.496 ms
+Execution Time: 0.759 ms

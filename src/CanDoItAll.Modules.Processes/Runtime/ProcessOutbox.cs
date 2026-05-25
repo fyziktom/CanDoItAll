@@ -1,6 +1,8 @@
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics;
 using System.Text.Json;
+using CanDoItAll.Infrastructure.Diagnostics;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Search;
 using CanDoItAll.SharedKernel;
@@ -138,29 +140,30 @@ public sealed class ProcessOutboxService(
             definition.Id,
             null,
             "save-definition",
-             new ProcessOutboxPayload(
-                 new SearchDocumentInput(
-                     "process-definition",
-                     definition.Id.ToString(),
-                     "Processes",
+            new ProcessOutboxPayload(
+                new SearchDocumentInput(
+                    "process-definition",
+                    definition.Id.ToString(),
+                    "Processes",
                     definition.Name,
                     definition.Summary,
                     $"{definition.ValueStatement}\nCustomer: {definition.CustomerName}\nOwner: {definition.OwnerName}\nVersion: {workingVersion.VersionNumber}",
                     route,
-                     definition.ProjectId),
-                 null,
-                 new ActivityWriteRequest(
-                     "processes",
+                    definition.ProjectId),
+                null,
+                new ActivityWriteRequest(
+                    "processes",
                     isNew ? "create-definition" : "update-definition",
                     isNew ? "Created process definition" : "Updated process definition",
                     definition.Name,
                     definition.ProjectId,
                     "process-definition",
-                     definition.Id,
-                     route,
-                     "process-management"),
-                 null),
-             cancellationToken);
+                    definition.Id,
+                    route,
+                    Actor: "process-management",
+                    IdempotencyKey: BuildDefinitionSaveActivityIdempotencyKey(definition.Id, workingVersion.Id, isNew)),
+                null),
+            cancellationToken);
     }
 
     public Task<Guid> EnqueueDefinitionPublishAsync(
@@ -179,21 +182,22 @@ public sealed class ProcessOutboxService(
             definition.Id,
             null,
             "publish-definition",
-             new ProcessOutboxPayload(
-                 null,
-                 null,
-                 new ActivityWriteRequest(
+            new ProcessOutboxPayload(
+                null,
+                null,
+                new ActivityWriteRequest(
                     "processes",
                     "publish-definition",
                     "Published process definition",
                     $"{definition.Name} v{publishedVersion.VersionNumber} is now immutable for runtime use.",
-                     definition.ProjectId,
-                     "process-definition",
-                     definition.Id,
-                     BuildDefinitionRoute(definition.Id, definition.ProjectId),
-                     "process-management"),
-                 null),
-             cancellationToken);
+                    definition.ProjectId,
+                    "process-definition",
+                    definition.Id,
+                    BuildDefinitionRoute(definition.Id, definition.ProjectId),
+                    Actor: "process-management",
+                    IdempotencyKey: BuildDefinitionPublishActivityIdempotencyKey(definition.Id, publishedVersion.Id)),
+                null),
+            cancellationToken);
     }
 
     public Task<Guid> EnqueueDefinitionDeleteAsync(
@@ -244,12 +248,13 @@ public sealed class ProcessOutboxService(
                     "process-run",
                     run.Id,
                     BuildRunRoute(run),
-                    "process-management"),
+                    Actor: "process-management",
+                    IdempotencyKey: BuildRunStartActivityIdempotencyKey(run.Id)),
                 null),
             cancellationToken);
     }
 
-    public Task<Guid> EnqueueAutomationDispatchAsync(
+    public async Task<Guid> EnqueueAutomationDispatchAsync(
         AppDbContext dbContext,
         Guid? projectId,
         Guid definitionId,
@@ -259,8 +264,17 @@ public sealed class ProcessOutboxService(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(dbContext);
+        var normalizedTrigger = NormalizeAutomationDispatchTrigger(trigger);
+        var existingOutboxId =
+            FindTrackedPendingAutomationDispatch(dbContext, definitionId, runId, stepRunId, normalizedTrigger) ??
+            await FindPendingAutomationDispatchAsync(dbContext, definitionId, runId, stepRunId, normalizedTrigger, cancellationToken);
+        if (existingOutboxId.HasValue)
+        {
+            RuntimeClaimMetrics.RecordDuplicateSuppression("process-outbox-automation-dispatch");
+            return existingOutboxId.Value;
+        }
 
-        return EnqueueAsync(
+        return await EnqueueAsync(
             dbContext,
             projectId,
             definitionId,
@@ -273,10 +287,115 @@ public sealed class ProcessOutboxService(
                 new ProcessOutboxAutomationDispatchRequest(
                     runId,
                     stepRunId,
-                    string.IsNullOrWhiteSpace(trigger)
-                        ? "process-runtime"
-                        : trigger.Trim())),
+                    normalizedTrigger)),
             cancellationToken);
+    }
+
+    private static string BuildDefinitionSaveActivityIdempotencyKey(Guid definitionId, Guid versionId, bool isNew)
+        => $"process-outbox:definition:{definitionId:N}:version:{versionId:N}:{(isNew ? "create" : "update")}:activity";
+
+    private static string BuildDefinitionPublishActivityIdempotencyKey(Guid definitionId, Guid versionId)
+        => $"process-outbox:definition:{definitionId:N}:version:{versionId:N}:publish:activity";
+
+    private static string BuildRunStartActivityIdempotencyKey(Guid runId)
+        => $"process-outbox:run:{runId:N}:start:activity";
+
+    private static string NormalizeAutomationDispatchTrigger(string trigger)
+        => string.IsNullOrWhiteSpace(trigger)
+            ? "process-runtime"
+            : trigger.Trim();
+
+    private static Guid? FindTrackedPendingAutomationDispatch(
+        AppDbContext dbContext,
+        Guid definitionId,
+        Guid runId,
+        Guid? stepRunId,
+        string trigger)
+    {
+        foreach (var entry in dbContext.ChangeTracker.Entries<ProcessOutboxRecord>())
+        {
+            if (entry.State == EntityState.Deleted ||
+                !IsMatchingPendingAutomationDispatch(entry.Entity, definitionId, runId, stepRunId, trigger))
+            {
+                continue;
+            }
+
+            return entry.Entity.Id;
+        }
+
+        return null;
+    }
+
+    private static async Task<Guid?> FindPendingAutomationDispatchAsync(
+        AppDbContext dbContext,
+        Guid definitionId,
+        Guid runId,
+        Guid? stepRunId,
+        string trigger,
+        CancellationToken cancellationToken)
+    {
+        var records = await dbContext.Set<ProcessOutboxRecord>()
+            .AsNoTracking()
+            .Where(item =>
+                item.ProcessDefinitionId == definitionId &&
+                item.ProcessRunId == runId &&
+                item.CommandKey == AutomationDispatchCommandKey &&
+                item.Status == ProcessOutboxRecordStatus.Pending)
+            .Select(item => new
+            {
+                item.Id,
+                item.PayloadJson
+            })
+            .ToListAsync(cancellationToken);
+
+        foreach (var record in records)
+        {
+            if (TryReadAutomationDispatch(record.PayloadJson, out var automationDispatch) &&
+                automationDispatch.StepRunId == stepRunId &&
+                string.Equals(automationDispatch.Trigger, trigger, StringComparison.Ordinal))
+            {
+                return record.Id;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool IsMatchingPendingAutomationDispatch(
+        ProcessOutboxRecord record,
+        Guid definitionId,
+        Guid runId,
+        Guid? stepRunId,
+        string trigger)
+    {
+        return record.ProcessDefinitionId == definitionId &&
+            record.ProcessRunId == runId &&
+            record.CommandKey == AutomationDispatchCommandKey &&
+            record.Status == ProcessOutboxRecordStatus.Pending &&
+            TryReadAutomationDispatch(record.PayloadJson, out var automationDispatch) &&
+            automationDispatch.StepRunId == stepRunId &&
+            string.Equals(automationDispatch.Trigger, trigger, StringComparison.Ordinal);
+    }
+
+    private static bool TryReadAutomationDispatch(
+        string payloadJson,
+        out ProcessOutboxAutomationDispatchRequest automationDispatch)
+    {
+        try
+        {
+            var payload = JsonSerializer.Deserialize<ProcessOutboxPayload>(payloadJson, PayloadSerializerOptions);
+            if (payload?.AutomationDispatch is not null)
+            {
+                automationDispatch = payload.AutomationDispatch;
+                return true;
+            }
+        }
+        catch (JsonException)
+        {
+        }
+
+        automationDispatch = new ProcessOutboxAutomationDispatchRequest(Guid.Empty, null, string.Empty);
+        return false;
     }
 
     public async Task<ProcessOutboxRecordStatus?> ProcessAsync(
@@ -314,6 +433,7 @@ public sealed class ProcessOutboxService(
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var batchStopwatch = Stopwatch.StartNew();
         var now = clock.GetUtcNow();
         var effectiveLeaseDuration = leaseDuration is null || leaseDuration.Value <= TimeSpan.Zero
             ? DefaultLeaseDuration
@@ -328,11 +448,19 @@ public sealed class ProcessOutboxService(
                 minimumAutomationDispatchCreatedAtUtc,
                 cancellationToken);
 
-            return await ProcessClaimedPostgreSqlBatchAsync(
+            var processedPostgreSqlCount = await ProcessClaimedPostgreSqlBatchAsync(
                 claimedRecords,
                 take,
                 maxParallelism,
                 cancellationToken);
+            RuntimeClaimMetrics.RecordBatch(
+                "process-outbox",
+                claimedRecords.Count,
+                processedPostgreSqlCount,
+                take,
+                ResolveBatchParallelism(maxParallelism, take),
+                batchStopwatch.Elapsed);
+            return processedPostgreSqlCount;
         }
 
         var query = dbContext.Set<ProcessOutboxRecord>()
@@ -369,6 +497,13 @@ public sealed class ProcessOutboxService(
             }
         }
 
+        RuntimeClaimMetrics.RecordBatch(
+            "process-outbox",
+            recordIds.Count,
+            processedCount,
+            take,
+            1,
+            batchStopwatch.Elapsed);
         return processedCount;
     }
 
@@ -633,6 +768,7 @@ public sealed class ProcessOutboxService(
             cancellationToken);
         if (!finalized)
         {
+            RuntimeClaimMetrics.RecordStaleFinalization("process-outbox");
             logger.LogWarning(
                 "Process outbox record {OutboxId} lost lease token {LeaseToken} during finalization; canonical state was not updated.",
                 record.Id,

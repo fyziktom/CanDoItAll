@@ -1,0 +1,6 @@
+Command: git merge-base --is-ancestor origin/development HEAD
+WorkingDirectory: C:\repositories\CanDoItAll
+Started: 2026-05-24T19:20:04.0829105-04:00
+
+
+ExitCode: 0

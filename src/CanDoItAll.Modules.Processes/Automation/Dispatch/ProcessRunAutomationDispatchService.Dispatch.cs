@@ -71,10 +71,19 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     dispatchGuardHeld = false;
 
                     DispatchCandidate? candidate = null;
+                    ProcessDispatchLeaseHeartbeat? dispatchHeartbeat = null;
+                    var dispatchCancellationToken = cancellationToken;
                     try
                     {
+                        var dispatchRenewLeaseAsync = CreateDispatchRenewLeaseCallback(dispatchClaim, renewLeaseAsync);
+                        dispatchHeartbeat = ProcessDispatchLeaseHeartbeat.Start(
+                            dispatchClaim.StepRunId,
+                            ResolveStepDispatchHeartbeatInterval(),
+                            dispatchRenewLeaseAsync,
+                            cancellationToken);
+                        dispatchCancellationToken = dispatchHeartbeat.DispatchCancellationToken;
                         var candidateHydrationStarted = Stopwatch.GetTimestamp();
-                        candidate = await LoadDispatchCandidateAsync(processRunId, dispatchClaim.StepRunId, cancellationToken);
+                        candidate = await LoadDispatchCandidateAsync(processRunId, dispatchClaim.StepRunId, dispatchCancellationToken);
                         logger.LogDebug(
                             "Hydrated claimed dispatch candidate for process run {ProcessRunId}, step {StepRunId}. CandidateFound={CandidateFound} ElapsedMilliseconds={ElapsedMilliseconds}.",
                             processRunId,
@@ -109,12 +118,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
                             : null;
                         if (databaseRequirementFailure is not null)
                         {
-                            await BlockDispatchForDatabaseRequirementAsync(candidate, databaseRequirementFailure, dispatchClaim, cancellationToken);
+                            await BlockDispatchForDatabaseRequirementAsync(candidate, databaseRequirementFailure, dispatchClaim, dispatchCancellationToken);
                             return;
                         }
 
-                        var dispatchRenewLeaseAsync = CreateDispatchRenewLeaseCallback(dispatchClaim, renewLeaseAsync);
-                        if (await TryRequestMissingUpstreamArtifactMaterializationAsync(candidate, dispatchClaim, cancellationToken))
+                        if (await TryRequestMissingUpstreamArtifactMaterializationAsync(candidate, dispatchClaim, dispatchCancellationToken))
                         {
                             return;
                         }
@@ -124,10 +132,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
                             trigger,
                             dispatchClaim,
                             dispatchRenewLeaseAsync,
-                            cancellationToken);
+                            dispatchCancellationToken);
                         if (strandedArtifactRecoveryOutcome is not null)
                         {
-                            var recoveryStepRunSnapshot = await LoadStepRunTransitionSnapshotAsync(candidate.StepRun.Id, cancellationToken)
+                            var recoveryStepRunSnapshot = await LoadStepRunTransitionSnapshotAsync(candidate.StepRun.Id, dispatchCancellationToken)
                                 ?? throw new InvalidOperationException($"Process step run {candidate.StepRun.Id} could not be reloaded after manager artifact recovery.");
                             if (ShouldSkipAutomationCompletionTransition(recoveryStepRunSnapshot.Status, strandedArtifactRecoveryOutcome.CompletionStatus))
                             {
@@ -152,7 +160,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                                     SuppressAutomationDispatch = strandedArtifactRecoveryOutcome.CompletionStatus != ProcessStepRunStatus.Completed
                                 },
                                 dispatchClaim,
-                                cancellationToken);
+                                dispatchCancellationToken);
                             if (recoveryTransitionResult.IsFailure)
                             {
                                 throw new InvalidOperationException(string.Join(" | ", recoveryTransitionResult.Errors.Select(error => error.Message)));
@@ -163,7 +171,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
                         if (candidate.StepRun.StepKind == ProcessStepKind.Subprocess)
                         {
-                            await HandleSubprocessDispatchAsync(candidate, trigger, triggerStepRunId, dispatchClaim, cancellationToken);
+                            await HandleSubprocessDispatchAsync(candidate, trigger, triggerStepRunId, dispatchClaim, dispatchCancellationToken);
                             return;
                         }
 
@@ -180,7 +188,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                                     SuppressAutomationDispatch = true
                                 },
                                 dispatchClaim,
-                                cancellationToken);
+                                dispatchCancellationToken);
                             if (startResult.IsFailure)
                             {
                                 logger.LogInformation(
@@ -188,7 +196,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                                     candidate.StepRun.Id,
                                     processRunId,
                                     string.Join(" | ", startResult.Errors.Select(error => error.Message)));
-                                var refreshedCandidate = await LoadDispatchCandidateAsync(processRunId, dispatchClaim.StepRunId, cancellationToken);
+                                var refreshedCandidate = await LoadDispatchCandidateAsync(processRunId, dispatchClaim.StepRunId, dispatchCancellationToken);
                                 if (refreshedCandidate is null ||
                                     refreshedCandidate.StepRun.Id != candidate.StepRun.Id ||
                                     refreshedCandidate.StepRun.Status != ProcessStepRunStatus.InProgress)
@@ -208,16 +216,17 @@ internal sealed partial class ProcessRunAutomationDispatchService
                             candidate.Run.Id,
                             candidate.StepRun.Id,
                             NormalizeTrigger(trigger, triggerStepRunId),
-                            cancellationToken);
+                            dispatchCancellationToken);
                         if (workflowOutcome.Handled)
                         {
-                            await HandleWorkflowExecutionOutcomeAsync(candidate, workflowOutcome, dispatchClaim, cancellationToken);
+                            await HandleWorkflowExecutionOutcomeAsync(candidate, workflowOutcome, dispatchClaim, dispatchCancellationToken);
                             return;
                         }
 
-                        var executionOutcome = await ExecuteUntilSettledAsync(candidate, trigger, dispatchRenewLeaseAsync, cancellationToken);
+                        var executionOutcome = await ExecuteUntilSettledAsync(candidate, trigger, dispatchRenewLeaseAsync, dispatchCancellationToken);
+                        dispatchHeartbeat.ThrowIfClaimLost();
                         var competingExecution = executionOutcome.CompletionStatus is not ProcessStepRunStatus.Completed
-                            ? await ResolveCompetingActiveAutomationExecutionAsync(candidate, executionOutcome, cancellationToken)
+                            ? await ResolveCompetingActiveAutomationExecutionAsync(candidate, executionOutcome, dispatchCancellationToken)
                             : null;
                         if (competingExecution is not null)
                         {
@@ -230,7 +239,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                             return;
                         }
 
-                        if (await IsRunClosedToAutomationAsync(candidate.Run.Id, candidate.StepRun.Id, cancellationToken))
+                        if (await IsRunClosedToAutomationAsync(candidate.Run.Id, candidate.StepRun.Id, dispatchCancellationToken))
                         {
                             logger.LogInformation(
                                 "Skipping automation completion projection for run {RunId}, step {StepRunId} because the process run became terminal while agent execution was in flight.",
@@ -239,7 +248,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                             return;
                         }
 
-                        var stepRunSnapshot = await LoadStepRunTransitionSnapshotAsync(candidate.StepRun.Id, cancellationToken)
+                        var stepRunSnapshot = await LoadStepRunTransitionSnapshotAsync(candidate.StepRun.Id, dispatchCancellationToken)
                             ?? throw new InvalidOperationException($"Process step run {candidate.StepRun.Id} could not be reloaded before completion.");
                         if (ShouldSkipAutomationCompletionTransition(stepRunSnapshot.Status, executionOutcome.CompletionStatus))
                         {
@@ -258,14 +267,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
                                 executionOutcome.ResponseText,
                                 executionOutcome.CompletionStatus,
                                 dispatchClaim,
-                                cancellationToken);
+                                dispatchCancellationToken);
                             executionOutcome = await TryRecoverMissingCompletionArtifactsAsync(
                                 candidate,
                                 executionOutcome,
                                 trigger,
                                 dispatchClaim,
                                 dispatchRenewLeaseAsync,
-                                cancellationToken);
+                                dispatchCancellationToken);
+                            dispatchHeartbeat.ThrowIfClaimLost();
 
                             var completionResult = await TransitionStepWithClaimAsync(
                                 new ProcessStepTransitionRequest
@@ -279,10 +289,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
                                     SuppressAutomationDispatch = executionOutcome.CompletionStatus != ProcessStepRunStatus.Completed
                                 },
                                 dispatchClaim,
-                                cancellationToken);
+                                dispatchCancellationToken);
                             if (completionResult.IsFailure)
                             {
-                                var refreshedSnapshot = await LoadStepRunTransitionSnapshotAsync(candidate.StepRun.Id, cancellationToken);
+                                var refreshedSnapshot = await LoadStepRunTransitionSnapshotAsync(candidate.StepRun.Id, dispatchCancellationToken);
                                 if (refreshedSnapshot is not null &&
                                     ShouldSkipAutomationCompletionTransition(refreshedSnapshot.Status, executionOutcome.CompletionStatus))
                                 {
@@ -300,6 +310,30 @@ internal sealed partial class ProcessRunAutomationDispatchService
                             }
                         }
 
+                        return;
+                    }
+                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+                    catch (OperationCanceledException) when (dispatchHeartbeat?.ClaimLost == true)
+                    {
+                        var claimLostException = dispatchHeartbeat.CreateClaimLostException();
+                        if (candidate is null)
+                        {
+                            logger.LogWarning(
+                                claimLostException,
+                                "Stopping process automation dispatch for run {RunId}, step {StepRunId} because the durable dispatch heartbeat was lost before candidate hydration completed.",
+                                processRunId,
+                                dispatchClaim.StepRunId);
+                            return;
+                        }
+
+                        logger.LogWarning(
+                            claimLostException,
+                            "Stopping process automation dispatch for run {RunId}, step {StepRunId} because the durable dispatch heartbeat was lost.",
+                            candidate.Run.Id,
+                            candidate.StepRun.Id);
                         return;
                     }
                     catch (ProcessDispatchClaimLostException exception)
@@ -323,6 +357,27 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     }
                     catch (Exception exception)
                     {
+                        if (dispatchHeartbeat?.ClaimLost == true)
+                        {
+                            var claimLostException = dispatchHeartbeat.CreateClaimLostException();
+                            if (candidate is null)
+                            {
+                                logger.LogWarning(
+                                    claimLostException,
+                                    "Stopping process automation dispatch for run {RunId}, step {StepRunId} because the durable dispatch heartbeat was lost before candidate hydration completed.",
+                                    processRunId,
+                                    dispatchClaim.StepRunId);
+                                return;
+                            }
+
+                            logger.LogWarning(
+                                claimLostException,
+                                "Stopping process automation dispatch for run {RunId}, step {StepRunId} because the durable dispatch heartbeat was lost.",
+                                candidate.Run.Id,
+                                candidate.StepRun.Id);
+                            return;
+                        }
+
                         if (candidate is null)
                         {
                             logger.LogError(
@@ -339,7 +394,17 @@ internal sealed partial class ProcessRunAutomationDispatchService
                             candidate.Run.Id,
                             candidate.StepRun.Id);
 
-                        if (await IsRunClosedToAutomationAsync(candidate.Run.Id, candidate.StepRun.Id, cancellationToken))
+                        if (dispatchHeartbeat?.ClaimLost == true)
+                        {
+                            logger.LogWarning(
+                                dispatchHeartbeat.CreateClaimLostException(),
+                                "Stopping process automation dispatch for run {RunId}, step {StepRunId} because the durable dispatch heartbeat was lost.",
+                                candidate.Run.Id,
+                                candidate.StepRun.Id);
+                            return;
+                        }
+
+                        if (await IsRunClosedToAutomationAsync(candidate.Run.Id, candidate.StepRun.Id, dispatchCancellationToken))
                         {
                             logger.LogInformation(
                                 "Skipping automation failure transition for run {RunId}, step {StepRunId} because the process run became terminal while agent execution was in flight.",
@@ -348,7 +413,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                             return;
                         }
 
-                        if (!await IsStepDispatchClaimHeldAsync(dispatchClaim, cancellationToken))
+                        if (!await IsStepDispatchClaimHeldAsync(dispatchClaim, dispatchCancellationToken))
                         {
                             logger.LogWarning(
                                 "Skipping automation failure transition for run {RunId}, step {StepRunId} because the durable dispatch claim is no longer held.",
@@ -367,7 +432,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                                 SuppressAutomationDispatch = true
                             },
                             dispatchClaim,
-                            cancellationToken);
+                            dispatchCancellationToken);
                         if (failResult.IsFailure)
                         {
                             logger.LogWarning(
@@ -380,6 +445,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     }
                     finally
                     {
+                        if (dispatchHeartbeat is not null)
+                        {
+                            await dispatchHeartbeat.DisposeAsync();
+                        }
+
                         await ReleaseStepDispatchClaimAsync(dispatchClaim, cancellationToken);
                     }
                 }
@@ -400,6 +470,33 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static double GetElapsedMilliseconds(long startTimestamp)
         => Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds;
+
+    private TimeSpan ResolveStepDispatchClaimLeaseDuration()
+    {
+        var leaseDuration = processRuntimeOptions.Value.StepDispatchClaimLeaseDuration;
+        if (leaseDuration <= TimeSpan.Zero)
+        {
+            throw new InvalidOperationException("Processes:Runtime:StepDispatchClaimLeaseDuration must be positive.");
+        }
+
+        return leaseDuration;
+    }
+
+    private TimeSpan ResolveStepDispatchHeartbeatInterval()
+    {
+        var heartbeatInterval = processRuntimeOptions.Value.StepDispatchHeartbeatInterval;
+        if (heartbeatInterval <= TimeSpan.Zero)
+        {
+            throw new InvalidOperationException("Processes:Runtime:StepDispatchHeartbeatInterval must be positive.");
+        }
+
+        if (heartbeatInterval >= ResolveStepDispatchClaimLeaseDuration())
+        {
+            throw new InvalidOperationException("Processes:Runtime:StepDispatchHeartbeatInterval must be shorter than StepDispatchClaimLeaseDuration.");
+        }
+
+        return heartbeatInterval;
+    }
 
     private static void TryRemoveReleasedDispatchGuard(Guid stepRunId, SemaphoreSlim dispatchGuard)
     {
@@ -469,7 +566,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     {
         var now = clock.GetUtcNow();
         var claimToken = Guid.NewGuid().ToString("N");
-        var leaseExpiresAtUtc = now.Add(StepDispatchClaimLeaseDuration);
+        var leaseExpiresAtUtc = now.Add(ResolveStepDispatchClaimLeaseDuration());
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var updatedRows = await dbContext.Set<ProcessStepRun>()
             .Where(item => item.Id == stepRunId)
@@ -531,7 +628,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         CancellationToken cancellationToken)
     {
         var now = clock.GetUtcNow();
-        var leaseExpiresAtUtc = now.Add(StepDispatchClaimLeaseDuration);
+        var leaseExpiresAtUtc = now.Add(ResolveStepDispatchClaimLeaseDuration());
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var updatedRows = await dbContext.Set<ProcessStepRun>()
             .Where(item => item.Id == dispatchClaim.StepRunId)
@@ -604,9 +701,6 @@ internal sealed partial class ProcessRunAutomationDispatchService
     private sealed record ProcessStepDispatchClaim(Guid StepRunId, string ClaimToken);
 
     private sealed record DispatchCandidateHeader(Guid StepRunId, ProcessStepRunStatus Status);
-
-    private sealed class ProcessDispatchClaimLostException(Guid stepRunId)
-        : InvalidOperationException($"The durable dispatch claim for process step run {stepRunId:D} is no longer held.");
 
     private async Task<bool> IsRunClosedToAutomationAsync(
         Guid processRunId,

@@ -158,6 +158,39 @@ public sealed class ProcessOutboxIntegrationTests
     }
 
     [Fact]
+    public async Task Duplicate_definition_save_outbox_records_reuse_stable_activity_idempotency_key()
+    {
+        await using var harness = await ProcessOutboxHarness.CreateAsync();
+        await using var scope = harness.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var outboxService = scope.ServiceProvider.GetRequiredService<ProcessOutboxService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Process outbox duplicate activity");
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.Equal(1, await CountActivityAsync(dbContextFactory, "create-definition", saveResult.Value));
+
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            var definition = await dbContext.Set<ProcessDefinition>()
+                .SingleAsync(item => item.Id == saveResult.Value);
+            var draftVersion = await dbContext.Set<ProcessDefinitionVersion>()
+                .SingleAsync(item => item.ProcessDefinitionId == saveResult.Value && item.Status == ProcessVersionStatus.Draft);
+
+            await outboxService.EnqueueDefinitionSaveAsync(dbContext, definition, draftVersion, isNew: true);
+            await outboxService.EnqueueDefinitionSaveAsync(dbContext, definition, draftVersion, isNew: true);
+            await dbContext.SaveChangesAsync();
+        }
+
+        Assert.Equal(2, await outboxService.ProcessPendingAsync(take: 10));
+        Assert.Equal(1, await CountActivityAsync(dbContextFactory, "create-definition", saveResult.Value));
+        Assert.True(await SearchDocumentExistsAsync(dbContextFactory, "process-definition", saveResult.Value.ToString()));
+    }
+
+    [Fact]
     public async Task StartRunAsync_enqueues_automation_dispatch_for_durable_processing()
     {
         await using var harness = await ProcessOutboxHarness.CreateAsync(trackAutomationDispatch: true);
@@ -197,6 +230,60 @@ public sealed class ProcessOutboxIntegrationTests
         Assert.Equal(ProcessOutboxRecordStatus.Completed, automationDispatchRecord.Status);
         Assert.Equal(1, automationDispatchRecord.AttemptCount);
         Assert.Equal(1, harness.AutomationDispatch.CallCount);
+    }
+
+    [Fact]
+    public async Task Duplicate_automation_dispatch_enqueue_reuses_existing_pending_command()
+    {
+        await using var harness = await ProcessOutboxHarness.CreateAsync(trackAutomationDispatch: true);
+        await using var scope = harness.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var outboxService = scope.ServiceProvider.GetRequiredService<ProcessOutboxService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Process outbox duplicate automation");
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Duplicate automation dispatch enqueue",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Validate automation dispatch idempotency"
+        });
+
+        Assert.True(runResult.IsSuccess);
+        await CompleteAutomationDispatchesAsync(dbContextFactory, runResult.Value);
+        var stepRunId = await GetFirstStepRunIdAsync(dbContextFactory, runResult.Value);
+
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            var firstOutboxId = await outboxService.EnqueueAutomationDispatchAsync(
+                dbContext,
+                projectId,
+                saveResult.Value,
+                runResult.Value,
+                stepRunId,
+                "step-transition:InProgress");
+            var secondOutboxId = await outboxService.EnqueueAutomationDispatchAsync(
+                dbContext,
+                projectId,
+                saveResult.Value,
+                runResult.Value,
+                stepRunId,
+                "step-transition:InProgress");
+
+            Assert.Equal(firstOutboxId, secondOutboxId);
+            await dbContext.SaveChangesAsync();
+        }
+
+        Assert.Equal(1, await CountPendingAutomationDispatchesAsync(dbContextFactory, runResult.Value));
+        Assert.Equal(0, harness.AutomationDispatch.CallCount);
     }
 
     [Fact]
@@ -541,7 +628,7 @@ public sealed class ProcessOutboxIntegrationTests
     }
 
     [Fact]
-    public async Task RecoverActiveRunsAsync_releases_stranded_startup_automation_dispatch_leases()
+    public async Task RecoverActiveRunsAsync_preserves_live_startup_automation_dispatch_leases()
     {
         await using var harness = await ProcessOutboxHarness.CreateAsync(trackAutomationDispatch: true);
         await using var scope = harness.Services.CreateAsyncScope();
@@ -566,7 +653,43 @@ public sealed class ProcessOutboxIntegrationTests
         Assert.Equal(0, await outboxService.ProcessPendingAsync(1, TimeSpan.FromMinutes(1)));
         Assert.Equal(0, harness.AutomationDispatch.CallCount);
 
-        Assert.Equal(0, await recoveryService.RecoverActiveRunsAsync(reclaimStrandedAutomationDispatchLeases: true));
+        Assert.Equal(0, await recoveryService.RecoverActiveRunsAsync(reclaimExpiredAutomationDispatchLeases: true));
+        Assert.Equal(0, await recoveryService.RecoverActiveRunsAsync(reclaimExpiredAutomationDispatchLeases: true));
+
+        automationDispatchRecord = Assert.Single(await ListAutomationDispatchRecordsAsync(dbContextFactory, runId));
+        Assert.Equal(ProcessOutboxRecordStatus.Pending, automationDispatchRecord.Status);
+        Assert.Equal(0, automationDispatchRecord.AttemptCount);
+        Assert.NotEqual(string.Empty, automationDispatchRecord.LeaseToken);
+        Assert.NotNull(automationDispatchRecord.LeaseExpiresAtUtc);
+
+        Assert.Equal(0, await outboxService.ProcessPendingAsync(1, TimeSpan.FromMinutes(1)));
+        Assert.Equal(0, harness.AutomationDispatch.CallCount);
+    }
+
+    [Fact]
+    public async Task RecoverActiveRunsAsync_releases_expired_startup_automation_dispatch_leases()
+    {
+        await using var harness = await ProcessOutboxHarness.CreateAsync(trackAutomationDispatch: true);
+        await using var scope = harness.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var outboxService = scope.ServiceProvider.GetRequiredService<ProcessOutboxService>();
+        var recoveryService = scope.ServiceProvider.GetRequiredService<ProcessRunRecoveryService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Process recovery expired lease");
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runId = await StartDeferredAutomationRunAsync(processesService, saveResult.Value, projectId, "Recovery expired automation lease");
+        await AssignFirstStepExecutorAsync(dbContextFactory, runId, Guid.NewGuid());
+
+        var automationDispatchRecord = Assert.Single(await ListAutomationDispatchRecordsAsync(dbContextFactory, runId));
+        await LeaseAutomationDispatchAsync(dbContextFactory, automationDispatchRecord.Id, DateTimeOffset.UtcNow.AddMinutes(-1));
+
+        Assert.Equal(0, await recoveryService.RecoverActiveRunsAsync(reclaimExpiredAutomationDispatchLeases: true));
 
         automationDispatchRecord = Assert.Single(await ListAutomationDispatchRecordsAsync(dbContextFactory, runId));
         Assert.Equal(ProcessOutboxRecordStatus.Pending, automationDispatchRecord.Status);
@@ -624,6 +747,18 @@ public sealed class ProcessOutboxIntegrationTests
         stepRun.CurrentExecutorPartyId = executorPartyId;
         stepRun.CurrentExecutorName = "Automation test agent";
         await dbContext.SaveChangesAsync();
+    }
+
+    private static async Task<Guid> GetFirstStepRunIdAsync(
+        IDbContextFactory<AppDbContext> dbContextFactory,
+        Guid runId)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        return await dbContext.Set<ProcessStepRun>()
+            .Where(item => item.ProcessRunId == runId)
+            .OrderBy(item => item.Sequence)
+            .Select(item => item.Id)
+            .FirstAsync();
     }
 
     private static async Task CompleteAutomationDispatchesAsync(

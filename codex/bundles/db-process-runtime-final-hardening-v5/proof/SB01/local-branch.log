@@ -1,0 +1,10 @@
+Command: git branch --show-current; git rev-parse HEAD origin/development development
+WorkingDirectory: C:\repositories\CanDoItAll
+Started: 2026-05-24T19:20:04.1452041-04:00
+
+db-remove-sqlite
+a7d82164eb837d72d7545088a18512802bcdb6c1
+f62a29461044739e947e715aa020f6ffc2b36216
+f62a29461044739e947e715aa020f6ffc2b36216
+
+ExitCode: 0

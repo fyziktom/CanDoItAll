@@ -9,6 +9,8 @@ public sealed class ProcessRuntimeOptions
     public const int MaximumOutboxWorkerConcurrency = 8;
     public const int MinimumOutboxBatchSize = 1;
     public const int MaximumOutboxBatchSize = 500;
+    public static readonly TimeSpan DefaultStepDispatchClaimLeaseDuration = TimeSpan.FromMinutes(30);
+    public static readonly TimeSpan DefaultStepDispatchHeartbeatInterval = TimeSpan.FromSeconds(5);
 
     public bool RequirePostgreSqlForAgentAutomation { get; set; }
 
@@ -24,4 +26,8 @@ public sealed class ProcessRuntimeOptions
 
     [Range(1, MaximumOutboxWorkerConcurrency)]
     public int OutboxWorkerMaxConcurrency { get; set; } = DefaultOutboxWorkerConcurrency;
+
+    public TimeSpan StepDispatchClaimLeaseDuration { get; set; } = DefaultStepDispatchClaimLeaseDuration;
+
+    public TimeSpan StepDispatchHeartbeatInterval { get; set; } = DefaultStepDispatchHeartbeatInterval;
 }

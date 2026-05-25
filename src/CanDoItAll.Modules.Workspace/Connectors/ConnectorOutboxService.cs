@@ -1,5 +1,7 @@
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics;
+using CanDoItAll.Infrastructure.Diagnostics;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -261,6 +263,7 @@ public sealed class ConnectorCommandProcessor(
                 cancellationToken);
         if (updatedRows == 0)
         {
+            RuntimeClaimMetrics.RecordStaleFinalization("connector-command");
             await transaction.RollbackAsync(cancellationToken);
             return false;
         }
@@ -400,6 +403,7 @@ public sealed class ConnectorOutboxService(
                 cancellationToken);
         if (existing is not null)
         {
+            RuntimeClaimMetrics.RecordDuplicateSuppression("connector-command");
             dbContext.Set<ConnectorCommandAuditRecord>().Add(new ConnectorCommandAuditRecord
             {
                 ConnectorCommandId = existing.Id,
@@ -509,6 +513,7 @@ public sealed class ConnectorOutboxService(
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ConnectorCommandSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        var batchStopwatch = Stopwatch.StartNew();
         var now = clock.GetUtcNow();
         var effectiveLeaseDuration = leaseDuration is null || leaseDuration.Value <= TimeSpan.Zero
             ? DefaultLeaseDuration
@@ -522,11 +527,19 @@ public sealed class ConnectorOutboxService(
                 effectiveLeaseDuration,
                 cancellationToken);
 
-            return await ProcessClaimedPostgreSqlBatchAsync(
+            var processedPostgreSqlCount = await ProcessClaimedPostgreSqlBatchAsync(
                 claimedCommands,
                 take,
                 maxParallelism,
                 cancellationToken);
+            RuntimeClaimMetrics.RecordBatch(
+                "connector-command",
+                claimedCommands.Count,
+                processedPostgreSqlCount,
+                take,
+                ResolveBatchParallelism(maxParallelism, take),
+                batchStopwatch.Elapsed);
+            return processedPostgreSqlCount;
         }
 
         var commandIds = await dbContext.Set<ConnectorCommandRecord>()
@@ -555,6 +568,13 @@ public sealed class ConnectorOutboxService(
             }
         }
 
+        RuntimeClaimMetrics.RecordBatch(
+            "connector-command",
+            commandIds.Count,
+            processedCount,
+            take,
+            1,
+            batchStopwatch.Elapsed);
         return processedCount;
     }
 

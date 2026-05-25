@@ -1,7 +1,9 @@
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics;
 using System.Text.Json;
 using CanDoItAll.Infrastructure.BackgroundJobs;
+using CanDoItAll.Infrastructure.Diagnostics;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -60,6 +62,7 @@ public sealed class AutomationMessagePublisher(
                     cancellationToken);
             if (existing is not null)
             {
+                RuntimeClaimMetrics.RecordDuplicateSuppression("automation-envelope");
                 return existing.Id;
             }
         }
@@ -112,6 +115,7 @@ public sealed class AutomationMessagePublisher(
             var existingId = await TryFindExistingEnvelopeIdAsync(envelopeType, dedupeKey, cancellationToken);
             if (existingId.HasValue)
             {
+                RuntimeClaimMetrics.RecordDuplicateSuppression("automation-envelope");
                 return existingId.Value;
             }
 
@@ -172,6 +176,7 @@ public sealed class AutomationMessageDispatcher(
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var batchStopwatch = Stopwatch.StartNew();
         var now = clock.GetUtcNow();
         var leaseCutoff = now.Subtract(options.Value.DeliveryLeaseDuration);
         if (dbContext.Database.IsNpgsql())
@@ -183,7 +188,15 @@ public sealed class AutomationMessageDispatcher(
                 leaseCutoff,
                 cancellationToken);
 
-            return await DispatchClaimedPostgreSqlBatchAsync(claimedDeliveries, take, cancellationToken);
+            var dispatchedCount = await DispatchClaimedPostgreSqlBatchAsync(claimedDeliveries, take, cancellationToken);
+            RuntimeClaimMetrics.RecordBatch(
+                "automation-delivery",
+                claimedDeliveries.Count,
+                dispatchedCount,
+                take,
+                ResolveBatchParallelism(options.Value.MessageDispatchMaxParallelism, take),
+                batchStopwatch.Elapsed);
+            return dispatchedCount;
         }
 
         var dueDeliveryIds = await dbContext.Set<AutomationEnvelopeDeliveryRecord>()
@@ -209,6 +222,13 @@ public sealed class AutomationMessageDispatcher(
             }
         }
 
+        RuntimeClaimMetrics.RecordBatch(
+            "automation-delivery",
+            dueDeliveryIds.Count,
+            processedCount,
+            take,
+            1,
+            batchStopwatch.Elapsed);
         return processedCount;
     }
 
@@ -543,6 +563,7 @@ public sealed class AutomationMessageDispatcher(
                 cancellationToken);
         if (updatedRows == 0)
         {
+            RuntimeClaimMetrics.RecordStaleFinalization("automation-delivery");
             await transaction.RollbackAsync(cancellationToken);
             return false;
         }
