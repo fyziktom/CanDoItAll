@@ -441,11 +441,33 @@ public sealed partial class ProcessesService
             : await dbContext.Set<ProcessStepRoleAssignmentRequirement>()
                 .Where(item => stepIds.Contains(item.StepDefinitionId))
                 .ToListAsync(cancellationToken);
+        var branchOutcomes = stepIds.Count == 0
+            ? []
+            : await dbContext.Set<ProcessStepBranchOutcomeDefinition>()
+                .Where(item => stepIds.Contains(item.StepDefinitionId))
+                .OrderBy(item => item.DisplayOrder)
+                .ToListAsync(cancellationToken);
         var artifactExpectations = stepIds.Count == 0
             ? []
             : await dbContext.Set<ProcessArtifactExpectation>()
                 .Where(item => stepIds.Contains(item.StepDefinitionId))
                 .ToListAsync(cancellationToken);
+        var lintResult = ProcessDefinitionLinter.Analyze(
+            BuildLintEditorModel(
+                definition,
+                publishedVersion,
+                roles,
+                steps,
+                stepRoleRequirements,
+                branchOutcomes,
+                artifactExpectations),
+            request.LintMode);
+        var strictLintError = CreateStrictLintGateError(lintResult, "run-start");
+        if (strictLintError is not null)
+        {
+            return Result<RunStartContext>.Failure(strictLintError);
+        }
+
         var parentContextResult = await LoadParentRunStartContextAsync(dbContext, request, definition, cancellationToken);
         if (parentContextResult.IsFailure)
         {
@@ -505,6 +527,7 @@ public sealed partial class ProcessesService
                 steps,
                 stepDependencies,
                 stepRoleRequirements,
+                branchOutcomes,
                 artifactExpectations,
                 projectId,
                 operatingMode,
@@ -962,6 +985,7 @@ public sealed partial class ProcessesService
         IReadOnlyList<ProcessStepDefinition> Steps,
         IReadOnlyList<ProcessStepDependencyDefinition> StepDependencies,
         IReadOnlyList<ProcessStepRoleAssignmentRequirement> StepRoleRequirements,
+        IReadOnlyList<ProcessStepBranchOutcomeDefinition> BranchOutcomes,
         IReadOnlyList<ProcessArtifactExpectation> ArtifactExpectations,
         Guid? ProjectId,
         ProcessOperatingMode OperatingMode,

@@ -18,6 +18,42 @@ internal sealed partial class ProcessRunAutomationDispatchService
         Recovery
     }
 
+    internal enum ProcessStepOperation
+    {
+        ReadProcessContext,
+        ReadProjectStructure,
+        ReadUpstreamArtifacts,
+        WriteManagedProcessArtifacts,
+        WriteExternalArtifactDestination,
+        MutateProductTarget,
+        RunValidation,
+        LaunchRuntime,
+        CaptureRuntimeProof,
+        ExecuteExternalAction,
+        RecoverArtifactsOnly,
+        EscalateOrDecide
+    }
+
+    internal enum ProcessStepTargetScope
+    {
+        ManagedProcessArtifactsOnly,
+        ManagedOutputProduct,
+        ExternalArtifactDestination,
+        ExternalProductTargetReadOnly,
+        ExternalProductTargetMutable,
+        ExternalActionControlled
+    }
+
+    internal sealed record ProcessStepOperationContract(
+        IReadOnlyList<ProcessStepOperation> AllowedOperations,
+        ProcessStepTargetScope TargetScope,
+        bool IsExplicit)
+    {
+        public bool AllowsProductMutation =>
+            AllowedOperations.Contains(ProcessStepOperation.MutateProductTarget) ||
+            TargetScope is ProcessStepTargetScope.ManagedOutputProduct or ProcessStepTargetScope.ExternalProductTargetMutable;
+    }
+
     private sealed record ProcessStepExecutionBoundaryDescriptor(
         ProcessStepExecutionBoundary Boundary,
         AgentWorkspaceToolProfileKind WorkspaceToolProfile,
@@ -34,8 +70,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
             candidate,
             projectStructureGroundingSummary,
             artifactInspectionGroundingSummary);
-        var executionBoundary = ResolveProcessStepExecutionBoundary(candidate);
-        var allowExternalTargetMutation = AllowsExternalTargetMutation(candidate, executionBoundary, projectStructureGroundingSummary);
+        var operationContract = ResolveProcessStepOperationContract(candidate);
+        var executionBoundary = ResolveProcessStepExecutionBoundary(candidate, operationContract);
+        var allowExternalTargetMutation = AllowsExternalTargetMutation(candidate, executionBoundary, operationContract, projectStructureGroundingSummary);
         var allowedExternalTargetAliases = allowExternalTargetMutation
             ? ResolveMutableExternalTargetAliases(candidate, resolvedExternalTargetAliases)
             : [];
@@ -46,7 +83,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var metadata = new Dictionary<string, object>(StringComparer.Ordinal)
         {
             [ExecutionInvocationMetadata.ProcessBrowserToolsAllowedMetadataKey] = RequiresConcreteBrowserProof(candidate, browserProofGroundingText),
-            [ExecutionInvocationMetadata.ProcessStepExecutionBoundaryMetadataKey] = executionBoundary.Boundary.ToString()
+            [ExecutionInvocationMetadata.ProcessStepExecutionBoundaryMetadataKey] = executionBoundary.Boundary.ToString(),
+            [ExecutionInvocationMetadata.ProcessStepAllowedOperationsMetadataKey] = operationContract.AllowedOperations.Select(item => item.ToString()).ToArray(),
+            [ExecutionInvocationMetadata.ProcessStepTargetScopeMetadataKey] = operationContract.TargetScope.ToString(),
+            [ExecutionInvocationMetadata.ProcessStepAllowsProductMutationMetadataKey] = operationContract.AllowsProductMutation
         };
         if (IsDotNetSolutionSetupScaffoldMutationStep(candidate))
         {
@@ -132,8 +172,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
     private static bool AllowsExternalTargetMutation(
         DispatchCandidate candidate,
         ProcessStepExecutionBoundaryDescriptor executionBoundary,
+        ProcessStepOperationContract operationContract,
         string? projectStructureGroundingSummary)
     {
+        if (operationContract.TargetScope == ProcessStepTargetScope.ExternalArtifactDestination)
+        {
+            return true;
+        }
+
         if ((executionBoundary.Boundary is ProcessStepExecutionBoundary.ArtifactOnly or
                 ProcessStepExecutionBoundary.AnalysisDesign or
                 ProcessStepExecutionBoundary.ProductMutation) &&
@@ -143,6 +189,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         return executionBoundary.AllowsProductMutation &&
+               operationContract.AllowsProductMutation &&
                (RequiresConcreteImplementationProof(candidate) ||
                 ContainsProductRepairIntent(candidate) ||
                 IsDotNetSolutionSetupScaffoldMutationStep(candidate) ||
@@ -150,6 +197,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
     }
 
     private static ProcessStepExecutionBoundaryDescriptor ResolveProcessStepExecutionBoundary(DispatchCandidate candidate)
+        => ResolveProcessStepExecutionBoundary(candidate, ResolveProcessStepOperationContract(candidate));
+
+    private static ProcessStepExecutionBoundaryDescriptor ResolveProcessStepExecutionBoundary(
+        DispatchCandidate candidate,
+        ProcessStepOperationContract operationContract)
     {
         ArgumentNullException.ThrowIfNull(candidate);
 
@@ -170,6 +222,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 candidate.WorkBrief?.EvidenceExpectationSummary,
                 string.Join(" ", candidate.ExpectedArtifacts.Select(item => $"{item.ArtifactKind} {item.Title} {item.ValidationRequirementSummary} {item.AllowedFutureUsageSummary}"))))
             .ToLowerInvariant();
+
+        if (operationContract.IsExplicit)
+        {
+            return ResolveExplicitOperationContractBoundary(operationContract);
+        }
 
         if (candidate.StepRun.StepKind == ProcessStepKind.Subprocess)
         {
@@ -240,6 +297,242 @@ internal sealed partial class ProcessRunAutomationDispatchService
             AgentWorkspaceToolProfileKind.BusinessAnalysis,
             AllowsProductMutation: false,
             "Step may create managed process artifacts only.");
+    }
+
+    private static ProcessStepOperationContract ResolveProcessStepOperationContract(DispatchCandidate candidate)
+    {
+        ArgumentNullException.ThrowIfNull(candidate);
+
+        var contractText = CollapsePromptWhitespace(string.Join(
+                ' ',
+                candidate.StepDefinition.Notes,
+                candidate.StepDefinition.InputContractSummary,
+                candidate.StepDefinition.OutputContractSummary,
+                candidate.StepDefinition.EvidenceContractSummary,
+                candidate.StepDefinition.ExceptionPolicySummary,
+                candidate.WorkBrief?.WorkBriefText,
+                candidate.WorkBrief?.ExpectedOutcome,
+                candidate.WorkBrief?.EvidenceExpectationSummary,
+                string.Join(" ", candidate.ExpectedArtifacts.Select(item => $"{item.Title} {item.ValidationRequirementSummary} {item.AllowedFutureUsageSummary}"))))
+            .ToLowerInvariant();
+
+        if (TryResolveExplicitOperationContract(contractText, out var explicitContract))
+        {
+            return explicitContract;
+        }
+
+        var operations = new SortedSet<ProcessStepOperation>();
+        operations.Add(ProcessStepOperation.ReadProcessContext);
+        if (candidate.ArtifactInputs.Count > 0)
+        {
+            operations.Add(ProcessStepOperation.ReadUpstreamArtifacts);
+        }
+
+        if (candidate.ExpectedArtifacts.Count > 0)
+        {
+            operations.Add(ProcessStepOperation.WriteManagedProcessArtifacts);
+        }
+
+        if (candidate.StepRun.StepKind is ProcessStepKind.Decision or ProcessStepKind.Approval or ProcessStepKind.Review)
+        {
+            operations.Add(ProcessStepOperation.EscalateOrDecide);
+        }
+
+        if (RequiresConcreteBrowserProof(candidate, contractText) || LooksLikeRuntimeValidationBoundary(candidate, contractText))
+        {
+            operations.Add(ProcessStepOperation.RunValidation);
+            operations.Add(ProcessStepOperation.CaptureRuntimeProof);
+        }
+
+        if (candidate.StepRun.StepKind == ProcessStepKind.Subprocess)
+        {
+            operations.Add(ProcessStepOperation.ExecuteExternalAction);
+            return new ProcessStepOperationContract(
+                operations.ToArray(),
+                ProcessStepTargetScope.ExternalActionControlled,
+                IsExplicit: false);
+        }
+
+        if (LooksLikeExternalArtifactDestination(candidate, contractText))
+        {
+            operations.Add(ProcessStepOperation.WriteExternalArtifactDestination);
+            return new ProcessStepOperationContract(
+                operations.ToArray(),
+                ProcessStepTargetScope.ExternalArtifactDestination,
+                IsExplicit: false);
+        }
+
+        if (RequiresConcreteImplementationProof(candidate) ||
+            ContainsProductRepairIntent(candidate) ||
+            IsDotNetSolutionSetupScaffoldMutationStep(candidate) ||
+            LooksLikeProductMutationBoundary(candidate, contractText, requireStrongSignal: true))
+        {
+            operations.Add(ProcessStepOperation.MutateProductTarget);
+            return new ProcessStepOperationContract(
+                operations.ToArray(),
+                ProcessStepTargetScope.ExternalProductTargetMutable,
+                IsExplicit: false);
+        }
+
+        if (IsProductReadOnlyValidationStep(candidate))
+        {
+            return new ProcessStepOperationContract(
+                operations.ToArray(),
+                ProcessStepTargetScope.ExternalProductTargetReadOnly,
+                IsExplicit: false);
+        }
+
+        return new ProcessStepOperationContract(
+            operations.ToArray(),
+            ProcessStepTargetScope.ManagedProcessArtifactsOnly,
+            IsExplicit: false);
+    }
+
+    private static bool TryResolveExplicitOperationContract(
+        string contractText,
+        out ProcessStepOperationContract contract)
+    {
+        contract = new ProcessStepOperationContract(
+            [ProcessStepOperation.ReadProcessContext, ProcessStepOperation.WriteManagedProcessArtifacts],
+            ProcessStepTargetScope.ManagedProcessArtifactsOnly,
+            IsExplicit: false);
+        if (string.IsNullOrWhiteSpace(contractText) ||
+            !ContainsAnyToken(contractText, "operation contract", "allowed operations", "target scope", "step contract"))
+        {
+            return false;
+        }
+
+        var operations = new SortedSet<ProcessStepOperation>();
+        operations.Add(ProcessStepOperation.ReadProcessContext);
+        AddExplicitOperationIfMentioned(contractText, operations, ProcessStepOperation.ReadProjectStructure, "readprojectstructure", "read project structure");
+        AddExplicitOperationIfMentioned(contractText, operations, ProcessStepOperation.ReadUpstreamArtifacts, "readupstreamartifacts", "read upstream artifacts");
+        AddExplicitOperationIfMentioned(contractText, operations, ProcessStepOperation.WriteManagedProcessArtifacts, "writemanagedprocessartifacts", "write managed process artifacts", "artifact-only", "artifact only");
+        AddExplicitOperationIfMentioned(contractText, operations, ProcessStepOperation.WriteExternalArtifactDestination, "writeexternalartifactdestination", "external artifact destination");
+        AddExplicitOperationIfMentioned(contractText, operations, ProcessStepOperation.MutateProductTarget, "mutateproducttarget", "mutate product target", "product mutation");
+        AddExplicitOperationIfMentioned(contractText, operations, ProcessStepOperation.RunValidation, "runvalidation", "run validation");
+        AddExplicitOperationIfMentioned(contractText, operations, ProcessStepOperation.LaunchRuntime, "launchruntime", "launch runtime");
+        AddExplicitOperationIfMentioned(contractText, operations, ProcessStepOperation.CaptureRuntimeProof, "captureruntimeproof", "capture runtime proof");
+        AddExplicitOperationIfMentioned(contractText, operations, ProcessStepOperation.ExecuteExternalAction, "executeexternalaction", "execute external action");
+        AddExplicitOperationIfMentioned(contractText, operations, ProcessStepOperation.RecoverArtifactsOnly, "recoverartifactsonly", "recover artifacts only");
+        AddExplicitOperationIfMentioned(contractText, operations, ProcessStepOperation.EscalateOrDecide, "escalateordecide", "escalate or decide");
+        if (operations.Count == 1)
+        {
+            operations.Add(ProcessStepOperation.WriteManagedProcessArtifacts);
+        }
+
+        var targetScope = ResolveExplicitTargetScope(contractText, operations);
+        contract = new ProcessStepOperationContract(operations.ToArray(), targetScope, IsExplicit: true);
+        return true;
+    }
+
+    private static void AddExplicitOperationIfMentioned(
+        string contractText,
+        ISet<ProcessStepOperation> operations,
+        ProcessStepOperation operation,
+        params string[] tokens)
+    {
+        if (tokens.Any(token => contractText.Contains(token, StringComparison.OrdinalIgnoreCase)))
+        {
+            operations.Add(operation);
+        }
+    }
+
+    private static ProcessStepTargetScope ResolveExplicitTargetScope(
+        string contractText,
+        IReadOnlySet<ProcessStepOperation> operations)
+    {
+        if (contractText.Contains("externalproducttargetmutable", StringComparison.OrdinalIgnoreCase) ||
+            contractText.Contains("external product target mutable", StringComparison.OrdinalIgnoreCase))
+        {
+            return ProcessStepTargetScope.ExternalProductTargetMutable;
+        }
+
+        if (contractText.Contains("managedoutputproduct", StringComparison.OrdinalIgnoreCase) ||
+            contractText.Contains("managed output product", StringComparison.OrdinalIgnoreCase))
+        {
+            return ProcessStepTargetScope.ManagedOutputProduct;
+        }
+
+        if (contractText.Contains("externalartifactdestination", StringComparison.OrdinalIgnoreCase) ||
+            contractText.Contains("external artifact destination", StringComparison.OrdinalIgnoreCase))
+        {
+            return ProcessStepTargetScope.ExternalArtifactDestination;
+        }
+
+        if (contractText.Contains("externalproducttargetreadonly", StringComparison.OrdinalIgnoreCase) ||
+            contractText.Contains("external product target read only", StringComparison.OrdinalIgnoreCase) ||
+            contractText.Contains("external product target readonly", StringComparison.OrdinalIgnoreCase))
+        {
+            return ProcessStepTargetScope.ExternalProductTargetReadOnly;
+        }
+
+        if (operations.Contains(ProcessStepOperation.MutateProductTarget))
+        {
+            return ProcessStepTargetScope.ExternalProductTargetMutable;
+        }
+
+        if (operations.Contains(ProcessStepOperation.ExecuteExternalAction))
+        {
+            return ProcessStepTargetScope.ExternalActionControlled;
+        }
+
+        return ProcessStepTargetScope.ManagedProcessArtifactsOnly;
+    }
+
+    private static ProcessStepExecutionBoundaryDescriptor ResolveExplicitOperationContractBoundary(
+        ProcessStepOperationContract operationContract)
+    {
+        if (operationContract.AllowedOperations.Contains(ProcessStepOperation.ExecuteExternalAction))
+        {
+            return new ProcessStepExecutionBoundaryDescriptor(
+                ProcessStepExecutionBoundary.ExternalAction,
+                AgentWorkspaceToolProfileKind.ReadOnly,
+                AllowsProductMutation: false,
+                "Explicit operation contract allows controlled external action without product mutation.");
+        }
+
+        if (operationContract.AllowedOperations.Contains(ProcessStepOperation.RecoverArtifactsOnly))
+        {
+            return new ProcessStepExecutionBoundaryDescriptor(
+                ProcessStepExecutionBoundary.Recovery,
+                AgentWorkspaceToolProfileKind.BusinessAnalysis,
+                AllowsProductMutation: false,
+                "Explicit operation contract allows artifact recovery only.");
+        }
+
+        if (operationContract.AllowsProductMutation)
+        {
+            return new ProcessStepExecutionBoundaryDescriptor(
+                ProcessStepExecutionBoundary.ProductMutation,
+                AgentWorkspaceToolProfileKind.SoftwareDevelopment,
+                AllowsProductMutation: true,
+                "Explicit operation contract allows scoped product mutation.");
+        }
+
+        if (operationContract.AllowedOperations.Contains(ProcessStepOperation.RunValidation) ||
+            operationContract.AllowedOperations.Contains(ProcessStepOperation.CaptureRuntimeProof))
+        {
+            return new ProcessStepExecutionBoundaryDescriptor(
+                ProcessStepExecutionBoundary.RuntimeValidation,
+                AgentWorkspaceToolProfileKind.QualityValidation,
+                AllowsProductMutation: false,
+                "Explicit operation contract allows validation and evidence capture without product mutation.");
+        }
+
+        if (operationContract.AllowedOperations.Contains(ProcessStepOperation.EscalateOrDecide))
+        {
+            return new ProcessStepExecutionBoundaryDescriptor(
+                ProcessStepExecutionBoundary.DecisionReview,
+                AgentWorkspaceToolProfileKind.BusinessAnalysis,
+                AllowsProductMutation: false,
+                "Explicit operation contract allows governed disposition without product mutation.");
+        }
+
+        return new ProcessStepExecutionBoundaryDescriptor(
+            ProcessStepExecutionBoundary.ArtifactOnly,
+            AgentWorkspaceToolProfileKind.BusinessAnalysis,
+            AllowsProductMutation: false,
+            "Explicit operation contract allows managed process artifact writes only.");
     }
 
     private static bool LooksLikeAnalysisOrDesignBoundary(
@@ -328,13 +621,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
         string stepText,
         bool requireStrongSignal = false)
     {
-        var hasMutationVerb = ContainsAnyToken(
+        var hasStrongMutationVerb = ContainsAnyToken(
             stepText,
             "implement",
             "implementation",
-            "build",
-            "create",
-            "generate",
             "scaffold",
             "code",
             "write product",
@@ -343,12 +633,36 @@ internal sealed partial class ProcessRunAutomationDispatchService
             "repair",
             "fix",
             "rework");
-        if (!hasMutationVerb)
+        var hasBroadCreationVerb = ContainsAnyToken(stepText, "build", "create", "generate", "write");
+        var hasProductTargetSignal = ContainsAnyToken(
+            stepText,
+            "product file",
+            "product files",
+            "product root",
+            "source file",
+            "source files",
+            "source root",
+            "target app",
+            "requested app",
+            "web app",
+            "console app",
+            "application",
+            "feature",
+            "component",
+            "app project",
+            "project file",
+            "solution file",
+            "runnable",
+            "change set",
+            "implementation change",
+            "deliverable files");
+        if (!hasStrongMutationVerb && !(hasBroadCreationVerb && hasProductTargetSignal))
         {
             return false;
         }
 
-        if (candidate.ExpectedArtifacts.Any(item => item.ArtifactKind == ProcessArtifactKind.Deliverable))
+        if (candidate.ExpectedArtifacts.Any(item => item.ArtifactKind == ProcessArtifactKind.Deliverable) &&
+            (hasStrongMutationVerb || hasProductTargetSignal))
         {
             return true;
         }
@@ -358,7 +672,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return false;
         }
 
-        return candidate.StepRun.StepKind is ProcessStepKind.Work or ProcessStepKind.Delivery;
+        return hasStrongMutationVerb &&
+               hasProductTargetSignal &&
+               candidate.StepRun.StepKind is (ProcessStepKind.Work or ProcessStepKind.Delivery);
     }
 
     private static bool ContainsAnyToken(string text, params string[] tokens)

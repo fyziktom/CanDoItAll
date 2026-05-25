@@ -78,7 +78,8 @@ public sealed record ToolInvocationPolicyContext(
     IReadOnlyList<string>? ReadOnlyExternalTargetAliases = null,
     bool ApprovalWrapperEffectiveForProvider = false,
     bool ApplicationApprovalAvailable = false,
-    bool ProcessScaffoldToolOnly = false)
+    bool ProcessScaffoldToolOnly = false,
+    bool ProcessAllowsProductMutation = true)
 {
     public bool HasEffectiveApprovalPath =>
         (ApprovalWrapperAvailable && ApprovalWrapperEffectiveForProvider) ||
@@ -260,6 +261,12 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             return ValueTask.FromResult(externalTargetDecision);
         }
 
+        var processBoundaryDecision = EvaluateGovernedProcessProductMutationBoundary(context, signature);
+        if (processBoundaryDecision is not null)
+        {
+            return ValueTask.FromResult(processBoundaryDecision);
+        }
+
         var managedWorkspaceIsolationDecision = EvaluateExternalTargetManagedWorkspaceIsolation(context, signature);
         if (managedWorkspaceIsolationDecision is not null)
         {
@@ -365,6 +372,82 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         }
 
         return null;
+    }
+
+    private static ToolInvocationPolicyDecision? EvaluateGovernedProcessProductMutationBoundary(
+        ToolInvocationPolicyContext context,
+        string signature)
+    {
+        if (!IsGovernedProcessRun(context) ||
+            context.ProcessAllowsProductMutation ||
+            !ProductFileMutationTools.Contains(context.ToolName))
+        {
+            return null;
+        }
+
+        var allowedAliases = NormalizeAllowedExternalTargetAliases(context.AllowedExternalTargetAliases);
+        foreach (var pathArgument in ResolveManagedWorkspacePathArguments(context.RedactedArguments))
+        {
+            var normalizedPath = NormalizeManagedWorkspacePath(pathArgument.Value);
+            if (string.IsNullOrWhiteSpace(normalizedPath))
+            {
+                continue;
+            }
+
+            if (IsExternalTargetAliasPath(normalizedPath))
+            {
+                var normalizedAlias = NormalizeExternalTargetAlias(normalizedPath);
+                if (IsAllowedExternalTargetAlias(normalizedAlias, allowedAliases) &&
+                    IsExternalArtifactDestinationPath(normalizedAlias))
+                {
+                    continue;
+                }
+
+                return ToolInvocationPolicyDecision.Deny(
+                    signature,
+                    $"This governed step is not authorized to mutate product targets. External product path '{normalizedPath}' is read-only for this step; write managed process artifacts under the current-run artifact root instead.");
+            }
+
+            if (IsManagedOutputPath(normalizedPath))
+            {
+                return ToolInvocationPolicyDecision.Deny(
+                    signature,
+                    $"This governed step is not authorized to mutate managed output product files. Managed output path '{normalizedPath}' is outside the current-run process artifact boundary for this step.");
+            }
+        }
+
+        return null;
+    }
+
+    private static bool IsExternalArtifactDestinationPath(string normalizedAlias)
+    {
+        var segments = normalizedAlias
+            .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Skip(2)
+            .ToArray();
+        if (segments.Length == 0)
+        {
+            return false;
+        }
+
+        if (segments.Any(segment =>
+                string.Equals(segment, "product", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(segment, "source", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(segment, "src", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(segment, "app", StringComparison.OrdinalIgnoreCase)))
+        {
+            return false;
+        }
+
+        return segments.Any(segment =>
+            string.Equals(segment, "artifact", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, "artifacts", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, "evidence", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, "report", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, "reports", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, "decision", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, "decisions", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, "output", StringComparison.OrdinalIgnoreCase));
     }
 
     public void RecordSuccessfulInvocation(ToolInvocationPolicyContext context)

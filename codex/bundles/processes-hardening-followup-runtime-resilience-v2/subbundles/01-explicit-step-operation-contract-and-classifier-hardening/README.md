@@ -1,8 +1,10 @@
-# SB01 - Explicit step operation contract and classifier hardening
+﻿# SB01 - Explicit step operation contract and classifier hardening
 
 ## Status
 
-Ready.
+Completed.
+
+- Subbundle status: Completed
 
 ## Objective
 
@@ -10,7 +12,7 @@ Add an explicit generic step operation contract and harden the classifier so art
 
 ## Covered Inputs
 
-RQ01, RQ02, N005, N006, N007
+- RQ01, RQ02, N005, N006, N007
 
 ## Prerequisites
 
@@ -28,15 +30,15 @@ RQ01, RQ02, N005, N006, N007
 
 ## Scope
 
-Implement only the runtime, tests, and proof required for this subbundle. Keep process core generic.
+- Implement only the runtime, tests, and proof required for this subbundle. Keep process core generic.
 
 ## Dependency Impact
 
-This subbundle affects downstream process runtime reliability. If this subbundle fails, later subbundles may pass from false assumptions.
+- This subbundle affects downstream process runtime reliability. If this subbundle fails, later subbundles may pass from false assumptions.
 
 ## Validation Depth
 
-Critical semantic validation required.
+- Critical semantic validation required.
 
 ## Implementation Steps
 
@@ -81,12 +83,13 @@ Create/update:
 
 ## Browser Validation Logging
 
-N/A unless this subbundle changes browser-visible UI or runs browser proof red-team scenarios. If browser proof is run, record route, viewport, actions, assertions, screenshots, and result in `reviews/01-execution-report.md`.
+- N/A unless this subbundle changes browser-visible UI or runs browser proof red-team scenarios. If browser proof is run, record route, viewport, actions, assertions, screenshots, and result in `reviews/01-execution-report.md`.
 
 ## Progression Gate
 
-Do not start downstream dependent subbundles until this subbundle's proof manifest and semantic invariant contract are complete.
+- Do not start downstream dependent subbundles until this subbundle's proof manifest and semantic invariant contract are complete.
 
 ## Suggested Agent Prompt
 
 Implement `SB01 - Explicit step operation contract and classifier hardening` from `codex/bundles/processes-hardening-followup-runtime-resilience-v2`. Follow the exact source references, constraints, and proof requirements in this README. Keep the process core generic and validate with behavior tests, not only source assertions.
+

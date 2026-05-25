@@ -53,12 +53,6 @@ internal static class ProcessRuntimeProgressionPlanner
                     ActivatePendingStepRun(dependentStepRun, dependentStep, now);
                 }
 
-                if (dependentStepRun.Status == ProcessStepRunStatus.Blocked &&
-                    IsMissingUpstreamArtifactBlock(dependentStepRun.BlockedReason) &&
-                    AreAllDependenciesSatisfied(dependentStep, stepRunsByDefinitionId, stepDependenciesByStepId))
-                {
-                    ReactivateBlockedStepRunAfterUpstreamArtifactMaterialization(dependentStepRun, dependentStep, now);
-                }
             }
         }
 
@@ -125,7 +119,7 @@ internal static class ProcessRuntimeProgressionPlanner
         stepRun.ReadyAtUtc = now;
     }
 
-    private static void ReactivateBlockedStepRunAfterUpstreamArtifactMaterialization(
+    public static void ReactivateBlockedStepRunAfterUpstreamArtifactMaterialization(
         ProcessStepRun stepRun,
         ProcessStepDefinition stepDefinition,
         DateTimeOffset now)
@@ -144,7 +138,7 @@ internal static class ProcessRuntimeProgressionPlanner
         stepRun.DecisionSummary = "Reopened after upstream artifact materialization completed.";
     }
 
-    private static bool IsMissingUpstreamArtifactBlock(string blockedReason)
+    public static bool IsMissingUpstreamArtifactBlock(string blockedReason)
     {
         return !string.IsNullOrWhiteSpace(blockedReason) &&
                blockedReason.Contains(MissingUpstreamArtifactsBlockMarker, StringComparison.OrdinalIgnoreCase) &&

@@ -1,3 +1,8 @@
 # SB05 failing-first.txt
 
-Fill during execution.
+Command: `dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-restore --filter "FullyQualifiedName~ProcessRunAutomationDispatchServiceTests"`
+Working directory: `C:\repositories\CanDoItAll`
+Run label: SB05-INV-001 failing-first/red-team.
+ExitCode: 1
+Pre-change failure summary: failing assertions expected because completed upstream transitions could mark blocked dependents ready before required artifact materialization.
+Red-team cases added before implementation: `ApplyTransitionConsequences_keeps_blocked_dependent_until_upstream_artifact_materializes` and `ShouldRetryIncompleteSuccessfulRun_does_not_retry_downstream_step_for_missing_upstream_artifact_block`.

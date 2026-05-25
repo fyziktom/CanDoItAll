@@ -1,3 +1,12 @@
 # SB01 passing.txt
 
-Fill during execution.
+Command: `dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-restore --filter "FullyQualifiedName~ProcessRunAutomationDispatchServiceTests|FullyQualifiedName~ProcessDefinitionLinterTests"`
+Working directory: `C:\repositories\CanDoItAll`
+Run label: SB01-INV-001 passing integration proof.
+Exit code: 0.
+Result: Passed, 419 tests.
+
+Command: `dotnet build CanDoItAll.slnx --no-restore`
+Working directory: `C:\repositories\CanDoItAll`
+Exit code: 0.
+Result: Build succeeded with existing MSB3277 package conflict warnings only.

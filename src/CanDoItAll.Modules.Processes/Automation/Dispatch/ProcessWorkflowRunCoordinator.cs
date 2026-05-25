@@ -320,6 +320,11 @@ internal sealed class ProcessWorkflowRunCoordinator(
         }
 
         var workflowArtifacts = await workflowRunStore.ListArtifactsAsync(run.RunId, cancellationToken);
+        var expectations = await dbContext.Set<ProcessArtifactExpectation>()
+            .AsNoTracking()
+            .Where(item => item.StepDefinitionId == context.StepRun.StepDefinitionId)
+            .OrderBy(item => item.Title)
+            .ToListAsync(cancellationToken);
         foreach (var artifact in workflowArtifacts)
         {
             var externalReferenceKey = BuildWorkflowArtifactExternalReferenceKey(run.RunId, artifact.Id);
@@ -328,19 +333,22 @@ internal sealed class ProcessWorkflowRunCoordinator(
                 continue;
             }
 
+            var artifactKind = MapWorkflowArtifactKind(artifact.Kind);
+            var expectation = ResolveWorkflowArtifactExpectation(expectations, artifactKind, artifact);
             await dbContext.Set<ProcessArtifactRecord>().AddAsync(
                 new ProcessArtifactRecord
                 {
                     ProcessRunId = context.Run.Id,
                     StepRunId = context.StepRun.Id,
-                    ArtifactKind = MapWorkflowArtifactKind(artifact.Kind),
-                    Title = string.IsNullOrWhiteSpace(artifact.Name)
+                    ArtifactExpectationId = expectation?.Id,
+                    ArtifactKind = expectation?.ArtifactKind ?? artifactKind,
+                    Title = expectation?.Title ?? (string.IsNullOrWhiteSpace(artifact.Name)
                         ? $"Workflow artifact {artifact.Id}"
-                        : artifact.Name,
+                        : artifact.Name),
                     TrustStatus = ResolveWorkflowArtifactTrustStatus(run.State),
-                    SensitivityLevel = ProcessSensitivityLevel.Internal,
-                    ProvenanceSummary = $"Produced by workflow run {run.RunId} at node {artifact.NodeId?.Value ?? "workflow"}.",
-                    AllowedFutureUsageSummary = "Use as process workflow output evidence.",
+                    SensitivityLevel = expectation?.SensitivityLevel ?? ProcessSensitivityLevel.Internal,
+                    ProvenanceSummary = $"Produced by workflow run {run.RunId} at node {artifact.NodeId?.Value ?? "workflow"} with workflow artifact id {artifact.Id}.",
+                    AllowedFutureUsageSummary = expectation?.AllowedFutureUsageSummary ?? "Use as process workflow output evidence.",
                     ReviewSummary = artifact.Summary,
                     ManagedStoragePath = artifact.StoragePath,
                     ExternalReferenceKey = externalReferenceKey,
@@ -348,6 +356,23 @@ internal sealed class ProcessWorkflowRunCoordinator(
                 },
                 cancellationToken);
         }
+    }
+
+    private static ProcessArtifactExpectation? ResolveWorkflowArtifactExpectation(
+        IReadOnlyList<ProcessArtifactExpectation> expectations,
+        ProcessArtifactKind artifactKind,
+        WorkflowArtifactRecord artifact)
+    {
+        var artifactName = artifact.Name?.Trim() ?? string.Empty;
+        var artifactSummary = artifact.Summary?.Trim() ?? string.Empty;
+        return expectations
+            .Where(expectation => expectation.ArtifactKind == artifactKind)
+            .OrderByDescending(expectation => string.Equals(expectation.Title, artifactName, StringComparison.OrdinalIgnoreCase))
+            .ThenByDescending(expectation => !string.IsNullOrWhiteSpace(artifactName) &&
+                                             artifactName.Contains(expectation.Title, StringComparison.OrdinalIgnoreCase))
+            .ThenByDescending(expectation => !string.IsNullOrWhiteSpace(artifactSummary) &&
+                                             artifactSummary.Contains(expectation.Title, StringComparison.OrdinalIgnoreCase))
+            .FirstOrDefault();
     }
 
     private static ProcessArtifactKind MapWorkflowArtifactKind(WorkflowArtifactKind artifactKind)

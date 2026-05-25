@@ -266,6 +266,75 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
+    public async Task EvaluateAsync_denies_external_product_mutation_when_process_step_disallows_product_mutation()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            "workspace_write_file",
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "external-target/C/programovani/todo-summary/product/src/Program.cs",
+                ["content"] = "Console.WriteLine(\"changed\");"
+            },
+            allowedExternalTargetAliases: ["external-target/C/programovani/todo-summary/product"],
+            processAllowsProductMutation: false);
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("not authorized to mutate product targets", decision.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_denies_managed_output_product_write_when_process_step_disallows_product_mutation()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            "workspace_write_file",
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "output/scopes/organization/demo/product/src/Program.cs",
+                ["content"] = "Console.WriteLine(\"changed\");"
+            },
+            processAllowsProductMutation: false);
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("managed output product files", decision.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_allows_current_run_artifact_when_process_step_disallows_product_mutation()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            "workspace_write_file",
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "artifacts/process-runs/process-run-001/architecture-decision.md",
+                ["content"] = "Decision artifact."
+            },
+            processAllowsProductMutation: false);
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
     public async Task EvaluateAsync_denies_direct_product_write_for_scaffold_tool_only_process_step()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
@@ -1266,7 +1335,8 @@ public sealed class AgentToolInvocationPolicyTests
         IReadOnlyDictionary<string, string>? arguments = null,
         IReadOnlyList<string>? allowedExternalTargetAliases = null,
         IReadOnlyList<string>? readOnlyExternalTargetAliases = null,
-        bool processScaffoldToolOnly = false)
+        bool processScaffoldToolOnly = false,
+        bool processAllowsProductMutation = true)
     {
         return new ToolInvocationPolicyContext(
             AgentId: Guid.Parse("11111111-1111-1111-1111-111111111111"),
@@ -1285,6 +1355,7 @@ public sealed class AgentToolInvocationPolicyTests
             ReadOnlyExternalTargetAliases: readOnlyExternalTargetAliases,
             ApprovalWrapperEffectiveForProvider: approvalWrapperEffectiveForProvider,
             ApplicationApprovalAvailable: applicationApprovalAvailable,
-            ProcessScaffoldToolOnly: processScaffoldToolOnly);
+            ProcessScaffoldToolOnly: processScaffoldToolOnly,
+            ProcessAllowsProductMutation: processAllowsProductMutation);
     }
 }

@@ -631,6 +631,8 @@ public sealed class ProcessRunStartRequest
     public Guid? ParentRunId { get; set; }
 
     public Guid? ParentStepRunId { get; set; }
+
+    public ProcessDefinitionLintMode LintMode { get; set; } = ProcessDefinitionLintMode.Advisory;
 }
 
 public sealed class ProcessRunStopRequest

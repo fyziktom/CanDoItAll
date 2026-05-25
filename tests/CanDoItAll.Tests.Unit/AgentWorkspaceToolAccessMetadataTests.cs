@@ -186,4 +186,27 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
 
         Assert.Contains("external-target/C/programovani/outputsfromtests/dotnet/BikeRepairSlotScheduler", aliases);
     }
+
+    [Fact]
+    public void GroundPromptExternalTargetAliases_adds_prompt_absolute_path_as_readonly_alias_when_process_step_disallows_product_mutation()
+    {
+        var metadataJson = ExecutionInvocationMetadata.GroundPromptExternalTargetAliases(
+            $"{{\"{ExecutionInvocationMetadata.ProcessStepAllowsProductMutationMetadataKey}\":false}}",
+            """inspect C:\programovani\outputsfromtests\dotnet\BikeRepairSlotScheduler before reporting""",
+            new AgentWorkspaceToolAccessSettings
+            {
+                CanReadFiles = true,
+                CanWriteFiles = true
+            });
+
+        using var document = JsonDocument.Parse(metadataJson);
+        var readOnlyAliases = document.RootElement
+            .GetProperty(ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey)
+            .EnumerateArray()
+            .Select(item => item.GetString())
+            .ToArray();
+
+        Assert.Contains("external-target/C/programovani/outputsfromtests/dotnet/BikeRepairSlotScheduler", readOnlyAliases);
+        Assert.False(document.RootElement.TryGetProperty(ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey, out _));
+    }
 }

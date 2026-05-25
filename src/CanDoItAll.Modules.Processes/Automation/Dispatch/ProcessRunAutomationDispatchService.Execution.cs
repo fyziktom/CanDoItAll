@@ -226,6 +226,21 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 }
             }
 
+            if (!IsTerminalAutomationExecutionRun(detail.Run))
+            {
+                logger.LogInformation(
+                    "Observed active AgentFramework execution run {ExecutionRunId} for process run {RunId}, step {StepRunId} in state {ExecutionState}; leaving the process step InProgress without finalization.",
+                    executionRunId,
+                    candidate.Run.Id,
+                    candidate.StepRun.Id,
+                    detail.Run.State);
+
+                return CreateObservedActiveAutomationExecutionOutcome(
+                    detail,
+                    responseText,
+                    attemptNumber);
+            }
+
             if (RequiresGovernedStepOutcome(candidate.StepRun) &&
                 !TryReadProcessStepOutcome(responseText, out _, out var outputValidation))
             {
@@ -360,17 +375,35 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     attemptNumber,
                     maxExecutionAttempts);
 
-            if (!shouldRetry)
-            {
-                return finalOutcome;
-            }
-
             var retryReasons = ResolveIncompleteSuccessfulRunRetryReasons(
                 candidate,
                 detail,
                 responseText,
                 missingRequiredTools,
                 carriedImplementationProof);
+            var noProgressFingerprint = TryCreateNoProgressRetryFingerprint(
+                candidate,
+                detail,
+                responseText,
+                missingRequiredTools,
+                retryReasons,
+                attemptNumber);
+
+            if (!shouldRetry)
+            {
+                if (!string.IsNullOrWhiteSpace(noProgressFingerprint))
+                {
+                    await PersistNoProgressRetryCompressedDiagnosticAsync(
+                        candidate,
+                        detail,
+                        missingRequiredTools,
+                        retryReasons,
+                        noProgressFingerprint,
+                        cancellationToken);
+                }
+
+                return finalOutcome;
+            }
 
             logger.LogWarning(
                 "AgentFramework run {ExecutionRunId} ended with unresolved execution work for process run {RunId}, step {StepRunId}. Retry reasons: {RetryReasons}. Missing tools: {MissingTools}. Critical failures: {CriticalFailures}. Retrying attempt {NextAttempt}/{MaxAttempts}.",
@@ -443,6 +476,21 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         return finalOutcome
                ?? throw new InvalidOperationException($"No AgentFramework execution outcome was captured for process step '{candidate.StepRun.Id:D}'.");
+    }
+
+    private static DispatchExecutionOutcome CreateObservedActiveAutomationExecutionOutcome(
+        ExecutionRunDetail detail,
+        string responseText,
+        int attemptNumber)
+    {
+        return new DispatchExecutionOutcome(
+            detail,
+            responseText,
+            ProcessStepRunStatus.InProgress,
+            $"AgentFramework run '{detail.Run.Title}' is still {detail.Run.State}; automation will observe it again after it becomes terminal or stale.",
+            [],
+            attemptNumber,
+            null);
     }
 
     private async Task<CarriedImplementationProof> ResolveHistoricalCarriedImplementationProofAsync(

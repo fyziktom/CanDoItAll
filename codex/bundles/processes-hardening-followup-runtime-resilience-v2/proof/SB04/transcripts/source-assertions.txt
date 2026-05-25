@@ -1,3 +1,11 @@
 # SB04 source-assertions.txt
 
-Fill during execution.
+Command: `rg -n "workflow-run:|ArtifactExpectationId|WorkflowArtifact|SubprocessParent|subprocess-run" src/CanDoItAll.Modules.Processes/Automation/Dispatch tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs -S`
+Working directory: `C:\repositories\CanDoItAll`
+Exit code: 0.
+Run label: SB04-INV-001 source assertion proof.
+
+Evidence:
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessWorkflowRunCoordinator.cs` projects workflow artifacts with process expectation IDs and provenance.
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs` requires current subprocess run identity for subprocess projection.
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs` validates workflow and subprocess producer kinds.

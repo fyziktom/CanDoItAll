@@ -45,6 +45,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ExecutionRunDetail Detail,
         string ResponseText);
 
+    private sealed record ArtifactProjectionLineage(
+        Guid? RecoveryExecutionRunId,
+        Guid? RecoveredForExecutionRunId,
+        Guid? ReworkPacketId);
+
     private sealed record StepRunTransitionSnapshot(
         Guid Id,
         ProcessStepRunStatus Status,

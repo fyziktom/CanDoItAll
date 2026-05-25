@@ -7,15 +7,28 @@ public enum ProcessDefinitionLintSeverity
     Error
 }
 
+public enum ProcessDefinitionLintMode
+{
+    Advisory,
+    Strict
+}
+
 public sealed record ProcessDefinitionLintIssue(
     string Code,
     ProcessDefinitionLintSeverity Severity,
     string Message,
     Guid? StepId,
-    string StepTitle);
+    string StepTitle,
+    string Suggestion = "");
 
-public sealed record ProcessDefinitionLintResult(IReadOnlyList<ProcessDefinitionLintIssue> Issues)
+public sealed record ProcessDefinitionLintResult(
+    IReadOnlyList<ProcessDefinitionLintIssue> Issues,
+    ProcessDefinitionLintMode Mode = ProcessDefinitionLintMode.Advisory)
 {
+    public static ProcessDefinitionLintResult Empty { get; } = new([]);
+
+    public bool HasErrors => Issues.Any(issue => issue.Severity == ProcessDefinitionLintSeverity.Error);
+
     public bool HasWarningsOrErrors => Issues.Any(issue => issue.Severity is ProcessDefinitionLintSeverity.Warning or ProcessDefinitionLintSeverity.Error);
 
     public string BuildDryRunSummary()
@@ -28,13 +41,20 @@ public sealed record ProcessDefinitionLintResult(IReadOnlyList<ProcessDefinition
         return string.Join(
             Environment.NewLine,
             Issues.Select(issue =>
-                $"{issue.Severity}: {issue.Code}: {issue.StepTitle}: {issue.Message}"));
+            {
+                var suggestion = string.IsNullOrWhiteSpace(issue.Suggestion)
+                    ? string.Empty
+                    : $" Suggested fix: {issue.Suggestion}";
+                return $"{issue.Severity}: {issue.Code}: {issue.StepTitle}: {issue.Message}{suggestion}";
+            }));
     }
 }
 
 public static class ProcessDefinitionLinter
 {
-    public static ProcessDefinitionLintResult Analyze(ProcessDefinitionEditorModel model)
+    public static ProcessDefinitionLintResult Analyze(
+        ProcessDefinitionEditorModel model,
+        ProcessDefinitionLintMode mode = ProcessDefinitionLintMode.Advisory)
     {
         ArgumentNullException.ThrowIfNull(model);
 
@@ -45,19 +65,20 @@ public static class ProcessDefinitionLinter
 
         foreach (var step in model.Steps)
         {
-            AddBoundaryIssues(issues, step);
+            AddBoundaryIssues(issues, step, mode);
             AddWorkflowArtifactIssues(issues, step, rolesById);
             AddSubprocessArtifactIssues(issues, step);
-            AddBranchOutcomeIssues(issues, step);
+            AddBranchOutcomeIssues(issues, step, mode);
             AddArtifactContractIssues(issues, step);
         }
 
-        return new ProcessDefinitionLintResult(issues);
+        return new ProcessDefinitionLintResult(issues, mode);
     }
 
     private static void AddBoundaryIssues(
         List<ProcessDefinitionLintIssue> issues,
-        ProcessStepEditorModel step)
+        ProcessStepEditorModel step,
+        ProcessDefinitionLintMode mode)
     {
         var text = NormalizeText(string.Join(
             " ",
@@ -75,15 +96,29 @@ public static class ProcessDefinitionLinter
         var isAnalysisBoundary = step.StepKind is ProcessStepKind.Start or ProcessStepKind.Decision or ProcessStepKind.Approval or ProcessStepKind.Review ||
             ContainsAny(text, "architecture", "design", "scope", "planning", "analysis", "decision", "approval", "review");
         var hasImplementationDemand = ContainsAny(text, "implement", "implementation", "build", "create", "generate", "scaffold", "repair", "fix", "mutate");
-        var hasProductDeliverable = step.ArtifactExpectations.Any(item => item.ArtifactKind == ProcessArtifactKind.Deliverable);
-        if (isAnalysisBoundary && hasImplementationDemand && hasProductDeliverable)
+        var hasProductMutationTargetSignal = HasProductMutationTargetSignal(text);
+        if (isAnalysisBoundary && hasImplementationDemand && hasProductMutationTargetSignal)
         {
             AddIssue(
                 issues,
                 step,
                 "processes.lint.step-boundary-ambiguous",
                 ProcessDefinitionLintSeverity.Warning,
-                "This step reads like an analysis/review boundary but also demands product implementation deliverables. Split architecture/decision work from product mutation or make the mutation step explicit.");
+                "This step reads like an analysis/review boundary but also demands product implementation deliverables. Split architecture/decision work from product mutation or make the mutation step explicit.",
+                "Move product mutation into a separate Work step, or state an explicit operation contract such as allowed operation MutateProductTarget and target scope ExternalProductTargetMutable.");
+        }
+
+        var requiresExplicitOperationContract = hasImplementationDemand &&
+            hasProductMutationTargetSignal;
+        if (requiresExplicitOperationContract && !HasExplicitOperationContractText(text))
+        {
+            AddIssue(
+                issues,
+                step,
+                "processes.lint.step-operation-contract-missing",
+                StrictSeverity(mode),
+                "This step can affect a product target but does not declare an explicit operation contract or target scope.",
+                "Add explicit allowed operations and target scope in the step notes or contract, for example WriteManagedProcessArtifact for report-only work or MutateProductTarget with a grounded mutable product target.");
         }
     }
 
@@ -110,7 +145,8 @@ public static class ProcessDefinitionLinter
                 step,
                 "processes.lint.workflow-artifact-contract-missing",
                 ProcessDefinitionLintSeverity.Warning,
-                "Workflow-backed steps should declare required process artifacts so workflow completion cannot bypass process-owned finalization.");
+                "Workflow-backed steps should declare required process artifacts so workflow completion cannot bypass process-owned finalization.",
+                "Add at least one required artifact expectation that maps the workflow output into the process artifact contract.");
             return;
         }
 
@@ -121,7 +157,8 @@ public static class ProcessDefinitionLinter
                 step,
                 "processes.lint.workflow-artifact-validation-weak",
                 ProcessDefinitionLintSeverity.Warning,
-                "Workflow-backed required artifacts need validation requirements so projected workflow output can be checked against the process contract.");
+                "Workflow-backed required artifacts need validation requirements so projected workflow output can be checked against the process contract.",
+                "Fill validation requirements with the expected output shape, producer, and acceptance criteria.");
         }
     }
 
@@ -141,13 +178,15 @@ public static class ProcessDefinitionLinter
                 step,
                 "processes.lint.subprocess-parent-artifact-mapping-review",
                 ProcessDefinitionLintSeverity.Warning,
-                "Subprocess parent required artifacts depend on child artifact projection. Verify child output contracts produce matching artifacts; source-less projection is not satisfying evidence.");
+                "Subprocess parent required artifacts depend on child artifact projection. Verify child output contracts produce matching artifacts; source-less projection is not satisfying evidence.",
+                "Align child process artifact titles/kinds with the parent expectation and require source-run provenance.");
         }
     }
 
     private static void AddBranchOutcomeIssues(
         List<ProcessDefinitionLintIssue> issues,
-        ProcessStepEditorModel step)
+        ProcessStepEditorModel step,
+        ProcessDefinitionLintMode mode)
     {
         var text = NormalizeText(string.Join(" ", step.Title, step.Notes, step.DecisionRightsSummary, step.OutputContractSummary));
         var needsNegativeDispositionRoute = ContainsAny(text, "approve", "approval", "no-go", "nogo", "reject", "repair", "rework", "escalate", "escalation");
@@ -158,7 +197,8 @@ public static class ProcessDefinitionLinter
                 step,
                 "processes.lint.branch-outcome-missing",
                 ProcessDefinitionLintSeverity.Warning,
-                "This governed decision/review step mentions approval, no-go, repair, or escalation but has no branch outcomes for disposition routing.");
+                "This governed decision/review step mentions approval, no-go, repair, or escalation but has no branch outcomes for disposition routing.",
+                "Add explicit branch outcomes such as approved, repair-required, no-go, or escalation and route each outcome to the next step.");
         }
 
         var ambiguousOutcomes = step.BranchOutcomes
@@ -171,7 +211,23 @@ public static class ProcessDefinitionLinter
                 step,
                 "processes.lint.branch-outcome-ambiguous",
                 ProcessDefinitionLintSeverity.Warning,
-                "Branch outcomes should use clear keys/titles such as approved, repair-required, no-go, or escalation so disposition routing is deterministic.");
+                "Branch outcomes should use clear keys/titles such as approved, repair-required, no-go, or escalation so disposition routing is deterministic.",
+                "Replace ambiguous branch labels with stable outcome keys and titles.");
+        }
+
+        var hasNegativeBranchOutcome = step.BranchOutcomes.Any(IsNegativeDispositionBranchOutcome);
+        var producesRequiredArtifact = step.ArtifactExpectations.Any(artifact => artifact.IsRequired);
+        if (hasNegativeBranchOutcome &&
+            producesRequiredArtifact &&
+            !HasArtifactRecoveryPolicyText(step))
+        {
+            AddIssue(
+                issues,
+                step,
+                "processes.lint.artifact-recovery-policy-missing",
+                StrictSeverity(mode),
+                "This artifact-producing step has a negative disposition branch but no artifact recovery policy. Missing artifact production can be mistaken for a valid disposition.",
+                "State how missing or invalid required artifacts are recovered or blocked before branch routing, or move the negative disposition to a separate review/approval step.");
         }
     }
 
@@ -191,7 +247,8 @@ public static class ProcessDefinitionLinter
                     step,
                     "processes.lint.decision-log-runtime-proof-conflict",
                     ProcessDefinitionLintSeverity.Warning,
-                    "Decision-log artifacts should not be mixed with runtime proof requirements. Use a separate evidence artifact for runtime proof.");
+                    "Decision-log artifacts should not be mixed with runtime proof requirements. Use a separate evidence artifact for runtime proof.",
+                    "Split legal/approval decision logs from operational evidence or runtime proof artifacts.");
             }
         }
     }
@@ -204,19 +261,92 @@ public static class ProcessDefinitionLinter
                ContainsAny(text, "maybe", "other", "path");
     }
 
+    private static bool IsNegativeDispositionBranchOutcome(ProcessStepBranchOutcomeEditorModel outcome)
+    {
+        var text = NormalizeText($"{outcome.Key} {outcome.Title} {outcome.Description}");
+        return ContainsAny(text, "repair", "rework", "reject", "no-go", "nogo", "escalat", "blocked", "failed");
+    }
+
+    private static bool HasArtifactRecoveryPolicyText(ProcessStepEditorModel step)
+    {
+        var text = NormalizeText(string.Join(
+            " ",
+            step.Notes,
+            step.ExceptionPolicySummary,
+            step.EvidenceContractSummary,
+            step.OutputContractSummary,
+            string.Join(" ", step.ArtifactExpectations.Select(item => item.ValidationRequirementSummary))));
+        return ContainsAny(text, "artifact recovery", "recover missing artifact", "missing artifact", "materialization", "required artifact failure", "block when artifact");
+    }
+
+    private static bool HasExplicitOperationContractText(string text)
+    {
+        return ContainsAny(
+            text,
+            "operation contract",
+            "allowed operation",
+            "allowed operations",
+            "target scope",
+            "writemanagedprocessartifact",
+            "mutateproducttarget",
+            "externalproducttargetmutable",
+            "managedprocessartifactsonly");
+    }
+
+    private static bool HasProductMutationTargetSignal(string text)
+    {
+        return ContainsAny(
+            text,
+            "product root",
+            "product file",
+            "product files",
+            "product target",
+            "source file",
+            "source files",
+            "source root",
+            "target app",
+            "requested app",
+            "web app",
+            "console app",
+            "app project",
+            "project file",
+            "solution file",
+            "codebase",
+            "repository",
+            "runnable",
+            "implementation change set",
+            "implementation change",
+            "deliverable files",
+            ".csproj",
+            ".sln",
+            "blazor",
+            ".net",
+            "javascript",
+            "typescript");
+    }
+
+    private static ProcessDefinitionLintSeverity StrictSeverity(ProcessDefinitionLintMode mode)
+    {
+        return mode == ProcessDefinitionLintMode.Strict
+            ? ProcessDefinitionLintSeverity.Error
+            : ProcessDefinitionLintSeverity.Warning;
+    }
+
     private static void AddIssue(
         List<ProcessDefinitionLintIssue> issues,
         ProcessStepEditorModel step,
         string code,
         ProcessDefinitionLintSeverity severity,
-        string message)
+        string message,
+        string suggestion = "")
     {
         issues.Add(new ProcessDefinitionLintIssue(
             code,
             severity,
             message,
             step.Id,
-            string.IsNullOrWhiteSpace(step.Title) ? "(untitled step)" : step.Title.Trim()));
+            string.IsNullOrWhiteSpace(step.Title) ? "(untitled step)" : step.Title.Trim(),
+            suggestion));
     }
 
     private static string NormalizeText(string? value)

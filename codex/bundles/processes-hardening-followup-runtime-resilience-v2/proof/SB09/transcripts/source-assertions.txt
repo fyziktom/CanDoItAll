@@ -1,3 +1,12 @@
 # SB09 source-assertions.txt
 
-Fill during execution.
+Command: `rg -n "ProcessDefinitionLintMode|CreateStrictLintGateError|LintResult|LintMode|BuildLintEditorModel|Analyze_strict|artifact-recovery-policy-missing" src/CanDoItAll.Modules.Processes tests/CanDoItAll.Tests.Integration/ProcessDefinitionLinterTests.cs -S`
+Working directory: `C:\repositories\CanDoItAll`
+Exit code: 0.
+Run label: SB09-INV-001 source assertion proof.
+
+Evidence:
+- `repo://src/CanDoItAll.Modules.Processes/Definitions/ProcessDefinitionLinter.cs` defines advisory/strict lint modes, suggestions, warnings, and errors.
+- `repo://src/CanDoItAll.Modules.Processes/Services/ProcessesService.Publication.cs` blocks publication on strict lint errors.
+- `repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.RunStart.cs` blocks run start on strict lint errors.
+- `repo://src/CanDoItAll.Modules.Processes/Components/ProcessDefinitionForm.razor` renders lint issue details in the definition editor.

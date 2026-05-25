@@ -1,3 +1,12 @@
 # SB02 source-assertions.txt
 
-Fill during execution.
+Command: `rg -n "ProcessAllowsProductMutation|ResolveProcessAllowsProductMutation|EvaluateGovernedProcessProductMutationBoundary|GroundPromptExternalTargetAliases" src/CanDoItAll.AgentFramework.Core src/CanDoItAll.AgentFramework.Maf tests -S`
+Working directory: `C:\repositories\CanDoItAll`
+Exit code: 0.
+Run label: SB02-INV-001 source assertion proof.
+
+Evidence:
+- `repo://src/CanDoItAll.AgentFramework.Core/Workspace/Audit/WorkspaceExecutionAuditContext.cs` stores `ProcessAllowsProductMutation`.
+- `repo://src/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.AgentFactory.cs` passes that value into `ToolInvocationPolicyContext`.
+- `repo://src/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs` denies external product writes and managed output product writes when the process boundary is non-mutating.
+- `repo://src/CanDoItAll.AgentFramework.Core/Execution/ExecutionInvocationMetadata.cs` keeps prompt-grounded aliases read-only when process metadata disallows product mutation.

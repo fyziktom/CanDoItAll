@@ -32,6 +32,104 @@ public sealed class ProcessDefinitionLinterTests
     }
 
     [Fact]
+    public void Analyze_strict_marks_missing_operation_contract_as_error()
+    {
+        var model = CreateBaseDefinition();
+        model.Steps.Add(new ProcessStepEditorModel
+        {
+            Id = Guid.NewGuid(),
+            Title = "Implement Blazor product component",
+            StepKind = ProcessStepKind.Work,
+            OutputContractSummary = "Implement the Blazor component in the product root.",
+            ArtifactExpectations =
+            [
+                new ProcessArtifactExpectationEditorModel
+                {
+                    Title = "Implementation change set",
+                    ArtifactKind = ProcessArtifactKind.Deliverable,
+                    ValidationRequirementSummary = "Must list product files changed."
+                }
+            ]
+        });
+
+        var advisory = ProcessDefinitionLinter.Analyze(model);
+        var strict = ProcessDefinitionLinter.Analyze(model, ProcessDefinitionLintMode.Strict);
+
+        Assert.Contains(advisory.Issues, issue =>
+            issue.Code == "processes.lint.step-operation-contract-missing" &&
+            issue.Severity == ProcessDefinitionLintSeverity.Warning);
+        Assert.Contains(strict.Issues, issue =>
+            issue.Code == "processes.lint.step-operation-contract-missing" &&
+            issue.Severity == ProcessDefinitionLintSeverity.Error &&
+            !string.IsNullOrWhiteSpace(issue.Suggestion));
+        Assert.True(strict.HasErrors);
+    }
+
+    [Fact]
+    public void Analyze_strict_marks_missing_artifact_recovery_policy_as_error()
+    {
+        var model = CreateBaseDefinition();
+        model.Steps.Add(new ProcessStepEditorModel
+        {
+            Id = Guid.NewGuid(),
+            Title = "Review implementation and route repair",
+            StepKind = ProcessStepKind.Review,
+            DecisionRightsSummary = "Approve or reject the implementation.",
+            BranchOutcomes =
+            [
+                new ProcessStepBranchOutcomeEditorModel
+                {
+                    Key = "repair-required",
+                    Title = "Repair required"
+                }
+            ],
+            ArtifactExpectations =
+            [
+                new ProcessArtifactExpectationEditorModel
+                {
+                    Title = "QA finding",
+                    ArtifactKind = ProcessArtifactKind.Evidence,
+                    ValidationRequirementSummary = "Must record the failing acceptance criteria."
+                }
+            ]
+        });
+
+        var result = ProcessDefinitionLinter.Analyze(model, ProcessDefinitionLintMode.Strict);
+
+        Assert.Contains(result.Issues, issue =>
+            issue.Code == "processes.lint.artifact-recovery-policy-missing" &&
+            issue.Severity == ProcessDefinitionLintSeverity.Error &&
+            !string.IsNullOrWhiteSpace(issue.Suggestion));
+    }
+
+    [Fact]
+    public void Analyze_accepts_business_plan_artifact_destination_without_product_mutation_warning()
+    {
+        var model = CreateBaseDefinition();
+        model.Steps.Add(new ProcessStepEditorModel
+        {
+            Id = Guid.NewGuid(),
+            Title = "Create market expansion business plan",
+            StepKind = ProcessStepKind.Work,
+            OutputContractSummary = "Create the business plan report and budget appendix as governed process deliverables.",
+            ArtifactExpectations =
+            [
+                new ProcessArtifactExpectationEditorModel
+                {
+                    Title = "Business plan report",
+                    ArtifactKind = ProcessArtifactKind.Deliverable,
+                    ValidationRequirementSummary = "Must include market assumptions, budget, owners, and approval criteria."
+                }
+            ]
+        });
+
+        var result = ProcessDefinitionLinter.Analyze(model, ProcessDefinitionLintMode.Strict);
+
+        Assert.DoesNotContain(result.Issues, issue => issue.Code == "processes.lint.step-operation-contract-missing");
+        Assert.DoesNotContain(result.Issues, issue => issue.Code == "processes.lint.step-boundary-ambiguous");
+    }
+
+    [Fact]
     public void Analyze_warns_when_workflow_step_has_weak_required_artifact_mapping()
     {
         var workflowRoleId = Guid.NewGuid();
@@ -69,6 +167,47 @@ public sealed class ProcessDefinitionLinterTests
         var result = ProcessDefinitionLinter.Analyze(model);
 
         Assert.Contains(result.Issues, issue => issue.Code == "processes.lint.workflow-artifact-validation-weak");
+    }
+
+    [Fact]
+    public void Analyze_accepts_workflow_step_with_required_validated_artifact_mapping()
+    {
+        var workflowRoleId = Guid.NewGuid();
+        var model = CreateBaseDefinition();
+        model.Roles.Add(new ProcessRoleEditorModel
+        {
+            Id = workflowRoleId,
+            DisplayName = "Workflow executor",
+            PreferredExecutorKind = ProcessExecutorKindNames.Workflow,
+            PreferredWorkflowDefinitionId = Guid.NewGuid()
+        });
+        model.Steps.Add(new ProcessStepEditorModel
+        {
+            Id = Guid.NewGuid(),
+            Title = "Run finance approval workflow",
+            StepKind = ProcessStepKind.Work,
+            RoleAssignments =
+            [
+                new ProcessStepRoleRequirementEditorModel
+                {
+                    RoleRequirementId = workflowRoleId
+                }
+            ],
+            ArtifactExpectations =
+            [
+                new ProcessArtifactExpectationEditorModel
+                {
+                    Title = "Finance approval packet",
+                    ArtifactKind = ProcessArtifactKind.Deliverable,
+                    ValidationRequirementSummary = "Must include approval id, approver, decision, timestamp, and routed next action."
+                }
+            ]
+        });
+
+        var result = ProcessDefinitionLinter.Analyze(model);
+
+        Assert.DoesNotContain(result.Issues, issue => issue.Code == "processes.lint.workflow-artifact-validation-weak");
+        Assert.DoesNotContain(result.Issues, issue => issue.Code == "processes.lint.workflow-artifact-contract-missing");
     }
 
     [Fact]
@@ -137,6 +276,109 @@ public sealed class ProcessDefinitionLinterTests
         var result = ProcessDefinitionLinter.Analyze(model);
 
         Assert.DoesNotContain(result.Issues, issue => issue.Code == "processes.lint.decision-log-runtime-proof-conflict");
+    }
+
+    [Fact]
+    public void Analyze_accepts_legal_no_go_review_without_runtime_proof_requirement()
+    {
+        var model = CreateBaseDefinition();
+        model.Steps.Add(new ProcessStepEditorModel
+        {
+            Id = Guid.NewGuid(),
+            Title = "Review legal approval and no-go decision",
+            StepKind = ProcessStepKind.Approval,
+            DecisionRightsSummary = "Approve or no-go the contract.",
+            ExceptionPolicySummary = "Artifact recovery: block when the legal decision log cannot be recorded; no runtime proof is required.",
+            BranchOutcomes =
+            [
+                new ProcessStepBranchOutcomeEditorModel
+                {
+                    Key = "no-go",
+                    Title = "No-go"
+                }
+            ],
+            ArtifactExpectations =
+            [
+                new ProcessArtifactExpectationEditorModel
+                {
+                    Title = "Legal decision log",
+                    ArtifactKind = ProcessArtifactKind.Decision,
+                    ValidationRequirementSummary = "Record legal rationale, decision owner, approval or no-go outcome, and required next action."
+                }
+            ]
+        });
+
+        var result = ProcessDefinitionLinter.Analyze(model, ProcessDefinitionLintMode.Strict);
+
+        Assert.DoesNotContain(result.Issues, issue => issue.Code == "processes.lint.decision-log-runtime-proof-conflict");
+        Assert.DoesNotContain(result.Issues, issue => issue.Code == "processes.lint.artifact-recovery-policy-missing");
+        Assert.False(result.HasErrors);
+    }
+
+    [Fact]
+    public void Analyze_accepts_manufacturing_inspection_artifacts_without_software_assumptions()
+    {
+        var model = CreateBaseDefinition();
+        model.Steps.Add(new ProcessStepEditorModel
+        {
+            Id = Guid.NewGuid(),
+            Title = "Complete manufacturing line inspection",
+            StepKind = ProcessStepKind.Review,
+            OutputContractSummary = "Record inspection checklist, measurements, and nonconformance log.",
+            ArtifactExpectations =
+            [
+                new ProcessArtifactExpectationEditorModel
+                {
+                    Title = "Inspection checklist",
+                    ArtifactKind = ProcessArtifactKind.Checklist,
+                    ValidationRequirementSummary = "Must include station id, inspected controls, pass/fail marks, and inspector."
+                },
+                new ProcessArtifactExpectationEditorModel
+                {
+                    Title = "Inspection evidence log",
+                    ArtifactKind = ProcessArtifactKind.Evidence,
+                    ValidationRequirementSummary = "Must include measurements, sampled lot, nonconformance ids, and containment action."
+                }
+            ]
+        });
+
+        var result = ProcessDefinitionLinter.Analyze(model, ProcessDefinitionLintMode.Strict);
+
+        Assert.DoesNotContain(result.Issues, issue => issue.Code == "processes.lint.step-operation-contract-missing");
+        Assert.DoesNotContain(result.Issues, issue => issue.Code == "processes.lint.decision-log-runtime-proof-conflict");
+    }
+
+    [Fact]
+    public void Analyze_accepts_research_dataset_and_report_artifacts_without_product_mutation_warning()
+    {
+        var model = CreateBaseDefinition();
+        model.Steps.Add(new ProcessStepEditorModel
+        {
+            Id = Guid.NewGuid(),
+            Title = "Create research dataset and findings report",
+            StepKind = ProcessStepKind.Work,
+            OutputContractSummary = "Create a dataset extract and research findings report.",
+            ArtifactExpectations =
+            [
+                new ProcessArtifactExpectationEditorModel
+                {
+                    Title = "Research dataset",
+                    ArtifactKind = ProcessArtifactKind.Dataset,
+                    ValidationRequirementSummary = "Must include source, sampling window, schema, and limitations."
+                },
+                new ProcessArtifactExpectationEditorModel
+                {
+                    Title = "Findings report",
+                    ArtifactKind = ProcessArtifactKind.Deliverable,
+                    ValidationRequirementSummary = "Must include findings, confidence, caveats, and cited dataset rows."
+                }
+            ]
+        });
+
+        var result = ProcessDefinitionLinter.Analyze(model, ProcessDefinitionLintMode.Strict);
+
+        Assert.DoesNotContain(result.Issues, issue => issue.Code == "processes.lint.step-operation-contract-missing");
+        Assert.DoesNotContain(result.Issues, issue => issue.Code == "processes.lint.step-boundary-ambiguous");
     }
 
     private static ProcessDefinitionEditorModel CreateBaseDefinition()

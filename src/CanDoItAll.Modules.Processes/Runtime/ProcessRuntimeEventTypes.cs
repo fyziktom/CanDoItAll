@@ -12,6 +12,8 @@ internal static class ProcessRuntimeEventTypes
     public const string WorkflowRunObserved = "workflow-run-observed";
     public const string ArtifactValidationDiagnostic = "artifact-validation-diagnostic";
     public const string MissingUpstreamArtifactMaterializationRequested = "missing-upstream-artifact-materialization-requested";
+    public const string MissingUpstreamArtifactMaterializationResolved = "missing-upstream-artifact-materialization-resolved";
+    public const string NoProgressRetryCompressed = "no-progress-retry-compressed";
     public const string ManagerDirectiveRecorded = "manager-directive-recorded";
     public const string ProcessEscalationCreated = "process-escalation-created";
     public const string ProcessEscalationAssigned = "process-escalation-assigned";

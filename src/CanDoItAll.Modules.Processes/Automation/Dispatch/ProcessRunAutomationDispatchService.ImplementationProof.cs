@@ -52,7 +52,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         var concreteMutationReceipts = successfulReceipts
             .Where(receipt => IsConcreteProductMutationToolName(NormalizeToolToken(receipt.ToolName)))
-            .Where(receipt => IsConcreteProductMutationReceipt(candidate, receipt))
+            .Where(receipt => IsConcreteProductMutationReceipt(candidate, detail, receipt))
             .ToList();
         if (RequiresCurrentAttemptProductMutation(candidate) &&
             concreteMutationReceipts.Count == 0)
@@ -155,7 +155,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         var latestMutationReceipt = successfulReceipts
             .Where(receipt => IsConcreteProductMutationToolName(NormalizeToolToken(receipt.ToolName)))
-            .Where(receipt => IsConcreteProductMutationReceipt(candidate, receipt))
+            .Where(receipt => IsConcreteProductMutationReceipt(candidate, detail, receipt))
             .OrderByDescending(receipt => receipt.CompletedAtUtc)
             .ThenByDescending(receipt => receipt.StartedAtUtc)
             .FirstOrDefault();
@@ -343,7 +343,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             .Where(receipt => !IsFailedToolReceipt(receipt))
             .Any(receipt =>
                 IsConcreteProductMutationToolName(NormalizeToolToken(receipt.ToolName)) &&
-                IsConcreteProductMutationReceipt(candidate, receipt));
+                IsConcreteProductMutationReceipt(candidate, detail, receipt));
     }
 
     private static ToolExecutionReceiptRecord? ResolveLatestImplementationProofReadReceipt(
@@ -877,6 +877,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool IsConcreteProductMutationReceipt(
         DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        ToolExecutionReceiptRecord receipt)
+    {
+        return IsConcreteProductMutationReceipt(candidate, receipt) &&
+               IsWithinCurrentRunExternalMutationBoundary(detail, receipt);
+    }
+
+    private static bool IsConcreteProductMutationReceipt(
+        DispatchCandidate candidate,
         ToolExecutionReceiptRecord receipt)
     {
         var toolName = NormalizeToolToken(receipt.ToolName);
@@ -889,6 +898,32 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         return HasConcreteProductPath(receipt);
+    }
+
+    private static bool IsWithinCurrentRunExternalMutationBoundary(
+        ExecutionRunDetail detail,
+        ToolExecutionReceiptRecord receipt)
+    {
+        var allowedExternalTargetAliases = ExecutionInvocationMetadata
+            .ResolveAllowedExternalTargetAliases(detail.Run)
+            .Select(NormalizeExternalTargetAlias)
+            .Where(alias => !string.IsNullOrWhiteSpace(alias))
+            .ToArray();
+        if (allowedExternalTargetAliases.Length == 0)
+        {
+            return true;
+        }
+
+        var externalTargetPaths = ResolveWorkspacePathsFromReceipt(receipt)
+            .Select(NormalizeExternalTargetAlias)
+            .Where(IsExternalTargetAliasPath)
+            .ToArray();
+        if (externalTargetPaths.Length == 0)
+        {
+            return true;
+        }
+
+        return externalTargetPaths.Any(path => IsAliasCoveredByAny(path, allowedExternalTargetAliases));
     }
 
     private static bool IsConcreteProductMutationToolName(string normalizedToolName)

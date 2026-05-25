@@ -98,6 +98,8 @@ public sealed class ProcessDefinitionEditorModel
 
     public ProcessDefinitionStatus Status { get; set; } = ProcessDefinitionStatus.Draft;
 
+    public ProcessDefinitionLintResult LintResult { get; set; } = ProcessDefinitionLintResult.Empty;
+
     public List<ProcessRoleEditorModel> Roles { get; set; } = [];
 
     public List<ProcessRoleMessagingPolicyEditorModel> MessagingPolicies { get; set; } = [];
@@ -112,6 +114,8 @@ public sealed class ProcessDefinitionPublishRequest
     public Guid? DefinitionConcurrencyToken { get; set; }
 
     public Guid? DraftVersionConcurrencyToken { get; set; }
+
+    public ProcessDefinitionLintMode LintMode { get; set; } = ProcessDefinitionLintMode.Advisory;
 }
 
 public sealed class ProcessRoleEditorModel

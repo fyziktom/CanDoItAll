@@ -1,3 +1,14 @@
 # SB02 changed-file-hashes.txt
 
-Fill during execution.
+Command: `git show HEAD:<file> plus Get-FileHash -Algorithm SHA256 on changed source/test files`
+Working directory: `C:\repositories\CanDoItAll`
+ExitCode: 0
+
+| File | Before SHA-256 | After SHA-256 |
+| --- | --- | --- |
+| repo://src/CanDoItAll.AgentFramework.Core/Execution/ExecutionInvocationMetadata.cs | 44d07b2a53def300ded0a376f104df1bcd283b918f1fcce6027b9fbb8c6ba666 | 11856d935c391aaa9f7ce4373ec25d5b84612e833e8646a335e6cbc20faff739 |
+| repo://src/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs | 6dde68aa5fc2ec1c4f640b56a5b2e82af17ba611b44f7e438cfaa25ef5fc3d15 | da504e54474754e2fc2757879f69f92d525af0ad5a72a9175adf437a6e8873b3 |
+| repo://src/CanDoItAll.AgentFramework.Core/Workspace/Audit/WorkspaceExecutionAuditContext.cs | 9b6f32f698b28bd7897822c702f58560a56dd34d5d683a0e459c0b44af814d70 | facdc8b367dc69dabc330197e4a69bf7c1f3141348e64cfef86795180cb9d5b7 |
+| repo://src/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.AgentFactory.cs | 3f0e65b039b66bedf87c4f83bc49e2c81e8240969beb74b575257af8884b9e83 | 2cb916e7cce422fe841eeda29ec1c65b3ca8cdb1fe54f34a7639f8706e5fad7e |
+| repo://tests/CanDoItAll.Tests.Unit/AgentToolInvocationPolicyTests.cs | 65b94a9b19616e6b6c36e53f914b105fa8b73cfcff0f1bcd893a7c52b35ff9a1 | 33b65ff9b7f159751935379b12ab63de5a4c9dc97124fe5eb7a804adacb0710b |
+| repo://tests/CanDoItAll.Tests.Unit/AgentWorkspaceToolAccessMetadataTests.cs | ade104965e6c45b7ac185b03c7309497668d0c699f60aad9e530ff1ad94de643 | 2f7246d627aac0e84353dfbaa2b810191e58cbc30adb64a4de8e44f4e17509de |

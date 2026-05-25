@@ -1,3 +1,8 @@
 # SB01 failing-first.txt
 
-Fill during execution.
+Command: `dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-restore --filter "FullyQualifiedName~ProcessDefinitionLinterTests|FullyQualifiedName~ProcessRunAutomationDispatchServiceTests"`
+Working directory: `C:\repositories\CanDoItAll`
+Run label: SB01-INV-001 failing-first/red-team.
+ExitCode: 1
+Pre-change failure summary: failing assertions expected because `ProcessStepOperationContract` metadata did not exist and generic business artifact creation could be treated as product mutation.
+Red-team cases added before implementation: `BuildProcessInvocationMetadataJson_allows_external_artifact_destination_without_product_mutation`, `Analyze_accepts_business_plan_artifact_destination_without_product_mutation_warning`, and `Analyze_accepts_research_dataset_and_report_artifacts_without_product_mutation_warning`.

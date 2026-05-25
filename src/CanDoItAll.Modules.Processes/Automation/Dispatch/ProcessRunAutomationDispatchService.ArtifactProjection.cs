@@ -28,7 +28,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
         string responseText,
         ProcessStepRunStatus completionStatus,
         ProcessStepDispatchClaim dispatchClaim,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ArtifactProjectionLineage? lineage = null)
     {
         await EnsureStepDispatchClaimHeldAsync(dispatchClaim, cancellationToken);
         var workspaceRoot = Path.GetFullPath(workspacePathResolver.ResolveWorkspaceRoot());
@@ -48,7 +49,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 continue;
             }
 
-            var externalReferenceKey = BuildExternalReferenceKey(artifact);
+            var externalReferenceKey = ApplyArtifactProjectionLineage(
+                BuildExternalReferenceKey(artifact),
+                detail.Run.Id,
+                lineage);
             if (candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
             {
                 continue;
@@ -111,7 +115,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
                         ? ProcessArtifactTrustStatus.ReviewRequired
                         : ResolveProjectedArtifactTrustStatus(matchedExpectation, completionStatus),
                     SensitivityLevel = matchedExpectation?.SensitivityLevel ?? ProcessSensitivityLevel.Internal,
-                    ProvenanceSummary = $"Projected from AgentFramework execution run {detail.Run.Id:D} artifact '{artifact.RelativePath}'.",
+                    ProvenanceSummary = BuildArtifactProjectionProvenance(
+                        $"Projected from AgentFramework execution run {detail.Run.Id:D} artifact '{artifact.RelativePath}'.",
+                        detail.Run.Id,
+                        lineage),
                     AllowedFutureUsageSummary = "Process evidence and audit review.",
                     ReviewSummary = string.IsNullOrWhiteSpace(artifact.Summary)
                         ? detail.Run.ResultSummary
@@ -152,27 +159,31 @@ internal sealed partial class ProcessRunAutomationDispatchService
             workspaceRoot,
             workspaceScope,
             completionStatus,
-            cancellationToken);
+            cancellationToken,
+            lineage);
         await ProjectExistingManagedArtifactFilesAsync(
             candidate,
             detail,
             workspaceRoot,
             workspaceScope,
             completionStatus,
-            cancellationToken);
+            cancellationToken,
+            lineage);
         await ProjectResponseTextArtifactsAsync(
             candidate,
             detail,
             responseText,
             workspaceRoot,
             completionStatus,
-            cancellationToken);
+            cancellationToken,
+            lineage);
         await ProjectProviderNativeBrowserArtifactsAsync(
             candidate,
             detail,
             workspaceRoot,
             completionStatus,
-            cancellationToken);
+            cancellationToken,
+            lineage);
         await EnsureDecisionArtifactsForCompletedStepAsync(
             candidate,
             detail,
@@ -187,7 +198,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
         string workspaceRoot,
         WorkspaceScopeDescriptor workspaceScope,
         ProcessStepRunStatus completionStatus,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ArtifactProjectionLineage? lineage = null)
     {
         if (candidate.ExpectedArtifacts.Count == 0)
         {
@@ -298,7 +310,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
         string workspaceRoot,
         WorkspaceScopeDescriptor workspaceScope,
         ProcessStepRunStatus completionStatus,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ArtifactProjectionLineage? lineage = null)
     {
         if (candidate.ExpectedArtifacts.Count == 0)
         {
@@ -350,10 +363,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 continue;
             }
 
-            var externalReferenceKey = BuildWorkspaceWrittenArtifactExternalReferenceKey(
+            var externalReferenceKey = ApplyArtifactProjectionLineage(
+                BuildWorkspaceWrittenArtifactExternalReferenceKey(
+                    detail.Run.Id,
+                    expectedArtifact.Id,
+                    projectedRelativePath),
                 detail.Run.Id,
-                expectedArtifact.Id,
-                projectedRelativePath);
+                lineage);
             if (candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
             {
                 continue;
@@ -425,7 +441,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     Title = expectedArtifact.Title,
                     TrustStatus = ResolveProjectedArtifactTrustStatus(expectedArtifact, completionStatus),
                     SensitivityLevel = expectedArtifact.SensitivityLevel,
-                    ProvenanceSummary = syntheticArtifact.Summary,
+                    ProvenanceSummary = BuildArtifactProjectionProvenance(
+                        syntheticArtifact.Summary,
+                        detail.Run.Id,
+                        lineage),
                     AllowedFutureUsageSummary = string.IsNullOrWhiteSpace(expectedArtifact.AllowedFutureUsageSummary)
                         ? "Process evidence and audit review."
                         : expectedArtifact.AllowedFutureUsageSummary,
@@ -468,7 +487,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
         string workspaceRoot,
         WorkspaceScopeDescriptor workspaceScope,
         ProcessStepRunStatus completionStatus,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ArtifactProjectionLineage? lineage = null)
     {
         if (candidate.ExpectedArtifacts.Count == 0)
         {
@@ -497,10 +517,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 continue;
             }
 
-            var externalReferenceKey = BuildExistingManagedArtifactExternalReferenceKey(
+            var externalReferenceKey = ApplyArtifactProjectionLineage(
+                BuildExistingManagedArtifactExternalReferenceKey(
+                    detail.Run.Id,
+                    expectedArtifact.Id,
+                    projectedRelativePath),
                 detail.Run.Id,
-                expectedArtifact.Id,
-                projectedRelativePath);
+                lineage);
             if (candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
             {
                 continue;
@@ -567,7 +590,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     Title = expectedArtifact.Title,
                     TrustStatus = ResolveProjectedArtifactTrustStatus(expectedArtifact, completionStatus),
                     SensitivityLevel = expectedArtifact.SensitivityLevel,
-                    ProvenanceSummary = $"Projected from existing managed workspace artifact '{projectedRelativePath}' for AgentFramework execution run {detail.Run.Id:D}.",
+                    ProvenanceSummary = BuildArtifactProjectionProvenance(
+                        $"Projected from existing managed workspace artifact '{projectedRelativePath}' for AgentFramework execution run {detail.Run.Id:D}.",
+                        detail.Run.Id,
+                        lineage),
                     AllowedFutureUsageSummary = string.IsNullOrWhiteSpace(expectedArtifact.AllowedFutureUsageSummary)
                         ? "Process evidence and audit review."
                         : expectedArtifact.AllowedFutureUsageSummary,
@@ -771,7 +797,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
         string responseText,
         string workspaceRoot,
         ProcessStepRunStatus completionStatus,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ArtifactProjectionLineage? lineage = null)
     {
         if (!ShouldProjectResponseTextArtifacts(detail.Run, completionStatus) ||
             candidate.ExpectedArtifacts.Count == 0 ||
@@ -816,7 +843,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 continue;
             }
 
-            var externalReferenceKey = BuildResponseTextArtifactExternalReferenceKey(detail.Run.Id, projectedRelativePath);
+            var externalReferenceKey = ApplyArtifactProjectionLineage(
+                BuildResponseTextArtifactExternalReferenceKey(detail.Run.Id, projectedRelativePath),
+                detail.Run.Id,
+                lineage);
             if (candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
             {
                 continue;
@@ -847,7 +877,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
                         projectedRelativePath,
                         targetFullPath,
                         completionStatus,
-                        cancellationToken))
+                        cancellationToken,
+                        lineage))
                 {
                     continue;
                 }
@@ -896,7 +927,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
                         Title = expectedArtifact.Title,
                         TrustStatus = ResolveProjectedArtifactTrustStatus(expectedArtifact, completionStatus),
                         SensitivityLevel = expectedArtifact.SensitivityLevel,
-                        ProvenanceSummary = $"Projected from the final assistant response for AgentFramework execution run {detail.Run.Id:D}.",
+                        ProvenanceSummary = BuildArtifactProjectionProvenance(
+                            $"Projected from the final assistant response for AgentFramework execution run {detail.Run.Id:D}.",
+                            detail.Run.Id,
+                            lineage),
                         AllowedFutureUsageSummary = string.IsNullOrWhiteSpace(expectedArtifact.AllowedFutureUsageSummary)
                             ? "Process evidence and audit review."
                             : expectedArtifact.AllowedFutureUsageSummary,
@@ -940,7 +974,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
         string projectedRelativePath,
         string targetFullPath,
         ProcessStepRunStatus completionStatus,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ArtifactProjectionLineage? lineage = null)
     {
         if (!ExistingManagedArtifactFileMatches(
                 candidate.ExpectedArtifacts,
@@ -951,10 +986,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return false;
         }
 
-        var externalReferenceKey = BuildExistingManagedArtifactExternalReferenceKey(
+        var externalReferenceKey = ApplyArtifactProjectionLineage(
+            BuildExistingManagedArtifactExternalReferenceKey(
+                detail.Run.Id,
+                expectedArtifact.Id,
+                projectedRelativePath),
             detail.Run.Id,
-            expectedArtifact.Id,
-            projectedRelativePath);
+            lineage);
         if (candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
         {
             return true;
@@ -992,7 +1030,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 Title = expectedArtifact.Title,
                 TrustStatus = ResolveProjectedArtifactTrustStatus(expectedArtifact, completionStatus),
                 SensitivityLevel = expectedArtifact.SensitivityLevel,
-                ProvenanceSummary = syntheticArtifact.Summary,
+                ProvenanceSummary = BuildArtifactProjectionProvenance(
+                    syntheticArtifact.Summary,
+                    detail.Run.Id,
+                    lineage),
                 AllowedFutureUsageSummary = string.IsNullOrWhiteSpace(expectedArtifact.AllowedFutureUsageSummary)
                     ? "Process evidence and audit review."
                     : expectedArtifact.AllowedFutureUsageSummary,
@@ -1022,7 +1063,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ExecutionRunDetail detail,
         string workspaceRoot,
         ProcessStepRunStatus completionStatus,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ArtifactProjectionLineage? lineage = null)
     {
         var browserOutputsByToolName = ResolveSuccessfulBrowserToolOutputFiles(detail);
         if (browserOutputsByToolName.Count == 0)
@@ -1119,9 +1161,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     requiredToolName,
                     $"Projected provider-native browser output '{matchedOutputFileName}' into the required managed artifact path.",
                     DateTimeOffset.UtcNow);
-                var externalReferenceKey = BuildProviderNativeBrowserArtifactExternalReferenceKey(
+                var externalReferenceKey = ApplyArtifactProjectionLineage(
+                    BuildProviderNativeBrowserArtifactExternalReferenceKey(
+                        detail.Run.Id,
+                        projectedRelativePath),
                     detail.Run.Id,
-                    projectedRelativePath);
+                    lineage);
                 if (candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
                 {
                     continue;
@@ -1148,7 +1193,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
                         Title = expectedArtifact.Title,
                         TrustStatus = ResolveProjectedArtifactTrustStatus(expectedArtifact, completionStatus),
                         SensitivityLevel = expectedArtifact.SensitivityLevel,
-                        ProvenanceSummary = $"Projected from provider-native browser output '{matchedOutputFileName}' for AgentFramework execution run {detail.Run.Id:D}.",
+                        ProvenanceSummary = BuildArtifactProjectionProvenance(
+                            $"Projected from provider-native browser output '{matchedOutputFileName}' for AgentFramework execution run {detail.Run.Id:D}.",
+                            detail.Run.Id,
+                            lineage),
                         AllowedFutureUsageSummary = "Process evidence and audit review.",
                         ReviewSummary = syntheticArtifact.Summary,
                         ManagedStoragePath = placement.RelativePath,
@@ -1189,7 +1237,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
             browserOutputsByToolName,
             browserWorkingDirectory,
             completionStatus,
-            cancellationToken);
+            cancellationToken,
+            lineage);
     }
 
     private async Task ProjectProviderNativeBrowserOutputArtifactsAsync(
@@ -1200,7 +1249,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
         IReadOnlyDictionary<string, IReadOnlyList<string>> browserOutputsByToolName,
         string browserWorkingDirectory,
         ProcessStepRunStatus completionStatus,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ArtifactProjectionLineage? lineage = null)
     {
         foreach (var pair in browserOutputsByToolName)
         {
@@ -1216,9 +1266,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     candidate,
                     workspaceScope,
                     normalizedOutputPath);
-                var externalReferenceKey = BuildProviderNativeBrowserArtifactExternalReferenceKey(
+                var externalReferenceKey = ApplyArtifactProjectionLineage(
+                    BuildProviderNativeBrowserArtifactExternalReferenceKey(
+                        detail.Run.Id,
+                        projectedRelativePath),
                     detail.Run.Id,
-                    projectedRelativePath);
+                    lineage);
                 if (candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
                 {
                     continue;
@@ -1307,7 +1360,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
                                 ? ProcessArtifactTrustStatus.ReviewRequired
                                 : ResolveProjectedArtifactTrustStatus(recordExpectation, completionStatus),
                             SensitivityLevel = recordExpectation?.SensitivityLevel ?? ProcessSensitivityLevel.Internal,
-                            ProvenanceSummary = $"Projected from provider-native browser output '{normalizedOutputPath}' for AgentFramework execution run {detail.Run.Id:D}.",
+                            ProvenanceSummary = BuildArtifactProjectionProvenance(
+                                $"Projected from provider-native browser output '{normalizedOutputPath}' for AgentFramework execution run {detail.Run.Id:D}.",
+                                detail.Run.Id,
+                                lineage),
                             AllowedFutureUsageSummary = recordExpectation is not null &&
                                                         !string.IsNullOrWhiteSpace(recordExpectation.AllowedFutureUsageSummary)
                                 ? recordExpectation.AllowedFutureUsageSummary
@@ -1519,6 +1575,48 @@ internal sealed partial class ProcessRunAutomationDispatchService
         await using var scope = serviceScopeFactory.CreateAsyncScope();
         var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
         return await processesService.RecordArtifactAsync(request, cancellationToken);
+    }
+
+    private static string ApplyArtifactProjectionLineage(
+        string externalReferenceKey,
+        Guid executionRunId,
+        ArtifactProjectionLineage? lineage)
+    {
+        if (lineage is null ||
+            !lineage.RecoveryExecutionRunId.HasValue ||
+            !lineage.RecoveredForExecutionRunId.HasValue)
+        {
+            return externalReferenceKey;
+        }
+
+        return string.Join(
+            "|",
+            "manager-recovery-artifact",
+            $"recoveryExecutionRunId={lineage.RecoveryExecutionRunId.Value:D}",
+            $"recoveredForExecutionRunId={lineage.RecoveredForExecutionRunId.Value:D}",
+            $"projectedExecutionRunId={executionRunId:D}",
+            lineage.ReworkPacketId.HasValue
+                ? $"reworkPacketId={lineage.ReworkPacketId.Value:D}"
+                : "reworkPacketId=",
+            externalReferenceKey);
+    }
+
+    private static string BuildArtifactProjectionProvenance(
+        string baseProvenance,
+        Guid executionRunId,
+        ArtifactProjectionLineage? lineage)
+    {
+        if (lineage is null ||
+            !lineage.RecoveryExecutionRunId.HasValue ||
+            !lineage.RecoveredForExecutionRunId.HasValue)
+        {
+            return baseProvenance;
+        }
+
+        var reworkPacketSummary = lineage.ReworkPacketId.HasValue
+            ? $" Rework packet id: {lineage.ReworkPacketId.Value:D}."
+            : string.Empty;
+        return $"{baseProvenance} Manager recovery lineage: recovery execution run {lineage.RecoveryExecutionRunId.Value:D}; recovered-for execution run {lineage.RecoveredForExecutionRunId.Value:D}; projected execution run {executionRunId:D}.{reworkPacketSummary}";
     }
 
 }

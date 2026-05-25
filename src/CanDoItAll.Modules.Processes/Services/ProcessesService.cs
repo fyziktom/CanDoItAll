@@ -107,7 +107,7 @@ public sealed partial class ProcessesService(
             .OrderBy(item => item.DisplayOrder)
             .ToListAsync(cancellationToken);
 
-        return new ProcessDefinitionEditorModel {
+        var editor = new ProcessDefinitionEditorModel {
             Id = definition.Id,
             ProjectId = definition.ProjectId,
             WorkingVersionId = workingVersion.Id,
@@ -228,5 +228,7 @@ public sealed partial class ProcessesService(
                 return editorStep;
             }).ToList()
         };
+        editor.LintResult = ProcessDefinitionLinter.Analyze(editor);
+        return editor;
     }
 }

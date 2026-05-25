@@ -1,3 +1,12 @@
 # SB10 source-assertions.txt
 
-Fill during execution.
+Command: `rg -n "Analyze_accepts_business|Analyze_accepts_legal|Analyze_accepts_manufacturing|Analyze_accepts_research|compresses_repeated|CreateObservedActiveAutomationExecutionOutcome|denies_external_product_mutation|workflow_artifact|subprocess_artifact" tests -S`
+Working directory: `C:\repositories\CanDoItAll`
+Exit code: 0.
+Run label: SB10-INV-001 source assertion proof.
+
+Evidence:
+- `repo://tests/CanDoItAll.Tests.Integration/ProcessDefinitionLinterTests.cs` includes business, legal, manufacturing, research, and workflow lint red-team coverage.
+- `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs` includes workflow/subprocess artifact validation, wrong-root retry compression, upstream unblock, and active-run adoption tests.
+- `repo://tests/CanDoItAll.Tests.Unit/AgentToolInvocationPolicyTests.cs` includes process product-mutation boundary tests.
+- `repo://tests/CanDoItAll.Tests.Unit/AgentWorkspaceToolAccessMetadataTests.cs` includes metadata no-autopromotion tests.

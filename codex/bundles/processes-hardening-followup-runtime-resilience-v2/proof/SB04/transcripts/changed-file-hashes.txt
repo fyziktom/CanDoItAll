@@ -1,3 +1,12 @@
 # SB04 changed-file-hashes.txt
 
-Fill during execution.
+Command: `git show HEAD:<file> plus Get-FileHash -Algorithm SHA256 on changed source/test files`
+Working directory: `C:\repositories\CanDoItAll`
+ExitCode: 0
+
+| File | Before SHA-256 | After SHA-256 |
+| --- | --- | --- |
+| repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessWorkflowRunCoordinator.cs | da5c92e04eaae086cd7f1ee009ee56b5a9c25ade116405cd0bdfc9e8defb2b4f | ef9be116e135251dff776f9f7ee338a114c5fd0b3f8c9fcb34f53ade04a296d3 |
+| repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs | 3b298990963e398ccfdf9735817522f422ad8e9066fb01b6e3237dd1ebf845d0 | a0ee5ce5dff1b6b37f625a62a53f23dd81b2bc54b29ca7818fa0986e880796af |
+| repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs | ff7e829634735efc18bb67c4ea1efdf779446d99d4c66d94f2f444acd9d154b4 | c641cd509919e9c2a10571b714515aa35c168d42cc83983811c57e6d992f6757 |
+| repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs | af720e25721243b1411c66ca7fa806a011ba537d08c3e7861576b270c0df5989 | bbf765f7f238243eb9b79a70695d84c9d6145dbd4a39a8195e9badd4590a407e |

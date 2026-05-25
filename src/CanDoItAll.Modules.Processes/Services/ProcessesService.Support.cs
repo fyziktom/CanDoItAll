@@ -299,6 +299,141 @@ public sealed partial class ProcessesService
         };
     }
 
+    private static Error? CreateStrictLintGateError(
+        ProcessDefinitionLintResult lintResult,
+        string operation)
+    {
+        if (!lintResult.HasErrors)
+        {
+            return null;
+        }
+
+        var summary = string.Join(
+            " | ",
+            lintResult.Issues
+                .Where(issue => issue.Severity == ProcessDefinitionLintSeverity.Error)
+                .Take(3)
+                .Select(issue => $"{issue.Code}: {issue.StepTitle}"));
+        return Error.Validation(
+            $"Process definition lint blocked {operation}: {summary}. Run the lint dry-run and correct the strict issues before retrying.",
+            $"processes.{operation}.lint-blocked");
+    }
+
+    private static ProcessDefinitionEditorModel BuildLintEditorModel(
+        ProcessDefinition definition,
+        ProcessDefinitionVersion version,
+        IReadOnlyList<ProcessRoleRequirement> roles,
+        IReadOnlyList<ProcessStepDefinition> steps,
+        IReadOnlyList<ProcessStepRoleAssignmentRequirement> stepRoleRequirements,
+        IReadOnlyList<ProcessStepBranchOutcomeDefinition> branchOutcomes,
+        IReadOnlyList<ProcessArtifactExpectation> artifactExpectations)
+    {
+        return new ProcessDefinitionEditorModel
+        {
+            Id = definition.Id,
+            ProjectId = definition.ProjectId,
+            WorkingVersionId = version.Id,
+            Name = definition.Name,
+            Summary = definition.Summary,
+            ValueStatement = definition.ValueStatement,
+            CustomerName = definition.CustomerName,
+            OwnerName = definition.OwnerName,
+            InterfaceContractSummary = definition.InterfaceContractSummary,
+            GovernanceNotes = definition.GovernanceNotes,
+            ChangeSummary = version.ChangeSummary,
+            GovernancePolicySummary = version.GovernancePolicySummary,
+            ConstitutionRuleSummary = version.ConstitutionRuleSummary,
+            OperatingModeSummary = version.OperatingModeSummary,
+            SimulationReadinessSummary = version.SimulationReadinessSummary,
+            Criticality = definition.Criticality,
+            AutonomyLevel = definition.AutonomyLevel,
+            Status = definition.Status,
+            Roles = roles
+                .Select(role => new ProcessRoleEditorModel
+                {
+                    Id = role.Id,
+                    Key = role.Key,
+                    DisplayName = role.DisplayName,
+                    Purpose = role.Purpose,
+                    StaffingIntent = role.StaffingIntent,
+                    PreferredExecutorKind = role.PreferredExecutorKind,
+                    PreferredWorkflowDefinitionId = role.PreferredWorkflowDefinitionId,
+                    PreferredWorkflowVersionId = role.PreferredWorkflowVersionId,
+                    PreferredProjectAssignmentRole = role.PreferredProjectAssignmentRole,
+                    IsRequired = role.IsRequired,
+                    AllowsFallback = role.AllowsFallback,
+                    RequiresExplicitApproval = role.RequiresExplicitApproval,
+                    DefaultAllocationPercent = role.DefaultAllocationPercent,
+                    RoleTemplateSourceKey = role.RoleTemplateSourceKey,
+                    RoleTemplateSnapshotName = role.RoleTemplateSnapshotName,
+                    SnapshotSummary = role.SnapshotSummary
+                })
+                .ToList(),
+            Steps = steps
+                .Select(step => new ProcessStepEditorModel
+                {
+                    Id = step.Id,
+                    Key = step.Key,
+                    Title = step.Title,
+                    Subtitle = step.Subtitle,
+                    Notes = step.Notes,
+                    StepKind = step.StepKind,
+                    SubprocessDefinitionId = step.SubprocessDefinitionId,
+                    SubprocessDefinitionSnapshotName = step.SubprocessDefinitionSnapshotName,
+                    AllowsManualSkip = step.AllowsManualSkip,
+                    AllowsSafeRefusal = step.AllowsSafeRefusal,
+                    RequiresApproval = step.RequiresApproval,
+                    RequiresDecisionRecord = step.RequiresDecisionRecord,
+                    InputContractSummary = step.InputContractSummary,
+                    OutputContractSummary = step.OutputContractSummary,
+                    EvidenceContractSummary = step.EvidenceContractSummary,
+                    DecisionRightsSummary = step.DecisionRightsSummary,
+                    ExceptionPolicySummary = step.ExceptionPolicySummary,
+                    TargetLeadHours = step.TargetLeadHours,
+                    DecisionRoleRequirementId = step.DecisionRoleRequirementId,
+                    BranchOutcomes = branchOutcomes
+                        .Where(outcome => outcome.StepDefinitionId == step.Id)
+                        .OrderBy(outcome => outcome.DisplayOrder)
+                        .Select(outcome => new ProcessStepBranchOutcomeEditorModel
+                        {
+                            Id = outcome.Id,
+                            Key = outcome.Key,
+                            Title = outcome.Title,
+                            Description = outcome.Description
+                        })
+                        .ToList(),
+                    RoleAssignments = stepRoleRequirements
+                        .Where(requirement => requirement.StepDefinitionId == step.Id)
+                        .Select(requirement => new ProcessStepRoleRequirementEditorModel
+                        {
+                            Id = requirement.Id,
+                            RoleRequirementId = requirement.RoleRequirementId,
+                            ResponsibilityKind = requirement.ResponsibilityKind,
+                            IsRequired = requirement.IsRequired,
+                            FallbackOrder = requirement.FallbackOrder,
+                            RebindPolicySummary = requirement.RebindPolicySummary
+                        })
+                        .ToList(),
+                    ArtifactExpectations = artifactExpectations
+                        .Where(expectation => expectation.StepDefinitionId == step.Id)
+                        .Select(expectation => new ProcessArtifactExpectationEditorModel
+                        {
+                            Id = expectation.Id,
+                            ArtifactKind = expectation.ArtifactKind,
+                            Title = expectation.Title,
+                            IsRequired = expectation.IsRequired,
+                            TrustRequirement = expectation.TrustRequirement,
+                            SensitivityLevel = expectation.SensitivityLevel,
+                            RetentionDays = expectation.RetentionDays,
+                            AllowedFutureUsageSummary = expectation.AllowedFutureUsageSummary,
+                            ValidationRequirementSummary = expectation.ValidationRequirementSummary
+                        })
+                        .ToList()
+                })
+                .ToList()
+        };
+    }
+
     private static Error CreateAssignmentUniqueConflictError() {
         return Error.Validation(
             "Another assignment update already claimed this run role scope. Reload the run and try again.",

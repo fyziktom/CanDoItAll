@@ -260,7 +260,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
             recoveryOutcome.ResponseText,
             recoveryOutcome.CompletionStatus,
             dispatchClaim,
-            cancellationToken);
+            cancellationToken,
+            new ArtifactProjectionLineage(
+                recoveryOutcome.Detail.Run.Id,
+                executionOutcome.Detail.Run.Id,
+                recoveryDecision.ReworkPacketId));
 
         var remainingArtifacts = ResolveMissingRequiredCompletionArtifacts(candidate);
         if (remainingArtifacts.Count == 0)

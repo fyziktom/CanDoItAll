@@ -325,9 +325,168 @@ public sealed partial class ProcessesService
                 $"definition-version:{run.ProcessDefinitionVersionId:D}",
                 artifact.ManagedStoragePath),
             cancellationToken);
+        if (artifactExpectation is not null)
+        {
+            await ReactivateBlockedDownstreamStepsAfterArtifactMaterializationAsync(
+                dbContext,
+                run,
+                artifactExpectation,
+                cancellationToken);
+        }
+
         await dbContext.SaveChangesAsync(cancellationToken);
         NotifyRunObservationChanged(run.ProjectId, run.ProcessDefinitionId, run.Id);
         return Result<Guid>.Success(artifact.Id);
+    }
+
+    private async Task ReactivateBlockedDownstreamStepsAfterArtifactMaterializationAsync(
+        AppDbContext dbContext,
+        ProcessRun run,
+        ProcessArtifactExpectation artifactExpectation,
+        CancellationToken cancellationToken)
+    {
+        var consumingInputs = await dbContext.Set<ProcessStepArtifactInputDefinition>()
+            .Where(input => input.ArtifactExpectationId == artifactExpectation.Id)
+            .ToListAsync(cancellationToken);
+        if (consumingInputs.Count == 0)
+        {
+            return;
+        }
+
+        var consumingStepDefinitionIds = consumingInputs
+            .Select(input => input.StepDefinitionId)
+            .Distinct()
+            .ToList();
+        var blockedStepRuns = await dbContext.Set<ProcessStepRun>()
+            .Where(stepRun =>
+                stepRun.ProcessRunId == run.Id &&
+                consumingStepDefinitionIds.Contains(stepRun.StepDefinitionId) &&
+                stepRun.Status == ProcessStepRunStatus.Blocked)
+            .ToListAsync(cancellationToken);
+        blockedStepRuns = blockedStepRuns
+            .Where(stepRun => ProcessRuntimeProgressionPlanner.IsMissingUpstreamArtifactBlock(stepRun.BlockedReason))
+            .ToList();
+        if (blockedStepRuns.Count == 0)
+        {
+            return;
+        }
+
+        var stepDefinitionIds = await dbContext.Set<ProcessStepDefinition>()
+            .Where(step => step.ProcessDefinitionVersionId == run.ProcessDefinitionVersionId)
+            .Select(step => step.Id)
+            .ToListAsync(cancellationToken);
+        var stepDefinitionsById = await dbContext.Set<ProcessStepDefinition>()
+            .Where(step => step.ProcessDefinitionVersionId == run.ProcessDefinitionVersionId)
+            .ToDictionaryAsync(step => step.Id, cancellationToken);
+        var stepRunsByDefinitionId = await dbContext.Set<ProcessStepRun>()
+            .Where(stepRun => stepRun.ProcessRunId == run.Id)
+            .ToDictionaryAsync(stepRun => stepRun.StepDefinitionId, cancellationToken);
+        var dependencies = await dbContext.Set<ProcessStepDependencyDefinition>()
+            .Where(dependency => stepDefinitionIds.Contains(dependency.StepDefinitionId))
+            .OrderBy(dependency => dependency.DisplayOrder)
+            .ToListAsync(cancellationToken);
+        var dependenciesByStepId = dependencies
+            .GroupBy(dependency => dependency.StepDefinitionId)
+            .ToDictionary(group => group.Key, group => group.ToList());
+        var artifactInputsByStepId = await dbContext.Set<ProcessStepArtifactInputDefinition>()
+            .Where(input => consumingStepDefinitionIds.Contains(input.StepDefinitionId))
+            .ToListAsync(cancellationToken);
+        var artifactExpectationIds = artifactInputsByStepId
+            .Select(input => input.ArtifactExpectationId)
+            .Distinct()
+            .ToList();
+        var sourceExpectations = await dbContext.Set<ProcessArtifactExpectation>()
+            .Where(expectation => artifactExpectationIds.Contains(expectation.Id))
+            .ToDictionaryAsync(expectation => expectation.Id, cancellationToken);
+        var artifacts = await dbContext.Set<ProcessArtifactRecord>()
+            .Where(artifact => artifact.ProcessRunId == run.Id && artifact.ArtifactExpectationId.HasValue)
+            .ToListAsync(cancellationToken);
+        var now = clock.GetUtcNow();
+
+        foreach (var blockedStepRun in blockedStepRuns)
+        {
+            if (!stepDefinitionsById.TryGetValue(blockedStepRun.StepDefinitionId, out var stepDefinition) ||
+                !AreDependenciesSatisfiedForMaterializationResume(stepDefinition, stepRunsByDefinitionId, dependenciesByStepId) ||
+                !AreArtifactInputsSatisfiedForMaterializationResume(
+                    blockedStepRun.StepDefinitionId,
+                    artifactInputsByStepId,
+                    sourceExpectations,
+                    stepRunsByDefinitionId,
+                    artifacts))
+            {
+                continue;
+            }
+
+            ProcessRuntimeProgressionPlanner.ReactivateBlockedStepRunAfterUpstreamArtifactMaterialization(
+                blockedStepRun,
+                stepDefinition,
+                now);
+            await dbContext.Set<ProcessJournalEntry>().AddAsync(
+                new ProcessJournalEntry
+                {
+                    ProcessRunId = run.Id,
+                    StepRunId = blockedStepRun.Id,
+                    EventType = ProcessRuntimeEventTypes.MissingUpstreamArtifactMaterializationResolved,
+                    Title = "Missing upstream artifact materialization resolved",
+                    Description = $"Required upstream artifact '{artifactExpectation.Title}' is now recorded; step '{blockedStepRun.Title}' was reopened for dispatch.",
+                    CorrelationId = $"{artifactExpectation.Id:D}:{blockedStepRun.Id:D}",
+                    OperatingMode = run.OperatingMode,
+                    PolicyVersion = $"definition-version:{run.ProcessDefinitionVersionId:D}",
+                    EnvironmentMode = run.OperatingMode.ToString(),
+                    ReplayContextJson = "{}",
+                    OccurredAtUtc = now
+                },
+                cancellationToken);
+        }
+    }
+
+    private static bool AreDependenciesSatisfiedForMaterializationResume(
+        ProcessStepDefinition stepDefinition,
+        IReadOnlyDictionary<Guid, ProcessStepRun> stepRunsByDefinitionId,
+        IReadOnlyDictionary<Guid, List<ProcessStepDependencyDefinition>> stepDependenciesByStepId)
+    {
+        foreach (var dependency in ProcessStepDependencyCollection.GetPersistedDependencies(stepDefinition.Id, stepDependenciesByStepId))
+        {
+            if (!stepRunsByDefinitionId.TryGetValue(dependency.DependsOnStepId, out var sourceStepRun) ||
+                sourceStepRun.Status != ProcessStepRunStatus.Completed)
+            {
+                return false;
+            }
+
+            if (dependency.DependsOnBranchOutcomeId.HasValue &&
+                sourceStepRun.SelectedBranchOutcomeId != dependency.DependsOnBranchOutcomeId)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool AreArtifactInputsSatisfiedForMaterializationResume(
+        Guid stepDefinitionId,
+        IReadOnlyList<ProcessStepArtifactInputDefinition> artifactInputs,
+        IReadOnlyDictionary<Guid, ProcessArtifactExpectation> sourceExpectations,
+        IReadOnlyDictionary<Guid, ProcessStepRun> stepRunsByDefinitionId,
+        IReadOnlyList<ProcessArtifactRecord> artifacts)
+    {
+        foreach (var input in artifactInputs.Where(input => input.StepDefinitionId == stepDefinitionId))
+        {
+            if (!sourceExpectations.TryGetValue(input.ArtifactExpectationId, out var sourceExpectation) ||
+                !stepRunsByDefinitionId.TryGetValue(sourceExpectation.StepDefinitionId, out var sourceStepRun))
+            {
+                return false;
+            }
+
+            if (!artifacts.Any(artifact =>
+                    artifact.StepRunId == sourceStepRun.Id &&
+                    artifact.ArtifactExpectationId == input.ArtifactExpectationId))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static string BoundProcessArtifactText(string value, int maxLength)

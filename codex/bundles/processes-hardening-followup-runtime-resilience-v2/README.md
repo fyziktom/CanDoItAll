@@ -1,8 +1,8 @@
-# Processes Hardening Follow-up: Runtime Resilience, Boundary Truth, and Recovery Lineage
+﻿# Processes Hardening Follow-up: Runtime Resilience, Boundary Truth, and Recovery Lineage
 
 ## Status
 
-Prepared for Codex execution.
+Completed.
 
 ## Branch Context
 
@@ -83,6 +83,8 @@ The remaining problem is not a lack of instructions. The core risk is that impor
 ## Validation Summary
 
 - Bundle preparation status: `Ready`
-- Execution status: `Not executed`
-- Final closure gate: `Pending`
-- Browser validation analytics: `Required only for red-team scenarios that launch UI; non-UI scenarios may use unit/integration source proof`
+- Execution status: `Completed`
+- Subbundle gate review: `Completed for SB01-SB10`
+- Final closure gate: `Completed with source, unit, integration, build, PostgreSQL-only audit, and bundle validator proof`
+- Browser validation analytics: `No runtime UI launch was required; SB10 red-team validation used source, unit, and integration proof for generic software and non-software scenarios`
+

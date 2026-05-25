@@ -1,3 +1,8 @@
 # SB04 failing-first.txt
 
-Fill during execution.
+Command: `dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-restore --filter "FullyQualifiedName~ProcessRunAutomationDispatchServiceTests"`
+Working directory: `C:\repositories\CanDoItAll`
+Run label: SB04-INV-001 failing-first/red-team.
+ExitCode: 1
+Pre-change failure summary: failing assertions expected because workflow artifacts were not reliably mapped to process artifact expectations and subprocess projection could accept stale parent/child output.
+Red-team cases added or preserved: `ArtifactContractValidation_accepts_matching_workflow_artifact_for_process_expectation`, `ArtifactContractValidation_accepts_subprocess_artifact_with_current_child_lineage`, and finalizer source assertions rejecting workflow status bypass.

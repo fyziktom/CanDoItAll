@@ -14,6 +14,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Data;
 using System.Data.Common;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -100,6 +101,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         var detail = await workspaceService.GetExecutionRunDetailAsync(blockingExecutionRunId.Value, cancellationToken);
+        for (var pollIndex = 0; pollIndex < 2 && !IsTerminalAutomationExecutionRun(detail.Run); pollIndex++)
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(250), cancellationToken);
+            detail = await workspaceService.GetExecutionRunDetailAsync(blockingExecutionRunId.Value, cancellationToken);
+        }
+
         return new ConcurrentAutomationExecution(
             blockingExecutionRunId.Value,
             detail,
@@ -383,23 +390,133 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         if (!string.IsNullOrWhiteSpace(candidate.ManualRecoveryDirective) ||
             TryResolveRecoverableProviderFailure(detail, responseText, out _) ||
-            HasSuccessfulConcreteProductMutation(candidate, detail) ||
-            HasSuccessfulCurrentAttemptEvidence(detail))
+            HasNewSatisfiedCurrentAttemptEvidence(candidate, detail))
         {
             return false;
+        }
+
+        var fingerprint = TryCreateNoProgressRetryFingerprint(candidate, detail, responseText, missingRequiredTools, retryReasons, attemptNumber);
+        if (!string.IsNullOrWhiteSpace(fingerprint))
+        {
+            return true;
         }
 
         return missingRequiredTools.Count > 0 ||
                retryReasons.Any(IsNoProgressRetryReason);
     }
 
-    private static bool HasSuccessfulCurrentAttemptEvidence(ExecutionRunDetail detail)
+    private static bool HasNewSatisfiedCurrentAttemptEvidence(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail)
     {
-        return detail.Artifacts.Count > 0 ||
+        return detail.Artifacts.Any(artifact =>
+                   candidate.ExpectedArtifacts.Any(expectation =>
+                       !candidate.RecordedArtifactExpectationIds.Contains(expectation.Id) &&
+                       ResolveArtifactExpectation(candidate, artifact)?.Id == expectation.Id)) ||
                detail.ToolReceipts.Any(receipt =>
                    !IsFailedToolReceipt(receipt) &&
-                   (ImplementationProofToolNames.Contains(NormalizeToolToken(receipt.ToolName), StringComparer.Ordinal) ||
-                    ConcreteProductMutationToolNames.Contains(NormalizeToolToken(receipt.ToolName), StringComparer.Ordinal)));
+                   ImplementationProofToolNames.Contains(NormalizeToolToken(receipt.ToolName), StringComparer.Ordinal));
+    }
+
+    private static string? TryCreateNoProgressRetryFingerprint(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        string? responseText,
+        IReadOnlyList<string> missingRequiredTools,
+        IReadOnlyList<string> retryReasons,
+        int attemptNumber)
+    {
+        ArgumentNullException.ThrowIfNull(candidate);
+        ArgumentNullException.ThrowIfNull(detail);
+        ArgumentNullException.ThrowIfNull(missingRequiredTools);
+        ArgumentNullException.ThrowIfNull(retryReasons);
+
+        if (attemptNumber <= 1 ||
+            !string.IsNullOrWhiteSpace(candidate.ManualRecoveryDirective) ||
+            TryResolveRecoverableProviderFailure(detail, responseText, out _) ||
+            HasSuccessfulConcreteProductMutation(candidate, detail) ||
+            HasNewSatisfiedCurrentAttemptEvidence(candidate, detail))
+        {
+            return null;
+        }
+
+        if (missingRequiredTools.Count == 0 &&
+            !retryReasons.Any(IsNoProgressRetryReason))
+        {
+            return null;
+        }
+
+        return CreateNoProgressRetryFingerprint(candidate, detail, missingRequiredTools, retryReasons);
+    }
+
+    private static string CreateNoProgressRetryFingerprint(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        IReadOnlyList<string> missingRequiredTools,
+        IReadOnlyList<string> retryReasons)
+    {
+        ArgumentNullException.ThrowIfNull(candidate);
+        ArgumentNullException.ThrowIfNull(detail);
+        ArgumentNullException.ThrowIfNull(missingRequiredTools);
+        ArgumentNullException.ThrowIfNull(retryReasons);
+
+        var failedToolNames = detail.ToolReceipts
+            .Where(IsFailedToolReceipt)
+            .Select(receipt => NormalizeToolToken(receipt.ToolName))
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .OrderBy(item => item, StringComparer.Ordinal)
+            .ToArray();
+        var artifactSignals = detail.Artifacts
+            .Select(artifact => string.Join(
+                ":",
+                NormalizeManagedRelativePathForComparison(artifact.RelativePath),
+                CollapsePromptWhitespace(artifact.DisplayName).ToLowerInvariant(),
+                CollapsePromptWhitespace(artifact.ContentType).ToLowerInvariant(),
+                CreateBoundedTextHash(artifact.Summary)))
+            .OrderBy(item => item, StringComparer.Ordinal)
+            .ToArray();
+        var receiptSignals = detail.ToolReceipts
+            .Select(receipt => string.Join(
+                ":",
+                NormalizeToolToken(receipt.ToolName),
+                NormalizeManagedRelativePathForComparison(receipt.WorkingDirectory),
+                CreateBoundedTextHash(receipt.RequestSummary),
+                CreateBoundedTextHash(receipt.ExitSummary),
+                IsFailedToolReceipt(receipt) ? "failed" : "succeeded"))
+            .OrderBy(item => item, StringComparer.Ordinal)
+            .ToArray();
+        var unsatisfiedExpectationIds = candidate.ExpectedArtifacts
+            .Where(expectation => expectation.IsRequired && !candidate.RecordedArtifactExpectationIds.Contains(expectation.Id))
+            .Select(expectation => expectation.Id.ToString("D"))
+            .OrderBy(item => item, StringComparer.Ordinal)
+            .ToArray();
+        var normalized = string.Join(
+            "|",
+            "no-progress-retry",
+            candidate.Run.Id.ToString("D"),
+            candidate.StepRun.Id.ToString("D"),
+            string.Join(",", missingRequiredTools.OrderBy(item => item, StringComparer.OrdinalIgnoreCase)),
+            string.Join(",", failedToolNames),
+            string.Join(",", unsatisfiedExpectationIds),
+            string.Join(",", artifactSignals),
+            string.Join(",", receiptSignals),
+            string.Join(",", retryReasons.Select(reason => CollapsePromptWhitespace(reason).ToLowerInvariant()).OrderBy(item => item, StringComparer.Ordinal)));
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized))).ToLowerInvariant();
+    }
+
+    private static bool IsTerminalAutomationExecutionRun(ExecutionRunRecord run)
+    {
+        return run.State is ExecutionState.Completed or ExecutionState.Failed;
+    }
+
+    private static string CreateBoundedTextHash(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(CollapsePromptWhitespace(value)))).ToLowerInvariant();
     }
 
     private static bool IsNoProgressRetryReason(string retryReason)

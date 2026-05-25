@@ -150,7 +150,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
                                     ProjectExecutionArtifacts: false,
                                     AllowManagerArtifactRecovery: false,
                                     Trigger: trigger,
-                                    RenewLeaseAsync: dispatchRenewLeaseAsync),
+                                    RenewLeaseAsync: dispatchRenewLeaseAsync,
+                                    RecoveryExecutionRunId: strandedArtifactRecoveryOutcome.Detail.Run.Id,
+                                    RecoveredForExecutionRunId: candidate.RecoveryExecutionRunId),
                                 dispatchClaim,
                                 dispatchCancellationToken);
                             if (finalizedRecoveryCompletion is not null)
@@ -933,7 +935,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
             .ToListAsync(cancellationToken);
         var missingProjectableExpectations = expectations
             .Where(IsSubprocessCompletionProjectionAllowed)
-            .Where(expectation => !parentArtifacts.Any(artifact => SatisfiesArtifactExpectation(artifact, expectation)))
+            .Where(expectation => !parentArtifacts.Any(artifact =>
+                SatisfiesCurrentSubprocessArtifactExpectation(artifact, expectation, subprocessRun.RunId)))
             .ToList();
         if (missingProjectableExpectations.Count == 0)
         {
@@ -1112,6 +1115,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return artifact.ArtifactExpectationId.HasValue
             ? artifact.ArtifactExpectationId.Value == expectation.Id
             : string.Equals(artifact.Title, expectation.Title, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool SatisfiesCurrentSubprocessArtifactExpectation(
+        ProcessArtifactRecord artifact,
+        ProcessArtifactExpectation expectation,
+        Guid subprocessRunId)
+    {
+        return SatisfiesArtifactExpectation(artifact, expectation) &&
+               artifact.ExternalReferenceKey.StartsWith("subprocess-run:", StringComparison.OrdinalIgnoreCase) &&
+               artifact.ExternalReferenceKey.Contains(subprocessRunId.ToString("D"), StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool SatisfiesTrustRequirement(

@@ -86,7 +86,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         bool ProjectExecutionArtifacts,
         bool AllowManagerArtifactRecovery,
         string Trigger,
-        Func<CancellationToken, Task>? RenewLeaseAsync);
+        Func<CancellationToken, Task>? RenewLeaseAsync,
+        Guid? RecoveryExecutionRunId = null,
+        Guid? RecoveredForExecutionRunId = null);
 
     private sealed record ProcessStepCompletionFinalizerResult(
         ProcessStepRunStatus CompletionStatus,
@@ -198,7 +200,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
                         CompletionReason = completionReason,
                         SelectedBranchOutcomeId = selectedBranchOutcomeId,
                         ProjectExecutionArtifacts = false,
-                        AllowManagerArtifactRecovery = false
+                        AllowManagerArtifactRecovery = false,
+                        RecoveryExecutionRunId = recoveryOutcome.Detail.Run.Id,
+                        RecoveredForExecutionRunId = context.ExecutionDetail.Run.Id
                     },
                     cancellationToken);
                 await PersistArtifactValidationDiagnosticsAsync(context, validationResults, cancellationToken);
@@ -301,7 +305,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     : null,
                 context.ExecutorKind == ProcessStepCompletionExecutorKind.SubprocessParent
                     ? context.SubprocessRunId ?? ResolveSubprocessRunIdForStep(artifacts)
-                    : null))
+                    : null,
+                context.RecoveryExecutionRunId,
+                context.RecoveredForExecutionRunId,
+                ResolveManagedArtifactText))
             .ToList();
 
         candidate.ExternalReferenceKeys.Clear();
@@ -324,7 +331,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessStepCompletionExecutorKind executorKind,
         Guid? executionRunId = null,
         Guid? workflowRunId = null,
-        Guid? subprocessRunId = null)
+        Guid? subprocessRunId = null,
+        Guid? recoveryExecutionRunId = null,
+        Guid? recoveredForExecutionRunId = null,
+        Func<string, string?>? managedArtifactContentReader = null)
     {
         ArgumentNullException.ThrowIfNull(expectation);
         ArgumentNullException.ThrowIfNull(artifacts);
@@ -352,7 +362,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 executorKind,
                 executionRunId,
                 workflowRunId,
-                subprocessRunId);
+                subprocessRunId,
+                recoveryExecutionRunId,
+                recoveredForExecutionRunId);
         }
 
         ProcessArtifactExpectationValidationResult? firstFailure = null;
@@ -367,7 +379,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 executorKind,
                 executionRunId,
                 workflowRunId,
-                subprocessRunId);
+                subprocessRunId,
+                recoveryExecutionRunId,
+                recoveredForExecutionRunId,
+                managedArtifactContentReader);
             if (result.IsSatisfied)
             {
                 return result;
@@ -388,7 +403,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessStepCompletionExecutorKind executorKind,
         Guid? executionRunId,
         Guid? workflowRunId,
-        Guid? subprocessRunId)
+        Guid? subprocessRunId,
+        Guid? recoveryExecutionRunId,
+        Guid? recoveredForExecutionRunId,
+        Func<string, string?>? managedArtifactContentReader)
     {
         var producerKind = ResolveArtifactProducerKind(artifact);
         if (ContainsPlaceholderArtifactSignal(artifact, mode))
@@ -407,7 +425,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 executorKind,
                 executionRunId,
                 workflowRunId,
-                subprocessRunId);
+                subprocessRunId,
+                recoveryExecutionRunId,
+                recoveredForExecutionRunId);
         }
 
         if (!IsProducerAllowedForMode(mode, producerKind, expectation))
@@ -426,10 +446,21 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 executorKind,
                 executionRunId,
                 workflowRunId,
-                subprocessRunId);
+                subprocessRunId,
+                recoveryExecutionRunId,
+                recoveredForExecutionRunId);
         }
 
-        if (!IsCurrentRunArtifact(artifact, producerKind, processRunId, stepRunId, executionRunId, workflowRunId, subprocessRunId))
+        if (!IsCurrentRunArtifact(
+                artifact,
+                producerKind,
+                processRunId,
+                stepRunId,
+                executionRunId,
+                workflowRunId,
+                subprocessRunId,
+                recoveryExecutionRunId,
+                recoveredForExecutionRunId))
         {
             return CreateArtifactValidationResult(
                 processRunId,
@@ -445,7 +476,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 executorKind,
                 executionRunId,
                 workflowRunId,
-                subprocessRunId);
+                subprocessRunId,
+                recoveryExecutionRunId,
+                recoveredForExecutionRunId);
         }
 
         if (RequiresManagedEvidencePath(mode, producerKind) && string.IsNullOrWhiteSpace(artifact.ManagedStoragePath))
@@ -464,10 +497,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 executorKind,
                 executionRunId,
                 workflowRunId,
-                subprocessRunId);
+                subprocessRunId,
+                recoveryExecutionRunId,
+                recoveredForExecutionRunId);
         }
 
-        if (!MatchesDeclaredFormat(expectation, artifact, out var formatDiagnostic))
+        if (!MatchesDeclaredFormat(expectation, artifact, managedArtifactContentReader, out var formatDiagnostic))
         {
             return CreateArtifactValidationResult(
                 processRunId,
@@ -483,7 +518,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 executorKind,
                 executionRunId,
                 workflowRunId,
-                subprocessRunId);
+                subprocessRunId,
+                recoveryExecutionRunId,
+                recoveredForExecutionRunId);
         }
 
         return CreateArtifactValidationResult(
@@ -500,7 +537,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
             executorKind,
             executionRunId,
             workflowRunId,
-            subprocessRunId);
+            subprocessRunId,
+            recoveryExecutionRunId,
+            recoveredForExecutionRunId);
     }
 
     private async Task PersistArtifactValidationDiagnosticsAsync(
@@ -612,12 +651,60 @@ internal sealed partial class ProcessRunAutomationDispatchService
         if (unsatisfiedResults.Count == 0 ||
             candidate.BranchOutcomes.Count == 0 ||
             ResolveMissingUpstreamArtifactInputs(candidate).Count > 0 ||
+            !IsDispositionRoutingStep(candidate) ||
+            IsArtifactProductionFailure(candidate, unsatisfiedResults) ||
             unsatisfiedResults.Any(IsHardBlockingArtifactValidationFailure))
         {
             return null;
         }
 
-        return ResolveNegativeDispositionBranchOutcome(candidate);
+        return ResolveNegativeDispositionBranchOutcome(candidate, unsatisfiedResults);
+    }
+
+    private static bool IsDispositionRoutingStep(DispatchCandidate candidate)
+    {
+        if (candidate.StepRun.StepKind is ProcessStepKind.Decision or ProcessStepKind.Approval or ProcessStepKind.Review)
+        {
+            return true;
+        }
+
+        var text = CollapsePromptWhitespace(string.Join(
+                ' ',
+                candidate.StepRun.Title,
+                candidate.StepDefinition.Title,
+                candidate.StepDefinition.DecisionRightsSummary,
+                candidate.StepDefinition.OutputContractSummary,
+                candidate.WorkBrief?.WorkBriefText,
+                candidate.WorkBrief?.ExpectedOutcome))
+            .ToLowerInvariant();
+        return ContainsAnyToken(
+            text,
+            "qa",
+            "quality",
+            "review",
+            "approval",
+            "approve",
+            "decision",
+            "decide",
+            "escalation",
+            "escalate",
+            "inspection",
+            "inspect");
+    }
+
+    private static bool IsArtifactProductionFailure(
+        DispatchCandidate candidate,
+        IReadOnlyList<ProcessArtifactExpectationValidationResult> unsatisfiedResults)
+    {
+        if (candidate.StepRun.StepKind is ProcessStepKind.Decision or ProcessStepKind.Approval or ProcessStepKind.Review)
+        {
+            return false;
+        }
+
+        return unsatisfiedResults.Any(result =>
+            result.Status is ProcessArtifactValidationStatus.Missing or
+                ProcessArtifactValidationStatus.PlaceholderOnly or
+                ProcessArtifactValidationStatus.StaleOrWrongRun);
     }
 
     private static bool IsHardBlockingArtifactValidationFailure(ProcessArtifactExpectationValidationResult result)
@@ -626,14 +713,28 @@ internal sealed partial class ProcessRunAutomationDispatchService
                result.Diagnostic.Contains("upstream", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static DispatchBranchOutcome? ResolveNegativeDispositionBranchOutcome(DispatchCandidate candidate)
+    private static DispatchBranchOutcome? ResolveNegativeDispositionBranchOutcome(
+        DispatchCandidate candidate,
+        IReadOnlyList<ProcessArtifactExpectationValidationResult> unsatisfiedResults)
     {
         if (TryResolveRepairBranchOutcome(candidate, out var repairBranchOutcome))
         {
-            return repairBranchOutcome;
+            return IsRepairDispositionCompatible(unsatisfiedResults)
+                ? repairBranchOutcome
+                : null;
         }
 
         return candidate.BranchOutcomes.FirstOrDefault(IsNegativeDispositionBranchOutcomeCandidate);
+    }
+
+    private static bool IsRepairDispositionCompatible(
+        IReadOnlyList<ProcessArtifactExpectationValidationResult> unsatisfiedResults)
+    {
+        return unsatisfiedResults.Any(result =>
+            result.Status is ProcessArtifactValidationStatus.InvalidFormat or
+                ProcessArtifactValidationStatus.InsufficientEvidence or
+                ProcessArtifactValidationStatus.WrongProducerMode or
+                ProcessArtifactValidationStatus.PlaceholderOnly);
     }
 
     private static bool IsNegativeDispositionBranchOutcomeCandidate(DispatchBranchOutcome outcome)
@@ -672,6 +773,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
             expectation.Title,
             expectation.ValidationRequirementSummary,
             expectation.AllowedFutureUsageSummary)).ToLowerInvariant();
+        if (TryResolveExplicitArtifactExpectationMode(contractText, out var explicitMode))
+        {
+            return explicitMode;
+        }
 
         if (contractText.Contains("runtime proof", StringComparison.Ordinal) ||
             contractText.Contains("browser proof", StringComparison.Ordinal) ||
@@ -691,6 +796,30 @@ internal sealed partial class ProcessRunAutomationDispatchService
             ProcessArtifactKind.Evidence or ProcessArtifactKind.Transcript or ProcessArtifactKind.Dataset => ProcessArtifactExpectationMode.Evidence,
             _ => ProcessArtifactExpectationMode.Narrative
         };
+    }
+
+    private static bool TryResolveExplicitArtifactExpectationMode(
+        string contractText,
+        out ProcessArtifactExpectationMode mode)
+    {
+        mode = ProcessArtifactExpectationMode.Narrative;
+        if (!contractText.Contains("artifact mode", StringComparison.OrdinalIgnoreCase) &&
+            !contractText.Contains("expectation mode", StringComparison.OrdinalIgnoreCase) &&
+            !contractText.Contains("mode:", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        foreach (var candidateMode in Enum.GetValues<ProcessArtifactExpectationMode>())
+        {
+            if (contractText.Contains(candidateMode.ToString().ToLowerInvariant(), StringComparison.OrdinalIgnoreCase))
+            {
+                mode = candidateMode;
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool ContainsRuntimeLogSignal(string contractText)
@@ -805,6 +934,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return ProcessArtifactProducerKind.SubprocessArtifact;
         }
 
+        if (key.StartsWith("manager-recovery-artifact|", StringComparison.OrdinalIgnoreCase))
+        {
+            return ProcessArtifactProducerKind.ManagerRecovery;
+        }
+
         if (artifact.ProvenanceSummary.Contains("manager", StringComparison.OrdinalIgnoreCase) ||
             artifact.ProvenanceSummary.Contains("recovery", StringComparison.OrdinalIgnoreCase))
         {
@@ -868,7 +1002,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         Guid stepRunId,
         Guid? executionRunId,
         Guid? workflowRunId,
-        Guid? subprocessRunId)
+        Guid? subprocessRunId,
+        Guid? recoveryExecutionRunId = null,
+        Guid? recoveredForExecutionRunId = null)
     {
         if (artifact.ProcessRunId != processRunId || artifact.StepRunId != stepRunId)
         {
@@ -892,14 +1028,45 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 ContainsGuidToken(key, workflowRunId.Value),
             ProcessArtifactProducerKind.SubprocessArtifact => subprocessRunId.HasValue &&
                 ContainsGuidToken(key, subprocessRunId.Value),
-            ProcessArtifactProducerKind.ManagerRecovery => !executionRunId.HasValue ||
-                ContainsGuidToken(key, executionRunId.Value) ||
-                ContainsGuidToken(provenance, executionRunId.Value),
+            ProcessArtifactProducerKind.ManagerRecovery => IsCurrentManagerRecoveryArtifact(
+                key,
+                provenance,
+                executionRunId,
+                recoveryExecutionRunId,
+                recoveredForExecutionRunId),
             ProcessArtifactProducerKind.CompletedDecision or
             ProcessArtifactProducerKind.ProcessMock or
             ProcessArtifactProducerKind.Manual => true,
             _ => string.IsNullOrWhiteSpace(key)
         };
+    }
+
+    private static bool IsCurrentManagerRecoveryArtifact(
+        string key,
+        string provenance,
+        Guid? executionRunId,
+        Guid? recoveryExecutionRunId,
+        Guid? recoveredForExecutionRunId)
+    {
+        var effectiveRecoveryExecutionRunId = recoveryExecutionRunId ?? executionRunId;
+        if (!effectiveRecoveryExecutionRunId.HasValue)
+        {
+            return false;
+        }
+
+        if (!ContainsGuidToken(key, effectiveRecoveryExecutionRunId.Value) &&
+            !ContainsGuidToken(provenance, effectiveRecoveryExecutionRunId.Value))
+        {
+            return false;
+        }
+
+        if (!recoveredForExecutionRunId.HasValue)
+        {
+            return false;
+        }
+
+        return ContainsGuidToken(key, recoveredForExecutionRunId.Value) ||
+               ContainsGuidToken(provenance, recoveredForExecutionRunId.Value);
     }
 
     private static bool ContainsGuidToken(string? text, Guid value)
@@ -911,6 +1078,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     private static bool MatchesDeclaredFormat(
         DispatchArtifactExpectation expectation,
         ProcessArtifactRecord artifact,
+        Func<string, string?>? managedArtifactContentReader,
         out string diagnostic)
     {
         diagnostic = string.Empty;
@@ -923,7 +1091,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return false;
         }
 
-        if (requiresJson && !HasValidJsonArtifactContent(artifact, out diagnostic))
+        if (requiresJson && !HasValidJsonArtifactContent(artifact, managedArtifactContentReader, out diagnostic))
         {
             return false;
         }
@@ -987,6 +1155,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool HasValidJsonArtifactContent(
         ProcessArtifactRecord artifact,
+        Func<string, string?>? managedArtifactContentReader,
         out string diagnostic)
     {
         diagnostic = string.Empty;
@@ -1010,6 +1179,35 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
         }
 
+        if (!Path.IsPathRooted(artifact.ManagedStoragePath) &&
+            managedArtifactContentReader is not null)
+        {
+            try
+            {
+                var content = managedArtifactContentReader(artifact.ManagedStoragePath);
+                if (content is not null)
+                {
+                    using var _ = JsonDocument.Parse(content);
+                    return true;
+                }
+            }
+            catch (JsonException exception)
+            {
+                diagnostic = $"The artifact contract declares JSON, but the managed artifact content is malformed JSON: {exception.Message}";
+                return false;
+            }
+            catch (IOException exception)
+            {
+                diagnostic = $"The artifact contract declares JSON, but the managed artifact content could not be read: {exception.Message}";
+                return false;
+            }
+            catch (UnauthorizedAccessException exception)
+            {
+                diagnostic = $"The artifact contract declares JSON, but the managed artifact content could not be read: {exception.Message}";
+                return false;
+            }
+        }
+
         if (TryResolveInlineJsonArtifactContent(artifact, out var jsonContent))
         {
             try
@@ -1025,6 +1223,27 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         return true;
+    }
+
+    private string? ResolveManagedArtifactText(string managedStoragePath)
+    {
+        if (string.IsNullOrWhiteSpace(managedStoragePath))
+        {
+            return null;
+        }
+
+        var workspaceRoot = Path.GetFullPath(workspacePathResolver.ResolveWorkspaceRoot());
+        var candidateFullPath = Path.IsPathRooted(managedStoragePath)
+            ? Path.GetFullPath(managedStoragePath)
+            : Path.GetFullPath(Path.Combine(
+                workspaceRoot,
+                managedStoragePath.Replace('/', Path.DirectorySeparatorChar)));
+        if (!IsWithinWorkspace(workspaceRoot, candidateFullPath) || !File.Exists(candidateFullPath))
+        {
+            return null;
+        }
+
+        return File.ReadAllText(candidateFullPath, Encoding.UTF8);
     }
 
     private static bool TryResolveInlineJsonArtifactContent(
@@ -1121,7 +1340,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessStepCompletionExecutorKind executorKind,
         Guid? executionRunId,
         Guid? workflowRunId,
-        Guid? subprocessRunId)
+        Guid? subprocessRunId,
+        Guid? recoveryExecutionRunId = null,
+        Guid? recoveredForExecutionRunId = null)
     {
         var fingerprint = CreateArtifactFailureFingerprint(
             processRunId,
@@ -1134,7 +1355,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
             executorKind,
             executionRunId,
             workflowRunId,
-            subprocessRunId);
+            subprocessRunId,
+            recoveryExecutionRunId,
+            recoveredForExecutionRunId);
         return new ProcessArtifactExpectationValidationResult(
             expectation.Id,
             expectation.Title,
@@ -1159,7 +1382,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessStepCompletionExecutorKind executorKind,
         Guid? executionRunId,
         Guid? workflowRunId,
-        Guid? subprocessRunId)
+        Guid? subprocessRunId,
+        Guid? recoveryExecutionRunId = null,
+        Guid? recoveredForExecutionRunId = null)
     {
         var normalized = string.Join(
             "|",
@@ -1173,7 +1398,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
             executorKind,
             executionRunId?.ToString("D") ?? string.Empty,
             workflowRunId?.ToString("D") ?? string.Empty,
-            subprocessRunId?.ToString("D") ?? string.Empty);
+            subprocessRunId?.ToString("D") ?? string.Empty,
+            recoveryExecutionRunId?.ToString("D") ?? string.Empty,
+            recoveredForExecutionRunId?.ToString("D") ?? string.Empty);
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized))).ToLowerInvariant();
     }
 }

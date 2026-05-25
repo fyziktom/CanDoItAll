@@ -611,7 +611,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             .ToList();
         var latestConcreteMutation = successfulReceipts
             .Where(receipt => IsConcreteProductMutationToolName(NormalizeToolToken(receipt.ToolName)))
-            .Where(receipt => IsConcreteProductMutationReceipt(candidate, receipt))
+            .Where(receipt => IsConcreteProductMutationReceipt(candidate, detail, receipt))
             .OrderByDescending(receipt => receipt.CompletedAtUtc)
             .ThenByDescending(receipt => receipt.StartedAtUtc)
             .FirstOrDefault();

@@ -141,6 +141,52 @@ internal sealed partial class ProcessRunAutomationDispatchService
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
+    private async Task PersistNoProgressRetryCompressedDiagnosticAsync(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        IReadOnlyList<string> missingRequiredTools,
+        IReadOnlyList<string> retryReasons,
+        string fingerprint,
+        CancellationToken cancellationToken)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var recordedAtUtc = clock.GetUtcNow();
+        await dbContext.Set<ProcessJournalEntry>().AddAsync(
+            new ProcessJournalEntry
+            {
+                ProcessRunId = candidate.Run.Id,
+                StepRunId = candidate.StepRun.Id,
+                EventType = ProcessRuntimeEventTypes.NoProgressRetryCompressed,
+                Title = "No-progress retry compressed",
+                Description = $"Execution run '{detail.Run.Id:D}' repeated the same unsatisfied process requirements without new satisfied evidence. Fingerprint: {fingerprint}.",
+                CorrelationId = fingerprint,
+                OperatingMode = candidate.Run.OperatingMode,
+                PolicyVersion = $"definition-version:{candidate.Run.ProcessDefinitionVersionId:D}",
+                EnvironmentMode = candidate.Run.OperatingMode.ToString(),
+                ReplayContextJson = JsonSerializer.Serialize(
+                    new
+                    {
+                        candidate.Run.Id,
+                        StepRunId = candidate.StepRun.Id,
+                        ExecutionRunId = detail.Run.Id,
+                        Fingerprint = fingerprint,
+                        MissingRequiredTools = missingRequiredTools,
+                        RetryReasons = retryReasons,
+                        FailedToolNames = detail.ToolReceipts
+                            .Where(IsFailedToolReceipt)
+                            .Select(receipt => NormalizeToolToken(receipt.ToolName))
+                            .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
+                            .Distinct(StringComparer.Ordinal)
+                            .OrderBy(toolName => toolName, StringComparer.Ordinal)
+                            .ToArray()
+                    },
+                    AgentOutputJson.SerializerOptions),
+                OccurredAtUtc = recordedAtUtc
+            },
+            cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
     private static AgentFailureCategory ResolveRecoveryFailureCategory(
         DispatchCandidate candidate,
         ExecutionRunDetail detail,

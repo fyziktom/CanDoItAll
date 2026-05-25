@@ -16,6 +16,9 @@ public static class ExecutionInvocationMetadata
     public const string ProcessBrowserToolsAllowedMetadataKey = "agentProcessBrowserToolsAllowed";
     public const string ProcessScaffoldToolOnlyMetadataKey = "agentProcessScaffoldToolOnly";
     public const string ProcessStepExecutionBoundaryMetadataKey = "agentProcessStepExecutionBoundary";
+    public const string ProcessStepAllowedOperationsMetadataKey = "agentProcessStepAllowedOperations";
+    public const string ProcessStepTargetScopeMetadataKey = "agentProcessStepTargetScope";
+    public const string ProcessStepAllowsProductMutationMetadataKey = "agentProcessStepAllowsProductMutation";
     public const string ContextWorkspaceScopeMetadataKey = "agentContextWorkspaceScope";
     public const int DefaultGovernedRepairAttempts = 1;
     public const int MaxRepairAttempts = 2;
@@ -96,11 +99,13 @@ public static class ExecutionInvocationMetadata
             return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
         }
 
+        var targetMetadataKey = accessSettings.CanWriteFiles &&
+                                (!HasProcessBoundaryMetadata(metadata) || ResolveProcessAllowsProductMutation(metadata))
+            ? AllowedExternalTargetAliasesMetadataKey
+            : ReadOnlyExternalTargetAliasesMetadataKey;
         MergeExternalTargetAliases(
             metadata,
-            accessSettings.CanWriteFiles
-                ? AllowedExternalTargetAliasesMetadataKey
-                : ReadOnlyExternalTargetAliasesMetadataKey,
+            targetMetadataKey,
             aliases);
 
         return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
@@ -232,6 +237,18 @@ public static class ExecutionInvocationMetadata
                TryReadBoolean(run.MetadataJson, ProcessScaffoldToolOnlyMetadataKey) == true;
     }
 
+    public static bool ResolveProcessAllowsProductMutation(ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        if (!IsTrustedGovernedProcessRun(run))
+        {
+            return true;
+        }
+
+        return ResolveProcessAllowsProductMutation(ParseObject(run.MetadataJson));
+    }
+
     public static WorkspaceScopeDescriptor? ResolveContextWorkspaceScope(ExecutionRunRecord run)
     {
         ArgumentNullException.ThrowIfNull(run);
@@ -340,6 +357,46 @@ public static class ExecutionInvocationMetadata
         {
             return string.Empty;
         }
+    }
+
+    private static bool ResolveProcessAllowsProductMutation(JsonObject metadata)
+    {
+        if (metadata[ProcessStepAllowsProductMutationMetadataKey] is JsonValue value &&
+            value.TryGetValue<bool>(out var allowsProductMutation))
+        {
+            return allowsProductMutation;
+        }
+
+        if (metadata[ProcessStepAllowedOperationsMetadataKey] is JsonArray operations &&
+            operations
+                .Select(item => item?.GetValue<string>())
+                .Any(item => string.Equals(item, "MutateProductTarget", StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        if (metadata[ProcessStepTargetScopeMetadataKey] is JsonValue scopeValue &&
+            scopeValue.TryGetValue<string>(out var scope))
+        {
+            return scope.Contains("Mutable", StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (metadata[ProcessStepExecutionBoundaryMetadataKey] is JsonValue boundaryValue &&
+            boundaryValue.TryGetValue<string>(out var boundary))
+        {
+            return string.Equals(boundary, "ProductMutation", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(boundary, "Recovery", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return false;
+    }
+
+    private static bool HasProcessBoundaryMetadata(JsonObject metadata)
+    {
+        return metadata.ContainsKey(ProcessStepAllowsProductMutationMetadataKey) ||
+               metadata.ContainsKey(ProcessStepAllowedOperationsMetadataKey) ||
+               metadata.ContainsKey(ProcessStepTargetScopeMetadataKey) ||
+               metadata.ContainsKey(ProcessStepExecutionBoundaryMetadataKey);
     }
 
     private static IReadOnlyList<string> ResolveExternalTargetAliases(

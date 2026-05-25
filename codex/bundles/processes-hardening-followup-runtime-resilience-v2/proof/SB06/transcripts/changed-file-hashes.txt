@@ -1,3 +1,12 @@
 # SB06 changed-file-hashes.txt
 
-Fill during execution.
+Command: `git show HEAD:<file> plus Get-FileHash -Algorithm SHA256 on changed source/test files`
+Working directory: `C:\repositories\CanDoItAll`
+ExitCode: 0
+
+| File | Before SHA-256 | After SHA-256 |
+| --- | --- | --- |
+| repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs | ff7e829634735efc18bb67c4ea1efdf779446d99d4c66d94f2f444acd9d154b4 | c641cd509919e9c2a10571b714515aa35c168d42cc83983811c57e6d992f6757 |
+| repo://src/CanDoItAll.Modules.Processes/Definitions/ProcessDefinitionLinter.cs | f88242c3e4d394d0e5d8f96bfcffdd1b9189b74e1c5292f511c563af26088cea | 4970834d5515a5ab11f2f487b0e2ed0aee474551ed936d5379b955ed6f7a0acf |
+| repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs | af720e25721243b1411c66ca7fa806a011ba537d08c3e7861576b270c0df5989 | bbf765f7f238243eb9b79a70695d84c9d6145dbd4a39a8195e9badd4590a407e |
+| repo://tests/CanDoItAll.Tests.Integration/ProcessDefinitionLinterTests.cs | b4e3f4d7c40e0a5870488f53cc5e21473785ec5b81e59a9eb8cef30ae3a7d0c3 | acc36958fbbae646811604453e5c847ca5edf9d7565379cea76b8c7bf6bb8482 |

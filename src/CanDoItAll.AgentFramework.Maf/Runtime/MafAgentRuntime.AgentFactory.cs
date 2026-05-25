@@ -483,7 +483,8 @@ public sealed partial class MafAgentRuntime
                 ReadOnlyExternalTargetAliases: auditScope?.ReadOnlyExternalTargetAliases ?? [],
                 ApprovalWrapperEffectiveForProvider: featureMatrix.SupportsApprovalRequiredAIFunction,
                 ApplicationApprovalAvailable: false,
-                ProcessScaffoldToolOnly: auditScope?.ProcessScaffoldToolOnly == true);
+                ProcessScaffoldToolOnly: auditScope?.ProcessScaffoldToolOnly == true,
+                ProcessAllowsProductMutation: auditScope?.ProcessAllowsProductMutation != false);
             var policyDecision = await toolPolicy.EvaluateAsync(policyContext, cancellationToken);
             using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("maf.function.invoke", ActivityKind.Internal);
             AgentFrameworkTelemetry.ApplyCurrentAuditScope(activity);

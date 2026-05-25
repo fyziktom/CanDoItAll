@@ -4034,6 +4034,59 @@ Requirements from project-level planning context:
     }
 
     [Fact]
+    public void BuildProcessInvocationMetadataJson_allows_external_artifact_destination_without_product_mutation()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var method = serviceType.GetMethod("BuildProcessInvocationMetadataJson", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildProcessInvocationMetadataJson method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Create the market expansion business plan and write it to the governed report destination.",
+            ProcessStepKind.Work,
+            [],
+            false,
+            [(ProcessArtifactKind.Deliverable, "Business plan report", true, "Must include market assumptions, budget, owners, and approval criteria.")],
+            [],
+            triggerReason: "Prepare a business plan report for executive review.",
+            stepTitle: "Create business plan report",
+            processName: "Business planning workflow",
+            outputContractSummary: "Operation contract: allowed operations WriteExternalArtifactDestination and WriteManagedProcessArtifacts; target scope ExternalArtifactDestination.");
+        const string projectStructureGroundingSummary = """
+            Dispatcher fetched the live project structure for `MarketPlan` and focused this prompt on the selected work branch.
+            Grounded external target paths from the selected project structure:
+            - `C:\business\market-plan\reports` mapped to `external-target/C/business/market-plan/reports` from report destination note (custom:report-destination)
+            """;
+
+        var metadataJson = method.Invoke(
+            null,
+            [
+                candidate,
+                new ExecutionInvocationPolicy(),
+                projectStructureGroundingSummary,
+                null
+            ]) as string;
+
+        Assert.False(string.IsNullOrWhiteSpace(metadataJson));
+        using var document = JsonDocument.Parse(metadataJson);
+        Assert.Equal(
+            "ExternalArtifactDestination",
+            document.RootElement.GetProperty(ExecutionInvocationMetadata.ProcessStepTargetScopeMetadataKey).GetString());
+        Assert.False(document.RootElement.GetProperty(ExecutionInvocationMetadata.ProcessStepAllowsProductMutationMetadataKey).GetBoolean());
+        var operations = document.RootElement
+            .GetProperty(ExecutionInvocationMetadata.ProcessStepAllowedOperationsMetadataKey)
+            .EnumerateArray()
+            .Select(item => item.GetString())
+            .ToArray();
+        Assert.Contains("WriteExternalArtifactDestination", operations);
+        Assert.DoesNotContain("MutateProductTarget", operations);
+        var allowedAliases = document.RootElement
+            .GetProperty(ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey)
+            .EnumerateArray()
+            .Select(item => item.GetString())
+            .ToArray();
+        Assert.Contains("external-target/C/business/market-plan/reports", allowedAliases);
+    }
+
+    [Fact]
     public async Task ToolPolicy_rejects_product_mutation_against_read_only_process_boundary()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
@@ -6874,6 +6927,69 @@ Use only the project-structure mindmap requirements as scope. Create the request
         var shouldRetryResult = shouldRetry.Invoke(
             null,
             [candidate, detail, detail.Run.ResultSummary, new[] { "workspace_write_file", "workspace_dotnet_build" }, CreateCarriedImplementationProof(false, false), 2, 5]);
+
+        Assert.IsType<bool>(shouldRetryResult);
+        Assert.False((bool)shouldRetryResult);
+    }
+
+    [Fact]
+    public void ShouldRetryIncompleteSuccessfulRun_compresses_repeated_wrong_root_write_without_satisfied_artifact()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var shouldRetry = serviceType.GetMethod("ShouldRetryIncompleteSuccessfulRun", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ShouldRetryIncompleteSuccessfulRun method was not found.");
+        var candidate = CreateDispatchCandidate(
+            "Implement the requested application and prove the build passes.",
+            ProcessStepKind.Work,
+            (ProcessArtifactKind.Deliverable, "Implementation change set", true, "Must identify concrete product source files changed under the current product root."));
+
+        var now = DateTimeOffset.UtcNow;
+        var detail = new ExecutionRunDetail(
+            new ExecutionRunRecord(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                null,
+                "Implementation retry",
+                "process-step",
+                "step-1",
+                "corr-1",
+                "run-start",
+                "process-automation-dispatch",
+                "system",
+                BuildAllowedExternalTargetMetadata("external-target/C/programovani/dotnet/CurrentApp/product"),
+                "Prompt",
+                "I wrote the implementation note to a sibling product root but did not satisfy the current artifact contract.",
+                "OpenAI chat completions",
+                "gpt-4o-mini",
+                ExecutionState.Completed,
+                RunOutcome.Succeeded,
+                now,
+                now,
+                now,
+                now,
+                string.Empty,
+                BuildSerializedSessionState(
+                    ("workspace_write_file", CreateProviderNativeTextResult("Wrote external-target/C/programovani/dotnet/OldApp/product/src/Program.cs"))),
+                []),
+            null,
+            [],
+            [])
+        {
+            ToolReceipts =
+            [
+                CreateToolReceipt(
+                    "workspace-file",
+                    "workspace_write_file",
+                    "external-target/C/programovani/dotnet/OldApp/product/src/Program.cs",
+                    ".",
+                    "Succeeded",
+                    now)
+            ]
+        };
+
+        var shouldRetryResult = shouldRetry.Invoke(
+            null,
+            [candidate, detail, detail.Run.ResultSummary, Array.Empty<string>(), CreateCarriedImplementationProof(false, false), 2, 5]);
 
         Assert.IsType<bool>(shouldRetryResult);
         Assert.False((bool)shouldRetryResult);
@@ -14166,7 +14282,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void ApplyTransitionConsequences_reactivates_blocked_dependent_after_upstream_artifact_materialization()
+    public void ApplyTransitionConsequences_keeps_blocked_dependent_until_upstream_artifact_materializes()
     {
         var upstreamStepDefinitionId = Guid.NewGuid();
         var downstreamStepDefinitionId = Guid.NewGuid();
@@ -14226,10 +14342,68 @@ Ancestor path to the target work node:
             dependenciesByStepId,
             now);
 
+        Assert.Equal(ProcessStepRunStatus.Blocked, downstreamStepRun.Status);
+        Assert.NotEqual(now, downstreamStepRun.ReadyAtUtc);
+        Assert.Contains("required upstream artifacts are missing", downstreamStepRun.BlockedReason, StringComparison.OrdinalIgnoreCase);
+
+        ProcessRuntimeProgressionPlanner.ReactivateBlockedStepRunAfterUpstreamArtifactMaterialization(
+            downstreamStepRun,
+            downstreamStepDefinition,
+            now);
+
         Assert.Equal(ProcessStepRunStatus.Ready, downstreamStepRun.Status);
         Assert.Equal(now, downstreamStepRun.ReadyAtUtc);
         Assert.Equal(string.Empty, downstreamStepRun.BlockedReason);
         Assert.Equal("Reopened after upstream artifact materialization completed.", downstreamStepRun.DecisionSummary);
+    }
+
+    [Fact]
+    public void CreateObservedActiveAutomationExecutionOutcome_keeps_step_in_progress_without_finalization()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var method = serviceType.GetMethod("CreateObservedActiveAutomationExecutionOutcome", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("CreateObservedActiveAutomationExecutionOutcome method was not found.");
+        var now = DateTimeOffset.UtcNow;
+        var detail = new ExecutionRunDetail(
+            new ExecutionRunRecord(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                null,
+                "Long running process step",
+                "process-step",
+                "step-1",
+                "corr-1",
+                "run-start",
+                "process-automation-dispatch",
+                "system",
+                "{}",
+                "Prompt",
+                "Partial output",
+                "OpenAI chat completions",
+                "gpt-4.1",
+                ExecutionState.Running,
+                RunOutcome.Succeeded,
+                now,
+                now,
+                null,
+                now,
+                string.Empty,
+                null,
+                []),
+            null,
+            [],
+            []);
+
+        var outcome = method.Invoke(null, [detail, "Partial output", 2])
+            ?? throw new InvalidOperationException("Active execution outcome was not returned.");
+        var status = (ProcessStepRunStatus)(outcome.GetType().GetProperty("CompletionStatus")?.GetValue(outcome)
+            ?? throw new InvalidOperationException("CompletionStatus was not available."));
+        var reason = outcome.GetType().GetProperty("CompletionReason")?.GetValue(outcome) as string;
+        var selectedBranchOutcomeId = outcome.GetType().GetProperty("SelectedBranchOutcomeId")?.GetValue(outcome);
+
+        Assert.Equal(ProcessStepRunStatus.InProgress, status);
+        Assert.Contains("still Running", reason, StringComparison.Ordinal);
+        Assert.Null(selectedBranchOutcomeId);
     }
 
     [Fact]
