@@ -169,11 +169,14 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private string projectName = string.Empty;
     private bool isFeedingDefaults;
     private readonly CancellationTokenSource componentLifetimeCts = new();
+    private CancellationTokenSource? deferredWorkspaceLoadCts;
+    private Task? deferredWorkspaceLoadTask;
     private Guid? stoppingRunId;
     private bool hasLoadedParameters;
     private Guid? loadedProjectId;
     private Guid? loadedProcessQueryId;
     private Guid? loadedRunQueryId;
+    private bool isEditorLoading;
     private bool executorOptionsLoaded;
     private bool workflowOptionsLoaded;
     private bool managerAgentOptionsLoaded;
@@ -248,12 +251,25 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
             : "Process management";
 
     private string EditorTitle
-        => string.IsNullOrWhiteSpace(editor.Name)
-            ? "New process definition"
-            : editor.Name;
+        => !string.IsNullOrWhiteSpace(editor.Name)
+            ? editor.Name
+            : SelectedDefinitionSummary?.Name ?? "New process definition";
 
     private string SelectedDefinitionTone
         => ResolveDefinitionStatusTone(editor.Status);
+
+    private int SelectedDefinitionRoleCount
+        => isEditorLoading && SelectedDefinitionSummary is not null
+            ? SelectedDefinitionSummary.RoleCount
+            : editor.Roles.Count;
+
+    private int SelectedDefinitionStepCount
+        => isEditorLoading && SelectedDefinitionSummary is not null
+            ? SelectedDefinitionSummary.StepCount
+            : editor.Steps.Count;
+
+    private bool ShouldShowEditorLoadingState
+        => isEditorLoading && selectedProcessId.HasValue;
 
     private int SelectedDetailTabIndex
         => ResolveDetailTabIndex(detailTab);

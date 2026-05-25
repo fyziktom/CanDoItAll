@@ -30,6 +30,7 @@ public partial class ProcessWorkspace
     public void Dispose()
     {
         componentLifetimeCts.Cancel();
+        _ = CancelDeferredWorkspaceDetailLoad();
         AgentWorkspaceService.ExecutionUpdated -= HandleManagerChatExecutionUpdated;
         StopRuntimeRefreshLoop();
         CancelPendingDefinitionCanvasPersistence();
@@ -38,8 +39,20 @@ public partial class ProcessWorkspace
     public async ValueTask DisposeAsync()
     {
         componentLifetimeCts.Cancel();
+        var deferredWorkspaceLoad = CancelDeferredWorkspaceDetailLoad();
         AgentWorkspaceService.ExecutionUpdated -= HandleManagerChatExecutionUpdated;
         await StopRuntimeRefreshLoopAsync();
+        if (deferredWorkspaceLoad is not null)
+        {
+            try
+            {
+                await deferredWorkspaceLoad;
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }
+
         await QuiesceDefinitionCanvasPersistenceAsync(DefinitionCanvasPersistenceQuiescenceMode.CancelPendingChanges);
         componentLifetimeCts.Dispose();
     }
@@ -47,23 +60,17 @@ public partial class ProcessWorkspace
     private async Task LoadWorkspaceAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        _ = CancelDeferredWorkspaceDetailLoad();
         if (RunIdQuery.HasValue || LaunchPlanIdQuery.HasValue)
         {
             detailTab = DetailTabRuns;
         }
 
-        if (ProjectId.HasValue)
-        {
-            var project = await ProjectsService.GetAsync(ProjectId.Value, cancellationToken);
-            projectName = project.Name;
-        }
-        else
-        {
-            projectName = string.Empty;
-        }
-
-        definitions = await ProcessesService.ListDefinitionsAsync(ProjectId, cancellationToken);
-        await LoadRuntimeOverviewAsync(cancellationToken);
+        var projectNameTask = LoadProjectNameAsync(cancellationToken);
+        var definitionsTask = ProcessesService.ListDefinitionsAsync(ProjectId, cancellationToken);
+        await Task.WhenAll(projectNameTask, definitionsTask);
+        projectName = await projectNameTask;
+        definitions = await definitionsTask;
         var nextSelectedProcessId = ResolveSelectedProcessId();
         if (nextSelectedProcessId != selectedProcessId)
         {
@@ -81,8 +88,124 @@ public partial class ProcessWorkspace
             ResetAnalyticsPaneData();
         }
 
-        editor = await ProcessesService.GetEditorAsync(selectedProcessId, ProjectId, cancellationToken);
-        await EnsureManagerAgentOptionsLoadedAsync(cancellationToken);
+        isEditorLoading = selectedProcessId.HasValue;
+        ApplySelectedDefinitionEditorShell();
+        RefreshCanvasSurface();
+        StartDeferredWorkspaceDetailLoad(selectedProcessId, ProjectId, cancellationToken);
+
+        UpdateRuntimeRefreshLoop();
+        StateHasChanged();
+    }
+
+    private async Task<string> LoadProjectNameAsync(CancellationToken cancellationToken)
+    {
+        if (!ProjectId.HasValue)
+        {
+            return string.Empty;
+        }
+
+        var project = await ProjectsService.GetAsync(ProjectId.Value, cancellationToken);
+        return project.Name;
+    }
+
+    private async Task LoadSelectedEditorAsync(
+        Guid? processId,
+        Guid? projectId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var loadedEditor = await ProcessesService.GetEditorAsync(processId, projectId, cancellationToken);
+            if (selectedProcessId != processId || ProjectId != projectId)
+            {
+                return;
+            }
+
+            editor = loadedEditor;
+        }
+        finally
+        {
+            if (!cancellationToken.IsCancellationRequested &&
+                selectedProcessId == processId &&
+                ProjectId == projectId)
+            {
+                isEditorLoading = false;
+            }
+        }
+    }
+
+    private void StartDeferredWorkspaceDetailLoad(
+        Guid? processId,
+        Guid? projectId,
+        CancellationToken cancellationToken)
+    {
+        var loadCts = CancellationTokenSource.CreateLinkedTokenSource(componentLifetimeCts.Token, cancellationToken);
+        deferredWorkspaceLoadCts = loadCts;
+        deferredWorkspaceLoadTask = InvokeAsync(async () =>
+        {
+            try
+            {
+                await LoadWorkspaceDetailsAsync(processId, projectId, loadCts.Token);
+            }
+            catch (OperationCanceledException) when (loadCts.IsCancellationRequested || componentLifetimeCts.IsCancellationRequested)
+            {
+            }
+            catch (Exception exception)
+            {
+                if (!componentLifetimeCts.IsCancellationRequested)
+                {
+                    SetError($"Failed to load process workspace details. {exception.Message}");
+                    StateHasChanged();
+                }
+            }
+            finally
+            {
+                if (ReferenceEquals(deferredWorkspaceLoadCts, loadCts))
+                {
+                    deferredWorkspaceLoadCts = null;
+                    deferredWorkspaceLoadTask = null;
+                }
+
+                loadCts.Dispose();
+            }
+        });
+    }
+
+    private Task? CancelDeferredWorkspaceDetailLoad()
+    {
+        var loadTask = deferredWorkspaceLoadTask;
+        deferredWorkspaceLoadCts?.Cancel();
+        deferredWorkspaceLoadCts = null;
+        deferredWorkspaceLoadTask = null;
+        return loadTask;
+    }
+
+    private async Task LoadWorkspaceDetailsAsync(
+        Guid? processId,
+        Guid? projectId,
+        CancellationToken cancellationToken)
+    {
+        var definitionIds = definitions.Select(definition => definition.Id).ToList();
+        await LoadSelectedEditorAsync(processId, projectId, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!IsCurrentWorkspaceLoad(processId, projectId))
+        {
+            return;
+        }
+
+        RefreshCanvasSurface();
+        StateHasChanged();
+
+        await LoadRuntimeOverviewAsync(
+            processId,
+            projectId,
+            definitionIds,
+            cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!IsCurrentWorkspaceLoad(processId, projectId))
+        {
+            return;
+        }
 
         if (selectedProcessId.HasValue)
         {
@@ -106,10 +229,46 @@ public partial class ProcessWorkspace
             await EnsureManagerAgentOptionsLoadedAsync(cancellationToken);
             await LoadManagerChatAsync(cancellationToken);
         }
+        else
+        {
+            await EnsureManagerAgentOptionsLoadedAsync(cancellationToken);
+        }
 
         cancellationToken.ThrowIfCancellationRequested();
+        if (!IsCurrentWorkspaceLoad(processId, projectId))
+        {
+            return;
+        }
+
         UpdateRuntimeRefreshLoop();
         StateHasChanged();
+    }
+
+    private bool IsCurrentWorkspaceLoad(Guid? processId, Guid? projectId)
+    {
+        return selectedProcessId == processId && ProjectId == projectId;
+    }
+
+    private void ApplySelectedDefinitionEditorShell()
+    {
+        if (SelectedDefinitionSummary is not { } definition)
+        {
+            editor = new ProcessDefinitionEditorModel
+            {
+                ProjectId = ProjectId
+            };
+            return;
+        }
+
+        editor = new ProcessDefinitionEditorModel
+        {
+            Id = definition.Id,
+            ProjectId = definition.ProjectId,
+            Name = definition.Name,
+            Summary = definition.Summary,
+            ValueStatement = definition.ValueStatement,
+            Status = definition.Status
+        };
     }
 
     private async Task LoadRuntimePaneDataAsync(CancellationToken cancellationToken = default)
@@ -294,16 +453,24 @@ public partial class ProcessWorkspace
     }
 
     private async Task LoadRuntimeOverviewAsync(
+        Guid? processId,
+        Guid? projectId,
+        IReadOnlyCollection<Guid> definitionIds,
         CancellationToken cancellationToken = default,
         bool forceRefresh = false)
     {
         var observation = await ProcessObservationService.GetDashboardSnapshotAsync(
             new ProcessObservationDashboardQuery(
-                ProjectId,
-                definitions.Select(definition => definition.Id).ToList(),
-                selectedProcessId,
+                projectId,
+                definitionIds,
+                processId,
                 ForceRefresh: forceRefresh),
             cancellationToken);
+        if (!IsCurrentWorkspaceLoad(processId, projectId))
+        {
+            return;
+        }
+
         runtimeStateOverview = observation.RuntimeStateOverview;
         ObservationDashboardState.SetDashboardSnapshot(observation);
     }

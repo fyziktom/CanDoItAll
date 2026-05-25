@@ -157,11 +157,11 @@
                                              Text="@editor.Status.ToString()"
                                              TooltipText="@($"Definition status: {editor.Status}.")" />
                                 <CompactStat Tone="neutral"
-                                             Text="@($"{editor.Roles.Count} role(s)")"
-                                             TooltipText="@($"This process currently defines {editor.Roles.Count} role requirement(s).")" />
+                                             Text="@($"{SelectedDefinitionRoleCount} role(s)")"
+                                             TooltipText="@($"This process currently defines {SelectedDefinitionRoleCount} role requirement(s).")" />
                                 <CompactStat Tone="info"
-                                             Text="@($"{editor.Steps.Count} step(s)")"
-                                             TooltipText="@($"This process currently defines {editor.Steps.Count} step(s).")" />
+                                             Text="@($"{SelectedDefinitionStepCount} step(s)")"
+                                             TooltipText="@($"This process currently defines {SelectedDefinitionStepCount} step(s).")" />
                                 @if (SelectedDefinitionSummary is not null)
                                 {
                                     <CompactStat Tone="warning"
@@ -187,18 +187,29 @@
                           data-testid="processes-detail-tabs">
                     <TabItems>
                         <TabsItem Text="Definition">
-                        <ProcessDefinitionForm Model="@editor"
-                                               ScopeLabel="@(ProjectId.HasValue ? projectName : "Global process library")"
-                                               ManagerAgentOptions="@managerAgentOptions"
-                                               Save="SaveAsync"
-                                               Publish="PublishAsync"
-                                               Delete="DeleteAsync" />
+                        @if (ShouldShowEditorLoadingState)
+                        {
+                            <EmptyState Eyebrow="Loading definition"
+                                        Title="@EditorTitle"
+                                        Description="The saved definition details are loading." />
+                        }
+                        else
+                        {
+                            <ProcessDefinitionForm Model="@editor"
+                                                   ScopeLabel="@(ProjectId.HasValue ? projectName : "Global process library")"
+                                                   ManagerAgentOptions="@managerAgentOptions"
+                                                   Save="SaveAsync"
+                                                   Publish="PublishAsync"
+                                                   Delete="DeleteAsync" />
+                        }
                         </TabsItem>
                         <TabsItem Text="Roles">
                         <FormSection Title="Role requirements"
                                      Description=""
                                      HelpText="Define who the process needs first. Exact person, supplier, or agent binding happens later at runtime without changing the process contract.">
                             <Actions>
+                                @if (!ShouldShowEditorLoadingState)
+                                {
                                 <Button Icon="add"
                                         Class="cda-button--quick"
                                         ButtonStyle="ButtonStyle.Light"
@@ -213,9 +224,16 @@
                                         aria-label="Templates"
                                         Click="OpenTemplateLibraryAsync"
                                         data-testid="processes-role-templates-button" />
+                                }
                             </Actions>
                             <ChildContent>
-                                @if (editor.Roles.Count == 0)
+                                @if (ShouldShowEditorLoadingState)
+                                {
+                                    <EmptyState Eyebrow="Loading roles"
+                                                Title="@EditorTitle"
+                                                Description="The saved role requirements are loading." />
+                                }
+                                else if (editor.Roles.Count == 0)
                                 {
                                     <EmptyState Eyebrow="No role requirements"
                                                 Title="Add the first role"
@@ -295,24 +313,36 @@
                                     </Grid>
                                 }
 
-                                <Cluster Gap="LayoutGap.Small">
-                                    <Button Icon="save"
-                                            Class="cda-button--quick"
-                                            title="Save definition"
-                                            aria-label="Save definition"
-                                            Click="SaveAsync" />
-                                    <Button Icon="publish"
-                                            Class="cda-button--quick"
-                                            ButtonStyle="ButtonStyle.Light"
-                                            title="Publish definition"
-                                            aria-label="Publish definition"
-                                            Click="PublishAsync" />
-                                </Cluster>
+                                @if (!ShouldShowEditorLoadingState)
+                                {
+                                    <Cluster Gap="LayoutGap.Small">
+                                        <Button Icon="save"
+                                                Class="cda-button--quick"
+                                                title="Save definition"
+                                                aria-label="Save definition"
+                                                Click="SaveAsync" />
+                                        <Button Icon="publish"
+                                                Class="cda-button--quick"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                title="Publish definition"
+                                                aria-label="Publish definition"
+                                                Click="PublishAsync" />
+                                    </Cluster>
+                                }
                             </ChildContent>
                         </FormSection>
                         </TabsItem>
                         <TabsItem Text="Steps">
-                        <ProcessWorkspaceStepsTab Presenter="@StepsTabPresenter" />
+                        @if (ShouldShowEditorLoadingState)
+                        {
+                            <EmptyState Eyebrow="Loading steps"
+                                        Title="@EditorTitle"
+                                        Description="The saved step graph is loading." />
+                        }
+                        else
+                        {
+                            <ProcessWorkspaceStepsTab Presenter="@StepsTabPresenter" />
+                        }
                         </TabsItem>
                         <TabsItem Text="Runs">
                         <ProcessWorkspaceRunsTab Presenter="@RunsTabPresenter" />

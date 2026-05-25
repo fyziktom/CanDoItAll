@@ -1165,6 +1165,42 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
+    public async Task ListDefinitionsAsync_counts_active_runs_in_current_project_scope()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var firstProjectId = await CreateProjectAsync(projectsService, "Scoped process counts first project");
+        var secondProjectId = await CreateProjectAsync(projectsService, "Scoped process counts second project");
+        var definition = BuildDefinitionEditor(firstProjectId, Guid.NewGuid());
+        definition.ProjectId = null;
+        definition.Name = "Global scoped process counts";
+        var saveResult = await processesService.SaveAsync(definition);
+
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        await StartTestRunAsync(processesService, saveResult.Value, firstProjectId, "First scoped active run");
+        await StartTestRunAsync(processesService, saveResult.Value, secondProjectId, "Second scoped active run");
+
+        var firstProjectDefinition = Assert.Single(
+            await processesService.ListDefinitionsAsync(firstProjectId),
+            item => item.Id == saveResult.Value);
+        var secondProjectDefinition = Assert.Single(
+            await processesService.ListDefinitionsAsync(secondProjectId),
+            item => item.Id == saveResult.Value);
+        var globalDefinition = Assert.Single(
+            await processesService.ListDefinitionsAsync(null),
+            item => item.Id == saveResult.Value);
+
+        Assert.Equal(1, firstProjectDefinition.ActiveRunCount);
+        Assert.Equal(1, secondProjectDefinition.ActiveRunCount);
+        Assert.Equal(2, globalDefinition.ActiveRunCount);
+    }
+
+    [Fact]
     public async Task ListRunsAsync_returns_projected_step_progress_and_capability_gap_counts()
     {
         await using var application = await TestApplication.CreateAsync();
