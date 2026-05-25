@@ -1,0 +1,9 @@
+Command: git show HEAD:src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs; assert artifact validation model exists before implementation
+Invariant IDs: SB02-INV-001
+Test name: ArtifactContractValidation_rejects_response_text_as_runtime_evidence
+Test name: ArtifactContractValidation_rejects_placeholder_record_for_required_artifact
+Test name: ArtifactContractValidation_accepts_matching_workflow_artifact_for_process_expectation
+Expected failing-first result: pre-change source had no process-owned artifact validation model/finalizer file.
+Observed source assertion output:
+fatal: path 'src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs' exists on disk, but not in 'HEAD'
+ExitCode: 1

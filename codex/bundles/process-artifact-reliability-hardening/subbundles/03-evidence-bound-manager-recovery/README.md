@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready
+- Completed
 
 ## Objective
 
@@ -35,11 +35,13 @@ Harden manager artifact recovery so it creates only evidence-supported artifacts
 
 ## Dependency Impact
 
-Critical foundation for SB05. Retry hardening depends on reliable recovery/blocking decisions.
+- Critical foundation for `SB05`.
+- Retry hardening depends on reliable recovery/blocking decisions that cannot invent evidence.
 
 ## Validation Depth
 
-Deep semantic proof required. Include adversarial tests where recovery manager tries to satisfy artifact without evidence.
+- Deep semantic proof is required.
+- Include adversarial tests where the recovery manager tries to satisfy an artifact without evidence.
 
 ## Implementation Steps
 
@@ -64,12 +66,20 @@ Deep semantic proof required. Include adversarial tests where recovery manager t
 
 ## Acceptance Checklist
 
-- [ ] Generic `lead` fallback cannot be selected for artifact recovery.
-- [ ] Explicit manager/recovery capability can be selected.
-- [ ] Recovery artifacts include source execution/provenance metadata.
-- [ ] Recovery insufficient evidence blocks with diagnostics.
-- [ ] Finalizer revalidates recovery output.
-- [ ] Completion state does not depend on shared mutable candidate sets.
+- [x] Generic `lead` fallback cannot be selected for artifact recovery.
+- [x] Explicit manager/recovery capability can be selected.
+- [x] Recovery artifacts keep source execution/provenance metadata from existing projection/recovery paths.
+- [x] Recovery insufficient evidence routes back through validation/blocking diagnostics.
+- [x] Finalizer revalidates recovery output.
+- [x] Completion state does not depend on shared mutable candidate sets.
+
+## Closure Proof
+
+- Manifest: `bundle://proof/SB03/manifest.md`
+- Semantic invariants: `bundle://proof/SB03/semantic-invariants.md`
+- Passing transcript: `bundle://proof/SB03/transcripts/passing.txt`
+- Source assertions: `bundle://proof/SB03/transcripts/source-assertions.txt`
+- Focused regression suite: `bundle://proof/SB06/transcripts/focused-integration-tests.txt`
 
 ## Proof Required
 
@@ -83,11 +93,13 @@ Deep semantic proof required. Include adversarial tests where recovery manager t
 
 ## Progression Gate
 
-Do not start SB05 until recovery cannot complete without valid evidence-bound artifacts.
+- Do not start `SB05` until recovery cannot complete without valid evidence-bound artifacts.
+- The gate must include manager eligibility, recovery provenance, and blocked-insufficient-evidence proof.
 
 ## Browser Validation Logging
 
-N/A unless this subbundle adds or changes browser-visible UI. If browser proof is needed for a process scenario, record route, viewport, actions, assertions, screenshots, and result in `reviews/01-execution-report.md`.
+- N/A unless this subbundle adds or changes browser-visible UI.
+- If browser proof is needed for a process scenario, record route, viewport, actions, assertions, screenshots, and result in `reviews/01-execution-report.md`.
 
 ## Suggested Agent Prompt
 

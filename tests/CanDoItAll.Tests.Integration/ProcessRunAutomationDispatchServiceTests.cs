@@ -12738,6 +12738,192 @@ Ancestor path to the target work node:
     }
 
     [Fact]
+    public void ResolveManagerArtifactRecoveryAgent_rejects_single_generic_lead_fallback_agent()
+    {
+        var run = new ProcessRun();
+        var now = DateTimeOffset.UtcNow;
+
+        var result = ProcessRunAutomationDispatchService.ResolveManagerArtifactRecoveryAgent(
+            run,
+            [],
+            [CreateAgentDefinition("Delivery Lead", "Lead engineer", now)]);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void ResolveManagerArtifactRecoveryAgent_allows_single_explicit_artifact_recovery_manager()
+    {
+        var technicalAgentId = Guid.NewGuid();
+
+        var result = ProcessRunAutomationDispatchService.ResolveManagerArtifactRecoveryAgent(
+            new ProcessRun(),
+            [
+                new ProcessManagerAgentOption(
+                    Guid.NewGuid(),
+                    technicalAgentId,
+                    "Recovery specialist",
+                    "OpenAI",
+                    "gpt-5-mini",
+                    "Capability: process-artifact-recovery-manager")
+            ],
+            []);
+
+        Assert.NotNull(result);
+        Assert.Equal(technicalAgentId, result.TechnicalAgentId);
+        Assert.Equal("single-explicit-recovery-option", result.ResolutionSource);
+    }
+
+    [Fact]
+    public void ArtifactContractValidation_rejects_response_text_as_runtime_evidence()
+    {
+        var processRunId = Guid.NewGuid();
+        var stepRunId = Guid.NewGuid();
+        var executionRunId = Guid.NewGuid();
+        var expectation = CreateDispatchArtifactExpectation(
+            ProcessArtifactKind.Evidence,
+            "Regression evidence pack",
+            isRequired: true,
+            "Must include browser proof, screenshot, and test log output.");
+        var artifact = new ProcessArtifactRecord
+        {
+            ProcessRunId = processRunId,
+            StepRunId = stepRunId,
+            ArtifactExpectationId = expectation.Id,
+            ArtifactKind = ProcessArtifactKind.Evidence,
+            Title = expectation.Title,
+            ManagedStoragePath = "artifacts/process-runs/current/regression-evidence.md",
+            ExternalReferenceKey = $"assistant-response|{executionRunId:D}|artifacts/process-runs/current/regression-evidence.md",
+            ReviewSummary = "Final assistant response text.",
+            ProvenanceSummary = $"Projected from final assistant response for AgentFramework execution run {executionRunId:D}."
+        };
+
+        var result = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+            processRunId,
+            stepRunId,
+            expectation,
+            [artifact],
+            ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+            executionRunId);
+
+        Assert.Equal(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.WrongProducerMode, result.Status);
+        Assert.Equal(ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.AssistantResponse, result.ProducerKind);
+    }
+
+    [Fact]
+    public void ArtifactContractValidation_rejects_placeholder_record_for_required_artifact()
+    {
+        var processRunId = Guid.NewGuid();
+        var stepRunId = Guid.NewGuid();
+        var executionRunId = Guid.NewGuid();
+        var expectation = CreateDispatchArtifactExpectation(
+            ProcessArtifactKind.Deliverable,
+            "Implementation change set",
+            isRequired: true,
+            "Must identify concrete product files and validation evidence.");
+        var artifact = new ProcessArtifactRecord
+        {
+            ProcessRunId = processRunId,
+            StepRunId = stepRunId,
+            ArtifactExpectationId = expectation.Id,
+            ArtifactKind = ProcessArtifactKind.Deliverable,
+            Title = expectation.Title,
+            ManagedStoragePath = "artifacts/process-runs/current/implementation-change-set.md",
+            ExternalReferenceKey = $"workspace-written-artifact|{executionRunId:D}|{expectation.Id:D}|artifacts/process-runs/current/implementation-change-set.md",
+            ReviewSummary = "Placeholder only; implementation artifact is not available.",
+            ProvenanceSummary = "Missing artifact gap marker."
+        };
+
+        var result = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+            processRunId,
+            stepRunId,
+            expectation,
+            [artifact],
+            ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+            executionRunId);
+
+        Assert.Equal(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.PlaceholderOnly, result.Status);
+    }
+
+    [Fact]
+    public void ArtifactContractValidation_reports_missing_required_artifact_for_current_step()
+    {
+        var processRunId = Guid.NewGuid();
+        var stepRunId = Guid.NewGuid();
+        var executionRunId = Guid.NewGuid();
+        var expectation = CreateDispatchArtifactExpectation(
+            ProcessArtifactKind.Evidence,
+            "Runtime validation evidence",
+            isRequired: true,
+            "Must include current run command output.");
+
+        var result = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+            processRunId,
+            stepRunId,
+            expectation,
+            [],
+            ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+            executionRunId);
+
+        Assert.Equal(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.Missing, result.Status);
+        Assert.False(result.IsSatisfied);
+    }
+
+    [Fact]
+    public void ArtifactContractValidation_accepts_matching_workflow_artifact_for_process_expectation()
+    {
+        var processRunId = Guid.NewGuid();
+        var stepRunId = Guid.NewGuid();
+        var workflowRunId = Guid.NewGuid();
+        var workflowArtifactId = Guid.NewGuid();
+        var expectation = CreateDispatchArtifactExpectation(
+            ProcessArtifactKind.Deliverable,
+            "Business plan",
+            isRequired: true,
+            "Write the business plan as Markdown.");
+        var artifact = new ProcessArtifactRecord
+        {
+            ProcessRunId = processRunId,
+            StepRunId = stepRunId,
+            ArtifactKind = ProcessArtifactKind.Deliverable,
+            Title = "Business plan",
+            ManagedStoragePath = "workflow-output/business-plan.md",
+            ExternalReferenceKey = $"workflow-run:{workflowRunId:D}:artifact:{workflowArtifactId:D}",
+            ReviewSummary = "Workflow produced the business plan.",
+            ProvenanceSummary = $"Produced by workflow run {workflowRunId:D}."
+        };
+
+        var result = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+            processRunId,
+            stepRunId,
+            expectation,
+            [artifact],
+            ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.WorkflowBackedRole,
+            workflowRunId: workflowRunId);
+
+        Assert.Equal(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.Satisfied, result.Status);
+        Assert.Equal(ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.WorkflowArtifact, result.ProducerKind);
+    }
+
+    [Fact]
+    public void DispatchSource_routes_direct_and_workflow_completion_through_process_owned_finalizer()
+    {
+        var dispatchSource = File.ReadAllText(Path.Combine(
+            IntegrationTestPaths.RepositoryRoot,
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessRunAutomationDispatchService.Dispatch.cs"));
+
+        Assert.Contains("FinalizeStepCompletionAsync", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessStepCompletionExecutorKind.DirectAgent", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessStepCompletionExecutorKind.WorkflowBackedRole", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessStepCompletionExecutorKind.ManagerArtifactRecovery", dispatchSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TargetStatus = workflowOutcome.CompletionStatus", dispatchSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void BuildRecoveryDirective_requires_process_step_outcome_for_governed_review_retry()
     {
         var buildRecoveryDirective = typeof(ProcessRunAutomationDispatchService).GetMethod("BuildRecoveryDirective", BindingFlags.NonPublic | BindingFlags.Static)
@@ -14675,15 +14861,26 @@ Ancestor path to the target work node:
     private static ProcessRunAutomationDispatchService.DispatchArtifactExpectation CreateDispatchArtifactExpectation(
         string title,
         bool isRequired)
+        => CreateDispatchArtifactExpectation(
+            ProcessArtifactKind.Evidence,
+            title,
+            isRequired,
+            $"Create {title}.");
+
+    private static ProcessRunAutomationDispatchService.DispatchArtifactExpectation CreateDispatchArtifactExpectation(
+        ProcessArtifactKind artifactKind,
+        string title,
+        bool isRequired,
+        string validationRequirementSummary)
     {
         return new ProcessRunAutomationDispatchService.DispatchArtifactExpectation(
             Guid.NewGuid(),
-            ProcessArtifactKind.Evidence,
+            artifactKind,
             title,
             isRequired,
             ProcessArtifactTrustRequirement.ReviewRequired,
             ProcessSensitivityLevel.Internal,
-            $"Create {title}.",
+            validationRequirementSummary,
             string.Empty);
     }
 

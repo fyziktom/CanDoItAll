@@ -1,0 +1,5 @@
+Command: git diff -- src tests codex/bundles/process-artifact-reliability-hardening | rg -n "Sqlite|SQLite|Migrations\.Sqlite|UseSqlite"; no matches in this change is pass
+Invariant IDs: SB06-INV-001
+31:-Reopen `SB06` if any SQLite residue is introduced or validation depends on SQLite.
+37:+- Reopen `SB06` if any SQLite residue is introduced or validation depends on SQLite.
+ExitCode: 0

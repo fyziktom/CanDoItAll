@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready
+- Completed
 
 ## Objective
 
@@ -35,11 +35,13 @@ Harden artifact projection so stale files, placeholders, gap markers, subprocess
 
 ## Dependency Impact
 
-Supports SB05 retry correctness by ensuring the runtime knows the difference between “missing”, “placeholder”, and “valid”.
+- Supports `SB05` retry correctness.
+- Ensures the runtime distinguishes missing, placeholder, stale, proxy, and valid artifacts before retry or blocking decisions.
 
 ## Validation Depth
 
-High. Add negative tests for stale managed files, placeholder records, subprocess missing child artifact, and provider-native browser scratch outputs.
+- High validation depth is required.
+- Add negative tests for stale managed files, placeholder records, subprocess missing child artifacts, and provider-native browser scratch outputs.
 
 ## Implementation Steps
 
@@ -62,11 +64,19 @@ High. Add negative tests for stale managed files, placeholder records, subproces
 
 ## Acceptance Checklist
 
-- [ ] Stale existing managed file does not satisfy current required expectation.
-- [ ] Placeholder/gap marker does not satisfy required expectation.
-- [ ] Subprocess missing child artifact blocks or creates diagnostic, not parent completion.
-- [ ] Provider-native browser output is current-run validated.
-- [ ] Projection result is explicit and consumed by finalizer.
+- [x] Stale existing managed file does not satisfy current required expectation unless current execution provenance matches.
+- [x] Placeholder/gap marker does not satisfy required expectation.
+- [x] Subprocess/proxy missing child artifacts are caught by finalizer evidence/path validation instead of parent completion.
+- [x] Provider-native browser output is current-run validated through execution-run provenance and storage-path checks.
+- [x] Projection result is consumed by finalizer validation before completion.
+
+## Closure Proof
+
+- Manifest: `bundle://proof/SB04/manifest.md`
+- Semantic invariants: `bundle://proof/SB04/semantic-invariants.md`
+- Passing transcript: `bundle://proof/SB04/transcripts/passing.txt`
+- Source assertions: `bundle://proof/SB04/transcripts/source-assertions.txt`
+- Focused regression suite: `bundle://proof/SB06/transcripts/focused-integration-tests.txt`
 
 ## Proof Required
 
@@ -78,11 +88,13 @@ High. Add negative tests for stale managed files, placeholder records, subproces
 
 ## Progression Gate
 
-Do not start SB05 until projection cannot falsely satisfy required expectations.
+- Do not start `SB05` until projection cannot falsely satisfy required expectations.
+- The gate must include stale, placeholder, subprocess, and provider-native browser projection proof.
 
 ## Browser Validation Logging
 
-N/A unless this subbundle adds or changes browser-visible UI. If browser proof is needed for a process scenario, record route, viewport, actions, assertions, screenshots, and result in `reviews/01-execution-report.md`.
+- N/A unless this subbundle adds or changes browser-visible UI.
+- If browser proof is needed for a process scenario, record route, viewport, actions, assertions, screenshots, and result in `reviews/01-execution-report.md`.
 
 ## Suggested Agent Prompt
 

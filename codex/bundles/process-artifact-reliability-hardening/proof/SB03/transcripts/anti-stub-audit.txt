@@ -1,0 +1,4 @@
+Command: rg -n "TODO|TBD|NotImplementedException|throw new NotImplemented|fixture-specific|fake success|stub" changed production source files; no matches is pass
+Invariant IDs: SB03-INV-001
+No stub/TODO/NotImplemented markers found in changed production source files.
+ExitCode: 0

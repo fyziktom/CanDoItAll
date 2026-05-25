@@ -38,7 +38,7 @@ This bundle was prepared from the `development` branch at commit `62dfbdd68bc84c
 - `traceability/` requirement-to-subbundle mapping
 - `shared-prompts/` reusable implementation and QA prompts
 - `subbundles/` execution-ready workstreams
-- `proof/` planned proof manifest templates for critical subbundles
+- `proof/` completed proof manifests, semantic invariants, command transcripts, and changed-file hashes
 - `reviews/` preparation self-review and execution report scaffold
 - `templates/` reusable subbundle/proof templates
 - `scripts/` validation command notes
@@ -61,8 +61,9 @@ This bundle was prepared from the `development` branch at commit `62dfbdd68bc84c
 ## Validation Summary
 
 - Bundle preparation status: `Ready for Codex execution`
-- Execution status: `Not executed by this bundle`
-- Final closure gate: `Pending implementation`
-- Browser validation analytics: `N/A for preparation; required only for UI/browser-proof scenarios created during execution`
+- Execution status: `Completed`
+- Subbundle gate review: `Completed`
+- Final closure gate: `Passed`
+- Browser validation analytics: `N/A backend-only execution; no UI/browser-visible behavior changed`
 
 Use the repository bundle workflow skill (`codex/skills/bundles/candoitall-bundle-workflow/SKILL.md`) to execute this bundle one subbundle at a time.

@@ -1,0 +1,8 @@
+Command: Get-FileHash changed source and test files with SHA256
+Invariant IDs: SB03-INV-001
+976f15d32e4eb1636d2b7d4af44c73278b484cc51c3defd7179e448b7fa3c9e3  repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs
+023e59b59248f2289662dd0d484cfd62171ce0c3c210681b24eef0a64937cbb6  repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs
+f14e5c4931842f7a66558dc3d0b72fbe6e605121334de8b08b247fd80c5c120a  repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.CompletionArtifactRecovery.cs
+6151c8ea22525066eb231f8c34a8ebccb71813c910130f6cb626617a679014e7  repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessRuntimeEventTypes.cs
+a6db909949d7b0ce1f40b092c5b1d45352b8c398fdbec145001ae3a83a2c0b1e  repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs
+ExitCode: 0

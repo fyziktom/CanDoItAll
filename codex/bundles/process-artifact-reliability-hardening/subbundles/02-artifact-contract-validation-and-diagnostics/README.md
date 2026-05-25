@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready
+- Completed
 
 ## Objective
 
@@ -34,11 +34,13 @@ Replace the weak “recorded expectation id exists” completion signal with art
 
 ## Dependency Impact
 
-Critical foundation for SB03 recovery and SB05 retry hardening. Recovery must consume diagnostics instead of guessing from missing ids.
+- Critical foundation for `SB03` recovery and `SB05` retry hardening.
+- Recovery must consume validation diagnostics instead of guessing from missing expectation ids.
 
 ## Validation Depth
 
-Deep semantic proof required. Tests must prove invalid artifacts do not satisfy expectations even when a `ProcessArtifactRecord` exists.
+- Deep semantic proof is required.
+- Tests must prove invalid artifacts do not satisfy expectations even when a `ProcessArtifactRecord` exists.
 
 ## Implementation Steps
 
@@ -64,12 +66,20 @@ Deep semantic proof required. Tests must prove invalid artifacts do not satisfy 
 
 ## Acceptance Checklist
 
-- [ ] Missing required artifact produces durable diagnostic.
-- [ ] Wrong format produces durable diagnostic.
-- [ ] Existing record with invalid content does not complete the step.
-- [ ] Response text cannot satisfy evidence/deliverable mode unless explicitly allowed.
-- [ ] Auto decision artifact cannot satisfy evidence/deliverable mode.
-- [ ] Artifact validator output is visible to recovery and final transition decision.
+- [x] Missing required artifact produces durable diagnostic input and unsatisfied validation state.
+- [x] Wrong format produces validation failure through declared format checks.
+- [x] Existing record with invalid content does not complete the step.
+- [x] Response text cannot satisfy evidence/runtime-proof mode unless mode-compatible.
+- [x] Auto decision artifact cannot satisfy evidence/deliverable mode.
+- [x] Artifact validator output is visible to recovery and final transition decision.
+
+## Closure Proof
+
+- Manifest: `bundle://proof/SB02/manifest.md`
+- Semantic invariants: `bundle://proof/SB02/semantic-invariants.md`
+- Passing transcript: `bundle://proof/SB02/transcripts/passing.txt`
+- Source assertions: `bundle://proof/SB02/transcripts/source-assertions.txt`
+- Focused regression suite: `bundle://proof/SB06/transcripts/focused-integration-tests.txt`
 
 ## Proof Required
 
@@ -82,11 +92,13 @@ Deep semantic proof required. Tests must prove invalid artifacts do not satisfy 
 
 ## Progression Gate
 
-Do not start SB03 until validation results and diagnostics are consumed by the finalizer.
+- Do not start `SB03` until validation results and diagnostics are consumed by the finalizer.
+- The gate must include proof that invalid records block completion and create durable recovery input.
 
 ## Browser Validation Logging
 
-N/A unless this subbundle adds or changes browser-visible UI. If browser proof is needed for a process scenario, record route, viewport, actions, assertions, screenshots, and result in `reviews/01-execution-report.md`.
+- N/A unless this subbundle adds or changes browser-visible UI.
+- If browser proof is needed for a process scenario, record route, viewport, actions, assertions, screenshots, and result in `reviews/01-execution-report.md`.
 
 ## Suggested Agent Prompt
 

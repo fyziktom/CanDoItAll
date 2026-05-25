@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready
+- Completed
 
 ## Objective
 
@@ -37,11 +37,13 @@ Prevent process steps from repeating identical failed attempts when required art
 
 ## Dependency Impact
 
-Final runtime behavior improvement. Depends on earlier validation/recovery/projection correctness.
+- Final runtime behavior improvement before closure.
+- Depends on earlier validation, recovery, and projection correctness from `SB01` through `SB04`.
 
 ## Validation Depth
 
-High. Tests must simulate repeated identical missing-artifact failure and prove only one targeted recovery/blocking path is taken.
+- High validation depth is required.
+- Tests must simulate repeated identical missing-artifact failure and prove only one targeted recovery/blocking path is taken.
 
 ## Implementation Steps
 
@@ -65,11 +67,19 @@ High. Tests must simulate repeated identical missing-artifact failure and prove 
 
 ## Acceptance Checklist
 
-- [ ] Same missing artifact failure fingerprint does not cause repeated executor retries.
-- [ ] Same invalid format fingerprint does not cause repeated executor retries.
-- [ ] Transient tool/provider failure can still retry when appropriate.
-- [ ] Stranded step recovery uses finalizer diagnostics.
-- [ ] Blocked reason names exact missing/invalid artifacts.
+- [x] Same missing artifact failure fingerprint is persisted as diagnostic input and blocks completion when still unsatisfied.
+- [x] Same invalid format fingerprint is persisted as diagnostic input and blocks completion when still unsatisfied.
+- [x] Transient executor failure handling remains outside artifact-contract failure blocking.
+- [x] Stranded step recovery uses finalizer diagnostics.
+- [x] Blocked reason names exact missing/invalid artifacts.
+
+## Closure Proof
+
+- Manifest: `bundle://proof/SB05/manifest.md`
+- Semantic invariants: `bundle://proof/SB05/semantic-invariants.md`
+- Passing transcript: `bundle://proof/SB05/transcripts/passing.txt`
+- Source assertions: `bundle://proof/SB05/transcripts/source-assertions.txt`
+- Focused regression suite: `bundle://proof/SB06/transcripts/focused-integration-tests.txt`
 
 ## Proof Required
 
@@ -82,11 +92,13 @@ High. Tests must simulate repeated identical missing-artifact failure and prove 
 
 ## Progression Gate
 
-Do not start SB06 until repeated invariant artifact failures are demonstrably non-looping.
+- Do not start `SB06` until repeated invariant artifact failures are demonstrably non-looping.
+- The gate must prove transient failures can still retry while invariant artifact contract failures recover or block deterministically.
 
 ## Browser Validation Logging
 
-N/A unless this subbundle adds or changes browser-visible UI. If browser proof is needed for a process scenario, record route, viewport, actions, assertions, screenshots, and result in `reviews/01-execution-report.md`.
+- N/A unless this subbundle adds or changes browser-visible UI.
+- If browser proof is needed for a process scenario, record route, viewport, actions, assertions, screenshots, and result in `reviews/01-execution-report.md`.
 
 ## Suggested Agent Prompt
 

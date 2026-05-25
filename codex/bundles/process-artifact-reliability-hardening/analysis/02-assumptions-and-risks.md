@@ -26,14 +26,9 @@
 
 ## Reopen Triggers
 
-Reopen `SB01` if any executor kind can transition a process step without the common process-owned finalizer.
-
-Reopen `SB02` if a required artifact expectation can be satisfied without passing artifact-mode validation.
-
-Reopen `SB03` if manager recovery can complete a missing artifact without source evidence, or if a generic unrelated manager can be selected.
-
-Reopen `SB04` if placeholder/proxy/subprocess artifacts can satisfy required expectations.
-
-Reopen `SB05` if a step repeats the same artifact failure more than the configured retry budget without producing a diagnostic, recovery attempt, or blocked state.
-
-Reopen `SB06` if any SQLite residue is introduced or validation depends on SQLite.
+- Reopen `SB01` if any executor kind can transition a process step without the common process-owned finalizer.
+- Reopen `SB02` if a required artifact expectation can be satisfied without passing artifact-mode validation.
+- Reopen `SB03` if manager recovery can complete a missing artifact without source evidence, or if a generic unrelated manager can be selected.
+- Reopen `SB04` if placeholder/proxy/subprocess artifacts can satisfy required expectations.
+- Reopen `SB05` if a step repeats the same artifact failure more than the configured retry budget without producing a diagnostic, recovery attempt, or blocked state.
+- Reopen `SB06` if any SQLite residue is introduced or validation depends on SQLite.

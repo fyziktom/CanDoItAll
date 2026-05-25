@@ -514,41 +514,32 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return byAssignedManager;
         }
 
-        var fallbackOptions = managerOptions
+        var explicitlyCapableOption = managerOptions
             .Where(option => option.TechnicalAgentId.HasValue)
-            .Where(option => ContainsManagerRecoveryToken(option.DisplayName) ||
-                             ContainsManagerRecoveryToken(option.BindingSummary))
+            .Where(option => ContainsExplicitArtifactRecoveryCapability(option.DisplayName) ||
+                             ContainsExplicitArtifactRecoveryCapability(option.BindingSummary))
             .ToList();
-        if (fallbackOptions.Count == 1)
+        if (explicitlyCapableOption.Count == 1)
         {
-            var option = fallbackOptions[0];
+            var option = explicitlyCapableOption[0];
             return new ManagerArtifactRecoveryAgent(
                 option.TechnicalAgentId!.Value,
                 ResolveManagerRecoveryDisplayName(option.DisplayName, option.TechnicalAgentId.Value),
-                "single-manager-like-option");
+                "single-explicit-recovery-option");
         }
 
-        var fallbackAgents = agents
-            .Select(agent => new
-            {
-                Agent = agent,
-                Score = ResolveManagerRecoveryScore(agent)
-            })
-            .Where(item => item.Score > 0)
-            .OrderByDescending(item => item.Score)
-            .ThenByDescending(item => item.Agent.UpdatedAtUtc)
+        var explicitlyCapableAgents = agents
+            .Where(agent =>
+                ContainsExplicitArtifactRecoveryCapability(agent.Name) ||
+                ContainsExplicitArtifactRecoveryCapability(agent.RoleTitle) ||
+                agent.Tags.Any(ContainsExplicitArtifactRecoveryCapability))
+            .OrderByDescending(agent => agent.UpdatedAtUtc)
             .ToList();
-        if (fallbackAgents.Count == 0)
-        {
-            return null;
-        }
-
-        var topScore = fallbackAgents[0].Score;
-        return fallbackAgents.Count(item => item.Score == topScore) == 1
+        return explicitlyCapableAgents.Count == 1
             ? new ManagerArtifactRecoveryAgent(
-                fallbackAgents[0].Agent.Id,
-                ResolveManagerRecoveryDisplayName(fallbackAgents[0].Agent.Name, fallbackAgents[0].Agent.Id),
-                "single-manager-like-agent")
+                explicitlyCapableAgents[0].Id,
+                ResolveManagerRecoveryDisplayName(explicitlyCapableAgents[0].Name, explicitlyCapableAgents[0].Id),
+                "single-explicit-recovery-agent")
             : null;
     }
 
@@ -673,6 +664,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return 0;
         }
 
+        if (ContainsExplicitArtifactRecoveryCapability(value))
+        {
+            return 120;
+        }
+
         if (value.Contains("process manager", StringComparison.OrdinalIgnoreCase))
         {
             return 100;
@@ -693,9 +689,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return 60;
         }
 
-        return value.Contains("lead", StringComparison.OrdinalIgnoreCase)
-            ? 50
-            : 0;
+        return 0;
     }
 
     private static bool ContainsManagerRecoveryToken(string value)
@@ -710,8 +704,20 @@ internal sealed partial class ProcessRunAutomationDispatchService
             StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         return tokens.Any(token =>
             string.Equals(token, "manager", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(token, "lead", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(token, "orchestrator", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool ContainsExplicitArtifactRecoveryCapability(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        return value.Contains("process-artifact-recovery-manager", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("artifact-recovery-manager", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("artifact recovery manager", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("process artifact recovery", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string ResolveManagerRecoveryDisplayName(string displayName, Guid technicalAgentId)

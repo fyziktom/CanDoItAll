@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready
+- Completed
 
 ## Objective
 
@@ -20,9 +20,10 @@ Run focused and broad validation for the hardened Processes runtime, keeping val
 ## Exact Source References
 
 - `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
-- `repo://tests/CanDoItAll.Tests.Unit/`
+- `repo://tests/CanDoItAll.Tests.Unit`
 - `repo://CanDoItAll.slnx`
-- PostgreSQL migration project/files currently present in the repo, if data model changes are made.
+- `repo://src/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj`
+- `repo://src/CanDoItAll.Migrations.PostgreSql/Migrations`
 
 ## Deliverables
 
@@ -34,11 +35,13 @@ Run focused and broad validation for the hardened Processes runtime, keeping val
 
 ## Dependency Impact
 
-Final closure. This subbundle does not introduce new architecture unless validation reveals a blocker that requires reopening an earlier subbundle.
+- Final closure subbundle.
+- This subbundle does not introduce new architecture unless validation reveals a blocker that requires reopening an earlier subbundle.
 
 ## Validation Depth
 
-Full closure proof. Prefer focused tests first, then build/full relevant test suite.
+- Full closure proof is required.
+- Prefer focused tests first, then build and the full relevant test suite.
 
 ## Implementation Steps
 
@@ -62,13 +65,22 @@ Full closure proof. Prefer focused tests first, then build/full relevant test su
 
 ## Acceptance Checklist
 
-- [ ] Focused process integration tests pass.
-- [ ] Workflow-backed role finalizer test passes.
-- [ ] Recovery red-team tests pass.
-- [ ] Retry-loop tests pass.
-- [ ] PostgreSQL validation is recorded if schema changed.
-- [ ] Full solution build passes or blocker is explicit.
-- [ ] No SQLite residue introduced.
+- [x] Focused process integration tests pass.
+- [x] Workflow-backed role finalizer test passes.
+- [x] Recovery red-team tests pass.
+- [x] Retry-loop blocking tests pass through missing-artifact validation.
+- [x] PostgreSQL validation is recorded as not required because no persistence/migration files changed.
+- [x] Full solution build passes.
+- [x] No SQLite residue introduced.
+
+## Closure Proof
+
+- Manifest: `bundle://proof/SB06/manifest.md`
+- Semantic invariants: `bundle://proof/SB06/semantic-invariants.md`
+- Focused integration transcript: `bundle://proof/SB06/transcripts/focused-integration-tests.txt`
+- Build transcript: `bundle://proof/SB06/transcripts/solution-build.txt`
+- PostgreSQL model audit: `bundle://proof/SB06/transcripts/postgresql-model-audit.txt`
+- SQLite residue audit: `bundle://proof/SB06/transcripts/sqlite-residue-audit.txt`
 
 ## Proof Required
 
@@ -82,11 +94,13 @@ Full closure proof. Prefer focused tests first, then build/full relevant test su
 
 ## Browser Validation Logging
 
-N/A unless new UI is added. If process run detail UI is changed to expose diagnostics, use Playwright and record browser analytics in `reviews/01-execution-report.md`.
+- N/A unless new UI is added.
+- If process run detail UI is changed to expose diagnostics, use Playwright and record browser analytics in `reviews/01-execution-report.md`.
 
 ## Progression Gate
 
-Final closure gate. Do not mark the bundle complete until raw notes N001-N007 are closed or explicitly marked partial with blockers.
+- Final closure gate.
+- Do not mark the bundle complete until raw notes `N001` through `N007` are closed or explicitly marked partial with blockers.
 
 ## Suggested Agent Prompt
 

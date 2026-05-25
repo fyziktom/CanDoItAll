@@ -1,0 +1,16 @@
+Command: git show HEAD:src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.CompletionArtifactRecovery.cs; reject generic lead recovery fallback token
+Invariant IDs: SB03-INV-001
+Test name: ResolveManagerArtifactRecoveryAgent_rejects_single_generic_lead_fallback_agent
+Test name: ResolveManagerArtifactRecoveryAgent_allows_single_explicit_artifact_recovery_manager
+Expected failing-first result: pre-change recovery selection accepted a generic lead token as manager-like fallback.
+Observed source assertion output:
+            TargetLeadHours = source.TargetLeadHours,
+            .Where(option => ContainsManagerRecoveryToken(option.DisplayName) ||
+                             ContainsManagerRecoveryToken(option.BindingSummary))
+                "single-manager-like-option");
+                "single-manager-like-agent")
+        score = Math.Max(score, agent.Tags.Any(ContainsManagerRecoveryToken) ? 20 : 0);
+        return value.Contains("lead", StringComparison.OrdinalIgnoreCase)
+    private static bool ContainsManagerRecoveryToken(string value)
+            string.Equals(token, "lead", StringComparison.OrdinalIgnoreCase) ||
+ExitCode: 1
