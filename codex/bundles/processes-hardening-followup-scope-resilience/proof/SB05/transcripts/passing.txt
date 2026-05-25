@@ -1,3 +1,9 @@
-# SB05 passing.txt
+﻿Command: dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-restore --filter "FullyQualifiedName~ProcessRunAutomationDispatchServiceTests|FullyQualifiedName~ProcessDefinitionLinterTests"
+ExitCode: 0
+Invariant ID: SB05-INV-001
+Result summary: 409 passed, 0 failed, 0 skipped for ProcessRunAutomationDispatchServiceTests and ProcessDefinitionLinterTests.
+Covered tests: ArtifactContractValidation_does_not_treat_decision_log_as_runtime_proof; ArtifactContractValidation_accepts_todo_register_as_legitimate_deliverable; ArtifactContractValidation_rejects_malformed_json_file_when_json_is_required; ArtifactContractValidation_rejects_workspace_artifact_from_wrong_execution_run; ArtifactContractValidation_accepts_subprocess_artifact_with_current_child_lineage
+Additional command: dotnet build CanDoItAll.slnx --no-restore
+Additional ExitCode: 0
+Build result: 0 errors; existing EF Core version conflict warnings remained.
 
-Fill during execution.

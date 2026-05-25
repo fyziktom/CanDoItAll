@@ -16,6 +16,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     {
         DirectAgent,
         WorkflowBackedRole,
+        SubprocessParent,
         ManagerArtifactRecovery
     }
 
@@ -52,6 +53,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProviderNativeBrowser,
         WorkflowRun,
         WorkflowArtifact,
+        SubprocessArtifact,
         ManagerRecovery,
         Manual
     }
@@ -79,6 +81,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         Guid? SelectedBranchOutcomeId,
         ExecutionRunDetail? ExecutionDetail,
         Guid? WorkflowRunId,
+        Guid? SubprocessRunId,
         string ResponseText,
         bool ProjectExecutionArtifacts,
         bool AllowManagerArtifactRecovery,
@@ -108,6 +111,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessStepCompletionExecutorKind ExecutorKind,
         Guid? ExecutionRunId,
         Guid? WorkflowRunId,
+        Guid? SubprocessRunId,
         DateTimeOffset CreatedAtUtc);
 
     private async Task<ProcessStepCompletionFinalizerResult?> FinalizeStepCompletionAsync(
@@ -203,9 +207,18 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
             if (completionStatus == ProcessStepRunStatus.Completed && unsatisfiedResults.Count > 0)
             {
-                completionStatus = ProcessStepRunStatus.Blocked;
-                completionReason = BuildArtifactContractBlockedReason(unsatisfiedResults);
-                selectedBranchOutcomeId = null;
+                var routedDisposition = ResolveArtifactContractDispositionBranchOutcome(candidate, unsatisfiedResults);
+                if (routedDisposition is not null)
+                {
+                    completionReason = BuildArtifactContractDispositionReason(routedDisposition, unsatisfiedResults);
+                    selectedBranchOutcomeId = routedDisposition.Id;
+                }
+                else
+                {
+                    completionStatus = ProcessStepRunStatus.Blocked;
+                    completionReason = BuildArtifactContractBlockedReason(unsatisfiedResults);
+                    selectedBranchOutcomeId = null;
+                }
             }
         }
         else
@@ -285,6 +298,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 context.ExecutionDetail?.Run.Id,
                 context.ExecutorKind == ProcessStepCompletionExecutorKind.WorkflowBackedRole
                     ? context.WorkflowRunId ?? ResolveWorkflowRunIdForStep(artifacts)
+                    : null,
+                context.ExecutorKind == ProcessStepCompletionExecutorKind.SubprocessParent
+                    ? context.SubprocessRunId ?? ResolveSubprocessRunIdForStep(artifacts)
                     : null))
             .ToList();
 
@@ -307,7 +323,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
         IReadOnlyList<ProcessArtifactRecord> artifacts,
         ProcessStepCompletionExecutorKind executorKind,
         Guid? executionRunId = null,
-        Guid? workflowRunId = null)
+        Guid? workflowRunId = null,
+        Guid? subprocessRunId = null)
     {
         ArgumentNullException.ThrowIfNull(expectation);
         ArgumentNullException.ThrowIfNull(artifacts);
@@ -334,7 +351,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 "Recover or block with the exact missing artifact.",
                 executorKind,
                 executionRunId,
-                workflowRunId);
+                workflowRunId,
+                subprocessRunId);
         }
 
         ProcessArtifactExpectationValidationResult? firstFailure = null;
@@ -348,7 +366,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 artifact,
                 executorKind,
                 executionRunId,
-                workflowRunId);
+                workflowRunId,
+                subprocessRunId);
             if (result.IsSatisfied)
             {
                 return result;
@@ -368,10 +387,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessArtifactRecord artifact,
         ProcessStepCompletionExecutorKind executorKind,
         Guid? executionRunId,
-        Guid? workflowRunId)
+        Guid? workflowRunId,
+        Guid? subprocessRunId)
     {
         var producerKind = ResolveArtifactProducerKind(artifact);
-        if (ContainsPlaceholderArtifactSignal(artifact))
+        if (ContainsPlaceholderArtifactSignal(artifact, mode))
         {
             return CreateArtifactValidationResult(
                 processRunId,
@@ -386,7 +406,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 "Produce a real current-run artifact or block with the evidence gap.",
                 executorKind,
                 executionRunId,
-                workflowRunId);
+                workflowRunId,
+                subprocessRunId);
         }
 
         if (!IsProducerAllowedForMode(mode, producerKind, expectation))
@@ -404,10 +425,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 "Recover from an allowed producer or block with an exact producer-mode diagnostic.",
                 executorKind,
                 executionRunId,
-                workflowRunId);
+                workflowRunId,
+                subprocessRunId);
         }
 
-        if (!IsCurrentRunArtifact(artifact, processRunId, stepRunId, executionRunId, workflowRunId))
+        if (!IsCurrentRunArtifact(artifact, producerKind, processRunId, stepRunId, executionRunId, workflowRunId, subprocessRunId))
         {
             return CreateArtifactValidationResult(
                 processRunId,
@@ -422,7 +444,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 "Recover using current-run evidence or block instead of carrying stale artifacts forward.",
                 executorKind,
                 executionRunId,
-                workflowRunId);
+                workflowRunId,
+                subprocessRunId);
         }
 
         if (RequiresManagedEvidencePath(mode, producerKind) && string.IsNullOrWhiteSpace(artifact.ManagedStoragePath))
@@ -440,7 +463,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 "Write or recover a durable managed artifact with current-run provenance.",
                 executorKind,
                 executionRunId,
-                workflowRunId);
+                workflowRunId,
+                subprocessRunId);
         }
 
         if (!MatchesDeclaredFormat(expectation, artifact, out var formatDiagnostic))
@@ -458,7 +482,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 "Regenerate the artifact in the declared format or block with the format mismatch.",
                 executorKind,
                 executionRunId,
-                workflowRunId);
+                workflowRunId,
+                subprocessRunId);
         }
 
         return CreateArtifactValidationResult(
@@ -474,7 +499,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
             "Complete",
             executorKind,
             executionRunId,
-            workflowRunId);
+            workflowRunId,
+            subprocessRunId);
     }
 
     private async Task PersistArtifactValidationDiagnosticsAsync(
@@ -523,6 +549,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 context.ExecutorKind,
                 context.ExecutionDetail?.Run.Id,
                 context.WorkflowRunId,
+                context.SubprocessRunId,
                 now);
 
             await dbContext.Set<ProcessJournalEntry>().AddAsync(
@@ -578,6 +605,66 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return $"Required artifact contract validation failed: {summary}. The process step is blocked instead of completing with missing, malformed, stale, placeholder, or weakly produced artifacts.";
     }
 
+    private static DispatchBranchOutcome? ResolveArtifactContractDispositionBranchOutcome(
+        DispatchCandidate candidate,
+        IReadOnlyList<ProcessArtifactExpectationValidationResult> unsatisfiedResults)
+    {
+        if (unsatisfiedResults.Count == 0 ||
+            candidate.BranchOutcomes.Count == 0 ||
+            ResolveMissingUpstreamArtifactInputs(candidate).Count > 0 ||
+            unsatisfiedResults.Any(IsHardBlockingArtifactValidationFailure))
+        {
+            return null;
+        }
+
+        return ResolveNegativeDispositionBranchOutcome(candidate);
+    }
+
+    private static bool IsHardBlockingArtifactValidationFailure(ProcessArtifactExpectationValidationResult result)
+    {
+        return result.Status == ProcessArtifactValidationStatus.Missing &&
+               result.Diagnostic.Contains("upstream", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static DispatchBranchOutcome? ResolveNegativeDispositionBranchOutcome(DispatchCandidate candidate)
+    {
+        if (TryResolveRepairBranchOutcome(candidate, out var repairBranchOutcome))
+        {
+            return repairBranchOutcome;
+        }
+
+        return candidate.BranchOutcomes.FirstOrDefault(IsNegativeDispositionBranchOutcomeCandidate);
+    }
+
+    private static bool IsNegativeDispositionBranchOutcomeCandidate(DispatchBranchOutcome outcome)
+    {
+        var token = NormalizeBranchOutcomeToken($"{outcome.Key} {outcome.Title} {outcome.Description}");
+        if (string.IsNullOrWhiteSpace(token) || IsAcceptingBranchOutcomeToken(token))
+        {
+            return false;
+        }
+
+        return token.Contains("nogo", StringComparison.Ordinal) ||
+               token.Contains("escalat", StringComparison.Ordinal) ||
+               token.Contains("reject", StringComparison.Ordinal) ||
+               token.Contains("decline", StringComparison.Ordinal) ||
+               token.Contains("fail", StringComparison.Ordinal) ||
+               token.Contains("blocked", StringComparison.Ordinal) ||
+               token.Contains("risk", StringComparison.Ordinal);
+    }
+
+    private static string BuildArtifactContractDispositionReason(
+        DispatchBranchOutcome routedDisposition,
+        IReadOnlyList<ProcessArtifactExpectationValidationResult> unsatisfiedResults)
+    {
+        var summary = string.Join(
+            "; ",
+            unsatisfiedResults
+                .Take(5)
+                .Select(result => $"{result.ExpectationTitle}: {result.Status} ({result.Diagnostic})"));
+        return $"Required artifact contract validation produced governed disposition '{routedDisposition.Title}' instead of hard blocking: {summary}.";
+    }
+
     private static ProcessArtifactExpectationMode ResolveArtifactExpectationMode(DispatchArtifactExpectation expectation)
     {
         var contractText = CollapsePromptWhitespace(string.Join(
@@ -592,7 +679,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             contractText.Contains("build output", StringComparison.Ordinal) ||
             contractText.Contains("command output", StringComparison.Ordinal) ||
             contractText.Contains("screenshot", StringComparison.Ordinal) ||
-            contractText.Contains("log", StringComparison.Ordinal))
+            ContainsRuntimeLogSignal(contractText))
         {
             return ProcessArtifactExpectationMode.RuntimeProof;
         }
@@ -604,6 +691,17 @@ internal sealed partial class ProcessRunAutomationDispatchService
             ProcessArtifactKind.Evidence or ProcessArtifactKind.Transcript or ProcessArtifactKind.Dataset => ProcessArtifactExpectationMode.Evidence,
             _ => ProcessArtifactExpectationMode.Narrative
         };
+    }
+
+    private static bool ContainsRuntimeLogSignal(string contractText)
+    {
+        return contractText.Contains("test log", StringComparison.Ordinal) ||
+               contractText.Contains("build log", StringComparison.Ordinal) ||
+               contractText.Contains("command log", StringComparison.Ordinal) ||
+               contractText.Contains("runtime log", StringComparison.Ordinal) ||
+               contractText.Contains("execution log", StringComparison.Ordinal) ||
+               contractText.Contains("browser console log", StringComparison.Ordinal) ||
+               contractText.Contains("console log", StringComparison.Ordinal);
     }
 
     private static bool IsArtifactCandidateForExpectation(
@@ -701,6 +799,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return ProcessArtifactProducerKind.WorkflowRun;
         }
 
+        if (key.StartsWith("subprocess-run:", StringComparison.OrdinalIgnoreCase) &&
+            key.Contains(":artifact:", StringComparison.OrdinalIgnoreCase))
+        {
+            return ProcessArtifactProducerKind.SubprocessArtifact;
+        }
+
         if (artifact.ProvenanceSummary.Contains("manager", StringComparison.OrdinalIgnoreCase) ||
             artifact.ProvenanceSummary.Contains("recovery", StringComparison.OrdinalIgnoreCase))
         {
@@ -727,6 +831,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 ProcessArtifactProducerKind.WorkspaceWrite or
                 ProcessArtifactProducerKind.ExistingManagedFile or
                 ProcessArtifactProducerKind.WorkflowArtifact or
+                ProcessArtifactProducerKind.SubprocessArtifact or
                 ProcessArtifactProducerKind.ManagerRecovery or
                 ProcessArtifactProducerKind.Manual,
             ProcessArtifactExpectationMode.RuntimeProof => producerKind is
@@ -734,6 +839,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 ProcessArtifactProducerKind.WorkspaceWrite or
                 ProcessArtifactProducerKind.ProviderNativeBrowser or
                 ProcessArtifactProducerKind.WorkflowArtifact or
+                ProcessArtifactProducerKind.SubprocessArtifact or
                 ProcessArtifactProducerKind.ManagerRecovery or
                 ProcessArtifactProducerKind.Manual,
             ProcessArtifactExpectationMode.RecoveryDiagnostic => false,
@@ -757,10 +863,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool IsCurrentRunArtifact(
         ProcessArtifactRecord artifact,
+        ProcessArtifactProducerKind producerKind,
         Guid processRunId,
         Guid stepRunId,
         Guid? executionRunId,
-        Guid? workflowRunId)
+        Guid? workflowRunId,
+        Guid? subprocessRunId)
     {
         if (artifact.ProcessRunId != processRunId || artifact.StepRunId != stepRunId)
         {
@@ -768,22 +876,36 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         var key = artifact.ExternalReferenceKey;
-        if (executionRunId.HasValue &&
-            (key.Contains(executionRunId.Value.ToString("D"), StringComparison.OrdinalIgnoreCase) ||
-             artifact.ProvenanceSummary.Contains(executionRunId.Value.ToString("D"), StringComparison.OrdinalIgnoreCase)))
+        var provenance = artifact.ProvenanceSummary;
+        return producerKind switch
         {
-            return true;
-        }
+            ProcessArtifactProducerKind.AgentExecutionArtifact or
+            ProcessArtifactProducerKind.WorkspaceWrite or
+            ProcessArtifactProducerKind.ExistingManagedFile or
+            ProcessArtifactProducerKind.AssistantResponse or
+            ProcessArtifactProducerKind.ProviderNativeBrowser => executionRunId.HasValue &&
+                ContainsGuidToken(key, executionRunId.Value) ||
+                executionRunId.HasValue &&
+                ContainsGuidToken(provenance, executionRunId.Value),
+            ProcessArtifactProducerKind.WorkflowRun or
+            ProcessArtifactProducerKind.WorkflowArtifact => workflowRunId.HasValue &&
+                ContainsGuidToken(key, workflowRunId.Value),
+            ProcessArtifactProducerKind.SubprocessArtifact => subprocessRunId.HasValue &&
+                ContainsGuidToken(key, subprocessRunId.Value),
+            ProcessArtifactProducerKind.ManagerRecovery => !executionRunId.HasValue ||
+                ContainsGuidToken(key, executionRunId.Value) ||
+                ContainsGuidToken(provenance, executionRunId.Value),
+            ProcessArtifactProducerKind.CompletedDecision or
+            ProcessArtifactProducerKind.ProcessMock or
+            ProcessArtifactProducerKind.Manual => true,
+            _ => string.IsNullOrWhiteSpace(key)
+        };
+    }
 
-        if (workflowRunId.HasValue &&
-            key.Contains(workflowRunId.Value.ToString("D"), StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
-        return !key.StartsWith("existing-managed-artifact|", StringComparison.OrdinalIgnoreCase) ||
-               !executionRunId.HasValue ||
-               key.Contains(executionRunId.Value.ToString("D"), StringComparison.OrdinalIgnoreCase);
+    private static bool ContainsGuidToken(string? text, Guid value)
+    {
+        return !string.IsNullOrWhiteSpace(text) &&
+               text.Contains(value.ToString("D"), StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool MatchesDeclaredFormat(
@@ -794,9 +916,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
         diagnostic = string.Empty;
         var contractText = CollapsePromptWhitespace(string.Join(' ', expectation.Title, expectation.ValidationRequirementSummary)).ToLowerInvariant();
         var extension = Path.GetExtension(artifact.ManagedStoragePath);
-        if (contractText.Contains("json", StringComparison.Ordinal) && !string.Equals(extension, ".json", StringComparison.OrdinalIgnoreCase))
+        var requiresJson = contractText.Contains("json", StringComparison.Ordinal);
+        if (requiresJson && !string.Equals(extension, ".json", StringComparison.OrdinalIgnoreCase))
         {
             diagnostic = "The artifact contract declares JSON, but the managed artifact path is not a .json file.";
+            return false;
+        }
+
+        if (requiresJson && !HasValidJsonArtifactContent(artifact, out diagnostic))
+        {
             return false;
         }
 
@@ -817,7 +945,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return true;
     }
 
-    private static bool ContainsPlaceholderArtifactSignal(ProcessArtifactRecord artifact)
+    private static bool ContainsPlaceholderArtifactSignal(
+        ProcessArtifactRecord artifact,
+        ProcessArtifactExpectationMode mode)
     {
         var text = CollapsePromptWhitespace(string.Join(
             ' ',
@@ -826,11 +956,103 @@ internal sealed partial class ProcessRunAutomationDispatchService
             artifact.ProvenanceSummary,
             artifact.ManagedStoragePath,
             artifact.ExternalReferenceKey)).ToLowerInvariant();
+        if (IsLegitimateUnavailableOrPlanningArtifact(text, mode))
+        {
+            return false;
+        }
+
         return text.Contains("placeholder", StringComparison.Ordinal) ||
                text.Contains("gap marker", StringComparison.Ordinal) ||
-               text.Contains("missing artifact", StringComparison.Ordinal) ||
-               text.Contains("not available", StringComparison.Ordinal) ||
-               text.Contains("todo", StringComparison.Ordinal);
+               text.Contains("missing artifact diagnostic", StringComparison.Ordinal) ||
+               text.Contains("artifact is not available", StringComparison.Ordinal) ||
+               text.Contains("no artifact available", StringComparison.Ordinal);
+    }
+
+    private static bool IsLegitimateUnavailableOrPlanningArtifact(
+        string text,
+        ProcessArtifactExpectationMode mode)
+    {
+        if (mode is not (ProcessArtifactExpectationMode.Narrative or ProcessArtifactExpectationMode.Decision or ProcessArtifactExpectationMode.Deliverable))
+        {
+            return false;
+        }
+
+        return text.Contains("todo register", StringComparison.Ordinal) ||
+               text.Contains("todo list", StringComparison.Ordinal) ||
+               text.Contains("unavailable findings", StringComparison.Ordinal) ||
+               text.Contains("not available finding", StringComparison.Ordinal) ||
+               text.Contains("missing artifact analysis", StringComparison.Ordinal) ||
+               text.Contains("missing-artifact analysis", StringComparison.Ordinal);
+    }
+
+    private static bool HasValidJsonArtifactContent(
+        ProcessArtifactRecord artifact,
+        out string diagnostic)
+    {
+        diagnostic = string.Empty;
+        if (Path.IsPathRooted(artifact.ManagedStoragePath) && File.Exists(artifact.ManagedStoragePath))
+        {
+            try
+            {
+                using var stream = File.OpenRead(artifact.ManagedStoragePath);
+                using var _ = JsonDocument.Parse(stream);
+                return true;
+            }
+            catch (JsonException exception)
+            {
+                diagnostic = $"The artifact contract declares JSON, but the managed artifact content is malformed JSON: {exception.Message}";
+                return false;
+            }
+            catch (IOException exception)
+            {
+                diagnostic = $"The artifact contract declares JSON, but the managed artifact content could not be read: {exception.Message}";
+                return false;
+            }
+        }
+
+        if (TryResolveInlineJsonArtifactContent(artifact, out var jsonContent))
+        {
+            try
+            {
+                using var _ = JsonDocument.Parse(jsonContent);
+                return true;
+            }
+            catch (JsonException exception)
+            {
+                diagnostic = $"The artifact contract declares JSON, but the recorded JSON content is malformed: {exception.Message}";
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool TryResolveInlineJsonArtifactContent(
+        ProcessArtifactRecord artifact,
+        out string jsonContent)
+    {
+        jsonContent = string.Empty;
+        foreach (var text in new[] { artifact.ReviewSummary, artifact.ProvenanceSummary })
+        {
+            var trimmed = text.Trim();
+            if (trimmed.StartsWith('{') || trimmed.StartsWith('['))
+            {
+                jsonContent = trimmed;
+                return true;
+            }
+
+            const string jsonContentPrefix = "json content:";
+            var prefixIndex = trimmed.IndexOf(jsonContentPrefix, StringComparison.OrdinalIgnoreCase);
+            if (prefixIndex < 0)
+            {
+                continue;
+            }
+
+            jsonContent = trimmed[(prefixIndex + jsonContentPrefix.Length)..].Trim();
+            return !string.IsNullOrWhiteSpace(jsonContent);
+        }
+
+        return false;
     }
 
     private static Guid? ResolveWorkflowRunIdForStep(IReadOnlyList<ProcessArtifactRecord> artifacts)
@@ -859,6 +1081,32 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return null;
     }
 
+    private static Guid? ResolveSubprocessRunIdForStep(IReadOnlyList<ProcessArtifactRecord> artifacts)
+    {
+        foreach (var artifact in artifacts)
+        {
+            var key = artifact.ExternalReferenceKey;
+            if (!key.StartsWith("subprocess-run:", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var start = "subprocess-run:".Length;
+            var length = Math.Min(36, key.Length - start);
+            if (length <= 0)
+            {
+                continue;
+            }
+
+            if (Guid.TryParse(key.Substring(start, length), out var subprocessRunId))
+            {
+                return subprocessRunId;
+            }
+        }
+
+        return null;
+    }
+
     private static ProcessArtifactExpectationValidationResult CreateArtifactValidationResult(
         Guid processRunId,
         Guid stepRunId,
@@ -872,7 +1120,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
         string suggestedAction,
         ProcessStepCompletionExecutorKind executorKind,
         Guid? executionRunId,
-        Guid? workflowRunId)
+        Guid? workflowRunId,
+        Guid? subprocessRunId)
     {
         var fingerprint = CreateArtifactFailureFingerprint(
             processRunId,
@@ -884,7 +1133,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
             expectation.ValidationRequirementSummary,
             executorKind,
             executionRunId,
-            workflowRunId);
+            workflowRunId,
+            subprocessRunId);
         return new ProcessArtifactExpectationValidationResult(
             expectation.Id,
             expectation.Title,
@@ -908,7 +1158,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
         string validationRequirementSummary,
         ProcessStepCompletionExecutorKind executorKind,
         Guid? executionRunId,
-        Guid? workflowRunId)
+        Guid? workflowRunId,
+        Guid? subprocessRunId)
     {
         var normalized = string.Join(
             "|",
@@ -921,7 +1172,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
             CollapsePromptWhitespace(validationRequirementSummary).ToLowerInvariant(),
             executorKind,
             executionRunId?.ToString("D") ?? string.Empty,
-            workflowRunId?.ToString("D") ?? string.Empty);
+            workflowRunId?.ToString("D") ?? string.Empty,
+            subprocessRunId?.ToString("D") ?? string.Empty);
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized))).ToLowerInvariant();
     }
 }

@@ -1,8 +1,8 @@
-# Artifact Validation Tuning And Lineage
+﻿# Artifact Validation Tuning And Lineage
 
 ## Status
 
-Ready.
+- Completed
 
 ## Objective
 
@@ -15,7 +15,7 @@ Make artifact validation generic, less heuristic, and stronger on current-run li
 
 ## Prerequisites
 
-Complete prerequisite subbundles according to `bundle://plan/01-phase-plan.md`.
+- Complete prerequisite subbundles according to `bundle://plan/01-phase-plan.md`.
 
 ## Exact Source References
 
@@ -35,7 +35,7 @@ Complete prerequisite subbundles according to `bundle://plan/01-phase-plan.md`.
 
 ## Dependency Impact
 
-Critical. Prevents false blocks and stale artifact acceptance.
+- Critical. Prevents false blocks and stale artifact acceptance.
 
 ## Validation Depth
 
@@ -74,12 +74,12 @@ None. Keep scope generic and PostgreSQL-only.
 
 ## Acceptance Checklist
 
-- [ ] Add explicit contract/mode fields or a normalized contract object; keep text summary as fallback.
-- [ ] Refine mode detection: do not treat every `log` as runtime proof.
-- [ ] Refine placeholder detection: do not reject legitimate TODO registers, legal unavailable findings, or missing-artifact analysis deliverables.
-- [ ] Validate JSON content when JSON is required, not only extension.
-- [ ] Enforce execution/workflow/recovery lineage for all producer kinds, not only existing-managed files.
-- [ ] Add non-software generic tests.
+- [x] Add explicit contract/mode fields or a normalized contract object; keep text summary as fallback.
+- [x] Refine mode detection: do not treat every `log` as runtime proof.
+- [x] Refine placeholder detection: do not reject legitimate TODO registers, legal unavailable findings, or missing-artifact analysis deliverables.
+- [x] Validate JSON content when JSON is required, not only extension.
+- [x] Enforce execution/workflow/recovery lineage for all producer kinds, not only existing-managed files.
+- [x] Add non-software generic tests.
 
 ## Proof Required
 
@@ -93,12 +93,16 @@ None. Keep scope generic and PostgreSQL-only.
 
 ## Browser Validation Logging
 
-N/A unless this subbundle changes browser-visible process flows or SB08 runs browser proof scenarios. If browser proof is used, record route, viewport, actions, screenshots, console, and result in `reviews/01-execution-report.md`.
+- N/A unless this subbundle changes browser-visible process flows or SB08 runs browser proof scenarios. If browser proof is used, record route, viewport, actions, screenshots, console, and result in `reviews/01-execution-report.md`.
 
 ## Progression Gate
 
-Do not start downstream dependent subbundles until this subbundle's proof manifest is complete and the targeted tests pass.
+- Do not start downstream dependent subbundles until this subbundle's proof manifest is complete and the targeted tests pass.
 
 ## Suggested Agent Prompt
 
 Implement `Artifact Validation Tuning And Lineage` from `codex/bundles/processes-hardening-followup-scope-resilience`. Preserve generic process semantics, keep workflows subordinate to processes, and update proof files before marking the subbundle complete.
+
+
+
+

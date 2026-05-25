@@ -1,3 +1,9 @@
-# SB04 passing.txt
+﻿Command: dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-restore --filter "FullyQualifiedName~ProcessRunAutomationDispatchServiceTests|FullyQualifiedName~ProcessDefinitionLinterTests"
+ExitCode: 0
+Invariant ID: SB04-INV-001
+Result summary: 409 passed, 0 failed, 0 skipped for ProcessRunAutomationDispatchServiceTests and ProcessDefinitionLinterTests.
+Covered tests: ProcessRunAutomationDispatchServiceTests focused suite source assertions plus build
+Additional command: dotnet build CanDoItAll.slnx --no-restore
+Additional ExitCode: 0
+Build result: 0 errors; existing EF Core version conflict warnings remained.
 
-Fill during execution.

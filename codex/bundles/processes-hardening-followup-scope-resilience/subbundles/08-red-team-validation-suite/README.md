@@ -1,8 +1,8 @@
-# Red-Team Validation Suite
+﻿# Red-Team Validation Suite
 
 ## Status
 
-Ready.
+- Completed
 
 ## Objective
 
@@ -15,7 +15,7 @@ Prove the hardening with realistic process scenarios and final closure gates.
 
 ## Prerequisites
 
-Complete prerequisite subbundles according to `bundle://plan/01-phase-plan.md`.
+- Complete prerequisite subbundles according to `bundle://plan/01-phase-plan.md`.
 
 ## Exact Source References
 
@@ -35,7 +35,7 @@ Complete prerequisite subbundles according to `bundle://plan/01-phase-plan.md`.
 
 ## Dependency Impact
 
-Final closure. Cannot pass if any critical subbundle lacks artifact-backed proof.
+- Final closure. Cannot pass if any critical subbundle lacks artifact-backed proof.
 
 ## Validation Depth
 
@@ -73,11 +73,11 @@ None. Keep scope generic and PostgreSQL-only.
 
 ## Acceptance Checklist
 
-- [ ] Run targeted integration tests for SB01-SB07.
-- [ ] Add scenario tests: Blazor architecture cannot implement, implementation can mutate only in implementation step, QA repair branch, workflow-backed artifact contract, subprocess missing child artifact, upstream artifact unblock.
-- [ ] Add non-software scenarios: finance approval, legal decision log, HR screen, operations incident review.
-- [ ] Run solution build and relevant test projects.
-- [ ] Record changed-file hashes and proof manifests.
+- [x] Run targeted integration tests for SB01-SB07.
+- [x] Add scenario tests: Blazor architecture cannot implement, implementation can mutate only in implementation step, QA repair branch, workflow-backed artifact contract, subprocess missing child artifact, upstream artifact unblock.
+- [x] Add non-software scenarios: finance approval, legal decision log, HR screen, operations incident review.
+- [x] Run solution build and relevant test projects.
+- [x] Record changed-file hashes and proof manifests.
 
 ## Proof Required
 
@@ -91,12 +91,16 @@ None. Keep scope generic and PostgreSQL-only.
 
 ## Browser Validation Logging
 
-N/A unless this subbundle changes browser-visible process flows or SB08 runs browser proof scenarios. If browser proof is used, record route, viewport, actions, screenshots, console, and result in `reviews/01-execution-report.md`.
+- N/A unless this subbundle changes browser-visible process flows or SB08 runs browser proof scenarios. If browser proof is used, record route, viewport, actions, screenshots, console, and result in `reviews/01-execution-report.md`.
 
 ## Progression Gate
 
-Do not start downstream dependent subbundles until this subbundle's proof manifest is complete and the targeted tests pass.
+- Do not start downstream dependent subbundles until this subbundle's proof manifest is complete and the targeted tests pass.
 
 ## Suggested Agent Prompt
 
 Implement `Red-Team Validation Suite` from `codex/bundles/processes-hardening-followup-scope-resilience`. Preserve generic process semantics, keep workflows subordinate to processes, and update proof files before marking the subbundle complete.
+
+
+
+

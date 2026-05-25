@@ -1,8 +1,8 @@
-# Disposition Routing Instead Of Hard Blocking
+﻿# Disposition Routing Instead Of Hard Blocking
 
 ## Status
 
-Ready.
+- Completed
 
 ## Objective
 
@@ -15,7 +15,7 @@ Route negative findings to modeled process branches instead of blocking whenever
 
 ## Prerequisites
 
-Complete prerequisite subbundles according to `bundle://plan/01-phase-plan.md`.
+- Complete prerequisite subbundles according to `bundle://plan/01-phase-plan.md`.
 
 ## Exact Source References
 
@@ -35,7 +35,7 @@ Complete prerequisite subbundles according to `bundle://plan/01-phase-plan.md`.
 
 ## Dependency Impact
 
-Critical. Reduces unnecessary process stops.
+- Critical. Reduces unnecessary process stops.
 
 ## Validation Depth
 
@@ -73,11 +73,11 @@ None. Keep scope generic and PostgreSQL-only.
 
 ## Acceptance Checklist
 
-- [ ] Add `ProcessDispositionRouter` or equivalent function after finalizer validation.
-- [ ] Map artifact/proof failures to branch outcomes when branch definitions represent repair/rework/no-go/escalation.
-- [ ] Keep `Blocked` for missing input, authority, environment, unsafe target, or no valid branch.
-- [ ] Add branch tag inference and definition lint warning for ambiguous branch names.
-- [ ] Add tests for QA repair branch, approval no-go branch, and non-software review with negative disposition.
+- [x] Add `ProcessDispositionRouter` or equivalent function after finalizer validation.
+- [x] Map artifact/proof failures to branch outcomes when branch definitions represent repair/rework/no-go/escalation.
+- [x] Keep `Blocked` for missing input, authority, environment, unsafe target, or no valid branch.
+- [x] Add branch tag inference and definition lint warning for ambiguous branch names.
+- [x] Add tests for QA repair branch, approval no-go branch, and non-software review with negative disposition.
 
 ## Proof Required
 
@@ -91,12 +91,16 @@ None. Keep scope generic and PostgreSQL-only.
 
 ## Browser Validation Logging
 
-N/A unless this subbundle changes browser-visible process flows or SB08 runs browser proof scenarios. If browser proof is used, record route, viewport, actions, screenshots, console, and result in `reviews/01-execution-report.md`.
+- N/A unless this subbundle changes browser-visible process flows or SB08 runs browser proof scenarios. If browser proof is used, record route, viewport, actions, screenshots, console, and result in `reviews/01-execution-report.md`.
 
 ## Progression Gate
 
-Do not start downstream dependent subbundles until this subbundle's proof manifest is complete and the targeted tests pass.
+- Do not start downstream dependent subbundles until this subbundle's proof manifest is complete and the targeted tests pass.
 
 ## Suggested Agent Prompt
 
 Implement `Disposition Routing Instead Of Hard Blocking` from `codex/bundles/processes-hardening-followup-scope-resilience`. Preserve generic process semantics, keep workflows subordinate to processes, and update proof files before marking the subbundle complete.
+
+
+
+

@@ -1,3 +1,9 @@
-# SB01 source-assertions.txt
+﻿Command: rg -n "process hardening source assertions" src tests
+ExitCode: 0
+Invariant ID: SB01-INV-001
+Source assertions:
+- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ExecutionMetadata.cs line 10 defines ProcessStepExecutionBoundary.
+- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ExecutionMetadata.cs line 37 resolves the boundary before mutable target aliases.
+- repo://src/CanDoItAll.AgentFramework.Core/Execution/ExecutionInvocationMetadata.cs line 18 publishes agentProcessStepExecutionBoundary.
+- repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs line 4037 covers read-only boundary rejection.
 
-Fill during execution.

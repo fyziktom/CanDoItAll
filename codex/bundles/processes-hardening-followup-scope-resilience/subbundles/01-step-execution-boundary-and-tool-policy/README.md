@@ -1,8 +1,8 @@
-# Step Execution Boundary And Tool Policy
+﻿# Step Execution Boundary And Tool Policy
 
 ## Status
 
-Ready.
+- Completed
 
 ## Objective
 
@@ -15,7 +15,7 @@ Prevent architecture/planning/review steps from doing downstream implementation 
 
 ## Prerequisites
 
-None.
+- None.
 
 ## Exact Source References
 
@@ -35,7 +35,7 @@ None.
 
 ## Dependency Impact
 
-Critical foundation. Downstream subbundles depend on trustworthy operation boundaries.
+- Critical foundation. Downstream subbundles depend on trustworthy operation boundaries.
 
 ## Validation Depth
 
@@ -74,12 +74,12 @@ None. Keep scope generic and PostgreSQL-only.
 
 ## Acceptance Checklist
 
-- [ ] Introduce `ProcessStepExecutionBoundary` or equivalent runtime object.
-- [ ] Compute boundary from explicit step definition data where available and conservative inference fallback.
-- [ ] Pass boundary through `BuildProcessInvocationMetadataJson` / `ExecutionInvocationMetadata`.
-- [ ] Update workspace/tool policy bridge so denied operations are rejected before mutation.
-- [ ] Architecture/design/scope steps may write managed artifacts but may not mutate product/external-target roots unless explicitly allowed.
-- [ ] Add red-team test: Blazor architecture step attempts product mutation; tool policy rejects it and architecture artifact can still be written.
+- [x] Introduce `ProcessStepExecutionBoundary` or equivalent runtime object.
+- [x] Compute boundary from explicit step definition data where available and conservative inference fallback.
+- [x] Pass boundary through `BuildProcessInvocationMetadataJson` / `ExecutionInvocationMetadata`.
+- [x] Update workspace/tool policy bridge so denied operations are rejected before mutation.
+- [x] Architecture/design/scope steps may write managed artifacts but may not mutate product/external-target roots unless explicitly allowed.
+- [x] Add red-team test: Blazor architecture step attempts product mutation; tool policy rejects it and architecture artifact can still be written.
 
 ## Proof Required
 
@@ -93,12 +93,16 @@ None. Keep scope generic and PostgreSQL-only.
 
 ## Browser Validation Logging
 
-N/A unless this subbundle changes browser-visible process flows or SB08 runs browser proof scenarios. If browser proof is used, record route, viewport, actions, screenshots, console, and result in `reviews/01-execution-report.md`.
+- N/A unless this subbundle changes browser-visible process flows or SB08 runs browser proof scenarios. If browser proof is used, record route, viewport, actions, screenshots, console, and result in `reviews/01-execution-report.md`.
 
 ## Progression Gate
 
-Do not start downstream dependent subbundles until this subbundle's proof manifest is complete and the targeted tests pass.
+- Do not start downstream dependent subbundles until this subbundle's proof manifest is complete and the targeted tests pass.
 
 ## Suggested Agent Prompt
 
 Implement `Step Execution Boundary And Tool Policy` from `codex/bundles/processes-hardening-followup-scope-resilience`. Preserve generic process semantics, keep workflows subordinate to processes, and update proof files before marking the subbundle complete.
+
+
+
+

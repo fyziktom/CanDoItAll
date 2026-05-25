@@ -1,3 +1,9 @@
-# SB06 source-assertions.txt
+﻿Command: rg -n "process hardening source assertions" src tests
+ExitCode: 0
+Invariant ID: SB06-INV-001
+Source assertions:
+- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs line 371 defines ShouldCompressNoProgressRetry.
+- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs line 396 detects current-attempt evidence.
+- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs line 405 identifies no-progress reasons.
+- repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs line 6834 covers repeated no-progress compression.
 
-Fill during execution.

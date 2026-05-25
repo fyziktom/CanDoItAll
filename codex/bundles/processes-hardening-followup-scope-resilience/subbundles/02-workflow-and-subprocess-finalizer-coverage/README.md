@@ -1,8 +1,8 @@
-# Workflow And Subprocess Finalizer Coverage
+﻿# Workflow And Subprocess Finalizer Coverage
 
 ## Status
 
-Ready.
+- Completed
 
 ## Objective
 
@@ -15,7 +15,7 @@ Make workflow-backed roles and subprocess parent steps obey the same process art
 
 ## Prerequisites
 
-Complete prerequisite subbundles according to `bundle://plan/01-phase-plan.md`.
+- Complete prerequisite subbundles according to `bundle://plan/01-phase-plan.md`.
 
 ## Exact Source References
 
@@ -35,7 +35,7 @@ Complete prerequisite subbundles according to `bundle://plan/01-phase-plan.md`.
 
 ## Dependency Impact
 
-Critical foundation. Artifact reliability is false if workflow/subprocess paths are weaker.
+- Critical foundation. Artifact reliability is false if workflow/subprocess paths are weaker.
 
 ## Validation Depth
 
@@ -73,11 +73,11 @@ None. Keep scope generic and PostgreSQL-only.
 
 ## Acceptance Checklist
 
-- [ ] Workflow-backed `DispatchCandidate` must load expected artifacts, artifact inputs, branch outcomes, recorded ids, and cooperation metadata.
-- [ ] Add workflow output-to-process artifact projection/linking if missing.
-- [ ] Subprocess parent completion must call `FinalizeStepCompletionAsync` before transition.
-- [ ] Subprocess source-less projections must become diagnostics/gap records, not satisfying artifact records.
-- [ ] Add tests proving workflow and subprocess required artifacts cannot be bypassed.
+- [x] Workflow-backed `DispatchCandidate` must load expected artifacts, artifact inputs, branch outcomes, recorded ids, and cooperation metadata.
+- [x] Add workflow output-to-process artifact projection/linking if missing.
+- [x] Subprocess parent completion must call `FinalizeStepCompletionAsync` before transition.
+- [x] Subprocess source-less projections must become diagnostics/gap records, not satisfying artifact records.
+- [x] Add tests proving workflow and subprocess required artifacts cannot be bypassed.
 
 ## Proof Required
 
@@ -91,12 +91,16 @@ None. Keep scope generic and PostgreSQL-only.
 
 ## Browser Validation Logging
 
-N/A unless this subbundle changes browser-visible process flows or SB08 runs browser proof scenarios. If browser proof is used, record route, viewport, actions, screenshots, console, and result in `reviews/01-execution-report.md`.
+- N/A unless this subbundle changes browser-visible process flows or SB08 runs browser proof scenarios. If browser proof is used, record route, viewport, actions, screenshots, console, and result in `reviews/01-execution-report.md`.
 
 ## Progression Gate
 
-Do not start downstream dependent subbundles until this subbundle's proof manifest is complete and the targeted tests pass.
+- Do not start downstream dependent subbundles until this subbundle's proof manifest is complete and the targeted tests pass.
 
 ## Suggested Agent Prompt
 
 Implement `Workflow And Subprocess Finalizer Coverage` from `codex/bundles/processes-hardening-followup-scope-resilience`. Preserve generic process semantics, keep workflows subordinate to processes, and update proof files before marking the subbundle complete.
+
+
+
+

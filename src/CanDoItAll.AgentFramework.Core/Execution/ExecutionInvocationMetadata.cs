@@ -15,6 +15,7 @@ public static class ExecutionInvocationMetadata
     public const string ProcessCooperationSummaryMetadataKey = "agentProcessCooperationSummary";
     public const string ProcessBrowserToolsAllowedMetadataKey = "agentProcessBrowserToolsAllowed";
     public const string ProcessScaffoldToolOnlyMetadataKey = "agentProcessScaffoldToolOnly";
+    public const string ProcessStepExecutionBoundaryMetadataKey = "agentProcessStepExecutionBoundary";
     public const string ContextWorkspaceScopeMetadataKey = "agentContextWorkspaceScope";
     public const int DefaultGovernedRepairAttempts = 1;
     public const int MaxRepairAttempts = 2;

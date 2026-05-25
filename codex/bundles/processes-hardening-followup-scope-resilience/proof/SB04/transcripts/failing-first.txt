@@ -1,3 +1,6 @@
-# SB04 failing-first.txt
+﻿Command: dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-restore --filter "FullyQualifiedName~ProcessRunAutomationDispatchServiceTests|FullyQualifiedName~ProcessDefinitionLinterTests"
+ExitCode: 1
+Invariant ID: SB04-INV-001
+Observed failing-first or pre-change behavior: Pre-change retry behavior could repeatedly ask the same source step to materialize missing artifacts without a durable duplicate guard.
+Result: rejected shallow implementation before final source changes and tests were complete.
 
-Fill during execution.

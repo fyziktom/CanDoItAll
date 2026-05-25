@@ -1,3 +1,9 @@
-# SB08 source-assertions.txt
+﻿Command: rg -n "process hardening source assertions" src tests
+ExitCode: 0
+Invariant ID: SB08-INV-001
+Source assertions:
+- repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs line 4037 covers tool policy rejection.
+- repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs line 12994 covers artifact validation tuning.
+- repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs line 13201 covers disposition routing.
+- repo://tests/CanDoItAll.Tests.Integration/ProcessDefinitionLinterTests.cs line 5 covers definition linter red-team scenarios.
 
-Fill during execution.

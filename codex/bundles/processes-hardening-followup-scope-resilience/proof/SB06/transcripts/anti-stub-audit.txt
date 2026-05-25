@@ -1,3 +1,6 @@
-# SB06 anti-stub-audit.txt
+﻿Command: rg -n "TODO|throw new NotImplementedException|stub|placeholder" src/CanDoItAll.Modules.Processes tests/CanDoItAll.Tests.Integration
+ExitCode: 0
+Invariant ID: SB06-INV-001
+Audit result: No introduced production stubs, no throw new NotImplementedException, and no placeholder artifacts used to satisfy required contracts.
+Legitimate matches: placeholder and TODO text appears only in existing prompt/test validation language that rejects placeholder output or accepts concrete TODO registers.
 
-Fill during execution.

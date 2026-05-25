@@ -347,16 +347,75 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return false;
         }
 
+        var retryReasons = ResolveIncompleteSuccessfulRunRetryReasons(
+            candidate,
+            detail,
+            responseText,
+            missingRequiredTools,
+            carriedImplementationProof);
+
         return attemptNumber < maxExecutionAttempts
                && run.State == ExecutionState.Completed
                 && run.PendingApprovals.Count == 0
                 && run.Outcome == RunOutcome.Succeeded
-                && ResolveIncompleteSuccessfulRunRetryReasons(
+                && retryReasons.Count > 0
+                && !ShouldCompressNoProgressRetry(
                     candidate,
                     detail,
                     responseText,
                     missingRequiredTools,
-                    carriedImplementationProof).Count > 0;
+                    retryReasons,
+                    attemptNumber);
+    }
+
+    private static bool ShouldCompressNoProgressRetry(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        string? responseText,
+        IReadOnlyList<string> missingRequiredTools,
+        IReadOnlyList<string> retryReasons,
+        int attemptNumber)
+    {
+        if (attemptNumber <= 1)
+        {
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(candidate.ManualRecoveryDirective) ||
+            TryResolveRecoverableProviderFailure(detail, responseText, out _) ||
+            HasSuccessfulConcreteProductMutation(candidate, detail) ||
+            HasSuccessfulCurrentAttemptEvidence(detail))
+        {
+            return false;
+        }
+
+        return missingRequiredTools.Count > 0 ||
+               retryReasons.Any(IsNoProgressRetryReason);
+    }
+
+    private static bool HasSuccessfulCurrentAttemptEvidence(ExecutionRunDetail detail)
+    {
+        return detail.Artifacts.Count > 0 ||
+               detail.ToolReceipts.Any(receipt =>
+                   !IsFailedToolReceipt(receipt) &&
+                   (ImplementationProofToolNames.Contains(NormalizeToolToken(receipt.ToolName), StringComparer.Ordinal) ||
+                    ConcreteProductMutationToolNames.Contains(NormalizeToolToken(receipt.ToolName), StringComparer.Ordinal)));
+    }
+
+    private static bool IsNoProgressRetryReason(string retryReason)
+    {
+        return retryReason.StartsWith("missing required tools:", StringComparison.OrdinalIgnoreCase) ||
+               retryReason.StartsWith("unresolved critical tool failures:", StringComparison.OrdinalIgnoreCase) ||
+               retryReason.StartsWith("missing concrete proof:", StringComparison.OrdinalIgnoreCase) ||
+               retryReason.StartsWith("missing concrete implementation proof:", StringComparison.OrdinalIgnoreCase) ||
+               retryReason.StartsWith("missing runnable application proof:", StringComparison.OrdinalIgnoreCase) ||
+               retryReason.StartsWith("invalid browser proof:", StringComparison.OrdinalIgnoreCase) ||
+               retryReason.StartsWith("invalid quality validation proof:", StringComparison.OrdinalIgnoreCase) ||
+               retryReason.StartsWith("missing required artifact:", StringComparison.OrdinalIgnoreCase) ||
+               retryReason.StartsWith("missing upstream artifact inspection:", StringComparison.OrdinalIgnoreCase) ||
+               retryReason.StartsWith("stale or ungrounded product path reference:", StringComparison.OrdinalIgnoreCase) ||
+               retryReason.StartsWith("shared managed artifact collision risk:", StringComparison.OrdinalIgnoreCase) ||
+               retryReason.StartsWith("recoverable finalizer validation failure:", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool ShouldRetryRepairableImplementationBlockedOutcome(

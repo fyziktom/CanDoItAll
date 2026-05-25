@@ -1,5 +1,16 @@
 # Phase Plan
 
+## Execution Order
+
+- `SB01` establishes step execution boundaries and tool policy.
+- `SB02` extends finalizer coverage to workflow-backed and subprocess-backed process steps.
+- `SB03` routes negative findings to governed process dispositions when branches are modeled.
+- `SB04` materializes upstream artifacts and unblocks dependent steps.
+- `SB05` tunes artifact validation and lineage for generic process types.
+- `SB06` compresses no-progress retries.
+- `SB07` adds process definition lint and template quality checks.
+- `SB08` runs red-team validation and final closure.
+
 ## Subbundle Dependency Map
 
 ```mermaid
@@ -31,6 +42,8 @@ SB08 red-team validation suite :crit, sb08, after sb04, 1d
 - `SB08` is critical because the user reported real process drift and blocking; red-team proof is required.
 
 ## Phase Gates
+
+- Prepared gate, SB01-SB08 gates, and final closure gate are mandatory before marking the bundle completed.
 
 ### Prepared bundle gate
 

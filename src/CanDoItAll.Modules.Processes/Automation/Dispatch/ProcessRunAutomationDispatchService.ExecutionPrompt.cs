@@ -57,7 +57,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
             out var groundedExternalLeafName);
         var usesScaffoldContractDrivenSetup = UsesScaffoldContractDrivenSetup(candidate);
         var isDotNetSolutionSetupScaffoldMutationStep = IsDotNetSolutionSetupScaffoldMutationStep(candidate);
-        var allowsExternalTargetMutation = AllowsExternalTargetMutation(candidate, projectStructureGroundingSummary);
+        var executionBoundary = ResolveProcessStepExecutionBoundary(candidate);
+        var allowsExternalTargetMutation = AllowsExternalTargetMutation(candidate, executionBoundary, projectStructureGroundingSummary);
         var currentRunManagedArtifactRoot = BuildCurrentRunManagedArtifactRoot(candidate);
         var currentRunManagedOutputRoot = BuildCurrentRunManagedOutputRoot(candidate);
         var usesGroundedExternalArtifactDestination = hasGroundedExternalTarget &&
