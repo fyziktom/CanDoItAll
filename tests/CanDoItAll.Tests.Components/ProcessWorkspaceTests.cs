@@ -33,6 +33,47 @@ public sealed class ProcessWorkspaceTests
     }
 
     [Fact]
+    public async Task Process_workspace_defers_hidden_runtime_and_analytics_data_until_tabs_need_it()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
+        var projectId = await CreateProjectAsync(projectsService, "Deferred process workspace project");
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess);
+
+        var cut = harness.Context.RenderComponent<ProcessWorkspace>(parameters => parameters
+            .Add(component => component.ProjectId, projectId));
+
+        cut.WaitForAssertion(() => Assert.Contains("Workspace-visible process", cut.Markup));
+
+        Assert.False(GetPrivateFieldValue<bool>(cut.Instance, "executorOptionsLoaded"));
+        Assert.False(GetPrivateFieldValue<bool>(cut.Instance, "workflowOptionsLoaded"));
+        Assert.False(GetPrivateFieldValue<bool>(cut.Instance, "analyticsLoaded"));
+        Assert.False(GetPrivateFieldValue<bool>(cut.Instance, "improvementsLoaded"));
+        Assert.Null(GetPrivateFieldValue<Guid?>(cut.Instance, "partyOptionsLoadedProjectId"));
+
+        await ActivateStepsTabAsync(cut);
+
+        Assert.False(GetPrivateFieldValue<bool>(cut.Instance, "executorOptionsLoaded"));
+        Assert.True(GetPrivateFieldValue<bool>(cut.Instance, "workflowOptionsLoaded"));
+        Assert.False(GetPrivateFieldValue<bool>(cut.Instance, "analyticsLoaded"));
+        Assert.False(GetPrivateFieldValue<bool>(cut.Instance, "improvementsLoaded"));
+
+        await ActivateRunsTabAsync(cut);
+
+        Assert.True(GetPrivateFieldValue<bool>(cut.Instance, "executorOptionsLoaded"));
+        Assert.True(GetPrivateFieldValue<bool>(cut.Instance, "workflowOptionsLoaded"));
+        Assert.Equal(projectId, GetPrivateFieldValue<Guid?>(cut.Instance, "partyOptionsLoadedProjectId"));
+
+        await ActivateAnalyticsTabAsync(cut);
+
+        Assert.True(GetPrivateFieldValue<bool>(cut.Instance, "analyticsLoaded"));
+        Assert.True(GetPrivateFieldValue<bool>(cut.Instance, "improvementsLoaded"));
+    }
+
+    [Fact]
     public async Task Workspace_shell_uses_internal_scroll_regions_for_definition_list_and_detail_tabs()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -1620,6 +1661,21 @@ public sealed class ProcessWorkspaceTests
 
         cut.Render();
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-runs-tab-shell']")));
+    }
+
+    private static async Task ActivateAnalyticsTabAsync(IRenderedComponent<ProcessWorkspace> cut)
+    {
+        var method = typeof(ProcessWorkspace).GetMethod("HandleDetailTabChanged", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(method);
+
+        await cut.InvokeAsync(async () =>
+        {
+            var task = method!.Invoke(cut.Instance, [4]) as Task;
+            Assert.NotNull(task);
+            await task!;
+        });
+
+        cut.Render();
     }
 
     private static async Task ActivateRunControlTabAsync(IRenderedComponent<ProcessWorkspace> cut)

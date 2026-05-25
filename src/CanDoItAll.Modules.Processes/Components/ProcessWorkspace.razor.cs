@@ -174,6 +174,15 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private Guid? loadedProjectId;
     private Guid? loadedProcessQueryId;
     private Guid? loadedRunQueryId;
+    private bool executorOptionsLoaded;
+    private bool workflowOptionsLoaded;
+    private bool managerAgentOptionsLoaded;
+    private Guid? partyOptionsLoadedProjectId;
+    private bool analyticsLoaded;
+    private Guid? analyticsLoadedProcessId;
+    private Guid? analyticsLoadedProjectId;
+    private bool improvementsLoaded;
+    private Guid? improvementsLoadedProcessId;
 
     private IReadOnlyList<ProcessDefinitionListItem> FilteredDefinitions => definitions
         .Where(definition =>

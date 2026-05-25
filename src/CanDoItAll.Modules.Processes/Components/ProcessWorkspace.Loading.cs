@@ -72,24 +72,17 @@ public partial class ProcessWorkspace
             selectedCanvasNodeId = null;
             ResetDefinitionCanvasState();
             ResetRuntimeCanvasState();
+            ResetAnalyticsPaneData();
         }
 
         selectedProcessId = nextSelectedProcessId;
-        editor = await ProcessesService.GetEditorAsync(selectedProcessId, ProjectId, cancellationToken);
-        executorOptions = await ProcessesService.ListExecutorOptionsAsync(cancellationToken);
-        workflowOptions = await ProcessesService.ListWorkflowDefinitionOptionsAsync(cancellationToken);
-        managerAgentOptions = await ProcessesService.ListManagerAgentOptionsAsync(cancellationToken);
-        analytics = await ProcessesService.GetAnalyticsAsync(selectedProcessId, ProjectId, cancellationToken);
-        improvements = await ProcessesService.ListImprovementsAsync(selectedProcessId, cancellationToken);
+        if (analyticsLoaded && (analyticsLoadedProcessId != selectedProcessId || analyticsLoadedProjectId != ProjectId))
+        {
+            ResetAnalyticsPaneData();
+        }
 
-        if (ProjectId.HasValue)
-        {
-            partyOptions = await ProcessesService.ListPartyOptionsAsync(ProjectId.Value, cancellationToken);
-        }
-        else
-        {
-            partyOptions = [];
-        }
+        editor = await ProcessesService.GetEditorAsync(selectedProcessId, ProjectId, cancellationToken);
+        await EnsureManagerAgentOptionsLoadedAsync(cancellationToken);
 
         if (selectedProcessId.HasValue)
         {
@@ -110,6 +103,7 @@ public partial class ProcessWorkspace
         RefreshCanvasSurface();
         if (string.Equals(detailTab, DetailTabManagerChat, StringComparison.Ordinal))
         {
+            await EnsureManagerAgentOptionsLoadedAsync(cancellationToken);
             await LoadManagerChatAsync(cancellationToken);
         }
 
@@ -129,6 +123,11 @@ public partial class ProcessWorkspace
         {
             ClearRuntimePaneData();
             return;
+        }
+
+        if (string.Equals(detailTab, DetailTabRuns, StringComparison.Ordinal) || RunIdQuery.HasValue || LaunchPlanIdQuery.HasValue)
+        {
+            await EnsureRuntimeOptionsLoadedAsync(cancellationToken);
         }
 
         if (ShouldLoadLaunchPlanData())
@@ -163,6 +162,19 @@ public partial class ProcessWorkspace
         if (observation.Analytics is not null)
         {
             analytics = observation.Analytics;
+            analyticsLoaded = true;
+            analyticsLoadedProcessId = selectedProcessId;
+            analyticsLoadedProjectId = ProjectId;
+        }
+
+        if (string.Equals(detailTab, DetailTabAnalytics, StringComparison.Ordinal))
+        {
+            if (!analyticsLoaded)
+            {
+                await EnsureAnalyticsLoadedAsync(cancellationToken: cancellationToken);
+            }
+
+            await EnsureImprovementsLoadedAsync(cancellationToken);
         }
 
         var nextSelectedRunId = ResolveSelectedRunId();
@@ -180,6 +192,105 @@ public partial class ProcessWorkspace
         }
 
         ClearRunDetails();
+    }
+
+    private async Task EnsureRuntimeOptionsLoadedAsync(CancellationToken cancellationToken = default)
+    {
+        await EnsureExecutorOptionsLoadedAsync(cancellationToken);
+        await EnsureWorkflowOptionsLoadedAsync(cancellationToken);
+        await EnsurePartyOptionsLoadedAsync(cancellationToken);
+    }
+
+    private async Task EnsureExecutorOptionsLoadedAsync(CancellationToken cancellationToken = default)
+    {
+        if (executorOptionsLoaded)
+        {
+            return;
+        }
+
+        executorOptions = await ProcessesService.ListExecutorOptionsAsync(cancellationToken);
+        executorOptionsLoaded = true;
+    }
+
+    private async Task EnsureWorkflowOptionsLoadedAsync(CancellationToken cancellationToken = default)
+    {
+        if (workflowOptionsLoaded)
+        {
+            return;
+        }
+
+        workflowOptions = await ProcessesService.ListWorkflowDefinitionOptionsAsync(cancellationToken);
+        workflowOptionsLoaded = true;
+    }
+
+    private async Task EnsureManagerAgentOptionsLoadedAsync(CancellationToken cancellationToken = default)
+    {
+        if (managerAgentOptionsLoaded)
+        {
+            return;
+        }
+
+        managerAgentOptions = await ProcessesService.ListManagerAgentOptionsAsync(cancellationToken);
+        managerAgentOptionsLoaded = true;
+    }
+
+    private async Task EnsurePartyOptionsLoadedAsync(CancellationToken cancellationToken = default)
+    {
+        if (!ProjectId.HasValue)
+        {
+            partyOptions = [];
+            partyOptionsLoadedProjectId = null;
+            return;
+        }
+
+        if (partyOptionsLoadedProjectId == ProjectId.Value)
+        {
+            return;
+        }
+
+        partyOptions = await ProcessesService.ListPartyOptionsAsync(ProjectId.Value, cancellationToken);
+        partyOptionsLoadedProjectId = ProjectId.Value;
+    }
+
+    private async Task EnsureAnalyticsLoadedAsync(
+        bool forceRefresh = false,
+        CancellationToken cancellationToken = default)
+    {
+        if (!forceRefresh &&
+            analyticsLoaded &&
+            analyticsLoadedProcessId == selectedProcessId &&
+            analyticsLoadedProjectId == ProjectId)
+        {
+            return;
+        }
+
+        analytics = await ProcessesService.GetAnalyticsAsync(selectedProcessId, ProjectId, cancellationToken);
+        analyticsLoaded = true;
+        analyticsLoadedProcessId = selectedProcessId;
+        analyticsLoadedProjectId = ProjectId;
+    }
+
+    private async Task EnsureImprovementsLoadedAsync(CancellationToken cancellationToken = default)
+    {
+        if (improvementsLoaded && improvementsLoadedProcessId == selectedProcessId)
+        {
+            return;
+        }
+
+        improvements = await ProcessesService.ListImprovementsAsync(selectedProcessId, cancellationToken);
+        improvementsLoaded = true;
+        improvementsLoadedProcessId = selectedProcessId;
+    }
+
+    private void ResetAnalyticsPaneData()
+    {
+        analytics = new ProcessAnalyticsSummary(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        improvements = [];
+        analyticsLoaded = false;
+        analyticsLoadedProcessId = null;
+        analyticsLoadedProjectId = null;
+        improvementsLoaded = false;
+        improvementsLoadedProcessId = null;
     }
 
     private async Task LoadRuntimeOverviewAsync(

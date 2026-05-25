@@ -1026,6 +1026,91 @@ else
         await InvokeAsync(StateHasChanged);
     }
 
+    private async Task ApplyCreatedSurfaceNodeAsync(
+        ProjectStructureNode created,
+        string? parentNodeId,
+        IReadOnlyList<ProjectStructurePendingLink> pendingLinks,
+        IReadOnlyList<ProjectNodeMoveRequest> followUpMoves)
+    {
+        if (surface is null)
+        {
+            await ReloadSurfaceAsync(created.Id);
+            return;
+        }
+
+        var moveByNodeId = followUpMoves
+            .Where(move => !string.IsNullOrWhiteSpace(move.NodeId))
+            .GroupBy(move => move.NodeId, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Last(), StringComparer.Ordinal);
+        var patchedNodes = surface.Nodes
+            .Where(node => !string.Equals(node.Id, created.Id, StringComparison.Ordinal))
+            .Select(node => moveByNodeId.TryGetValue(node.Id, out var move)
+                ? node with { X = move.X, Y = move.Y }
+                : node)
+            .Append(created)
+            .ToList();
+        var patchedLinks = surface.Links.ToList();
+        var normalizedParentNodeId = ProjectWorkbenchGraphConventions.NormalizeEditableParentNodeKey(ProjectId, parentNodeId);
+        AddSurfaceLink(
+            patchedLinks,
+            normalizedParentNodeId,
+            created.Id,
+            ProjectWorkbenchGraphConventions.ResolveHierarchyLinkKind(ProjectId, normalizedParentNodeId),
+            isUserAuthored: false);
+
+        foreach (var pendingLink in pendingLinks)
+        {
+            AddSurfaceLink(
+                patchedLinks,
+                created.Id,
+                pendingLink.TargetNodeId,
+                pendingLink.LinkKind,
+                isUserAuthored: true);
+        }
+
+        selectedNodeIds = [created.Id];
+        pendingClientSelectionId = created.Id;
+        pendingWorkbenchSelectionId = created.Id;
+
+        var uiState = NormalizePersistedCanvasUiState(CanvasWorkbenchUiState.Parse(currentViewStateJson ?? surface.ViewStateJson));
+        uiState.SelectedNodeIds = [.. selectedNodeIds];
+        graphAdapter.ExpandSelectionAncestors(patchedNodes, uiState, selectedNodeIds);
+        surface = surface with
+        {
+            Nodes = patchedNodes,
+            Links = patchedLinks,
+            ViewStateJson = uiState.ToJson()
+        };
+        currentViewStateJson = surface.ViewStateJson;
+        RefreshCanvasSurface();
+        await LoadPartyEditorAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private static void AddSurfaceLink(
+        List<ProjectStructureLink> links,
+        string sourceId,
+        string targetId,
+        ProjectObjectLinkKind kind,
+        bool isUserAuthored)
+    {
+        if (string.IsNullOrWhiteSpace(sourceId) || string.IsNullOrWhiteSpace(targetId))
+        {
+            return;
+        }
+
+        if (links.Any(link =>
+            string.Equals(link.SourceId, sourceId, StringComparison.Ordinal) &&
+            string.Equals(link.TargetId, targetId, StringComparison.Ordinal) &&
+            link.Kind == kind &&
+            link.IsUserAuthored == isUserAuthored))
+        {
+            return;
+        }
+
+        links.Add(new ProjectStructureLink(sourceId, targetId, kind, isUserAuthored));
+    }
+
     private void RefreshCanvasSurface()
     {
         if (surface is null)
@@ -1551,7 +1636,7 @@ else
             await ProjectWorkbenchService.MoveObjectsAsync(ProjectId, placementPlan.FollowUpMoves);
         }
 
-        await ReloadSurfaceAsync(created.Id);
+        await ApplyCreatedSurfaceNodeAsync(created, parentNodeId, prepared.PendingLinks, placementPlan.FollowUpMoves);
     }
 
     private async Task OpenCreateDialogAsync(CanvasWorkbenchAction action)

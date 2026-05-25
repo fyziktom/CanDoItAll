@@ -1,14 +1,40 @@
+using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.DependencyInjection;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Unit;
 
 public sealed class DatabaseConfigurationTests
 {
+    [Fact]
+    public void DatabaseOptions_DisablesEntityFrameworkConsoleLogging_ByDefault()
+    {
+        var options = new DatabaseOptions();
+
+        Assert.False(options.EnableEntityFrameworkConsoleLogging);
+    }
+
+    [Fact]
+    public void DatabaseOptions_BindsEntityFrameworkConsoleLoggingSwitch()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Database:EnableEntityFrameworkConsoleLogging"] = "true"
+            })
+            .Build();
+
+        var options = configuration.GetSection("Database").Get<DatabaseOptions>();
+
+        Assert.NotNull(options);
+        Assert.True(options!.EnableEntityFrameworkConsoleLogging);
+    }
+
     [Fact]
     public async Task AddCanDoItAllInfrastructure_UsesInMemoryProvider_WhenConfigured()
     {

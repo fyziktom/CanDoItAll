@@ -70,9 +70,10 @@ public sealed class ProjectStructurePageSimpleMutationTests
     [Fact]
     public async Task Quick_sibling_note_insertion_persists_downward_stack_shift()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync();
+        await using var harness = await ComponentTestHarness.CreateAsync(WrapDbContextFactoryWithCreateCounter);
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
         var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var createCounter = harness.Context.Services.GetRequiredService<DbContextCreateCounter>();
 
         var projectId = await CreateProjectAsync(projectsService, "Quick note stack shift");
         var parentNodeId = $"project:{projectId}";
@@ -102,6 +103,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
         var cut = harness.Context.RenderComponent<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         var canvasWorkbench = WaitForCanvasWorkbench(cut);
+        createCounter.Reset();
 
         const string insertedNote = "Inserted quick note\r\nwith enough text\r\nto require vertical room";
         await cut.InvokeAsync(() => canvasWorkbench.Instance.OnCreateAction(JsonSerializer.Serialize(
@@ -125,6 +127,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
                 canvasWorkbench.Instance.Surface.Nodes,
                 node => string.Equals(node.Title, "Inserted quick note", StringComparison.Ordinal));
         });
+        Assert.Equal(2, createCounter.CreateCount);
 
         var persistedSurface = await workbenchService.GetStructureAsync(projectId);
         var persistedLowerNode = Assert.Single(persistedSurface.Nodes, node => string.Equals(node.Id, lowerNode.Id, StringComparison.Ordinal));

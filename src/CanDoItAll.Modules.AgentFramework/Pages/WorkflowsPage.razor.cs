@@ -82,9 +82,13 @@ public partial class WorkflowsPage
     private bool isBusy;
     private bool isRunningTest;
     private bool isPreviewInputDialogOpen;
+    private bool componentLibraryLoaded;
+    private Task? componentLibraryLoadTask;
     private readonly HashSet<string> expandedWorkflowTreeNodeIds = [];
 
     private string SelectedDefinitionTitle => selectedDefinition?.Name ?? "Workflow detail";
+
+    private string ComponentCountText => componentLibraryLoaded ? components.Count.ToString() : "-";
 
     private string ValidationText => validationIssues.Count == 0 ? "Valid" : $"{validationIssues.Count} issue(s)";
 
@@ -114,16 +118,6 @@ public partial class WorkflowsPage
 
     protected override async Task OnInitializedAsync()
     {
-        try
-        {
-            await ExampleCatalogSeedService.EnsureSeededAsync();
-        }
-        catch (Exception exception)
-        {
-            errorMessage = exception.Message;
-            NotificationService.Error("Workflow examples seed failed", exception.Message);
-        }
-
         await RefreshAsync();
     }
 
@@ -160,14 +154,10 @@ public partial class WorkflowsPage
     {
         var settingsTask = SettingsService.GetSettingsAsync();
         var definitionsTask = CatalogService.ListDefinitionsAsync();
-        var componentsTask = ComponentLibrary.ListComponentsAsync();
-        var providerOptionsTask = ComponentLibrary.ListProviderOptionsAsync();
-        await Task.WhenAll(settingsTask, definitionsTask, componentsTask, providerOptionsTask);
+        await Task.WhenAll(settingsTask, definitionsTask);
 
         settings = await settingsTask;
         definitions = await definitionsTask;
-        components = await componentsTask;
-        providerOptions = await providerOptionsTask;
 
         var definitionId = preferredDefinitionId ??
                            selectedDefinition?.Id ??
@@ -186,6 +176,11 @@ public partial class WorkflowsPage
             selectedDefinition?.Id,
             pageIndex: 0,
             preferredRunId);
+
+        if (componentLibraryLoaded)
+        {
+            await RefreshComponentLibraryAsync();
+        }
     }
 
     private async Task SelectDefinitionAsync(WorkflowId definitionId)
@@ -241,6 +236,7 @@ public partial class WorkflowsPage
 
         try
         {
+            await EnsureComponentLibraryLoadedAsync();
             var providerOption = ResolveDefaultProviderOption();
             var component = await ComponentLibrary.SaveComponentAsync(new LlmCallComponentSaveRequest(
                 Id: null,
@@ -613,11 +609,61 @@ public partial class WorkflowsPage
         await OpenRunDetailDialogAsync(selectedRun ?? run);
     }
 
+    private async Task HandleWorkflowTabChangedAsync(int index)
+    {
+        activeWorkflowTabIndex = index;
+        if (WorkflowTabRequiresComponentLibrary(index))
+        {
+            await EnsureComponentLibraryLoadedAsync();
+        }
+    }
+
+    private async Task EnsureComponentLibraryLoadedAsync()
+    {
+        if (componentLibraryLoaded)
+        {
+            return;
+        }
+
+        componentLibraryLoadTask ??= LoadComponentLibraryAsync();
+        try
+        {
+            await componentLibraryLoadTask;
+            componentLibraryLoaded = true;
+        }
+        finally
+        {
+            componentLibraryLoadTask = null;
+        }
+    }
+
     private async Task RefreshComponentLibraryAsync()
+    {
+        if (componentLibraryLoadTask is not null)
+        {
+            await componentLibraryLoadTask;
+        }
+
+        componentLibraryLoadTask = LoadComponentLibraryAsync();
+        try
+        {
+            await componentLibraryLoadTask;
+            componentLibraryLoaded = true;
+        }
+        finally
+        {
+            componentLibraryLoadTask = null;
+        }
+    }
+
+    private async Task LoadComponentLibraryAsync()
     {
         components = await ComponentLibrary.ListComponentsAsync();
         providerOptions = await ComponentLibrary.ListProviderOptionsAsync();
     }
+
+    private static bool WorkflowTabRequiresComponentLibrary(int index)
+        => index is 2 or 3 or 5;
 
     private bool IsSelectedDefinition(WorkflowCatalogItem item)
     {

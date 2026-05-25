@@ -76,7 +76,7 @@ public partial class ProcessWorkspace
         }
 
         definitions = await ProcessesService.ListDefinitionsAsync(ProjectId);
-        analytics = await ProcessesService.GetAnalyticsAsync(selectedProcessId, ProjectId);
+        await EnsureAnalyticsLoadedAsync(forceRefresh: true);
         NotificationService.Notify(new NotificationMessage
         {
             Severity = NotificationSeverity.Success,
@@ -93,6 +93,7 @@ public partial class ProcessWorkspace
         var preview = ProcessTemplateLibraryService.GetPreview(ProcessTemplateLibraryCategory.Roles, itemId);
         var draft = CreateUniqueRoleDraftFromTemplate(itemId, excludedRole: null);
         templateLibraryOpen = false;
+        await EnsureWorkflowOptionsLoadedAsync();
         OpenRoleDialog(draft, target: null, isNew: true);
 
         NotificationService.Notify(new NotificationMessage

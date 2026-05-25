@@ -7,6 +7,8 @@ public sealed class DatabaseOptions
     public string Provider { get; set; } = "PostgreSql";
 
     public string? ConnectionString { get; set; }
+
+    public bool EnableEntityFrameworkConsoleLogging { get; set; }
 }
 
 public sealed class StorageOptions
