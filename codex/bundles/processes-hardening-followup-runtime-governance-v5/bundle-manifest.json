@@ -1,0 +1,29 @@
+{
+  "bundleId": "processes-hardening-followup-runtime-governance-v5",
+  "title": "Processes Hardening Follow-up: Runtime Governance, Typed Contracts, and Scenario Resilience",
+  "preparedAtUtc": "2026-05-25T00:00:00Z",
+  "targetRepository": "fyziktom/CanDoItAll",
+  "targetBranchObserved": "processes-hardening",
+  "observedHead": "474708e7a09d85a90d9541946e1e0e3dd964ec18",
+  "observedHeadMessage": "phase4",
+  "language": "en",
+  "subbundles": [
+    "01-persisted-step-operation-contract-schema-ui-import-export",
+    "02-operation-aware-tool-policy-enforcement",
+    "03-trusted-grounding-source-model-and-alias-ledger",
+    "04-storage-service-backed-artifact-validation",
+    "05-artifact-lineage-uniqueness-and-dedup-index",
+    "06-workflow-subprocess-output-contract-adapters",
+    "07-manager-recovery-and-workflow-recovery-continuation",
+    "08-runtime-invariant-audit-and-process-health-dashboard",
+    "09-blocked-failed-escalation-lifecycle",
+    "10-generic-scenario-harness-and-red-team-pack"
+  ],
+  "hardRequirements": [
+    "Processes remain generic and must not become a software-delivery-only engine.",
+    "Do not confuse Processes with Workflows. Workflows are executable roles under Agents; Processes own process state, artifacts, transitions, governance, and finalization.",
+    "Keep PostgreSQL-only runtime assumptions. Do not reintroduce SQLite runtime or SQLite-specific migrations.",
+    "Every subbundle must include failing-first or red-team proof, passing proof, source assertions, anti-stub audit, and changed-file hashes.",
+    "Avoid prompt-only fixes. Runtime contracts, policy checks, persistence, and tests are required."
+  ]
+}
