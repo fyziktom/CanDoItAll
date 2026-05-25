@@ -1,7 +1,0 @@
-Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~SemanticInvariant_ClusterDiscoveryUsesRealEmbeddingProviderAndHonestLexicalFallback|FullyQualifiedName~SemanticInvariant_EmbeddingCandidateDiscoveryPairsParaphrasesWithoutSharedSignals" --no-restore
-ExitCode: 0
-Output:
-SemanticInvariant_ClusterDiscoveryUsesRealEmbeddingProviderAndHonestLexicalFallback passed.
-SemanticInvariant_EmbeddingCandidateDiscoveryPairsParaphrasesWithoutSharedSignals passed.
-SB06-EMBEDDING-CLUSTER-01
-

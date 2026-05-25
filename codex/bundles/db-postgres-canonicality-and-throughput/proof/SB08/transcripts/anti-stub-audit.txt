@@ -1,5 +1,0 @@
-Command: rg -n --ignore-case 'TODO|NotImplementedException|throw new NotImplemented|fixture-only|test-only|fake implementation|stub' <changed production files>
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: anti-stub-audit-current-source
-No stub markers found in changed production source files.
-ExitCode: 0

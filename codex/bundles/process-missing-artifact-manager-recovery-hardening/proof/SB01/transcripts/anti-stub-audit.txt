@@ -1,6 +1,0 @@
-Command: rg -n "NotImplementedException|TODO|stub" src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.CompletionArtifactRecovery.cs src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs
-Invariant: SB01-I001
-ExitCode: 0
-
-No NotImplementedException, TODO, or stub markers were found in touched files.
-

@@ -1,6 +1,0 @@
-Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~SemanticInvariant_CuratorCaptureCzechProfessorTeachingWithoutEnglishKeywordsPreservesDiacritics"
-ExitCode: 1
-Output:
-SemanticInvariant_CuratorCaptureCzechProfessorTeachingWithoutEnglishKeywordsPreservesDiacritics failed before production changes: Assert.Single() Failure: collection was empty because Czech/diacritic teaching was not captured.
-SB04-CZECH-DIACRITIC-01
-

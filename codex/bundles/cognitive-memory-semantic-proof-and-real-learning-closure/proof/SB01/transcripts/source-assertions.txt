@@ -1,6 +1,0 @@
-Command: rg -n "PROOF_CLAIM_TO_CODE_MATRIX_HEADING|CAPABILITY_SOURCE_REQUIREMENTS|validate_proof_claim_to_code_matrix|validate_capability_source_requirements" codex/skills/bundles/candoitall-bundle-preparation/scripts/validate_bundle.py
-ExitCode: 0
-Output:
-Source assertions confirm completed-stage capability proof requires source-backed checks for literal semantic labels.
-SB01-CLAIM-TO-CODE-01
-

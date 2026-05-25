@@ -1,5 +1,0 @@
-Command: rg -n "Tetris|tetris" Templates\Processes\processes\blazor-* tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs
-Exit Code: 1
-Invariant IDs: SB03-I005
-
-No Tetris-specific references found in new Blazor process templates or template projection test.

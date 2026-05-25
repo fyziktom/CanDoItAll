@@ -1,7 +1,0 @@
-Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~SemanticInvariant_RecallBriefKeepsSharedSourceLineageOnlyForTheStatementSupport|FullyQualifiedName~SemanticInvariant_RecallBriefKeepsAggregateClaimLineageAtStatementLineLevel" --no-restore
-ExitCode: 0
-Output:
-SemanticInvariant_RecallBriefKeepsSharedSourceLineageOnlyForTheStatementSupport passed.
-SemanticInvariant_RecallBriefKeepsAggregateClaimLineageAtStatementLineLevel passed in the broader affected class run.
-SB08-RECALL-LINEAGE-01
-

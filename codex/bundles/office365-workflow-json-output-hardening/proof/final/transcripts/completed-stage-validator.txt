@@ -1,5 +1,0 @@
-Command: python <bundle-validator> --stage completed codex\bundles\office365-workflow-json-output-hardening
-ExitCode: 0
-
-Bundle is valid for stage 'completed': repo://codex/bundles/office365-workflow-json-output-hardening
-

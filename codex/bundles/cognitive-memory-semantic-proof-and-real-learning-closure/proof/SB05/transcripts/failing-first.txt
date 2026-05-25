@@ -1,8 +1,0 @@
-Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~SemanticInvariant_AcceptedUseSignalHasProductionOutcomeEventHandlerAndScheduledAssimilation|FullyQualifiedName~AcceptedUseOutcomeEventHandler_EmitsAcceptedUseSignalIdempotentlyAndRejectsBroadLineage"
-ExitCode: 1
-Output:
-Accepted-use source assertions failed before production changes because ICognitiveMemoryRecallOutcomeAcceptedEventHandler was missing, and the event-handler behavior test had no production handler to execute.
-SemanticInvariant_AcceptedUseSignalHasProductionOutcomeEventHandlerAndScheduledAssimilation
-AcceptedUseOutcomeEventHandler_EmitsAcceptedUseSignalIdempotentlyAndRejectsBroadLineage
-SB05-ACCEPTED-USE-01
-

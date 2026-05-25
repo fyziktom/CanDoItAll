@@ -1,5 +1,0 @@
-Command: Inspect final app validation proof for Codex product edits, stale screenshot acceptance, or chat-only validation.
-Exit Code: 0
-Invariant IDs: SB07-I001
-
-No Codex product-file repair, stale screenshot shortcut, or chat-only validation was used. The accepted evidence came from agent-produced process artifacts, browser console logs, screenshots, and project-structure writeback.
