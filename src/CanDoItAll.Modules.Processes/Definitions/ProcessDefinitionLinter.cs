@@ -110,16 +110,43 @@ public static class ProcessDefinitionLinter
 
         var requiresExplicitOperationContract = hasImplementationDemand &&
             hasProductMutationTargetSignal;
-        if (requiresExplicitOperationContract && !HasExplicitOperationContractText(text))
+        var hasTypedOperationContract = HasTypedOperationContract(step);
+        var hasPartialTypedOperationContract = HasPartialTypedOperationContract(step);
+        if (hasPartialTypedOperationContract)
         {
             AddIssue(
                 issues,
                 step,
-                "processes.lint.step-operation-contract-missing",
+                "processes.lint.step-operation-contract-partial",
                 StrictSeverity(mode),
-                "This step can affect a product target but does not declare an explicit operation contract or target scope.",
-                "Add explicit allowed operations and target scope in the step notes or contract, for example WriteManagedProcessArtifact for report-only work or MutateProductTarget with a grounded mutable product target.");
+                "This step has only part of the persisted operation contract. Runtime boundaries need both allowed operations and target scope.",
+                "Set both allowed operations and target scope in the step operation contract.");
         }
+
+        if (!requiresExplicitOperationContract || hasTypedOperationContract || hasPartialTypedOperationContract)
+        {
+            return;
+        }
+
+        if (HasExplicitOperationContractText(text))
+        {
+            AddIssue(
+                issues,
+                step,
+                "processes.lint.step-operation-contract-inferred",
+                ProcessDefinitionLintSeverity.Warning,
+                "This step relies on a text-inferred operation contract. Persisted allowed operations and target scope are required for a durable runtime boundary.",
+                "Move the operation contract into the typed allowed operations and target scope fields.");
+            return;
+        }
+
+        AddIssue(
+            issues,
+            step,
+            "processes.lint.step-operation-contract-missing",
+            StrictSeverity(mode),
+            "This step can affect a product target but does not declare an explicit operation contract or target scope.",
+            "Add explicit allowed operations and target scope in the step notes or contract, for example WriteManagedProcessArtifact for report-only work or MutateProductTarget with a grounded mutable product target.");
     }
 
     private static void AddWorkflowArtifactIssues(
@@ -291,6 +318,18 @@ public static class ProcessDefinitionLinter
             "mutateproducttarget",
             "externalproducttargetmutable",
             "managedprocessartifactsonly");
+    }
+
+    private static bool HasTypedOperationContract(ProcessStepEditorModel step)
+    {
+        return step.AllowedOperations.Count > 0 &&
+            step.OperationTargetScope.HasValue;
+    }
+
+    private static bool HasPartialTypedOperationContract(ProcessStepEditorModel step)
+    {
+        var hasAllowedOperations = step.AllowedOperations.Count > 0;
+        return hasAllowedOperations != step.OperationTargetScope.HasValue;
     }
 
     private static bool HasProductMutationTargetSignal(string text)

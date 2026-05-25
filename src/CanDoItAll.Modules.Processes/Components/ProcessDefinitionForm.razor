@@ -174,7 +174,7 @@
                                      Text="@($"{Model.LintResult.Issues.Count(issue => issue.Severity == ProcessDefinitionLintSeverity.Error)} blocking")" />
                     }
                 </Cluster>
-                @foreach (var issue in Model.LintResult.Issues.Take(4))
+                @foreach (var issue in Model.LintResult.Issues)
                 {
                     <Stack GapScale="LayoutGap.Tiny"
                            AlignItems="AlignItems.Stretch"

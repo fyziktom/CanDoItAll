@@ -761,6 +761,87 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
+    public async Task RecordArtifactAsync_SB01_INV_001_reactivates_blocked_downstream_with_tracked_materialized_artifact()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Materialization reactivation project");
+        var saveResult = await processesService.SaveAsync(BuildArtifactMaterializationReactivationDefinitionEditor(projectId, Guid.NewGuid()));
+
+        AssertSuccess(saveResult);
+        AssertSuccess(await processesService.PublishAsync(saveResult.Value));
+
+        var runId = await StartTestRunAsync(
+            processesService,
+            saveResult.Value,
+            projectId,
+            "Materialization reactivation run");
+        var initialStepRuns = await processesService.ListStepRunsAsync(runId);
+        var upstreamStep = Assert.Single(initialStepRuns, item => item.Sequence == 0);
+        var downstreamStep = Assert.Single(initialStepRuns, item => item.Sequence == 1);
+        var upstreamArtifact = Assert.Single(upstreamStep.ArtifactOutputs);
+        var now = DateTimeOffset.UtcNow;
+
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            var upstream = await dbContext.Set<ProcessStepRun>().SingleAsync(item => item.Id == upstreamStep.Id);
+            upstream.Status = ProcessStepRunStatus.Completed;
+            upstream.CompletedAtUtc = now;
+            upstream.DecisionSummary = "Upstream work completed before materialized artifact was recorded.";
+
+            var downstream = await dbContext.Set<ProcessStepRun>().SingleAsync(item => item.Id == downstreamStep.Id);
+            downstream.Status = ProcessStepRunStatus.Blocked;
+            downstream.BlockedReason = "Cannot dispatch 'Review materialized artifact' because required upstream artifacts are missing: upstream step 'Produce materialized artifact' must provide required artifact 'Materialized evidence'. Automation requested upstream artifact materialization from 'Produce materialized artifact' before retrying this step.";
+            downstream.DecisionSummary = "Waiting for upstream materialized artifact.";
+
+            var run = await dbContext.Set<ProcessRun>().SingleAsync(item => item.Id == runId);
+            run.Status = ProcessRunStatus.Blocked;
+            run.UpdatedAtUtc = now;
+
+            await dbContext.SaveChangesAsync();
+        }
+
+        var recordResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runId,
+            StepRunId = upstreamStep.Id,
+            ArtifactExpectationId = upstreamArtifact.ArtifactExpectationId,
+            ArtifactKind = ProcessArtifactKind.Evidence,
+            Title = upstreamArtifact.Title,
+            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+            SensitivityLevel = ProcessSensitivityLevel.Internal,
+            ProvenanceSummary = "Recorded by the same materialization call that must reopen the downstream step.",
+            AllowedFutureUsageSummary = "SB01-INV-001 regression proof.",
+            ReviewSummary = "Materialized evidence is present.",
+            ManagedStoragePath = "artifacts/materialization/materialized-evidence.md",
+            ExternalReferenceKey = $"sb01-inv-001:{Guid.NewGuid():N}"
+        });
+
+        AssertSuccess(recordResult);
+
+        await using var assertionContext = await dbContextFactory.CreateDbContextAsync();
+        var reactivatedStep = await assertionContext.Set<ProcessStepRun>().SingleAsync(item => item.Id == downstreamStep.Id);
+        Assert.Equal(ProcessStepRunStatus.Ready, reactivatedStep.Status);
+        Assert.Equal(string.Empty, reactivatedStep.BlockedReason);
+        Assert.Equal("Reopened after upstream artifact materialization completed.", reactivatedStep.DecisionSummary);
+
+        var recordedArtifact = await assertionContext.Set<ProcessArtifactRecord>().SingleAsync(item => item.Id == recordResult.Value);
+        Assert.Equal(upstreamStep.Id, recordedArtifact.StepRunId);
+        Assert.Equal(upstreamArtifact.ArtifactExpectationId, recordedArtifact.ArtifactExpectationId);
+
+        var journalEntry = await assertionContext.Set<ProcessJournalEntry>()
+            .SingleAsync(item =>
+                item.ProcessRunId == runId &&
+                item.StepRunId == downstreamStep.Id &&
+                item.EventType == ProcessRuntimeEventTypes.MissingUpstreamArtifactMaterializationResolved);
+        Assert.Contains("Materialized evidence", journalEntry.Description, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task TransitionStepAsync_allows_restarting_failed_step_and_reactivates_run()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -1425,6 +1506,67 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
+    public async Task PublishAsync_SB10_INV_001_applies_strict_lint_for_high_criticality_definitions()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "SB10 high criticality lint project");
+        var definition = BuildProductMutationLintGateDefinitionEditor(projectId, Guid.NewGuid());
+        definition.Criticality = ProcessCriticality.High;
+        var saveResult = await processesService.SaveAsync(definition);
+
+        AssertSuccess(saveResult);
+
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+
+        Assert.True(publishResult.IsFailure);
+        Assert.Contains(publishResult.Errors, error =>
+            error.Code == "processes.publish.lint-blocked" &&
+            error.Message.Contains("processes.lint.step-operation-contract-missing", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task StartRunAsync_SB10_INV_001_applies_strict_lint_for_delegated_published_definitions()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "SB10 delegated lint project");
+        var saveResult = await processesService.SaveAsync(BuildProductMutationLintGateDefinitionEditor(projectId, Guid.NewGuid()));
+
+        AssertSuccess(saveResult);
+        AssertSuccess(await processesService.PublishAsync(saveResult.Value));
+
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            var definition = await dbContext.Set<ProcessDefinition>()
+                .SingleAsync(item => item.Id == saveResult.Value);
+            definition.AutonomyLevel = ProcessAutonomyLevel.Delegated;
+            await dbContext.SaveChangesAsync();
+        }
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "SB10 lint gate run",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "SB10 strict lint gate verification."
+        });
+
+        Assert.True(runResult.IsFailure);
+        Assert.Contains(runResult.Errors, error =>
+            error.Code == "processes.run-start.lint-blocked" &&
+            error.Message.Contains("processes.lint.step-operation-contract-missing", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task SaveAsync_rejects_self_referencing_step_dependency()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -2074,6 +2216,68 @@ public sealed class ProcessesServiceIntegrationTests
         var nextDraftArtifactInput = Assert.Single(nextDraftConsumerStep.ArtifactInputs);
 
         Assert.Equal(nextDraftSourceArtifact.Id, nextDraftArtifactInput.ArtifactExpectationId);
+    }
+
+    [Fact]
+    public async Task Save_export_import_and_publish_SB08_INV_001_preserve_step_operation_contract()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Step operation contract project");
+        var managerRoleId = Guid.NewGuid();
+        var model = BuildDefinitionEditor(projectId, managerRoleId);
+        var deliveryStep = Assert.Single(model.Steps, step => step.Key == "delivery-review");
+        deliveryStep.AllowedOperations =
+        [
+            ProcessStepOperation.WriteExternalArtifactDestination,
+            ProcessStepOperation.WriteManagedProcessArtifacts
+        ];
+        deliveryStep.OperationTargetScope = ProcessStepTargetScope.ExternalArtifactDestination;
+
+        var saveResult = await processesService.SaveAsync(model);
+
+        AssertSuccess(saveResult);
+
+        var savedEditor = await processesService.GetEditorAsync(saveResult.Value, projectId);
+        var savedDeliveryStep = Assert.Single(savedEditor.Steps, step => step.Key == "delivery-review");
+
+        Assert.Equal(
+            [ProcessStepOperation.WriteManagedProcessArtifacts, ProcessStepOperation.WriteExternalArtifactDestination],
+            savedDeliveryStep.AllowedOperations);
+        Assert.Equal(ProcessStepTargetScope.ExternalArtifactDestination, savedDeliveryStep.OperationTargetScope);
+
+        var exportEnvelope = await processesService.ExportAsync(saveResult.Value);
+        var exportedDeliveryStep = Assert.Single(exportEnvelope.Definition.Steps, step => step.Key == "delivery-review");
+
+        Assert.Equal(savedDeliveryStep.AllowedOperations, exportedDeliveryStep.AllowedOperations);
+        Assert.Equal(savedDeliveryStep.OperationTargetScope, exportedDeliveryStep.OperationTargetScope);
+
+        exportEnvelope.Definition.Id = null;
+        exportEnvelope.Definition.WorkingVersionId = null;
+        exportEnvelope.Definition.DefinitionConcurrencyToken = null;
+        exportEnvelope.Definition.WorkingVersionConcurrencyToken = null;
+        exportEnvelope.Definition.Name = "Imported step operation contract process";
+        exportEnvelope.Definition.ChangeSummary = "Imported for SB08 operation contract persistence validation.";
+        var importResult = await processesService.ImportAsync(exportEnvelope);
+
+        AssertSuccess(importResult);
+
+        var importedEditor = await processesService.GetEditorAsync(importResult.Value, projectId);
+        var importedDeliveryStep = Assert.Single(importedEditor.Steps, step => step.Key == "delivery-review");
+
+        Assert.Equal(savedDeliveryStep.AllowedOperations, importedDeliveryStep.AllowedOperations);
+        Assert.Equal(ProcessStepTargetScope.ExternalArtifactDestination, importedDeliveryStep.OperationTargetScope);
+
+        AssertSuccess(await processesService.PublishAsync(importResult.Value));
+
+        var nextDraftEditor = await processesService.GetEditorAsync(importResult.Value, projectId);
+        var nextDraftDeliveryStep = Assert.Single(nextDraftEditor.Steps, step => step.Key == "delivery-review");
+
+        Assert.Equal(savedDeliveryStep.AllowedOperations, nextDraftDeliveryStep.AllowedOperations);
+        Assert.Equal(ProcessStepTargetScope.ExternalArtifactDestination, nextDraftDeliveryStep.OperationTargetScope);
     }
 
     [Fact]
@@ -3400,6 +3604,130 @@ public sealed class ProcessesServiceIntegrationTests
                             ArtifactKind = ProcessArtifactKind.Evidence,
                             Title = "Delivery readiness evidence",
                             ValidationRequirementSummary = "Human review required before final approval."
+                        }
+                    ]
+                }
+            ]
+        };
+    }
+
+    private static ProcessDefinitionEditorModel BuildProductMutationLintGateDefinitionEditor(Guid projectId, Guid managerRoleId)
+    {
+        var model = BuildDefinitionEditor(projectId, managerRoleId);
+        var deliveryStep = model.Steps.Single(step => string.Equals(step.Key, "delivery-review", StringComparison.Ordinal));
+        deliveryStep.Title = "Implement Blazor product component";
+        deliveryStep.OutputContractSummary = "Implement the Blazor component in the product root.";
+        deliveryStep.EvidenceContractSummary = "Implementation evidence retained for review.";
+        deliveryStep.ArtifactExpectations =
+        [
+            new ProcessArtifactExpectationEditorModel
+            {
+                Id = Guid.NewGuid(),
+                ArtifactKind = ProcessArtifactKind.Deliverable,
+                Title = "Implementation change set",
+                ValidationRequirementSummary = "Must list product files changed."
+            }
+        ];
+
+        return model;
+    }
+
+    private static ProcessDefinitionEditorModel BuildArtifactMaterializationReactivationDefinitionEditor(Guid projectId, Guid managerRoleId)
+    {
+        var upstreamStepId = Guid.NewGuid();
+        var downstreamStepId = Guid.NewGuid();
+        var materializedArtifactId = Guid.NewGuid();
+
+        return new ProcessDefinitionEditorModel
+        {
+            ProjectId = projectId,
+            Name = "Materialization reactivation process",
+            Summary = "Validates that materialized upstream artifacts reactivate blocked downstream steps.",
+            ValueStatement = "Keep artifact materialization and downstream dispatch in one consistent lifecycle.",
+            CustomerName = "Acme Customer",
+            OwnerName = "Morgan Process Lead",
+            GovernancePolicySummary = "Downstream work must wait for typed upstream artifacts.",
+            ChangeSummary = "SB01-INV-001 integration definition.",
+            ConstitutionRuleSummary = "Artifact materialization is runtime state, not prompt text.",
+            OperatingModeSummary = "Assisted execution with explicit materialization.",
+            SimulationReadinessSummary = "Safe for local integration validation.",
+            Roles =
+            [
+                new ProcessRoleEditorModel
+                {
+                    Id = managerRoleId,
+                    Key = "delivery-owner",
+                    DisplayName = "Delivery owner",
+                    Purpose = "Own materialization validation.",
+                    StaffingIntent = "Primary process owner for the project.",
+                    PreferredProjectAssignmentRole = ProjectPartyAssignmentRole.Manager,
+                    PreferredExecutorKind = "person",
+                    SnapshotSummary = "Delivery owner snapshot."
+                }
+            ],
+            Steps =
+            [
+                new ProcessStepEditorModel
+                {
+                    Id = upstreamStepId,
+                    Key = "produce-materialized-artifact",
+                    Title = "Produce materialized artifact",
+                    StepKind = ProcessStepKind.Work,
+                    InputContractSummary = "Current process scope.",
+                    OutputContractSummary = "Materialized evidence for downstream review.",
+                    EvidenceContractSummary = "A concrete evidence artifact must be recorded.",
+                    DecisionRightsSummary = "Delivery owner confirms materialization.",
+                    ExceptionPolicySummary = "Block downstream work when the artifact is absent.",
+                    TargetLeadHours = 1,
+                    CanvasX = 120,
+                    CanvasY = 120,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = managerRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                        }
+                    ],
+                    ArtifactExpectations =
+                    [
+                        new ProcessArtifactExpectationEditorModel
+                        {
+                            Id = materializedArtifactId,
+                            ArtifactKind = ProcessArtifactKind.Evidence,
+                            Title = "Materialized evidence",
+                            ValidationRequirementSummary = "Must be present before downstream review dispatches."
+                        }
+                    ]
+                },
+                new ProcessStepEditorModel
+                {
+                    Id = downstreamStepId,
+                    Key = "review-materialized-artifact",
+                    Title = "Review materialized artifact",
+                    StepKind = ProcessStepKind.Review,
+                    InputContractSummary = "Materialized evidence from the upstream step.",
+                    OutputContractSummary = "Review readiness decision.",
+                    EvidenceContractSummary = "Review uses the upstream materialized evidence.",
+                    DecisionRightsSummary = "Delivery owner decides whether to continue.",
+                    ExceptionPolicySummary = "Remain blocked when upstream materialized evidence is absent.",
+                    TargetLeadHours = 1,
+                    Dependencies = CreateDependencies((upstreamStepId, null)),
+                    CanvasX = 420,
+                    CanvasY = 120,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = managerRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                        }
+                    ],
+                    ArtifactInputs =
+                    [
+                        new ProcessStepArtifactInputEditorModel
+                        {
+                            ArtifactExpectationId = materializedArtifactId
                         }
                     ]
                 }

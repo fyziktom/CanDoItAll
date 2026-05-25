@@ -1,3 +1,9 @@
 # SB07 anti-stub-audit.txt
 
-Fill during execution.
+Anti-stub audit:
+
+- Production router code, not prompt text, now enforces ownership-gated disposition routing.
+- `ArtifactDispositionRouter_SB07_INV_001_blocks_missing_own_required_artifact_even_with_negative_branch` constructs a real dispatch candidate with required artifacts and a no-go branch, invokes the production router, and verifies no branch is returned for missing own output.
+- `ArtifactContractValidation_SB07_INV_001_classifies_missing_required_artifact_as_own_output` exercises the production artifact validator that produces ownership metadata consumed by the router.
+- The allowed-route regression uses a satisfied required decision artifact plus explicit `ReviewDisposition` ownership; it does not rely on branch-specific hardcoding or a software-only process shape.
+- No SQLite support, UI changes, or prompt-only restrictions were added for SB07.

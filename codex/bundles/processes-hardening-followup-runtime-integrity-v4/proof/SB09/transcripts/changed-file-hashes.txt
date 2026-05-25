@@ -1,3 +1,14 @@
 # SB09 changed-file-hashes.txt
 
 Fill during execution.
+# SB09 changed-file-hashes.txt
+
+SHA256 hashes:
+
+```text
+20D4AF14B03BD11B5FDBDC140AFF7429F0CC7A1094701333579924A2A40A6792  C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeEventTypes.cs
+3524F676F03BBB5BA9233971DF8D52C028AFCF68BFCA910F353044BFAEAD0CB8  C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs
+AE501EE5AE02425DE9E893C16C8837DBF9D2320A2C9F2918AB272876FCD413DF  C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs
+4715055B385B17C823B1FDEB90D0921EC5FF19DBEEB6D0CECFF2BE8F1A948E3D  C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.RecoveryPackets.cs
+EF02E6E3E8493766A4F385F27C83A26BA30FF08D69931718348E1726CABC1BC9  C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs
+```

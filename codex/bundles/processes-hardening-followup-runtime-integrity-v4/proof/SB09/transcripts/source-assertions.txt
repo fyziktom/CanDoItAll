@@ -1,3 +1,42 @@
 # SB09 source-assertions.txt
 
 Fill during execution.
+# SB09 source-assertions.txt
+
+Command:
+
+```powershell
+rg -n "NoProgressRetrySignal|NoProgressRetryObserved|HasPriorNoProgressRetrySignal|TryCreateNoProgressRetrySignal|PersistNoProgressRetryObserved|ResolveBlockingAutomationExecutionRunId_SB09|SB09_INV_001|NoProgressRetryCompressed" src\CanDoItAll.Modules.Processes\Automation\Dispatch src\CanDoItAll.Modules.Processes\Runtime tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs
+```
+
+Result excerpt:
+
+```text
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:216:    public void ResolveBlockingAutomationExecutionRunId_SB09_INV_001_ignores_active_runs_from_previous_attempt_window()
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:235:    public void HasPriorNoProgressRetrySignal_SB09_INV_001_detects_repeated_fingerprint_after_restart()
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeEventTypes.cs:16:    public const string NoProgressRetryObserved = "no-progress-retry-observed";
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeEventTypes.cs:17:    public const string NoProgressRetryCompressed = "no-progress-retry-compressed";
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs:26:    internal sealed record NoProgressRetrySignal(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs:438:    internal static bool HasPriorNoProgressRetrySignal(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs:512:        return TryCreateNoProgressRetrySignal(candidate, detail, responseText, missingRequiredTools, retryReasons)?.Fingerprint;
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs:515:    private static NoProgressRetrySignal? TryCreateNoProgressRetrySignal(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:384:            var noProgressSignal = TryCreateNoProgressRetrySignal(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:393:                await HasPriorNoProgressRetrySignalAsync(candidate, noProgressSignal, cancellationToken))
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:461:                await PersistNoProgressRetryObservedAsync(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.RecoveryPackets.cs:175:    private async Task PersistNoProgressRetryObservedAsync(
+```
+
+Command:
+
+```powershell
+rg -n "ResolveBlockingAutomationExecutionRunId\(|IsRecoverableExecutionRunForCurrentAttempt|ResolveCompetingActiveAutomationExecutionAsync|TryAdoptConcurrentAutomationExecutionAsync" src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs
+```
+
+Result excerpt:
+
+```text
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs:64:    internal static Guid? ResolveBlockingAutomationExecutionRunId(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs:75:                IsRecoverableExecutionRunForCurrentAttempt(executionRun, stepRun.StartedAtUtc))
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs:125:        var blockingExecutionRunId = ResolveBlockingAutomationExecutionRunId(candidate.StepRun, executionRuns, clock.GetUtcNow());
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs:160:                IsRecoverableExecutionRunForCurrentAttempt(executionRun, candidate.StepRun.StartedAtUtc))
+```

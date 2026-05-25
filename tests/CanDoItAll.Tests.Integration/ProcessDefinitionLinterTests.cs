@@ -66,6 +66,103 @@ public sealed class ProcessDefinitionLinterTests
     }
 
     [Fact]
+    public void Analyze_SB08_INV_001_warns_when_operation_contract_is_text_inferred()
+    {
+        var model = CreateBaseDefinition();
+        model.Steps.Add(new ProcessStepEditorModel
+        {
+            Id = Guid.NewGuid(),
+            Title = "Implement Blazor product component",
+            StepKind = ProcessStepKind.Work,
+            OutputContractSummary = "Operation contract: allowed operations MutateProductTarget; target scope ExternalProductTargetMutable. Implement the Blazor component in the product root.",
+            ArtifactExpectations =
+            [
+                new ProcessArtifactExpectationEditorModel
+                {
+                    Title = "Implementation change set",
+                    ArtifactKind = ProcessArtifactKind.Deliverable,
+                    ValidationRequirementSummary = "Must list product files changed."
+                }
+            ]
+        });
+
+        var result = ProcessDefinitionLinter.Analyze(model);
+
+        Assert.Contains(result.Issues, issue =>
+            issue.Code == "processes.lint.step-operation-contract-inferred" &&
+            issue.Severity == ProcessDefinitionLintSeverity.Warning);
+        Assert.DoesNotContain(result.Issues, issue => issue.Code == "processes.lint.step-operation-contract-missing");
+    }
+
+    [Fact]
+    public void Analyze_SB08_INV_001_accepts_typed_operation_contract_without_text_markers()
+    {
+        var model = CreateBaseDefinition();
+        model.Steps.Add(new ProcessStepEditorModel
+        {
+            Id = Guid.NewGuid(),
+            Title = "Implement Blazor product component",
+            StepKind = ProcessStepKind.Work,
+            AllowedOperations =
+            [
+                ProcessStepOperation.MutateProductTarget,
+                ProcessStepOperation.WriteManagedProcessArtifacts
+            ],
+            OperationTargetScope = ProcessStepTargetScope.ExternalProductTargetMutable,
+            OutputContractSummary = "Implement the Blazor component in the product root.",
+            ArtifactExpectations =
+            [
+                new ProcessArtifactExpectationEditorModel
+                {
+                    Title = "Implementation change set",
+                    ArtifactKind = ProcessArtifactKind.Deliverable,
+                    ValidationRequirementSummary = "Must list product files changed."
+                }
+            ]
+        });
+
+        var result = ProcessDefinitionLinter.Analyze(model, ProcessDefinitionLintMode.Strict);
+
+        Assert.DoesNotContain(result.Issues, issue => issue.Code == "processes.lint.step-operation-contract-missing");
+        Assert.DoesNotContain(result.Issues, issue => issue.Code == "processes.lint.step-operation-contract-inferred");
+        Assert.DoesNotContain(result.Issues, issue => issue.Code == "processes.lint.step-operation-contract-partial");
+        Assert.False(result.HasErrors);
+    }
+
+    [Fact]
+    public void Analyze_SB08_INV_001_rejects_partial_typed_operation_contract()
+    {
+        var model = CreateBaseDefinition();
+        model.Steps.Add(new ProcessStepEditorModel
+        {
+            Id = Guid.NewGuid(),
+            Title = "Implement Blazor product component",
+            StepKind = ProcessStepKind.Work,
+            AllowedOperations =
+            [
+                ProcessStepOperation.MutateProductTarget
+            ],
+            OutputContractSummary = "Implement the Blazor component in the product root.",
+            ArtifactExpectations =
+            [
+                new ProcessArtifactExpectationEditorModel
+                {
+                    Title = "Implementation change set",
+                    ArtifactKind = ProcessArtifactKind.Deliverable,
+                    ValidationRequirementSummary = "Must list product files changed."
+                }
+            ]
+        });
+
+        var result = ProcessDefinitionLinter.Analyze(model, ProcessDefinitionLintMode.Strict);
+
+        Assert.Contains(result.Issues, issue =>
+            issue.Code == "processes.lint.step-operation-contract-partial" &&
+            issue.Severity == ProcessDefinitionLintSeverity.Error);
+        Assert.True(result.HasErrors);
+    }
+
+    [Fact]
     public void Analyze_strict_marks_missing_artifact_recovery_policy_as_error()
     {
         var model = CreateBaseDefinition();
@@ -127,6 +224,34 @@ public sealed class ProcessDefinitionLinterTests
 
         Assert.DoesNotContain(result.Issues, issue => issue.Code == "processes.lint.step-operation-contract-missing");
         Assert.DoesNotContain(result.Issues, issue => issue.Code == "processes.lint.step-boundary-ambiguous");
+    }
+
+    [Fact]
+    public void Analyze_SB10_INV_001_accepts_architecture_report_without_product_mutation_contract()
+    {
+        var model = CreateBaseDefinition();
+        model.Steps.Add(new ProcessStepEditorModel
+        {
+            Id = Guid.NewGuid(),
+            Title = "Create target operating model architecture report",
+            StepKind = ProcessStepKind.Work,
+            OutputContractSummary = "Create architecture options, decision criteria, tradeoffs, and a recommendation.",
+            ArtifactExpectations =
+            [
+                new ProcessArtifactExpectationEditorModel
+                {
+                    Title = "Architecture recommendation report",
+                    ArtifactKind = ProcessArtifactKind.Deliverable,
+                    ValidationRequirementSummary = "Must include context, options, decision criteria, risks, and recommended next action."
+                }
+            ]
+        });
+
+        var result = ProcessDefinitionLinter.Analyze(model, ProcessDefinitionLintMode.Strict);
+
+        Assert.DoesNotContain(result.Issues, issue => issue.Code == "processes.lint.step-operation-contract-missing");
+        Assert.DoesNotContain(result.Issues, issue => issue.Code == "processes.lint.step-boundary-ambiguous");
+        Assert.False(result.HasErrors);
     }
 
     [Fact]

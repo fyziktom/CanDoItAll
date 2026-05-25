@@ -319,6 +319,26 @@ public sealed partial class ProcessesService
             $"processes.{operation}.lint-blocked");
     }
 
+    private static ProcessDefinitionLintMode ResolveEffectiveLintMode(
+        ProcessDefinitionLintMode requestedMode,
+        ProcessDefinition definition)
+    {
+        var requiresStrictLint = requestedMode == ProcessDefinitionLintMode.Strict ||
+            RequiresStrictLint(definition.Criticality, definition.AutonomyLevel);
+
+        return requiresStrictLint
+            ? ProcessDefinitionLintMode.Strict
+            : ProcessDefinitionLintMode.Advisory;
+    }
+
+    private static bool RequiresStrictLint(
+        ProcessCriticality criticality,
+        ProcessAutonomyLevel autonomyLevel)
+    {
+        return criticality is ProcessCriticality.High or ProcessCriticality.MissionCritical ||
+            autonomyLevel is ProcessAutonomyLevel.Guarded or ProcessAutonomyLevel.Delegated;
+    }
+
     private static ProcessDefinitionEditorModel BuildLintEditorModel(
         ProcessDefinition definition,
         ProcessDefinitionVersion version,
@@ -378,6 +398,8 @@ public sealed partial class ProcessesService
                     Subtitle = step.Subtitle,
                     Notes = step.Notes,
                     StepKind = step.StepKind,
+                    AllowedOperations = ProcessStepOperationContractState.NormalizeAllowedOperations(step.AllowedOperations),
+                    OperationTargetScope = step.OperationTargetScope,
                     SubprocessDefinitionId = step.SubprocessDefinitionId,
                     SubprocessDefinitionSnapshotName = step.SubprocessDefinitionSnapshotName,
                     AllowsManualSkip = step.AllowsManualSkip,

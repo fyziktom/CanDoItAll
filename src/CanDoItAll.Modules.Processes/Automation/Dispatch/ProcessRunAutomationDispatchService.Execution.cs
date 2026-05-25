@@ -381,24 +381,30 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 responseText,
                 missingRequiredTools,
                 carriedImplementationProof);
-            var noProgressFingerprint = TryCreateNoProgressRetryFingerprint(
+            var noProgressSignal = TryCreateNoProgressRetrySignal(
                 candidate,
                 detail,
                 responseText,
                 missingRequiredTools,
-                retryReasons,
-                attemptNumber);
+                retryReasons);
+
+            if (shouldRetry &&
+                noProgressSignal is not null &&
+                await HasPriorNoProgressRetrySignalAsync(candidate, noProgressSignal, cancellationToken))
+            {
+                shouldRetry = false;
+            }
 
             if (!shouldRetry)
             {
-                if (!string.IsNullOrWhiteSpace(noProgressFingerprint))
+                if (noProgressSignal is not null)
                 {
                     await PersistNoProgressRetryCompressedDiagnosticAsync(
                         candidate,
                         detail,
                         missingRequiredTools,
                         retryReasons,
-                        noProgressFingerprint,
+                        noProgressSignal,
                         cancellationToken);
                 }
 
@@ -448,6 +454,17 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     Mode = AgentRecoveryMode.ReworkContinuation,
                     ReworkPacketId = reworkPacket.Id
                 };
+            }
+
+            if (noProgressSignal is not null)
+            {
+                await PersistNoProgressRetryObservedAsync(
+                    candidate,
+                    detail,
+                    missingRequiredTools,
+                    retryReasons,
+                    noProgressSignal,
+                    cancellationToken);
             }
 
             await PersistRecoveryJournalAsync(

@@ -38,6 +38,8 @@ public sealed partial class ProcessesService
             step.Subtitle = stepModel.Subtitle.Trim();
             step.Notes = stepModel.Notes.Trim();
             step.StepKind = stepModel.StepKind;
+            step.AllowedOperations = ProcessStepOperationContractState.NormalizeAllowedOperations(stepModel.AllowedOperations);
+            step.OperationTargetScope = stepModel.OperationTargetScope;
             step.SubprocessDefinitionId = stepModel.StepKind == ProcessStepKind.Subprocess
                 ? stepModel.SubprocessDefinitionId
                 : null;

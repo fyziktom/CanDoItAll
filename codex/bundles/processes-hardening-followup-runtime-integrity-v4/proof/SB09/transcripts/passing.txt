@@ -1,3 +1,32 @@
 # SB09 passing.txt
 
 Fill during execution.
+# SB09 passing.txt
+
+Command:
+
+```powershell
+dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~SB09_INV_001" --no-restore -v minimal
+```
+
+Result excerpt:
+
+```text
+Total matched test files: 1
+Passed: 2, Failed: 0, Skipped: 0, Total: 2
+```
+
+Command:
+
+```powershell
+dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~AutomationExecutionRunId|FullyQualifiedName~NoProgressRetry|FullyQualifiedName~SB09_INV_001" --no-restore --no-build -v minimal
+```
+
+Result excerpt:
+
+```text
+Total matched test files: 1
+Passed: 8, Failed: 0, Skipped: 0, Total: 8
+```
+
+Known unrelated build warning noise: MSB3277 EntityFrameworkCore.Relational 10.0.0/10.0.4 conflicts.

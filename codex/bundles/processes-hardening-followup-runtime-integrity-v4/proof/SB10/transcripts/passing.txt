@@ -1,3 +1,161 @@
 # SB10 passing.txt
 
-Fill during execution.
+Command:
+
+```powershell
+dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~SB10_INV_001" --no-restore -v minimal
+```
+
+Result excerpt:
+
+```text
+Passed: 3, Failed: 0, Skipped: 0, Total: 3
+```
+
+Command:
+
+```powershell
+dotnet test tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --filter "FullyQualifiedName~Render_SB10_INV_001" --no-restore -v minimal
+```
+
+Result excerpt:
+
+```text
+Passed: 1, Failed: 0, Skipped: 0, Total: 1
+```
+
+Command:
+
+```powershell
+dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~ProcessDefinitionLinterTests|FullyQualifiedName~PublishAsync_SB10_INV_001|FullyQualifiedName~StartRunAsync_SB10_INV_001" --no-restore --no-build -v minimal
+```
+
+Result excerpt:
+
+```text
+Passed: 18, Failed: 0, Skipped: 0, Total: 18
+```
+
+Command:
+
+```powershell
+dotnet test tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --filter "FullyQualifiedName~ProcessDefinitionFormTests|FullyQualifiedName~ProcessStepEditorFormTests" --no-restore --no-build -v minimal
+```
+
+Result excerpt:
+
+```text
+Passed: 3, Failed: 0, Skipped: 0, Total: 3
+```
+
+Command:
+
+```powershell
+dotnet test tests/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj --filter "FullyQualifiedName~Process_step_operation_contract_editor_controls_work_in_browser" --no-restore -v minimal
+```
+
+Result excerpt:
+
+```text
+Passed: 1, Failed: 0, Skipped: 0, Total: 1
+```
+
+Command:
+
+```powershell
+dotnet test tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~AgentToolInvocationPolicyTests|FullyQualifiedName~AgentWorkspaceToolAccessMetadataTests" -v minimal
+```
+
+Result excerpt:
+
+```text
+Passed: 101, Failed: 0, Skipped: 0, Total: 101
+```
+
+Command:
+
+```powershell
+dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-restore --filter "FullyQualifiedName~ProcessRunAutomationDispatchServiceTests|FullyQualifiedName~ProcessDefinitionLinterTests" -v minimal
+```
+
+Result excerpt:
+
+```text
+Passed: 438, Failed: 0, Skipped: 0, Total: 438
+```
+
+Command:
+
+```powershell
+dotnet test tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-restore -v minimal
+```
+
+Result excerpt:
+
+```text
+Passed: 800, Failed: 0, Skipped: 0, Total: 800
+```
+
+Command:
+
+```powershell
+dotnet build CanDoItAll.slnx --no-restore -m:1 -v minimal
+```
+
+Result excerpt:
+
+```text
+Build succeeded.
+27 Warning(s)
+0 Error(s)
+```
+
+Command:
+
+```powershell
+rg -n "Sqlite|SQLite|UseSqlite|Migrations.Sqlite" src tests codex/bundles/processes-hardening-followup-runtime-integrity-v4 -S
+```
+
+Result excerpt:
+
+```text
+Only existing quarantine/test references and bundle instruction text matched. No new SQLite runtime path, provider path, migration, or validation dependency was introduced.
+```
+
+Command:
+
+```powershell
+python codex/skills/bundles/candoitall-bundle-preparation/scripts/validate_bundle.py --stage prepared codex/bundles/processes-hardening-followup-runtime-integrity-v4
+```
+
+Result excerpt:
+
+```text
+Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\processes-hardening-followup-runtime-integrity-v4
+```
+
+Attempted full integration validation:
+
+```powershell
+dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-restore -v minimal
+```
+
+Result:
+
+```text
+Timed out after 15 minutes.
+```
+
+Attempted full integration rerun:
+
+```powershell
+dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-restore --no-build --logger "trx;LogFileName=full-integration-sb10.trx" -v minimal
+```
+
+Result:
+
+```text
+Timed out after 30 minutes. Orphaned dotnet/testhost processes were cleaned up. No TRX result was produced.
+```
+
+Known unrelated warning noise: MSB3277 EntityFrameworkCore.Relational 10.0.0/10.0.4 conflicts.

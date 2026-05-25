@@ -1,3 +1,20 @@
-# SB05 failing-first.txt
+# SB05 Failing-First / Red-Team Proof
 
-Fill during execution.
+Old failure mode: a relative managed storage path could satisfy a JSON artifact contract without the finalizer reading the file. If no delegate supplied content, `HasValidJsonArtifactContent` fell through to inline summary detection and returned success for a `.json` path even when the stored file was malformed or missing.
+
+Red-team scenario added for SB05:
+
+- The process artifact record is current-run and mode-compatible.
+- `ManagedStoragePath` is relative: `artifacts/process-runs/current/finance-approval-packet.json`.
+- The file exists under the workspace root but contains malformed JSON: `{ not valid json`.
+- The finalizer uses `WorkspaceProcessArtifactContentReader`, so the stored bytes must be read and parsed before the artifact can satisfy the contract.
+
+Regression test:
+
+```powershell
+dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~ArtifactContractValidation_SB05_INV_001_rejects_malformed_json_from_relative_managed_storage_path" --no-restore --no-build -v minimal
+```
+
+Expected old result: `Satisfied`, because the relative storage path was not read.
+
+Current guarded result: `InvalidFormat` with a diagnostic containing `malformed JSON`.

@@ -351,6 +351,8 @@ public sealed class ProcessArtifactRecord {
 
     public string ExternalReferenceKey { get; set; } = string.Empty;
 
+    public string ProjectionLineageJson { get; set; } = string.Empty;
+
     public DateTimeOffset CreatedAtUtc { get; set; }
 }
 

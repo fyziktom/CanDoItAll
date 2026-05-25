@@ -1,3 +1,30 @@
-# SB03 failing-first.txt
+# SB03 Failing-First / Red-Team Transcript
 
-Fill during execution.
+Red-team source audit before the SB03 fix:
+
+1. `repo://src/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs`
+   - `ToolInvocationPolicyContext` carried redacted tool arguments only. It had no inspected script content or script inspection failure channel.
+   - `ProductFileMutationTools` included direct file/scaffold mutation tools, but did not include `workspace_pwsh_run_script` or `workspace_python_run_file`.
+   - `EvaluateGovernedProcessProductMutationBoundary` returned `null` for script runner tools even when `ProcessAllowsProductMutation=false`.
+
+2. `repo://src/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.AgentFactory.cs`
+   - MAF middleware built `ToolInvocationPolicyContext` from `AgentToolInvocationPolicyMetadata.RedactArguments(...)`.
+   - It did not inspect local script content before policy evaluation.
+
+Old failure mode demonstrated by the new red-team cases:
+
+```text
+Tool: workspace_pwsh_run_script
+ProcessAllowsProductMutation: false
+Script content: Set-Content -Path 'external-target/C/programovani/todo-summary/product/src/Program.cs' -Value 'changed'
+Old decision path: ProductFileMutationTools did not match the script tool, policy reached mutation auto-approval, decision Allow.
+Expected hardened decision: Deny.
+```
+
+```text
+Tool: workspace_python_run_file
+ProcessAllowsProductMutation: false
+Script content: Path('external-target/C/programovani/todo-summary/product/src/Program.cs').write_text('changed')
+Old decision path: ProductFileMutationTools did not match the script tool, policy reached mutation auto-approval, decision Allow.
+Expected hardened decision: Deny.
+```

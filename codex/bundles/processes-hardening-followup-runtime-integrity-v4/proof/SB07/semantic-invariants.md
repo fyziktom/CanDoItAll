@@ -2,7 +2,7 @@
 
 ## SB07-INV-001
 
-Expected behavior: see `subbundles/07-disposition-routing-ownership-guardrails/README.md`.
+Expected behavior: artifact validation failures are classified by ownership. Own required output failures, including missing or invalid current-step artifacts, block or recover instead of completing onto negative branch outcomes. Review/approval/QA disposition routing remains allowed only when a required decision artifact is already satisfied and the remaining failure is explicitly classified as `ReviewDisposition`.
 
 Disallowed shallow implementation:
 
@@ -20,3 +20,8 @@ Required proof:
 - anti-stub audit
 - changed-file hashes
 - production behavior artifact matrix when new runtime state is introduced
+
+Closure proof:
+
+- `ArtifactDispositionRouter_SB07_INV_001_blocks_missing_own_required_artifact_even_with_negative_branch`
+- `ArtifactContractValidation_SB07_INV_001_classifies_missing_required_artifact_as_own_output`

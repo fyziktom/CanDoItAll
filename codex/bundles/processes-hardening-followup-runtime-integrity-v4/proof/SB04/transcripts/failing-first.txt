@@ -1,3 +1,26 @@
-# SB04 failing-first.txt
+# SB04 Failing-First / Red-Team Proof
 
-Fill during execution.
+Old failure mode: external-target aliases were accumulated from free text and then promoted as writable when the step allowed product mutation. That let stale project-structure text or upstream artifact summaries influence writable roots.
+
+Observed failing-first regression before the SB04 classifier fix:
+
+```powershell
+dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~BuildProcessInvocationMetadataJson" --no-restore --no-build -v minimal
+```
+
+Result excerpt:
+
+```text
+Neúspěšné CanDoItAll.Tests.Integration.ProcessRunAutomationDispatchServiceTests.BuildProcessInvocationMetadataJson_prefers_current_run_product_root_over_stale_project_structure_products
+Assert.Equal() Failure: Strings differ
+Expected: ...codex-live-blazor-20260522-190813/product
+Actual:   ...codex-live-blazor-20260522-181000/product
+```
+
+Red-team scenario added for SB04:
+
+- Current-run project structure grounds `external-target/.../codex-live-blazor-20260522-190813/product`.
+- Upstream artifact summary mentions stale sibling root `external-target/.../codex-live-blazor-20260522-190813-sibling/product`.
+- Mutating step must allow only the current project-structure product root and must keep the upstream sibling alias read-only.
+
+This scenario is captured by `BuildProcessInvocationMetadataJson_SB04_INV_001_keeps_stale_upstream_product_alias_read_only_for_mutating_step`.

@@ -11309,6 +11309,10 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ProjectionLineageJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("ReviewSummary")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -12646,6 +12650,10 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("AllowedOperations")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<bool>("AllowsManualSkip")
                         .HasColumnType("boolean");
 
@@ -12691,6 +12699,10 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<string>("Notes")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<string>("OperationTargetScope")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
 
                     b.Property<int>("OrderIndex")
                         .HasColumnType("integer");

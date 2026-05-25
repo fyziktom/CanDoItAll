@@ -43,6 +43,32 @@ public enum ProcessStepKind
     Subprocess = 7
 }
 
+public enum ProcessStepOperation
+{
+    ReadProcessContext,
+    ReadProjectStructure,
+    ReadUpstreamArtifacts,
+    WriteManagedProcessArtifacts,
+    WriteExternalArtifactDestination,
+    MutateProductTarget,
+    RunValidation,
+    LaunchRuntime,
+    CaptureRuntimeProof,
+    ExecuteExternalAction,
+    RecoverArtifactsOnly,
+    EscalateOrDecide
+}
+
+public enum ProcessStepTargetScope
+{
+    ManagedProcessArtifactsOnly,
+    ManagedOutputProduct,
+    ExternalArtifactDestination,
+    ExternalProductTargetReadOnly,
+    ExternalProductTargetMutable,
+    ExternalActionControlled
+}
+
 public enum ProcessResponsibilityKind
 {
     Responsible,

@@ -24,6 +24,10 @@ namespace CanDoItAll.Modules.Processes;
 
 internal sealed partial class ProcessRunAutomationDispatchService
 {
+    private static readonly Regex SubprocessOutputMappingRegex = new(
+        @"\b(?:subprocess[-_\s]*(?:child[-_\s]*)?(?:expectation|artifact|output)[-_\s]*(?:id|key)|child[-_\s]*expectation[-_\s]*id)\s*[:=]\s*[`""']?(?<value>[0-9A-Fa-f-]{32,36})",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     public async Task DispatchAsync(
         Guid processRunId,
         Guid? triggerStepRunId,
@@ -955,7 +959,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
         foreach (var expectation in missingProjectableExpectations)
         {
             await EnsureStepDispatchClaimHeldAsync(dispatchClaim, cancellationToken);
-            var sourceArtifact = ResolveSubprocessSourceArtifact(childArtifacts, expectation);
+            var sourceArtifact = ResolveSubprocessSourceArtifact(
+                childArtifacts,
+                missingProjectableExpectations,
+                expectation,
+                out var projectionDiagnostic);
             if (sourceArtifact is null)
             {
                 await RecordSubprocessProjectionGapAsync(
@@ -963,6 +971,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     candidate,
                     subprocessRun,
                     expectation,
+                    projectionDiagnostic,
                     now,
                     cancellationToken);
                 continue;
@@ -982,6 +991,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 ReviewSummary = BuildSubprocessArtifactProjectionReviewSummary(subprocessRun, sourceArtifact),
                 ManagedStoragePath = BoundProjectedSubprocessStoragePath(sourceArtifact.ManagedStoragePath),
                 ExternalReferenceKey = BuildSubprocessArtifactProjectionReferenceKey(subprocessRun.RunId, sourceArtifact.Id),
+                ProjectionLineageJson = ProcessArtifactProjectionLineageJson.Serialize(
+                    new ProcessArtifactProjectionLineage
+                    {
+                        SourceKind = ProcessArtifactProjectionSourceKind.SubprocessArtifact,
+                        SubprocessRunId = subprocessRun.RunId,
+                        SourceArtifactId = sourceArtifact.Id,
+                        SourceExternalReferenceKey = sourceArtifact.ExternalReferenceKey
+                    }),
                 CreatedAtUtc = now
             };
             await dbContext.Set<ProcessArtifactRecord>().AddAsync(artifact, cancellationToken);
@@ -1018,6 +1035,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         DispatchCandidate candidate,
         ProcessSubprocessRunStartResult subprocessRun,
         ProcessArtifactExpectation expectation,
+        string projectionDiagnostic,
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
@@ -1043,7 +1061,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 StepRunId = candidate.StepRun.Id,
                 EventType = ProcessRuntimeEventTypes.ArtifactValidationDiagnostic,
                 Title = $"Subprocess artifact projection gap: {expectation.Title}",
-                Description = $"Completed subprocess run '{subprocessRun.RunName}' did not produce a child artifact that can satisfy parent expectation '{expectation.Title}'.",
+                Description = string.IsNullOrWhiteSpace(projectionDiagnostic)
+                    ? $"Completed subprocess run '{subprocessRun.RunName}' did not produce a child artifact that can satisfy parent expectation '{expectation.Title}'."
+                    : $"Completed subprocess run '{subprocessRun.RunName}' did not produce a child artifact that can satisfy parent expectation '{expectation.Title}'. {projectionDiagnostic}",
                 CorrelationId = fingerprint,
                 OperatingMode = candidate.Run.OperatingMode,
                 PolicyVersion = $"definition-version:{candidate.Run.ProcessDefinitionVersionId:D}",
@@ -1054,7 +1074,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     StepRunId = candidate.StepRun.Id,
                     SubprocessRunId = subprocessRun.RunId,
                     ExpectationId = expectation.Id,
-                    ExpectationTitle = expectation.Title
+                    ExpectationTitle = expectation.Title,
+                    ProjectionDiagnostic = projectionDiagnostic
                 }),
                 OccurredAtUtc = now
             },
@@ -1083,18 +1104,150 @@ internal sealed partial class ProcessRunAutomationDispatchService
             ProcessArtifactTrustRequirement.ReviewRequired;
     }
 
-    private static ProcessArtifactRecord? ResolveSubprocessSourceArtifact(
+    internal static ProcessArtifactRecord? ResolveSubprocessSourceArtifact(
         IReadOnlyList<ProcessArtifactRecord> childArtifacts,
-        ProcessArtifactExpectation expectation) {
-        return childArtifacts
-            .Where(artifact =>
-                artifact.ArtifactKind == expectation.ArtifactKind &&
-                artifact.SensitivityLevel >= expectation.SensitivityLevel &&
-                SatisfiesTrustRequirement(artifact.TrustStatus, expectation.TrustRequirement))
-            .OrderByDescending(artifact => artifact.ArtifactExpectationId.HasValue)
-            .ThenByDescending(artifact => string.Equals(artifact.Title, expectation.Title, StringComparison.OrdinalIgnoreCase))
-            .ThenByDescending(artifact => artifact.CreatedAtUtc)
-            .FirstOrDefault();
+        IReadOnlyList<ProcessArtifactExpectation> parentExpectations,
+        ProcessArtifactExpectation expectation,
+        out string diagnostic)
+    {
+        diagnostic = string.Empty;
+        if (!TryBuildSubprocessOutputMappingIndex(parentExpectations, out var childExpectationIdsByParentExpectationId, out diagnostic))
+        {
+            return null;
+        }
+
+        if (childExpectationIdsByParentExpectationId.Count > 0)
+        {
+            if (!childExpectationIdsByParentExpectationId.TryGetValue(expectation.Id, out var childExpectationId))
+            {
+                diagnostic = $"Parent artifact expectation '{expectation.Title}' has no explicit subprocess child expectation mapping.";
+                return null;
+            }
+
+            var mappedArtifacts = childArtifacts
+                .Where(artifact =>
+                    artifact.ArtifactExpectationId == childExpectationId &&
+                    IsSubprocessSourceArtifactEligible(artifact, expectation))
+                .OrderByDescending(artifact => artifact.CreatedAtUtc)
+                .ToList();
+            if (mappedArtifacts.Count > 0)
+            {
+                return mappedArtifacts[0];
+            }
+
+            diagnostic = $"Subprocess child expectation '{childExpectationId:D}' did not produce an eligible artifact for parent expectation '{expectation.Title}'.";
+            return null;
+        }
+
+        var eligibleParentExpectations = parentExpectations
+            .Where(IsSubprocessCompletionProjectionAllowed)
+            .ToList();
+        var eligibleChildArtifacts = childArtifacts
+            .Where(artifact => IsSubprocessSourceArtifactEligible(artifact, expectation))
+            .ToList();
+        if (eligibleParentExpectations.Count == 1 && eligibleChildArtifacts.Count == 1)
+        {
+            return eligibleChildArtifacts[0];
+        }
+
+        if (eligibleParentExpectations.Count > 1 || eligibleChildArtifacts.Count > 1)
+        {
+            diagnostic = "Subprocess artifact projection is ambiguous; explicit subprocess child expectation mapping is required when multiple parent expectations or child artifacts can match.";
+        }
+
+        return null;
+    }
+
+    internal sealed record ProcessSubprocessOutputArtifactMapping(
+        Guid ParentExpectationId,
+        Guid ChildExpectationId);
+
+    internal static IReadOnlyList<ProcessSubprocessOutputArtifactMapping> ResolveSubprocessOutputArtifactMappings(
+        IReadOnlyList<ProcessArtifactExpectation> parentExpectations)
+    {
+        var mappings = new List<ProcessSubprocessOutputArtifactMapping>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var expectation in parentExpectations)
+        {
+            foreach (var childExpectationId in ResolveSubprocessChildExpectationIds(expectation))
+            {
+                var key = $"{expectation.Id:D}|{childExpectationId:D}";
+                if (seen.Add(key))
+                {
+                    mappings.Add(new ProcessSubprocessOutputArtifactMapping(expectation.Id, childExpectationId));
+                }
+            }
+        }
+
+        return mappings;
+    }
+
+    private static bool TryBuildSubprocessOutputMappingIndex(
+        IReadOnlyList<ProcessArtifactExpectation> parentExpectations,
+        out Dictionary<Guid, Guid> childExpectationIdsByParentExpectationId,
+        out string diagnostic)
+    {
+        childExpectationIdsByParentExpectationId = [];
+        var parentExpectationIdsByChildExpectationId = new Dictionary<Guid, Guid>();
+        var childExpectationIdsByParent = new Dictionary<Guid, HashSet<Guid>>();
+        var diagnostics = new List<string>();
+        foreach (var mapping in ResolveSubprocessOutputArtifactMappings(parentExpectations))
+        {
+            if (!childExpectationIdsByParent.TryGetValue(mapping.ParentExpectationId, out var childExpectationIds))
+            {
+                childExpectationIds = [];
+                childExpectationIdsByParent[mapping.ParentExpectationId] = childExpectationIds;
+            }
+
+            childExpectationIds.Add(mapping.ChildExpectationId);
+            if (parentExpectationIdsByChildExpectationId.TryGetValue(mapping.ChildExpectationId, out var existingParentExpectationId) &&
+                existingParentExpectationId != mapping.ParentExpectationId)
+            {
+                diagnostics.Add($"Subprocess child expectation '{mapping.ChildExpectationId:D}' maps to multiple parent artifact expectations.");
+                continue;
+            }
+
+            parentExpectationIdsByChildExpectationId[mapping.ChildExpectationId] = mapping.ParentExpectationId;
+            childExpectationIdsByParentExpectationId[mapping.ParentExpectationId] = mapping.ChildExpectationId;
+        }
+
+        foreach (var item in childExpectationIdsByParent.Where(item => item.Value.Count > 1))
+        {
+            diagnostics.Add($"Parent artifact expectation '{item.Key:D}' maps to multiple subprocess child expectations.");
+        }
+
+        diagnostic = string.Join(" ", diagnostics.Distinct(StringComparer.OrdinalIgnoreCase));
+        if (diagnostics.Count == 0)
+        {
+            return true;
+        }
+
+        childExpectationIdsByParentExpectationId.Clear();
+        return false;
+    }
+
+    private static IReadOnlyList<Guid> ResolveSubprocessChildExpectationIds(ProcessArtifactExpectation expectation)
+    {
+        var text = string.Join(
+            '\n',
+            expectation.ValidationRequirementSummary,
+            expectation.AllowedFutureUsageSummary);
+        return SubprocessOutputMappingRegex
+            .Matches(text)
+            .Select(match => match.Groups["value"].Value.Trim().Trim('`', '\'', '"').TrimEnd('.', ',', ';'))
+            .Where(value => Guid.TryParse(value, out _))
+            .Select(Guid.Parse)
+            .Distinct()
+            .ToList();
+    }
+
+    private static bool IsSubprocessSourceArtifactEligible(
+        ProcessArtifactRecord artifact,
+        ProcessArtifactExpectation expectation)
+    {
+        return artifact.ArtifactKind == expectation.ArtifactKind &&
+               artifact.SensitivityLevel >= expectation.SensitivityLevel &&
+               SatisfiesTrustRequirement(artifact.TrustStatus, expectation.TrustRequirement);
     }
 
     private static bool SatisfiesArtifactExpectation(

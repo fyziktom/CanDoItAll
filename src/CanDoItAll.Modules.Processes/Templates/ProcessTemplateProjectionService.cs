@@ -110,6 +110,8 @@ public sealed class ProcessTemplateProjectionService
                 Subtitle = template.Subtitle,
                 Notes = template.Notes,
                 StepKind = EnumValueParser.ParseOrDefault(template.StepKind, ProcessStepKind.Work),
+                AllowedOperations = ProcessStepOperationContractState.NormalizeAllowedOperations(template.AllowedOperations),
+                OperationTargetScope = template.OperationTargetScope,
                 SubprocessDefinitionSnapshotName = string.IsNullOrWhiteSpace(template.SubprocessDefinitionSnapshotName)
                     ? template.SubprocessProcessKey
                     : template.SubprocessDefinitionSnapshotName,

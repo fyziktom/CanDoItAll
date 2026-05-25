@@ -2,7 +2,13 @@
 
 ## SB05-INV-001
 
-Expected behavior: see `subbundles/05-storage-backed-artifact-validation/README.md`.
+Expected behavior:
+
+- Required JSON artifacts recorded with relative managed storage paths are validated by reading stored content from the active workspace root, not by extension or inline summary alone.
+- Missing relative managed artifact content fails with a readable diagnostic that can be persisted by the existing artifact validation diagnostic path.
+- Oversized managed artifact content fails before parsing to keep finalizer validation bounded.
+- YAML and Markdown declarations require readable non-empty text when a production content reader is available.
+- Image/screenshot declarations require readable stored bytes with an image content type and matching image signature when a production content reader is available.
 
 Disallowed shallow implementation:
 

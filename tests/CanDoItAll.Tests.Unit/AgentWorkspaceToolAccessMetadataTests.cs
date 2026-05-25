@@ -209,4 +209,27 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
         Assert.Contains("external-target/C/programovani/outputsfromtests/dotnet/BikeRepairSlotScheduler", readOnlyAliases);
         Assert.False(document.RootElement.TryGetProperty(ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey, out _));
     }
+
+    [Fact]
+    public void GroundPromptExternalTargetAliases_SB04_INV_001_keeps_process_free_text_alias_read_only_even_when_product_mutation_is_allowed()
+    {
+        var metadataJson = ExecutionInvocationMetadata.GroundPromptExternalTargetAliases(
+            $"{{\"{ExecutionInvocationMetadata.ProcessStepAllowsProductMutationMetadataKey}\":true}}",
+            """implementation prompt mentions C:\programovani\outputsfromtests\dotnet\BikeRepairSlotScheduler""",
+            new AgentWorkspaceToolAccessSettings
+            {
+                CanReadFiles = true,
+                CanWriteFiles = true
+            });
+
+        using var document = JsonDocument.Parse(metadataJson);
+        var readOnlyAliases = document.RootElement
+            .GetProperty(ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey)
+            .EnumerateArray()
+            .Select(item => item.GetString())
+            .ToArray();
+
+        Assert.Contains("external-target/C/programovani/outputsfromtests/dotnet/BikeRepairSlotScheduler", readOnlyAliases);
+        Assert.False(document.RootElement.TryGetProperty(ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey, out _));
+    }
 }

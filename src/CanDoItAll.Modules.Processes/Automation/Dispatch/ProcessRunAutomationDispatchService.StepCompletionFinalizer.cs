@@ -1,6 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -41,6 +42,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
         PlaceholderOnly
     }
 
+    internal enum ProcessArtifactFailureOwnership
+    {
+        OwnOutput,
+        UpstreamInput,
+        RuntimeEvidence,
+        ReviewDisposition
+    }
+
     internal enum ProcessArtifactProducerKind
     {
         Unknown,
@@ -68,10 +77,150 @@ internal sealed partial class ProcessRunAutomationDispatchService
         string AttemptedPath,
         string Diagnostic,
         string SuggestedAction,
-        string Fingerprint)
+        string Fingerprint,
+        ProcessArtifactFailureOwnership FailureOwnership = ProcessArtifactFailureOwnership.OwnOutput)
     {
         public bool IsSatisfied => Status == ProcessArtifactValidationStatus.Satisfied;
     }
+
+    internal interface IProcessArtifactContentReader
+    {
+        ProcessArtifactContentReadResult Read(string managedStoragePath);
+    }
+
+    internal sealed record ProcessArtifactContentReadResult(
+        bool Succeeded,
+        string ManagedStoragePath,
+        string ResolvedPath,
+        string ContentType,
+        long ByteLength,
+        byte[] ContentBytes,
+        string? TextContent,
+        string Diagnostic)
+    {
+        public static ProcessArtifactContentReadResult Failure(
+            string managedStoragePath,
+            string resolvedPath,
+            string contentType,
+            long byteLength,
+            string diagnostic)
+        {
+            return new(
+                false,
+                managedStoragePath,
+                resolvedPath,
+                contentType,
+                byteLength,
+                [],
+                null,
+                diagnostic);
+        }
+
+        public static ProcessArtifactContentReadResult Success(
+            string managedStoragePath,
+            string resolvedPath,
+            string contentType,
+            byte[] contentBytes,
+            string? textContent)
+        {
+            return new(
+                true,
+                managedStoragePath,
+                resolvedPath,
+                contentType,
+                contentBytes.LongLength,
+                contentBytes,
+                textContent,
+                string.Empty);
+        }
+    }
+
+    internal sealed class WorkspaceProcessArtifactContentReader(IWorkspacePathResolver workspacePathResolver) : IProcessArtifactContentReader
+    {
+        public ProcessArtifactContentReadResult Read(string managedStoragePath)
+        {
+            if (string.IsNullOrWhiteSpace(managedStoragePath))
+            {
+                return ProcessArtifactContentReadResult.Failure(
+                    managedStoragePath,
+                    string.Empty,
+                    "application/octet-stream",
+                    0,
+                    "Managed artifact storage path is empty.");
+            }
+
+            var workspaceRoot = Path.GetFullPath(workspacePathResolver.ResolveWorkspaceRoot());
+            var candidateFullPath = Path.IsPathRooted(managedStoragePath)
+                ? Path.GetFullPath(managedStoragePath)
+                : Path.GetFullPath(Path.Combine(
+                    workspaceRoot,
+                    WorkspaceScopeDescriptor.NormalizeRelativePath(managedStoragePath).Replace('/', Path.DirectorySeparatorChar)));
+            var contentType = GuessContentTypeFromPath(candidateFullPath);
+            if (!IsWithinWorkspace(workspaceRoot, candidateFullPath))
+            {
+                return ProcessArtifactContentReadResult.Failure(
+                    managedStoragePath,
+                    candidateFullPath,
+                    contentType,
+                    0,
+                    "Managed artifact storage path resolves outside the configured workspace root.");
+            }
+
+            if (!File.Exists(candidateFullPath))
+            {
+                return ProcessArtifactContentReadResult.Failure(
+                    managedStoragePath,
+                    candidateFullPath,
+                    contentType,
+                    0,
+                    "Managed artifact content file was not found.");
+            }
+
+            var fileInfo = new FileInfo(candidateFullPath);
+            if (fileInfo.Length > MaxProcessArtifactValidationContentBytes)
+            {
+                return ProcessArtifactContentReadResult.Failure(
+                    managedStoragePath,
+                    candidateFullPath,
+                    contentType,
+                    fileInfo.Length,
+                    $"Managed artifact content is {fileInfo.Length} bytes, exceeding the validation limit of {MaxProcessArtifactValidationContentBytes} bytes.");
+            }
+
+            try
+            {
+                var contentBytes = File.ReadAllBytes(candidateFullPath);
+                var textContent = TryDecodeManagedArtifactTextContent(contentType, candidateFullPath, contentBytes);
+                return ProcessArtifactContentReadResult.Success(
+                    managedStoragePath,
+                    candidateFullPath,
+                    contentType,
+                    contentBytes,
+                    textContent);
+            }
+            catch (IOException exception)
+            {
+                return ProcessArtifactContentReadResult.Failure(
+                    managedStoragePath,
+                    candidateFullPath,
+                    contentType,
+                    fileInfo.Length,
+                    $"Managed artifact content could not be read: {exception.Message}");
+            }
+            catch (UnauthorizedAccessException exception)
+            {
+                return ProcessArtifactContentReadResult.Failure(
+                    managedStoragePath,
+                    candidateFullPath,
+                    contentType,
+                    fileInfo.Length,
+                    $"Managed artifact content could not be read: {exception.Message}");
+            }
+        }
+    }
+
+    private const int MaxProcessArtifactValidationContentBytes = 1024 * 1024;
+    private static readonly UTF8Encoding StrictUtf8Encoding = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
 
     private sealed record ProcessStepCompletionFinalizerContext(
         ProcessStepCompletionExecutorKind ExecutorKind,
@@ -105,6 +254,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessArtifactExpectationMode Mode,
         ProcessArtifactValidationStatus Status,
         ProcessArtifactProducerKind ProducerKind,
+        ProcessArtifactFailureOwnership FailureOwnership,
         Guid? ArtifactRecordId,
         string AttemptedPath,
         string Diagnostic,
@@ -291,6 +441,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             .OrderByDescending(item => item.CreatedAtUtc)
             .ToListAsync(cancellationToken);
 
+        var managedArtifactContentReader = new WorkspaceProcessArtifactContentReader(workspacePathResolver);
         var results = candidate.ExpectedArtifacts
             .Where(expectation => expectation.IsRequired)
             .Select(expectation => ValidateArtifactExpectationForRecordedArtifacts(
@@ -308,7 +459,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     : null,
                 context.RecoveryExecutionRunId,
                 context.RecoveredForExecutionRunId,
-                ResolveManagedArtifactText))
+                managedArtifactContentReader))
             .ToList();
 
         candidate.ExternalReferenceKeys.Clear();
@@ -334,7 +485,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         Guid? subprocessRunId = null,
         Guid? recoveryExecutionRunId = null,
         Guid? recoveredForExecutionRunId = null,
-        Func<string, string?>? managedArtifactContentReader = null)
+        IProcessArtifactContentReader? managedArtifactContentReader = null)
     {
         ArgumentNullException.ThrowIfNull(expectation);
         ArgumentNullException.ThrowIfNull(artifacts);
@@ -406,7 +557,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         Guid? subprocessRunId,
         Guid? recoveryExecutionRunId,
         Guid? recoveredForExecutionRunId,
-        Func<string, string?>? managedArtifactContentReader)
+        IProcessArtifactContentReader? managedArtifactContentReader)
     {
         var producerKind = ResolveArtifactProducerKind(artifact);
         if (ContainsPlaceholderArtifactSignal(artifact, mode))
@@ -502,7 +653,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 recoveredForExecutionRunId);
         }
 
-        if (!MatchesDeclaredFormat(expectation, artifact, managedArtifactContentReader, out var formatDiagnostic))
+        if (!MatchesDeclaredFormat(expectation, artifact, mode, producerKind, managedArtifactContentReader, out var formatDiagnostic))
         {
             return CreateArtifactValidationResult(
                 processRunId,
@@ -580,6 +731,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 failure.Mode,
                 failure.Status,
                 failure.ProducerKind,
+                failure.FailureOwnership,
                 failure.ArtifactRecordId,
                 failure.AttemptedPath,
                 failure.Diagnostic,
@@ -652,8 +804,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             candidate.BranchOutcomes.Count == 0 ||
             ResolveMissingUpstreamArtifactInputs(candidate).Count > 0 ||
             !IsDispositionRoutingStep(candidate) ||
-            IsArtifactProductionFailure(candidate, unsatisfiedResults) ||
-            unsatisfiedResults.Any(IsHardBlockingArtifactValidationFailure))
+            !CanRouteArtifactContractDispositionFailures(candidate, unsatisfiedResults))
         {
             return null;
         }
@@ -692,25 +843,50 @@ internal sealed partial class ProcessRunAutomationDispatchService
             "inspect");
     }
 
-    private static bool IsArtifactProductionFailure(
+    private static bool CanRouteArtifactContractDispositionFailures(
         DispatchCandidate candidate,
         IReadOnlyList<ProcessArtifactExpectationValidationResult> unsatisfiedResults)
     {
-        if (candidate.StepRun.StepKind is ProcessStepKind.Decision or ProcessStepKind.Approval or ProcessStepKind.Review)
+        if (!HasSatisfiedRequiredDecisionArtifact(candidate))
         {
             return false;
         }
 
-        return unsatisfiedResults.Any(result =>
-            result.Status is ProcessArtifactValidationStatus.Missing or
-                ProcessArtifactValidationStatus.PlaceholderOnly or
-                ProcessArtifactValidationStatus.StaleOrWrongRun);
+        return unsatisfiedResults.All(result =>
+            ResolveDispositionRoutingFailureOwnership(result) == ProcessArtifactFailureOwnership.ReviewDisposition);
     }
 
-    private static bool IsHardBlockingArtifactValidationFailure(ProcessArtifactExpectationValidationResult result)
+    private static bool HasSatisfiedRequiredDecisionArtifact(DispatchCandidate candidate)
     {
-        return result.Status == ProcessArtifactValidationStatus.Missing &&
-               result.Diagnostic.Contains("upstream", StringComparison.OrdinalIgnoreCase);
+        return candidate.ExpectedArtifacts.Any(expectation =>
+            expectation.IsRequired &&
+            expectation.ArtifactKind == ProcessArtifactKind.Decision &&
+            candidate.RecordedArtifactExpectationIds.Contains(expectation.Id));
+    }
+
+    private static ProcessArtifactFailureOwnership ResolveDispositionRoutingFailureOwnership(
+        ProcessArtifactExpectationValidationResult result)
+    {
+        if (result.FailureOwnership == ProcessArtifactFailureOwnership.UpstreamInput ||
+            result.Diagnostic.Contains("upstream", StringComparison.OrdinalIgnoreCase))
+        {
+            return ProcessArtifactFailureOwnership.UpstreamInput;
+        }
+
+        if (IsOwnOutputArtifactProductionFailure(result))
+        {
+            return ProcessArtifactFailureOwnership.OwnOutput;
+        }
+
+        return result.FailureOwnership;
+    }
+
+    private static bool IsOwnOutputArtifactProductionFailure(ProcessArtifactExpectationValidationResult result)
+    {
+        return result.Status is ProcessArtifactValidationStatus.Missing or
+            ProcessArtifactValidationStatus.InvalidFormat or
+            ProcessArtifactValidationStatus.PlaceholderOnly or
+            ProcessArtifactValidationStatus.StaleOrWrongRun;
     }
 
     private static DispatchBranchOutcome? ResolveNegativeDispositionBranchOutcome(
@@ -881,6 +1057,21 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static ProcessArtifactProducerKind ResolveArtifactProducerKind(ProcessArtifactRecord artifact)
     {
+        var lineage = ProcessArtifactProjectionLineageJson.Deserialize(artifact.ProjectionLineageJson);
+        if (lineage is not null)
+        {
+            if (IsManagerRecoveryLineage(lineage))
+            {
+                return ProcessArtifactProducerKind.ManagerRecovery;
+            }
+
+            var typedProducerKind = ResolveArtifactProducerKind(lineage.SourceKind);
+            if (typedProducerKind != ProcessArtifactProducerKind.Unknown)
+            {
+                return typedProducerKind;
+            }
+        }
+
         var key = artifact.ExternalReferenceKey;
         if (key.StartsWith("agentframework-artifact:", StringComparison.OrdinalIgnoreCase))
         {
@@ -1011,6 +1202,19 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return false;
         }
 
+        var lineage = ProcessArtifactProjectionLineageJson.Deserialize(artifact.ProjectionLineageJson);
+        if (lineage is not null && (lineage.SourceKind != ProcessArtifactProjectionSourceKind.Unknown || IsManagerRecoveryLineage(lineage)))
+        {
+            return IsCurrentRunArtifact(
+                lineage,
+                producerKind,
+                executionRunId,
+                workflowRunId,
+                subprocessRunId,
+                recoveryExecutionRunId,
+                recoveredForExecutionRunId);
+        }
+
         var key = artifact.ExternalReferenceKey;
         var provenance = artifact.ProvenanceSummary;
         return producerKind switch
@@ -1039,6 +1243,77 @@ internal sealed partial class ProcessRunAutomationDispatchService
             ProcessArtifactProducerKind.Manual => true,
             _ => string.IsNullOrWhiteSpace(key)
         };
+    }
+
+    private static ProcessArtifactProducerKind ResolveArtifactProducerKind(ProcessArtifactProjectionSourceKind sourceKind)
+    {
+        return sourceKind switch
+        {
+            ProcessArtifactProjectionSourceKind.AgentExecutionArtifact => ProcessArtifactProducerKind.AgentExecutionArtifact,
+            ProcessArtifactProjectionSourceKind.WorkspaceWrite => ProcessArtifactProducerKind.WorkspaceWrite,
+            ProcessArtifactProjectionSourceKind.ExistingManagedFile => ProcessArtifactProducerKind.ExistingManagedFile,
+            ProcessArtifactProjectionSourceKind.AssistantResponse => ProcessArtifactProducerKind.AssistantResponse,
+            ProcessArtifactProjectionSourceKind.WorkflowRun => ProcessArtifactProducerKind.WorkflowRun,
+            ProcessArtifactProjectionSourceKind.WorkflowArtifact => ProcessArtifactProducerKind.WorkflowArtifact,
+            ProcessArtifactProjectionSourceKind.SubprocessArtifact => ProcessArtifactProducerKind.SubprocessArtifact,
+            ProcessArtifactProjectionSourceKind.CompletedDecision => ProcessArtifactProducerKind.CompletedDecision,
+            ProcessArtifactProjectionSourceKind.ProcessMock => ProcessArtifactProducerKind.ProcessMock,
+            ProcessArtifactProjectionSourceKind.ProviderNativeBrowser => ProcessArtifactProducerKind.ProviderNativeBrowser,
+            ProcessArtifactProjectionSourceKind.Manual => ProcessArtifactProducerKind.Manual,
+            _ => ProcessArtifactProducerKind.Unknown
+        };
+    }
+
+    private static bool IsCurrentRunArtifact(
+        ProcessArtifactProjectionLineage lineage,
+        ProcessArtifactProducerKind producerKind,
+        Guid? executionRunId,
+        Guid? workflowRunId,
+        Guid? subprocessRunId,
+        Guid? recoveryExecutionRunId,
+        Guid? recoveredForExecutionRunId)
+    {
+        if (producerKind == ProcessArtifactProducerKind.ManagerRecovery || IsManagerRecoveryLineage(lineage))
+        {
+            return IsCurrentManagerRecoveryArtifact(lineage, executionRunId, recoveryExecutionRunId, recoveredForExecutionRunId);
+        }
+
+        return producerKind switch
+        {
+            ProcessArtifactProducerKind.AgentExecutionArtifact or
+            ProcessArtifactProducerKind.WorkspaceWrite or
+            ProcessArtifactProducerKind.ExistingManagedFile or
+            ProcessArtifactProducerKind.AssistantResponse or
+            ProcessArtifactProducerKind.ProviderNativeBrowser => executionRunId.HasValue &&
+                lineage.SourceExecutionRunId == executionRunId.Value,
+            ProcessArtifactProducerKind.WorkflowRun or
+            ProcessArtifactProducerKind.WorkflowArtifact => workflowRunId.HasValue &&
+                lineage.WorkflowRunId == workflowRunId.Value,
+            ProcessArtifactProducerKind.SubprocessArtifact => subprocessRunId.HasValue &&
+                lineage.SubprocessRunId == subprocessRunId.Value,
+            ProcessArtifactProducerKind.CompletedDecision or
+            ProcessArtifactProducerKind.ProcessMock or
+            ProcessArtifactProducerKind.Manual => true,
+            _ => false
+        };
+    }
+
+    private static bool IsManagerRecoveryLineage(ProcessArtifactProjectionLineage lineage)
+    {
+        return lineage.RecoveryExecutionRunId.HasValue && lineage.RecoveredForExecutionRunId.HasValue;
+    }
+
+    private static bool IsCurrentManagerRecoveryArtifact(
+        ProcessArtifactProjectionLineage lineage,
+        Guid? executionRunId,
+        Guid? recoveryExecutionRunId,
+        Guid? recoveredForExecutionRunId)
+    {
+        var effectiveRecoveryExecutionRunId = recoveryExecutionRunId ?? executionRunId;
+        return effectiveRecoveryExecutionRunId.HasValue &&
+               lineage.RecoveryExecutionRunId == effectiveRecoveryExecutionRunId.Value &&
+               recoveredForExecutionRunId.HasValue &&
+               lineage.RecoveredForExecutionRunId == recoveredForExecutionRunId.Value;
     }
 
     private static bool IsCurrentManagerRecoveryArtifact(
@@ -1078,12 +1353,40 @@ internal sealed partial class ProcessRunAutomationDispatchService
     private static bool MatchesDeclaredFormat(
         DispatchArtifactExpectation expectation,
         ProcessArtifactRecord artifact,
-        Func<string, string?>? managedArtifactContentReader,
+        ProcessArtifactExpectationMode mode,
+        ProcessArtifactProducerKind producerKind,
+        IProcessArtifactContentReader? managedArtifactContentReader,
         out string diagnostic)
     {
         diagnostic = string.Empty;
         var contractText = CollapsePromptWhitespace(string.Join(' ', expectation.Title, expectation.ValidationRequirementSummary)).ToLowerInvariant();
-        var extension = Path.GetExtension(artifact.ManagedStoragePath);
+        var extension = Path.GetExtension(artifact.ManagedStoragePath).ToLowerInvariant();
+        var requiresStoredContent = managedArtifactContentReader is not null && RequiresManagedEvidencePath(mode, producerKind);
+        ProcessArtifactContentReadResult? content = null;
+        var contentRead = false;
+
+        bool TryReadStoredContent(
+            out ProcessArtifactContentReadResult? readContent,
+            out string readDiagnostic)
+        {
+            readDiagnostic = string.Empty;
+            if (contentRead)
+            {
+                readContent = content;
+                return true;
+            }
+
+            contentRead = true;
+            if (!TryReadManagedArtifactContent(artifact, managedArtifactContentReader, out content, out readDiagnostic))
+            {
+                readContent = null;
+                return false;
+            }
+
+            readContent = content;
+            return true;
+        }
+
         var requiresJson = contractText.Contains("json", StringComparison.Ordinal);
         if (requiresJson && !string.Equals(extension, ".json", StringComparison.OrdinalIgnoreCase))
         {
@@ -1096,17 +1399,60 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return false;
         }
 
-        if ((contractText.Contains("markdown", StringComparison.Ordinal) || contractText.Contains(".md", StringComparison.Ordinal)) &&
+        var requiresYaml =
+            contractText.Contains("yaml", StringComparison.Ordinal) ||
+            contractText.Contains(".yml", StringComparison.Ordinal) ||
+            contractText.Contains(".yaml", StringComparison.Ordinal);
+        if (requiresYaml && extension is not ".yml" and not ".yaml")
+        {
+            diagnostic = "The artifact contract declares YAML, but the managed artifact path is not a .yml or .yaml file.";
+            return false;
+        }
+
+        if (requiresYaml &&
+            requiresStoredContent &&
+            (!TryReadStoredContent(out var yamlContent, out diagnostic) ||
+             !HasReadableTextArtifactContent(yamlContent, "YAML", out diagnostic)))
+        {
+            return false;
+        }
+
+        var requiresMarkdown = contractText.Contains("markdown", StringComparison.Ordinal) || contractText.Contains(".md", StringComparison.Ordinal);
+        if (requiresMarkdown &&
             !string.Equals(extension, ".md", StringComparison.OrdinalIgnoreCase))
         {
             diagnostic = "The artifact contract declares Markdown, but the managed artifact path is not a .md file.";
             return false;
         }
 
-        if ((contractText.Contains("screenshot", StringComparison.Ordinal) || contractText.Contains("image", StringComparison.Ordinal)) &&
-            extension is not ".png" and not ".jpg" and not ".jpeg" and not ".webp")
+        if (requiresMarkdown &&
+            requiresStoredContent &&
+            (!TryReadStoredContent(out var markdownContent, out diagnostic) ||
+             !HasReadableTextArtifactContent(markdownContent, "Markdown", out diagnostic)))
+        {
+            return false;
+        }
+
+        var requiresImage = contractText.Contains("screenshot", StringComparison.Ordinal) || contractText.Contains("image", StringComparison.Ordinal);
+        if (requiresImage &&
+            extension is not ".png" and not ".jpg" and not ".jpeg" and not ".webp" and not ".svg")
         {
             diagnostic = "The artifact contract declares image or screenshot evidence, but the managed artifact path is not an image file.";
+            return false;
+        }
+
+        if (requiresImage &&
+            requiresStoredContent &&
+            (!TryReadStoredContent(out var imageContent, out diagnostic) ||
+             !HasValidImageArtifactContent(imageContent, out diagnostic)))
+        {
+            return false;
+        }
+
+        if (requiresStoredContent &&
+            mode is ProcessArtifactExpectationMode.Evidence or ProcessArtifactExpectationMode.RuntimeProof &&
+            !TryReadStoredContent(out _, out diagnostic))
+        {
             return false;
         }
 
@@ -1155,10 +1501,35 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool HasValidJsonArtifactContent(
         ProcessArtifactRecord artifact,
-        Func<string, string?>? managedArtifactContentReader,
+        IProcessArtifactContentReader? managedArtifactContentReader,
         out string diagnostic)
     {
         diagnostic = string.Empty;
+        if (managedArtifactContentReader is not null)
+        {
+            if (!TryReadManagedArtifactContent(artifact, managedArtifactContentReader, out var content, out diagnostic))
+            {
+                return false;
+            }
+
+            if (content?.TextContent is null)
+            {
+                diagnostic = $"The artifact contract declares JSON, but the managed artifact content type '{content?.ContentType ?? "unknown"}' is not readable text.";
+                return false;
+            }
+
+            try
+            {
+                using var _ = JsonDocument.Parse(content.TextContent);
+                return true;
+            }
+            catch (JsonException exception)
+            {
+                diagnostic = $"The artifact contract declares JSON, but the managed artifact content is malformed JSON: {exception.Message}";
+                return false;
+            }
+        }
+
         if (Path.IsPathRooted(artifact.ManagedStoragePath) && File.Exists(artifact.ManagedStoragePath))
         {
             try
@@ -1173,35 +1544,6 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 return false;
             }
             catch (IOException exception)
-            {
-                diagnostic = $"The artifact contract declares JSON, but the managed artifact content could not be read: {exception.Message}";
-                return false;
-            }
-        }
-
-        if (!Path.IsPathRooted(artifact.ManagedStoragePath) &&
-            managedArtifactContentReader is not null)
-        {
-            try
-            {
-                var content = managedArtifactContentReader(artifact.ManagedStoragePath);
-                if (content is not null)
-                {
-                    using var _ = JsonDocument.Parse(content);
-                    return true;
-                }
-            }
-            catch (JsonException exception)
-            {
-                diagnostic = $"The artifact contract declares JSON, but the managed artifact content is malformed JSON: {exception.Message}";
-                return false;
-            }
-            catch (IOException exception)
-            {
-                diagnostic = $"The artifact contract declares JSON, but the managed artifact content could not be read: {exception.Message}";
-                return false;
-            }
-            catch (UnauthorizedAccessException exception)
             {
                 diagnostic = $"The artifact contract declares JSON, but the managed artifact content could not be read: {exception.Message}";
                 return false;
@@ -1225,25 +1567,143 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return true;
     }
 
-    private string? ResolveManagedArtifactText(string managedStoragePath)
+    private static bool TryReadManagedArtifactContent(
+        ProcessArtifactRecord artifact,
+        IProcessArtifactContentReader? managedArtifactContentReader,
+        out ProcessArtifactContentReadResult? content,
+        out string diagnostic)
     {
-        if (string.IsNullOrWhiteSpace(managedStoragePath))
+        content = null;
+        diagnostic = string.Empty;
+        if (managedArtifactContentReader is null)
+        {
+            return true;
+        }
+
+        content = managedArtifactContentReader.Read(artifact.ManagedStoragePath);
+        if (!content.Succeeded)
+        {
+            diagnostic = $"The managed artifact content could not be loaded from '{artifact.ManagedStoragePath}': {content.Diagnostic}";
+            return false;
+        }
+
+        if (content.ByteLength == 0)
+        {
+            diagnostic = $"The managed artifact content at '{artifact.ManagedStoragePath}' is empty.";
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool HasReadableTextArtifactContent(
+        ProcessArtifactContentReadResult? content,
+        string declaredFormat,
+        out string diagnostic)
+    {
+        if (content is null)
+        {
+            diagnostic = string.Empty;
+            return true;
+        }
+
+        if (string.IsNullOrWhiteSpace(content.TextContent))
+        {
+            diagnostic = $"The artifact contract declares {declaredFormat}, but the managed artifact content type '{content.ContentType}' is not readable non-empty text.";
+            return false;
+        }
+
+        diagnostic = string.Empty;
+        return true;
+    }
+
+    private static bool HasValidImageArtifactContent(
+        ProcessArtifactContentReadResult? content,
+        out string diagnostic)
+    {
+        if (content is null)
+        {
+            diagnostic = string.Empty;
+            return true;
+        }
+
+        if (!content.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        {
+            diagnostic = $"The artifact contract declares image or screenshot evidence, but the managed artifact content type is '{content.ContentType}'.";
+            return false;
+        }
+
+        var extension = Path.GetExtension(content.ResolvedPath).ToLowerInvariant();
+        var bytes = content.ContentBytes;
+        var isValidImage = extension switch
+        {
+            ".png" => bytes.Length >= 8 &&
+                bytes[0] == 0x89 &&
+                bytes[1] == 0x50 &&
+                bytes[2] == 0x4E &&
+                bytes[3] == 0x47 &&
+                bytes[4] == 0x0D &&
+                bytes[5] == 0x0A &&
+                bytes[6] == 0x1A &&
+                bytes[7] == 0x0A,
+            ".jpg" or ".jpeg" => bytes.Length >= 2 &&
+                bytes[0] == 0xFF &&
+                bytes[1] == 0xD8,
+            ".webp" => bytes.Length >= 12 &&
+                bytes[0] == (byte)'R' &&
+                bytes[1] == (byte)'I' &&
+                bytes[2] == (byte)'F' &&
+                bytes[3] == (byte)'F' &&
+                bytes[8] == (byte)'W' &&
+                bytes[9] == (byte)'E' &&
+                bytes[10] == (byte)'B' &&
+                bytes[11] == (byte)'P',
+            ".svg" => content.TextContent?.Contains("<svg", StringComparison.OrdinalIgnoreCase) == true,
+            _ => false
+        };
+
+        if (isValidImage)
+        {
+            diagnostic = string.Empty;
+            return true;
+        }
+
+        diagnostic = "The artifact contract declares image or screenshot evidence, but the stored bytes do not match the declared image format.";
+        return false;
+    }
+
+    private static string? TryDecodeManagedArtifactTextContent(
+        string contentType,
+        string fullPath,
+        byte[] contentBytes)
+    {
+        if (!IsTextReadableArtifactContent(contentType, fullPath))
         {
             return null;
         }
 
-        var workspaceRoot = Path.GetFullPath(workspacePathResolver.ResolveWorkspaceRoot());
-        var candidateFullPath = Path.IsPathRooted(managedStoragePath)
-            ? Path.GetFullPath(managedStoragePath)
-            : Path.GetFullPath(Path.Combine(
-                workspaceRoot,
-                managedStoragePath.Replace('/', Path.DirectorySeparatorChar)));
-        if (!IsWithinWorkspace(workspaceRoot, candidateFullPath) || !File.Exists(candidateFullPath))
+        if (contentBytes.Contains((byte)0))
         {
             return null;
         }
 
-        return File.ReadAllText(candidateFullPath, Encoding.UTF8);
+        try
+        {
+            return StrictUtf8Encoding.GetString(contentBytes);
+        }
+        catch (DecoderFallbackException)
+        {
+            return null;
+        }
+    }
+
+    private static bool IsTextReadableArtifactContent(string contentType, string fullPath)
+    {
+        return contentType.StartsWith("text/", StringComparison.OrdinalIgnoreCase) ||
+               contentType.Contains("json", StringComparison.OrdinalIgnoreCase) ||
+               contentType.Contains("xml", StringComparison.OrdinalIgnoreCase) ||
+               contentType.Contains("yaml", StringComparison.OrdinalIgnoreCase) ||
+               IsTextReadableManagedArtifactPath(fullPath);
     }
 
     private static bool TryResolveInlineJsonArtifactContent(
@@ -1278,6 +1738,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
     {
         foreach (var artifact in artifacts)
         {
+            var lineage = ProcessArtifactProjectionLineageJson.Deserialize(artifact.ProjectionLineageJson);
+            if (lineage?.WorkflowRunId.HasValue == true)
+            {
+                return lineage.WorkflowRunId.Value;
+            }
+
             var key = artifact.ExternalReferenceKey;
             if (!key.StartsWith("workflow-run:", StringComparison.OrdinalIgnoreCase))
             {
@@ -1304,6 +1770,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
     {
         foreach (var artifact in artifacts)
         {
+            var lineage = ProcessArtifactProjectionLineageJson.Deserialize(artifact.ProjectionLineageJson);
+            if (lineage?.SubprocessRunId.HasValue == true)
+            {
+                return lineage.SubprocessRunId.Value;
+            }
+
             var key = artifact.ExternalReferenceKey;
             if (!key.StartsWith("subprocess-run:", StringComparison.OrdinalIgnoreCase))
             {
@@ -1344,6 +1816,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         Guid? recoveryExecutionRunId = null,
         Guid? recoveredForExecutionRunId = null)
     {
+        var failureOwnership = ResolveArtifactFailureOwnership(mode, status, diagnostic);
         var fingerprint = CreateArtifactFailureFingerprint(
             processRunId,
             stepRunId,
@@ -1351,6 +1824,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             status,
             attemptedPath,
             mode,
+            failureOwnership,
             expectation.ValidationRequirementSummary,
             executorKind,
             executionRunId,
@@ -1368,7 +1842,34 @@ internal sealed partial class ProcessRunAutomationDispatchService
             attemptedPath,
             diagnostic,
             suggestedAction,
-            fingerprint);
+            fingerprint,
+            failureOwnership);
+    }
+
+    private static ProcessArtifactFailureOwnership ResolveArtifactFailureOwnership(
+        ProcessArtifactExpectationMode mode,
+        ProcessArtifactValidationStatus status,
+        string diagnostic)
+    {
+        if (diagnostic.Contains("upstream", StringComparison.OrdinalIgnoreCase))
+        {
+            return ProcessArtifactFailureOwnership.UpstreamInput;
+        }
+
+        if (status is ProcessArtifactValidationStatus.Missing or
+            ProcessArtifactValidationStatus.InvalidFormat or
+            ProcessArtifactValidationStatus.PlaceholderOnly or
+            ProcessArtifactValidationStatus.StaleOrWrongRun)
+        {
+            return ProcessArtifactFailureOwnership.OwnOutput;
+        }
+
+        return mode switch
+        {
+            ProcessArtifactExpectationMode.Decision => ProcessArtifactFailureOwnership.ReviewDisposition,
+            ProcessArtifactExpectationMode.Evidence or ProcessArtifactExpectationMode.RuntimeProof => ProcessArtifactFailureOwnership.RuntimeEvidence,
+            _ => ProcessArtifactFailureOwnership.OwnOutput
+        };
     }
 
     private static string CreateArtifactFailureFingerprint(
@@ -1378,6 +1879,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessArtifactValidationStatus status,
         string attemptedPath,
         ProcessArtifactExpectationMode mode,
+        ProcessArtifactFailureOwnership failureOwnership,
         string validationRequirementSummary,
         ProcessStepCompletionExecutorKind executorKind,
         Guid? executionRunId,
@@ -1394,6 +1896,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             status,
             NormalizeManagedRelativePathForComparison(attemptedPath),
             mode,
+            failureOwnership,
             CollapsePromptWhitespace(validationRequirementSummary).ToLowerInvariant(),
             executorKind,
             executionRunId?.ToString("D") ?? string.Empty,

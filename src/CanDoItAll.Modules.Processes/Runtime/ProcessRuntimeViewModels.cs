@@ -784,6 +784,8 @@ public sealed class ProcessArtifactRecordRequest
     public string ManagedStoragePath { get; set; } = string.Empty;
 
     public string ExternalReferenceKey { get; set; } = string.Empty;
+
+    public ProcessArtifactProjectionLineage? ProjectionLineage { get; set; }
 }
 
 public sealed class ProcessDirectMessageRequest

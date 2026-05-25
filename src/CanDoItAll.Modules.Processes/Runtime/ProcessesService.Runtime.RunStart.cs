@@ -452,6 +452,7 @@ public sealed partial class ProcessesService
             : await dbContext.Set<ProcessArtifactExpectation>()
                 .Where(item => stepIds.Contains(item.StepDefinitionId))
                 .ToListAsync(cancellationToken);
+        var lintMode = ResolveEffectiveLintMode(request.LintMode, definition);
         var lintResult = ProcessDefinitionLinter.Analyze(
             BuildLintEditorModel(
                 definition,
@@ -461,7 +462,7 @@ public sealed partial class ProcessesService
                 stepRoleRequirements,
                 branchOutcomes,
                 artifactExpectations),
-            request.LintMode);
+            lintMode);
         var strictLintError = CreateStrictLintGateError(lintResult, "run-start");
         if (strictLintError is not null)
         {

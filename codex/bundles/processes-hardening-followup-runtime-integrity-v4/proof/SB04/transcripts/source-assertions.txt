@@ -1,3 +1,31 @@
-# SB04 source-assertions.txt
+# SB04 Source Assertions
 
-Fill during execution.
+Command:
+
+```powershell
+rg -n "ProcessTargetGroundingRecord|ProcessTargetGroundingSourceKind|ProcessTargetGroundingAuthority|ProjectStructureContext|AddProjectStructureGroundings|EnumerateProjectStructureWritableGroundingLines|IsProjectStructureWritableGroundingLine|ResolveExternalTargetGroundings|ResolveMutableExternalTargetAliases|GroundPromptExternalTargetAliases_SB04_INV_001|BuildProcessInvocationMetadataJson_SB04_INV_001|keeps_current_upstream_product_root_read_only" src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ExecutionMetadata.cs src/CanDoItAll.AgentFramework.Core/Execution/ExecutionInvocationMetadata.cs tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs tests/CanDoItAll.Tests.Unit/AgentWorkspaceToolAccessMetadataTests.cs
+```
+
+Result excerpt:
+
+```text
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ExecutionMetadata.cs:63:    private enum ProcessTargetGroundingSourceKind
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ExecutionMetadata.cs:67:        ProjectStructureContext,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ExecutionMetadata.cs:74:    private enum ProcessTargetGroundingAuthority
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ExecutionMetadata.cs:80:    private sealed record ProcessTargetGroundingRecord(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ExecutionMetadata.cs:795:    private static IReadOnlyList<ProcessTargetGroundingRecord> ResolveExternalTargetGroundings(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ExecutionMetadata.cs:830:    private static void AddProjectStructureGroundings(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ExecutionMetadata.cs:850:    private static IEnumerable<string> EnumerateProjectStructureWritableGroundingLines(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ExecutionMetadata.cs:871:    private static bool IsProjectStructureWritableGroundingLine(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ExecutionMetadata.cs:991:    private static IReadOnlyList<string> ResolveMutableExternalTargetAliases(
+tests/CanDoItAll.Tests.Unit/AgentWorkspaceToolAccessMetadataTests.cs:214:    public void GroundPromptExternalTargetAliases_SB04_INV_001_keeps_process_free_text_alias_read_only_even_when_product_mutation_is_allowed()
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:3741:    public void BuildProcessInvocationMetadataJson_keeps_current_upstream_product_root_read_only_when_project_structure_product_is_stale()
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:3804:    public void BuildProcessInvocationMetadataJson_SB04_INV_001_keeps_stale_upstream_product_alias_read_only_for_mutating_step()
+```
+
+Notes:
+
+- The typed grounding model is inside dispatch metadata production, not test-only code.
+- `ProjectStructureContext` is captured read-only; `ProjectStructureCurrentRun`, `LaunchPlan`, and `ExplicitStepContract` are the writable-authority sources.
+- Upstream artifact/provenance records are present only with read-only authority.
+- Core prompt grounding keeps governed process free-text aliases read-only.

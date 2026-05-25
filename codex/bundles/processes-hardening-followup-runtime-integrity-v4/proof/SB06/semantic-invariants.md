@@ -2,7 +2,13 @@
 
 ## SB06-INV-001
 
-Expected behavior: see `subbundles/06-explicit-workflow-subprocess-output-mapping/README.md`.
+Expected behavior:
+
+- Workflow artifacts satisfy process artifact expectations by explicit output mapping metadata or by the single workflow artifact/single compatible expectation fallback only.
+- A workflow artifact is not assigned to a process expectation by kind/title/summary when multiple same-kind workflow artifacts or process expectations exist.
+- Subprocess parent projection maps a parent expectation to a child artifact through an explicit child expectation id when multiple same-kind child artifacts can match.
+- A subprocess parent step records a projection diagnostic instead of selecting a same-kind/title child artifact when the mapping is ambiguous.
+- Many-to-one and one-to-many mapping declarations are treated as invalid and do not silently project artifacts.
 
 Disallowed shallow implementation:
 

@@ -203,6 +203,7 @@ internal sealed class ProcessArtifactRecordConfiguration : IEntityTypeConfigurat
         builder.Property(record => record.ReviewSummary).HasColumnType("TEXT");
         builder.Property(record => record.ManagedStoragePath).HasMaxLength(500);
         builder.Property(record => record.ExternalReferenceKey).HasMaxLength(200);
+        builder.Property(record => record.ProjectionLineageJson).HasColumnType("TEXT");
         builder.HasIndex(record => record.ProcessRunId);
         builder.HasIndex(record => record.StepRunId);
         builder.HasIndex(record => record.ArtifactExpectationId);

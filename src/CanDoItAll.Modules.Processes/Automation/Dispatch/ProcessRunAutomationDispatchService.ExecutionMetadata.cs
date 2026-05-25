@@ -18,32 +18,6 @@ internal sealed partial class ProcessRunAutomationDispatchService
         Recovery
     }
 
-    internal enum ProcessStepOperation
-    {
-        ReadProcessContext,
-        ReadProjectStructure,
-        ReadUpstreamArtifacts,
-        WriteManagedProcessArtifacts,
-        WriteExternalArtifactDestination,
-        MutateProductTarget,
-        RunValidation,
-        LaunchRuntime,
-        CaptureRuntimeProof,
-        ExecuteExternalAction,
-        RecoverArtifactsOnly,
-        EscalateOrDecide
-    }
-
-    internal enum ProcessStepTargetScope
-    {
-        ManagedProcessArtifactsOnly,
-        ManagedOutputProduct,
-        ExternalArtifactDestination,
-        ExternalProductTargetReadOnly,
-        ExternalProductTargetMutable,
-        ExternalActionControlled
-    }
-
     internal sealed record ProcessStepOperationContract(
         IReadOnlyList<ProcessStepOperation> AllowedOperations,
         ProcessStepTargetScope TargetScope,
@@ -60,13 +34,49 @@ internal sealed partial class ProcessRunAutomationDispatchService
         bool AllowsProductMutation,
         string Summary);
 
+    private enum ProcessTargetGroundingSourceKind
+    {
+        TextMention,
+        LaunchPlan,
+        ProjectStructureContext,
+        ProjectStructureCurrentRun,
+        ExplicitStepContract,
+        UpstreamArtifact,
+        UpstreamArtifactProvenance
+    }
+
+    private enum ProcessTargetGroundingAuthority
+    {
+        ReadOnly,
+        Writable
+    }
+
+    private sealed record ProcessTargetGroundingRecord(
+        string Alias,
+        ProcessTargetGroundingSourceKind SourceKind,
+        ProcessTargetGroundingAuthority Authority);
+
+    private const string ProjectStructureCurrentRunMarker = "current-run";
+    private static readonly string[] StaleProjectStructureGroundingMarkers =
+    [
+        "old-run",
+        "old run",
+        "previous run",
+        "prior run",
+        "stale",
+        "sibling",
+        "out-of-scope",
+        "no-go",
+        "prohibited"
+    ];
+
     private static string BuildProcessInvocationMetadataJson(
         DispatchCandidate candidate,
         ExecutionInvocationPolicy processInvocationPolicy,
         string? projectStructureGroundingSummary,
         string? artifactInspectionGroundingSummary)
     {
-        var resolvedExternalTargetAliases = ResolveExternalTargetAliases(
+        var targetGroundings = ResolveExternalTargetGroundings(
             candidate,
             projectStructureGroundingSummary,
             artifactInspectionGroundingSummary);
@@ -74,7 +84,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var executionBoundary = ResolveProcessStepExecutionBoundary(candidate, operationContract);
         var allowExternalTargetMutation = AllowsExternalTargetMutation(candidate, executionBoundary, operationContract, projectStructureGroundingSummary);
         var allowedExternalTargetAliases = allowExternalTargetMutation
-            ? ResolveMutableExternalTargetAliases(candidate, resolvedExternalTargetAliases)
+            ? ResolveMutableExternalTargetAliases(candidate, targetGroundings)
             : [];
         var browserProofGroundingText = string.Join(
             ' ',
@@ -100,7 +110,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         var readOnlyExternalTargetAliases = ResolveReadOnlyExternalTargetAliases(
             candidate,
-            resolvedExternalTargetAliases,
+            targetGroundings,
             allowedExternalTargetAliases,
             allowExternalTargetMutation);
         if (readOnlyExternalTargetAliases.Count > 0)
@@ -146,10 +156,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static IReadOnlyList<string> ResolveReadOnlyExternalTargetAliases(
         DispatchCandidate candidate,
-        IReadOnlyList<string> resolvedExternalTargetAliases,
+        IReadOnlyList<ProcessTargetGroundingRecord> targetGroundings,
         IReadOnlyList<string> allowedExternalTargetAliases,
         bool allowExternalTargetMutation)
     {
+        var resolvedExternalTargetAliases = PruneAllowedExternalTargetAliasesForCurrentRun(
+            targetGroundings.Select(grounding => grounding.Alias));
         if (resolvedExternalTargetAliases.Count == 0)
         {
             return [];
@@ -159,7 +171,6 @@ internal sealed partial class ProcessRunAutomationDispatchService
         if (allowExternalTargetMutation)
         {
             return scopedExternalTargetAliases
-                .Where(IsNonProductExternalTargetAlias)
                 .Where(alias => !IsAliasCoveredByAny(alias, allowedExternalTargetAliases))
                 .ToArray();
         }
@@ -303,6 +314,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
     {
         ArgumentNullException.ThrowIfNull(candidate);
 
+        if (TryResolvePersistedOperationContract(candidate.StepDefinition, out var persistedContract))
+        {
+            return persistedContract;
+        }
+
         var contractText = CollapsePromptWhitespace(string.Join(
                 ' ',
                 candidate.StepDefinition.Notes,
@@ -388,6 +404,62 @@ internal sealed partial class ProcessRunAutomationDispatchService
             IsExplicit: false);
     }
 
+    private static bool TryResolvePersistedOperationContract(
+        ProcessStepDefinition stepDefinition,
+        out ProcessStepOperationContract contract)
+    {
+        contract = new ProcessStepOperationContract(
+            [ProcessStepOperation.ReadProcessContext, ProcessStepOperation.WriteManagedProcessArtifacts],
+            ProcessStepTargetScope.ManagedProcessArtifactsOnly,
+            IsExplicit: false);
+
+        if (stepDefinition.AllowedOperations.Count == 0 &&
+            !stepDefinition.OperationTargetScope.HasValue)
+        {
+            return false;
+        }
+
+        var operations = new SortedSet<ProcessStepOperation>(
+            ProcessStepOperationContractState.NormalizeAllowedOperations(stepDefinition.AllowedOperations));
+        operations.Add(ProcessStepOperation.ReadProcessContext);
+
+        var targetScope = stepDefinition.OperationTargetScope ??
+            ResolveExplicitTargetScope(string.Empty, operations);
+        AddOperationsImpliedByTargetScope(operations, targetScope);
+        if (operations.Count == 1)
+        {
+            operations.Add(ProcessStepOperation.WriteManagedProcessArtifacts);
+        }
+
+        contract = new ProcessStepOperationContract(
+            operations.ToArray(),
+            targetScope,
+            IsExplicit: true);
+        return true;
+    }
+
+    private static void AddOperationsImpliedByTargetScope(
+        ISet<ProcessStepOperation> operations,
+        ProcessStepTargetScope targetScope)
+    {
+        switch (targetScope)
+        {
+            case ProcessStepTargetScope.ExternalArtifactDestination:
+                operations.Add(ProcessStepOperation.WriteExternalArtifactDestination);
+                break;
+            case ProcessStepTargetScope.ManagedOutputProduct:
+            case ProcessStepTargetScope.ExternalProductTargetMutable:
+                operations.Add(ProcessStepOperation.MutateProductTarget);
+                break;
+            case ProcessStepTargetScope.ExternalProductTargetReadOnly:
+                operations.Add(ProcessStepOperation.ReadProjectStructure);
+                break;
+            case ProcessStepTargetScope.ExternalActionControlled:
+                operations.Add(ProcessStepOperation.ExecuteExternalAction);
+                break;
+        }
+    }
+
     private static bool TryResolveExplicitOperationContract(
         string contractText,
         out ProcessStepOperationContract contract)
@@ -469,6 +541,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
         if (operations.Contains(ProcessStepOperation.MutateProductTarget))
         {
             return ProcessStepTargetScope.ExternalProductTargetMutable;
+        }
+
+        if (operations.Contains(ProcessStepOperation.WriteExternalArtifactDestination))
+        {
+            return ProcessStepTargetScope.ExternalArtifactDestination;
         }
 
         if (operations.Contains(ProcessStepOperation.ExecuteExternalAction))
@@ -755,30 +832,211 @@ internal sealed partial class ProcessRunAutomationDispatchService
                stepText.Contains("changes requested", StringComparison.Ordinal);
     }
 
-    private static IReadOnlyList<string> ResolveExternalTargetAliases(
+    private static IReadOnlyList<ProcessTargetGroundingRecord> ResolveExternalTargetGroundings(
         DispatchCandidate candidate,
         string? projectStructureGroundingSummary,
         string? artifactInspectionGroundingSummary)
     {
-        var aliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        AddExternalTargetAliasesFromText(aliases, candidate.Run.TriggerReason);
-        AddExternalTargetAliasesFromText(aliases, projectStructureGroundingSummary);
-        foreach (var source in EnumerateCurrentRunExternalTargetSources(
-            candidate,
+        var groundings = new List<ProcessTargetGroundingRecord>();
+        AddExternalTargetGroundings(
+            groundings,
+            candidate.Run.TriggerReason,
+            ProcessTargetGroundingSourceKind.LaunchPlan,
+            ProcessTargetGroundingAuthority.Writable);
+        AddProjectStructureGroundings(groundings, candidate, projectStructureGroundingSummary);
+        AddExplicitStepContractGroundings(groundings, candidate);
+        AddExternalTargetGroundings(
+            groundings,
+            candidate.Run.Name,
+            ProcessTargetGroundingSourceKind.TextMention,
+            ProcessTargetGroundingAuthority.ReadOnly);
+        AddExternalTargetGroundings(
+            groundings,
+            artifactInspectionGroundingSummary,
+            ProcessTargetGroundingSourceKind.UpstreamArtifact,
+            ProcessTargetGroundingAuthority.ReadOnly);
+        AddWorkBriefTextMentionGroundings(groundings, candidate);
+        AddArtifactInputGroundings(groundings, candidate);
+
+        return groundings
+            .Where(grounding => !string.IsNullOrWhiteSpace(grounding.Alias))
+            .DistinctBy(grounding => (
+                Alias: grounding.Alias.ToUpperInvariant(),
+                grounding.SourceKind,
+                grounding.Authority))
+            .ToArray();
+    }
+
+    private static void AddProjectStructureGroundings(
+        List<ProcessTargetGroundingRecord> groundings,
+        DispatchCandidate candidate,
+        string? projectStructureGroundingSummary)
+    {
+        AddExternalTargetGroundings(
+            groundings,
             projectStructureGroundingSummary,
-            artifactInspectionGroundingSummary))
+            ProcessTargetGroundingSourceKind.ProjectStructureContext,
+            ProcessTargetGroundingAuthority.ReadOnly);
+        foreach (var currentRunGroundingLine in EnumerateProjectStructureWritableGroundingLines(candidate, projectStructureGroundingSummary))
         {
-            AddExternalTargetAliasesFromText(aliases, source);
+            AddExternalTargetGroundings(
+                groundings,
+                currentRunGroundingLine,
+                ProcessTargetGroundingSourceKind.ProjectStructureCurrentRun,
+                ProcessTargetGroundingAuthority.Writable);
+        }
+    }
+
+    private static IEnumerable<string> EnumerateProjectStructureWritableGroundingLines(
+        DispatchCandidate candidate,
+        string? projectStructureGroundingSummary)
+    {
+        if (string.IsNullOrWhiteSpace(projectStructureGroundingSummary))
+        {
+            yield break;
         }
 
-        return PruneAllowedExternalTargetAliasesForCurrentRun(aliases);
+        var currentRunTokens = ResolveCurrentRunExternalTargetAliasTokens(candidate);
+        foreach (var line in projectStructureGroundingSummary.Split(
+                     ['\r', '\n'],
+                     StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (IsProjectStructureWritableGroundingLine(line, currentRunTokens))
+            {
+                yield return line;
+            }
+        }
+    }
+
+    private static bool IsProjectStructureWritableGroundingLine(
+        string line,
+        IReadOnlyList<string> currentRunTokens)
+    {
+        if (StaleProjectStructureGroundingMarkers.Any(marker => line.Contains(marker, StringComparison.OrdinalIgnoreCase)) ||
+            ExtractExternalTargetAliasesFromText(line).Count == 0)
+        {
+            return false;
+        }
+
+        return line.Contains(ProjectStructureCurrentRunMarker, StringComparison.OrdinalIgnoreCase) ||
+               currentRunTokens.Any(token => line.Contains(token, StringComparison.OrdinalIgnoreCase)) ||
+               line.Contains(" mapped to ", StringComparison.OrdinalIgnoreCase) ||
+               line.Contains(" must be written at ", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void AddExplicitStepContractGroundings(
+        List<ProcessTargetGroundingRecord> groundings,
+        DispatchCandidate candidate)
+    {
+        AddExternalTargetGroundings(
+            groundings,
+            candidate.StepDefinition.InputContractSummary,
+            ProcessTargetGroundingSourceKind.ExplicitStepContract,
+            ProcessTargetGroundingAuthority.Writable);
+        AddExternalTargetGroundings(
+            groundings,
+            candidate.StepDefinition.OutputContractSummary,
+            ProcessTargetGroundingSourceKind.ExplicitStepContract,
+            ProcessTargetGroundingAuthority.Writable);
+        AddExternalTargetGroundings(
+            groundings,
+            candidate.StepDefinition.EvidenceContractSummary,
+            ProcessTargetGroundingSourceKind.ExplicitStepContract,
+            ProcessTargetGroundingAuthority.Writable);
+        foreach (var expectedArtifact in candidate.ExpectedArtifacts)
+        {
+            AddExternalTargetGroundings(
+                groundings,
+                string.Join(
+                    ' ',
+                    expectedArtifact.Title,
+                    expectedArtifact.ValidationRequirementSummary,
+                    expectedArtifact.AllowedFutureUsageSummary),
+                ProcessTargetGroundingSourceKind.ExplicitStepContract,
+                ProcessTargetGroundingAuthority.Writable);
+        }
+    }
+
+    private static void AddWorkBriefTextMentionGroundings(
+        List<ProcessTargetGroundingRecord> groundings,
+        DispatchCandidate candidate)
+    {
+        if (candidate.WorkBrief is null)
+        {
+            return;
+        }
+
+        foreach (var source in new[]
+                 {
+                     candidate.WorkBrief.Title,
+                     candidate.WorkBrief.WorkBriefText,
+                     candidate.WorkBrief.HandoffSummary,
+                     candidate.WorkBrief.AssignmentReason,
+                     candidate.WorkBrief.ExpectedOutcome,
+                     candidate.WorkBrief.EvidenceExpectationSummary
+                 })
+        {
+            AddExternalTargetGroundings(
+                groundings,
+                source,
+                ProcessTargetGroundingSourceKind.TextMention,
+                ProcessTargetGroundingAuthority.ReadOnly);
+        }
+    }
+
+    private static void AddArtifactInputGroundings(
+        List<ProcessTargetGroundingRecord> groundings,
+        DispatchCandidate candidate)
+    {
+        foreach (var artifactInput in candidate.ArtifactInputs)
+        {
+            AddExternalTargetGroundings(
+                groundings,
+                artifactInput.SourceStepTitle,
+                ProcessTargetGroundingSourceKind.UpstreamArtifact,
+                ProcessTargetGroundingAuthority.ReadOnly);
+            AddExternalTargetGroundings(
+                groundings,
+                artifactInput.ExpectedArtifactTitle,
+                ProcessTargetGroundingSourceKind.UpstreamArtifact,
+                ProcessTargetGroundingAuthority.ReadOnly);
+            foreach (var artifact in artifactInput.Artifacts)
+            {
+                AddExternalTargetGroundings(
+                    groundings,
+                    string.Join(' ', artifact.Title, artifact.ArtifactKind, artifact.ManagedStoragePath, artifact.ReviewSummary),
+                    ProcessTargetGroundingSourceKind.UpstreamArtifact,
+                    ProcessTargetGroundingAuthority.ReadOnly);
+                AddExternalTargetGroundings(
+                    groundings,
+                    artifact.ProvenanceSummary,
+                    ProcessTargetGroundingSourceKind.UpstreamArtifactProvenance,
+                    ProcessTargetGroundingAuthority.ReadOnly);
+            }
+        }
+    }
+
+    private static void AddExternalTargetGroundings(
+        List<ProcessTargetGroundingRecord> groundings,
+        string? text,
+        ProcessTargetGroundingSourceKind sourceKind,
+        ProcessTargetGroundingAuthority authority)
+    {
+        foreach (var alias in ExtractExternalTargetAliasesFromText(text))
+        {
+            groundings.Add(new ProcessTargetGroundingRecord(alias, sourceKind, authority));
+        }
     }
 
     private static IReadOnlyList<string> ResolveMutableExternalTargetAliases(
         DispatchCandidate candidate,
-        IReadOnlyList<string> aliases)
+        IReadOnlyList<ProcessTargetGroundingRecord> targetGroundings)
     {
-        var mutableAliases = aliases
+        var trustedWritableAliases = PruneAllowedExternalTargetAliasesForCurrentRun(
+            targetGroundings
+                .Where(grounding => grounding.Authority == ProcessTargetGroundingAuthority.Writable)
+                .Select(grounding => grounding.Alias));
+        var mutableAliases = trustedWritableAliases
             .Where(alias => !IsNonProductExternalTargetAlias(alias))
             .ToList();
         if (mutableAliases.Count == 0)
@@ -960,56 +1218,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
                leaf.Contains('.');
     }
 
-    private static IEnumerable<string?> EnumerateCurrentRunExternalTargetSources(
-        DispatchCandidate candidate,
-        string? projectStructureGroundingSummary,
-        string? artifactInspectionGroundingSummary)
-    {
-        yield return candidate.Run.Name;
-        yield return candidate.Run.TriggerReason;
-        yield return projectStructureGroundingSummary;
-        yield return artifactInspectionGroundingSummary;
-
-        if (candidate.WorkBrief is not null)
-        {
-            yield return candidate.WorkBrief.Title;
-            yield return candidate.WorkBrief.WorkBriefText;
-            yield return candidate.WorkBrief.HandoffSummary;
-            yield return candidate.WorkBrief.AssignmentReason;
-            yield return candidate.WorkBrief.ExpectedOutcome;
-            yield return candidate.WorkBrief.EvidenceExpectationSummary;
-        }
-
-        foreach (var expectedArtifact in candidate.ExpectedArtifacts)
-        {
-            yield return expectedArtifact.Title;
-            yield return expectedArtifact.ValidationRequirementSummary;
-            yield return expectedArtifact.AllowedFutureUsageSummary;
-        }
-
-        foreach (var artifactInput in candidate.ArtifactInputs)
-        {
-            yield return artifactInput.SourceStepTitle;
-            yield return artifactInput.ExpectedArtifactTitle;
-            foreach (var artifact in artifactInput.Artifacts)
-            {
-                yield return artifact.Title;
-                yield return artifact.ManagedStoragePath;
-                yield return artifact.ReviewSummary;
-                yield return artifact.ProvenanceSummary;
-            }
-        }
-    }
-
-    private static void AddExternalTargetAliasesFromText(
-        HashSet<string> aliases,
-        string? text)
+    private static IReadOnlyList<string> ExtractExternalTargetAliasesFromText(string? text)
     {
         if (string.IsNullOrWhiteSpace(text))
         {
-            return;
+            return [];
         }
 
+        var aliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (Match match in WorkspacePathInToolRequestRegex.Matches(text))
         {
             var path = match.Groups["path"].Value;
@@ -1028,7 +1244,6 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
                 continue;
             }
-
         }
 
         foreach (var candidatePath in EnumerateAbsoluteExternalPathCandidates(text))
@@ -1038,6 +1253,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 aliases.Add(mappedAlias);
             }
         }
+
+        return aliases
+            .Where(alias => !string.IsNullOrWhiteSpace(alias))
+            .ToArray();
     }
 
     private static bool TryMapAbsoluteExternalPathToAlias(

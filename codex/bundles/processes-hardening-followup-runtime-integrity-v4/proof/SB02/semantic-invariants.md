@@ -2,7 +2,9 @@
 
 ## SB02-INV-001
 
-Expected behavior: see `subbundles/02-lineage-keys-and-artifact-provenance-schema/README.md`.
+Source raw note: RQ02 / VF02 requires recovery, workflow, subprocess, and source artifact lineage to survive bounded external reference keys.
+
+Expected behavior: process artifact projection stores full typed lineage in `ProjectionLineageJson`, uses compact hash keys for manager recovery dedupe, and validates producer/current-run identity from typed lineage before legacy key/provenance text.
 
 Disallowed shallow implementation:
 
@@ -12,11 +14,37 @@ Disallowed shallow implementation:
 - branch-specific hardcoding
 - software-only behavior for generic process runtime
 
-Required proof:
+Failing-first or red-team proof:
 
-- failing-first/red-team proof
-- passing proof
-- source assertions
-- anti-stub audit
-- changed-file hashes
-- production behavior artifact matrix when new runtime state is introduced
+- `bundle://proof/SB02/transcripts/failing-first.txt` shows old source encoded recovery lineage inside bounded `ExternalReferenceKey`, had no `ProjectionLineageJson`, and validated manager recovery identity from key/provenance GUID text.
+
+Passing proof:
+
+- `bundle://proof/SB02/transcripts/passing.txt` runs `ApplyArtifactProjectionLineage_SB02_INV_001_uses_compact_key_for_long_recovery_lineage` and `ArtifactContractValidation_SB02_INV_001_accepts_manager_recovery_with_compact_key_and_typed_lineage`.
+
+Changed source files and hashes:
+
+- `bundle://proof/SB02/transcripts/changed-file-hashes.txt`
+
+Production assertions:
+
+- `bundle://proof/SB02/transcripts/source-assertions.txt`
+
+Red-team negative case:
+
+- A compact manager recovery key with no embedded GUIDs and no recovery GUIDs in provenance validates only when typed lineage is present; old text-only validation cannot prove it belongs to the current recovery lifecycle.
+
+Downstream dependency check:
+
+- SB03 may proceed because artifact producer identity no longer depends on long, truncatable recovery strings.
+
+Anti-stub audit:
+
+- `bundle://proof/SB02/transcripts/anti-stub-audit.txt`
+
+## Production Behavior Artifact Matrix
+
+| Artifact/signal | Producer proof | Consumer proof | Lifecycle proof | Negative proof |
+| --- | --- | --- | --- | --- |
+| `ProjectionLineageJson` | `bundle://proof/SB02/transcripts/source-assertions.txt` | `bundle://proof/SB02/transcripts/source-assertions.txt` | `repo://src/CanDoItAll.Migrations.PostgreSql/Migrations/20260525140500_ProcessArtifactProjectionLineage.cs` | `bundle://proof/SB02/transcripts/failing-first.txt` |
+| Compact manager recovery external key | `bundle://proof/SB02/transcripts/source-assertions.txt` | `bundle://proof/SB02/transcripts/passing.txt` | `bundle://proof/SB02/transcripts/passing.txt` | `bundle://proof/SB02/transcripts/failing-first.txt` |

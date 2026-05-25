@@ -1,3 +1,12 @@
-# SB01 failing-first.txt
+Command: red-team inspect old HEAD source for SB01-INV-001 vulnerable shape
+Underlying command: git show HEAD:src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.Operations.cs
+Working directory: C:\repositories\CanDoItAll
+Start: 2026-05-25T14:06:35.1280938-04:00
+Exit code: 0
 
-Fill during execution.
+Old call omitted tracked materialized artifact: True
+Old reactivation accepted tracked materialized artifact parameter: False
+Old reactivation queried persisted artifact records before SaveChanges: True
+
+Expected old behavior: a downstream step blocked for missing upstream artifact remains blocked because the just-added artifact is only tracked locally when reactivation evaluates artifact input satisfaction.
+SB01-INV-001 negative proof: the old source shape is vulnerable to the regression covered by RecordArtifactAsync_SB01_INV_001_reactivates_blocked_downstream_with_tracked_materialized_artifact.

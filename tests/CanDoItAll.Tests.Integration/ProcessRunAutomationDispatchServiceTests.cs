@@ -1,6 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Processes;
@@ -209,6 +210,67 @@ public sealed class ProcessRunAutomationDispatchServiceTests
             createdAtUtc.AddMinutes(8));
 
         Assert.True(hasBlockingRun);
+    }
+
+    [Fact]
+    public void ResolveBlockingAutomationExecutionRunId_SB09_INV_001_ignores_active_runs_from_previous_attempt_window()
+    {
+        var attemptStartedAtUtc = DateTimeOffset.Parse("2026-04-19T09:18:25+00:00");
+        var previousAttemptRun = CreateExecutionRun("process-automation-dispatch", ExecutionState.Running, null) with
+        {
+            CreatedAtUtc = attemptStartedAtUtc.AddMinutes(-20),
+            StartedAtUtc = attemptStartedAtUtc.AddMinutes(-20),
+            UpdatedAtUtc = attemptStartedAtUtc.AddMinutes(2)
+        };
+
+        var blockingRunId = ProcessRunAutomationDispatchService.ResolveBlockingAutomationExecutionRunId(
+            CreateStepRun(ProcessStepRunStatus.InProgress, attemptStartedAtUtc),
+            [previousAttemptRun],
+            attemptStartedAtUtc.AddMinutes(3));
+
+        Assert.Null(blockingRunId);
+    }
+
+    [Fact]
+    public void HasPriorNoProgressRetrySignal_SB09_INV_001_detects_repeated_fingerprint_after_restart()
+    {
+        var processRunId = Guid.NewGuid();
+        var stepRunId = Guid.NewGuid();
+        var priorExecutionRunId = Guid.NewGuid();
+        var currentExecutionRunId = Guid.NewGuid();
+        var signal = new ProcessRunAutomationDispatchService.NoProgressRetrySignal(
+            "sb09-no-progress-fingerprint",
+            currentExecutionRunId,
+            "tool-signature",
+            "artifact-validation-fingerprint",
+            "mutation-delta:none",
+            "proof-delta:none");
+        var priorEntry = new ProcessJournalEntry
+        {
+            ProcessRunId = processRunId,
+            StepRunId = stepRunId,
+            EventType = ProcessRuntimeEventTypes.NoProgressRetryObserved,
+            Title = "No-progress retry observed",
+            CorrelationId = signal.Fingerprint,
+            ReplayContextJson = JsonSerializer.Serialize(
+                new
+                {
+                    ExecutionRunId = priorExecutionRunId,
+                    signal.Fingerprint,
+                    signal.ToolSignature,
+                    signal.ArtifactValidationFingerprint,
+                    signal.MutationDelta,
+                    signal.ProofDelta
+                })
+        };
+        var serializedJournal = JsonSerializer.Serialize(new[] { priorEntry });
+        var reloadedJournal = JsonSerializer.Deserialize<List<ProcessJournalEntry>>(serializedJournal)
+            ?? throw new InvalidOperationException("No-progress journal reload failed.");
+
+        Assert.True(ProcessRunAutomationDispatchService.HasPriorNoProgressRetrySignal(reloadedJournal, signal));
+
+        var duplicateProcessingSignal = signal with { ExecutionRunId = priorExecutionRunId };
+        Assert.False(ProcessRunAutomationDispatchService.HasPriorNoProgressRetrySignal(reloadedJournal, duplicateProcessingSignal));
     }
 
     [Fact]
@@ -3738,7 +3800,7 @@ Requirements from project-level planning context:
     }
 
     [Fact]
-    public void BuildProcessInvocationMetadataJson_prefers_current_run_product_root_over_stale_project_structure_products()
+    public void BuildProcessInvocationMetadataJson_keeps_current_upstream_product_root_read_only_when_project_structure_product_is_stale()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
         var method = serviceType.GetMethod("BuildProcessInvocationMetadataJson", BindingFlags.NonPublic | BindingFlags.Static)
@@ -3777,19 +3839,20 @@ Requirements from project-level planning context:
 
         Assert.False(string.IsNullOrWhiteSpace(metadataJson));
         using var document = JsonDocument.Parse(metadataJson);
-        var allowedAliases = document.RootElement
-            .GetProperty(ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey)
-            .EnumerateArray()
-            .Select(item => item.GetString())
-            .ToArray();
+        var allowedAliases = document.RootElement.TryGetProperty(ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey, out var allowedAliasesElement)
+            ? allowedAliasesElement
+                .EnumerateArray()
+                .Select(item => item.GetString())
+                .ToArray()
+            : [];
         var readOnlyAliases = document.RootElement
             .GetProperty(ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey)
             .EnumerateArray()
             .Select(item => item.GetString())
             .ToArray();
 
-        var allowedAlias = Assert.Single(allowedAliases);
-        Assert.Equal("external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-190813/product", allowedAlias);
+        Assert.Empty(allowedAliases);
+        Assert.Contains("external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-190813/product", readOnlyAliases);
         Assert.Contains("external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-190813/project-structure-backup", readOnlyAliases);
         Assert.DoesNotContain(
             readOnlyAliases,
@@ -3797,6 +3860,68 @@ Requirements from project-level planning context:
                 alias,
                 "external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-181000/product",
                 StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void BuildProcessInvocationMetadataJson_SB04_INV_001_keeps_stale_upstream_product_alias_read_only_for_mutating_step()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var method = serviceType.GetMethod("BuildProcessInvocationMetadataJson", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildProcessInvocationMetadataJson method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Implement the requested app and prove build, tests, and startup smoke.",
+            ProcessStepKind.Work,
+            [],
+            false,
+            [],
+            [],
+            triggerReason: "Deliver the generated application showcase.",
+            runName: "Codex live Blazor delivery 20260522-190813",
+            processName: "Blazor app delivery",
+            outputContractSummary: "Buildable Blazor implementation");
+        const string projectStructureGroundingSummary = """
+            Dispatcher fetched the live project structure for `TetrisGame` and focused this prompt on the selected work branch.
+            Grounded external target paths from the selected project structure:
+            - `C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-190813\product` mapped to `external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-190813/product` from current product root note (custom:current-run)
+            """;
+        const string artifactInspectionGroundingSummary = """
+            Upstream artifact stale excerpt:
+            - Prior failed attempt wrote into sibling product root `external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-190813-sibling/product`.
+            """;
+
+        var metadataJson = method.Invoke(
+            null,
+            [
+                candidate,
+                new ExecutionInvocationPolicy(),
+                projectStructureGroundingSummary,
+                artifactInspectionGroundingSummary
+            ]) as string;
+
+        Assert.False(string.IsNullOrWhiteSpace(metadataJson));
+        using var document = JsonDocument.Parse(metadataJson);
+        var allowedAliases = document.RootElement.TryGetProperty(ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey, out var allowedAliasesElement)
+            ? allowedAliasesElement
+                .EnumerateArray()
+                .Select(item => item.GetString())
+                .ToArray()
+            : [];
+        var readOnlyAliases = document.RootElement
+            .GetProperty(ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey)
+            .EnumerateArray()
+            .Select(item => item.GetString())
+            .ToArray();
+
+        Assert.Contains("external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-190813/product", allowedAliases);
+        Assert.DoesNotContain(
+            allowedAliases,
+            alias => string.Equals(
+                alias,
+                "external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-190813-sibling/product",
+                StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            "external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-190813-sibling/product",
+            readOnlyAliases);
     }
 
     [Fact]
@@ -4078,12 +4203,69 @@ Requirements from project-level planning context:
             .ToArray();
         Assert.Contains("WriteExternalArtifactDestination", operations);
         Assert.DoesNotContain("MutateProductTarget", operations);
-        var allowedAliases = document.RootElement
-            .GetProperty(ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey)
+        var allowedAliases = document.RootElement.TryGetProperty(ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey, out var allowedAliasesElement)
+            ? allowedAliasesElement
+                .EnumerateArray()
+                .Select(item => item.GetString())
+                .ToArray()
+            : [];
+        Assert.Contains("external-target/C/business/market-plan/reports", allowedAliases);
+    }
+
+    [Fact]
+    public void BuildProcessInvocationMetadataJson_SB08_INV_001_uses_persisted_operation_contract_without_text_markers()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var method = serviceType.GetMethod("BuildProcessInvocationMetadataJson", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildProcessInvocationMetadataJson method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Create the governed executive report and place it in the selected report destination.",
+            ProcessStepKind.Work,
+            [],
+            false,
+            [(ProcessArtifactKind.Deliverable, "Executive report", true, "Must include owner, assumptions, findings, and approval criteria.")],
+            [],
+            triggerReason: "Prepare an executive report for the selected destination.",
+            stepTitle: "Create executive report",
+            processName: "Executive reporting workflow",
+            outputContractSummary: "Executive report.");
+        var stepDefinition = (ProcessStepDefinition)(candidate.GetType().GetProperty("StepDefinition")?.GetValue(candidate)
+            ?? throw new InvalidOperationException("DispatchCandidate.StepDefinition was not available."));
+        stepDefinition.AllowedOperations =
+        [
+            ProcessStepOperation.WriteManagedProcessArtifacts,
+            ProcessStepOperation.WriteExternalArtifactDestination
+        ];
+        stepDefinition.OperationTargetScope = ProcessStepTargetScope.ExternalArtifactDestination;
+        const string projectStructureGroundingSummary = """
+            Dispatcher fetched the live project structure for `ExecutiveReports` and focused this prompt on the selected work branch.
+            Grounded external target paths from the selected project structure:
+            - `C:\business\executive-reports` mapped to `external-target/C/business/executive-reports` from report destination note (custom:report-destination)
+            """;
+
+        var metadataJson = method.Invoke(
+            null,
+            [
+                candidate,
+                new ExecutionInvocationPolicy(),
+                projectStructureGroundingSummary,
+                null
+            ]) as string;
+
+        Assert.False(string.IsNullOrWhiteSpace(metadataJson));
+        using var document = JsonDocument.Parse(metadataJson);
+        Assert.Equal(
+            ProcessStepTargetScope.ExternalArtifactDestination.ToString(),
+            document.RootElement.GetProperty(ExecutionInvocationMetadata.ProcessStepTargetScopeMetadataKey).GetString());
+        Assert.False(document.RootElement.GetProperty(ExecutionInvocationMetadata.ProcessStepAllowsProductMutationMetadataKey).GetBoolean());
+        var operations = document.RootElement
+            .GetProperty(ExecutionInvocationMetadata.ProcessStepAllowedOperationsMetadataKey)
             .EnumerateArray()
             .Select(item => item.GetString())
             .ToArray();
-        Assert.Contains("external-target/C/business/market-plan/reports", allowedAliases);
+        Assert.Contains(ProcessStepOperation.WriteExternalArtifactDestination.ToString(), operations);
+        Assert.Contains(ProcessStepOperation.WriteManagedProcessArtifacts.ToString(), operations);
+        Assert.DoesNotContain(ProcessStepOperation.MutateProductTarget.ToString(), operations);
     }
 
     [Fact]
@@ -12852,6 +13034,227 @@ Ancestor path to the target work node:
     }
 
     [Fact]
+    public void ApplyArtifactProjectionLineage_SB02_INV_001_uses_compact_key_for_long_recovery_lineage()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var lineageType = serviceType.GetNestedType("ArtifactProjectionLineage", BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("ArtifactProjectionLineage type was not found.");
+        var applyLineage = serviceType.GetMethod("ApplyArtifactProjectionLineage", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ApplyArtifactProjectionLineage method was not found.");
+        var recoveryExecutionRunId = Guid.NewGuid();
+        var recoveredForExecutionRunId = Guid.NewGuid();
+        var projectedExecutionRunId = Guid.NewGuid();
+        var reworkPacketId = Guid.NewGuid();
+        var longSourceKey = $"workspace-written-artifact|{projectedExecutionRunId:D}|{Guid.NewGuid():D}|{string.Join("/", Enumerable.Repeat("deep-artifact-segment", 12))}/implementation-change-set.md";
+        var lineage = Activator.CreateInstance(
+            lineageType,
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+            binder: null,
+            args: [recoveryExecutionRunId, recoveredForExecutionRunId, reworkPacketId],
+            culture: null);
+
+        var compactKey = (string?)applyLineage.Invoke(null, [longSourceKey, projectedExecutionRunId, lineage])
+            ?? throw new InvalidOperationException("Lineage key was not returned.");
+
+        Assert.StartsWith("manager-recovery-artifact|sha256:", compactKey, StringComparison.Ordinal);
+        Assert.True(compactKey.Length <= 200);
+        Assert.DoesNotContain(recoveryExecutionRunId.ToString("D"), compactKey, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(recoveredForExecutionRunId.ToString("D"), compactKey, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(longSourceKey, compactKey, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void WorkflowArtifactProjectionMapping_SB06_INV_001_uses_explicit_output_id_when_same_kind_names_conflict()
+    {
+        var stepDefinitionId = Guid.NewGuid();
+        var workflowRunId = WorkflowRunId.New();
+        var financeExpectation = new ProcessArtifactExpectation
+        {
+            Id = Guid.NewGuid(),
+            StepDefinitionId = stepDefinitionId,
+            ArtifactKind = ProcessArtifactKind.Deliverable,
+            Title = "Finance approval packet",
+            ValidationRequirementSummary = "workflow-output-id: finance-output"
+        };
+        var complianceExpectation = new ProcessArtifactExpectation
+        {
+            Id = Guid.NewGuid(),
+            StepDefinitionId = stepDefinitionId,
+            ArtifactKind = ProcessArtifactKind.Deliverable,
+            Title = "Compliance approval packet",
+            ValidationRequirementSummary = "workflow-output-id: compliance-output"
+        };
+        var financeArtifact = new WorkflowArtifactRecord(
+            WorkflowArtifactId.New(),
+            workflowRunId,
+            WorkflowArtifactKind.Json,
+            new WorkflowNodeId("finance-output"),
+            "Compliance approval packet",
+            "application/json",
+            "workflow/finance.json",
+            "Finance packet emitted from workflow node.",
+            DateTimeOffset.UtcNow);
+        var complianceArtifact = new WorkflowArtifactRecord(
+            WorkflowArtifactId.New(),
+            workflowRunId,
+            WorkflowArtifactKind.Json,
+            new WorkflowNodeId("compliance-output"),
+            "Finance approval packet",
+            "application/json",
+            "workflow/compliance.json",
+            "Compliance packet emitted from workflow node.",
+            DateTimeOffset.UtcNow);
+
+        var result = ProcessWorkflowRunCoordinator.ResolveWorkflowArtifactExpectation(
+            [financeExpectation, complianceExpectation],
+            [financeArtifact, complianceArtifact],
+            ProcessArtifactKind.Deliverable,
+            financeArtifact,
+            out var diagnostic);
+
+        Assert.Equal(financeExpectation.Id, result?.Id);
+        Assert.Equal(string.Empty, diagnostic);
+    }
+
+    [Fact]
+    public void WorkflowArtifactProjectionMapping_SB06_INV_001_blocks_same_kind_heuristic_without_explicit_output_id()
+    {
+        var stepDefinitionId = Guid.NewGuid();
+        var workflowRunId = WorkflowRunId.New();
+        var financeExpectation = new ProcessArtifactExpectation
+        {
+            Id = Guid.NewGuid(),
+            StepDefinitionId = stepDefinitionId,
+            ArtifactKind = ProcessArtifactKind.Deliverable,
+            Title = "Finance approval packet"
+        };
+        var complianceExpectation = new ProcessArtifactExpectation
+        {
+            Id = Guid.NewGuid(),
+            StepDefinitionId = stepDefinitionId,
+            ArtifactKind = ProcessArtifactKind.Deliverable,
+            Title = "Compliance approval packet"
+        };
+        var financeArtifact = new WorkflowArtifactRecord(
+            WorkflowArtifactId.New(),
+            workflowRunId,
+            WorkflowArtifactKind.Json,
+            new WorkflowNodeId("finance-output"),
+            "Finance approval packet",
+            "application/json",
+            "workflow/finance.json",
+            "Finance packet emitted from workflow node.",
+            DateTimeOffset.UtcNow);
+        var complianceArtifact = new WorkflowArtifactRecord(
+            WorkflowArtifactId.New(),
+            workflowRunId,
+            WorkflowArtifactKind.Json,
+            new WorkflowNodeId("compliance-output"),
+            "Compliance approval packet",
+            "application/json",
+            "workflow/compliance.json",
+            "Compliance packet emitted from workflow node.",
+            DateTimeOffset.UtcNow);
+
+        var result = ProcessWorkflowRunCoordinator.ResolveWorkflowArtifactExpectation(
+            [financeExpectation, complianceExpectation],
+            [financeArtifact, complianceArtifact],
+            ProcessArtifactKind.Deliverable,
+            financeArtifact,
+            out var diagnostic);
+
+        Assert.Null(result);
+        Assert.Contains("ambiguous", diagnostic, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("explicit workflow-output-id", diagnostic, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void SubprocessArtifactProjectionMapping_SB06_INV_001_uses_child_expectation_id_when_same_kind_titles_conflict()
+    {
+        var childFinanceExpectationId = Guid.NewGuid();
+        var childComplianceExpectationId = Guid.NewGuid();
+        var parentFinanceExpectation = new ProcessArtifactExpectation
+        {
+            Id = Guid.NewGuid(),
+            StepDefinitionId = Guid.NewGuid(),
+            ArtifactKind = ProcessArtifactKind.Deliverable,
+            Title = "Finance approval packet",
+            ValidationRequirementSummary = $"subprocess-child-expectation-id: {childFinanceExpectationId:D}"
+        };
+        var wrongTitleArtifact = new ProcessArtifactRecord
+        {
+            Id = Guid.NewGuid(),
+            ArtifactExpectationId = childComplianceExpectationId,
+            ArtifactKind = ProcessArtifactKind.Deliverable,
+            Title = "Finance approval packet",
+            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+            SensitivityLevel = ProcessSensitivityLevel.Internal,
+            CreatedAtUtc = DateTimeOffset.UtcNow.AddMinutes(-1)
+        };
+        var mappedArtifact = new ProcessArtifactRecord
+        {
+            Id = Guid.NewGuid(),
+            ArtifactExpectationId = childFinanceExpectationId,
+            ArtifactKind = ProcessArtifactKind.Deliverable,
+            Title = "Compliance approval packet",
+            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+            SensitivityLevel = ProcessSensitivityLevel.Internal,
+            CreatedAtUtc = DateTimeOffset.UtcNow
+        };
+
+        var result = ProcessRunAutomationDispatchService.ResolveSubprocessSourceArtifact(
+            [wrongTitleArtifact, mappedArtifact],
+            [parentFinanceExpectation],
+            parentFinanceExpectation,
+            out var diagnostic);
+
+        Assert.Equal(mappedArtifact.Id, result?.Id);
+        Assert.Equal(string.Empty, diagnostic);
+    }
+
+    [Fact]
+    public void SubprocessArtifactProjectionMapping_SB06_INV_001_blocks_same_kind_heuristic_without_child_mapping()
+    {
+        var parentFinanceExpectation = new ProcessArtifactExpectation
+        {
+            Id = Guid.NewGuid(),
+            StepDefinitionId = Guid.NewGuid(),
+            ArtifactKind = ProcessArtifactKind.Deliverable,
+            Title = "Finance approval packet"
+        };
+        var wrongTitleArtifact = new ProcessArtifactRecord
+        {
+            Id = Guid.NewGuid(),
+            ArtifactExpectationId = Guid.NewGuid(),
+            ArtifactKind = ProcessArtifactKind.Deliverable,
+            Title = "Finance approval packet",
+            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+            SensitivityLevel = ProcessSensitivityLevel.Internal,
+            CreatedAtUtc = DateTimeOffset.UtcNow.AddMinutes(-1)
+        };
+        var secondArtifact = new ProcessArtifactRecord
+        {
+            Id = Guid.NewGuid(),
+            ArtifactExpectationId = Guid.NewGuid(),
+            ArtifactKind = ProcessArtifactKind.Deliverable,
+            Title = "Compliance approval packet",
+            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+            SensitivityLevel = ProcessSensitivityLevel.Internal,
+            CreatedAtUtc = DateTimeOffset.UtcNow
+        };
+
+        var result = ProcessRunAutomationDispatchService.ResolveSubprocessSourceArtifact(
+            [wrongTitleArtifact, secondArtifact],
+            [parentFinanceExpectation],
+            parentFinanceExpectation,
+            out var diagnostic);
+
+        Assert.Null(result);
+        Assert.Contains("ambiguous", diagnostic, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("explicit subprocess child expectation mapping", diagnostic, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void ResolveManagerArtifactRecoveryAgent_prefers_configured_run_manager_option()
     {
         var managerPartyId = Guid.NewGuid();
@@ -13071,6 +13474,26 @@ Ancestor path to the target work node:
     }
 
     [Fact]
+    public void ArtifactContractValidation_SB07_INV_001_classifies_missing_required_artifact_as_own_output()
+    {
+        var expectation = CreateDispatchArtifactExpectation(
+            ProcessArtifactKind.Evidence,
+            "QA evidence pack",
+            isRequired: true,
+            "Must include runtime proof and defect findings.");
+
+        var result = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            expectation,
+            [],
+            ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent);
+
+        Assert.Equal(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.Missing, result.Status);
+        Assert.Equal(ProcessRunAutomationDispatchService.ProcessArtifactFailureOwnership.OwnOutput, result.FailureOwnership);
+    }
+
+    [Fact]
     public void ArtifactContractValidation_accepts_matching_workflow_artifact_for_process_expectation()
     {
         var processRunId = Guid.NewGuid();
@@ -13221,6 +13644,167 @@ Ancestor path to the target work node:
     }
 
     [Fact]
+    public void ArtifactContractValidation_SB05_INV_001_rejects_malformed_json_from_relative_managed_storage_path()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"process-artifact-workspace-{Guid.NewGuid():N}");
+        var relativePath = "artifacts/process-runs/current/finance-approval-packet.json";
+        var fullPath = Path.Combine(workspaceRoot, relativePath.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        File.WriteAllText(fullPath, "{ not valid json");
+        try
+        {
+            var processRunId = Guid.NewGuid();
+            var stepRunId = Guid.NewGuid();
+            var executionRunId = Guid.NewGuid();
+            var expectation = CreateDispatchArtifactExpectation(
+                ProcessArtifactKind.Deliverable,
+                "Finance approval packet",
+                isRequired: true,
+                "Create the approval packet as JSON.");
+            var artifact = new ProcessArtifactRecord
+            {
+                ProcessRunId = processRunId,
+                StepRunId = stepRunId,
+                ArtifactExpectationId = expectation.Id,
+                ArtifactKind = ProcessArtifactKind.Deliverable,
+                Title = expectation.Title,
+                ManagedStoragePath = relativePath,
+                ExternalReferenceKey = $"workspace-written-artifact|{executionRunId:D}|{expectation.Id:D}|{relativePath}",
+                ReviewSummary = "Finance approval packet.",
+                ProvenanceSummary = $"Written by execution run {executionRunId:D}."
+            };
+            var reader = new ProcessRunAutomationDispatchService.WorkspaceProcessArtifactContentReader(
+                new TestWorkspacePathResolver(workspaceRoot));
+
+            var result = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+                processRunId,
+                stepRunId,
+                expectation,
+                [artifact],
+                ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+                executionRunId,
+                managedArtifactContentReader: reader);
+
+            Assert.Equal(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.InvalidFormat, result.Status);
+            Assert.Contains("malformed JSON", result.Diagnostic, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            if (Directory.Exists(workspaceRoot))
+            {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public void ArtifactContractValidation_SB05_INV_001_reports_missing_relative_managed_storage_content()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"process-artifact-workspace-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(workspaceRoot);
+        try
+        {
+            var processRunId = Guid.NewGuid();
+            var stepRunId = Guid.NewGuid();
+            var executionRunId = Guid.NewGuid();
+            var relativePath = "artifacts/process-runs/current/missing-runtime-proof.md";
+            var expectation = CreateDispatchArtifactExpectation(
+                ProcessArtifactKind.Evidence,
+                "Runtime validation evidence",
+                isRequired: true,
+                "Must include runtime proof as Markdown.");
+            var artifact = new ProcessArtifactRecord
+            {
+                ProcessRunId = processRunId,
+                StepRunId = stepRunId,
+                ArtifactExpectationId = expectation.Id,
+                ArtifactKind = ProcessArtifactKind.Evidence,
+                Title = expectation.Title,
+                ManagedStoragePath = relativePath,
+                ExternalReferenceKey = $"workspace-written-artifact|{executionRunId:D}|{expectation.Id:D}|{relativePath}",
+                ReviewSummary = "Runtime proof.",
+                ProvenanceSummary = $"Written by execution run {executionRunId:D}."
+            };
+            var reader = new ProcessRunAutomationDispatchService.WorkspaceProcessArtifactContentReader(
+                new TestWorkspacePathResolver(workspaceRoot));
+
+            var result = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+                processRunId,
+                stepRunId,
+                expectation,
+                [artifact],
+                ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+                executionRunId,
+                managedArtifactContentReader: reader);
+
+            Assert.Equal(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.InvalidFormat, result.Status);
+            Assert.Contains("could not be loaded", result.Diagnostic, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("not found", result.Diagnostic, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            if (Directory.Exists(workspaceRoot))
+            {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public void ArtifactContractValidation_SB05_INV_001_rejects_relative_managed_storage_content_over_validation_limit()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"process-artifact-workspace-{Guid.NewGuid():N}");
+        var relativePath = "artifacts/process-runs/current/oversized-approval-packet.json";
+        var fullPath = Path.Combine(workspaceRoot, relativePath.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        File.WriteAllText(fullPath, new string('x', 1024 * 1024 + 1));
+        try
+        {
+            var processRunId = Guid.NewGuid();
+            var stepRunId = Guid.NewGuid();
+            var executionRunId = Guid.NewGuid();
+            var expectation = CreateDispatchArtifactExpectation(
+                ProcessArtifactKind.Deliverable,
+                "Finance approval packet",
+                isRequired: true,
+                "Create the approval packet as JSON.");
+            var artifact = new ProcessArtifactRecord
+            {
+                ProcessRunId = processRunId,
+                StepRunId = stepRunId,
+                ArtifactExpectationId = expectation.Id,
+                ArtifactKind = ProcessArtifactKind.Deliverable,
+                Title = expectation.Title,
+                ManagedStoragePath = relativePath,
+                ExternalReferenceKey = $"workspace-written-artifact|{executionRunId:D}|{expectation.Id:D}|{relativePath}",
+                ReviewSummary = "Finance approval packet.",
+                ProvenanceSummary = $"Written by execution run {executionRunId:D}."
+            };
+            var reader = new ProcessRunAutomationDispatchService.WorkspaceProcessArtifactContentReader(
+                new TestWorkspacePathResolver(workspaceRoot));
+
+            var result = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+                processRunId,
+                stepRunId,
+                expectation,
+                [artifact],
+                ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+                executionRunId,
+                managedArtifactContentReader: reader);
+
+            Assert.Equal(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.InvalidFormat, result.Status);
+            Assert.Contains("exceeding the validation limit", result.Diagnostic, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            if (Directory.Exists(workspaceRoot))
+            {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public void ArtifactContractValidation_rejects_workspace_artifact_from_wrong_execution_run()
     {
         var processRunId = Guid.NewGuid();
@@ -13254,6 +13838,58 @@ Ancestor path to the target work node:
             currentExecutionRunId);
 
         Assert.Equal(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.StaleOrWrongRun, result.Status);
+    }
+
+    [Fact]
+    public void ArtifactContractValidation_SB02_INV_001_accepts_manager_recovery_with_compact_key_and_typed_lineage()
+    {
+        var processRunId = Guid.NewGuid();
+        var stepRunId = Guid.NewGuid();
+        var recoveryExecutionRunId = Guid.NewGuid();
+        var recoveredForExecutionRunId = Guid.NewGuid();
+        var projectedExecutionRunId = Guid.NewGuid();
+        var sourceExternalReferenceKey = $"workspace-written-artifact|{projectedExecutionRunId:D}|{Guid.NewGuid():D}|{string.Join("/", Enumerable.Repeat("nested-artifact-segment", 12))}/implementation-change-set.md";
+        var expectation = CreateDispatchArtifactExpectation(
+            ProcessArtifactKind.Deliverable,
+            "Recovered implementation change set",
+            isRequired: true,
+            "Must identify concrete product files and validation evidence.");
+        var artifact = new ProcessArtifactRecord
+        {
+            ProcessRunId = processRunId,
+            StepRunId = stepRunId,
+            ArtifactExpectationId = expectation.Id,
+            ArtifactKind = ProcessArtifactKind.Deliverable,
+            Title = expectation.Title,
+            ManagedStoragePath = "artifacts/process-runs/current/recovered-implementation-change-set.md",
+            ExternalReferenceKey = "manager-recovery-artifact|sha256:0123456789abcdef0123456789abcdef",
+            ProjectionLineageJson = ProcessArtifactProjectionLineageJson.Serialize(
+                new ProcessArtifactProjectionLineage
+                {
+                    SourceKind = ProcessArtifactProjectionSourceKind.WorkspaceWrite,
+                    SourceExecutionRunId = projectedExecutionRunId,
+                    RecoveryExecutionRunId = recoveryExecutionRunId,
+                    RecoveredForExecutionRunId = recoveredForExecutionRunId,
+                    ProjectedExecutionRunId = projectedExecutionRunId,
+                    SourceExternalReferenceKey = sourceExternalReferenceKey
+                }),
+            ReviewSummary = "Recovered implementation change set.",
+            ProvenanceSummary = "Manager recovery artifact with structured lineage."
+        };
+
+        var result = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+            processRunId,
+            stepRunId,
+            expectation,
+            [artifact],
+            ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+            executionRunId: projectedExecutionRunId,
+            recoveryExecutionRunId: recoveryExecutionRunId,
+            recoveredForExecutionRunId: recoveredForExecutionRunId);
+
+        Assert.Equal(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.Satisfied, result.Status);
+        Assert.Equal(ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.ManagerRecovery, result.ProducerKind);
+        Assert.True(result.IsSatisfied);
     }
 
     [Fact]
@@ -13314,7 +13950,43 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void ArtifactDispositionRouter_routes_validation_failure_to_repair_branch()
+    public void ArtifactDispositionRouter_SB07_INV_001_blocks_missing_own_required_artifact_even_with_negative_branch()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var method = serviceType.GetMethod("ResolveArtifactContractDispositionBranchOutcome", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveArtifactContractDispositionBranchOutcome method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "QA review records a disposition decision and routes discovered product defects to implementation repair.",
+            ProcessStepKind.Review,
+            [("no_go", "No-go", "Route blocking product defects to no-go.")],
+            true,
+            [
+                (ProcessArtifactKind.Decision, "QA disposition decision", true, "Required decision artifact for the governed review disposition."),
+                (ProcessArtifactKind.Evidence, "QA evidence pack", true, "Must include browser proof and defect findings.")
+            ],
+            [],
+            stepTitle: "QA validation",
+            recordedArtifactTitles: ["QA disposition decision"]);
+        var evidenceExpectation = ResolveDispatchArtifactExpectation(candidate, "QA evidence pack");
+        var failure = new ProcessRunAutomationDispatchService.ProcessArtifactExpectationValidationResult(
+            evidenceExpectation.Id,
+            evidenceExpectation.Title,
+            ProcessRunAutomationDispatchService.ProcessArtifactExpectationMode.RuntimeProof,
+            ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.Missing,
+            ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.Unknown,
+            ArtifactRecordId: null,
+            AttemptedPath: string.Empty,
+            Diagnostic: "No current step artifact record matches the required expectation.",
+            SuggestedAction: "Recover or block with the exact missing artifact.",
+            Fingerprint: "fingerprint");
+
+        var routedOutcome = method.Invoke(null, [candidate, new[] { failure }]);
+
+        Assert.Null(routedOutcome);
+    }
+
+    [Fact]
+    public void ArtifactDispositionRouter_routes_review_disposition_failure_to_repair_branch_when_decision_artifact_exists()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
         var method = serviceType.GetMethod("ResolveArtifactContractDispositionBranchOutcome", BindingFlags.NonPublic | BindingFlags.Static)
@@ -13324,13 +13996,14 @@ Ancestor path to the target work node:
             ProcessStepKind.Review,
             [("repair_required", "Repair required", "Route product defects to repair.")],
             true,
-            [(ProcessArtifactKind.Evidence, "QA evidence", true, "Must include browser proof and defect findings.")],
-            []);
-        var expectation = CreateDispatchArtifactExpectation(
-            ProcessArtifactKind.Evidence,
-            "QA evidence",
-            isRequired: true,
-            "Must include browser proof and defect findings.");
+            [
+                (ProcessArtifactKind.Decision, "QA disposition decision", true, "Required decision artifact for the governed review disposition."),
+                (ProcessArtifactKind.Evidence, "QA evidence", true, "Must include browser proof and defect findings.")
+            ],
+            [],
+            stepTitle: "QA validation",
+            recordedArtifactTitles: ["QA disposition decision"]);
+        var expectation = ResolveDispatchArtifactExpectation(candidate, "QA evidence");
         var failure = new ProcessRunAutomationDispatchService.ProcessArtifactExpectationValidationResult(
             expectation.Id,
             expectation.Title,
@@ -13341,7 +14014,8 @@ Ancestor path to the target work node:
             AttemptedPath: string.Empty,
             Diagnostic: "Browser proof evidence is insufficient.",
             SuggestedAction: "Route repair or recover evidence.",
-            Fingerprint: "fingerprint");
+            Fingerprint: "fingerprint",
+            FailureOwnership: ProcessRunAutomationDispatchService.ProcessArtifactFailureOwnership.ReviewDisposition);
 
         var routedOutcome = method.Invoke(null, [candidate, new[] { failure }])
             ?? throw new InvalidOperationException("Disposition route was not resolved.");
@@ -15401,8 +16075,19 @@ Ancestor path to the target work node:
             isRequired,
             ProcessArtifactTrustRequirement.ReviewRequired,
             ProcessSensitivityLevel.Internal,
-            validationRequirementSummary,
-            string.Empty);
+                validationRequirementSummary,
+                string.Empty);
+    }
+
+    private static ProcessRunAutomationDispatchService.DispatchArtifactExpectation ResolveDispatchArtifactExpectation(
+        object candidate,
+        string title)
+    {
+        var expectedArtifacts = candidate.GetType().GetProperty("ExpectedArtifacts")?.GetValue(candidate)
+            ?? throw new InvalidOperationException("DispatchCandidate.ExpectedArtifacts was not available.");
+        return ((IEnumerable)expectedArtifacts)
+            .Cast<ProcessRunAutomationDispatchService.DispatchArtifactExpectation>()
+            .Single(item => string.Equals(item.Title, title, StringComparison.Ordinal));
     }
 
     private static ProcessRunAssignmentViewModel CreateAssignment(
@@ -15982,5 +16667,18 @@ Ancestor path to the target work node:
                               parameters[1].ParameterType.IsByRef;
                    })
                ?? throw new InvalidOperationException("TryResolveDeclaredStepOutcome method was not found.");
+    }
+
+    private sealed class TestWorkspacePathResolver(string workspaceRoot) : IWorkspacePathResolver
+    {
+        public string ResolveWorkspaceRoot() => workspaceRoot;
+
+        public string ResolveManagedFilesRoot() => Path.Combine(workspaceRoot, "managed-files");
+
+        public string ResolveExportsRoot() => Path.Combine(workspaceRoot, "exports");
+
+        public string ResolveEvidenceRoot() => Path.Combine(workspaceRoot, "evidence");
+
+        public string ResolveManagerArtifactsRoot() => Path.Combine(workspaceRoot, "manager-artifacts");
     }
 }

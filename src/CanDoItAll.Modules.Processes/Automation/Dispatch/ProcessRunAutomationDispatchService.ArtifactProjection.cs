@@ -14,6 +14,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Data;
 using System.Data.Common;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -49,8 +50,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 continue;
             }
 
+            var sourceExternalReferenceKey = BuildExternalReferenceKey(artifact);
             var externalReferenceKey = ApplyArtifactProjectionLineage(
-                BuildExternalReferenceKey(artifact),
+                sourceExternalReferenceKey,
                 detail.Run.Id,
                 lineage);
             if (candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
@@ -124,7 +126,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
                         ? detail.Run.ResultSummary
                         : artifact.Summary,
                     ManagedStoragePath = placement.RelativePath,
-                    ExternalReferenceKey = externalReferenceKey
+                    ExternalReferenceKey = externalReferenceKey,
+                    ProjectionLineage = BuildArtifactProjectionLineage(
+                        ProcessArtifactProjectionSourceKind.AgentExecutionArtifact,
+                        detail.Run.Id,
+                        lineage,
+                        sourceArtifactId: artifact.Id,
+                        sourceExternalReferenceKey: sourceExternalReferenceKey)
                 },
                 cancellationToken);
             if (recordResult.IsSuccess)
@@ -152,7 +160,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
             workspaceRoot,
             workspaceScope,
             completionStatus,
-            cancellationToken);
+            cancellationToken,
+            lineage);
         await ProjectWorkspaceWrittenArtifactsAsync(
             candidate,
             detail,
@@ -231,10 +240,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
 
             var expectedArtifact = matchedExpectations[0];
-            var externalReferenceKey = BuildProcessMockArtifactExternalReferenceKey(
+            var sourceExternalReferenceKey = BuildProcessMockArtifactExternalReferenceKey(
                 candidate.StepRun.Id,
                 expectedArtifact.Id,
                 projection.RelativePath);
+            var externalReferenceKey = ApplyArtifactProjectionLineage(
+                sourceExternalReferenceKey,
+                detail.Run.Id,
+                lineage);
             if (candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
             {
                 projectedExpectationIds.Add(expectedArtifact.Id);
@@ -289,7 +302,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
                         : expectedArtifact.AllowedFutureUsageSummary,
                     ReviewSummary = $"Process mock role '{projection.RoleKey}' produced '{Path.GetFileName(projection.RelativePath)}'.",
                     ManagedStoragePath = placement.RelativePath,
-                    ExternalReferenceKey = externalReferenceKey
+                    ExternalReferenceKey = externalReferenceKey,
+                    ProjectionLineage = BuildArtifactProjectionLineage(
+                        ProcessArtifactProjectionSourceKind.ProcessMock,
+                        detail.Run.Id,
+                        lineage,
+                        sourceExternalReferenceKey: sourceExternalReferenceKey)
                 },
                 cancellationToken);
             if (recordResult.IsFailure)
@@ -363,11 +381,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 continue;
             }
 
+            var sourceExternalReferenceKey = BuildWorkspaceWrittenArtifactExternalReferenceKey(
+                detail.Run.Id,
+                expectedArtifact.Id,
+                projectedRelativePath);
             var externalReferenceKey = ApplyArtifactProjectionLineage(
-                BuildWorkspaceWrittenArtifactExternalReferenceKey(
-                    detail.Run.Id,
-                    expectedArtifact.Id,
-                    projectedRelativePath),
+                sourceExternalReferenceKey,
                 detail.Run.Id,
                 lineage);
             if (candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
@@ -452,7 +471,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
                         ? $"Workspace file write produced '{projectedRelativePath}'."
                         : $"Workspace file write produced '{sourceRelativePath}' and was imported as '{projectedRelativePath}'.",
                     ManagedStoragePath = placement.RelativePath,
-                    ExternalReferenceKey = externalReferenceKey
+                    ExternalReferenceKey = externalReferenceKey,
+                    ProjectionLineage = BuildArtifactProjectionLineage(
+                        ProcessArtifactProjectionSourceKind.WorkspaceWrite,
+                        detail.Run.Id,
+                        lineage,
+                        sourceExternalReferenceKey: sourceExternalReferenceKey)
                 },
                 cancellationToken);
             if (recordResult.IsSuccess)
@@ -517,11 +541,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 continue;
             }
 
+            var sourceExternalReferenceKey = BuildExistingManagedArtifactExternalReferenceKey(
+                detail.Run.Id,
+                expectedArtifact.Id,
+                projectedRelativePath);
             var externalReferenceKey = ApplyArtifactProjectionLineage(
-                BuildExistingManagedArtifactExternalReferenceKey(
-                    detail.Run.Id,
-                    expectedArtifact.Id,
-                    projectedRelativePath),
+                sourceExternalReferenceKey,
                 detail.Run.Id,
                 lineage);
             if (candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
@@ -599,7 +624,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
                         : expectedArtifact.AllowedFutureUsageSummary,
                     ReviewSummary = $"Managed workspace artifact '{projectedRelativePath}' already existed when the step outcome was finalized.",
                     ManagedStoragePath = placement.RelativePath,
-                    ExternalReferenceKey = externalReferenceKey
+                    ExternalReferenceKey = externalReferenceKey,
+                    ProjectionLineage = BuildArtifactProjectionLineage(
+                        ProcessArtifactProjectionSourceKind.ExistingManagedFile,
+                        detail.Run.Id,
+                        lineage,
+                        sourceExternalReferenceKey: sourceExternalReferenceKey)
                 },
                 cancellationToken);
             if (recordResult.IsSuccess)
@@ -759,7 +789,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
                         ? "Reusable for audit, release replay, and governance tuning."
                         : expectedArtifact.AllowedFutureUsageSummary,
                     ReviewSummary = BuildCompletedDecisionArtifactReviewSummary(candidate, detail, responseText, expectedArtifact),
-                    ExternalReferenceKey = externalReferenceKey
+                    ExternalReferenceKey = externalReferenceKey,
+                    ProjectionLineage = BuildArtifactProjectionLineage(
+                        ProcessArtifactProjectionSourceKind.CompletedDecision,
+                        detail.Run.Id,
+                        sourceExternalReferenceKey: externalReferenceKey)
                 },
                 cancellationToken);
             if (recordResult.IsSuccess)
@@ -843,8 +877,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 continue;
             }
 
+            var sourceExternalReferenceKey = BuildResponseTextArtifactExternalReferenceKey(detail.Run.Id, projectedRelativePath);
             var externalReferenceKey = ApplyArtifactProjectionLineage(
-                BuildResponseTextArtifactExternalReferenceKey(detail.Run.Id, projectedRelativePath),
+                sourceExternalReferenceKey,
                 detail.Run.Id,
                 lineage);
             if (candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
@@ -936,7 +971,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
                             : expectedArtifact.AllowedFutureUsageSummary,
                         ReviewSummary = syntheticArtifact.Summary,
                         ManagedStoragePath = placement.RelativePath,
-                        ExternalReferenceKey = externalReferenceKey
+                        ExternalReferenceKey = externalReferenceKey,
+                        ProjectionLineage = BuildArtifactProjectionLineage(
+                            ProcessArtifactProjectionSourceKind.AssistantResponse,
+                            detail.Run.Id,
+                            lineage,
+                            sourceExternalReferenceKey: sourceExternalReferenceKey)
                     },
                     cancellationToken);
                 if (recordResult.IsSuccess)
@@ -986,11 +1026,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return false;
         }
 
+        var sourceExternalReferenceKey = BuildExistingManagedArtifactExternalReferenceKey(
+            detail.Run.Id,
+            expectedArtifact.Id,
+            projectedRelativePath);
         var externalReferenceKey = ApplyArtifactProjectionLineage(
-            BuildExistingManagedArtifactExternalReferenceKey(
-                detail.Run.Id,
-                expectedArtifact.Id,
-                projectedRelativePath),
+            sourceExternalReferenceKey,
             detail.Run.Id,
             lineage);
         if (candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
@@ -1039,7 +1080,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     : expectedArtifact.AllowedFutureUsageSummary,
                 ReviewSummary = $"Managed workspace artifact '{projectedRelativePath}' already existed when the step outcome was finalized.",
                 ManagedStoragePath = placement.RelativePath,
-                ExternalReferenceKey = externalReferenceKey
+                ExternalReferenceKey = externalReferenceKey,
+                ProjectionLineage = BuildArtifactProjectionLineage(
+                    ProcessArtifactProjectionSourceKind.ExistingManagedFile,
+                    detail.Run.Id,
+                    lineage,
+                    sourceExternalReferenceKey: sourceExternalReferenceKey)
             },
             cancellationToken);
         if (recordResult.IsFailure)
@@ -1161,10 +1207,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     requiredToolName,
                     $"Projected provider-native browser output '{matchedOutputFileName}' into the required managed artifact path.",
                     DateTimeOffset.UtcNow);
+                var sourceExternalReferenceKey = BuildProviderNativeBrowserArtifactExternalReferenceKey(
+                    detail.Run.Id,
+                    projectedRelativePath);
                 var externalReferenceKey = ApplyArtifactProjectionLineage(
-                    BuildProviderNativeBrowserArtifactExternalReferenceKey(
-                        detail.Run.Id,
-                        projectedRelativePath),
+                    sourceExternalReferenceKey,
                     detail.Run.Id,
                     lineage);
                 if (candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
@@ -1200,7 +1247,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
                         AllowedFutureUsageSummary = "Process evidence and audit review.",
                         ReviewSummary = syntheticArtifact.Summary,
                         ManagedStoragePath = placement.RelativePath,
-                        ExternalReferenceKey = externalReferenceKey
+                        ExternalReferenceKey = externalReferenceKey,
+                        ProjectionLineage = BuildArtifactProjectionLineage(
+                            ProcessArtifactProjectionSourceKind.ProviderNativeBrowser,
+                            detail.Run.Id,
+                            lineage,
+                            sourceExternalReferenceKey: sourceExternalReferenceKey)
                     },
                     cancellationToken);
                 if (recordResult.IsSuccess)
@@ -1266,10 +1318,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     candidate,
                     workspaceScope,
                     normalizedOutputPath);
+                var sourceExternalReferenceKey = BuildProviderNativeBrowserArtifactExternalReferenceKey(
+                    detail.Run.Id,
+                    projectedRelativePath);
                 var externalReferenceKey = ApplyArtifactProjectionLineage(
-                    BuildProviderNativeBrowserArtifactExternalReferenceKey(
-                        detail.Run.Id,
-                        projectedRelativePath),
+                    sourceExternalReferenceKey,
                     detail.Run.Id,
                     lineage);
                 if (candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
@@ -1370,7 +1423,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
                                 : "Process evidence and audit review.",
                             ReviewSummary = syntheticArtifact.Summary,
                             ManagedStoragePath = placement.RelativePath,
-                            ExternalReferenceKey = externalReferenceKey
+                            ExternalReferenceKey = externalReferenceKey,
+                            ProjectionLineage = BuildArtifactProjectionLineage(
+                                ProcessArtifactProjectionSourceKind.ProviderNativeBrowser,
+                                detail.Run.Id,
+                                lineage,
+                                sourceExternalReferenceKey: sourceExternalReferenceKey)
                         },
                         cancellationToken);
                     if (recordResult.IsSuccess)
@@ -1589,16 +1647,35 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return externalReferenceKey;
         }
 
-        return string.Join(
+        var hashInput = string.Join(
             "|",
-            "manager-recovery-artifact",
-            $"recoveryExecutionRunId={lineage.RecoveryExecutionRunId.Value:D}",
-            $"recoveredForExecutionRunId={lineage.RecoveredForExecutionRunId.Value:D}",
-            $"projectedExecutionRunId={executionRunId:D}",
-            lineage.ReworkPacketId.HasValue
-                ? $"reworkPacketId={lineage.ReworkPacketId.Value:D}"
-                : "reworkPacketId=",
+            lineage.RecoveryExecutionRunId.Value.ToString("D"),
+            lineage.RecoveredForExecutionRunId.Value.ToString("D"),
+            executionRunId.ToString("D"),
+            lineage.ReworkPacketId?.ToString("D") ?? string.Empty,
             externalReferenceKey);
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(hashInput)).AsSpan(0, 16)).ToLowerInvariant();
+        return $"manager-recovery-artifact|sha256:{hash}";
+    }
+
+    private static ProcessArtifactProjectionLineage BuildArtifactProjectionLineage(
+        ProcessArtifactProjectionSourceKind sourceKind,
+        Guid? sourceExecutionRunId = null,
+        ArtifactProjectionLineage? lineage = null,
+        Guid? sourceArtifactId = null,
+        string sourceExternalReferenceKey = "")
+    {
+        return new ProcessArtifactProjectionLineage
+        {
+            SourceKind = sourceKind,
+            SourceExecutionRunId = sourceExecutionRunId,
+            RecoveryExecutionRunId = lineage?.RecoveryExecutionRunId,
+            RecoveredForExecutionRunId = lineage?.RecoveredForExecutionRunId,
+            ProjectedExecutionRunId = sourceExecutionRunId,
+            SourceArtifactId = sourceArtifactId,
+            ReworkPacketId = lineage?.ReworkPacketId,
+            SourceExternalReferenceKey = sourceExternalReferenceKey
+        };
     }
 
     private static string BuildArtifactProjectionProvenance(

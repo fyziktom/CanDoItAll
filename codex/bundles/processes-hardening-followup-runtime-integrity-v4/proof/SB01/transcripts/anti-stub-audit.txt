@@ -1,3 +1,7 @@
-# SB01 anti-stub-audit.txt
+Command: rg -n "TODO|NotImplemented|throw new NotImplementedException|fixture-specific" src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.Operations.cs tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs -S
+Working directory: C:\repositories\CanDoItAll
+Start: 2026-05-25T14:07:07.6857346-04:00
+Exit code: 0
 
-Fill during execution.
+rg exit code: 1
+Audit result: no TODO, NotImplemented, or fixture-specific marker found in the SB01 changed files.

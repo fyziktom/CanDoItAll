@@ -277,6 +277,10 @@ public sealed class ProcessTemplateStepDefinition
 
     public string StepKind { get; set; } = string.Empty;
 
+    public List<ProcessStepOperation> AllowedOperations { get; set; } = [];
+
+    public ProcessStepTargetScope? OperationTargetScope { get; set; }
+
     public string SubprocessProcessKey { get; set; } = string.Empty;
 
     public string SubprocessDefinitionSnapshotName { get; set; } = string.Empty;

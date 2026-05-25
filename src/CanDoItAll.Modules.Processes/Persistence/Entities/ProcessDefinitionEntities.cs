@@ -166,6 +166,10 @@ public sealed class ProcessStepDefinition
 
     public ProcessStepKind StepKind { get; set; } = ProcessStepKind.Work;
 
+    public List<ProcessStepOperation> AllowedOperations { get; set; } = [];
+
+    public ProcessStepTargetScope? OperationTargetScope { get; set; }
+
     public Guid? SubprocessDefinitionId { get; set; }
 
     public string SubprocessDefinitionSnapshotName { get; set; } = string.Empty;

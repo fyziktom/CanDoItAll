@@ -100,7 +100,7 @@ public static class ExecutionInvocationMetadata
         }
 
         var targetMetadataKey = accessSettings.CanWriteFiles &&
-                                (!HasProcessBoundaryMetadata(metadata) || ResolveProcessAllowsProductMutation(metadata))
+                                !HasProcessBoundaryMetadata(metadata)
             ? AllowedExternalTargetAliasesMetadataKey
             : ReadOnlyExternalTargetAliasesMetadataKey;
         MergeExternalTargetAliases(

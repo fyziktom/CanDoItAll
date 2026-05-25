@@ -1,4 +1,7 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace CanDoItAll.Modules.Processes;
@@ -141,6 +144,13 @@ internal sealed class ProcessRoleMessagingPolicyDefinitionConfiguration : IEntit
 
 internal sealed class ProcessStepDefinitionConfiguration : IEntityTypeConfiguration<ProcessStepDefinition>
 {
+    private static readonly JsonSerializerOptions StepOperationJsonOptions = CreateStepOperationJsonOptions();
+
+    private static readonly ValueComparer<List<ProcessStepOperation>> StepOperationListComparer = new(
+        (left, right) => AreStepOperationListsEqual(left, right),
+        operations => GetStepOperationListHashCode(operations),
+        operations => ProcessStepOperationContractState.NormalizeAllowedOperations(operations));
+
     public void Configure(EntityTypeBuilder<ProcessStepDefinition> builder)
     {
         builder.ToTable("Processes_StepDefinitions");
@@ -150,6 +160,13 @@ internal sealed class ProcessStepDefinitionConfiguration : IEntityTypeConfigurat
         builder.Property(step => step.Subtitle).HasMaxLength(200);
         builder.Property(step => step.Notes).HasColumnType("TEXT");
         builder.Property(step => step.StepKind).HasConversion<string>().HasMaxLength(48);
+        var allowedOperationsProperty = builder.Property(step => step.AllowedOperations)
+            .HasConversion(
+                operations => SerializeStepOperations(operations),
+                json => DeserializeStepOperations(json));
+        allowedOperationsProperty.HasColumnType("TEXT");
+        allowedOperationsProperty.Metadata.SetValueComparer(StepOperationListComparer);
+        builder.Property(step => step.OperationTargetScope).HasConversion<string>().HasMaxLength(80);
         builder.Property(step => step.SubprocessDefinitionSnapshotName).HasMaxLength(200);
         builder.Property(step => step.InputContractSummary).HasColumnType("TEXT");
         builder.Property(step => step.OutputContractSummary).HasColumnType("TEXT");
@@ -172,6 +189,50 @@ internal sealed class ProcessStepDefinitionConfiguration : IEntityTypeConfigurat
             .WithMany()
             .HasForeignKey(step => step.SubprocessDefinitionId)
             .OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static JsonSerializerOptions CreateStepOperationJsonOptions()
+    {
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        options.Converters.Add(new JsonStringEnumConverter());
+        return options;
+    }
+
+    private static string SerializeStepOperations(List<ProcessStepOperation>? operations)
+    {
+        return JsonSerializer.Serialize(
+            ProcessStepOperationContractState.NormalizeAllowedOperations(operations),
+            StepOperationJsonOptions);
+    }
+
+    private static List<ProcessStepOperation> DeserializeStepOperations(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return [];
+        }
+
+        var operations = JsonSerializer.Deserialize<List<ProcessStepOperation>>(json, StepOperationJsonOptions);
+        return ProcessStepOperationContractState.NormalizeAllowedOperations(operations);
+    }
+
+    private static bool AreStepOperationListsEqual(
+        List<ProcessStepOperation>? left,
+        List<ProcessStepOperation>? right)
+    {
+        return ProcessStepOperationContractState.NormalizeAllowedOperations(left)
+            .SequenceEqual(ProcessStepOperationContractState.NormalizeAllowedOperations(right));
+    }
+
+    private static int GetStepOperationListHashCode(List<ProcessStepOperation>? operations)
+    {
+        var hash = new HashCode();
+        foreach (var operation in ProcessStepOperationContractState.NormalizeAllowedOperations(operations))
+        {
+            hash.Add(operation);
+        }
+
+        return hash.ToHashCode();
     }
 }
 

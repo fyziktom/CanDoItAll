@@ -1,3 +1,32 @@
-# SB03 source-assertions.txt
+# SB03 Source Assertions
 
-Fill during execution.
+Command:
+
+```powershell
+rg -n "EvaluateGovernedScriptSideEffectBoundary|WorkspaceScriptExecutionTools|InspectedScriptContent|ScriptInspectionFailure|PowerShellWriteSignalRegex|PythonWriteSignalRegex|ResolveScriptContentInspectionForPolicy|MaxPolicyInspectedScriptBytes" src/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs src/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.AgentFactory.cs tests/CanDoItAll.Tests.Unit/AgentToolInvocationPolicyTests.cs
+```
+
+Relevant output:
+
+```text
+src/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs:83:    string InspectedScriptContent = "",
+src/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs:84:    string ScriptInspectionFailure = "")
+src/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs:179:    private static readonly HashSet<string> WorkspaceScriptExecutionTools = new(StringComparer.OrdinalIgnoreCase)
+src/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs:229:    private static readonly Regex PowerShellWriteSignalRegex = new(
+src/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs:232:    private static readonly Regex PythonWriteSignalRegex = new(
+src/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs:283:        var scriptSideEffectDecision = EvaluateGovernedScriptSideEffectBoundary(context, signature);
+src/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs:472:    private static ToolInvocationPolicyDecision? EvaluateGovernedScriptSideEffectBoundary(
+src/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.AgentFactory.cs:25:    private const long MaxPolicyInspectedScriptBytes = 128 * 1024;
+src/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.AgentFactory.cs:471:            var scriptInspection = ResolveScriptContentInspectionForPolicy(
+src/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.AgentFactory.cs:494:                InspectedScriptContent: scriptInspection.Content,
+src/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.AgentFactory.cs:495:                ScriptInspectionFailure: scriptInspection.FailureMessage);
+src/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.AgentFactory.cs:1052:    private ScriptContentInspection ResolveScriptContentInspectionForPolicy(
+tests/CanDoItAll.Tests.Unit/AgentToolInvocationPolicyTests.cs:1460:            InspectedScriptContent: inspectedScriptContent,
+tests/CanDoItAll.Tests.Unit/AgentToolInvocationPolicyTests.cs:1461:            ScriptInspectionFailure: scriptInspectionFailure);
+```
+
+Assertions:
+
+- `repo://src/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.AgentFactory.cs` inspects workspace PowerShell/Python script files before policy evaluation and propagates either content or a failure reason.
+- `repo://src/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs` evaluates script side effects for governed process runs with product mutation disabled.
+- `repo://tests/CanDoItAll.Tests.Unit/AgentToolInvocationPolicyTests.cs` exercises PowerShell denial, Python denial, read-only validation allowance, and uninspected-script denial through `DefaultAgentToolInvocationPolicy`.

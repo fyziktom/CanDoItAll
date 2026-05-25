@@ -52,6 +52,7 @@ public sealed partial class ProcessesService
                 return Result.Failure(publishError);
             }
 
+            var lintMode = ResolveEffectiveLintMode(request.LintMode, definition);
             var lintResult = ProcessDefinitionLinter.Analyze(
                 BuildLintEditorModel(
                     definition,
@@ -61,7 +62,7 @@ public sealed partial class ProcessesService
                     publicationContext.CloneSource.StepRoleRequirements,
                     publicationContext.CloneSource.BranchOutcomes,
                     publicationContext.CloneSource.ArtifactExpectations),
-                request.LintMode);
+                lintMode);
             var strictLintError = CreateStrictLintGateError(lintResult, "publish");
             if (strictLintError is not null) {
                 return Result.Failure(strictLintError);

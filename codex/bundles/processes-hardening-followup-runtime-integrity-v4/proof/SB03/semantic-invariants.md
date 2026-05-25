@@ -2,7 +2,7 @@
 
 ## SB03-INV-001
 
-Expected behavior: see `subbundles/03-script-tool-boundary-and-side-effect-policy/README.md`.
+Expected behavior: governed process steps with `agentProcessStepAllowsProductMutation=false` must not mutate product targets indirectly through PowerShell/Python helper scripts. Scripts must be inspected before execution; write signals against grounded product target aliases are denied, uninspected scripts are denied, and read-only validation scripts remain allowed.
 
 Disallowed shallow implementation:
 
@@ -20,3 +20,13 @@ Required proof:
 - anti-stub audit
 - changed-file hashes
 - production behavior artifact matrix when new runtime state is introduced
+
+Proof captured:
+
+- `proof/SB03/transcripts/failing-first.txt`
+- `proof/SB03/transcripts/passing.txt`
+- `proof/SB03/transcripts/source-assertions.txt`
+- `proof/SB03/transcripts/anti-stub-audit.txt`
+- `proof/SB03/transcripts/changed-file-hashes.txt`
+
+Durable state note: SB03 introduces no new durable database state. The new inspected script content/failure signal is per-invocation runtime metadata only.

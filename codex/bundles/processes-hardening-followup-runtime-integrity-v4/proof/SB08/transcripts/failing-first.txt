@@ -1,3 +1,20 @@
 # SB08 failing-first.txt
 
+Failing-first test added before the runtime resolver consumed persisted operation contract fields:
+
+```powershell
+dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~BuildProcessInvocationMetadataJson_SB08_INV_001" --no-restore -v minimal
+```
+
+Failure excerpt:
+
+```text
+Failed CanDoItAll.Tests.Integration.ProcessRunAutomationDispatchServiceTests.BuildProcessInvocationMetadataJson_SB08_INV_001_uses_persisted_operation_contract_without_text_markers
+Assert.Equal() Failure: Strings differ
+Expected: "ExternalArtifactDestination"
+Actual:   "ManagedProcessArtifactsOnly"
+```
+
+This demonstrates the old failure mode: typed operation fields on the step definition were ignored, so runtime metadata fell back to the text parser and treated a step with no text markers as managed-process-artifact-only.
+
 Fill during execution.

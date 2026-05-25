@@ -136,6 +136,42 @@
             </label>
         </Cluster>
 
+        <FormSection Title="Operation contract"
+                     Description="Persist the runtime boundary as typed allowed operations and target scope. Text contract summaries are only used for older definitions without these fields.">
+            <ChildContent>
+                <Grid Gap="LayoutGap.Large"
+                      ColumnsMd="2">
+                    <FormField Text="Target scope">
+                        <select class="cda-input"
+                                value="@SelectedOperationTargetScopeValue"
+                                @onchange="HandleOperationTargetScopeChanged"
+                                data-testid="processes-operation-target-scope-select">
+                            <option value="">Infer from contracts</option>
+                            @foreach (var targetScope in TargetScopeOptions)
+                            {
+                                <option value="@targetScope">@targetScope</option>
+                            }
+                        </select>
+                    </FormField>
+                    <FormField Text="Allowed operations">
+                        <Cluster Gap="LayoutGap.Small">
+                            @foreach (var operation in OperationOptions)
+                            {
+                                <label class="inline-flex items-center gap-2 text-sm text-slate-700"
+                                       @key="operation">
+                                    <input type="checkbox"
+                                           checked="@IsAllowedOperationSelected(operation)"
+                                           @onchange="@((ChangeEventArgs args) => ToggleAllowedOperation(operation, args))"
+                                           data-testid="@BuildOperationCheckboxTestId(operation)" />
+                                    @operation
+                                </label>
+                            }
+                        </Cluster>
+                    </FormField>
+                </Grid>
+            </ChildContent>
+        </FormSection>
+
         <FormField Text="Notes">
             <InputTextArea @bind-Value="Model.Notes"
                            class="cda-input cda-input--textarea min-h-24" />
@@ -332,7 +368,67 @@
     private bool HasSystemBranchOutcomes
         => Model.BranchOutcomes.Any(ProcessCanvasBranching.IsSystemOutcome);
 
+    private static IReadOnlyList<ProcessStepOperation> OperationOptions { get; } = Enum.GetValues<ProcessStepOperation>();
+
+    private static IReadOnlyList<ProcessStepTargetScope> TargetScopeOptions { get; } = Enum.GetValues<ProcessStepTargetScope>();
+
+    private string SelectedOperationTargetScopeValue => Model.OperationTargetScope?.ToString() ?? string.Empty;
+
     private string SelectedSubprocessDefinitionValue => Model.SubprocessDefinitionId?.ToString("D") ?? string.Empty;
+
+    private static string BuildOperationCheckboxTestId(ProcessStepOperation operation)
+    {
+        return $"processes-operation-{operation}";
+    }
+
+    private bool IsAllowedOperationSelected(ProcessStepOperation operation)
+    {
+        return Model.AllowedOperations.Contains(operation);
+    }
+
+    private void ToggleAllowedOperation(ProcessStepOperation operation, ChangeEventArgs args)
+    {
+        if (ResolveCheckboxValue(args))
+        {
+            if (!Model.AllowedOperations.Contains(operation))
+            {
+                Model.AllowedOperations.Add(operation);
+            }
+        }
+        else
+        {
+            Model.AllowedOperations.RemoveAll(candidate => candidate == operation);
+        }
+
+        Model.AllowedOperations = ProcessStepOperationContractState.NormalizeAllowedOperations(Model.AllowedOperations);
+    }
+
+    private static bool ResolveCheckboxValue(ChangeEventArgs args)
+    {
+        return args.Value switch
+        {
+            bool value => value,
+            string rawValue when bool.TryParse(rawValue, out var parsed) => parsed,
+            _ => false
+        };
+    }
+
+    private void HandleOperationTargetScopeChanged(ChangeEventArgs args)
+    {
+        var rawValue = args.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(rawValue))
+        {
+            Model.OperationTargetScope = null;
+            return;
+        }
+
+        if (!Enum.TryParse<ProcessStepTargetScope>(rawValue, out var targetScope))
+        {
+            throw new InvalidOperationException($"Unknown process step target scope '{rawValue}'.");
+        }
+
+        Model.OperationTargetScope = targetScope;
+    }
 
     private void HandleSubprocessDefinitionChanged(ChangeEventArgs args)
     {

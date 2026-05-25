@@ -311,6 +311,7 @@ public sealed partial class ProcessesService
             ReviewSummary = request.ReviewSummary.Trim(),
             ManagedStoragePath = request.ManagedStoragePath.Trim(),
             ExternalReferenceKey = externalReferenceKey,
+            ProjectionLineageJson = ProcessArtifactProjectionLineageJson.Serialize(request.ProjectionLineage),
             CreatedAtUtc = clock.GetUtcNow()
         };
         await dbContext.Set<ProcessArtifactRecord>().AddAsync(artifact, cancellationToken);
@@ -331,6 +332,7 @@ public sealed partial class ProcessesService
                 dbContext,
                 run,
                 artifactExpectation,
+                artifact,
                 cancellationToken);
         }
 
@@ -343,6 +345,7 @@ public sealed partial class ProcessesService
         AppDbContext dbContext,
         ProcessRun run,
         ProcessArtifactExpectation artifactExpectation,
+        ProcessArtifactRecord materializedArtifact,
         CancellationToken cancellationToken)
     {
         var consumingInputs = await dbContext.Set<ProcessStepArtifactInputDefinition>()
@@ -401,6 +404,13 @@ public sealed partial class ProcessesService
         var artifacts = await dbContext.Set<ProcessArtifactRecord>()
             .Where(artifact => artifact.ProcessRunId == run.Id && artifact.ArtifactExpectationId.HasValue)
             .ToListAsync(cancellationToken);
+        if (materializedArtifact.ProcessRunId == run.Id &&
+            materializedArtifact.ArtifactExpectationId.HasValue &&
+            artifacts.All(artifact => artifact.Id != materializedArtifact.Id))
+        {
+            artifacts.Add(materializedArtifact);
+        }
+
         var now = clock.GetUtcNow();
 
         foreach (var blockedStepRun in blockedStepRuns)

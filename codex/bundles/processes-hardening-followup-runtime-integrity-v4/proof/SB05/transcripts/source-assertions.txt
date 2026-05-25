@@ -1,3 +1,32 @@
-# SB05 source-assertions.txt
+# SB05 Source Assertions
 
-Fill during execution.
+Command:
+
+```powershell
+rg -n "IProcessArtifactContentReader|WorkspaceProcessArtifactContentReader|MaxProcessArtifactValidationContentBytes|TryReadManagedArtifactContent|TryDecodeManagedArtifactTextContent|HasValidJsonArtifactContent|HasReadableTextArtifactContent|HasValidImageArtifactContent|ArtifactContractValidation_SB05_INV_001" src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs
+```
+
+Result excerpt:
+
+```text
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:77:    internal interface IProcessArtifactContentReader
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:129:    internal sealed class WorkspaceProcessArtifactContentReader(IWorkspacePathResolver workspacePathResolver) : IProcessArtifactContentReader
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:171:            if (fileInfo.Length > MaxProcessArtifactValidationContentBytes)
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:178:                    $"Managed artifact content is {fileInfo.Length} bytes, exceeding the validation limit of {MaxProcessArtifactValidationContentBytes} bytes.");
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:184:                var textContent = TryDecodeManagedArtifactTextContent(contentType, candidateFullPath, contentBytes);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:434:        var managedArtifactContentReader = new WorkspaceProcessArtifactContentReader(workspacePathResolver);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:1362:        if (requiresJson && !HasValidJsonArtifactContent(artifact, managedArtifactContentReader, out diagnostic))
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:1380:             !HasReadableTextArtifactContent(yamlContent, "YAML", out diagnostic)))
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:1396:             !HasReadableTextArtifactContent(markdownContent, "Markdown", out diagnostic)))
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:1412:             !HasValidImageArtifactContent(imageContent, out diagnostic)))
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:13319:    public void ArtifactContractValidation_SB05_INV_001_rejects_malformed_json_from_relative_managed_storage_path()
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:13373:    public void ArtifactContractValidation_SB05_INV_001_reports_missing_relative_managed_storage_content()
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:13426:    public void ArtifactContractValidation_SB05_INV_001_rejects_relative_managed_storage_content_over_validation_limit()
+```
+
+Notes:
+
+- The production finalizer constructs the reader from the injected `IWorkspacePathResolver`; the tests do not manually call private parsing helpers.
+- Relative paths are resolved through workspace confinement and then read as bytes.
+- JSON validation parses stored text content; Markdown/YAML require readable text; image validation checks stored bytes.
+- Missing and oversize diagnostics flow through the normal artifact validation result, which is consumed by existing diagnostic persistence.

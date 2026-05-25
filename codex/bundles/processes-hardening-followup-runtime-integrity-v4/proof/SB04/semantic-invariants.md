@@ -2,7 +2,7 @@
 
 ## SB04-INV-001
 
-Expected behavior: see `subbundles/04-typed-grounding-sources-and-alias-trust/README.md`.
+Expected behavior: process external-target write authority must come from typed, trusted grounding sources only. Launch plan, current-run project-structure grounding, and explicit step contracts may produce writable aliases. Free-text process prompts, work briefs, upstream artifacts, upstream provenance, stale project-structure lines, and sibling-path mentions are read-only unless independently promoted by a trusted source.
 
 Disallowed shallow implementation:
 
@@ -20,3 +20,13 @@ Required proof:
 - anti-stub audit
 - changed-file hashes
 - production behavior artifact matrix when new runtime state is introduced
+
+Proof captured:
+
+- `proof/SB04/transcripts/failing-first.txt`
+- `proof/SB04/transcripts/passing.txt`
+- `proof/SB04/transcripts/source-assertions.txt`
+- `proof/SB04/transcripts/anti-stub-audit.txt`
+- `proof/SB04/transcripts/changed-file-hashes.txt`
+
+Durable state note: SB04 introduces no new durable database state. Typed grounding records are transient dispatch metadata used to construct allowed/read-only alias metadata for a single process invocation.

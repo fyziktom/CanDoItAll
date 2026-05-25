@@ -1,3 +1,16 @@
-# SB05 changed-file-hashes.txt
+# SB05 Changed File Hashes
+
+Command:
+
+```powershell
+Get-FileHash -Algorithm SHA256 src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs, tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs | ForEach-Object { "$($_.Hash)  $($_.Path)" }
+```
+
+Result:
+
+```text
+0F8EFEF84F7067A6D0A09D4B3912434840639977C689D6F6392B064208A3F138  C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs
+0CC60F0FC1B48EE439B0E12A9EA321A1F77C5748E282D9883372FA516AAEE44E  C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs
+```
 
 Fill during execution.

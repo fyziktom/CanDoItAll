@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready.
+Completed.
 
 ## Objective
 
@@ -25,11 +25,11 @@ Fix `RecordArtifactAsync` / `ReactivateBlockedDownstreamStepsAfterArtifactMateri
 
 ## Scope
 
-Implement the production runtime change, add failing-first/red-team tests, add passing proof, and update proof manifest.
+- Implement the production runtime change, add failing-first/red-team tests, add passing proof, and update proof manifest.
 
 ## Dependency Impact
 
-This subbundle is critical. Downstream subbundles must not assume runtime integrity until this gate passes.
+- This subbundle is critical. Downstream subbundles must not assume runtime integrity until this gate passes.
 
 ## Validation Depth
 
@@ -59,11 +59,11 @@ Do not implement unrelated process UI redesign unless the subbundle explicitly r
 
 ## Acceptance Checklist
 
-- [ ] Failing-first or red-team test demonstrates the old failure mode.
-- [ ] Production code fixes the failure mode.
-- [ ] Passing test covers the production path.
-- [ ] No new source-only or prose-only proof.
-- [ ] New durable state has producer/consumer/lifecycle proof.
+- [x] Failing-first or red-team test demonstrates the old failure mode.
+- [x] Production code fixes the failure mode.
+- [x] Passing test covers the production path.
+- [x] No new source-only or prose-only proof.
+- [x] New durable state has producer/consumer/lifecycle proof.
 
 ## Proof Required
 
@@ -79,11 +79,12 @@ Update:
 
 ## Browser Validation Logging
 
-N/A unless this subbundle changes process editor UI or launches browser-visible red-team scenarios.
+- N/A unless this subbundle changes process editor UI or launches browser-visible red-team scenarios.
 
 ## Progression Gate
 
-Do not continue until focused tests pass and the proof manifest is updated.
+- Do not continue until focused tests pass and the proof manifest is updated.
+- Closure result: passed. SB02 may rely on upstream materialization reactivation including the tracked artifact recorded in the same `RecordArtifactAsync` call.
 
 ## Suggested Agent Prompt
 

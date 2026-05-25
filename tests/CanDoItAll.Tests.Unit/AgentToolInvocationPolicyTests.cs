@@ -335,6 +335,104 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
+    public async Task EvaluateAsync_SB03_INV_001_denies_pwsh_script_product_write_when_process_step_disallows_product_mutation()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "artifacts/process-runs/process-run-001/helpers/apply-change.ps1"
+            },
+            allowedExternalTargetAliases: ["external-target/C/programovani/todo-summary/product"],
+            processAllowsProductMutation: false,
+            inspectedScriptContent:
+                "Set-Content -Path 'external-target/C/programovani/todo-summary/product/src/Program.cs' -Value 'changed'");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("contains write operations against product target", decision.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("external-target/C/programovani/todo-summary/product/src/Program.cs", decision.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_SB03_INV_001_denies_python_script_product_write_when_process_step_disallows_product_mutation()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            AgentToolInvocationPolicyMetadata.WorkspacePythonRunFile,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "artifacts/process-runs/process-run-001/helpers/apply_change.py"
+            },
+            allowedExternalTargetAliases: ["external-target/C/programovani/todo-summary/product"],
+            processAllowsProductMutation: false,
+            inspectedScriptContent:
+                "Path('external-target/C/programovani/todo-summary/product/src/Program.cs').write_text('changed')");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("contains write operations against product target", decision.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_SB03_INV_001_allows_read_only_validation_script_when_process_step_disallows_product_mutation()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "artifacts/process-runs/process-run-001/helpers/inspect.ps1"
+            },
+            readOnlyExternalTargetAliases: ["external-target/C/programovani/todo-summary/product"],
+            processAllowsProductMutation: false,
+            inspectedScriptContent:
+                "Get-Content -Path 'external-target/C/programovani/todo-summary/product/src/Program.cs'");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_SB03_INV_001_denies_uninspected_script_when_process_step_disallows_product_mutation()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "artifacts/process-runs/process-run-001/helpers/opaque.ps1"
+            },
+            processAllowsProductMutation: false,
+            scriptInspectionFailure: "script path was not readable");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("could not be inspected", decision.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task EvaluateAsync_denies_direct_product_write_for_scaffold_tool_only_process_step()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
@@ -1336,7 +1434,9 @@ public sealed class AgentToolInvocationPolicyTests
         IReadOnlyList<string>? allowedExternalTargetAliases = null,
         IReadOnlyList<string>? readOnlyExternalTargetAliases = null,
         bool processScaffoldToolOnly = false,
-        bool processAllowsProductMutation = true)
+        bool processAllowsProductMutation = true,
+        string inspectedScriptContent = "",
+        string scriptInspectionFailure = "")
     {
         return new ToolInvocationPolicyContext(
             AgentId: Guid.Parse("11111111-1111-1111-1111-111111111111"),
@@ -1356,6 +1456,8 @@ public sealed class AgentToolInvocationPolicyTests
             ApprovalWrapperEffectiveForProvider: approvalWrapperEffectiveForProvider,
             ApplicationApprovalAvailable: applicationApprovalAvailable,
             ProcessScaffoldToolOnly: processScaffoldToolOnly,
-            ProcessAllowsProductMutation: processAllowsProductMutation);
+            ProcessAllowsProductMutation: processAllowsProductMutation,
+            InspectedScriptContent: inspectedScriptContent,
+            ScriptInspectionFailure: scriptInspectionFailure);
     }
 }

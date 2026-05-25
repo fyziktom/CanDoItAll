@@ -22,13 +22,29 @@ SB09 durable no-progress ledger :crit, sb09, after sb08, 1d
 SB10 lint gates and red-team closure :crit, sb10, after sb09, 1d
 ```
 
+## Execution Order
+
+- SB01: materialization reactivation transaction.
+- SB02: lineage keys and provenance schema.
+- SB03: script tool boundary and side-effect policy.
+- SB04: typed grounding sources and alias trust.
+- SB05: storage-backed artifact validation.
+- SB06: explicit workflow and subprocess output mapping.
+- SB07: disposition routing ownership guardrails.
+- SB08: persisted step operation contract, UI, and import/export.
+- SB09: durable no-progress ledger and active-run reconciliation.
+- SB10: lint gates and red-team closure.
+
 ## Critical Subbundles
 
-All subbundles are critical. SB01 and SB02 are the foundation: do not start downstream work if materialization or lineage remains unreliable.
+- All subbundles are critical.
+- SB01 and SB02 are the foundation: do not start downstream work if materialization or lineage remains unreliable.
 
 ## Phase Gates
 
 ### Prepared gate
+
+- Run before implementation and after material bundle-contract edits.
 
 ```powershell
 python codex/skills/bundles/candoitall-bundle-preparation/scripts/validate_bundle.py --stage prepared codex/bundles/processes-hardening-followup-runtime-integrity-v4
