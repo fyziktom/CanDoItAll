@@ -32,6 +32,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Data;
+using System.Data.Common;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -209,6 +212,31 @@ public sealed class AppDatabaseBootstrapper(
     private const int RuntimeBootstrapOpenAiTimeoutSeconds = 600;
     private static readonly Guid DefaultOpenAiApiKeySecretId = Guid.Parse("86F781F1-1E76-4B45-9F1A-42B8CF13D8C7");
     private const string DefaultOpenAiApiKeySecretName = "OpenAI API key";
+    private const string InitialPostgreSqlBaselineMigrationId = "20260523211921_InitialPostgreSqlBaseline";
+    private const string ProcessStepAutomationDispatchClaimsMigrationId = "20260524144716_ProcessStepAutomationDispatchClaims";
+    private const string ProcessClaimHotPathIndexesMigrationId = "20260524183000_ProcessClaimHotPathIndexes";
+    private const string StepDispatchClaimIndexName = "IX_Processes_StepRuns_ProcessRunId_AutomationDispatchLeaseExpi~";
+    private static readonly string[] BaselineSentinelTables =
+    [
+        "Activity_Entries",
+        "Projects_Projects",
+        "Processes_Outbox",
+        "Workspace_ProviderProfiles"
+    ];
+    private static readonly string[] ProcessStepDispatchClaimColumns =
+    [
+        "AutomationDispatchAttemptCount",
+        "AutomationDispatchClaimToken",
+        "AutomationDispatchClaimedAtUtc",
+        "AutomationDispatchClaimedBy",
+        "AutomationDispatchLeaseExpiresAtUtc"
+    ];
+    private static readonly string[] ProcessClaimHotPathIndexNames =
+    [
+        "IX_Processes_Outbox_PendingClaimOrder",
+        "IX_Automation_EnvelopeDeliveries_DueClaimOrder",
+        "IX_Workspace_ConnectorCommands_PendingClaimOrder"
+    ];
 
     public Task EnsureCurrentProfileReadyAsync(CancellationToken cancellationToken = default)
     {
@@ -240,6 +268,7 @@ public sealed class AppDatabaseBootstrapper(
         logger.LogInformation(
             "Applying EF migrations for profile {ProfileId}.",
             profile.Profile.Id);
+        await AdoptExistingPostgreSqlSchemaIfNeededAsync(profile, dbContext, cancellationToken);
         await dbContext.Database.MigrateAsync(cancellationToken);
         logger.LogInformation(
             "Ensuring CRM/HR schema for profile {ProfileId}.",
@@ -264,6 +293,283 @@ public sealed class AppDatabaseBootstrapper(
         logger.LogInformation(
             "Runtime database profile {ProfileId} is ready.",
             profile.Profile.Id);
+    }
+
+    private async Task AdoptExistingPostgreSqlSchemaIfNeededAsync(
+        ResolvedDatabaseProfile profile,
+        AppDbContext dbContext,
+        CancellationToken cancellationToken) {
+        if (profile.Profile.ProviderKind != DatabaseProviderKind.PostgreSql) {
+            return;
+        }
+
+        var appliedMigrations = (await dbContext.Database.GetAppliedMigrationsAsync(cancellationToken))
+            .ToHashSet(StringComparer.Ordinal);
+
+        if (!appliedMigrations.Contains(InitialPostgreSqlBaselineMigrationId)) {
+            var existingSentinelTables = new List<string>();
+            foreach (var tableName in BaselineSentinelTables) {
+                if (await PostgreSqlTableExistsAsync(dbContext, tableName, cancellationToken)) {
+                    existingSentinelTables.Add(tableName);
+                }
+            }
+
+            if (existingSentinelTables.Count > 0) {
+                if (existingSentinelTables.Count != BaselineSentinelTables.Length) {
+                    throw new InvalidOperationException(
+                        $"PostgreSQL profile '{profile.Profile.DisplayName}' has a partial CanDoItAll schema without EF migration history. Existing sentinel tables: {string.Join(", ", existingSentinelTables)}. Refusing to adopt the merged baseline automatically.");
+                }
+
+                logger.LogWarning(
+                    "PostgreSQL profile {ProfileId} has existing CanDoItAll tables but no recorded initial EF migration. Recording merged baseline migration {MigrationId} before applying pending migrations.",
+                    profile.Profile.Id,
+                    InitialPostgreSqlBaselineMigrationId);
+
+                await EnsurePostgreSqlMigrationHistoryTableAsync(dbContext, cancellationToken);
+                await MarkPostgreSqlMigrationAppliedAsync(dbContext, InitialPostgreSqlBaselineMigrationId, cancellationToken);
+                appliedMigrations.Add(InitialPostgreSqlBaselineMigrationId);
+            }
+        }
+
+        if (!appliedMigrations.Contains(InitialPostgreSqlBaselineMigrationId)) {
+            return;
+        }
+
+        if (!appliedMigrations.Contains(ProcessStepAutomationDispatchClaimsMigrationId) &&
+            await PostgreSqlTableExistsAsync(dbContext, "Processes_StepRuns", cancellationToken) &&
+            await PostgreSqlColumnsExistAsync(dbContext, "Processes_StepRuns", ProcessStepDispatchClaimColumns, cancellationToken)) {
+            logger.LogWarning(
+                "PostgreSQL profile {ProfileId} already contains process dispatch claim columns without migration {MigrationId}. Recording the migration and ensuring its index exists.",
+                profile.Profile.Id,
+                ProcessStepAutomationDispatchClaimsMigrationId);
+
+            await EnsurePostgreSqlMigrationHistoryTableAsync(dbContext, cancellationToken);
+            await EnsureProcessStepDispatchClaimIndexAsync(dbContext, cancellationToken);
+            await MarkPostgreSqlMigrationAppliedAsync(dbContext, ProcessStepAutomationDispatchClaimsMigrationId, cancellationToken);
+            appliedMigrations.Add(ProcessStepAutomationDispatchClaimsMigrationId);
+        }
+
+        if (!appliedMigrations.Contains(ProcessClaimHotPathIndexesMigrationId) &&
+            await AnyPostgreSqlIndexExistsAsync(dbContext, ProcessClaimHotPathIndexNames, cancellationToken)) {
+            logger.LogWarning(
+                "PostgreSQL profile {ProfileId} already contains one or more process claim hot-path indexes without migration {MigrationId}. Ensuring all indexes exist and recording the migration.",
+                profile.Profile.Id,
+                ProcessClaimHotPathIndexesMigrationId);
+
+            await EnsurePostgreSqlMigrationHistoryTableAsync(dbContext, cancellationToken);
+            await EnsureProcessClaimHotPathIndexesAsync(dbContext, cancellationToken);
+            await MarkPostgreSqlMigrationAppliedAsync(dbContext, ProcessClaimHotPathIndexesMigrationId, cancellationToken);
+        }
+    }
+
+    private static async Task<bool> PostgreSqlTableExistsAsync(
+        AppDbContext dbContext,
+        string tableName,
+        CancellationToken cancellationToken) {
+        var result = await ExecutePostgreSqlScalarAsync(
+            dbContext,
+            """
+            SELECT EXISTS (
+                SELECT 1
+                FROM information_schema.tables
+                WHERE table_schema = current_schema()
+                  AND table_name = @tableName
+            );
+            """,
+            cancellationToken,
+            ("@tableName", tableName));
+
+        return result is true;
+    }
+
+    private static async Task<bool> PostgreSqlColumnsExistAsync(
+        AppDbContext dbContext,
+        string tableName,
+        IReadOnlyCollection<string> columnNames,
+        CancellationToken cancellationToken) {
+        foreach (var columnName in columnNames) {
+            var result = await ExecutePostgreSqlScalarAsync(
+                dbContext,
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM information_schema.columns
+                    WHERE table_schema = current_schema()
+                      AND table_name = @tableName
+                      AND column_name = @columnName
+                );
+                """,
+                cancellationToken,
+                ("@tableName", tableName),
+                ("@columnName", columnName));
+
+            if (result is not true) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static async Task<bool> AnyPostgreSqlIndexExistsAsync(
+        AppDbContext dbContext,
+        IReadOnlyCollection<string> indexNames,
+        CancellationToken cancellationToken) {
+        foreach (var indexName in indexNames) {
+            var result = await ExecutePostgreSqlScalarAsync(
+                dbContext,
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM pg_indexes
+                    WHERE schemaname = current_schema()
+                      AND indexname = @indexName
+                );
+                """,
+                cancellationToken,
+                ("@indexName", indexName));
+
+            if (result is true) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static Task EnsurePostgreSqlMigrationHistoryTableAsync(
+        AppDbContext dbContext,
+        CancellationToken cancellationToken)
+        => ExecutePostgreSqlNonQueryAsync(
+            dbContext,
+            """
+            CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" (
+                "MigrationId" character varying(150) NOT NULL,
+                "ProductVersion" character varying(32) NOT NULL,
+                CONSTRAINT "PK___EFMigrationsHistory" PRIMARY KEY ("MigrationId")
+            );
+            """,
+            cancellationToken);
+
+    private static Task MarkPostgreSqlMigrationAppliedAsync(
+        AppDbContext dbContext,
+        string migrationId,
+        CancellationToken cancellationToken)
+        => ExecutePostgreSqlNonQueryAsync(
+            dbContext,
+            """
+            INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+            VALUES (@migrationId, @productVersion)
+            ON CONFLICT ("MigrationId") DO NOTHING;
+            """,
+            cancellationToken,
+            ("@migrationId", migrationId),
+            ("@productVersion", ResolveEfCoreProductVersion()));
+
+    private static Task EnsureProcessStepDispatchClaimIndexAsync(
+        AppDbContext dbContext,
+        CancellationToken cancellationToken)
+        => ExecutePostgreSqlNonQueryAsync(
+            dbContext,
+            $"""
+            CREATE INDEX IF NOT EXISTS "{StepDispatchClaimIndexName}"
+            ON "Processes_StepRuns" ("ProcessRunId", "AutomationDispatchLeaseExpiresAtUtc");
+            """,
+            cancellationToken);
+
+    private static Task EnsureProcessClaimHotPathIndexesAsync(
+        AppDbContext dbContext,
+        CancellationToken cancellationToken)
+        => ExecutePostgreSqlNonQueryAsync(
+            dbContext,
+            """
+            CREATE INDEX IF NOT EXISTS "IX_Processes_Outbox_PendingClaimOrder"
+            ON "Processes_Outbox" ((COALESCE("NextAttemptAtUtc", "CreatedAtUtc")), "CreatedAtUtc")
+            INCLUDE ("Id", "CommandKey", "ProcessRunId", "LeaseExpiresAtUtc")
+            WHERE "Status" = 0;
+
+            CREATE INDEX IF NOT EXISTS "IX_Automation_EnvelopeDeliveries_DueClaimOrder"
+            ON "Automation_EnvelopeDeliveries" ("AvailableAtUtc", "CreatedAtUtc")
+            INCLUDE ("Id", "EnvelopeId", "State", "LockedAtUtc")
+            WHERE "State" IN (0, 1, 2);
+
+            CREATE INDEX IF NOT EXISTS "IX_Workspace_ConnectorCommands_PendingClaimOrder"
+            ON "Workspace_ConnectorCommands" ((COALESCE("NextAttemptAtUtc", "CreatedAtUtc")), "CreatedAtUtc")
+            INCLUDE ("Id", "ProjectId", "ConnectorPluginKey", "CommandKey", "LeaseExpiresAtUtc")
+            WHERE "Status" = 0 AND "ApprovalState" <> 1;
+            """,
+            cancellationToken);
+
+    private static string ResolveEfCoreProductVersion() {
+        var informationalVersion = typeof(DbContext).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            ?.InformationalVersion;
+
+        if (!string.IsNullOrWhiteSpace(informationalVersion)) {
+            return informationalVersion.Split('+', 2)[0];
+        }
+
+        return typeof(DbContext).Assembly.GetName().Version?.ToString(3) ?? "10.0.0";
+    }
+
+    private static async Task<object?> ExecutePostgreSqlScalarAsync(
+        AppDbContext dbContext,
+        string commandText,
+        CancellationToken cancellationToken,
+        params (string Name, object? Value)[] parameters) {
+        var connection = dbContext.Database.GetDbConnection();
+        var shouldClose = connection.State != ConnectionState.Open;
+        if (shouldClose) {
+            await connection.OpenAsync(cancellationToken);
+        }
+
+        try {
+            await using var command = CreateCommand(connection, commandText, parameters);
+            return await command.ExecuteScalarAsync(cancellationToken);
+        }
+        finally {
+            if (shouldClose) {
+                await connection.CloseAsync();
+            }
+        }
+    }
+
+    private static async Task ExecutePostgreSqlNonQueryAsync(
+        AppDbContext dbContext,
+        string commandText,
+        CancellationToken cancellationToken,
+        params (string Name, object? Value)[] parameters) {
+        var connection = dbContext.Database.GetDbConnection();
+        var shouldClose = connection.State != ConnectionState.Open;
+        if (shouldClose) {
+            await connection.OpenAsync(cancellationToken);
+        }
+
+        try {
+            await using var command = CreateCommand(connection, commandText, parameters);
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+        finally {
+            if (shouldClose) {
+                await connection.CloseAsync();
+            }
+        }
+    }
+
+    private static DbCommand CreateCommand(
+        DbConnection connection,
+        string commandText,
+        params (string Name, object? Value)[] parameters) {
+        var command = connection.CreateCommand();
+        command.CommandText = commandText;
+        foreach (var (name, value) in parameters) {
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = name;
+            parameter.Value = value ?? DBNull.Value;
+            command.Parameters.Add(parameter);
+        }
+
+        return command;
     }
 
     private async Task EnsureAgentProviderBootstrapAsync(

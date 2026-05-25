@@ -54,4 +54,40 @@ public sealed class MigrationBootstrapIntegrationTests
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         Assert.True(await dbContext.Database.CanConnectAsync());
     }
+
+    [Fact]
+    public async Task Bootstrap_adopts_existing_postgresql_schema_without_migration_history()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-postgres-existing-schema");
+        var activeProfile = testEnvironment.CreatePostgreSqlProfile("migration-existing-schema");
+
+        var services = new ServiceCollection();
+        var environment = new TestHostEnvironment(activeProfile.EnvironmentRootPath, "CanDoItAll.Tests.Integration");
+        var configuration = TestApplicationBootstrap.BuildConfiguration(activeProfile);
+        TestApplicationBootstrap.ConfigureDefaultServices(services, configuration, environment);
+
+        await using var provider = services.BuildServiceProvider(new ServiceProviderOptions
+        {
+            ValidateOnBuild = true,
+            ValidateScopes = true
+        });
+
+        await using var scope = provider.CreateAsyncScope();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        await using (var existingSchemaContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            await existingSchemaContext.Database.EnsureCreatedAsync();
+            Assert.Empty(await existingSchemaContext.Database.GetAppliedMigrationsAsync());
+        }
+
+        var bootstrapper = scope.ServiceProvider.GetRequiredService<IAppDatabaseBootstrapper>();
+        await bootstrapper.EnsureCurrentProfileReadyAsync();
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var appliedMigrations = await dbContext.Database.GetAppliedMigrationsAsync();
+        Assert.Contains("20260523211921_InitialPostgreSqlBaseline", appliedMigrations);
+        Assert.Contains("20260524144716_ProcessStepAutomationDispatchClaims", appliedMigrations);
+        Assert.Contains("20260524183000_ProcessClaimHotPathIndexes", appliedMigrations);
+        Assert.True(await dbContext.Database.CanConnectAsync());
+    }
 }
