@@ -1,35 +1,87 @@
-# SB04: 04-refactor-checkpoint-a-api-contracts-and-normalizers
+# SB04: refactor-checkpoint-a-api-contracts-and-normalizers
 
-## Goal
+## Status
 
-Refactor duplicated process contract mapping/normalization into shared services and run focused tests before continuing.
+- Status: Completed
 
-## Scope
+## Objective
 
-- Work only on the generic process runtime/API/skill/documentation contract.
-- Keep workflows below processes.
-- Keep PostgreSQL-only.
-- Do not add software-only assumptions unless the test is explicitly a software scenario.
+Checkpoint A confirms API contract normalization is explicit and used.
 
-## Required implementation tasks
+## Covered Inputs
 
-1. Read reviewed source observations and current source.
-2. Add failing-first or red-team tests before production code.
-3. Implement production changes.
-4. Add/adjust API, docs, skill, and template coverage if this subbundle touches public process semantics.
-5. Update proof manifest.
+- bundle://inputs/02-structured-input.md
+- bundle://requirements/01-normalized-requirements.md
+- bundle://traceability/01-requirement-traceability.md
 
-## Required proof
+## Prerequisites
 
-- `proof/SB04/transcripts/failing-first.txt`
-- `proof/SB04/transcripts/passing.txt`
-- `proof/SB04/transcripts/source-assertions.txt`
-- `proof/SB04/transcripts/anti-stub-audit.txt`
-- `proof/SB04/transcripts/changed-file-hashes.txt`
+- Prepared-stage bundle validator passed before production edits.
+- Upstream phase6 process hardening source was preserved unless this subbundle exposed schema drift.
 
-## Closure criteria
+## Exact Source References
 
-- Focused tests pass.
-- No stub-only implementation.
-- No SQLite reintroduction.
-- Public/API/tool/skill/docs surface is not behind production runtime for fields owned by this subbundle.
+- repo://src/CanDoItAll.Web/Api/ProcessesApi.cs
+- repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessRuntimeViewModels.cs
+- repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.RuntimeReadQuery.cs
+- repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.RuntimeReadQuery.Support.cs
+- repo://src/CanDoItAll.Modules.Processes/Services/ProcessesService.Reads.cs
+- repo://tests/CanDoItAll.Tests.Integration/ApiIntegrationTests.cs
+
+## Deliverables
+
+- Closed typed process API/read-model drift for the fields owned by this subbundle.
+- Preserved existing source-backed behavior for subbundle requirements that phase6 already implemented.
+- Updated proof manifest: proof/SB04/manifest.md.
+
+## Dependency Impact
+
+- Downstream process API, runtime tooling, artifact lineage, recovery health, and final closure gates were rechecked through the focused validation transcript.
+
+## Validation Depth
+
+- Source assertions, adversarial negative proof, semantic positive proof, anti-stub audit, changed-file hashes, and focused tests are recorded under bundle://proof/SB04/.
+
+## Implementation Steps
+
+1. Confirmed source references still resolve.
+2. Fixed the shared API/read-model contract drift where required.
+3. Added HTTP-level regression coverage for nested process routes and JSON read-model fields.
+4. Ran focused unit, integration, component, build, and source-audit validation.
+5. Updated semantic proof and closure report.
+
+## Do Not Do
+
+- Do not add SQLite runtime paths or migrations.
+- Do not replace typed contracts with display-string inference.
+- Do not narrow process behavior to a Blazor-only or software-only scenario.
+
+## Acceptance Checklist
+
+- Focused tests pass through bundle://proof/SB16/transcripts/passing.txt.
+- No stub-only implementation remains in the changed contract path.
+- PostgreSQL-only audit was run and recorded.
+- Public API/read-model fields remain synchronized with runtime request models.
+
+## Proof Required
+
+- bundle://proof/SB04/manifest.md
+- bundle://proof/SB04/semantic-invariants.md
+- bundle://proof/SB04/transcripts/failing-first.txt
+- bundle://proof/SB04/transcripts/passing.txt
+- bundle://proof/SB04/transcripts/source-assertions.txt
+- bundle://proof/SB04/transcripts/anti-stub-audit.txt
+- bundle://proof/SB04/transcripts/changed-file-hashes.txt
+- reviews/01-execution-report.md includes the SB04 gate row.
+
+## Browser Validation Logging
+
+- Not required for this API/read-model-only implementation. API JSON evidence is in the ApiIntegrationTests regression transcript.
+
+## Progression Gate
+
+- Passed after source assertions, semantic proof, anti-stub audit, changed-file hashes, and validation commands agreed.
+
+## Suggested Agent Prompt
+
+SB04 is closed. Reopen only if the cited source references or validation transcripts no longer prove the typed process runtime contract.

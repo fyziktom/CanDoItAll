@@ -5,6 +5,7 @@ using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Workbench;
@@ -16,6 +17,7 @@ using CanDoItAll.Web.Api;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -142,6 +144,130 @@ public sealed class ApiIntegrationTests
         Assert.True(artifactResponse.IsSuccessStatusCode, artifactBody);
         using var artifactPayload = JsonDocument.Parse(artifactBody);
         Assert.Equal(expectedArtifact.Id, artifactPayload.RootElement.GetProperty("id").GetGuid());
+    }
+
+    [Fact]
+    public async Task Api_nested_process_runtime_routes_preserve_typed_contract_state()
+    {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
+
+        Guid seededRunId;
+        Guid seededStepRunId;
+        var workflowRunId = Guid.NewGuid();
+        var workflowArtifactId = Guid.NewGuid();
+        await using (var scope = host.App.Services.CreateAsyncScope())
+        {
+            var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+            var definition = BuildFilterTestDefinition();
+            var definitionStep = Assert.Single(definition.Steps);
+            definitionStep.AllowedOperations =
+            [
+                ProcessStepOperation.WriteManagedProcessArtifacts,
+                ProcessStepOperation.CaptureRuntimeProof
+            ];
+            definitionStep.OperationTargetScope = ProcessStepTargetScope.ManagedProcessArtifactsOnly;
+
+            var definitionResult = await processesService.SaveAsync(definition);
+            Assert.True(definitionResult.IsSuccess, string.Join(" | ", definitionResult.Errors.Select(error => error.Message)));
+
+            var publishResult = await processesService.PublishAsync(definitionResult.Value);
+            Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+
+            var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+            {
+                ProcessDefinitionId = definitionResult.Value,
+                RunName = "API typed contract run",
+                OperatingMode = ProcessOperatingMode.AssistedExecution,
+                TriggerReason = "Integration test"
+            });
+            Assert.True(runResult.IsSuccess, string.Join(" | ", runResult.Errors.Select(error => error.Message)));
+
+            seededRunId = runResult.Value;
+            seededStepRunId = Assert.Single(await processesService.ListStepRunsAsync(seededRunId)).Id;
+        }
+
+        var transitionResponse = await host.Client.PostAsJsonAsync(
+            $"/api/processes/runs/{seededRunId:D}/steps/{seededStepRunId:D}/transition",
+            new
+            {
+                TargetStatus = ProcessStepRunStatus.Blocked,
+                Reason = "The API test supplies typed blocked ownership.",
+                BlockCause = ProcessStepBlockCause.OwnOutput,
+                DecidedBy = "api-integration-tests",
+                SuppressAutomationDispatch = true
+            });
+        var transitionBody = await transitionResponse.Content.ReadAsStringAsync();
+        Assert.True(transitionResponse.IsSuccessStatusCode, transitionBody);
+
+        var artifactResponse = await host.Client.PostAsJsonAsync(
+            $"/api/processes/runs/{seededRunId:D}/steps/{seededStepRunId:D}/artifacts",
+            new
+            {
+                ArtifactKind = ProcessArtifactKind.Deliverable,
+                Title = "Projected workflow deliverable",
+                TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+                SensitivityLevel = ProcessSensitivityLevel.Internal,
+                ProvenanceSummary = "Created by ApiIntegrationTests.",
+                AllowedFutureUsageSummary = "Regression validation.",
+                ReviewSummary = "Projection lineage should remain attached.",
+                ManagedStoragePath = "artifacts/api/projected-workflow-deliverable.md",
+                ExternalReferenceKey = $"api-projection:{Guid.NewGuid():N}",
+                ProjectionLineage = new ProcessArtifactProjectionLineage
+                {
+                    SourceKind = ProcessArtifactProjectionSourceKind.WorkflowArtifact,
+                    WorkflowRunId = workflowRunId,
+                    WorkflowArtifactId = workflowArtifactId,
+                    ContentHash = "sha256:api-projection-lineage"
+                }
+            });
+        var artifactBody = await artifactResponse.Content.ReadAsStringAsync();
+        Assert.True(artifactResponse.IsSuccessStatusCode, artifactBody);
+
+        await using (var scope = host.App.Services.CreateAsyncScope())
+        {
+            var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+            var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+
+            var persistedStep = await dbContext.Set<ProcessStepRun>().SingleAsync(item => item.Id == seededStepRunId);
+            var persistedArtifact = await dbContext.Set<ProcessArtifactRecord>().SingleAsync(item => item.ProcessRunId == seededRunId);
+            var listedStep = Assert.Single(await processesService.ListStepRunsAsync(seededRunId));
+            var listedArtifact = Assert.Single(await processesService.ListArtifactsAsync(seededRunId));
+
+            Assert.Equal(ProcessStepBlockReasonCode.ArtifactContractUnsatisfied, persistedStep.BlockReasonCode);
+            Assert.Equal(ProcessStepBlockReasonCode.ArtifactContractUnsatisfied, listedStep.BlockReasonCode);
+            Assert.Equal(ProcessStepRecoveryOption.RecoverArtifactsOnly, listedStep.NextRecoveryAction);
+            Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly, listedStep.RecoveryOptions);
+            Assert.Equal(
+                [ProcessStepOperation.WriteManagedProcessArtifacts, ProcessStepOperation.CaptureRuntimeProof],
+                listedStep.AllowedOperations);
+            Assert.Equal(ProcessStepTargetScope.ManagedProcessArtifactsOnly, listedStep.OperationTargetScope);
+            Assert.StartsWith("sha256:", persistedArtifact.ProjectionIdentityHash, StringComparison.Ordinal);
+            Assert.Equal(persistedArtifact.ProjectionIdentityHash, listedArtifact.ProjectionIdentityHash);
+            Assert.Equal(persistedArtifact.ProjectionLineageJson, listedArtifact.ProjectionLineageJson);
+        }
+
+        var runResponse = await host.Client.GetAsync(
+            $"/api/processes/runs/{seededRunId:D}?includeWorkBriefs=false&includeExecutionRuns=false&includeDirectMessages=false");
+        var runBody = await runResponse.Content.ReadAsStringAsync();
+        Assert.True(runResponse.IsSuccessStatusCode, runBody);
+        using var runPayload = JsonDocument.Parse(runBody);
+        var stepPayload = Assert.Single(runPayload.RootElement.GetProperty("stepRuns").EnumerateArray().ToList());
+        var artifactPayload = Assert.Single(runPayload.RootElement.GetProperty("artifacts").EnumerateArray().ToList());
+
+        Assert.Equal((int)ProcessStepBlockReasonCode.ArtifactContractUnsatisfied, stepPayload.GetProperty("blockReasonCode").GetInt32());
+        Assert.Equal((int)ProcessStepRecoveryOption.RecoverArtifactsOnly, stepPayload.GetProperty("nextRecoveryAction").GetInt32());
+        Assert.Contains(
+            (int)ProcessStepOperation.WriteManagedProcessArtifacts,
+            stepPayload.GetProperty("allowedOperations").EnumerateArray().Select(item => item.GetInt32()));
+        Assert.Equal((int)ProcessStepTargetScope.ManagedProcessArtifactsOnly, stepPayload.GetProperty("operationTargetScope").GetInt32());
+        var projectionIdentityHash = artifactPayload.GetProperty("projectionIdentityHash").GetString() ?? string.Empty;
+        var projectionLineageJson = artifactPayload.GetProperty("projectionLineageJson").GetString() ?? string.Empty;
+        Assert.StartsWith("sha256:", projectionIdentityHash, StringComparison.Ordinal);
+        Assert.Contains(
+            "api-projection-lineage",
+            projectionLineageJson,
+            StringComparison.Ordinal);
     }
 
     [Fact]

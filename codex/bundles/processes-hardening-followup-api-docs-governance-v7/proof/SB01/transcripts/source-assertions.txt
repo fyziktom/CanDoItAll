@@ -1,3 +1,10 @@
-# SB01 source-assertions.txt
-
-Fill during execution.
+# SB01 source assertions
+Command: rg -n "BlockCause = request.BlockCause|ProjectionLineage = request.ProjectionLineage|AllowedOperations = stepDefinition|ProjectionIdentityHash = item.ProjectionIdentityHash|Api_nested_process_runtime_routes_preserve_typed_contract_state" repo://src/CanDoItAll.Web/Api/ProcessesApi.cs repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessRuntimeViewModels.cs repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.RuntimeReadQuery.cs repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.RuntimeReadQuery.Support.cs repo://src/CanDoItAll.Modules.Processes/Services/ProcessesService.Reads.cs repo://tests/CanDoItAll.Tests.Integration/ApiIntegrationTests.cs -S
+Invariant ID: SB01-INV-001
+repo://src/CanDoItAll.Web/Api/ProcessesApi.cs maps BlockCause from ProcessStepTransitionApiRequest to ProcessStepTransitionRequest.
+repo://src/CanDoItAll.Web/Api/ProcessesApi.cs maps ProjectionLineage from ProcessArtifactRecordApiRequest to ProcessArtifactRecordRequest.
+repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessRuntimeViewModels.cs exposes AllowedOperations, OperationTargetScope, BlockReasonCode, NextRecoveryAction, RecoveryOptions, ProjectionLineageJson, and ProjectionIdentityHash.
+repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.RuntimeReadQuery.cs populates operation and recovery read-model fields.
+repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.RuntimeReadQuery.Support.cs and repo://src/CanDoItAll.Modules.Processes/Services/ProcessesService.Reads.cs populate projection lineage and identity read-model fields.
+repo://tests/CanDoItAll.Tests.Integration/ApiIntegrationTests.cs includes Api_nested_process_runtime_routes_preserve_typed_contract_state.
+ExitCode: 0

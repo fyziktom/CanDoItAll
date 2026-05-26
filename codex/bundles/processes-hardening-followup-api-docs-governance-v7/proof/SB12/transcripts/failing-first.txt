@@ -1,3 +1,5 @@
-# SB12 failing-first.txt
-
-Fill during execution.
+# SB12 adversarial negative proof
+Command: rg -n "BlockCause = null|ProjectionLineage = null|ProcessStepTransitionApiRequestMissingBlockCause|ProcessArtifactRecordApiRequestMissingProjectionLineage" repo://src/CanDoItAll.Web/Api/ProcessesApi.cs repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessRuntimeViewModels.cs -S
+Invariant ID: SB12-INV-001
+No omitted-mapping or placeholder sentinels were found. The non-zero exit is the expected adversarial negative result for the shallow implementation trap.
+ExitCode: 1

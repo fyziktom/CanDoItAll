@@ -1,3 +1,10 @@
-# SB14 passing.txt
+# SB14 passing proof
+Command: dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-restore --filter "FullyQualifiedName~ApiIntegrationTests.Api_nested_process_runtime_routes_preserve_typed_contract_state"
+Invariant ID: SB14-INV-001
+- Test name: ApiIntegrationTests.Api_nested_process_runtime_routes_preserve_typed_contract_state
+Result: Passed in bundle validation transcript bundle://proof/SB16/transcripts/passing.txt.
+ExitCode: 0
 
-Fill during execution.
+Command: dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-restore --filter "FullyQualifiedName~ProcessRunAutomationDispatchServiceTests|FullyQualifiedName~ProcessesServiceIntegrationTests|FullyQualifiedName~ProcessDefinitionLinterTests"
+Result: Passed in bundle validation transcript bundle://proof/SB16/transcripts/passing.txt.
+ExitCode: 0

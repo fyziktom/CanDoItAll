@@ -271,9 +271,19 @@ public sealed record ProcessStepRunViewModel(
 
     public IReadOnlyList<ProcessStepRunArtifactPortViewModel> ArtifactOutputs { get; init; } = [];
 
+    public IReadOnlyList<ProcessStepOperation> AllowedOperations { get; init; } = [];
+
+    public ProcessStepTargetScope? OperationTargetScope { get; init; }
+
     public string ExceptionSummary { get; init; } = string.Empty;
 
     public IReadOnlyList<ProcessArtifactExpectationSatisfactionViewModel> ArtifactExpectations { get; init; } = [];
+
+    public ProcessStepBlockReasonCode BlockReasonCode { get; init; } = ProcessStepBlockReasonCode.None;
+
+    public ProcessStepRecoveryOption NextRecoveryAction { get; init; } = ProcessStepRecoveryOption.None;
+
+    public IReadOnlyList<ProcessStepRecoveryOption> RecoveryOptions { get; init; } = [];
 
     public ProcessStepRunHealthViewModel Health { get; init; } = ProcessStepRunHealthViewModel.Empty;
 
@@ -302,7 +312,12 @@ public sealed record ProcessArtifactViewModel(
     string AllowedFutureUsageSummary,
     string ManagedStoragePath,
     string ExternalReferenceKey,
-    DateTimeOffset CreatedAtUtc);
+    DateTimeOffset CreatedAtUtc)
+{
+    public string ProjectionLineageJson { get; init; } = string.Empty;
+
+    public string ProjectionIdentityHash { get; init; } = string.Empty;
+}
 
 public sealed record ProcessRunAssignmentViewModel(
     Guid Id,

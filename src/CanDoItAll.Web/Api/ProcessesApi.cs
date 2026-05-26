@@ -258,6 +258,7 @@ internal static class ProcessesApi
                         StepRunConcurrencyToken = request.StepRunConcurrencyToken,
                         TargetStatus = request.TargetStatus,
                         Reason = request.Reason,
+                        BlockCause = request.BlockCause,
                         SelectedBranchOutcomeId = request.SelectedBranchOutcomeId,
                         DecidedBy = NormalizeActor(request.DecidedBy),
                         SuppressAutomationDispatch = request.SuppressAutomationDispatch
@@ -528,7 +529,8 @@ internal static class ProcessesApi
                         AllowedFutureUsageSummary = request.AllowedFutureUsageSummary,
                         ReviewSummary = request.ReviewSummary,
                         ManagedStoragePath = request.ManagedStoragePath,
-                        ExternalReferenceKey = request.ExternalReferenceKey
+                        ExternalReferenceKey = request.ExternalReferenceKey,
+                        ProjectionLineage = request.ProjectionLineage
                     },
                     cancellationToken));
             })
@@ -1300,6 +1302,8 @@ internal sealed class ProcessStepTransitionApiRequest
 
     public string Reason { get; set; } = string.Empty;
 
+    public ProcessStepBlockCause? BlockCause { get; set; }
+
     public Guid? SelectedBranchOutcomeId { get; set; }
 
     public string? DecidedBy { get; set; }
@@ -1432,4 +1436,6 @@ internal sealed class ProcessArtifactRecordApiRequest
     public string ManagedStoragePath { get; set; } = string.Empty;
 
     public string ExternalReferenceKey { get; set; } = string.Empty;
+
+    public ProcessArtifactProjectionLineage? ProjectionLineage { get; set; }
 }

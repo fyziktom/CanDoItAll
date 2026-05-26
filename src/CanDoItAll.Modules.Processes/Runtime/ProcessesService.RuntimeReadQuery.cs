@@ -320,8 +320,15 @@ public sealed partial class ProcessRuntimeReadQueryService(
                         ArtifactOutputs = stepDefinition is null
                             ? []
                             : artifactOutputsByStepId.GetValueOrDefault(stepDefinition.Id) ?? [],
+                        AllowedOperations = stepDefinition is null
+                            ? []
+                            : ProcessStepOperationContractState.NormalizeAllowedOperations(stepDefinition.AllowedOperations),
+                        OperationTargetScope = stepDefinition?.OperationTargetScope,
                         ExceptionSummary = item.ExceptionSummary,
                         ArtifactExpectations = artifactLedger,
+                        BlockReasonCode = item.BlockReasonCode,
+                        NextRecoveryAction = item.NextRecoveryAction,
+                        RecoveryOptions = ProcessStepRunBlockState.ResolveRecoveryOptions(item),
                         Health = BuildInitialStepHealth(
                             item,
                             artifactLedger,

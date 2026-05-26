@@ -1,62 +1,88 @@
-# Phase plan
+# Phase Plan
 
-## Execution order
+## Execution Order
 
-1. `01-processes-api-surface-inventory-and-schema-parity` — Audit every `processes_*` tool/API endpoint, DTO, request, response, docs and tests. Produce a matrix showing whether each surface includes operation contract, target scope, contract mode, artifact mappings, typed block state, recovery options, and lineage fields.
+1. SB01 processes API surface inventory and schema parity.
+2. SB02 API/tool model operation contract fields.
+3. SB03 API/tool model artifact output mapping fields.
+4. SB04 refactor checkpoint A: API contracts and normalizers.
+5. SB05 process skill and documentation update.
+6. SB06 template migration beyond Blazor.
+7. SB07 authoritative grounding ledger policy.
+8. SB08 projection identity hash dedupe proof.
+9. SB09 unified artifact validation service.
+10. SB10 refactor checkpoint B: artifact lineage validation.
+11. SB11 typed block cause and recovery router.
+12. SB12 workflow/subprocess output mapping enforcement.
+13. SB13 script side-effect manifest and post-execution audit.
+14. SB14 refactor checkpoint C: recovery health API.
+15. SB15 process health dashboard API and observability.
+16. SB16 generic red-team harness and final closure.
 
-2. `02-api-tool-models-operation-contract-fields` — Update process definition save/import/export/template/API tool models so `AllowedOperations`, `OperationTargetScope`, and `ContractMode` round-trip through API/tools, not just UI/service internals.
+## Subbundle Dependency Map
 
-3. `03-api-tool-models-artifact-output-mapping-fields` — Update API/tool models for `WorkflowOutputId`, `WorkflowOutputName`, `WorkflowOutputKind`, and `SubprocessChildArtifactExpectationId`; add validation and examples.
+```mermaid
+flowchart TD
+    SB01["SB01 API inventory"]
+    SB02["SB02 operation contract fields"]
+    SB03["SB03 artifact mapping fields"]
+    SB04["SB04 checkpoint A"]
+    SB05["SB05 skills and docs"]
+    SB06["SB06 template migration"]
+    SB07["SB07 grounding ledger authority"]
+    SB08["SB08 projection identity"]
+    SB09["SB09 unified artifact validation"]
+    SB10["SB10 checkpoint B"]
+    SB11["SB11 typed block recovery"]
+    SB12["SB12 workflow/subprocess mapping"]
+    SB13["SB13 script side-effect audit"]
+    SB14["SB14 checkpoint C"]
+    SB15["SB15 health API observability"]
+    SB16["SB16 red-team closure"]
 
-4. `04-refactor-checkpoint-a-api-contracts-and-normalizers` — Refactor duplicated process contract mapping/normalization into shared services and run focused tests before continuing.
+    SB01 --> SB02
+    SB01 --> SB03
+    SB02 --> SB04
+    SB03 --> SB04
+    SB04 --> SB05
+    SB05 --> SB06
+    SB04 --> SB07
+    SB04 --> SB08
+    SB08 --> SB09
+    SB07 --> SB10
+    SB08 --> SB10
+    SB09 --> SB10
+    SB10 --> SB11
+    SB11 --> SB12
+    SB11 --> SB13
+    SB12 --> SB14
+    SB13 --> SB14
+    SB14 --> SB15
+    SB15 --> SB16
+```
 
-5. `05-process-skill-and-documentation-update` — Find and update related process skill(s), Codex skill docs, process API docs, and template authoring docs for new runtime governance fields.
+## Critical Subbundles
 
-6. `06-template-migration-beyond-blazor` — Migrate non-Blazor templates and examples to typed operation contracts, artifact recovery policy, workflow/subprocess mappings, and contract mode.
+- SB01, SB02, SB03, SB05, SB06, SB07, SB08, SB09, SB11, SB12, SB13, SB15, and SB16 are critical because weak proof would invalidate public governance correctness.
+- SB04, SB10, and SB14 are refactoring checkpoint gates that must pass before dependent feature work continues.
 
-7. `07-authoritative-grounding-ledger-policy` — Make `agentProcessGroundedTargetAliasLedger` authoritative for tool policy; resolve alias overlaps and remove heuristic authority drift.
+## Phase Gates
 
-8. `08-projection-identity-hash-dedupe-proof` — Ensure `ProjectionIdentityHash` is persisted, unique, computed from normalized lineage/content identity, and used for dedupe in all projection paths.
-
-9. `09-unified-artifact-validation-service` — Extract finalizer-grade artifact validation into a shared service used by automation finalizer and manual/API transition paths.
-
-10. `10-refactor-checkpoint-b-artifact-lineage-validation` — Refactor artifact projection, lineage, content reading, and validation services for maintainability before adding more recovery logic.
-
-11. `11-typed-block-cause-and-recovery-router` — Extend transition requests and runtime code to carry typed block reason code and recovery options; treat reason-text inference only as legacy fallback.
-
-12. `12-workflow-subprocess-output-mapping-enforcement` — Require explicit workflow/subprocess output mappings for required artifacts and block ambiguous mappings deterministically.
-
-13. `13-script-side-effect-manifest-and-post-execution-audit` — Add script manifest and post-execution diff/fingerprint audit for governed process steps using scripts.
-
-14. `14-refactor-checkpoint-c-recovery-health-api` — Refactor recovery router, block state, and health models into maintainable services; update API query models.
-
-15. `15-process-health-dashboard-api-and-observability` — Expose typed block/recovery state, artifact validation diagnostics, operation contract, and grounding ledger in health/detail APIs and UI.
-
-16. `16-generic-red-team-harness-and-final-closure` — Run generic red-team scenarios across software, business, legal, manufacturing QA, research, and incident-response processes.
-
-
-## Refactoring checkpoints
-
+- Every subbundle must pass entry and closure gates before the next subbundle starts.
 - After SB03 run SB04 before continuing.
 - After SB09 run SB10 before continuing.
 - After SB13 run SB14 before continuing.
-- SB16 is the final closure and red-team gate.
+- Critical subbundles require semantic adequacy proof, failing-first or adversarial proof, passing proof, source assertions, anti-stub audit, and changed-file hashes under `bundle://proof/SBxx/`.
+- SB15 must provide API/read-model proof and browser or component proof if rendered UI changes.
+- SB16 must run final focused tests, build, PostgreSQL-only audit, completed-stage bundle validator, and note-by-note raw closure.
 
-## Required validation commands
+## Required Commands
 
 ```powershell
+python codex/skills/bundles/candoitall-bundle-preparation/scripts/validate_bundle.py codex/bundles/processes-hardening-followup-api-docs-governance-v7 --stage prepared --repo-root .
 dotnet test tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~AgentToolInvocationPolicyTests"
 dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-restore --filter "FullyQualifiedName~ProcessRunAutomationDispatchServiceTests|FullyQualifiedName~ProcessesServiceIntegrationTests|FullyQualifiedName~ProcessDefinitionLinterTests"
 dotnet test tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --no-restore --filter "FullyQualifiedName~ProcessStepEditorFormTests"
 dotnet build CanDoItAll.slnx --no-restore
 rg -n "Sqlite|SQLite|UseSqlite|Migrations.Sqlite" src tests codex/bundles/processes-hardening-followup-api-docs-governance-v7 -S
-```
-
-## Documentation/API/skill audit commands
-
-Codex must adapt paths after discovering the exact files:
-
-```powershell
-rg -n "processes_definition_save|processes_run_start|processes_artifact_record|ProcessStepOperation|OperationTargetScope|WorkflowOutputId|SubprocessChildArtifactExpectationId|BlockReasonCode|RecoveryOptions" src codex docs README* -S
-rg -n "AllowedOperations|OperationTargetScope|ContractMode|artifact recovery|workflow output|subprocess child artifact" codex/skills docs src/CanDoItAll.Modules.Processes -S
 ```

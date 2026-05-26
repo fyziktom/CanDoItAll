@@ -86,7 +86,11 @@ public sealed partial class ProcessesService {
                 item.AllowedFutureUsageSummary,
                 item.ManagedStoragePath,
                 item.ExternalReferenceKey,
-                item.CreatedAtUtc))
+                item.CreatedAtUtc)
+            {
+                ProjectionLineageJson = item.ProjectionLineageJson,
+                ProjectionIdentityHash = item.ProjectionIdentityHash
+            })
             .ToListAsync(cancellationToken);
         return items
             .OrderByDescending(item => item.CreatedAtUtc)
