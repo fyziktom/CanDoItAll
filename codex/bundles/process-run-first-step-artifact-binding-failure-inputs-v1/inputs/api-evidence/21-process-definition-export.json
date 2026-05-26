@@ -1,0 +1,994 @@
+{
+  "definition": {
+    "id": "9dd2f94e-b607-4f47-afb6-c51765db55bb",
+    "projectId": null,
+    "workingVersionId": "52698460-9c29-41db-8e9b-92a0b1dade51",
+    "definitionConcurrencyToken": "3961af3f-95fe-445b-8f60-1f4f35f92d22",
+    "workingVersionConcurrencyToken": "b3b0c7df-29e6-457f-8c81-583d55f71457",
+    "workingVersionNumber": 2,
+    "name": "Blazor app delivery",
+    "summary": "Simplified multi-team delivery for a new or rebuilt Blazor SSR, WASM, or WASM PWA application from project-structure requirements.",
+    "valueStatement": "Agents build the requested Blazor app and prove it with build, test, browser screenshots, console checks, cleanup, summaries, and project-structure evidence.",
+    "customerName": "Blazor delivery requester",
+    "ownerName": "Delivery manager",
+    "interfaceContractSummary": "Generic Blazor SSR, WASM, and WASM PWA work is driven by project-structure source-of-truth data, process artifacts, and agent tool contracts.",
+    "governanceNotes": "The process core remains generic. Blazor app specifics live in this template, step instructions, agent skills/tools, and project-structure records.",
+    "changeSummary": "Draft created from published v1.",
+    "governancePolicySummary": "Do not close until build/test proof, runtime/browser proof, screenshots, console status, cleanup, and project-structure writeback are present or a blocker is classified.",
+    "constitutionRuleSummary": "Agents own delivery and validation; Codex/user observation may approve or reject process escalations but must not manually build the app.",
+    "operatingModeSummary": "Governed live execution for local Blazor application delivery.",
+    "simulationReadinessSummary": "Suitable for demo and development Blazor runs using PostgreSQL-backed CanDoItAll runtime data.",
+    "managerAgentOverrideId": null,
+    "managerAgentOverrideName": "",
+    "criticality": 2,
+    "autonomyLevel": 2,
+    "contractMode": 1,
+    "status": 1,
+    "roles": [
+      {
+        "id": "4a799955-6604-4f80-b2ab-f132c5539ab6",
+        "key": "blazor-delivery-manager",
+        "displayName": "Blazor delivery manager",
+        "purpose": "Own process flow, approvals, summaries, evidence index, and project-structure writeback.",
+        "staffingIntent": "Use an agent or person with explicit Blazor, .NET, project-structure, process-artifact, and validation-tool readiness.",
+        "preferredExecutorKind": "AI agent",
+        "preferredWorkflowDefinitionId": null,
+        "preferredWorkflowVersionId": null,
+        "preferredProjectAssignmentRole": 4,
+        "isRequired": true,
+        "allowsFallback": true,
+        "requiresExplicitApproval": false,
+        "defaultAllocationPercent": 50,
+        "roleTemplateSourceKey": "process-role-template/delivery-manager",
+        "roleTemplateSnapshotName": "Delivery manager / template-pack v1",
+        "snapshotSummary": "Flow owner for sequencing, staffing realism, dependency control, and execution escalation. | Seniority: Senior delivery management | Min years primary discipline: 7 | Min years software delivery: 10 | Domain tags: delivery-governance, program-coordination, execution-risk",
+        "requiredSkillIds": [],
+        "canvasX": 0,
+        "canvasY": 0
+      },
+      {
+        "id": "cd696c69-97aa-401d-8140-1bb3cc01bc74",
+        "key": "blazor-solution-architect",
+        "displayName": "Blazor solution architect",
+        "purpose": "Protect Blazor mode, app boundaries, data boundaries, and maintainability.",
+        "staffingIntent": "Use an agent or person with explicit Blazor, .NET, project-structure, process-artifact, and validation-tool readiness.",
+        "preferredExecutorKind": "AI agent",
+        "preferredWorkflowDefinitionId": null,
+        "preferredWorkflowVersionId": null,
+        "preferredProjectAssignmentRole": 10,
+        "isRequired": true,
+        "allowsFallback": true,
+        "requiresExplicitApproval": false,
+        "defaultAllocationPercent": 30,
+        "roleTemplateSourceKey": "process-role-template/solution-architect",
+        "roleTemplateSnapshotName": "Solution architect / template-pack v1",
+        "snapshotSummary": "Architecture authority for system boundaries, irreversible decisions, and cross-domain technical coherence. | Seniority: Principal or staff architecture | Min years primary discipline: 8 | Min years software delivery: 10 | Domain tags: architecture, integration, data-boundaries, operability",
+        "requiredSkillIds": [],
+        "canvasX": 0,
+        "canvasY": 0
+      },
+      {
+        "id": "ff51e97c-e7cd-42df-858f-7efcf7a927eb",
+        "key": "blazor-engineer",
+        "displayName": "Blazor implementation engineer",
+        "purpose": "Build or repair the Blazor app and produce code/build proof.",
+        "staffingIntent": "Use an agent or person with explicit Blazor, .NET, project-structure, process-artifact, and validation-tool readiness.",
+        "preferredExecutorKind": "AI agent",
+        "preferredWorkflowDefinitionId": null,
+        "preferredWorkflowVersionId": null,
+        "preferredProjectAssignmentRole": 3,
+        "isRequired": true,
+        "allowsFallback": true,
+        "requiresExplicitApproval": false,
+        "defaultAllocationPercent": 100,
+        "roleTemplateSourceKey": "process-role-template/software-engineer",
+        "roleTemplateSnapshotName": "Software engineer / template-pack v1",
+        "snapshotSummary": "Implementation owner for code, tests, migration notes, and executable delivery proof. | Seniority: Senior software engineer or technical lead | Min years primary discipline: 6 | Min years software delivery: 8 | Domain tags: software-delivery, implementation, migrations, reviewability",
+        "requiredSkillIds": [],
+        "canvasX": 0,
+        "canvasY": 0
+      },
+      {
+        "id": "482a38d9-96c5-43ec-a86e-cf087f5071d6",
+        "key": "blazor-qa-lead",
+        "displayName": "Blazor QA and browser proof lead",
+        "purpose": "Run dotnet validation and Playwright browser proof with screenshots and console checks.",
+        "staffingIntent": "Use an agent or person with explicit Blazor, .NET, project-structure, process-artifact, and validation-tool readiness.",
+        "preferredExecutorKind": "AI agent",
+        "preferredWorkflowDefinitionId": null,
+        "preferredWorkflowVersionId": null,
+        "preferredProjectAssignmentRole": 10,
+        "isRequired": true,
+        "allowsFallback": true,
+        "requiresExplicitApproval": false,
+        "defaultAllocationPercent": 80,
+        "roleTemplateSourceKey": "process-role-template/qa-lead",
+        "roleTemplateSnapshotName": "QA lead / template-pack v1",
+        "snapshotSummary": "Quality owner for coverage depth, evidence quality, and release confidence. | Seniority: Senior QA or test leadership | Min years primary discipline: 6 | Min years software delivery: 8 | Domain tags: quality-assurance, test-strategy, risk-based-testing",
+        "requiredSkillIds": [],
+        "canvasX": 0,
+        "canvasY": 0
+      }
+    ],
+    "messagingPolicies": [],
+    "steps": [
+      {
+        "id": "095ec6e6-bca6-4ad5-b14b-e54b60e9becd",
+        "key": "resolve-blazor-contract",
+        "title": "Resolve Blazor delivery contract",
+        "subtitle": "Project structure and output root",
+        "notes": "Read project structure and run prompt. Resolve Blazor mode (SSR, WASM, or WASM PWA), product root, output root under C:\\programovani\\dotnet-demo\\output or requested equivalent, run folder, acceptance criteria, routes/screens, backend/API expectations, exclusions, and required evidence writeback targets. Keep the app description generic and do not add sample-specific assumptions.",
+        "stepKind": 0,
+        "allowedOperations": [
+          0,
+          1,
+          3
+        ],
+        "operationTargetScope": 3,
+        "subprocessDefinitionId": null,
+        "subprocessDefinitionSnapshotName": "",
+        "allowsManualSkip": false,
+        "allowsSafeRefusal": false,
+        "requiresApproval": false,
+        "requiresDecisionRecord": false,
+        "inputContractSummary": "Use project-structure source-of-truth data, upstream process artifacts, and explicit run prompt constraints.",
+        "outputContractSummary": "Produce the named artifacts with enough detail for downstream agents to act without reading the full raw transcript.",
+        "evidenceContractSummary": "Record commands, files, URLs, screenshots, console messages, errors, assumptions, and project-structure writeback references as applicable.",
+        "decisionRightsSummary": "The assigned role owns the step outcome and must block or escalate instead of silently narrowing scope.",
+        "exceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+        "targetLeadHours": 2,
+        "decisionRoleRequirementId": "4a799955-6604-4f80-b2ab-f132c5539ab6",
+        "canvasX": 260,
+        "canvasY": 180,
+        "branchCanvasX": 321,
+        "branchCanvasY": 509,
+        "branchOutcomes": [
+          {
+            "id": "2cd8ec44-0071-4e23-8405-8b7837a6e22b",
+            "key": "__default__",
+            "title": "Default",
+            "description": "Continue when no explicit branch outcome is selected."
+          },
+          {
+            "id": "6d2458f1-5d54-4654-a7c8-2d82a273b7e6",
+            "key": "__error__",
+            "title": "Error",
+            "description": "Handle exceptions, failed validations, or explicit error escalation."
+          }
+        ],
+        "dependencies": [],
+        "roleAssignments": [
+          {
+            "id": "7037edde-3812-4caf-b547-9dc871422758",
+            "roleRequirementId": "4a799955-6604-4f80-b2ab-f132c5539ab6",
+            "responsibilityKind": 0,
+            "isRequired": true,
+            "fallbackOrder": 0,
+            "rebindPolicySummary": "Rebind only to an agent or person with the same Blazor, project-structure, workspace, and evidence-tool readiness."
+          },
+          {
+            "id": "7422ca44-ad94-427d-a7ab-9b49fa7f4f8a",
+            "roleRequirementId": "cd696c69-97aa-401d-8140-1bb3cc01bc74",
+            "responsibilityKind": 1,
+            "isRequired": true,
+            "fallbackOrder": 1,
+            "rebindPolicySummary": "Rebind only to an agent or person with the same Blazor, project-structure, workspace, and evidence-tool readiness."
+          }
+        ],
+        "artifactExpectations": [
+          {
+            "id": "5c57c987-8c71-4ba6-874d-bb1e7ddc2a9e",
+            "artifactKind": 0,
+            "title": "Blazor delivery contract",
+            "isRequired": true,
+            "trustRequirement": 1,
+            "sensitivityLevel": 1,
+            "retentionDays": 365,
+            "allowedFutureUsageSummary": "Reusable for downstream QA, release governance, reruns, and process learning.",
+            "validationRequirementSummary": "Must name Blazor mode SSR/WASM/WASM PWA, project id, source/project-structure node ids, product root, output root, run folder, acceptance criteria, routes or API surfaces, exclusions, and evidence writeback targets.",
+            "workflowOutputId": "",
+            "workflowOutputName": "",
+            "workflowOutputKind": null,
+            "subprocessChildArtifactExpectationId": null,
+            "subprocessChildStepKey": "",
+            "subprocessChildArtifactTitle": ""
+          }
+        ],
+        "artifactInputs": []
+      },
+      {
+        "id": "ca051157-927d-4a91-bc29-e0ebfadcc976",
+        "key": "implement-blazor-change",
+        "title": "Build Blazor application",
+        "subtitle": "Build-capable implementation",
+        "notes": "Create or update the requested Blazor solution and app using the project-structure declared mode, package choices, routes, features, and output folder. Use workspace file and command tools only inside the approved product root. Run dotnet restore before build-sensitive changes when dependencies changed. Run dotnet build after implementation. Do not mark complete if explicit acceptance criteria are omitted, if output is written outside the approved run folder, or if project-structure constraints are narrowed without a decision record.",
+        "stepKind": 1,
+        "allowedOperations": [
+          0,
+          1,
+          2,
+          3,
+          5,
+          6
+        ],
+        "operationTargetScope": 4,
+        "subprocessDefinitionId": null,
+        "subprocessDefinitionSnapshotName": "",
+        "allowsManualSkip": false,
+        "allowsSafeRefusal": false,
+        "requiresApproval": false,
+        "requiresDecisionRecord": false,
+        "inputContractSummary": "Use project-structure source-of-truth data, upstream process artifacts, and explicit run prompt constraints.",
+        "outputContractSummary": "Produce the named artifacts with enough detail for downstream agents to act without reading the full raw transcript.",
+        "evidenceContractSummary": "Record commands, files, URLs, screenshots, console messages, errors, assumptions, and project-structure writeback references as applicable.",
+        "decisionRightsSummary": "The assigned role owns the step outcome and must block or escalate instead of silently narrowing scope.",
+        "exceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+        "targetLeadHours": 2,
+        "decisionRoleRequirementId": "ff51e97c-e7cd-42df-858f-7efcf7a927eb",
+        "canvasX": 1160,
+        "canvasY": 180,
+        "branchCanvasX": 1221,
+        "branchCanvasY": 523,
+        "branchOutcomes": [
+          {
+            "id": "27466926-dc01-4634-a779-ca68b8684d08",
+            "key": "__default__",
+            "title": "Default",
+            "description": "Continue when no explicit branch outcome is selected."
+          },
+          {
+            "id": "23c4d1a1-7ef1-4ab7-b996-114582470967",
+            "key": "__error__",
+            "title": "Error",
+            "description": "Handle exceptions, failed validations, or explicit error escalation."
+          }
+        ],
+        "dependencies": [
+          {
+            "id": "1ccf301f-0586-4ef4-af2a-c3a208cba714",
+            "dependsOnStepId": "095ec6e6-bca6-4ad5-b14b-e54b60e9becd",
+            "dependsOnBranchOutcomeId": "2cd8ec44-0071-4e23-8405-8b7837a6e22b"
+          }
+        ],
+        "roleAssignments": [
+          {
+            "id": "782a1aa1-b1c6-44ca-a4da-c139b12c35ab",
+            "roleRequirementId": "ff51e97c-e7cd-42df-858f-7efcf7a927eb",
+            "responsibilityKind": 0,
+            "isRequired": true,
+            "fallbackOrder": 0,
+            "rebindPolicySummary": "Rebind only to an agent or person with the same Blazor, project-structure, workspace, and evidence-tool readiness."
+          },
+          {
+            "id": "8f78b634-a6d5-45e4-ac4e-1d655e6a6e58",
+            "roleRequirementId": "cd696c69-97aa-401d-8140-1bb3cc01bc74",
+            "responsibilityKind": 1,
+            "isRequired": true,
+            "fallbackOrder": 1,
+            "rebindPolicySummary": "Rebind only to an agent or person with the same Blazor, project-structure, workspace, and evidence-tool readiness."
+          }
+        ],
+        "artifactExpectations": [
+          {
+            "id": "ce00e530-ec03-4d38-ba2d-044969b710ee",
+            "artifactKind": 0,
+            "title": "Implementation self-review summary",
+            "isRequired": true,
+            "trustRequirement": 1,
+            "sensitivityLevel": 1,
+            "retentionDays": 365,
+            "allowedFutureUsageSummary": "Reusable for downstream QA, release governance, reruns, and process learning.",
+            "validationRequirementSummary": "Must summarize changed behavior, commands run, build status, assumptions, unresolved risks, and project-structure criteria coverage.",
+            "workflowOutputId": "",
+            "workflowOutputName": "",
+            "workflowOutputKind": null,
+            "subprocessChildArtifactExpectationId": null,
+            "subprocessChildStepKey": "",
+            "subprocessChildArtifactTitle": ""
+          },
+          {
+            "id": "fad2908e-b031-48c3-85bf-116d163ce388",
+            "artifactKind": 3,
+            "title": "Blazor implementation change set",
+            "isRequired": true,
+            "trustRequirement": 1,
+            "sensitivityLevel": 1,
+            "retentionDays": 365,
+            "allowedFutureUsageSummary": "Reusable for downstream QA, release governance, reruns, and process learning.",
+            "validationRequirementSummary": "Must include created or changed files, app mode, project/solution path, output root/run folder, build command and result, implementation notes, and acceptance-criteria mapping.",
+            "workflowOutputId": "",
+            "workflowOutputName": "",
+            "workflowOutputKind": null,
+            "subprocessChildArtifactExpectationId": null,
+            "subprocessChildStepKey": "",
+            "subprocessChildArtifactTitle": ""
+          }
+        ],
+        "artifactInputs": [
+          {
+            "id": "e6215fb2-7008-473a-af4b-1e7222288299",
+            "artifactExpectationId": "5c57c987-8c71-4ba6-874d-bb1e7ddc2a9e"
+          }
+        ]
+      },
+      {
+        "id": "dd339424-d3ab-4d9f-b023-1e4a4eda6e30",
+        "key": "validate-blazor-runtime",
+        "title": "Validate Blazor runtime and browser evidence",
+        "subtitle": "Build/test/browser proof",
+        "notes": "Run validation against the delivered Blazor SSR, WASM, or WASM PWA app. Run dotnet restore, dotnet build, and dotnet test when a test project exists or was created. Start the app once from the approved product root and record the startup receipt. Use Playwright browser tools for every visible UI surface named by project structure or implementation evidence. Capture screenshot image paths, browser_snapshot or browser_evaluate state output, browser_console_messages output, actual URL or entrypoint, visible behavior assertions, and cleanup receipt. For new app delivery, include the matching API/backend proof as well. Missing, blank, detached, stale, or chat-only screenshots are not acceptable.",
+        "stepKind": 4,
+        "allowedOperations": [
+          0,
+          1,
+          2,
+          3,
+          6,
+          7,
+          8
+        ],
+        "operationTargetScope": 3,
+        "subprocessDefinitionId": null,
+        "subprocessDefinitionSnapshotName": "",
+        "allowsManualSkip": false,
+        "allowsSafeRefusal": false,
+        "requiresApproval": false,
+        "requiresDecisionRecord": false,
+        "inputContractSummary": "Use project-structure source-of-truth data, upstream process artifacts, and explicit run prompt constraints.",
+        "outputContractSummary": "Produce the named artifacts with enough detail for downstream agents to act without reading the full raw transcript.",
+        "evidenceContractSummary": "Record commands, files, URLs, screenshots, console messages, errors, assumptions, and project-structure writeback references as applicable.",
+        "decisionRightsSummary": "The assigned role owns the step outcome and must block or escalate instead of silently narrowing scope.",
+        "exceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+        "targetLeadHours": 2,
+        "decisionRoleRequirementId": "482a38d9-96c5-43ec-a86e-cf087f5071d6",
+        "canvasX": 2060,
+        "canvasY": 180,
+        "branchCanvasX": 2121,
+        "branchCanvasY": -440.5,
+        "branchOutcomes": [
+          {
+            "id": "9b535836-7144-4fc7-9601-7206e8e30ffb",
+            "key": "quality-accepted",
+            "title": "Quality accepted",
+            "description": "Build, tests, runtime, screenshots, console checks, and acceptance assertions are sufficient."
+          },
+          {
+            "id": "7ceba842-743d-4b27-afcd-5a6ff480dac1",
+            "key": "repair-required",
+            "title": "Repair required",
+            "description": "A reproducible defect, missing proof, or screenshot/console failure must be repaired before writeback."
+          },
+          {
+            "id": "639949e6-0874-4fec-a04d-cddfa418c20e",
+            "key": "__default__",
+            "title": "Default",
+            "description": "Continue when no explicit branch outcome is selected."
+          },
+          {
+            "id": "eade3e32-5ef4-4a58-925f-a5bdbd3542ce",
+            "key": "__error__",
+            "title": "Error",
+            "description": "Handle exceptions, failed validations, or explicit error escalation."
+          }
+        ],
+        "dependencies": [
+          {
+            "id": "65737e9a-1e69-4ff3-9d5c-3e8faa802e0f",
+            "dependsOnStepId": "ca051157-927d-4a91-bc29-e0ebfadcc976",
+            "dependsOnBranchOutcomeId": "27466926-dc01-4634-a779-ca68b8684d08"
+          }
+        ],
+        "roleAssignments": [
+          {
+            "id": "6e69fc19-3e53-4b6d-831b-fdf40a965d4c",
+            "roleRequirementId": "482a38d9-96c5-43ec-a86e-cf087f5071d6",
+            "responsibilityKind": 0,
+            "isRequired": true,
+            "fallbackOrder": 0,
+            "rebindPolicySummary": "Rebind only to an agent or person with the same Blazor, project-structure, workspace, and evidence-tool readiness."
+          },
+          {
+            "id": "550f9d6d-40bb-4f72-b063-4b27571a70d2",
+            "roleRequirementId": "ff51e97c-e7cd-42df-858f-7efcf7a927eb",
+            "responsibilityKind": 1,
+            "isRequired": true,
+            "fallbackOrder": 1,
+            "rebindPolicySummary": "Rebind only to an agent or person with the same Blazor, project-structure, workspace, and evidence-tool readiness."
+          }
+        ],
+        "artifactExpectations": [
+          {
+            "id": "c5617940-95af-4988-8d60-da88386e6bc9",
+            "artifactKind": 0,
+            "title": "Validation self-review summary",
+            "isRequired": true,
+            "trustRequirement": 1,
+            "sensitivityLevel": 1,
+            "retentionDays": 365,
+            "allowedFutureUsageSummary": "Reusable for downstream QA, release governance, reruns, and process learning.",
+            "validationRequirementSummary": "Must state validated routes or APIs, screenshots captured, console status, failed assertions if any, and whether acceptance criteria are satisfied.",
+            "workflowOutputId": "",
+            "workflowOutputName": "",
+            "workflowOutputKind": null,
+            "subprocessChildArtifactExpectationId": null,
+            "subprocessChildStepKey": "",
+            "subprocessChildArtifactTitle": ""
+          },
+          {
+            "id": "cc19500a-76a4-4a09-8ebd-c40d08a60759",
+            "artifactKind": 1,
+            "title": "Blazor runtime evidence pack",
+            "isRequired": true,
+            "trustRequirement": 1,
+            "sensitivityLevel": 1,
+            "retentionDays": 365,
+            "allowedFutureUsageSummary": "Reusable for downstream QA, release governance, reruns, and process learning.",
+            "validationRequirementSummary": "Must include dotnet restore/build/test results as applicable, app startup receipt, URL or entrypoint, Playwright screenshot paths, browser_snapshot or browser_evaluate state output, browser_console_messages output showing no active JavaScript/runtime errors, visible behavior assertions, cleanup receipt, and project-structure evidence writeback references.",
+            "workflowOutputId": "",
+            "workflowOutputName": "",
+            "workflowOutputKind": null,
+            "subprocessChildArtifactExpectationId": null,
+            "subprocessChildStepKey": "",
+            "subprocessChildArtifactTitle": ""
+          }
+        ],
+        "artifactInputs": [
+          {
+            "id": "1e32c83c-6088-49f8-b1f6-106e863fba5d",
+            "artifactExpectationId": "fad2908e-b031-48c3-85bf-116d163ce388"
+          }
+        ]
+      },
+      {
+        "id": "a98a22e2-02ae-498a-ae19-a8692acb26ea",
+        "key": "repair-blazor-findings",
+        "title": "Repair Blazor validation findings",
+        "subtitle": "Focused repair",
+        "notes": "Repair only findings produced by the validation step. Do not expand scope beyond project-structure acceptance criteria. Rerun the smallest relevant dotnet build/test checks needed to prove the repair before handoff.",
+        "stepKind": 1,
+        "allowedOperations": [
+          0,
+          1,
+          2,
+          3,
+          5,
+          6
+        ],
+        "operationTargetScope": 4,
+        "subprocessDefinitionId": null,
+        "subprocessDefinitionSnapshotName": "",
+        "allowsManualSkip": false,
+        "allowsSafeRefusal": false,
+        "requiresApproval": false,
+        "requiresDecisionRecord": false,
+        "inputContractSummary": "Use project-structure source-of-truth data, upstream process artifacts, and explicit run prompt constraints.",
+        "outputContractSummary": "Produce the named artifacts with enough detail for downstream agents to act without reading the full raw transcript.",
+        "evidenceContractSummary": "Record commands, files, URLs, screenshots, console messages, errors, assumptions, and project-structure writeback references as applicable.",
+        "decisionRightsSummary": "The assigned role owns the step outcome and must block or escalate instead of silently narrowing scope.",
+        "exceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+        "targetLeadHours": 2,
+        "decisionRoleRequirementId": "ff51e97c-e7cd-42df-858f-7efcf7a927eb",
+        "canvasX": 2960,
+        "canvasY": -210.5,
+        "branchCanvasX": 3220,
+        "branchCanvasY": -1200.5,
+        "branchOutcomes": [
+          {
+            "id": "bccd165a-34e1-46b8-8634-e12aca02a49a",
+            "key": "__default__",
+            "title": "Default",
+            "description": "Continue when no explicit branch outcome is selected."
+          },
+          {
+            "id": "474d98e7-5379-412b-8ac6-d278b9ca2e25",
+            "key": "__error__",
+            "title": "Error",
+            "description": "Handle exceptions, failed validations, or explicit error escalation."
+          }
+        ],
+        "dependencies": [
+          {
+            "id": "e055e493-c29e-46f3-9de3-2cb5ab5b2067",
+            "dependsOnStepId": "dd339424-d3ab-4d9f-b023-1e4a4eda6e30",
+            "dependsOnBranchOutcomeId": "7ceba842-743d-4b27-afcd-5a6ff480dac1"
+          }
+        ],
+        "roleAssignments": [
+          {
+            "id": "5f16daef-795a-4da4-9824-00f5b4277a75",
+            "roleRequirementId": "ff51e97c-e7cd-42df-858f-7efcf7a927eb",
+            "responsibilityKind": 0,
+            "isRequired": true,
+            "fallbackOrder": 0,
+            "rebindPolicySummary": "Rebind only to an agent or person with the same Blazor, project-structure, workspace, and evidence-tool readiness."
+          },
+          {
+            "id": "7f4e50fb-6555-4bad-a855-e8d4e3bb9162",
+            "roleRequirementId": "482a38d9-96c5-43ec-a86e-cf087f5071d6",
+            "responsibilityKind": 1,
+            "isRequired": true,
+            "fallbackOrder": 1,
+            "rebindPolicySummary": "Rebind only to an agent or person with the same Blazor, project-structure, workspace, and evidence-tool readiness."
+          }
+        ],
+        "artifactExpectations": [
+          {
+            "id": "4be85793-ac52-4855-974d-169c24ea0c95",
+            "artifactKind": 3,
+            "title": "Blazor repair change set",
+            "isRequired": true,
+            "trustRequirement": 1,
+            "sensitivityLevel": 1,
+            "retentionDays": 365,
+            "allowedFutureUsageSummary": "Reusable for downstream QA, release governance, reruns, and process learning.",
+            "validationRequirementSummary": "Must name repaired finding ids, changed files, cause, rerun build/test proof, and unresolved risk.",
+            "workflowOutputId": "",
+            "workflowOutputName": "",
+            "workflowOutputKind": null,
+            "subprocessChildArtifactExpectationId": null,
+            "subprocessChildStepKey": "",
+            "subprocessChildArtifactTitle": ""
+          }
+        ],
+        "artifactInputs": [
+          {
+            "id": "0d1612c9-be3c-444b-9a52-abc1bf1300eb",
+            "artifactExpectationId": "cc19500a-76a4-4a09-8ebd-c40d08a60759"
+          }
+        ]
+      },
+      {
+        "id": "675de58e-ed91-454a-8e91-26934f3f3294",
+        "key": "revalidate-blazor-repair",
+        "title": "Revalidate Blazor repair",
+        "subtitle": "Post-repair proof",
+        "notes": "Run validation against the delivered Blazor SSR, WASM, or WASM PWA app. Run dotnet restore, dotnet build, and dotnet test when a test project exists or was created. Start the app once from the approved product root and record the startup receipt. Use Playwright browser tools for every visible UI surface named by project structure or implementation evidence. Capture screenshot image paths, browser_snapshot or browser_evaluate state output, browser_console_messages output, actual URL or entrypoint, visible behavior assertions, and cleanup receipt. For new app delivery, include the matching API/backend proof as well. Missing, blank, detached, stale, or chat-only screenshots are not acceptable.",
+        "stepKind": 4,
+        "allowedOperations": [
+          0,
+          1,
+          2,
+          3,
+          6,
+          7,
+          8
+        ],
+        "operationTargetScope": 3,
+        "subprocessDefinitionId": null,
+        "subprocessDefinitionSnapshotName": "",
+        "allowsManualSkip": false,
+        "allowsSafeRefusal": false,
+        "requiresApproval": false,
+        "requiresDecisionRecord": false,
+        "inputContractSummary": "Use project-structure source-of-truth data, upstream process artifacts, and explicit run prompt constraints.",
+        "outputContractSummary": "Produce the named artifacts with enough detail for downstream agents to act without reading the full raw transcript.",
+        "evidenceContractSummary": "Record commands, files, URLs, screenshots, console messages, errors, assumptions, and project-structure writeback references as applicable.",
+        "decisionRightsSummary": "The assigned role owns the step outcome and must block or escalate instead of silently narrowing scope.",
+        "exceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+        "targetLeadHours": 2,
+        "decisionRoleRequirementId": "482a38d9-96c5-43ec-a86e-cf087f5071d6",
+        "canvasX": 3860,
+        "canvasY": -200,
+        "branchCanvasX": 3921,
+        "branchCanvasY": -1203.5,
+        "branchOutcomes": [
+          {
+            "id": "6d462a72-ac8c-4e5a-b959-9ad0be054574",
+            "key": "quality-accepted",
+            "title": "Quality accepted after repair",
+            "description": "Fresh validation evidence is sufficient."
+          },
+          {
+            "id": "706cdd77-50b5-4e07-bc2f-832198376b77",
+            "key": "repair-escalation",
+            "title": "Repair escalation",
+            "description": "The same or new blocking issue remains and must be escalated."
+          },
+          {
+            "id": "63fa9e24-de5f-4b3f-a09a-0d9e2ed2359e",
+            "key": "__default__",
+            "title": "Default",
+            "description": "Continue when no explicit branch outcome is selected."
+          },
+          {
+            "id": "4d14e495-8e16-4d9b-9dbf-e45e7bc5c2a2",
+            "key": "__error__",
+            "title": "Error",
+            "description": "Handle exceptions, failed validations, or explicit error escalation."
+          }
+        ],
+        "dependencies": [
+          {
+            "id": "12f47e8f-e1d6-4958-a4a5-553459dbcd77",
+            "dependsOnStepId": "a98a22e2-02ae-498a-ae19-a8692acb26ea",
+            "dependsOnBranchOutcomeId": "bccd165a-34e1-46b8-8634-e12aca02a49a"
+          }
+        ],
+        "roleAssignments": [
+          {
+            "id": "03b73e52-bab3-4c2a-84c9-d0cc279bb29d",
+            "roleRequirementId": "482a38d9-96c5-43ec-a86e-cf087f5071d6",
+            "responsibilityKind": 0,
+            "isRequired": true,
+            "fallbackOrder": 0,
+            "rebindPolicySummary": "Rebind only to an agent or person with the same Blazor, project-structure, workspace, and evidence-tool readiness."
+          },
+          {
+            "id": "04c3aed5-db0a-481b-b41a-61e2b48022d0",
+            "roleRequirementId": "ff51e97c-e7cd-42df-858f-7efcf7a927eb",
+            "responsibilityKind": 1,
+            "isRequired": true,
+            "fallbackOrder": 1,
+            "rebindPolicySummary": "Rebind only to an agent or person with the same Blazor, project-structure, workspace, and evidence-tool readiness."
+          }
+        ],
+        "artifactExpectations": [
+          {
+            "id": "8593496e-4476-4710-9156-95297f7524ea",
+            "artifactKind": 1,
+            "title": "Repaired Blazor runtime evidence pack",
+            "isRequired": true,
+            "trustRequirement": 1,
+            "sensitivityLevel": 1,
+            "retentionDays": 365,
+            "allowedFutureUsageSummary": "Reusable for downstream QA, release governance, reruns, and process learning.",
+            "validationRequirementSummary": "Must include fresh dotnet build/test results as applicable, fresh app startup receipt, fresh Playwright screenshot paths, fresh browser_snapshot or browser_evaluate state output, fresh browser_console_messages output showing no active JavaScript/runtime errors, visible behavior assertions, cleanup receipt, and project-structure evidence writeback references.",
+            "workflowOutputId": "",
+            "workflowOutputName": "",
+            "workflowOutputKind": null,
+            "subprocessChildArtifactExpectationId": null,
+            "subprocessChildStepKey": "",
+            "subprocessChildArtifactTitle": ""
+          }
+        ],
+        "artifactInputs": [
+          {
+            "id": "9ceff814-310d-43ba-879d-14656b10f13b",
+            "artifactExpectationId": "4be85793-ac52-4855-974d-169c24ea0c95"
+          }
+        ]
+      },
+      {
+        "id": "04b7b969-d3e3-4f25-9b08-c505391e7be9",
+        "key": "record-blazor-results",
+        "title": "Record Blazor results and evidence index",
+        "subtitle": "Project structure writeback",
+        "notes": "Write a compact run evidence index, agent self-review summary, output-root path, screenshot references, console status, build/test status, and final verdict back into project structure through APIs/tools. Before completing, use project_structure_asset_create for screenshot or evidence files that must become project assets, and use project_structure_node_create to attach the final verdict and evidence index to the target work item. Include concrete node ids, asset ids, and raw record pointers only where needed for selective follow-up. If these project-structure tool calls cannot be completed, return status Blocked with the failed tool names and do not select the Error branch as a completed outcome.",
+        "stepKind": 6,
+        "allowedOperations": [
+          0,
+          2,
+          3,
+          9
+        ],
+        "operationTargetScope": 5,
+        "subprocessDefinitionId": null,
+        "subprocessDefinitionSnapshotName": "",
+        "allowsManualSkip": false,
+        "allowsSafeRefusal": false,
+        "requiresApproval": false,
+        "requiresDecisionRecord": false,
+        "inputContractSummary": "Use project-structure source-of-truth data, upstream process artifacts, and explicit run prompt constraints.",
+        "outputContractSummary": "Produce the named artifacts with enough detail for downstream agents to act without reading the full raw transcript.",
+        "evidenceContractSummary": "Record commands, files, URLs, screenshots, console messages, errors, assumptions, and project-structure writeback references as applicable.",
+        "decisionRightsSummary": "The assigned role owns the step outcome and must block or escalate instead of silently narrowing scope.",
+        "exceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+        "targetLeadHours": 2,
+        "decisionRoleRequirementId": "4a799955-6604-4f80-b2ab-f132c5539ab6",
+        "canvasX": 2960,
+        "canvasY": 190.5,
+        "branchCanvasX": 3369,
+        "branchCanvasY": 373,
+        "branchOutcomes": [
+          {
+            "id": "fc63041e-f076-433f-a99a-e9abbfec48c1",
+            "key": "__default__",
+            "title": "Default",
+            "description": "Continue when no explicit branch outcome is selected."
+          },
+          {
+            "id": "facd6f65-4cf2-4f11-a95f-89b23a1783b9",
+            "key": "__error__",
+            "title": "Error",
+            "description": "Handle exceptions, failed validations, or explicit error escalation."
+          }
+        ],
+        "dependencies": [
+          {
+            "id": "11385d24-3129-4a9b-8c47-f365d76f96b2",
+            "dependsOnStepId": "dd339424-d3ab-4d9f-b023-1e4a4eda6e30",
+            "dependsOnBranchOutcomeId": "9b535836-7144-4fc7-9601-7206e8e30ffb"
+          }
+        ],
+        "roleAssignments": [
+          {
+            "id": "e38f4cb3-8ae7-4b48-8d5a-a7af8dcf5c46",
+            "roleRequirementId": "4a799955-6604-4f80-b2ab-f132c5539ab6",
+            "responsibilityKind": 0,
+            "isRequired": true,
+            "fallbackOrder": 0,
+            "rebindPolicySummary": "Rebind only to an agent or person with the same Blazor, project-structure, workspace, and evidence-tool readiness."
+          },
+          {
+            "id": "b65538da-2df4-401f-bc0d-605d00099c73",
+            "roleRequirementId": "482a38d9-96c5-43ec-a86e-cf087f5071d6",
+            "responsibilityKind": 1,
+            "isRequired": true,
+            "fallbackOrder": 1,
+            "rebindPolicySummary": "Rebind only to an agent or person with the same Blazor, project-structure, workspace, and evidence-tool readiness."
+          }
+        ],
+        "artifactExpectations": [
+          {
+            "id": "6fee55ec-4ec0-4122-9709-9f5d7f2d127a",
+            "artifactKind": 1,
+            "title": "Run evidence index",
+            "isRequired": true,
+            "trustRequirement": 1,
+            "sensitivityLevel": 1,
+            "retentionDays": 365,
+            "allowedFutureUsageSummary": "Reusable for downstream QA, release governance, reruns, and process learning.",
+            "validationRequirementSummary": "Must list run id, output root, run folder, final app path, build/test outputs, screenshot files, console logs, process artifacts, project-structure node or asset ids, approvals, blockers, and raw-record pointers for selective follow-up.",
+            "workflowOutputId": "",
+            "workflowOutputName": "",
+            "workflowOutputKind": null,
+            "subprocessChildArtifactExpectationId": null,
+            "subprocessChildStepKey": "",
+            "subprocessChildArtifactTitle": ""
+          },
+          {
+            "id": "7f3c9895-5552-468d-b930-37b84f5183e0",
+            "artifactKind": 0,
+            "title": "Project-structure result writeback summary",
+            "isRequired": true,
+            "trustRequirement": 1,
+            "sensitivityLevel": 1,
+            "retentionDays": 365,
+            "allowedFutureUsageSummary": "Reusable for downstream QA, release governance, reruns, and process learning.",
+            "validationRequirementSummary": "Must confirm result/evidence was written back to project structure through actual project_structure_* tool calls, including project_structure_node_create receipt and screenshot/evidence project_structure_asset_create ids where applicable, target node id, created or updated node ids, asset ids, and final verdict.",
+            "workflowOutputId": "",
+            "workflowOutputName": "",
+            "workflowOutputKind": null,
+            "subprocessChildArtifactExpectationId": null,
+            "subprocessChildStepKey": "",
+            "subprocessChildArtifactTitle": ""
+          }
+        ],
+        "artifactInputs": [
+          {
+            "id": "a02d3667-9ec2-4b49-839c-1170c558639e",
+            "artifactExpectationId": "cc19500a-76a4-4a09-8ebd-c40d08a60759"
+          }
+        ]
+      },
+      {
+        "id": "ad4d320c-79cb-4ca9-a440-62723956f736",
+        "key": "record-blazor-results-after-repair",
+        "title": "Record repaired Blazor results and evidence index",
+        "subtitle": "Project structure writeback",
+        "notes": "Write a compact run evidence index, agent self-review summary, output-root path, screenshot references, console status, build/test status, and final verdict back into project structure through APIs/tools. Before completing, use project_structure_asset_create for screenshot or evidence files that must become project assets, and use project_structure_node_create to attach the final verdict and evidence index to the target work item. Include concrete node ids, asset ids, and raw record pointers only where needed for selective follow-up. If these project-structure tool calls cannot be completed, return status Blocked with the failed tool names and do not select the Error branch as a completed outcome.",
+        "stepKind": 6,
+        "allowedOperations": [
+          0,
+          2,
+          3,
+          9
+        ],
+        "operationTargetScope": 5,
+        "subprocessDefinitionId": null,
+        "subprocessDefinitionSnapshotName": "",
+        "allowsManualSkip": false,
+        "allowsSafeRefusal": false,
+        "requiresApproval": false,
+        "requiresDecisionRecord": false,
+        "inputContractSummary": "Use project-structure source-of-truth data, upstream process artifacts, and explicit run prompt constraints.",
+        "outputContractSummary": "Produce the named artifacts with enough detail for downstream agents to act without reading the full raw transcript.",
+        "evidenceContractSummary": "Record commands, files, URLs, screenshots, console messages, errors, assumptions, and project-structure writeback references as applicable.",
+        "decisionRightsSummary": "The assigned role owns the step outcome and must block or escalate instead of silently narrowing scope.",
+        "exceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+        "targetLeadHours": 2,
+        "decisionRoleRequirementId": "4a799955-6604-4f80-b2ab-f132c5539ab6",
+        "canvasX": 4760,
+        "canvasY": -569.5,
+        "branchCanvasX": 5169,
+        "branchCanvasY": -569.5,
+        "branchOutcomes": [
+          {
+            "id": "dd4cc045-3ffa-4edf-9d56-98c2d77ffd18",
+            "key": "__default__",
+            "title": "Default",
+            "description": "Continue when no explicit branch outcome is selected."
+          },
+          {
+            "id": "95d672a7-c8fa-4fe6-ac75-85932b19a196",
+            "key": "__error__",
+            "title": "Error",
+            "description": "Handle exceptions, failed validations, or explicit error escalation."
+          }
+        ],
+        "dependencies": [
+          {
+            "id": "8f2ad3db-dbac-4ec7-8083-572b9a9cd316",
+            "dependsOnStepId": "675de58e-ed91-454a-8e91-26934f3f3294",
+            "dependsOnBranchOutcomeId": "6d462a72-ac8c-4e5a-b959-9ad0be054574"
+          }
+        ],
+        "roleAssignments": [
+          {
+            "id": "cb0bf9f1-4ee7-4e82-a0d6-9865494c068c",
+            "roleRequirementId": "4a799955-6604-4f80-b2ab-f132c5539ab6",
+            "responsibilityKind": 0,
+            "isRequired": true,
+            "fallbackOrder": 0,
+            "rebindPolicySummary": "Rebind only to an agent or person with the same Blazor, project-structure, workspace, and evidence-tool readiness."
+          },
+          {
+            "id": "ce9e4bb9-c7b9-44b3-a30b-ab3f89c2b0ce",
+            "roleRequirementId": "482a38d9-96c5-43ec-a86e-cf087f5071d6",
+            "responsibilityKind": 1,
+            "isRequired": true,
+            "fallbackOrder": 1,
+            "rebindPolicySummary": "Rebind only to an agent or person with the same Blazor, project-structure, workspace, and evidence-tool readiness."
+          }
+        ],
+        "artifactExpectations": [
+          {
+            "id": "61d608b1-7e35-4035-8eeb-e5d22d5ad083",
+            "artifactKind": 0,
+            "title": "Repaired project-structure result writeback summary",
+            "isRequired": true,
+            "trustRequirement": 1,
+            "sensitivityLevel": 1,
+            "retentionDays": 365,
+            "allowedFutureUsageSummary": "Reusable for downstream QA, release governance, reruns, and process learning.",
+            "validationRequirementSummary": "Must confirm repaired result/evidence was written back to project structure, including node ids, asset ids, and final verdict.",
+            "workflowOutputId": "",
+            "workflowOutputName": "",
+            "workflowOutputKind": null,
+            "subprocessChildArtifactExpectationId": null,
+            "subprocessChildStepKey": "",
+            "subprocessChildArtifactTitle": ""
+          },
+          {
+            "id": "d9df3810-12dd-4a75-b7a5-eabe4da88adc",
+            "artifactKind": 1,
+            "title": "Repaired run evidence index",
+            "isRequired": true,
+            "trustRequirement": 1,
+            "sensitivityLevel": 1,
+            "retentionDays": 365,
+            "allowedFutureUsageSummary": "Reusable for downstream QA, release governance, reruns, and process learning.",
+            "validationRequirementSummary": "Must list run id, output root, run folder, final app path, repaired build/test outputs, fresh screenshot files, fresh console logs, process artifacts, project-structure node or asset ids, approvals, blockers, and raw-record pointers for selective follow-up.",
+            "workflowOutputId": "",
+            "workflowOutputName": "",
+            "workflowOutputKind": null,
+            "subprocessChildArtifactExpectationId": null,
+            "subprocessChildStepKey": "",
+            "subprocessChildArtifactTitle": ""
+          }
+        ],
+        "artifactInputs": [
+          {
+            "id": "ad6e0a7e-1240-49d5-a4d7-2218ed2d6b6d",
+            "artifactExpectationId": "8593496e-4476-4710-9156-95297f7524ea"
+          }
+        ]
+      },
+      {
+        "id": "6ccf9eff-b00b-405c-8c02-6587daeff69f",
+        "key": "escalate-blazor-unresolved-repair",
+        "title": "Escalate unresolved Blazor repair findings",
+        "subtitle": "No-go repair escalation",
+        "notes": "Capture unresolved post-repair findings and make the Blazor delivery no-go or replan decision explicit instead of silently closing the process.",
+        "stepKind": 3,
+        "allowedOperations": [
+          0,
+          2,
+          3,
+          11
+        ],
+        "operationTargetScope": 0,
+        "subprocessDefinitionId": null,
+        "subprocessDefinitionSnapshotName": "",
+        "allowsManualSkip": false,
+        "allowsSafeRefusal": false,
+        "requiresApproval": true,
+        "requiresDecisionRecord": true,
+        "inputContractSummary": "Post-repair Blazor validation evidence, repair notes, and remaining product or proof-blocking findings.",
+        "outputContractSummary": "Explicit no-go, scope reset, or replan decision with accountable owner and required next repair scope.",
+        "evidenceContractSummary": "Escalation decision, unresolved defect/proof-gap list, failed URLs or APIs, screenshot/console references when available, and owner.",
+        "decisionRightsSummary": "Blazor delivery manager owns escalation and cannot treat unresolved repair evidence as delivery-ready.",
+        "exceptionPolicySummary": "Do not record successful delivery while post-repair validation remains unresolved. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+        "targetLeadHours": 2,
+        "decisionRoleRequirementId": "4a799955-6604-4f80-b2ab-f132c5539ab6",
+        "canvasX": 4760,
+        "canvasY": -970.5,
+        "branchCanvasX": 5169,
+        "branchCanvasY": -970.5,
+        "branchOutcomes": [
+          {
+            "id": "26bb2f56-88ef-455e-8a20-c15a7b2b3cbc",
+            "key": "__default__",
+            "title": "Default",
+            "description": "Continue when no explicit branch outcome is selected."
+          },
+          {
+            "id": "8ffbf9a4-215f-4ee6-b172-cd4a44f2e932",
+            "key": "__error__",
+            "title": "Error",
+            "description": "Handle exceptions, failed validations, or explicit error escalation."
+          }
+        ],
+        "dependencies": [
+          {
+            "id": "ca3ceea9-8366-4b7e-be60-17e2f8d145ba",
+            "dependsOnStepId": "675de58e-ed91-454a-8e91-26934f3f3294",
+            "dependsOnBranchOutcomeId": "706cdd77-50b5-4e07-bc2f-832198376b77"
+          },
+          {
+            "id": "43447a4e-7d7e-4dd8-baba-ea8164081c67",
+            "dependsOnStepId": "a98a22e2-02ae-498a-ae19-a8692acb26ea",
+            "dependsOnBranchOutcomeId": "bccd165a-34e1-46b8-8634-e12aca02a49a"
+          }
+        ],
+        "roleAssignments": [
+          {
+            "id": "2d61f306-3f81-4e0a-8c91-bee7ede397df",
+            "roleRequirementId": "4a799955-6604-4f80-b2ab-f132c5539ab6",
+            "responsibilityKind": 2,
+            "isRequired": true,
+            "fallbackOrder": 0,
+            "rebindPolicySummary": "Blazor repair escalation stays accountable to the process owner."
+          },
+          {
+            "id": "5a3a6940-71e2-4e4a-b0af-4148f1c828e2",
+            "roleRequirementId": "ff51e97c-e7cd-42df-858f-7efcf7a927eb",
+            "responsibilityKind": 1,
+            "isRequired": true,
+            "fallbackOrder": 1,
+            "rebindPolicySummary": "Implementation owner provides concrete repair implications."
+          },
+          {
+            "id": "c22cc586-7e34-41e3-8135-24d8fe859074",
+            "roleRequirementId": "482a38d9-96c5-43ec-a86e-cf087f5071d6",
+            "responsibilityKind": 1,
+            "isRequired": true,
+            "fallbackOrder": 2,
+            "rebindPolicySummary": "QA provides failing evidence and proof gaps for the replan."
+          }
+        ],
+        "artifactExpectations": [
+          {
+            "id": "cb3813ac-07a8-4b7f-ad73-efaaae759d7f",
+            "artifactKind": 2,
+            "title": "Blazor repair escalation record",
+            "isRequired": true,
+            "trustRequirement": 2,
+            "sensitivityLevel": 1,
+            "retentionDays": 365,
+            "allowedFutureUsageSummary": "Reusable for replan, future repair runs, and Blazor delivery governance audit.",
+            "validationRequirementSummary": "Must name unresolved findings, no-go rationale, failed validation evidence, accountable owner, and required next repair scope.",
+            "workflowOutputId": "",
+            "workflowOutputName": "",
+            "workflowOutputKind": null,
+            "subprocessChildArtifactExpectationId": null,
+            "subprocessChildStepKey": "",
+            "subprocessChildArtifactTitle": ""
+          }
+        ],
+        "artifactInputs": [
+          {
+            "id": "16c46083-11bc-4667-b138-3e307464a0d9",
+            "artifactExpectationId": "8593496e-4476-4710-9156-95297f7524ea"
+          },
+          {
+            "id": "a097e8b0-34c5-4d27-a4d2-cddbbef6335d",
+            "artifactExpectationId": "4be85793-ac52-4855-974d-169c24ea0c95"
+          }
+        ]
+      }
+    ]
+  },
+  "warnings": [],
+  "sourceFormat": "CanDoItAll.ProcessDefinition/v2"
+}

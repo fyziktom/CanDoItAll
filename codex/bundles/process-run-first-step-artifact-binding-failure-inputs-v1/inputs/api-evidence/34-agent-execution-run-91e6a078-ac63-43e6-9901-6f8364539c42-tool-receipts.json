@@ -1,0 +1,16 @@
+[
+  {
+    "id": "3962de92-ec56-0555-b90f-90908e20719e",
+    "executionRunId": "91e6a078-ac63-43e6-9901-6f8364539c42",
+    "toolFamily": "workspace-file",
+    "toolName": "workspace_write_file",
+    "riskClass": "MutatingWorkspace",
+    "approvalMode": "NotRequired",
+    "isolationGuarantee": "Workspace file service with support for mapped external-target/<drive>/... aliases. No host process execution.",
+    "requestSummary": "artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/9bbc0667-9d12-4506-ba81-654ef924cad6/01-blazor-delivery-contract.md",
+    "workingDirectory": ".",
+    "exitSummary": "Succeeded: Created 'artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/9bbc0667-9d12-4506-ba81-654ef924cad6/01-blazor-delivery-contract.md' with 5660 characters.",
+    "startedAtUtc": "2026-05-26T14:03:31.0733438-04:00",
+    "completedAtUtc": "2026-05-26T14:03:31.0838205-04:00"
+  }
+]

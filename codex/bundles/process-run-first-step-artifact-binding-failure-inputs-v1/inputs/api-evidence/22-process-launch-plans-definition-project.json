@@ -1,0 +1,18 @@
+{
+  "id": "60344087-fe27-47f3-8975-1a4749f76b37",
+  "processDefinitionId": "9dd2f94e-b607-4f47-afb6-c51765db55bb",
+  "processDefinitionVersionId": "9e902a62-4f74-46c0-b974-7ebed8f66f52",
+  "projectId": "7330105d-8450-4c80-923b-5c27d8e63d6c",
+  "name": "Main app / Blazor app delivery",
+  "operatingMode": 2,
+  "status": 7,
+  "resolvedRoleCount": 4,
+  "totalRoleCount": 4,
+  "pendingProvisioningCount": 0,
+  "updatedAtUtc": "2026-05-26T14:02:14.142043-04:00",
+  "generatedRunId": "9bbc0667-9d12-4506-ba81-654ef924cad6",
+  "statusBadgeText": "Run failed",
+  "statusTone": "danger",
+  "planningStatusBadgeText": "Launch Executing",
+  "statusDetail": "The generated runtime run failed, so run state is authoritative for this launch."
+}

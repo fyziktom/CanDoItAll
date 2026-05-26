@@ -1,0 +1,15 @@
+{
+  "totalRuns": 1,
+  "activeRuns": 0,
+  "completedRuns": 0,
+  "blockedRuns": 0,
+  "capabilityGapCount": 0,
+  "improvementCandidateCount": 1,
+  "conformanceObservationCount": 1,
+  "safeNonActionCount": 0,
+  "averageLeadMinutes": 0,
+  "averageWaitMinutes": 0,
+  "averageBlockedMinutes": 0,
+  "estimatedCost": 640,
+  "actualCost": 0
+}

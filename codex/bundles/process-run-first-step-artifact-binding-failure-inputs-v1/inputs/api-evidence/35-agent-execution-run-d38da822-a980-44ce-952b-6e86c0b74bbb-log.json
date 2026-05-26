@@ -1,0 +1,132 @@
+[
+  {
+    "id": "82c596bd-3f41-4ccf-9b9c-cc4f3ba4ec89",
+    "agentId": "2732772f-3a8a-4e1f-97d0-56c25eade538",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-05-26T14:07:42.0633018-04:00",
+    "state": 3,
+    "phase": "Approval",
+    "message": "The execution run is waiting for an approval response before it can continue.",
+    "executionRunId": "d38da822-a980-44ce-952b-6e86c0b74bbb"
+  },
+  {
+    "id": "19626034-e4c8-488b-bab4-d01efa32b835",
+    "agentId": "2732772f-3a8a-4e1f-97d0-56c25eade538",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-05-26T14:07:41.6737758-04:00",
+    "state": 3,
+    "phase": "Approval",
+    "message": "The run is waiting for a tool approval response before it can continue.",
+    "executionRunId": "d38da822-a980-44ce-952b-6e86c0b74bbb"
+  },
+  {
+    "id": "f3c205ea-76b7-4f73-ab4a-2b9591b2dd89",
+    "agentId": "2732772f-3a8a-4e1f-97d0-56c25eade538",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-05-26T14:07:41.6101457-04:00",
+    "state": 4,
+    "phase": "Session",
+    "message": "Serializing the Microsoft Agent Framework session.",
+    "executionRunId": "d38da822-a980-44ce-952b-6e86c0b74bbb"
+  },
+  {
+    "id": "c65bdeea-a496-450f-b960-27e1e59379e3",
+    "agentId": "2732772f-3a8a-4e1f-97d0-56c25eade538",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-05-26T14:07:28.8318049-04:00",
+    "state": 3,
+    "phase": "Tool",
+    "message": "Invoking tool 'processes_run_detail_get' with runId=\"9bbc0667-9d12-4506-ba81-654ef924cad6\".",
+    "executionRunId": "d38da822-a980-44ce-952b-6e86c0b74bbb"
+  },
+  {
+    "id": "cbb31b3b-b4a1-49b9-a316-f9adb6ca161a",
+    "agentId": "2732772f-3a8a-4e1f-97d0-56c25eade538",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-05-26T14:07:23.7383005-04:00",
+    "state": 2,
+    "phase": "Run",
+    "message": "Executing the run through Microsoft Agent Framework streaming.",
+    "executionRunId": "d38da822-a980-44ce-952b-6e86c0b74bbb"
+  },
+  {
+    "id": "5c4465e6-6ef6-4c2c-89a8-bd4833a5285d",
+    "agentId": "2732772f-3a8a-4e1f-97d0-56c25eade538",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-05-26T14:07:23.698091-04:00",
+    "state": 1,
+    "phase": "Session",
+    "message": "Creating a new Microsoft Agent Framework session and hydrating it from the sandbox transcript.",
+    "executionRunId": "d38da822-a980-44ce-952b-6e86c0b74bbb"
+  },
+  {
+    "id": "d8c868b4-5ab8-4d9c-9388-26c89866b910",
+    "agentId": "2732772f-3a8a-4e1f-97d0-56c25eade538",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-05-26T14:07:23.6576113-04:00",
+    "state": 1,
+    "phase": "Model parameters",
+    "message": "The runtime will omit temperature for model 'gpt-5-mini' and use the provider default.",
+    "executionRunId": "d38da822-a980-44ce-952b-6e86c0b74bbb"
+  },
+  {
+    "id": "729f14bd-bd0d-404a-861e-18ad1126256b",
+    "agentId": "2732772f-3a8a-4e1f-97d0-56c25eade538",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-05-26T14:07:23.6168518-04:00",
+    "state": 1,
+    "phase": "Compaction",
+    "message": "Skipped Microsoft Agent Framework compaction for governed process automation. Process-step prompts are bounded and include required artifact paths, so compaction must not trim evidence context before the agent session starts.",
+    "executionRunId": "d38da822-a980-44ce-952b-6e86c0b74bbb"
+  },
+  {
+    "id": "a41277a5-b0a0-4e09-a130-ec52478ca1e9",
+    "agentId": "2732772f-3a8a-4e1f-97d0-56c25eade538",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-05-26T14:07:23.5767019-04:00",
+    "state": 1,
+    "phase": "Processes",
+    "message": "Attached internal process-module tools backed by the workspace services and current agent policy.",
+    "executionRunId": "d38da822-a980-44ce-952b-6e86c0b74bbb"
+  },
+  {
+    "id": "3d8f1880-6fa8-48e9-b285-593a759d7b7e",
+    "agentId": "2732772f-3a8a-4e1f-97d0-56c25eade538",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-05-26T14:07:23.5363183-04:00",
+    "state": 1,
+    "phase": "Project structure",
+    "message": "Attached internal project-structure tools backed by the workspace services and current agent policy.",
+    "executionRunId": "d38da822-a980-44ce-952b-6e86c0b74bbb"
+  },
+  {
+    "id": "43e7f281-d3b0-44f8-9850-b8cdad9f35ee",
+    "agentId": "2732772f-3a8a-4e1f-97d0-56c25eade538",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-05-26T14:07:23.4988017-04:00",
+    "state": 1,
+    "phase": "Context contributors",
+    "message": "Attached 1 registered agent context contributor(s) in deterministic order.",
+    "executionRunId": "d38da822-a980-44ce-952b-6e86c0b74bbb"
+  },
+  {
+    "id": "5e9211d4-f960-490c-8f3c-f8d775b6cdc5",
+    "agentId": "2732772f-3a8a-4e1f-97d0-56c25eade538",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-05-26T14:07:23.4596122-04:00",
+    "state": 1,
+    "phase": "Framework",
+    "message": "Composing the Microsoft Agent Framework runtime for the selected provider and capabilities.",
+    "executionRunId": "d38da822-a980-44ce-952b-6e86c0b74bbb"
+  },
+  {
+    "id": "c99397d8-cc23-41e9-adde-080e11a5dbce",
+    "agentId": "2732772f-3a8a-4e1f-97d0-56c25eade538",
+    "chatSessionId": null,
+    "createdAtUtc": "2026-05-26T14:07:23.4239746-04:00",
+    "state": 1,
+    "phase": "Planning",
+    "message": "Preparing provider OpenAI chat completions.",
+    "executionRunId": "d38da822-a980-44ce-952b-6e86c0b74bbb"
+  }
+]

@@ -1,0 +1,239 @@
+{
+  "run": {
+    "id": "d38da822-a980-44ce-952b-6e86c0b74bbb",
+    "agentId": "2732772f-3a8a-4e1f-97d0-56c25eade538",
+    "chatSessionId": null,
+    "title": "Context:\r\n- Workspace: live process manager c...",
+    "sourceKind": "process-manager-chat",
+    "sourceId": "9dd2f94e-b607-4f47-afb6-c51765db55bb",
+    "correlationId": "2a3b19d56d284cb09f0157654e745c86",
+    "causationId": "",
+    "requestedBy": "live-processes-manager-chat",
+    "requestedByKind": "interactive",
+    "metadataJson": "{\"processDefinitionId\":\"9dd2f94e-b607-4f47-afb6-c51765db55bb\",\"processDefinitionName\":\"Blazor app delivery\",\"selectedProcessRunId\":\"9bbc0667-9d12-4506-ba81-654ef924cad6\",\"selectedProcessRunName\":\"Main app / Blazor app delivery\",\"managerDisplayName\":\"Default process manager\"}",
+    "inputSummary": "Context: - Workspace: live process manager chat. - Process definition id: 9dd2f94e-b607-4f47-afb6-c51765db55bb. - Process definition name: Blazor app deliver...",
+    "resultSummary": "Awaiting approval for 1 tool request(s).",
+    "providerName": "OpenAI chat completions",
+    "model": "gpt-5-mini",
+    "state": 3,
+    "outcome": null,
+    "createdAtUtc": "2026-05-26T14:07:23.3934908-04:00",
+    "updatedAtUtc": "2026-05-26T14:07:42.0633018-04:00",
+    "startedAtUtc": "2026-05-26T14:07:23.3934908-04:00",
+    "completedAtUtc": null,
+    "runtimeSessionKey": "chatcmpl-DjqWwhvscUfy4gdplKj8ZFwDI75FI",
+    "serializedSessionStateJson": "{\"stateBag\":{\"InMemoryChatHistoryProvider\":{\"messages\":[{\"role\":\"user\",\"contents\":[{\"$type\":\"text\",\"text\":\"Context:\\r\\n- Workspace: live process manager chat.\\r\\n- Process definition id: 9dd2f94e-b607-4f47-afb6-c51765db55bb.\\r\\n- Process definition name: Blazor app delivery.\\r\\n- Process run id: 9bbc0667-9d12-4506-ba81-654ef924cad6.\\r\\n- Process run name: Main app / Blazor app delivery.\\r\\n- Process run status: Failed.\\r\\n- Process run progress: 0/8 steps completed, 0 blocked, 0 capability gaps.\\r\\n- Active execution count: 0.\\r\\n- Pending approval count: 0.\\r\\n- Estimated cost: 640.\\r\\n- Actual cost: 0.\\r\\n- Last run activity UTC: 2026-05-26T18:03:51.1427170\\u002B00:00.\\r\\n- Selected process run manager: Default process manager.\\r\\n- Treat \\u0022this process\\u0022 as the process definition above.\\r\\n- Treat \\u0022this run\\u0022 as the selected process run above.\\r\\n- Report like a human delivery manager: current status, main blockers, concrete unblock actions, and whether action is needed from user or agents.\\r\\n- If asked to unblock work, prefer process runtime tools, manager directives, rework requests, or agent instructions. Do not rewrite dispatcher behavior unless the issue is generic across processes.\\r\\n\\r\\nUser request:\\r\\nOperator quick decision from Live Processes:\\r\\n- Decision: Approved\\r\\n- Process run: Main app / Blazor app delivery\\r\\n- Definition: Blazor app delivery\\r\\n- Escalation: Failed step needs operator review\\r\\n- Escalation kind: FailedStep\\r\\n- Severity: High\\r\\n- Step: Resolve Blazor delivery contract\\r\\n- Reason: AgentFramework execution failed: Step \\u0027Resolve Blazor delivery contract\\u0027 cannot be completed because required artifact contract validation failed: Blazor delivery contract: StaleOrWrongRun (The candidate artifact is not bound to the current process run, step, execution run, or workflow run.).\\r\\n\\r\\nRecord this operator decision in the process context, continue only when this decision is sufficient for the process contract, and reply with the next concrete action or remaining blocker.\"}]},{\"authorName\":\"Blazor delivery manager AI agent\",\"createdAt\":\"2026-05-26T18:10:54\\u002B00:00\",\"role\":\"assistant\",\"contents\":[{\"$type\":\"functionCall\",\"name\":\"processes_run_detail_get\",\"arguments\":{\"runId\":\"9bbc0667-9d12-4506-ba81-654ef924cad6\"},\"informationalOnly\":true,\"callId\":\"call_PykhhdJLBcHagx221CAkh5Bd\"}],\"messageId\":\"chatcmpl-DjqWsA5BHQOHDLtYFGcRyxNdyR5bz\"},{\"authorName\":\"Blazor delivery manager AI agent\",\"createdAt\":\"2026-05-26T18:07:28.8816603\\u002B00:00\",\"role\":\"tool\",\"contents\":[{\"$type\":\"functionResult\",\"result\":\"Error: Function failed.\",\"callId\":\"call_PykhhdJLBcHagx221CAkh5Bd\"}],\"messageId\":\"7f31b9c6bf07482f92139628112be529\"},{\"authorName\":\"Blazor delivery manager AI agent\",\"createdAt\":\"2026-05-26T18:10:58\\u002B00:00\",\"role\":\"assistant\",\"contents\":[{\"$type\":\"toolApprovalRequest\",\"toolCall\":{\"$type\":\"functionCall\",\"name\":\"processes_artifact_record\",\"arguments\":{\"request\":{\"processRunId\":\"9bbc0667-9d12-4506-ba81-654ef924cad6\",\"artifactKind\":\"DecisionRecord\",\"title\":\"Operator decision: Approved \\u2014 Resolve Blazor delivery contract\",\"trustStatus\":\"Approved\",\"sensitivityLevel\":\"Internal\",\"provenanceSummary\":\"Operator \\u0027Default process manager\\u0027 recorded decision via Live Processes: Approved. Escalation: FailedStep. Severity: High. Reason: AgentFramework execution failed with stale/wrong artifact binding for \\u0027Blazor delivery contract\\u0027.\",\"allowedFutureUsageSummary\":\"This decision may be used to satisfy contract validation checks for the \\u0027Resolve Blazor delivery contract\\u0027 step so the step can be progressed after artifact is re-bound to this run.\",\"reviewSummary\":\"Operator confirmed approval to accept the contract despite stale/wrong binding; agents must rebind or re-create the contract artifact against this process run before the step can complete.\"}},\"informationalOnly\":false,\"callId\":\"call_M2nwtidqGQPrBjKYG1p4uUXT\"},\"requestId\":\"ficc_call_M2nwtidqGQPrBjKYG1p4uUXT\"}],\"messageId\":\"chatcmpl-DjqWwhvscUfy4gdplKj8ZFwDI75FI\"}]}}}",
+    "pendingApprovals": [
+      {
+        "approvalId": "ficc_call_M2nwtidqGQPrBjKYG1p4uUXT",
+        "callId": "call_M2nwtidqGQPrBjKYG1p4uUXT",
+        "toolName": "processes_artifact_record",
+        "toolKind": "function",
+        "details": "",
+        "argumentsJson": "{\"request\":{\"processRunId\":\"9bbc0667-9d12-4506-ba81-654ef924cad6\",\"artifactKind\":\"DecisionRecord\",\"title\":\"Operator decision: Approved \\u2014 Resolve Blazor delivery contract\",\"trustStatus\":\"Approved\",\"sensitivityLevel\":\"Internal\",\"provenanceSummary\":\"Operator \\u0027Default process manager\\u0027 recorded decision via Live Processes: Approved. Escalation: FailedStep. Severity: High. Reason: AgentFramework execution failed with stale/wrong artifact binding for \\u0027Blazor delivery contract\\u0027.\",\"allowedFutureUsageSummary\":\"This decision may be used to satisfy contract validation checks for the \\u0027Resolve Blazor delivery contract\\u0027 step so the step can be progressed after artifact is re-bound to this run.\",\"reviewSummary\":\"Operator confirmed approval to accept the contract despite stale/wrong binding; agents must rebind or re-create the contract artifact against this process run before the step can complete.\"}}"
+      }
+    ],
+    "autoApprovePendingToolCalls": false,
+    "processRunId": "9bbc0667-9d12-4506-ba81-654ef924cad6",
+    "processStepId": "",
+    "schedulerRunId": "",
+    "messageId": "",
+    "revision": 2,
+    "structuredOutputContractKey": "",
+    "structuredOutputTypeName": "",
+    "structuredOutputSchemaName": "",
+    "structuredOutputSchemaDescription": ""
+  },
+  "chatSession": null,
+  "executionLog": [
+    {
+      "id": "82c596bd-3f41-4ccf-9b9c-cc4f3ba4ec89",
+      "agentId": "2732772f-3a8a-4e1f-97d0-56c25eade538",
+      "chatSessionId": null,
+      "createdAtUtc": "2026-05-26T14:07:42.0633018-04:00",
+      "state": 3,
+      "phase": "Approval",
+      "message": "The execution run is waiting for an approval response before it can continue.",
+      "executionRunId": "d38da822-a980-44ce-952b-6e86c0b74bbb"
+    },
+    {
+      "id": "19626034-e4c8-488b-bab4-d01efa32b835",
+      "agentId": "2732772f-3a8a-4e1f-97d0-56c25eade538",
+      "chatSessionId": null,
+      "createdAtUtc": "2026-05-26T14:07:41.6737758-04:00",
+      "state": 3,
+      "phase": "Approval",
+      "message": "The run is waiting for a tool approval response before it can continue.",
+      "executionRunId": "d38da822-a980-44ce-952b-6e86c0b74bbb"
+    },
+    {
+      "id": "f3c205ea-76b7-4f73-ab4a-2b9591b2dd89",
+      "agentId": "2732772f-3a8a-4e1f-97d0-56c25eade538",
+      "chatSessionId": null,
+      "createdAtUtc": "2026-05-26T14:07:41.6101457-04:00",
+      "state": 4,
+      "phase": "Session",
+      "message": "Serializing the Microsoft Agent Framework session.",
+      "executionRunId": "d38da822-a980-44ce-952b-6e86c0b74bbb"
+    },
+    {
+      "id": "c65bdeea-a496-450f-b960-27e1e59379e3",
+      "agentId": "2732772f-3a8a-4e1f-97d0-56c25eade538",
+      "chatSessionId": null,
+      "createdAtUtc": "2026-05-26T14:07:28.8318049-04:00",
+      "state": 3,
+      "phase": "Tool",
+      "message": "Invoking tool 'processes_run_detail_get' with runId=\"9bbc0667-9d12-4506-ba81-654ef924cad6\".",
+      "executionRunId": "d38da822-a980-44ce-952b-6e86c0b74bbb"
+    },
+    {
+      "id": "cbb31b3b-b4a1-49b9-a316-f9adb6ca161a",
+      "agentId": "2732772f-3a8a-4e1f-97d0-56c25eade538",
+      "chatSessionId": null,
+      "createdAtUtc": "2026-05-26T14:07:23.7383005-04:00",
+      "state": 2,
+      "phase": "Run",
+      "message": "Executing the run through Microsoft Agent Framework streaming.",
+      "executionRunId": "d38da822-a980-44ce-952b-6e86c0b74bbb"
+    },
+    {
+      "id": "5c4465e6-6ef6-4c2c-89a8-bd4833a5285d",
+      "agentId": "2732772f-3a8a-4e1f-97d0-56c25eade538",
+      "chatSessionId": null,
+      "createdAtUtc": "2026-05-26T14:07:23.698091-04:00",
+      "state": 1,
+      "phase": "Session",
+      "message": "Creating a new Microsoft Agent Framework session and hydrating it from the sandbox transcript.",
+      "executionRunId": "d38da822-a980-44ce-952b-6e86c0b74bbb"
+    },
+    {
+      "id": "d8c868b4-5ab8-4d9c-9388-26c89866b910",
+      "agentId": "2732772f-3a8a-4e1f-97d0-56c25eade538",
+      "chatSessionId": null,
+      "createdAtUtc": "2026-05-26T14:07:23.6576113-04:00",
+      "state": 1,
+      "phase": "Model parameters",
+      "message": "The runtime will omit temperature for model 'gpt-5-mini' and use the provider default.",
+      "executionRunId": "d38da822-a980-44ce-952b-6e86c0b74bbb"
+    },
+    {
+      "id": "729f14bd-bd0d-404a-861e-18ad1126256b",
+      "agentId": "2732772f-3a8a-4e1f-97d0-56c25eade538",
+      "chatSessionId": null,
+      "createdAtUtc": "2026-05-26T14:07:23.6168518-04:00",
+      "state": 1,
+      "phase": "Compaction",
+      "message": "Skipped Microsoft Agent Framework compaction for governed process automation. Process-step prompts are bounded and include required artifact paths, so compaction must not trim evidence context before the agent session starts.",
+      "executionRunId": "d38da822-a980-44ce-952b-6e86c0b74bbb"
+    },
+    {
+      "id": "a41277a5-b0a0-4e09-a130-ec52478ca1e9",
+      "agentId": "2732772f-3a8a-4e1f-97d0-56c25eade538",
+      "chatSessionId": null,
+      "createdAtUtc": "2026-05-26T14:07:23.5767019-04:00",
+      "state": 1,
+      "phase": "Processes",
+      "message": "Attached internal process-module tools backed by the workspace services and current agent policy.",
+      "executionRunId": "d38da822-a980-44ce-952b-6e86c0b74bbb"
+    },
+    {
+      "id": "3d8f1880-6fa8-48e9-b285-593a759d7b7e",
+      "agentId": "2732772f-3a8a-4e1f-97d0-56c25eade538",
+      "chatSessionId": null,
+      "createdAtUtc": "2026-05-26T14:07:23.5363183-04:00",
+      "state": 1,
+      "phase": "Project structure",
+      "message": "Attached internal project-structure tools backed by the workspace services and current agent policy.",
+      "executionRunId": "d38da822-a980-44ce-952b-6e86c0b74bbb"
+    },
+    {
+      "id": "43e7f281-d3b0-44f8-9850-b8cdad9f35ee",
+      "agentId": "2732772f-3a8a-4e1f-97d0-56c25eade538",
+      "chatSessionId": null,
+      "createdAtUtc": "2026-05-26T14:07:23.4988017-04:00",
+      "state": 1,
+      "phase": "Context contributors",
+      "message": "Attached 1 registered agent context contributor(s) in deterministic order.",
+      "executionRunId": "d38da822-a980-44ce-952b-6e86c0b74bbb"
+    },
+    {
+      "id": "5e9211d4-f960-490c-8f3c-f8d775b6cdc5",
+      "agentId": "2732772f-3a8a-4e1f-97d0-56c25eade538",
+      "chatSessionId": null,
+      "createdAtUtc": "2026-05-26T14:07:23.4596122-04:00",
+      "state": 1,
+      "phase": "Framework",
+      "message": "Composing the Microsoft Agent Framework runtime for the selected provider and capabilities.",
+      "executionRunId": "d38da822-a980-44ce-952b-6e86c0b74bbb"
+    },
+    {
+      "id": "c99397d8-cc23-41e9-adde-080e11a5dbce",
+      "agentId": "2732772f-3a8a-4e1f-97d0-56c25eade538",
+      "chatSessionId": null,
+      "createdAtUtc": "2026-05-26T14:07:23.4239746-04:00",
+      "state": 1,
+      "phase": "Planning",
+      "message": "Preparing provider OpenAI chat completions.",
+      "executionRunId": "d38da822-a980-44ce-952b-6e86c0b74bbb"
+    }
+  ],
+  "metrics": [
+    {
+      "id": "ed15d1a0-b70a-41cd-a5b3-afc1a379b1ca",
+      "agentId": "2732772f-3a8a-4e1f-97d0-56c25eade538",
+      "chatSessionId": null,
+      "createdAtUtc": "2026-05-26T14:07:41.740528-04:00",
+      "outcome": 2,
+      "providerName": "OpenAI chat completions",
+      "model": "gpt-5-mini",
+      "durationMs": 18281,
+      "inputTokens": 20286,
+      "outputTokens": 1146,
+      "toolCalls": 2,
+      "executionRunId": "d38da822-a980-44ce-952b-6e86c0b74bbb"
+    }
+  ],
+  "approvals": [
+    {
+      "approvalId": "ficc_call_M2nwtidqGQPrBjKYG1p4uUXT",
+      "executionRunId": "d38da822-a980-44ce-952b-6e86c0b74bbb",
+      "callId": "call_M2nwtidqGQPrBjKYG1p4uUXT",
+      "toolName": "processes_artifact_record",
+      "toolKind": "function",
+      "details": "",
+      "argumentsJson": "{\"request\":{\"processRunId\":\"9bbc0667-9d12-4506-ba81-654ef924cad6\",\"artifactKind\":\"DecisionRecord\",\"title\":\"Operator decision: Approved \\u2014 Resolve Blazor delivery contract\",\"trustStatus\":\"Approved\",\"sensitivityLevel\":\"Internal\",\"provenanceSummary\":\"Operator \\u0027Default process manager\\u0027 recorded decision via Live Processes: Approved. Escalation: FailedStep. Severity: High. Reason: AgentFramework execution failed with stale/wrong artifact binding for \\u0027Blazor delivery contract\\u0027.\",\"allowedFutureUsageSummary\":\"This decision may be used to satisfy contract validation checks for the \\u0027Resolve Blazor delivery contract\\u0027 step so the step can be progressed after artifact is re-bound to this run.\",\"reviewSummary\":\"Operator confirmed approval to accept the contract despite stale/wrong binding; agents must rebind or re-create the contract artifact against this process run before the step can complete.\"}}",
+      "status": 0,
+      "requestedAtUtc": "2026-05-26T14:07:41.7405717-04:00",
+      "decidedAtUtc": null,
+      "decisionSourceKind": "",
+      "decisionSourceId": "",
+      "decisionNotes": ""
+    }
+  ],
+  "artifacts": [],
+  "checkpoints": [
+    {
+      "id": "63957a17-c3a6-49b6-be88-505fad03e7ae",
+      "executionRunId": "d38da822-a980-44ce-952b-6e86c0b74bbb",
+      "workflowSessionId": "d38da822a98044ce952b6e86c0b74bbb",
+      "workflowCheckpointId": "d0c78d2991b34629b366dc704a411d79",
+      "checkpointKind": "approval-wait",
+      "runState": 3,
+      "pendingApprovalIds": [
+        "ficc_call_M2nwtidqGQPrBjKYG1p4uUXT"
+      ],
+      "capturedAtUtc": "2026-05-26T14:07:41.9588083-04:00",
+      "resumedAtUtc": null,
+      "correlationId": "2a3b19d56d284cb09f0157654e745c86",
+      "sourceKind": "process-manager-chat",
+      "sourceId": "9dd2f94e-b607-4f47-afb6-c51765db55bb",
+      "processRunId": "9bbc0667-9d12-4506-ba81-654ef924cad6",
+      "processStepId": "",
+      "schedulerRunId": "",
+      "messageId": "",
+      "traceId": "",
+      "spanId": ""
+    }
+  ],
+  "toolReceipts": []
+}

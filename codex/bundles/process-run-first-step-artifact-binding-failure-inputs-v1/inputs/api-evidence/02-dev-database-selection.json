@@ -1,0 +1,14 @@
+{
+  "id": "e5df9ad6-33db-c697-4a06-78a74976013c",
+  "runtimeProfileId": "e5df9ad6-33db-c697-4a06-78a74976013c",
+  "pendingRestartProfileId": null,
+  "hasPendingRestartActivation": false,
+  "pendingRestartDisplayName": "",
+  "pendingRestartDescriptor": "",
+  "displayName": "Configured PostgreSQL override",
+  "providerKind": 1,
+  "sourceKind": 3,
+  "fingerprint": "postgres:127.0.0.1:5432:candoitall_development:candoitall",
+  "workspaceRoot": "C:\\Users\\lucys\\AppData\\Local\\CanDoItAll\\workspace",
+  "connectionString": "Host=127.0.0.1;Port=5432;Database=candoitall_development;Username=candoitall;Password=candoitall;Include Error Detail=True"
+}

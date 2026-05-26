@@ -1,0 +1,103 @@
+{
+  "id": "0610f6d6-5d37-4313-b560-09cc9484f5b8",
+  "stepDefinitionId": "70d60e3e-ded4-4d12-a4b0-4c271b47d844",
+  "decisionRoleRequirementId": "6cb9a086-7449-42c7-8683-b647b2f0d637",
+  "sequence": 0,
+  "title": "Resolve Blazor delivery contract",
+  "stepKind": 0,
+  "status": 8,
+  "currentExecutorName": "Blazor delivery manager AI agent",
+  "decisionSummary": "",
+  "blockedReason": "",
+  "refusalReason": "",
+  "selectedBranchOutcomeId": null,
+  "selectedBranchOutcomeTitle": "",
+  "waitMinutes": 0,
+  "touchMinutes": 1,
+  "blockedMinutes": 0,
+  "reworkCount": 1,
+  "capabilityGapSeverity": 0,
+  "availableBranchOutcomes": [
+    {
+      "id": "9d7af408-8d1b-4c06-8562-1edf0e3c9855",
+      "title": "Default",
+      "description": "Continue when no explicit branch outcome is selected."
+    },
+    {
+      "id": "ac3930c2-b05e-4f87-8114-10944ff2ba4e",
+      "title": "Error",
+      "description": "Handle exceptions, failed validations, or explicit error escalation."
+    }
+  ],
+  "stepRunConcurrencyToken": "405a21f4-cc39-4423-adcb-ebce8a651deb",
+  "dependencies": [],
+  "decisionRoleTitle": "Blazor delivery manager",
+  "responsibilityPorts": [
+    {
+      "responsibilityKind": 0,
+      "isRequired": true,
+      "assignmentCount": 1
+    },
+    {
+      "responsibilityKind": 1,
+      "isRequired": true,
+      "assignmentCount": 1
+    }
+  ],
+  "artifactInputCount": 0,
+  "artifactOutputs": [
+    {
+      "artifactExpectationId": "47ae2838-41eb-4301-a57e-350a635d4a51",
+      "title": "Blazor delivery contract",
+      "isRequired": true
+    }
+  ],
+  "allowedOperations": [
+    0,
+    1,
+    3
+  ],
+  "operationTargetScope": 3,
+  "exceptionSummary": "AgentFramework execution failed: Step 'Resolve Blazor delivery contract' cannot be completed because required artifact contract validation failed: Blazor delivery contract: StaleOrWrongRun (The candidate artifact is not bound to the current process run, step, execution run, or workflow run.).",
+  "artifactExpectations": [
+    {
+      "stepRunId": "0610f6d6-5d37-4313-b560-09cc9484f5b8",
+      "artifactExpectationId": "47ae2838-41eb-4301-a57e-350a635d4a51",
+      "artifactKind": 0,
+      "title": "Blazor delivery contract",
+      "isRequired": true,
+      "status": 1,
+      "sourceKind": 1,
+      "processArtifactRecordId": "aa9a3e75-8d3e-4757-bafa-be00e8678b8d",
+      "satisfiedByTitle": "Blazor delivery contract",
+      "managedStoragePath": "artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/9bbc0667-9d12-4506-ba81-654ef924cad6/01-blazor-delivery-contract.md",
+      "diagnostic": "Satisfied by a process artifact record."
+    }
+  ],
+  "blockReasonCode": 9,
+  "nextRecoveryAction": 2,
+  "recoveryOptions": [
+    2,
+    3,
+    6
+  ],
+  "health": {
+    "attemptCount": 0,
+    "latestAttemptStatus": "",
+    "latestAttemptTone": "neutral",
+    "pendingApprovalCount": 0,
+    "recoveryClassification": 1,
+    "actionableReason": "AgentFramework execution failed: Step 'Resolve Blazor delivery contract' cannot be completed because required artifact contract validation failed: Blazor delivery contract: StaleOrWrongRun (The candidate artifact is not bound to the current process run, step, execution run, or workflow run.).",
+    "canManualRerun": true,
+    "pendingOutboxCount": 0,
+    "deadLetteredOutboxCount": 0,
+    "attempts": [],
+    "nextRecoveryAction": 2,
+    "recoveryOptions": [
+      2,
+      3,
+      6
+    ]
+  },
+  "subprocessRun": null
+}

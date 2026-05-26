@@ -1,0 +1,21 @@
+{
+  "projectId": "7330105d-8450-4c80-923b-5c27d8e63d6c",
+  "parentProjects": [],
+  "childProjects": [
+    {
+      "id": "fd099d01-f95b-4f2f-8967-8578281f264e",
+      "name": "TetrisUI",
+      "status": 2,
+      "currentPhase": "",
+      "phaseCount": 0,
+      "parentCount": 1,
+      "childCount": 0,
+      "updatedAtUtc": "2026-05-23T11:20:24.967375-04:00",
+      "primaryCustomerName": "",
+      "primaryDeliveryUnitName": "",
+      "primaryOwnerName": "",
+      "relatedParties": [],
+      "relatedPartySearchText": ""
+    }
+  ]
+}

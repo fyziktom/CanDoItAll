@@ -1,0 +1,16 @@
+{
+  "id": "aa9a3e75-8d3e-4757-bafa-be00e8678b8d",
+  "stepRunId": "0610f6d6-5d37-4313-b560-09cc9484f5b8",
+  "artifactExpectationId": "47ae2838-41eb-4301-a57e-350a635d4a51",
+  "artifactKind": 0,
+  "title": "Blazor delivery contract",
+  "trustStatus": 1,
+  "sensitivityLevel": 1,
+  "provenanceSummary": "Projected from workspace file write 'artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/9bbc0667-9d12-4506-ba81-654ef924cad6/01-blazor-delivery-contract.md' for AgentFramework execution run 91e6a078-ac63-43e6-9901-6f8364539c42.",
+  "allowedFutureUsageSummary": "Reusable for downstream QA, release governance, reruns, and process learning.",
+  "managedStoragePath": "artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/9bbc0667-9d12-4506-ba81-654ef924cad6/01-blazor-delivery-contract.md",
+  "externalReferenceKey": "workspace-written-artifact|91e6a078-ac63-43e6-9901-6f8364539c42|47ae2838-41eb-4301-a57e-350a635d4a51|artifacts/process-runs/9bbc0667-9d12-4506-ba81-654ef924cad6/01-blazor-delivery-contract.md",
+  "createdAtUtc": "2026-05-26T14:03:50.937078-04:00",
+  "projectionLineageJson": "{\"sourceKind\":\"WorkspaceWrite\",\"sourceExecutionRunId\":\"91e6a078-ac63-43e6-9901-6f8364539c42\",\"projectedExecutionRunId\":\"91e6a078-ac63-43e6-9901-6f8364539c42\",\"sourceExternalReferenceKey\":\"workspace-written-artifact|91e6a078-ac63-43e6-9901-6f8364539c42|47ae2838-41eb-4301-a57e-350a635d4a51|artifacts/process-runs/9bbc0667-9d12-4506-ba81-654ef924cad6/01-blazor-delivery-contract.md\",\"contentHash\":\"\",\"projectionIdentityHash\":\"sha256:2c233800c82b0b865f3cd3d689e8deb7789ef876682fca5de7395d32548fe7ec\"}",
+  "projectionIdentityHash": "sha256:2c233800c82b0b865f3cd3d689e8deb7789ef876682fca5de7395d32548fe7ec"
+}
