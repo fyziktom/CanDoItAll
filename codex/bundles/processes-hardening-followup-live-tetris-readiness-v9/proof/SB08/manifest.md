@@ -2,28 +2,37 @@
 
 ## Status
 
-Pending.
+Completed.
 
 ## Semantic invariant
 
-See `proof/SB08/semantic-invariants.md`.
+- Contract: proof/SB08/semantic-invariants.md
 
-## Failing-first or adversarial proof
+## Claim
 
-`proof/SB08/transcripts/failing-first.txt`
+Agent/tool dispatch policy keeps project-structure and external-target access governed, with no unsafe missing-tool fallback introduced by this bundle.
+
+## Source references
+
+repo://src/CanDoItAll.Modules.Processes, repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs
+
+## Failing-first or adversarial negative proof
+
+- Transcript: proof/SB08/transcripts/failing-first.txt
 
 ## Passing proof
 
-`proof/SB08/transcripts/passing.txt`
+- Transcript: proof/SB08/transcripts/passing.txt
 
 ## Source assertions
 
-`proof/SB08/transcripts/source-assertions.txt`
+- Transcript: proof/SB08/transcripts/source-assertions.txt
 
 ## Anti-stub audit
 
-`proof/SB08/transcripts/anti-stub-audit.txt`
+- Transcript: proof/SB08/transcripts/anti-stub-audit.txt
 
 ## Changed-file hashes
 
-`proof/SB08/transcripts/changed-file-hashes.txt`
+- Transcript: proof/SB08/transcripts/changed-file-hashes.txt
+- SHA-256: sha256:d9fb63eed34b9738c8d37b3948dc28ba10be8759c019662b4781167160ed5923  repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs

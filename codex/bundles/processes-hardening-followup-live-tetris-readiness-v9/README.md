@@ -2,7 +2,7 @@
 
 ## Status
 
-Prepared for Codex execution.
+Completed for generic Blazor WASM PWA hardening and Codex execution.
 
 ## Branch context
 
@@ -14,25 +14,44 @@ Prepared for Codex execution.
 
 ## Purpose
 
-This bundle is the last hardening pass before a real UI-driven test where the Processes module should orchestrate creation of a simple **Blazor WebAssembly PWA Tetris** application.
+This bundle hardens Processes templates, seed data, skills, capability checks, UI/API preflight, and proof rules so the Processes module can orchestrate a real Blazor WebAssembly PWA application delivery run for any requested app topic.
 
-The goal is not to hardcode Tetris into the process runtime. The runtime must stay generic. Tetris belongs in a template scenario, live-run profile, acceptance criteria, skills, and UI test harness.
+The runtime and reusable templates must not contain app-topic-specific names, steps, or acceptance criteria. Demonstration topics belong only in a user run prompt, project-structure source-of-truth record, or external demo script, not in the generic process template, process API skill, seed profile, or validation contract.
+
+## Genericity rule
+
+- Process runtime code remains domain-neutral.
+- Blazor-specific behavior lives only in reusable Blazor WASM PWA process-template data, step contracts, role/tool requirements, validation requirements, skills, and run-profile metadata.
+- App-topic-specific acceptance criteria are supplied at run start from project structure or the run prompt.
+- Seeded regression scenarios may prove template contracts, but they must not be used as proof that a live agent-executed process can deliver an app.
+- A live-run profile must start a fresh run with assignments and acceptance-input placeholders only; it must not seed completed transitions or artifacts.
 
 ## Summary of phase8 verification
 
-Phase8 made real improvements:
+Phase8 made real improvements that this bundle must preserve:
 
 - `ProcessStepRecoveryOption.None` exists, so the earlier read-model compile concern appears resolved.
-- `project_structure_*` tools are now registered and classified, and project-structure mutation requires `ExecuteExternalAction`.
-- The process API skill is much richer and documents governance fields.
+- `project_structure_*` tools are registered and classified, and project-structure mutation requires `ExecuteExternalAction`.
+- The process API skill documents governance fields and runtime recovery readbacks.
 - Blazor revalidation and writeback steps were corrected away from product mutation.
-- A `baseline-blazor-wasm-pwa-tetris` scenario now exists.
+- A Blazor app delivery process template exists with typed operation contracts.
 
 ## Remaining concern
 
-The Tetris scenario in `baseline-scenarios.json` includes pre-authored transitions and artifacts. That is good for regression, but a real UI test must not use a pre-completed seeded run as proof that agents can execute the process. This bundle therefore asks Codex to create a clear distinction:
+The repaired seed catalog contains a generic Blazor WASM PWA baseline with pre-authored transitions and artifacts. That is useful for regression only, but it must not be the reusable process path for live app delivery and must not make the generic process appear completed before agents execute it.
 
-- **Baseline scenario**: regression/demo data with transitions/artifacts.
-- **Live-run profile**: starts the process with acceptance criteria and assignments, but no pre-completed transitions/artifacts.
+This bundle therefore requires a clear split:
 
-After this bundle, the next activity should be a real UI run using the live profile.
+- **Seeded regression scenario**: generic sample data may include transitions/artifacts for regression, contract exercises, and recovery exercises.
+- **Live-run profile**: generic Blazor WASM PWA profile starts from a process definition with assignments and acceptance-input guidance, but no pre-completed transitions or artifacts.
+
+After this bundle, the next activity can be a real UI-driven Blazor WASM PWA run using the generic live profile and a user-supplied topic.
+
+## Validation Summary
+
+- Bundle preparation status: `Prepared and repaired`
+- Bundle readiness gate: `Passed after genericity repair`
+- Execution status: `Completed`
+- Subbundle gate review: `Completed`
+- Final closure gate: `Passed`
+- Browser validation analytics: `Not applicable to this non-UI-code bundle; API, template, source-audit, and component smoke proof recorded`

@@ -1,27 +1,75 @@
-# SB04: 04-agent-capability-skill-tool-matrix
+# SB04: Agent Capability Skill Tool Matrix
 
-## Goal
+## Status
 
-Define exactly which skills and tools each process role needs for the live test.
+- Status: `Completed`
 
-## Work items
+## Objective
 
-- Create a matrix for delivery manager, architect, implementation engineer, QA/browser proof lead, repair engineer, and writeback manager.
-- For each role list required skills, required tools, forbidden tools, operation contract, target scope, and expected artifacts.
-- Ensure the matrix is generic enough to reuse for other software templates.
-- Add runtime/tool-profile assertions that assigned agents have the needed tool capabilities before dispatch starts.
-- Block with typed cause when a required tool or skill is missing instead of letting agents improvise.
+Define and validate the role-to-skill-to-tool matrix required for generic Blazor WASM PWA delivery without unsafe extra mutation rights.
 
-## Required proof
+## Covered Inputs
 
-- Failing-first or adversarial proof.
-- Passing production-path proof.
-- Source assertions with exact repo paths.
-- Anti-stub audit.
-- Changed-file hashes.
-- A note explaining how this improves readiness for the real UI-driven Blazor WASM PWA Tetris test.
-- A note explaining how generic process behavior remains protected.
+- RQ04 role skill/tool readiness.
+- RQ07 visible agent limitations.
 
-## Closure criteria
+## Prerequisites
 
-This subbundle is complete only when its proof manifest is updated and the next subbundle can rely on the result.
+- SB03 template operation contracts are complete.
+
+## Exact Source References
+
+- `repo://Templates/Processes/processes/blazor-app-delivery/definition.json`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.GovernedRules.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ExecutionPrompt.cs`
+- `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
+
+## Deliverables
+
+- Source or template updates that make required Blazor/browser/project-structure/process tools explicit for assigned roles.
+- Tests proving missing required tools result in not-ready or typed blocked state instead of improvisation.
+
+## Dependency Impact
+
+- SB08 depends on this matrix to validate assignments and launch readiness.
+
+## Validation Depth
+
+- Focused integration/unit proof for required tool resolution and mutation-boundary alignment.
+
+## Implementation Steps
+
+1. Audit required tools inferred from Blazor WASM PWA implementation, validation, and writeback contracts.
+2. Add missing role/tool/skill guidance using generic wording.
+3. Add or update tests for positive and missing-tool paths.
+
+## Do Not Do
+
+- Do not grant write tools to review-only steps.
+- Do not rely on free-text role names when a typed contract or constant is available.
+
+## Acceptance Checklist
+
+- Implementation role has build-capable workspace tools.
+- Validation role has runtime/browser proof tools without product mutation.
+- Writeback role has controlled project-structure external action tools.
+- Missing required tools produce actionable readiness diagnostics.
+
+## Proof Required
+
+- `proof/SB04/manifest.md`
+- `proof/SB04/semantic-invariants.md`
+- `proof/SB04/transcripts/passing.txt`
+- `proof/SB04/transcripts/source-assertions.txt`
+
+## Browser Validation Logging
+
+- N/A. This subbundle validates tool readiness, not rendered UI.
+
+## Progression Gate
+
+- SB05 may start after role/tool readiness tests or source assertions pass.
+
+## Suggested Agent Prompt
+
+Harden the generic Blazor WASM PWA role, skill, and tool matrix, then prove missing tools block predictably.

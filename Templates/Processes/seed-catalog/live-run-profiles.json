@@ -1,0 +1,71 @@
+[
+  {
+    "Key": "generic-blazor-wasm-pwa-app",
+    "ProcessTemplateKey": "blazor-app-delivery",
+    "RunNameTemplate": "Blazor WASM PWA delivery / {AppTopic}",
+    "Summary": "Live-run profile for a fresh Blazor WebAssembly PWA delivery run. The app topic and acceptance criteria come from the run request; this profile does not seed transitions or artifacts.",
+    "OperatingMode": "GovernedLive",
+    "TriggerReasonTemplate": "Deliver a Blazor WebAssembly PWA for {AppTopic} from the approved project-structure node. Acceptance criteria must be supplied by the run request and should cover the app's primary user workflow, responsive UI, state behavior, PWA manifest/service-worker readiness where feasible, build/test proof, browser screenshot, console proof with no active JavaScript/runtime errors, and project-structure writeback. The first step resolves architecture and contract only; implementation owns code; validation and QA cannot mutate code.",
+    "Assignments": [
+      {
+        "StepKey": "",
+        "RoleKey": "blazor-delivery-manager",
+        "DisplayNameTemplate": "{AppTopic} delivery manager",
+        "ExecutorKind": "agent",
+        "BindingReason": "Owns process flow, acceptance scope, evidence index, and project-structure writeback for the requested Blazor WASM PWA run."
+      },
+      {
+        "StepKey": "resolve-blazor-contract",
+        "RoleKey": "blazor-solution-architect",
+        "DisplayNameTemplate": "{AppTopic} solution architect",
+        "ExecutorKind": "agent",
+        "BindingReason": "Resolves architecture, route structure, output root, acceptance criteria, and evidence targets without implementing code."
+      },
+      {
+        "StepKey": "implement-blazor-change",
+        "RoleKey": "blazor-engineer",
+        "DisplayNameTemplate": "{AppTopic} Blazor engineer",
+        "ExecutorKind": "agent",
+        "BindingReason": "Owns scoped implementation of the requested Blazor WASM PWA and build/test proof."
+      },
+      {
+        "StepKey": "validate-blazor-runtime",
+        "RoleKey": "blazor-qa-lead",
+        "DisplayNameTemplate": "{AppTopic} QA and browser proof lead",
+        "ExecutorKind": "agent",
+        "BindingReason": "Owns non-mutating runtime validation, screenshot capture, console inspection, acceptance checks, and PWA/offline readiness proof."
+      }
+    ],
+    "AcceptanceCriteria": [
+      {
+        "Key": "run-request-topic",
+        "Title": "Run request drives the app topic",
+        "Description": "The delivered app satisfies the concrete topic and acceptance criteria supplied in the run request without relying on template-hardcoded feature names."
+      },
+      {
+        "Key": "blazor-wasm-pwa-shape",
+        "Title": "Blazor WASM PWA shape",
+        "Description": "The implementation is a Blazor WebAssembly PWA with a relevant route structure, responsive UI, explicit client-side state behavior, and PWA manifest/service-worker readiness where feasible."
+      },
+      {
+        "Key": "runtime-browser-proof",
+        "Title": "Runtime and browser proof",
+        "Description": "Validation captures build/test output, a browser screenshot or Playwright proof, console inspection with no active JavaScript/runtime errors, and any offline-readiness limitations."
+      },
+      {
+        "Key": "process-evidence-boundary",
+        "Title": "Process evidence boundary",
+        "Description": "Architecture is read-only, implementation is the only normal product mutation step, validation is non-mutating, and final writeback records current-run evidence with project-structure lineage."
+      }
+    ],
+    "RequiredProofKinds": [
+      "Architecture and acceptance contract brief",
+      "Implementation change-set summary",
+      "Build and test transcript",
+      "Browser screenshot or Playwright proof",
+      "Console inspection result",
+      "PWA manifest/service-worker readiness notes",
+      "Project-structure writeback receipt"
+    ]
+  }
+]

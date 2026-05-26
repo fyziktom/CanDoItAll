@@ -1,14 +1,12 @@
-# Live Tetris Process Test Acceptance
+# Generic Blazor WASM PWA Live Process Test Acceptance
 
-The next real UI test is ready only when:
-
-1. The user can import or select `blazor-app-delivery`.
-2. The UI offers a live-run Tetris WASM PWA profile separate from seeded baseline transitions/artifacts.
-3. Starting the run creates pending/ready steps, not a precompleted fake run.
-4. The first step can only resolve architecture/contract and write managed artifacts.
-5. The implementation step can mutate product target and produce build/test evidence.
-6. The validation step can launch/run/browser-test the app but cannot mutate product files.
-7. The repair step is the only post-validation product mutation path.
-8. Final writeback uses project-structure external action tools and managed artifacts.
-9. Each role/agent has required skills/tools listed and validated.
-10. Run health and step detail make missing artifacts, policy denials, and recovery options visible.
+1. The process template and reusable skill guidance describe generic Blazor WASM PWA application delivery, not a fixed app topic.
+2. The UI/API exposes or documents a generic live-run profile separate from seeded regression transitions and artifacts.
+3. Starting from the live profile creates a fresh active run; it does not pre-complete steps or seed proof artifacts.
+4. The run prompt or project-structure source-of-truth supplies the app topic, acceptance criteria, routes, and proof expectations.
+5. Planning and validation steps are read-only against product code.
+6. Implementation and repair are the only product-mutating steps.
+7. Writeback uses controlled project-structure external actions and records receipts.
+8. Missing required proof blocks with typed cause and actionable recovery options.
+9. Browser proof requires route, screenshot, console, DOM/state, visible behavior assertions, and cleanup evidence.
+10. The final runbook shows how to use the generic profile with any Blazor WASM PWA topic.

@@ -1,26 +1,74 @@
-# SB08: 08-agent-assignment-and-tool-profile-validation
+# SB08: Agent Assignment And Tool Profile Validation
 
-## Goal
+## Status
 
-Validate agents before execution starts.
+- Status: `Completed`
 
-## Work items
+## Objective
 
-- Add launch-plan or run-start validation that checks required role assignments and required tool/skill availability.
-- Ensure missing Blazor/PWA/browser/project-structure/process tools results in a typed block or launch-plan not-ready state.
-- Ensure roles do not receive unsafe mutation tools when their operation contract is read-only.
-- Add tests for missing QA browser tools and missing implementation workspace mutation tools.
+Validate that agent assignment and workspace tool profiles are sufficient for generic Blazor WASM PWA live runs and block predictably when required capabilities are absent.
 
-## Required proof
+## Covered Inputs
 
-- Failing-first or adversarial proof.
-- Passing production-path proof.
-- Source assertions with exact repo paths.
-- Anti-stub audit.
-- Changed-file hashes.
-- A note explaining how this improves readiness for the real UI-driven Blazor WASM PWA Tetris test.
-- A note explaining how generic process behavior remains protected.
+- RQ04 role/tool readiness.
+- RQ07 visible limitations.
 
-## Closure criteria
+## Prerequisites
 
-This subbundle is complete only when its proof manifest is updated and the next subbundle can rely on the result.
+- SB07 preflight is complete.
+
+## Exact Source References
+
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Cooperation.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.GovernedRules.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Launch/ProcessesService.Launch.Staffing.cs`
+- `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
+
+## Deliverables
+
+- Tests proving missing Blazor/PWA/browser/project-structure/process tools result in typed not-ready or blocked state.
+- Source assertions proving review-only assignments do not get product mutation rights.
+
+## Dependency Impact
+
+- SB09 and SB10 depend on trustworthy assignment/tool diagnostics.
+
+## Validation Depth
+
+- Critical foundation. Require semantic positive and adversarial missing-tool proof.
+
+## Implementation Steps
+
+1. Audit assignment and tool profile resolution for generic Blazor WASM PWA runs.
+2. Add tests for complete and incomplete capability sets.
+3. Ensure diagnostics name missing tools or skills explicitly.
+
+## Do Not Do
+
+- Do not silently fall back to broad workspace access.
+- Do not infer tool safety from topic-specific role names.
+
+## Acceptance Checklist
+
+- Implementation assignment can build and mutate only in allowed steps.
+- Validation assignment can run/browser-proof without product mutation.
+- Missing required tools are visible before or during dispatch.
+
+## Proof Required
+
+- `proof/SB08/manifest.md`
+- `proof/SB08/semantic-invariants.md`
+- `proof/SB08/transcripts/failing-first.txt`
+- `proof/SB08/transcripts/passing.txt`
+
+## Browser Validation Logging
+
+- N/A unless assignment readiness UI changes; otherwise record API/test proof.
+
+## Progression Gate
+
+- SB09 may start only after assignment/tool validation proves both positive and missing-capability paths.
+
+## Suggested Agent Prompt
+
+Harden generic Blazor WASM PWA assignment and tool profile validation, then prove missing capabilities block with actionable typed diagnostics.

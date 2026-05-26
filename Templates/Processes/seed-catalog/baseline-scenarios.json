@@ -1382,25 +1382,25 @@
     ]
   },
   {
-    "Key": "baseline-blazor-wasm-pwa-tetris",
+    "Key": "baseline-blazor-wasm-pwa-app",
     "ProcessTemplateKey": "blazor-app-delivery",
-    "RunName": "Blazor WASM PWA Tetris delivery / playable browser game",
-    "Summary": "Baseline Blazor app delivery run for a simple Tetris-style WASM PWA, with gameplay, PWA/offline, build, browser, console, screenshot, and project-structure writeback acceptance criteria kept in scenario data.",
+    "RunName": "Blazor WASM PWA delivery / generic application",
+    "Summary": "Baseline Blazor app delivery run for a generic WASM PWA, with interactive workflow, PWA/offline, build, browser, console, screenshot, and project-structure writeback acceptance criteria kept in scenario data.",
     "OperatingMode": "GovernedLive",
-    "TriggerReason": "Deliver a simple Blazor WebAssembly PWA Tetris game from the approved project-structure node. Acceptance criteria: playable Tetris board, falling tetrominoes, keyboard controls, scoring, line clear, game over, restart, pause/resume, PWA manifest/service-worker offline readiness where feasible, build/test proof, browser screenshot, console proof with no active JavaScript/runtime errors, and project-structure writeback. The first step resolves architecture and contract only; implementation owns code; validation and QA cannot mutate code.",
+    "TriggerReason": "Deliver a Blazor WebAssembly PWA application from the approved project-structure node. Acceptance criteria: implement the requested app topic, provide responsive route-level UI, complete the core interactive workflow, preserve explicit state where relevant, include PWA manifest/service-worker offline readiness where feasible, build/test proof, browser screenshot, console proof with no active JavaScript/runtime errors, and project-structure writeback. The first step resolves architecture and contract only; implementation owns code; validation and QA cannot mutate code.",
     "Assignments": [
       {
         "StepKey": "",
         "RoleKey": "blazor-delivery-manager",
-        "DisplayName": "Tetris delivery manager",
+        "DisplayName": "Blazor PWA delivery manager",
         "ExecutorKind": "agent",
-        "BindingReason": "Owns process flow, acceptance scope, evidence index, and project-structure writeback for the Tetris WASM PWA run.",
+        "BindingReason": "Owns process flow, acceptance scope, evidence index, and project-structure writeback for the Blazor WASM PWA run.",
         "IsFallback": false
       },
       {
         "StepKey": "resolve-blazor-contract",
         "RoleKey": "blazor-solution-architect",
-        "DisplayName": "Tetris solution architect",
+        "DisplayName": "Blazor PWA solution architect",
         "ExecutorKind": "agent",
         "BindingReason": "Resolves architecture, Blazor WASM PWA mode, routes, output root, and evidence targets without implementing code.",
         "IsFallback": false
@@ -1408,17 +1408,17 @@
       {
         "StepKey": "implement-blazor-change",
         "RoleKey": "blazor-engineer",
-        "DisplayName": "Tetris Blazor engineer",
+        "DisplayName": "Blazor PWA engineer",
         "ExecutorKind": "agent",
-        "BindingReason": "Owns scoped implementation of the playable Blazor WASM PWA Tetris game and build/test proof.",
+        "BindingReason": "Owns scoped implementation of the requested Blazor WASM PWA and build/test proof.",
         "IsFallback": false
       },
       {
         "StepKey": "validate-blazor-runtime",
         "RoleKey": "blazor-qa-lead",
-        "DisplayName": "Tetris QA and browser proof lead",
+        "DisplayName": "Blazor PWA QA and browser proof lead",
         "ExecutorKind": "agent",
-        "BindingReason": "Owns non-mutating runtime validation, screenshot capture, console inspection, gameplay assertions, and PWA/offline readiness proof.",
+        "BindingReason": "Owns non-mutating runtime validation, screenshot capture, console inspection, interactive workflow assertions, and PWA/offline readiness proof.",
         "IsFallback": false
       }
     ],
@@ -1428,50 +1428,50 @@
         "TargetStatus": "Completed",
         "SelectedBranchOutcomeKey": "__default__",
         "Reason": "Architecture and acceptance contract resolved without implementation.",
-        "DecidedBy": "Tetris solution architect"
+        "DecidedBy": "Blazor PWA solution architect"
       },
       {
         "StepKey": "implement-blazor-change",
         "TargetStatus": "Completed",
         "SelectedBranchOutcomeKey": "__default__",
-        "Reason": "Playable WASM PWA Tetris implementation completed with build/test proof.",
-        "DecidedBy": "Tetris Blazor engineer"
+        "Reason": "Requested WASM PWA implementation completed with build/test proof.",
+        "DecidedBy": "Blazor PWA engineer"
       },
       {
         "StepKey": "validate-blazor-runtime",
         "TargetStatus": "Completed",
         "SelectedBranchOutcomeKey": "quality-accepted",
-        "Reason": "Browser screenshot, console proof, gameplay assertions, and PWA/offline readiness evidence accepted.",
-        "DecidedBy": "Tetris QA and browser proof lead"
+        "Reason": "Browser screenshot, console proof, interactive workflow assertions, and PWA/offline readiness evidence accepted.",
+        "DecidedBy": "Blazor PWA QA and browser proof lead"
       },
       {
         "StepKey": "record-blazor-results",
         "TargetStatus": "Completed",
         "SelectedBranchOutcomeKey": "",
         "Reason": "Run evidence index and project-structure writeback recorded.",
-        "DecidedBy": "Tetris delivery manager"
+        "DecidedBy": "Blazor PWA delivery manager"
       }
     ],
     "Artifacts": [
       {
         "StepKey": "resolve-blazor-contract",
         "ArtifactKind": "Brief",
-        "Title": "Tetris WASM PWA delivery contract",
+        "Title": "Blazor WASM PWA delivery contract",
         "TrustStatus": "ReviewRequired",
         "SensitivityLevel": "Internal",
-        "ProvenanceSummary": "Prepared from the Tetris scenario trigger and project-structure source-of-truth node.",
+        "ProvenanceSummary": "Prepared from the scenario trigger and project-structure source-of-truth node.",
         "AllowedFutureUsageSummary": "Reusable by implementation, validation, repair, and run-evidence writeback steps.",
         "ReviewSummary": "Names Blazor WASM PWA mode, route, product root, output root, acceptance criteria, evidence paths, and non-mutating validation boundary."
       },
       {
         "StepKey": "implement-blazor-change",
         "ArtifactKind": "Deliverable",
-        "Title": "Tetris WASM PWA implementation change set",
+        "Title": "Blazor WASM PWA implementation change set",
         "TrustStatus": "ReviewRequired",
         "SensitivityLevel": "Internal",
         "ProvenanceSummary": "Generated by the implementation step inside the approved product root.",
-        "AllowedFutureUsageSummary": "Reusable by validation and repair steps for gameplay and PWA readiness checks.",
-        "ReviewSummary": "Includes playable board, falling tetrominoes, keyboard controls, scoring, line clear, game over, restart, pause/resume, build/test output, and PWA files."
+        "AllowedFutureUsageSummary": "Reusable by validation and repair steps for interactive workflow and PWA readiness checks.",
+        "ReviewSummary": "Includes requested app routes, interactive state, responsive layout, build/test output, and PWA files."
       },
       {
         "StepKey": "implement-blazor-change",
@@ -1480,7 +1480,7 @@
         "TrustStatus": "ReviewRequired",
         "SensitivityLevel": "Internal",
         "ProvenanceSummary": "Generated by the implementation step inside the approved Blazor product root.",
-        "AllowedFutureUsageSummary": "Reusable by validation and repair steps for gameplay, PWA readiness, and regression checks.",
+        "AllowedFutureUsageSummary": "Reusable by validation and repair steps for workflow, PWA readiness, and regression checks.",
         "ReviewSummary": "Implementation files, affected routes, acceptance criteria coverage, and PWA assets are explicit."
       },
       {
@@ -1496,12 +1496,12 @@
       {
         "StepKey": "validate-blazor-runtime",
         "ArtifactKind": "Evidence",
-        "Title": "Tetris browser and PWA validation evidence",
+        "Title": "Blazor browser and PWA validation evidence",
         "TrustStatus": "HumanApproved",
         "SensitivityLevel": "Internal",
         "ProvenanceSummary": "Captured from the non-mutating validation step using runtime, browser, screenshot, and console tools.",
         "AllowedFutureUsageSummary": "Reusable for acceptance, repair routing, and future regression comparison.",
-        "ReviewSummary": "Contains screenshot path, console proof with no active JavaScript/runtime errors, gameplay assertions, build/test proof, PWA manifest/service-worker/offline readiness findings, and any feasible-limit notes."
+        "ReviewSummary": "Contains screenshot path, console proof with no active JavaScript/runtime errors, interactive workflow assertions, build/test proof, PWA manifest/service-worker/offline readiness findings, and any feasible-limit notes."
       },
       {
         "StepKey": "validate-blazor-runtime",
@@ -1511,7 +1511,7 @@
         "SensitivityLevel": "Internal",
         "ProvenanceSummary": "Captured from runtime, browser, screenshot, console, and PWA validation checks.",
         "AllowedFutureUsageSummary": "Reusable for acceptance, repair routing, and future regression comparison.",
-        "ReviewSummary": "Runtime URL, screenshot, console proof, gameplay checks, manifest status, and offline readiness findings are explicit."
+        "ReviewSummary": "Runtime URL, screenshot, console proof, workflow checks, manifest status, and offline readiness findings are explicit."
       },
       {
         "StepKey": "validate-blazor-runtime",
@@ -1529,7 +1529,7 @@
         "Title": "Run evidence index",
         "TrustStatus": "ReviewRequired",
         "SensitivityLevel": "Internal",
-        "ProvenanceSummary": "Recorded from implementation and validation artifacts after the Tetris run was accepted.",
+        "ProvenanceSummary": "Recorded from implementation and validation artifacts after the run was accepted.",
         "AllowedFutureUsageSummary": "Reusable for project history, reruns, governance audit, and downstream writeback.",
         "ReviewSummary": "Evidence paths, validation state, acceptance outcome, and known follow-up items are explicit."
       },
@@ -1546,7 +1546,7 @@
       {
         "StepKey": "record-blazor-results",
         "ArtifactKind": "Evidence",
-        "Title": "Tetris project-structure writeback receipt",
+        "Title": "Blazor project-structure writeback receipt",
         "TrustStatus": "ReviewRequired",
         "SensitivityLevel": "Internal",
         "ProvenanceSummary": "Recorded by the result step after validation accepted the run.",
@@ -1576,7 +1576,7 @@
           "RunValidation",
           "WriteManagedProcessArtifacts"
         ],
-        "Purpose": "Implementation is the owned mutation step for the Tetris WASM PWA product target."
+        "Purpose": "Implementation is the owned mutation step for the requested Blazor WASM PWA product target."
       },
       {
         "StepKey": "validate-blazor-runtime",
@@ -1601,7 +1601,7 @@
           "RerunValidation",
           "RepairImplementation"
         ],
-        "Diagnostic": "Validation failed: browser console proof or gameplay assertion failed during Tetris WASM PWA validation."
+        "Diagnostic": "Validation failed: browser console proof or interactive workflow assertion failed during Blazor WASM PWA validation."
       }
     ]
   }

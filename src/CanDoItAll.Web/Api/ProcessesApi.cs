@@ -695,6 +695,25 @@ internal static class ProcessesApi
         })
         .WithName("ListProcessTemplateBaselineScenarios");
 
+        processes.MapGet("/templates/live-run-profiles", (
+                ProcessTemplatePackLoader packLoader) =>
+        {
+            var pack = packLoader.Load();
+            return Results.Ok(pack.LiveRunProfiles
+                .Select(item => new ProcessTemplateLiveRunProfileSummary(
+                    item.Key,
+                    item.ProcessTemplateKey,
+                    item.RunNameTemplate,
+                    item.Summary,
+                    item.OperatingMode,
+                    item.TriggerReasonTemplate,
+                    item.Assignments.Count,
+                    item.AcceptanceCriteria.Count,
+                    item.RequiredProofKinds.Count))
+                .ToList());
+        })
+        .WithName("ListProcessTemplateLiveRunProfiles");
+
         processes.MapGet("/templates/{processKey}", (
                 string processKey,
                 ProcessTemplatePackLoader packLoader) =>

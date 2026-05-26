@@ -96,6 +96,49 @@ public sealed class ProcessTemplateBaselineRecoveryExercise
     public string Diagnostic { get; set; } = string.Empty;
 }
 
+public sealed class ProcessTemplateLiveRunProfile
+{
+    public string Key { get; set; } = string.Empty;
+
+    public string ProcessTemplateKey { get; set; } = string.Empty;
+
+    public string RunNameTemplate { get; set; } = string.Empty;
+
+    public string Summary { get; set; } = string.Empty;
+
+    public string OperatingMode { get; set; } = string.Empty;
+
+    public string TriggerReasonTemplate { get; set; } = string.Empty;
+
+    public List<ProcessTemplateLiveRunProfileAssignment> Assignments { get; set; } = [];
+
+    public List<ProcessTemplateLiveRunProfileAcceptanceCriterion> AcceptanceCriteria { get; set; } = [];
+
+    public List<string> RequiredProofKinds { get; set; } = [];
+}
+
+public sealed class ProcessTemplateLiveRunProfileAssignment
+{
+    public string StepKey { get; set; } = string.Empty;
+
+    public string RoleKey { get; set; } = string.Empty;
+
+    public string DisplayNameTemplate { get; set; } = string.Empty;
+
+    public string ExecutorKind { get; set; } = string.Empty;
+
+    public string BindingReason { get; set; } = string.Empty;
+}
+
+public sealed class ProcessTemplateLiveRunProfileAcceptanceCriterion
+{
+    public string Key { get; set; } = string.Empty;
+
+    public string Title { get; set; } = string.Empty;
+
+    public string Description { get; set; } = string.Empty;
+}
+
 public sealed record ProcessTemplateCatalogItem(
     string Key,
     string DisplayName,
@@ -131,3 +174,14 @@ public sealed record ProcessTemplateBaselineScenarioSummary(
     int BlockedTransitionCount,
     int ContractExerciseCount,
     int RecoveryExerciseCount);
+
+public sealed record ProcessTemplateLiveRunProfileSummary(
+    string Key,
+    string ProcessTemplateKey,
+    string RunNameTemplate,
+    string Summary,
+    string OperatingMode,
+    string TriggerReasonTemplate,
+    int AssignmentCount,
+    int AcceptanceCriterionCount,
+    int RequiredProofKindCount);

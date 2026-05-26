@@ -32,7 +32,8 @@ Use this skill when a task needs process authoring or runtime control through th
 - Import/export: `GET /api/processes/definitions/{definitionId}/export`, `POST /api/processes/definitions/import`.
 - Templates: `GET /api/processes/templates`, `GET /api/processes/templates/{processKey}`, `GET /api/processes/templates/{processKey}/detail`, `GET /api/processes/templates/{processKey}/envelope`, `GET /api/processes/templates/{processKey}/mermaid`, `POST /api/processes/templates/{processKey}/import`.
 - Baseline scenarios: `GET /api/processes/templates/baseline-scenarios`.
-- Use template `/detail` and `/envelope` routes when verifying typed operation contracts, shared sidecars, workflow mappings, subprocess mappings, and baseline scenarios.
+- Live-run profiles: `GET /api/processes/templates/live-run-profiles`.
+- Use template `/detail` and `/envelope` routes when verifying typed operation contracts, shared sidecars, workflow mappings, subprocess mappings, and baseline scenarios. Use live-run profiles when preparing a fresh UI-driven run without seeded transitions or artifacts.
 - Do not move product mutation into validation, revalidation, writeback, or escalation steps. Blazor implementation or repair steps may mutate the product target; validation and screenshot/review steps are read-only unless their contract explicitly allows a governed external action.
 
 ## Runtime Work
@@ -64,9 +65,9 @@ Content-Type: application/json
 
 ```json
 {
-  "name": "Tetris Blazor WASM PWA delivery",
-  "summary": "Build and validate a Tetris Blazor WASM PWA.",
-  "valueStatement": "Deliver a playable offline-capable sample with proof.",
+  "name": "Blazor WASM PWA delivery",
+  "summary": "Build and validate a Blazor WASM PWA from a run-request topic.",
+  "valueStatement": "Deliver an offline-capable app with proof.",
   "customerName": "Engineering",
   "ownerName": "Process owner",
   "governancePolicySummary": "Product mutation is limited to implementation and repair steps.",
@@ -86,10 +87,10 @@ Content-Type: application/json
   ],
   "steps": [
     {
-      "key": "implement-tetris",
-      "title": "Implement Tetris WASM PWA",
+      "key": "implement-blazor-pwa",
+      "title": "Implement Blazor WASM PWA",
       "stepKind": 1,
-      "outputContractSummary": "Playable Tetris Blazor WASM PWA exists.",
+      "outputContractSummary": "Requested Blazor WASM PWA exists.",
       "evidenceContractSummary": "Implementation summary and browser proof are recorded.",
       "allowedOperations": [0, 3, 5, 6, 7, 8],
       "operationTargetScope": 4,
@@ -124,9 +125,9 @@ Content-Type: application/json
 {
   "processDefinitionId": "00000000-0000-0000-0000-000000000000",
   "projectId": "00000000-0000-0000-0000-000000000000",
-  "runName": "Tetris PWA run",
+  "runName": "Blazor PWA run",
   "operatingMode": 2,
-  "triggerReason": "Create and validate the Tetris Blazor WASM PWA."
+  "triggerReason": "Create and validate the requested Blazor WASM PWA."
 }
 ```
 
@@ -182,9 +183,10 @@ GET /api/processes/runs/{runId}?includeWorkBriefs=false&includeExecutionRuns=fal
 
 Check `stepRuns[].blockReasonCode`, `stepRuns[].recoveryOptions`, `stepRuns[].nextRecoveryAction`, `stepRuns[].health.nextRecoveryAction`, `health.recommendedAction`, `health.missingArtifactCount`, and `invariantDiagnostics`.
 
-## Tetris Blazor WASM PWA Checklist
+## Blazor WASM PWA Live-Run Checklist
 
-- Start from the `baseline-blazor-wasm-pwa-tetris` baseline scenario or the `blazor-app-delivery` template detail route.
+- Start from the `generic-blazor-wasm-pwa-app` live-run profile or the `blazor-app-delivery` template detail route. Put the concrete app topic and acceptance criteria in the run request.
+- Do not use seeded baseline transitions or artifacts as proof for a live UI run.
 - Confirm the first planning/contract step is read-only and that implementation or repair steps are the only steps allowed to mutate the product target.
 - Require managed artifacts for implementation summary, test/build output, browser screenshot or equivalent Playwright proof, and PWA/offline validation notes.
 - After the run starts, resolve assignments before expecting automation dispatch.

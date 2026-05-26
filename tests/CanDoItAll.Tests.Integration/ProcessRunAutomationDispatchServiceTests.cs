@@ -1098,7 +1098,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
             Run boundary:
             - Output root: C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-192839
             - Product root: C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-192839\product
-            - Fresh screenshot file: artifacts/process-runs/run-001/tetris-revalidated-current.png
+            - Fresh screenshot file: artifacts/process-runs/run-001/blazor-pwa-revalidated-current.png
             """,
             ["external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-192839/product"]);
 
@@ -3601,7 +3601,7 @@ Requirements from project-level planning context:
                 string.Empty,
                 "ProjectRoot",
                 string.Empty,
-                "TetrisGame",
+                "SamplePwaApp",
                 string.Empty,
                 string.Empty,
                 string.Empty,
@@ -3669,7 +3669,7 @@ Requirements from project-level planning context:
         var summary = method.Invoke(
             null,
             [
-                "TetrisGame",
+                "SamplePwaApp",
                 nodes,
                 new ProcessProjectStructureContext
                 {
@@ -3924,7 +3924,7 @@ Requirements from project-level planning context:
                 ParentNodeTitle = "Blazor app delivery"
             });
         const string projectStructureGroundingSummary = """
-            Dispatcher fetched the live project structure for `TetrisGame` and focused this prompt on the selected work branch.
+            Dispatcher fetched the live project structure for `SamplePwaApp` and focused this prompt on the selected work branch.
             Grounded external target paths from the selected project structure:
             - `C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-170653 Approved product root for this run` mapped to `external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-170653 Approved product root for this run` from run note (custom:run-note)
             - `C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-170653\project-structure-backup` mapped to `external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-170653/project-structure-backup` from backup note (custom:backup-note)
@@ -3979,7 +3979,7 @@ Requirements from project-level planning context:
             processName: "Blazor app delivery",
             outputContractSummary: "Buildable Blazor implementation");
         const string projectStructureGroundingSummary = """
-            Dispatcher fetched the live project structure for `TetrisGame` and focused this prompt on the selected work branch.
+            Dispatcher fetched the live project structure for `SamplePwaApp` and focused this prompt on the selected work branch.
             Grounded external target paths from the selected project structure:
             - `C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-181000\product` mapped to `external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-181000/product` from old run note (custom:old-run)
             - `C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-190813\project-structure-backup` mapped to `external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-190813/project-structure-backup` from current run instructions (custom:current-run)
@@ -4042,7 +4042,7 @@ Requirements from project-level planning context:
             processName: "Blazor app delivery",
             outputContractSummary: "Buildable Blazor implementation");
         const string projectStructureGroundingSummary = """
-            Dispatcher fetched the live project structure for `TetrisGame` and focused this prompt on the selected work branch.
+            Dispatcher fetched the live project structure for `SamplePwaApp` and focused this prompt on the selected work branch.
             Grounded external target paths from the selected project structure:
             - `C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-190813\product` mapped to `external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-190813/product` from current product root note (custom:current-run)
             """;
@@ -4174,7 +4174,7 @@ Requirements from project-level planning context:
             processName: "Blazor app delivery",
             outputContractSummary: "Buildable Blazor implementation");
         const string projectStructureGroundingSummary = """
-            Dispatcher fetched the live project structure for `TetrisGame` and focused this prompt on the selected work branch.
+            Dispatcher fetched the live project structure for `SamplePwaApp` and focused this prompt on the selected work branch.
             Grounded external target paths from the selected project structure:
             - `C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-190813\product` mapped to `external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-190813/product` from current product root note (custom:current-run)
             """;
@@ -4216,7 +4216,7 @@ Requirements from project-level planning context:
             processName: "Blazor app delivery",
             runName: "Codex live Blazor delivery 20260522-192839");
         const string projectStructureGroundingSummary = """
-            Dispatcher fetched the live project structure for `TetrisGame` and focused this prompt on the selected work branch.
+            Dispatcher fetched the live project structure for `SamplePwaApp` and focused this prompt on the selected work branch.
             Grounded external target paths from the selected project structure:
             - `C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-181000\product` mapped to `external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-181000/product` from old run note (custom:old-run)
             - `C:\programovani\dotnet-demo\output\codex-live-blazor-20260522-192839\project-structure-backup` mapped to `external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-192839/project-structure-backup` from current backup note (custom:backup-note)
@@ -5366,7 +5366,7 @@ Requirements from project-level planning context:
         var buildRecoveryDirective = serviceType.GetMethod("BuildRecoveryDirective", BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("BuildRecoveryDirective method was not found.");
         const string changeSetPath = "artifacts/process-runs/run-001/02-blazor-implementation-change-set.md";
-        const string sourcePath = "external-target/C/programovani/dotnet-demo/output/run-001/product/Domain/Tetris/Tetromino.cs";
+        const string sourcePath = "external-target/C/programovani/dotnet-demo/output/run-001/product/Features/SamplePwaApp/AppFeature.cs";
         var candidate = CreateReviewDispatchCandidateWithArtifactInputs(
             "Validate runtime and browser evidence for the inherited Blazor implementation.",
             (
@@ -5374,7 +5374,7 @@ Requirements from project-level planning context:
                 "Blazor implementation change set",
                 [
                     ("Blazor implementation change set", "Deliverable", changeSetPath, "Implementation artifact was produced.", "workspace"),
-                    ("Tetromino.cs", "Deliverable", sourcePath, "Source artifact was produced.", "external-target")
+                    ("AppFeature.cs", "Deliverable", sourcePath, "Source artifact was produced.", "external-target")
                 ]));
         var responseText = StructuredOutcome(
             ProcessStepOutcomeStatus.Completed,
@@ -12086,10 +12086,10 @@ Ancestor path to the target work node:
         var serviceType = typeof(ProcessRunAutomationDispatchService);
         var resolveMissingProof = serviceType.GetMethod("ResolveMissingConcreteImplementationProofSummary", BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("ResolveMissingConcreteImplementationProofSummary method was not found.");
-        var candidate = CreateDispatchCandidate("Implement the Tetris game as a Blazor application and prove startup.");
+        var candidate = CreateDispatchCandidate("Implement the requested Blazor application and prove startup.");
         var runId = Guid.NewGuid();
-        var sourcePath = $"output/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/{runId:D}/TetrisGame/Program.cs";
-        var projectPath = $"output/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/{runId:D}/TetrisGame/TetrisGame.csproj";
+        var sourcePath = $"output/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/{runId:D}/SamplePwaApp/Program.cs";
+        var projectPath = $"output/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/{runId:D}/SamplePwaApp/SamplePwaApp.csproj";
         var now = DateTimeOffset.UtcNow;
         var detail = CreateSuccessfulExecutionDetail(
             StructuredOutcome(ProcessStepOutcomeStatus.Completed, "Implementation source was written, read back, built, and smoke-tested."),

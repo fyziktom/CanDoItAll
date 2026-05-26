@@ -15,6 +15,15 @@ public sealed class ProcessTemplateGovernanceTests
         "blazor-fullstack-feature"
     ];
 
+    private static readonly string[] DemoTopicTerms =
+    [
+        "tetris",
+        "tetromino",
+        "falling block",
+        "gameplay",
+        "simple game loop"
+    ];
+
     private static readonly (string TemplateKey, string ResolveStepKey, string CaptureStepKey, string WritebackStepKey)[] ScreenshotTemplateSteps =
     [
         ("app-page-screenshot", "resolve-single-page-target", "capture-page-screenshot", "review-and-store-screenshot"),
@@ -23,7 +32,7 @@ public sealed class ProcessTemplateGovernanceTests
 
     private static readonly (string ScenarioKey, string TemplateKey)[] RequiredTypedBaselineScenarios =
     [
-        ("baseline-blazor-wasm-pwa-tetris", "blazor-app-delivery"),
+        ("baseline-blazor-wasm-pwa-app", "blazor-app-delivery"),
         ("baseline-customer-onboarding", "customer-onboarding"),
         ("baseline-business-plan-development", "business-plan-development"),
         ("baseline-incident-response", "incident-response"),
@@ -61,7 +70,7 @@ public sealed class ProcessTemplateGovernanceTests
     }
 
     [Fact]
-    public async Task Tetris_wasm_pwa_baseline_SB05_INV_001_keeps_sample_specific_requirements_in_scenario_data()
+    public async Task Blazor_wasm_pwa_baseline_SB05_INV_001_keeps_app_topic_generic_in_scenario_data()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -71,31 +80,28 @@ public sealed class ProcessTemplateGovernanceTests
         var pack = packLoader.Load();
         var scenario = Assert.Single(
             pack.BaselineScenarios,
-            item => string.Equals(item.Key, "baseline-blazor-wasm-pwa-tetris", StringComparison.Ordinal));
+            item => string.Equals(item.Key, "baseline-blazor-wasm-pwa-app", StringComparison.Ordinal));
         var projectedDefinition = projectionService.GetProjectedEnvelope(scenario.ProcessTemplateKey).Definition;
 
         Assert.Equal("blazor-app-delivery", scenario.ProcessTemplateKey);
-        Assert.Contains("Blazor WebAssembly PWA Tetris", scenario.TriggerReason, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("playable Tetris board", scenario.TriggerReason, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("falling tetrominoes", scenario.TriggerReason, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("keyboard controls", scenario.TriggerReason, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("scoring", scenario.TriggerReason, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("line clear", scenario.TriggerReason, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("game over", scenario.TriggerReason, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("restart", scenario.TriggerReason, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("pause/resume", scenario.TriggerReason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("requested app topic", scenario.TriggerReason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("responsive route-level UI", scenario.TriggerReason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("core interactive workflow", scenario.TriggerReason, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("PWA manifest/service-worker offline readiness", scenario.TriggerReason, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("build/test proof", scenario.TriggerReason, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("browser screenshot", scenario.TriggerReason, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("console proof", scenario.TriggerReason, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("project-structure writeback", scenario.TriggerReason, StringComparison.OrdinalIgnoreCase);
+        AssertNoDemoTopicTerms(scenario.RunName);
+        AssertNoDemoTopicTerms(scenario.Summary);
+        AssertNoDemoTopicTerms(scenario.TriggerReason);
 
         Assert.Contains(scenario.Transitions, transition =>
             string.Equals(transition.StepKey, "resolve-blazor-contract", StringComparison.Ordinal) &&
             transition.Reason.Contains("without implementation", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(scenario.Artifacts, artifact =>
             string.Equals(artifact.StepKey, "validate-blazor-runtime", StringComparison.Ordinal) &&
-            artifact.ReviewSummary.Contains("gameplay assertions", StringComparison.OrdinalIgnoreCase));
+            artifact.ReviewSummary.Contains("interactive workflow assertions", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(scenario.Artifacts, artifact =>
             string.Equals(artifact.StepKey, "record-blazor-results", StringComparison.Ordinal) &&
             artifact.ReviewSummary.Contains("project-structure writeback", StringComparison.OrdinalIgnoreCase));
@@ -103,6 +109,32 @@ public sealed class ProcessTemplateGovernanceTests
         Assert.False(AllowsProductMutation(GetStep(projectedDefinition, "resolve-blazor-contract")));
         Assert.True(AllowsProductMutation(GetStep(projectedDefinition, "implement-blazor-change")));
         Assert.False(AllowsProductMutation(GetStep(projectedDefinition, "validate-blazor-runtime")));
+    }
+
+    [Fact]
+    public async Task Blazor_wasm_pwa_live_run_profile_SB02_INV_001_starts_fresh_and_takes_topic_from_run_request()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var packLoader = scope.ServiceProvider.GetRequiredService<ProcessTemplatePackLoader>();
+
+        var pack = packLoader.Load();
+        var profile = Assert.Single(
+            pack.LiveRunProfiles,
+            item => string.Equals(item.Key, "generic-blazor-wasm-pwa-app", StringComparison.Ordinal));
+
+        Assert.Equal("blazor-app-delivery", profile.ProcessTemplateKey);
+        Assert.Equal("GovernedLive", profile.OperatingMode);
+        Assert.Contains("{AppTopic}", profile.RunNameTemplate, StringComparison.Ordinal);
+        Assert.Contains("{AppTopic}", profile.TriggerReasonTemplate, StringComparison.Ordinal);
+        Assert.NotEmpty(profile.Assignments);
+        Assert.NotEmpty(profile.AcceptanceCriteria);
+        Assert.NotEmpty(profile.RequiredProofKinds);
+        Assert.Null(typeof(ProcessTemplateLiveRunProfile).GetProperty("Transitions"));
+        Assert.Null(typeof(ProcessTemplateLiveRunProfile).GetProperty("Artifacts"));
+        AssertNoDemoTopicTerms(profile.RunNameTemplate);
+        AssertNoDemoTopicTerms(profile.Summary);
+        AssertNoDemoTopicTerms(profile.TriggerReasonTemplate);
     }
 
     [Fact]
@@ -317,5 +349,13 @@ public sealed class ProcessTemplateGovernanceTests
         Assert.Contains(ProcessStepOperation.EscalateOrDecide, step.AllowedOperations);
         Assert.Contains(ProcessStepOperation.WriteManagedProcessArtifacts, step.AllowedOperations);
         Assert.DoesNotContain(ProcessStepOperation.MutateProductTarget, step.AllowedOperations);
+    }
+
+    private static void AssertNoDemoTopicTerms(string value)
+    {
+        foreach (var term in DemoTopicTerms)
+        {
+            Assert.DoesNotContain(term, value, StringComparison.OrdinalIgnoreCase);
+        }
     }
 }

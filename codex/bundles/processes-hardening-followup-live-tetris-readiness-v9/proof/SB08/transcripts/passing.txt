@@ -1,3 +1,3 @@
-# SB08 passing.txt
-
-Pending.
+Command: dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-restore --filter "FullyQualifiedName~ProcessRunAutomationDispatchServiceTests"
+ExitCode: 0
+SB08-INV-001 semantic positive proof: ProcessRunAutomationDispatchServiceTests passed 447/447, covering dispatch policy, project-structure grounding, tool metadata, and governed external target alias behavior.

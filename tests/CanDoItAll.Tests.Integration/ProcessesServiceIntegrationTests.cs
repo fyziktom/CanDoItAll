@@ -2202,7 +2202,7 @@ public sealed class ProcessesServiceIntegrationTests
 
         var blazorAppDeliveryRun = Assert.Single(
             await processesService.ListRunsAsync(blazorAppDeliveryDefinition.Id, projectId),
-            item => item.Name == "Blazor WASM PWA Tetris delivery / playable browser game");
+            item => item.Name == "Blazor WASM PWA delivery / generic application");
         var blazorAppDeliveryStepRuns = await processesService.ListStepRunsAsync(blazorAppDeliveryRun.Id);
         var blazorAppDeliveryArtifacts = await processesService.ListArtifactsAsync(blazorAppDeliveryRun.Id);
 
@@ -2210,7 +2210,7 @@ public sealed class ProcessesServiceIntegrationTests
             blazorAppDeliveryStepRuns,
             item => item.Title == "Validate Blazor runtime and browser evidence" &&
                     item.SelectedBranchOutcomeTitle == "Quality accepted");
-        Assert.Contains(blazorAppDeliveryArtifacts, item => item.Title == "Tetris project-structure writeback receipt");
+        Assert.Contains(blazorAppDeliveryArtifacts, item => item.Title == "Blazor project-structure writeback receipt");
 
         var exportEnvelope = await processesService.ExportAsync(seedResult.Value.PrimaryDefinitionId);
         exportEnvelope.Definition.Id = null;

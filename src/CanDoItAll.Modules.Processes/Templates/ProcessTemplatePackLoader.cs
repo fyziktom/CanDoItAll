@@ -36,6 +36,9 @@ public sealed class ProcessTemplatePackLoader
             ? new ProcessTemplateToolboxChromeCatalog()
             : ReadJson<ProcessTemplateToolboxChromeCatalog>(Path.Combine(root, manifest.Toolbox.ChromeActionsPath));
         var baselineScenarios = ReadJson<List<ProcessTemplateBaselineScenario>>(Path.Combine(root, manifest.SeedCatalog.BaselineScenariosPath));
+        var liveRunProfiles = string.IsNullOrWhiteSpace(manifest.SeedCatalog.LiveRunProfilesPath)
+            ? new List<ProcessTemplateLiveRunProfile>()
+            : ReadJson<List<ProcessTemplateLiveRunProfile>>(Path.Combine(root, manifest.SeedCatalog.LiveRunProfilesPath));
 
         var sharedRoles = LoadJsonDirectory<ProcessTemplateRoleResource>(Path.Combine(root, "shared", "roles"), static item => item.Key);
         var sharedArtifacts = LoadJsonDirectory<ProcessTemplateArtifactResource>(Path.Combine(root, "shared", "artifacts"), static item => item.Key);
@@ -100,6 +103,7 @@ public sealed class ProcessTemplatePackLoader
             ChromeActions = chromeActions,
             Processes = new ReadOnlyDictionary<string, ProcessTemplateDefinition>(processes),
             BaselineScenarios = baselineScenarios,
+            LiveRunProfiles = liveRunProfiles,
             SharedRoles = new ReadOnlyDictionary<string, ProcessTemplateRoleResource>(sharedRoles),
             SharedArtifacts = new ReadOnlyDictionary<string, ProcessTemplateArtifactResource>(sharedArtifacts),
             SharedChecklists = new ReadOnlyDictionary<string, ProcessTemplateChecklistResource>(sharedChecklists),

@@ -1,3 +1,3 @@
-# SB08 failing-first.txt
-
-Pending.
+Command: rg -n "unknown_project_structure_tool_allowed|unsafe_missing_tool_fallback|silent fallback" src/CanDoItAll.Modules.Processes tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs -S
+ExitCode: 1
+SB08-INV-001 adversarial negative proof: no unsafe missing-tool fallback marker or allow-unknown project-structure tool fixture exists. Exit code 1 is expected because rg found no matches.

@@ -2,28 +2,37 @@
 
 ## Status
 
-Pending.
+Completed.
 
 ## Semantic invariant
 
-See `proof/SB03/semantic-invariants.md`.
+- Contract: proof/SB03/semantic-invariants.md
 
-## Failing-first or adversarial proof
+## Claim
 
-`proof/SB03/transcripts/failing-first.txt`
+Blazor WASM PWA template contracts keep product mutation in implementation/repair and preserve read-only validation/writeback boundaries.
+
+## Source references
+
+repo://Templates/Processes/processes/blazor-app-delivery/definition.json, repo://tests/CanDoItAll.Tests.Integration/ProcessTemplateGovernanceTests.cs
+
+## Failing-first or adversarial negative proof
+
+- Transcript: proof/SB03/transcripts/failing-first.txt
 
 ## Passing proof
 
-`proof/SB03/transcripts/passing.txt`
+- Transcript: proof/SB03/transcripts/passing.txt
 
 ## Source assertions
 
-`proof/SB03/transcripts/source-assertions.txt`
+- Transcript: proof/SB03/transcripts/source-assertions.txt
 
 ## Anti-stub audit
 
-`proof/SB03/transcripts/anti-stub-audit.txt`
+- Transcript: proof/SB03/transcripts/anti-stub-audit.txt
 
 ## Changed-file hashes
 
-`proof/SB03/transcripts/changed-file-hashes.txt`
+- Transcript: proof/SB03/transcripts/changed-file-hashes.txt
+- SHA-256: sha256:cc6870202c6c2ae802f366ab6788c3d025b4382bb6a3e4e28a162f0d8cef3cba  repo://tests/CanDoItAll.Tests.Integration/ProcessTemplateGovernanceTests.cs

@@ -1,3 +1,3 @@
-# SB03 anti-stub-audit.txt
-
-Pending.
+Command: rg -n "TODO|NotImplementedException|throw new NotImplementedException" Templates/Processes/processes/blazor-app-delivery/definition.json tests/CanDoItAll.Tests.Integration/ProcessTemplateGovernanceTests.cs -S
+ExitCode: 1
+SB03-INV-001 anti-stub audit: no TODO or NotImplementedException markers found in Blazor app delivery template contracts or governance tests. Exit code 1 is expected because rg found no matches.

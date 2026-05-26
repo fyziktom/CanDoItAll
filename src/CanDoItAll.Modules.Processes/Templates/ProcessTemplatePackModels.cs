@@ -21,6 +21,8 @@ public sealed class ProcessTemplatePack
 
     public IReadOnlyList<ProcessTemplateBaselineScenario> BaselineScenarios { get; init; } = [];
 
+    public IReadOnlyList<ProcessTemplateLiveRunProfile> LiveRunProfiles { get; init; } = [];
+
     public IReadOnlyDictionary<string, ProcessTemplateRoleResource> SharedRoles { get; init; } =
         new ReadOnlyDictionary<string, ProcessTemplateRoleResource>(new Dictionary<string, ProcessTemplateRoleResource>(StringComparer.OrdinalIgnoreCase));
 
@@ -77,6 +79,8 @@ public sealed class ProcessTemplateToolboxManifest
 public sealed class ProcessTemplateSeedCatalogManifest
 {
     public string BaselineScenariosPath { get; set; } = string.Empty;
+
+    public string LiveRunProfilesPath { get; set; } = string.Empty;
 }
 
 public sealed class ProcessFrameworkSource

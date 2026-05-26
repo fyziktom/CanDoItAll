@@ -12,7 +12,8 @@ This pack is the current-architecture-aligned replacement for the original execu
 - Added explicit process-level role usages.
 - Added first-class step dependencies and artifact-input definitions.
 - Added a new branching-code-review template aligned to the current baseline scenarios.
-- Realigned the baseline scenario catalog to five scenarios matching the current repository expectations.
+- Realigned the baseline scenario catalog to current repository expectations.
+- Added live-run profiles for fresh UI-driven runs that must not pre-seed completed transitions or artifacts.
 - Added corrective guidance for the remaining hardcoded authoring chrome in ProcessCanvasSurfaceFactory.
 - Added typed operation contracts, target scopes, workflow/subprocess artifact mappings, and block/recovery health guidance for governed process runs.
 
@@ -26,8 +27,8 @@ This pack is the current-architecture-aligned replacement for the original execu
 - Workflows are role executors under Processes. A workflow assignment can execute a process step and produce mapped artifacts, but the process definition still owns dependencies, approvals, artifact expectations, recovery, and closure.
 - Block/recovery behavior is typed runtime state. New transitions should supply `BlockCause` instead of depending on blocked-reason text; text inference exists only for legacy state.
 
-## Tetris Blazor WASM PWA readiness checklist
-- Start from `baseline-blazor-wasm-pwa-tetris` in `seed-catalog/baseline-scenarios.json` or import `blazor-app-delivery` and preserve the scenario-specific acceptance criteria.
+## Blazor WASM PWA live-run readiness checklist
+- Start fresh UI-driven runs from `generic-blazor-wasm-pwa-app` in `seed-catalog/live-run-profiles.json` or import `blazor-app-delivery` and supply the concrete app topic in the run request.
 - Keep planning and validation steps read-only. Only implementation and repair steps should use product-target mutation.
 - Require artifacts for implementation summary, build/test output, browser screenshot or Playwright proof, PWA/offline validation notes, and final handoff.
 - For missing current-step output, block with `OwnOutput`; for missing upstream materialization, block with `UpstreamInput`.
@@ -37,7 +38,7 @@ This pack is the current-architecture-aligned replacement for the original execu
 - `shared/` contains reusable roles, artifacts, checklists, validations, and prompts.
 - `processes/<key>/` contains the template definition, local resources, step docs, Mermaid exports, and projection sidecars.
 - `toolbox/` contains role/step seeds and the proposed chrome-action catalog.
-- `seed-catalog/` contains baseline seeded runtime scenarios.
+- `seed-catalog/` contains baseline seeded runtime scenarios and live-run profiles for fresh UI-driven runs.
 
 ## Validation
 Use `tools/validate_process_template_pack.py` to validate JSON references, dependency graphs, artifact inputs, and current baseline expectations.

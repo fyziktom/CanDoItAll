@@ -18,7 +18,8 @@
     "ChromeActionsPath": "toolbox/chrome-actions.json"
   },
   "SeedCatalog": {
-    "BaselineScenariosPath": "seed-catalog/baseline-scenarios.json"
+    "BaselineScenariosPath": "seed-catalog/baseline-scenarios.json",
+    "LiveRunProfilesPath": "seed-catalog/live-run-profiles.json"
   },
   "Processes": [
     {

@@ -1,27 +1,75 @@
-# SB05: 05-blazor-wasm-pwa-and-browser-proof-skills
+# SB05: Blazor WASM PWA And Browser Proof Skills
 
-## Goal
+## Status
 
-Add or update skills so agents do not improvise Blazor/PWA/browser proof work.
+- Status: `Completed`
 
-## Work items
+## Objective
 
-- Add/upgrade a Blazor WASM PWA implementation skill: project structure, `dotnet new blazorwasm`/PWA options, app setup, service worker/manifest, static assets, simple game loop, keyboard input, and build/test guidance.
-- Add/upgrade a browser proof skill: launch app, find URL, capture screenshot, browser snapshot/evaluate, console messages, network checks, cleanup receipt.
-- Add/upgrade a project-structure writeback skill: node/asset create, evidence index, references, no product-source mutation.
-- Add/upgrade a process artifact discipline skill: managed paths, lineage, current-run evidence, no chat-only proof.
-- Ensure the skills are discoverable and referenced by template docs or role instructions.
+Add or upgrade reusable skill guidance for generic Blazor WASM PWA delivery and browser proof.
 
-## Required proof
+## Covered Inputs
 
-- Failing-first or adversarial proof.
-- Passing production-path proof.
-- Source assertions with exact repo paths.
-- Anti-stub audit.
-- Changed-file hashes.
-- A note explaining how this improves readiness for the real UI-driven Blazor WASM PWA Tetris test.
-- A note explaining how generic process behavior remains protected.
+- RQ05 reusable Blazor/browser/project-structure/process proof skills.
 
-## Closure criteria
+## Prerequisites
 
-This subbundle is complete only when its proof manifest is updated and the next subbundle can rely on the result.
+- SB04 role/tool matrix is complete.
+
+## Exact Source References
+
+- `repo://codex/skills/candoitall-api-processes/SKILL.md`
+- `repo://codex/skills/candoitall-watch-playwright-loop/SKILL.md`
+- `repo://Templates/Agents/teams/delivery-platform`
+- `repo://tests/CanDoItAll.Tests.Integration/ProcessTemplateGovernanceTests.cs`
+
+## Deliverables
+
+- Generic Blazor WASM PWA delivery guidance covering project structure, PWA manifest/service worker, static assets, UI state, route validation, build/test, and browser proof.
+- Process API skill examples that use neutral app names and app-topic placeholders.
+- Active skill-root synchronization proof if a repo skill used by Codex is changed.
+
+## Dependency Impact
+
+- SB06 and later subbundles depend on updated reusable skills to avoid topic-specific instructions.
+
+## Validation Depth
+
+- Source assertion and skill synchronization proof if active skill content changes.
+
+## Implementation Steps
+
+1. Audit process and browser-proof skills for app-topic-specific examples.
+2. Replace examples with generic Blazor WASM PWA app delivery placeholders.
+3. Add instructions for topic-specific criteria to come from project structure or run prompt.
+4. Record repo/active skill hashes if synchronization is required.
+
+## Do Not Do
+
+- Do not encode a demonstration topic or domain-specific route into a reusable skill.
+- Do not treat generated images or screenshots as proof unless they are captured from the shipped app.
+
+## Acceptance Checklist
+
+- Skill text is generic and reusable for any Blazor WASM PWA topic.
+- Browser proof requirements remain concrete.
+- Project-structure writeback is documented as controlled external action.
+
+## Proof Required
+
+- `proof/SB05/manifest.md`
+- `proof/SB05/semantic-invariants.md`
+- `proof/SB05/transcripts/source-assertions.txt`
+- `proof/SB05/transcripts/changed-file-hashes.txt`
+
+## Browser Validation Logging
+
+- N/A. This subbundle changes skills and proof instructions.
+
+## Progression Gate
+
+- SB06 may start after skill text is generic and synchronization proof is recorded when applicable.
+
+## Suggested Agent Prompt
+
+Update reusable Blazor WASM PWA and browser proof skills so they are generic, concrete, and ready for any app topic.

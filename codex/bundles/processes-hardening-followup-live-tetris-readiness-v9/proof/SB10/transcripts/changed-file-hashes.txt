@@ -1,3 +1,16 @@
-# SB10 changed-file-hashes.txt
-
-Pending.
+Command: Get-FileHash -Algorithm SHA256 for changed production, template, skill, and test files
+ExitCode: 0
+sha256:733545bf1dca2628e47570e43a0a08c6e68ae813daf8a000e4f6cb4c997af357  repo://Templates/Processes/manifest.json
+sha256:619fb2045e3d08b16bb70ede5886b5bb24ece870ce0bbe326a2f5a1133e1d7f5  repo://Templates/Processes/seed-catalog/baseline-scenarios.json
+sha256:6292fadff8307eaf618c7a0ad8336b3d21bd1dceafb0d7994f0d7071c7d7bb3c  repo://Templates/Processes/seed-catalog/live-run-profiles.json
+sha256:f1d19cc59a6d819922c9b5423d5fa5062b496519158f137893e428af4bd9a483  repo://Templates/Processes/README.md
+sha256:01c271191a6ec0ca536cbf6e674f49c27718582eff42e390c58cbf5629e6c6cc  repo://codex/skills/candoitall-api-processes/SKILL.md
+sha256:88c7f1b2621a4a7f08ba353dc8063eb105e92bfbd737158bc7b2794da521a38a  repo://src/CanDoItAll.Modules.Processes/Templates/ProcessTemplatePackModels.cs
+sha256:8b7137845e69269a1a3aa7a87b69b42b1bb71dd2271db28b76bd2a50fbaa8666  repo://src/CanDoItAll.Modules.Processes/Templates/ProcessTemplatePackScenarios.cs
+sha256:73e802834b4a8620671cd9c5e8a8da0718017fd5dce89c850b9d356c57e3be29  repo://src/CanDoItAll.Modules.Processes/Templates/ProcessTemplatePackLoader.cs
+sha256:652c0b85ce9baa6cb455a84af54e18423bbd17d67153dd65be239bc515bbd394  repo://src/CanDoItAll.Web/Api/ProcessesApi.cs
+sha256:cc6870202c6c2ae802f366ab6788c3d025b4382bb6a3e4e28a162f0d8cef3cba  repo://tests/CanDoItAll.Tests.Integration/ProcessTemplateGovernanceTests.cs
+sha256:054a74d1002ff376eddeda37af02e7b140e4c564b3d253eed5b5cb49b66d8742  repo://tests/CanDoItAll.Tests.Integration/ApiIntegrationTests.cs
+sha256:cf52c8c83fc5ab292640b63a0ad1aed06c4ccbfe3303b4d569499b88d76d1c43  repo://tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs
+sha256:d9fb63eed34b9738c8d37b3948dc28ba10be8759c019662b4781167160ed5923  repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs
+sha256:cd24df2f4ebfbbfee08529b72b5a523d002df46b0bd85a01e0c5cf1f8f0245c1  repo://tests/CanDoItAll.Tests.Components/ProcessWorkspaceTests.cs

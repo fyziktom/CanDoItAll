@@ -1,25 +1,75 @@
-# SB15: 15-refactor-checkpoint-b-ui-test-readiness
+# SB15: Refactor Checkpoint B UI Test Readiness
 
-## Goal
+## Status
 
-Final refactor checkpoint before live-test closure.
+- Status: `Completed`
 
-## Work items
+## Objective
 
-- Clean up helper duplication in template profile selection, live scenario metadata, and skill/tool readiness checks.
-- Ensure UI/API/test code names are generic: live-run profile, scenario acceptance, operation contract, not Tetris-specific runtime logic.
-- Run focused tests before final red-team.
+Run a final checkpoint before closure to ensure UI/API/test code names are generic: live-run profile, scenario acceptance, operation contract, current-run proof, and artifact lineage.
 
-## Required proof
+## Covered Inputs
 
-- Failing-first or adversarial proof.
-- Passing production-path proof.
-- Source assertions with exact repo paths.
-- Anti-stub audit.
-- Changed-file hashes.
-- A note explaining how this improves readiness for the real UI-driven Blazor WASM PWA Tetris test.
-- A note explaining how generic process behavior remains protected.
+- RQ08 generic runtime breadth.
+- RQ09 scope/template/fake-proof drift.
 
-## Closure criteria
+## Prerequisites
 
-This subbundle is complete only when its proof manifest is updated and the next subbundle can rely on the result.
+- SB14 harness/runbook preparation is complete.
+
+## Exact Source References
+
+- `repo://Templates/Processes`
+- `repo://src/CanDoItAll.Web/Api/ProcessesApi.cs`
+- `repo://src/CanDoItAll.Modules.Processes`
+- `repo://tests`
+- `repo://codex/skills/candoitall-api-processes/SKILL.md`
+
+## Deliverables
+
+- Source assertion report for generic names and topic-neutral reusable instructions.
+- Minimal cleanup for naming or proof drift found during SB14.
+
+## Dependency Impact
+
+- SB16 final closure depends on a clean genericity and proof-readiness checkpoint.
+
+## Validation Depth
+
+- Source assertions plus focused tests affected by any cleanup.
+
+## Implementation Steps
+
+1. Search process templates, skills, tests, and source for app-topic-specific reusable instructions.
+2. Repair only reusable instructions, names, or tests that violate generic scope.
+3. Confirm profile and proof terminology is consistent.
+
+## Do Not Do
+
+- Do not rewrite large modules for naming polish.
+- Do not remove raw input preservation from the bundle.
+
+## Acceptance Checklist
+
+- Reusable runtime/template/skill instructions are generic.
+- Tests name generic behavior rather than a demonstration topic.
+- Final runbook can accept any Blazor WASM PWA topic.
+
+## Proof Required
+
+- `proof/SB15/manifest.md`
+- `proof/SB15/semantic-invariants.md`
+- `proof/SB15/transcripts/source-assertions.txt`
+- `proof/SB15/transcripts/passing.txt`
+
+## Browser Validation Logging
+
+- N/A unless UI labels or process workspace behavior changes.
+
+## Progression Gate
+
+- SB16 may start after the genericity checkpoint passes.
+
+## Suggested Agent Prompt
+
+Run the final genericity and UI-test-readiness checkpoint, repair narrow drift only, and record source assertions.

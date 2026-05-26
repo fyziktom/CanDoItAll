@@ -1,3 +1,3 @@
-# SB16 source-assertions.txt
-
-Pending.
+Command: rg -n "generic-blazor-wasm-pwa-app|baseline-blazor-wasm-pwa-app|live-run-profiles|ProcessTemplateLiveRunProfileSummary|Blazor WASM PWA Live-Run Checklist" Templates/Processes codex/skills/candoitall-api-processes src tests -S
+ExitCode: 0
+SB16-INV-001 source proof: final source assertions locate the generic live-run profile, generic baseline, API summary route, and generic documentation without relying on a demo topic.

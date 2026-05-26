@@ -178,8 +178,8 @@ public sealed class ProcessWorkspaceTests
         await using var harness = await ComponentTestHarness.CreateAsync();
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
         var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
-        var projectId = await CreateProjectAsync(projectsService, "Tetris UI preflight component project");
-        var saveResult = await processesService.SaveAsync(BuildTetrisPreflightDefinition(projectId, Guid.NewGuid()));
+        var projectId = await CreateProjectAsync(projectsService, "Blazor PWA UI preflight component project");
+        var saveResult = await processesService.SaveAsync(BuildBlazorPwaPreflightDefinition(projectId, Guid.NewGuid()));
 
         Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
         var publishResult = await processesService.PublishAsync(saveResult.Value);
@@ -191,15 +191,15 @@ public sealed class ProcessWorkspaceTests
             {
                 ProcessDefinitionId = saveResult.Value,
                 ProjectId = projectId,
-                RunName = "Tetris UI preflight run",
+                RunName = "Blazor PWA UI preflight run",
                 OperatingMode = ProcessOperatingMode.AssistedExecution,
-                TriggerReason = "Component test Tetris UI preflight."
+                TriggerReason = "Component test Blazor PWA UI preflight."
             });
 
         Assert.True(runResult.IsSuccess, string.Join(" | ", runResult.Errors.Select(error => error.Message)));
         var intakeStep = Assert.Single(
             await processesService.ListStepRunsAsync(runResult.Value),
-            step => step.Title == "Confirm Tetris request intake");
+            step => step.Title == "Confirm Blazor PWA request intake");
         var startResult = await processesService.TransitionStepAsync(
             new ProcessStepTransitionRequest
             {
@@ -220,7 +220,7 @@ public sealed class ProcessWorkspaceTests
                 StepRunId = inProgressStep.Id,
                 StepRunConcurrencyToken = inProgressStep.StepRunConcurrencyToken,
                 TargetStatus = ProcessStepRunStatus.Blocked,
-                Reason = "Missing managed intake evidence for the Tetris request.",
+                Reason = "Missing managed intake evidence for the Blazor PWA request.",
                 DecidedBy = "component-tests",
                 BlockCause = ProcessStepBlockCause.OwnOutput
             });
@@ -234,7 +234,7 @@ public sealed class ProcessWorkspaceTests
         var cut = harness.Context.RenderComponent<ProcessWorkspace>(parameters => parameters
             .Add(component => component.ProjectId, projectId));
 
-        cut.WaitForAssertion(() => Assert.Contains("Tetris UI preflight process", cut.Markup));
+        cut.WaitForAssertion(() => Assert.Contains("Blazor PWA UI preflight process", cut.Markup));
         await ActivateRunsTabAsync(cut);
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find($"[data-testid='processes-run-history-item-{runResult.Value}']")));
 
@@ -246,12 +246,12 @@ public sealed class ProcessWorkspaceTests
             Assert.Equal(ProcessStepTargetScope.ManagedProcessArtifactsOnly.ToString(), intakeCard.GetAttribute("data-operation-target-scope"));
             Assert.Contains(ProcessStepOperation.WriteManagedProcessArtifacts.ToString(), intakeCard.GetAttribute("data-allowed-operations"), StringComparison.Ordinal);
             Assert.DoesNotContain(ProcessStepOperation.MutateProductTarget.ToString(), intakeCard.GetAttribute("data-allowed-operations"), StringComparison.Ordinal);
-            Assert.Contains("Confirm Tetris request intake", intakeCard.TextContent, StringComparison.Ordinal);
+            Assert.Contains("Confirm Blazor PWA request intake", intakeCard.TextContent, StringComparison.Ordinal);
             Assert.Contains("target: ManagedProcessArtifactsOnly", intakeCard.TextContent, StringComparison.Ordinal);
             Assert.Contains(ProcessStepOperation.EscalateOrDecide.ToString(), intakeCard.TextContent, StringComparison.Ordinal);
 
             var branchSelect = host.Find($"[data-testid='processes-branch-outcome-select'][data-step-run-id='{blockedStep.Id:D}']");
-            Assert.Contains("Tetris request ready", branchSelect.TextContent, StringComparison.Ordinal);
+            Assert.Contains("Blazor PWA request ready", branchSelect.TextContent, StringComparison.Ordinal);
 
             var recoveryDiagnostics = host.Find($"[data-testid='processes-step-recovery-diagnostics'][data-step-run-id='{blockedStep.Id:D}']");
             Assert.Equal(ProcessStepBlockReasonCode.ArtifactContractUnsatisfied.ToString(), recoveryDiagnostics.GetAttribute("data-block-reason-code"));
@@ -1495,23 +1495,23 @@ public sealed class ProcessWorkspaceTests
         };
     }
 
-    private static ProcessDefinitionEditorModel BuildTetrisPreflightDefinition(Guid projectId, Guid managerRoleId)
+    private static ProcessDefinitionEditorModel BuildBlazorPwaPreflightDefinition(Guid projectId, Guid managerRoleId)
     {
         var intakeStepId = Guid.NewGuid();
         var implementationStepId = Guid.NewGuid();
-        var tetrisReadyOutcomeId = Guid.NewGuid();
+        var blazorReadyOutcomeId = Guid.NewGuid();
 
         return new ProcessDefinitionEditorModel
         {
             ProjectId = projectId,
             ContractMode = ProcessDefinitionContractMode.Strict,
-            Name = "Tetris UI preflight process",
-            Summary = "Component-test process for proving runtime UI diagnostics before the browser Tetris run.",
-            ValueStatement = "Expose enough runtime state to inspect Tetris process execution.",
+            Name = "Blazor PWA UI preflight process",
+            Summary = "Component-test process for proving runtime UI diagnostics before the browser Blazor PWA run.",
+            ValueStatement = "Expose enough runtime state to inspect Blazor PWA process execution.",
             CustomerName = "Internal validation",
             OwnerName = "Morgan Process Lead",
-            GovernancePolicySummary = "Keep Tetris specifics in process data, not runtime code.",
-            ChangeSummary = "Tetris UI preflight definition.",
+            GovernancePolicySummary = "Keep app-topic specifics in process data, not runtime code.",
+            ChangeSummary = "Blazor PWA UI preflight definition.",
             ConstitutionRuleSummary = "The first step cannot mutate product files.",
             OperatingModeSummary = "Assisted execution with visible recovery diagnostics.",
             SimulationReadinessSummary = "Safe for component validation.",
@@ -1520,13 +1520,13 @@ public sealed class ProcessWorkspaceTests
                 new ProcessRoleEditorModel
                 {
                     Id = managerRoleId,
-                    Key = "tetris-process-owner",
-                    DisplayName = "Tetris process owner",
+                    Key = "blazor-pwa-process-owner",
+                    DisplayName = "Blazor PWA process owner",
                     Purpose = "Own branch selection and intake recovery decisions.",
                     StaffingIntent = "Single validation owner.",
                     PreferredProjectAssignmentRole = ProjectPartyAssignmentRole.Manager,
                     PreferredExecutorKind = "person",
-                    SnapshotSummary = "Tetris process owner snapshot."
+                    SnapshotSummary = "Blazor PWA process owner snapshot."
                 }
             ],
             Steps =
@@ -1534,13 +1534,13 @@ public sealed class ProcessWorkspaceTests
                 new ProcessStepEditorModel
                 {
                     Id = intakeStepId,
-                    Key = "confirm-tetris-intake",
-                    Title = "Confirm Tetris request intake",
+                    Key = "confirm-blazor-pwa-intake",
+                    Title = "Confirm Blazor PWA request intake",
                     StepKind = ProcessStepKind.Decision,
                     DecisionRoleRequirementId = managerRoleId,
-                    InputContractSummary = "Tetris WASM PWA request and constraints.",
+                    InputContractSummary = "Blazor WASM PWA request and constraints.",
                     OutputContractSummary = "Managed intake record and branch decision.",
-                    EvidenceContractSummary = "Tetris request readiness decision stays in managed process artifacts.",
+                    EvidenceContractSummary = "Blazor PWA request readiness decision stays in managed process artifacts.",
                     DecisionRightsSummary = "The process owner decides whether the request is ready for implementation.",
                     ExceptionPolicySummary = "Block for artifact recovery when intake evidence is missing.",
                     TargetLeadHours = 1,
@@ -1558,16 +1558,16 @@ public sealed class ProcessWorkspaceTests
                         {
                             RoleRequirementId = managerRoleId,
                             ResponsibilityKind = ProcessResponsibilityKind.Responsible,
-                            RebindPolicySummary = "Keep the Tetris process owner assigned."
+                            RebindPolicySummary = "Keep the Blazor PWA process owner assigned."
                         }
                     ],
                     BranchOutcomes =
                     [
                         new ProcessStepBranchOutcomeEditorModel
                         {
-                            Id = tetrisReadyOutcomeId,
-                            Key = "tetris-ready",
-                            Title = "Tetris request ready",
+                            Id = blazorReadyOutcomeId,
+                            Key = "blazor-pwa-ready",
+                            Title = "Blazor PWA request ready",
                             Description = "Move to implementation without granting intake product mutation."
                         }
                     ],
@@ -1577,7 +1577,7 @@ public sealed class ProcessWorkspaceTests
                         {
                             Id = Guid.NewGuid(),
                             ArtifactKind = ProcessArtifactKind.Evidence,
-                            Title = "Tetris intake decision record",
+                            Title = "Blazor PWA intake decision record",
                             IsRequired = true,
                             ValidationRequirementSummary = "Record the managed intake decision before implementation."
                         }
@@ -1586,11 +1586,11 @@ public sealed class ProcessWorkspaceTests
                 new ProcessStepEditorModel
                 {
                     Id = implementationStepId,
-                    Key = "implement-tetris-pwa",
-                    Title = "Implement Tetris WASM PWA",
+                    Key = "implement-blazor-pwa",
+                    Title = "Implement Blazor WASM PWA",
                     StepKind = ProcessStepKind.Work,
-                    InputContractSummary = "Approved Tetris request intake.",
-                    OutputContractSummary = "Tetris WASM PWA implementation package.",
+                    InputContractSummary = "Approved Blazor PWA request intake.",
+                    OutputContractSummary = "Blazor WASM PWA implementation package.",
                     EvidenceContractSummary = "Build, browser, screenshot, and project-structure proof.",
                     DecisionRightsSummary = "Implementation agent owns product changes only after intake approval.",
                     ExceptionPolicySummary = "Block when implementation proof is missing.",
@@ -1601,7 +1601,7 @@ public sealed class ProcessWorkspaceTests
                         ProcessStepOperation.MutateProductTarget,
                         ProcessStepOperation.WriteManagedProcessArtifacts
                     ],
-                    Dependencies = CreateDependencies((intakeStepId, tetrisReadyOutcomeId)),
+                    Dependencies = CreateDependencies((intakeStepId, blazorReadyOutcomeId)),
                     CanvasX = 420,
                     CanvasY = 160,
                     RoleAssignments =
@@ -1619,7 +1619,7 @@ public sealed class ProcessWorkspaceTests
                         {
                             Id = Guid.NewGuid(),
                             ArtifactKind = ProcessArtifactKind.Deliverable,
-                            Title = "Tetris implementation package",
+                            Title = "Blazor PWA implementation package",
                             IsRequired = true,
                             ValidationRequirementSummary = "Implementation package must be linked to browser and screenshot proof."
                         }

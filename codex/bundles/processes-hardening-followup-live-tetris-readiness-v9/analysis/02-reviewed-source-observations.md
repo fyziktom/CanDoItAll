@@ -26,7 +26,7 @@ Remaining concern: tests must prove every actual project-structure tool exposed 
 
 - Processes are the durable orchestration layer.
 - Workflows are role executors below Processes.
-- `AllowedOperations`, `OperationTargetScope`, `ContractMode`, `BlockCause`, recovery options, projection lineage, and Tetris checklist.
+- `AllowedOperations`, `OperationTargetScope`, `ContractMode`, `BlockCause`, recovery options, and projection lineage.
 
 Remaining concern: runtime agents also need Blazor/PWA/browser/project-structure skills, not only the Processes API skill.
 
@@ -36,6 +36,6 @@ The reviewed `blazor-app-delivery` template now keeps `revalidate-blazor-repair`
 
 Remaining concern: the actual live test must ensure assigned agents receive tool profiles consistent with those contracts.
 
-## Tetris scenario exists but is not a live-run profile
+## Seeded Blazor scenario exists but is not a live-run profile
 
-`baseline-blazor-wasm-pwa-tetris` includes scenario assignments, transitions, artifacts, contract exercises, and recovery exercises. This is useful for regression. For the real UI test, we need a live-run profile that does not pre-complete the process.
+The existing Blazor WASM PWA baseline scenario includes assignments, transitions, artifacts, contract exercises, and recovery exercises. This is useful for regression. For the real UI test, we need a live-run profile that does not pre-complete the process and that accepts any concrete app topic supplied at run time.

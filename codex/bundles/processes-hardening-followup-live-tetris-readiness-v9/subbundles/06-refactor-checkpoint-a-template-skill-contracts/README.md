@@ -1,26 +1,75 @@
-# SB06: 06-refactor-checkpoint-a-template-skill-contracts
+# SB06: Refactor Checkpoint A Template Skill Contracts
 
-## Goal
+## Status
 
-Refactor after template/skill work before runtime UI preflight.
+- Status: `Completed`
 
-## Work items
+## Objective
 
-- Extract repeated Blazor template contract phrases into shared template resources where appropriate.
-- Refactor template validation helpers if repeated checks were added.
-- Ensure docs and skills reference common terminology for operations and target scopes.
-- Run focused template and skill source audits before continuing.
+Run a checkpoint after template and skill updates to remove duplication, drift, and topic-specific leakage before UI/API preflight work.
 
-## Required proof
+## Covered Inputs
 
-- Failing-first or adversarial proof.
-- Passing production-path proof.
-- Source assertions with exact repo paths.
-- Anti-stub audit.
-- Changed-file hashes.
-- A note explaining how this improves readiness for the real UI-driven Blazor WASM PWA Tetris test.
-- A note explaining how generic process behavior remains protected.
+- RQ03 template boundaries.
+- RQ05 reusable skills.
+- RQ09 drift checks.
 
-## Closure criteria
+## Prerequisites
 
-This subbundle is complete only when its proof manifest is updated and the next subbundle can rely on the result.
+- SB05 skills and proof guidance are complete.
+
+## Exact Source References
+
+- `repo://Templates/Processes/processes/blazor-app-delivery/definition.json`
+- `repo://Templates/Processes/processes/blazor-app-delivery/definition.md`
+- `repo://Templates/Processes/README.md`
+- `repo://codex/skills/candoitall-api-processes/SKILL.md`
+
+## Deliverables
+
+- Source assertion report for duplicated or drifting Blazor WASM PWA requirements.
+- Small cleanup changes only where they remove real duplication or contradiction.
+
+## Dependency Impact
+
+- SB07 UI/API preflight depends on stable template/skill terminology.
+
+## Validation Depth
+
+- Source-level audit and focused regression tests affected by any cleanup.
+
+## Implementation Steps
+
+1. Compare template, skill, and README terminology.
+2. Remove contradictions or topic-specific leakage.
+3. Avoid broad refactors unless required to make downstream preflight clear.
+
+## Do Not Do
+
+- Do not add new process layers.
+- Do not change runtime behavior without a test.
+
+## Acceptance Checklist
+
+- Generic Blazor WASM PWA terminology is consistent.
+- No reusable instruction contains app-topic-specific acceptance criteria.
+- Downstream source references remain valid.
+
+## Proof Required
+
+- `proof/SB06/manifest.md`
+- `proof/SB06/semantic-invariants.md`
+- `proof/SB06/transcripts/source-assertions.txt`
+- `proof/SB06/transcripts/passing.txt`
+
+## Browser Validation Logging
+
+- N/A. Checkpoint is source and contract focused.
+
+## Progression Gate
+
+- SB07 may start after checkpoint assertions pass.
+
+## Suggested Agent Prompt
+
+Run the template/skill contract checkpoint and clean only contradictions that would weaken generic Blazor WASM PWA preflight.

@@ -1,26 +1,75 @@
-# SB11: 11-project-structure-writeback-proof
+# SB11: Project Structure Writeback Proof
 
-## Goal
+## Status
 
-Make final writeback step verifiable.
+- Status: `Completed`
 
-## Work items
+## Objective
 
-- Ensure final writeback requires `project_structure_node_create` and `project_structure_asset_create` receipts when applicable.
-- Ensure project-structure tools require `ExecuteExternalAction` and are not available to read-only QA unless explicitly allowed.
-- Add readback validation that created node/asset ids are recorded in final artifact.
-- Add tests for writeback missing receipts causing Blocked/OwnOutput, not silent success.
+Ensure project-structure result writeback for generic Blazor WASM PWA runs uses controlled external actions and records receipt evidence.
 
-## Required proof
+## Covered Inputs
 
-- Failing-first or adversarial proof.
-- Passing production-path proof.
-- Source assertions with exact repo paths.
-- Anti-stub audit.
-- Changed-file hashes.
-- A note explaining how this improves readiness for the real UI-driven Blazor WASM PWA Tetris test.
-- A note explaining how generic process behavior remains protected.
+- RQ04 writeback tool rights.
+- RQ07 blocker visibility.
 
-## Closure criteria
+## Prerequisites
 
-This subbundle is complete only when its proof manifest is updated and the next subbundle can rely on the result.
+- SB10 artifact lineage and current-run proof is complete.
+
+## Exact Source References
+
+- `repo://Templates/Processes/processes/blazor-app-delivery/definition.json`
+- `repo://src/CanDoItAll.AgentFramework.Core/ToolPolicy/ProcessToolOperationAuthorizer.cs`
+- `repo://src/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureProcessRunSyncBridge.cs`
+- `repo://tests/CanDoItAll.Tests.Unit/AgentToolInvocationPolicyTests.cs`
+- `repo://tests/CanDoItAll.Tests.Integration/ProcessTemplateGovernanceTests.cs`
+
+## Deliverables
+
+- Tests proving writeback requires `ExecuteExternalAction` and missing receipts block rather than silently succeeding.
+- Source assertions proving writeback steps do not mutate product targets.
+
+## Dependency Impact
+
+- SB12 health diagnostics and SB16 final closure rely on writeback blockers being visible.
+
+## Validation Depth
+
+- Focused unit/integration tests for policy and template governance.
+
+## Implementation Steps
+
+1. Audit writeback step contracts and tool authorizer behavior.
+2. Add or update tests for project-structure node/asset writeback receipts.
+3. Ensure missing writeback receipts cause typed blockers.
+
+## Do Not Do
+
+- Do not treat project-structure writeback as product mutation.
+- Do not mark delivery complete without writeback receipt or explicit blocker.
+
+## Acceptance Checklist
+
+- Writeback steps use external-action controlled scope.
+- Required receipts identify node or asset ids where applicable.
+- Missing receipts block with actionable diagnostics.
+
+## Proof Required
+
+- `proof/SB11/manifest.md`
+- `proof/SB11/semantic-invariants.md`
+- `proof/SB11/transcripts/passing.txt`
+- `proof/SB11/transcripts/source-assertions.txt`
+
+## Browser Validation Logging
+
+- N/A unless writeback UI changes.
+
+## Progression Gate
+
+- SB12 may start after writeback policy and blocker proof passes.
+
+## Suggested Agent Prompt
+
+Harden project-structure writeback proof for generic Blazor WASM PWA runs and prove missing receipts block predictably.

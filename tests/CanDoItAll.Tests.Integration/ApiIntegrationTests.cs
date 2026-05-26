@@ -526,6 +526,7 @@ public sealed class ApiIntegrationTests
         Assert.True(paths.TryGetProperty("/api/project-structure/projects/{projectId}/assets/{nodeId}/content", out _));
         Assert.True(paths.TryGetProperty("/api/processes/templates/{processKey}/detail", out _));
         Assert.True(paths.TryGetProperty("/api/processes/templates/baseline-scenarios", out _));
+        Assert.True(paths.TryGetProperty("/api/processes/templates/live-run-profiles", out _));
         Assert.True(paths.TryGetProperty("/api/processes/runs/{runId}/steps/{stepRunId}/artifacts", out _));
         Assert.True(paths.TryGetProperty("/api/processes/runs/{runId}/manager-directives", out _));
         Assert.True(paths.TryGetProperty("/api/agents/teams/{teamId}", out _));
