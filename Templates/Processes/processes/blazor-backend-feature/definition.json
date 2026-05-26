@@ -573,11 +573,12 @@
         "ReadProcessContext",
         "ReadProjectStructure",
         "ReadUpstreamArtifacts",
-        "MutateProductTarget",
         "RunValidation",
+        "LaunchRuntime",
+        "CaptureRuntimeProof",
         "WriteManagedProcessArtifacts"
       ],
-      "OperationTargetScope": "ExternalProductTargetMutable"
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 5,
@@ -759,13 +760,11 @@
       ],
       "AllowedOperations": [
         "ReadProcessContext",
-        "ReadProjectStructure",
         "ReadUpstreamArtifacts",
-        "MutateProductTarget",
-        "RunValidation",
-        "WriteManagedProcessArtifacts"
+        "WriteManagedProcessArtifacts",
+        "ExecuteExternalAction"
       ],
-      "OperationTargetScope": "ExternalProductTargetMutable"
+      "OperationTargetScope": "ExternalActionControlled"
     },
     {
       "Order": 7,
@@ -857,13 +856,11 @@
       ],
       "AllowedOperations": [
         "ReadProcessContext",
-        "ReadProjectStructure",
         "ReadUpstreamArtifacts",
-        "MutateProductTarget",
-        "RunValidation",
-        "WriteManagedProcessArtifacts"
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
       ],
-      "OperationTargetScope": "ExternalProductTargetMutable"
+      "OperationTargetScope": "ManagedProcessArtifactsOnly"
     }
   ],
   "DocPath": "processes/blazor-backend-feature/definition.md"

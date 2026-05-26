@@ -4147,6 +4147,13 @@ Requirements from project-level planning context:
         Assert.True(resolved);
         Assert.True(contract.IsExplicit);
         Assert.Equal(ProcessStepTargetScope.ExternalArtifactDestination, contract.TargetScope);
+        Assert.Equal(
+            ProcessStepOperationContractState.NormalizeDeclaredContract(
+                stepDefinition.StepKind,
+                stepDefinition.AllowedOperations,
+                stepDefinition.OperationTargetScope,
+                inferMissingTargetScope: true).AllowedOperations,
+            contract.AllowedOperations);
         Assert.Contains(ProcessStepOperation.ReadProcessContext, contract.AllowedOperations);
         Assert.Contains(ProcessStepOperation.WriteExternalArtifactDestination, contract.AllowedOperations);
         Assert.DoesNotContain(ProcessStepOperation.MutateProductTarget, contract.AllowedOperations);
@@ -14799,6 +14806,47 @@ Ancestor path to the target work node:
         var code = ProcessStepRunBlockState.InferBlockReasonCode("missing required artifact: Delivery readiness evidence");
 
         Assert.Equal(ProcessStepBlockReasonCode.ArtifactContractUnsatisfied, code);
+    }
+
+    [Fact]
+    public void ProcessBlockStateClassifier_SB12_INV_001_prefers_typed_block_cause_over_prose_inference()
+    {
+        var classification = ProcessBlockStateClassifier.Classify(
+            "Required upstream artifacts are missing in the diagnostic text, but the missing output belongs to this step.",
+            ProcessStepBlockCause.OwnOutput);
+
+        Assert.Equal(ProcessStepBlockReasonCode.ArtifactContractUnsatisfied, classification.ReasonCode);
+        Assert.Equal(ProcessStepBlockCause.OwnOutput, classification.BlockCause);
+        Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly, classification.RecoveryOptions);
+        Assert.DoesNotContain(ProcessStepRecoveryOption.WaitForArtifactMaterialization, classification.RecoveryOptions);
+    }
+
+    [Fact]
+    public void ProcessStepRunBlockState_SB12_INV_001_uses_legacy_text_inference_only_when_block_cause_is_absent()
+    {
+        var ownOutputStep = new ProcessStepRun();
+        var ownOutputDecision = ProcessStepRunBlockState.Apply(
+            ownOutputStep,
+            "missing required artifact: Delivery readiness evidence");
+        var ownOutputRecoveryOptions = ProcessStepRunBlockState.ResolveRecoveryOptions(ownOutputStep);
+
+        Assert.Equal(ProcessStepBlockReasonCode.ArtifactContractUnsatisfied, ownOutputStep.BlockReasonCode);
+        Assert.Equal(ProcessStepBlockCause.OwnOutput, ownOutputDecision.FailureOwnership);
+        Assert.Equal(ProcessStepRecoveryOption.RecoverArtifactsOnly, ownOutputDecision.NextAction);
+        Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly, ownOutputRecoveryOptions);
+        Assert.DoesNotContain(ProcessStepRecoveryOption.WaitForArtifactMaterialization, ownOutputRecoveryOptions);
+
+        var upstreamStep = new ProcessStepRun();
+        var upstreamDecision = ProcessStepRunBlockState.Apply(
+            upstreamStep,
+            "Required upstream artifacts are missing and the source step must provide required artifact input.");
+        var upstreamRecoveryOptions = ProcessStepRunBlockState.ResolveRecoveryOptions(upstreamStep);
+
+        Assert.Equal(ProcessStepBlockReasonCode.MissingUpstreamArtifact, upstreamStep.BlockReasonCode);
+        Assert.Equal(ProcessStepBlockCause.UpstreamInput, upstreamDecision.FailureOwnership);
+        Assert.Equal(ProcessStepRecoveryOption.WaitForArtifactMaterialization, upstreamDecision.NextAction);
+        Assert.Contains(ProcessStepRecoveryOption.WaitForArtifactMaterialization, upstreamRecoveryOptions);
+        Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly, upstreamRecoveryOptions);
     }
 
     [Fact]

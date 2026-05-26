@@ -1,3 +1,6 @@
-# SB12 failing-first.txt
+SB12 adversarial proof, not a failing-first regression: the previous runtime shape respected explicit BlockCause for the reason code but did not carry inferred legacy failure ownership into recovery routing. These tests reject a shallow implementation that infers from prose when a typed cause is present, or leaves legacy ownership empty when no typed cause exists.
+COMMAND: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-restore --no-build --filter "FullyQualifiedName~ProcessBlockStateClassifier_SB12_INV_001|FullyQualifiedName~ProcessStepRunBlockState_SB12_INV_001"
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
 
-Pending.
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     2, Přeskočeno:     0, Celkem:     2, Doba trvání: 80 ms - CanDoItAll.Tests.Integration.dll (net10.0)

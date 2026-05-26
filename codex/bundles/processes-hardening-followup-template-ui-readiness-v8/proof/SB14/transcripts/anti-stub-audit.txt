@@ -1,3 +1,11 @@
 # SB14 anti-stub-audit.txt
 
-Pending.
+## Command
+
+```powershell
+rg -n "TODO|TBD|FIXME|NotImplemented|throw new NotImplementedException" src\CanDoItAll.Modules.Processes\Templates\ProcessTemplatePackScenarios.cs src\CanDoItAll.Modules.Processes\Development\ProcessDevelopmentSeedService.RuntimeSeeds.cs src\CanDoItAll.Modules.Processes\Development\ProcessDevelopmentSeedService.RuntimeSeeds.Complex.cs src\CanDoItAll.Modules.Processes\Runtime\ProcessStepTransitionGuard.cs src\CanDoItAll.Web\Api\ProcessesApi.cs src\CanDoItAll.AgentFramework.Maf\Runtime\Tools\MafAgentRuntime.ProcessTools.cs tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs Templates\Processes\seed-catalog\baseline-scenarios.json Templates\Processes\processes\customer-onboarding\definition.json Templates\Processes\processes\incident-response\definition.json Templates\Processes\processes\release-readiness-and-deployment\definition.json Templates\Processes\processes\architecture-decision-governance\definition.json
+```
+
+## Result
+
+No matches. `rg` returned exit code 1, which is expected when no stub markers are present.

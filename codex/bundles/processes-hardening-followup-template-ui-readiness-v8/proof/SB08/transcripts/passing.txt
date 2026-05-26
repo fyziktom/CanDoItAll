@@ -1,3 +1,10 @@
-# SB08 passing.txt
+Command: powershell -NoProfile -File .\codex\bundles\processes-hardening-followup-template-ui-readiness-v8\scripts\audit-template-governance.ps1 -RequireTypedContracts -OutputPath codex\bundles\processes-hardening-followup-template-ui-readiness-v8\proof\SB08\template-governance-matrix.md
+Templates: 21
+Steps: 147
+Steps missing typed contracts: 0
+Steps missing migration plan: 0
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-restore --no-build --filter "FullyQualifiedName~Manifest_process_templates_SB08_INV_001|FullyQualifiedName~Project_structure_templates_SB07_INV_001|FullyQualifiedName~Blazor_process_templates_SB04_INV_001"
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
 
-Pending.
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     3, Přeskočeno:     0, Celkem:     3, Doba trvání: 19 s - CanDoItAll.Tests.Integration.dll (net10.0)

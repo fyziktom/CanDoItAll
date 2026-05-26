@@ -239,7 +239,11 @@ public sealed class ApiIntegrationTests
             Assert.Equal(ProcessStepRecoveryOption.RecoverArtifactsOnly, listedStep.NextRecoveryAction);
             Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly, listedStep.RecoveryOptions);
             Assert.Equal(
-                [ProcessStepOperation.WriteManagedProcessArtifacts, ProcessStepOperation.CaptureRuntimeProof],
+                [
+                    ProcessStepOperation.ReadProcessContext,
+                    ProcessStepOperation.WriteManagedProcessArtifacts,
+                    ProcessStepOperation.CaptureRuntimeProof
+                ],
                 listedStep.AllowedOperations);
             Assert.Equal(ProcessStepTargetScope.ManagedProcessArtifactsOnly, listedStep.OperationTargetScope);
             Assert.StartsWith("sha256:", persistedArtifact.ProjectionIdentityHash, StringComparison.Ordinal);
@@ -258,6 +262,12 @@ public sealed class ApiIntegrationTests
         Assert.Equal((int)ProcessStepBlockReasonCode.ArtifactContractUnsatisfied, stepPayload.GetProperty("blockReasonCode").GetInt32());
         Assert.Equal((int)ProcessStepRecoveryOption.RecoverArtifactsOnly, stepPayload.GetProperty("nextRecoveryAction").GetInt32());
         Assert.Contains(
+            (int)ProcessStepRecoveryOption.RecoverArtifactsOnly,
+            stepPayload.GetProperty("recoveryOptions").EnumerateArray().Select(item => item.GetInt32()));
+        Assert.DoesNotContain(
+            (int)ProcessStepRecoveryOption.WaitForArtifactMaterialization,
+            stepPayload.GetProperty("recoveryOptions").EnumerateArray().Select(item => item.GetInt32()));
+        Assert.Contains(
             (int)ProcessStepOperation.WriteManagedProcessArtifacts,
             stepPayload.GetProperty("allowedOperations").EnumerateArray().Select(item => item.GetInt32()));
         Assert.Equal((int)ProcessStepTargetScope.ManagedProcessArtifactsOnly, stepPayload.GetProperty("operationTargetScope").GetInt32());
@@ -268,6 +278,163 @@ public sealed class ApiIntegrationTests
             "api-projection-lineage",
             projectionLineageJson,
             StringComparison.Ordinal);
+        var healthPayload = runPayload.RootElement.GetProperty("health");
+        Assert.Equal((int)ProcessStepRecoveryOption.RecoverArtifactsOnly, healthPayload.GetProperty("recommendedAction").GetInt32());
+    }
+
+    [Fact]
+    public async Task Api_process_run_detail_SB12_INV_001_exposes_upstream_missing_artifact_recovery_health()
+    {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
+
+        Guid seededRunId;
+        Guid seededStepRunId;
+        await using (var scope = host.App.Services.CreateAsyncScope())
+        {
+            var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+            var definitionResult = await processesService.SaveAsync(BuildFilterTestDefinition());
+            Assert.True(definitionResult.IsSuccess, string.Join(" | ", definitionResult.Errors.Select(error => error.Message)));
+
+            var publishResult = await processesService.PublishAsync(definitionResult.Value);
+            Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+
+            var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+            {
+                ProcessDefinitionId = definitionResult.Value,
+                RunName = "API SB12 upstream recovery health",
+                OperatingMode = ProcessOperatingMode.AssistedExecution,
+                TriggerReason = "Integration test"
+            });
+            Assert.True(runResult.IsSuccess, string.Join(" | ", runResult.Errors.Select(error => error.Message)));
+
+            seededRunId = runResult.Value;
+            seededStepRunId = Assert.Single(await processesService.ListStepRunsAsync(seededRunId)).Id;
+        }
+
+        var transitionResponse = await host.Client.PostAsJsonAsync(
+            $"/api/processes/runs/{seededRunId:D}/steps/{seededStepRunId:D}/transition",
+            new
+            {
+                TargetStatus = ProcessStepRunStatus.Blocked,
+                Reason = "Required upstream artifacts are missing and the source step must provide required artifact input.",
+                BlockCause = ProcessStepBlockCause.UpstreamInput,
+                DecidedBy = "api-integration-tests",
+                SuppressAutomationDispatch = true
+            });
+        var transitionBody = await transitionResponse.Content.ReadAsStringAsync();
+        Assert.True(transitionResponse.IsSuccessStatusCode, transitionBody);
+
+        var runResponse = await host.Client.GetAsync(
+            $"/api/processes/runs/{seededRunId:D}?includeWorkBriefs=false&includeExecutionRuns=false&includeDirectMessages=false");
+        var runBody = await runResponse.Content.ReadAsStringAsync();
+        Assert.True(runResponse.IsSuccessStatusCode, runBody);
+        using var runPayload = JsonDocument.Parse(runBody);
+        var stepPayload = Assert.Single(runPayload.RootElement.GetProperty("stepRuns").EnumerateArray().ToList());
+        var recoveryOptions = stepPayload
+            .GetProperty("recoveryOptions")
+            .EnumerateArray()
+            .Select(item => item.GetInt32())
+            .ToList();
+
+        Assert.Equal((int)ProcessStepBlockReasonCode.MissingUpstreamArtifact, stepPayload.GetProperty("blockReasonCode").GetInt32());
+        Assert.Equal((int)ProcessStepRecoveryOption.WaitForArtifactMaterialization, stepPayload.GetProperty("nextRecoveryAction").GetInt32());
+        Assert.Contains((int)ProcessStepRecoveryOption.WaitForArtifactMaterialization, recoveryOptions);
+        Assert.Contains((int)ProcessStepRecoveryOption.RecoverArtifactsOnly, recoveryOptions);
+
+        var healthPayload = runPayload.RootElement.GetProperty("health");
+        Assert.Equal((int)ProcessStepRecoveryOption.WaitForArtifactMaterialization, healthPayload.GetProperty("recommendedAction").GetInt32());
+        Assert.True(healthPayload.GetProperty("missingArtifactCount").GetInt32() > 0);
+    }
+
+    [Fact]
+    public async Task Api_definition_routes_round_trip_typed_contract_and_artifact_mapping_fields()
+    {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
+
+        var subprocessChildArtifactExpectationId = Guid.NewGuid();
+        var definition = BuildFilterTestDefinition();
+        definition.Name = "API contract parity definition";
+        definition.ContractMode = ProcessDefinitionContractMode.Strict;
+        var step = Assert.Single(definition.Steps);
+        step.AllowedOperations =
+        [
+            ProcessStepOperation.RunValidation,
+            ProcessStepOperation.WriteManagedProcessArtifacts
+        ];
+        step.OperationTargetScope = ProcessStepTargetScope.ManagedProcessArtifactsOnly;
+        var expectation = Assert.Single(step.ArtifactExpectations);
+        expectation.WorkflowOutputId = "qa-report-json";
+        expectation.WorkflowOutputName = "QA report";
+        expectation.WorkflowOutputKind = WorkflowArtifactKind.Json;
+        expectation.SubprocessChildArtifactExpectationId = subprocessChildArtifactExpectationId;
+
+        var saveResponse = await host.Client.PostAsJsonAsync("/api/processes/definitions", definition);
+        var saveBody = await saveResponse.Content.ReadAsStringAsync();
+        Assert.True(saveResponse.IsSuccessStatusCode, saveBody);
+        var definitionId = JsonSerializer.Deserialize<Guid>(saveBody);
+        Assert.NotEqual(Guid.Empty, definitionId);
+
+        var editorResponse = await host.Client.GetAsync($"/api/processes/definitions/{definitionId:D}");
+        var editorBody = await editorResponse.Content.ReadAsStringAsync();
+        Assert.True(editorResponse.IsSuccessStatusCode, editorBody);
+        var editor = JsonSerializer.Deserialize<ProcessDefinitionEditorModel>(editorBody, JsonSerializerOptions.Web)
+            ?? throw new InvalidOperationException("The process definition editor response was empty.");
+        Assert.Equal(ProcessDefinitionContractMode.Strict, editor.ContractMode);
+        var savedStep = Assert.Single(editor.Steps);
+        Assert.Equal(
+            [
+                ProcessStepOperation.ReadProcessContext,
+                ProcessStepOperation.WriteManagedProcessArtifacts,
+                ProcessStepOperation.RunValidation
+            ],
+            savedStep.AllowedOperations);
+        Assert.Equal(ProcessStepTargetScope.ManagedProcessArtifactsOnly, savedStep.OperationTargetScope);
+        var savedExpectation = Assert.Single(savedStep.ArtifactExpectations);
+        Assert.Equal("qa-report-json", savedExpectation.WorkflowOutputId);
+        Assert.Equal("QA report", savedExpectation.WorkflowOutputName);
+        Assert.Equal(WorkflowArtifactKind.Json, savedExpectation.WorkflowOutputKind);
+        Assert.Equal(subprocessChildArtifactExpectationId, savedExpectation.SubprocessChildArtifactExpectationId);
+
+        var exportResponse = await host.Client.GetAsync($"/api/processes/definitions/{definitionId:D}/export");
+        var exportBody = await exportResponse.Content.ReadAsStringAsync();
+        Assert.True(exportResponse.IsSuccessStatusCode, exportBody);
+        var envelope = JsonSerializer.Deserialize<ProcessImportExportEnvelope>(exportBody, JsonSerializerOptions.Web)
+            ?? throw new InvalidOperationException("The process definition export response was empty.");
+        Assert.Equal(ProcessDefinitionContractMode.Strict, envelope.Definition.ContractMode);
+        var exportedStep = Assert.Single(envelope.Definition.Steps);
+        Assert.Equal(savedStep.AllowedOperations, exportedStep.AllowedOperations);
+        Assert.Equal(ProcessStepTargetScope.ManagedProcessArtifactsOnly, exportedStep.OperationTargetScope);
+        var exportedExpectation = Assert.Single(exportedStep.ArtifactExpectations);
+        Assert.Equal("qa-report-json", exportedExpectation.WorkflowOutputId);
+        Assert.Equal("QA report", exportedExpectation.WorkflowOutputName);
+        Assert.Equal(WorkflowArtifactKind.Json, exportedExpectation.WorkflowOutputKind);
+        Assert.Equal(subprocessChildArtifactExpectationId, exportedExpectation.SubprocessChildArtifactExpectationId);
+
+        envelope.Definition.Id = null;
+        envelope.Definition.WorkingVersionId = null;
+        envelope.Definition.DefinitionConcurrencyToken = null;
+        envelope.Definition.WorkingVersionConcurrencyToken = null;
+        envelope.Definition.Name = "Imported API contract parity definition";
+        var importResponse = await host.Client.PostAsJsonAsync("/api/processes/definitions/import", envelope);
+        var importBody = await importResponse.Content.ReadAsStringAsync();
+        Assert.True(importResponse.IsSuccessStatusCode, importBody);
+        var importedDefinitionId = JsonSerializer.Deserialize<Guid>(importBody);
+        Assert.NotEqual(Guid.Empty, importedDefinitionId);
+
+        var importedEditorResponse = await host.Client.GetAsync($"/api/processes/definitions/{importedDefinitionId:D}");
+        var importedEditorBody = await importedEditorResponse.Content.ReadAsStringAsync();
+        Assert.True(importedEditorResponse.IsSuccessStatusCode, importedEditorBody);
+        var importedEditor = JsonSerializer.Deserialize<ProcessDefinitionEditorModel>(importedEditorBody, JsonSerializerOptions.Web)
+            ?? throw new InvalidOperationException("The imported process definition editor response was empty.");
+        Assert.Equal(ProcessDefinitionContractMode.Strict, importedEditor.ContractMode);
+        var importedStep = Assert.Single(importedEditor.Steps);
+        Assert.Equal(savedStep.AllowedOperations, importedStep.AllowedOperations);
+        Assert.Equal(ProcessStepTargetScope.ManagedProcessArtifactsOnly, importedStep.OperationTargetScope);
+        var importedExpectation = Assert.Single(importedStep.ArtifactExpectations);
+        Assert.Equal("qa-report-json", importedExpectation.WorkflowOutputId);
+        Assert.Equal("QA report", importedExpectation.WorkflowOutputName);
+        Assert.Equal(WorkflowArtifactKind.Json, importedExpectation.WorkflowOutputKind);
+        Assert.Equal(subprocessChildArtifactExpectationId, importedExpectation.SubprocessChildArtifactExpectationId);
     }
 
     [Fact]

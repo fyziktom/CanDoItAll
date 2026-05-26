@@ -1,3 +1,19 @@
+Command: pre-change SB15 UI selector and diagnostics adversarial audit
+ExitCode: 1
+Invariant: SB15-INV-001
+
 # SB15 failing-first.txt
 
-Pending.
+Adversarial proof for SB15.
+
+Before this subbundle, `ProcessWorkspaceRunStepsDialog` rendered repeated generic step cards and a branch select, but it did not expose `OperationTargetScope` or `AllowedOperations` in visible diagnostics or stable attributes. A browser test for the Tetris process could see a step title and status, but it could not prove that the first step lacked `MutateProductTarget` without calling backend APIs separately.
+
+The shallow implementation rejected here is a checklist-only preflight. The regression test asserts against the production steps dialog and would fail if:
+
+- the first step card lacks `data-operation-target-scope`
+- the first step card lacks `data-allowed-operations`
+- the first step UI contains `MutateProductTarget`
+- the branch selector lacks the step run id
+- block/recovery diagnostics omit `ArtifactContractUnsatisfied` or `RecoverArtifactsOnly`
+
+The test fixture uses a strict Tetris-like process definition with managed-artifact-only intake and a downstream mutable implementation step, so Tetris behavior stays in process data instead of runtime code.

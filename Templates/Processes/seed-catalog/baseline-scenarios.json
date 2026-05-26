@@ -104,6 +104,7 @@
         "StepKey": "security-review",
         "TargetStatus": "Blocked",
         "SelectedBranchOutcomeKey": "",
+        "BlockCause": "PolicyDenied",
         "Reason": "Blocked pending explicit security exception owner and residual-risk containment.",
         "DecidedBy": "Ivana Security"
       }
@@ -472,7 +473,7 @@
   {
     "Key": "baseline-customer-onboarding",
     "ProcessTemplateKey": "customer-onboarding",
-    "RunName": "Customer onboarding orchestration / Contoso enterprise rollout",
+    "RunName": "Customer onboarding orchestration / enterprise rollout",
     "Summary": "Baseline onboarding run that keeps intake, staffing review, and kickoff approval explicit.",
     "OperatingMode": "AssistedExecution",
     "TriggerReason": "Seeded baseline scenario for a new enterprise customer onboarding.",
@@ -513,7 +514,7 @@
       {
         "StepKey": "staffing-review",
         "TargetStatus": "Completed",
-        "SelectedBranchOutcomeKey": "",
+        "SelectedBranchOutcomeKey": "staffing-ready",
         "Reason": "Staffing readiness accepted for kickoff.",
         "DecidedBy": "Tomáš Staffing"
       },
@@ -529,7 +530,7 @@
       {
         "StepKey": "intake",
         "ArtifactKind": "Brief",
-        "Title": "Contoso customer onboarding brief",
+        "Title": "Enterprise customer onboarding brief",
         "TrustStatus": "ReviewRequired",
         "SensitivityLevel": "Internal",
         "ProvenanceSummary": "Prepared from signed scope and discovery notes.",
@@ -539,7 +540,7 @@
       {
         "StepKey": "staffing-review",
         "ArtifactKind": "Decision",
-        "Title": "Contoso staffing recommendation",
+        "Title": "Enterprise customer staffing recommendation",
         "TrustStatus": "ReviewRequired",
         "SensitivityLevel": "Internal",
         "ProvenanceSummary": "Recorded during staffing feasibility review for the enterprise rollout.",
@@ -548,23 +549,47 @@
       },
       {
         "StepKey": "kickoff-approval",
-        "ArtifactKind": "Brief",
-        "Title": "Contoso kickoff packet",
-        "TrustStatus": "ReviewRequired",
-        "SensitivityLevel": "Internal",
-        "ProvenanceSummary": "Prepared from onboarding brief and staffing note.",
-        "AllowedFutureUsageSummary": "Reusable for the first delivery phase.",
-        "ReviewSummary": "Owners and risks made explicit."
-      },
-      {
-        "StepKey": "kickoff-approval",
         "ArtifactKind": "Decision",
-        "Title": "Contoso kickoff approval record",
+        "Title": "Enterprise customer kickoff approval record",
         "TrustStatus": "HumanApproved",
         "SensitivityLevel": "Internal",
         "ProvenanceSummary": "Recorded when kickoff was approved with named owners, milestones, and next actions.",
         "AllowedFutureUsageSummary": "Reusable for execution governance, customer reporting, and audit.",
         "ReviewSummary": "Approval scope, accountable owners, and immediate next actions are explicit."
+      }
+    ],
+    "ContractExercises": [
+      {
+        "StepKey": "intake",
+        "ExpectedTargetScope": "ManagedProcessArtifactsOnly",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "WriteManagedProcessArtifacts"
+        ],
+        "Purpose": "Intake may create managed onboarding artifacts but cannot mutate external systems."
+      },
+      {
+        "StepKey": "kickoff-approval",
+        "ExpectedTargetScope": "ManagedProcessArtifactsOnly",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts",
+          "EscalateOrDecide"
+        ],
+        "Purpose": "Kickoff approval is an explicit process decision over upstream staffing evidence."
+      }
+    ],
+    "RecoveryExercises": [
+      {
+        "StepKey": "staffing-review",
+        "BlockCause": "UpstreamInput",
+        "ExpectedRecoveryOptions": [
+          "WaitForArtifactMaterialization",
+          "RecoverArtifactsOnly",
+          "HumanEscalation"
+        ],
+        "Diagnostic": "Missing upstream artifact: customer onboarding brief was not materialized before staffing review."
       }
     ]
   },
@@ -612,7 +637,7 @@
       {
         "StepKey": "diagnose",
         "TargetStatus": "Completed",
-        "SelectedBranchOutcomeKey": "",
+        "SelectedBranchOutcomeKey": "mitigation-ready",
         "Reason": "Diagnosis evidence assembled and mitigation options framed.",
         "DecidedBy": "Karel Resolver"
       },
@@ -654,6 +679,39 @@
         "ProvenanceSummary": "Approved by escalation authority after risk review.",
         "AllowedFutureUsageSummary": "Reusable for incident audit.",
         "ReviewSummary": "Rollback trigger and accountable owner recorded."
+      }
+    ],
+    "ContractExercises": [
+      {
+        "StepKey": "respond",
+        "ExpectedTargetScope": "ManagedProcessArtifactsOnly",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "WriteManagedProcessArtifacts"
+        ],
+        "Purpose": "Response triage records managed incident evidence before diagnosis."
+      },
+      {
+        "StepKey": "escalate",
+        "ExpectedTargetScope": "ManagedProcessArtifactsOnly",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts",
+          "EscalateOrDecide"
+        ],
+        "Purpose": "Escalation approval can decide or escalate but cannot silently mutate the product."
+      }
+    ],
+    "RecoveryExercises": [
+      {
+        "StepKey": "diagnose",
+        "BlockCause": "RuntimeEvidence",
+        "ExpectedRecoveryOptions": [
+          "RerunValidation",
+          "RepairImplementation"
+        ],
+        "Diagnostic": "Validation failed: diagnosis evidence conflicts with current telemetry and must be repaired before escalation."
       }
     ]
   },
@@ -794,6 +852,756 @@
         "ProvenanceSummary": "Approved from strategy, finance, and marketing artifacts.",
         "AllowedFutureUsageSummary": "Reusable for portfolio decision and execution planning.",
         "ReviewSummary": "Approved with explicit risks and next actions."
+      }
+    ],
+    "ContractExercises": [
+      {
+        "StepKey": "strategy-intake",
+        "ExpectedTargetScope": "ManagedProcessArtifactsOnly",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "WriteManagedProcessArtifacts"
+        ],
+        "Purpose": "Strategy intake creates managed planning artifacts from mixed business inputs."
+      },
+      {
+        "StepKey": "integrated-review",
+        "ExpectedTargetScope": "ManagedProcessArtifactsOnly",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts",
+          "EscalateOrDecide"
+        ],
+        "Purpose": "Integrated review selects the branch outcome from explicit business, finance, and marketing artifacts."
+      }
+    ],
+    "RecoveryExercises": [
+      {
+        "StepKey": "integrated-review",
+        "BlockCause": "OwnOutput",
+        "ExpectedRecoveryOptions": [
+          "RecoverArtifactsOnly",
+          "RetryAgent",
+          "HumanEscalation"
+        ],
+        "Diagnostic": "Artifact contract unsatisfied: integrated business plan review is missing required risk and next-action evidence."
+      }
+    ]
+  },
+  {
+    "Key": "baseline-release-readiness-and-deployment",
+    "ProcessTemplateKey": "release-readiness-and-deployment",
+    "RunName": "Release readiness and deployment control / customer-visible maintenance window",
+    "Summary": "Baseline release governance run that exercises scope freeze, readiness synthesis, cutover rehearsal, go/no-go branching, controlled cutover, and closure evidence.",
+    "OperatingMode": "GovernedLive",
+    "TriggerReason": "Seeded baseline scenario for a customer-visible release that must prove evidence, approval, rollback readiness, and deployment-event ownership before cutover.",
+    "Assignments": [
+      {
+        "StepKey": "",
+        "RoleKey": "change-manager",
+        "DisplayName": "Nora Change",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns release boundary, cutover choreography, and event-level discipline.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "readiness-synthesis",
+        "RoleKey": "delivery-manager",
+        "DisplayName": "Martin Delivery",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns integrated readiness evidence and open-risk synthesis.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "cutover-rehearsal",
+        "RoleKey": "platform-engineer",
+        "DisplayName": "Roman Platform",
+        "ExecutorKind": "person-or-agent",
+        "BindingReason": "Owns rollback, deployment mechanics, and live observability review.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "security-and-go-no-go",
+        "RoleKey": "release-approver",
+        "DisplayName": "Milan Release",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns final go/no-go decision from explicit evidence.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "stabilize-and-close",
+        "RoleKey": "service-owner",
+        "DisplayName": "Sofia Service",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns post-release stability and closure signals.",
+        "IsFallback": false
+      }
+    ],
+    "Transitions": [
+      {
+        "StepKey": "scope-freeze",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Release scope, deployment boundary, and excluded items captured.",
+        "DecidedBy": "Nora Change"
+      },
+      {
+        "StepKey": "readiness-synthesis",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Readiness evidence and open risks synthesized into one release view.",
+        "DecidedBy": "Martin Delivery"
+      },
+      {
+        "StepKey": "cutover-rehearsal",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Cutover rehearsal and rollback readiness accepted for go/no-go review.",
+        "DecidedBy": "Roman Platform"
+      },
+      {
+        "StepKey": "security-and-go-no-go",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "go",
+        "Reason": "Release approved after evidence, security posture, rollback plan, and watch coverage review.",
+        "DecidedBy": "Milan Release"
+      },
+      {
+        "StepKey": "execute-cutover",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Cutover executed within the approved release window and rollback triggers.",
+        "DecidedBy": "Roman Platform"
+      },
+      {
+        "StepKey": "stabilize-and-close",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Post-release stability window closed with follow-up improvements recorded.",
+        "DecidedBy": "Sofia Service"
+      }
+    ],
+    "Artifacts": [
+      {
+        "StepKey": "scope-freeze",
+        "ArtifactKind": "Brief",
+        "Title": "Release scope freeze note",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from release candidate scope, deployment boundary, and excluded items.",
+        "AllowedFutureUsageSummary": "Reusable for readiness synthesis, approval, cutover execution, and audit.",
+        "ReviewSummary": "Scope boundary, environment, rollout strategy, and exclusions are explicit."
+      },
+      {
+        "StepKey": "scope-freeze",
+        "ArtifactKind": "Brief",
+        "Title": "Deployment strategy outline",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from deployment boundary, rollout sequencing, and release ownership decisions.",
+        "AllowedFutureUsageSummary": "Reusable for readiness synthesis, cutover rehearsal, approval, and audit.",
+        "ReviewSummary": "Deployment strategy, environment boundary, rollout method, and rollback assumptions are explicit."
+      },
+      {
+        "StepKey": "readiness-synthesis",
+        "ArtifactKind": "Evidence",
+        "Title": "Release readiness report",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from scope freeze, QA proof, security notes, platform status, and open exceptions.",
+        "AllowedFutureUsageSummary": "Reusable for cutover rehearsal, go/no-go approval, and future release comparison.",
+        "ReviewSummary": "Evidence links, open risks, and readiness gaps are separated."
+      },
+      {
+        "StepKey": "readiness-synthesis",
+        "ArtifactKind": "Evidence",
+        "Title": "Test evidence pack",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from release validation, regression proof, and unresolved quality exceptions.",
+        "AllowedFutureUsageSummary": "Reusable for readiness synthesis, go/no-go approval, and future regression comparison.",
+        "ReviewSummary": "Passed checks, skipped checks, known defects, and evidence links are explicit."
+      },
+      {
+        "StepKey": "cutover-rehearsal",
+        "ArtifactKind": "Brief",
+        "Title": "Cutover watch roster",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared during cutover rehearsal with named watchers and escalation paths.",
+        "AllowedFutureUsageSummary": "Reusable for live cutover, incident response, and release retrospective.",
+        "ReviewSummary": "Watch timing, owners, and escalation paths are explicit."
+      },
+      {
+        "StepKey": "cutover-rehearsal",
+        "ArtifactKind": "Brief",
+        "Title": "Rollback plan",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared during cutover rehearsal from rollback triggers, owner assignments, and restoration checks.",
+        "AllowedFutureUsageSummary": "Reusable for final approval, live cutover, rollback execution, and audit.",
+        "ReviewSummary": "Rollback trigger, owner, expected timing, and verification method are explicit."
+      },
+      {
+        "StepKey": "security-and-go-no-go",
+        "ArtifactKind": "Evidence",
+        "Title": "Security review note",
+        "TrustStatus": "HumanApproved",
+        "SensitivityLevel": "Confidential",
+        "ProvenanceSummary": "Prepared from security posture, exception review, residual risk, and control-owner signoff.",
+        "AllowedFutureUsageSummary": "Reusable for release audit, rollback review, and future exception governance.",
+        "ReviewSummary": "Security posture, accepted exceptions, control gaps, and approving owner are explicit."
+      },
+      {
+        "StepKey": "security-and-go-no-go",
+        "ArtifactKind": "Decision",
+        "Title": "Final go/no-go decision",
+        "TrustStatus": "HumanApproved",
+        "SensitivityLevel": "Confidential",
+        "ProvenanceSummary": "Approved from release evidence, security posture, rollback plan, and watch coverage.",
+        "AllowedFutureUsageSummary": "Reusable for audit, rollback review, and release governance tuning.",
+        "ReviewSummary": "Go decision, conditions, residual risks, and accountable approver are explicit."
+      },
+      {
+        "StepKey": "execute-cutover",
+        "ArtifactKind": "Brief",
+        "Title": "Rollback plan",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Confirmed during live cutover against rollback triggers, watch ownership, and observed telemetry.",
+        "AllowedFutureUsageSummary": "Reusable for rollback decisioning, incident replay, and release retrospective.",
+        "ReviewSummary": "Live rollback thresholds, owners, commands, and verification signals are explicit."
+      },
+      {
+        "StepKey": "execute-cutover",
+        "ArtifactKind": "Evidence",
+        "Title": "Release execution provenance note",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Captured from deployment execution, hold points, and observed rollout telemetry.",
+        "AllowedFutureUsageSummary": "Reusable for stability review, incident replay, and audit.",
+        "ReviewSummary": "Cutover timing, commands, observations, and deviations are explicit."
+      },
+      {
+        "StepKey": "stabilize-and-close",
+        "ArtifactKind": "Brief",
+        "Title": "Retrospective improvement log",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from stability watch, support handoff, and release-retrospective findings.",
+        "AllowedFutureUsageSummary": "Reusable for future release planning, operational improvement, and audit.",
+        "ReviewSummary": "Improvement items, owners, triggers, and due dates are explicit."
+      },
+      {
+        "StepKey": "stabilize-and-close",
+        "ArtifactKind": "Brief",
+        "Title": "Release closure note",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared after stability watch with support, telemetry, and retrospective inputs.",
+        "AllowedFutureUsageSummary": "Reusable for future release planning and operational improvement.",
+        "ReviewSummary": "Stability result, support handoff, and improvement actions are explicit."
+      }
+    ],
+    "ContractExercises": [
+      {
+        "StepKey": "scope-freeze",
+        "ExpectedTargetScope": "ExternalProductTargetReadOnly",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts"
+        ],
+        "Purpose": "Scope freeze can inspect project state and write release artifacts without mutating product targets."
+      },
+      {
+        "StepKey": "security-and-go-no-go",
+        "ExpectedTargetScope": "ExternalProductTargetReadOnly",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts",
+          "EscalateOrDecide"
+        ],
+        "Purpose": "Go/no-go approval branches release flow from explicit managed evidence."
+      },
+      {
+        "StepKey": "execute-cutover",
+        "ExpectedTargetScope": "ExternalActionControlled",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts",
+          "ExecuteExternalAction"
+        ],
+        "Purpose": "Cutover is the controlled external action step, not an unbounded product mutation step."
+      }
+    ],
+    "RecoveryExercises": [
+      {
+        "StepKey": "security-and-go-no-go",
+        "BlockCause": "PolicyDenied",
+        "ExpectedRecoveryOptions": [
+          "HumanEscalation",
+          "ReworkContinuation"
+        ],
+        "Diagnostic": "Policy denied external path: release cannot proceed until security exception ownership and containment are approved."
+      }
+    ]
+  },
+  {
+    "Key": "baseline-architecture-decision-governance",
+    "ProcessTemplateKey": "architecture-decision-governance",
+    "RunName": "Architecture decision governance / integration boundary decision",
+    "Summary": "Baseline architecture governance run that exercises decision intake, option comparison, security/compliance review, approval branching, and rollout guidance.",
+    "OperatingMode": "AssistedExecution",
+    "TriggerReason": "Seeded baseline scenario for selecting an integration boundary with explicit project context, provenance, review, approval, and implementation guidance.",
+    "Assignments": [
+      {
+        "StepKey": "",
+        "RoleKey": "governance-facilitator",
+        "DisplayName": "Eva Governance",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns decision process hygiene and evidence index.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "context-and-options",
+        "RoleKey": "solution-architect",
+        "DisplayName": "Alex Architect",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns context synthesis and option comparison.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "security-compliance-review",
+        "RoleKey": "security-reviewer",
+        "DisplayName": "Ivana Security",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns security and compliance posture review.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "board-decision",
+        "RoleKey": "domain-owner",
+        "DisplayName": "Dana Domain",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns accountable architecture decision approval.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "rollout-guidance",
+        "RoleKey": "service-owner",
+        "DisplayName": "Sofia Service",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns implementation guidance and revisit trigger handoff.",
+        "IsFallback": false
+      }
+    ],
+    "Transitions": [
+      {
+        "StepKey": "decision-intake",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Decision demand, project context, constraints, and stakeholders captured.",
+        "DecidedBy": "Eva Governance"
+      },
+      {
+        "StepKey": "context-and-options",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Options compared with source context, constraints, and rejected alternatives.",
+        "DecidedBy": "Alex Architect"
+      },
+      {
+        "StepKey": "security-compliance-review",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Security, compliance, and provenance implications reviewed.",
+        "DecidedBy": "Ivana Security"
+      },
+      {
+        "StepKey": "board-decision",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "approved",
+        "Reason": "Architecture board approved the integration boundary with explicit conditions.",
+        "DecidedBy": "Dana Domain"
+      },
+      {
+        "StepKey": "rollout-guidance",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Implementation guidance and revisit triggers published for the approved decision.",
+        "DecidedBy": "Sofia Service"
+      }
+    ],
+    "Artifacts": [
+      {
+        "StepKey": "decision-intake",
+        "ArtifactKind": "Brief",
+        "Title": "Architecture demand intake",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from project context, stakeholder request, constraints, and decision deadline.",
+        "AllowedFutureUsageSummary": "Reusable for option comparison, review, board approval, and future revisit.",
+        "ReviewSummary": "Decision question, scope, constraints, and affected systems are explicit."
+      },
+      {
+        "StepKey": "decision-intake",
+        "ArtifactKind": "Brief",
+        "Title": "Decision brief",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from decision demand, stakeholder constraints, affected domains, and deadline.",
+        "AllowedFutureUsageSummary": "Reusable for option comparison, security review, board approval, and future revisit.",
+        "ReviewSummary": "Decision question, owner, affected systems, constraints, and timing are explicit."
+      },
+      {
+        "StepKey": "context-and-options",
+        "ArtifactKind": "Decision",
+        "Title": "Architecture decision record",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from context assembly, option analysis, trade-offs, and known constraints.",
+        "AllowedFutureUsageSummary": "Reusable for security review, board decision, rollout guidance, and audit.",
+        "ReviewSummary": "Context, candidate decision, alternatives, consequences, and unresolved evidence are explicit."
+      },
+      {
+        "StepKey": "context-and-options",
+        "ArtifactKind": "Decision",
+        "Title": "Option comparison brief",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from repository context, architecture constraints, and option analysis.",
+        "AllowedFutureUsageSummary": "Reusable for security review, board decision, and rollout guidance.",
+        "ReviewSummary": "Selected option candidates, rejected alternatives, trade-offs, and unknowns are explicit."
+      },
+      {
+        "StepKey": "security-compliance-review",
+        "ArtifactKind": "Evidence",
+        "Title": "Security review note",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Confidential",
+        "ProvenanceSummary": "Captured during security and compliance review of the proposed architecture direction.",
+        "AllowedFutureUsageSummary": "Reusable for board decision, implementation guardrails, compliance audit, and revisit.",
+        "ReviewSummary": "Security obligations, compliance impact, required controls, and residual risks are explicit."
+      },
+      {
+        "StepKey": "security-compliance-review",
+        "ArtifactKind": "Evidence",
+        "Title": "Dependency and provenance impact note",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Confidential",
+        "ProvenanceSummary": "Captured during security and compliance review of the integration boundary options.",
+        "AllowedFutureUsageSummary": "Reusable for board decision, implementation guardrails, and audit.",
+        "ReviewSummary": "Security, compliance, dependency, and provenance impacts are separated."
+      },
+      {
+        "StepKey": "board-decision",
+        "ArtifactKind": "Decision",
+        "Title": "Approved architecture decision record",
+        "TrustStatus": "HumanApproved",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Approved from decision intake, option comparison, and security/compliance review.",
+        "AllowedFutureUsageSummary": "Reusable for implementation, governance audit, and revisit decisions.",
+        "ReviewSummary": "Decision, conditions, owner, rejected alternatives, and revisit trigger are explicit."
+      },
+      {
+        "StepKey": "rollout-guidance",
+        "ArtifactKind": "Brief",
+        "Title": "Architecture rollout guidance",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared after board approval for implementation owners and service handoff.",
+        "AllowedFutureUsageSummary": "Reusable for implementation planning, review, and future decision audit.",
+        "ReviewSummary": "Rollout constraints, handoff owner, implementation guardrails, and revisit triggers are explicit."
+      },
+      {
+        "StepKey": "rollout-guidance",
+        "ArtifactKind": "Brief",
+        "Title": "Architecture revisit trigger log",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared after board approval from adoption conditions, review dates, and risk triggers.",
+        "AllowedFutureUsageSummary": "Reusable for implementation governance, revisit scheduling, and future audit.",
+        "ReviewSummary": "Revisit triggers, owners, due dates, and decision-update conditions are explicit."
+      }
+    ],
+    "ContractExercises": [
+      {
+        "StepKey": "decision-intake",
+        "ExpectedTargetScope": "ExternalProductTargetReadOnly",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts"
+        ],
+        "Purpose": "Decision intake can inspect project context and upstream material without changing the product."
+      },
+      {
+        "StepKey": "security-compliance-review",
+        "ExpectedTargetScope": "ExternalProductTargetReadOnly",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts",
+          "EscalateOrDecide"
+        ],
+        "Purpose": "Security/compliance review can decide or escalate from evidence but cannot mutate product targets."
+      },
+      {
+        "StepKey": "board-decision",
+        "ExpectedTargetScope": "ExternalProductTargetReadOnly",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts",
+          "EscalateOrDecide"
+        ],
+        "Purpose": "Board decision selects the approved or deferred branch from explicit architecture evidence."
+      }
+    ],
+    "RecoveryExercises": [
+      {
+        "StepKey": "context-and-options",
+        "BlockCause": "UpstreamInput",
+        "ExpectedRecoveryOptions": [
+          "WaitForArtifactMaterialization",
+          "RecoverArtifactsOnly",
+          "HumanEscalation"
+        ],
+        "Diagnostic": "Missing upstream artifact: architecture demand intake is absent or not materialized before option comparison."
+      }
+    ]
+  },
+  {
+    "Key": "baseline-blazor-wasm-pwa-tetris",
+    "ProcessTemplateKey": "blazor-app-delivery",
+    "RunName": "Blazor WASM PWA Tetris delivery / playable browser game",
+    "Summary": "Baseline Blazor app delivery run for a simple Tetris-style WASM PWA, with gameplay, PWA/offline, build, browser, console, screenshot, and project-structure writeback acceptance criteria kept in scenario data.",
+    "OperatingMode": "GovernedLive",
+    "TriggerReason": "Deliver a simple Blazor WebAssembly PWA Tetris game from the approved project-structure node. Acceptance criteria: playable Tetris board, falling tetrominoes, keyboard controls, scoring, line clear, game over, restart, pause/resume, PWA manifest/service-worker offline readiness where feasible, build/test proof, browser screenshot, console proof with no active JavaScript/runtime errors, and project-structure writeback. The first step resolves architecture and contract only; implementation owns code; validation and QA cannot mutate code.",
+    "Assignments": [
+      {
+        "StepKey": "",
+        "RoleKey": "blazor-delivery-manager",
+        "DisplayName": "Tetris delivery manager",
+        "ExecutorKind": "agent",
+        "BindingReason": "Owns process flow, acceptance scope, evidence index, and project-structure writeback for the Tetris WASM PWA run.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "resolve-blazor-contract",
+        "RoleKey": "blazor-solution-architect",
+        "DisplayName": "Tetris solution architect",
+        "ExecutorKind": "agent",
+        "BindingReason": "Resolves architecture, Blazor WASM PWA mode, routes, output root, and evidence targets without implementing code.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "implement-blazor-change",
+        "RoleKey": "blazor-engineer",
+        "DisplayName": "Tetris Blazor engineer",
+        "ExecutorKind": "agent",
+        "BindingReason": "Owns scoped implementation of the playable Blazor WASM PWA Tetris game and build/test proof.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "validate-blazor-runtime",
+        "RoleKey": "blazor-qa-lead",
+        "DisplayName": "Tetris QA and browser proof lead",
+        "ExecutorKind": "agent",
+        "BindingReason": "Owns non-mutating runtime validation, screenshot capture, console inspection, gameplay assertions, and PWA/offline readiness proof.",
+        "IsFallback": false
+      }
+    ],
+    "Transitions": [
+      {
+        "StepKey": "resolve-blazor-contract",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "__default__",
+        "Reason": "Architecture and acceptance contract resolved without implementation.",
+        "DecidedBy": "Tetris solution architect"
+      },
+      {
+        "StepKey": "implement-blazor-change",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "__default__",
+        "Reason": "Playable WASM PWA Tetris implementation completed with build/test proof.",
+        "DecidedBy": "Tetris Blazor engineer"
+      },
+      {
+        "StepKey": "validate-blazor-runtime",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "quality-accepted",
+        "Reason": "Browser screenshot, console proof, gameplay assertions, and PWA/offline readiness evidence accepted.",
+        "DecidedBy": "Tetris QA and browser proof lead"
+      },
+      {
+        "StepKey": "record-blazor-results",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Run evidence index and project-structure writeback recorded.",
+        "DecidedBy": "Tetris delivery manager"
+      }
+    ],
+    "Artifacts": [
+      {
+        "StepKey": "resolve-blazor-contract",
+        "ArtifactKind": "Brief",
+        "Title": "Tetris WASM PWA delivery contract",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from the Tetris scenario trigger and project-structure source-of-truth node.",
+        "AllowedFutureUsageSummary": "Reusable by implementation, validation, repair, and run-evidence writeback steps.",
+        "ReviewSummary": "Names Blazor WASM PWA mode, route, product root, output root, acceptance criteria, evidence paths, and non-mutating validation boundary."
+      },
+      {
+        "StepKey": "implement-blazor-change",
+        "ArtifactKind": "Deliverable",
+        "Title": "Tetris WASM PWA implementation change set",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Generated by the implementation step inside the approved product root.",
+        "AllowedFutureUsageSummary": "Reusable by validation and repair steps for gameplay and PWA readiness checks.",
+        "ReviewSummary": "Includes playable board, falling tetrominoes, keyboard controls, scoring, line clear, game over, restart, pause/resume, build/test output, and PWA files."
+      },
+      {
+        "StepKey": "implement-blazor-change",
+        "ArtifactKind": "Deliverable",
+        "Title": "Blazor implementation change set",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Generated by the implementation step inside the approved Blazor product root.",
+        "AllowedFutureUsageSummary": "Reusable by validation and repair steps for gameplay, PWA readiness, and regression checks.",
+        "ReviewSummary": "Implementation files, affected routes, acceptance criteria coverage, and PWA assets are explicit."
+      },
+      {
+        "StepKey": "implement-blazor-change",
+        "ArtifactKind": "Brief",
+        "Title": "Implementation self-review summary",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared after implementation from changed files, acceptance criteria, and known risks.",
+        "AllowedFutureUsageSummary": "Reusable by validation, repair, and final run-evidence steps.",
+        "ReviewSummary": "Self-review checks, known limitations, affected files, and unresolved concerns are explicit."
+      },
+      {
+        "StepKey": "validate-blazor-runtime",
+        "ArtifactKind": "Evidence",
+        "Title": "Tetris browser and PWA validation evidence",
+        "TrustStatus": "HumanApproved",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Captured from the non-mutating validation step using runtime, browser, screenshot, and console tools.",
+        "AllowedFutureUsageSummary": "Reusable for acceptance, repair routing, and future regression comparison.",
+        "ReviewSummary": "Contains screenshot path, console proof with no active JavaScript/runtime errors, gameplay assertions, build/test proof, PWA manifest/service-worker/offline readiness findings, and any feasible-limit notes."
+      },
+      {
+        "StepKey": "validate-blazor-runtime",
+        "ArtifactKind": "Evidence",
+        "Title": "Blazor runtime evidence pack",
+        "TrustStatus": "HumanApproved",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Captured from runtime, browser, screenshot, console, and PWA validation checks.",
+        "AllowedFutureUsageSummary": "Reusable for acceptance, repair routing, and future regression comparison.",
+        "ReviewSummary": "Runtime URL, screenshot, console proof, gameplay checks, manifest status, and offline readiness findings are explicit."
+      },
+      {
+        "StepKey": "validate-blazor-runtime",
+        "ArtifactKind": "Brief",
+        "Title": "Validation self-review summary",
+        "TrustStatus": "HumanApproved",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared after validation from browser evidence, build/test output, and acceptance decisions.",
+        "AllowedFutureUsageSummary": "Reusable for final result recording, repair routing, and future validation planning.",
+        "ReviewSummary": "Accepted checks, rejected checks, screenshot evidence references, rerun conditions, and validation confidence are explicit."
+      },
+      {
+        "StepKey": "record-blazor-results",
+        "ArtifactKind": "Evidence",
+        "Title": "Run evidence index",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Recorded from implementation and validation artifacts after the Tetris run was accepted.",
+        "AllowedFutureUsageSummary": "Reusable for project history, reruns, governance audit, and downstream writeback.",
+        "ReviewSummary": "Evidence paths, validation state, acceptance outcome, and known follow-up items are explicit."
+      },
+      {
+        "StepKey": "record-blazor-results",
+        "ArtifactKind": "Brief",
+        "Title": "Project-structure result writeback summary",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from the final result writeback target, evidence index, and accepted run state.",
+        "AllowedFutureUsageSummary": "Reusable for project-structure traceability, reruns, and process governance audit.",
+        "ReviewSummary": "Writeback target, screenshot evidence links, accepted status, and ownership are explicit."
+      },
+      {
+        "StepKey": "record-blazor-results",
+        "ArtifactKind": "Evidence",
+        "Title": "Tetris project-structure writeback receipt",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Recorded by the result step after validation accepted the run.",
+        "AllowedFutureUsageSummary": "Reusable for project timeline, reruns, and process governance audit.",
+        "ReviewSummary": "Links the run evidence index, screenshot, console proof, build/test proof, acceptance state, and project-structure writeback target."
+      }
+    ],
+    "ContractExercises": [
+      {
+        "StepKey": "resolve-blazor-contract",
+        "ExpectedTargetScope": "ExternalProductTargetReadOnly",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "WriteManagedProcessArtifacts"
+        ],
+        "Purpose": "Contract resolution may inspect project structure and write process artifacts without implementing code."
+      },
+      {
+        "StepKey": "implement-blazor-change",
+        "ExpectedTargetScope": "ExternalProductTargetMutable",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "MutateProductTarget",
+          "RunValidation",
+          "WriteManagedProcessArtifacts"
+        ],
+        "Purpose": "Implementation is the owned mutation step for the Tetris WASM PWA product target."
+      },
+      {
+        "StepKey": "validate-blazor-runtime",
+        "ExpectedTargetScope": "ExternalProductTargetReadOnly",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "RunValidation",
+          "LaunchRuntime",
+          "CaptureRuntimeProof",
+          "WriteManagedProcessArtifacts"
+        ],
+        "Purpose": "Validation captures browser/runtime proof without mutating product code."
+      }
+    ],
+    "RecoveryExercises": [
+      {
+        "StepKey": "validate-blazor-runtime",
+        "BlockCause": "RuntimeEvidence",
+        "ExpectedRecoveryOptions": [
+          "RerunValidation",
+          "RepairImplementation"
+        ],
+        "Diagnostic": "Validation failed: browser console proof or gameplay assertion failed during Tetris WASM PWA validation."
       }
     ]
   }

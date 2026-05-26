@@ -1,3 +1,17 @@
-# SB09 changed-file-hashes.txt
 
-Pending.
+Algorithm Hash                                                             Path
+--------- ----                                                             ----
+SHA256    761BE193414B216D9476223FDFA7E4674BFCAFED3E14A1FB471879805B5A1F0C C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionLinter.cs
+SHA256    1DBC7D0DA5971FC0A2209BCF2EC95AB31999482010E6FB213887D6725FEAF006 C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Templates\ProcessTemplatePackModels.cs
+SHA256    C2E5ABAE4880E6DAAB86CB016F77E985D73FDDDFF376E10C19994711AAA55AB0 C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Templates\ProcessTemplateEditorModelFactory.cs
+SHA256    2B2DA014832563C671F0A6D151135F28BF3F800AC648FA24BC762D7E846F1928 C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Components\ProcessArtifactExpectationEditor.razor
+SHA256    20143EF0F09FBA1175EC10A2FB894A64563D3778B1A9185739D79FD9EA300C50 C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\ProcessDefinitionLinterTests.cs
+SHA256    81732E6864448BEC5A1627073ABDF33FFA0F3B9DCBE696438FBA765AE5CD78B7 C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs
+SHA256    B4E1D6926CDF797635B0B104B11A86E46C0827FAC34770FF30DB807B55BE8518 C:\repositories\CanDoItAll\codex\bundles\processes-hardening-followup-template-ui-readiness-v8\proof\SB09\manifest.md
+SHA256    76B446AA05D52AFE7281DFB3DF5EF2D99A5BBBCCFADEDD7BE24FA0E0DD60E774 C:\repositories\CanDoItAll\codex\bundles\processes-hardening-followup-template-ui-readiness-v8\proof\SB09\semantic-invariants.md
+SHA256    7D8E0015479345197920D2F61FF3E6D0D654977AD4D46A62E8FBF59EC70BBF85 C:\repositories\CanDoItAll\codex\bundles\processes-hardening-followup-template-ui-readiness-v8\reviews\01-execution-report.md
+SHA256    62A8A1F0110BF7B3A6842069DA60CCDDB908B176B21AE34E3C8A48C95C58C22E C:\repositories\CanDoItAll\codex\bundles\processes-hardening-followup-template-ui-readiness-v8\subbundles\09-workflow-subprocess-output-mapping-hardening\README.md
+SHA256    89B0F4B2987321889F12488A3843651B03A50830D546CC9DF8287F8CA1230330 C:\repositories\CanDoItAll\codex\bundles\processes-hardening-followup-template-ui-readiness-v8\proof\SB09\transcripts\failing-first.txt
+SHA256    AB6323A1C6E759C8A621252D3B8E8E133892BB4738B7E2617ECAC016968EB07B C:\repositories\CanDoItAll\codex\bundles\processes-hardening-followup-template-ui-readiness-v8\proof\SB09\transcripts\passing.txt
+SHA256    3C8BB8B50A6279FAC2B6BAF12FD2539019CDA4BE4C106B14329A34FFF9BAA531 C:\repositories\CanDoItAll\codex\bundles\processes-hardening-followup-template-ui-readiness-v8\proof\SB09\transcripts\source-assertions.txt
+SHA256    89A29834CC9DF03F9C8E21C0D4383DD56A485E57C14F229107EAD63A1BE79C8B C:\repositories\CanDoItAll\codex\bundles\processes-hardening-followup-template-ui-readiness-v8\proof\SB09\transcripts\anti-stub-audit.txt

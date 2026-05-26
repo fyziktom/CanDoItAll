@@ -191,7 +191,14 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/dotnet-feature-function-implementation/steps/feature-slice-intake.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 1,
@@ -274,7 +281,15 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/dotnet-feature-function-implementation/steps/implementation-approach.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 2,
@@ -349,7 +364,15 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/dotnet-feature-function-implementation/steps/test-contract.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 3,
@@ -432,7 +455,16 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/dotnet-feature-function-implementation/steps/code-change.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "MutateProductTarget",
+        "RunValidation",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetMutable"
     },
     {
       "Order": 4,
@@ -514,7 +546,16 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/dotnet-feature-function-implementation/steps/targeted-validation.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "RunValidation",
+        "CaptureRuntimeProof",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 5,
@@ -589,7 +630,14 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/dotnet-feature-function-implementation/steps/feature-handoff.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     }
   ]
 }

@@ -150,7 +150,12 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/business-plan-development/steps/strategy-intake.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ManagedProcessArtifactsOnly"
     },
     {
       "Order": 1,
@@ -222,7 +227,13 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/business-plan-development/steps/product-evidence-review.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ManagedProcessArtifactsOnly"
     },
     {
       "Order": 2,
@@ -304,7 +315,13 @@
       ],
       "DocRefs": [
         "processes/business-plan-development/steps/business-plan-draft.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ManagedProcessArtifactsOnly"
     },
     {
       "Order": 3,
@@ -377,7 +394,13 @@
       ],
       "DocRefs": [
         "processes/business-plan-development/steps/financial-modeling.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ManagedProcessArtifactsOnly"
     },
     {
       "Order": 4,
@@ -458,7 +481,13 @@
       ],
       "DocRefs": [
         "processes/business-plan-development/steps/marketing-plan.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ManagedProcessArtifactsOnly"
     },
     {
       "Order": 5,
@@ -572,7 +601,14 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/business-plan-development/steps/integrated-review.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ManagedProcessArtifactsOnly"
     },
     {
       "Order": 6,
@@ -640,7 +676,13 @@
       ],
       "ValidationRefs": [],
       "PromptRefs": [],
-      "DocRefs": []
+      "DocRefs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ManagedProcessArtifactsOnly"
     },
     {
       "Order": 7,
@@ -706,7 +748,13 @@
       "ChecklistRefs": [],
       "ValidationRefs": [],
       "PromptRefs": [],
-      "DocRefs": []
+      "DocRefs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ManagedProcessArtifactsOnly"
     }
   ]
 }

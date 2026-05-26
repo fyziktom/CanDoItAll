@@ -1,3 +1,8 @@
-# SB02 changed-file-hashes.txt
-
-Pending.
+Command: Get-FileHash <SB02 touched/asserted files>
+Invariant: SB02-INV-001
+FDE212F24DEF6BB9C7780CA2E4549AB5E7A606E40C0FE40A5E76922ABB4A35BE  repo://src/CanDoItAll.AgentFramework.Maf/Runtime/Tools/MafAgentRuntime.ProcessTools.cs
+1B14C83C8AF72622CDB408F6B18DB5977F34E5C937EFDB45933B9B553226A5F4  repo://src/CanDoItAll.Web/Api/ProcessesApi.cs
+0B4A9239764467828A9E2BA059E63E0AA6868CB132F59CFF333CC8E0B0767A38  repo://src/CanDoItAll.Modules.Processes/Definitions/ProcessDefinitionEditorModels.cs
+510EAB4DDF72F0818FB969434BAA709B2BFDEE42F91996DD9A759FEDD0C89EB7  repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessRuntimeViewModels.cs
+3E5F391A58F782EAB916ED6E8B2180D63E10254E0F2202C65653BCF2354B715B  repo://tests/CanDoItAll.Tests.Integration/ApiIntegrationTests.cs
+ExitCode: 0

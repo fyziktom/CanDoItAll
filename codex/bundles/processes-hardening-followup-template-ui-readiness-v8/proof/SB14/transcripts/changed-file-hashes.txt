@@ -1,3 +1,19 @@
 # SB14 changed-file-hashes.txt
 
-Pending.
+SHA256 hashes captured after SB14 implementation.
+
+```text
+E1F362B6A5BA8967AE6C658AA53CDB60B04481E10BF8CE5DFEA9E595D0C7B0CA  repo://src/CanDoItAll.Modules.Processes/Templates/ProcessTemplatePackScenarios.cs
+B8ABAFC5420F6FFE9EFBED729AF5E6250447DBD4CB37ED726862A08D4160BE00  repo://src/CanDoItAll.Modules.Processes/Development/ProcessDevelopmentSeedService.RuntimeSeeds.cs
+D0086AF5CBF817DA6AAA44AAC1DC42F08CCD23B9569305E961B9188E49F04735  repo://src/CanDoItAll.Modules.Processes/Development/ProcessDevelopmentSeedService.RuntimeSeeds.Complex.cs
+4A125E3273C52A42FC7E4720F59917FF9AEE4F7768FED8B6CD2F3802B03ECCC5  repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessStepTransitionGuard.cs
+0FCA5EAE819DDD8F0B871EBC66E6E14527628B09BED65B18172CE22293C6F746  repo://src/CanDoItAll.Web/Api/ProcessesApi.cs
+C5A1CD9A46A67FC9BB4A5536F7E075E1880FFF5D755073C564AB101886A3D9D3  repo://src/CanDoItAll.AgentFramework.Maf/Runtime/Tools/MafAgentRuntime.ProcessTools.cs
+61D64191C538B115A34A3F7A46D48A0E07E0E9130A3B86E74E9FD8CE54CB2870  repo://tests/CanDoItAll.Tests.Integration/ProcessTemplateGovernanceTests.cs
+7CDB35D1ED99DA0E45FD8189F7F4E73DF4477820059EAE51AECEFB8CD0A73D4E  repo://tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs
+A3F5B73D91E0FFD2D23D81825684923E2CDEF840199F3869836452ABA18B6AFA  repo://Templates/Processes/seed-catalog/baseline-scenarios.json
+80A2A0C277651358448C80153877367123BD84E422A75BE443C77A6A75418F26  repo://Templates/Processes/processes/customer-onboarding/definition.json
+A208E356B681CF52C50EF23638152E4AD0B97A31DB3F68C9394E539ECD7D8511  repo://Templates/Processes/processes/incident-response/definition.json
+CC0FE75B15DB650D7EA1B73F78840DA247E364F1715F2FEBEAE95D6AED988FB8  repo://Templates/Processes/processes/release-readiness-and-deployment/definition.json
+6F4CC0C49F6ED6C03F10D7F73A045D3989206C508B85580F5CD73EACA4BB1610  repo://Templates/Processes/processes/architecture-decision-governance/definition.json
+```

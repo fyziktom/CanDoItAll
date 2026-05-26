@@ -686,7 +686,11 @@ internal static class ProcessesApi
                     item.OperatingMode,
                     item.Assignments.Count,
                     item.Transitions.Count,
-                    item.Artifacts.Count))
+                    item.Artifacts.Count,
+                    item.Transitions.Count(transition => !string.IsNullOrWhiteSpace(transition.SelectedBranchOutcomeKey)),
+                    item.Transitions.Count(transition => string.Equals(transition.TargetStatus, ProcessStepRunStatus.Blocked.ToString(), StringComparison.OrdinalIgnoreCase)),
+                    item.ContractExercises.Count,
+                    item.RecoveryExercises.Count))
                 .ToList());
         })
         .WithName("ListProcessTemplateBaselineScenarios");

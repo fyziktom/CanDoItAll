@@ -322,7 +322,10 @@ public sealed partial class ProcessRuntimeReadQueryService(
                             : artifactOutputsByStepId.GetValueOrDefault(stepDefinition.Id) ?? [],
                         AllowedOperations = stepDefinition is null
                             ? []
-                            : ProcessStepOperationContractState.NormalizeAllowedOperations(stepDefinition.AllowedOperations),
+                            : ProcessStepOperationContractState.NormalizeDeclaredAllowedOperations(
+                                stepDefinition.StepKind,
+                                stepDefinition.AllowedOperations,
+                                stepDefinition.OperationTargetScope),
                         OperationTargetScope = stepDefinition?.OperationTargetScope,
                         ExceptionSummary = item.ExceptionSummary,
                         ArtifactExpectations = artifactLedger,

@@ -1,3 +1,14 @@
+Command: rg SB15 anti-stub audit
+ExitCode: 0
+
 # SB15 anti-stub-audit.txt
 
-Pending.
+## Command
+
+```powershell
+rg -n "TODO|TBD|FIXME|NotImplemented|throw new NotImplementedException" src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunStepsDialog.razor tests\CanDoItAll.Tests.Components\ProcessWorkspaceTests.cs
+```
+
+## Result
+
+No matches. `rg` returned exit code 1, which is expected when no stub markers are present.

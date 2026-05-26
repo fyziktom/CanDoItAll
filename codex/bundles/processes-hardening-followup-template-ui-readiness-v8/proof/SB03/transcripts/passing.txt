@@ -1,3 +1,7 @@
-# SB03 passing.txt
-
-Pending.
+Command: powershell -NoProfile -File .\\codex\\bundles\\processes-hardening-followup-template-ui-readiness-v8\\scripts\\audit-template-governance.ps1 -OutputPath codex\bundles\processes-hardening-followup-template-ui-readiness-v8\proof\SB03\template-governance-matrix.md
+Invariant: SB03-INV-001
+Templates: 21
+Steps: 147
+Steps missing typed contracts: 104
+Steps missing migration plan: 0
+ExitCode: 0

@@ -1,3 +1,36 @@
-# SB11 source-assertions.txt
-
-Pending.
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\WorkflowSubprocessArtifactMapper.cs:7:internal static class WorkflowSubprocessArtifactMapper
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.CompletionArtifactValidator.cs:5:    internal static class ProcessCompletionArtifactValidator
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.CompletionArtifactValidator.cs:7:        public static ProcessArtifactExpectationValidationResult ValidateArtifactExpectationForRecordedArtifacts(
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.StepTransitions.cs:439:            .Select(expectation => ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.StepTransitions.cs:444:                ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.Manual,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRecoveryRouter.cs:30:internal static class ProcessRecoveryRouter
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeInvariantAuditor.cs:12:internal static class ProcessRuntimeInvariantAuditor
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactIdentityService.cs:8:internal static class ProcessArtifactIdentityService
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:691:    public async Task TransitionStepAsync_SB10_INV_001_rejects_stale_execution_lineage_required_artifact_on_manual_completion()
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1741:    public async Task TransitionStepAsync_SB10_INV_001_persists_recovery_router_next_action_and_lifecycle_event()
+src\CanDoItAll.Modules.Processes\Runtime\ProcessHealthInvariantAuditor.cs:3:internal static class ProcessHealthInvariantAuditor
+src\CanDoItAll.Modules.Processes\Runtime\ProcessBlockStateClassifier.cs:8:internal static class ProcessBlockStateClassifier
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:133:    public void ProcessBlockStateClassifier_SB11_INV_001_classifies_typed_causes_without_step_mutation()
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:146:    public void ProcessHealthInvariantAuditor_SB11_INV_001_builds_generic_actionable_recovery_health()
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:186:    public void WorkflowSubprocessArtifactMapper_SB11_INV_001_resolves_explicit_mappings_without_dispatch_partials()
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:13766:        var result = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:13802:        var result = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:13825:        var result = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:13884:        var result = ProcessRunAutomationDispatchService.ProcessCompletionArtifactValidator.ValidateArtifactExpectationForRecordedArtifacts(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:13905:        var result = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:13940:        var result = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:13975:        var result = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:14010:        var result = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:14072:            var result = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:14121:            var result = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:14171:            var result = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:14223:            var result = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:14278:            var result = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:14324:        var result = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:14372:        var result = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:14412:        var result = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:14592:        var workflowResult = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:14623:        var subprocessResult = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:14665:        var managerResult = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:14677:        var missingRequired = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:14755:            var result = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(

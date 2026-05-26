@@ -390,6 +390,14 @@ public sealed class ProcessTemplateArtifactExpectation
     public string AllowedFutureUsageSummary { get; set; } = string.Empty;
 
     public string ValidationRequirementSummary { get; set; } = string.Empty;
+
+    public string WorkflowOutputId { get; set; } = string.Empty;
+
+    public string WorkflowOutputName { get; set; } = string.Empty;
+
+    public string WorkflowOutputKind { get; set; } = string.Empty;
+
+    public Guid? SubprocessChildArtifactExpectationId { get; set; }
 }
 
 public sealed class ProcessTemplateStepArtifactInput

@@ -398,9 +398,13 @@
         else
         {
             Model.AllowedOperations.RemoveAll(candidate => candidate == operation);
+            ReconcileTargetScopeAfterOperationRemoval(operation);
         }
 
-        Model.AllowedOperations = ProcessStepOperationContractState.NormalizeAllowedOperations(Model.AllowedOperations);
+        Model.AllowedOperations = ProcessStepOperationContractState.NormalizeDeclaredAllowedOperations(
+            Model.StepKind,
+            Model.AllowedOperations,
+            Model.OperationTargetScope);
     }
 
     private static bool ResolveCheckboxValue(ChangeEventArgs args)
@@ -409,6 +413,34 @@
         {
             bool value => value,
             string rawValue when bool.TryParse(rawValue, out var parsed) => parsed,
+            _ => false
+        };
+    }
+
+    private void ReconcileTargetScopeAfterOperationRemoval(ProcessStepOperation removedOperation)
+    {
+        if (!Model.OperationTargetScope.HasValue ||
+            !IsOperationImpliedByTargetScope(removedOperation, Model.OperationTargetScope.Value))
+        {
+            return;
+        }
+
+        Model.OperationTargetScope = ProcessStepOperationContractState.InferTargetScope(
+            Model.StepKind,
+            Model.AllowedOperations);
+    }
+
+    private static bool IsOperationImpliedByTargetScope(
+        ProcessStepOperation operation,
+        ProcessStepTargetScope targetScope)
+    {
+        return (operation, targetScope) switch
+        {
+            (ProcessStepOperation.WriteExternalArtifactDestination, ProcessStepTargetScope.ExternalArtifactDestination) => true,
+            (ProcessStepOperation.MutateProductTarget, ProcessStepTargetScope.ManagedOutputProduct) => true,
+            (ProcessStepOperation.MutateProductTarget, ProcessStepTargetScope.ExternalProductTargetMutable) => true,
+            (ProcessStepOperation.ReadProjectStructure, ProcessStepTargetScope.ExternalProductTargetReadOnly) => true,
+            (ProcessStepOperation.ExecuteExternalAction, ProcessStepTargetScope.ExternalActionControlled) => true,
             _ => false
         };
     }
@@ -428,6 +460,10 @@
         }
 
         Model.OperationTargetScope = targetScope;
+        Model.AllowedOperations = ProcessStepOperationContractState.NormalizeDeclaredAllowedOperations(
+            Model.StepKind,
+            Model.AllowedOperations,
+            Model.OperationTargetScope);
     }
 
     private void HandleSubprocessDefinitionChanged(ChangeEventArgs args)

@@ -132,7 +132,10 @@ internal static class ProcessDependencyCompatibilityBridge
             Subtitle = step.Subtitle,
             Notes = step.Notes,
             StepKind = step.StepKind,
-            AllowedOperations = ProcessStepOperationContractState.NormalizeAllowedOperations(step.AllowedOperations),
+            AllowedOperations = ProcessStepOperationContractState.NormalizeDeclaredAllowedOperations(
+                step.StepKind,
+                step.AllowedOperations,
+                step.OperationTargetScope),
             OperationTargetScope = step.OperationTargetScope,
             SubprocessDefinitionId = step.SubprocessDefinitionId,
             SubprocessDefinitionSnapshotName = step.SubprocessDefinitionSnapshotName,
@@ -222,7 +225,10 @@ internal static class ProcessDependencyCompatibilityBridge
             Subtitle = step.Subtitle,
             Notes = step.Notes,
             StepKind = step.StepKind,
-            AllowedOperations = ProcessStepOperationContractState.NormalizeAllowedOperations(step.AllowedOperations),
+            AllowedOperations = ProcessStepOperationContractState.NormalizeDeclaredAllowedOperations(
+                step.StepKind,
+                step.AllowedOperations,
+                step.OperationTargetScope),
             OperationTargetScope = step.OperationTargetScope,
             SubprocessDefinitionId = step.SubprocessDefinitionId,
             SubprocessDefinitionSnapshotName = step.SubprocessDefinitionSnapshotName,

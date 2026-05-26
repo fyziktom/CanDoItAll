@@ -440,6 +440,11 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             return [OperationRequirement.Any(OperationEscalateOrDecide, OperationRecoverArtifactsOnly, OperationExecuteExternalAction)];
         }
 
+        if (AgentToolInvocationPolicyMetadata.IsProjectStructureMutationTool(context.ToolName))
+        {
+            return [OperationRequirement.Any(OperationExecuteExternalAction)];
+        }
+
         if (ProcessDefinitionMutationTools.Contains(context.ToolName) ||
             string.Equals(context.ToolName, AgentToolInvocationPolicyMetadata.ImageGenerationCreate, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(context.ToolName, AgentToolInvocationPolicyMetadata.RunSkillScript, StringComparison.OrdinalIgnoreCase))
@@ -1653,6 +1658,70 @@ public static class AgentToolInvocationPolicyMetadata
     public const string ProcessesTemplateBaselineScenariosList = "processes_template_baseline_scenarios_list";
     public const string ImageGenerationCreate = "image_generation_create";
     public const string WorkspaceInspectImage = "workspace_inspect_image";
+    public const string ProjectStructureProjectsList = "project_structure_projects_list";
+    public const string ProjectStructureProjectCreate = "project_structure_project_create";
+    public const string ProjectStructureProjectUpdate = "project_structure_project_update";
+    public const string ProjectStructureHierarchyGet = "project_structure_hierarchy_get";
+    public const string ProjectStructureSubprojectLink = "project_structure_subproject_link";
+    public const string ProjectStructureNodesToNewSubproject = "project_structure_nodes_to_new_subproject";
+    public const string ProjectStructureRead = "project_structure_read";
+    public const string ProjectStructureNodeCatalog = "project_structure_node_catalog";
+    public const string ProjectStructureChecklist = "project_structure_checklist";
+    public const string ProjectStructureDependenciesQuery = "project_structure_dependencies_query";
+    public const string ProjectStructureDependencyLink = "project_structure_dependency_link";
+    public const string ProjectStructureDependencyUnlink = "project_structure_dependency_unlink";
+    public const string ProjectStructureNodeCreate = "project_structure_node_create";
+    public const string ProjectStructureNodeUpdate = "project_structure_node_update";
+    public const string ProjectStructureNodeMove = "project_structure_node_move";
+    public const string ProjectStructureNodeRecompose = "project_structure_node_recompose";
+    public const string ProjectStructureNodeReparent = "project_structure_node_reparent";
+    public const string ProjectStructureApprovalRequest = "project_structure_approval_request";
+    public const string ProjectStructureAssetCreate = "project_structure_asset_create";
+    public const string ProjectStructureAssetGet = "project_structure_asset_get";
+    public const string ProjectStructureAssetCreateRevision = "project_structure_asset_create_revision";
+    public const string ProjectStructureImport = "project_structure_import";
+    public const string ProjectStructureKnowledgeQuery = "project_structure_knowledge_query";
+    public const string ProjectStructureAnalyticsQuery = "project_structure_analytics_query";
+    public const string ProjectStructureProjectLeaseAcquire = "project_structure_project_lease_acquire";
+    public const string ProjectStructureRepoBranchLeaseAcquire = "project_structure_repo_branch_lease_acquire";
+    public const string ProjectStructureLeaseGet = "project_structure_lease_get";
+    public const string ProjectStructureLeaseRelease = "project_structure_lease_release";
+
+    private static readonly string[] ProjectStructureReadToolNames =
+    [
+        ProjectStructureProjectsList,
+        ProjectStructureHierarchyGet,
+        ProjectStructureRead,
+        ProjectStructureNodeCatalog,
+        ProjectStructureChecklist,
+        ProjectStructureDependenciesQuery,
+        ProjectStructureAssetGet,
+        ProjectStructureKnowledgeQuery,
+        ProjectStructureAnalyticsQuery,
+        ProjectStructureLeaseGet
+    ];
+
+    private static readonly string[] ProjectStructureMutationToolNames =
+    [
+        ProjectStructureProjectCreate,
+        ProjectStructureProjectUpdate,
+        ProjectStructureSubprojectLink,
+        ProjectStructureNodesToNewSubproject,
+        ProjectStructureDependencyLink,
+        ProjectStructureDependencyUnlink,
+        ProjectStructureNodeCreate,
+        ProjectStructureNodeUpdate,
+        ProjectStructureNodeMove,
+        ProjectStructureNodeRecompose,
+        ProjectStructureNodeReparent,
+        ProjectStructureApprovalRequest,
+        ProjectStructureAssetCreate,
+        ProjectStructureAssetCreateRevision,
+        ProjectStructureImport,
+        ProjectStructureProjectLeaseAcquire,
+        ProjectStructureRepoBranchLeaseAcquire,
+        ProjectStructureLeaseRelease
+    ];
 
     private static readonly string[] SensitiveArgumentNameFragments =
     [
@@ -1709,9 +1778,16 @@ public static class AgentToolInvocationPolicyMetadata
             Read(ProcessesTemplateGet),
             Read(ProcessesTemplateMermaidGet),
             Read(ProcessesTemplateBaselineScenariosList)
-        }.ToDictionary(item => item.Name, StringComparer.OrdinalIgnoreCase);
+        }
+        .Concat(ProjectStructureReadToolNames.Select(Read))
+        .Concat(ProjectStructureMutationToolNames.Select(Mutation))
+        .ToDictionary(item => item.Name, StringComparer.OrdinalIgnoreCase);
 
     public static IReadOnlyCollection<AgentToolPolicyMetadata> Tools => RegisteredTools.Values.ToList();
+
+    public static IReadOnlyList<string> ProjectStructureReadTools => ProjectStructureReadToolNames.ToArray();
+
+    public static IReadOnlyList<string> ProjectStructureMutationTools => ProjectStructureMutationToolNames.ToArray();
 
     public static ToolInvocationClassification Classify(string? toolName)
     {
@@ -1724,6 +1800,11 @@ public static class AgentToolInvocationPolicyMetadata
         if (RegisteredTools.TryGetValue(normalized, out var metadata))
         {
             return metadata.Classification;
+        }
+
+        if (normalized.StartsWith("project_structure_", StringComparison.OrdinalIgnoreCase))
+        {
+            return ToolInvocationClassification.Unknown;
         }
 
         if (normalized.StartsWith("processes_", StringComparison.OrdinalIgnoreCase))
@@ -1755,6 +1836,11 @@ public static class AgentToolInvocationPolicyMetadata
     {
         return RegisteredTools.TryGetValue(toolName, out var metadata) &&
                metadata.Classification == ToolInvocationClassification.Validation;
+    }
+
+    public static bool IsProjectStructureMutationTool(string toolName)
+    {
+        return ProjectStructureMutationToolNames.Contains(toolName, StringComparer.OrdinalIgnoreCase);
     }
 
     public static bool RequiresApprovalByDefault(string toolName)

@@ -38,16 +38,19 @@ internal static class ProcessStepTransitionGuard
         ProcessStepBranchOutcomeDefinition? selectedBranchOutcome = null;
         if (request.TargetStatus == ProcessStepRunStatus.Completed)
         {
-            var hasConditionalDependents = stepDefinitions.Any(
-                item => ProcessStepDependencyCollection.GetPersistedDependencies(item.Id, stepDependenciesByStepId)
-                    .Any(
-                        dependency => dependency.DependsOnStepId == currentStepDefinition.Id &&
-                            dependency.DependsOnBranchOutcomeId.HasValue));
-            if (hasConditionalDependents && !request.SelectedBranchOutcomeId.HasValue)
+            var conditionalDependents = stepDefinitions
+                .Where(
+                    item => ProcessStepDependencyCollection.GetPersistedDependencies(item.Id, stepDependenciesByStepId)
+                        .Any(
+                            dependency => dependency.DependsOnStepId == currentStepDefinition.Id &&
+                                dependency.DependsOnBranchOutcomeId.HasValue))
+                .Select(item => item.Title)
+                .ToList();
+            if (conditionalDependents.Count > 0 && !request.SelectedBranchOutcomeId.HasValue)
             {
                 return Result<ProcessStepTransitionResolution>.Failure(
                     Error.Validation(
-                        "Completing this step requires selecting a branch outcome.",
+                        $"Completing this step requires selecting a branch outcome because conditional dependents exist: {string.Join(", ", conditionalDependents)}.",
                         "processes.branch-outcome-required"));
             }
 

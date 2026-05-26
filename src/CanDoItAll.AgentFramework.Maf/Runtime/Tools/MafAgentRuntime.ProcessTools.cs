@@ -92,7 +92,7 @@ public sealed partial class MafAgentRuntime
                 AIFunctionFactory.Create(
                     (Guid runId, CancellationToken cancellationToken = default) => ProcessesRunDetailGetAsync(accessState, runId, cancellationToken),
                     "processes_run_detail_get",
-                    "Loads a process run with step runs, decisions, artifacts, assignments, work briefs, conformance observations, and improvements."),
+                    "Loads a process run with health summary, step runs, decisions, artifacts, assignments, work briefs, conformance observations, and improvements."),
                 AIFunctionFactory.Create(
                     (Guid? definitionId = null, Guid? projectId = null, CancellationToken cancellationToken = default) => ProcessesAnalyticsGetAsync(accessState, definitionId, projectId, cancellationToken),
                     "processes_analytics_get",
@@ -354,6 +354,7 @@ public sealed partial class MafAgentRuntime
 
             return new InternalProcessRunDetailToolData(
                 run,
+                details.Health,
                 details.StepRuns,
                 details.Decisions,
                 details.Artifacts,
@@ -575,7 +576,11 @@ public sealed partial class MafAgentRuntime
                         item.OperatingMode,
                         item.Assignments.Count,
                         item.Transitions.Count,
-                        item.Artifacts.Count))
+                        item.Artifacts.Count,
+                        item.Transitions.Count(transition => !string.IsNullOrWhiteSpace(transition.SelectedBranchOutcomeKey)),
+                        item.Transitions.Count(transition => string.Equals(transition.TargetStatus, ProcessStepRunStatus.Blocked.ToString(), StringComparison.OrdinalIgnoreCase)),
+                        item.ContractExercises.Count,
+                        item.RecoveryExercises.Count))
                     .ToList());
         }
 
@@ -872,6 +877,7 @@ public sealed record ProcessDefinitionRoleAddResult(
 
 public sealed record InternalProcessRunDetailToolData(
     ProcessRunListItem Run,
+    ProcessRunHealthSummaryViewModel Health,
     IReadOnlyList<ProcessStepRunViewModel> StepRuns,
     IReadOnlyList<ProcessDecisionViewModel> DecisionRecords,
     IReadOnlyList<ProcessArtifactViewModel> Artifacts,

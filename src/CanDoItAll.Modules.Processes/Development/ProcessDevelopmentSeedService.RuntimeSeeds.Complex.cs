@@ -53,6 +53,7 @@ public sealed partial class ProcessDevelopmentSeedService
         Guid stepRunId,
         ProcessStepRunStatus targetStatus,
         Guid? selectedBranchOutcomeId,
+        ProcessStepBlockCause? blockCause,
         string reason,
         string decidedBy,
         CancellationToken cancellationToken)
@@ -108,6 +109,9 @@ public sealed partial class ProcessDevelopmentSeedService
                     StepRunId = stepRunId,
                     TargetStatus = transitionStatus,
                     SelectedBranchOutcomeId = transitionStatus == targetStatus ? selectedBranchOutcomeId : null,
+                    BlockCause = transitionStatus == targetStatus && transitionStatus == ProcessStepRunStatus.Blocked
+                        ? blockCause
+                        : null,
                     Reason = transitionStatus == targetStatus ? reason?.Trim() ?? string.Empty : string.Empty,
                     DecidedBy = string.IsNullOrWhiteSpace(decidedBy) ? "process-template-pack" : decidedBy.Trim()
                 },
@@ -140,16 +144,18 @@ public sealed partial class ProcessDevelopmentSeedService
         }
 
         var normalizedTitle = title.Trim();
+        var artifactExpectationId = ResolveArtifactExpectationId(artifactOutputs, normalizedTitle);
         var artifacts = await processesService.ListArtifactsAsync(runId, cancellationToken);
         var existingArtifact = artifacts.FirstOrDefault(item =>
-            string.Equals(item.Title, normalizedTitle, StringComparison.OrdinalIgnoreCase) &&
-            item.ArtifactKind == artifactKind);
+            artifactExpectationId.HasValue
+                ? item.ArtifactExpectationId == artifactExpectationId.Value
+                : string.Equals(item.Title, normalizedTitle, StringComparison.OrdinalIgnoreCase) &&
+                  item.ArtifactKind == artifactKind);
         if (existingArtifact is not null)
         {
             return Result.Success();
         }
 
-        var artifactExpectationId = ResolveArtifactExpectationId(artifactOutputs, normalizedTitle);
         var managedStoragePath = BuildSeedArtifactManagedStoragePath(
             runId,
             normalizedTitle,

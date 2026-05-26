@@ -2,7 +2,13 @@
 
 ## Status
 
-Pending.
+Completed.
+
+## Production-path coverage
+
+- Migrated all manifest process-template steps to explicit typed operation contracts (`AllowedOperations` and `OperationTargetScope`).
+- Verified the strict governance audit has zero missing typed contracts and zero missing migration-plan gaps.
+- Added a production template-pack regression test that loads the real manifest templates and normalizes every declared operation contract through `ProcessStepOperationContractState.NormalizeDeclaredContract`.
 
 ## Semantic invariant
 

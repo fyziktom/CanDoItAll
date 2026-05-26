@@ -1,3 +1,63 @@
-# SB04 source-assertions.txt
+Command: Source assertions for SB04 Blazor template boundary corrections
+Invariant: SB04-INV-001
 
-Pending.
+Pattern: only implementation and repair steps may mutate|validation/revalidation step must target ExternalProductTargetReadOnly
+Path: repo://codex/bundles/processes-hardening-followup-template-ui-readiness-v8/scripts/audit-blazor-template-boundaries.ps1
+61:            Add-Violation $templateKey $step 'only implementation and repair steps may mutate product targets.'
+72:                Add-Violation $templateKey $step 'validation/revalidation step must target ExternalProductTargetReadOnly.'
+
+Pattern: Blazor_process_templates_SB04_INV_001|AssertValidationStep|AssertWritebackStep|AssertEscalationStep
+Path: repo://tests/CanDoItAll.Tests.Integration/ProcessTemplateGovernanceTests.cs
+18:    public async Task Blazor_process_templates_SB04_INV_001_constrain_product_mutation_to_implementation_and_repair_steps()
+38:            AssertValidationStep(definition, "validate-blazor-runtime");
+39:            AssertValidationStep(definition, "revalidate-blazor-repair");
+40:            AssertWritebackStep(definition, "record-blazor-results");
+41:            AssertWritebackStep(definition, "record-blazor-results-after-repair");
+42:            AssertEscalationStep(definition, "escalate-blazor-unresolved-repair");
+68:    private static void AssertValidationStep(ProcessDefinitionImportExportModel definition, string stepKey)
+80:    private static void AssertWritebackStep(ProcessDefinitionImportExportModel definition, string stepKey)
+90:    private static void AssertEscalationStep(ProcessDefinitionImportExportModel definition, string stepKey)
+
+Pattern: "Key": "revalidate-blazor-repair"|"OperationTargetScope": "ExternalProductTargetReadOnly"|"CaptureRuntimeProof"|"Key": "escalate-blazor-unresolved-repair"|"EscalateOrDecide"
+Path: repo://Templates/Processes/processes/blazor-app-delivery/definition.json
+201:      "OperationTargetScope": "ExternalProductTargetReadOnly"
+400:        "CaptureRuntimeProof",
+403:      "OperationTargetScope": "ExternalProductTargetReadOnly"
+490:      "Key": "revalidate-blazor-repair",
+578:        "CaptureRuntimeProof",
+581:      "OperationTargetScope": "ExternalProductTargetReadOnly"
+771:      "Key": "escalate-blazor-unresolved-repair",
+861:        "EscalateOrDecide"
+
+Pattern: "Key": "record-blazor-results-after-repair"|"OperationTargetScope": "ExternalActionControlled"|"ExecuteExternalAction"
+Path: repo://Templates/Processes/processes/blazor-app-repair-fix/definition.json
+672:        "ExecuteExternalAction"
+674:      "OperationTargetScope": "ExternalActionControlled"
+678:      "Key": "record-blazor-results-after-repair",
+765:        "ExecuteExternalAction"
+767:      "OperationTargetScope": "ExternalActionControlled"
+
+Pattern: "Key": "revalidate-blazor-repair"|"OperationTargetScope": "ExternalProductTargetReadOnly"|"CaptureRuntimeProof"
+Path: repo://Templates/Processes/processes/blazor-backend-feature/definition.json
+201:      "OperationTargetScope": "ExternalProductTargetReadOnly"
+400:        "CaptureRuntimeProof",
+403:      "OperationTargetScope": "ExternalProductTargetReadOnly"
+490:      "Key": "revalidate-blazor-repair",
+578:        "CaptureRuntimeProof",
+581:      "OperationTargetScope": "ExternalProductTargetReadOnly"
+
+Pattern: "Key": "record-blazor-results-after-repair"|"OperationTargetScope": "ExternalActionControlled"|"ExecuteExternalAction"
+Path: repo://Templates/Processes/processes/blazor-frontend-feature/definition.json
+672:        "ExecuteExternalAction"
+674:      "OperationTargetScope": "ExternalActionControlled"
+678:      "Key": "record-blazor-results-after-repair",
+765:        "ExecuteExternalAction"
+767:      "OperationTargetScope": "ExternalActionControlled"
+
+Pattern: "Key": "escalate-blazor-unresolved-repair"|"OperationTargetScope": "ManagedProcessArtifactsOnly"|"EscalateOrDecide"
+Path: repo://Templates/Processes/processes/blazor-fullstack-feature/definition.json
+771:      "Key": "escalate-blazor-unresolved-repair",
+861:        "EscalateOrDecide"
+863:      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+
+ExitCode: 0

@@ -1628,12 +1628,69 @@ public sealed class AgentToolInvocationPolicyTests
     [InlineData(AgentToolInvocationPolicyMetadata.RunSkillScript, ToolInvocationClassification.Mutation)]
     [InlineData(AgentToolInvocationPolicyMetadata.ProcessesTemplateImport, ToolInvocationClassification.Mutation)]
     [InlineData(AgentToolInvocationPolicyMetadata.ProcessesTemplateBaselineScenariosList, ToolInvocationClassification.Read)]
+    [InlineData(AgentToolInvocationPolicyMetadata.ProjectStructureRead, ToolInvocationClassification.Read)]
+    [InlineData(AgentToolInvocationPolicyMetadata.ProjectStructureNodeCreate, ToolInvocationClassification.Mutation)]
+    [InlineData("project_structure_unregistered_mutation", ToolInvocationClassification.Unknown)]
     [InlineData("processes_unregistered_mutation", ToolInvocationClassification.Unknown)]
     public void Classify_returns_expected_tool_classification(string toolName, ToolInvocationClassification expected)
     {
         var classification = AgentToolInvocationPolicyMetadata.Classify(toolName);
 
         Assert.Equal(expected, classification);
+    }
+
+    [Fact]
+    public void ProjectStructureToolInventory_SB07_INV_001_classifies_all_runtime_project_structure_tools()
+    {
+        var expectedReadTools = new[]
+        {
+            AgentToolInvocationPolicyMetadata.ProjectStructureProjectsList,
+            AgentToolInvocationPolicyMetadata.ProjectStructureHierarchyGet,
+            AgentToolInvocationPolicyMetadata.ProjectStructureRead,
+            AgentToolInvocationPolicyMetadata.ProjectStructureNodeCatalog,
+            AgentToolInvocationPolicyMetadata.ProjectStructureChecklist,
+            AgentToolInvocationPolicyMetadata.ProjectStructureDependenciesQuery,
+            AgentToolInvocationPolicyMetadata.ProjectStructureAssetGet,
+            AgentToolInvocationPolicyMetadata.ProjectStructureKnowledgeQuery,
+            AgentToolInvocationPolicyMetadata.ProjectStructureAnalyticsQuery,
+            AgentToolInvocationPolicyMetadata.ProjectStructureLeaseGet
+        };
+        var expectedMutationTools = new[]
+        {
+            AgentToolInvocationPolicyMetadata.ProjectStructureProjectCreate,
+            AgentToolInvocationPolicyMetadata.ProjectStructureProjectUpdate,
+            AgentToolInvocationPolicyMetadata.ProjectStructureSubprojectLink,
+            AgentToolInvocationPolicyMetadata.ProjectStructureNodesToNewSubproject,
+            AgentToolInvocationPolicyMetadata.ProjectStructureDependencyLink,
+            AgentToolInvocationPolicyMetadata.ProjectStructureDependencyUnlink,
+            AgentToolInvocationPolicyMetadata.ProjectStructureNodeCreate,
+            AgentToolInvocationPolicyMetadata.ProjectStructureNodeUpdate,
+            AgentToolInvocationPolicyMetadata.ProjectStructureNodeMove,
+            AgentToolInvocationPolicyMetadata.ProjectStructureNodeRecompose,
+            AgentToolInvocationPolicyMetadata.ProjectStructureNodeReparent,
+            AgentToolInvocationPolicyMetadata.ProjectStructureApprovalRequest,
+            AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate,
+            AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreateRevision,
+            AgentToolInvocationPolicyMetadata.ProjectStructureImport,
+            AgentToolInvocationPolicyMetadata.ProjectStructureProjectLeaseAcquire,
+            AgentToolInvocationPolicyMetadata.ProjectStructureRepoBranchLeaseAcquire,
+            AgentToolInvocationPolicyMetadata.ProjectStructureLeaseRelease
+        };
+
+        Assert.Equal(expectedReadTools.Order(StringComparer.Ordinal), AgentToolInvocationPolicyMetadata.ProjectStructureReadTools.Order(StringComparer.Ordinal));
+        Assert.Equal(expectedMutationTools.Order(StringComparer.Ordinal), AgentToolInvocationPolicyMetadata.ProjectStructureMutationTools.Order(StringComparer.Ordinal));
+        foreach (var toolName in expectedReadTools)
+        {
+            Assert.Equal(ToolInvocationClassification.Read, AgentToolInvocationPolicyMetadata.Classify(toolName));
+            Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(toolName));
+        }
+
+        foreach (var toolName in expectedMutationTools)
+        {
+            Assert.Equal(ToolInvocationClassification.Mutation, AgentToolInvocationPolicyMetadata.Classify(toolName));
+            Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(toolName));
+            Assert.True(AgentToolInvocationPolicyMetadata.IsProjectStructureMutationTool(toolName));
+        }
     }
 
     [Theory]
@@ -1817,6 +1874,80 @@ public sealed class AgentToolInvocationPolicyTests
         var decision = await policy.EvaluateAsync(context, CancellationToken.None);
 
         Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_SB07_INV_001_denies_project_structure_mutation_without_execute_external_action()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            AgentToolInvocationPolicyMetadata.ProjectStructureNodeCreate,
+            AgentToolInvocationPolicyMetadata.Classify(AgentToolInvocationPolicyMetadata.ProjectStructureNodeCreate),
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            processAllowsProductMutation: false,
+            processStepAllowedOperations:
+            [
+                "ReadProcessContext",
+                "ReadProjectStructure",
+                "RunValidation",
+                "CaptureRuntimeProof"
+            ],
+            processStepTargetScope: "ExternalProductTargetReadOnly");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("ExecuteExternalAction", decision.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_SB07_INV_002_allows_project_structure_mutation_with_execute_external_action()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate,
+            AgentToolInvocationPolicyMetadata.Classify(AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate),
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            processAllowsProductMutation: false,
+            processStepAllowedOperations:
+            [
+                "ReadProcessContext",
+                "WriteManagedProcessArtifacts",
+                "ExecuteExternalAction"
+            ],
+            processStepTargetScope: "ExternalActionControlled");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_SB07_INV_003_allows_project_structure_read_without_execute_external_action()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            AgentToolInvocationPolicyMetadata.ProjectStructureRead,
+            AgentToolInvocationPolicyMetadata.Classify(AgentToolInvocationPolicyMetadata.ProjectStructureRead),
+            isKnownTool: true,
+            autoApprovalAllowed: false,
+            approvalWrapperAvailable: false,
+            processAllowsProductMutation: false,
+            processStepAllowedOperations:
+            [
+                "ReadProcessContext",
+                "ReadProjectStructure"
+            ],
+            processStepTargetScope: "ExternalProductTargetReadOnly");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+        Assert.Equal(ToolInvocationClassification.Read, context.Classification);
     }
 
     [Fact]

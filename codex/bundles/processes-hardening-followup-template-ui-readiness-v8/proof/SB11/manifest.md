@@ -2,28 +2,34 @@
 
 ## Status
 
-Pending.
+Completed.
+
+## Production-path coverage
+
+- Verified the runtime validation/recovery service boundaries already exist in production code instead of UI or template-only code.
+- Covered the block-state classifier, health invariant auditor, workflow/subprocess artifact mapper, shared completion artifact validator, and manual transition call site.
+- Re-ran the dependent manual transition stale-lineage regression so SB12 can rely on the service split without weakening SB10 validation behavior.
 
 ## Semantic invariant
 
-See `proof/SB11/semantic-invariants.md`.
+See `bundle://proof/SB11/semantic-invariants.md`.
 
 ## Failing-first or adversarial proof
 
-`proof/SB11/transcripts/failing-first.txt`
+`bundle://proof/SB11/transcripts/failing-first.txt`
 
 ## Passing proof
 
-`proof/SB11/transcripts/passing.txt`
+`bundle://proof/SB11/transcripts/passing.txt`
 
 ## Source assertions
 
-`proof/SB11/transcripts/source-assertions.txt`
+`bundle://proof/SB11/transcripts/source-assertions.txt`
 
 ## Anti-stub audit
 
-`proof/SB11/transcripts/anti-stub-audit.txt`
+`bundle://proof/SB11/transcripts/anti-stub-audit.txt`
 
 ## Changed-file hashes
 
-`proof/SB11/transcripts/changed-file-hashes.txt`
+`bundle://proof/SB11/transcripts/changed-file-hashes.txt`

@@ -273,6 +273,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return persistedContract;
         }
 
+        // Legacy prose inference remains only for definitions that have not declared persisted operation contracts.
         var contractText = CollapsePromptWhitespace(string.Join(
                 ' ',
                 candidate.StepDefinition.Notes,
@@ -286,7 +287,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 string.Join(" ", candidate.ExpectedArtifacts.Select(item => $"{item.Title} {item.ValidationRequirementSummary} {item.AllowedFutureUsageSummary}"))))
             .ToLowerInvariant();
 
-        if (TryResolveExplicitOperationContract(contractText, out var explicitContract))
+        if (TryResolveExplicitOperationContract(candidate.StepRun.StepKind, contractText, out var explicitContract))
         {
             return explicitContract;
         }
@@ -317,19 +318,21 @@ internal sealed partial class ProcessRunAutomationDispatchService
         if (candidate.StepRun.StepKind == ProcessStepKind.Subprocess)
         {
             operations.Add(ProcessStepOperation.ExecuteExternalAction);
-            return new ProcessStepOperationContract(
-                operations.ToArray(),
+            return CreateOperationContract(
+                candidate.StepRun.StepKind,
+                operations,
                 ProcessStepTargetScope.ExternalActionControlled,
-                IsExplicit: false);
+                isExplicit: false);
         }
 
         if (LooksLikeExternalArtifactDestination(candidate, contractText))
         {
             operations.Add(ProcessStepOperation.WriteExternalArtifactDestination);
-            return new ProcessStepOperationContract(
-                operations.ToArray(),
+            return CreateOperationContract(
+                candidate.StepRun.StepKind,
+                operations,
                 ProcessStepTargetScope.ExternalArtifactDestination,
-                IsExplicit: false);
+                isExplicit: false);
         }
 
         if (RequiresConcreteImplementationProof(candidate) ||
@@ -338,24 +341,27 @@ internal sealed partial class ProcessRunAutomationDispatchService
             LooksLikeProductMutationBoundary(candidate, contractText, requireStrongSignal: true))
         {
             operations.Add(ProcessStepOperation.MutateProductTarget);
-            return new ProcessStepOperationContract(
-                operations.ToArray(),
+            return CreateOperationContract(
+                candidate.StepRun.StepKind,
+                operations,
                 ProcessStepTargetScope.ExternalProductTargetMutable,
-                IsExplicit: false);
+                isExplicit: false);
         }
 
         if (IsProductReadOnlyValidationStep(candidate))
         {
-            return new ProcessStepOperationContract(
-                operations.ToArray(),
+            return CreateOperationContract(
+                candidate.StepRun.StepKind,
+                operations,
                 ProcessStepTargetScope.ExternalProductTargetReadOnly,
-                IsExplicit: false);
+                isExplicit: false);
         }
 
-        return new ProcessStepOperationContract(
-            operations.ToArray(),
+        return CreateOperationContract(
+            candidate.StepRun.StepKind,
+            operations,
             ProcessStepTargetScope.ManagedProcessArtifactsOnly,
-            IsExplicit: false);
+            isExplicit: false);
     }
 
     private static bool TryResolvePersistedOperationContract(
@@ -373,48 +379,24 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return false;
         }
 
-        var operations = new SortedSet<ProcessStepOperation>(
-            ProcessStepOperationContractState.NormalizeAllowedOperations(stepDefinition.AllowedOperations));
-        operations.Add(ProcessStepOperation.ReadProcessContext);
-
-        var targetScope = stepDefinition.OperationTargetScope ??
-            ResolveExplicitTargetScope(string.Empty, operations);
-        AddOperationsImpliedByTargetScope(operations, targetScope);
-        if (operations.Count == 1)
-        {
-            operations.Add(ProcessStepOperation.WriteManagedProcessArtifacts);
-        }
+        var normalizedContract = ProcessStepOperationContractState.NormalizeDeclaredContract(
+            stepDefinition.StepKind,
+            stepDefinition.AllowedOperations,
+            stepDefinition.OperationTargetScope,
+            inferMissingTargetScope: true);
+        ThrowIfInvalidOperationContract(normalizedContract);
+        var targetScope = normalizedContract.OperationTargetScope ??
+            ProcessStepTargetScope.ManagedProcessArtifactsOnly;
 
         contract = new ProcessStepOperationContract(
-            operations.ToArray(),
+            normalizedContract.AllowedOperations,
             targetScope,
             IsExplicit: true);
         return true;
     }
 
-    private static void AddOperationsImpliedByTargetScope(
-        ISet<ProcessStepOperation> operations,
-        ProcessStepTargetScope targetScope)
-    {
-        switch (targetScope)
-        {
-            case ProcessStepTargetScope.ExternalArtifactDestination:
-                operations.Add(ProcessStepOperation.WriteExternalArtifactDestination);
-                break;
-            case ProcessStepTargetScope.ManagedOutputProduct:
-            case ProcessStepTargetScope.ExternalProductTargetMutable:
-                operations.Add(ProcessStepOperation.MutateProductTarget);
-                break;
-            case ProcessStepTargetScope.ExternalProductTargetReadOnly:
-                operations.Add(ProcessStepOperation.ReadProjectStructure);
-                break;
-            case ProcessStepTargetScope.ExternalActionControlled:
-                operations.Add(ProcessStepOperation.ExecuteExternalAction);
-                break;
-        }
-    }
-
     private static bool TryResolveExplicitOperationContract(
+        ProcessStepKind stepKind,
         string contractText,
         out ProcessStepOperationContract contract)
     {
@@ -446,8 +428,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
             operations.Add(ProcessStepOperation.WriteManagedProcessArtifacts);
         }
 
-        var targetScope = ResolveExplicitTargetScope(contractText, operations);
-        contract = new ProcessStepOperationContract(operations.ToArray(), targetScope, IsExplicit: true);
+        var targetScope = ProcessStepOperationContractState.ResolveExplicitTargetScope(
+            contractText,
+            operations,
+            stepKind);
+        contract = CreateOperationContract(
+            stepKind,
+            operations,
+            targetScope,
+            isExplicit: true);
         return true;
     }
 
@@ -463,51 +452,37 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
     }
 
-    private static ProcessStepTargetScope ResolveExplicitTargetScope(
-        string contractText,
-        IReadOnlySet<ProcessStepOperation> operations)
+    private static ProcessStepOperationContract CreateOperationContract(
+        ProcessStepKind stepKind,
+        IEnumerable<ProcessStepOperation> operations,
+        ProcessStepTargetScope targetScope,
+        bool isExplicit)
     {
-        if (contractText.Contains("externalproducttargetmutable", StringComparison.OrdinalIgnoreCase) ||
-            contractText.Contains("external product target mutable", StringComparison.OrdinalIgnoreCase))
+        var normalizedContract = ProcessStepOperationContractState.NormalizeResolvedContract(
+            stepKind,
+            operations,
+            targetScope);
+        ThrowIfInvalidOperationContract(normalizedContract);
+
+        return new ProcessStepOperationContract(
+            normalizedContract.AllowedOperations,
+            normalizedContract.OperationTargetScope ?? targetScope,
+            isExplicit);
+    }
+
+    private static void ThrowIfInvalidOperationContract(ProcessStepOperationContractNormalizationResult normalizedContract)
+    {
+        var invalidIssue = normalizedContract.Issues.FirstOrDefault(issue =>
+            string.Equals(
+                issue.Code,
+                ProcessStepOperationContractState.InvalidCombinationCode,
+                StringComparison.Ordinal));
+        if (invalidIssue is null)
         {
-            return ProcessStepTargetScope.ExternalProductTargetMutable;
+            return;
         }
 
-        if (contractText.Contains("managedoutputproduct", StringComparison.OrdinalIgnoreCase) ||
-            contractText.Contains("managed output product", StringComparison.OrdinalIgnoreCase))
-        {
-            return ProcessStepTargetScope.ManagedOutputProduct;
-        }
-
-        if (contractText.Contains("externalartifactdestination", StringComparison.OrdinalIgnoreCase) ||
-            contractText.Contains("external artifact destination", StringComparison.OrdinalIgnoreCase))
-        {
-            return ProcessStepTargetScope.ExternalArtifactDestination;
-        }
-
-        if (contractText.Contains("externalproducttargetreadonly", StringComparison.OrdinalIgnoreCase) ||
-            contractText.Contains("external product target read only", StringComparison.OrdinalIgnoreCase) ||
-            contractText.Contains("external product target readonly", StringComparison.OrdinalIgnoreCase))
-        {
-            return ProcessStepTargetScope.ExternalProductTargetReadOnly;
-        }
-
-        if (operations.Contains(ProcessStepOperation.MutateProductTarget))
-        {
-            return ProcessStepTargetScope.ExternalProductTargetMutable;
-        }
-
-        if (operations.Contains(ProcessStepOperation.WriteExternalArtifactDestination))
-        {
-            return ProcessStepTargetScope.ExternalArtifactDestination;
-        }
-
-        if (operations.Contains(ProcessStepOperation.ExecuteExternalAction))
-        {
-            return ProcessStepTargetScope.ExternalActionControlled;
-        }
-
-        return ProcessStepTargetScope.ManagedProcessArtifactsOnly;
+        throw new InvalidOperationException($"Invalid process step operation contract: {invalidIssue.Message}");
     }
 
     private static ProcessStepExecutionBoundaryDescriptor ResolveExplicitOperationContractBoundary(

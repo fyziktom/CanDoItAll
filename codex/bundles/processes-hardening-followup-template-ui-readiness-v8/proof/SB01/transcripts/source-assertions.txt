@@ -1,3 +1,52 @@
-# SB01 source-assertions.txt
+Command: Select-String source assertions for SB01 enum/default contract
+Invariant: SB01-INV-001
 
-Pending.
+> src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs:64:    RecoverArtifactsOnly,
+  src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs:65:    EscalateOrDecide
+  src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs:66:}
+  src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs:67:
+  src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs:68:public enum ProcessStepTargetScope
+> src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs:80:    None,
+  src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs:81:    MissingUpstreamArtifact,
+  src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs:82:    PolicyDeniedExternalPath,
+  src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs:83:    ToolUnavailable,
+  src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs:84:    MissingCredential,
+> src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs:103:public enum ProcessStepRecoveryOption
+  src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs:104:{
+> src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs:105:    None,
+> src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs:106:    WaitForArtifactMaterialization,
+> src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs:107:    RecoverArtifactsOnly,
+  src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs:108:    RetryAgent,
+  src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs:109:    FreshAgentSession,
+  src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs:110:    ReworkContinuation,
+  src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs:111:    HumanEscalation,
+> src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs:201:    None,
+  src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs:202:    ReviewRequired,
+  src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs:203:    HumanApproved,
+  src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs:204:    TrustedSource
+  src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs:205:}
+
+
+
+> src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:111:    public ProcessStepRecoveryOption NextRecoveryAction { get; init; } = ProcessStepRecoveryOption.None;
+  src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:112:
+  src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:113:    public IReadOnlyList<ProcessStepRecoveryOption> RecoveryOptions { get; init; } = [];
+> src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:158:    public ProcessStepRecoveryOption RecommendedAction { get; init; } = ProcessStepRecoveryOption.None;
+  src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:159:
+  src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:160:    public static ProcessRunHealthSummaryViewModel Empty { get; } = new(
+> src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:183:    string RecommendedAction,
+  src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:184:    string EvidenceKey,
+  src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:185:    DateTimeOffset ObservedAtUtc);
+> src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:284:    public ProcessStepRecoveryOption NextRecoveryAction { get; init; } = ProcessStepRecoveryOption.None;
+  src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:285:
+  src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:286:    public IReadOnlyList<ProcessStepRecoveryOption> RecoveryOptions { get; init; } = [];
+
+
+
+> tests\CanDoItAll.Tests.Integration\ProcessStepRecoveryOptionContractTests.cs:10:        Assert.Equal(0, (int)ProcessStepRecoveryOption.None);
+> tests\CanDoItAll.Tests.Integration\ProcessStepRecoveryOptionContractTests.cs:11:        Assert.Equal(ProcessStepRecoveryOption.None, ProcessStepRunHealthViewModel.Empty.NextRecoveryAction);
+> tests\CanDoItAll.Tests.Integration\ProcessStepRecoveryOptionContractTests.cs:12:        Assert.Equal(ProcessStepRecoveryOption.None, ProcessRunHealthSummaryViewModel.Empty.RecommendedAction);
+  tests\CanDoItAll.Tests.Integration\ProcessStepRecoveryOptionContractTests.cs:13:    }
+
+
+ExitCode: 0

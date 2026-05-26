@@ -1,3 +1,14 @@
+Command: Get-FileHash -Algorithm SHA256 <SB16 changed paths>
+ExitCode: 0
+
 # SB16 changed-file-hashes.txt
 
-Pending.
+SHA256 hashes captured after SB16 implementation.
+
+```text
+2A12C69A826C6EAE88AD48B9372C04D0DE0D8798DF59FD8FF8B65D408FB1FB06  repo://Templates/Processes/manifest.json
+C06FE82800D70997BE30DBA5BB213E6C99F5391569A1D32BBD717FC5C6FA2BFF  repo://src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceRunStepsDialog.razor
+CF2F9387AE1B35B345D309EC42B0B9E68F32C6CDDC15D26CF74CD9B43B7F8D55  repo://src/CanDoItAll.Modules.Processes/Components/ProcessStepEditorForm.razor
+61BCE6A9AE9DA595EEF57372CB0E18D03F843A64F626B9AC50FA511B48B19BEC  repo://tests/CanDoItAll.Tests.Components/ProcessWorkspaceTests.cs
+D172FCFD367C973BFDAB2C1543B8666F73FDEFFB3CB7218113340DA4F066BCB5  repo://tests/CanDoItAll.Tests.Components/ProcessStepEditorFormTests.cs
+```

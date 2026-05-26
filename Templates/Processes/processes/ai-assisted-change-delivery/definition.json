@@ -104,6 +104,13 @@
       "EvidenceContractSummary": "Intake brief and acceptance criteria map.",
       "DecisionRightsSummary": "Product owner owns value boundary; no agent may redefine acceptance criteria alone.",
       "ExceptionPolicySummary": "Do not delegate ambiguous or ownerless tasks.",
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
       "TargetLeadHours": 4,
       "DependsOnStepKey": "",
 "DependsOnBranchOutcomeKey": "",
@@ -186,6 +193,14 @@
       "EvidenceContractSummary": "Delegation contract and refusal boundary note.",
       "DecisionRightsSummary": "Solution architect and AI safety reviewer define safe task decomposition; model-risk approver reviews autonomy fit for sensitive domains.",
       "ExceptionPolicySummary": "If the delegation boundary cannot be explained precisely, do not delegate.",
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
       "TargetLeadHours": 6,
       "DependsOnStepKey": "task-intake",
       "DependsOnBranchOutcomeKey": "",
@@ -304,6 +319,15 @@
       "EvidenceContractSummary": "Product-file change set, execution trace pack, generated diff when applicable, and intermediate reasoning artifacts permitted by policy.",
       "DecisionRightsSummary": "Software engineer supervises the lane; AI safety reviewer may halt execution when boundary breaches appear.",
       "ExceptionPolicySummary": "Stop immediately if the agent attempts disallowed files, tools, or data domains.",
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "MutateProductTarget",
+        "RunValidation",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetMutable",
       "TargetLeadHours": 8,
       "DependsOnStepKey": "delegation-design",
 "DependsOnBranchOutcomeKey": "delegate",
@@ -413,6 +437,15 @@
       "EvidenceContractSummary": "Benchmark report, test evidence, and evaluator notes.",
       "DecisionRightsSummary": "AI evaluation lead owns measurement quality; QA lead reviews reproducibility and adequacy of tests.",
       "ExceptionPolicySummary": "Do not infer correctness from style, brevity, or model confidence.",
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "RunValidation",
+        "CaptureRuntimeProof",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
       "TargetLeadHours": 8,
       "DependsOnStepKey": "agent-execution",
       "DependsOnBranchOutcomeKey": "",
@@ -542,6 +575,14 @@
       "EvidenceContractSummary": "Safety/security approval record with residual risk statement.",
       "DecisionRightsSummary": "Security reviewer and model-risk approver may block merge; release approver owns final risk acceptance for guarded lanes.",
       "ExceptionPolicySummary": "Do not merge when control impact is ambiguous.",
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
       "TargetLeadHours": 4,
       "DependsOnStepKey": "evaluation-and-benchmarking",
       "DependsOnBranchOutcomeKey": "",
@@ -679,6 +720,14 @@
       "EvidenceContractSummary": "Merge note, trace references, and improvement backlog.",
       "DecisionRightsSummary": "Software engineer performs the merge; AI evaluation lead captures benchmark improvement; product owner reviews value fit if needed.",
       "ExceptionPolicySummary": "Do not lose traceability between approved artifact and merged change.",
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "ExecuteExternalAction"
+      ],
+      "OperationTargetScope": "ExternalActionControlled",
       "TargetLeadHours": 4,
       "DependsOnStepKey": "safety-and-security-review",
       "DependsOnBranchOutcomeKey": "approved",
@@ -796,6 +845,13 @@
       "EvidenceContractSummary": "Delegation refusal note and handoff summary.",
       "DecisionRightsSummary": "Product owner and solution architect confirm that the work remains human-executed.",
       "ExceptionPolicySummary": "Do not reopen an agent lane until the delegation boundary is redesigned explicitly.",
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "delegation-design",
       "DependsOnBranchOutcomeKey": "human-only",
@@ -850,6 +906,13 @@
       "EvidenceContractSummary": "Rework decision record and next-step note.",
       "DecisionRightsSummary": "Security reviewer and release approver jointly define what must change before re-entry.",
       "ExceptionPolicySummary": "Do not treat rework as approved-by-delay; the merge lane stays closed until a new review cycle starts.",
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "safety-and-security-review",
       "DependsOnBranchOutcomeKey": "rework",

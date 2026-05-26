@@ -414,7 +414,10 @@ public partial class ProcessWorkspace
             Subtitle = source.Subtitle,
             Notes = source.Notes,
             StepKind = source.StepKind,
-            AllowedOperations = ProcessStepOperationContractState.NormalizeAllowedOperations(source.AllowedOperations),
+            AllowedOperations = ProcessStepOperationContractState.NormalizeDeclaredAllowedOperations(
+                source.StepKind,
+                source.AllowedOperations,
+                source.OperationTargetScope),
             OperationTargetScope = source.OperationTargetScope,
             AllowsManualSkip = source.AllowsManualSkip,
             AllowsSafeRefusal = source.AllowsSafeRefusal,
@@ -501,7 +504,10 @@ public partial class ProcessWorkspace
         target.Subtitle = clone.Subtitle;
         target.Notes = clone.Notes;
         target.StepKind = clone.StepKind;
-        target.AllowedOperations = ProcessStepOperationContractState.NormalizeAllowedOperations(clone.AllowedOperations);
+        target.AllowedOperations = ProcessStepOperationContractState.NormalizeDeclaredAllowedOperations(
+            clone.StepKind,
+            clone.AllowedOperations,
+            clone.OperationTargetScope);
         target.OperationTargetScope = clone.OperationTargetScope;
         target.AllowsManualSkip = clone.AllowsManualSkip;
         target.AllowsSafeRefusal = clone.AllowsSafeRefusal;

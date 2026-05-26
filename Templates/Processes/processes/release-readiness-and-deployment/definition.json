@@ -96,7 +96,7 @@
       "ExceptionPolicySummary": "No readiness claim is valid if scope can still silently drift.",
       "TargetLeadHours": 4,
       "DependsOnStepKey": "",
-"DependsOnBranchOutcomeKey": "",
+      "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
       "CanvasX": 260,
       "CanvasY": 0,
@@ -163,7 +163,14 @@
       "BranchCanvasX": 320,
       "BranchCanvasY": 200,
       "Dependencies": [],
-      "ArtifactInputs": []
+      "ArtifactInputs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 1,
@@ -266,7 +273,14 @@
           "DependsOnBranchOutcomeKey": ""
         }
       ],
-      "ArtifactInputs": []
+      "ArtifactInputs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 2,
@@ -369,7 +383,15 @@
           "DependsOnBranchOutcomeKey": ""
         }
       ],
-      "ArtifactInputs": []
+      "ArtifactInputs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 3,
@@ -386,7 +408,7 @@
       "OutputContractSummary": "Approved or held release decision with explicit conditions.",
       "EvidenceContractSummary": "Release approval record and exception note if applicable.",
       "DecisionRightsSummary": "Release approver owns the final decision; security reviewer may hold the release for unresolved control gaps.",
-      "ExceptionPolicySummary": "No release may proceed on informal approval.",
+      "ExceptionPolicySummary": "No release may proceed on informal approval; block when artifact recovery is required for missing or invalid go/no-go evidence.",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "cutover-rehearsal",
       "DependsOnBranchOutcomeKey": "",
@@ -478,7 +500,15 @@
           "DependsOnBranchOutcomeKey": ""
         }
       ],
-      "ArtifactInputs": []
+      "ArtifactInputs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 4,
@@ -570,7 +600,15 @@
           "DependsOnBranchOutcomeKey": "go"
         }
       ],
-      "ArtifactInputs": []
+      "ArtifactInputs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "ExecuteExternalAction"
+      ],
+      "OperationTargetScope": "ExternalActionControlled"
     },
     {
       "Order": 5,
@@ -662,7 +700,14 @@
           "DependsOnBranchOutcomeKey": ""
         }
       ],
-      "ArtifactInputs": []
+      "ArtifactInputs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 6,
@@ -716,7 +761,14 @@
           "DependsOnBranchOutcomeKey": "hold"
         }
       ],
-      "ArtifactInputs": []
+      "ArtifactInputs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     }
   ],
   "DocPath": "processes/release-readiness-and-deployment/definition.md",

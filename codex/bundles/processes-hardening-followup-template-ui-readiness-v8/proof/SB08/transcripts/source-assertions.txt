@@ -1,3 +1,122 @@
-# SB08 source-assertions.txt
+Command: rg -n "Manifest_process_templates_SB08_INV_001|NormalizeDeclaredContract|AllowedOperations|OperationTargetScope" tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs Templates\Processes\processes\customer-onboarding\definition.json Templates\Processes\processes\business-plan-development\definition.json Templates\Processes\processes\incident-response\definition.json Templates\Processes\processes\architecture-decision-governance\definition.json Templates\Processes\processes\release-readiness-and-deployment\definition.json Templates\Processes\processes\oss-intake-supply-chain-governance\definition.json Templates\Processes\processes\ai-assisted-change-delivery\definition.json
+Templates\Processes\processes\ai-assisted-change-delivery\definition.json:107:      "AllowedOperations": [
+Templates\Processes\processes\ai-assisted-change-delivery\definition.json:113:      "OperationTargetScope": "ExternalProductTargetReadOnly",
+Templates\Processes\processes\ai-assisted-change-delivery\definition.json:196:      "AllowedOperations": [
+Templates\Processes\processes\ai-assisted-change-delivery\definition.json:203:      "OperationTargetScope": "ExternalProductTargetReadOnly",
+Templates\Processes\processes\ai-assisted-change-delivery\definition.json:322:      "AllowedOperations": [
+Templates\Processes\processes\ai-assisted-change-delivery\definition.json:330:      "OperationTargetScope": "ExternalProductTargetMutable",
+Templates\Processes\processes\ai-assisted-change-delivery\definition.json:440:      "AllowedOperations": [
+Templates\Processes\processes\ai-assisted-change-delivery\definition.json:448:      "OperationTargetScope": "ExternalProductTargetReadOnly",
+Templates\Processes\processes\ai-assisted-change-delivery\definition.json:578:      "AllowedOperations": [
+Templates\Processes\processes\ai-assisted-change-delivery\definition.json:585:      "OperationTargetScope": "ExternalProductTargetReadOnly",
+Templates\Processes\processes\ai-assisted-change-delivery\definition.json:723:      "AllowedOperations": [
+Templates\Processes\processes\ai-assisted-change-delivery\definition.json:730:      "OperationTargetScope": "ExternalActionControlled",
+Templates\Processes\processes\ai-assisted-change-delivery\definition.json:848:      "AllowedOperations": [
+Templates\Processes\processes\ai-assisted-change-delivery\definition.json:854:      "OperationTargetScope": "ExternalProductTargetReadOnly",
+Templates\Processes\processes\ai-assisted-change-delivery\definition.json:909:      "AllowedOperations": [
+Templates\Processes\processes\ai-assisted-change-delivery\definition.json:915:      "OperationTargetScope": "ExternalProductTargetReadOnly",
+Templates\Processes\processes\release-readiness-and-deployment\definition.json:167:      "AllowedOperations": [
+Templates\Processes\processes\release-readiness-and-deployment\definition.json:173:      "OperationTargetScope": "ExternalProductTargetReadOnly"
+Templates\Processes\processes\release-readiness-and-deployment\definition.json:277:      "AllowedOperations": [
+Templates\Processes\processes\release-readiness-and-deployment\definition.json:283:      "OperationTargetScope": "ExternalProductTargetReadOnly"
+Templates\Processes\processes\release-readiness-and-deployment\definition.json:387:      "AllowedOperations": [
+Templates\Processes\processes\release-readiness-and-deployment\definition.json:394:      "OperationTargetScope": "ExternalProductTargetReadOnly"
+Templates\Processes\processes\release-readiness-and-deployment\definition.json:504:      "AllowedOperations": [
+Templates\Processes\processes\release-readiness-and-deployment\definition.json:511:      "OperationTargetScope": "ExternalProductTargetReadOnly"
+Templates\Processes\processes\release-readiness-and-deployment\definition.json:604:      "AllowedOperations": [
+Templates\Processes\processes\release-readiness-and-deployment\definition.json:611:      "OperationTargetScope": "ExternalActionControlled"
+Templates\Processes\processes\release-readiness-and-deployment\definition.json:704:      "AllowedOperations": [
+Templates\Processes\processes\release-readiness-and-deployment\definition.json:710:      "OperationTargetScope": "ExternalProductTargetReadOnly"
+Templates\Processes\processes\release-readiness-and-deployment\definition.json:765:      "AllowedOperations": [
+Templates\Processes\processes\release-readiness-and-deployment\definition.json:771:      "OperationTargetScope": "ExternalProductTargetReadOnly"
+Templates\Processes\processes\business-plan-development\definition.json:154:      "AllowedOperations": [
+Templates\Processes\processes\business-plan-development\definition.json:158:      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+Templates\Processes\processes\business-plan-development\definition.json:231:      "AllowedOperations": [
+Templates\Processes\processes\business-plan-development\definition.json:236:      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+Templates\Processes\processes\business-plan-development\definition.json:319:      "AllowedOperations": [
+Templates\Processes\processes\business-plan-development\definition.json:324:      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+Templates\Processes\processes\business-plan-development\definition.json:398:      "AllowedOperations": [
+Templates\Processes\processes\business-plan-development\definition.json:403:      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+Templates\Processes\processes\business-plan-development\definition.json:485:      "AllowedOperations": [
+Templates\Processes\processes\business-plan-development\definition.json:490:      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+Templates\Processes\processes\business-plan-development\definition.json:605:      "AllowedOperations": [
+Templates\Processes\processes\business-plan-development\definition.json:611:      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+Templates\Processes\processes\business-plan-development\definition.json:680:      "AllowedOperations": [
+Templates\Processes\processes\business-plan-development\definition.json:685:      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+Templates\Processes\processes\business-plan-development\definition.json:752:      "AllowedOperations": [
+Templates\Processes\processes\business-plan-development\definition.json:757:      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+Templates\Processes\processes\oss-intake-supply-chain-governance\definition.json:146:      "AllowedOperations": [
+Templates\Processes\processes\oss-intake-supply-chain-governance\definition.json:150:      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+Templates\Processes\processes\oss-intake-supply-chain-governance\definition.json:237:      "AllowedOperations": [
+Templates\Processes\processes\oss-intake-supply-chain-governance\definition.json:243:      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+Templates\Processes\processes\oss-intake-supply-chain-governance\definition.json:331:      "AllowedOperations": [
+Templates\Processes\processes\oss-intake-supply-chain-governance\definition.json:337:      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+Templates\Processes\processes\oss-intake-supply-chain-governance\definition.json:433:      "AllowedOperations": [
+Templates\Processes\processes\oss-intake-supply-chain-governance\definition.json:439:      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+Templates\Processes\processes\oss-intake-supply-chain-governance\definition.json:546:      "AllowedOperations": [
+Templates\Processes\processes\oss-intake-supply-chain-governance\definition.json:552:      "OperationTargetScope": "ExternalActionControlled"
+Templates\Processes\processes\oss-intake-supply-chain-governance\definition.json:645:      "AllowedOperations": [
+Templates\Processes\processes\oss-intake-supply-chain-governance\definition.json:650:      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:121:    public async Task Manifest_process_templates_SB08_INV_001_all_steps_declare_typed_operation_contracts()
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:133:                HasAllowedOperations = step.AllowedOperations.Count > 0,
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:134:                HasTargetScope = step.OperationTargetScope.HasValue
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:136:            .Where(item => !item.HasAllowedOperations || !item.HasTargetScope)
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:154:                var normalization = ProcessStepOperationContractState.NormalizeDeclaredContract(
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:156:                    step.AllowedOperations,
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:157:                    step.OperationTargetScope);
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:167:        return step.AllowedOperations.Contains(ProcessStepOperation.MutateProductTarget) ||
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:168:            step.OperationTargetScope is ProcessStepTargetScope.ManagedOutputProduct or ProcessStepTargetScope.ExternalProductTargetMutable;
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:182:        Assert.Equal(ProcessStepTargetScope.ExternalProductTargetReadOnly, step.OperationTargetScope);
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:183:        Assert.Contains(ProcessStepOperation.ReadProjectStructure, step.AllowedOperations);
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:184:        Assert.DoesNotContain(ProcessStepOperation.MutateProductTarget, step.AllowedOperations);
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:191:        Assert.Equal(ProcessStepTargetScope.ExternalProductTargetReadOnly, step.OperationTargetScope);
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:192:        Assert.Contains(ProcessStepOperation.RunValidation, step.AllowedOperations);
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:193:        Assert.Contains(ProcessStepOperation.LaunchRuntime, step.AllowedOperations);
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:194:        Assert.Contains(ProcessStepOperation.CaptureRuntimeProof, step.AllowedOperations);
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:195:        Assert.Contains(ProcessStepOperation.WriteManagedProcessArtifacts, step.AllowedOperations);
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:196:        Assert.DoesNotContain(ProcessStepOperation.MutateProductTarget, step.AllowedOperations);
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:203:        Assert.Equal(ProcessStepTargetScope.ExternalProductTargetReadOnly, step.OperationTargetScope);
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:204:        Assert.Contains(ProcessStepOperation.CaptureRuntimeProof, step.AllowedOperations);
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:205:        Assert.Contains(ProcessStepOperation.WriteManagedProcessArtifacts, step.AllowedOperations);
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:206:        Assert.DoesNotContain(ProcessStepOperation.ExecuteExternalAction, step.AllowedOperations);
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:207:        Assert.DoesNotContain(ProcessStepOperation.MutateProductTarget, step.AllowedOperations);
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:214:        Assert.Equal(ProcessStepTargetScope.ExternalActionControlled, step.OperationTargetScope);
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:215:        Assert.Contains(ProcessStepOperation.ExecuteExternalAction, step.AllowedOperations);
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:216:        Assert.Contains(ProcessStepOperation.WriteManagedProcessArtifacts, step.AllowedOperations);
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:217:        Assert.DoesNotContain(ProcessStepOperation.MutateProductTarget, step.AllowedOperations);
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:224:        Assert.Equal(ProcessStepTargetScope.ManagedProcessArtifactsOnly, step.OperationTargetScope);
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:225:        Assert.Contains(ProcessStepOperation.EscalateOrDecide, step.AllowedOperations);
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:226:        Assert.Contains(ProcessStepOperation.WriteManagedProcessArtifacts, step.AllowedOperations);
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:227:        Assert.DoesNotContain(ProcessStepOperation.MutateProductTarget, step.AllowedOperations);
+Templates\Processes\processes\incident-response\definition.json:172:      "AllowedOperations": [
+Templates\Processes\processes\incident-response\definition.json:176:      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+Templates\Processes\processes\incident-response\definition.json:255:      "AllowedOperations": [
+Templates\Processes\processes\incident-response\definition.json:260:      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+Templates\Processes\processes\incident-response\definition.json:330:      "AllowedOperations": [
+Templates\Processes\processes\incident-response\definition.json:336:      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+Templates\Processes\processes\architecture-decision-governance\definition.json:157:      "AllowedOperations": [
+Templates\Processes\processes\architecture-decision-governance\definition.json:163:      "OperationTargetScope": "ExternalProductTargetReadOnly"
+Templates\Processes\processes\architecture-decision-governance\definition.json:260:      "AllowedOperations": [
+Templates\Processes\processes\architecture-decision-governance\definition.json:266:      "OperationTargetScope": "ExternalProductTargetReadOnly"
+Templates\Processes\processes\architecture-decision-governance\definition.json:361:      "AllowedOperations": [
+Templates\Processes\processes\architecture-decision-governance\definition.json:368:      "OperationTargetScope": "ExternalProductTargetReadOnly"
+Templates\Processes\processes\architecture-decision-governance\definition.json:461:      "AllowedOperations": [
+Templates\Processes\processes\architecture-decision-governance\definition.json:468:      "OperationTargetScope": "ExternalProductTargetReadOnly"
+Templates\Processes\processes\architecture-decision-governance\definition.json:561:      "AllowedOperations": [
+Templates\Processes\processes\architecture-decision-governance\definition.json:567:      "OperationTargetScope": "ExternalProductTargetReadOnly"
+Templates\Processes\processes\architecture-decision-governance\definition.json:622:      "AllowedOperations": [
+Templates\Processes\processes\architecture-decision-governance\definition.json:628:      "OperationTargetScope": "ExternalProductTargetReadOnly"
+Templates\Processes\processes\customer-onboarding\definition.json:168:      "AllowedOperations": [
+Templates\Processes\processes\customer-onboarding\definition.json:172:      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+Templates\Processes\processes\customer-onboarding\definition.json:253:      "AllowedOperations": [
+Templates\Processes\processes\customer-onboarding\definition.json:259:      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+Templates\Processes\processes\customer-onboarding\definition.json:333:      "AllowedOperations": [
+Templates\Processes\processes\customer-onboarding\definition.json:339:      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+Command: Get-Content proof\SB08\template-governance-matrix.md -TotalCount 8
+# Process Template Governance Matrix
 
-Pending.
+Generated on 2026-05-26 from repo://Templates\Processes\manifest.json.
+
+Templates: 21
+Steps: 147
+Steps missing typed contracts: 0

@@ -228,7 +228,14 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/hotfix-rollout/steps/activate-emergency-bridge.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 1,
@@ -304,7 +311,15 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/hotfix-rollout/steps/assess-blast-radius.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 2,
@@ -373,7 +388,16 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/hotfix-rollout/steps/package-hotfix.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "MutateProductTarget",
+        "RunValidation",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetMutable"
     },
     {
       "Order": 3,
@@ -444,7 +468,16 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/hotfix-rollout/steps/validate-hotfix.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "RunValidation",
+        "CaptureRuntimeProof",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 4,
@@ -526,7 +559,15 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/hotfix-rollout/steps/approve-emergency-release.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 5,
@@ -607,7 +648,15 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/hotfix-rollout/steps/execute-emergency-rollout.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "ExecuteExternalAction"
+      ],
+      "OperationTargetScope": "ExternalActionControlled"
     },
     {
       "Order": 6,
@@ -683,7 +732,14 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/hotfix-rollout/steps/post-incident-review.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     }
   ],
   "DocPath": "processes/hotfix-rollout/definition.md",
@@ -836,7 +892,7 @@
         "Emergency change notes with explicit risk and rollback triggers.",
         "Evidence of incident support grounded in real telemetry.",
         "Post-incident findings showing the role preserved integrity or accelerated diagnosis.",
-        "Operator trust in the role’s emergency judgments."
+        "Operator trust in the role\u2019s emergency judgments."
       ],
       "DocPath": "processes/hotfix-rollout/roles/database-engineer.md"
     }

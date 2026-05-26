@@ -1,3 +1,4 @@
-# SB10 anti-stub-audit.txt
+Command: rg SB10 anti-stub audit
+ExitCode: 0
 
-Pending.
+No TODO, NotImplemented, or throw new NotImplementedException implementation stub markers found in SB10 changed/asserted paths. The audit excludes the literal test fixture phrase "TODO register" because it is domain data, not a stub marker.

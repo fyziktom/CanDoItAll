@@ -1,9 +1,44 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Processes;
 
 namespace CanDoItAll.Tests.Integration;
 
 public sealed class ProcessDefinitionLinterTests
 {
+    [Fact]
+    public void ProcessStepOperationContractState_SB06_INV_001_adds_target_scope_implied_operations_and_validation_issues()
+    {
+        var normalized = ProcessStepOperationContractState.NormalizeDeclaredContract(
+            ProcessStepKind.Review,
+            [
+                ProcessStepOperation.RunValidation,
+                ProcessStepOperation.WriteManagedProcessArtifacts,
+                ProcessStepOperation.RunValidation
+            ],
+            ProcessStepTargetScope.ExternalProductTargetReadOnly);
+
+        Assert.Equal(ProcessStepTargetScope.ExternalProductTargetReadOnly, normalized.OperationTargetScope);
+        Assert.Equal(
+            [
+                ProcessStepOperation.ReadProcessContext,
+                ProcessStepOperation.ReadProjectStructure,
+                ProcessStepOperation.WriteManagedProcessArtifacts,
+                ProcessStepOperation.RunValidation
+            ],
+            normalized.AllowedOperations);
+        Assert.DoesNotContain(normalized.Issues, issue =>
+            issue.Code == ProcessStepOperationContractState.InvalidCombinationCode);
+
+        var invalid = ProcessStepOperationContractState.NormalizeDeclaredContract(
+            ProcessStepKind.Review,
+            [ProcessStepOperation.MutateProductTarget],
+            ProcessStepTargetScope.ExternalProductTargetReadOnly);
+
+        Assert.Contains(invalid.Issues, issue =>
+            issue.Code == ProcessStepOperationContractState.InvalidCombinationCode &&
+            issue.Message.Contains(nameof(ProcessStepOperation.MutateProductTarget), StringComparison.Ordinal));
+    }
+
     [Fact]
     public void Analyze_warns_when_architecture_step_demands_product_implementation()
     {
@@ -192,6 +227,42 @@ public sealed class ProcessDefinitionLinterTests
     }
 
     [Fact]
+    public void Analyze_SB06_INV_001_strict_rejects_invalid_typed_operation_contract_combination()
+    {
+        var model = CreateBaseDefinition();
+        model.Steps.Add(new ProcessStepEditorModel
+        {
+            Id = Guid.NewGuid(),
+            Title = "Validate Blazor product component",
+            StepKind = ProcessStepKind.Review,
+            AllowedOperations =
+            [
+                ProcessStepOperation.MutateProductTarget,
+                ProcessStepOperation.RunValidation
+            ],
+            OperationTargetScope = ProcessStepTargetScope.ExternalProductTargetReadOnly,
+            OutputContractSummary = "Validate the Blazor component in the product root.",
+            ArtifactExpectations =
+            [
+                new ProcessArtifactExpectationEditorModel
+                {
+                    Title = "Runtime validation evidence",
+                    ArtifactKind = ProcessArtifactKind.Evidence,
+                    ValidationRequirementSummary = "Must include browser proof and console status."
+                }
+            ]
+        });
+
+        var result = ProcessDefinitionLinter.Analyze(model, ProcessDefinitionLintMode.Strict);
+
+        Assert.Contains(result.Issues, issue =>
+            issue.Code == "processes.lint.step-operation-contract-invalid" &&
+            issue.Severity == ProcessDefinitionLintSeverity.Error &&
+            issue.Message.Contains("MutateProductTarget", StringComparison.Ordinal));
+        Assert.True(result.HasErrors);
+    }
+
+    [Fact]
     public void Analyze_strict_marks_missing_artifact_recovery_policy_as_error()
     {
         var model = CreateBaseDefinition();
@@ -365,6 +436,92 @@ public sealed class ProcessDefinitionLinterTests
     }
 
     [Fact]
+    public void Analyze_SB09_INV_001_strict_rejects_required_workflow_artifact_without_explicit_output_mapping()
+    {
+        var workflowRoleId = Guid.NewGuid();
+        var model = CreateBaseDefinition();
+        model.Roles.Add(new ProcessRoleEditorModel
+        {
+            Id = workflowRoleId,
+            DisplayName = "Workflow executor",
+            PreferredExecutorKind = ProcessExecutorKindNames.Workflow,
+            PreferredWorkflowDefinitionId = Guid.NewGuid()
+        });
+        model.Steps.Add(new ProcessStepEditorModel
+        {
+            Id = Guid.NewGuid(),
+            Title = "Run finance approval workflow",
+            StepKind = ProcessStepKind.Work,
+            RoleAssignments =
+            [
+                new ProcessStepRoleRequirementEditorModel
+                {
+                    RoleRequirementId = workflowRoleId
+                }
+            ],
+            ArtifactExpectations =
+            [
+                new ProcessArtifactExpectationEditorModel
+                {
+                    Title = "Finance approval packet",
+                    ArtifactKind = ProcessArtifactKind.Deliverable,
+                    ValidationRequirementSummary = "Must include approval id, approver, decision, timestamp, and routed next action."
+                }
+            ]
+        });
+
+        var result = ProcessDefinitionLinter.Analyze(model, ProcessDefinitionLintMode.Strict);
+
+        Assert.Contains(result.Issues, issue =>
+            issue.Code == "processes.lint.workflow-artifact-output-mapping-missing" &&
+            issue.Severity == ProcessDefinitionLintSeverity.Error);
+        Assert.True(result.HasErrors);
+    }
+
+    [Fact]
+    public void Analyze_SB09_INV_001_accepts_required_workflow_artifact_with_explicit_output_mapping()
+    {
+        var workflowRoleId = Guid.NewGuid();
+        var model = CreateBaseDefinition();
+        model.Roles.Add(new ProcessRoleEditorModel
+        {
+            Id = workflowRoleId,
+            DisplayName = "Workflow executor",
+            PreferredExecutorKind = ProcessExecutorKindNames.Workflow,
+            PreferredWorkflowDefinitionId = Guid.NewGuid()
+        });
+        model.Steps.Add(new ProcessStepEditorModel
+        {
+            Id = Guid.NewGuid(),
+            Title = "Run finance approval workflow",
+            StepKind = ProcessStepKind.Work,
+            RoleAssignments =
+            [
+                new ProcessStepRoleRequirementEditorModel
+                {
+                    RoleRequirementId = workflowRoleId
+                }
+            ],
+            ArtifactExpectations =
+            [
+                new ProcessArtifactExpectationEditorModel
+                {
+                    Title = "Finance approval packet",
+                    ArtifactKind = ProcessArtifactKind.Deliverable,
+                    ValidationRequirementSummary = "Must include approval id, approver, decision, timestamp, and routed next action.",
+                    WorkflowOutputId = "finance-approval-packet",
+                    WorkflowOutputKind = WorkflowArtifactKind.Json
+                }
+            ]
+        });
+
+        var result = ProcessDefinitionLinter.Analyze(model, ProcessDefinitionLintMode.Strict);
+
+        Assert.DoesNotContain(result.Issues, issue => issue.Code == "processes.lint.workflow-artifact-output-mapping-missing");
+        Assert.False(result.HasErrors);
+    }
+
+    [Fact]
     public void Analyze_warns_when_subprocess_parent_declares_required_artifacts()
     {
         var model = CreateBaseDefinition();
@@ -388,6 +545,63 @@ public sealed class ProcessDefinitionLinterTests
         var result = ProcessDefinitionLinter.Analyze(model);
 
         Assert.Contains(result.Issues, issue => issue.Code == "processes.lint.subprocess-parent-artifact-mapping-review");
+    }
+
+    [Fact]
+    public void Analyze_SB09_INV_001_strict_rejects_required_subprocess_artifact_without_child_mapping()
+    {
+        var model = CreateBaseDefinition();
+        model.Steps.Add(new ProcessStepEditorModel
+        {
+            Id = Guid.NewGuid(),
+            Title = "Run operations incident subprocess",
+            StepKind = ProcessStepKind.Subprocess,
+            SubprocessDefinitionId = Guid.NewGuid(),
+            ArtifactExpectations =
+            [
+                new ProcessArtifactExpectationEditorModel
+                {
+                    Title = "Operations incident review",
+                    ArtifactKind = ProcessArtifactKind.Deliverable,
+                    ValidationRequirementSummary = "Child process must produce matching incident review evidence."
+                }
+            ]
+        });
+
+        var result = ProcessDefinitionLinter.Analyze(model, ProcessDefinitionLintMode.Strict);
+
+        Assert.Contains(result.Issues, issue =>
+            issue.Code == "processes.lint.subprocess-child-artifact-mapping-missing" &&
+            issue.Severity == ProcessDefinitionLintSeverity.Error);
+        Assert.True(result.HasErrors);
+    }
+
+    [Fact]
+    public void Analyze_SB09_INV_001_accepts_required_subprocess_artifact_with_child_mapping()
+    {
+        var model = CreateBaseDefinition();
+        model.Steps.Add(new ProcessStepEditorModel
+        {
+            Id = Guid.NewGuid(),
+            Title = "Run operations incident subprocess",
+            StepKind = ProcessStepKind.Subprocess,
+            SubprocessDefinitionId = Guid.NewGuid(),
+            ArtifactExpectations =
+            [
+                new ProcessArtifactExpectationEditorModel
+                {
+                    Title = "Operations incident review",
+                    ArtifactKind = ProcessArtifactKind.Deliverable,
+                    ValidationRequirementSummary = "Child process must produce matching incident review evidence.",
+                    SubprocessChildArtifactExpectationId = Guid.NewGuid()
+                }
+            ]
+        });
+
+        var result = ProcessDefinitionLinter.Analyze(model, ProcessDefinitionLintMode.Strict);
+
+        Assert.DoesNotContain(result.Issues, issue => issue.Code == "processes.lint.subprocess-child-artifact-mapping-missing");
+        Assert.False(result.HasErrors);
     }
 
     [Fact]

@@ -1,3 +1,140 @@
-# SB03 source-assertions.txt
+Command: Source assertions for SB03 template governance inventory matrix
+Invariant: SB03-INV-001
 
-Pending.
+Pattern: StrictGovernanceReady|PlannedMigration|RequireTypedContracts
+Path: repo://codex/bundles/processes-hardening-followup-template-ui-readiness-v8/scripts/audit-template-governance.ps1
+2:    [switch] $RequireTypedContracts,
+12:function Resolve-PlannedMigration {
+51:        $plannedMigration = Resolve-PlannedMigration $processEntry.Key $hasTypedContract
+65:            StrictGovernanceReady = $hasTypedContract
+66:            PlannedMigration = $plannedMigration
+72:$missingTyped = @($rows | Where-Object { -not $_.StrictGovernanceReady })
+73:$missingPlan = @($missingTyped | Where-Object { [string]::IsNullOrWhiteSpace($_.PlannedMigration) })
+88:        $ready = if ($row.StrictGovernanceReady) { 'Yes' } else { 'No' }
+93:        $migration = if ([string]::IsNullOrWhiteSpace($row.PlannedMigration)) { '-' } else { $row.PlannedMigration }
+115:if ($RequireTypedContracts -and $missingTyped.Count -gt 0) {
+116:    $missingTyped | Select-Object TemplateKey, StepKey, PlannedMigration, SourcePath | Format-Table -AutoSize | Write-Output
+
+Pattern: Steps missing typed contracts: 104|SB06|SB08|blazor-app-delivery
+Path: repo://codex/bundles/processes-hardening-followup-template-ui-readiness-v8/proof/SB03/template-governance-matrix.md
+7:Steps missing typed contracts: 104
+11:| dotnet-solution-setup | scaffold-contract | Start | - | - | No | 1 | 0 | Yes | No | SB06 |
+12:| dotnet-solution-setup | create-dotnet-project | Work | - | - | No | 1 | 1 | Yes | No | SB06 |
+13:| dotnet-solution-setup | add-test-project | Work | - | - | No | 1 | 1 | Yes | No | SB06 |
+14:| dotnet-solution-setup | validate-first-build | Review | - | - | No | 1 | 2 | Yes | No | SB06 |
+15:| dotnet-solution-setup | setup-handoff | End | - | - | No | 1 | 1 | Yes | No | SB06 |
+16:| dotnet-feature-function-implementation | feature-slice-intake | Start | - | - | No | 2 | 0 | Yes | No | SB06 |
+17:| dotnet-feature-function-implementation | implementation-approach | Review | - | - | No | 1 | 2 | Yes | No | SB06 |
+18:| dotnet-feature-function-implementation | test-contract | Review | - | - | No | 1 | 2 | Yes | No | SB06 |
+19:| dotnet-feature-function-implementation | code-change | Work | - | - | No | 1 | 3 | Yes | No | SB06 |
+20:| dotnet-feature-function-implementation | targeted-validation | Review | - | - | No | 1 | 2 | Yes | No | SB06 |
+21:| dotnet-feature-function-implementation | feature-handoff | End | - | - | No | 1 | 2 | Yes | No | SB06 |
+22:| dotnet-development-slice | slice-intake | Start | - | - | No | 1 | 0 | Yes | No | SB06 |
+23:| dotnet-development-slice | slice-architecture-check | Review | - | - | No | 1 | 1 | Yes | No | SB06 |
+24:| dotnet-development-slice | prepare-solution-skeleton | Subprocess | - | - | No | 1 | 1 | Yes | No | SB06 |
+25:| dotnet-development-slice | implement-code-change | Subprocess | - | - | No | 1 | 2 | Yes | No | SB06 |
+26:| dotnet-development-slice | add-tests-and-proof | Review | - | - | No | 1 | 1 | Yes | No | SB06 |
+27:| dotnet-development-slice | slice-handoff | End | - | - | No | 1 | 2 | Yes | No | SB06 |
+28:| app-page-screenshot | resolve-single-page-target | Start | - | - | Yes | 1 | 1 | Yes | No | SB06 |
+29:| app-page-screenshot | start-app-once | Work | - | - | Yes | 1 | 1 | Yes | No | SB06 |
+30:| app-page-screenshot | capture-page-screenshot | Work | - | - | Yes | 2 | 1 | Yes | No | SB06 |
+31:| app-page-screenshot | review-and-store-screenshot | Review | - | - | Yes | 2 | 2 | Yes | No | SB06 |
+32:| app-page-screenshot | cleanup-and-handoff | End | - | - | Yes | 1 | 2 | Yes | No | SB06 |
+33:| app-pages-screenshot-set | resolve-page-set-targets | Start | - | - | Yes | 1 | 1 | Yes | No | SB06 |
+34:| app-pages-screenshot-set | start-app-once-for-set | Work | - | - | Yes | 1 | 1 | Yes | No | SB06 |
+35:| app-pages-screenshot-set | capture-page-screenshot-set | Work | - | - | Yes | 2 | 1 | Yes | No | SB06 |
+36:| app-pages-screenshot-set | review-and-store-screenshot-set | Review | - | - | Yes | 2 | 2 | Yes | No | SB06 |
+37:| app-pages-screenshot-set | cleanup-and-set-handoff | End | - | - | Yes | 1 | 2 | Yes | No | SB06 |
+38:| app-layout-image-generation | resolve-layout-sources | Start | - | - | Yes | 1 | 1 | Yes | No | SB06 |
+39:| app-layout-image-generation | generate-and-store-layout-recommendation | Work | - | - | Yes | 1 | 1 | Yes | No | SB06 |
+40:| app-layout-image-generation | layout-generation-handoff | End | - | - | Yes | 1 | 1 | Yes | No | SB06 |
+41:| software-delivery | feature-intake | Start | - | - | No | 1 | 0 | Yes | No | SB06 |
+42:| software-delivery | architecture-review | Review | - | - | No | 2 | 1 | Yes | No | SB06 |
+44:| software-delivery | peer-review | Review | - | - | No | 1 | 2 | Yes | No | SB06 |
+46:| software-delivery | quality-repair | Work | - | - | No | 1 | 3 | Yes | No | SB06 |
+48:| software-delivery | security-review | Approval | - | - | No | 1 | 4 | Yes | No | SB06 |
+49:| software-delivery | security-review-after-repair | Approval | - | - | No | 1 | 3 | Yes | No | SB06 |
+50:| software-delivery | release-approval | Approval | - | - | No | 1 | 4 | Yes | No | SB06 |
+51:| software-delivery | execute-release-rollout | Delivery | - | - | No | 1 | 1 | Yes | No | SB06 |
+52:| software-delivery | post-release-learning | End | - | - | No | 1 | 0 | Yes | No | SB06 |
+53:| software-delivery | repair-escalation | Approval | - | - | No | 1 | 2 | Yes | No | SB06 |
+54:| software-delivery | release-approval-after-repair | Approval | - | - | No | 1 | 4 | Yes | No | SB06 |
+55:| software-delivery | execute-release-rollout-after-repair | Delivery | - | - | No | 1 | 1 | Yes | No | SB06 |
+56:| software-delivery | post-release-learning-after-repair | End | - | - | No | 1 | 0 | Yes | No | SB06 |
+57:| blazor-app-delivery | resolve-blazor-contract | Start | ReadProcessContext,ReadProjectStructure,WriteManagedProcessArtifacts | ExternalProductTargetReadOnly | No | 1 | 0 | Yes | Yes | - |
+58:| blazor-app-delivery | implement-blazor-change | Work | ReadProcessContext,ReadProjectStructure,ReadUpstreamArtifacts,MutateProductTarget,RunValidation,WriteManagedProcessArtifacts | ExternalProductTargetMutable | No | 2 | 1 | Yes | Yes | - |
+59:| blazor-app-delivery | validate-blazor-runtime | Review | ReadProcessContext,ReadProjectStructure,ReadUpstreamArtifacts,RunValidation,LaunchRuntime,CaptureRuntimeProof,WriteManagedProcessArtifacts | ExternalProductTargetReadOnly | Yes | 2 | 1 | Yes | Yes | - |
+60:| blazor-app-delivery | repair-blazor-findings | Work | ReadProcessContext,ReadProjectStructure,ReadUpstreamArtifacts,MutateProductTarget,RunValidation,WriteManagedProcessArtifacts | ExternalProductTargetMutable | No | 1 | 1 | Yes | Yes | - |
+61:| blazor-app-delivery | revalidate-blazor-repair | Review | ReadProcessContext,ReadProjectStructure,ReadUpstreamArtifacts,MutateProductTarget,RunValidation,WriteManagedProcessArtifacts | ExternalProductTargetMutable | Yes | 1 | 1 | Yes | Yes | - |
+62:| blazor-app-delivery | record-blazor-results | End | ReadProcessContext,ReadUpstreamArtifacts,WriteManagedProcessArtifacts,ExecuteExternalAction | ExternalActionControlled | No | 2 | 1 | Yes | Yes | - |
+63:| blazor-app-delivery | record-blazor-results-after-repair | End | ReadProcessContext,ReadProjectStructure,ReadUpstreamArtifacts,MutateProductTarget,RunValidation,WriteManagedProcessArtifacts | ExternalProductTargetMutable | No | 2 | 1 | Yes | Yes | - |
+64:| blazor-app-delivery | escalate-blazor-unresolved-repair | Approval | ReadProcessContext,ReadProjectStructure,ReadUpstreamArtifacts,MutateProductTarget,RunValidation,WriteManagedProcessArtifacts | ExternalProductTargetMutable | No | 1 | 2 | Yes | Yes | - |
+97:| branching-code-review | prepare-pull-request | Start | - | - | No | 1 | 0 | Yes | No | SB06 |
+98:| branching-code-review | route-review-disposition | Decision | - | - | Yes | 1 | 1 | Yes | No | SB06 |
+99:| branching-code-review | repair-pass | Work | - | - | No | 1 | 1 | Yes | No | SB06 |
+100:| branching-code-review | validate-qa-lane | Review | - | - | No | 1 | 1 | Yes | No | SB06 |
+101:| branching-code-review | perform-security-review | Approval | - | - | No | 1 | 1 | Yes | No | SB06 |
+102:| branching-code-review | architecture-escalation | Review | - | - | No | 1 | 1 | Yes | No | SB06 |
+103:| branching-code-review | approve-merge | Approval | - | - | No | 1 | 1 | Yes | No | SB06 |
+104:| branching-code-review | approve-merge-after-qa | Approval | - | - | No | 1 | 2 | Yes | No | SB06 |
+105:| branching-code-review | approve-merge-after-security | Approval | - | - | No | 1 | 2 | Yes | No | SB06 |
+106:| branching-code-review | approve-merge-after-architecture | Approval | - | - | No | 1 | 2 | Yes | No | SB06 |
+107:| branching-code-review | normalize-default-lane | Review | - | - | No | 1 | 1 | Yes | No | SB06 |
+108:| branching-code-review | approve-merge-after-default | Approval | - | - | No | 1 | 2 | Yes | No | SB06 |
+109:| branching-code-review | capture-workflow-failure | End | - | - | No | 1 | 1 | Yes | No | SB06 |
+110:| hotfix-rollout | activate-emergency-bridge | Start | - | - | No | 1 | 0 | Yes | No | SB06 |
+111:| hotfix-rollout | assess-blast-radius | Review | - | - | No | 1 | 0 | Yes | No | SB06 |
+112:| hotfix-rollout | package-hotfix | Work | - | - | No | 1 | 0 | Yes | No | SB06 |
+113:| hotfix-rollout | validate-hotfix | Review | - | - | No | 1 | 0 | Yes | No | SB06 |
+114:| hotfix-rollout | approve-emergency-release | Approval | - | - | No | 1 | 2 | Yes | No | SB06 |
+115:| hotfix-rollout | execute-emergency-rollout | Delivery | - | - | No | 1 | 1 | Yes | No | SB06 |
+116:| hotfix-rollout | post-incident-review | End | - | - | No | 1 | 0 | Yes | No | SB06 |
+117:| customer-onboarding | intake | Start | - | - | No | 1 | 0 | Yes | No | SB08 |
+118:| customer-onboarding | staffing-review | Review | - | - | No | 1 | 1 | Yes | No | SB08 |
+119:| customer-onboarding | kickoff-approval | Approval | - | - | No | 1 | 1 | Yes | No | SB08 |
+120:| business-plan-development | strategy-intake | Start | - | - | No | 1 | 0 | Yes | No | SB08 |
+121:| business-plan-development | product-evidence-review | Work | - | - | No | 1 | 1 | Yes | No | SB08 |
+122:| business-plan-development | business-plan-draft | Work | - | - | No | 1 | 2 | Yes | No | SB08 |
+123:| business-plan-development | financial-modeling | Work | - | - | No | 1 | 1 | Yes | No | SB08 |
+124:| business-plan-development | marketing-plan | Work | - | - | No | 1 | 2 | Yes | No | SB08 |
+125:| business-plan-development | integrated-review | Approval | - | - | Yes | 1 | 3 | Yes | No | SB08 |
+126:| business-plan-development | approved-execution-handoff | End | - | - | No | 0 | 1 | Yes | No | SB08 |
+127:| business-plan-development | blocked-correction-plan | End | - | - | No | 0 | 1 | Yes | No | SB08 |
+128:| incident-response | respond | Start | - | - | No | 1 | 0 | Yes | No | SB08 |
+129:| incident-response | diagnose | Work | - | - | No | 1 | 1 | Yes | No | SB08 |
+130:| incident-response | escalate | Approval | - | - | No | 1 | 1 | Yes | No | SB08 |
+131:| architecture-decision-governance | decision-intake | Start | - | - | No | 2 | 0 | Yes | No | SB08 |
+132:| architecture-decision-governance | context-and-options | Work | - | - | No | 2 | 0 | Yes | No | SB08 |
+133:| architecture-decision-governance | security-compliance-review | Review | - | - | No | 2 | 0 | Yes | No | SB08 |
+134:| architecture-decision-governance | board-decision | Approval | - | - | Yes | 1 | 0 | Yes | No | SB08 |
+135:| architecture-decision-governance | rollout-guidance | End | - | - | No | 2 | 0 | Yes | No | SB08 |
+136:| architecture-decision-governance | defer-and-revisit | End | - | - | No | 0 | 0 | Yes | No | SB08 |
+137:| release-readiness-and-deployment | scope-freeze | Start | - | - | No | 2 | 0 | Yes | No | SB08 |
+138:| release-readiness-and-deployment | readiness-synthesis | Work | - | - | No | 2 | 0 | Yes | No | SB08 |
+139:| release-readiness-and-deployment | cutover-rehearsal | Review | - | - | No | 2 | 0 | Yes | No | SB08 |
+140:| release-readiness-and-deployment | security-and-go-no-go | Approval | - | - | Yes | 2 | 0 | Yes | No | SB08 |
+141:| release-readiness-and-deployment | execute-cutover | Delivery | - | - | No | 2 | 0 | Yes | No | SB08 |
+142:| release-readiness-and-deployment | stabilize-and-close | End | - | - | No | 2 | 0 | Yes | No | SB08 |
+143:| release-readiness-and-deployment | hold-release-and-track-gap-closure | End | - | - | No | 0 | 0 | Yes | No | SB08 |
+144:| oss-intake-supply-chain-governance | component-request | Start | - | - | No | 1 | 0 | Yes | No | SB08 |
+145:| oss-intake-supply-chain-governance | identity-and-maintenance | Review | - | - | No | 2 | 0 | Yes | No | SB08 |
+146:| oss-intake-supply-chain-governance | license-and-obligations | Review | - | - | No | 2 | 0 | Yes | No | SB08 |
+147:| oss-intake-supply-chain-governance | security-and-provenance | Review | - | - | No | 2 | 0 | Yes | No | SB08 |
+148:| oss-intake-supply-chain-governance | approval-and-registration | Approval | - | - | Yes | 2 | 0 | Yes | No | SB08 |
+149:| oss-intake-supply-chain-governance | handoff-and-watch | End | - | - | No | 2 | 0 | Yes | No | SB08 |
+150:| ai-assisted-change-delivery | task-intake | Start | - | - | No | 2 | 0 | Yes | No | SB08 |
+151:| ai-assisted-change-delivery | delegation-design | Decision | - | - | Yes | 3 | 0 | Yes | No | SB08 |
+152:| ai-assisted-change-delivery | agent-execution | Work | - | - | No | 3 | 1 | Yes | No | SB08 |
+153:| ai-assisted-change-delivery | evaluation-and-benchmarking | Review | - | - | No | 3 | 4 | Yes | No | SB08 |
+154:| ai-assisted-change-delivery | safety-and-security-review | Approval | - | - | Yes | 2 | 5 | Yes | No | SB08 |
+155:| ai-assisted-change-delivery | controlled-merge-and-learning | End | - | - | No | 2 | 4 | Yes | No | SB08 |
+156:| ai-assisted-change-delivery | manual-delivery-handoff | End | - | - | No | 0 | 0 | Yes | No | SB08 |
+157:| ai-assisted-change-delivery | capture-rework-decision | End | - | - | No | 0 | 3 | Yes | No | SB08 |
+
+Pattern: "Key": "blazor-app-delivery"|"Key": "business-plan-development"|"Key": "ai-assisted-change-delivery"
+Path: repo://Templates/Processes/manifest.json
+53:      "Key": "blazor-app-delivery",
+85:      "Key": "business-plan-development",
+105:      "Key": "ai-assisted-change-delivery",
+
+ExitCode: 0

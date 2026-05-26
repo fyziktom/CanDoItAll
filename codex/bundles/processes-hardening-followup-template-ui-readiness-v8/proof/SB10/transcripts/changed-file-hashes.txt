@@ -1,3 +1,18 @@
-# SB10 changed-file-hashes.txt
+Command: Get-FileHash -Algorithm SHA256 <SB10 changed paths>
+ExitCode: 0
 
-Pending.
+Algorithm Hash                                                             Path
+--------- ----                                                             ----
+SHA256    5A97C5C1ED653AD2F39CC0FE1E4A54761D48728198571F7A5749766C96484022 C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.StepTransitions.cs
+SHA256    24FF58117AB0C69E43023D89004C9F4084407E9F945E7B42081302329B8E9CAE C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs
+SHA256    C60358D8B285B718C2EEE3B3DB48010C5CE391248324078F0B0BD070D66E7374 C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.CompletionArtifactValidator.cs
+SHA256    E2F8D55117EEC54A1E20F7B137BEE5CF485BC0F7AC8E0F0705B6E706D3BA3D26 C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs
+SHA256    DF0D33CA83C5C3669F913FFE796E78197071B328A40BC127676A1419B766413F C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs
+SHA256    2CF98E53425D9975D54E899322702F5D6E65B1577F758BE09E7EC8D0FBDCE551 C:\repositories\CanDoItAll\codex\bundles\processes-hardening-followup-template-ui-readiness-v8\proof\SB10\manifest.md
+SHA256    B375AC2FD31F509BAFC3C9913BE8C0C24FA5028CFC8766518732F9E19F761CC7 C:\repositories\CanDoItAll\codex\bundles\processes-hardening-followup-template-ui-readiness-v8\proof\SB10\semantic-invariants.md
+SHA256    5ECE7553982A82BB009F494F18F647C1A453D7FD389A801271C18A48764F3E39 C:\repositories\CanDoItAll\codex\bundles\processes-hardening-followup-template-ui-readiness-v8\subbundles\10-unified-artifact-validation-for-api-transitions\README.md
+SHA256    5D1BD51DD3591167110AD64F9E92002FC89DC8596EBAC385F72F8081997DC338 C:\repositories\CanDoItAll\codex\bundles\processes-hardening-followup-template-ui-readiness-v8\reviews\01-execution-report.md
+SHA256    0BAAA0DC95FB4BF3F21BB5A0B06C72715D0486FF8457F57BFC70C7797D2CE684 C:\repositories\CanDoItAll\codex\bundles\processes-hardening-followup-template-ui-readiness-v8\proof\SB10\transcripts\failing-first.txt
+SHA256    9E49D7DA76B454D6DF49B4658D43FB15FFAC5B1A6694312F436F57260F185912 C:\repositories\CanDoItAll\codex\bundles\processes-hardening-followup-template-ui-readiness-v8\proof\SB10\transcripts\passing.txt
+SHA256    C9D9FCF7DB7BB41CBB1A46DA9354656119FD63D61BCA861EE44C50E026A694FB C:\repositories\CanDoItAll\codex\bundles\processes-hardening-followup-template-ui-readiness-v8\proof\SB10\transcripts\source-assertions.txt
+SHA256    476D6507B4DC03015659881B1118B8928D66AA53DC3F80B71E792446750ADEA4 C:\repositories\CanDoItAll\codex\bundles\processes-hardening-followup-template-ui-readiness-v8\proof\SB10\transcripts\anti-stub-audit.txt

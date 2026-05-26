@@ -1,3 +1,57 @@
-# SB02 source-assertions.txt
+Command: Source assertions for SB02 API/tool/import-export contract parity
+Invariant: SB02-INV-001
 
-Pending.
+Pattern: ProcessRunHealthSummaryViewModel Health
+Path: repo://src/CanDoItAll.AgentFramework.Maf/Runtime/Tools/MafAgentRuntime.ProcessTools.cs
+876:    ProcessRunHealthSummaryViewModel Health,
+
+Pattern: details.Health
+Path: repo://src/CanDoItAll.AgentFramework.Maf/Runtime/Tools/MafAgentRuntime.ProcessTools.cs
+357:                details.Health,
+
+Pattern: Api_definition_routes_round_trip_typed_contract_and_artifact_mapping_fields
+Path: repo://tests/CanDoItAll.Tests.Integration/ApiIntegrationTests.cs
+276:    public async Task Api_definition_routes_round_trip_typed_contract_and_artifact_mapping_fields()
+
+Pattern: GetProperty\("health"\)
+Path: repo://tests/CanDoItAll.Tests.Integration/ApiIntegrationTests.cs
+271:        var healthPayload = runPayload.RootElement.GetProperty("health");
+
+Pattern: WorkflowOutputId
+Path: repo://tests/CanDoItAll.Tests.Integration/ApiIntegrationTests.cs
+292:        expectation.WorkflowOutputId = "qa-report-json";
+315:        Assert.Equal("qa-report-json", savedExpectation.WorkflowOutputId);
+330:        Assert.Equal("qa-report-json", exportedExpectation.WorkflowOutputId);
+356:        Assert.Equal("qa-report-json", importedExpectation.WorkflowOutputId);
+
+Pattern: SubprocessChildArtifactExpectationId
+Path: repo://tests/CanDoItAll.Tests.Integration/ApiIntegrationTests.cs
+295:        expectation.SubprocessChildArtifactExpectationId = subprocessChildArtifactExpectationId;
+318:        Assert.Equal(subprocessChildArtifactExpectationId, savedExpectation.SubprocessChildArtifactExpectationId);
+333:        Assert.Equal(subprocessChildArtifactExpectationId, exportedExpectation.SubprocessChildArtifactExpectationId);
+359:        Assert.Equal(subprocessChildArtifactExpectationId, importedExpectation.SubprocessChildArtifactExpectationId);
+
+Pattern: ProcessDefinitionEditorModel
+Path: repo://src/CanDoItAll.Web/Api/ProcessesApi.cs
+32:                ProcessDefinitionEditorModel request,
+
+Pattern: ProcessImportExportEnvelope
+Path: repo://src/CanDoItAll.Web/Api/ProcessesApi.cs
+73:                ProcessImportExportEnvelope request,
+
+Pattern: WorkflowOutputId|WorkflowOutputKind|SubprocessChildArtifactExpectationId
+Path: repo://src/CanDoItAll.Modules.Processes/Definitions/ProcessDefinitionEditorModels.cs
+291:    public string WorkflowOutputId { get; set; } = string.Empty;
+295:    public WorkflowArtifactKind? WorkflowOutputKind { get; set; }
+297:    public Guid? SubprocessChildArtifactExpectationId { get; set; }
+
+Pattern: BlockReasonCode|RecoveryOptions|ProjectionIdentityHash|ProjectionLineage
+Path: repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessRuntimeViewModels.cs
+113:    public IReadOnlyList<ProcessStepRecoveryOption> RecoveryOptions { get; init; } = [];
+282:    public ProcessStepBlockReasonCode BlockReasonCode { get; init; } = ProcessStepBlockReasonCode.None;
+286:    public IReadOnlyList<ProcessStepRecoveryOption> RecoveryOptions { get; init; } = [];
+317:    public string ProjectionLineageJson { get; init; } = string.Empty;
+319:    public string ProjectionIdentityHash { get; init; } = string.Empty;
+834:    public ProcessArtifactProjectionLineage? ProjectionLineage { get; set; }
+
+ExitCode: 0

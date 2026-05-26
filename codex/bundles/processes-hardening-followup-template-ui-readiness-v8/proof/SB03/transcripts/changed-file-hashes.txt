@@ -1,3 +1,6 @@
-# SB03 changed-file-hashes.txt
-
-Pending.
+Command: Get-FileHash <SB03 matrix and source paths>
+Invariant: SB03-INV-001
+9662C83DD12DD84A58BBBD2A79400D0B93E68E1BA0A6B776B92A2E04FA63249F  repo://codex/bundles/processes-hardening-followup-template-ui-readiness-v8/scripts/audit-template-governance.ps1
+4F8E616998A9E2A723BA48E7D7BB3ED21D82CAFA04BE340B01E9724F4BED1CE2  repo://codex/bundles/processes-hardening-followup-template-ui-readiness-v8/proof/SB03/template-governance-matrix.md
+4DD169CA7B7765DF21AD527ECBB967C62BE9ADA12E658953686E087239C2B340  repo://Templates/Processes/manifest.json
+ExitCode: 0

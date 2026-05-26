@@ -1,3 +1,19 @@
-# SB06 changed-file-hashes.txt
-
-Pending.
+Command: Get-FileHash <SB06 changed/asserted paths>
+Invariant: SB06-INV-001
+5A379C1CBF07E9D72B5359063B6D54EA7E005FA8F885D7A5EA58A2FCE7EB6D2C  repo://src/CanDoItAll.Modules.Processes/Definitions/ProcessStepOperationContractState.cs
+A926C0EB189A14F12A9C6FAE3275C362BA96ED71C8B45CE0F54E1E5A7A60285E  repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ExecutionMetadata.cs
+26D67E742E1E4A6DC45C4EDB00239575CE38CFCEE25A5887484B63F2E4F56FF6  repo://src/CanDoItAll.Modules.Processes/Definitions/ProcessDefinitionLinter.cs
+16FAEBCD8F9082DAF45A4EC3666E82E43A0D1B29B41756AF4E6548689404C97E  repo://src/CanDoItAll.Modules.Processes/Persistence/ProcessesService.Persistence.DefinitionChildren.Steps.cs
+2B2A2765E172049E6C090551560062A9564C1616A4AC8F4E97F58C474E5496D9  repo://src/CanDoItAll.Modules.Processes/Templates/ProcessTemplateProjectionService.cs
+DCB5E95BD940B0B6C40C1F4988E389EBF063C243B62737F580FFB272B8C6088B  repo://src/CanDoItAll.Modules.Processes/Templates/ProcessTemplateCatalogService.cs
+FD757A225EA83485E07AC018B9D04B4587311F1D1AB93E2D41F2B3365BF08F6A  repo://src/CanDoItAll.Modules.Processes/Definitions/ProcessDefinitionDraftCloneEngine.cs
+B87E769BD652891E7638985A1BF7430870FB9515EE2617EB54D9DDC8AA8C6930  repo://src/CanDoItAll.Modules.Processes/Runtime/Dependencies/ProcessDependencyCompatibilityBridge.cs
+76109E942C4A4797B65A3097BB29227917C06A1567BBACC861DDECA7CBB4FA74  repo://src/CanDoItAll.Modules.Processes/Components/ProcessWorkspace.Canvas.Persistence.cs
+693AEA48DFB4D76B25531C10824C3D84DF4E8B2BC77BE0ED65ADFE2F68A4A015  repo://src/CanDoItAll.Modules.Processes/Services/ProcessesService.cs
+6357CB4A7D93CE1D36F4727EA734D04FF4C51C991D99ACEABF2CC5BD29A80F49  repo://src/CanDoItAll.Modules.Processes/Services/ProcessesService.Support.cs
+B2B83D19253EA1464BDB9AA0E4101BD1001D20B7227E9D7E7ED2BF17A4561A86  repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.RuntimeReadQuery.cs
+7E12BA96EB441A2ECBA2F33BD23B865906E3C22C881EB487F35956E40C19ECDC  repo://src/CanDoItAll.Modules.Processes/Components/ProcessStepEditorForm.razor
+B920EC0C3D93208F7697207E28664C2A06C3DB1298B59AD446E7ED8BBEEB9A0F  repo://tests/CanDoItAll.Tests.Integration/ProcessDefinitionLinterTests.cs
+DF0D33CA83C5C3669F913FFE796E78197071B328A40BC127676A1419B766413F  repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs
+0EB34D76C87EB580BBF3102818FB7107BEC441145840469B402B180718E9ACE4  repo://tests/CanDoItAll.Tests.Integration/ApiIntegrationTests.cs
+ExitCode: 0

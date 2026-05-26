@@ -688,6 +688,113 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
+    public async Task TransitionStepAsync_SB10_INV_001_rejects_stale_execution_lineage_required_artifact_on_manual_completion()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var bridge = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Manual stale artifact lineage gate project");
+        var managerPartyId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Morgan Stale Lineage Gate");
+        var assignmentResult = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
+        {
+            ProjectId = projectId,
+            PartyId = managerPartyId,
+            Role = ProjectPartyAssignmentRole.Manager,
+            IsPrimary = true,
+            Source = "integration-tests"
+        });
+
+        Assert.True(assignmentResult.IsSuccess);
+
+        var managerRoleId = Guid.NewGuid();
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, managerRoleId));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Manual stale artifact lineage gate run",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Integration verification"
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var intakeStep = (await processesService.ListStepRunsAsync(runResult.Value)).Single(item => item.Sequence == 0);
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = intakeStep.Id,
+            TargetStatus = ProcessStepRunStatus.InProgress,
+            Reason = "Started intake.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = intakeStep.Id,
+            TargetStatus = ProcessStepRunStatus.Completed,
+            Reason = "Completed intake.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+
+        var deliveryStep = (await processesService.ListStepRunsAsync(runResult.Value)).Single(item => item.Sequence == 1);
+        var requiredArtifactExpectationId = Assert.Single(deliveryStep.ArtifactOutputs).ArtifactExpectationId;
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = deliveryStep.Id,
+            TargetStatus = ProcessStepRunStatus.InProgress,
+            Reason = "Started delivery review.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+
+        var staleExecutionRunId = Guid.NewGuid();
+        const string staleEvidencePath = "artifacts/test/stale-lineage-delivery-readiness-evidence.md";
+        await WriteWorkspaceArtifactAsync(application, staleEvidencePath, "Evidence content is present but belongs to a stale execution lineage.");
+
+        var recordedArtifactResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            StepRunId = deliveryStep.Id,
+            ArtifactExpectationId = requiredArtifactExpectationId,
+            ArtifactKind = ProcessArtifactKind.Evidence,
+            Title = "Delivery readiness evidence",
+            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+            SensitivityLevel = ProcessSensitivityLevel.Internal,
+            ProvenanceSummary = $"Recorded from stale execution run {staleExecutionRunId:D}.",
+            AllowedFutureUsageSummary = "Integration verification only.",
+            ReviewSummary = "Evidence content is present but stale.",
+            ManagedStoragePath = staleEvidencePath,
+            ExternalReferenceKey = $"workspace-written-artifact|{staleExecutionRunId:D}|{requiredArtifactExpectationId:D}|{staleEvidencePath}",
+            ProjectionLineage = new ProcessArtifactProjectionLineage
+            {
+                SourceKind = ProcessArtifactProjectionSourceKind.WorkspaceWrite,
+                SourceExecutionRunId = staleExecutionRunId,
+                SourceExternalReferenceKey = $"workspace-written-artifact|{staleExecutionRunId:D}|{requiredArtifactExpectationId:D}|{staleEvidencePath}"
+            }
+        });
+
+        Assert.True(recordedArtifactResult.IsSuccess, FormatErrors(recordedArtifactResult.Errors));
+
+        var completionResult = await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = deliveryStep.Id,
+            TargetStatus = ProcessStepRunStatus.Completed,
+            Reason = "Attempting to complete with stale lineage evidence.",
+            DecidedBy = "integration-tests"
+        });
+
+        Assert.True(completionResult.IsFailure);
+        Assert.Contains(completionResult.Errors, error => error.Code == "processes.step-completion-invalid-required-artifacts");
+        Assert.Contains(completionResult.Errors, error => error.Message.Contains("StaleOrWrongRun", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public async Task TransitionStepAsync_allows_repair_branch_without_positive_required_artifact()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -1631,6 +1738,84 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
+    public async Task TransitionStepAsync_SB12_INV_001_exposes_distinct_recovery_health_for_own_and_upstream_missing_artifacts()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var ownOutput = await CreateBlockedRunAsync(
+            "SB12 own missing artifact recovery",
+            "missing required artifact: Delivery readiness evidence",
+            ProcessStepBlockCause.OwnOutput);
+        var ownOutputStep = Assert.Single(
+            (await processesService.GetRunDetailsAsync(ownOutput.RunId)).StepRuns,
+            item => item.Id == ownOutput.StepRunId);
+
+        Assert.Equal(ProcessStepBlockReasonCode.ArtifactContractUnsatisfied, ownOutputStep.BlockReasonCode);
+        Assert.Equal(ProcessStepRecoveryOption.RecoverArtifactsOnly, ownOutputStep.NextRecoveryAction);
+        Assert.Equal(ProcessStepRecoveryOption.RecoverArtifactsOnly, ownOutputStep.Health.NextRecoveryAction);
+        Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly, ownOutputStep.RecoveryOptions);
+        Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly, ownOutputStep.Health.RecoveryOptions);
+        Assert.DoesNotContain(ProcessStepRecoveryOption.WaitForArtifactMaterialization, ownOutputStep.RecoveryOptions);
+
+        var upstream = await CreateBlockedRunAsync(
+            "SB12 upstream missing artifact recovery",
+            "Required upstream artifacts are missing and the source step must provide required artifact input.",
+            ProcessStepBlockCause.UpstreamInput);
+        var upstreamStep = Assert.Single(
+            (await processesService.GetRunDetailsAsync(upstream.RunId)).StepRuns,
+            item => item.Id == upstream.StepRunId);
+
+        Assert.Equal(ProcessStepBlockReasonCode.MissingUpstreamArtifact, upstreamStep.BlockReasonCode);
+        Assert.Equal(ProcessStepRecoveryOption.WaitForArtifactMaterialization, upstreamStep.NextRecoveryAction);
+        Assert.Equal(ProcessStepRecoveryOption.WaitForArtifactMaterialization, upstreamStep.Health.NextRecoveryAction);
+        Assert.Contains(ProcessStepRecoveryOption.WaitForArtifactMaterialization, upstreamStep.RecoveryOptions);
+        Assert.Contains(ProcessStepRecoveryOption.WaitForArtifactMaterialization, upstreamStep.Health.RecoveryOptions);
+        Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly, upstreamStep.RecoveryOptions);
+
+        async Task<(Guid RunId, Guid StepRunId)> CreateBlockedRunAsync(
+            string projectName,
+            string reason,
+            ProcessStepBlockCause blockCause)
+        {
+            var projectId = await CreateProjectAsync(projectsService, projectName);
+            var managerRoleId = Guid.NewGuid();
+            var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, managerRoleId));
+
+            AssertSuccess(saveResult);
+            AssertSuccess(await processesService.PublishAsync(saveResult.Value));
+
+            var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+            {
+                ProcessDefinitionId = saveResult.Value,
+                ProjectId = projectId,
+                RunName = projectName,
+                OperatingMode = ProcessOperatingMode.AssistedExecution,
+                TriggerReason = "Verify SB12 block recovery health."
+            });
+
+            AssertSuccess(runResult);
+
+            var firstStep = Assert.Single(await processesService.ListStepRunsAsync(runResult.Value), item => item.Sequence == 0);
+            var transitionResult = await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+            {
+                StepRunId = firstStep.Id,
+                TargetStatus = ProcessStepRunStatus.Blocked,
+                Reason = reason,
+                BlockCause = blockCause,
+                DecidedBy = "integration-tests",
+                SuppressAutomationDispatch = true
+            });
+
+            AssertSuccess(transitionResult);
+
+            return (runResult.Value, firstStep.Id);
+        }
+    }
+
+    [Fact]
     public async Task TransitionStepAsync_SB10_INV_001_persists_recovery_router_next_action_and_lifecycle_event()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -1882,8 +2067,11 @@ public sealed class ProcessesServiceIntegrationTests
         var softwareDeliveryDefinition = Assert.Single(projectDefinitions, item => item.Name == "Multi-team software delivery and release governance");
         var branchingDefinition = Assert.Single(projectDefinitions, item => item.Name == "Branching code review and merge governance");
         var hotfixDefinition = Assert.Single(projectDefinitions, item => item.Name == "Emergency hotfix rollout with shard-risk governance");
-        Assert.Single(projectDefinitions, item => item.Name == "Customer onboarding orchestration");
-        Assert.Single(projectDefinitions, item => item.Name == "Incident response and escalation");
+        var customerOnboardingDefinition = Assert.Single(projectDefinitions, item => item.Name == "Customer onboarding orchestration");
+        var incidentResponseDefinition = Assert.Single(projectDefinitions, item => item.Name == "Incident response and escalation");
+        var releaseReadinessDefinition = Assert.Single(projectDefinitions, item => item.Name == "Release readiness and deployment control");
+        var architectureDecisionDefinition = Assert.Single(projectDefinitions, item => item.Name == "Architecture decision governance and ADR stewardship");
+        var blazorAppDeliveryDefinition = Assert.Single(projectDefinitions, item => item.Name == "Blazor app delivery");
 
         var softwareDeliveryRun = Assert.Single(
             await processesService.ListRunsAsync(softwareDeliveryDefinition.Id, projectId),
@@ -1962,6 +2150,67 @@ public sealed class ProcessesServiceIntegrationTests
         var branchingQaMergeDefinitionStep = Assert.Single(branchingEditor.Steps, item => item.Key == "approve-merge-after-qa");
         Assert.Equal(2, branchingQaMergeDefinitionStep.Dependencies.Count);
         Assert.Equal(2, branchingQaMergeDefinitionStep.ArtifactInputs.Count);
+
+        var customerOnboardingRun = Assert.Single(
+            await processesService.ListRunsAsync(customerOnboardingDefinition.Id, projectId),
+            item => item.Name == "Customer onboarding orchestration / enterprise rollout");
+        var customerOnboardingStepRuns = await processesService.ListStepRunsAsync(customerOnboardingRun.Id);
+        var customerOnboardingArtifacts = await processesService.ListArtifactsAsync(customerOnboardingRun.Id);
+
+        Assert.Contains(
+            customerOnboardingStepRuns,
+            item => item.Title == "Review staffing intent" &&
+                    item.SelectedBranchOutcomeTitle == "Staffing ready");
+        Assert.Contains(customerOnboardingArtifacts, item => item.Title == "Enterprise customer kickoff approval record");
+
+        var incidentResponseRun = Assert.Single(
+            await processesService.ListRunsAsync(incidentResponseDefinition.Id, projectId),
+            item => item.Name == "Incident response and escalation / user access disruption");
+        var incidentResponseStepRuns = await processesService.ListStepRunsAsync(incidentResponseRun.Id);
+        var incidentResponseArtifacts = await processesService.ListArtifactsAsync(incidentResponseRun.Id);
+
+        Assert.Contains(
+            incidentResponseStepRuns,
+            item => item.Title == "Diagnose probable cause" &&
+                    item.SelectedBranchOutcomeTitle == "Mitigation ready for approval");
+        Assert.Contains(incidentResponseArtifacts, item => item.Title == "User access escalation approval record");
+
+        var releaseReadinessRun = Assert.Single(
+            await processesService.ListRunsAsync(releaseReadinessDefinition.Id, projectId),
+            item => item.Name == "Release readiness and deployment control / customer-visible maintenance window");
+        var releaseReadinessStepRuns = await processesService.ListStepRunsAsync(releaseReadinessRun.Id);
+        var releaseReadinessArtifacts = await processesService.ListArtifactsAsync(releaseReadinessRun.Id);
+
+        Assert.Contains(
+            releaseReadinessStepRuns,
+            item => item.Title == "Run final security review and go/no-go approval" &&
+                    item.SelectedBranchOutcomeTitle == "Go");
+        Assert.Contains(releaseReadinessArtifacts, item => item.Title == "Final go/no-go decision");
+        Assert.Contains(releaseReadinessArtifacts, item => item.Title == "Release execution provenance note");
+
+        var architectureDecisionRun = Assert.Single(
+            await processesService.ListRunsAsync(architectureDecisionDefinition.Id, projectId),
+            item => item.Name == "Architecture decision governance / integration boundary decision");
+        var architectureDecisionStepRuns = await processesService.ListStepRunsAsync(architectureDecisionRun.Id);
+        var architectureDecisionArtifacts = await processesService.ListArtifactsAsync(architectureDecisionRun.Id);
+
+        Assert.Contains(
+            architectureDecisionStepRuns,
+            item => item.Title == "Make the board decision and record rationale" &&
+                    item.SelectedBranchOutcomeTitle == "Approved");
+        Assert.Contains(architectureDecisionArtifacts, item => item.Title == "Approved architecture decision record");
+
+        var blazorAppDeliveryRun = Assert.Single(
+            await processesService.ListRunsAsync(blazorAppDeliveryDefinition.Id, projectId),
+            item => item.Name == "Blazor WASM PWA Tetris delivery / playable browser game");
+        var blazorAppDeliveryStepRuns = await processesService.ListStepRunsAsync(blazorAppDeliveryRun.Id);
+        var blazorAppDeliveryArtifacts = await processesService.ListArtifactsAsync(blazorAppDeliveryRun.Id);
+
+        Assert.Contains(
+            blazorAppDeliveryStepRuns,
+            item => item.Title == "Validate Blazor runtime and browser evidence" &&
+                    item.SelectedBranchOutcomeTitle == "Quality accepted");
+        Assert.Contains(blazorAppDeliveryArtifacts, item => item.Title == "Tetris project-structure writeback receipt");
 
         var exportEnvelope = await processesService.ExportAsync(seedResult.Value.PrimaryDefinitionId);
         exportEnvelope.Definition.Id = null;

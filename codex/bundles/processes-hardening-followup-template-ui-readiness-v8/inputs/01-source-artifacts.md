@@ -1,0 +1,26 @@
+# Source Artifacts
+
+- `bundle://README.md`
+- `bundle://analysis/01-current-state.md`
+- `bundle://analysis/02-verified-findings.md`
+- `bundle://analysis/03-template-review-notes.md`
+- `bundle://requirements/01-normalized-requirements.md`
+- `bundle://requirements/02-runtime-invariants.md`
+- `bundle://plan/01-phase-plan.md`
+- `bundle://traceability/01-requirement-traceability.md`
+- `bundle://subbundles/01-build-breaker-and-compile-integrity/README.md`
+- `bundle://subbundles/02-process-api-tool-openapi-contract-parity/README.md`
+- `bundle://subbundles/03-template-inventory-and-governance-matrix/README.md`
+- `bundle://subbundles/04-blazor-template-boundary-corrections/README.md`
+- `bundle://subbundles/05-tetris-wasm-pwa-template-readiness/README.md`
+- `bundle://subbundles/06-refactor-checkpoint-a-contract-normalization/README.md`
+- `bundle://subbundles/07-project-structure-tool-classification-and-policy/README.md`
+- `bundle://subbundles/08-nonsoftware-template-migration/README.md`
+- `bundle://subbundles/09-workflow-subprocess-output-mapping-hardening/README.md`
+- `bundle://subbundles/10-unified-artifact-validation-for-api-transitions/README.md`
+- `bundle://subbundles/11-refactor-checkpoint-b-runtime-validation-services/README.md`
+- `bundle://subbundles/12-block-recovery-health-and-dashboard-readiness/README.md`
+- `bundle://subbundles/13-process-skill-and-documentation-update/README.md`
+- `bundle://subbundles/14-template-baseline-scenarios-and-seed-pack/README.md`
+- `bundle://subbundles/15-ui-test-preflight-for-tetris-process-run/README.md`
+- `bundle://subbundles/16-final-red-team-and-closure/README.md`

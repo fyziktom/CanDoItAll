@@ -19,6 +19,10 @@ public sealed class ProcessTemplateBaselineScenario
     public List<ProcessTemplateBaselineTransition> Transitions { get; set; } = [];
 
     public List<ProcessTemplateBaselineArtifactRecord> Artifacts { get; set; } = [];
+
+    public List<ProcessTemplateBaselineContractExercise> ContractExercises { get; set; } = [];
+
+    public List<ProcessTemplateBaselineRecoveryExercise> RecoveryExercises { get; set; } = [];
 }
 
 public sealed class ProcessTemplateBaselineAssignment
@@ -44,6 +48,8 @@ public sealed class ProcessTemplateBaselineTransition
 
     public string SelectedBranchOutcomeKey { get; set; } = string.Empty;
 
+    public ProcessStepBlockCause? BlockCause { get; set; }
+
     public string Reason { get; set; } = string.Empty;
 
     public string DecidedBy { get; set; } = string.Empty;
@@ -66,6 +72,28 @@ public sealed class ProcessTemplateBaselineArtifactRecord
     public string AllowedFutureUsageSummary { get; set; } = string.Empty;
 
     public string ReviewSummary { get; set; } = string.Empty;
+}
+
+public sealed class ProcessTemplateBaselineContractExercise
+{
+    public string StepKey { get; set; } = string.Empty;
+
+    public ProcessStepTargetScope? ExpectedTargetScope { get; set; }
+
+    public List<ProcessStepOperation> ExpectedAllowedOperations { get; set; } = [];
+
+    public string Purpose { get; set; } = string.Empty;
+}
+
+public sealed class ProcessTemplateBaselineRecoveryExercise
+{
+    public string StepKey { get; set; } = string.Empty;
+
+    public ProcessStepBlockCause BlockCause { get; set; }
+
+    public List<ProcessStepRecoveryOption> ExpectedRecoveryOptions { get; set; } = [];
+
+    public string Diagnostic { get; set; } = string.Empty;
 }
 
 public sealed record ProcessTemplateCatalogItem(
@@ -98,4 +126,8 @@ public sealed record ProcessTemplateBaselineScenarioSummary(
     string OperatingMode,
     int AssignmentCount,
     int TransitionCount,
-    int ArtifactCount);
+    int ArtifactCount,
+    int BranchSelectionCount,
+    int BlockedTransitionCount,
+    int ContractExerciseCount,
+    int RecoveryExerciseCount);

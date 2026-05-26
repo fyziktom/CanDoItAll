@@ -261,7 +261,14 @@
       ],
       "DocRefs": [
         "processes/software-delivery/steps/feature-intake.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 1,
@@ -353,7 +360,15 @@
       ],
       "DocRefs": [
         "processes/software-delivery/steps/architecture-review.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 2,
@@ -556,22 +571,30 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/software-delivery/steps/peer-review.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 4,
       "Key": "qa-validation",
       "Title": "Run QA validation and runtime or browser proof",
       "Subtitle": "Regression, UX, runtime, and quality evidence",
-      "Notes": "Execute targeted regression, runtime/API/browser proof as applicable, and defect triage against the reviewed implementation package. When project structure, scope, or implementation evidence identifies a visible browser workflow, capture current-run process-visible browser artifacts under `artifacts/process-runs/<run-id>/browser/` before selecting quality-accepted.",
+      "Notes": "Execute targeted regression, runtime/API/browser proof as applicable, and defect triage against the reviewed implementation package. When project structure, scope, or implementation evidence identifies a visible browser workflow, capture current-run process-visible browser artifacts under \u0060artifacts/process-runs/\u003Crun-id\u003E/browser/\u0060 before selecting quality-accepted.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": false,
       "InputContractSummary": "Peer-reviewed change set, changed-surface inventory, and release-scope assumptions.",
-          "OutputContractSummary": "Targeted QA result with runtime/API/browser evidence as applicable, regressions, warning and executed-test counts, shipped entrypoint/runtime consistency, residual quality risk, and an explicit accepted or repair-required branch. Browser-workflow quality acceptance requires process-visible screenshot, browser_snapshot or browser_evaluate state output, browser_console_messages output, actual URL or entrypoint, launch and cleanup receipts, and acceptance-state assertion.",
-          "EvidenceContractSummary": "Regression logs, warning-free validation output unless explicitly accepted, nonzero executed-test proof when tests are expected, shipped entrypoint plus referenced-runtime inspection, stale or unreferenced artifact assessment, runtime/API/browser proof as applicable, screenshots for UI surfaces, defect notes, and current-run process-visible browser artifacts when a visible browser workflow is in scope.",
+      "OutputContractSummary": "Targeted QA result with runtime/API/browser evidence as applicable, regressions, warning and executed-test counts, shipped entrypoint/runtime consistency, residual quality risk, and an explicit accepted or repair-required branch. Browser-workflow quality acceptance requires process-visible screenshot, browser_snapshot or browser_evaluate state output, browser_console_messages output, actual URL or entrypoint, launch and cleanup receipts, and acceptance-state assertion.",
+      "EvidenceContractSummary": "Regression logs, warning-free validation output unless explicitly accepted, nonzero executed-test proof when tests are expected, shipped entrypoint plus referenced-runtime inspection, stale or unreferenced artifact assessment, runtime/API/browser proof as applicable, screenshots for UI surfaces, defect notes, and current-run process-visible browser artifacts when a visible browser workflow is in scope.",
       "DecisionRightsSummary": "QA lead selects an explicit quality disposition: accepted evidence may continue, while reproducible defects or proof gaps route to repair.",
       "ExceptionPolicySummary": "Do not let schedule pressure replace proof with verbal confidence. Artifact recovery: block when required QA evidence, browser/runtime proof, or repair-required evidence is missing or invalid before branch routing.",
       "TargetLeadHours": 10,
@@ -623,7 +646,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable for release approval, incident review, and later regression comparison.",
-              "ValidationRequirementSummary": "Must name changed flows, assertion depth, warning counts, executed-test counts when tests are expected, shipped entrypoint and referenced runtime files or commands, runtime/API/browser evidence as applicable, screenshots for UI surfaces, stale/unreferenced artifact findings, and unresolved risks. When the current project structure, scope packet, or implementation evidence identifies a visible browser workflow, the pack must include current-run process-visible browser artifacts under `artifacts/process-runs/<run-id>/browser/`: screenshot image, browser_snapshot or browser_evaluate state output, browser_console_messages output showing no active JavaScript/runtime errors, actual URL or entrypoint, launch and cleanup receipts, and an acceptance-state assertion mapped to the project-structure notes. Missing, empty, detached, stale, or chat-only browser proof must route to repair-required."
+          "ValidationRequirementSummary": "Must name changed flows, assertion depth, warning counts, executed-test counts when tests are expected, shipped entrypoint and referenced runtime files or commands, runtime/API/browser evidence as applicable, screenshots for UI surfaces, stale/unreferenced artifact findings, and unresolved risks. When the current project structure, scope packet, or implementation evidence identifies a visible browser workflow, the pack must include current-run process-visible browser artifacts under \u0060artifacts/process-runs/\u003Crun-id\u003E/browser/\u0060: screenshot image, browser_snapshot or browser_evaluate state output, browser_console_messages output showing no active JavaScript/runtime errors, actual URL or entrypoint, launch and cleanup receipts, and an acceptance-state assertion mapped to the project-structure notes. Missing, empty, detached, stale, or chat-only browser proof must route to repair-required."
         }
       ],
       "ArtifactInputs": [
@@ -767,22 +790,31 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/software-delivery/steps/quality-repair.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "MutateProductTarget",
+        "RunValidation",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetMutable"
     },
     {
       "Order": 6,
       "Key": "qa-recheck",
       "Title": "Re-run QA validation and runtime or browser proof after repair",
       "Subtitle": "Repair verification",
-      "Notes": "Re-run targeted runtime/API/browser validation as applicable against the repaired package and select an explicit accepted or unresolved-repair branch. When project structure, original QA findings, or repair evidence identifies a visible browser workflow, recapture current-run process-visible browser artifacts under `artifacts/process-runs/<run-id>/browser/` before selecting quality-accepted.",
+      "Notes": "Re-run targeted runtime/API/browser validation as applicable against the repaired package and select an explicit accepted or unresolved-repair branch. When project structure, original QA findings, or repair evidence identifies a visible browser workflow, recapture current-run process-visible browser artifacts under \u0060artifacts/process-runs/\u003Crun-id\u003E/browser/\u0060 before selecting quality-accepted.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": false,
       "InputContractSummary": "Repair change set, original QA findings, and reviewed implementation package.",
-          "OutputContractSummary": "Recheck result with warning-free validation, nonzero executed-test proof when tests are expected, shipped entrypoint/runtime consistency, runtime/API/browser evidence as applicable, regression evidence, and explicit quality disposition. Browser-workflow repair acceptance requires fresh process-visible screenshot, browser_snapshot or browser_evaluate state output, browser_console_messages output, actual URL or entrypoint, launch and cleanup receipts, and acceptance-state assertion.",
-          "EvidenceContractSummary": "Regression logs, warning-free validation output unless explicitly accepted, nonzero executed-test proof when tests are expected, shipped entrypoint plus referenced-runtime inspection, stale or unreferenced artifact assessment, runtime/API/browser proof as applicable, screenshots for UI surfaces, repair verification, unresolved defects if any, and fresh current-run process-visible browser artifacts when a visible browser workflow is in scope.",
+      "OutputContractSummary": "Recheck result with warning-free validation, nonzero executed-test proof when tests are expected, shipped entrypoint/runtime consistency, runtime/API/browser evidence as applicable, regression evidence, and explicit quality disposition. Browser-workflow repair acceptance requires fresh process-visible screenshot, browser_snapshot or browser_evaluate state output, browser_console_messages output, actual URL or entrypoint, launch and cleanup receipts, and acceptance-state assertion.",
+      "EvidenceContractSummary": "Regression logs, warning-free validation output unless explicitly accepted, nonzero executed-test proof when tests are expected, shipped entrypoint plus referenced-runtime inspection, stale or unreferenced artifact assessment, runtime/API/browser proof as applicable, screenshots for UI surfaces, repair verification, unresolved defects if any, and fresh current-run process-visible browser artifacts when a visible browser workflow is in scope.",
       "DecisionRightsSummary": "QA lead may accept the repaired evidence or escalate when repair remains insufficient.",
       "ExceptionPolicySummary": "Artifact recovery: block when the required repaired regression evidence artifact is missing or invalid before selecting quality-accepted or repair-escalation. Do not approve repaired work when the same failing flow, launch, or proof gap remains unresolved.",
       "TargetLeadHours": 8,
@@ -834,7 +866,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable for post-repair security review, release approval, and later regression comparison.",
-              "ValidationRequirementSummary": "Must name repaired flows, assertion depth, warning counts, executed-test counts when tests are expected, shipped entrypoint and referenced runtime files or commands, runtime/API/browser evidence as applicable, screenshots for UI surfaces, stale/unreferenced artifact findings, and unresolved risks after the repair pass. When the current project structure, original QA findings, or repair evidence identifies a visible browser workflow, the pack must include fresh current-run process-visible browser artifacts under `artifacts/process-runs/<run-id>/browser/`: screenshot image, browser_snapshot or browser_evaluate state output, browser_console_messages output showing no active JavaScript/runtime errors, actual URL or entrypoint, launch and cleanup receipts, and an acceptance-state assertion mapped to the project-structure notes. Missing, empty, detached, stale, or chat-only browser proof must route to repair-escalation."
+          "ValidationRequirementSummary": "Must name repaired flows, assertion depth, warning counts, executed-test counts when tests are expected, shipped entrypoint and referenced runtime files or commands, runtime/API/browser evidence as applicable, screenshots for UI surfaces, stale/unreferenced artifact findings, and unresolved risks after the repair pass. When the current project structure, original QA findings, or repair evidence identifies a visible browser workflow, the pack must include fresh current-run process-visible browser artifacts under \u0060artifacts/process-runs/\u003Crun-id\u003E/browser/\u0060: screenshot image, browser_snapshot or browser_evaluate state output, browser_console_messages output showing no active JavaScript/runtime errors, actual URL or entrypoint, launch and cleanup receipts, and an acceptance-state assertion mapped to the project-structure notes. Missing, empty, detached, stale, or chat-only browser proof must route to repair-escalation."
         }
       ],
       "ArtifactInputs": [
@@ -977,7 +1009,15 @@
       ],
       "DocRefs": [
         "processes/software-delivery/steps/security-review.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 8,
@@ -1068,7 +1108,15 @@
       ],
       "DocRefs": [
         "processes/software-delivery/steps/security-review.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 9,
@@ -1168,7 +1216,15 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/software-delivery/steps/release-approval.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 10,
@@ -1249,7 +1305,15 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/software-delivery/steps/execute-release-rollout.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "ExecuteExternalAction"
+      ],
+      "OperationTargetScope": "ExternalActionControlled"
     },
     {
       "Order": 11,
@@ -1325,7 +1389,14 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/software-delivery/steps/post-release-learning.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 12,
@@ -1414,7 +1485,15 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/software-delivery/steps/repair-escalation.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 13,
@@ -1514,7 +1593,15 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/software-delivery/steps/release-approval.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 14,
@@ -1595,7 +1682,15 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/software-delivery/steps/execute-release-rollout.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "ExecuteExternalAction"
+      ],
+      "OperationTargetScope": "ExternalActionControlled"
     },
     {
       "Order": 15,
@@ -1671,7 +1766,14 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/software-delivery/steps/post-release-learning.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     }
   ],
   "DocPath": "processes/software-delivery/definition.md",
@@ -1715,7 +1817,7 @@
         "Deep knowledge of schema evolution, data backfill sequencing, locking behavior, and rollback limitations.",
         "Understanding of production data sensitivity, replication, and consistency risk during change rollout.",
         "Ability to design reversible migration patterns or explicitly document when reversal is not technically safe.",
-          "Knowledge of runbook requirements for staged or data-bearing change.",
+        "Knowledge of runbook requirements for staged or data-bearing change.",
         "Ability to interpret telemetry that indicates migration success, degradation, or partial failure.",
         "Understanding of how code and migration deployment order interact."
       ],
@@ -1729,7 +1831,7 @@
       "DecisionRights": [
         "Approve migration sequence and rollback viability.",
         "Block release when migration evidence is incomplete or unsafe.",
-          "Define environment, user-segment, or batch sequencing constraints for deployment.",
+        "Define environment, user-segment, or batch sequencing constraints for deployment.",
         "Escalate when data change risk exceeds the normal release window."
       ],
       "OwnedArtifacts": [
@@ -1741,7 +1843,7 @@
         "Work closely with platform engineer, release approver, and software engineer.",
         "Provide QA with data-risk hotspots requiring targeted validation.",
         "Coordinate with service owner on maintenance-window and support implications.",
-        "Document exactly what 'successful migration' means operationally."
+        "Document exactly what \u0027successful migration\u0027 means operationally."
       ],
       "AntiPatterns": [
         "Treating rollback as a theoretical possibility instead of a rehearsed path.",

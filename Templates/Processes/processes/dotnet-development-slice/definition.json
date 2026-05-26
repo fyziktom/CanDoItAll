@@ -179,7 +179,14 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/dotnet-development-slice/steps/slice-intake.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 1,
@@ -246,7 +253,15 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/dotnet-development-slice/steps/slice-architecture-check.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 2,
@@ -315,7 +330,15 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/dotnet-development-slice/steps/prepare-solution-skeleton.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "ExecuteExternalAction"
+      ],
+      "OperationTargetScope": "ExternalActionControlled"
     },
     {
       "Order": 3,
@@ -392,7 +415,15 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/dotnet-development-slice/steps/implement-code-change.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "ExecuteExternalAction"
+      ],
+      "OperationTargetScope": "ExternalActionControlled"
     },
     {
       "Order": 4,
@@ -459,7 +490,16 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/dotnet-development-slice/steps/add-tests-and-proof.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "MutateProductTarget",
+        "RunValidation",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetMutable"
     },
     {
       "Order": 5,
@@ -534,7 +574,14 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/dotnet-development-slice/steps/slice-handoff.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     }
   ]
 }

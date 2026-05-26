@@ -22,14 +22,15 @@ internal static class ProcessStepRunBlockState
 
         var classification = ProcessBlockStateClassifier.Classify(reason, cause);
         var code = classification.ReasonCode;
+        var blockCause = classification.BlockCause;
         var recoveryOptions = classification.RecoveryOptions;
         var routingDecision = ProcessRecoveryRouter.Route(new ProcessRecoveryRoutingRequest(
             code,
-            cause,
+            blockCause,
             reason,
             recoveryOptions,
             [],
-            ProcessRecoveryRouter.BuildEvidenceFingerprint(code, cause, reason),
+            ProcessRecoveryRouter.BuildEvidenceFingerprint(code, blockCause, reason),
             HasNewEvidence: true));
         stepRun.BlockReasonCode = code;
         stepRun.RecoveryOptionsJson = SerializeRecoveryOptions(recoveryOptions);

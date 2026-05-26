@@ -9,11 +9,12 @@ internal static class ProcessBlockStateClassifier
 {
     public static ProcessBlockStateClassification Classify(string reason, ProcessStepBlockCause? cause = null)
     {
-        var code = cause.HasValue
-            ? ResolveBlockReasonCode(cause.Value)
+        var blockCause = cause ?? InferBlockCause(reason);
+        var code = blockCause.HasValue
+            ? ResolveBlockReasonCode(blockCause.Value)
             : InferBlockReasonCode(reason);
 
-        return new ProcessBlockStateClassification(code, cause, ResolveRecoveryOptions(code));
+        return new ProcessBlockStateClassification(code, blockCause, ResolveRecoveryOptions(code));
     }
 
     public static bool IsMissingUpstreamArtifactBlock(ProcessStepRun stepRun)

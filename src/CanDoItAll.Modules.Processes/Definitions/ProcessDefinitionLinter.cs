@@ -66,8 +66,8 @@ public static class ProcessDefinitionLinter
         foreach (var step in model.Steps)
         {
             AddBoundaryIssues(issues, step, mode);
-            AddWorkflowArtifactIssues(issues, step, rolesById);
-            AddSubprocessArtifactIssues(issues, step);
+            AddWorkflowArtifactIssues(issues, step, rolesById, mode);
+            AddSubprocessArtifactIssues(issues, step, mode);
             AddBranchOutcomeIssues(issues, step, mode);
             AddArtifactContractIssues(issues, step);
         }
@@ -112,6 +112,10 @@ public static class ProcessDefinitionLinter
             hasProductMutationTargetSignal;
         var hasTypedOperationContract = HasTypedOperationContract(step);
         var hasPartialTypedOperationContract = HasPartialTypedOperationContract(step);
+        var normalizedContract = ProcessStepOperationContractState.NormalizeDeclaredContract(
+            step.StepKind,
+            step.AllowedOperations,
+            step.OperationTargetScope);
         if (hasPartialTypedOperationContract)
         {
             AddIssue(
@@ -121,6 +125,21 @@ public static class ProcessDefinitionLinter
                 StrictSeverity(mode),
                 "This step has only part of the persisted operation contract. Runtime boundaries need both allowed operations and target scope.",
                 "Set both allowed operations and target scope in the step operation contract.");
+        }
+
+        foreach (var issue in normalizedContract.Issues.Where(issue =>
+                     string.Equals(
+                         issue.Code,
+                         ProcessStepOperationContractState.InvalidCombinationCode,
+                         StringComparison.Ordinal)))
+        {
+            AddIssue(
+                issues,
+                step,
+                "processes.lint.step-operation-contract-invalid",
+                StrictSeverity(mode),
+                issue.Message,
+                "Align allowed operations with the declared target scope, or split read-only validation from product mutation.");
         }
 
         if (!requiresExplicitOperationContract || hasTypedOperationContract || hasPartialTypedOperationContract)
@@ -152,7 +171,8 @@ public static class ProcessDefinitionLinter
     private static void AddWorkflowArtifactIssues(
         List<ProcessDefinitionLintIssue> issues,
         ProcessStepEditorModel step,
-        IReadOnlyDictionary<Guid, ProcessRoleEditorModel> rolesById)
+        IReadOnlyDictionary<Guid, ProcessRoleEditorModel> rolesById,
+        ProcessDefinitionLintMode mode)
     {
         var hasWorkflowExecutor = step.RoleAssignments.Any(assignment =>
             assignment.RoleRequirementId.HasValue &&
@@ -187,26 +207,88 @@ public static class ProcessDefinitionLinter
                 "Workflow-backed required artifacts need validation requirements so projected workflow output can be checked against the process contract.",
                 "Fill validation requirements with the expected output shape, producer, and acceptance criteria.");
         }
+
+        if (requiredArtifacts.Any(IsMissingWorkflowOutputMapping))
+        {
+            AddIssue(
+                issues,
+                step,
+                "processes.lint.workflow-artifact-output-mapping-missing",
+                StrictSeverity(mode),
+                "Workflow-backed required artifacts need explicit workflow output mapping fields so projection does not depend on output kind or title heuristics.",
+                "Set workflow output id, workflow output name, or workflow output kind on each required artifact expectation.");
+        }
+
+        var duplicateMappingKeys = requiredArtifacts
+            .Where(HasWorkflowOutputMapping)
+            .GroupBy(BuildWorkflowOutputMappingKey, StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .ToArray();
+        if (duplicateMappingKeys.Length > 0)
+        {
+            AddIssue(
+                issues,
+                step,
+                "processes.lint.workflow-artifact-output-mapping-ambiguous",
+                StrictSeverity(mode),
+                "Multiple required artifacts share the same workflow output mapping, so a workflow artifact could project to more than one process expectation.",
+                "Give each required artifact expectation a unique workflow output id/name/kind combination.");
+        }
     }
 
     private static void AddSubprocessArtifactIssues(
         List<ProcessDefinitionLintIssue> issues,
-        ProcessStepEditorModel step)
+        ProcessStepEditorModel step,
+        ProcessDefinitionLintMode mode)
     {
         if (step.StepKind != ProcessStepKind.Subprocess)
         {
             return;
         }
 
-        if (step.ArtifactExpectations.Any(item => item.IsRequired))
+        var requiredArtifacts = step.ArtifactExpectations
+            .Where(item => item.IsRequired)
+            .ToList();
+        if (requiredArtifacts.Count == 0)
+        {
+            return;
+        }
+
+        AddIssue(
+            issues,
+            step,
+            "processes.lint.subprocess-parent-artifact-mapping-review",
+            ProcessDefinitionLintSeverity.Warning,
+            "Subprocess parent required artifacts depend on child artifact projection. Verify child output contracts produce matching artifacts; source-less projection is not satisfying evidence.",
+            "Align child process artifact titles/kinds with the parent expectation and require source-run provenance.");
+
+        if (requiredArtifacts.Any(IsMissingSubprocessChildMapping))
         {
             AddIssue(
                 issues,
                 step,
-                "processes.lint.subprocess-parent-artifact-mapping-review",
-                ProcessDefinitionLintSeverity.Warning,
-                "Subprocess parent required artifacts depend on child artifact projection. Verify child output contracts produce matching artifacts; source-less projection is not satisfying evidence.",
-                "Align child process artifact titles/kinds with the parent expectation and require source-run provenance.");
+                "processes.lint.subprocess-child-artifact-mapping-missing",
+                StrictSeverity(mode),
+                "Subprocess parent required artifacts need explicit child artifact expectation mappings so projection does not depend on kind or title heuristics.",
+                "Set subprocess child artifact expectation id on each required parent artifact expectation.");
+        }
+
+        var duplicateChildExpectationIds = requiredArtifacts
+            .Where(HasSubprocessChildMapping)
+            .GroupBy(item => item.SubprocessChildArtifactExpectationId!.Value)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .ToArray();
+        if (duplicateChildExpectationIds.Length > 0)
+        {
+            AddIssue(
+                issues,
+                step,
+                "processes.lint.subprocess-child-artifact-mapping-ambiguous",
+                StrictSeverity(mode),
+                "Multiple parent required artifacts map to the same subprocess child artifact expectation, so child output projection is ambiguous.",
+                "Map each parent artifact expectation to a distinct child artifact expectation id.");
         }
     }
 
@@ -330,6 +412,45 @@ public static class ProcessDefinitionLinter
     {
         var hasAllowedOperations = step.AllowedOperations.Count > 0;
         return hasAllowedOperations != step.OperationTargetScope.HasValue;
+    }
+
+    private static bool IsMissingWorkflowOutputMapping(ProcessArtifactExpectationEditorModel artifact)
+    {
+        return !HasWorkflowOutputMapping(artifact);
+    }
+
+    private static bool HasWorkflowOutputMapping(ProcessArtifactExpectationEditorModel artifact)
+    {
+        return !string.IsNullOrWhiteSpace(artifact.WorkflowOutputId) ||
+            !string.IsNullOrWhiteSpace(artifact.WorkflowOutputName) ||
+            artifact.WorkflowOutputKind.HasValue;
+    }
+
+    private static string BuildWorkflowOutputMappingKey(ProcessArtifactExpectationEditorModel artifact)
+    {
+        return string.Join(
+            "|",
+            NormalizeMappingKey(artifact.WorkflowOutputId),
+            NormalizeMappingKey(artifact.WorkflowOutputName),
+            artifact.WorkflowOutputKind?.ToString() ?? string.Empty);
+    }
+
+    private static bool IsMissingSubprocessChildMapping(ProcessArtifactExpectationEditorModel artifact)
+    {
+        return !HasSubprocessChildMapping(artifact);
+    }
+
+    private static bool HasSubprocessChildMapping(ProcessArtifactExpectationEditorModel artifact)
+    {
+        return artifact.SubprocessChildArtifactExpectationId.HasValue &&
+            artifact.SubprocessChildArtifactExpectationId.Value != Guid.Empty;
+    }
+
+    private static string NormalizeMappingKey(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? string.Empty
+            : value.Trim();
     }
 
     private static bool HasProductMutationTargetSignal(string text)

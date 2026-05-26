@@ -1,3 +1,95 @@
-# SB09 source-assertions.txt
-
-Pending.
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:167:    public void Process_template_artifact_projection_SB09_INV_001_preserves_explicit_output_mappings()
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:179:                WorkflowOutputId = "qa-report-json",
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:180:                WorkflowOutputName = "QA report",
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:181:                WorkflowOutputKind = "Json",
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:182:                SubprocessChildArtifactExpectationId = childExpectationId
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:187:        Assert.Equal("qa-report-json", artifact.WorkflowOutputId);
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:188:        Assert.Equal("QA report", artifact.WorkflowOutputName);
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:189:        Assert.Equal(WorkflowArtifactKind.Json, artifact.WorkflowOutputKind);
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:190:        Assert.Equal(childExpectationId, artifact.SubprocessChildArtifactExpectationId);
+tests\CanDoItAll.Tests.Integration\ProcessDefinitionLinterTests.cs:439:    public void Analyze_SB09_INV_001_strict_rejects_required_workflow_artifact_without_explicit_output_mapping()
+tests\CanDoItAll.Tests.Integration\ProcessDefinitionLinterTests.cs:476:            issue.Code == "processes.lint.workflow-artifact-output-mapping-missing" &&
+tests\CanDoItAll.Tests.Integration\ProcessDefinitionLinterTests.cs:482:    public void Analyze_SB09_INV_001_accepts_required_workflow_artifact_with_explicit_output_mapping()
+tests\CanDoItAll.Tests.Integration\ProcessDefinitionLinterTests.cs:512:                    WorkflowOutputId = "finance-approval-packet",
+tests\CanDoItAll.Tests.Integration\ProcessDefinitionLinterTests.cs:513:                    WorkflowOutputKind = WorkflowArtifactKind.Json
+tests\CanDoItAll.Tests.Integration\ProcessDefinitionLinterTests.cs:520:        Assert.DoesNotContain(result.Issues, issue => issue.Code == "processes.lint.workflow-artifact-output-mapping-missing");
+tests\CanDoItAll.Tests.Integration\ProcessDefinitionLinterTests.cs:551:    public void Analyze_SB09_INV_001_strict_rejects_required_subprocess_artifact_without_child_mapping()
+tests\CanDoItAll.Tests.Integration\ProcessDefinitionLinterTests.cs:574:            issue.Code == "processes.lint.subprocess-child-artifact-mapping-missing" &&
+tests\CanDoItAll.Tests.Integration\ProcessDefinitionLinterTests.cs:580:    public void Analyze_SB09_INV_001_accepts_required_subprocess_artifact_with_child_mapping()
+tests\CanDoItAll.Tests.Integration\ProcessDefinitionLinterTests.cs:596:                    SubprocessChildArtifactExpectationId = Guid.NewGuid()
+tests\CanDoItAll.Tests.Integration\ProcessDefinitionLinterTests.cs:603:        Assert.DoesNotContain(result.Issues, issue => issue.Code == "processes.lint.subprocess-child-artifact-mapping-missing");
+src\CanDoItAll.Modules.Processes\Templates\ProcessTemplateEditorModelFactory.cs:117:            WorkflowOutputId = template.WorkflowOutputId.Trim(),
+src\CanDoItAll.Modules.Processes\Templates\ProcessTemplateEditorModelFactory.cs:118:            WorkflowOutputName = template.WorkflowOutputName.Trim(),
+src\CanDoItAll.Modules.Processes\Templates\ProcessTemplateEditorModelFactory.cs:119:            WorkflowOutputKind = EnumValueParser.ParseNullable<WorkflowArtifactKind>(template.WorkflowOutputKind),
+src\CanDoItAll.Modules.Processes\Templates\ProcessTemplateEditorModelFactory.cs:120:            SubprocessChildArtifactExpectationId = NormalizeGuid(template.SubprocessChildArtifactExpectationId)
+src\CanDoItAll.Modules.Processes\Components\ProcessArtifactExpectationEditor.razor:69:                <InputText @bind-Value="Model.WorkflowOutputId"
+src\CanDoItAll.Modules.Processes\Components\ProcessArtifactExpectationEditor.razor:73:                <InputText @bind-Value="Model.WorkflowOutputName"
+src\CanDoItAll.Modules.Processes\Components\ProcessArtifactExpectationEditor.razor:77:                <InputSelect @bind-Value="Model.WorkflowOutputKind"
+src\CanDoItAll.Modules.Processes\Components\ProcessArtifactExpectationEditor.razor:91:                <InputText @bind-Value="SubprocessChildArtifactExpectationIdText"
+src\CanDoItAll.Modules.Processes\Components\ProcessArtifactExpectationEditor.razor:94:            @if (!string.IsNullOrWhiteSpace(SubprocessChildArtifactExpectationIdError))
+src\CanDoItAll.Modules.Processes\Components\ProcessArtifactExpectationEditor.razor:99:                    <p class="text-sm text-red-700">@SubprocessChildArtifactExpectationIdError</p>
+src\CanDoItAll.Modules.Processes\Components\ProcessArtifactExpectationEditor.razor:125:    private string SubprocessChildArtifactExpectationIdError { get; set; } = string.Empty;
+src\CanDoItAll.Modules.Processes\Components\ProcessArtifactExpectationEditor.razor:127:    private string SubprocessChildArtifactExpectationIdText
+src\CanDoItAll.Modules.Processes\Components\ProcessArtifactExpectationEditor.razor:130:        set => UpdateSubprocessChildArtifactExpectationId(value);
+src\CanDoItAll.Modules.Processes\Components\ProcessArtifactExpectationEditor.razor:135:        if (string.IsNullOrWhiteSpace(SubprocessChildArtifactExpectationIdError))
+src\CanDoItAll.Modules.Processes\Components\ProcessArtifactExpectationEditor.razor:137:            subprocessChildArtifactExpectationIdText = Model.SubprocessChildArtifactExpectationId?.ToString("D") ?? string.Empty;
+src\CanDoItAll.Modules.Processes\Components\ProcessArtifactExpectationEditor.razor:141:    private void UpdateSubprocessChildArtifactExpectationId(string? value)
+src\CanDoItAll.Modules.Processes\Components\ProcessArtifactExpectationEditor.razor:147:            Model.SubprocessChildArtifactExpectationId = null;
+src\CanDoItAll.Modules.Processes\Components\ProcessArtifactExpectationEditor.razor:148:            SubprocessChildArtifactExpectationIdError = string.Empty;
+src\CanDoItAll.Modules.Processes\Components\ProcessArtifactExpectationEditor.razor:154:            Model.SubprocessChildArtifactExpectationId = parsed;
+src\CanDoItAll.Modules.Processes\Components\ProcessArtifactExpectationEditor.razor:155:            SubprocessChildArtifactExpectationIdError = string.Empty;
+src\CanDoItAll.Modules.Processes\Components\ProcessArtifactExpectationEditor.razor:159:        SubprocessChildArtifactExpectationIdError = "Enter a non-empty GUID from the child process artifact expectation.";
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\WorkflowSubprocessArtifactMapper.cs:110:            foreach (var outputId in ResolveLegacyWorkflowOutputIds(expectation))
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\WorkflowSubprocessArtifactMapper.cs:195:            if (expectation.SubprocessChildArtifactExpectationId is { } explicitChildExpectationId &&
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\WorkflowSubprocessArtifactMapper.cs:241:            .Select(NormalizeWorkflowOutputId)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\WorkflowSubprocessArtifactMapper.cs:247:    internal static string NormalizeWorkflowOutputId(string value)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\WorkflowSubprocessArtifactMapper.cs:301:            NormalizeWorkflowOutputId(expectation.WorkflowOutputId),
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\WorkflowSubprocessArtifactMapper.cs:302:            NormalizeWorkflowOutputId(expectation.WorkflowOutputName),
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\WorkflowSubprocessArtifactMapper.cs:303:            expectation.WorkflowOutputKind,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\WorkflowSubprocessArtifactMapper.cs:307:    private static IReadOnlyList<string> ResolveLegacyWorkflowOutputIds(ProcessArtifactExpectation expectation)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\WorkflowSubprocessArtifactMapper.cs:315:            .Select(match => NormalizeWorkflowOutputId(match.Groups["value"].Value))
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\WorkflowSubprocessArtifactMapper.cs:416:    string WorkflowOutputId,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\WorkflowSubprocessArtifactMapper.cs:417:    string WorkflowOutputName,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\WorkflowSubprocessArtifactMapper.cs:418:    WorkflowArtifactKind? WorkflowOutputKind,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\WorkflowSubprocessArtifactMapper.cs:422:        !string.IsNullOrWhiteSpace(WorkflowOutputId) ||
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\WorkflowSubprocessArtifactMapper.cs:423:        !string.IsNullOrWhiteSpace(WorkflowOutputName) ||
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\WorkflowSubprocessArtifactMapper.cs:424:        WorkflowOutputKind.HasValue;
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\WorkflowSubprocessArtifactMapper.cs:428:        WorkflowSubprocessArtifactMapper.NormalizeWorkflowOutputId(WorkflowOutputId),
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\WorkflowSubprocessArtifactMapper.cs:429:        WorkflowSubprocessArtifactMapper.NormalizeWorkflowOutputId(WorkflowOutputName),
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\WorkflowSubprocessArtifactMapper.cs:430:        WorkflowOutputKind?.ToString() ?? string.Empty);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\WorkflowSubprocessArtifactMapper.cs:439:        if (!string.IsNullOrWhiteSpace(WorkflowOutputId) &&
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\WorkflowSubprocessArtifactMapper.cs:440:            !WorkflowSubprocessArtifactMapper.ResolveWorkflowArtifactOutputIds(artifact).Contains(WorkflowSubprocessArtifactMapper.NormalizeWorkflowOutputId(WorkflowOutputId), StringComparer.OrdinalIgnoreCase))
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\WorkflowSubprocessArtifactMapper.cs:445:        if (!string.IsNullOrWhiteSpace(WorkflowOutputName) &&
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\WorkflowSubprocessArtifactMapper.cs:446:            !string.Equals(WorkflowSubprocessArtifactMapper.NormalizeWorkflowOutputId(artifact.Name), WorkflowSubprocessArtifactMapper.NormalizeWorkflowOutputId(WorkflowOutputName), StringComparison.OrdinalIgnoreCase))
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\WorkflowSubprocessArtifactMapper.cs:451:        return !WorkflowOutputKind.HasValue || artifact.Kind == WorkflowOutputKind.Value;
+src\CanDoItAll.Modules.Processes\Templates\ProcessTemplatePackModels.cs:394:    public string WorkflowOutputId { get; set; } = string.Empty;
+src\CanDoItAll.Modules.Processes\Templates\ProcessTemplatePackModels.cs:396:    public string WorkflowOutputName { get; set; } = string.Empty;
+src\CanDoItAll.Modules.Processes\Templates\ProcessTemplatePackModels.cs:398:    public string WorkflowOutputKind { get; set; } = string.Empty;
+src\CanDoItAll.Modules.Processes\Templates\ProcessTemplatePackModels.cs:400:    public Guid? SubprocessChildArtifactExpectationId { get; set; }
+src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionLinter.cs:216:                "processes.lint.workflow-artifact-output-mapping-missing",
+src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionLinter.cs:233:                "processes.lint.workflow-artifact-output-mapping-ambiguous",
+src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionLinter.cs:271:                "processes.lint.subprocess-child-artifact-mapping-missing",
+src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionLinter.cs:279:            .GroupBy(item => item.SubprocessChildArtifactExpectationId!.Value)
+src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionLinter.cs:288:                "processes.lint.subprocess-child-artifact-mapping-ambiguous",
+src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionLinter.cs:424:        return !string.IsNullOrWhiteSpace(artifact.WorkflowOutputId) ||
+src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionLinter.cs:425:            !string.IsNullOrWhiteSpace(artifact.WorkflowOutputName) ||
+src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionLinter.cs:426:            artifact.WorkflowOutputKind.HasValue;
+src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionLinter.cs:433:            NormalizeMappingKey(artifact.WorkflowOutputId),
+src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionLinter.cs:434:            NormalizeMappingKey(artifact.WorkflowOutputName),
+src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionLinter.cs:435:            artifact.WorkflowOutputKind?.ToString() ?? string.Empty);
+src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionLinter.cs:445:        return artifact.SubprocessChildArtifactExpectationId.HasValue &&
+src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionLinter.cs:446:            artifact.SubprocessChildArtifactExpectationId.Value != Guid.Empty;
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:194:            WorkflowOutputId = "remittance-output",
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:195:            WorkflowOutputKind = WorkflowArtifactKind.Json
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:222:            SubprocessChildArtifactExpectationId = childExpectationId
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:13361:    public void WorkflowArtifactProjectionMapping_SB09_INV_001_uses_explicit_output_id_when_same_kind_names_conflict()
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:13371:            WorkflowOutputId = "finance-output",
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:13372:            WorkflowOutputKind = WorkflowArtifactKind.Json
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:13380:            WorkflowOutputId = "compliance-output",
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:13381:            WorkflowOutputKind = WorkflowArtifactKind.Json
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:13416:    public void WorkflowArtifactProjectionMapping_SB09_INV_001_blocks_same_kind_heuristic_without_explicit_output_id()
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:13468:    public void WorkflowArtifactProjectionMapping_SB09_INV_001_warns_when_legacy_same_kind_fallback_maps()
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:13502:    public void SubprocessArtifactProjectionMapping_SB09_INV_001_uses_child_expectation_id_when_same_kind_titles_conflict()
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:13512:            SubprocessChildArtifactExpectationId = childFinanceExpectationId
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:13546:    public void SubprocessArtifactProjectionMapping_SB09_INV_001_blocks_same_kind_heuristic_without_child_mapping()
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:13588:    public void SubprocessArtifactProjectionMapping_SB09_INV_001_warns_when_legacy_same_kind_fallback_maps()

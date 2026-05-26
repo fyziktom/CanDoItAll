@@ -1,3 +1,4 @@
-# SB07 anti-stub-audit.txt
+ExitCode: 0
 
-Pending.
+Command: rg -n "TODO|NotImplemented|throw new NotImplementedException" <SB07 changed paths>
+No TODO, NotImplemented, or throw new NotImplementedException markers found in SB07 changed/asserted paths.

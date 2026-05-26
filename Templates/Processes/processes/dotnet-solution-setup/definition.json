@@ -156,7 +156,14 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/dotnet-solution-setup/steps/scaffold-contract.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 1,
@@ -223,7 +230,16 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/dotnet-solution-setup/steps/create-dotnet-project.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "MutateProductTarget",
+        "RunValidation",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetMutable"
     },
     {
       "Order": 2,
@@ -290,7 +306,16 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/dotnet-solution-setup/steps/add-test-project.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "MutateProductTarget",
+        "RunValidation",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetMutable"
     },
     {
       "Order": 3,
@@ -365,7 +390,16 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/dotnet-solution-setup/steps/validate-first-build.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "RunValidation",
+        "CaptureRuntimeProof",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 4,
@@ -432,7 +466,14 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/dotnet-solution-setup/steps/setup-handoff.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     }
   ]
 }

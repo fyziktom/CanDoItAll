@@ -173,6 +173,93 @@ public sealed class ProcessWorkspaceTests
     }
 
     [Fact]
+    public async Task Run_steps_dialog_SB15_INV_001_exposes_contract_branch_and_recovery_diagnostics_for_ui_preflight()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
+        var projectId = await CreateProjectAsync(projectsService, "Tetris UI preflight component project");
+        var saveResult = await processesService.SaveAsync(BuildTetrisPreflightDefinition(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+
+        var runResult = await processesService.StartRunAsync(
+            new ProcessRunStartRequest
+            {
+                ProcessDefinitionId = saveResult.Value,
+                ProjectId = projectId,
+                RunName = "Tetris UI preflight run",
+                OperatingMode = ProcessOperatingMode.AssistedExecution,
+                TriggerReason = "Component test Tetris UI preflight."
+            });
+
+        Assert.True(runResult.IsSuccess, string.Join(" | ", runResult.Errors.Select(error => error.Message)));
+        var intakeStep = Assert.Single(
+            await processesService.ListStepRunsAsync(runResult.Value),
+            step => step.Title == "Confirm Tetris request intake");
+        var startResult = await processesService.TransitionStepAsync(
+            new ProcessStepTransitionRequest
+            {
+                StepRunId = intakeStep.Id,
+                StepRunConcurrencyToken = intakeStep.StepRunConcurrencyToken,
+                TargetStatus = ProcessStepRunStatus.InProgress,
+                Reason = "Start intake before recording a recoverable preflight blockage.",
+                DecidedBy = "component-tests"
+            });
+
+        Assert.True(startResult.IsSuccess, string.Join(" | ", startResult.Errors.Select(error => error.Message)));
+        var inProgressStep = Assert.Single(
+            await processesService.ListStepRunsAsync(runResult.Value),
+            step => step.Id == intakeStep.Id);
+        var blockResult = await processesService.TransitionStepAsync(
+            new ProcessStepTransitionRequest
+            {
+                StepRunId = inProgressStep.Id,
+                StepRunConcurrencyToken = inProgressStep.StepRunConcurrencyToken,
+                TargetStatus = ProcessStepRunStatus.Blocked,
+                Reason = "Missing managed intake evidence for the Tetris request.",
+                DecidedBy = "component-tests",
+                BlockCause = ProcessStepBlockCause.OwnOutput
+            });
+
+        Assert.True(blockResult.IsSuccess, string.Join(" | ", blockResult.Errors.Select(error => error.Message)));
+        var blockedStep = Assert.Single(
+            await processesService.ListStepRunsAsync(runResult.Value),
+            step => step.Id == intakeStep.Id);
+
+        var host = harness.Context.RenderComponent<DialogHost>();
+        var cut = harness.Context.RenderComponent<ProcessWorkspace>(parameters => parameters
+            .Add(component => component.ProjectId, projectId));
+
+        cut.WaitForAssertion(() => Assert.Contains("Tetris UI preflight process", cut.Markup));
+        await ActivateRunsTabAsync(cut);
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find($"[data-testid='processes-run-history-item-{runResult.Value}']")));
+
+        cut.Find($"[data-testid='processes-run-history-item-{runResult.Value}']").Click();
+
+        host.WaitForAssertion(() =>
+        {
+            var intakeCard = host.Find($"[data-testid='processes-step-run-card'][data-step-run-id='{blockedStep.Id:D}']");
+            Assert.Equal(ProcessStepTargetScope.ManagedProcessArtifactsOnly.ToString(), intakeCard.GetAttribute("data-operation-target-scope"));
+            Assert.Contains(ProcessStepOperation.WriteManagedProcessArtifacts.ToString(), intakeCard.GetAttribute("data-allowed-operations"), StringComparison.Ordinal);
+            Assert.DoesNotContain(ProcessStepOperation.MutateProductTarget.ToString(), intakeCard.GetAttribute("data-allowed-operations"), StringComparison.Ordinal);
+            Assert.Contains("Confirm Tetris request intake", intakeCard.TextContent, StringComparison.Ordinal);
+            Assert.Contains("target: ManagedProcessArtifactsOnly", intakeCard.TextContent, StringComparison.Ordinal);
+            Assert.Contains(ProcessStepOperation.EscalateOrDecide.ToString(), intakeCard.TextContent, StringComparison.Ordinal);
+
+            var branchSelect = host.Find($"[data-testid='processes-branch-outcome-select'][data-step-run-id='{blockedStep.Id:D}']");
+            Assert.Contains("Tetris request ready", branchSelect.TextContent, StringComparison.Ordinal);
+
+            var recoveryDiagnostics = host.Find($"[data-testid='processes-step-recovery-diagnostics'][data-step-run-id='{blockedStep.Id:D}']");
+            Assert.Equal(ProcessStepBlockReasonCode.ArtifactContractUnsatisfied.ToString(), recoveryDiagnostics.GetAttribute("data-block-reason-code"));
+            Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly.ToString(), recoveryDiagnostics.GetAttribute("data-recovery-options"), StringComparison.Ordinal);
+        });
+    }
+
+    [Fact]
     public async Task Run_history_filters_by_state_name_and_tags()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -1401,6 +1488,140 @@ public sealed class ProcessWorkspaceTests
                             RoleRequirementId = managerRoleId,
                             ResponsibilityKind = ProcessResponsibilityKind.Responsible,
                             RebindPolicySummary = "Keep the workspace owner assigned."
+                        }
+                    ]
+                }
+            ]
+        };
+    }
+
+    private static ProcessDefinitionEditorModel BuildTetrisPreflightDefinition(Guid projectId, Guid managerRoleId)
+    {
+        var intakeStepId = Guid.NewGuid();
+        var implementationStepId = Guid.NewGuid();
+        var tetrisReadyOutcomeId = Guid.NewGuid();
+
+        return new ProcessDefinitionEditorModel
+        {
+            ProjectId = projectId,
+            ContractMode = ProcessDefinitionContractMode.Strict,
+            Name = "Tetris UI preflight process",
+            Summary = "Component-test process for proving runtime UI diagnostics before the browser Tetris run.",
+            ValueStatement = "Expose enough runtime state to inspect Tetris process execution.",
+            CustomerName = "Internal validation",
+            OwnerName = "Morgan Process Lead",
+            GovernancePolicySummary = "Keep Tetris specifics in process data, not runtime code.",
+            ChangeSummary = "Tetris UI preflight definition.",
+            ConstitutionRuleSummary = "The first step cannot mutate product files.",
+            OperatingModeSummary = "Assisted execution with visible recovery diagnostics.",
+            SimulationReadinessSummary = "Safe for component validation.",
+            Roles =
+            [
+                new ProcessRoleEditorModel
+                {
+                    Id = managerRoleId,
+                    Key = "tetris-process-owner",
+                    DisplayName = "Tetris process owner",
+                    Purpose = "Own branch selection and intake recovery decisions.",
+                    StaffingIntent = "Single validation owner.",
+                    PreferredProjectAssignmentRole = ProjectPartyAssignmentRole.Manager,
+                    PreferredExecutorKind = "person",
+                    SnapshotSummary = "Tetris process owner snapshot."
+                }
+            ],
+            Steps =
+            [
+                new ProcessStepEditorModel
+                {
+                    Id = intakeStepId,
+                    Key = "confirm-tetris-intake",
+                    Title = "Confirm Tetris request intake",
+                    StepKind = ProcessStepKind.Decision,
+                    DecisionRoleRequirementId = managerRoleId,
+                    InputContractSummary = "Tetris WASM PWA request and constraints.",
+                    OutputContractSummary = "Managed intake record and branch decision.",
+                    EvidenceContractSummary = "Tetris request readiness decision stays in managed process artifacts.",
+                    DecisionRightsSummary = "The process owner decides whether the request is ready for implementation.",
+                    ExceptionPolicySummary = "Block for artifact recovery when intake evidence is missing.",
+                    TargetLeadHours = 1,
+                    OperationTargetScope = ProcessStepTargetScope.ManagedProcessArtifactsOnly,
+                    AllowedOperations =
+                    [
+                        ProcessStepOperation.WriteManagedProcessArtifacts,
+                        ProcessStepOperation.EscalateOrDecide
+                    ],
+                    CanvasX = 140,
+                    CanvasY = 160,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = managerRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible,
+                            RebindPolicySummary = "Keep the Tetris process owner assigned."
+                        }
+                    ],
+                    BranchOutcomes =
+                    [
+                        new ProcessStepBranchOutcomeEditorModel
+                        {
+                            Id = tetrisReadyOutcomeId,
+                            Key = "tetris-ready",
+                            Title = "Tetris request ready",
+                            Description = "Move to implementation without granting intake product mutation."
+                        }
+                    ],
+                    ArtifactExpectations =
+                    [
+                        new ProcessArtifactExpectationEditorModel
+                        {
+                            Id = Guid.NewGuid(),
+                            ArtifactKind = ProcessArtifactKind.Evidence,
+                            Title = "Tetris intake decision record",
+                            IsRequired = true,
+                            ValidationRequirementSummary = "Record the managed intake decision before implementation."
+                        }
+                    ]
+                },
+                new ProcessStepEditorModel
+                {
+                    Id = implementationStepId,
+                    Key = "implement-tetris-pwa",
+                    Title = "Implement Tetris WASM PWA",
+                    StepKind = ProcessStepKind.Work,
+                    InputContractSummary = "Approved Tetris request intake.",
+                    OutputContractSummary = "Tetris WASM PWA implementation package.",
+                    EvidenceContractSummary = "Build, browser, screenshot, and project-structure proof.",
+                    DecisionRightsSummary = "Implementation agent owns product changes only after intake approval.",
+                    ExceptionPolicySummary = "Block when implementation proof is missing.",
+                    TargetLeadHours = 4,
+                    OperationTargetScope = ProcessStepTargetScope.ExternalProductTargetMutable,
+                    AllowedOperations =
+                    [
+                        ProcessStepOperation.MutateProductTarget,
+                        ProcessStepOperation.WriteManagedProcessArtifacts
+                    ],
+                    Dependencies = CreateDependencies((intakeStepId, tetrisReadyOutcomeId)),
+                    CanvasX = 420,
+                    CanvasY = 160,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = managerRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible,
+                            RebindPolicySummary = "Keep implementation owned by the selected process owner in this fixture."
+                        }
+                    ],
+                    ArtifactExpectations =
+                    [
+                        new ProcessArtifactExpectationEditorModel
+                        {
+                            Id = Guid.NewGuid(),
+                            ArtifactKind = ProcessArtifactKind.Deliverable,
+                            Title = "Tetris implementation package",
+                            IsRequired = true,
+                            ValidationRequirementSummary = "Implementation package must be linked to browser and screenshot proof."
                         }
                     ]
                 }

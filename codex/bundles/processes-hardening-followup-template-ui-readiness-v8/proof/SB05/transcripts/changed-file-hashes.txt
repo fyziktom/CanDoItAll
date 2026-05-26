@@ -1,3 +1,6 @@
-# SB05 changed-file-hashes.txt
-
-Pending.
+Command: Get-FileHash <SB05 changed/asserted paths>
+Invariant: SB05-INV-001
+82CCC86E722FA4DDD6133890ECF2BBDFC7861D3D59BB0514467EE71D246CD468  repo://Templates/Processes/seed-catalog/baseline-scenarios.json
+7FF55D3DEE43F2C23E7E9DF03AFEB37161FFE1A24627F6BF9E96A65A29F00566  repo://tests/CanDoItAll.Tests.Integration/ProcessTemplateGovernanceTests.cs
+37E343D7FBE57DBDB0C4DC863BF1FB232F6FE4C7ED5FEEB2479A3E185EBC0F5D  repo://Templates/Processes/processes/blazor-app-delivery/definition.json
+ExitCode: 0

@@ -1,3 +1,46 @@
+ExitCode: 1
+Invariant: SB16-INV-001
+
 # SB16 failing-first.txt
 
-Pending.
+SB16 used adversarial closure instead of introducing a synthetic failing test after all previous subbundles were implemented.
+
+## Adversarial issue found and fixed
+
+Command:
+
+```text
+dotnet test tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --no-restore --filter "FullyQualifiedName~ProcessStepEditorFormTests|FullyQualifiedName~Run_steps_dialog_SB15_INV_001"
+```
+
+Initial result during SB16:
+
+```text
+ProcessStepEditorFormTests.Render_SB08_INV_001_operation_contract_controls_update_model failed because removing WriteExternalArtifactDestination from a step whose target scope still implied external artifact writes caused normalization to silently add the operation back.
+```
+
+Fix:
+
+```text
+repo://src/CanDoItAll.Modules.Processes/Components/ProcessStepEditorForm.razor now calls ReconcileTargetScopeAfterOperationRemoval before normalization. If the removed operation is implied by the current target scope, the target scope is inferred from the remaining operations so the user action is preserved.
+```
+
+Passing confirmation is recorded in `bundle://proof/SB16/transcripts/passing.txt`.
+
+## Stale process lock found and resolved
+
+A broad integration class filter timed out after 304 seconds and left a stale `testhost` process locking test outputs. The stale PID was stopped, the solution build was rerun, and the focused red-team integration slice passed.
+
+## Metadata red-team issue found and fixed
+
+Command:
+
+```text
+rg -n "software process template pack|candoitall-software-process-template-pack" Templates\Processes -S
+```
+
+Initial result found the live pack manifest still used software-only metadata. `Templates/Processes/manifest.json` now uses `candoitall-process-template-pack` and `CanDoItAll process template pack (current architecture aligned)`.
+
+## PostgreSQL-only red-team result
+
+`rg -n "UseSqlite|Migrations\.Sqlite" src tests Templates -S` returned no matches. A broader `Sqlite|SQLite` audit found only the existing retired-provider quarantine and its tests, not a new runtime provider, migration path, or template dependency.

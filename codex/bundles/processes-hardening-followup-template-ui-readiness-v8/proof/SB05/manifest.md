@@ -2,7 +2,7 @@
 
 ## Status
 
-Pending.
+ Completed.
 
 ## Semantic invariant
 
@@ -15,6 +15,11 @@ See `proof/SB05/semantic-invariants.md`.
 ## Passing proof
 
 `proof/SB05/transcripts/passing.txt`
+
+## Production-path coverage
+
+- `repo://Templates/Processes/seed-catalog/baseline-scenarios.json` contains the reusable `baseline-blazor-wasm-pwa-tetris` scenario for the generic `blazor-app-delivery` process.
+- `repo://tests/CanDoItAll.Tests.Integration/ProcessTemplateGovernanceTests.cs` verifies the scenario through the production template catalog/projection path and reasserts the Blazor step mutation boundaries used by the scenario.
 
 ## Source assertions
 

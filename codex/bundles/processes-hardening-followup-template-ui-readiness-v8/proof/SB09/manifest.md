@@ -2,7 +2,14 @@
 
 ## Status
 
-Pending.
+Completed.
+
+## Production-path coverage
+
+- Strict process-definition lint now errors when workflow-backed required artifacts omit explicit workflow output mapping fields.
+- Strict process-definition lint now errors when subprocess parent required artifacts omit explicit child artifact expectation mappings.
+- Template artifact projection preserves `WorkflowOutputId`, `WorkflowOutputName`, `WorkflowOutputKind`, and `SubprocessChildArtifactExpectationId`.
+- The artifact expectation editor exposes the mapping fields already persisted by the definition model.
 
 ## Semantic invariant
 
