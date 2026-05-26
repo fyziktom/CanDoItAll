@@ -1,0 +1,21 @@
+Command: dotnet run --no-build --no-launch-profile --project src\CanDoItAll.Web\CanDoItAll.Web.csproj -- --urls http://127.0.0.1:57999
+ExitCode: 0
+
+Invariant IDs: SB02-INV-001, SB02-INV-002, SB02-INV-003
+
+Warmup readiness gate:
+- WARMUP_COUNTS|definitions|versions|steps|published=8|16|134|8
+
+Published process templates after final reload:
+- .NET feature/function implementation subprocess: Published, active published version present, version_count=2, published_versions=1
+- .NET implementation slice with atomic validation: Published, active published version present, version_count=2, published_versions=1
+- .NET solution setup subprocess: Published, active published version present, version_count=2, published_versions=1
+- AI-assisted change delivery with guarded delegation: Published, active published version present, version_count=2, published_versions=1
+- Architecture decision governance and ADR stewardship: Published, active published version present, version_count=2, published_versions=1
+- Branching code review and merge governance: Published, active published version present, version_count=2, published_versions=1
+- Multi-team software delivery and release governance: Published, active published version present, version_count=2, published_versions=1
+- Release readiness and deployment control: Published, active published version present, version_count=2, published_versions=1
+
+Host logs:
+- bundle://proof/SB02/transcripts/web-warmup-final2-stdout.txt
+- bundle://proof/SB02/transcripts/web-warmup-final2-stderr.txt

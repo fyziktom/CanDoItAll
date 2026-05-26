@@ -117,7 +117,9 @@ internal static class ProcessTemplateEditorModelFactory
             WorkflowOutputId = template.WorkflowOutputId.Trim(),
             WorkflowOutputName = template.WorkflowOutputName.Trim(),
             WorkflowOutputKind = EnumValueParser.ParseNullable<WorkflowArtifactKind>(template.WorkflowOutputKind),
-            SubprocessChildArtifactExpectationId = NormalizeGuid(template.SubprocessChildArtifactExpectationId)
+            SubprocessChildArtifactExpectationId = NormalizeGuid(template.SubprocessChildArtifactExpectationId),
+            SubprocessChildStepKey = template.SubprocessChildStepKey.Trim(),
+            SubprocessChildArtifactTitle = template.SubprocessChildArtifactTitle.Trim()
         };
     }
 

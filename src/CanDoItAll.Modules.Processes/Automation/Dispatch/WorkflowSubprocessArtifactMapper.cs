@@ -381,7 +381,8 @@ internal static class WorkflowSubprocessArtifactMapper
     {
         return expectation.TrustRequirement is
             ProcessArtifactTrustRequirement.None or
-            ProcessArtifactTrustRequirement.ReviewRequired;
+            ProcessArtifactTrustRequirement.ReviewRequired or
+            ProcessArtifactTrustRequirement.ApprovalRequired;
     }
 
     private static bool IsSubprocessSourceArtifactEligible(
@@ -405,6 +406,7 @@ internal static class WorkflowSubprocessArtifactMapper
                 ProcessArtifactTrustStatus.Approved or
                 ProcessArtifactTrustStatus.TrustedSource,
             ProcessArtifactTrustRequirement.HumanApproved => trustStatus == ProcessArtifactTrustStatus.Approved,
+            ProcessArtifactTrustRequirement.ApprovalRequired => trustStatus == ProcessArtifactTrustStatus.Approved,
             ProcessArtifactTrustRequirement.TrustedSource => trustStatus == ProcessArtifactTrustStatus.TrustedSource,
             _ => false
         };

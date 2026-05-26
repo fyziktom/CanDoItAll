@@ -192,7 +192,7 @@
       "OutputContractSummary": "Approved delegation contract for agent execution.",
       "EvidenceContractSummary": "Delegation contract and refusal boundary note.",
       "DecisionRightsSummary": "Solution architect and AI safety reviewer define safe task decomposition; model-risk approver reviews autonomy fit for sensitive domains.",
-      "ExceptionPolicySummary": "If the delegation boundary cannot be explained precisely, do not delegate.",
+      "ExceptionPolicySummary": "If the delegation boundary cannot be explained precisely, do not delegate. Artifact recovery blocks delegation when the required delegation contract or refusal-boundary evidence is missing or invalid before branch routing.",
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
@@ -574,7 +574,7 @@
       "OutputContractSummary": "Approved, held, or rejected merge recommendation.",
       "EvidenceContractSummary": "Safety/security approval record with residual risk statement.",
       "DecisionRightsSummary": "Security reviewer and model-risk approver may block merge; release approver owns final risk acceptance for guarded lanes.",
-      "ExceptionPolicySummary": "Do not merge when control impact is ambiguous.",
+      "ExceptionPolicySummary": "Do not merge when control impact is ambiguous. Artifact recovery blocks approval when required safety, security, or residual-risk evidence is missing or invalid before branch routing.",
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",

@@ -1,0 +1,17 @@
+Command: source assertion before SB01 edits; rg current templates for unsupported vocabulary and compare against pre-change UI/domain option sets.
+ExitCode: 1
+
+Invariant IDs: SB01-INV-001, SB01-INV-002, SB01-INV-003, SB01-INV-004
+
+Observed failure before implementation:
+- Templates/Processes/processes/dotnet-feature-function-implementation/definition.json used ResponsibilityKind `Accountable`.
+- Templates/Processes/processes/dotnet-feature-function-implementation/definition.json used ArtifactKind `DecisionRecord`.
+- Templates/Processes/processes/dotnet-feature-function-implementation/definition.json used TrustRequirement `ApprovalRequired`.
+- src/CanDoItAll.Modules.Processes/Components/ProcessRoleEditorForm.razor rendered only Human, AI agent, and Workflow executor choices.
+- src/CanDoItAll.Modules.Processes/Definitions/ProcessDefinitionEnums.cs did not define Accountable, DecisionRecord, or ApprovalRequired.
+
+Failing-first result:
+- SB01-INV-001 failed because template executor vocabulary was not represented as a stable option catalog.
+- SB01-INV-002 failed because `person-or-agent` could normalize to a narrower legacy AI-agent intent.
+- SB01-INV-003 failed because Accountable was missing from domain/UI responsibility options.
+- SB01-INV-004 failed because DecisionRecord and ApprovalRequired were missing from domain/UI artifact options.

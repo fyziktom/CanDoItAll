@@ -1,0 +1,129 @@
+Použití nastavení spuštění z src\CanDoItAll.Web\Properties\launchSettings.json...
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]
+      Resolved database profile Configured PostgreSQL override (e5df9ad6-33db-c697-4a06-78a74976013c) via ExplicitOverride. Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:candoitall_development:candoitall. RuntimeLocked=True.
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]
+      Initialized canonical runtime database profile e5df9ad6-33db-c697-4a06-78a74976013c (Configured PostgreSQL override). Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:candoitall_development:candoitall. Generation=0.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring runtime database profile e5df9ad6-33db-c697-4a06-78a74976013c (Configured PostgreSQL override) is ready. Provider=PostgreSql, Source=PostgresConnection.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Applying EF migrations for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring CRM/HR schema for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring Quartz automation schema for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring plugin runtime schema for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring scheduler planner schema for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring agent provider bootstrap for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Runtime database profile e5df9ad6-33db-c697-4a06-78a74976013c is ready.
+info: DBConnectionManager[0]
+      Registering datasource 'default' with db provider: 'Quartz.Impl.AdoJobStore.Common.DbProvider'
+info: Quartz.Impl.StdSchedulerFactory[0]
+      Using object serializer: Quartz.Simpl.JsonObjectSerializer, Quartz.Serialization.Json
+info: Quartz.Core.SchedulerSignalerImpl[0]
+      Initialized Scheduler Signaller of type: Quartz.Core.SchedulerSignalerImpl
+info: Quartz.Core.QuartzScheduler[0]
+      Quartz Scheduler created
+info: Quartz.Core.QuartzScheduler[0]
+      JobFactory set to: Quartz.Simpl.MicrosoftDependencyInjectionJobFactory
+info: Quartz.Impl.AdoJobStore.JobStoreTX[0]
+      Using thread monitor-based data access locking (synchronization).
+info: Quartz.Impl.AdoJobStore.JobStoreTX[0]
+      Successfully validated presence of 10 schema objects
+info: Quartz.Impl.AdoJobStore.JobStoreTX[0]
+      JobStoreTX initialized.
+info: Quartz.Impl.StdSchedulerFactory[0]
+      Quartz Scheduler 3.13.1.0 - 'CanDoItAll Automation' with instanceId 'CanDoItAll.Automation' initialized
+info: Quartz.Impl.StdSchedulerFactory[0]
+      Using thread pool 'Quartz.Simpl.DefaultThreadPool', size: 10
+info: Quartz.Impl.StdSchedulerFactory[0]
+      Using job store 'Quartz.Impl.AdoJobStore.JobStoreTX', supports persistence: True, clustered: False
+warn: Microsoft.EntityFrameworkCore.Model.Validation[20601]
+      The 'CognitiveMemoryCuratorConversationDepth' property 'ConversationDepth' on entity type 'CognitiveMemoryCuratorCapturedImprovementRecord' is configured with a database-generated default, but has no configured sentinel value. The database-generated default will always be used for inserts when the property has the value 'Short', since this is the CLR default for the 'CognitiveMemoryCuratorConversationDepth' type. Consider using a nullable type, using a nullable backing field, or setting the sentinel value for the property to ensure the database default is used when, and only when, appropriate. See https://aka.ms/efcore-docs-default-values for more information.
+warn: Microsoft.EntityFrameworkCore.Model.Validation[20601]
+      The 'CognitiveMemoryCuratorConversationDepth' property 'ConversationDepth' on entity type 'CognitiveMemoryCuratorSessionRecord' is configured with a database-generated default, but has no configured sentinel value. The database-generated default will always be used for inserts when the property has the value 'Short', since this is the CLR default for the 'CognitiveMemoryCuratorConversationDepth' type. Consider using a nullable type, using a nullable backing field, or setting the sentinel value for the property to ensure the database default is used when, and only when, appropriate. See https://aka.ms/efcore-docs-default-values for more information.
+warn: Microsoft.EntityFrameworkCore.Model.Validation[20601]
+      The 'CognitiveMemoryCuratorConversationDepth' property 'ConversationDepth' on entity type 'CognitiveMemoryCuratorTurnRecord' is configured with a database-generated default, but has no configured sentinel value. The database-generated default will always be used for inserts when the property has the value 'Short', since this is the CLR default for the 'CognitiveMemoryCuratorConversationDepth' type. Consider using a nullable type, using a nullable backing field, or setting the sentinel value for the property to ensure the database default is used when, and only when, appropriate. See https://aka.ms/efcore-docs-default-values for more information.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://localhost:5032
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\repositories\CanDoItAll\src\CanDoItAll.Web
+info: Quartz.Impl.AdoJobStore.JobStoreTX[0]
+      Freed 0 triggers from 'acquired' / 'blocked' state.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=create-definition Title=Created process definition IdempotencyKey=process-outbox:definition:d53bbc32bc0e440bb3547020c002aebd:version:6d613eae3275482b9f351ee0d268594f:create:activity.
+info: Quartz.Impl.AdoJobStore.JobStoreTX[0]
+      Recovering 0 jobs that were in-progress at the time of the last shut-down.
+info: Quartz.Impl.AdoJobStore.JobStoreTX[0]
+      Recovery complete.
+info: Quartz.Impl.AdoJobStore.JobStoreTX[0]
+      Removed 0 'complete' triggers.
+info: Quartz.Impl.AdoJobStore.JobStoreTX[0]
+      Removed 0 stale fired job entries.
+info: Quartz.Core.QuartzScheduler[0]
+      Scheduler CanDoItAll Automation_$_CanDoItAll.Automation started.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=create-definition Title=Created process definition.
+warn: CanDoItAll.Modules.Processes.ProcessCatalogWarmupService[0]
+      Failed to publish warmed process definition 'd53bbc32-bc0e-440b-b354-7020c002aebd' from template 'dotnet-solution-setup': Process definition lint blocked publish: processes.lint.artifact-recovery-policy-missing: Validate first build and test discovery. Run the lint dry-run and correct the strict issues before retrying.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=create-definition Title=Created process definition IdempotencyKey=process-outbox:definition:bd3d95614b4445c9b937a7940aefc367:version:2249ef56b0b640a480f6b57cd001a06c:create:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=create-definition Title=Created process definition.
+warn: CanDoItAll.Modules.Processes.ProcessCatalogWarmupService[0]
+      Failed to publish warmed process definition 'bd3d9561-4b44-45c9-b937-a7940aefc367' from template 'dotnet-feature-function-implementation': Process definition lint blocked publish: processes.lint.artifact-recovery-policy-missing: Decide implementation approach | processes.lint.artifact-recovery-policy-missing: Define focused validation contract. Run the lint dry-run and correct the strict issues before retrying.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=create-definition Title=Created process definition IdempotencyKey=process-outbox:definition:ae0a9dd514ec491a9226a2a99bc732c1:version:8488a043746444d2b210bf1adf5fa335:create:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=create-definition Title=Created process definition.
+warn: CanDoItAll.Modules.Processes.ProcessCatalogWarmupService[0]
+      Failed to publish warmed process definition 'ae0a9dd5-14ec-491a-9226-a2a99bc732c1' from template 'dotnet-development-slice': Process definition lint blocked publish: processes.lint.artifact-recovery-policy-missing: Check architecture and source-of-truth impact | processes.lint.subprocess-child-artifact-mapping-missing: Prepare solution skeleton subprocess | processes.lint.subprocess-child-artifact-mapping-missing: Implement bounded code change through subprocess. Run the lint dry-run and correct the strict issues before retrying.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=create-definition Title=Created process definition IdempotencyKey=process-outbox:definition:b4d9fb100e3f4c918b9aa79bde38dd13:version:d3b7ac588a304f82a301811ca22dc17f:create:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=create-definition Title=Created process definition.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=publish-definition Title=Published process definition IdempotencyKey=process-outbox:definition:b4d9fb100e3f4c918b9aa79bde38dd13:version:d3b7ac588a304f82a301811ca22dc17f:publish:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=publish-definition Title=Published process definition.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=create-definition Title=Created process definition IdempotencyKey=process-outbox:definition:864b15313dbd4619aeee7b4d0ce16b50:version:3f1ecf62be21445481867e75ec93efa5:create:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=create-definition Title=Created process definition.
+warn: CanDoItAll.Modules.Processes.ProcessCatalogWarmupService[0]
+      Failed to publish warmed process definition '864b1531-3dbd-4619-aeee-7b4d0ce16b50' from template 'ai-assisted-change-delivery': Process definition lint blocked publish: processes.lint.artifact-recovery-policy-missing: Define delegation boundary, allowed tools, and refusal conditions | processes.lint.artifact-recovery-policy-missing: Review safety, security, and residual risk. Run the lint dry-run and correct the strict issues before retrying.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=create-definition Title=Created process definition IdempotencyKey=process-outbox:definition:016270dea6bc4178bd632d6bd851082e:version:035dbeb67567440886ec97d5daaab0fb:create:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=create-definition Title=Created process definition.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=publish-definition Title=Published process definition IdempotencyKey=process-outbox:definition:016270dea6bc4178bd632d6bd851082e:version:035dbeb67567440886ec97d5daaab0fb:publish:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=publish-definition Title=Published process definition.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=create-definition Title=Created process definition IdempotencyKey=process-outbox:definition:c4d241c432a6473bbb1a9e8ccf4e3d02:version:28a1912132c24a9b8a5df993e8905d34:create:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=create-definition Title=Created process definition.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=publish-definition Title=Published process definition IdempotencyKey=process-outbox:definition:c4d241c432a6473bbb1a9e8ccf4e3d02:version:28a1912132c24a9b8a5df993e8905d34:publish:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=publish-definition Title=Published process definition.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=create-definition Title=Created process definition IdempotencyKey=process-outbox:definition:c6ac659a760942c7bd6f3762458ee718:version:34dfb49889ec4acba76e3f74305c7d3c:create:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=create-definition Title=Created process definition.
+info: CanDoItAll.Modules.Processes.ProcessCatalogWarmupService[0]
+      Completed process catalog warmup in 3036 ms. Imported 8 definitions, synchronized 0 definitions, and published 4 definitions.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=publish-definition Title=Published process definition IdempotencyKey=process-outbox:definition:c6ac659a760942c7bd6f3762458ee718:version:34dfb49889ec4acba76e3f74305c7d3c:publish:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=publish-definition Title=Published process definition.
+info: CanDoItAll.Modules.AgentFramework.AgentFrameworkCatalogWarmupService[0]
+      Completed AgentFramework catalog repair and projection warmup in 17135 ms.

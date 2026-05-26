@@ -201,7 +201,9 @@ internal static class ProcessDependencyCompatibilityBridge
                         WorkflowOutputId = artifact.WorkflowOutputId,
                         WorkflowOutputName = artifact.WorkflowOutputName,
                         WorkflowOutputKind = artifact.WorkflowOutputKind,
-                        SubprocessChildArtifactExpectationId = artifact.SubprocessChildArtifactExpectationId
+                        SubprocessChildArtifactExpectationId = artifact.SubprocessChildArtifactExpectationId,
+                        SubprocessChildStepKey = artifact.SubprocessChildStepKey,
+                        SubprocessChildArtifactTitle = artifact.SubprocessChildArtifactTitle
                     })
                 .ToList(),
             ArtifactInputs = step.ArtifactInputs
@@ -285,7 +287,9 @@ internal static class ProcessDependencyCompatibilityBridge
                         WorkflowOutputId = artifact.WorkflowOutputId,
                         WorkflowOutputName = artifact.WorkflowOutputName,
                         WorkflowOutputKind = artifact.WorkflowOutputKind,
-                        SubprocessChildArtifactExpectationId = artifact.SubprocessChildArtifactExpectationId
+                        SubprocessChildArtifactExpectationId = artifact.SubprocessChildArtifactExpectationId,
+                        SubprocessChildStepKey = artifact.SubprocessChildStepKey,
+                        SubprocessChildArtifactTitle = artifact.SubprocessChildArtifactTitle
                     })
                 .ToList(),
             ArtifactInputs = step.ArtifactInputs

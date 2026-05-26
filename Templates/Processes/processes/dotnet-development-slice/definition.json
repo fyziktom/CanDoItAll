@@ -203,7 +203,7 @@
       "OutputContractSummary": "Architecture decision record or explicit no-ADR rationale for this slice.",
       "EvidenceContractSummary": "Touched boundaries, source-of-truth decision, and risk notes.",
       "DecisionRightsSummary": "Slice architect can require split or escalation when ownership boundaries are unclear.",
-      "ExceptionPolicySummary": "Block on canonical model ambiguity, persistence ownership conflict, unsafe cross-layer leakage, or contradictory project-structure requirements. Do not block only because a greenfield product root does not exist yet.",
+      "ExceptionPolicySummary": "Block on canonical model ambiguity, persistence ownership conflict, unsafe cross-layer leakage, contradictory project-structure requirements, or artifact recovery when required architecture evidence is missing or invalid before branch routing. Do not block only because a greenfield product root does not exist yet.",
       "TargetLeadHours": 3,
       "DependsOnStepKey": "slice-intake",
       "DependsOnBranchOutcomeKey": "",
@@ -315,7 +315,9 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by implementation and validation steps.",
-          "ValidationRequirementSummary": "Must point to the observed child run or an explicit already-existing skeleton proof."
+          "ValidationRequirementSummary": "Must point to the observed child run or an explicit already-existing skeleton proof.",
+          "SubprocessChildStepKey": "setup-handoff",
+          "SubprocessChildArtifactTitle": "Setup handoff packet"
         }
       ],
       "ArtifactInputs": [
@@ -396,7 +398,9 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by tests, peer review, and parent QA.",
-          "ValidationRequirementSummary": "Must point to the observed child implementation run and include changed files, behavioral intent, touched-surface inventory, and proof summary."
+          "ValidationRequirementSummary": "Must point to the observed child implementation run and include changed files, behavioral intent, touched-surface inventory, and proof summary.",
+          "SubprocessChildStepKey": "code-change",
+          "SubprocessChildArtifactTitle": "Feature implementation change set"
         }
       ],
       "ArtifactInputs": [
@@ -440,7 +444,7 @@
       "OutputContractSummary": "Test and validation evidence tied to the implemented behavior.",
       "EvidenceContractSummary": "Test files, commands, exit codes, warnings, and browser proof when UI is touched.",
       "DecisionRightsSummary": "Validation owner can require focused rework when proof does not match acceptance criteria.",
-      "ExceptionPolicySummary": "Block on missing tests, failing build, or validation that is too broad to diagnose failures.",
+      "ExceptionPolicySummary": "Block on missing tests, failing build, validation that is too broad to diagnose failures, or artifact recovery when required validation evidence is missing or invalid before branch routing.",
       "TargetLeadHours": 6,
       "DependsOnStepKey": "implement-code-change",
       "DependsOnBranchOutcomeKey": "",

@@ -1668,18 +1668,21 @@ public sealed partial class ProcessesService
         {
             ProcessStepKind.Approval => [
                 ProcessResponsibilityKind.Approver,
+                ProcessResponsibilityKind.Accountable,
                 ProcessResponsibilityKind.Responsible,
                 ProcessResponsibilityKind.Reviewer,
                 ProcessResponsibilityKind.Backup
             ],
             ProcessStepKind.Review => [
                 ProcessResponsibilityKind.Responsible,
+                ProcessResponsibilityKind.Accountable,
                 ProcessResponsibilityKind.Reviewer,
                 ProcessResponsibilityKind.Approver,
                 ProcessResponsibilityKind.Backup
             ],
             _ => [
                 ProcessResponsibilityKind.Responsible,
+                ProcessResponsibilityKind.Accountable,
                 ProcessResponsibilityKind.Approver,
                 ProcessResponsibilityKind.Reviewer,
                 ProcessResponsibilityKind.Backup

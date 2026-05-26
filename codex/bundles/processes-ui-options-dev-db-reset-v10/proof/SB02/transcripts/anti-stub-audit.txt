@@ -1,0 +1,9 @@
+Command: rg -n "TODO|NotImplemented|throw new NotImplementedException|stub|fake|placeholder" Templates/Processes/processes src/CanDoItAll.Modules.Processes/Services/ProcessesService.Support.cs src/CanDoItAll.Modules.Processes/Templates
+ExitCode: 0
+
+Invariant IDs: SB02-INV-001, SB02-INV-002, SB02-INV-003
+
+Audit result:
+- The reload was executed against the development PostgreSQL database and application warmup service.
+- No simulated database reset, fake template reload, or placeholder process publication was used.
+- The final proof is based on psql counts and the web host warmup gate.

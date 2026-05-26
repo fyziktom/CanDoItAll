@@ -1,0 +1,36 @@
+Command: psql information_schema query for table_name like 'Processes\_%' and cross-domain foreign-key audit.
+ExitCode: 0
+
+Invariant IDs: SB02-INV-001, SB02-INV-002, SB02-INV-003
+
+Truncate target list reviewed before destructive execution:
+- Processes_ArtifactExpectations
+- Processes_ArtifactRecords
+- Processes_ConformanceObservations
+- Processes_DecisionRecords
+- Processes_DefinitionVersions
+- Processes_Definitions
+- Processes_ImprovementCandidates
+- Processes_JournalEntries
+- Processes_LaunchApprovals
+- Processes_LaunchCandidates
+- Processes_LaunchPlanRoles
+- Processes_LaunchPlans
+- Processes_LaunchProvisioningRequests
+- Processes_Outbox
+- Processes_RoleMessagingPolicies
+- Processes_RoleRequirements
+- Processes_RoleSkillRequirements
+- Processes_RunAssignments
+- Processes_Runs
+- Processes_StepArtifactInputs
+- Processes_StepBranchOutcomes
+- Processes_StepDefinitions
+- Processes_StepDependencies
+- Processes_StepRoleRequirements
+- Processes_StepRuns
+- Processes_WorkBriefs
+- Processes_WorkflowRunLinks
+
+Cross-domain foreign key audit:
+- No foreign keys were found where one side is Processes_% and the other side is not Processes_%.

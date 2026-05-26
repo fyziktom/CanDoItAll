@@ -332,7 +332,7 @@
       "OutputContractSummary": "Build and test command output that proves the new solution can be iterated safely.",
       "EvidenceContractSummary": "Command, exit code, warnings, and any accepted follow-up risks.",
       "DecisionRightsSummary": "Validation reviewer can reject the scaffold when build proof is missing or non-deterministic.",
-      "ExceptionPolicySummary": "Block on restore/build failure, missing test project, or unexplained command output.",
+      "ExceptionPolicySummary": "Block on restore/build failure, missing test project, unexplained command output, or artifact recovery when required build or test discovery evidence is missing or invalid before branch routing.",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "add-test-project",
       "DependsOnBranchOutcomeKey": "",

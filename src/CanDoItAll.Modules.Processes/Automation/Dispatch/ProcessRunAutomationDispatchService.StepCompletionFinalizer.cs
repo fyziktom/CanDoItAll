@@ -914,7 +914,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     {
         return candidate.ExpectedArtifacts.Any(expectation =>
             expectation.IsRequired &&
-            expectation.ArtifactKind == ProcessArtifactKind.Decision &&
+            expectation.ArtifactKind is ProcessArtifactKind.Decision or ProcessArtifactKind.DecisionRecord &&
             candidate.RecordedArtifactExpectationIds.Contains(expectation.Id));
     }
 
@@ -1021,7 +1021,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         return expectation.ArtifactKind switch
         {
-            ProcessArtifactKind.Decision => ProcessArtifactExpectationMode.Decision,
+            ProcessArtifactKind.Decision or ProcessArtifactKind.DecisionRecord => ProcessArtifactExpectationMode.Decision,
             ProcessArtifactKind.Deliverable => ProcessArtifactExpectationMode.Deliverable,
             ProcessArtifactKind.Evidence or ProcessArtifactKind.Transcript or ProcessArtifactKind.Dataset => ProcessArtifactExpectationMode.Evidence,
             _ => ProcessArtifactExpectationMode.Narrative

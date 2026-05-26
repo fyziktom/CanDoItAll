@@ -144,6 +144,8 @@ public sealed partial class ProcessesService
             foreach (var artifactExpectation in step.ArtifactExpectations) {
                 artifactExpectation.WorkflowOutputId = artifactExpectation.WorkflowOutputId.Trim();
                 artifactExpectation.WorkflowOutputName = artifactExpectation.WorkflowOutputName.Trim();
+                artifactExpectation.SubprocessChildStepKey = artifactExpectation.SubprocessChildStepKey.Trim();
+                artifactExpectation.SubprocessChildArtifactTitle = artifactExpectation.SubprocessChildArtifactTitle.Trim();
                 if (artifactExpectation.SubprocessChildArtifactExpectationId == Guid.Empty) {
                     artifactExpectation.SubprocessChildArtifactExpectationId = null;
                 }
@@ -245,6 +247,83 @@ public sealed partial class ProcessesService
             var resolvedDefinition = preferredMatches[0];
             step.SubprocessDefinitionId = resolvedDefinition.Id;
             step.SubprocessDefinitionSnapshotName = resolvedDefinition.Name;
+
+            var artifactReferenceResolution = await ResolveImportedSubprocessArtifactReferencesAsync(
+                dbContext,
+                step,
+                resolvedDefinition.Id,
+                resolvedDefinition.ActivePublishedVersionId,
+                cancellationToken);
+            if (artifactReferenceResolution.IsFailure)
+            {
+                return artifactReferenceResolution;
+            }
+        }
+
+        return Result.Success();
+    }
+
+    private static async Task<Result> ResolveImportedSubprocessArtifactReferencesAsync(
+        AppDbContext dbContext,
+        ProcessStepEditorModel step,
+        Guid subprocessDefinitionId,
+        Guid? activePublishedVersionId,
+        CancellationToken cancellationToken)
+    {
+        var unresolvedArtifactReferences = step.ArtifactExpectations
+            .Where(artifact =>
+                !artifact.SubprocessChildArtifactExpectationId.HasValue &&
+                !string.IsNullOrWhiteSpace(artifact.SubprocessChildStepKey) &&
+                !string.IsNullOrWhiteSpace(artifact.SubprocessChildArtifactTitle))
+            .ToList();
+        if (unresolvedArtifactReferences.Count == 0)
+        {
+            return Result.Success();
+        }
+
+        if (!activePublishedVersionId.HasValue || activePublishedVersionId.Value == Guid.Empty)
+        {
+            return Result.Failure(Error.Validation(
+                $"Subprocess step '{step.Title}' references child artifact mappings, but subprocess definition '{step.SubprocessDefinitionSnapshotName}' has no active published version.",
+                "processes.subprocess-child-artifact-target-unpublished"));
+        }
+
+        var childArtifactTargets = await (
+                from childStep in dbContext.Set<ProcessStepDefinition>().AsNoTracking()
+                join childArtifact in dbContext.Set<ProcessArtifactExpectation>().AsNoTracking()
+                    on childStep.Id equals childArtifact.StepDefinitionId
+                where childStep.ProcessDefinitionVersionId == activePublishedVersionId.Value
+                select new
+                {
+                    StepKey = childStep.Key,
+                    StepTitle = childStep.Title,
+                    ArtifactId = childArtifact.Id,
+                    ArtifactTitle = childArtifact.Title
+                })
+            .ToListAsync(cancellationToken);
+
+        foreach (var artifact in unresolvedArtifactReferences)
+        {
+            var matches = childArtifactTargets
+                .Where(target =>
+                    string.Equals(target.StepKey, artifact.SubprocessChildStepKey, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(target.ArtifactTitle, artifact.SubprocessChildArtifactTitle, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            if (matches.Count == 0)
+            {
+                return Result.Failure(Error.Validation(
+                    $"Subprocess step '{step.Title}' maps parent artifact '{artifact.Title}' to child step '{artifact.SubprocessChildStepKey}' artifact '{artifact.SubprocessChildArtifactTitle}', but no matching child artifact expectation was found in subprocess definition '{step.SubprocessDefinitionSnapshotName}' ({subprocessDefinitionId:D}).",
+                    "processes.subprocess-child-artifact-target-not-found"));
+            }
+
+            if (matches.Count > 1)
+            {
+                return Result.Failure(Error.Validation(
+                    $"Subprocess step '{step.Title}' maps parent artifact '{artifact.Title}' to child step '{artifact.SubprocessChildStepKey}' artifact '{artifact.SubprocessChildArtifactTitle}', but multiple child artifact expectations matched in subprocess definition '{step.SubprocessDefinitionSnapshotName}' ({subprocessDefinitionId:D}).",
+                    "processes.subprocess-child-artifact-target-ambiguous"));
+            }
+
+            artifact.SubprocessChildArtifactExpectationId = matches[0].ArtifactId;
         }
 
         return Result.Success();

@@ -1,0 +1,17 @@
+Command: dotnet run --no-build --no-launch-profile --project src\CanDoItAll.Web\CanDoItAll.Web.csproj -- --urls http://127.0.0.1:57999 && readiness gate expected published=8
+ExitCode: 1
+
+Invariant IDs: SB02-INV-001, SB02-INV-002, SB02-INV-003
+
+Observed failing-first readiness state:
+- Initial warmup imported 8 process definitions but published only 4 because strict lint blocked four template publishes.
+- After the first template repair, warmup imported 8 process definitions but published only 7 because one remaining strict lint issue blocked publish.
+- The readiness gate treated anything below published=8 as failed.
+
+Why this is adversarial:
+- A shallow reload could claim success after import or after partial publish.
+- The accepted behavior requires all eight default process templates to be published and active after the process-only reset.
+
+Supporting logs:
+- bundle://proof/SB02/transcripts/web-warmup-stdout.txt
+- bundle://proof/SB02/transcripts/web-warmup-final-stdout.txt

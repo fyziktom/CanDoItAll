@@ -556,7 +556,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return false;
         }
 
-        if (candidate.ExpectedArtifacts.Any(item => item.ArtifactKind is ProcessArtifactKind.Decision or ProcessArtifactKind.Brief) &&
+        if (candidate.ExpectedArtifacts.Any(item => item.ArtifactKind is ProcessArtifactKind.Decision or ProcessArtifactKind.DecisionRecord or ProcessArtifactKind.Brief) &&
             ContainsAnyToken(
                 stepText,
                 "architecture",

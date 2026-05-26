@@ -50,6 +50,7 @@ public static class ProcessCanvasCatalog
                 ProcessResponsibilityKind.Reviewer => "role:reviewer",
                 ProcessResponsibilityKind.Approver => "role:approver",
                 ProcessResponsibilityKind.Backup => "role:backup",
+                ProcessResponsibilityKind.Accountable => "role:accountable",
                 _ => throw new ArgumentOutOfRangeException(nameof(responsibilityKind), responsibilityKind, null)
             };
         }
@@ -62,6 +63,7 @@ public static class ProcessCanvasCatalog
                 ProcessResponsibilityKind.Reviewer => "Reviewer",
                 ProcessResponsibilityKind.Approver => "Approver",
                 ProcessResponsibilityKind.Backup => "Backup",
+                ProcessResponsibilityKind.Accountable => "Accountable",
                 _ => throw new ArgumentOutOfRangeException(nameof(responsibilityKind), responsibilityKind, null)
             };
         }
@@ -74,6 +76,7 @@ public static class ProcessCanvasCatalog
                 ProcessResponsibilityKind.Reviewer => "step:reviewer",
                 ProcessResponsibilityKind.Approver => "step:approver",
                 ProcessResponsibilityKind.Backup => "step:backup",
+                ProcessResponsibilityKind.Accountable => "step:accountable",
                 _ => throw new ArgumentOutOfRangeException(nameof(responsibilityKind), responsibilityKind, null)
             };
         }
@@ -180,6 +183,7 @@ public static class ProcessCanvasCatalog
                 ProcessResponsibilityKind.Reviewer => "run-step:reviewer",
                 ProcessResponsibilityKind.Approver => "run-step:approver",
                 ProcessResponsibilityKind.Backup => "run-step:backup",
+                ProcessResponsibilityKind.Accountable => "run-step:accountable",
                 _ => throw new ArgumentOutOfRangeException(nameof(responsibilityKind), responsibilityKind, null)
             };
         }
@@ -198,6 +202,7 @@ public static class ProcessCanvasCatalog
         public const string DecisionAuthority = "process-decision-authority";
         public const string Messaging = "process-messaging";
         public const string ResponsibilityResponsible = "process-responsible";
+        public const string ResponsibilityAccountable = "process-accountable";
         public const string ResponsibilityReviewer = "process-reviewer";
         public const string ResponsibilityApprover = "process-approver";
         public const string ResponsibilityBackup = "process-backup";
@@ -296,6 +301,7 @@ public static class ProcessCanvasCatalog
     public static IReadOnlyList<ProcessResponsibilityKind> OrderedResponsibilities { get; } =
     [
         ProcessResponsibilityKind.Responsible,
+        ProcessResponsibilityKind.Accountable,
         ProcessResponsibilityKind.Reviewer,
         ProcessResponsibilityKind.Approver,
         ProcessResponsibilityKind.Backup
@@ -462,6 +468,8 @@ public static class ProcessCanvasCatalog
         {
             ProcessResponsibilityKind.Responsible
                 => new ConnectionVisual(ConnectionCategories.ResponsibilityResponsible, "#0ea5e9"),
+            ProcessResponsibilityKind.Accountable
+                => new ConnectionVisual(ConnectionCategories.ResponsibilityAccountable, "#14b8a6"),
             ProcessResponsibilityKind.Reviewer
                 => new ConnectionVisual(ConnectionCategories.ResponsibilityReviewer, "#6366f1"),
             ProcessResponsibilityKind.Approver

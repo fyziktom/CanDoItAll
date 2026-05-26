@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Processes;
+using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration;
@@ -275,7 +276,9 @@ public sealed class ProcessTemplateGovernanceTests
                 WorkflowOutputId = "qa-report-json",
                 WorkflowOutputName = "QA report",
                 WorkflowOutputKind = "Json",
-                SubprocessChildArtifactExpectationId = childExpectationId
+                SubprocessChildArtifactExpectationId = childExpectationId,
+                SubprocessChildStepKey = "child-qa",
+                SubprocessChildArtifactTitle = "Child QA report"
             },
             resource: null,
             id: Guid.NewGuid());
@@ -284,6 +287,66 @@ public sealed class ProcessTemplateGovernanceTests
         Assert.Equal("QA report", artifact.WorkflowOutputName);
         Assert.Equal(WorkflowArtifactKind.Json, artifact.WorkflowOutputKind);
         Assert.Equal(childExpectationId, artifact.SubprocessChildArtifactExpectationId);
+        Assert.Equal("child-qa", artifact.SubprocessChildStepKey);
+        Assert.Equal("Child QA report", artifact.SubprocessChildArtifactTitle);
+    }
+
+    [Fact]
+    public async Task Process_template_vocabulary_SB01_INV_001_maps_to_supported_ui_and_domain_options()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var packLoader = scope.ServiceProvider.GetRequiredService<ProcessTemplatePackLoader>();
+
+        var pack = packLoader.Load();
+        var executorOptionValues = ProcessRoleExecutorKindOptions.Options
+            .Select(item => item.Value)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var unsupportedExecutorKinds = EnumerateRoleExecutorKinds(pack)
+            .Where(value => !executorOptionValues.Contains(ProcessRoleExecutorKindOptions.NormalizeForSelection(value)))
+            .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var unsupportedResponsibilityKinds = EnumerateResponsibilityKinds(pack)
+            .Where(value => EnumValueParser.ParseNullable<ProcessResponsibilityKind>(value) is null)
+            .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var unsupportedArtifactKinds = EnumerateArtifactKinds(pack)
+            .Where(value => EnumValueParser.ParseNullable<ProcessArtifactKind>(value) is null)
+            .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var unsupportedTrustRequirements = EnumerateTrustRequirements(pack)
+            .Where(value => EnumValueParser.ParseNullable<ProcessArtifactTrustRequirement>(value) is null)
+            .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        Assert.Empty(unsupportedExecutorKinds);
+        Assert.Empty(unsupportedResponsibilityKinds);
+        Assert.Empty(unsupportedArtifactKinds);
+        Assert.Empty(unsupportedTrustRequirements);
+        Assert.Equal(ProcessResponsibilityKind.Accountable, EnumValueParser.ParseNullable<ProcessResponsibilityKind>("Accountable"));
+        Assert.Equal(ProcessArtifactKind.DecisionRecord, EnumValueParser.ParseNullable<ProcessArtifactKind>("DecisionRecord"));
+        Assert.Equal(ProcessArtifactTrustRequirement.ApprovalRequired, EnumValueParser.ParseNullable<ProcessArtifactTrustRequirement>("ApprovalRequired"));
+    }
+
+    [Fact]
+    public async Task Dotnet_feature_template_SB01_INV_002_preserves_accountable_decision_record_and_approval_required()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectionService = scope.ServiceProvider.GetRequiredService<ProcessTemplateProjectionService>();
+
+        var definition = projectionService.GetProjectedEnvelope("dotnet-feature-function-implementation").Definition;
+        var validationStep = GetStep(definition, "targeted-validation");
+
+        Assert.Contains(
+            validationStep.RoleAssignments,
+            assignment => assignment.ResponsibilityKind == ProcessResponsibilityKind.Accountable);
+        Assert.Contains(
+            definition.Steps.SelectMany(step => step.ArtifactExpectations),
+            artifact => artifact.ArtifactKind == ProcessArtifactKind.DecisionRecord);
+        Assert.Contains(
+            definition.Steps.SelectMany(step => step.ArtifactExpectations),
+            artifact => artifact.TrustRequirement == ProcessArtifactTrustRequirement.ApprovalRequired);
     }
 
     private static bool AllowsProductMutation(ProcessStepImportExportModel step)
@@ -357,5 +420,68 @@ public sealed class ProcessTemplateGovernanceTests
         {
             Assert.DoesNotContain(term, value, StringComparison.OrdinalIgnoreCase);
         }
+    }
+
+    private static IEnumerable<string> EnumerateRoleExecutorKinds(ProcessTemplatePack pack)
+    {
+        foreach (var roleTemplate in pack.RoleTemplates)
+        {
+            yield return roleTemplate.PreferredExecutorKind;
+        }
+
+        foreach (var process in pack.Processes.Values)
+        {
+            foreach (var usage in process.RoleUsages)
+            {
+                yield return usage.PreferredExecutorKind;
+            }
+
+            foreach (var role in process.LocalRoles)
+            {
+                yield return role.PreferredExecutorKind;
+            }
+        }
+
+        foreach (var role in pack.SharedRoles.Values)
+        {
+            yield return role.PreferredExecutorKind;
+        }
+    }
+
+    private static IEnumerable<string> EnumerateResponsibilityKinds(ProcessTemplatePack pack)
+    {
+        return pack.Processes.Values
+            .SelectMany(process => process.Steps)
+            .SelectMany(step => step.RoleAssignments)
+            .Select(assignment => assignment.ResponsibilityKind)
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static IEnumerable<string> EnumerateArtifactKinds(ProcessTemplatePack pack)
+    {
+        return EnumerateTemplateArtifacts(pack)
+            .Select(artifact => artifact.ArtifactKind)
+            .Concat(pack.SharedArtifacts.Values.Select(artifact => artifact.ArtifactKind))
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static IEnumerable<string> EnumerateTrustRequirements(ProcessTemplatePack pack)
+    {
+        return EnumerateTemplateArtifacts(pack)
+            .Select(artifact => artifact.TrustRequirement)
+            .Concat(pack.SharedArtifacts.Values.Select(artifact => artifact.DefaultTrustRequirement))
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static IEnumerable<ProcessTemplateArtifactExpectation> EnumerateTemplateArtifacts(ProcessTemplatePack pack)
+    {
+        return pack.StepTemplates
+            .SelectMany(template => template.Template.ArtifactExpectations)
+            .Concat(pack.Processes.Values
+                .SelectMany(process => process.Steps)
+                .SelectMany(step => step.ArtifactExpectations));
     }
 }

@@ -1,0 +1,39 @@
+Command: psql after-count query for process history tables, definition tables, and activity categories.
+ExitCode: 0
+
+Invariant IDs: SB02-INV-001, SB02-INV-002, SB02-INV-003
+
+Process runtime/history counts after cleanup:
+- Processes_Runs: 0
+- Processes_StepRuns: 0
+- Processes_RunAssignments: 0
+- Processes_ArtifactRecords: 0
+- Processes_DecisionRecords: 0
+- Processes_JournalEntries: 0
+- Processes_ConformanceObservations: 0
+- Processes_ImprovementCandidates: 0
+- Processes_LaunchCandidates: 0
+- Processes_LaunchPlans: 0
+- Processes_LaunchApprovals: 0
+- Processes_LaunchProvisioningRequests: 0
+- Processes_WorkBriefs: 0
+- Processes_WorkflowRunLinks: 0
+- Processes_Outbox: 0
+
+Reloaded definition counts:
+- Processes_Definitions: 8
+- Processes_DefinitionVersions: 16
+- Processes_RoleRequirements: 94
+- Processes_StepDefinitions: 134
+- Processes_ArtifactExpectations: 172
+- Processes_StepDependencies: 200
+- Processes_StepBranchOutcomes: 90
+- Processes_StepRoleRequirements: 266
+- Processes_StepArtifactInputs: 180
+
+Activity category counts after cleanup:
+- CRM / HR: 8
+- Collaboration: 1
+- projects: 3
+- providers: 1
+- processes: 0

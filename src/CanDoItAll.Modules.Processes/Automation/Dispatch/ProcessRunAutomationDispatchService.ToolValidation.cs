@@ -223,7 +223,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                !HasSuccessfulConcreteProductMutation(candidate, detail) &&
                candidate.ExpectedArtifacts
                    .Where(expectedArtifact => expectedArtifact.IsRequired &&
-                                              expectedArtifact.ArtifactKind != ProcessArtifactKind.Decision)
+                                              expectedArtifact.ArtifactKind is not ProcessArtifactKind.Decision and not ProcessArtifactKind.DecisionRecord)
                    .All(expectedArtifact => HasRecordedOrExecutionArtifactForExpectedArtifact(
                        candidate,
                        detail,

@@ -399,6 +399,7 @@ public sealed partial class ProcessesService {
                 ProcessArtifactTrustStatus.Approved or
                 ProcessArtifactTrustStatus.TrustedSource,
             ProcessArtifactTrustRequirement.HumanApproved => trustStatus == ProcessArtifactTrustStatus.Approved,
+            ProcessArtifactTrustRequirement.ApprovalRequired => trustStatus == ProcessArtifactTrustStatus.Approved,
             ProcessArtifactTrustRequirement.TrustedSource => trustStatus == ProcessArtifactTrustStatus.TrustedSource,
             _ => false
         };

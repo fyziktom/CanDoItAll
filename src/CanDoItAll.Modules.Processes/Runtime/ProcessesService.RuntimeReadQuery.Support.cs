@@ -27,6 +27,7 @@ public sealed partial class ProcessRuntimeReadQueryService
         var orderedKinds = new[]
         {
             ProcessResponsibilityKind.Responsible,
+            ProcessResponsibilityKind.Accountable,
             ProcessResponsibilityKind.Reviewer,
             ProcessResponsibilityKind.Approver,
             ProcessResponsibilityKind.Backup
@@ -436,6 +437,7 @@ public sealed partial class ProcessRuntimeReadQueryService
                 ProcessArtifactTrustStatus.Approved or
                 ProcessArtifactTrustStatus.TrustedSource,
             ProcessArtifactTrustRequirement.HumanApproved => trustStatus == ProcessArtifactTrustStatus.Approved,
+            ProcessArtifactTrustRequirement.ApprovalRequired => trustStatus == ProcessArtifactTrustStatus.Approved,
             ProcessArtifactTrustRequirement.TrustedSource => trustStatus == ProcessArtifactTrustStatus.TrustedSource,
             _ => false
         };

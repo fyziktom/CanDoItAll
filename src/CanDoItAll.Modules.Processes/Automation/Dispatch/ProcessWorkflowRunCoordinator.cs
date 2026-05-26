@@ -252,10 +252,11 @@ internal sealed class ProcessWorkflowRunCoordinator(
         return responsibilityKind switch
         {
             ProcessResponsibilityKind.Responsible => 0,
-            ProcessResponsibilityKind.Approver => 1,
-            ProcessResponsibilityKind.Reviewer => 2,
-            ProcessResponsibilityKind.Backup => 3,
-            _ => 4
+            ProcessResponsibilityKind.Accountable => 1,
+            ProcessResponsibilityKind.Approver => 2,
+            ProcessResponsibilityKind.Reviewer => 3,
+            ProcessResponsibilityKind.Backup => 4,
+            _ => 5
         };
     }
 

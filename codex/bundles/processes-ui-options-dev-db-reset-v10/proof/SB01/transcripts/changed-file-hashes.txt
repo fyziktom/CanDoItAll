@@ -1,0 +1,30 @@
+Command: git diff --name-only | Get-FileHash -Algorithm SHA256
+ExitCode: 0
+
+Invariant IDs: SB01-INV-001, SB01-INV-002, SB01-INV-003, SB01-INV-004
+
+Changed file SHA-256 hashes:
+- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ArtifactValidation.cs cf9c840af95d33a208ca9448aec3325fe092084e433f2f84886f8a8aa87fbb2c
+- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs 3944e866de0739494175b364dd5a91680a14fd2f5be5e145c30f5c3cd562f655
+- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ExecutionMetadata.cs 45ff8c5ab089a78cd6b44a14209b560a3eda45a64926830f823d49c0e233d355
+- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs 3879c0a4bf4988022c611970f2dc34801f381bf004ebecad1e802cbe10bba430
+- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ToolValidation.cs a0899d1c990aa4a6fbb8074609dbc8b881eeda26ed7fcf04744954c67d11e24f
+- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessWorkflowRunCoordinator.cs a8a2806446a384ed0415c7886581fd3f827b4f0a5c745f87a3dbd3f149e8a475
+- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/WorkflowSubprocessArtifactMapper.cs 8626ad6b6c5e1c0415ab0a6fef3ab5eb4f5b134cc7702d864d3d2d8da2ace1b3
+- repo://src/CanDoItAll.Modules.Processes/Canvas/ProcessCanvasCatalog.cs e490cb5a53e227a28e6bc6233d8e69e4b5efddbac3b34a0e91e7312227e10954
+- repo://src/CanDoItAll.Modules.Processes/Components/ProcessRoleEditorForm.razor 25ae85ba70f98d86232a7a23c96e2ded8bdee87028e07ee2beb8faab0ec4721f
+- repo://src/CanDoItAll.Modules.Processes/Definitions/ProcessDefinitionEditorModels.cs b606d26abf5f037e800f2656da6266237f3a07159fe6a1119582849242b6ba5f
+- repo://src/CanDoItAll.Modules.Processes/Definitions/ProcessDefinitionEnums.cs 1de16a743d7884c5076fb986fcd045e3ea4199b3188a9a32aeb975ad8d8cee0e
+- repo://src/CanDoItAll.Modules.Processes/Definitions/ProcessDefinitionLinter.cs b1b19cd89ac0640701fdc2f754aa07eeb1a6ddc71d4d8c76f373e64fc737ad47
+- repo://src/CanDoItAll.Modules.Processes/Runtime/Dependencies/ProcessDependencyCompatibilityBridge.cs e145f2500bf0a99277c7c3cbd56a6cab02a4950a811d3116967b98b812804992
+- repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessRuntimeInvariantAuditor.cs ab8d19ce8b81ed966fbe67923be7341b2d4a5354639ce61a1d7fea81fd1f796d
+- repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.Rerun.cs c3a34294af7b02780e31245b6ec1714bdd1ca9f1baa8aa944cf4f8be583c27a8
+- repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.RunStart.cs 8a508d293c9a9ea3b9085d37abdd23532e8f9c5c919bbd1efc618431be5ee731
+- repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.RuntimeReadQuery.Support.cs 17f2a030e1d846722ef7ad71b90733010ea787fcd6cb1898ce2e5bf308b296c8
+- repo://src/CanDoItAll.Modules.Processes/Services/ProcessesService.Support.cs aebfa7e6fd761f8ce4670b2f0f3c6bcc53b5d3b11b532c6e2dc37b10989d5247
+- repo://src/CanDoItAll.Modules.Processes/Templates/ProcessTemplateEditorModelFactory.cs 7c0758eb9463ad4d24ae8c46ef871e6ce7c54a754ba2cbaf234bb98ac4729e78
+- repo://src/CanDoItAll.Modules.Processes/Templates/ProcessTemplatePackModels.cs 7a3fda987787a0fe7ccc3030d833aeb6f0fe1e8bbf2975d5d039ca7e84e7de76
+- repo://tests/CanDoItAll.Tests.Components/ProcessRoleEditorFormTests.cs 343f350311fe70acefa8ecf4e250d6436e206d2d8d575707e2898c333df22758
+- repo://tests/CanDoItAll.Tests.Components/ProcessStepRoleAssignmentEditorTests.cs b472ca4c4fda381b3b4241ccc04a3fe43fd7e2a1e12a99f9c457fb1d7ca774f3
+- repo://tests/CanDoItAll.Tests.Components/ProcessArtifactExpectationEditorTests.cs 9f2dffe541a41d68b1a75fca17fef7d7350afe9929a9b5b22172eeb4c23a7093
+- repo://tests/CanDoItAll.Tests.Integration/ProcessTemplateGovernanceTests.cs 621f52f9b0f4a9cc21c308a4b1c8ddf5d557d1fab76ca437f97bfa2b2f70032c

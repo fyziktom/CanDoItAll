@@ -347,7 +347,7 @@ public static class ProcessDefinitionLinter
         foreach (var artifact in step.ArtifactExpectations)
         {
             var text = NormalizeText($"{artifact.Title} {artifact.ValidationRequirementSummary} {artifact.AllowedFutureUsageSummary}");
-            if (artifact.ArtifactKind == ProcessArtifactKind.Decision &&
+            if (artifact.ArtifactKind is ProcessArtifactKind.Decision or ProcessArtifactKind.DecisionRecord &&
                 ContainsAny(text, "decision log", "legal log", "approval log") &&
                 ContainsAny(text, "runtime", "browser proof", "test output", "build output"))
             {

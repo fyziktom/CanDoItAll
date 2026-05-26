@@ -598,7 +598,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     {
         return RequiresConcreteImplementationProof(candidate) &&
                expectedArtifact.IsRequired &&
-               expectedArtifact.ArtifactKind != ProcessArtifactKind.Decision;
+               expectedArtifact.ArtifactKind is not ProcessArtifactKind.Decision and not ProcessArtifactKind.DecisionRecord;
     }
 
     private static bool HasFreshCurrentAttemptImplementationArtifact(
@@ -3929,8 +3929,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
     private static bool ShouldAutoRecordCompletedDecisionArtifact(DispatchArtifactExpectation expectedArtifact)
     {
         return expectedArtifact.IsRequired &&
-               expectedArtifact.ArtifactKind == ProcessArtifactKind.Decision &&
-               expectedArtifact.TrustRequirement is ProcessArtifactTrustRequirement.ReviewRequired or ProcessArtifactTrustRequirement.HumanApproved;
+               expectedArtifact.ArtifactKind is ProcessArtifactKind.Decision or ProcessArtifactKind.DecisionRecord &&
+               expectedArtifact.TrustRequirement is ProcessArtifactTrustRequirement.ReviewRequired or ProcessArtifactTrustRequirement.HumanApproved or ProcessArtifactTrustRequirement.ApprovalRequired;
     }
 
     private static ProcessArtifactTrustStatus ResolveCompletedDecisionArtifactTrustStatus(
@@ -3938,7 +3938,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     {
         return trustRequirement switch
         {
-            ProcessArtifactTrustRequirement.HumanApproved => ProcessArtifactTrustStatus.Approved,
+            ProcessArtifactTrustRequirement.HumanApproved or ProcessArtifactTrustRequirement.ApprovalRequired => ProcessArtifactTrustStatus.Approved,
             _ => ProcessArtifactTrustStatus.ReviewRequired
         };
     }
@@ -3948,7 +3948,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessStepRunStatus completionStatus)
     {
         return completionStatus == ProcessStepRunStatus.Completed &&
-               expectedArtifact.ArtifactKind == ProcessArtifactKind.Decision
+               expectedArtifact.ArtifactKind is ProcessArtifactKind.Decision or ProcessArtifactKind.DecisionRecord
             ? ResolveCompletedDecisionArtifactTrustStatus(expectedArtifact.TrustRequirement)
             : ProcessArtifactTrustStatus.ReviewRequired;
     }

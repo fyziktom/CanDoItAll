@@ -1,0 +1,46 @@
+Command: psql metadata/count query for all public tables whose names match Processes_% plus representative preserved tables.
+ExitCode: 0
+
+Invariant IDs: SB02-INV-001, SB02-INV-002, SB02-INV-003
+
+Process table counts before the scoped reset:
+- Processes_ArtifactExpectations: 292
+- Processes_ArtifactRecords: 30
+- Processes_ConformanceObservations: 3
+- Processes_DecisionRecords: 25
+- Processes_DefinitionVersions: 26
+- Processes_Definitions: 13
+- Processes_ImprovementCandidates: 3
+- Processes_JournalEntries: 72
+- Processes_LaunchApprovals: 3
+- Processes_LaunchCandidates: 404
+- Processes_LaunchPlanRoles: 16
+- Processes_LaunchPlans: 4
+- Processes_LaunchProvisioningRequests: 3
+- Processes_Outbox: 57
+- Processes_RoleMessagingPolicies: 0
+- Processes_RoleRequirements: 134
+- Processes_RoleSkillRequirements: 0
+- Processes_RunAssignments: 8
+- Processes_Runs: 2
+- Processes_StepArtifactInputs: 260
+- Processes_StepBranchOutcomes: 290
+- Processes_StepDefinitions: 214
+- Processes_StepDependencies: 280
+- Processes_StepRoleRequirements: 436
+- Processes_StepRuns: 16
+- Processes_WorkBriefs: 16
+- Processes_WorkflowRunLinks: 0
+
+Representative preserved counts before reset:
+- AgentFramework_WorkflowDefinitions: 26
+- AgentFramework_WorkflowRuns: 1
+- CrmHr_AiAgentProfiles: 3
+- CognitiveMemory_Records: 0
+- Plugins_Installations: 1
+- Plugins_Connections: 1
+- Projects_Projects: 2
+- Projects_ProjectHierarchyLinks: 1
+- Workbench_ProjectObjects: 22
+- Workbench_ProjectStructureOperationAnalytics: 42
+- Workspace_Settings: 1
